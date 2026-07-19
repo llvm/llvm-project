@@ -5,115 +5,14 @@
 define <16 x i8> @test_divv_16i8_strictfp(<16 x i8> %a, <16 x i8> %b) nounwind strictfp {
 ; CHECK-LABEL: test_divv_16i8_strictfp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %r15
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r13
-; CHECK-NEXT:    pushq %r12
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    vpextrb $1, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $1, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    # kill: def $al killed $al def $eax
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    vmovd %xmm1, %ecx
-; CHECK-NEXT:    vmovd %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    vpextrb $2, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $2, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    vpextrb $3, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $3, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    vpextrb $4, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $4, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %r8d
-; CHECK-NEXT:    vpextrb $5, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $5, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %r9d
-; CHECK-NEXT:    vpextrb $6, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $6, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %r10d
-; CHECK-NEXT:    vpextrb $7, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $7, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %r11d
-; CHECK-NEXT:    vpextrb $8, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $8, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %ebx
-; CHECK-NEXT:    vpextrb $9, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $9, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %ebp
-; CHECK-NEXT:    vpextrb $10, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $10, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %r14d
-; CHECK-NEXT:    vpextrb $11, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $11, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %r15d
-; CHECK-NEXT:    vpextrb $12, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $12, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %r12d
-; CHECK-NEXT:    vpextrb $13, %xmm1, %ecx
-; CHECK-NEXT:    vpextrb $13, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %r13d
-; CHECK-NEXT:    vpextrb $14, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    vpextrb $14, %xmm1, %ecx
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    vmovd %esi, %xmm2
-; CHECK-NEXT:    vpextrb $15, %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    vpextrb $15, %xmm1, %esi
-; CHECK-NEXT:    divb %sil
-; CHECK-NEXT:    # kill: def $al killed $al def $eax
-; CHECK-NEXT:    vpinsrb $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2, %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $4, %r8d, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $5, %r9d, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $6, %r10d, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $7, %r11d, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $8, %ebx, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $9, %ebp, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $10, %r14d, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $11, %r15d, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $12, %r12d, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $13, %r13d, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    popq %r13
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %r15
-; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; CHECK-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttps2udq {sae}, %zmm0, %zmm0
+; CHECK-NEXT:    vpmovdb %zmm0, %xmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res = udiv <16 x i8> %a, %b
   ret <16 x i8> %res
@@ -122,27 +21,12 @@ define <16 x i8> @test_divv_16i8_strictfp(<16 x i8> %a, <16 x i8> %b) nounwind s
 define <4 x i32> @test_sdivv_4i32_strictfp(<4 x i32> %a, <4 x i32> %b) nounwind strictfp {
 ; CHECK-LABEL: test_sdivv_4i32_strictfp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpextrd $1, %xmm0, %eax
-; CHECK-NEXT:    vpextrd $1, %xmm1, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    vmovd %xmm0, %eax
-; CHECK-NEXT:    vmovd %xmm1, %esi
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %esi
-; CHECK-NEXT:    vmovd %eax, %xmm2
-; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
-; CHECK-NEXT:    vpextrd $2, %xmm0, %eax
-; CHECK-NEXT:    vpextrd $2, %xmm1, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vpextrd $3, %xmm0, %eax
-; CHECK-NEXT:    vpextrd $3, %xmm1, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
+; CHECK-NEXT:    vcvtdq2pd %xmm1, %ymm1
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttpd2dq {sae}, %zmm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res = sdiv <4 x i32> %a, %b
   ret <4 x i32> %res
@@ -151,62 +35,15 @@ define <4 x i32> @test_sdivv_4i32_strictfp(<4 x i32> %a, <4 x i32> %b) nounwind 
 define <8 x i16> @test_sdivv_8i16_strictfp(<8 x i16> %a, <8 x i16> %b) nounwind strictfp {
 ; CHECK-LABEL: test_sdivv_8i16_strictfp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpextrw $1, %xmm0, %eax
-; CHECK-NEXT:    vpextrw $1, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %cx
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    vmovd %xmm0, %eax
-; CHECK-NEXT:    vmovd %xmm1, %esi
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %si
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    vmovd %eax, %xmm2
-; CHECK-NEXT:    vpinsrw $1, %ecx, %xmm2, %xmm2
-; CHECK-NEXT:    vpextrw $2, %xmm0, %eax
-; CHECK-NEXT:    vpextrw $2, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %cx
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    vpinsrw $2, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vpextrw $3, %xmm0, %eax
-; CHECK-NEXT:    vpextrw $3, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %cx
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    vpinsrw $3, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vpextrw $4, %xmm0, %eax
-; CHECK-NEXT:    vpextrw $4, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %cx
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    vpinsrw $4, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vpextrw $5, %xmm0, %eax
-; CHECK-NEXT:    vpextrw $5, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %cx
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    vpinsrw $5, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vpextrw $6, %xmm0, %eax
-; CHECK-NEXT:    vpextrw $6, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %cx
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    vpinsrw $6, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vpextrw $7, %xmm0, %eax
-; CHECK-NEXT:    vpextrw $7, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %cx
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    vpinsrw $7, %eax, %xmm2, %xmm0
+; CHECK-NEXT:    vpmovsxwd %xmm1, %ymm1
+; CHECK-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; CHECK-NEXT:    vpmovsxwd %xmm0, %ymm0
+; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; CHECK-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttps2dq {sae}, %zmm0, %zmm0
+; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res = sdiv <8 x i16> %a, %b
   ret <8 x i16> %res
@@ -215,374 +52,44 @@ define <8 x i16> @test_sdivv_8i16_strictfp(<8 x i16> %a, <8 x i16> %b) nounwind 
 define <8 x i32> @test_remv_8i32_strictfp(<8 x i32> %a, <8 x i32> %b) nounwind strictfp {
 ; CHECK-LABEL: test_remv_8i32_strictfp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; CHECK-NEXT:    vpextrd $1, %xmm2, %eax
-; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; CHECK-NEXT:    vpextrd $1, %xmm3, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    vmovd %xmm2, %eax
-; CHECK-NEXT:    vmovd %xmm3, %esi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    vmovd %edx, %xmm4
-; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; CHECK-NEXT:    vpextrd $2, %xmm2, %eax
-; CHECK-NEXT:    vpextrd $2, %xmm3, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $2, %edx, %xmm4, %xmm4
-; CHECK-NEXT:    vpextrd $3, %xmm2, %eax
-; CHECK-NEXT:    vpextrd $3, %xmm3, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $3, %edx, %xmm4, %xmm2
-; CHECK-NEXT:    vpextrd $1, %xmm0, %eax
-; CHECK-NEXT:    vpextrd $1, %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    vmovd %xmm0, %eax
-; CHECK-NEXT:    vmovd %xmm1, %esi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    vmovd %edx, %xmm3
-; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm3, %xmm3
-; CHECK-NEXT:    vpextrd $2, %xmm0, %eax
-; CHECK-NEXT:    vpextrd $2, %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $2, %edx, %xmm3, %xmm3
-; CHECK-NEXT:    vpextrd $3, %xmm0, %eax
-; CHECK-NEXT:    vpextrd $3, %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $3, %edx, %xmm3, %xmm0
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    vcvtudq2pd %ymm1, %zmm2
+; CHECK-NEXT:    vcvtudq2pd %ymm0, %zmm3
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm2, %zmm3, %zmm2
+; CHECK-NEXT:    vcvttpd2udq {sae}, %zmm2, %ymm2
+; CHECK-NEXT:    vpmulld %ymm1, %ymm2, %ymm1
+; CHECK-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %res = urem <8 x i32> %a, %b
   ret <8 x i32> %res
 }
 
 define <8 x i32> @test_masked_divv_8i32_strictfp(<8 x i32> %a, <8 x i32> %b, <8 x i1> %m) nounwind strictfp {
-; AVX512F-LABEL: test_masked_divv_8i32_strictfp:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512F-NEXT:    vpmovsxwq %xmm2, %zmm2
-; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm2
-; AVX512F-NEXT:    vptestmq %zmm2, %zmm2, %k1
-; AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1]
-; AVX512F-NEXT:    vmovdqa32 %zmm1, %zmm2 {%k1}
-; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm1
-; AVX512F-NEXT:    vpextrd $1, %xmm1, %ecx
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; AVX512F-NEXT:    vpextrd $1, %xmm3, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    vmovd %xmm1, %esi
-; AVX512F-NEXT:    vmovd %xmm3, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %esi
-; AVX512F-NEXT:    vmovd %eax, %xmm4
-; AVX512F-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; AVX512F-NEXT:    vpextrd $2, %xmm1, %ecx
-; AVX512F-NEXT:    vpextrd $2, %xmm3, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; AVX512F-NEXT:    vpextrd $3, %xmm1, %ecx
-; AVX512F-NEXT:    vpextrd $3, %xmm3, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm1
-; AVX512F-NEXT:    vpextrd $1, %xmm2, %ecx
-; AVX512F-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    vmovd %xmm2, %esi
-; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %esi
-; AVX512F-NEXT:    vmovd %eax, %xmm3
-; AVX512F-NEXT:    vpinsrd $1, %ecx, %xmm3, %xmm3
-; AVX512F-NEXT:    vpextrd $2, %xmm2, %ecx
-; AVX512F-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; AVX512F-NEXT:    vpextrd $3, %xmm2, %ecx
-; AVX512F-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; AVX512DQ-LABEL: test_masked_divv_8i32_strictfp:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512DQ-NEXT:    vpmovsxwq %xmm2, %zmm2
-; AVX512DQ-NEXT:    vpsllq $63, %zmm2, %zmm2
-; AVX512DQ-NEXT:    vpmovq2m %zmm2, %k1
-; AVX512DQ-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1]
-; AVX512DQ-NEXT:    vmovdqa32 %zmm1, %zmm2 {%k1}
-; AVX512DQ-NEXT:    vextracti128 $1, %ymm2, %xmm1
-; AVX512DQ-NEXT:    vpextrd $1, %xmm1, %ecx
-; AVX512DQ-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; AVX512DQ-NEXT:    vpextrd $1, %xmm3, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    movl %eax, %ecx
-; AVX512DQ-NEXT:    vmovd %xmm1, %esi
-; AVX512DQ-NEXT:    vmovd %xmm3, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %esi
-; AVX512DQ-NEXT:    vmovd %eax, %xmm4
-; AVX512DQ-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; AVX512DQ-NEXT:    vpextrd $2, %xmm1, %ecx
-; AVX512DQ-NEXT:    vpextrd $2, %xmm3, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; AVX512DQ-NEXT:    vpextrd $3, %xmm1, %ecx
-; AVX512DQ-NEXT:    vpextrd $3, %xmm3, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm1
-; AVX512DQ-NEXT:    vpextrd $1, %xmm2, %ecx
-; AVX512DQ-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    movl %eax, %ecx
-; AVX512DQ-NEXT:    vmovd %xmm2, %esi
-; AVX512DQ-NEXT:    vmovd %xmm0, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %esi
-; AVX512DQ-NEXT:    vmovd %eax, %xmm3
-; AVX512DQ-NEXT:    vpinsrd $1, %ecx, %xmm3, %xmm3
-; AVX512DQ-NEXT:    vpextrd $2, %xmm2, %ecx
-; AVX512DQ-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; AVX512DQ-NEXT:    vpextrd $3, %xmm2, %ecx
-; AVX512DQ-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
-; AVX512DQ-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512DQ-NEXT:    retq
+; CHECK-LABEL: test_masked_divv_8i32_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; CHECK-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttpd2udq {sae}, %zmm0, %ymm0
+; CHECK-NEXT:    retq
   %res = call <8 x i32> @llvm.masked.udiv(<8 x i32> %a, <8 x i32> %b, <8 x i1> %m)
   ret <8 x i32> %res
 }
 
 define <16 x i32> @test_masked_divv_16i32_strictfp(<16 x i32> %a, <16 x i32> %b, <16 x i1> %m) nounwind strictfp {
-; AVX512F-LABEL: test_masked_divv_16i32_strictfp:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmovsxbd %xmm2, %zmm2
-; AVX512F-NEXT:    vpslld $31, %zmm2, %zmm2
-; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; AVX512F-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512F-NEXT:    vmovdqa32 %zmm1, %zmm2 {%k1}
-; AVX512F-NEXT:    vextracti32x4 $3, %zmm2, %xmm1
-; AVX512F-NEXT:    vpextrd $1, %xmm1, %ecx
-; AVX512F-NEXT:    vextracti32x4 $3, %zmm0, %xmm3
-; AVX512F-NEXT:    vpextrd $1, %xmm3, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    vmovd %xmm1, %esi
-; AVX512F-NEXT:    vmovd %xmm3, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %esi
-; AVX512F-NEXT:    vmovd %eax, %xmm4
-; AVX512F-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; AVX512F-NEXT:    vpextrd $2, %xmm1, %ecx
-; AVX512F-NEXT:    vpextrd $2, %xmm3, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; AVX512F-NEXT:    vpextrd $3, %xmm1, %ecx
-; AVX512F-NEXT:    vpextrd $3, %xmm3, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm1
-; AVX512F-NEXT:    vextracti32x4 $2, %zmm2, %xmm3
-; AVX512F-NEXT:    vpextrd $1, %xmm3, %ecx
-; AVX512F-NEXT:    vextracti32x4 $2, %zmm0, %xmm4
-; AVX512F-NEXT:    vpextrd $1, %xmm4, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    vmovd %xmm3, %esi
-; AVX512F-NEXT:    vmovd %xmm4, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %esi
-; AVX512F-NEXT:    vmovd %eax, %xmm5
-; AVX512F-NEXT:    vpinsrd $1, %ecx, %xmm5, %xmm5
-; AVX512F-NEXT:    vpextrd $2, %xmm3, %ecx
-; AVX512F-NEXT:    vpextrd $2, %xmm4, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; AVX512F-NEXT:    vpextrd $3, %xmm3, %ecx
-; AVX512F-NEXT:    vpextrd $3, %xmm4, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm3
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
-; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX512F-NEXT:    vpextrd $1, %xmm3, %ecx
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm4
-; AVX512F-NEXT:    vpextrd $1, %xmm4, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    vmovd %xmm3, %esi
-; AVX512F-NEXT:    vmovd %xmm4, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %esi
-; AVX512F-NEXT:    vmovd %eax, %xmm5
-; AVX512F-NEXT:    vpinsrd $1, %ecx, %xmm5, %xmm5
-; AVX512F-NEXT:    vpextrd $2, %xmm3, %ecx
-; AVX512F-NEXT:    vpextrd $2, %xmm4, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; AVX512F-NEXT:    vpextrd $3, %xmm3, %ecx
-; AVX512F-NEXT:    vpextrd $3, %xmm4, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm3
-; AVX512F-NEXT:    vpextrd $1, %xmm2, %ecx
-; AVX512F-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    vmovd %xmm2, %esi
-; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %esi
-; AVX512F-NEXT:    vmovd %eax, %xmm4
-; AVX512F-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; AVX512F-NEXT:    vpextrd $2, %xmm2, %ecx
-; AVX512F-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; AVX512F-NEXT:    vpextrd $3, %xmm2, %ecx
-; AVX512F-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX512F-NEXT:    xorl %edx, %edx
-; AVX512F-NEXT:    divl %ecx
-; AVX512F-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm0
-; AVX512F-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512DQ-LABEL: test_masked_divv_16i32_strictfp:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vpmovsxbd %xmm2, %zmm2
-; AVX512DQ-NEXT:    vpslld $31, %zmm2, %zmm2
-; AVX512DQ-NEXT:    vpmovd2m %zmm2, %k1
-; AVX512DQ-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512DQ-NEXT:    vmovdqa32 %zmm1, %zmm2 {%k1}
-; AVX512DQ-NEXT:    vextracti32x4 $3, %zmm2, %xmm1
-; AVX512DQ-NEXT:    vpextrd $1, %xmm1, %ecx
-; AVX512DQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm3
-; AVX512DQ-NEXT:    vpextrd $1, %xmm3, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    movl %eax, %ecx
-; AVX512DQ-NEXT:    vmovd %xmm1, %esi
-; AVX512DQ-NEXT:    vmovd %xmm3, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %esi
-; AVX512DQ-NEXT:    vmovd %eax, %xmm4
-; AVX512DQ-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; AVX512DQ-NEXT:    vpextrd $2, %xmm1, %ecx
-; AVX512DQ-NEXT:    vpextrd $2, %xmm3, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; AVX512DQ-NEXT:    vpextrd $3, %xmm1, %ecx
-; AVX512DQ-NEXT:    vpextrd $3, %xmm3, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm1
-; AVX512DQ-NEXT:    vextracti32x4 $2, %zmm2, %xmm3
-; AVX512DQ-NEXT:    vpextrd $1, %xmm3, %ecx
-; AVX512DQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm4
-; AVX512DQ-NEXT:    vpextrd $1, %xmm4, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    movl %eax, %ecx
-; AVX512DQ-NEXT:    vmovd %xmm3, %esi
-; AVX512DQ-NEXT:    vmovd %xmm4, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %esi
-; AVX512DQ-NEXT:    vmovd %eax, %xmm5
-; AVX512DQ-NEXT:    vpinsrd $1, %ecx, %xmm5, %xmm5
-; AVX512DQ-NEXT:    vpextrd $2, %xmm3, %ecx
-; AVX512DQ-NEXT:    vpextrd $2, %xmm4, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; AVX512DQ-NEXT:    vpextrd $3, %xmm3, %ecx
-; AVX512DQ-NEXT:    vpextrd $3, %xmm4, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm3
-; AVX512DQ-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
-; AVX512DQ-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX512DQ-NEXT:    vpextrd $1, %xmm3, %ecx
-; AVX512DQ-NEXT:    vextracti128 $1, %ymm0, %xmm4
-; AVX512DQ-NEXT:    vpextrd $1, %xmm4, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    movl %eax, %ecx
-; AVX512DQ-NEXT:    vmovd %xmm3, %esi
-; AVX512DQ-NEXT:    vmovd %xmm4, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %esi
-; AVX512DQ-NEXT:    vmovd %eax, %xmm5
-; AVX512DQ-NEXT:    vpinsrd $1, %ecx, %xmm5, %xmm5
-; AVX512DQ-NEXT:    vpextrd $2, %xmm3, %ecx
-; AVX512DQ-NEXT:    vpextrd $2, %xmm4, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; AVX512DQ-NEXT:    vpextrd $3, %xmm3, %ecx
-; AVX512DQ-NEXT:    vpextrd $3, %xmm4, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm3
-; AVX512DQ-NEXT:    vpextrd $1, %xmm2, %ecx
-; AVX512DQ-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    movl %eax, %ecx
-; AVX512DQ-NEXT:    vmovd %xmm2, %esi
-; AVX512DQ-NEXT:    vmovd %xmm0, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %esi
-; AVX512DQ-NEXT:    vmovd %eax, %xmm4
-; AVX512DQ-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; AVX512DQ-NEXT:    vpextrd $2, %xmm2, %ecx
-; AVX512DQ-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; AVX512DQ-NEXT:    vpextrd $3, %xmm2, %ecx
-; AVX512DQ-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX512DQ-NEXT:    xorl %edx, %edx
-; AVX512DQ-NEXT:    divl %ecx
-; AVX512DQ-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm0
-; AVX512DQ-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512DQ-NEXT:    retq
+; CHECK-LABEL: test_masked_divv_16i32_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtudq2pd %ymm1, %zmm2
+; CHECK-NEXT:    vcvtudq2pd %ymm0, %zmm3
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm2, %zmm3, %zmm2
+; CHECK-NEXT:    vcvttpd2udq {sae}, %zmm2, %ymm2
+; CHECK-NEXT:    vextractf64x4 $1, %zmm1, %ymm1
+; CHECK-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; CHECK-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttpd2udq {sae}, %zmm0, %ymm0
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0
+; CHECK-NEXT:    retq
   %res = call <16 x i32> @llvm.masked.udiv(<16 x i32> %a, <16 x i32> %b, <16 x i1> %m)
   ret <16 x i32> %res
 }
@@ -590,99 +97,17 @@ define <16 x i32> @test_masked_divv_16i32_strictfp(<16 x i32> %a, <16 x i32> %b,
 define <16 x i32> @test_divv_16i32_strictfp(<16 x i32> %a, <16 x i32> %b) nounwind strictfp {
 ; CHECK-LABEL: test_divv_16i32_strictfp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
-; CHECK-NEXT:    vpextrd $1, %xmm2, %eax
-; CHECK-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
-; CHECK-NEXT:    vpextrd $1, %xmm3, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    vmovd %xmm2, %eax
-; CHECK-NEXT:    vmovd %xmm3, %esi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    vmovd %eax, %xmm4
-; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; CHECK-NEXT:    vpextrd $2, %xmm2, %eax
-; CHECK-NEXT:    vpextrd $2, %xmm3, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; CHECK-NEXT:    vpextrd $3, %xmm2, %eax
-; CHECK-NEXT:    vpextrd $3, %xmm3, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm2
-; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; CHECK-NEXT:    vpextrd $1, %xmm3, %eax
-; CHECK-NEXT:    vextracti32x4 $2, %zmm1, %xmm4
-; CHECK-NEXT:    vpextrd $1, %xmm4, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    vmovd %xmm3, %eax
-; CHECK-NEXT:    vmovd %xmm4, %esi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    vmovd %eax, %xmm5
-; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm5, %xmm5
-; CHECK-NEXT:    vpextrd $2, %xmm3, %eax
-; CHECK-NEXT:    vpextrd $2, %xmm4, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; CHECK-NEXT:    vpextrd $3, %xmm3, %eax
-; CHECK-NEXT:    vpextrd $3, %xmm4, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm3
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; CHECK-NEXT:    vpextrd $1, %xmm3, %eax
-; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm4
-; CHECK-NEXT:    vpextrd $1, %xmm4, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    vmovd %xmm3, %eax
-; CHECK-NEXT:    vmovd %xmm4, %esi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    vmovd %eax, %xmm5
-; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm5, %xmm5
-; CHECK-NEXT:    vpextrd $2, %xmm3, %eax
-; CHECK-NEXT:    vpextrd $2, %xmm4, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; CHECK-NEXT:    vpextrd $3, %xmm3, %eax
-; CHECK-NEXT:    vpextrd $3, %xmm4, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm3
-; CHECK-NEXT:    vpextrd $1, %xmm0, %eax
-; CHECK-NEXT:    vpextrd $1, %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    vmovd %xmm0, %eax
-; CHECK-NEXT:    vmovd %xmm1, %esi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    vmovd %eax, %xmm4
-; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; CHECK-NEXT:    vpextrd $2, %xmm0, %eax
-; CHECK-NEXT:    vpextrd $2, %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; CHECK-NEXT:    vpextrd $3, %xmm0, %eax
-; CHECK-NEXT:    vpextrd $3, %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm0
-; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
-; CHECK-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; CHECK-NEXT:    vcvtudq2pd %ymm1, %zmm2
+; CHECK-NEXT:    vcvtudq2pd %ymm0, %zmm3
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm2, %zmm3, %zmm2
+; CHECK-NEXT:    vcvttpd2udq {sae}, %zmm2, %ymm2
+; CHECK-NEXT:    vextractf64x4 $1, %zmm1, %ymm1
+; CHECK-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; CHECK-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttpd2udq {sae}, %zmm0, %ymm0
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %res = udiv <16 x i32> %a, %b
   ret <16 x i32> %res
