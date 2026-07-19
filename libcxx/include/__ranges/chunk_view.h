@@ -238,7 +238,7 @@ public:
     return -(__s - __i);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_rvalue_reference_t<_View>
   iter_move(const __inner_iterator& __i) noexcept(noexcept(ranges::iter_move(*__i.__parent_->__current_))) {
     return ranges::iter_move(*__i.__parent_->__current_);
   }
