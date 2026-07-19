@@ -440,6 +440,12 @@ TEST_F(SelectionDAGNodeConstructionTest, DontFoldPartialReduceMLA) {
                    DAG->getBuildVector(MVT::v4i8, DL, SpecialLHS), RHS);
   EXPECT_EQ(OpaqueResult.getOpcode(), ISD::PARTIAL_REDUCE_SMLA);
 
+  SpecialLHS[2] = DAG->getUNDEF(MVT::i8);
+  SDValue UndefResult =
+      DAG->getNode(ISD::PARTIAL_REDUCE_SMLA, DL, MVT::v2i32, Acc,
+                   DAG->getBuildVector(MVT::v4i8, DL, SpecialLHS), RHS);
+  EXPECT_EQ(UndefResult.getOpcode(), ISD::PARTIAL_REDUCE_SMLA);
+
   SDValue Variable = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
                                          Register::index2VirtReg(2), MVT::i32);
   SmallVector<SDValue, 2> MixedLHS = {Variable,
