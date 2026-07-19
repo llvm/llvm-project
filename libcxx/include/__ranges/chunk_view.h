@@ -71,7 +71,7 @@ public:
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
-    requires std::copy_constructible<_View>
+    requires copy_constructible<_View>
   {
     return __base_;
   }
