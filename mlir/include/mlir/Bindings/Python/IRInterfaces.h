@@ -135,7 +135,58 @@ private:
   nanobind::object obj;
 };
 
-struct PyMemoryEffectsInstanceList {
+/// A borrowed memory effect.
+class PyMemoryEffect {
+public:
+  explicit PyMemoryEffect(MlirMemoryEffect effect) : effect(effect) {}
+
+  MlirMemoryEffect get() const { return effect; }
+
+private:
+  MlirMemoryEffect effect;
+};
+
+/// A borrowed side effect resource.
+class PySideEffectResource {
+public:
+  explicit PySideEffectResource(MlirSideEffectResource resource)
+      : resource(resource) {}
+
+  MlirSideEffectResource get() const { return resource; }
+
+private:
+  MlirSideEffectResource resource;
+};
+
+/// An owning memory effect instance.
+class PyMemoryEffectInstance {
+public:
+  explicit PyMemoryEffectInstance(MlirMemoryEffectInstance instance)
+      : instance(instance) {}
+  PyMemoryEffectInstance(PyMemoryEffectInstance &&other) noexcept
+      : instance(other.instance) {
+    other.instance.ptr = nullptr;
+  }
+  ~PyMemoryEffectInstance() {
+    if (instance.ptr)
+      mlirMemoryEffectInstanceDestroy(instance);
+  }
+
+  MlirMemoryEffectInstance get() const { return instance; }
+
+private:
+  MlirMemoryEffectInstance instance;
+};
+
+/// A callback-scoped view of a list of memory effect instances.
+class PyMemoryEffectsInstanceList {
+public:
+  explicit PyMemoryEffectsInstanceList(MlirMemoryEffectInstancesList effects)
+      : effects(effects) {}
+
+  MlirMemoryEffectInstancesList get() const { return effects; }
+
+private:
   MlirMemoryEffectInstancesList effects;
 };
 
