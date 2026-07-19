@@ -173,6 +173,8 @@ Available checks are:
 - `-fsanitize=pointer-overflow`: Performing pointer arithmetic which
   overflows, or where either the old or new pointer value is a null pointer
   (excluding the case where both are null pointers).
+- `-fsanitize=unaligned-pointer-subtraction`: Subtraction of two pointers whose
+  byte distance is not a multiple of the element size.
 - `-fsanitize=return`: In C++, reaching the end of a
   value-returning function without returning a value.
 - `-fsanitize=returns-nonnull-attribute`: Returning null pointer
