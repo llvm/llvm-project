@@ -182,31 +182,12 @@ define <2 x i64> @test_sremv_2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 define <4 x i64> @test_sdivv_4i64_narrow(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: test_sdivv_4i64_narrow:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsraq $11, %ymm0, %ymm2
+; CHECK-NEXT:    vpsraq $11, %ymm0, %ymm0
 ; CHECK-NEXT:    vpsraq $11, %ymm1, %ymm1
-; CHECK-NEXT:    vpabsq %ymm1, %ymm0
-; CHECK-NEXT:    vcvtuqq2pd {ru-sae}, %zmm0, %zmm3
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; CHECK-NEXT:    vdivpd {rd-sae}, %zmm3, %zmm4, %zmm3
-; CHECK-NEXT:    vpabsq %ymm2, %ymm4
-; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm5
-; CHECK-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm5, %zmm5
-; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm5, %zmm5
-; CHECK-NEXT:    vpmullq %ymm0, %ymm5, %ymm6
-; CHECK-NEXT:    vpsubq %ymm6, %ymm4, %ymm4
-; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm6
-; CHECK-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm6, %zmm3
-; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
-; CHECK-NEXT:    vpaddq %ymm3, %ymm5, %ymm5
-; CHECK-NEXT:    vpmullq %ymm0, %ymm3, %ymm3
-; CHECK-NEXT:    vpsubq %ymm3, %ymm4, %ymm3
-; CHECK-NEXT:    vpcmpnltuq %ymm0, %ymm3, %k0
-; CHECK-NEXT:    vpmovm2q %k0, %ymm0
-; CHECK-NEXT:    vpsubq %ymm0, %ymm5, %ymm0
-; CHECK-NEXT:    vpxor %ymm1, %ymm2, %ymm1
-; CHECK-NEXT:    vpmovq2m %ymm1, %k1
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpsubq %ymm0, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vcvtqq2pd %ymm1, %ymm1
+; CHECK-NEXT:    vcvtqq2pd %ymm0, %ymm0
+; CHECK-NEXT:    vdivpd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vcvttpd2qq %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %aa = ashr <4 x i64> %a, splat (i64 11)
   %bb = ashr <4 x i64> %b, splat (i64 11)
@@ -250,46 +231,15 @@ define <4 x i64> @test_sdivv_4i64_notnarrow(<4 x i64> %a, <4 x i64> %b) nounwind
 }
 
 define <2 x i64> @test_divv_2i64_narrow24(<2 x i64> %a, <2 x i64> %b) nounwind {
-; FASTMULLQ-LABEL: test_divv_2i64_narrow24:
-; FASTMULLQ:       # %bb.0:
-; FASTMULLQ-NEXT:    vpsrlq $40, %xmm0, %xmm0
-; FASTMULLQ-NEXT:    vpsrlq $40, %xmm1, %xmm1
-; FASTMULLQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
-; FASTMULLQ-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; FASTMULLQ-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
-; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
-; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
-; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
-; FASTMULLQ-NEXT:    vpmullq %xmm1, %xmm3, %xmm4
-; FASTMULLQ-NEXT:    vpsubq %xmm4, %xmm0, %xmm0
-; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm4
-; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm4, %zmm2
-; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
-; FASTMULLQ-NEXT:    vpaddq %xmm2, %xmm3, %xmm3
-; FASTMULLQ-NEXT:    vpmullq %xmm1, %xmm2, %xmm2
-; FASTMULLQ-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; FASTMULLQ-NEXT:    vpcmpnltuq %xmm1, %xmm0, %k0
-; FASTMULLQ-NEXT:    vpmovm2q %k0, %xmm0
-; FASTMULLQ-NEXT:    vpsubq %xmm0, %xmm3, %xmm0
-; FASTMULLQ-NEXT:    vzeroupper
-; FASTMULLQ-NEXT:    retq
-;
-; SLOWMULLQ-LABEL: test_divv_2i64_narrow24:
-; SLOWMULLQ:       # %bb.0:
-; SLOWMULLQ-NEXT:    vpsrlq $40, %xmm0, %xmm0
-; SLOWMULLQ-NEXT:    vpsrlq $40, %xmm1, %xmm1
-; SLOWMULLQ-NEXT:    vpextrq $1, %xmm0, %rax
-; SLOWMULLQ-NEXT:    vpextrq $1, %xmm1, %rcx
-; SLOWMULLQ-NEXT:    xorl %edx, %edx
-; SLOWMULLQ-NEXT:    divq %rcx
-; SLOWMULLQ-NEXT:    vmovq %rax, %xmm2
-; SLOWMULLQ-NEXT:    vmovd %xmm0, %eax
-; SLOWMULLQ-NEXT:    vmovd %xmm1, %ecx
-; SLOWMULLQ-NEXT:    xorl %edx, %edx
-; SLOWMULLQ-NEXT:    divq %rcx
-; SLOWMULLQ-NEXT:    vmovq %rax, %xmm0
-; SLOWMULLQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; SLOWMULLQ-NEXT:    retq
+; CHECK-LABEL: test_divv_2i64_narrow24:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrlq $40, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrlq $40, %xmm1, %xmm1
+; CHECK-NEXT:    vcvtqq2ps %xmm1, %xmm1
+; CHECK-NEXT:    vcvtqq2ps %xmm0, %xmm0
+; CHECK-NEXT:    vdivps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vcvttps2uqq %xmm0, %xmm0
+; CHECK-NEXT:    retq
   %aa = lshr <2 x i64> %a, splat (i64 40)
   %bb = lshr <2 x i64> %b, splat (i64 40)
   %res = udiv <2 x i64> %aa, %bb

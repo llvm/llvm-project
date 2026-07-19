@@ -50559,19 +50559,26 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   if (DAG.isConstantIntBuildVectorOrConstantInt(Divisor))
     return SDValue();
 
-  // i8/i16/i32: the operands fit the float mantissa exactly so one float
-  // divide recovers the exact quotient.
-  if (VT.getScalarSizeInBits() <= 32) {
+  unsigned EltBits = VT.getScalarSizeInBits();
+  auto FitsFP = [&](SDValue V, const fltSemantics &Sem) {
+    unsigned Precision = APFloat::semanticsPrecision(Sem);
+    return IsSigned ? DAG.ComputeNumSignBits(V) + Precision > EltBits
+                    : DAG.computeKnownBits(V).countMaxActiveBits() <= Precision;
+  };
+  auto BothFitFP = [&](const fltSemantics &Sem) {
+    return FitsFP(Dividend, Sem) && FitsFP(Divisor, Sem);
+  };
+  // i64 needs the qq converts which is AVX512DQ only
+  bool NarrowI64 = EltBits == 64 && Subtarget.hasDQI() &&
+                   Subtarget.useAVX512Regs() &&
+                   BothFitFP(APFloat::IEEEdouble());
+
+  // i8/i16/i32 and narrow value i64: the operands fit the float mantissa
+  // exactly so one float divide recovers the exact quotient.
+  if (EltBits <= 32 || NarrowI64) {
     // f32 recovers the quotient exactly when both operands fit in 24 bits
-    unsigned EltBits = VT.getScalarSizeInBits();
-    unsigned Precision = APFloat::semanticsPrecision(APFloat::IEEEsingle());
-    auto FitsF32 = [&](SDValue V) {
-      return IsSigned
-                 ? DAG.ComputeNumSignBits(V) + Precision > EltBits
-                 : DAG.computeKnownBits(V).countMaxActiveBits() <= Precision;
-    };
     MVT FPSclVT = MVT::f64;
-    if (EltBits <= 16 || (FitsF32(Dividend) && FitsF32(Divisor)))
+    if (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle()))
       FPSclVT = MVT::f32;
     EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
 
@@ -50605,7 +50612,9 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
       // raise flags.
       unsigned WideElts = 512 / FPSclVT.getSizeInBits(); // 16 f32 or 8 f64
       MVT WideFP = MVT::getVectorVT(FPSclVT, WideElts);
-      MVT WideI = MVT::getVectorVT(MVT::i32, WideElts);
+      // Narrow i64 quotients can pass 2^31 so the f64 tier lands on i64.
+      MVT WideIScl = EltBits == 64 && FPSclVT == MVT::f64 ? MVT::i64 : MVT::i32;
+      MVT WideI = MVT::getVectorVT(WideIScl, WideElts);
       SDValue RN = DAG.getTargetConstant(X86::STATIC_ROUNDING::TO_NEAREST_INT,
                                          DL, MVT::i32); // {rn-sae}
       SDValue Quot =
@@ -50613,10 +50622,11 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
                       widenSubVector(X, false, Subtarget, DAG, DL, 512),
                       widenSubVector(Y, false, Subtarget, DAG, DL, 512), RN);
       unsigned FromFP = IsSigned ? X86ISD::CVTTP2SI_SAE : X86ISD::CVTTP2UI_SAE;
-      Q = DAG.getNode(FromFP, DL, WideI, Quot); // vcvttp*2dq {sae}
-      MVT NarrowI = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements());
+      Q = DAG.getNode(FromFP, DL, WideI, Quot); // vcvttp*2dq/qq {sae}
+      MVT NarrowI = MVT::getVectorVT(WideIScl, VT.getVectorNumElements());
       Q = extractSubVector(Q, 0, DAG, DL, NarrowI.getSizeInBits());
-      Q = DAG.getNode(ISD::TRUNCATE, DL, VT, Q);
+      Q = IsSigned ? DAG.getSExtOrTrunc(Q, DL, VT)
+                   : DAG.getZExtOrTrunc(Q, DL, VT);
     } else {
       unsigned FromFP = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
       Q = DAG.getNode(FromFP, DL, VT, DAG.getNode(ISD::FDIV, DL, FPVT, X, Y));

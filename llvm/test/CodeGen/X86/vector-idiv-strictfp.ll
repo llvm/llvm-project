@@ -259,23 +259,10 @@ define <8 x i64> @test_divv_8i64_narrow_strictfp(<8 x i64> %a, <8 x i64> %b) nou
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vpsrlq $12, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vpsrlq $12, %zmm1, %zmm1
-; AVX512DQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
-; AVX512DQ-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX512DQ-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
-; AVX512DQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
-; AVX512DQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
-; AVX512DQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
-; AVX512DQ-NEXT:    vpmullq %zmm1, %zmm3, %zmm4
-; AVX512DQ-NEXT:    vpsubq %zmm4, %zmm0, %zmm0
-; AVX512DQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm4
-; AVX512DQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm4, %zmm2
-; AVX512DQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
-; AVX512DQ-NEXT:    vpaddq %zmm2, %zmm3, %zmm3
-; AVX512DQ-NEXT:    vpmullq %zmm1, %zmm2, %zmm2
-; AVX512DQ-NEXT:    vpsubq %zmm2, %zmm0, %zmm0
-; AVX512DQ-NEXT:    vpcmpnltuq %zmm1, %zmm0, %k0
-; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
-; AVX512DQ-NEXT:    vpsubq %zmm0, %zmm3, %zmm0
+; AVX512DQ-NEXT:    vcvtqq2pd %zmm1, %zmm1
+; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
+; AVX512DQ-NEXT:    vdivpd {rn-sae}, %zmm1, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vcvttpd2uqq {sae}, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
   %aa = lshr <8 x i64> %a, splat (i64 12)
   %bb = lshr <8 x i64> %b, splat (i64 12)
