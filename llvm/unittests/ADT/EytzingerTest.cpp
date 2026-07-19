@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/Support/Endian.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -312,14 +313,14 @@ TEST(EytzingerTest, EytzingerTableSpanBeginEnd) {
   EXPECT_EQ(std::distance(Span.begin(), Span.end()), 7);
 
   std::vector<int> Traversed(Span.begin(), Span.end());
-  std::vector<int> Expected = {40, 20, 60, 10, 30, 50, 70};
-  EXPECT_EQ(Traversed, Expected);
+  const int Expected[] = {40, 20, 60, 10, 30, 50, 70};
+  EXPECT_THAT(Traversed, testing::ElementsAreArray(Expected));
 
   // Range-based for loop verification.
   std::vector<int> RangeTraversed;
   for (const int &Val : Span)
     RangeTraversed.push_back(Val);
-  EXPECT_EQ(RangeTraversed, Expected);
+  EXPECT_THAT(RangeTraversed, testing::ElementsAreArray(Expected));
 }
 
 TEST(EytzingerTest, EytzingerTableBeginEnd) {
@@ -329,18 +330,18 @@ TEST(EytzingerTest, EytzingerTableBeginEnd) {
   EXPECT_EQ(std::distance(Table.begin(), Table.end()), 7);
 
   std::vector<int> Traversed(Table.begin(), Table.end());
-  std::vector<int> Expected = {40, 20, 60, 10, 30, 50, 70};
-  EXPECT_EQ(Traversed, Expected);
+  const int Expected[] = {40, 20, 60, 10, 30, 50, 70};
+  EXPECT_THAT(Traversed, testing::ElementsAreArray(Expected));
 
   // Range-based for loop verification on both non-const and const tables.
   std::vector<int> RangeTraversed;
   for (const int &Val : Table)
     RangeTraversed.push_back(Val);
-  EXPECT_EQ(RangeTraversed, Expected);
+  EXPECT_THAT(RangeTraversed, testing::ElementsAreArray(Expected));
 
   const auto &ConstTable = Table;
   std::vector<int> ConstTraversed(ConstTable.begin(), ConstTable.end());
-  EXPECT_EQ(ConstTraversed, Expected);
+  EXPECT_THAT(ConstTraversed, testing::ElementsAreArray(Expected));
 }
 
 } // namespace
