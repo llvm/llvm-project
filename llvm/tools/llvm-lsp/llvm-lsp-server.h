@@ -11,6 +11,7 @@
 
 #include <sstream>
 
+#include "IRDocument.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LSP/Protocol.h"
 #include "llvm/Support/LSP/Transport.h"
@@ -21,6 +22,8 @@ class LspServer {
   lsp::MessageHandler MessageHandler;
 
   bool ShutDownRequested = false;
+
+  std::unordered_map<std::string, std::unique_ptr<IRDocument>> OpenDocuments;
 
 public:
   LspServer(lsp::JSONTransport &Transport)
@@ -50,6 +53,20 @@ private:
   // shutdown
   void handleRequestShutdown(const lsp::NoParams &Params,
                              lsp::Callback<std::nullptr_t> Reply);
+
+  // textDocument/didOpen
+  void handleNotificationTextDocumentDidOpen(
+      const lsp::DidOpenTextDocumentParams &Params);
+
+  // textDocument/references
+  void
+  handleRequestGetReferences(const lsp::ReferenceParams &Params,
+                             lsp::Callback<std::vector<lsp::Location>> Reply);
+
+  // textDocument/documentSymbol
+  void handleRequestTextDocumentDocumentSymbol(
+      const lsp::DocumentSymbolParams &Params,
+      lsp::Callback<std::vector<lsp::DocumentSymbol>> Reply);
 
   // Identifies RPC Call and dispatches the handling to other methods
   bool registerMessageHandlers();
