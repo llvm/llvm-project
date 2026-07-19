@@ -58,6 +58,3 @@ exit:
   %result = phi i8 [ 0, %entry ], [ %red, %reduction ]
   ret i8 %result
 }
-
-declare i8 @llvm.vector.reduce.umax.v8i8(<8 x i8>)
-declare i8 @llvm.vector.reduce.umax.v32i8(<32 x i8>)
