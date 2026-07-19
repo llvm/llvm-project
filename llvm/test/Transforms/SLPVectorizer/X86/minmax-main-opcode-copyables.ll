@@ -6,14 +6,12 @@ define void @test_umax(ptr %dst, i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-LABEL: define void @test_umax(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[X2:%.*]], i32 [[X3:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X1]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 2>)
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
-; CHECK-NEXT:    store i32 [[X2]], ptr [[P2]], align 4
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[DST]], i32 3
-; CHECK-NEXT:    store i32 [[X3]], ptr [[P3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[TMP3]], <4 x i32> <i32 1, i32 2, i32 0, i32 0>)
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -35,14 +33,12 @@ define void @test_umin(ptr %dst, i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-LABEL: define void @test_umin(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[X2:%.*]], i32 [[X3:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X1]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 2>)
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
-; CHECK-NEXT:    store i32 [[X2]], ptr [[P2]], align 4
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[DST]], i32 3
-; CHECK-NEXT:    store i32 [[X3]], ptr [[P3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[TMP3]], <4 x i32> <i32 1, i32 2, i32 -1, i32 -1>)
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -64,14 +60,12 @@ define void @test_smax(ptr %dst, i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-LABEL: define void @test_smax(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[X2:%.*]], i32 [[X3:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X1]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 2>)
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
-; CHECK-NEXT:    store i32 [[X2]], ptr [[P2]], align 4
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[DST]], i32 3
-; CHECK-NEXT:    store i32 [[X3]], ptr [[P3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP3]], <4 x i32> <i32 1, i32 2, i32 -2147483648, i32 -2147483648>)
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -93,14 +87,12 @@ define void @test_smin(ptr %dst, i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-LABEL: define void @test_smin(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[X2:%.*]], i32 [[X3:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X1]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 2>)
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
-; CHECK-NEXT:    store i32 [[X2]], ptr [[P2]], align 4
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[DST]], i32 3
-; CHECK-NEXT:    store i32 [[X3]], ptr [[P3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP3]], <4 x i32> <i32 1, i32 2, i32 2147483647, i32 2147483647>)
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -126,13 +118,12 @@ define void @test_minbitwidth_trunc(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP10:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[TMP8]], <2 x i32> <i32 100, i32 200>)
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i64 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP3]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP7]], <4 x i32> <i32 100, i32 200, i32 -2147483648, i32 -2147483648>)
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc <4 x i32> [[TMP8]] to <4 x i16>
 ; CHECK-NEXT:    store <4 x i16> [[TMP9]], ptr [[DST]], align 2
 ; CHECK-NEXT:    ret void
 ;
