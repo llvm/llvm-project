@@ -35,11 +35,11 @@ constexpr bool test() {
 
   // Test `chunk_view(_View, range_difference_t<_View>)` when V models `forward_range`
   {
-    static_assert(!test_convertible<std::ranges::chunk_view<input_span<int>>,
+    static_assert(!test_convertible<std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>>,
                                     std::ranges::ref_view<std::vector<int>>,
                                     std::ptrdiff_t>());
 
-    std::ranges::chunk_view<input_span<int>> chunked(std::ranges::ref_view(vector), 3);
+    std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>> chunked(std::ranges::ref_view(vector), 3);
     assert(std::ranges::equal(*chunked.begin(), std::vector{1, 2, 3}));
   }
 
