@@ -2794,7 +2794,8 @@ fn -> other_fn -> other_fn ; fn is norecurse
     optimizations that require assumptions about the floating-point rounding
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
-    not introduce any new floating-point instructions that may trap.
+    not introduce any new floating-point instructions that may trap. All
+    function definitions that contain strictfp calls must be marked strictfp.
 
 (denormal_fpenv)=
 
@@ -4014,6 +4015,10 @@ The LLVM IR does not define any way to start parallel threads of
 execution or to register signal handlers. Nonetheless, there are
 platform-specific ways to create them, and we define LLVM IR's behavior
 in their presence. This model is inspired by the C++ memory model.
+The memory model is defined axiomatically: we consider a set of candidate
+executions where every read can (in principle) read from every write
+to the same location (including "later" writes), and provide constraints that
+reduce this candidate set to the set of actually valid executions.
 
 For a more informal introduction to this model, see the {doc}`Atomics`.
 
@@ -11710,7 +11715,7 @@ behavior.
 
 ```
 <result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.load !<empty_node>][, !invariant.group !<empty_node>][, !nonnull !<empty_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>][, !noundef !<empty_node>]
-<result> = load atomic [volatile] <ty>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>]
+<result> = load atomic [volatile] [elementwise] <ty>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>]
 !<nontemp_node> = !{ i32 1 }
 !<empty_node> = !{}
 !<deref_bytes_node> = !{ i64 <dereferenceable_bytes> }
@@ -11734,14 +11739,24 @@ If the `load` is marked as `atomic`, it takes an extra {ref}`ordering <ordering>
 `release` and `acq_rel` orderings are not valid on `load` instructions.
 Atomic loads produce {ref}`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer,
-floating-point, or vector type whose bit width is a power of two greater than
-or equal to eight. `align` must be
-explicitly specified on atomic loads. Note: if the alignment is not greater or
-equal to the size of the `<value>` type, the atomic operation is likely to
-require a lock and have poor performance. `!nontemporal` does not have any
-defined semantics for atomic loads.
+floating-point, or vector type whose bit width is a power of two greater than or
+equal to eight.
 
-The optional constant `align` argument specifies the alignment of the
+If the `elementwise` modifier is present, the loaded type must be a fixed
+vector type whose total bit width is a power of two greater than or equal to
+eight, and whose element type is supported by scalar atomic loads. The load has
+per-element atomic load semantics: it behaves as if it were expanded into
+one scalar atomic load per element, and the element loads are not ordered with
+respect to each other. Without `elementwise`, vector atomic loads keep
+whole-value atomic semantics. That is, the entire vector is loaded atomically.
+
+`align` must be explicitly specified on atomic loads, and is otherwise
+optional on non-atomic loads. Note: if the alignment is not greater than or equal
+to the size of the `<ty>` type, or the element type for an `elementwise` load,
+the atomic operation is likely to require a lock and have poor performance.
+`!nontemporal` does not have any defined semantics for atomic loads.
+
+The constant `align` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). It is the
 responsibility of the code emitter to ensure that the alignment information is
 correct. Overestimating the alignment results in undefined behavior.
@@ -13392,7 +13407,8 @@ values indicating the condition, and two values of the same {ref}`first class <t
 
 If the condition is an i1 and it evaluates to 1, the instruction returns
 the first value argument; otherwise, it returns the second value
-argument.
+argument. If the condition evaluates to `poison`, the instruction returns `poison`.
+If it evaluates to `undef`, the result is an `undef` representing the union of two value arguments (i.e., each use of this value can pick either value argument).
 
 If the condition is a vector of i1, then the value arguments must be
 vectors of the same size, and the selection is done element by element.
@@ -21334,6 +21350,11 @@ type and first argument.
   - FP6 formats: `"Float6E3M2FN"`, `"Float6E2M3FN"`
   - FP4 formats: `"Float4E2M1FN"`
 
+  The bit width of the integer return type must equal the bit width of the
+  selected format, for example `i8` for an FP8 format, `i6` for an FP6 format,
+  and `i4` for an FP4 format. For vector operands this applies to the integer
+  element type.
+
 `rounding mode`
 :   A metadata string specifying the rounding mode. The permitted strings match those
   accepted by `llvm.fptrunc.round` (for example,
@@ -21362,7 +21383,8 @@ saturation behavior. The conversion is performed in two steps: first, the value 
 rounded according to the specified rounding mode to fit the target format's precision;
 then, if the rounded result exceeds the target format's representable range, saturation
 is applied according to the `saturation` parameter. The result is returned as an
-integer (e.g., `i8` for FP8, `i6` for FP6) containing the encoded arbitrary FP bits.
+integer whose bit width equals the format's bit width (`i8` for FP8, `i6` for FP6,
+`i4` for FP4) containing the encoded arbitrary FP bits.
 
 **Handling of special values:**
 
@@ -21412,7 +21434,10 @@ overloaded on both its return type and first argument.
 ##### Arguments:
 
 `value`
-:   An integer value containing the arbitrary FP bits (e.g., `i8` for FP8, `i6` for FP6).
+:   An integer value containing the arbitrary FP bits. Its bit width must equal the
+  bit width of the format selected by `interpretation`, for example `i8` for an FP8
+  format, `i6` for an FP6 format, and `i4` for an FP4 format. For vector operands
+  this applies to the integer element type.
 
 `interpretation`
 :   A metadata string describing the source arbitrary FP format. Supported format names include:
@@ -26562,9 +26587,6 @@ All function *calls* done in a function that uses constrained floating
 point intrinsics must have the `strictfp` attribute either on the
 calling instruction or on the declaration or definition of the function
 being called.
-
-All function *definitions* that use constrained floating point intrinsics
-must have the `strictfp` attribute.
 
 #### '`llvm.experimental.constrained.fadd`' Intrinsic
 

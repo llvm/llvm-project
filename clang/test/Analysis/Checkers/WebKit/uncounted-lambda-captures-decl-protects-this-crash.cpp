@@ -28,9 +28,9 @@ struct Obj {
 
   void foo(Foo foo) {
     bar([this](auto baz) {
-      // expected-warning@-1{{Captured variable 'this' is a raw pointer to ref-countable type 'Obj' [webkit.UncountedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Captured variable 'this' is a raw pointer to RefPtr-capable type 'Obj' [webkit.UncountedLambdaCapturesChecker]}}
       bar([this, foo = *baz, foo2 = !baz](auto&&) {
-        // expected-warning@-1{{Captured variable 'this' is a raw pointer to ref-countable type 'Obj' [webkit.UncountedLambdaCapturesChecker]}}
+        // expected-warning@-1{{Captured variable 'this' is a raw pointer to RefPtr-capable type 'Obj' [webkit.UncountedLambdaCapturesChecker]}}
         someFunction();
       });
     });

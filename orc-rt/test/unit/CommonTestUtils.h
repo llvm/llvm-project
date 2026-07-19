@@ -21,19 +21,44 @@
 #include <cstddef>
 #include <cstdint>
 #include <future>
+#include <string>
+#include <vector>
+
+#include "gtest/gtest.h"
 
 inline void noErrors(orc_rt::Error Err) { orc_rt::cantFail(std::move(Err)); }
+
+/// ReportError callback for tests that records the message of every reported
+/// error, in the order reported.
+class AccumulateErrors {
+public:
+  AccumulateErrors(std::vector<std::string> &ErrMsgs) : ErrMsgs(ErrMsgs) {}
+
+  void operator()(orc_rt::Error Err) {
+    ErrMsgs.push_back(orc_rt::toString(std::move(Err)));
+  }
+
+private:
+  std::vector<std::string> &ErrMsgs;
+};
 
 inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
   return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384);
 }
 
 /// RunWrapperCall callback for tests that should never dispatch a wrapper
-/// call. Asserts on invocation.
-inline void noDispatch(orc_rt_SessionRef, uint64_t,
-                       orc_rt_WrapperFunctionReturn, orc_rt_WrapperFunction,
-                       orc_rt::WrapperFunctionBuffer) {
-  assert(false && "strictly no dispatching!");
+/// call. Records a test failure on invocation, then completes the call with an
+/// out-of-band error so that any caller awaiting the result unblocks and fails
+/// too (rather than hanging), even in -Asserts builds or when the dispatch
+/// arrives on a non-test thread.
+inline void noDispatch(orc_rt_SessionRef S, uint64_t CallId,
+                       orc_rt_WrapperFunctionReturn Return,
+                       orc_rt_WrapperFunction, orc_rt::WrapperFunctionBuffer) {
+  ADD_FAILURE() << "unexpected wrapper-call dispatch in a no-dispatch session";
+  Return(S, CallId,
+         orc_rt::WrapperFunctionBuffer::createOutOfBandError(
+             "unexpected wrapper-call dispatch in a no-dispatch session")
+             .release());
 }
 
 template <size_t Idx = 0> class OpCounter {

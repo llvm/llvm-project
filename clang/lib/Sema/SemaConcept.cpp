@@ -276,6 +276,31 @@ public:
       return false;
     return true;
   }
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+    NonTypeTemplateParmDecl *NTTP =
+        dyn_cast<NonTypeTemplateParmDecl>(E->getDecl());
+    if (!NTTP)
+      return inherited::TransformDeclRefExpr(E);
+
+    assert(E->getTemplateArgs() == nullptr &&
+           "Template arguments for NTTP decl?");
+    auto *TSI = inherited::TransformType(NTTP->getTypeSourceInfo());
+    if (!TSI)
+      return ExprError();
+
+    auto *D = NonTypeTemplateParmDecl::Create(
+        SemaRef.getASTContext(), NTTP->getDeclContext(),
+        NTTP->getInnerLocStart(), NTTP->getLocation(),
+        NTTP->getDepth() + TemplateDepth, NTTP->getPosition(),
+        NTTP->getIdentifier(), TSI->getType(), NTTP->isParameterPack(), TSI);
+
+    return DeclRefExpr::Create(
+        SemaRef.getASTContext(), E->getQualifierLoc(),
+        E->getTemplateKeywordLoc(), D, E->refersToEnclosingVariableOrCapture(),
+        E->getNameInfo(), TSI->getType(), E->getValueKind(), D,
+        /*TemplateArgs=*/nullptr, E->isNonOdrUse());
+  }
 };
 } // namespace
 

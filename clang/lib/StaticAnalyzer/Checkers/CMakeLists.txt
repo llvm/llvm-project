@@ -93,6 +93,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   PointerSubChecker.cpp
   PthreadLockChecker.cpp
   PutenvStackArrayChecker.cpp
+  ReportDanglingPtrDeref.cpp
   RetainCountChecker/RetainCountChecker.cpp
   RetainCountChecker/RetainCountDiagnostics.cpp
   ReturnPointerRangeChecker.cpp

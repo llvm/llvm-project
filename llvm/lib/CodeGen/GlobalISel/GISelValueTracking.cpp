@@ -398,6 +398,38 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = KnownBits::mulhs(Known, Known2);
     break;
   }
+  case TargetOpcode::G_UAVGFLOOR: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::avgFloorU(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_UAVGCEIL: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::avgCeilU(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_SAVGFLOOR: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::avgFloorS(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_SAVGCEIL: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::avgCeilS(Known, Known2);
+    break;
+  }
   case TargetOpcode::G_ABDU: {
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
                          Depth + 1);
@@ -623,8 +655,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_ROTL:
   case TargetOpcode::G_ROTR: {
-    MachineInstr *AmtOpMI = MRI.getVRegDef(MI.getOperand(2).getReg());
-    auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
+    auto MaybeAmtOp =
+        isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
     if (!MaybeAmtOp)
       break;
 
@@ -643,8 +675,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_FSHL:
   case TargetOpcode::G_FSHR: {
-    MachineInstr *AmtOpMI = MRI.getVRegDef(MI.getOperand(3).getReg());
-    auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
+    auto MaybeAmtOp =
+        isConstantOrConstantSplatVector(MI.getOperand(3).getReg(), MRI);
     if (!MaybeAmtOp)
       break;
 

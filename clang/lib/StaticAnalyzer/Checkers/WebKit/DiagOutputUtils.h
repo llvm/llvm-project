@@ -10,7 +10,10 @@
 #define LLVM_CLANG_ANALYZER_WEBKIT_DIAGPRINTUTILS_H
 
 #include "ASTUtils.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {

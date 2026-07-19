@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s 2>&1 | FileCheck --check-prefixes=ERR %s
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa < %s 2>&1 | FileCheck --check-prefixes=ERR %s
 
 ; ERR: error: xnack setting of 'func2' function does not match module xnack setting
 

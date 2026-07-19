@@ -3106,24 +3106,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::EXTRACT_SUBVECTOR:
   case RISCVISD::TUPLE_EXTRACT: {
+    if (Subtarget->hasStdExtP())
+      break;
+
     SDValue V = Node->getOperand(0);
     auto Idx = Node->getConstantOperandVal(1);
     MVT InVT = V.getSimpleValueType();
-
-    // Handle P-extension extract_subvector for v2i16 from v4i16 and v4i8 from
-    // v8i8
-    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit() &&
-        ((InVT == MVT::v4i16 && VT == MVT::v2i16) ||
-         (InVT == MVT::v8i8 && VT == MVT::v4i8))) {
-      unsigned NumElts = VT.getVectorNumElements();
-      if (Idx != 0 && Idx != NumElts)
-        break;
-
-      unsigned SubRegIdx = Idx == 0 ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
-      SDValue Extract = CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, V);
-      ReplaceNode(Node, Extract.getNode());
-      return;
-    }
 
     SDLoc DL(V);
 
@@ -3581,6 +3569,77 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, VT);
   return true;
+}
+
+/// Similar to SelectAddrRegImm, except that the offset is a 26-bit signed
+/// immediate. This is used by the Qualcomm Xqcilo large offset load/store
+/// instructions (qc.e.lw/qc.e.sw), whose offset field is 26 bits wide.
+/// Only matches offsets that do not fit a 12-bit signed immediate, so that
+/// offsets in the simm12 range keep using the shorter (and possibly
+/// compressible) standard load/store instructions.
+bool RISCVDAGToDAGISel::SelectAddrRegImm26(SDValue Addr, SDValue &Base,
+                                           SDValue &Offset) {
+
+  if (SelectAddrFrameIndex(Addr, Base, Offset))
+    return true;
+
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    // Fold a 26-bit (but not 12-bit) signed offset directly into the
+    // load/store.
+    if (isInt<26>(CVal) && !isInt<12>(CVal)) {
+      Base = Addr.getOperand(0);
+      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+      Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
+      return true;
+    }
+  }
+
+  // The offset is just outside the 26-bit range. Split off a small (simm12)
+  // adjustment with a plain ADDI and fold the remaining 26-bit offset into the
+  // load/store. A plain ADDI is used (rather than the wide
+  // qc.e.addi/qc.e.addai) because the adjustment fits simm12: this keeps it a
+  // short, compressible (c.addi) instruction and is available without Xqcilia.
+  //
+  // Skip the split if the address is used other than as a foldable load/store
+  // base. `isWorthFoldingAdd()` returns true when every user of the add node is
+  // a scalar load/store using it as an address operand. If it return false, it
+  // means that some use consumes the add result as a value (e.g. it feeds
+  // another add, is a stored value, is used in arithmetic) and that use forces
+  // the add to be materialized into a register.
+  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1)) &&
+      isWorthFoldingAdd(Addr)) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (!isInt<26>(CVal)) {
+      // check if lw in lui + add + lw combination can be compressed.
+      // The check here purely based on the immediate value and hopes that
+      // register allocator would assign a register from a GPRC set so that the
+      // instruction can get compressed.
+      bool IsLwCompressable = isShiftedUInt<5, 2>(CVal & ((1 << 12) - 1));
+
+      int64_t Imm26 = CVal < 0 ? minIntN(26) : maxIntN(26);
+      int64_t Adj = CVal - Imm26;
+      // If Adj fits within 6-bits, then both combinations will take 8 bytes
+      // however c.addi + qc.e.lw/sw will take 1 less cycle. Also, if lw is not
+      // compressable then both combination would take 10 bytes but again
+      // addi + qc.e.lw/sw will take 1 less cycle.
+      if (isInt<6>(Adj) || (isInt<12>(Adj) && !IsLwCompressable)) {
+        Base = SDValue(CurDAG->getMachineNode(
+                           RISCV::ADDI, DL, VT, Addr.getOperand(0),
+                           CurDAG->getSignedTargetConstant(Adj, DL, VT)),
+                       0);
+        Offset = CurDAG->getSignedTargetConstant(Imm26, DL, VT);
+        return true;
+      }
+    }
+  }
+
+  // Don't match: let the standard addressing modes handle it.
+  return false;
 }
 
 /// Similar to SelectAddrRegImm, except that the offset is restricted to uimm9.
