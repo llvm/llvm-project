@@ -109,11 +109,15 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
   return Intrinsic::not_intrinsic;
 }
 
-/// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
-/// Returns an optional pair, where the first element indicates whether it is
-/// an intrinsic ID.
+/// Return the instruction opcode for the recipe defining \p V or 0 for
+/// unsupported recipes and VPValues not defined by a recipe.
+unsigned getOpcode(const VPValue *V);
+
+/// Get the instruction opcode or intrinsic ID for the recipe defining \p V.
+/// Returns an optional pair, where the first element indicates whether it is an
+/// intrinsic ID.
 std::optional<std::pair<bool, unsigned>>
-getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R);
+getOpcodeOrIntrinsicID(const VPValue *V);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
