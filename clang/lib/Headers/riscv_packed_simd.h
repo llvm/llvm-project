@@ -134,6 +134,42 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
                                         7);                                    \
   }
 
+#if __riscv_xlen == 64
+#define __packed_narrow_even2(name, rty, ty, sty)                              \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 0, 2);              \
+  }
+#define __packed_narrow_even4(name, rty, ty, sty)                              \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 0, 2, 4, 6);        \
+  }
+#define __packed_narrow_odd2(name, rty, ty, sty, uty)                          \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 1, 3);              \
+  }
+#define __packed_narrow_odd4(name, rty, ty, sty, uty)                          \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 1, 3, 5, 7);        \
+  }
+#else
+#define __packed_narrow_even2(name, rty, ty, sty)                              \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_convertvector(__rs1, rty);                                \
+  }
+#define __packed_narrow_even4(name, rty, ty, sty)                              \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_convertvector(__rs1, rty);                                \
+  }
+#define __packed_narrow_odd2(name, rty, ty, sty, uty)                          \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_convertvector(((uty)__rs1) >> 16, rty);                   \
+  }
+#define __packed_narrow_odd4(name, rty, ty, sty, uty)                          \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_convertvector(((uty)__rs1) >> 8, rty);                    \
+  }
+#endif
+
 /* Packed Reverse: reverse the order of the elements. Lowered to a single
  * rev8/rev16/ppairoe.* by the backend's packed reverse-shuffle handling. */
 #define __packed_reverse2(name, ty)                                            \
@@ -186,6 +222,12 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(rty __rd, ty __rs1,  \
                                                           ty __rs2) {          \
     return builtin(__rd, __rs1, __rs2);                                        \
+  }
+
+#define __packed_reinterpret(name, rty, ty)                                    \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_preinterpret_##name(        \
+      ty __x) {                                                                \
+    return __builtin_bit_cast(rty, __x);                                       \
   }
 
 // clang-format off: macro call sites have no trailing semicolons, which
@@ -479,6 +521,16 @@ __packed_widen_high4(pwcvth_u16x4, uint16x4_t, uint8x4_t)
 __packed_widen_high2(pwcvth_i32x2, int32x2_t, int16x2_t)
 __packed_widen_high2(pwcvth_u32x2, uint32x2_t, uint16x2_t)
 
+/* Packed Narrowing Convert */
+__packed_narrow_even4(pncvt_i8x4, int8x4_t, int16x4_t, int8x8_t)
+__packed_narrow_even4(pncvt_u8x4, uint8x4_t, uint16x4_t, uint8x8_t)
+__packed_narrow_even2(pncvt_i16x2, int16x2_t, int32x2_t, int16x4_t)
+__packed_narrow_even2(pncvt_u16x2, uint16x2_t, uint32x2_t, uint16x4_t)
+__packed_narrow_odd4(pncvth_i8x4, int8x4_t, int16x4_t, int8x8_t, uint16x4_t)
+__packed_narrow_odd4(pncvth_u8x4, uint8x4_t, uint16x4_t, uint8x8_t, uint16x4_t)
+__packed_narrow_odd2(pncvth_i16x2, int16x2_t, int32x2_t, int16x4_t, uint32x2_t)
+__packed_narrow_odd2(pncvth_u16x2, uint16x2_t, uint32x2_t, uint16x4_t, uint32x2_t)
+
 /* Packed Reverse (32-bit) */
 __packed_reverse4(prev_i8x4, int8x4_t)
 __packed_reverse4(prev_u8x4, uint8x4_t)
@@ -599,6 +651,96 @@ __packed_psabs(psabs_i16x2, int16x2_t, __builtin_riscv_psabs_i16x2)
 __packed_psabs(psabs_i8x8, int8x8_t, __builtin_riscv_psabs_i8x8)
 __packed_psabs(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
 
+/* Reinterpret Casts, Packed <-> Scalar (32-bit) */
+__packed_reinterpret(u8x4_u32, uint32_t, uint8x4_t)
+__packed_reinterpret(u16x2_u32, uint32_t, uint16x2_t)
+__packed_reinterpret(i8x4_u32, uint32_t, int8x4_t)
+__packed_reinterpret(i16x2_u32, uint32_t, int16x2_t)
+__packed_reinterpret(u8x4_i32, int32_t, uint8x4_t)
+__packed_reinterpret(u16x2_i32, int32_t, uint16x2_t)
+__packed_reinterpret(i8x4_i32, int32_t, int8x4_t)
+__packed_reinterpret(i16x2_i32, int32_t, int16x2_t)
+__packed_reinterpret(u32_u8x4, uint8x4_t, uint32_t)
+__packed_reinterpret(u32_u16x2, uint16x2_t, uint32_t)
+__packed_reinterpret(u32_i8x4, int8x4_t, uint32_t)
+__packed_reinterpret(u32_i16x2, int16x2_t, uint32_t)
+__packed_reinterpret(i32_u8x4, uint8x4_t, int32_t)
+__packed_reinterpret(i32_u16x2, uint16x2_t, int32_t)
+__packed_reinterpret(i32_i8x4, int8x4_t, int32_t)
+__packed_reinterpret(i32_i16x2, int16x2_t, int32_t)
+
+/* Reinterpret Casts, Packed <-> Scalar (64-bit) */
+__packed_reinterpret(u8x8_u64, uint64_t, uint8x8_t)
+__packed_reinterpret(u16x4_u64, uint64_t, uint16x4_t)
+__packed_reinterpret(u32x2_u64, uint64_t, uint32x2_t)
+__packed_reinterpret(i8x8_u64, uint64_t, int8x8_t)
+__packed_reinterpret(i16x4_u64, uint64_t, int16x4_t)
+__packed_reinterpret(i32x2_u64, uint64_t, int32x2_t)
+__packed_reinterpret(u8x8_i64, int64_t, uint8x8_t)
+__packed_reinterpret(u16x4_i64, int64_t, uint16x4_t)
+__packed_reinterpret(u32x2_i64, int64_t, uint32x2_t)
+__packed_reinterpret(i8x8_i64, int64_t, int8x8_t)
+__packed_reinterpret(i16x4_i64, int64_t, int16x4_t)
+__packed_reinterpret(i32x2_i64, int64_t, int32x2_t)
+__packed_reinterpret(u64_u8x8, uint8x8_t, uint64_t)
+__packed_reinterpret(u64_u16x4, uint16x4_t, uint64_t)
+__packed_reinterpret(u64_u32x2, uint32x2_t, uint64_t)
+__packed_reinterpret(u64_i8x8, int8x8_t, uint64_t)
+__packed_reinterpret(u64_i16x4, int16x4_t, uint64_t)
+__packed_reinterpret(u64_i32x2, int32x2_t, uint64_t)
+__packed_reinterpret(i64_u8x8, uint8x8_t, int64_t)
+__packed_reinterpret(i64_u16x4, uint16x4_t, int64_t)
+__packed_reinterpret(i64_u32x2, uint32x2_t, int64_t)
+__packed_reinterpret(i64_i8x8, int8x8_t, int64_t)
+__packed_reinterpret(i64_i16x4, int16x4_t, int64_t)
+__packed_reinterpret(i64_i32x2, int32x2_t, int64_t)
+
+/* Reinterpret Casts, Packed <-> Packed (32-bit) */
+__packed_reinterpret(i8x4_u8x4, uint8x4_t, int8x4_t)
+__packed_reinterpret(u16x2_u8x4, uint8x4_t, uint16x2_t)
+__packed_reinterpret(i16x2_u8x4, uint8x4_t, int16x2_t)
+__packed_reinterpret(u8x4_i8x4, int8x4_t, uint8x4_t)
+__packed_reinterpret(u16x2_i8x4, int8x4_t, uint16x2_t)
+__packed_reinterpret(i16x2_i8x4, int8x4_t, int16x2_t)
+__packed_reinterpret(u8x4_u16x2, uint16x2_t, uint8x4_t)
+__packed_reinterpret(i8x4_u16x2, uint16x2_t, int8x4_t)
+__packed_reinterpret(i16x2_u16x2, uint16x2_t, int16x2_t)
+__packed_reinterpret(u8x4_i16x2, int16x2_t, uint8x4_t)
+__packed_reinterpret(i8x4_i16x2, int16x2_t, int8x4_t)
+__packed_reinterpret(u16x2_i16x2, int16x2_t, uint16x2_t)
+
+/* Reinterpret Casts, Packed <-> Packed (64-bit) */
+__packed_reinterpret(i8x8_u8x8, uint8x8_t, int8x8_t)
+__packed_reinterpret(u16x4_u8x8, uint8x8_t, uint16x4_t)
+__packed_reinterpret(i16x4_u8x8, uint8x8_t, int16x4_t)
+__packed_reinterpret(u32x2_u8x8, uint8x8_t, uint32x2_t)
+__packed_reinterpret(i32x2_u8x8, uint8x8_t, int32x2_t)
+__packed_reinterpret(u8x8_i8x8, int8x8_t, uint8x8_t)
+__packed_reinterpret(u16x4_i8x8, int8x8_t, uint16x4_t)
+__packed_reinterpret(i16x4_i8x8, int8x8_t, int16x4_t)
+__packed_reinterpret(u32x2_i8x8, int8x8_t, uint32x2_t)
+__packed_reinterpret(i32x2_i8x8, int8x8_t, int32x2_t)
+__packed_reinterpret(u8x8_u16x4, uint16x4_t, uint8x8_t)
+__packed_reinterpret(i8x8_u16x4, uint16x4_t, int8x8_t)
+__packed_reinterpret(i16x4_u16x4, uint16x4_t, int16x4_t)
+__packed_reinterpret(u32x2_u16x4, uint16x4_t, uint32x2_t)
+__packed_reinterpret(i32x2_u16x4, uint16x4_t, int32x2_t)
+__packed_reinterpret(u8x8_i16x4, int16x4_t, uint8x8_t)
+__packed_reinterpret(i8x8_i16x4, int16x4_t, int8x8_t)
+__packed_reinterpret(u16x4_i16x4, int16x4_t, uint16x4_t)
+__packed_reinterpret(u32x2_i16x4, int16x4_t, uint32x2_t)
+__packed_reinterpret(i32x2_i16x4, int16x4_t, int32x2_t)
+__packed_reinterpret(u8x8_u32x2, uint32x2_t, uint8x8_t)
+__packed_reinterpret(i8x8_u32x2, uint32x2_t, int8x8_t)
+__packed_reinterpret(u16x4_u32x2, uint32x2_t, uint16x4_t)
+__packed_reinterpret(i16x4_u32x2, uint32x2_t, int16x4_t)
+__packed_reinterpret(i32x2_u32x2, uint32x2_t, int32x2_t)
+__packed_reinterpret(u8x8_i32x2, int32x2_t, uint8x8_t)
+__packed_reinterpret(i8x8_i32x2, int32x2_t, int8x8_t)
+__packed_reinterpret(u16x4_i32x2, int32x2_t, uint16x4_t)
+__packed_reinterpret(i16x4_i32x2, int32x2_t, int16x4_t)
+__packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
+
 // clang-format on
 
 #undef __packed_splat2
@@ -624,6 +766,10 @@ __packed_psabs(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
 #undef __packed_widen_convert
 #undef __packed_widen_high2
 #undef __packed_widen_high4
+#undef __packed_narrow_even2
+#undef __packed_narrow_even4
+#undef __packed_narrow_odd2
+#undef __packed_narrow_odd4
 #undef __packed_reverse2
 #undef __packed_reverse4
 #undef __packed_reverse8
@@ -635,6 +781,7 @@ __packed_psabs(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
 #undef __packed_unzipo4
 #undef __packed_abdsum
 #undef __packed_abdsum_acc
+#undef __packed_reinterpret
 #undef __DEFAULT_FN_ATTRS
 
 #if defined(__cplusplus)
