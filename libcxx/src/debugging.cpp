@@ -162,7 +162,7 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
   const char* __tokenStr     = "TracerPid:";
   bool __is_debugger_present = false;
 
-  while ((::getline(&__line, &__lineLen, __proc_status_fp)) != -1) {
+  while ((getline(&__line, &__lineLen, __proc_status_fp)) != -1) {
     // If the process is being debugged "TracerPid"'s value is non-zero.
     char* __tokenPos = ::strstr(__line, __tokenStr);
     if (__tokenPos == nullptr) {
