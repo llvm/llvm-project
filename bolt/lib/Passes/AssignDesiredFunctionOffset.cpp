@@ -51,7 +51,7 @@ static BinaryFunction *lookupFunction(BinaryContext &BC, StringRef Name) {
     return nullptr;
   }
   return BC.getFunctionForSymbol(BD->getSymbol());
-};
+}
 
 Error AssignDesiredFunctionOffset::runOnFunctions(BinaryContext &BC) {
   if (opts::FunctionLayoutFile.empty())
