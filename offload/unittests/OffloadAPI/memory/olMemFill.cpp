@@ -184,12 +184,25 @@ TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
   olMemFree(Alloc);
 }
 
-TEST_P(olMemFillTest, InvalidPatternSize) {
+TEST_P(olMemFillTest, InvalidSizeNotMultipleOfPatternSize) {
   constexpr size_t Size = 1025;
   void *Alloc;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   uint16_t Pattern = 0x4242;
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+               olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
+
+  olSyncQueue(Queue);
+  olMemFree(Alloc);
+}
+
+TEST_P(olMemFillTest, InvalidPatternSizeLargerThanFillSize) {
+  constexpr size_t Size = 4;
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+
+  uint64_t Pattern = 0x4242424242424242;
   ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
                olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
 
