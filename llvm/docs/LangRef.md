@@ -11986,7 +11986,7 @@ store i32 3, ptr %ptr                           ; yields void
 
 ```
 store [volatile] <ty> <value>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.group !<empty_node>]        ; yields void
-store atomic [volatile] <ty> <value>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>] ; yields void
+store atomic [volatile] [elementwise] <ty> <value>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>] ; yields void
 !<nontemp_node> = !{ i32 1 }
 !<empty_node> = !{}
 ```
@@ -12004,16 +12004,25 @@ operand. If the `store` is marked as `volatile`, then the optimizer is not
 allowed to modify the number or order of execution of this `store` with other
 {ref}`volatile operations <volatile>`.  Only values of {ref}`first class <t_firstclass>` types of known size (i.e., not containing an {ref}`opaque structural type <t_opaque>`) can be stored.
 
-If the `store` is marked as `atomic`, it takes an extra {ref}`ordering <ordering>` and optional `syncscope("<target-scope>")` argument. The
-`acquire` and `acq_rel` orderings aren't valid on `store` instructions.
-Atomic loads produce {ref}`defined <memmodel>` results when they may see
-multiple atomic stores. The type of the pointee must be an integer, pointer,
+If the `store` is marked as `atomic`, it takes an extra
+{ref}`ordering <ordering>` and optional `syncscope("<target-scope>")`
+argument. The `acquire` and `acq_rel` orderings are not valid on `store`
+instructions. The type of the stored value must be an integer, pointer,
 floating-point, or vector type whose bit width is a power of two greater than
-or equal to eight. `align` must be
-explicitly specified on atomic stores. Note: if the alignment is not greater or
-equal to the size of the `<value>` type, the atomic operation is likely to
-require a lock and have poor performance. `!nontemporal` does not have any
-defined semantics for atomic stores.
+or equal to eight.
+
+If the `elementwise` modifier is present, the instruction has
+{ref}`elementwise atomic semantics <elementwise-atomics>`. The stored value
+must have a fixed vector type whose total bit width is a power of two greater
+than or equal to eight, and whose element type is supported by scalar atomic
+stores.
+
+`align` must be explicitly specified on atomic stores, and is otherwise
+optional on non-atomic stores. Note: if the alignment is not greater than or
+equal to the size of the `<value>` type, or the element type for an
+`elementwise` store, the atomic operation is likely to require a lock and have
+poor performance. `!nontemporal` does not have any defined semantics for
+atomic stores.
 
 The optional constant `align` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). It is the
