@@ -30834,6 +30834,30 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return NVCAST;
 }
 
+static bool isDeinterleave4ForWideningUToFP(SDNode *N) {
+  if (N->getNumOperands() != 4)
+    return false;
+
+  if (N->getValueType(0).isScalableVector())
+    return false;
+  SmallVector<SDNode *, 4> Users(4, nullptr);
+  for (SDUse &Use : N->uses()) {
+    unsigned ResNo = Use.getResNo();
+    SDNode *User = Use.getUser();
+    if (Users[ResNo])
+      return false; // return if more than 1 uses
+    if (User->getOpcode() != ISD::UINT_TO_FP)
+      return false;
+    unsigned InBits = N->getValueType(ResNo).getScalarSizeInBits();
+    unsigned OutBits = User->getValueType(0).getScalarSizeInBits();
+    if (OutBits != InBits * 4)
+      return false;
+    Users[ResNo] = User;
+  }
+
+  return llvm::all_of(Users, [](SDNode *User) { return User != nullptr; });
+}
+
 static SDValue performVectorDeinterleaveCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
   if (!DCI.isBeforeLegalize())
@@ -30872,6 +30896,12 @@ static SDValue performVectorDeinterleaveCombine(
 
   SDValue WideVec = Op0->getOperand(0);
   SDLoc DL(N);
+
+  // A fixed-length factor-4 deinterleave whose results are only used by
+  // 4x widening unsigned-to-float conversions can be lowered more efficiently
+  // using shifts and masks on the original loaded vectors.
+  if (isDeinterleave4ForWideningUToFP(N))
+    return SDValue();
 
   SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
   ResVTs.push_back(MVT::Other);
