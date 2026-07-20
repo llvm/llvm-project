@@ -3911,131 +3911,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::TaskReduction &x) {
   CheckReductionObjects(objects, llvm::omp::Clause::OMPC_task_reduction);
 }
 
-// Compute the mangled reduction name to look up in a reduction's source module.
-// If the operator was renamed on import (e.g. USE m, ONLY: operator(.local.) =>
-// operator(.remote.)), the local mangled name will not match in the source
-// module; re-derive the lookup name from the source operator's ultimate name.
-// Only defined operators can be renamed (intrinsic operators and named
-// reductions cannot), so a detected rename always has a ".op." source name.
-// For non-renamed lookups the original mangled name is returned unchanged.
-static std::string SourceReductionName(const parser::CharBlock &mangledName,
-    const parser::CharBlock &localName, const parser::CharBlock &sourceName) {
-  if (sourceName != localName && sourceName.size() >= 3 &&
-      sourceName.front() == '.' && sourceName.back() == '.') {
-    return MangleDefinedOperator(sourceName);
-  }
-  return mangledName.ToString();
-}
-
-// Return the reduction details of `symbol` if it is a user reduction that
-// supports `type` (any type when `type` is null).
-static const UserReductionDetails *AcceptReduction(
-    const Symbol &symbol, const DeclTypeSpec *type) {
-  const auto *details{symbol.GetUltimate().detailsIf<UserReductionDetails>()};
-  if (details && (!type || details->SupportsType(*type))) {
-    return details;
-  }
-  return nullptr;
-}
-
-// A reduction symbol is locally declared (authoritative) when it is not reached
-// through any USE association, even via host association. Such a reduction
-// shadows reductions imported or reachable through its operator.
-static bool IsLocalReduction(const Symbol &symbol) {
-  const Symbol *s{&symbol};
-  while (const auto *host{s->detailsIf<HostAssocDetails>()}) {
-    s = &host->symbol();
-  }
-  return !s->detailsIf<UseDetails>();
-}
-
-// Search for a user reduction supporting `type` by following the operator/
-// procedure symbol `opSym` through its USE associations and merged generic
-// sources. Each module the operator passes through is checked for a (possibly
-// renamed) reduction; `localName` is the operator name written at the use site,
-// used to detect renames. A locally declared reduction in a module is
-// authoritative: it is returned if it supports the type, otherwise it shadows
-// reductions reachable further along that branch.
-static const UserReductionDetails *SearchOperatorReduction(const Symbol &opSym,
-    const parser::CharBlock &mangledName, const parser::CharBlock &localName,
-    const DeclTypeSpec *type, llvm::SmallPtrSetImpl<const Symbol *> &visited) {
-  if (!visited.insert(&opSym).second) {
-    return nullptr;
-  }
-  const Scope &scope{opSym.owner()};
-  if (scope.kind() == Scope::Kind::Module) {
-    std::string lookupName{
-        SourceReductionName(mangledName, localName, opSym.name())};
-    auto it{scope.find(parser::CharBlock{lookupName})};
-    if (it != scope.end()) {
-      const Symbol &reductionSym{*it->second};
-      const Symbol &reductionUltimate{reductionSym.GetUltimate()};
-      if (!reductionUltimate.attrs().test(Attr::PRIVATE)) {
-        if (const auto *details{AcceptReduction(reductionUltimate, type)}) {
-          return details;
-        }
-        // A locally declared reduction here shadows reductions reachable
-        // further along this branch.
-        if (reductionUltimate.detailsIf<UserReductionDetails>() &&
-            IsLocalReduction(reductionSym)) {
-          return nullptr;
-        }
-      }
-    }
-  }
-  // Follow a USE-associated operator to the module it was imported from.
-  if (const auto *use{opSym.detailsIf<UseDetails>()}) {
-    return SearchOperatorReduction(
-        use->symbol(), mangledName, localName, type, visited);
-  }
-  // Search each module merged into a generic operator (recursing through
-  // re-exporting facade modules).
-  if (const auto *generic{opSym.detailsIf<GenericDetails>()}) {
-    for (const Symbol &useSym : generic->uses()) {
-      if (const auto *details{SearchOperatorReduction(
-              useSym, mangledName, localName, type, visited)}) {
-        return details;
-      }
-    }
-  }
-  return nullptr;
-}
-
-// Find user reduction details for a mangled name, following USE associations
-// when the reduction is not directly visible in the scope. A type may be
-// supplied to disambiguate an operator that carries reductions for several
-// types (e.g. a generic merged from multiple modules); a candidate is accepted
-// only if it supports that type. A locally declared reduction is authoritative
-// for its operator in its scope and shadows USE-associated reductions.
-static const UserReductionDetails *FindUserReduction(const Scope &scope,
-    const parser::CharBlock &mangledName, const DeclTypeSpec *type = nullptr) {
-  // Direct lookup: a reduction directly visible via bare USE or a local
-  // declaration.
-  const Symbol *directSymbol{scope.FindSymbol(mangledName)};
-  if (directSymbol) {
-    if (const auto *details{AcceptReduction(*directSymbol, type)}) {
-      return details;
-    }
-    // A locally declared reduction that does not support the requested type is
-    // authoritative: it shadows USE-associated reductions (ProcessReduction-
-    // Specifier erases the latter), so do not resurrect them via the operator.
-    if (directSymbol->GetUltimate().detailsIf<UserReductionDetails>() &&
-        IsLocalReduction(*directSymbol)) {
-      return nullptr;
-    }
-  }
-  // Trace the operator/procedure to the modules that declare its reduction.
-  std::string fortranName{GetReductionFortranId(mangledName)};
-  const Symbol *opSymbol{
-      fortranName.empty() ? nullptr : scope.FindSymbol(fortranName)};
-  if (!opSymbol) {
-    return nullptr;
-  }
-  llvm::SmallPtrSet<const Symbol *, 8> visited;
-  return SearchOperatorReduction(
-      *opSymbol, mangledName, opSymbol->name(), type, visited);
-}
-
 bool OmpStructureChecker::CheckReductionOperator(
     const parser::OmpReductionIdentifier &ident, parser::CharBlock source,
     llvm::omp::Clause clauseId) {
@@ -4066,12 +3941,12 @@ bool OmpStructureChecker::CheckReductionOperator(
     if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
       std::string mangled{MangleDefinedOperator(definedOp->v.symbol->name())};
       // Look up the user-defined reduction in the scope where the clause
-      // appears (FindUserReduction searches enclosing scopes for host
+      // appears (FindUserReductionSymbol searches enclosing scopes for host
       // association), not in the scope where the operator itself is declared:
       // the DECLARE REDUCTION may be local to a procedure that host-associates
       // the operator from an enclosing module or program unit.
       const Scope &scope{context_.FindScope(source)};
-      if (FindUserReduction(scope, mangled)) {
+      if (omp::FindUserReductionSymbol(scope, mangled)) {
         return true;
       }
     }
@@ -4159,9 +4034,62 @@ void OmpStructureChecker::CheckReductionObjects(
 
 static bool CheckSymbolSupportsType(const Scope &scope,
     const parser::CharBlock &name, const DeclTypeSpec &type) {
-  // FindUserReduction only returns a reduction that supports the requested
-  // type.
-  return FindUserReduction(scope, name, &type) != nullptr;
+  // FindUserReductionSymbol only returns a reduction that supports the
+  // requested type.
+  return omp::FindUserReductionSymbol(scope, name, &type) != nullptr;
+}
+
+// Compute the mangled reduction symbol name for a reduction identifier (a
+// defined or intrinsic operator, or a special function / named reduction), so a
+// declared reduction can be looked up. A defined operator mangles to a
+// dynamically built name kept alive in `buffer`; the other kinds return a
+// pointer to stable storage.
+static std::optional<parser::CharBlock> MangledReductionIdentifier(
+    const parser::OmpReductionIdentifier &ident, SemanticsContext &context,
+    std::string &buffer) {
+  return common::visit(
+      common::visitors{
+          [&](const parser::DefinedOperator &dOpr)
+              -> std::optional<parser::CharBlock> {
+            if (const auto *intrinsicOp{
+                    std::get_if<parser::DefinedOperator::IntrinsicOperator>(
+                        &dOpr.u)}) {
+              return MakeNameFromOperator(*intrinsicOp, context);
+            }
+            if (const auto *definedOp{
+                    std::get_if<parser::DefinedOpName>(&dOpr.u)};
+                definedOp && definedOp->v.symbol) {
+              buffer = MangleDefinedOperator(definedOp->v.symbol->name());
+              return parser::CharBlock{buffer};
+            }
+            return std::nullopt;
+          },
+          [&](const parser::ProcedureDesignator &procD)
+              -> std::optional<parser::CharBlock> {
+            if (const auto *name{std::get_if<parser::Name>(&procD.u)}) {
+              return MangleSpecialFunctions(name->source);
+            }
+            return std::nullopt;
+          },
+      },
+      ident.u);
+}
+
+// Diagnose a reduction whose identifier resolves to more than one distinct
+// user-defined reduction for `type` (e.g. an operator merged from two modules
+// that each declare a reduction for the type, or a mangled reduction name that
+// collides across modules). Without this the resolver would silently pick one
+// by USE order.
+static bool IsAmbiguousUserReduction(
+    const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type,
+    const Scope &scope, SemanticsContext &context) {
+  std::string buffer;
+  if (auto mangled{MangledReductionIdentifier(ident, context, buffer)}) {
+    bool ambiguous{false};
+    omp::FindUserReductionSymbol(scope, *mangled, &type, &ambiguous);
+    return ambiguous;
+  }
+  return false;
 }
 
 static bool IsReductionAllowedForType(
@@ -4289,6 +4217,10 @@ void OmpStructureChecker::CheckReductionObjectTypes(
               ident, *type, cannotBeBuiltinReduction, scope, context_)) {
         context_.Say(source,
             "The type of '%s' is incompatible with the reduction operator."_err_en_US,
+            symbol->name());
+      } else if (IsAmbiguousUserReduction(ident, *type, scope, context_)) {
+        context_.Say(source,
+            "The reduction for '%s' is ambiguous: more than one user-defined reduction for its type is accessible."_err_en_US,
             symbol->name());
       }
     } else {

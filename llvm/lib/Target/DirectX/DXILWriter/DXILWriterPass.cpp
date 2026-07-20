@@ -37,7 +37,12 @@ using namespace llvm;
 using namespace llvm::dxil;
 
 extern cl::opt<bool> EmbedDebug;
-extern cl::opt<std::string> PdbDebugPath;
+extern cl::opt<bool> StripDebug;
+cl::opt<std::string> PdbDebugPath(
+    "dx-pdb-path",
+    cl::desc("Write debug information to the given file, or automatically "
+             "named file in directory when ending in '/'"),
+    cl::value_desc("filename"));
 cl::opt<bool> SourceInDebugModule(
     "dx-source-in-debug-module",
     cl::desc("Embed source code into debug module on DirectX target"),
@@ -237,9 +242,12 @@ public:
 
     bool HasDebugInfo = !M.debug_compile_units().empty();
 
-    // Enable EmbedDebug if there is debug info, but it is not being written
-    // to a PDB file.
-    if (HasDebugInfo && !EmbedDebug && PdbDebugPath.empty())
+    // If both StripDebug and EmbedDebug are specified, StripDebug is ignored.
+    if (StripDebug && EmbedDebug)
+      StripDebug = false;
+    // Enable EmbedDebug if there is debug info, but it is not being stripped
+    // or written to a PDB file.
+    if (HasDebugInfo && !StripDebug && !EmbedDebug && PdbDebugPath.empty())
       EmbedDebug = true;
     if (!HasDebugInfo && EmbedDebug)
       reportFatalUsageError(

@@ -274,7 +274,7 @@ public:
     Return(addSync(X, Y));
   }
 };
-} // anonymous namespace
+} // namespace
 
 static void adder_add_async_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
                                         orc_rt_WrapperFunctionReturn Return,

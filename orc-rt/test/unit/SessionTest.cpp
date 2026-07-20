@@ -130,7 +130,7 @@ public:
     notifyDisconnected();
   }
 
-  void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturnFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) override {
     // Simulate a call to the controller by running the requested function via
     // the test-supplied Post hook (or inline, if no hook was provided).
@@ -163,7 +163,7 @@ public:
   void sendWrapperResult(uint64_t CallId,
                          WrapperFunctionBuffer ResultBytes) override {
     // Respond to a simulated call by the controller.
-    OnCallHandlerCompleteFn OnComplete;
+    OnControllerCallReturnFn OnComplete;
     {
       std::scoped_lock<std::mutex> Lock(M);
       if (Shutdown) {
@@ -192,7 +192,7 @@ public:
       ShutdownCV.notify_all();
   }
 
-  void callFromController(OnCallHandlerCompleteFn OnComplete,
+  void callFromController(OnControllerCallReturnFn OnComplete,
                           orc_rt_WrapperFunction Fn,
                           WrapperFunctionBuffer ArgBytes) {
     size_t CId = 0;
@@ -263,7 +263,7 @@ private:
   bool Shutdown = false;
   size_t Outstanding = 0;
   size_t CallId = 0;
-  std::unordered_map<size_t, OnCallHandlerCompleteFn> Pending;
+  std::unordered_map<size_t, OnControllerCallReturnFn> Pending;
   std::condition_variable ShutdownCV;
   OnConnectFn OnConnect;
 };
@@ -273,7 +273,7 @@ public:
   CallViaMockControllerAccess(MockControllerAccess &CA,
                               orc_rt_WrapperFunction Fn)
       : CA(CA), Fn(Fn) {}
-  void operator()(Session::OnCallHandlerCompleteFn OnComplete,
+  void operator()(Session::OnControllerCallReturnFn OnComplete,
                   WrapperFunctionBuffer ArgBytes) {
     CA.callFromController(std::move(OnComplete), Fn, std::move(ArgBytes));
   }
@@ -444,7 +444,7 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
   ASSERT_FALSE(ShutdownOpIdx);
 
   // Take a managed code call token. This should succeed.
-  auto Tok = TaskGroup::Token(S.managedCodeTaskGroup());
+  auto Tok = TaskGroup::Token(S.managedCodeTokenSource());
   ASSERT_TRUE(Tok);
 
   // We expect shutdown to wait for any active managed calls to complete.
@@ -458,7 +458,7 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
 
   // The managed calls code group should have been closed. Assert that we
   // can't get a new token.
-  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTaskGroup()));
+  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTokenSource()));
 
   Tok = TaskGroup::Token(); // Reset token.
 
@@ -467,18 +467,17 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
   EXPECT_TRUE(ShutdownComplete);
 }
 
-static void managedSyncVoidFunction(int *P) { *P = 42; }
+static void managedVoidFunction(int *P) { *P = 42; }
 
-TEST(SessionTest, SyncCallManagedCodeVoidFn) {
-  // Test synchronous calls to a void function while holding a
-  // ManagedCodeTaskGroup token.
+TEST(SessionTest, CallManagedCodeVoidFn) {
+  // Test calls to a void function while holding a ManagedCodeTaskGroup token.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 
   {
     // Pre-shutdown we expect token acquisition to succeed and the function to
     // run.
     int X = 0;
-    bool CallSucceeded = S.callManagedCodeSync(managedSyncVoidFunction, &X);
+    bool CallSucceeded = S.callManagedCode(managedVoidFunction, &X);
 
     EXPECT_TRUE(CallSucceeded);
     EXPECT_EQ(X, 42U);
@@ -488,25 +487,25 @@ TEST(SessionTest, SyncCallManagedCodeVoidFn) {
 
   {
     // Post-shutdown we expect token acquisition to fail, and
-    // callManagedCodeSync to return false.
+    // callManagedCode to return false.
     int X = 0;
-    bool CallSucceeded = S.callManagedCodeSync(managedSyncVoidFunction, &X);
+    bool CallSucceeded = S.callManagedCode(managedVoidFunction, &X);
 
     EXPECT_FALSE(CallSucceeded);
   }
 }
 
-static int managedSyncNonVoidFunction(int N) { return N + 1; }
+static int managedNonVoidFunction(int N) { return N + 1; }
 
-TEST(SessionTest, SyncCallManagedCodeNonVoidFn) {
-  // Test synchronous calls to a non-void function while holding a
-  // ManagedCodeTaskGroup token.
+TEST(SessionTest, CallManagedCodeNonVoidFn) {
+  // Test calls to a non-void function while holding a ManagedCodeTaskGroup
+  // token.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 
   {
     // Pre-shutdown we expect token acquisition to succeed, the function to be
     // run, and the result to be returned.
-    auto Result = S.callManagedCodeSync(managedSyncNonVoidFunction, 41);
+    auto Result = S.callManagedCode(managedNonVoidFunction, 41);
 
     EXPECT_TRUE(Result);
     EXPECT_EQ(*Result, 42U);
@@ -516,57 +515,19 @@ TEST(SessionTest, SyncCallManagedCodeNonVoidFn) {
 
   {
     // Post-shutdown we expect token acquisition to fail, and
-    // callManagedCodeSync to return std::nullopt.
-    auto Result = S.callManagedCodeSync(managedSyncNonVoidFunction, 41);
+    // callManagedCode to return std::nullopt.
+    auto Result = S.callManagedCode(managedNonVoidFunction, 41);
 
     EXPECT_EQ(Result, std::nullopt);
   }
 }
 
-static void managedAsyncVoidFunction(move_only_function<void()> Return,
-                                     int *P) {
-  *P = 42;
-  Return();
-}
-
-TEST(SessionTest, AsyncCallManagedCodeVoidFn) {
-  // Test asynchronous calls to a void function while holding a
-  // ManagedCodeTaskGroup token.
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-
-  {
-    // Pre-shutdown we expect token acquisition to succeed, and the function
-    // and Return callback to be run.
-    int X = 0;
-    bool ReturnSucceeded = false;
-    S.callManagedCodeAsync([&](bool B) { ReturnSucceeded = B; },
-                           managedAsyncVoidFunction, &X);
-    EXPECT_TRUE(ReturnSucceeded);
-    EXPECT_EQ(X, 42U);
-  }
-
-  waitForShutdown(S);
-
-  {
-    // Post-shutdown we expect token acquisition to fail. Return should be
-    // with `false` and the function should not be called.
-    int X = 0;
-    bool ReturnSucceeded = false;
-    S.callManagedCodeAsync([&](bool B) { ReturnSucceeded = B; },
-                           managedAsyncVoidFunction, &X);
-    EXPECT_FALSE(ReturnSucceeded);
-    EXPECT_EQ(X, 0U);
-  }
-}
-
-static void managedAsyncNonVoidFunction(move_only_function<void(int)> Return,
-                                        int *P) {
+static void managedAsyncFunction(move_only_function<void(int)> Return, int *P) {
   Return(++*P);
 }
 
-TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
-  // Test asynchronous calls to a non-void function while holding a
-  // ManagedCodeTaskGroup token.
+TEST(SessionTest, CallManagedCodeAsyncFn) {
+  // Test that calls to managed async functions via callManagedCode work.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 
   {
@@ -574,8 +535,7 @@ TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
     // and Return callback to be run.
     int N = 41;
     std::optional<int> Result;
-    S.callManagedCodeAsync([&](std::optional<int> N) { Result = N; },
-                           managedAsyncNonVoidFunction, &N);
+    S.callManagedCode(managedAsyncFunction, [&](int N) { Result = N; }, &N);
     EXPECT_TRUE(Result);
     EXPECT_EQ(*Result, 42U);
     EXPECT_EQ(N, 42U);
@@ -588,58 +548,10 @@ TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
     // with `std::nullopt` and the function should not be called.
     int N = 41;
     std::optional<int> Result;
-    S.callManagedCodeAsync([&](std::optional<int> N) { Result = N; },
-                           managedAsyncNonVoidFunction, &N);
+    S.callManagedCode(managedAsyncFunction, [&](int N) { Result = N; }, &N);
     EXPECT_EQ(Result, std::nullopt);
     EXPECT_EQ(N, 41U);
   }
-}
-
-TEST(SessionTest, AsyncCallManagedCodeHoldsTokenAcrossAsyncGap) {
-  // Verify that the ManagedCodeTaskGroup token is held until the async
-  // continuation runs, not just until callManagedCodeAsync returns. This
-  // ensures shutdown blocks for the duration of the actual async work.
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-
-  size_t OpIdx = 0;
-  std::optional<size_t> DetachOpIdx;
-  std::optional<size_t> ShutdownOpIdx;
-  S.createService<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx);
-
-  // The managed code function stashes its continuation instead of calling it.
-  std::optional<int> Result;
-  move_only_function<void(int)> StashedContinuation;
-  S.callManagedCodeAsync([&](std::optional<int> N) { Result = std::move(N); },
-                         [&](move_only_function<void(int)> Return, int N) {
-                           // Stash the continuation and return without calling
-                           // it.
-                           StashedContinuation = std::move(Return);
-                         },
-                         41);
-
-  // callManagedCodeAsync has returned, but the continuation hasn't been
-  // called yet. The token should still be held inside StashedContinuation.
-  ASSERT_TRUE(StashedContinuation);
-
-  // Request shutdown. It should detach but block on the outstanding token.
-  bool ShutdownComplete = false;
-  S.shutdown([&]() { ShutdownComplete = true; });
-
-  EXPECT_EQ(DetachOpIdx, 0U);
-  EXPECT_FALSE(ShutdownOpIdx);
-  EXPECT_FALSE(ShutdownComplete);
-
-  // Now invoke the stashed continuation and then destroy it, releasing the
-  // token.
-  StashedContinuation(42);
-  StashedContinuation = {};
-
-  // Check result.
-  EXPECT_EQ(Result, 42);
-
-  // Shutdown should now have completed.
-  EXPECT_EQ(ShutdownOpIdx, 1U);
-  EXPECT_TRUE(ShutdownComplete);
 }
 
 TEST(SessionTest, AddServiceAndUseRef) {
