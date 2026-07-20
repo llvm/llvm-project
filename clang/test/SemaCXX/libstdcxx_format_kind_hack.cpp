@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify %s
+// RUN: %clang_cc1 -E -std=c++23 %s -o %t.ii
+// RUN: echo '// expected-no-diagnostics' >> %t.ii
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify %t.ii
 
 // expected-no-diagnostics
 

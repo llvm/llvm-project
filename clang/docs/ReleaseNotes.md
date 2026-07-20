@@ -323,6 +323,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
+  libstdc++15 has been extended to handle the case of the input being preprocessed first (via `-E`) and
+  only then compiled; previously, this would result in the fix not being applied. (#GH160314)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
