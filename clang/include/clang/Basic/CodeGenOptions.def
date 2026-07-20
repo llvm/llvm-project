@@ -539,6 +539,12 @@ CODEGENOPT(DisableOutlining, 1, 0, Benign)
 /// Controlls the emission of function name in PPA1 on z/OS.
 CODEGENOPT(ZOSPPA1Name, 1, 1, Benign)
 
+/// Whether compiler should treat signaling NaNs according to IEEE 754. Use
+/// separate options for positive and negative settings, this allows us to
+/// represent "unspecified" setting.
+CODEGENOPT(SignalingNans, 1, 0, Benign)
+CODEGENOPT(NoSignalingNans, 1, 0, Benign)
+
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
 

@@ -54,6 +54,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* The function attribute "signaling-nans" was added to control the support of
+  signaling NaNs.
+
 ### Changes to LLVM infrastructure
 
 ### Changes to building LLVM

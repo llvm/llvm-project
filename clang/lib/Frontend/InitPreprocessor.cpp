@@ -1346,6 +1346,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   else
     Builder.defineMacro("__FINITE_MATH_ONLY__", "0");
 
+  if (CGOpts.SignalingNans)
+    Builder.defineMacro("__SUPPORT_SNAN__");
+
   if (LangOpts.GNUCVersion) {
     if (LangOpts.GNUInline || LangOpts.CPlusPlus)
       Builder.defineMacro("__GNUC_GNU_INLINE__");

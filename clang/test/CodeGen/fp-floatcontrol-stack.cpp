@@ -7,7 +7,7 @@
   (float z) { return n * z + n; }
 
 // CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
-// CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
+// CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone signaling_nans strictfp{{$$}}
 // CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 // CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 float fun_default FUN(1)
@@ -33,9 +33,9 @@ float fun_default FUN(1)
 #pragma float_control(except, on)
 #endif
     // CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
-    // CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
-    // CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
-    // CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
+    // CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone signaling_nans strictfp{{$$}}
+    // CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone signaling_nans strictfp{{$$}}
+    // CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone signaling_nans strictfp{{$$}}
     float exc_on FUN(2)
 //CHECK-LABEL: define {{.*}} @_Z6exc_onf{{.*}}
 #if DEFAULT
@@ -55,7 +55,7 @@ float fun_default FUN(1)
 
 #pragma float_control(pop)
     // CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
-    // CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
+    // CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone signaling_nans strictfp{{$$}}
     // CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
     // CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
     float exc_pop FUN(5)
@@ -76,7 +76,7 @@ float fun_default FUN(1)
 
 #pragma float_control(except, off)
         float exc_off FUN(5)
-//CHECK-LABEL: define {{.*}} @_Z7exc_offf{{.*}}
+//CHECK-LABEL: define {{.*}} @_Z7exc_offf{{.*}}{
 #if DEFAULT
 //CHECK-DDEFAULT: call float @llvm.fmuladd{{.*}}
 #endif

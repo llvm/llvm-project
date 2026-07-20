@@ -57,6 +57,8 @@ def warn_fe_backend_unsupported_fp_rounding : Warning<
 def warn_fe_backend_unsupported_fp_exceptions : Warning<
     "overriding currently unsupported use of floating point exceptions "
     "on this target">, InGroup<UnsupportedFPOpt>;
+def warn_fe_backend_unsupported_signaling_nans : Warning<
+    "signaling NaNs are unsupported on this target">, InGroup<UnsupportedFPOpt>;
 def warn_fe_backend_invalid_feature_flag : Warning<
     "feature flag '%0' must start with either '+' to enable the feature or '-'"
     " to disable it; flag ignored">, InGroup<InvalidCommandLineArgument>;

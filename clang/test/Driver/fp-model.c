@@ -127,6 +127,7 @@
 // CHECK-FPM-AGGR-SAME: "-freciprocal-math"
 // CHECK-FPM-AGGR-SAME: "-ffp-contract=fast"
 // CHECK-FPM-AGGR-SAME: "-fno-rounding-math"
+// CHECK-FPM-AGGR-SAME: "-fno-signaling-nans"
 // CHECK-FPM-AGGR-SAME: "-ffast-math"
 // CHECK-FPM-AGGR-SAME: "-ffinite-math-only"
 // CHECK-FPM-AGGR-SAME: "-complex-range=basic"
@@ -143,6 +144,7 @@
 // CHECK-FPM-FAST-SAME: "-freciprocal-math"
 // CHECK-FPM-FAST-SAME: "-ffp-contract=fast"
 // CHECK-FPM-FAST-SAME: "-fno-rounding-math"
+// CHECK-FPM-FAST-SAME: "-fno-signaling-nans"
 // CHECK-FPM-FAST-NOT: "-ffast-math"
 // CHECK-FPM-FAST-NOT: "-ffinite-math-only"
 // CHECK-FPM-FAST-SAME: "-complex-range=promoted"
@@ -152,12 +154,14 @@
 // CHECK-FPM-PRECISE: "-cc1"
 // CHECK-FPM-PRECISE-SAME: "-ffp-contract=on"
 // CHECK-FPM-PRECISE-SAME: "-fno-rounding-math"
+// CHECK-FPM-PRECISE-SAME: "-fno-signaling-nans"
 
 // RUN: %clang -### -nostdinc -ffp-model=strict -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPM-STRICT %s
 // CHECK-FPM-STRICT: "-cc1"
 // CHECK-FPM-STRICT-SAME: "-frounding-math"
 // CHECK-FPM-STRICT-SAME: "-ffp-exception-behavior=strict"
+// CHECK-FPM-STRICT-SAME: "-fsignaling-nans"
 
 // RUN: %clang -### -nostdinc -ffp-model=strict -ffp-model=fast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-EXCEPT %s
@@ -252,3 +256,13 @@
 // CHECK-FASTMATH-FPM-STRICT-NOT: "-ffast-math"
 // CHECK-FASTMATH-FPM-STRICT-NOT: "-ffinite-math-only"
 // CHECK-FASTMATH-FPM-STRICT-SAME: "-complex-range=full"
+
+// RUN: %clang -### -nostdinc -fsignaling-nans -ffp-model=precise -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK-SNAN-FPM-PRECISE %s
+// CHECK-SNAN-FPM-PRECISE:      "-cc1"
+// CHECK-SNAN-FPM-PRECISE-SAME: "-fno-signaling-nans"
+
+// RUN: %clang -### -nostdinc -ffp-model=precise -fsignaling-nans -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=CHECK-FPM-PRECISE-SNAN %s
+// CHECK-FPM-PRECISE-SNAN:      "-cc1"
+// CHECK-FPM-PRECISE-SNAN-SAME: "-fsignaling-nans"

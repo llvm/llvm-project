@@ -597,6 +597,12 @@ define void @noipa() noipa {
   ret void
 }
 
+; CHECK: define float @signaling_nans(float %x) [[SIGNALING_NANS:#[0-9]+]]
+define float @signaling_nans(float %x) signaling_nans {
+  %r = fadd float %x, 2.0
+  ret float %r
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }
@@ -660,4 +666,5 @@ define void @noipa() noipa {
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }
 ; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
 ; CHECK: attributes [[NOIPA]] = { noipa }
+; CHECK: attributes [[SIGNALING_NANS]] = { signaling_nans }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

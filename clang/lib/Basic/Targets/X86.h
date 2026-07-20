@@ -195,6 +195,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
     AddrSpaceMap = &X86AddrSpaceMap;
     HasStrictFP = true;
+    HasSignalingNaNs = true;
     HasUnalignedAccess = true;
 
     bool IsWinCOFF =

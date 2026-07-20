@@ -2334,6 +2334,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoOutline;
   case bitc::ATTR_KIND_NOIPA:
     return Attribute::NoIPA;
+  case bitc::ATTR_KIND_SIGNALING_NANS:
+    return Attribute::SignalingNans;
   }
 }
 
