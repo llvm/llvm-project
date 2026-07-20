@@ -576,6 +576,9 @@ SanitizerSet CodeGenModule::getProfileCoreUBChecks() const {
   Checks.set(SanitizerKind::Alignment, true);
   // {expr.unary.dereference}, null case: dereferencing a null pointer.
   Checks.set(SanitizerKind::Null, true);
+  // {expr.add.out.of.bounds}, statically known bound: indexing past the end of
+  // an array whose bound is visible at the subscript.
+  Checks.set(SanitizerKind::ArrayBounds, true);
   return Checks;
 }
 
