@@ -106,7 +106,7 @@ private:
 
   void MakeValid(RegisterSetType set) { m_validity |= set; }
 
-  [[nodsicard]] bool IsValid(RegisterSetType set) {
+  [[nodiscard]] bool IsValid(RegisterSetType set) {
     return any(m_validity & set);
   }
 
