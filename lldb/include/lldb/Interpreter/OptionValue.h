@@ -103,7 +103,7 @@ public:
                      VarSetOperationType op = eVarSetOperationAssign);
 
   void Clear() {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_mutex);
     ClearImpl();
   }
 
@@ -381,7 +381,7 @@ protected:
   // This a recursive mutex because, some of the derived classes
   // methods may be invoked from other methods such as
   // OptionValueFileSpecList's Clear() in SetValueFromString().
-  mutable std::recursive_mutex m_mutex;
+  mutable std::mutex m_mutex;
 
 private:
   std::optional<ArchSpec> GetArchSpecValue() const;

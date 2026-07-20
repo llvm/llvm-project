@@ -44,17 +44,17 @@ public:
   // Subclass specific functions
 
   FileSpecList GetCurrentValue() const {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_rmutex);
     return m_current_value;
   }
 
   void SetCurrentValue(const FileSpecList &value) {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_rmutex);
     m_current_value = value;
   }
 
   void AppendCurrentValue(const FileSpec &value) {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_rmutex);
     m_current_value.Append(value);
   }
 
@@ -65,7 +65,7 @@ protected:
     m_current_value.Clear();
     m_value_was_set = false;
   }
-
+  mutable std::recursive_mutex m_rmutex;
   FileSpecList m_current_value;
 };
 
