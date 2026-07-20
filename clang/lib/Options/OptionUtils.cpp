@@ -244,3 +244,35 @@ std::string clang::GetResourcesPath(const char *Argv0, void *MainAddr) {
       llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
   return GetResourcesPath(ClangExecutable);
 }
+
+static bool isSpaceOrNull(char c) { return !c || c == ' '; }
+
+static Expected<const char *> unescapeUntilSpace(const char *Arg,
+                                                 SmallVectorImpl<char> &Res) {
+  for (; !isSpaceOrNull(*Arg); ++Arg) {
+    if (*Arg == '\\') {
+      ++Arg;
+      if (*Arg != '\\' && *Arg != ' ')
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "only escaped backslashes and spaces are supported");
+    }
+    Res.push_back(*Arg);
+  }
+  return Arg;
+}
+
+Expected<SmallVector<SmallString<8>>>
+clang::parseEscapedCommandLine(const char *CommandLine) {
+  SmallVector<SmallString<8>> Res;
+  while (*CommandLine) {
+    Expected<const char *> ArgEnd =
+        unescapeUntilSpace(CommandLine, Res.emplace_back());
+    if (!ArgEnd)
+      return ArgEnd.takeError();
+    CommandLine = *ArgEnd;
+    if (*CommandLine == ' ')
+      ++CommandLine;
+  }
+  return Res;
+}

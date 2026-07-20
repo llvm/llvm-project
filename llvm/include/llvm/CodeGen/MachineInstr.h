@@ -58,7 +58,8 @@ template <typename T> class SmallVectorImpl;
 class SmallBitVector;
 class StringRef;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 //===----------------------------------------------------------------------===//
@@ -1921,10 +1922,7 @@ public:
 
   /// Replace current source information with new such.
   /// Avoid using this, the constructor argument is preferable.
-  void setDebugLoc(DebugLoc DL) {
-    DbgLoc = std::move(DL);
-    assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
-  }
+  void setDebugLoc(DebugLoc DL) { DbgLoc = std::move(DL); }
 
   /// Erase an operand from an instruction, leaving it with one
   /// fewer operand than it started with.
@@ -2128,22 +2126,11 @@ private:
 /// instruction rather than by pointer value.
 /// The hashing and equality testing functions ignore definitions so this is
 /// useful for CSE, etc.
-struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
-  static inline MachineInstr *getEmptyKey() {
-    return nullptr;
-  }
-
-  static inline MachineInstr *getTombstoneKey() {
-    return reinterpret_cast<MachineInstr*>(-1);
-  }
-
+struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr *> {
   LLVM_ABI static unsigned getHashValue(const MachineInstr *const &MI);
 
-  static bool isEqual(const MachineInstr* const &LHS,
-                      const MachineInstr* const &RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey() ||
-        LHS == getEmptyKey() || LHS == getTombstoneKey())
-      return LHS == RHS;
+  static bool isEqual(const MachineInstr *const &LHS,
+                      const MachineInstr *const &RHS) {
     return LHS->isIdenticalTo(*RHS, MachineInstr::IgnoreVRegDefs);
   }
 };

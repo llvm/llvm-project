@@ -303,14 +303,6 @@ struct UnrolledInstStateKeyInfo {
   using PtrInfo = DenseMapInfo<Instruction *>;
   using PairInfo = DenseMapInfo<std::pair<Instruction *, int>>;
 
-  static inline UnrolledInstState getEmptyKey() {
-    return {PtrInfo::getEmptyKey(), 0, 0, 0};
-  }
-
-  static inline UnrolledInstState getTombstoneKey() {
-    return {PtrInfo::getTombstoneKey(), 0, 0, 0};
-  }
-
   static inline unsigned getHashValue(const UnrolledInstState &S) {
     return PairInfo::getHashValue({S.I, S.Iteration});
   }

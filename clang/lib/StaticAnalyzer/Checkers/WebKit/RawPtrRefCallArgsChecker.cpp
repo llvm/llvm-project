@@ -14,6 +14,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -47,7 +48,7 @@ public:
   virtual bool isSafePtrType(const QualType type) const = 0;
   virtual bool isSafeExpr(const Expr *) const { return false; }
   virtual bool isSafeDecl(const Decl *) const { return false; }
-  virtual const char *ptrKind() const = 0;
+  virtual const char *typeName() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -118,14 +119,14 @@ public:
           isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
 
       if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE))
-        checkThisArg(MemberCallExpr, D);
+        checkThisArg(F, MemberCallExpr, D);
 
       if (ArgIdx) {
         auto *Arg = CE->getArg(0);
         QualType ArgType = Arg->getType().getCanonicalType();
         std::optional<bool> IsUnsafe = isUnsafeType(ArgType);
         if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Arg))
-          reportBugOnThis(Arg, D);
+          reportBugOnThis(F, Arg, D);
       }
 
       for (auto P = F->param_begin();
@@ -133,11 +134,11 @@ public:
         // TODO: attributes.
         // if ((*P)->hasAttr<SafeRefCntblRawPtrAttr>())
         //  continue;
-        checkArg(CE->getArg(ArgIdx), (*P)->getType(), *P, D);
+        checkArg(F, CE->getArg(ArgIdx), (*P)->getType(), *P, D);
       }
       for (; ArgIdx < CE->getNumArgs(); ++ArgIdx) {
         auto *Arg = CE->getArg(ArgIdx);
-        checkArg(Arg, Arg->getType(), nullptr, D);
+        checkArg(F, Arg, Arg->getType(), nullptr, D);
       }
     }
   }
@@ -153,15 +154,15 @@ public:
       if (auto *FnType = Decl->getFunctionType()) {
         if (auto *ProtoType = dyn_cast<FunctionProtoType>(FnType)) {
           if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE))
-            checkThisArg(MemberCallExpr, D);
+            checkThisArg(nullptr, MemberCallExpr, D);
           unsigned ArgIdx = 0;
           for (auto PT = ProtoType->param_type_begin();
                PT < ProtoType->param_type_end() && ArgIdx < CE->getNumArgs();
                ++PT, ++ArgIdx)
-            checkArg(CE->getArg(ArgIdx), *PT, nullptr, D);
+            checkArg(nullptr, CE->getArg(ArgIdx), *PT, nullptr, D);
           for (; ArgIdx < CE->getNumArgs(); ++ArgIdx) {
             auto *Arg = CE->getArg(ArgIdx);
-            checkArg(Arg, Arg->getType(), nullptr, D);
+            checkArg(nullptr, Arg, Arg->getType(), nullptr, D);
           }
         }
       }
@@ -185,7 +186,10 @@ public:
       if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver)) {
         if (isAllocInit(E))
           return;
-        reportBugOnReceiver(Receiver, D);
+        auto SelectorName = E->getSelector().getNameForSlot(0);
+        if (SelectorName == "isEqual" || SelectorName == "isEqualToString")
+          return;
+        reportBugOnReceiver(E->getMethodDecl(), Receiver, D);
       }
     }
 
@@ -204,11 +208,12 @@ public:
         continue;
       if (isPtrOriginSafe(Arg))
         continue;
-      reportBug(Arg, Param, D);
+      reportBug(MethodDecl, Arg, Param, D);
     }
   }
 
-  void checkThisArg(const CXXMemberCallExpr *MemberCallExpr,
+  void checkThisArg(const NamedDecl *Callee,
+                    const CXXMemberCallExpr *MemberCallExpr,
                     const Decl *DeclWithIssue) const {
     if (auto *MD = MemberCallExpr->getMethodDecl()) {
       auto name = safeGetName(MD);
@@ -227,11 +232,11 @@ public:
     if (isPtrOriginSafe(ThisExpr))
       return;
 
-    reportBugOnThis(MemberCallExpr, DeclWithIssue);
+    reportBugOnThis(Callee, ThisExpr, DeclWithIssue);
   }
 
-  void checkArg(const Expr *Arg, QualType ParamType, const ParmVarDecl *Param,
-                const Decl *DeclWithIssue) const {
+  void checkArg(const NamedDecl *Callee, const Expr *Arg, QualType ParamType,
+                const ParmVarDecl *Param, const Decl *DeclWithIssue) const {
     std::optional<bool> IsUncounted = isUnsafePtr(ParamType);
     if (!IsUncounted || !(*IsUncounted))
       return;
@@ -242,7 +247,7 @@ public:
     if (isPtrOriginSafe(Arg))
       return;
 
-    reportBug(Arg, Param, DeclWithIssue);
+    reportBug(Callee, Arg, Param, DeclWithIssue);
   }
 
   bool isPtrOriginSafe(const Expr *Arg) const {
@@ -267,8 +272,12 @@ public:
             return true;
           if (isASafeCallArg(ArgOrigin))
             return true;
-          if (EFA.isACallToEnsureFn(ArgOrigin))
-            return true;
+          if (EFA.isACallToEnsureFn(ArgOrigin)) {
+            auto *MCE = dyn_cast<CXXMemberCallExpr>(ArgOrigin);
+            assert(MCE);
+            if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
+              return true;
+          }
           if (isSafeExpr(ArgOrigin))
             return true;
           return false;
@@ -371,20 +380,46 @@ public:
             ClsName.ends_with("String"));
   }
 
-  void reportBug(const Expr *CallArg, const ParmVarDecl *Param,
-                 const Decl *DeclWithIssue) const {
+  void reportBug(const NamedDecl *Callee, const Expr *CallArg,
+                 const ParmVarDecl *Param, const Decl *DeclWithIssue) const {
     assert(CallArg);
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
     const std::string paramName = safeGetName(Param);
-    Os << "Call argument";
+    Os << "Function argument";
+    printArgument(Os, CallArg);
+    if (!paramName.empty() || Callee)
+      Os << " (";
     if (!paramName.empty()) {
-      Os << " for parameter ";
+      Os << "parameter ";
       printQuotedQualifiedName(Os, Param);
     }
-    Os << " is " << ptrKind() << " and unsafe.";
+    if (Callee) {
+      if (!paramName.empty())
+        Os << " ";
+      Os << "to ";
+      printQuotedQualifiedName(Os, Callee);
+    }
+    if (!paramName.empty() || Callee)
+      Os << ")";
+    Os << " is a ";
+    auto *ArgType = CallArg->getType().getTypePtr();
+
+    if (printPointer(Os, ArgType) == PrintDeclKind::Pointer) {
+      assert(RTC);
+      if (auto *Decl = RTC->getCanonicalDecl(CallArg->getType())) {
+        printQuotedQualifiedName(Os, Decl);
+      } else {
+        auto Typedef = ArgType->getAs<TypedefType>();
+        assert(Typedef);
+        printQuotedQualifiedName(Os, Typedef->getDecl());
+      }
+    } else {
+      Os << " ";
+      printTypeName(Os, CallArg->getType());
+    }
 
     bool usesDefaultArgValue = isa<CXXDefaultArgExpr>(CallArg) && Param;
     const SourceLocation SrcLocToReport =
@@ -398,15 +433,23 @@ public:
     BR->emitReport(std::move(Report));
   }
 
-  void reportBugOnThis(const Expr *CallArg, const Decl *DeclWithIssue) const {
+  void reportBugOnThis(const NamedDecl *Callee, const Expr *CallArg,
+                       const Decl *DeclWithIssue) const {
     assert(CallArg);
 
     const SourceLocation SrcLocToReport = CallArg->getSourceRange().getBegin();
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
-    Os << "Call argument for 'this' parameter is " << ptrKind();
-    Os << " and unsafe.";
+    Os << "Function argument";
+    printArgument(Os, CallArg);
+    Os << " (parameter 'this'";
+    if (Callee) {
+      Os << " to ";
+      printQuotedQualifiedName(Os, Callee);
+    }
+    Os << ") is a raw pointer to " << typeName() << " ";
+    printTypeName(Os, CallArg->getType());
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -415,7 +458,7 @@ public:
     BR->emitReport(std::move(Report));
   }
 
-  void reportBugOnReceiver(const Expr *CallArg,
+  void reportBugOnReceiver(const NamedDecl *Callee, const Expr *CallArg,
                            const Decl *DeclWithIssue) const {
     assert(CallArg);
 
@@ -423,13 +466,45 @@ public:
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
-    Os << "Receiver is " << ptrKind() << " and unsafe.";
+    Os << "Receiver";
+    printArgument(Os, CallArg);
+    if (Callee) {
+      Os << " (to ";
+      printQuotedQualifiedName(Os, Callee);
+      Os << ")";
+    }
+    Os << " is a raw pointer to " << typeName() << " ";
+    printTypeName(Os, CallArg->getType());
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(CallArg->getSourceRange());
     Report->setDeclWithIssue(DeclWithIssue);
     BR->emitReport(std::move(Report));
+  }
+
+  void printArgument(llvm::raw_svector_ostream &Os, const Expr *Arg) const {
+    SmallString<100> Buf;
+    llvm::raw_svector_ostream ArgOs(Buf);
+    Arg->printPretty(ArgOs, /*Helper=*/nullptr,
+                     BR->getContext().getPrintingPolicy());
+    StringRef ArgCode = ArgOs.str();
+    if (ArgCode.contains('\n'))
+      return;
+    ArgCode = ArgCode.take_front(50);
+    if (ArgCode.size() == 50)
+      Os << " '" << ArgCode << "...'";
+    else
+      Os << " '" << ArgCode << "'";
+  }
+
+  enum class PrintDeclKind { Pointee, Pointer };
+  virtual PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
+                                     const Type *T) const {
+    T = T->getUnqualifiedDesugaredType();
+    bool IsPtr = isa<PointerType, ObjCObjectPointerType>(T);
+    Os << "raw " << (IsPtr ? "pointer" : "reference") << " to " << typeName();
+    return PrintDeclKind::Pointee;
   }
 };
 
@@ -455,7 +530,7 @@ public:
     return isRefOrCheckedPtrType(type);
   }
 
-  const char *ptrKind() const final { return "uncounted"; }
+  const char *typeName() const final { return "RefPtr-capable type"; }
 };
 
 class UncheckedCallArgsChecker final : public RawPtrRefCallArgsChecker {
@@ -484,7 +559,7 @@ public:
     return isExprToGetCheckedPtrCapableMember(E);
   }
 
-  const char *ptrKind() const final { return "unchecked"; }
+  const char *typeName() const final { return "CheckedPtr-capable type"; }
 };
 
 class UnretainedCallArgsChecker final : public RawPtrRefCallArgsChecker {
@@ -511,17 +586,21 @@ public:
     return isRetainPtrOrOSPtrType(type);
   }
 
-  bool isSafeExpr(const Expr *E) const final {
-    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
-           isa<ObjCMessageExpr>(E);
-  }
-
   bool isSafeDecl(const Decl *D) const final {
     // Treat NS/CF globals in system header as immortal.
     return BR->getSourceManager().isInSystemHeader(D->getLocation());
   }
 
-  const char *ptrKind() const final { return "unretained"; }
+  PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
+                             const Type *T) const final {
+    if (isa<TypedefType>(T)) {
+      Os << typeName() << " ";
+      return PrintDeclKind::Pointer;
+    }
+    return RawPtrRefCallArgsChecker::printPointer(Os, T);
+  }
+
+  const char *typeName() const final { return "RetainPtr-capable type"; }
 };
 
 } // namespace

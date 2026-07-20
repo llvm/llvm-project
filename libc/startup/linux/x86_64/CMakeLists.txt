@@ -7,7 +7,9 @@ add_startup_object(
     libc.hdr.sys_mman_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.string.memory_utils.inline_memcpy
   COMPILE_OPTIONS
     -fno-stack-protector

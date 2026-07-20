@@ -56,7 +56,7 @@ define ptr @return_alloca() {
 ; noalias arg does not imply noalias return
 define ptr @return_noalias_arg(ptr noalias %arg) {
 ; CHECK-LABEL: define ptr @return_noalias_arg(
-; CHECK-SAME: ptr noalias readnone returned captures(ret: address, provenance) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias nofree readnone returned captures(ret: address, provenance) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr [[ARG]]
 ;
   ret ptr %arg
@@ -226,7 +226,7 @@ define ptr @scc2(i1 %c) {
 
 define ptr @return_unknown_call(ptr %fn) {
 ; CHECK-LABEL: define ptr @return_unknown_call(
-; CHECK-SAME: ptr readonly captures(none) [[FN:%.*]]) {
+; CHECK-SAME: ptr nofree readonly captures(none) [[FN:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = call ptr [[FN]]()
 ; CHECK-NEXT:    ret ptr [[A]]
 ;
@@ -236,7 +236,7 @@ define ptr @return_unknown_call(ptr %fn) {
 
 define ptr @return_unknown_noalias_call(ptr %fn) {
 ; CHECK-LABEL: define noalias ptr @return_unknown_noalias_call(
-; CHECK-SAME: ptr readonly captures(none) [[FN:%.*]]) {
+; CHECK-SAME: ptr nofree readonly captures(none) [[FN:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = call noalias ptr [[FN]]()
 ; CHECK-NEXT:    ret ptr [[A]]
 ;

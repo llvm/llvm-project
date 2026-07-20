@@ -7,18 +7,19 @@
 //===----------------------------------------------------------------------===//
 #include "src/sys/ipc/ftok.h"
 
+#include "hdr/fcntl_macros.h" // For AT_FDCWD.
+#include "src/__support/OSUtil/linux/stat/kernel_statx_types.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/statx.h"
 #include "src/__support/common.h"
-#include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
-
-#include "kernel_statx.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(key_t, ftok, (const char *path, int id)) {
-  struct statx xbuf;
+  internal::kernel_statx_buf xbuf;
 
-  ErrorOr<int> err = statx_for_ftok(path, xbuf);
+  auto err = linux_syscalls::statx(
+      AT_FDCWD, path, 0, internal::KERNEL_STATX_BASIC_STATS_MASK, &xbuf);
 
   if (!err.has_value()) {
     libc_errno = err.error();

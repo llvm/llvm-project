@@ -83,6 +83,8 @@ public:
         AddrSpaceMap = &ZOSAddressMap;
       }
       TLSSupported = false;
+      HasBuiltinZOSVaList = true;
+
       // All vector types are default aligned on an 8-byte boundary, even if the
       // vector facility is not available. That is different from Linux.
       MaxVectorAlign = 64;
@@ -106,8 +108,6 @@ public:
   }
 
   unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;
-
-  bool useFP16ConversionIntrinsics() const override { return false; }
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
@@ -166,6 +166,8 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
+    if (getTriple().isOSzOS())
+      return TargetInfo::CharPtrBuiltinVaList;
     return TargetInfo::SystemZBuiltinVaList;
   }
 
@@ -185,7 +187,7 @@ public:
     fillValidCPUList(Values);
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     ISARevision = getISARevision(Name);
     return ISARevision != -1;
   }

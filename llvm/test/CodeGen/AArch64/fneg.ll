@@ -53,19 +53,28 @@ entry:
 }
 
 define bfloat @fneg_bf16(bfloat %a) {
-; CHECK-NOFP16-LABEL: fneg_bf16:
-; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NOFP16-NEXT:    fmov w8, s0
-; CHECK-NOFP16-NEXT:    eor w8, w8, #0x8000
-; CHECK-NOFP16-NEXT:    fmov s0, w8
-; CHECK-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-NOFP16-NEXT:    ret
+; CHECK-NOFP16-SD-LABEL: fneg_bf16:
+; CHECK-NOFP16-SD:       // %bb.0: // %entry
+; CHECK-NOFP16-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-NOFP16-SD-NEXT:    fmov w8, s0
+; CHECK-NOFP16-SD-NEXT:    eor w8, w8, #0x8000
+; CHECK-NOFP16-SD-NEXT:    fmov s0, w8
+; CHECK-NOFP16-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NOFP16-SD-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: fneg_bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    fneg h0, h0
 ; CHECK-FP16-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: fneg_bf16:
+; CHECK-NOFP16-GI:       // %bb.0: // %entry
+; CHECK-NOFP16-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-NOFP16-GI-NEXT:    fmov w8, s0
+; CHECK-NOFP16-GI-NEXT:    eor w8, w8, #0xffff8000
+; CHECK-NOFP16-GI-NEXT:    fmov s0, w8
+; CHECK-NOFP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NOFP16-GI-NEXT:    ret
 entry:
   %c = fneg bfloat %a
   ret bfloat %c

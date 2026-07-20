@@ -16,14 +16,32 @@
 
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+
+#include <cstdint>
 
 namespace mlir {
 
+#define GEN_PASS_DECL_TOSATOSPIRVTOSAMARKGRAPHCONSTANTS
 #define GEN_PASS_DECL_TOSATOSPIRVTOSA
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace tosa {
 
+// Allows users to specify descriptor sets and binding ids on the source
+// function inputs and outputs. Use a source-side GraphARM attribute because
+// `spirv.interface_var_abi` is verified by the SPIR-V dialect before this
+// conversion runs, and result attrs are only accepted on `spirv.ARM.Graph`.
+constexpr llvm::StringLiteral graphARMInterfaceVarABIAttrName =
+    "grapharm.interface_var_abi";
+
+// Marks a `tosa.const` or `tosa.const_shape` as a SPIR-V Graph constant.
+// The conversion pass lowers marked constants to `spirv.ARM.GraphConstant`.
+constexpr llvm::StringLiteral graphARMGraphConstantIdAttrName =
+    "grapharm.graph_constant_id";
+
+std::unique_ptr<Pass> createTosaToSPIRVTosaMarkGraphConstants();
 std::unique_ptr<Pass> createTosaToSPIRVTosa();
 
 spirv::VerCapExtAttr getDefaultVerCapExtAttr(MLIRContext *context);
@@ -38,6 +56,11 @@ spirv::TargetEnvAttr constructTargetEnvAttrWithCapExtDefaults(
 void populateTosaToSPIRVTosaConversionPatterns(
     SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns,
     spirv::TargetEnvAttr targetAttr);
+void populateTosaToSPIRVTosaOpsConversionPatterns(
+    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns);
+void populateTosaToSPIRVTosaCustomConversionPatterns(
+    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns,
+    llvm::StringMap<int32_t> domainToOpcode);
 
 } // namespace tosa
 } // namespace mlir

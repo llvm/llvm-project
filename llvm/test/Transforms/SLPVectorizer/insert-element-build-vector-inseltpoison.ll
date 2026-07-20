@@ -42,7 +42,7 @@ define <4 x float> @simple_select(<4 x float> %a, <4 x float> %b, <4 x i32> %c) 
 declare void @llvm.assume(i1) nounwind
 
 ; This entire tree is ephemeral, don't vectorize any of it.
-define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
+define void @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @simple_select_eph(
 ; CHECK-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
 ; CHECK-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
@@ -77,7 +77,7 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; CHECK-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
 ; CHECK-NEXT:    [[QI:%.*]] = fcmp olt float [[Q6]], [[Q5]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[QI]])
-; CHECK-NEXT:    ret <4 x float> undef
+; CHECK-NEXT:    ret void
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1
@@ -112,7 +112,7 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
   %q6 = fadd float %q4, %q5
   %qi = fcmp olt float %q6, %q5
   call void @llvm.assume(i1 %qi)
-  ret <4 x float> undef
+  ret void
 }
 
 ; Insert in an order different from the vector indices to make sure it
@@ -382,10 +382,10 @@ define <4 x float> @take_credit(<4 x float> %a, <4 x float> %b) {
 ; Make sure we handle multiple trees that feed one build vector correctly.
 define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
 ; CHECK-LABEL: @multi_tree(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[Z:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[X:%.*]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[W:%.*]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[Z:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[Y:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[X:%.*]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[W:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 3.000000e+00, double 2.000000e+00, double 1.000000e+00, double 0.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP5]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    ret <4 x double> [[TMP6]]

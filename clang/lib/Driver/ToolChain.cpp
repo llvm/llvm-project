@@ -93,6 +93,7 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)),
       CachedExceptionsMode(CalculateExceptionsMode(Args)) {
+  assert(T.str() == T.normalize() && "triple should be normalized");
   auto addIfExists = [this](path_list &List, const std::string &Path) {
     if (getVFS().exists(Path))
       List.push_back(Path);
@@ -288,17 +289,17 @@ static void getAArch64MultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : AArch64::Extensions)
-    if (!Ext.UserVisibleName.empty())
-      if (FeatureSet.contains(Ext.PosTargetFeature))
-        MArch.push_back(Ext.UserVisibleName.str());
+    if (Ext.UserVisibleName.value())
+      if (FeatureSet.contains(AArch64::StrTab[Ext.PosTargetFeature]))
+        MArch.push_back(AArch64::StrTab[Ext.UserVisibleName].str());
   for (const auto &Ext : AArch64::Extensions)
-    if (!Ext.UserVisibleName.empty())
-      if (FeatureSet.contains(Ext.NegTargetFeature))
-        MArch.push_back(("no" + Ext.UserVisibleName).str());
+    if (Ext.UserVisibleName.value())
+      if (FeatureSet.contains(AArch64::StrTab[Ext.NegTargetFeature]))
+        MArch.push_back(("no" + AArch64::StrTab[Ext.UserVisibleName]).str());
   StringRef ArchName;
   for (const auto &ArchInfo : AArch64::ArchInfos)
-    if (FeatureSet.contains(ArchInfo->ArchFeature))
-      ArchName = ArchInfo->Name;
+    if (FeatureSet.contains(AArch64::StrTab[ArchInfo.ArchFeature]))
+      ArchName = AArch64::StrTab[ArchInfo.Name];
   if (!ArchName.empty()) {
     MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
     Result.push_back(llvm::join(MArch, "+"));
@@ -444,6 +445,18 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
     Result.push_back("-fsanitize=shadow-call-stack");
   else
     Result.push_back("-fno-sanitize=shadow-call-stack");
+
+  const Arg *CFProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_fcf_protection_EQ);
+  StringRef CFProtectionVal =
+      CFProtectionArg ? CFProtectionArg->getValue() : "none";
+  Result.push_back(("-fcf-protection=" + CFProtectionVal).str());
+
+  if (CFProtectionVal == "branch" || CFProtectionVal == "full") {
+    if (const Arg *SchemeArg =
+            Args.getLastArgNoClaim(options::OPT_mcf_branch_label_scheme_EQ))
+      Result.push_back(SchemeArg->getAsString(Args));
+  }
 }
 
 Multilib::flags_list
@@ -491,6 +504,10 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 
   processMultilibCustomFlags(Result, Args);
 
+  if (Arg *CStdLibArg = Args.getLastArg(options::OPT_cstdlib_EQ))
+    Result.push_back(std::string(CStdLibArg->getOption().getPrefixedName()) +
+                     CStdLibArg->getValue());
+
   // Include fno-exceptions and fno-rtti
   // to improve multilib selection
   if (getRTTIMode() == ToolChain::RTTIMode::RM_Disabled)
@@ -516,14 +533,22 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerArgs
-ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs,
-                            StringRef BoundArch,
+ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs, BoundArch BA,
                             Action::OffloadKind DeviceOffloadKind) const {
+  // When -fno-gpu-sanitize is specified for GPU targets, don't emit
+  // diagnostics about unsupported sanitizers for specific GPU arches,
+  // since sanitizers are disabled for the GPU anyway.
+  bool DiagnoseBoundArchErrors =
+      BoundArchSanitizerArgsChecked.insert(BA.ArchName).second;
+  if (BA && getTriple().isGPU() &&
+      !JobArgs.hasFlag(options::OPT_fgpu_sanitize,
+                       options::OPT_fno_gpu_sanitize, true)) {
+    DiagnoseBoundArchErrors = false;
+  }
+
   SanitizerArgs SanArgs(*this, JobArgs,
                         /*DiagnoseErrors=*/!SanitizerArgsChecked,
-                        /*DiagnoseBoundArchErrors=*/
-                        BoundArchSanitizerArgsChecked.insert(BoundArch).second,
-                        BoundArch, DeviceOffloadKind);
+                        DiagnoseBoundArchErrors, BA, DeviceOffloadKind);
 
   SanitizerArgsChecked = true;
   return SanArgs;
@@ -827,6 +852,8 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
 StringRef ToolChain::getOSLibName() const {
   if (Triple.isOSDarwin())
     return "darwin";
+  if (Triple.isWindowsCygwinEnvironment())
+    return "cygwin";
 
   switch (Triple.getOS()) {
   case llvm::Triple::FreeBSD:
@@ -1097,6 +1124,14 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (auto Path = getPathForTriple(T))
     return *Path;
 
+  // Handle the legacy AMDGPU triple case as well.
+  if (T.getArchName() == "amdgcn") {
+    llvm::Triple Canon(T);
+    Canon.setArchName("amdgpu");
+    if (auto Path = getPathForTriple(Canon))
+      return *Path;
+  }
+
   if (T.isOSAIX()) {
     llvm::Triple AIXTriple;
     if (T.getEnvironment() == Triple::UnknownEnvironment) {
@@ -1328,6 +1363,60 @@ bool ToolChain::HasNativeLLVMSupport() const {
   return false;
 }
 
+LTOKind ToolChain::getDefaultLTOMode() const { return LTOK_None; }
+
+bool ToolChain::isUsingLTO(const llvm::opt::ArgList &Args,
+                           Action::OffloadKind Kind) const {
+  return getLTOMode(Args, Kind) != LTOK_None;
+}
+
+static LTOKind parseLTOMode(const llvm::opt::ArgList &Args,
+                            llvm::opt::OptSpecifier OptEq,
+                            llvm::opt::OptSpecifier OptNeg) {
+  if (!Args.hasFlag(OptEq, OptNeg, false))
+    return LTOK_None;
+
+  const Arg *A = Args.getLastArg(OptEq);
+  StringRef LTOName = A->getValue();
+
+  return llvm::StringSwitch<LTOKind>(LTOName)
+      .Case("full", LTOK_Full)
+      .Case("thin", LTOK_Thin)
+      .Case("none", LTOK_None)
+      .Default(LTOK_Unknown);
+}
+
+LTOKind ToolChain::getLTOMode(const llvm::opt::ArgList &Args,
+                              Action::OffloadKind Kind) const {
+  bool IsOffload = Kind != Action::OFK_None;
+  auto OptEq = IsOffload ? options::OPT_foffload_lto_EQ : options::OPT_flto_EQ;
+  auto OptNeg = IsOffload ? options::OPT_fno_offload_lto : options::OPT_fno_lto;
+
+  // -fopenmp-target-jit implies -foffload-lto=full for device compilations,
+  // overriding any explicit -fno-offload-lto.
+  if (IsOffload && Args.hasFlag(options::OPT_fopenmp_target_jit,
+                                options::OPT_fno_openmp_target_jit, false)) {
+    if (Arg *A = Args.getLastArg(OptEq, OptNeg))
+      if (parseLTOMode(Args, OptEq, OptNeg) != LTOK_Full)
+        getDriver().Diag(diag::err_drv_incompatible_options)
+            << A->getSpelling() << "-fopenmp-target-jit";
+    return LTOK_Full;
+  }
+
+  if (!Args.hasArg(OptEq, OptNeg))
+    return getDefaultLTOMode();
+
+  LTOKind Mode = parseLTOMode(Args, OptEq, OptNeg);
+
+  if (Mode == LTOK_Unknown) {
+    const Arg *A = Args.getLastArg(OptEq);
+    getDriver().Diag(diag::err_drv_unsupported_option_argument)
+        << A->getSpelling() << A->getValue();
+    return LTOK_None;
+  }
+  return Mode;
+}
+
 bool ToolChain::isCrossCompiling() const {
   llvm::Triple HostTriple(LLVM_HOST_TRIPLE);
   switch (HostTriple.getArch()) {
@@ -1367,8 +1456,7 @@ bool ToolChain::isThreadModelSupported(const StringRef Model) const {
   return false;
 }
 
-std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
-                                         StringRef BoundArch,
+std::string ToolChain::ComputeLLVMTriple(const ArgList &Args, BoundArch BA,
                                          types::ID InputType) const {
   switch (getTriple().getArch()) {
   default:
@@ -1404,7 +1492,7 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64_32:
     return getTripleString().str();
-  case llvm::Triple::amdgcn: {
+  case llvm::Triple::amdgpu: {
     llvm::Triple Triple = getTriple();
     tools::AMDGPU::setArchNameInTriple(getDriver(), Args, InputType, Triple);
     return Triple.getTriple();
@@ -1422,9 +1510,9 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
 }
 
 std::string ToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
-                                                   StringRef BoundArch,
+                                                   BoundArch BA,
                                                    types::ID InputType) const {
-  return ComputeLLVMTriple(Args, BoundArch, InputType);
+  return ComputeLLVMTriple(Args, BA, InputType);
 }
 
 std::string ToolChain::computeSysRoot() const {
@@ -1437,7 +1525,7 @@ void ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void ToolChain::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, BoundArch BA,
     Action::OffloadKind DeviceOffloadKind) const {}
 
 void ToolChain::addClangCC1ASTargetOptions(const ArgList &Args,
@@ -1776,7 +1864,7 @@ ToolChain::getSystemGPUArchs(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerMask
-ToolChain::getSupportedSanitizers(StringRef BoundArch,
+ToolChain::getSupportedSanitizers(BoundArch BA,
                                   Action::OffloadKind DeviceOffloadKind) const {
   // Return sanitizers which don't require runtime support and are not
   // platform dependent.
@@ -1817,7 +1905,7 @@ void ToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                    ArgStringList &CC1Args) const {}
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-ToolChain::getDeviceLibs(const ArgList &DriverArgs,
+ToolChain::getDeviceLibs(const ArgList &DriverArgs, BoundArch BA,
                          const Action::OffloadKind DeviceOffloadingKind) const {
   return {};
 }
@@ -2037,7 +2125,7 @@ static bool isXArchCompatibleTripleArch(const llvm::Triple &TT,
 }
 
 llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
-    const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+    const llvm::opt::DerivedArgList &Args, BoundArch BA,
     Action::OffloadKind OFK,
     SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
@@ -2055,8 +2143,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
       Skip = IsDevice;
     } else if (A->getOption().matches(options::OPT_Xarch__)) {
       StringRef Val = A->getValue();
-      NeedTrans = Val == getArchName() ||
-                  (!BoundArch.empty() && Val == BoundArch) ||
+      NeedTrans = Val == getArchName() || (BA && Val == BA.ArchName) ||
                   isXArchCompatibleTripleArch(Triple, Val);
       Skip = !NeedTrans;
     }

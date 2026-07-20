@@ -110,6 +110,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Pass.h"
 #include "llvm/Remarks/RemarkStreamer.h"
@@ -127,7 +128,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -610,13 +610,18 @@ bool AsmPrinter::doInitialization(Module &M) {
   BeginGCAssembly(M);
 
   // Emit module-level inline asm if it exists.
-  if (!M.getModuleInlineAsm().empty()) {
+  if (M.hasModuleInlineAsm()) {
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->addBlankLine();
-    emitInlineAsm(
-        M.getModuleInlineAsm() + "\n", TM.getMCSubtargetInfo(),
-        TM.Options.MCOptions, nullptr,
-        InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
+    for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
+      const MCSubtargetInfo &AsmSTI = TM.getMCSubtargetInfo(
+          Frag.Props.TargetCPU, Frag.Props.TargetFeatures);
+      bool DidPush = emitTargetFeaturePush(AsmSTI);
+      emitInlineAsm(
+          Frag.Asm, AsmSTI, TM.Options.MCOptions, nullptr,
+          InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
+      emitTargetFeaturePop(AsmSTI, DidPush);
+    }
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->addBlankLine();
   }
@@ -1608,8 +1613,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     if (Features.FuncEntryCount) {
       OutStreamer->AddComment("function entry count");
       auto MaybeEntryCount = MF.getFunction().getEntryCount();
-      OutStreamer->emitULEB128IntValue(
-          MaybeEntryCount ? MaybeEntryCount->getCount() : 0);
+      OutStreamer->emitULEB128IntValue(MaybeEntryCount ? *MaybeEntryCount : 0);
     }
     const MachineBlockFrequencyInfo *MBFI =
         Features.BBFreq
@@ -1752,15 +1756,15 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
     *StackUsageStream << "static\n";
 }
 
-/// Extracts a generalized numeric type identifier of a Function's type from
-/// type metadata. Returns null if metadata cannot be found.
+/// Extracts a numeric type identifier of a Function's type from
+/// callgraph metadata. Returns null if metadata cannot be found.
 static ConstantInt *extractNumericCGTypeId(const Function &F) {
   SmallVector<MDNode *, 2> Types;
-  F.getMetadata(LLVMContext::MD_type, Types);
+  F.getMetadata(LLVMContext::MD_callgraph, Types);
   for (const auto &Type : Types) {
-    if (Type->hasGeneralizedMDString()) {
-      MDString *MDGeneralizedTypeId = cast<MDString>(Type->getOperand(1));
-      uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
+    if (Type->getNumOperands() == 1 && isa<MDString>(Type->getOperand(0))) {
+      MDString *MDTypeId = cast<MDString>(Type->getOperand(0));
+      uint64_t TypeIdVal = llvm::MD5Hash(MDTypeId->getString());
       IntegerType *Int64Ty = Type::getInt64Ty(F.getContext());
       return ConstantInt::get(Int64Ty, TypeIdVal);
     }
@@ -2754,12 +2758,12 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 
   MCSymbol *Stub = getSymbol(&GI);
   EmitLinkage(Stub);
-  OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
+  OutStreamer->emitCodeAlignment(TextAlign, *getIFuncMCSubtargetInfo());
   OutStreamer->emitLabel(Stub);
   emitVisibility(Stub, GI.getVisibility());
   emitMachOIFuncStubBody(M, GI, LazyPointer);
 
-  OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
+  OutStreamer->emitCodeAlignment(TextAlign, *getIFuncMCSubtargetInfo());
   OutStreamer->emitLabel(StubHelper);
   emitVisibility(StubHelper, GI.getVisibility());
   emitMachOIFuncStubHelperBody(M, GI, LazyPointer);
@@ -3833,7 +3837,7 @@ Align AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
       STI = &getSubtargetInfo();
     else
       STI = &TM.getMCSubtargetInfo();
-    OutStreamer->emitCodeAlignment(Alignment, STI, MaxBytesToEmit);
+    OutStreamer->emitCodeAlignment(Alignment, *STI, MaxBytesToEmit);
   } else
     OutStreamer->emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   return Alignment;
@@ -4163,6 +4167,11 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP);
 static void emitGlobalConstantVector(const DataLayout &DL, const Constant *CV,
                                      AsmPrinter &AP,
                                      AsmPrinter::AliasMapTy *AliasList) {
+  uint64_t AllocSize = DL.getTypeAllocSize(CV->getType());
+
+  if (CV->isNullValue())
+    return AP.OutStreamer->emitZeros(AllocSize);
+
   auto *VTy = cast<FixedVectorType>(CV->getType());
   Type *ElementType = VTy->getElementType();
   uint64_t ElementSizeInBits = DL.getTypeSizeInBits(ElementType);
@@ -4187,14 +4196,13 @@ static void emitGlobalConstantVector(const DataLayout &DL, const Constant *CV,
     EmittedSize = DL.getTypeStoreSize(CV->getType());
   } else {
     for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-      emitGlobalAliasInline(AP, DL.getTypeAllocSize(CV->getType()) * I, AliasList);
+      emitGlobalAliasInline(AP, AllocSize * I, AliasList);
       emitGlobalConstantImpl(DL, CV->getAggregateElement(I), AP);
     }
     EmittedSize = DL.getTypeAllocSize(ElementType) * VTy->getNumElements();
   }
 
-  unsigned Size = DL.getTypeAllocSize(CV->getType());
-  if (unsigned Padding = Size - EmittedSize)
+  if (unsigned Padding = AllocSize - EmittedSize)
     AP.OutStreamer->emitZeros(Padding);
 }
 

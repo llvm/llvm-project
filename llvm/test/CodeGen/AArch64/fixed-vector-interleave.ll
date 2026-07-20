@@ -209,12 +209,12 @@ define <4 x i16> @interleave2_diff_nonconst_splat_v4i16(i16 %a, i16 %b) {
 define <32 x i8> @interleave4_v32i8(<8 x i8> %vec0, <8 x i8> %vec1, <8 x i8> %vec2, <8 x i8> %vec3) {
 ; CHECK-LABEL: interleave4_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v4.8b, v1.8b, v3.8b
-; CHECK-NEXT:    zip1 v5.8b, v0.8b, v2.8b
-; CHECK-NEXT:    zip2 v1.8b, v1.8b, v3.8b
-; CHECK-NEXT:    zip2 v2.8b, v0.8b, v2.8b
-; CHECK-NEXT:    zip1 v0.16b, v5.16b, v4.16b
-; CHECK-NEXT:    zip1 v1.16b, v2.16b, v1.16b
+; CHECK-NEXT:    zip2 v4.8b, v1.8b, v3.8b
+; CHECK-NEXT:    zip2 v5.8b, v0.8b, v2.8b
+; CHECK-NEXT:    zip1 v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    zip1 v1.8b, v1.8b, v3.8b
+; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    zip1 v1.16b, v5.16b, v4.16b
 ; CHECK-NEXT:    ret
   %retval = call <32 x i8> @llvm.vector.interleave4.v32i8(<8 x i8> %vec0, <8 x i8> %vec1, <8 x i8> %vec2, <8 x i8> %vec3)
   ret <32 x i8> %retval
@@ -239,12 +239,12 @@ define <64 x i8> @interleave4_v64i8(<16 x i8> %vec0, <16 x i8> %vec1, <16 x i8> 
 define <16 x i16> @interleave4_v16i16(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2, <4 x i16> %vec3) {
 ; CHECK-LABEL: interleave4_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v4.4h, v1.4h, v3.4h
-; CHECK-NEXT:    zip1 v5.4h, v0.4h, v2.4h
-; CHECK-NEXT:    zip2 v1.4h, v1.4h, v3.4h
-; CHECK-NEXT:    zip2 v2.4h, v0.4h, v2.4h
-; CHECK-NEXT:    zip1 v0.8h, v5.8h, v4.8h
-; CHECK-NEXT:    zip1 v1.8h, v2.8h, v1.8h
+; CHECK-NEXT:    zip2 v4.4h, v1.4h, v3.4h
+; CHECK-NEXT:    zip2 v5.4h, v0.4h, v2.4h
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v2.4h
+; CHECK-NEXT:    zip1 v1.4h, v1.4h, v3.4h
+; CHECK-NEXT:    zip1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    zip1 v1.8h, v5.8h, v4.8h
 ; CHECK-NEXT:    ret
   %retval = call <16 x i16> @llvm.vector.interleave4.v16i16(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2, <4 x i16> %vec3)
   ret <16 x i16> %retval
@@ -269,12 +269,12 @@ define <32 x i16> @interleave4_v32i16(<8 x i16> %vec0, <8 x i16> %vec1, <8 x i16
 define <8 x i32> @interleave4_v8i32(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2, <2 x i32> %vec3) {
 ; CHECK-LABEL: interleave4_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v4.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip1 v5.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip2 v2.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v0.4s, v5.4s, v4.4s
-; CHECK-NEXT:    zip1 v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    zip2 v4.2s, v1.2s, v3.2s
+; CHECK-NEXT:    zip2 v5.2s, v0.2s, v2.2s
+; CHECK-NEXT:    zip1 v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    zip1 v1.2s, v1.2s, v3.2s
+; CHECK-NEXT:    zip1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    zip1 v1.4s, v5.4s, v4.4s
 ; CHECK-NEXT:    ret
   %retval = call <8 x i32> @llvm.vector.interleave4.v8i32(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2, <2 x i32> %vec3)
   ret <8 x i32> %retval
@@ -330,12 +330,12 @@ define <8 x i64> @interleave4_v8i64(<2 x i64> %vec0, <2 x i64> %vec1, <2 x i64> 
 define <16 x half> @interleave4_v16f16(<4 x half> %vec0, <4 x half> %vec1, <4 x half> %vec2, <4 x half> %vec3) {
 ; CHECK-LABEL: interleave4_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v4.4h, v1.4h, v3.4h
-; CHECK-NEXT:    zip1 v5.4h, v0.4h, v2.4h
-; CHECK-NEXT:    zip2 v1.4h, v1.4h, v3.4h
-; CHECK-NEXT:    zip2 v2.4h, v0.4h, v2.4h
-; CHECK-NEXT:    zip1 v0.8h, v5.8h, v4.8h
-; CHECK-NEXT:    zip1 v1.8h, v2.8h, v1.8h
+; CHECK-NEXT:    zip2 v4.4h, v1.4h, v3.4h
+; CHECK-NEXT:    zip2 v5.4h, v0.4h, v2.4h
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v2.4h
+; CHECK-NEXT:    zip1 v1.4h, v1.4h, v3.4h
+; CHECK-NEXT:    zip1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    zip1 v1.8h, v5.8h, v4.8h
 ; CHECK-NEXT:    ret
   %retval = call <16 x half> @llvm.vector.interleave4.v16f16(<4 x half> %vec0, <4 x half> %vec1, <4 x half> %vec2, <4 x half> %vec3)
   ret <16 x half> %retval
@@ -360,12 +360,12 @@ define <32 x half> @interleave4_v32f16(<8 x half> %vec0, <8 x half> %vec1, <8 x 
 define <8 x float> @interleave4_v8f32(<2 x float> %vec0, <2 x float> %vec1, <2 x float> %vec2, <2 x float> %vec3) {
 ; CHECK-LABEL: interleave4_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v4.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip1 v5.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip2 v2.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v0.4s, v5.4s, v4.4s
-; CHECK-NEXT:    zip1 v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    zip2 v4.2s, v1.2s, v3.2s
+; CHECK-NEXT:    zip2 v5.2s, v0.2s, v2.2s
+; CHECK-NEXT:    zip1 v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    zip1 v1.2s, v1.2s, v3.2s
+; CHECK-NEXT:    zip1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    zip1 v1.4s, v5.4s, v4.4s
 ; CHECK-NEXT:    ret
   %retval = call <8 x float> @llvm.vector.interleave4.v8f32(<2 x float> %vec0, <2 x float> %vec1, <2 x float> %vec2, <2 x float> %vec3)
   ret <8 x float> %retval
@@ -421,12 +421,12 @@ define <8 x double> @interleave4_v8f64(<2 x double> %vec0, <2 x double> %vec1, <
 define <16 x bfloat> @interleave4_v16bf16(<4 x bfloat> %vec0, <4 x bfloat> %vec1, <4 x bfloat> %vec2, <4 x bfloat> %vec3) {
 ; CHECK-LABEL: interleave4_v16bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v4.4h, v1.4h, v3.4h
-; CHECK-NEXT:    zip1 v5.4h, v0.4h, v2.4h
-; CHECK-NEXT:    zip2 v1.4h, v1.4h, v3.4h
-; CHECK-NEXT:    zip2 v2.4h, v0.4h, v2.4h
-; CHECK-NEXT:    zip1 v0.8h, v5.8h, v4.8h
-; CHECK-NEXT:    zip1 v1.8h, v2.8h, v1.8h
+; CHECK-NEXT:    zip2 v4.4h, v1.4h, v3.4h
+; CHECK-NEXT:    zip2 v5.4h, v0.4h, v2.4h
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v2.4h
+; CHECK-NEXT:    zip1 v1.4h, v1.4h, v3.4h
+; CHECK-NEXT:    zip1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    zip1 v1.8h, v5.8h, v4.8h
 ; CHECK-NEXT:    ret
   %retval = call <16 x bfloat> @llvm.vector.interleave4.v16bf16(<4 x bfloat> %vec0, <4 x bfloat> %vec1, <4 x bfloat> %vec2, <4 x bfloat> %vec3)
   ret <16 x bfloat> %retval
@@ -761,26 +761,26 @@ define <16 x double> @interleave8_v16f64(<2 x double> %vec0, <2 x double> %vec1,
 define <16 x i32> @interleave8_v16i32(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2, <2 x i32> %vec3, <2 x i32> %vec4, <2 x i32> %vec5, <2 x i32> %vec6, <2 x i32> %vec7) {
 ; CHECK-LABEL: interleave8_v16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v16.2s, v3.2s, v7.2s
-; CHECK-NEXT:    zip1 v17.2s, v1.2s, v5.2s
-; CHECK-NEXT:    zip1 v18.2s, v2.2s, v6.2s
-; CHECK-NEXT:    zip1 v19.2s, v0.2s, v4.2s
-; CHECK-NEXT:    zip2 v3.2s, v3.2s, v7.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v5.2s
-; CHECK-NEXT:    zip2 v2.2s, v2.2s, v6.2s
-; CHECK-NEXT:    zip2 v0.2s, v0.2s, v4.2s
-; CHECK-NEXT:    zip1 v4.2s, v17.2s, v16.2s
-; CHECK-NEXT:    zip2 v6.2s, v17.2s, v16.2s
-; CHECK-NEXT:    zip1 v5.2s, v19.2s, v18.2s
-; CHECK-NEXT:    zip2 v7.2s, v19.2s, v18.2s
+; CHECK-NEXT:    zip2 v16.2s, v2.2s, v6.2s
+; CHECK-NEXT:    zip2 v17.2s, v0.2s, v4.2s
+; CHECK-NEXT:    zip2 v18.2s, v3.2s, v7.2s
+; CHECK-NEXT:    zip2 v19.2s, v1.2s, v5.2s
+; CHECK-NEXT:    zip1 v2.2s, v2.2s, v6.2s
+; CHECK-NEXT:    zip1 v0.2s, v0.2s, v4.2s
+; CHECK-NEXT:    zip1 v3.2s, v3.2s, v7.2s
+; CHECK-NEXT:    zip1 v1.2s, v1.2s, v5.2s
+; CHECK-NEXT:    zip2 v4.2s, v17.2s, v16.2s
+; CHECK-NEXT:    zip1 v6.2s, v17.2s, v16.2s
+; CHECK-NEXT:    zip2 v5.2s, v19.2s, v18.2s
+; CHECK-NEXT:    zip1 v7.2s, v0.2s, v2.2s
+; CHECK-NEXT:    zip1 v17.2s, v19.2s, v18.2s
 ; CHECK-NEXT:    zip1 v16.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip1 v17.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v3.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip2 v18.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v0.4s, v5.4s, v4.4s
-; CHECK-NEXT:    zip1 v1.4s, v7.4s, v6.4s
-; CHECK-NEXT:    zip1 v2.4s, v17.4s, v16.4s
-; CHECK-NEXT:    zip1 v3.4s, v18.4s, v3.4s
+; CHECK-NEXT:    zip2 v2.2s, v0.2s, v2.2s
+; CHECK-NEXT:    zip2 v1.2s, v1.2s, v3.2s
+; CHECK-NEXT:    zip1 v3.4s, v4.4s, v5.4s
+; CHECK-NEXT:    zip1 v0.4s, v7.4s, v16.4s
+; CHECK-NEXT:    zip1 v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    zip1 v2.4s, v6.4s, v17.4s
 ; CHECK-NEXT:    ret
   %retval = call <16 x i32> @llvm.vector.interleave8.v16i32(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2, <2 x i32> %vec3, <2 x i32> %vec4, <2 x i32> %vec5, <2 x i32> %vec6, <2 x i32> %vec7)
   ret <16 x i32> %retval
@@ -789,26 +789,26 @@ define <16 x i32> @interleave8_v16i32(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32
 define <32 x i16> @interleave8_v32i16(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2, <4 x i16> %vec3, <4 x i16> %vec4, <4 x i16> %vec5, <4 x i16> %vec6, <4 x i16> %vec7) {
 ; CHECK-LABEL: interleave8_v32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v16.4h, v3.4h, v7.4h
-; CHECK-NEXT:    zip1 v17.4h, v1.4h, v5.4h
-; CHECK-NEXT:    zip1 v18.4h, v2.4h, v6.4h
-; CHECK-NEXT:    zip1 v19.4h, v0.4h, v4.4h
-; CHECK-NEXT:    zip2 v3.4h, v3.4h, v7.4h
-; CHECK-NEXT:    zip2 v1.4h, v1.4h, v5.4h
-; CHECK-NEXT:    zip2 v2.4h, v2.4h, v6.4h
-; CHECK-NEXT:    zip2 v0.4h, v0.4h, v4.4h
-; CHECK-NEXT:    zip1 v4.4h, v17.4h, v16.4h
-; CHECK-NEXT:    zip2 v6.4h, v17.4h, v16.4h
-; CHECK-NEXT:    zip1 v5.4h, v19.4h, v18.4h
-; CHECK-NEXT:    zip2 v7.4h, v19.4h, v18.4h
+; CHECK-NEXT:    zip2 v16.4h, v2.4h, v6.4h
+; CHECK-NEXT:    zip2 v17.4h, v0.4h, v4.4h
+; CHECK-NEXT:    zip2 v18.4h, v3.4h, v7.4h
+; CHECK-NEXT:    zip2 v19.4h, v1.4h, v5.4h
+; CHECK-NEXT:    zip1 v2.4h, v2.4h, v6.4h
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v4.4h
+; CHECK-NEXT:    zip1 v3.4h, v3.4h, v7.4h
+; CHECK-NEXT:    zip1 v1.4h, v1.4h, v5.4h
+; CHECK-NEXT:    zip2 v4.4h, v17.4h, v16.4h
+; CHECK-NEXT:    zip1 v6.4h, v17.4h, v16.4h
+; CHECK-NEXT:    zip2 v5.4h, v19.4h, v18.4h
+; CHECK-NEXT:    zip1 v7.4h, v0.4h, v2.4h
+; CHECK-NEXT:    zip1 v17.4h, v19.4h, v18.4h
 ; CHECK-NEXT:    zip1 v16.4h, v1.4h, v3.4h
-; CHECK-NEXT:    zip1 v17.4h, v0.4h, v2.4h
-; CHECK-NEXT:    zip2 v3.4h, v1.4h, v3.4h
-; CHECK-NEXT:    zip2 v18.4h, v0.4h, v2.4h
-; CHECK-NEXT:    zip1 v0.8h, v5.8h, v4.8h
-; CHECK-NEXT:    zip1 v1.8h, v7.8h, v6.8h
-; CHECK-NEXT:    zip1 v2.8h, v17.8h, v16.8h
-; CHECK-NEXT:    zip1 v3.8h, v18.8h, v3.8h
+; CHECK-NEXT:    zip2 v2.4h, v0.4h, v2.4h
+; CHECK-NEXT:    zip2 v1.4h, v1.4h, v3.4h
+; CHECK-NEXT:    zip1 v3.8h, v4.8h, v5.8h
+; CHECK-NEXT:    zip1 v0.8h, v7.8h, v16.8h
+; CHECK-NEXT:    zip1 v1.8h, v2.8h, v1.8h
+; CHECK-NEXT:    zip1 v2.8h, v6.8h, v17.8h
 ; CHECK-NEXT:    ret
   %retval = call <32 x i16> @llvm.vector.interleave8.v32i16(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2, <4 x i16> %vec3, <4 x i16> %vec4, <4 x i16> %vec5, <4 x i16> %vec6, <4 x i16> %vec7)
   ret <32 x i16> %retval

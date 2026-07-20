@@ -17,7 +17,7 @@ int fn() {
   return s.test();
 }
 
-// CHECK: @_ZTV1S = linkonce_odr dso_local unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1S, ptr @_ZN1S4testEv] }
+// CHECK: @_ZTV1S = linkonce_odr dso_local constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1S, ptr @_ZN1S4testEv] }
 
 // CHECK-LABEL: define dso_local noundef i32 @_Z2fnv()
 // CHECK:   call x86_thiscallcc void @_ZN1SC1Ev(ptr {{[^,]*}} %s)

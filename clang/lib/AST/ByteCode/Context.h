@@ -47,7 +47,7 @@ class EvalIDScope;
 class Context final {
 public:
   /// Initialises the constexpr VM.
-  Context(ASTContext &Ctx);
+  explicit Context(ASTContext &Ctx);
 
   /// Cleans up the constexpr VM.
   ~Context();
@@ -67,6 +67,9 @@ public:
   /// Evaluates a toplevel initializer.
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
                              APValue &Result);
+
+  /// Evaluates the destruction of a variable.
+  bool evaluateDestruction(State &Parent, const VarDecl *VD, APValue Value);
 
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);
@@ -94,6 +97,12 @@ public:
   std::optional<uint64_t> tryEvaluateObjectSize(State &Parent, const Expr *E,
                                                 unsigned Kind);
 
+  std::optional<bool> evaluateWithSubstitution(State &Parent,
+                                               const FunctionDecl *Callee,
+                                               ArrayRef<const Expr *> Args,
+                                               const Expr *This,
+                                               const Expr *Condition);
+
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
   /// Returns the language options.
@@ -118,6 +127,7 @@ public:
   }
 
   bool canClassify(QualType T) const {
+    T = T.getCanonicalType();
     if (const auto *BT = dyn_cast<BuiltinType>(T)) {
       if (BT->isInteger() || BT->isFloatingPoint())
         return true;
@@ -130,6 +140,10 @@ public:
     if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
         T->isVectorType())
       return false;
+
+    if (const auto *D = T->getAsEnumDecl())
+      return D->isComplete();
+
     return classify(T) != std::nullopt;
   }
   bool canClassify(const Expr *E) const {

@@ -16,4 +16,4 @@ The check does not flag implicitly-defined operators, deleted or private
 operators, or placement operators.
 
 This check corresponds to CERT C++ Coding Standard rule `DCL54-CPP. Overload allocation and deallocation functions as a pair in the same scope
-<https://www.securecoding.cert.org/confluence/display/cplusplus/DCL54-CPP.+Overload+allocation+and+deallocation+functions+as+a+pair+in+the+same+scope>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl54-cpp/>`_.

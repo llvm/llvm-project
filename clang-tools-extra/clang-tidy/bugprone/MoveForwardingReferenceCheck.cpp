@@ -24,7 +24,7 @@ AST_MATCHER(DeclRefExpr, refersToEnclosingVariableOrCapture) {
 static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
                                    const ParmVarDecl *ParmVar,
                                    const TemplateTypeParmDecl *TypeParmDecl,
-                                   DiagnosticBuilder &Diag,
+                                   const DiagnosticBuilder &Diag,
                                    const ASTContext &Context) {
   const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();

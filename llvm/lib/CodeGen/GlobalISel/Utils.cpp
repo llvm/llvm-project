@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -36,8 +37,10 @@
 #include "llvm/Support/UndefPoison.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
+#include <limits>
 #include <numeric>
 #include <optional>
+#include <tuple>
 
 #define DEBUG_TYPE "globalisel-utils"
 
@@ -1524,12 +1527,11 @@ bool llvm::isConstantOrConstantVector(const MachineInstr &MI,
 }
 
 std::optional<APInt>
-llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
+llvm::isConstantOrConstantSplatVector(Register Def,
                                       const MachineRegisterInfo &MRI) {
-  Register Def = MI.getOperand(0).getReg();
   if (auto C = getIConstantVRegValWithLookThrough(Def, MRI))
     return C->Value;
-  auto MaybeCst = getIConstantSplatSExtVal(MI, MRI);
+  auto MaybeCst = getIConstantSplatSExtVal(Def, MRI);
   if (!MaybeCst)
     return std::nullopt;
   const unsigned ScalarSize = MRI.getType(Def).getScalarSizeInBits();
@@ -1537,9 +1539,8 @@ llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
 }
 
 std::optional<APFloat>
-llvm::isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+llvm::isConstantOrConstantSplatVectorFP(Register Def,
                                         const MachineRegisterInfo &MRI) {
-  Register Def = MI.getOperand(0).getReg();
   if (auto FpConst = getFConstantVRegValWithLookThrough(Def, MRI))
     return FpConst->Value;
   auto MaybeCstFP = getFConstantSplat(Def, MRI, /*allowUndef=*/false);
@@ -2077,4 +2078,187 @@ llvm::GFConstant::getConstant(Register Const, const MachineRegisterInfo &MRI) {
     return std::nullopt;
 
   return GFConstant(MayBeConstant->Value, GFConstantKind::Scalar);
+}
+
+// Returns a list of types to use for memory op lowering in MemOps. A partial
+// port of findOptimalMemOpLowering in TargetLowering.
+static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
+                                          unsigned Limit, const MemOp &Op,
+                                          unsigned DstAS, unsigned SrcAS,
+                                          const AttributeList &FuncAttributes,
+                                          const TargetLowering &TLI) {
+  if (Op.isMemcpyOrMemmoveWithFixedDstAlign() &&
+      Op.getSrcAlign() < Op.getDstAlign())
+    return false;
+
+  LLT Ty = TLI.getOptimalMemOpLLT(Op, FuncAttributes);
+
+  if (Ty == LLT()) {
+    // Use the largest scalar type whose alignment constraints are satisfied.
+    // We only need to check DstAlign here as SrcAlign is always greater or
+    // equal to DstAlign (or zero).
+    Ty = LLT::integer(64);
+    if (Op.isFixedDstAlign())
+      while (Op.getDstAlign() < Ty.getSizeInBytes() &&
+             !TLI.allowsMisalignedMemoryAccesses(Ty, DstAS, Op.getDstAlign()))
+        Ty = LLT::integer(Ty.getSizeInBytes());
+    assert(Ty.getSizeInBits() > 0 && "Could not find valid type");
+    // FIXME: check for the largest legal type we can load/store to.
+  }
+
+  unsigned NumMemOps = 0;
+  uint64_t Size = Op.size();
+  while (Size) {
+    unsigned TySize = Ty.getSizeInBytes();
+    while (TySize > Size) {
+      // For now, only use non-vector load / store's for the left-over pieces.
+      LLT NewTy = Ty;
+      // FIXME: check for mem op safety and legality of the types. Not all of
+      // SDAGisms map cleanly to GISel concepts.
+      if (NewTy.isVector())
+        NewTy =
+            NewTy.getSizeInBits() > 64 ? LLT::integer(64) : LLT::integer(32);
+      NewTy = LLT::integer(llvm::bit_floor(NewTy.getSizeInBits() - 1));
+      unsigned NewTySize = NewTy.getSizeInBytes();
+      assert(NewTySize > 0 && "Could not find appropriate type");
+
+      // If the new LLT cannot cover all of the remaining bits, then consider
+      // issuing a (or a pair of) unaligned and overlapping load / store.
+      unsigned Fast;
+      // Need to get a VT equivalent for allowMisalignedMemoryAccesses().
+      MVT VT = getMVTForLLT(Ty);
+      if (NumMemOps && !Op.isVolatile() && NewTySize < Size &&
+          TLI.allowsMisalignedMemoryAccesses(
+              VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
+              MachineMemOperand::MONone, &Fast) &&
+          Fast)
+        TySize = Size;
+      else {
+        Ty = NewTy;
+        TySize = NewTySize;
+      }
+    }
+
+    if (++NumMemOps > Limit)
+      return false;
+
+    MemOps.push_back(Ty);
+    Size -= TySize;
+  }
+
+  return true;
+}
+
+bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
+                                const MachineRegisterInfo &MRI, unsigned MaxLen,
+                                Register &Dst, Register &Src,
+                                uint64_t &KnownLen, Align &Alignment,
+                                bool &DstAlignCanChange,
+                                std::vector<LLT> &MemOps) {
+  const unsigned Opc = MI.getOpcode();
+  assert((Opc == TargetOpcode::G_MEMCPY ||
+          Opc == TargetOpcode::G_MEMCPY_INLINE ||
+          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET ||
+          Opc == TargetOpcode::G_MEMSET_INLINE) &&
+         "Expected memcpy like instruction");
+
+  auto MMOIt = MI.memoperands_begin();
+  const MachineMemOperand *MemOp = *MMOIt;
+
+  Align DstAlign = MemOp->getBaseAlign();
+  Align SrcAlign;
+  Alignment = DstAlign;
+  Register Len;
+  std::tie(Dst, Src, Len) = MI.getFirst3Regs();
+
+  if (Opc != TargetOpcode::G_MEMSET && Opc != TargetOpcode::G_MEMSET_INLINE) {
+    assert(MMOIt != MI.memoperands_end() && "Expected a second MMO on MI");
+    MemOp = *(++MMOIt);
+    SrcAlign = MemOp->getBaseAlign();
+    Alignment = std::min(DstAlign, SrcAlign);
+  }
+
+  // See if this is a constant length copy.
+  auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
+  if (!LenVRegAndVal) {
+    // FIXME: support dynamically sized G_MEMCPY_INLINE and G_MEMSET_INLINE
+    assert(Opc != TargetOpcode::G_MEMCPY_INLINE &&
+           Opc != TargetOpcode::G_MEMSET_INLINE &&
+           "inline memcpy and memset with dynamic size are not yet supported");
+    return false;
+  }
+
+  KnownLen = LenVRegAndVal->Value.getZExtValue();
+  DstAlignCanChange = false;
+
+  if (KnownLen == 0)
+    return true;
+
+  if (Opc != TargetOpcode::G_MEMCPY_INLINE &&
+      Opc != TargetOpcode::G_MEMSET_INLINE && MaxLen && KnownLen > MaxLen)
+    return false;
+
+  bool IsVolatile = MemOp->isVolatile();
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const auto &TLI = *MF.getSubtarget().getTargetLowering();
+  // On Darwin, -Os means optimize for size without hurting performance, so
+  // only really optimize for size when -Oz (MinSize) is used.
+  bool OptSize = MF.getTarget().getTargetTriple().isOSDarwin()
+                     ? MF.getFunction().hasMinSize()
+                     : MF.getFunction().hasOptSize();
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineInstr *FIDef = getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Dst, MRI);
+  if (FIDef && !MFI.isFixedObjectIndex(FIDef->getOperand(1).getIndex()))
+    DstAlignCanChange = true;
+
+  const auto &DstMMO = **MI.memoperands_begin();
+  MachinePointerInfo DstPtrInfo = DstMMO.getPointerInfo();
+
+  switch (Opc) {
+  case TargetOpcode::G_MEMCPY_INLINE:
+  case TargetOpcode::G_MEMCPY: {
+    const auto &SrcMMO = **std::next(MI.memoperands_begin());
+    MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
+    uint64_t Limit = Opc == TargetOpcode::G_MEMCPY_INLINE
+                         ? std::numeric_limits<uint64_t>::max()
+                         : TLI.getMaxStoresPerMemcpy(OptSize);
+    return findGISelOptimalMemOpLowering(
+        MemOps, Limit,
+        MemOp::Copy(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
+                    SrcAlign, IsVolatile),
+        DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
+        MF.getFunction().getAttributes(), TLI);
+  }
+  case TargetOpcode::G_MEMMOVE: {
+    const auto &SrcMMO = **std::next(MI.memoperands_begin());
+    MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
+    unsigned Limit = TLI.getMaxStoresPerMemmove(OptSize);
+    // FIXME: SelectionDAG always passes true for 'IsVolatile', apparently
+    // due to a bug in it's findOptimalMemOpLowering implementation. For now do
+    // the same thing here.
+    return findGISelOptimalMemOpLowering(
+        MemOps, Limit,
+        MemOp::Move(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
+                    SrcAlign, /*IsVolatile=*/true),
+        DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
+        MF.getFunction().getAttributes(), TLI);
+  }
+  case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE: {
+    unsigned Limit = Opc == TargetOpcode::G_MEMSET_INLINE
+                         ? std::numeric_limits<unsigned>::max()
+                         : TLI.getMaxStoresPerMemset(OptSize);
+    auto ValVRegAndVal = getIConstantVRegValWithLookThrough(Src, MRI);
+    bool IsZeroVal = ValVRegAndVal && ValVRegAndVal->Value == 0;
+    return findGISelOptimalMemOpLowering(
+        MemOps, Limit,
+        MemOp::Set(KnownLen, DstAlignCanChange, DstAlign,
+                   /*IsZeroMemset=*/IsZeroVal,
+                   /*IsVolatile=*/IsVolatile),
+        DstPtrInfo.getAddrSpace(), ~0u, MF.getFunction().getAttributes(), TLI);
+  }
+  default:
+    llvm_unreachable("Unexpected memcpy-family opcode");
+  }
 }

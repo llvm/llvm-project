@@ -454,10 +454,6 @@ LogicalResult
 AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
                                     OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
-  if (isa<FloatType>(atomicOp.getType()))
-    return rewriter.notifyMatchFailure(atomicOp,
-                                       "unimplemented floating-point case");
-
   auto memrefType = cast<MemRefType>(atomicOp.getMemref().getType());
   std::optional<spirv::Scope> scope = getAtomicOpScope(memrefType);
   if (!scope)
@@ -488,13 +484,13 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
                                        "failed to convert memref type");
 
   Type pointeeType = pointerType.getPointeeType();
-  auto dstType = dyn_cast<IntegerType>(
-      getElementTypeForStoragePointer(pointeeType, typeConverter));
-  if (!dstType)
+  Type storageElemType =
+      getElementTypeForStoragePointer(pointeeType, typeConverter);
+  if (!storageElemType || !storageElemType.isIntOrFloat())
     return rewriter.notifyMatchFailure(
         atomicOp, "failed to determine destination element type");
 
-  int dstBits = static_cast<int>(dstType.getWidth());
+  int dstBits = static_cast<int>(storageElemType.getIntOrFloatBitWidth());
   assert(dstBits % srcBits == 0);
 
   spirv::MemorySemantics memSem = getAtomicAcqRelMemorySemantics(memrefType);
@@ -509,6 +505,7 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
     break
 
     switch (atomicOp.getKind()) {
+      ATOMIC_CASE(addf, EXTAtomicFAddOp);
       ATOMIC_CASE(addi, AtomicIAddOp);
       ATOMIC_CASE(maxs, AtomicSMaxOp);
       ATOMIC_CASE(maxu, AtomicUMaxOp);
@@ -545,6 +542,8 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
     return rewriter.notifyMatchFailure(
         atomicOp,
         "sub-element-width atomic ops unsupported with Kernel capability");
+
+  auto dstType = cast<IntegerType>(storageElemType);
 
   auto accessChainOp = ptr.getDefiningOp<spirv::AccessChainOp>();
   if (!accessChainOp)

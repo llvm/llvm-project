@@ -83,6 +83,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  err
+  ../libc/include/err.yaml
+  err.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   features
   ../libc/include/features.yaml
   features.h
@@ -117,6 +125,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.imaxdiv_t
+    .llvm-libc-types.wchar_t
     .llvm-libc-macros.inttypes_macros
     .stdint
 )
@@ -127,6 +136,14 @@ add_header_macro(
   float.h
   DEPENDS
     .llvm-libc-macros.float_macros
+)
+
+add_header_macro(
+  libgen
+  ../libc/include/libgen.yaml
+  libgen.h
+  DEPENDS
+    .llvm_libc_common_h
 )
 
 add_header_macro(
@@ -194,35 +211,14 @@ add_header_macro(
     .llvm-libc-macros.sysexits_macros
 )
 
-
-# TODO: This should be conditional on POSIX networking being included.
-file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
-
 add_header_macro(
-  arpa_inet
-  ../libc/include/arpa/inet.yaml
-  arpa/inet.h
+  alloca
+  ../libc/include/alloca.yaml
+  alloca.h
   DEPENDS
     .llvm_libc_common_h
-    .inttypes
-    .llvm-libc-types.in_addr_t
-    .llvm-libc-types.struct_in_addr
-)
-
-file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
-
-add_header_macro(
-  netinet_in
-  ../libc/include/netinet/in.yaml
-  netinet/in.h
-  DEPENDS
-    .llvm-libc-macros.netinet_in_macros
-    .llvm-libc-types.in_addr_t
-    .llvm-libc-types.in_port_t
-    .llvm-libc-types.sa_family_t
-    .llvm-libc-types.struct_sockaddr_in
-    .llvm-libc-types.struct_in_addr
-    .llvm_libc_common_h
+    .llvm-libc-macros.alloca_macros
+    .llvm-libc-types.size_t
 )
 
 add_header_macro(
@@ -342,6 +338,7 @@ add_header_macro(
     .llvm-libc-types.struct_timeval
     .llvm-libc-types.clockid_t
     .llvm-libc-types.rsize_t
+    .llvm-libc-types.tm_gmtoff_t
 )
 
 add_header_macro(
@@ -560,6 +557,7 @@ add_header_macro(
   elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
+    .llvm-libc-macros.sys_auxv_macros
     .llvm-libc-types.Elf32_Addr
     .llvm-libc-types.Elf32_Chdr
     .llvm-libc-types.Elf32_Dyn
@@ -640,6 +638,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_ioctl_macros
+    .llvm-libc-types.struct_winsize
 )
 
 add_header_macro(
@@ -669,6 +668,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_param
+  ../libc/include/sys/param.yaml
+  sys/param.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_param_macros
+)
+
+add_header_macro(
   sys_personality
   ../libc/include/sys/personality.yaml
   sys/personality.h
@@ -683,6 +691,15 @@ add_header_macro(
   sys/prctl.h
   DEPENDS
     .llvm_libc_common_h
+)
+
+add_header_macro(
+  sys_ptrace
+  ../libc/include/sys/ptrace.yaml
+  sys/ptrace.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_ptrace_macros
 )
 
 add_header(
@@ -789,6 +806,7 @@ add_header_macro(
     .llvm-libc-types.struct_cmsghdr
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.struct_linger
+    .llvm-libc-types.struct_mmsghdr
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.struct_sockaddr_storage
@@ -834,6 +852,7 @@ add_header_macro(
     .llvm-libc-types.gid_t
     .llvm-libc-types.ino_t
     .llvm-libc-types.key_t
+    .llvm-libc-types.loff_t
     .llvm-libc-types.mode_t
     .llvm-libc-types.nlink_t
     .llvm-libc-types.off_t
@@ -849,7 +868,10 @@ add_header_macro(
     .llvm-libc-types.ssize_t
     .llvm-libc-types.suseconds_t
     .llvm-libc-types.time_t
+    .llvm-libc-types.u_char
+    .llvm-libc-types.u_int32_t
     .llvm-libc-types.uid_t
+    .llvm-libc-types.uint
 )
 
 add_header_macro(
@@ -890,6 +912,79 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.struct_rusage
     .llvm-libc-types.siginfo_t
+)
+
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
+
+add_header_macro(
+  net_if
+  ../libc/include/net/if.yaml
+  net/if.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.net_if_macros
+    .llvm-libc-types.struct_ifreq
+)
+
+# TODO: This should be conditional on POSIX networking being included.
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
+
+add_header_macro(
+  netinet_in
+  ../libc/include/netinet/in.yaml
+  netinet/in.h
+  DEPENDS
+    .llvm-libc-macros.netinet_in_macros
+    .llvm-libc-macros.inet_address_macros
+    .llvm-libc-types.in_addr_t
+    .llvm-libc-types.in_port_t
+    .llvm-libc-types.sa_family_t
+    .llvm-libc-types.struct_sockaddr_in
+    .llvm-libc-types.struct_sockaddr_in6
+    .llvm-libc-types.struct_in_addr
+    .llvm-libc-types.struct_in6_addr
+    .llvm-libc-types.struct_ip_mreq
+    .llvm-libc-types.struct_ip_mreq_source
+    .llvm-libc-types.struct_ip_mreqn
+    .llvm-libc-types.struct_ip_msfilter
+    .llvm-libc-types.struct_ip_opts
+    .llvm-libc-types.struct_ipv6_mreq
+    .llvm_libc_common_h
+    .sys_socket
+)
+
+add_header_macro(
+  netinet_tcp
+  ../libc/include/netinet/tcp.yaml
+  netinet/tcp.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
+  netinet_udp
+  ../libc/include/netinet/udp.yaml
+  netinet/udp.h
+  DEPENDS
+    .llvm-libc-types.struct_udphdr
+    .llvm_libc_common_h
+)
+
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
+
+add_header_macro(
+  arpa_inet
+  ../libc/include/arpa/inet.yaml
+  arpa/inet.h
+  DEPENDS
+    .inttypes
+    .llvm_libc_common_h
+    .llvm-libc-types.in_addr_t
+    .llvm-libc-types.in_port_t
+    .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_in_addr
+    .llvm-libc-macros.inet_address_macros
+    .netinet_in
 )
 
 add_header_macro(

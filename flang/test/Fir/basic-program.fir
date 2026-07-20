@@ -21,18 +21,23 @@ func.func @_QQmain() {
 // PASSES-NEXT: 'fir.global' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   SeparateAllocatableAssign
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   SeparateAllocatableAssign
 // PASSES-NEXT:  'omp.declare_mapper' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   SeparateAllocatableAssign
 // PASSES-NEXT: 'omp.declare_reduction' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   SeparateAllocatableAssign
 // PASSES-NEXT: 'omp.private' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   SeparateAllocatableAssign
 // PASSES-NEXT:   Canonicalizer
 // PASSES-NEXT:   CSE
 // PASSES-NEXT:    (S) 0 num-cse'd - Number of operations CSE'd
@@ -179,6 +184,8 @@ func.func @_QQmain() {
 // PASSES-NEXT:  LowerNontemporalPass
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
+// PASSES-NEXT: EmitMIFGlobalCtors
+// PASSES-NEXT:  HostOpFilteringPass
 // PASSES-NEXT: 'llvm.func' Pipeline
 // PASSES-NEXT:  StackToSharedPass
 // PASSES-NEXT: PrepareForOMPOffloadPrivatizationPass

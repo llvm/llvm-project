@@ -19,7 +19,7 @@ void swf(int a) {
 }
 
 // BEFORE:  cir.func{{.*}} @_Z3swfi
-// BEFORE:   %[[VAR_B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
+// BEFORE:   %[[VAR_B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
 // BEFORE:   %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
 // BEFORE:   cir.switch(%[[COND:.*]] : !s32i) {
 // BEFORE:     cir.case(equal, [#cir.int<3> : !s32i]) {
@@ -45,9 +45,9 @@ void swf(int a) {
 // BEFORE: cir.return
 
 // AFTER: cir.func{{.*}} @_Z3swfi
-// AFTER:  %[[VAR_A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+// AFTER:  %[[VAR_A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // AFTER:  cir.store{{.*}} %arg0, %[[VAR_A]] : !s32i, !cir.ptr<!s32i>
-// AFTER:  %[[VAR_B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
+// AFTER:  %[[VAR_B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
 // AFTER:  %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
 // AFTER:  cir.store{{.*}} %[[CONST_3]], %[[VAR_B]] : !s32i, !cir.ptr<!s32i>
 // AFTER:  cir.switch.flat %[[COND:.*]] : !s32i, ^bb[[#BB6:]] [

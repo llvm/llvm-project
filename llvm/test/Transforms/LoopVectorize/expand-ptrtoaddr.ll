@@ -7,8 +7,8 @@ define void @test_ptrtoaddr_tripcount(ptr %start, ptr %end) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[START_ADDR:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; CHECK-NEXT:    [[END_ADDR:%.*]] = ptrtoaddr ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END_ADDR]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START_ADDR]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[END_ADDR]], [[START_ADDR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

@@ -8,7 +8,7 @@ target triple = "aarch64"
 
 define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 noundef %3) {
 ; CHECK-LABEL: define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii
-; CHECK-SAME: (ptr noundef readonly captures(none) [[TMP0:%.*]], ptr noundef readonly captures(none) [[TMP1:%.*]], i32 noundef [[TMP2:%.*]], i32 noundef [[TMP3:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef readonly captures(none) [[TMP0:%.*]], ptr nofree noundef readonly captures(none) [[TMP1:%.*]], i32 noundef [[TMP2:%.*]], i32 noundef [[TMP3:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  .preheader.i:
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP2]] to i64

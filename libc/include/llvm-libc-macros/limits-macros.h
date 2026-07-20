@@ -248,10 +248,16 @@
 #endif
 
 #ifdef __linux__
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
-#endif
-#endif
+#endif // PATH_MAX
+
+#ifndef NAME_MAX
+#define NAME_MAX 255
+#endif // NAME_MAX
+
+#endif // __linux__
 
 #ifndef _POSIX_ARG_MAX
 #define _POSIX_ARG_MAX 4096
@@ -260,5 +266,12 @@
 #ifndef IOV_MAX
 #define IOV_MAX 1024
 #endif // IOV_MAX
+
+#ifndef SSIZE_MAX
+#ifdef __PTRDIFF_MAX__
+/// The maximum value that can be stored in an object of type ssize_t.
+#define SSIZE_MAX __PTRDIFF_MAX__
+#endif
+#endif
 
 #endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H

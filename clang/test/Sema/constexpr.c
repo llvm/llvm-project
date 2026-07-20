@@ -446,3 +446,11 @@ static_assert(designated_init_b.a.d == 12.0); // expected-warning {{folding it t
 static_assert(designated_init_b.a.e[0] == 5); // expected-warning {{folding it to a constant is a GNU extension}}
 static_assert(designated_init_b.a.e[1] == 13); // expected-warning {{folding it to a constant is a GNU extension}}
 static_assert(designated_init_b.y == 14);
+
+struct S2 {
+  char L[4];
+  int M;
+};
+const struct S2 s2[2] = {{{"foo"}, 1}, [0].L[2] = 'x'}; // expected-warning {{initializer partially overrides prior initialization of this subobject}} \
+                                                        // expected-note {{previous initialization is here}}
+static_assert(s2[0].L[2] == 'x');// expected-warning {{folding it to a constant is a GNU extension}}

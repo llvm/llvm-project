@@ -546,85 +546,64 @@ class MetadataLoader::MetadataLoaderImpl {
                llvm::dyn_cast_or_null<DISubprogram>(S);
   }
 
-  /// Move local imports from DICompileUnit's 'imports' field to
-  /// DISubprogram's retainedNodes.
-  /// Move function-local enums from DICompileUnit's enums
-  /// to DISubprogram's retainedNodes.
+  /// Map SP -> {Metadata} to store CU locals that should be attached to
+  /// subprogram retainedNodes list during CU upgrade.
+  using SPToEntitiesMap =
+      SmallDenseMap<DISubprogram *, SmallVector<Metadata *>>;
+
+  /// Retrieve the CU operand at position ListIndex, treat it as an MDTuple, and
+  /// remove all local debug info nodes from it. Fill SPToEntities map with
+  /// removed local nodes.
+  template <typename NodeT>
+  void upgradeOneCULocalsList(SPToEntitiesMap &SPToEntities, DICompileUnit *CU,
+                              unsigned ListIndex) {
+    MDTuple *List = cast_if_present<MDTuple>(CU->getOperand(ListIndex));
+    if (!List)
+      return;
+
+    if (llvm::all_of(List->operands(), [](Metadata *MD) {
+          return !isa_and_nonnull<DILocalScope>(getScope(cast<NodeT>(MD)));
+        }))
+      return;
+
+    SmallVector<Metadata *> MDs;
+    for (Metadata *MD : List->operands()) {
+      DILocalScope *LS =
+          dyn_cast_or_null<DILocalScope>(getScope(cast<NodeT>(MD)));
+      if (!LS)
+        MDs.push_back(MD);
+      else if (auto *SP = findEnclosingSubprogram(LS))
+        SPToEntities[SP].push_back(MD);
+    }
+
+    CU->replaceOperandWith(ListIndex, MDNode::get(CU->getContext(), MDs));
+  }
+
+  /// Move function-local entities from DICompileUnit's 'imports',
+  /// 'enums', and 'globals' fields to DISubprogram's retainedNodes.
   void upgradeCULocals() {
     NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu");
     if (!CUNodes)
       return;
 
-    // Filter out elements of ToRemove from tuple T.
-    auto FilterTuple = [this](MDNode *T,
-                              const SetVector<Metadata *> &ToRemove) {
-      SmallVector<Metadata *> Result;
-      for (Metadata *Op : T->operands())
-        if (!ToRemove.contains(Op))
-          Result.push_back(Op);
-      return MDTuple::get(Context, Result);
-    };
-
-    // For each CU:
-    // - Collect local metadata nodes from CU's imports: and enums: lists in
-    //   MetadataToRemove set.
-    // - Remove metadata nodes of MetadataToRemove set from CU's imports: and
-    //   enums: lists.
-    // - Group MetadataToRemove items by their parent subprograms (in
-    //   SPToEntities map).
-    // - For each subprogram SP in SPToEntities:
-    //   - Append collected local metadata nodes to SP's retainedNodes: list.
+    SPToEntitiesMap SPToEntities;
     for (MDNode *N : CUNodes->operands()) {
       auto *CU = dyn_cast<DICompileUnit>(N);
       if (!CU)
         continue;
 
-      SetVector<Metadata *> MetadataToRemove;
-      // Collect imported entities to be moved.
-      if (CU->getRawImportedEntities())
-        for (Metadata *Op : CU->getImportedEntities()->operands()) {
-          auto *IE = cast<DIImportedEntity>(Op);
-          if (isa_and_nonnull<DILocalScope>(IE->getScope()))
-            MetadataToRemove.insert(IE);
-        }
-      // Collect enums to be moved.
-      if (CU->getRawEnumTypes())
-        for (Metadata *Op : CU->getEnumTypes()->operands()) {
-          auto *Enum = cast<DICompositeType>(Op);
-          if (isa_and_nonnull<DILocalScope>(Enum->getScope()))
-            MetadataToRemove.insert(Enum);
-        }
+      // Remove all static local variables from CU's globals list.
+      upgradeOneCULocalsList<DIGlobalVariableExpression>(SPToEntities, CU, 6);
+      // Remove all local imports from CU's imports list.
+      upgradeOneCULocalsList<DIImportedEntity>(SPToEntities, CU, 7);
+      // Remove all local types from CU's enums list.
+      upgradeOneCULocalsList<DICompositeType>(SPToEntities, CU, 4);
 
-      if (MetadataToRemove.empty())
-        continue;
-
-      // Remove entities with local scope from CU.
-      if (CU->getRawImportedEntities())
-        CU->replaceImportedEntities(
-            FilterTuple(CU->getImportedEntities().get(), MetadataToRemove));
-
-      // Remove enums with local scope from CU.
-      if (CU->getRawEnumTypes())
-        CU->replaceEnumTypes(
-            FilterTuple(CU->getEnumTypes().get(), MetadataToRemove));
-
-      // Find DISubprogram corresponding to each entity.
-      SmallDenseMap<DISubprogram *, SmallVector<Metadata *>> SPToEntities;
-      for (auto *I : MetadataToRemove) {
-        DILocalScope *Scope =
-            DISubprogram::getRetainedNodeScope(cast<DINode>(I));
-        if (auto *SP = findEnclosingSubprogram(Scope))
-          SPToEntities[SP].push_back(I);
-      }
-
-      // Update DISubprograms' retainedNodes.
-      for (auto I = SPToEntities.begin(); I != SPToEntities.end(); ++I) {
-        auto *SP = I->first;
-        auto RetainedNodes = SP->getRetainedNodes();
-        SmallVector<Metadata *> MDs(RetainedNodes.begin(), RetainedNodes.end());
-        MDs.append(I->second);
-        SP->replaceRetainedNodes(MDNode::get(Context, MDs));
-      }
+      // Retain local entities removed from the CU in their corresponding
+      // subprograms.
+      for (auto &[SP, Nodes] : SPToEntities)
+        SP->retainNodes(Nodes.begin(), Nodes.end());
+      SPToEntities.clear();
     }
 
     ParentSubprogram.clear();
@@ -1937,7 +1916,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPILE_UNIT: {
-    if (Record.size() < 14 || Record.size() > 23)
+    if (Record.size() < 14 || Record.size() > 24)
       return error("Invalid record");
 
     // Ignore Record[0], which indicates whether this compile unit is
@@ -1947,13 +1926,23 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     const auto LangVersionMask = (uint64_t(1) << 63);
     const bool HasVersionedLanguage = Record[1] & LangVersionMask;
     const uint32_t LanguageVersion = Record.size() > 22 ? Record[22] : 0;
+    // The dialect field is written by writeDICompileUnit as a small enum
+    // value (see dwarf::LanguageDialectAttribute). Reject out-of-range
+    // values rather than silently truncating to uint16_t; this keeps the
+    // writer/reader invariant symmetric and surfaces malformed inputs.
+    // Value 0 means "no dialect specified".
+    if (Record.size() > 23 &&
+        Record[23] > static_cast<uint64_t>(dwarf::DW_LLVM_LANG_DIALECT_max))
+      return error("Invalid DICompileUnit dialect value");
+    const uint16_t Dialect =
+        Record.size() > 23 ? static_cast<uint16_t>(Record[23]) : uint16_t(0);
 
     auto *CU = DICompileUnit::getDistinct(
         Context,
         HasVersionedLanguage
             ? DISourceLanguageName(Record[1] & ~LangVersionMask,
-                                   LanguageVersion)
-            : DISourceLanguageName(Record[1]),
+                                   LanguageVersion, Dialect)
+            : DISourceLanguageName(Record[1], Dialect),
         getMDOrNull(Record[2]), getMDString(Record[3]), Record[4],
         getMDString(Record[5]), Record[6], getMDString(Record[7]), Record[8],
         getMDOrNull(Record[9]), getMDOrNull(Record[10]),
@@ -1964,6 +1953,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Record.size() <= 17 ? false : Record[17],
         Record.size() <= 18 ? 0 : Record[18],
         Record.size() <= 19 ? false : Record[19],
+        // Keep these guarded for backwards-compatibility with older bitcode
+        // records. Keep this index layout in sync with writeDICompileUnit:
+        // index 20 is sysroot, 21 is SDK, 22 is source-language version, and
+        // 23 is dialect (read above as raw enum value, where 0 means unset).
         Record.size() <= 20 ? nullptr : getMDString(Record[20]),
         Record.size() <= 21 ? nullptr : getMDString(Record[21]));
 

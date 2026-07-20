@@ -77,6 +77,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
 
   switch (Ctx->emitDwarfUnwindInfo()) {
   case EmitDwarfUnwindType::Always:
+  case EmitDwarfUnwindType::DwarfOnly:
     OmitDwarfIfHaveCompactUnwind = false;
     break;
   case EmitDwarfUnwindType::NoCompactUnwind:
@@ -368,7 +369,9 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   case Triple::aarch64_be:
   case Triple::x86_64:
     FDECFIEncoding = dwarf::DW_EH_PE_pcrel |
-                     (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+                     ((Large || Ctx->getTargetOptions().LargeEHEncoding)
+                          ? dwarf::DW_EH_PE_sdata8
+                          : dwarf::DW_EH_PE_sdata4);
     break;
   case Triple::bpfel:
   case Triple::bpfeb:
@@ -432,21 +435,24 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   DataRelROSection = Ctx->getELFSection(".data.rel.ro", ELF::SHT_PROGBITS,
                                         ELF::SHF_ALLOC | ELF::SHF_WRITE);
 
-  MergeableConst4Section =
-      Ctx->getELFSection(".rodata.cst4", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
+  unsigned MergeableCstFlags = ELF::SHF_ALLOC | ELF::SHF_MERGE;
+  StringRef CstPrefix = ".rodata";
+  if (Large && T.getArch() == Triple::x86_64) {
+    MergeableCstFlags |= ELF::SHF_X86_64_LARGE;
+    CstPrefix = ".lrodata";
+  }
 
-  MergeableConst8Section =
-      Ctx->getELFSection(".rodata.cst8", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
+  MergeableConst4Section = Ctx->getELFSection(
+      CstPrefix + ".cst4", ELF::SHT_PROGBITS, MergeableCstFlags, 4);
 
-  MergeableConst16Section =
-      Ctx->getELFSection(".rodata.cst16", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
+  MergeableConst8Section = Ctx->getELFSection(
+      CstPrefix + ".cst8", ELF::SHT_PROGBITS, MergeableCstFlags, 8);
 
-  MergeableConst32Section =
-      Ctx->getELFSection(".rodata.cst32", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
+  MergeableConst16Section = Ctx->getELFSection(
+      CstPrefix + ".cst16", ELF::SHT_PROGBITS, MergeableCstFlags, 16);
+
+  MergeableConst32Section = Ctx->getELFSection(
+      CstPrefix + ".cst32", ELF::SHT_PROGBITS, MergeableCstFlags, 32);
 
   // Exception Handling Sections.
 
@@ -583,9 +589,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1,
-                   GOFF::ESD_ALIGN_Quadword, 0},
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1, 0},
       RootSDSection);
+  ADAEDSection->setAlignment(Align(16)); // Quadword
   ADASection = Ctx->getGOFFSection(SectionKind::getData(), "#S",
                                    GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
                                                 GOFF::ESD_LT_XPLink,
@@ -596,17 +602,17 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       SectionKind::getText(), GOFF::CLASS_CODE,
       GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_NormalName,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Concatenate,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword, 0},
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       RootSDSection);
+  TextSection->setAlignment(Align(8)); // Doubleword
 
   MCSectionGOFF *PPA2ListEDSection = Ctx->getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_PPA2,
       GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword, 0},
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       RootSDSection);
+  PPA2ListEDSection->setAlignment(Align(8)); // Doubleword
   PPA2ListSection = Ctx->getGOFFSection(SectionKind::getData(), ".&ppa2",
                                         GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
                                                      GOFF::ESD_LT_OS,
@@ -617,9 +623,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       SectionKind::getData(), "B_IDRL",
       GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_NormalName,
                    GOFF::ESD_TS_Structured, GOFF::ESD_BA_Concatenate,
-                   GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword, 0},
+                   GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0, 0},
       RootSDSection);
+  IDRLSection->setAlignment(Align(8)); // Doubleword
 
   // Debug Info Sections. The ED name is the same used by the XL compiler.
   auto InitDebugSection = [this,
@@ -629,9 +635,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
         SectionKind::getMetadata(), EDName,
         GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                      GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Concatenate,
-                     GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0,
-                     GOFF::ESD_ALIGN_Doubleword, 0},
+                     GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0, 0},
         RootSDSection);
+    ED->setAlignment(Align(8)); // Doubleword
     // At least for llc, this function is called twice! (See function
     // compileModule() in llc.cpp). Since the context is not cleared, the
     // already allocated section is returned above. We only add the begin symbol
@@ -815,46 +821,57 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                           COFF::IMAGE_SCN_MEM_READ);
   DwarfMacinfoDWOSection = Ctx->getCOFFSection(
       ".debug_macinfo.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                COFF::IMAGE_SCN_LNK_REMOVE |
                                 COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                 COFF::IMAGE_SCN_MEM_READ);
   DwarfMacroDWOSection = Ctx->getCOFFSection(
       ".debug_macro.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                              COFF::IMAGE_SCN_LNK_REMOVE |
                               COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                               COFF::IMAGE_SCN_MEM_READ);
   DwarfInfoDWOSection = Ctx->getCOFFSection(
       ".debug_info.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                             COFF::IMAGE_SCN_LNK_REMOVE |
                              COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                              COFF::IMAGE_SCN_MEM_READ);
   DwarfTypesDWOSection = Ctx->getCOFFSection(
       ".debug_types.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                              COFF::IMAGE_SCN_LNK_REMOVE |
                               COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                               COFF::IMAGE_SCN_MEM_READ);
   DwarfAbbrevDWOSection = Ctx->getCOFFSection(
       ".debug_abbrev.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                               COFF::IMAGE_SCN_LNK_REMOVE |
                                COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                COFF::IMAGE_SCN_MEM_READ);
   DwarfStrDWOSection = Ctx->getCOFFSection(
       ".debug_str.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                            COFF::IMAGE_SCN_LNK_REMOVE |
                             COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                             COFF::IMAGE_SCN_MEM_READ);
   DwarfLineDWOSection = Ctx->getCOFFSection(
       ".debug_line.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                             COFF::IMAGE_SCN_LNK_REMOVE |
                              COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                              COFF::IMAGE_SCN_MEM_READ);
   DwarfLocDWOSection = Ctx->getCOFFSection(
       ".debug_loc.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                            COFF::IMAGE_SCN_LNK_REMOVE |
                             COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                             COFF::IMAGE_SCN_MEM_READ);
   DwarfLoclistsDWOSection = Ctx->getCOFFSection(
       ".debug_loclists.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                 COFF::IMAGE_SCN_LNK_REMOVE |
                                  COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                  COFF::IMAGE_SCN_MEM_READ);
   DwarfStrOffDWOSection = Ctx->getCOFFSection(
       ".debug_str_offsets.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                    COFF::IMAGE_SCN_LNK_REMOVE |
                                     COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                     COFF::IMAGE_SCN_MEM_READ);
   DwarfRnglistsDWOSection = Ctx->getCOFFSection(
       ".debug_rnglists.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                 COFF::IMAGE_SCN_LNK_REMOVE |
                                  COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                  COFF::IMAGE_SCN_MEM_READ);
   DwarfAddrSection = Ctx->getCOFFSection(

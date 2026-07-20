@@ -47,7 +47,7 @@ define zeroext i8 @select_cmov_i8(i1 zeroext %cond, i8 zeroext %a, i8 zeroext %b
 ;
 ; SDAG-X86-LABEL: select_cmov_i8:
 ; SDAG-X86:       ## %bb.0:
-; SDAG-X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    jne LBB0_1
 ; SDAG-X86-NEXT:  ## %bb.2:
 ; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -60,7 +60,7 @@ define zeroext i8 @select_cmov_i8(i1 zeroext %cond, i8 zeroext %a, i8 zeroext %b
 ;
 ; SDAG-X86-CMOV-LABEL: select_cmov_i8:
 ; SDAG-X86-CMOV:       ## %bb.0:
-; SDAG-X86-CMOV-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; SDAG-X86-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; SDAG-X86-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; SDAG-X86-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -155,7 +155,7 @@ define zeroext i16 @select_cmov_i16(i1 zeroext %cond, i16 zeroext %a, i16 zeroex
 ;
 ; SDAG-X86-LABEL: select_cmov_i16:
 ; SDAG-X86:       ## %bb.0:
-; SDAG-X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    jne LBB1_1
 ; SDAG-X86-NEXT:  ## %bb.2:
 ; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -168,7 +168,7 @@ define zeroext i16 @select_cmov_i16(i1 zeroext %cond, i16 zeroext %a, i16 zeroex
 ;
 ; SDAG-X86-CMOV-LABEL: select_cmov_i16:
 ; SDAG-X86-CMOV:       ## %bb.0:
-; SDAG-X86-CMOV-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; SDAG-X86-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; SDAG-X86-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; SDAG-X86-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -360,7 +360,7 @@ define i32 @select_cmov_i32(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; SDAG-X86-LABEL: select_cmov_i32:
 ; SDAG-X86:       ## %bb.0:
-; SDAG-X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    jne LBB3_1
 ; SDAG-X86-NEXT:  ## %bb.2:
 ; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -373,7 +373,7 @@ define i32 @select_cmov_i32(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; SDAG-X86-CMOV-LABEL: select_cmov_i32:
 ; SDAG-X86-CMOV:       ## %bb.0:
-; SDAG-X86-CMOV-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; SDAG-X86-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; SDAG-X86-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; SDAG-X86-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -549,7 +549,7 @@ define i64 @select_cmov_i64(i1 zeroext %cond, i64 %a, i64 %b) {
 ;
 ; SDAG-X86-LABEL: select_cmov_i64:
 ; SDAG-X86:       ## %bb.0:
-; SDAG-X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    jne LBB5_1
 ; SDAG-X86-NEXT:  ## %bb.2:
 ; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
@@ -563,7 +563,7 @@ define i64 @select_cmov_i64(i1 zeroext %cond, i64 %a, i64 %b) {
 ;
 ; SDAG-X86-CMOV-LABEL: select_cmov_i64:
 ; SDAG-X86-CMOV:       ## %bb.0:
-; SDAG-X86-CMOV-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; SDAG-X86-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; SDAG-X86-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; SDAG-X86-CMOV-NEXT:    cmovnel %eax, %ecx

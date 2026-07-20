@@ -170,7 +170,7 @@ macro(detect_target_arch)
   check_symbol_exists(__wasm64__ "" __WEBASSEMBLY64)
   check_symbol_exists(__ve__ "" __VE)
   if(__AMDGPU)
-    add_default_target_arch(amdgcn)
+    add_default_target_arch(amdgpu)
   elseif(__ARM)
     add_default_target_arch(arm)
   elseif(__AVR)
@@ -419,12 +419,23 @@ macro(construct_compiler_rt_default_triple)
     set(COMPILER_RT_DEFAULT_TARGET_ARCH "i386")
   endif()
 
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "^thumb")
+    string(REPLACE "thumb" "arm" COMPILER_RT_DEFAULT_TARGET_ARCH "${COMPILER_RT_DEFAULT_TARGET_ARCH}")
+    set(COMPILER_RT_ARM_THUMB ON)
+  endif()
+
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgpu|amdgcn")
+    set(COMPILER_RT_TARGET_AMDGPU TRUE)
+  else()
+    set(COMPILER_RT_TARGET_AMDGPU FALSE)
+  endif()
+
   # If we are directly targeting a GPU we need to check that the compiler is
   # compatible and pass some default arguments.
   if(COMPILER_RT_DEFAULT_TARGET_ONLY)
 
     # Pass the necessary flags to make flag detection work.
-    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    if(COMPILER_RT_TARGET_AMDGPU)
       set(COMPILER_RT_GPU_BUILD ON)
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx|spirv64")
       set(COMPILER_RT_GPU_BUILD ON)

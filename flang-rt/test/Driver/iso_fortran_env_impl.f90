@@ -2,6 +2,8 @@
 ! (iso_fortran_env_impl.cpp) match the Fortran module definitions.
 
 ! UNSUPPORTED: offload-cuda
+! REQUIRES: fortran-modules
+
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
 ! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
 

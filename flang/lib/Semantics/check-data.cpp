@@ -17,8 +17,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
-#include <algorithm>
-#include <vector>
 
 namespace Fortran::semantics {
 

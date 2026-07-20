@@ -13,24 +13,32 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
+cl::opt<bool> EmbedDebug("dx-embed-debug",
+                         cl::desc("Embed PDB in shader container"));
+cl::opt<bool>
+    StripDebug("dx-strip-debug",
+               cl::desc("Strip debug information from shader bytecode"));
+
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
-uint64_t DXContainerObjectWriter::writeObject() {
-  auto &Asm = *this->Asm;
+MCDXContainerBaseWriter::~MCDXContainerBaseWriter() = default;
+
+void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
+  ArrayRef<MCDXContainerPart> Parts = collectParts();
+
+  support::endian::Writer W(OS, llvm::endianness::little);
+
   // Start the file size as the header plus the size of the part offsets.
   // Presently DXContainer files usually contain 7-10 parts. Reserving space for
   // 16 part offsets gives us a little room for growth.
   llvm::SmallVector<uint64_t, 16> PartOffsets;
   uint64_t PartOffset = 0;
-  for (const MCSection &Sec : Asm) {
-    uint64_t SectionSize = Asm.getSectionAddressSize(Sec);
-    // Skip empty sections.
-    if (SectionSize == 0)
-      continue;
-
+  for (const MCDXContainerPart &Part : Parts) {
+    uint64_t SectionSize = Part.Data.size();
     assert(SectionSize < std::numeric_limits<uint32_t>::max() &&
            "Section size too large for DXContainer");
 
@@ -39,7 +47,7 @@ uint64_t DXContainerObjectWriter::writeObject() {
     PartOffset = alignTo(PartOffset, Align(4ul));
     // The DXIL part also writes a program header, so we need to include its
     // size when computing the offset for a part after the DXIL part.
-    if (Sec.getName() == "DXIL")
+    if (dxbc::isProgramPart(Part.Name))
       PartOffset += sizeof(dxbc::ProgramHeader);
   }
   assert(PartOffset < std::numeric_limits<uint32_t>::max() &&
@@ -66,28 +74,23 @@ uint64_t DXContainerObjectWriter::writeObject() {
   for (uint64_t Offset : PartOffsets)
     W.write<uint32_t>(static_cast<uint32_t>(PartStart + Offset));
 
-  for (const MCSection &Sec : Asm) {
-    uint64_t SectionSize = Asm.getSectionAddressSize(Sec);
-    // Skip empty sections.
-    if (SectionSize == 0)
-      continue;
-
+  for (const MCDXContainerPart &Part : Parts) {
+    uint64_t SectionSize = Part.Data.size();
     unsigned Start = W.OS.tell();
     // Write section header.
-    W.write<char>(ArrayRef<char>(Sec.getName().data(), 4));
+    W.write<char>(ArrayRef<char>(Part.Name.data(), 4));
 
     uint64_t PartSize = SectionSize;
 
-    if (Sec.getName() == "DXIL")
+    if (dxbc::isProgramPart(Part.Name))
       PartSize += sizeof(dxbc::ProgramHeader);
     // DXContainer parts should be 4-byte aligned.
     PartSize = alignTo(PartSize, Align(4));
     W.write<uint32_t>(static_cast<uint32_t>(PartSize));
-    if (Sec.getName() == "DXIL") {
+    if (dxbc::isProgramPart(Part.Name)) {
       dxbc::ProgramHeader Header;
       memset(reinterpret_cast<void *>(&Header), 0, sizeof(dxbc::ProgramHeader));
 
-      const Triple &TT = getContext().getTargetTriple();
       VersionTuple Version = TT.getOSVersion();
       uint8_t MajorVersion = static_cast<uint8_t>(Version.getMajor());
       uint8_t MinorVersion =
@@ -111,9 +114,44 @@ uint64_t DXContainerObjectWriter::writeObject() {
       W.write<char>(ArrayRef<char>(reinterpret_cast<char *>(&Header),
                                    sizeof(dxbc::ProgramHeader)));
     }
-    Asm.writeSectionData(W.OS, &Sec);
+    W.write<char>(Part.Data);
     unsigned Size = W.OS.tell() - Start;
     W.OS.write_zeros(offsetToAlignment(Size, Align(4)));
   }
+}
+
+void DXContainerObjectWriter::clearParts() {
+  Parts.clear();
+  SectionBuffers.clear();
+}
+
+ArrayRef<MCDXContainerPart> DXContainerObjectWriter::collectParts() {
+  clearParts();
+  for (const MCSection &Sec : *Asm) {
+    if (shouldSkipSection(Sec.getName(), Asm->getSectionAddressSize(Sec)))
+      continue;
+
+    SectionBuffers.emplace_back();
+    raw_svector_ostream OS(SectionBuffers.back());
+    Asm->writeSectionData(OS, &Sec);
+    Parts.push_back({Sec.getName(), StringRef(SectionBuffers.back())});
+  }
+  return Parts;
+}
+
+bool DXContainerObjectWriter::shouldSkipSection(StringRef SectionName,
+                                                size_t SectionSize) {
+  // Do not write ILDB part if we're not embedding it.
+  if (SectionName == "ILDB" && (!EmbedDebug || StripDebug))
+    return true;
+  if (SectionName == "SRCI")
+    return true;
+  return MCDXContainerBaseWriter::shouldSkipSection(SectionName, SectionSize);
+}
+
+uint64_t DXContainerObjectWriter::writeObject() {
+  write(W.OS, getContext().getTargetTriple());
+  clearParts();
+
   return 0;
 }

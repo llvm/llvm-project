@@ -250,6 +250,18 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
+        Return this type as an equivalent MemRef type when convertible.
+      }],
+      /*retTy=*/"::mlir::MemRefType",
+      /*methodName=*/"getAsMemRefType",
+      /*args=*/(ins "::mlir::ModuleOp":$module),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
         Returns true if the pointer points to device data.
       }],
       /*retTy=*/"bool",
@@ -427,6 +439,12 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         are created during initialization). When `needsDestroy` is set, callers
         should invoke `generatePrivateDestroy` in the recipe's destroy region
         with the privatized value returned by this method.
+
+        Implementations that want certain ops to carry the correct variable name
+        post materialization should attach `getVarNamePlaceholder()` as the
+        `acc.var_name` attribute to those ops. `ACCRecipeMaterialization` will
+        replace the placeholder with the actual variable name when inlining the
+        recipe.
 
         If the return value is empty, it means that recipe body was not
         successfully generated.

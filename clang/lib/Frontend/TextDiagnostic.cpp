@@ -730,15 +730,16 @@ void TextDiagnostic::emitDiagnosticMessage(
   if (Loc.isValid())
     emitDiagnosticLoc(Loc, PLoc, Level, Ranges);
 
-  if (DiagOpts.ShowColors)
+  if (DiagOpts.showColors(OS.has_colors()))
     OS.resetColor();
 
   if (DiagOpts.ShowLevel)
-    printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
+    printDiagnosticLevel(OS, Level, DiagOpts.showColors(OS.has_colors()));
   printDiagnosticMessage(OS,
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
                          Message, OS.getColumn() - StartOfLocationInfo,
-                         DiagOpts.MessageLength, DiagOpts.ShowColors);
+                         DiagOpts.MessageLength,
+                         DiagOpts.showColors(OS.has_colors()));
   // We use a formatted ostream, which does its own buffering. Flush here
   // so we keep the proper order of output.
   OS.flush();
@@ -872,7 +873,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
   if (!DiagOpts.ShowLocation)
     return;
 
-  if (DiagOpts.ShowColors)
+  if (DiagOpts.showColors(OS.has_colors()))
     OS.changeColor(SavedColor, true);
 
   emitFilename(PLoc.getFilename(), Loc.getManager());
@@ -1429,7 +1430,7 @@ void TextDiagnostic::emitSnippetAndCaret(
   // emit, starting from the first line.
   std::unique_ptr<SmallVector<StyleRange>[]> SourceStyles =
       highlightLines(BufData, Lines.first, Lines.second, PP, LangOpts,
-                     DiagOpts.ShowColors, FID, SM);
+                     DiagOpts.showColors(OS.has_colors()), FID, SM);
 
   SmallVector<LineRange> LineRanges =
       prepareAndFilterRanges(Ranges, SM, Lines, FID, LangOpts);
@@ -1508,22 +1509,22 @@ void TextDiagnostic::emitSnippetAndCaret(
 
     if (!CaretLine.empty()) {
       indentForLineNumbers();
-      if (DiagOpts.ShowColors)
+      if (DiagOpts.showColors(OS.has_colors()))
         OS.changeColor(CaretColor, true);
       OS << CaretLine << '\n';
-      if (DiagOpts.ShowColors)
+      if (DiagOpts.showColors(OS.has_colors()))
         OS.resetColor();
     }
 
     if (!FixItInsertionLine.empty()) {
       indentForLineNumbers();
-      if (DiagOpts.ShowColors)
+      if (DiagOpts.showColors(OS.has_colors()))
         // Print fixit line in color
         OS.changeColor(FixitColor, false);
       if (DiagOpts.ShowSourceRanges)
         OS << ' ';
       OS << FixItInsertionLine << '\n';
-      if (DiagOpts.ShowColors)
+      if (DiagOpts.showColors(OS.has_colors()))
         OS.resetColor();
     }
   }
@@ -1552,7 +1553,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
         printableTextForNextCharacter(SourceLine, &I, DiagOpts.TabStop);
 
     // Toggle inverted colors on or off for this character.
-    if (DiagOpts.ShowColors) {
+    if (DiagOpts.showColors(OS.has_colors())) {
       if (WasPrintable == PrintReversed) {
         PrintReversed = !PrintReversed;
         if (PrintReversed)
@@ -1583,7 +1584,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
     OS << Str;
   }
 
-  if (DiagOpts.ShowColors)
+  if (DiagOpts.showColors(OS.has_colors()))
     OS.resetColor();
 
   OS << '\n';

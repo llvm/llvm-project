@@ -27,7 +27,9 @@ set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
 # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang.
 if (CMAKE_VERSION VERSION_LESS "3.24")
   cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR
+      _Fortran_COMPILER_STEM STREQUAL "flang" OR
+      _Fortran_COMPILER_STEM STREQUAL "fakeflang")
     include(CMakeForceCompiler)
     CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
 
@@ -69,6 +71,7 @@ include(GetToolchainDirs)
 include(FlangCommon)
 include(HandleCompilerRT)
 include(ExtendPath)
+include(FlangRTIntrospection)
 
 
 ############################
@@ -112,12 +115,23 @@ else ()
   option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." OFF)
 endif ()
 
+# Enable building Fortran modules if Fortran is enabled
+option(FLANG_RT_FORTRAN_MODULES "Build Flang-RT modules" "${RUNTIMES_FORTRAN_MODULES}")
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED AND NOT FLANG_RT_FORTRAN_MODULES)
+  message(WARNING "LLVM_ENABLE_RUNTIMES=flang-rt, but not building anything")
+endif ()
 
 # TODO: Support tests for the GPU target.
 set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
 if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
+elseif (NOT FLANG_RT_FORTRAN_MODULES)
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
 elseif (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
+# NonGTestTesting uses LINK_TO_LLVM, pulling in host dependencies
+# (e.g. ZLIB::ZLIB) that break cross-compilation.
+elseif (CMAKE_CROSSCOMPILING)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
 endif()
 option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
@@ -181,6 +195,10 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
+# Look for support of REAL(16), if not already defined via command
+# line via -DFORTRAN_SUPPORTS_REAL16=YES/NO
+check_fortran_quadmath_support()
+
 # Search for clang_rt.builtins library. Need in addition to msvcrt.
 if (WIN32)
   find_compiler_rt_library(builtins FLANG_RT_BUILTINS_LIBRARY)
@@ -194,7 +212,7 @@ if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
 endif ()
 
 # Indicates REAL(16) support via an external library (e.g. libquadmath).
-add_compile_definitions(FLANG_RT_SUPPORTS_REAL16=$<BOOL:${FLANG_RUNTIME_F128_MATH_LIB}>)
+add_compile_definitions(FLANG_RT_SUPPORTS_REAL16=$<BOOL:${FORTRAN_SUPPORTS_REAL16}>)
 
 # Check whether the compiler can undefine a macro using the "-Wp,-U" flag.
 # Aternatively, we could use

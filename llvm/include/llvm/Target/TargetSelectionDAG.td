@@ -346,7 +346,7 @@ def SDTFPAtomic2 : SDTypeProfile<1, 2, [
 ]>;
 
 def SDTAtomicStore : SDTypeProfile<0, 2, [
-  SDTCisInt<0>, SDTCisPtrTy<1>
+  SDTCisPtrTy<1>
 ]>;
 def SDTAtomicLoad : SDTypeProfile<1, 1, [
   SDTCisPtrTy<1>
@@ -480,6 +480,8 @@ def clmul      : SDNode<"ISD::CLMUL"     , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def clmulr     : SDNode<"ISD::CLMULR"    , SDTIntBinOp, [SDNPCommutative]>;
 def clmulh     : SDNode<"ISD::CLMULH"    , SDTIntBinOp, [SDNPCommutative]>;
+def pext       : SDNode<"ISD::PEXT"      , SDTIntBinOp>;
+def pdep       : SDNode<"ISD::PDEP"      , SDTIntBinOp>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def or         : SDNode<"ISD::OR"        , SDTIntBinOp,
@@ -596,6 +598,9 @@ def fminimumnum   : SDNode<"ISD::FMINIMUMNUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fmaximumnum   : SDNode<"ISD::FMAXIMUMNUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
+// Pseudo fmin/fmax are neither commutative nor associative.
+def pseudo_fmin : SDNode<"ISD::PSEUDO_FMIN", SDTFPBinOp>;
+def pseudo_fmax : SDNode<"ISD::PSEUDO_FMAX", SDTFPBinOp>;
 def fgetsign   : SDNode<"ISD::FGETSIGN"   , SDTFPToIntOp>;
 def fcanonicalize : SDNode<"ISD::FCANONICALIZE", SDTFPUnaryOp>;
 def fneg       : SDNode<"ISD::FNEG"       , SDTFPUnaryOp>;
@@ -642,8 +647,6 @@ def fp_to_sint : SDNode<"ISD::FP_TO_SINT" , SDTFPToIntOp>;
 def fp_to_uint : SDNode<"ISD::FP_TO_UINT" , SDTFPToIntOp>;
 def fp_to_sint_sat : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntSatOp>;
 def fp_to_uint_sat : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntSatOp>;
-def fp_to_sint_sat_gi : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntOp>;
-def fp_to_uint_sat_gi : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntOp>;
 def f16_to_fp  : SDNode<"ISD::FP16_TO_FP" , SDTIntToFPOp>;
 def fp_to_f16  : SDNode<"ISD::FP_TO_FP16" , SDTFPToIntOp>;
 def bf16_to_fp  : SDNode<"ISD::BF16_TO_FP" , SDTIntToFPOp>;
@@ -725,6 +728,10 @@ def strict_fminimum   : SDNode<"ISD::STRICT_FMINIMUM",
 def strict_fmaximum   : SDNode<"ISD::STRICT_FMAXIMUM",
                                SDTFPBinOp, [SDNPHasChain,
                                             SDNPCommutative, SDNPAssociative]>;
+def strict_pseudo_fmin : SDNode<"ISD::STRICT_PSEUDO_FMIN", SDTFPBinOp,
+                                [SDNPHasChain]>;
+def strict_pseudo_fmax : SDNode<"ISD::STRICT_PSEUDO_FMAX", SDTFPBinOp,
+                                [SDNPHasChain]>;
 def strict_fpround    : SDNode<"ISD::STRICT_FP_ROUND",
                                SDTFPRoundOp, [SDNPHasChain]>;
 def strict_fpextend   : SDNode<"ISD::STRICT_FP_EXTEND",
@@ -1904,6 +1911,12 @@ def any_fmaximum   : PatFrags<(ops node:$lhs, node:$rhs),
 def any_fminimum   : PatFrags<(ops node:$lhs, node:$rhs),
                               [(strict_fminimum node:$lhs, node:$rhs),
                                (fminimum node:$lhs, node:$rhs)]>;
+def any_pseudo_fmax : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_pseudo_fmax node:$lhs, node:$rhs),
+                               (pseudo_fmax node:$lhs, node:$rhs)]>;
+def any_pseudo_fmin : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_pseudo_fmin node:$lhs, node:$rhs),
+                               (pseudo_fmin node:$lhs, node:$rhs)]>;
 def any_fpround    : PatFrags<(ops node:$src),
                               [(strict_fpround node:$src),
                                (fpround node:$src)]>;
@@ -2391,6 +2404,41 @@ def atomic_store_128 :
   PatFrag<(ops node:$val, node:$ptr),
           (atomic_store node:$val, node:$ptr)> {
   let IsAtomic = true;
+  let MemoryVT = i128;
+}
+
+// Matches store or atomic_store, no alignment requirement.
+def any_store : PatFrags<(ops node:$val, node:$ptr),
+                         [(store node:$val, node:$ptr),
+                          (atomic_store node:$val, node:$ptr)]>;
+
+def any_store_8 : PatFrags<(ops node:$val, node:$ptr),
+                           [(store node:$val, node:$ptr),
+                            (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i8;
+}
+
+def any_store_16 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i16;
+}
+
+def any_store_32 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i32;
+}
+
+def any_store_64 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i64;
+}
+
+def any_store_128 : PatFrags<(ops node:$val, node:$ptr),
+                             [(store node:$val, node:$ptr),
+                              (atomic_store node:$val, node:$ptr)]> {
   let MemoryVT = i128;
 }
 

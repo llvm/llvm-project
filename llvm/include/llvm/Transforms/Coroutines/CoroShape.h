@@ -211,7 +211,10 @@ struct Shape {
   CallingConv::ID getResumeFunctionCC() const {
     switch (ABI) {
     case coro::ABI::Switch:
-      return CallingConv::Fast;
+      // Use the platform C calling convention so that resume/destroy
+      // function pointers stored in the coroutine frame are
+      // interoperable with other compilers.
+      return CallingConv::C;
 
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:

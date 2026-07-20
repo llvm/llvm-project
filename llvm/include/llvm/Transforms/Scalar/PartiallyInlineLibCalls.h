@@ -22,7 +22,7 @@ class Function;
 class PartiallyInlineLibCallsPass
     : public OptionalPassInfoMixin<PartiallyInlineLibCallsPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 }
 

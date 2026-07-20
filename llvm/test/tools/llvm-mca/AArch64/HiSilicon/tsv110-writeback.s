@@ -750,7 +750,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.2s }, [x27], #8
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.4h }, [x27], #8
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.4s }, [x27], #16
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [1] Code Region - G02
 
@@ -786,7 +786,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.16b }, [x27], #16
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.1d }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.2d }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [2] Code Region - G03
 
@@ -822,7 +822,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.4s }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.8b }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.8h }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [3] Code Region - G04
 
@@ -858,7 +858,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.2d, v2.2d }, [x27], #32
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.2s, v2.2s }, [x27], #16
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.4h, v2.4h }, [x27], #16
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [4] Code Region - G05
 
@@ -894,7 +894,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.8h, v2.8h }, [x27], #32
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.16b, v2.16b }, [x27], #32
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.1d, v2.1d }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [5] Code Region - G06
 
@@ -930,7 +930,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.4h, v2.4h }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.4s, v2.4s }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [6] Code Region - G07
 
@@ -966,7 +966,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
 # CHECK-NEXT: 3.     1     2.0    0.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
 # CHECK-NEXT: 4.     1     3.0    1.0    0.0       ld1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT:        1     2.0    0.4    0.0       <total>
+# CHECK-NEXT:        5     2.0    0.4    0.0       <total>
 
 # CHECK:      [7] Code Region - G08
 
@@ -1002,7 +1002,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    1.0    0.0       ld1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
 # CHECK-NEXT: 3.     1     2.0    0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
 # CHECK-NEXT: 4.     1     3.0    1.0    0.0       ld1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT:        1     1.8    0.6    0.0       <total>
+# CHECK-NEXT:        5     1.8    0.6    0.0       <total>
 
 # CHECK:      [8] Code Region - G09
 
@@ -1038,7 +1038,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    1.0    0.0       ld1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
 # CHECK-NEXT: 3.     1     2.0    0.0    0.0       ld1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    1.0    0.0       ld1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT:        1     1.8    0.6    0.0       <total>
+# CHECK-NEXT:        5     1.8    0.6    0.0       <total>
 
 # CHECK:      [9] Code Region - G10
 
@@ -1074,7 +1074,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    1.0    0.0       ld1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
 # CHECK-NEXT: 3.     1     2.0    0.0    0.0       ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
 # CHECK-NEXT: 4.     1     3.0    1.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
-# CHECK-NEXT:        1     1.8    0.6    0.0       <total>
+# CHECK-NEXT:        5     1.8    0.6    0.0       <total>
 
 # CHECK:      [10] Code Region - G11
 
@@ -1110,7 +1110,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [11] Code Region - G12
 
@@ -1146,7 +1146,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [12] Code Region - G13
 
@@ -1182,7 +1182,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
 # CHECK-NEXT: 4.     1     6.0    0.0    0.0       ld1	{ v1.b }[0], [x27], #1
-# CHECK-NEXT:        1     2.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.0    0.2    0.0       <total>
 
 # CHECK:      [13] Code Region - G14
 
@@ -1218,7 +1218,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld1	{ v1.b }[8], [x27], x28
 # CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld1	{ v1.h }[0], [x27], #2
 # CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld1	{ v1.h }[4], [x27], #2
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT:        5     13.0   0.2    0.0       <total>
 
 # CHECK:      [14] Code Region - G15
 
@@ -1254,7 +1254,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld1	{ v1.s }[0], [x27], #4
 # CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld1	{ v1.s }[0], [x27], x28
 # CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld1	{ v1.d }[0], [x27], #8
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT:        5     13.0   0.2    0.0       <total>
 
 # CHECK:      [15] Code Region - G16
 
@@ -1290,7 +1290,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1r	{ v1.2d }, [x27], #8
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1r	{ v1.2s }, [x27], #4
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld1r	{ v1.4h }, [x27], #2
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [16] Code Region - G17
 
@@ -1326,7 +1326,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1r	{ v1.8h }, [x27], #2
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1r	{ v1.16b }, [x27], #1
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld1r	{ v1.1d }, [x27], x28
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [17] Code Region - G18
 
@@ -1362,7 +1362,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1r	{ v1.4h }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1r	{ v1.4s }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld1r	{ v1.8b }, [x27], x28
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [18] Code Region - G19
 
@@ -1398,7 +1398,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2	{ v1.2d, v2.2d }, [x27], #32
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2	{ v1.2s, v2.2s }, [x27], #16
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld2	{ v1.4h, v2.4h }, [x27], #16
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [19] Code Region - G20
 
@@ -1434,7 +1434,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2	{ v1.8h, v2.8h }, [x27], #32
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2	{ v1.16b, v2.16b }, [x27], #32
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld2	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [20] Code Region - G21
 
@@ -1470,7 +1470,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2	{ v1.4s, v2.4s }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2	{ v1.8b, v2.8b }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld2	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [21] Code Region - G22
 
@@ -1506,7 +1506,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld2	{ v1.b, v2.b }[8], [x27], #2
 # CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld2	{ v1.b, v2.b }[0], [x27], x28
 # CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld2	{ v1.b, v2.b }[8], [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT:        5     13.0   0.2    0.0       <total>
 
 # CHECK:      [22] Code Region - G23
 
@@ -1542,7 +1542,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld2	{ v1.h, v2.h }[0], [x27], x28
 # CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld2	{ v1.h, v2.h }[4], [x27], x28
 # CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld2	{ v1.s, v2.s }[0], [x27], #8
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT:        5     13.0   0.2    0.0       <total>
 
 # CHECK:      [23] Code Region - G24
 
@@ -1578,7 +1578,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld2	{ v1.d, v2.d }[0], [x27], x28
 # CHECK-NEXT: 3.     1     13.0   0.0    0.0       ld2r	{ v1.1d, v2.1d }, [x27], #16
 # CHECK-NEXT: 4.     1     13.0   0.0    0.0       ld2r	{ v1.2d, v2.2d }, [x27], #16
-# CHECK-NEXT:        1     9.4    0.2    0.0       <total>
+# CHECK-NEXT:        5     9.4    0.2    0.0       <total>
 
 # CHECK:      [24] Code Region - G25
 
@@ -1614,7 +1614,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2r	{ v1.4s, v2.4s }, [x27], #8
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2r	{ v1.8b, v2.8b }, [x27], #2
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld2r	{ v1.8h, v2.8h }, [x27], #4
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [25] Code Region - G26
 
@@ -1650,7 +1650,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2r	{ v1.2d, v2.2d }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2r	{ v1.2s, v2.2s }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld2r	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [26] Code Region - G27
 
@@ -1686,7 +1686,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2r	{ v1.8h, v2.8h }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2r	{ v1.16b, v2.16b }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [27] Code Region - G28
 
@@ -1722,7 +1722,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
 # CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
 # CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     1.0    1.0    0.0       <total>
 
 # CHECK:      [28] Code Region - G29
 
@@ -1758,7 +1758,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     1.0    1.0    0.0       <total>
 
 # CHECK:      [29] Code Region - G30
 
@@ -1794,7 +1794,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       ld3	{ v1.b, v2.b, v3.b }[0], [x27], #3
 # CHECK-NEXT: 4.     1     13.0   0.0    0.0       ld3	{ v1.b, v2.b, v3.b }[8], [x27], #3
-# CHECK-NEXT:        1     4.6    0.6    0.0       <total>
+# CHECK-NEXT:        5     4.6    0.6    0.0       <total>
 
 # CHECK:      [30] Code Region - G31
 
@@ -1830,7 +1830,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld3	{ v1.h, v2.h, v3.h }[0], [x27], #6
 # CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld3	{ v1.h, v2.h, v3.h }[4], [x27], #6
 # CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld3	{ v1.h, v2.h, v3.h }[0], [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT:        5     13.0   0.2    0.0       <total>
 
 # CHECK:      [31] Code Region - G32
 
@@ -1866,7 +1866,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld3	{ v1.s, v2.s, v3.s }[0], [x27], x28
 # CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld3	{ v1.d, v2.d, v3.d }[0], [x27], #24
 # CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld3	{ v1.d, v2.d, v3.d }[0], [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT:        5     13.0   0.2    0.0       <total>
 
 # CHECK:      [32] Code Region - G33
 
@@ -1902,7 +1902,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], #12
 # CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], #6
 # CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], #12
-# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     1.0    1.0    0.0       <total>
 
 # CHECK:      [33] Code Region - G34
 
@@ -1938,7 +1938,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], #3
 # CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     1.0    1.0    0.0       <total>
 
 # CHECK:      [34] Code Region - G35
 
@@ -1974,7 +1974,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     1.0    1.0    0.0       <total>
 
 # CHECK:      [35] Code Region - G36
 
@@ -2010,7 +2010,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
 # CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
 # CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
-# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     1.0    1.0    0.0       <total>
 
 # CHECK:      [36] Code Region - G37
 
@@ -2046,7 +2046,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
 # CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     1.0    1.0    0.0       <total>
 
 # CHECK:      [37] Code Region - G38
 
@@ -2082,7 +2082,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     1.0    1.0    0.0       <total>
 
 # CHECK:      [38] Code Region - G39
 
@@ -2118,7 +2118,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], x28
 # CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], x28
 # CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], #8
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT:        5     13.0   0.2    0.0       <total>
 
 # CHECK:      [39] Code Region - G40
 
@@ -2154,7 +2154,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], x28
 # CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], #16
 # CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT:        5     13.0   0.2    0.0       <total>
 
 # CHECK:      [40] Code Region - G41
 
@@ -2190,7 +2190,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     6.0    0.0    0.0       ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
 # CHECK-NEXT: 3.     1     6.0    1.0    0.0       ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #32
 # CHECK-NEXT: 4.     1     5.0    0.0    0.0       ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #16
-# CHECK-NEXT:        1     5.0    0.4    0.0       <total>
+# CHECK-NEXT:        5     5.0    0.4    0.0       <total>
 
 # CHECK:      [41] Code Region - G42
 
@@ -2226,7 +2226,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4r	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #4
 # CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld4r	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #8
 # CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #4
-# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     1.0    1.0    0.0       <total>
 
 # CHECK:      [42] Code Region - G43
 
@@ -2262,7 +2262,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
 # CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     1.0    1.0    0.0       <total>
 
 # CHECK:      [43] Code Region - G44
 
@@ -2298,7 +2298,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
 # CHECK-NEXT: 3.     1     1.0    1.0    1.0       ldp	s1, s2, [x27], #248
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ldp	d1, d2, [x27], #496
-# CHECK-NEXT:        1     1.0    0.8    0.2       <total>
+# CHECK-NEXT:        5     1.0    0.8    0.2       <total>
 
 # CHECK:      [44] Code Region - G45
 
@@ -2334,7 +2334,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ldp	d1, d2, [x27, #496]!
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ldp	q1, q2, [x27, #992]!
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ldp	w1, w2, [x27], #248
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [45] Code Region - G46
 
@@ -2370,7 +2370,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       ldp	x1, x2, [x27, #496]!
 # CHECK-NEXT: 3.     1     1.0    0.0    0.0       ldpsw	x1, x2, [x27], #248
 # CHECK-NEXT: 4.     1     1.0    0.0    0.0       ldpsw	x1, x2, [x27, #248]!
-# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
+# CHECK-NEXT:        5     1.0    0.2    0.0       <total>
 
 # CHECK:      [46] Code Region - G47
 
@@ -2406,7 +2406,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldr	s1, [x27], #254
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ldr	d1, [x27], #254
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldr	q1, [x27], #254
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [47] Code Region - G48
 
@@ -2442,7 +2442,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldr	s1, [x27, #254]!
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ldr	d1, [x27, #254]!
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldr	q1, [x27, #254]!
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [48] Code Region - G49
 
@@ -2478,7 +2478,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldr	w1, [x27, #254]!
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ldr	x1, [x27, #254]!
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldrb	w1, [x27], #254
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [49] Code Region - G50
 
@@ -2514,7 +2514,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldrh	w1, [x27, #254]!
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ldrsb	w1, [x27], #254
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldrsb	x1, [x27], #254
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [50] Code Region - G51
 
@@ -2550,7 +2550,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldrsh	w1, [x27], #254
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       ldrsh	x1, [x27], #254
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldrsh	w1, [x27, #254]!
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [51] Code Region - G52
 
@@ -2585,7 +2585,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldrsw	x1, [x27, #254]!
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.1d }, [x27], #8
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.2d }, [x27], #16
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [52] Code Region - G53
 
@@ -2620,7 +2620,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.4s }, [x27], #16
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.8b }, [x27], #8
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.8h }, [x27], #16
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [53] Code Region - G54
 
@@ -2655,7 +2655,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.2d }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.2s }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.4h }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [54] Code Region - G55
 
@@ -2691,7 +2691,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.8h }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.16b }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.1d, v2.1d }, [x27], #16
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [55] Code Region - G56
 
@@ -2727,7 +2727,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.4h, v2.4h }, [x27], #16
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.4s, v2.4s }, [x27], #32
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [56] Code Region - G57
 
@@ -2763,7 +2763,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.1d, v2.1d }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.2d, v2.2d }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [57] Code Region - G58
 
@@ -2799,7 +2799,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.8b, v2.8b }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.8h, v2.8h }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [58] Code Region - G59
 
@@ -2835,7 +2835,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [59] Code Region - G60
 
@@ -2871,7 +2871,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [60] Code Region - G61
 
@@ -2907,7 +2907,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [61] Code Region - G62
 
@@ -2943,7 +2943,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [62] Code Region - G63
 
@@ -2979,7 +2979,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [63] Code Region - G64
 
@@ -3015,7 +3015,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [64] Code Region - G65
 
@@ -3050,7 +3050,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    2.0       st1	{ v1.b }[0], [x27], #1
 # CHECK-NEXT: 3.     1     3.0    0.0    1.0       st1	{ v1.b }[8], [x27], #1
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.b }[0], [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.6       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.6       <total>
 
 # CHECK:      [65] Code Region - G66
 
@@ -3085,7 +3085,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.h }[4], [x27], #2
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.h }[0], [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.h }[4], [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [66] Code Region - G67
 
@@ -3121,7 +3121,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.d }[0], [x27], #8
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.d }[0], [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [67] Code Region - G68
 
@@ -3157,7 +3157,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st2	{ v1.4s, v2.4s }, [x27], #32
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st2	{ v1.8b, v2.8b }, [x27], #16
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [68] Code Region - G69
 
@@ -3193,7 +3193,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st2	{ v1.2s, v2.2s }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st2	{ v1.4h, v2.4h }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [69] Code Region - G70
 
@@ -3229,7 +3229,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st2	{ v1.16b, v2.16b }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st2	{ v1.b, v2.b }[0], [x27], #2
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.b, v2.b }[8], [x27], #2
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [70] Code Region - G71
 
@@ -3265,7 +3265,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st2	{ v1.h, v2.h }[0], [x27], #4
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st2	{ v1.h, v2.h }[4], [x27], #4
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.h, v2.h }[0], [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [71] Code Region - G72
 
@@ -3301,7 +3301,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st2	{ v1.s, v2.s }[0], [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st2	{ v1.d, v2.d }[0], [x27], #16
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.d, v2.d }[0], [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [72] Code Region - G73
 
@@ -3332,7 +3332,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
 # CHECK-NEXT: 1.     1     2.0    0.0    0.0       st3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT:        1     1.7    0.3    0.0       <total>
+# CHECK-NEXT:        3     1.7    0.3    0.0       <total>
 
 # CHECK:      [73] Code Region - G74
 
@@ -3368,7 +3368,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [74] Code Region - G75
 
@@ -3404,7 +3404,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [75] Code Region - G76
 
@@ -3440,7 +3440,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.b, v2.b, v3.b }[8], [x27], #3
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st3	{ v1.b, v2.b, v3.b }[0], [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st3	{ v1.b, v2.b, v3.b }[8], [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [76] Code Region - G77
 
@@ -3476,7 +3476,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.h, v2.h, v3.h }[0], [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st3	{ v1.h, v2.h, v3.h }[4], [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st3	{ v1.s, v2.s, v3.s }[0], [x27], #12
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [77] Code Region - G78
 
@@ -3512,7 +3512,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.d, v2.d, v3.d }[0], [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [78] Code Region - G79
 
@@ -3548,7 +3548,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [79] Code Region - G80
 
@@ -3584,7 +3584,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [80] Code Region - G81
 
@@ -3620,7 +3620,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    1.0       st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], #4
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], #4
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.2       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.2       <total>
 
 # CHECK:      [81] Code Region - G82
 
@@ -3656,7 +3656,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], #8
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], x28
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], x28
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [82] Code Region - G83
 
@@ -3690,7 +3690,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 1.     1     2.0    0.0    0.0       st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], x28
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
-# CHECK-NEXT:        1     2.0    0.3    0.0       <total>
+# CHECK-NEXT:        4     2.0    0.3    0.0       <total>
 
 # CHECK:      [83] Code Region - G84
 
@@ -3719,7 +3719,7 @@ ldr  x2, [x1], #254
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       stp	s1, s2, [x27], #248
 # CHECK-NEXT: 1.     1     2.0    1.0    0.0       stp	d1, d2, [x27], #496
-# CHECK-NEXT:        1     1.5    1.0    0.0       <total>
+# CHECK-NEXT:        2     1.5    1.0    0.0       <total>
 
 # CHECK:      [84] Code Region - G85
 
@@ -3755,7 +3755,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     3.0    1.0    0.0       stp	d1, d2, [x27, #496]!
 # CHECK-NEXT: 3.     1     4.0    1.0    0.0       stp	q1, q2, [x27, #992]!
 # CHECK-NEXT: 4.     1     5.0    1.0    0.0       stp	w1, w2, [x27], #248
-# CHECK-NEXT:        1     3.0    1.0    0.0       <total>
+# CHECK-NEXT:        5     3.0    1.0    0.0       <total>
 
 # CHECK:      [85] Code Region - G86
 
@@ -3790,7 +3790,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       stp	x1, x2, [x27, #496]!
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       str	b1, [x27], #254
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       str	h1, [x27], #254
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [86] Code Region - G87
 
@@ -3825,7 +3825,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       str	q1, [x27], #254
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       str	b1, [x27, #254]!
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       str	h1, [x27, #254]!
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [87] Code Region - G88
 
@@ -3860,7 +3860,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       str	q1, [x27, #254]!
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       str	w1, [x27], #254
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       str	x1, [x27], #254
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [88] Code Region - G89
 
@@ -3895,7 +3895,7 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       strb	w1, [x27], #254
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       strb	w1, [x27, #254]!
 # CHECK-NEXT: 4.     1     3.0    0.0    0.0       strh	w1, [x27], #254
-# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
+# CHECK-NEXT:        5     2.2    0.2    0.0       <total>
 
 # CHECK:      [89] Code Region - G90
 
@@ -3951,4 +3951,4 @@ ldr  x2, [x1], #254
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldr	x1, [x27], #254
 # CHECK-NEXT: 1.     1     5.0    0.0    0.0       ldr	x2, [x1], #254
-# CHECK-NEXT:        1     3.0    0.5    0.0       <total>
+# CHECK-NEXT:        2     3.0    0.5    0.0       <total>

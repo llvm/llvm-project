@@ -1,6 +1,6 @@
 // This module contains headers related to the configuration of the library. These headers
 // are free of any dependency on the rest of libc++.
-module std_config [system] {
+module std_config {
   @LIBCXX_CONFIG_SITE_MODULE_ENTRY@ // generated via CMake
   textual header "__config"
   textual header "__configuration/abi.h"
@@ -13,11 +13,12 @@ module std_config [system] {
   textual header "__configuration/language.h"
   textual header "__configuration/namespace.h"
   textual header "__configuration/platform.h"
+  textual header "__configuration/pstl.h"
   textual header "__configuration/utility.h"
   textual header "version"
 }
 
-module std_core [system] {
+module std_core {
   module cstddef {
     module byte         { header "__cstddef/byte.h" }
     module max_align_t  {
@@ -90,7 +91,6 @@ module std_core [system] {
     module copy_cvref                                 { header "__type_traits/copy_cvref.h" }
     module datasizeof                                 { header "__type_traits/datasizeof.h" }
     module decay                                      { header "__type_traits/decay.h" }
-    module dependent_type                             { header "__type_traits/dependent_type.h" }
     module desugars_to                                { header "__type_traits/desugars_to.h" }
     module detected_or                                { header "__type_traits/detected_or.h" }
     module disjunction                                { header "__type_traits/disjunction.h" }
@@ -263,10 +263,6 @@ module std_core [system] {
       header "__type_traits/is_reference.h"
       export std_core.type_traits.integral_constant
     }
-    module is_referenceable {
-      header "__type_traits/is_referenceable.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
@@ -337,7 +333,6 @@ module std_core [system] {
       export std_core.type_traits.integral_constant
     }
     module is_within_lifetime                         { header "__type_traits/is_within_lifetime.h" }
-    module lazy                                       { header "__type_traits/lazy.h" }
     module make_32_64_or_128_bit                      { header "__type_traits/make_32_64_or_128_bit.h" }
     module make_const_lvalue_ref                      { header "__type_traits/make_const_lvalue_ref.h" }
     module make_signed                                { header "__type_traits/make_signed.h" }
@@ -385,7 +380,7 @@ module std_core [system] {
   }
 } // module std_core
 
-module std [system] {
+module std {
   module algorithm {
     module adjacent_find                          { header "__algorithm/adjacent_find.h" }
     module all_of                                 { header "__algorithm/all_of.h" }
@@ -841,7 +836,11 @@ module std [system] {
       header "__algorithm/stable_sort.h"
       export std.memory.unique_temporary_buffer // TODO: Workaround for https://llvm.org/PR120108
     }
-    module swap_ranges                            { header "__algorithm/swap_ranges.h" }
+    module swap_ranges                            {
+      header "__algorithm/swap_ranges.h"
+      export std.algorithm.iterator_operations
+      export std.algorithm.iter_swap
+    }
     module three_way_comp_ref_type                { header "__algorithm/three_way_comp_ref_type.h" }
     module transform                              { header "__algorithm/transform.h" }
     module uniform_random_bit_generator_adaptor   { header "__algorithm/uniform_random_bit_generator_adaptor.h" }
@@ -949,7 +948,10 @@ module std [system] {
       header "__charconv/to_chars_integral.h"
       export std.charconv.to_chars_result
     }
-    module to_chars_result            { header "__charconv/to_chars_result.h" }
+    module to_chars_result            {
+      header "__charconv/to_chars_result.h"
+      export std.system_error.errc
+    }
     module traits                     { header "__charconv/traits.h" }
 
     header "charconv"
@@ -1088,6 +1090,7 @@ module std [system] {
     module movable                  { header "__concepts/movable.h" }
     module predicate                { header "__concepts/predicate.h" }
     module primary_template         { header "__concepts/primary_template.h" }
+    module referenceable            { header "__concepts/referenceable.h" }
     module regular                  { header "__concepts/regular.h" }
     module relation                 { header "__concepts/relation.h" }
     module same_as                  { header "__concepts/same_as.h" }
@@ -1625,7 +1628,7 @@ module std [system] {
   }
 
   // TODO: Understand why this needs to live in its own module
-  module locale_base [system] {
+  module locale_base {
     header "__locale"
     export *
   }
@@ -1699,7 +1702,11 @@ module std [system] {
     }
     module uninitialized_algorithms {
       header "__memory/uninitialized_algorithms.h"
+      export std.memory.destroy
       export std.utility.pair
+    }
+    module uninitialized_multidimensional_algorithms {
+      header "__memory/uninitialized_multidimensional_algorithms.h"
     }
     module unique_ptr {
       header "__memory/unique_ptr.h"
@@ -1837,7 +1844,10 @@ module std [system] {
     module clamp_to_integral                  { header "__random/clamp_to_integral.h" }
     module default_random_engine              { header "__random/default_random_engine.h" }
     module discard_block_engine               { header "__random/discard_block_engine.h" }
-    module discrete_distribution              { header "__random/discrete_distribution.h" }
+    module discrete_distribution              {
+      header "__random/discrete_distribution.h"
+      export std.vector.vector
+    }
     module exponential_distribution           { header "__random/exponential_distribution.h" }
     module extreme_value_distribution         { header "__random/extreme_value_distribution.h" }
     module fisher_f_distribution              { header "__random/fisher_f_distribution.h" }
@@ -1889,6 +1899,7 @@ module std [system] {
       export std.functional.bind_back
     }
     module common_view                    { header "__ranges/common_view.h" }
+    module concat_view                    { header "__ranges/concat_view.h" }
     module concepts                       { header "__ranges/concepts.h" }
     module container_compatible_range     { header "__ranges/container_compatible_range.h" }
     module counted {
@@ -2121,6 +2132,11 @@ module std [system] {
     export *
   }
 
+  module text_encoding {
+    header "text_encoding"
+    export *
+  }
+
   module thread {
     module formatter              { header "__thread/formatter.h" }
     module id                     { header "__thread/id.h" }
@@ -2248,6 +2264,7 @@ module std [system] {
 
       export std.format.formatter
     }
+    module layout                { header "__vector/layout.h" }
     module pmr                   {
       header "__vector/pmr.h"
 
@@ -2441,57 +2458,57 @@ module std [system] {
 // These modules need to be their own top-level modules because they depend on the system-provided
 // headers (via include_next), which are then free to include other C headers provided by libc++.
 // If we group these headers in a single module, we would end up with circular dependencies.
-module std_complex_h [system] {
+module std_complex_h {
   header "complex.h"
   export *
 }
-module std_errno_h [system] {
+module std_errno_h {
   header "errno.h"
   export *
 }
-module std_math_h [system] {
+module std_math_h {
   header "math.h"
   export *
 }
-module std_stdatomic_h [system] {
+module std_stdatomic_h {
   header "stdatomic.h"
   export *
 }
-module std_stddef_h [system] {
+module std_stddef_h {
   // <stddef.h> supports being included multiple times with different pre-defined macros
   textual header "stddef.h"
 }
-module std_stdio_h [system] {
+module std_stdio_h {
   // <stdio.h> supports being included multiple times with different pre-defined macros
   textual header "stdio.h"
 }
-module std_stdlib_h [system] {
+module std_stdlib_h {
   // <stdlib.h> supports being included multiple times with different pre-defined macros
   textual header "stdlib.h"
 }
-module std_string_h [system] {
+module std_string_h {
   header "string.h"
   export *
 }
-module std_tgmath_h [system] {
+module std_tgmath_h {
   header "tgmath.h"
   export *
 }
-module std_uchar_h [system] {
+module std_uchar_h {
   header "uchar.h"
   export *
 }
-module std_wchar_h [system] {
+module std_wchar_h {
   // <wchar.h> supports being included multiple times with different pre-defined macros
   textual header "wchar.h"
 }
-module std_wctype_h [system] {
+module std_wctype_h {
   header "wctype.h"
   export *
 }
 
 // This header is used by other C compatibility headers so it needs to be in its own module.
-module std_private_mbstate_t [system] {
+module std_private_mbstate_t {
   header "__mbstate_t.h"
   export *
 }

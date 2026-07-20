@@ -111,8 +111,7 @@ void AMDGPUInstPrinter::printOffset(const MCInst *MI, unsigned OpNo,
     O << " offset:";
 
     // GFX12+ uses a 24-bit signed offset for VBUFFER.
-    const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-    bool IsVBuffer = Desc.TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF);
+    bool IsVBuffer = SIInstrFlags::isBuffer(MII, *MI);
     if (IsVBuffer && AMDGPU::isGFX12Plus(STI))
       O << formatDec(SignExtend32<24>(Imm));
     else
@@ -127,9 +126,7 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
   if (Imm != 0) {
     O << " offset:";
 
-    const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-    bool AllowNegative = (Desc.TSFlags & (SIInstrFlags::FlatGlobal |
-                                          SIInstrFlags::FlatScratch)) ||
+    bool AllowNegative = SIInstrFlags::isSegmentSpecificFLAT(MII, *MI) ||
                          STI.hasFeature(AMDGPU::FeatureFlatSignedOffset);
 
     if (AllowNegative) // Signed offset
@@ -178,8 +175,7 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
   }
 
   if (Imm & CPol::GLC)
-    O << ((AMDGPU::isGFX940(STI) &&
-           !(MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SMRD)) ? " sc0"
+    O << ((AMDGPU::isGFX940(STI) && !SIInstrFlags::isSMRD(MII, *MI)) ? " sc0"
                                                                      : " glc");
   if (Imm & CPol::SLC)
     O << (AMDGPU::isGFX940(STI) ? " nt" : " slc");
@@ -275,7 +271,7 @@ void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
 
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
   if (DimInfo)
-    O << DimInfo->AsmSuffix;
+    O << AMDGPU::getMIMGDimInfoStr(DimInfo->AsmSuffix);
   else
     O << Dim;
 }
@@ -423,19 +419,18 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, unsigned Opc,
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI, raw_ostream &O) {
   auto Opcode = MI->getOpcode();
-  auto Flags = MII.get(Opcode).TSFlags;
   if (OpNo == 0) {
-    if (Flags & SIInstrFlags::VOP3 && Flags & SIInstrFlags::DPP)
+    if (SIInstrFlags::isVOP3(MII, *MI) && SIInstrFlags::isDPP(MII, *MI))
       O << "_e64_dpp";
-    else if (Flags & SIInstrFlags::VOP3) {
+    else if (SIInstrFlags::isVOP3(MII, *MI)) {
       if (!getVOP3IsSingle(Opcode))
         O << "_e64";
-    } else if (Flags & SIInstrFlags::DPP)
+    } else if (SIInstrFlags::isDPP(MII, *MI))
       O << "_dpp";
-    else if (Flags & SIInstrFlags::SDWA)
+    else if (SIInstrFlags::isSDWA(MII, *MI))
       O << "_sdwa";
-    else if (((Flags & SIInstrFlags::VOP1) && !getVOP1IsSingle(Opcode)) ||
-             ((Flags & SIInstrFlags::VOP2) && !getVOP2IsSingle(Opcode)))
+    else if ((SIInstrFlags::isVOP1(MII, *MI) && !getVOP1IsSingle(Opcode)) ||
+             (SIInstrFlags::isVOP2(MII, *MI) && !getVOP2IsSingle(Opcode)))
       O << "_e32";
     O << " ";
   }
@@ -790,8 +785,7 @@ void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
 
 bool AMDGPUInstPrinter::needsImpliedVcc(const MCInstrDesc &Desc,
                                         unsigned OpNo) const {
-  return OpNo == 0 && (Desc.TSFlags & SIInstrFlags::DPP) &&
-         (Desc.TSFlags & SIInstrFlags::VOPC) &&
+  return OpNo == 0 && SIInstrFlags::isDPP(Desc) && SIInstrFlags::isVOPC(Desc) &&
          !isVOPCAsmOnly(Desc.getOpcode()) &&
          (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
           Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO));
@@ -807,9 +801,8 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   // 0, 1 and 2 are the first printed operands in different cases
   // If there are printed modifiers, printOperandAndFPInputMods or
   // printOperandAndIntInputMods will be called instead
-  if ((OpNo == 0 ||
-       (OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP) && ModIdx != -1)) &&
-      (Desc.TSFlags & SIInstrFlags::VOPC) && !isVOPCAsmOnly(Desc.getOpcode()) &&
+  if ((OpNo == 0 || (OpNo == 1 && SIInstrFlags::isDPP(Desc) && ModIdx != -1)) &&
+      SIInstrFlags::isVOPC(Desc) && !isVOPCAsmOnly(Desc.getOpcode()) &&
       (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
        Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO)))
     printDefaultVccOperand(true, STI, O);
@@ -873,11 +866,13 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    case AMDGPU::OPERAND_REG_IMM_V2INT64:
       printImmediate64(Op.getImm(), STI, O, false);
       break;
     case AMDGPU::OPERAND_REG_IMM_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+    case AMDGPU::OPERAND_REG_IMM_V2FP64:
       printImmediate64(Op.getImm(), STI, O, true);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
@@ -983,7 +978,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     break;
   }
 
-  if (Desc.TSFlags & SIInstrFlags::MTBUF) {
+  if (SIInstrFlags::isMTBUF(Desc)) {
     int SOffsetIdx =
       AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::soffset);
     assert(SOffsetIdx != -1);
@@ -1369,8 +1364,7 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
 
   // Print three values of neg/opsel for wmma instructions (prints 0 when there
   // is no src_modifier operand instead of not printing anything).
-  if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsSWMMAC ||
-      MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsWMMA) {
+  if (SIInstrFlags::isSWMMAC(MII, *MI) || SIInstrFlags::isWMMA(MII, *MI)) {
     NumOps = 0;
     int DefaultValue = Mod == SISrcMods::OP_SEL_1;
     for (AMDGPU::OpName OpName :
@@ -1384,12 +1378,10 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
     }
   }
 
-  const bool HasDstSel =
-      HasDst && NumOps > 0 && Mod == SISrcMods::OP_SEL_0 &&
-      MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::VOP3_OPSEL;
+  const bool HasDstSel = HasDst && NumOps > 0 && Mod == SISrcMods::OP_SEL_0 &&
+                         SIInstrFlags::hasVOP3OpSel(MII, *MI);
 
-  const bool IsPacked =
-    MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsPacked;
+  const bool IsPacked = SIInstrFlags::isPacked(MII, *MI);
 
   if (allOpsDefaultValue(Ops, NumOps, Mod, IsPacked, HasDstSel))
     return;

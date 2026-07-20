@@ -21,7 +21,7 @@ end:
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z24test_goto_within_cleanupb
-// CIR:         %[[A_ADDR:.*]] = cir.alloca !rec_StructWithDestructor, !cir.ptr<!rec_StructWithDestructor>, ["a"]
+// CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.scope {
 // CIR:             cir.if {{.*}} {
@@ -87,7 +87,7 @@ skip:
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z29test_goto_jump_into_nested_opbb
-// CIR:         %[[A_ADDR:.*]] = cir.alloca !rec_StructWithDestructor, !cir.ptr<!rec_StructWithDestructor>, ["a"]
+// CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.scope {
 // CIR:             cir.if {{.*}} {

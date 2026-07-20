@@ -76,6 +76,12 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
 def callseq_end : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+// To avoid stack clash, allocation is performed by block and each block is
+// probed.
+def loongarch_probed_alloca : SDNode<"LoongArchISD::PROBED_ALLOCA",
+                                     SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
+                                     [SDNPHasChain, SDNPMayStore]>;
+
 // Target-dependent nodes.
 def loongarch_call : SDNode<"LoongArchISD::CALL", SDT_LoongArchCall,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
@@ -573,7 +579,7 @@ def NegImm : SDNodeXForm<imm, [{
 // FP immediate patterns.
 def fpimm0    : PatLeaf<(fpimm), [{return N->isPosZero();}]>;
 def fpimm0neg : PatLeaf<(fpimm), [{return N->isNegZero();}]>;
-def fpimm1    : PatLeaf<(fpimm), [{return N->isExactlyValue(+1.0);}]>;
+def fpimm1    : PatLeaf<(fpimm), [{return N->isOne();}]>;
 
 // Return an immediate subtracted from 32.
 def ImmSubFrom32 : SDNodeXForm<imm, [{
@@ -2455,6 +2461,22 @@ def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                               [(callseq_end timm:$amt1, timm:$amt2)]>;
 } // Defs = [R3], Uses = [R3]
+
+// Stack probing
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+    Defs = [R3], Uses = [R3] in {
+// Probed stack allocation of a constant size, used in function prologues when
+// stack-clash protection is enabled.
+def PROBED_STACKALLOC : Pseudo<(outs),
+                               (ins GPR:$target),
+                               []>,
+                               Sched<[]>;
+let usesCustomInserter = 1 in
+def PROBED_STACKALLOC_DYN : Pseudo<(outs),
+                                   (ins GPR:$target),
+                                   [(loongarch_probed_alloca GPR:$target)]>,
+                                   Sched<[]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions

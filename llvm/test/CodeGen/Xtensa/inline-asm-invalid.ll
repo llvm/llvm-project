@@ -3,7 +3,7 @@
 
 define void @constraint_f() nounwind {
 ; CHECK: error: unknown asm constraint 'f'
-  tail call void asm "addi a1, a1, $0", "f"(i32 1)
+  tail call void asm "add.s f0, f1, $0", "f"(float 0.0)
   ret void
 }
 

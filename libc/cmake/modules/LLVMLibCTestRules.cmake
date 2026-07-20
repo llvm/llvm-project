@@ -18,6 +18,21 @@ function(_get_common_test_compile_options output_var c_test flags)
       ${compile_flags}
       ${config_flags}
       ${arch_flags})
+  libc_add_definition(compile_options
+                      "LIBC_TEST_FLOAT_RANGE_COUNT=${LIBC_TEST_FLOAT_RANGE_COUNT}")
+
+  # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
+  # will make those tests no-op to reduce the overall test time.
+  if(LIBC_TEST_SKIP_DEATH_TESTS)
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      message(STATUS "LIBC_TEST_SKIP_DEATH_TESTS is set.  EXPECT_DEATH/ASSERT_DEATH are no-op.")
+    endif()
+    list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
+  endif()
+
+  if(CMAKE_CROSSCOMPILING_EMULATOR)
+    list(APPEND compile_options "-DLIBC_TEST_UNDER_EMULATOR")
+  endif()
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -72,8 +87,8 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-Wthread-safety")
     endif()
 
-    if(LIBC_CC_SUPPORTS_NO_FENV_ACCESS)
-      list(APPEND compile_options "-Wno-fenv-access")
+    if(LIBC_COMPILER_HAS_STDC_FENV_ACCESS)
+      list(APPEND compile_options "-DLIBC_COMPILER_HAS_STDC_FENV_ACCESS")
     endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
@@ -765,6 +780,18 @@ function(add_libc_hermetic test_name)
       libc.src.string.memset
       libc.src.strings.bcmp
       libc.src.strings.bzero
+      # Syscalls used by death tests.
+      libc.src.poll.poll
+      libc.src.signal.kill
+      libc.src.stdio.fflush
+      libc.src.stdio.stderr
+      libc.src.stdio.stdout
+      libc.src.stdlib.exit
+      libc.src.string.strsignal
+      libc.src.sys.wait.waitpid
+      libc.src.unistd.close
+      libc.src.unistd.fork
+      libc.src.unistd.pipe
   )
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -994,6 +1021,7 @@ function(add_libc_test test_name)
       ${test_name}.__hermetic__
       LINK_LIBRARIES
         LibcTest.hermetic
+        LibcDeathTestExecutors.hermetic
       ${LIBC_TEST_UNPARSED_ARGUMENTS}
     )
     get_fq_target_name(${test_name} fq_test_name)

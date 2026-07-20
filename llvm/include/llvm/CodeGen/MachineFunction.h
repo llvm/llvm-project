@@ -70,7 +70,8 @@ class PseudoSourceValueManager;
 class raw_ostream;
 class SlotIndexes;
 class StringRef;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetSubtargetInfo;
 struct WinEHFuncInfo;
 
@@ -901,12 +902,7 @@ public:
 
   MachineFunctionInfo *cloneInfoFrom(
       const MachineFunction &OrigMF,
-      const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB) {
-    assert(!MFInfo && "new function already has MachineFunctionInfo");
-    if (!OrigMF.MFInfo)
-      return nullptr;
-    return OrigMF.MFInfo->clone(Allocator, *this, Src2DstMBB);
-  }
+      const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB);
 
   /// Returns the denormal handling type for the default rounding mode of the
   /// function.
@@ -1261,6 +1257,10 @@ public:
   }
 
   [[nodiscard]] unsigned addFrameInst(const MCCFIInstruction &Inst);
+
+  /// Replace all references to register \param From with register \param To in
+  /// frame instructions. Note that .cfi_escape instructions will be left as-is.
+  void replaceFrameInstRegister(MCRegister From, MCRegister To);
 
   /// Returns a reference to a list of symbols immediately following calls to
   /// _setjmp in the function. Used to construct the longjmp target table used

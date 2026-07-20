@@ -77,16 +77,16 @@ public:
                   const hasher& hf = hasher(), const key_equal& eql = key_equal(),
                   const allocator_type& a = allocator_type());
     unordered_map(size_type n, const allocator_type& a)
-      : unordered_map(n, hasher(), key_equal(), a) {}  // C++14
+      : unordered_map(n, hasher(), key_equal(), a) {}
     unordered_map(size_type n, const hasher& hf, const allocator_type& a)
-      : unordered_map(n, hf, key_equal(), a) {}  // C++14
+      : unordered_map(n, hf, key_equal(), a) {}
     template <class InputIterator>
       unordered_map(InputIterator f, InputIterator l, size_type n, const allocator_type& a)
-      : unordered_map(f, l, n, hasher(), key_equal(), a) {}  // C++14
+      : unordered_map(f, l, n, hasher(), key_equal(), a) {}
     template <class InputIterator>
       unordered_map(InputIterator f, InputIterator l, size_type n, const hasher& hf,
         const allocator_type& a)
-      : unordered_map(f, l, n, hf, key_equal(), a) {}  // C++14
+      : unordered_map(f, l, n, hf, key_equal(), a) {}
     template<container-compatible-range<value_type> R>
       unordered_map(from_range_t, R&& rg, size_type n, const allocator_type& a)
         : unordered_map(from_range, std::forward<R>(rg), n, hasher(), key_equal(), a) { } // C++23
@@ -94,10 +94,10 @@ public:
       unordered_map(from_range_t, R&& rg, size_type n, const hasher& hf, const allocator_type& a)
         : unordered_map(from_range, std::forward<R>(rg), n, hf, key_equal(), a) { }       // C++23
     unordered_map(initializer_list<value_type> il, size_type n, const allocator_type& a)
-      : unordered_map(il, n, hasher(), key_equal(), a) {}  // C++14
+      : unordered_map(il, n, hasher(), key_equal(), a) {}
     unordered_map(initializer_list<value_type> il, size_type n, const hasher& hf,
       const allocator_type& a)
-      : unordered_map(il, n, hf, key_equal(), a) {}  // C++14
+      : unordered_map(il, n, hf, key_equal(), a) {}
     ~unordered_map();
     unordered_map& operator=(const unordered_map&);
     unordered_map& operator=(unordered_map&&)
@@ -363,16 +363,16 @@ public:
                   const hasher& hf = hasher(), const key_equal& eql = key_equal(),
                   const allocator_type& a = allocator_type());
     unordered_multimap(size_type n, const allocator_type& a)
-      : unordered_multimap(n, hasher(), key_equal(), a) {}  // C++14
+      : unordered_multimap(n, hasher(), key_equal(), a) {}
     unordered_multimap(size_type n, const hasher& hf, const allocator_type& a)
-      : unordered_multimap(n, hf, key_equal(), a) {}  // C++14
+      : unordered_multimap(n, hf, key_equal(), a) {}
     template <class InputIterator>
       unordered_multimap(InputIterator f, InputIterator l, size_type n, const allocator_type& a)
-      : unordered_multimap(f, l, n, hasher(), key_equal(), a) {}  // C++14
+      : unordered_multimap(f, l, n, hasher(), key_equal(), a) {}
     template <class InputIterator>
       unordered_multimap(InputIterator f, InputIterator l, size_type n, const hasher& hf,
         const allocator_type& a)
-      : unordered_multimap(f, l, n, hf, key_equal(), a) {}  // C++14
+      : unordered_multimap(f, l, n, hf, key_equal(), a) {}
     template<container-compatible-range<value_type> R>
       unordered_multimap(from_range_t, R&& rg, size_type n, const allocator_type& a)
         : unordered_multimap(from_range, std::forward<R>(rg), n, hasher(), key_equal(), a) { } // C++23
@@ -380,10 +380,10 @@ public:
       unordered_multimap(from_range_t, R&& rg, size_type n, const hasher& hf, const allocator_type& a)
         : unordered_multimap(from_range, std::forward<R>(rg), n, hf, key_equal(), a) { }       // C++23
     unordered_multimap(initializer_list<value_type> il, size_type n, const allocator_type& a)
-      : unordered_multimap(il, n, hasher(), key_equal(), a) {}  // C++14
+      : unordered_multimap(il, n, hasher(), key_equal(), a) {}
     unordered_multimap(initializer_list<value_type> il, size_type n, const hasher& hf,
       const allocator_type& a)
-      : unordered_multimap(il, n, hf, key_equal(), a) {}  // C++14
+      : unordered_multimap(il, n, hf, key_equal(), a) {}
     ~unordered_multimap();
     unordered_multimap& operator=(const unordered_multimap&);
     unordered_multimap& operator=(unordered_multimap&&)
@@ -993,7 +993,6 @@ public:
       const key_equal& __eql,
       const allocator_type& __a);
 #  endif // _LIBCPP_CXX03_LANG
-#  if _LIBCPP_STD_VER >= 14
   _LIBCPP_HIDE_FROM_ABI unordered_map(size_type __n, const allocator_type& __a)
       : unordered_map(__n, hasher(), key_equal(), __a) {}
   _LIBCPP_HIDE_FROM_ABI unordered_map(size_type __n, const hasher& __hf, const allocator_type& __a)
@@ -1007,7 +1006,7 @@ public:
       _InputIterator __first, _InputIterator __last, size_type __n, const hasher& __hf, const allocator_type& __a)
       : unordered_map(__first, __last, __n, __hf, key_equal(), __a) {}
 
-#    if _LIBCPP_STD_VER >= 23
+#  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI unordered_map(from_range_t, _Range&& __range, size_type __n, const allocator_type& __a)
       : unordered_map(from_range, std::forward<_Range>(__range), __n, hasher(), key_equal(), __a) {}
@@ -1016,8 +1015,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   unordered_map(from_range_t, _Range&& __range, size_type __n, const hasher& __hf, const allocator_type& __a)
       : unordered_map(from_range, std::forward<_Range>(__range), __n, __hf, key_equal(), __a) {}
-#    endif
+#  endif
 
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI unordered_map(initializer_list<value_type> __il, size_type __n, const allocator_type& __a)
       : unordered_map(__il, __n, hasher(), key_equal(), __a) {}
   _LIBCPP_HIDE_FROM_ABI
@@ -1787,7 +1787,6 @@ public:
       const key_equal& __eql,
       const allocator_type& __a);
 #  endif // _LIBCPP_CXX03_LANG
-#  if _LIBCPP_STD_VER >= 14
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(size_type __n, const allocator_type& __a)
       : unordered_multimap(__n, hasher(), key_equal(), __a) {}
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(size_type __n, const hasher& __hf, const allocator_type& __a)
@@ -1801,7 +1800,7 @@ public:
       _InputIterator __first, _InputIterator __last, size_type __n, const hasher& __hf, const allocator_type& __a)
       : unordered_multimap(__first, __last, __n, __hf, key_equal(), __a) {}
 
-#    if _LIBCPP_STD_VER >= 23
+#  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(from_range_t, _Range&& __range, size_type __n, const allocator_type& __a)
       : unordered_multimap(from_range, std::forward<_Range>(__range), __n, hasher(), key_equal(), __a) {}
@@ -1810,8 +1809,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   unordered_multimap(from_range_t, _Range&& __range, size_type __n, const hasher& __hf, const allocator_type& __a)
       : unordered_multimap(from_range, std::forward<_Range>(__range), __n, __hf, key_equal(), __a) {}
-#    endif
+#  endif
 
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(initializer_list<value_type> __il, size_type __n, const allocator_type& __a)
       : unordered_multimap(__il, __n, hasher(), key_equal(), __a) {}
   _LIBCPP_HIDE_FROM_ABI
@@ -2381,7 +2381,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <algorithm>
 #    include <bit>
 #    include <cmath>
