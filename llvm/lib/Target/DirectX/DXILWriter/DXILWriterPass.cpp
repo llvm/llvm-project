@@ -38,7 +38,11 @@ using namespace llvm::dxil;
 
 extern cl::opt<bool> EmbedDebug;
 extern cl::opt<bool> StripDebug;
-extern cl::opt<std::string> PdbDebugPath;
+cl::opt<std::string> PdbDebugPath(
+    "dx-pdb-path",
+    cl::desc("Write debug information to the given file, or automatically "
+             "named file in directory when ending in '/'"),
+    cl::value_desc("filename"));
 cl::opt<bool> SourceInDebugModule(
     "dx-source-in-debug-module",
     cl::desc("Embed source code into debug module on DirectX target"),
