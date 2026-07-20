@@ -571,6 +571,9 @@ SanitizerSet CodeGenModule::getProfileCoreUBChecks() const {
   // operand width (exponent), or a signed left shift that loses bits (base).
   Checks.set(SanitizerKind::ShiftBase, true);
   Checks.set(SanitizerKind::ShiftExponent, true);
+  // {basic.align.object.alignment}: an access through a pointer that does not
+  // meet the referenced type's alignment.
+  Checks.set(SanitizerKind::Alignment, true);
   return Checks;
 }
 
