@@ -144,24 +144,31 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
     return FnD;
   }
 
+  FunctionDecl *FD = FnD ? FnD->getAsFunction() : nullptr;
+  bool IsDelayedTemplateFunction =
+      Actions.CurContext->isDependentContext() ||
+      (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
+       TemplateInfo.Kind != ParsedTemplateKind::ExplicitSpecialization);
+
   // In delayed template parsing mode, if we are within a class template
   // or if we are about to parse function member template then consume
   // the tokens and store them for parsing at the end of the translation unit.
-  if (getLangOpts().DelayedTemplateParsing &&
-      D.getFunctionDefinitionKind() == FunctionDefinitionKind::Definition &&
+  // In on-demand parsing mode, internal-linkage member definitions are also
+  // handled in the same way.
+  if (D.getFunctionDefinitionKind() == FunctionDefinitionKind::Definition &&
       !D.getDeclSpec().hasConstexprSpecifier() &&
-      !(FnD && FnD->getAsFunction() &&
-        FnD->getAsFunction()->getReturnType()->getContainedAutoType()) &&
-      ((Actions.CurContext->isDependentContext() ||
-        (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
-         TemplateInfo.Kind != ParsedTemplateKind::ExplicitSpecialization)) &&
-       !Actions.IsInsideALocalClassWithinATemplateFunction())) {
+      !(FD && FD->getReturnType()->getContainedAutoType()) &&
+      !Actions.IsInsideALocalClassWithinATemplateFunction() &&
+      ((getLangOpts().DelayedTemplateParsing && IsDelayedTemplateFunction) ||
+       (getLangOpts().ParseFunctionsOnDemand &&
+        ((FD && !FD->isExternallyVisible() &&
+          FD->isDefinedOutsideFunctionOrMethod()) ||
+         IsDelayedTemplateFunction)))) {
 
     CachedTokens Toks;
     LexTemplateFunctionForLateParsing(Toks);
 
-    if (FnD) {
-      FunctionDecl *FD = FnD->getAsFunction();
+    if (FD) {
       Actions.CheckForFunctionRedefinition(FD);
       Actions.MarkAsLateParsedTemplate(FD, FnD, Toks);
     }

@@ -26,6 +26,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1234,51 +1235,82 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
         Diag(AL.getLoc(), diag::warn_attribute_on_function_definition) << AL;
   }
 
-  // In delayed template parsing mode, for function template we consume the
-  // tokens and store them for late parsing at the end of the translation unit.
-  if (getLangOpts().DelayedTemplateParsing && Tok.isNot(tok::equal) &&
-      TemplateInfo.Kind == ParsedTemplateKind::Template &&
-      LateParsedAttrs->empty() && Actions.canDelayFunctionBody(D)) {
-    MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
+  MultiTemplateParamsArg TemplateParameterLists(
+      TemplateInfo.TemplateParams ? *TemplateInfo.TemplateParams
+                                  : MultiTemplateParamsArg{});
 
-    ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
-                                   Scope::CompoundStmtScope);
-    Scope *ParentScope = getCurScope()->getParent();
+  bool CanDelayFunctionBody = Actions.canDelayFunctionBody(D);
+  bool IsDelayedTemplateFunction =
+      getLangOpts().DelayedTemplateParsing &&
+      TemplateInfo.Kind == ParsedTemplateKind::Template && CanDelayFunctionBody;
+  bool ShouldProbeInternalLinkage = getLangOpts().ParseFunctionsOnDemand &&
+                                    !CurParsedObjCImpl && CanDelayFunctionBody;
 
-    D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
-    Decl *DP = Actions.HandleDeclarator(ParentScope, D,
-                                        TemplateParameterLists);
-    D.complete(DP);
-    D.getMutableDeclSpec().abort();
+  // Enter a scope for the function body.
+  ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
+                                 Scope::CompoundStmtScope);
+  Scope *ParentScope = getCurScope()->getParent();
 
-    if (SkipFunctionBodies && (!DP || Actions.canSkipFunctionBody(DP)) &&
-        trySkippingFunctionBody()) {
-      BodyScope.Exit();
-      return Actions.ActOnSkippedFunctionBody(DP);
+  D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
+
+  // Check and handle if we are in an `omp begin/end declare variant` scope.
+  SmallVector<FunctionDecl *, 4> Bases;
+  if (getLangOpts().OpenMP && Actions.OpenMP().isInOpenMPDeclareVariantScope())
+    Actions.OpenMP().ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
+        ParentScope, D, TemplateParameterLists, Bases);
+
+  Decl *FuncDecl =
+      Actions.HandleDeclarator(ParentScope, D, TemplateParameterLists);
+
+  // Break out of the ParsingDeclarator context before we parse the body.
+  D.complete(FuncDecl);
+
+  // Break out of the ParsingDeclSpec context, too.  This const_cast is
+  // safe because we're always the sole owner.
+  D.getMutableDeclSpec().abort();
+
+  // Finish the OpenMP declare-variant handling on any early-return path.
+  auto FinishDeclareVariant = [&](Decl *D) {
+    if (!Bases.empty())
+      Actions.OpenMP()
+          .ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(D, Bases);
+  };
+
+  // For function templates in delayed template parsing mode, and for
+  // internal-linkage functions in on-demand parsing mode, consume the tokens
+  // and store them for late parsing.
+  if (Tok.isNot(tok::equal) && LateParsedAttrs->empty() &&
+      (IsDelayedTemplateFunction || ShouldProbeInternalLinkage)) {
+    FunctionDecl *FnD = FuncDecl ? FuncDecl->getAsFunction() : nullptr;
+    bool ShouldDelayFunction =
+        !FnD->isUsed(/*CheckUsedAttr=*/true) &&
+        FnD->isDefinedOutsideFunctionOrMethod() &&
+        (IsDelayedTemplateFunction || (FnD && !FnD->isExternallyVisible()) ||
+         TemplateInfo.Kind == ParsedTemplateKind::Template);
+    if (ShouldDelayFunction) {
+      if (SkipFunctionBodies &&
+          (!FuncDecl || Actions.canSkipFunctionBody(FuncDecl)) &&
+          trySkippingFunctionBody()) {
+        BodyScope.Exit();
+        FinishDeclareVariant(FuncDecl);
+        return Actions.ActOnSkippedFunctionBody(FuncDecl);
+      }
+
+      CachedTokens Toks;
+      LexTemplateFunctionForLateParsing(Toks);
+
+      if (FnD) {
+        Actions.CheckForFunctionRedefinition(FnD);
+        Actions.MarkAsLateParsedTemplate(FnD, FuncDecl, Toks);
+      }
+      FinishDeclareVariant(FuncDecl);
+      return FuncDecl;
     }
-
-    CachedTokens Toks;
-    LexTemplateFunctionForLateParsing(Toks);
-
-    if (DP) {
-      FunctionDecl *FnD = DP->getAsFunction();
-      Actions.CheckForFunctionRedefinition(FnD);
-      Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
-    }
-    return DP;
   }
+
   if (CurParsedObjCImpl && !TemplateInfo.TemplateParams &&
       (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) || Tok.is(tok::colon)) &&
       Actions.CurContext->isTranslationUnit()) {
-    ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
-                                   Scope::CompoundStmtScope);
-    Scope *ParentScope = getCurScope()->getParent();
-
-    D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
-    Decl *FuncDecl = Actions.HandleDeclarator(ParentScope, D,
-                                              MultiTemplateParamsArg());
-    D.complete(FuncDecl);
-    D.getMutableDeclSpec().abort();
     if (FuncDecl) {
       // Consume the tokens and store them for later parsing.
       StashAwayMethodOrFunctionBodyTokens(FuncDecl);
@@ -1287,10 +1319,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     }
     // FIXME: Should we really fall through here?
   }
-
-  // Enter a scope for the function body.
-  ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
-                                 Scope::CompoundStmtScope);
 
   // Parse function body eagerly if it is either '= delete;' or '= default;' as
   // ActOnStartOfFunctionDef needs to know whether the function is deleted.
@@ -1336,11 +1364,9 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Tell the actions module that we have entered a function definition with the
   // specified Declarator for the function.
   SkipBodyInfo SkipBody;
-  Decl *Res = Actions.ActOnStartOfFunctionDef(getCurScope(), D,
-                                              TemplateInfo.TemplateParams
-                                                  ? *TemplateInfo.TemplateParams
-                                                  : MultiTemplateParamsArg(),
+  Decl *Res = Actions.ActOnStartOfFunctionDef(getCurScope(), FuncDecl,
                                               &SkipBody, BodyKind);
+  FinishDeclareVariant(Res);
 
   if (SkipBody.ShouldSkip) {
     // Do NOT enter SkipFunctionBody if we already consumed the tokens.
@@ -1360,13 +1386,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
       Actions.PopExpressionEvaluationContext();
     return Res;
   }
-
-  // Break out of the ParsingDeclarator context before we parse the body.
-  D.complete(Res);
-
-  // Break out of the ParsingDeclSpec context, too.  This const_cast is
-  // safe because we're always the sole owner.
-  D.getMutableDeclSpec().abort();
 
   if (BodyKind != Sema::FnBodyKind::Other) {
     Actions.SetFunctionBodyKind(Res, KWLoc, BodyKind, DeletedMessage);
