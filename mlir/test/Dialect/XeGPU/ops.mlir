@@ -688,6 +688,34 @@ gpu.func @truncf(%a: vector<8x16xf16>) {
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @bitcast_shuffle_scalar_to_vector_16
+gpu.func @bitcast_shuffle_scalar_to_vector_16(%a: i32) {
+  // CHECK: %{{.+}} = xegpu.bitcast_shuffle %{{.+}} : i32 -> vector<2xi16>
+  %1 = xegpu.bitcast_shuffle %a : i32 -> vector<2xi16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @bitcast_shuffle_vector_16_to_scalar
+gpu.func @bitcast_shuffle_vector_16_to_scalar(%a: vector<2xi16>) {
+  // CHECK: %{{.+}} = xegpu.bitcast_shuffle %{{.+}} : vector<2xi16> -> i32
+  %1 = xegpu.bitcast_shuffle %a : vector<2xi16> -> i32
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @bitcast_shuffle_scalar_to_vector_8
+gpu.func @bitcast_shuffle_scalar_to_vector_8(%a: i32) {
+  // CHECK: %{{.+}} = xegpu.bitcast_shuffle %{{.+}} : i32 -> vector<4xi8>
+  %1 = xegpu.bitcast_shuffle %a : i32 -> vector<4xi8>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @bitcast_shuffle_vector_8_to_scalar
+gpu.func @bitcast_shuffle_vector_8_to_scalar(%a: vector<4xi8>) {
+  // CHECK: %{{.+}} = xegpu.bitcast_shuffle %{{.+}} : vector<4xi8> -> i32
+  %1 = xegpu.bitcast_shuffle %a : vector<4xi8> -> i32
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @dpas_mx
 gpu.func @dpas_mx(%a : vector<8x32xf8E5M2>, %b: vector<32x16xf8E5M2>, %acc: vector<8x16xbf16>, %a_scale: vector<8x1xf8E8M0FNU>, %b_scale: vector<1x16xf8E8M0FNU>) {
   // CHECK: %{{.+}} = xegpu.dpas_mx %{{.+}}, %{{.+}}, %{{.+}} scale_a = %{{.+}} scale_b = %{{.+}} : (vector<8x32xf8E5M2>, vector<32x16xf8E5M2>, vector<8x16xbf16>, vector<8x1xf8E8M0FNU>, vector<1x16xf8E8M0FNU>) -> vector<8x16xbf16>

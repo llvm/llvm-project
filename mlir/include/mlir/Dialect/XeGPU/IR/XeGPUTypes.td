@@ -31,6 +31,11 @@ def XeGPU_VectorOrScalarType
     : AnyTypeOf<[VectorOfRankAndType<[1,2,3,4,5,6,7,8], [XeGPU_ScalarType, Index]>, XeGPU_ScalarType]>;
 def XeGPU_GatherScatterBaseAddrType
     : AnyTypeOf<[MemRefRankOf<[XeGPU_ScalarType], [1]>, XeGPU_PointerType]>;
+// Operand/result type of xegpu.bitcast_shuffle: a numerical scalar or a 1D
+// vector of numerical type.
+def XeGPU_BitcastShuffleType
+    : AnyTypeOf<[FixedVectorOfRankAndType<[1], [XeGPU_ScalarType]>,
+                 XeGPU_ScalarType]>;
 
 // common base class for types in XeGPU dialect
 class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],

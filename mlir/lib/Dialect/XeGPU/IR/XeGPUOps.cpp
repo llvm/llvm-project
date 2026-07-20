@@ -938,6 +938,35 @@ LogicalResult TruncfOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// XeGPU_BitcastShuffleOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult BitcastShuffleOp::verify() {
+  Type srcType = getSourceType();
+  Type resType = getResultType();
+
+  // A bitcast_shuffle only makes sense between two different types; a
+  // same-type shuffle is a no-op.
+  if (srcType == resType)
+    return emitOpError("source and result must have different types.");
+
+  // Compute the total number of bits on both sides. The operation is
+  // bit-preserving, so the source and result must carry the same amount of
+  // data per lane.
+  auto sizeInBits = [](Type type) -> int64_t {
+    if (auto vecType = dyn_cast<VectorType>(type))
+      return vecType.getNumElements() * vecType.getElementTypeBitWidth();
+    return type.getIntOrFloatBitWidth();
+  };
+
+  if (sizeInBits(srcType) != sizeInBits(resType))
+    return emitOpError(
+        "source and result must have the same total size in bits.");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // XeGPU_DpasMxOp
 //===----------------------------------------------------------------------===//
 

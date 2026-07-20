@@ -694,6 +694,20 @@ func.func @truncf_invalid_result_size(%a: vector<8x16xf16>) {
 }
 
 // -----
+func.func @bitcast_shuffle_same_type(%a: vector<2xi16>) {
+  // expected-error@+1 {{op source and result must have different types}}
+  %1 = xegpu.bitcast_shuffle %a : vector<2xi16> -> vector<2xi16>
+  return
+}
+
+// -----
+func.func @bitcast_shuffle_size_mismatch(%a: i32) {
+  // expected-error@+1 {{op source and result must have the same total size in bits}}
+  %1 = xegpu.bitcast_shuffle %a : i32 -> vector<4xi16>
+  return
+}
+
+// -----
 func.func @dpas_mx_acc_result_type_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xbf16>) {
   // expected-error@+1 {{Accumulator type must match result type.}}
   %1 = xegpu.dpas_mx %a, %b, %acc : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xbf16>) -> vector<8x16xf32>

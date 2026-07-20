@@ -1491,6 +1491,72 @@ def XeGPU_TruncfOp
   let hasVerifier = 1;
 }
 
+def XeGPU_BitcastShuffleOp
+    : XeGPU_Op<"bitcast_shuffle", [Pure]> {
+  let summary = "Bit-preserving type conversion and re-distribution of a "
+                "subgroup's fragments across its lanes.";
+
+  let description = [{
+    `xegpu.bitcast_shuffle` is a lane-level operation. The `source` operand is
+    the fragment (a scalar or 1D vector) held by one lane, and the `result` is
+    the fragment that lane holds afterwards. It reinterprets the fragments as a
+    different element type, possibly with a different number of elements per
+    lane, and at the same time re-distributes the data across the lanes of the
+    subgroup.
+
+    Both `source` and `result` must be a scalar or a 1D vector of numerical
+    type, and they must have a different type. When they have the same number of
+    elements the operation degenerates into a plain bitcast. Otherwise the total
+    number of bits per lane must be equal on both sides.
+
+    For example, consider `vector<2xi16> -> i32` with a subgroup size of 8. Each
+    lane's `source` is a `vector<2xi16>` of two 16-bit half-words, so the
+    subgroup holds 8 * 2 = 16 half-words in total. Number these half-words 0..15
+    and denote a lane's `source` as `<a,b>`, so lane `i` starts with half-words
+    `<2*i, 2*i+1>`. The `result` `i32` holds two packed half-words, denoted
+    `a|b` (`a` in the low bits, `b` in the high bits):
+
+    ```
+    lane:       0      1      2      3      4      5      6      7
+    source:   <0,1>  <2,3>  <4,5>  <6,7>  <8,9> <10,11> <12,13> <14,15>
+    result:    0|2    4|6   8|10   12|14   1|3    5|7    9|11   13|15
+    ```
+
+    The half-words are gathered one `source` element position at a time, in
+    lane order: first every lane's element 0 (half-words 0, 2, 4, ..., 14), then
+    every lane's element 1 (half-words 1, 3, 5, ..., 15). This sequence is then
+    handed back out two half-words per lane, in lane order, to form each lane's
+    `result`. In general each lane's two result half-words come from two
+    different lanes' `source` fragments -- that is the cross-lane shuffle.
+
+    The reverse pair `i32 -> vector<2xi16>` undoes this exactly, so bitcasting
+    to one type and back yields the original fragments.
+
+    The operation assumes a full subgroup (the subgroup size equals the maximum
+    subgroup size) and that all lanes execute the same dynamic instance of the
+    operation; otherwise the behavior is undefined.
+  }];
+
+  let arguments = (ins XeGPU_BitcastShuffleType:$source);
+  let results = (outs XeGPU_BitcastShuffleType:$result);
+
+  let extraClassDeclaration = [{
+    Type getSourceType() {
+      return getSource().getType();
+    }
+
+    Type getResultType() {
+      return getResult().getType();
+    }
+  }];
+
+  let assemblyFormat = [{
+    $source attr-dict `:` type($source) `->` type($result)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
                                           AnchorLayoutInterface]> {
   let summary = "It performs scaled mma computation";
