@@ -857,23 +857,25 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
   // Compute zero-initializable status.
   // This union might not be zero initialized: it may contain a pointer to
   // data member which might have some exotic initialization sequence.
-  // Unlike classic codegen, we don't really 'give up' on adding all the fields,
-  // though this is a decision/implementation we might want to revisit.  We just
-  // fall back on the typical storage type calculation rather than this bizarre
-  // "choose the first thing", as that likely won't be compatible with later
-  // decisions.
-  for (const FieldDecl *field : recordDecl->fields()) {
+  // This chooses the first 'named' member and is zero-initializable based on
+  // that.
+  auto hasNamedMember = [](const FieldDecl *curField) -> bool {
+    const auto *rd = curField->getType()->getAsRecordDecl();
+    return rd && rd->findFirstNamedDataMember();
+  };
+  // Whether this is usable for zero-init as a 'named member'. It is a field
+  // with a name (or a record type with a named member itself), that isn't a
+  // zero-width bitfield.
+  auto isNamedMember = [hasNamedMember](const FieldDecl *curField) -> bool {
+    if (curField->isZeroLengthBitField())
+      return false;
+    return curField->getIdentifier() || hasNamedMember(curField);
+  };
+  auto firstNamedMemberItr = llvm::find_if(recordDecl->fields(), isNamedMember);
 
-    auto hasNamedMember = [](const FieldDecl *curField) -> bool {
-      const auto *rd = curField->getType()->getAsRecordDecl();
-      return rd && rd->findFirstNamedDataMember();
-    };
-
-    if ((field->getIdentifier() || hasNamedMember(field)) &&
-        !isZeroInitializable(field)) {
-      zeroInitializable = zeroInitializableAsBase = false;
-    }
-  }
+  if (firstNamedMemberItr != recordDecl->fields().end() &&
+      !isZeroInitializable(*firstNamedMemberItr))
+    zeroInitializable = zeroInitializableAsBase = false;
 
   // If we have no candidates for storage, we are JUST padding.
   if (fieldTypes.empty()) {
