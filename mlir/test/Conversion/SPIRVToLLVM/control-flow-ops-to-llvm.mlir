@@ -236,7 +236,7 @@ spirv.module Logical GLSL450 {
       // CHECK: llvm.br ^bb4(%[[ARG]] : i32)
       spirv.mlir.merge %1 : i32
     }
-    // CHECK: ^bb4({{.*}}):
+    // CHECK: ^bb4({{.*}}: i32):
     %one = spirv.Constant 1 : i32
     spirv.ReturnValue %one : i32
   }
@@ -266,7 +266,7 @@ spirv.module Logical GLSL450 {
       // CHECK: llvm.br ^bb4(%[[ARG]], %[[ARG1]] : i32, i32)
       spirv.mlir.merge %1, %2 : i32, i32
     }
-    // CHECK: ^bb4({{.*}}):
+    // CHECK: ^bb4({{.*}}: i32, {{.*}}: i32):
     %one = spirv.Constant 1 : i32
     spirv.ReturnValue %one : i32
   }
