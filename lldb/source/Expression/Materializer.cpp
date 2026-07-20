@@ -353,14 +353,14 @@ public:
                        m_persistent_variable_sp->GetName());
 
     {
-      dump_stream.Printf("Pointer:\n");
+      dump_stream.PutCString("Pointer:\n");
 
       DataBufferHeap data(m_size, 0);
 
       map.ReadMemory(data.GetBytes(), load_addr, m_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
@@ -370,14 +370,14 @@ public:
     }
 
     {
-      dump_stream.Printf("Target:\n");
+      dump_stream.PutCString("Target:\n");
 
       lldb::addr_t target_address;
 
       map.ReadPointerFromMemory(&target_address, load_addr, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DataBufferHeap data(
             llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
@@ -391,7 +391,7 @@ public:
             err);
 
         if (!err.Success()) {
-          dump_stream.Printf("  <could not be read>\n");
+          dump_stream.PutCString("  <could not be read>\n");
         } else {
           DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                        target_address);
@@ -688,14 +688,14 @@ public:
     lldb::addr_t ptr = LLDB_INVALID_ADDRESS;
 
     {
-      dump_stream.Printf("Pointer:\n");
+      dump_stream.PutCString("Pointer:\n");
 
       DataBufferHeap data(m_size, 0);
 
       map.ReadMemory(data.GetBytes(), load_addr, m_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
                                 map.GetByteOrder(), map.GetAddressByteSize());
@@ -712,13 +712,13 @@ public:
     }
 
     if (m_temporary_allocation == LLDB_INVALID_ADDRESS) {
-      dump_stream.Printf("Points to process memory:\n");
+      dump_stream.PutCString("Points to process memory:\n");
     } else {
-      dump_stream.Printf("Temporary allocation:\n");
+      dump_stream.PutCString("Temporary allocation:\n");
     }
 
     if (ptr == LLDB_INVALID_ADDRESS) {
-      dump_stream.Printf("  <could not be be found>\n");
+      dump_stream.PutCString("  <could not be be found>\n");
     } else {
       DataBufferHeap data(m_temporary_allocation_size, 0);
 
@@ -726,7 +726,7 @@ public:
                      m_temporary_allocation_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
@@ -1119,14 +1119,14 @@ public:
     lldb::addr_t ptr = LLDB_INVALID_ADDRESS;
 
     {
-      dump_stream.Printf("Pointer:\n");
+      dump_stream.PutCString("Pointer:\n");
 
       DataBufferHeap data(m_size, 0);
 
       map.ReadMemory(data.GetBytes(), load_addr, m_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
                                 map.GetByteOrder(), map.GetAddressByteSize());
@@ -1143,13 +1143,13 @@ public:
     }
 
     if (m_temporary_allocation == LLDB_INVALID_ADDRESS) {
-      dump_stream.Printf("Points to process memory:\n");
+      dump_stream.PutCString("Points to process memory:\n");
     } else {
-      dump_stream.Printf("Temporary allocation:\n");
+      dump_stream.PutCString("Temporary allocation:\n");
     }
 
     if (ptr == LLDB_INVALID_ADDRESS) {
-      dump_stream.Printf("  <could not be be found>\n");
+      dump_stream.PutCString("  <could not be be found>\n");
     } else {
       DataBufferHeap data(m_temporary_allocation_size, 0);
 
@@ -1157,7 +1157,7 @@ public:
                      m_temporary_allocation_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
@@ -1284,14 +1284,14 @@ public:
                        m_symbol.GetName());
 
     {
-      dump_stream.Printf("Pointer:\n");
+      dump_stream.PutCString("Pointer:\n");
 
       DataBufferHeap data(m_size, 0);
 
       map.ReadMemory(data.GetBytes(), load_addr, m_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
@@ -1451,14 +1451,14 @@ public:
                        m_register_info.name);
 
     {
-      dump_stream.Printf("Value:\n");
+      dump_stream.PutCString("Value:\n");
 
       DataBufferHeap data(m_size, 0);
 
       map.ReadMemory(data.GetBytes(), load_addr, m_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
