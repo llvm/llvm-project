@@ -488,7 +488,6 @@ TEST(Support, HomeDirectory) {
     expected = path;
 #endif
   // Do not try to test it if we don't know what to expect.
-  // On Windows we use something better than env vars.
   if (expected.empty())
     GTEST_SKIP();
   SmallString<128> HomeDir;
@@ -587,8 +586,7 @@ TEST(Support, CacheDirectory) {
   EXPECT_EQ(Expected, CacheDir);
 }
 
-#if LLVM_WINDOWS_AVOID_SHELL32_APIS
-// RAII helper to set and restore a wide-character environment variable.
+// RAII helper to temporarily override a wide-character environment variable.
 class WithEnvW {
   const wchar_t *Var;
   std::optional<std::wstring> OriginalValue;
@@ -604,12 +602,8 @@ public:
   }
 };
 
-// With LLVM_WINDOWS_AVOID_SHELL32_APIS the known-folder lookups must not call
-// shell32 and instead fall back to environment variables. Point them at a
-// synthetic value to prove the fallback is actually consulted
-// (SHGetKnownFolderPath would ignore an overridden USERPROFILE/LOCALAPPDATA and
-// return the real path).
-TEST(Support, HomeDirectoryNoShell32) {
+// home_directory() reads USERPROFILE, so overriding it must change the result.
+TEST(Support, HomeDirectoryFromEnv) {
   WithEnvW Env(L"USERPROFILE", L"C:\\synthetic\\home");
   std::string Expected = getEnvWin(L"USERPROFILE"); // normalizes separators
   SmallString<128> HomeDir;
@@ -617,7 +611,7 @@ TEST(Support, HomeDirectoryNoShell32) {
   EXPECT_EQ(Expected, HomeDir);
 }
 
-TEST(Support, ConfigAndCacheDirectoryNoShell32) {
+TEST(Support, ConfigAndCacheDirectoryFromEnv) {
   WithEnvW Env(L"LOCALAPPDATA", L"C:\\synthetic\\appdata");
   std::string Expected = getEnvWin(L"LOCALAPPDATA"); // normalizes separators
 
@@ -630,14 +624,11 @@ TEST(Support, ConfigAndCacheDirectoryNoShell32) {
   EXPECT_EQ(Expected, CacheDir);
 }
 
-// The fallback reports failure (rather than crashing) when the variable is
-// unset.
-TEST(Support, HomeDirectoryNoShell32Unset) {
+TEST(Support, HomeDirectoryMissingEnv) {
   WithEnvW Env(L"USERPROFILE", nullptr);
   SmallString<128> HomeDir;
   EXPECT_FALSE(path::home_directory(HomeDir));
 }
-#endif // LLVM_WINDOWS_AVOID_SHELL32_APIS
 #endif
 
 TEST(Support, TempDirectory) {
