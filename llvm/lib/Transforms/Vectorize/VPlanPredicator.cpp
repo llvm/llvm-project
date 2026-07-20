@@ -270,7 +270,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   }
 }
 
-void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
+void VPlanTransforms::introduceMasks(VPlan &Plan) {
   // Nested loop regions (outer-loop vectorization) are not supported yet.
   if (Plan.isOuterLoop())
     return;
@@ -300,10 +300,21 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
         VPI->addMask(BlockMask);
     }
   }
-
   for (VPBlockBase *VPBB : reverse(RPOT))
     if (VPBB != Header)
       Predicator.convertPhisToBlends(cast<VPBasicBlock>(VPBB));
+}
+
+void VPlanTransforms::LinearizeVPlan(VPlan &Plan) {
+  // Nested loop regions (outer-loop vectorization) are not supported yet.
+  if (Plan.isOuterLoop())
+    return;
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  // Scan the body of the loop in a topological order to visit each basic block
+  // after having visited its predecessor basic blocks.
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Header);
 
   // Linearize the blocks of the loop into one serial chain.
   VPBlockBase *PrevVPBB = nullptr;

@@ -6580,7 +6580,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM.foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
-  RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasks, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::LinearizeVPlan, *VPlan0);
 
   return VPlan0;
 }

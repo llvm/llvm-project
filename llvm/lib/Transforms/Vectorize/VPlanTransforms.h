@@ -542,9 +542,11 @@ struct VPlanTransforms {
   /// last active lane of the header mask.
   static void foldTailByMasking(VPlan &Plan);
 
-  /// Predicate and linearize the control-flow in the only loop region of
-  /// \p Plan.
-  static void introduceMasksAndLinearize(VPlan &Plan);
+  /// Predicate the only loop region of \p Plan.
+  static void introduceMasks(VPlan &Plan);
+
+  /// Linearize the control-flow in the only loop region of the \p Plan.
+  static void LinearizeVPlan(VPlan &Plan);
 
   /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
   /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
