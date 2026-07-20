@@ -241,7 +241,7 @@ Retry:
 
     switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
       if (NextToken().is(tok::less)) {
         Tok.setKind(tok::identifier);
         Diag(Tok, diag::ext_keyword_as_ident)
