@@ -471,9 +471,16 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
     // In the nops mode, call the backend hook to write `Count` nops.
     if (F.hasAlignEmitNops()) {
-      if (!Asm.getBackend().writeNopData(OS, Count, F.getSubtargetInfo()))
-        reportFatalInternalError("unable to write nop sequence of " +
-                                 Twine(Count) + " bytes");
+      if (!Asm.isBundlingEnabled()) {
+        if (!Asm.getBackend().writeNopData(OS, Count, F.getSubtargetInfo()))
+          reportFatalInternalError("unable to write nop sequence of " +
+                                   Twine(Count) + " bytes");
+      } else {
+        // Ensure that no nop of the fill crosses a bundle boundary.
+        writeControlledNops(OS, Asm, Count,
+                            Asm.getFragmentOffset(F) + F.getFixedSize(), Count,
+                            F.getSubtargetInfo());
+      }
     } else {
       // Otherwise, write out in multiples of the value size.
       for (uint64_t i = 0; i != Count; ++i) {

@@ -38,3 +38,20 @@ just_nops:
 # CHECK-NEXT:   6f:  nop
 # CHECK-NEXT:   7e:  nop
 # CHECK-NEXT:   80:  nop
+
+## The nop fill emitted for an alignment directive must also respect bundle
+## boundaries. An alignment larger than the bundle size produces a fill that
+## spans multiple bundles; no single nop of that fill may cross a boundary.
+  .p2align 6
+align_fill:
+  .rept 25
+  int3
+  .endr
+  .p2align 6
+  int3
+## The 39-byte fill from 0xd9 to 0x100 must break at the bundle boundary 0xe0.
+# CHECK:       d9: nop
+# CHECK-NEXT:  e0: nop
+# CHECK-NEXT:  ef: nop
+# CHECK-NEXT:  fe: nop
+# CHECK-NEXT: 100: int3
