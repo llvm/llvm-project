@@ -113,16 +113,7 @@ skip lldb-api :: tools/lldb-server
 skip lldb-api :: commands/dwim-print/TestDWIMPrint.py
 skip lldb-api :: commands/thread/backtrace/TestThreadBacktraceRepeat.py
 skip lldb-api :: functionalities/inferior-crashing/TestInferiorCrashing.py
-skip lldb-api :: functionalities/inline-stepping/TestInlineStepping.py
-skip lldb-api :: functionalities/step_scripted/TestStepScripted.py
 skip lldb-api :: functionalities/thread/thread_specific_break/TestThreadSpecificBreakpoint.py
-
-### Tests that pass occasionally ###
-
-# Fixed upstream: https://github.com/llvm/llvm-project/commit/ec009994a06338995dfb6431c943b299f9327fd2
-# But patches don't apply on stable branch due to downstream changes.
-skip lldb-api :: functionalities/archives/TestBSDArchives.py
-skip lldb-api :: macosx/duplicate-archive-members/TestDuplicateMembers.py
 
 ### Tests that pass accidentally ###
 
@@ -141,25 +132,15 @@ skip lldb-api :: tools/lldb-dap/output/TestDAP_output.py
 
 ### Untriaged ###
 
-skip lldb-api :: commands/statistics/basic/TestStats.py
-skip lldb-api :: lang/BoundsSafety/array_of_ptrs/TestArrayOfBoundsSafetyPointers.py
-skip lldb-api :: lang/BoundsSafety/out_of_bounds_pointer/TestOutOfBoundsPointer.py
 skip lldb-shell :: Commands/command-expr-diagnostics.test
 skip lldb-unit :: Host/./HostTests.exe
 skip lldb-api :: commands/platform/connect/TestPlatformConnect.py
 
-# https://github.com/llvm/llvm-project/issues/62983
-skip lldb-api :: functionalities/var_path/TestVarPath.py
-
 # https://github.com/swiftlang/llvm-project/issues/9073
 skip lldb-api :: lang/c/trampoline_stepping/TestTrampolineStepping.py
 
-# https://github.com/swiftlang/llvm-project/issues/9072
-skip lldb-api :: lang/cpp/bitfields/TestCppBitfields.py
-
-skip lldb-shell :: Swift/astcontext_error.test
-skip lldb-shell :: Swift/cond-breakpoint.test
-
-skip lldb-api :: functionalities/data-formatter/data-formatter-cpp/TestDataFormatterCpp.py
-skip lldb-api :: lang/cpp/frame-var-depth-and-elem-count/TestFrameVarDepthAndElemCount.py
-skip lldb-api :: functionalities/inferior-crashing/recursive-inferior/TestRecursiveInferiorStep.py
+# Untriaged: new in stable/21.x
+skip lldb-api :: commands/frame/var-dil/basics/QualifiedId/TestFrameVarDILQualifiedId.py
+skip lldb-api :: functionalities/dead-strip/TestDeadStrip.py
+skip lldb-api :: functionalities/memory/holes/TestMemoryHoles.py
+skip lldb-api :: lang/cpp/forward/TestCPPForwardDeclaration.py

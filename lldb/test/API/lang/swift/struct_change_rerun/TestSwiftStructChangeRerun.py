@@ -23,6 +23,11 @@ import shutil
 class TestSwiftStructChangeRerun(TestBase):
     @skipEmbeddedSwift
     @swiftTest
+    @skipIf(
+        oslist=["windows"],
+        swift_module_importer="noclang",
+        bugnumber="rdar://178182243",
+    )
     def test_swift_struct_change_rerun(self):
         """Test that we display self correctly for an inline-initialized struct"""
         copied_main_swift = self.getBuildArtifact("main.swift")
