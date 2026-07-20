@@ -948,6 +948,33 @@ public:
                                         PluginName, Subgroup, StableID);
   }
 
+  /// One entry in a plugin's diagnostic table, mirroring a single TableGen
+  /// Diagnostic record. A plugin registers a table of these with
+  /// getCustomPluginDiagIDs to organize its diagnostics the way Clang organizes
+  /// its own .td-generated ones: grouped, controllable, and stably identified.
+  struct PluginDiagnostic {
+    /// Record name. Becomes the plugin's enumerator and, together with the
+    /// plugin name, the SARIF ruleId "<plugin>_<name>".
+    StringRef Name;
+    Level DiagLevel;
+    /// Diagnostic format string, e.g. "unexpected token %0".
+    StringRef Message;
+    /// Subgroup within the plugin's "<plugin>-plugin" group, or empty for the
+    /// group itself.
+    StringRef Subgroup;
+  };
+
+  /// Register a whole plugin diagnostic table at once: a convenience over
+  /// getCustomPluginDiagID that places every entry in the plugin's own group
+  /// "<PluginName>-plugin[-<Subgroup>]" and derives each diagnostic's stable
+  /// SARIF ruleId from the plugin and record names, so the plugin spells
+  /// neither the group nor the id. This is the runtime equivalent of #including
+  /// a clang-tblgen'd diagnostics table. Returns the assigned IDs in table
+  /// order, so a caller can index them by a parallel enumeration.
+  SmallVector<unsigned>
+  getCustomPluginDiagIDs(StringRef PluginName,
+                         ArrayRef<PluginDiagnostic> Table);
+
   /// Converts a diagnostic argument (as an intptr_t) into the string
   /// that represents it.
   void ConvertArgToString(ArgumentKind Kind, intptr_t Val, StringRef Modifier,

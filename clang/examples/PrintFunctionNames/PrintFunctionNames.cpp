@@ -22,45 +22,65 @@ using namespace clang;
 
 namespace {
 
+// A plugin that wants to organize its diagnostics the way Clang organizes its
+// own would write them as TableGen records in a .td file and run
+//   clang-tblgen -gen-clang-diags-defs
+// to generate a table of DIAG(...) rows it #includes. To keep the example
+// self-contained we hand-write the equivalent table with an X-macro; a real
+// plugin would generate the PRINT_FNS_DIAGS body instead. Each row is one
+// diagnostic: a record name (which becomes both the enumerator below and, with
+// the plugin name, the SARIF ruleId), a level, a message, and an optional
+// subgroup of the plugin's "print-fns-plugin" group.
+#define PRINT_FNS_DIAGS(DIAG)                                                  \
+  DIAG(suspicious_decl, Warning, "suspicious top-level declaration '%0'", "")  \
+  DIAG(forbidden_decl, Error, "forbidden top-level declaration '%0'", "")      \
+  DIAG(saw_decl, Remark, "saw top-level declaration '%0'", "")
+
+// The stable enumeration, generated from the table's first column, gives the
+// plugin type-safe names for its diagnostics just like clang's diag::warn_*.
+namespace print_fns {
+enum Kind {
+#define DIAG(ENUM, LEVEL, MSG, SUBGROUP) ENUM,
+  PRINT_FNS_DIAGS(DIAG)
+#undef DIAG
+};
+} // namespace print_fns
+
+// The same table as PluginDiagnostic rows, ready for one-shot registration.
+static const DiagnosticsEngine::PluginDiagnostic PrintFnsDiagTable[] = {
+#define DIAG(ENUM, LEVEL, MSG, SUBGROUP)                                       \
+  {#ENUM, DiagnosticsEngine::LEVEL, MSG, SUBGROUP},
+    PRINT_FNS_DIAGS(DIAG)
+#undef DIAG
+};
+
 class PrintFunctionsConsumer : public ASTConsumer {
   CompilerInstance &Instance;
   std::set<std::string> ParsedTemplates;
-  // Diagnostics in the plugin's own "print-fns-plugin" group, or 0 if the
-  // corresponding argument was not passed. Registering the IDs up front (rather
-  // than lazily on first use) makes them members of the group before the source
-  // is parsed, so a `#pragma clang diagnostic` referring to the group can be
-  // applied to them.
-  unsigned WarnID = 0;
-  unsigned RemarkID = 0;
-  unsigned ErrorID = 0;
+  bool WarnOnDecls;
+  bool RemarkOnDecls;
+  bool ErrorOnDecls;
+  // Diagnostic IDs assigned by getCustomPluginDiagIDs, indexed by
+  // print_fns::Kind. Registering the whole table up front (rather than lazily
+  // on first use) makes every diagnostic a member of the "print-fns-plugin"
+  // group before the source is parsed, so a `#pragma clang diagnostic` naming
+  // the group can be applied to them.
+  llvm::SmallVector<unsigned> DiagIDs;
 
 public:
   PrintFunctionsConsumer(CompilerInstance &Instance,
                          std::set<std::string> ParsedTemplates,
                          bool WarnOnDecls, bool RemarkOnDecls,
                          bool ErrorOnDecls)
-      : Instance(Instance), ParsedTemplates(ParsedTemplates) {
-    DiagnosticsEngine &Diags = Instance.getDiagnostics();
-    // The plugin is registered under "print-fns", so its group is
-    // "print-fns-plugin"; passing the plugin's own name keeps the diagnostics
-    // in that namespace automatically.
-    if (RemarkOnDecls)
-      RemarkID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Remark,
-                                             "saw top-level declaration '%0'",
-                                             "print-fns");
-    if (WarnOnDecls)
-      // The trailing stable ID becomes this diagnostic's SARIF ruleId. It is
-      // independent of registration order, unlike the numeric ID SARIF would
-      // otherwise fall back to; a plugin generating its diagnostics from
-      // TableGen would pass the generated enum name here.
-      WarnID = Diags.getCustomPluginDiagID(
-          DiagnosticsEngine::Warning, "suspicious top-level declaration '%0'",
-          "print-fns", /*Subgroup=*/"",
-          /*StableID=*/"print_fns_suspicious_decl");
-    if (ErrorOnDecls)
-      ErrorID = Diags.getCustomPluginDiagID(
-          DiagnosticsEngine::Error, "forbidden top-level declaration '%0'",
-          "print-fns");
+      : Instance(Instance), ParsedTemplates(ParsedTemplates),
+        WarnOnDecls(WarnOnDecls), RemarkOnDecls(RemarkOnDecls),
+        ErrorOnDecls(ErrorOnDecls) {
+    // One call registers the whole table. Each diagnostic lands in the plugin's
+    // "print-fns-plugin" group (derived from the plugin name) with a stable
+    // SARIF ruleId "print_fns_<record>" (likewise derived), so the plugin
+    // spells neither the group nor the id.
+    DiagIDs = Instance.getDiagnostics().getCustomPluginDiagIDs("print-fns",
+                                                               PrintFnsDiagTable);
   }
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
@@ -74,12 +94,15 @@ public:
       // with -Rno-print-fns-plugin (or the -Wplugin / -Wno-plugin umbrella),
       // while the error keeps its severity -- group flags never silence errors.
       DiagnosticsEngine &Diags = Instance.getDiagnostics();
-      if (RemarkID)
-        Diags.Report(ND->getLocation(), RemarkID) << ND->getNameAsString();
-      if (WarnID)
-        Diags.Report(ND->getLocation(), WarnID) << ND->getNameAsString();
-      if (ErrorID)
-        Diags.Report(ND->getLocation(), ErrorID) << ND->getNameAsString();
+      if (RemarkOnDecls)
+        Diags.Report(ND->getLocation(), DiagIDs[print_fns::saw_decl])
+            << ND->getNameAsString();
+      if (WarnOnDecls)
+        Diags.Report(ND->getLocation(), DiagIDs[print_fns::suspicious_decl])
+            << ND->getNameAsString();
+      if (ErrorOnDecls)
+        Diags.Report(ND->getLocation(), DiagIDs[print_fns::forbidden_decl])
+            << ND->getNameAsString();
     }
 
     return true;

@@ -769,6 +769,21 @@ TEST_F(PluginWarningGroupTest, UserDefinedWarningsPromotesPluginGroup) {
             DiagnosticsEngine::Error);
 }
 
+// The other -Wuser-defined-warnings tests process the flag before the plugin
+// registers (the command-line ordering), which routes through the mapping seed.
+// When the plugin diagnostic is already registered, the flag instead reaches it
+// by enumerating the root's runtime members -- the distinct getDiagnosticsInGroup
+// path where the static "user-defined-warnings" group collects plugin members.
+TEST_F(PluginWarningGroupTest, UserDefinedWarningsRootReachesRegisteredMember) {
+  unsigned ID = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                            "plugin warning", "example");
+  EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
+
+  DiagOpts.Warnings = {"no-user-defined-warnings"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
+}
+
 // A custom diagnostic given a stable ID reports it verbatim (used as the SARIF
 // ruleId); without one it falls back to the numeric, non-reproducible ID.
 TEST_F(PluginWarningGroupTest, StableIDReportedForSarifRuleId) {
@@ -797,5 +812,49 @@ TEST_F(PluginWarningGroupTest, UserDefinedWarningsRootLeavesRemarksAlone) {
   DiagOpts.Remarks = {"example-plugin"};
   ProcessWarningOptions(Diags, DiagOpts, *FS);
   EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
+}
+
+// getCustomPluginDiagIDs registers a whole table at once: each entry lands in
+// the plugin's group, controllable together, and gets a stable ruleId derived
+// from the plugin and record names (so a -Wno-<plugin>-plugin silences the
+// warnings, the error keeps its severity, and the ruleIds are as derived).
+TEST_F(PluginWarningGroupTest, PluginDiagTableRegistration) {
+  const DiagnosticIDs &DiagIDs = *Diags.getDiagnosticIDs();
+  static const DiagnosticsEngine::PluginDiagnostic Table[] = {
+      {"suspicious_decl", DiagnosticsEngine::Warning, "suspicious %0", ""},
+      {"forbidden_decl", DiagnosticsEngine::Error, "forbidden %0", ""},
+      // A row with a subgroup lands in "my-plugin-plugin-loop".
+      {"loop_warn", DiagnosticsEngine::Warning, "loop %0", "loop"},
+  };
+  llvm::SmallVector<unsigned> IDs =
+      Diags.getCustomPluginDiagIDs("my-plugin", Table);
+  ASSERT_EQ(IDs.size(), 3u);
+
+  // ruleIds are "<sanitized-plugin>_<record>"; the dash in "my-plugin" maps to
+  // '_'. The subgroup does not affect the ruleId.
+  EXPECT_EQ(DiagIDs.getStableID(IDs[0]), "my_plugin_suspicious_decl");
+  EXPECT_EQ(DiagIDs.getStableID(IDs[1]), "my_plugin_forbidden_decl");
+  EXPECT_EQ(DiagIDs.getStableID(IDs[2]), "my_plugin_loop_warn");
+
+  // The table shares the "my-plugin-plugin" group: -Wno silences both warnings
+  // (the subgroup entry too, since the group controls its subgroups); the error
+  // keeps its severity.
+  DiagOpts.Warnings = {"no-my-plugin-plugin"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_TRUE(Diags.isIgnored(IDs[0], SourceLocation()));
+  EXPECT_TRUE(Diags.isIgnored(IDs[2], SourceLocation()));
+  EXPECT_EQ(Diags.getDiagnosticLevel(IDs[1], SourceLocation()),
+            DiagnosticsEngine::Error);
+
+  // The subgroup entry is also reachable by its own subgroup flag, proving the
+  // helper threaded the Subgroup field through to the group name.
+  DiagnosticsEngine Fresh{DiagnosticIDs::create(), DiagOpts};
+  llvm::SmallVector<unsigned> FreshIDs =
+      Fresh.getCustomPluginDiagIDs("my-plugin", Table);
+  DiagnosticOptions SubOpts;
+  SubOpts.Warnings = {"no-my-plugin-plugin-loop"};
+  ProcessWarningOptions(Fresh, SubOpts, *FS);
+  EXPECT_FALSE(Fresh.isIgnored(FreshIDs[0], SourceLocation()));
+  EXPECT_TRUE(Fresh.isIgnored(FreshIDs[2], SourceLocation()));
 }
 } // namespace
