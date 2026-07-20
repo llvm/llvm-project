@@ -4105,6 +4105,12 @@ address. See that instruction's documentation for details.
 For a simpler introduction to the ordering constraints, see the
 {doc}`Atomics`.
 
+For the following, we call two or more accesses *perfectly overlapping*
+if they all access the exact same set of bytes, i.e., they access the
+same address and have the same access size. By the constraints of the
+previous section, racing atomic accesses must be perfectly overlapping
+to act atomically.
+
 `unordered`
 :   The set of values that can be read is governed by the happens-before
     partial order. A value cannot be read unless some operation wrote
@@ -4114,22 +4120,24 @@ For a simpler introduction to the ordering constraints, see the
     to make them atomic in any interesting way.
 
 `monotonic`
-:   In addition to the guarantees of `unordered`, there is a single
-    total order for modifications by `monotonic` operations on each
-    address. All modification orders must be compatible with the
+:   In addition to the guarantees of `unordered`, there is a total order
+    of modifications for each set of perfectly overlapping `monotonic`
+    operations.
+    All modification orders must be compatible with the
     happens-before order. There is no guarantee that the modification
     orders can be combined to a global total order for the whole program
     (and this often will not be possible). If the read in an atomic
     read-modify-write operation M ({ref}`cmpxchg <i_cmpxchg>` and
-    {ref}`atomicrmw <i_atomicrmw>`) reads from a `monotonic` (or
-    stronger) write W, W must be immediately before M in the address's
-    modification order. If one atomic read happens before another atomic
-    read of the same address and both are at least `monotonic`, the
-    later read must not see an earlier value in the address's
-    modification order. This disallows reordering of `monotonic` (or
-    stronger) operations on the same address. If an address is written
-    `monotonic`-ally by one thread, and other threads `monotonic`-ally
-    read that address repeatedly, the other threads must eventually see
+    {ref}`atomicrmw <i_atomicrmw>`) reads from a perfectly overlapping
+    `monotonic` (or stronger) write W, W must be immediately before M in
+    the relevant modification order. If one atomic read happens before
+    another perfectly overlapping atomic read and both are at least
+    `monotonic`, the later read must not see an earlier value in the
+    address's modification order. This disallows reordering of perfectly
+    overlapping `monotonic` (or stronger) operations. If an address is
+    written `monotonic`-ally by one thread, and other threads
+    `monotonic`-ally read that address repeatedly with perfectly
+    overlapping accesses, the other threads must eventually see
     the write. This corresponds to the C/C++ `memory_order_relaxed`.
 
 `acquire`
@@ -4139,10 +4147,11 @@ For a simpler introduction to the ordering constraints, see the
 
 `release`
 :   In addition to the guarantees of `monotonic`, if this operation
-    writes a value which is subsequently read by an `acquire`
-    operation, it *synchronizes-with* that operation. Furthermore,
-    this occurs even if the value written by a `release` operation
-    has been modified by a read-modify-write operation before being
+    writes a value which is subsequently read by a perfectly overlapping
+    `acquire` operation, it *synchronizes-with* that operation.
+    Furthermore, this occurs even if the value written by a `release`
+    operation has been modified by a perfectly overlapping
+    read-modify-write operation before being
     read. (Such a set of operations comprises a *release
     sequence*). This corresponds to the C/C++
     `memory_order_release`.
@@ -4156,7 +4165,8 @@ For a simpler introduction to the ordering constraints, see the
     operation that only reads, `release` for an operation that only
     writes), there is a global total order on all
     sequentially-consistent operations on all addresses. If an address
-    is only accessed through sequentially-consistent operations, each
+    is only accessed through perfectly overlapping
+    sequentially-consistent operations, each
     sequentially-consistent read of that address sees the last preceding
     write to the same address in this global order. This corresponds to
     the C/C++ `memory_order_seq_cst` and Java `volatile`.
@@ -11967,7 +11977,8 @@ defines what *synchronizes-with* edges they add. They can only be given
 A fence A which has (at least) `release` ordering semantics
 *synchronizes with* a fence B with (at least) `acquire` ordering
 semantics if and only if there exist atomic operations X and Y, both
-operating on some atomic object M, such that A is sequenced before X, X
+operating on some atomic object M with the same address and access size,
+such that A is sequenced before X, X
 modifies M (either directly or through some side effect of a sequence
 headed by X), Y is sequenced before B, and Y observes M. This provides a
 *happens-before* dependency between A and B. Rather than an explicit
