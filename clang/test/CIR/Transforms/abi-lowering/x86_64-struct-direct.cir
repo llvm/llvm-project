@@ -55,8 +55,11 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @take_two(%arg0: !s64i, %arg1: !s64i) -> !s64i
   // CHECK:   cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct>
-  // CHECK:   cir.store %arg0, %{{.*}} : !s64i, !cir.ptr<!s64i>
-  // CHECK:   cir.store %arg1, %{{.*}} : !s64i, !cir.ptr<!s64i>
+  // CHECK:   %[[FLAT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct>
+  // CHECK:   %[[E0:.*]] = cir.get_member %[[FLAT]][0] {{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!s64i>
+  // CHECK:   cir.store %arg0, %[[E0]] : !s64i, !cir.ptr<!s64i>
+  // CHECK:   %[[E1:.*]] = cir.get_member %[[FLAT]][1] {{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!s64i>
+  // CHECK:   cir.store %arg1, %[[E1]] : !s64i, !cir.ptr<!s64i>
   // CHECK:   %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Two>
   // CHECK:   %{{.*}} = cir.get_member %{{.*}}[1] {name = "b"} : !cir.ptr<!rec_Two> -> !cir.ptr<!s64i>
 
@@ -67,6 +70,10 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @take_mixed(%arg0: !u64i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_Mixed>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_Mixed>, !rec_Mixed
 
   // A struct wrapping a small char array is data, not an empty record: the
   // 4-byte struct coerces to a single i32.
@@ -75,6 +82,10 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @take_charbuf(%arg0: !u32i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!u32i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !u32i, !cir.ptr<!u32i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u32i> -> !cir.ptr<!rec_CharBuf>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_CharBuf>, !rec_CharBuf
 
   // A one-byte struct wrapping a single-element char array is data, not an
   // empty class: it coerces to a single i8.
@@ -83,13 +94,26 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @take_char1(%arg0: !s8i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!s8i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !s8i, !cir.ptr<!s8i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!s8i> -> !cir.ptr<!rec_Char1>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_Char1>, !rec_Char1
 
-  // A 12-byte array argument is passed as two eightbytes (i64 then i32).
+  // A 12-byte array argument is passed as two eightbytes (i64 then i32).  The
+  // two registers are written into a flattened coerce slot, then reloaded as
+  // the array.
   cir.func @take_arr3(%arg0: !cir.array<!s32i x 3>) {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_arr3(%arg0: !u64i, %arg1: !s32i)
+  // CHECK:   cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct1>
+  // CHECK:   %[[FLAT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct1>
+  // CHECK:   %[[E0:.*]] = cir.get_member %[[FLAT]][0] {{.*}} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[E0]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[E1:.*]] = cir.get_member %[[FLAT]][1] {{.*}} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!s32i>
+  // CHECK:   cir.store %arg1, %[[E1]] : !s32i, !cir.ptr<!s32i>
+  // CHECK:   %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!cir.array<!s32i x 3>>
 
   // An anonymous struct has no record-layout entry, so it defaults to
   // can-pass-in-registers and coerces like its named counterpart.
@@ -98,15 +122,29 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @take_anon(%arg0: !u64i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_anon_struct2>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_anon_struct2>, !rec_anon_struct2
 
-  // The call site coerces the record operand to the same i64.
+  // The call site round-trips the record through the coercion type: the
+  // incoming i64 is reloaded as the record, then stored and reloaded as the
+  // i64 the callee expects.
   cir.func @call_pair(%arg0: !rec_Pair) {
     %0 = cir.call @take_pair(%arg0) : (!rec_Pair) -> !s32i
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @call_pair(%arg0: !u64i)
-  // CHECK:   %{{.*}} = cir.call @take_pair(%{{.*}}) : (!u64i) -> !s32i
+  // CHECK:   %[[S0:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[S0]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[C0:.*]] = cir.cast bitcast %[[S0]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_Pair>
+  // CHECK:   %[[REC:.*]] = cir.load %[[C0]] : !cir.ptr<!rec_Pair>, !rec_Pair
+  // CHECK:   %[[S1:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_Pair>
+  // CHECK:   cir.store %[[REC]], %[[S1]] : !rec_Pair, !cir.ptr<!rec_Pair>
+  // CHECK:   %[[C1:.*]] = cir.cast bitcast %[[S1]] : !cir.ptr<!rec_Pair> -> !cir.ptr<!u64i>
+  // CHECK:   %[[U:.*]] = cir.load %[[C1]] : !cir.ptr<!u64i>, !u64i
+  // CHECK:   %{{.*}} = cir.call @take_pair(%[[U]]) : (!u64i) -> !s32i
 }
 
 // LLVM: define i32 @take_pair(i64 %{{.+}})
