@@ -960,6 +960,15 @@ template <> struct DenseMapInfo<StringRef, void> {
   LLVM_ABI static unsigned getHashValue(StringRef Val);
 
   static bool isEqual(StringRef LHS, StringRef RHS) { return LHS == RHS; }
+
+  static inline StringRef getEmptyKey() {
+    assert(false && "Obsoleted");
+    abort();
+  }
+  static inline StringRef getTombstoneKey() {
+    assert(false && "Obsoleted");
+    abort();
+  }
 };
 
 } // end namespace llvm
