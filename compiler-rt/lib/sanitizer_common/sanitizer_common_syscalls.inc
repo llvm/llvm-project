@@ -1905,10 +1905,13 @@ PRE_SYSCALL(getsockopt)
 POST_SYSCALL(getsockopt)
 (long res, long fd, long level, long optname, void *optval, void *optlen) {
   if (res >= 0) {
-    if (optval && optlen)
-      POST_WRITE(optval, *(unsigned int *)optlen);
-    if (optlen)
+    // getsockopt cannot succeed with a null optlen, but guard it before
+    // dereferencing since the hook is called with raw, untrusted arguments.
+    if (optlen) {
+      if (optval)
+        POST_WRITE(optval, *(unsigned int *)optlen);
       POST_WRITE(optlen, sizeof(int));
+    }
   }
 }
 

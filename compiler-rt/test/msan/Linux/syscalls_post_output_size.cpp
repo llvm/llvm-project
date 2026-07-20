@@ -37,5 +37,21 @@ int main() {
     __sanitizer_syscall_post_getsockopt(0, 3, 1, 2, ov, &ol);
     assert(__msan_test_shadow(ov, 16) == 4); // exactly *optlen bytes
   }
+  {
+    // optlen == NULL: the hook must not dereference it and must leave optval
+    // untouched (getsockopt cannot succeed with a NULL optlen, but the hook is
+    // called with raw arguments and must stay safe regardless).
+    unsigned char ov[16];
+    __msan_poison(ov, 16);
+    __sanitizer_syscall_post_getsockopt(0, 3, 1, 2, ov, nullptr);
+    assert(__msan_test_shadow(ov, 16) == 0); // nothing unpoisoned
+  }
+  {
+    // optval == NULL: only optlen is unpoisoned, optval is never dereferenced.
+    socklen_t ol = 4;
+    __msan_poison(&ol, sizeof(ol));
+    __sanitizer_syscall_post_getsockopt(0, 3, 1, 2, nullptr, &ol);
+    assert(__msan_test_shadow(&ol, sizeof(ol)) == -1);
+  }
   return 0;
 }
