@@ -11,7 +11,8 @@
 ; Ensure lld generates imports files if requested for distributed backends.
 ; RUN: rm -f %t3.obj.imports %t3.obj.thinlto.bc
 ; RUN: lld-link -entry:main -thinlto-index-only \
-; RUN:     -thinlto-emit-imports-files %t1.obj %t2.obj %t3.obj -out:%t4.exe
+; RUN:     -thinlto-emit-imports-files %t1.obj \
+; RUN:     -start-lib %t2.obj %t3.obj -end-lib -out:%t4.exe
 
 ; The imports file for this module contains the bitcode file for
 ; Inputs/thinlto.ll
@@ -26,7 +27,8 @@
 ; RUN: cat %t3.obj.imports | count 0
 
 ; The index file should be created even for the input with an empty summary.
-; RUN: ls %t3.obj.thinlto.bc
+; RUN: llvm-dis %t3.obj.thinlto.bc -o - | FileCheck %s --check-prefix=UNUSED
+; UNUSED: ^{{[0-9]+}} = flags: 2
 
 ; Ensure lld generates error if unable to write to imports file.
 ; RUN: rm -f %t3.obj.imports
