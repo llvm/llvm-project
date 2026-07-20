@@ -57,8 +57,9 @@ struct PolynomialInfo {
   // the case of CRC, which must be zero.
   Value *ComputedValue;
 
-  // Set to true in the case of big-endian.
-  bool ByteOrderSwapped;
+  // The big-endian case implies that bits are reversed, in the case of bit-wise
+  // algorithms such as CRC.
+  bool IsBigEndian;
 
   // An optional auxiliary checksum that augments the LHS. In the case of CRC,
   // it is XOR'ed with the LHS, so that the computation's final remainder is
@@ -66,7 +67,7 @@ struct PolynomialInfo {
   Value *LHSAux;
 
   LLVM_ABI PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
-                          Value *ComputedValue, bool ByteOrderSwapped,
+                          Value *ComputedValue, bool IsBigEndian,
                           Value *LHSAux = nullptr);
 };
 
@@ -85,7 +86,17 @@ public:
   // Auxilary entry point after analysis to interleave the generating polynomial
   // and return a 256-entry CRC table.
   LLVM_ABI static CRCTable genSarwateTable(const APInt &GenPoly,
-                                           bool ByteOrderSwapped);
+                                           bool IsBigEndian);
+
+  /// Auxilary entry point after analysis to generate constants for a GF(2)
+  /// Barrett Reduction.
+  /// Returns a pair of Mu of bitwidth TC+1 and FullGenPoly of bitwidth BW+1.
+  /// Mu is used in the first clmul operation. Mu = floor(x^(BW+TC) / P(x)).
+  /// FullGenPoly is used in the second clmul operation, and is Info.RHS with
+  /// the implied BW'th bit.
+  /// Endianness is accounted for using Info.IsBigEndian.
+  LLVM_ABI static std::pair<APInt, APInt>
+  genBarrettConstants(const PolynomialInfo &Info);
 
   LLVM_ABI void print(raw_ostream &OS) const;
 

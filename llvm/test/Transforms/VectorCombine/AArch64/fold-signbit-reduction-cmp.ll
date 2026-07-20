@@ -331,8 +331,8 @@ define i1 @negative_wrong_shift(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @negative_wrong_shift(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 30)
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SHR]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i32> %x, splat (i32 30)
@@ -362,8 +362,8 @@ define i1 @negative_multi_use_shift(<4 x i32> %x, ptr %p) {
 ; CHECK-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 31)
 ; CHECK-NEXT:    store <4 x i32> [[SHR]], ptr [[P]], align 16
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SHR]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i32> %x, splat (i32 31)
@@ -573,8 +573,8 @@ define i1 @i1_or_eq_0(<4 x i1> %x) {
 ; CHECK-LABEL: define i1 @i1_or_eq_0(
 ; CHECK-SAME: <4 x i1> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
@@ -588,8 +588,7 @@ define i1 @i1_or_ne_0(<4 x i1> %x) {
 ; CHECK-SAME: <4 x i1> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
   %red = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %shr)
@@ -629,8 +628,8 @@ define i1 @i1_umax_eq_0(<4 x i1> %x) {
 ; CHECK-LABEL: define i1 @i1_umax_eq_0(
 ; CHECK-SAME: <4 x i1> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
@@ -657,8 +656,8 @@ define i1 @i1_ashr_or_eq_0(<4 x i1> %x) {
 ; CHECK-LABEL: define i1 @i1_ashr_or_eq_0(
 ; CHECK-SAME: <4 x i1> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = ashr <4 x i1> %x, splat (i1 0)
@@ -1013,8 +1012,8 @@ define i1 @negative_multi_shift_multiuse(<4 x i32> %a, <4 x i32> %b, ptr %p) {
 ; CHECK-NEXT:    store <4 x i32> [[SA]], ptr [[P]], align 16
 ; CHECK-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
 ; CHECK-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SUM]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SUM]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sa = lshr <4 x i32> %a, splat (i32 31)
@@ -1036,8 +1035,8 @@ define i1 @negative_multi_tree_node_multiuse(<4 x i32> %a, <4 x i32> %b, <4 x i3
 ; CHECK-NEXT:    [[AB:%.*]] = add <4 x i32> [[SA]], [[SB]]
 ; CHECK-NEXT:    store <4 x i32> [[AB]], ptr [[P]], align 16
 ; CHECK-NEXT:    [[ABC:%.*]] = add <4 x i32> [[AB]], [[SC]]
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[ABC]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[ABC]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sa = lshr <4 x i32> %a, splat (i32 31)
@@ -1058,8 +1057,8 @@ define i1 @negative_multi_op_mismatch(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
 ; CHECK-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
 ; CHECK-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SUM]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SUM]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sa = lshr <4 x i32> %a, splat (i32 31)

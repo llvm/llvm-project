@@ -3,7 +3,7 @@
 # similar although simpler functionality. We should figure out how to merge
 # the two files.
 
-set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR}")
+set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR};-DLLVM_LIBDIR_SUFFIX=${LLVM_LIBDIR_SUFFIX}")
 if(APPLE AND CMAKE_OSX_SYSROOT AND (LLVM_TARGET_TRIPLE STREQUAL LLVM_HOST_TRIPLE))
   # Only propagate the host sysroot for native runtimes builds.
   list(APPEND RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT}")
@@ -120,18 +120,20 @@ endmacro()
 # flang dependency to the main build target and any fortran module file builds,
 # like 'install-libomp-mod' or `install-flang-rt-mod'.
 function(add_flang_mod_deps build_target)
-  if(TARGET flang)
-    if(TARGET ${build_target})
-      add_dependencies(${build_target} flang)
-    endif()
-    foreach(tgt IN LISTS ARGN)
-      if(tgt MATCHES "-mod($|-)")
-        if(TARGET ${tgt})
-          add_dependencies(${tgt} flang)
-        endif()
-      endif()
-    endforeach()
+  if(NOT TARGET flang)
+    return ()
+  endif ()
+
+  if(TARGET ${build_target})
+    add_dependencies(${build_target} flang)
   endif()
+  foreach(tgt IN LISTS ARGN)
+    if(tgt MATCHES "-mod($|-)" OR tgt MATCHES "check-(flang-rt|openmp)($|-)")
+      if(TARGET ${tgt})
+        add_dependencies(${tgt} flang)
+      endif()
+    endif()
+  endforeach()
 endfunction()
 
 function(builtin_default_target compiler_rt_path)
@@ -364,7 +366,7 @@ function(runtime_default_target)
                            FOLDER "Runtimes"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 
-  add_flang_mod_deps(runtimes-build ${extra_targets})
+  add_flang_mod_deps(runtimes-build ${extra_targets} ${test_targets})
 endfunction()
 
 # runtime_register_target(name)
@@ -544,6 +546,7 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
+                flang-lazy
                 count
                 lld
                 lli
@@ -625,11 +628,25 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+    # The offload unittests detect the GPU arch at configure time via
+    # -mcpu=native.
+    if(LLVM_INCLUDE_TESTS)
+      if(TARGET offload-arch)
+        list(APPEND extra_deps offload-arch)
+      endif()
+    endif()
+  endif()
+  if("libsycl" IN_LIST LLVM_ENABLE_RUNTIMES)
+    foreach(dep clang-linker-wrapper clang-sycl-linker clang llvm-offload-binary)
+      if(TARGET ${dep})
+        list(APPEND extra_deps ${dep})
+      endif()
+    endforeach()
   endif()
   if(LLVM_LIBC_GPU_BUILD)
     set(_gpu_loader "${LLVM_TOOLS_BINARY_DIR}/llvm-gpu-loader${CMAKE_EXECUTABLE_SUFFIX}")
     foreach(name ${LLVM_RUNTIME_TARGETS})
-      if(name MATCHES "^(amdgcn|nvptx)")
+      if(name MATCHES "^(amdgcn|amdgpu|nvptx)")
         set(RUNTIMES_${name}_CMAKE_CROSSCOMPILING_EMULATOR "${_gpu_loader}" CACHE STRING "")
       endif()
     endforeach()

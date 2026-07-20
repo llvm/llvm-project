@@ -12,19 +12,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Iterator.h"
 #include "Move.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace clang;
 using namespace ento;
+using namespace iterator;
 
 namespace {
 struct RegionState {
@@ -46,12 +50,13 @@ public:
 
 namespace {
 class MoveChecker
-    : public Checker<check::PreCall, check::PostCall,
-                     check::DeadSymbols, check::RegionChanges> {
+    : public Checker<check::PreCall, check::PostCall, check::DeadSymbols,
+                     check::RegionChanges, eval::Call> {
 public:
   void checkPreCall(const CallEvent &MC, CheckerContext &C) const;
   void checkPostCall(const CallEvent &MC, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   ProgramStateRef
   checkRegionChanges(ProgramStateRef State,
                      const InvalidatedSymbols *Invalidated,
@@ -205,6 +210,9 @@ public:
 private:
   BugType BT{this, "Use-after-move", categories::CXXMoveSemantics};
 
+  // Modelling the 3 argument std::move calls
+  const CallDescription StdMoveCall{CDM::SimpleFunc, {"std", "move"}, 3};
+
   // Check if the given form of potential misuse of a given object
   // should be reported. If so, get it reported. The callback from which
   // this function was called should immediately return after the call
@@ -229,6 +237,11 @@ private:
 } // end anonymous namespace
 
 REGISTER_MAP_WITH_PROGRAMSTATE(TrackedRegionMap, const MemRegion *, RegionState)
+
+// Custom map designed to track containers whose contents were moved by 3-arg
+// std::move
+REGISTER_MAP_WITH_PROGRAMSTATE(TrackedContentsMap, const MemRegion *,
+                               RegionState)
 
 // Define the inter-checker API.
 namespace clang {
@@ -494,6 +507,79 @@ void MoveChecker::checkPostCall(const CallEvent &Call,
   assert(!C.isDifferent() && "Should not have made transitions on this path!");
 }
 
+bool MoveChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
+
+  const auto *CE = dyn_cast_if_present<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return false;
+
+  ProgramStateRef State = C.getState();
+
+  if (!StdMoveCall.matches(Call))
+    return false;
+
+  const auto *POS = getIteratorPosition(State, Call.getArgSVal(0));
+  if (!POS)
+    return false;
+
+  const MemRegion *ContainerRegion = POS->getContainer();
+  if (!ContainerRegion)
+    return false;
+
+  const auto *TypedRegion = dyn_cast<TypedValueRegion>(ContainerRegion);
+
+  if (!TypedRegion)
+    return false;
+
+  QualType ObjTy = TypedRegion->getValueType();
+
+  const auto *RD = ObjTy->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+
+  ObjectKind OK = classifyObject(State, ContainerRegion, RD);
+
+  // FIXME: IteratorModeling does not handle output iterators like
+  // std::back_inserter. For this reason, we fall back to AST pattern matching
+  // for destination recovery. Once IteratorModeling handles output iterators
+  // like std::back_inserter, this can be replaced with getIteratorPosition().
+  const auto *BackInsCall = dyn_cast<CallExpr>(CE->getArg(2)->IgnoreImpCasts());
+  if (!BackInsCall)
+    return false;
+
+  const Expr *DestExpr = BackInsCall->getArg(0)->IgnoreImpCasts();
+  if (!DestExpr)
+    return false;
+
+  const auto *DestDRE = dyn_cast<DeclRefExpr>(DestExpr);
+  if (!DestDRE)
+    return false;
+
+  const auto *DestVD = dyn_cast<VarDecl>(DestDRE->getDecl());
+  if (!DestVD)
+    return false;
+
+  const MemRegion *DestRegion =
+      State->getLValue(DestVD, C.getStackFrame()).getAsRegion();
+  if (!DestRegion)
+    return false;
+
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  SVal ReturnVal = SVB.conjureSymbolVal(Call, C.blockCount());
+  State = State->BindExpr(CE, C.getStackFrame(), ReturnVal);
+
+  State = State->invalidateRegions({DestRegion}, Call.getCFGElementRef(),
+                                   C.blockCount(), C.getStackFrame(),
+                                   /*CausesPointerEscape=*/false);
+
+  if (shouldBeTracked(OK))
+    State = State->set<TrackedContentsMap>(ContainerRegion,
+                                           RegionState::getMoved());
+
+  C.addTransition(State);
+  return true;
+}
+
 bool MoveChecker::isMoveSafeMethod(const CXXMethodDecl *MethodDec) const {
   // We abandon the cases where bool/void/void* conversion happens.
   if (const auto *ConversionDec =
@@ -642,6 +728,40 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   // class in which the encountered method defined.
   ThisRegion = ThisRegion->getMostDerivedObjectRegion();
 
+  // Store class declaration as well, for bug reporting purposes.
+  const CXXRecordDecl *RD = MethodDecl->getParent();
+
+  if (MethodDecl->getOverloadedOperator() == OO_Star ||
+      MethodDecl->getOverloadedOperator() == OO_Arrow) {
+    SVal Val = IC->getCXXThisVal();
+
+    if (const auto *POS = getIteratorPosition(State, Val)) {
+      const MemRegion *ContainerRegion = POS->getContainer();
+      if (!ContainerRegion)
+        return;
+
+      const auto *TypedRegion = dyn_cast<TypedValueRegion>(ContainerRegion);
+      if (!TypedRegion)
+        return;
+
+      QualType ObjTy = TypedRegion->getValueType();
+      const auto *R = ObjTy->getAsCXXRecordDecl();
+      if (!R)
+        return;
+
+      if (State->get<TrackedContentsMap>(ContainerRegion)) {
+        ExplodedNode *N = tryToReportBug(ContainerRegion, R, C, MK_FunCall);
+        if (!N || N->isSink())
+          return;
+
+        State = State->set<TrackedContentsMap>(ContainerRegion,
+                                               RegionState::getReported());
+        C.addTransition(State, N);
+        return;
+      }
+    }
+  }
+
   if (isStateResetMethod(MethodDecl)) {
     State = removeFromState(State, ThisRegion);
     C.addTransition(State);
@@ -650,9 +770,6 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
 
   if (isMoveSafeMethod(MethodDecl))
     return;
-
-  // Store class declaration as well, for bug reporting purposes.
-  const CXXRecordDecl *RD = MethodDecl->getParent();
 
   if (MethodDecl->isOverloadedOperator()) {
     OverloadedOperatorKind OOK = MethodDecl->getOverloadedOperator();

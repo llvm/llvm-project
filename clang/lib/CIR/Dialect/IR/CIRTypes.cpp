@@ -23,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypesDetails.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -36,6 +37,28 @@ bool cir::isSized(mlir::Type ty) {
     return sizedTy.isSized();
   assert(!cir::MissingFeatures::unsizedTypes());
   return false;
+}
+
+cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
+                                               mlir::MLIRContext *ctx) {
+  switch (llvm::APFloat::SemanticsToEnum(sem)) {
+  case llvm::APFloat::S_IEEEhalf:
+    return cir::FP16Type::get(ctx);
+  case llvm::APFloat::S_BFloat:
+    return cir::BF16Type::get(ctx);
+  case llvm::APFloat::S_IEEEsingle:
+    return cir::SingleType::get(ctx);
+  case llvm::APFloat::S_IEEEdouble:
+    return cir::DoubleType::get(ctx);
+  case llvm::APFloat::S_x87DoubleExtended:
+    return cir::FP80Type::get(ctx);
+  case llvm::APFloat::S_IEEEquad:
+    return cir::FP128Type::get(ctx);
+  default:
+    // CIR has no type for the remaining semantics (PPCDoubleDouble, the
+    // Float8 formats).  Return null and let the caller report it.
+    return {};
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -809,7 +832,13 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
         std::min(llvm::PowerOf2Ceil(width), static_cast<uint64_t>(64));
     return std::max(alignBits / 8, static_cast<uint64_t>(1));
   }
-  return (uint64_t)(width / 8);
+  // Round up to a power-of-two byte alignment.  DataLayout consumers such as
+  // llvm::Align require power-of-two alignments, and width / 8 is not a power
+  // of two for non-fundamental widths (e.g. i24 -> 3).  This leaves the
+  // fundamental widths unchanged (i8 -> 1, i16 -> 2, i32 -> 4, i64 -> 8) and
+  // keeps __int128 at 16.
+  uint64_t alignBits = llvm::PowerOf2Ceil(width);
+  return std::max(alignBits / 8, static_cast<uint64_t>(1));
 }
 
 mlir::LogicalResult
@@ -1264,7 +1293,9 @@ cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
   case LangAS::opencl_generic:
     return LangAddressSpace::OffloadGeneric;
   case LangAS::opencl_global_device:
+    return LangAddressSpace::OffloadGlobalDevice;
   case LangAS::opencl_global_host:
+    return LangAddressSpace::OffloadGlobalHost;
   case LangAS::sycl_global:
   case LangAS::sycl_global_device:
   case LangAS::sycl_global_host:

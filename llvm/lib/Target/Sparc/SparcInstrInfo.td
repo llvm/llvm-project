@@ -158,6 +158,7 @@ def SETHIimm_not : PatLeaf<(i32 imm), [{
 // Addressing modes.
 def ADDRrr : ComplexPattern<iPTR, 2, "SelectADDRrr", [], []>;
 def ADDRri : ComplexPattern<iPTR, 2, "SelectADDRri", [], []>;
+def ForceADDRrr : ComplexPattern<iPTR, 2, "SelectForceADDRrr", [], []>;
 
 // Constrained operands for the shift operations.
 class ShiftAmtImmAsmOperand<int Bits> : AsmOperandClass {
@@ -336,6 +337,11 @@ SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 def SDTSPloadgdop :
 SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 
+def SDTSPloadbig     : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, OtherVT>]>;
+def SDTSPloadlittle  : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, OtherVT>]>;
+def SDTSPstorebig    : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, OtherVT>]>;
+def SDTSPstorelittle : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, OtherVT>]>;
+
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPcmpfccv9 : SDNode<"SPISD::CMPFCC_V9", SDTSPcmpfcc, [SDNPOutGlue]>;
@@ -358,6 +364,24 @@ def SPselecticc : SDNode<"SPISD::SELECT_ICC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectxcc : SDNode<"SPISD::SELECT_XCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectfcc : SDNode<"SPISD::SELECT_FCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectreg : SDNode<"SPISD::SELECT_REG", SDTSPselectreg>;
+
+// GPRC, CHAIN = LOAD_BIG/LITTLE CHAIN, Ptr, Type
+// These are endianness-adjusted load instructions. They load the low "Type"
+// bits of the memory pointed by Ptr, possibly byte swapping it as necessary
+// to account for its in-memory endianness. Type can be i16, i32, or i64.
+def SPloadbig    : SDNode<"SPISD::LOAD_BIG", SDTSPloadbig,
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def SPloadlittle : SDNode<"SPISD::LOAD_LITTLE", SDTSPloadlittle,
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// CHAIN = STORE_BIG/LITTLE CHAIN, GPRC, Ptr, Type
+// These are endianness-adjusted store instructions. They store the low "Type"
+// bits of the GPR input out through Ptr, possibly byte swapping it as necessary
+// to adjust its in-memory endianness. Type can be i16, i32, or i64.
+def SPstorebig    : SDNode<"SPISD::STORE_BIG", SDTSPstorebig,
+                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def SPstorelittle : SDNode<"SPISD::STORE_LITTLE", SDTSPstorelittle,
+                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 //  These are target-independent nodes, but have target-specific formats.
 def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
@@ -546,8 +570,6 @@ multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
                  itin>;
 }
 
-// TODO: Instructions of the StoreASI class are currently asm only; hooking up
-// CodeGen's address spaces to use these is a future task.
 multiclass StoreASI<string OpcStr, bits<6> Op3Val, RegisterClass RC,
                InstrItinClass itin = IIC_st> {
   def rr : F3_1_asi<3, Op3Val, (outs), (ins (MEMrr $rs1, $rs2):$addr, RC:$rd, ASITag:$asi),
@@ -2050,6 +2072,26 @@ def : Pat<(build_vector (i32 IntRegs:$a1), (i32 IntRegs:$a2)),
 	    (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)), (i32 IntRegs:$a1), sub_even),
             (i32 IntRegs:$a2), sub_odd)>;
 
+// Endian adjusted memory operations.
+let Predicates = [HasV9] in {
+  def : Pat<(i32 (SPloadbig    ForceADDRrr:$src, i16)), (LDUHArr ForceADDRrr:$src, 0x80)>;
+  def : Pat<(i32 (SPloadbig    ForceADDRrr:$src, i32)), (LDArr   ForceADDRrr:$src, 0x80)>;
+  def : Pat<(i32 (SPloadlittle ForceADDRrr:$src, i16)), (LDUHArr ForceADDRrr:$src, 0x88)>;
+  def : Pat<(i32 (SPloadlittle ForceADDRrr:$src, i32)), (LDArr   ForceADDRrr:$src, 0x88)>;
+
+  def : Pat<(zanyext (i32 (SPloadbig    ForceADDRrr:$src, i16))), (LDUHArr ForceADDRrr:$src, 0x80)>;
+  def : Pat<(zanyext (i32 (SPloadbig    ForceADDRrr:$src, i32))), (LDArr   ForceADDRrr:$src, 0x80)>;
+  def : Pat<(zanyext (i32 (SPloadlittle ForceADDRrr:$src, i16))), (LDUHArr ForceADDRrr:$src, 0x88)>;
+  def : Pat<(zanyext (i32 (SPloadlittle ForceADDRrr:$src, i32))), (LDArr   ForceADDRrr:$src, 0x88)>;
+
+  def : Pat<(sext    (i32 (SPloadbig    ForceADDRrr:$src, i16))), (LDSHArr ForceADDRrr:$src, 0x80)>;
+  def : Pat<(sext    (i32 (SPloadlittle ForceADDRrr:$src, i16))), (LDSHArr ForceADDRrr:$src, 0x88)>;
+
+  def : Pat<(SPstorebig    i32:$val, ForceADDRrr:$dst, i16), (STHArr ForceADDRrr:$dst, $val, 0x80)>;
+  def : Pat<(SPstorebig    i32:$val, ForceADDRrr:$dst, i32), (STArr  ForceADDRrr:$dst, $val, 0x80)>;
+  def : Pat<(SPstorelittle i32:$val, ForceADDRrr:$dst, i16), (STHArr ForceADDRrr:$dst, $val, 0x88)>;
+  def : Pat<(SPstorelittle i32:$val, ForceADDRrr:$dst, i32), (STArr  ForceADDRrr:$dst, $val, 0x88)>;
+}
 
 include "SparcInstr64Bit.td"
 include "SparcInstrVIS.td"

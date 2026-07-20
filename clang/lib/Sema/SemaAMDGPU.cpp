@@ -86,6 +86,23 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       return true;
     }
   }
+  case AMDGPU::BI__builtin_amdgcn_uicmp:
+  case AMDGPU::BI__builtin_amdgcn_uicmpl:
+  case AMDGPU::BI__builtin_amdgcn_sicmp:
+  case AMDGPU::BI__builtin_amdgcn_sicmpl:
+  case AMDGPU::BI__builtin_amdgcn_fcmp:
+  case AMDGPU::BI__builtin_amdgcn_fcmpf: {
+    // These builtins are deprecated in favor of
+    // __builtin_amdgcn_ballot_{w32|w64}. Suggest the replacement matching the
+    // wavefront size of the calling function.
+    bool IsWave32 = Builtin::evaluateRequiredTargetFeatures("wavefrontsize32",
+                                                            CallerFeatureMap);
+    Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
+        << getASTContext().BuiltinInfo.getQuotedName(BuiltinID)
+        << (IsWave32 ? "__builtin_amdgcn_ballot_w32"
+                     : "__builtin_amdgcn_ballot_w64");
+    return false;
+  }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv:
   case AMDGPU::BI__builtin_amdgcn_set_fpenv:
     return false;
@@ -800,26 +817,21 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
 
     StringRef N = GFX->getString();
     const TargetInfo &TI = Ctx.getTargetInfo();
-    const TargetInfo *AuxTI = Ctx.getAuxTargetInfo();
-    if (!TI.isValidCPUName(N) && (!AuxTI || !AuxTI->isValidCPUName(N))) {
+    if (llvm::AMDGPU::parseArchAMDGCN(N) == llvm::AMDGPU::GK_NONE) {
       Diag(Loc, diag::err_amdgcn_processor_is_arg_invalid_value) << N;
-      SmallVector<StringRef, 32> ValidList;
-      if (TI.getTriple().getVendor() == llvm::Triple::VendorType::AMD)
-        TI.fillValidCPUList(ValidList);
-      else if (AuxTI) // Since the BI is present it must be an AMDGPU triple.
-        AuxTI->fillValidCPUList(ValidList);
+      SmallVector<StringRef, 64> ValidList;
+      llvm::AMDGPU::fillValidArchListAMDGCN(ValidList);
       if (!ValidList.empty())
         Diag(Loc, diag::note_amdgcn_processor_is_valid_options)
             << llvm::join(ValidList, ", ");
       return nullptr;
     }
-    if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
+    if (TI.getTriple().isSPIRV()) {
       CE->setType(BoolTy);
       return *ExpandedPredicates.insert(CE).first;
     }
 
-    if (auto TID = Ctx.getTargetInfo().getTargetID())
-      P = TID->find(N) == 0;
+    P = TI.isProcessorName(N);
   } else {
     Expr *Arg = CE->getArg(0);
     if (!Arg || Arg->getType() != Ctx.BuiltinFnTy) {
@@ -1039,7 +1051,7 @@ bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
       for (auto &&F : llvm::split(BInfo.getRequiredFeatures(GID), ','))
         FeatureMap[F] = true;
   } else {
-    static const llvm::Triple AMDGCN(llvm::Triple::amdgcn,
+    static const llvm::Triple AMDGCN(llvm::Triple::amdgpu,
                                      llvm::Triple::NoSubArch, llvm::Triple::AMD,
                                      llvm::Triple::AMDHSA);
     llvm::AMDGPU::fillAMDGPUFeatureMap(CurrentGFXIP.back().second, AMDGCN,

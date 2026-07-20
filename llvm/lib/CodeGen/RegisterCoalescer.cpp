@@ -92,7 +92,7 @@ static cl::opt<bool> EnableJoinSplits(
 static cl::opt<cl::boolOrDefault> EnableGlobalCopies(
     "join-globalcopies",
     cl::desc("Coalesce copies that span blocks (default=subtarget)"),
-    cl::init(cl::BOU_UNSET), cl::Hidden);
+    cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden);
 
 static cl::opt<bool> VerifyCoalescing(
     "verify-coalescing",
@@ -4317,10 +4317,10 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
   const TargetSubtargetInfo &STI = fn.getSubtarget();
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
-  if (EnableGlobalCopies == cl::BOU_UNSET)
+  if (EnableGlobalCopies == cl::boolOrDefault::BOU_UNSET)
     JoinGlobalCopies = STI.enableJoinGlobalCopies();
   else
-    JoinGlobalCopies = (EnableGlobalCopies == cl::BOU_TRUE);
+    JoinGlobalCopies = (EnableGlobalCopies == cl::boolOrDefault::BOU_TRUE);
 
   // If there are PHIs tracked by debug-info, they will need updating during
   // coalescing. Build an index of those PHIs to ease updating.

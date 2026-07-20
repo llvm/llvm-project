@@ -16,19 +16,19 @@ define void @f(i1 %x) #0 {
 ; CHECK:       while.body.lr.ph:
 ; CHECK-NEXT:    [[ICMP_A1:%.*]] = icmp eq i64 [[A1]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @b, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> poison, i1 [[ICMP_A1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> poison, i1 [[ICMP_A1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP3]], <2 x i64> [[TMP1]], <2 x i64> [[TMP0]]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i64> [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP4]], [[WHILE_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i64>, ptr @c, align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[ICMP_D0:%.*]] = icmp eq i64 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[ICMP_D0]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[AND0_TMP:%.*]] = and i64 [[TMP7]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[AND0_TMP]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[AND0_TMP]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> [[TMP5]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP10:%.*]] = and <2 x i64> [[TMP9]], [[TMP6]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP10]], ptr @a, align 8

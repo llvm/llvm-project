@@ -1335,12 +1335,23 @@ def hlsl_quad_read_across_x :
   let VaryingMatDims = [];
 }
 
-// Reads the value from the lane across the X axis of the quad.
+// Reads the value from the lane across the Y axis of the quad.
 def hlsl_quad_read_across_y :
     HLSLOneArgBuiltin<"QuadReadAcrossY",
                       "__builtin_hlsl_quad_read_across_y"> {
   let Doc = [{
 \brief Reads the value from the lane across the Y axis of the quad.
+\param Val The input value.
+}];
+  let VaryingTypes = AllNumericTypes;
+  let IsConvergent = 1;
+  let VaryingMatDims = [];
+}
+
+// Reads the value from the lane diagonally opposite from the current lane in the quad.
+def hlsl_quad_read_across_diagonal : HLSLOneArgBuiltin<"QuadReadAcrossDiagonal", "__builtin_hlsl_quad_read_across_diagonal"> {
+  let Doc = [{
+\brief Returns the value from the lane diagonally opposite from the current lane in the quad.
 \param Val The input value.
 }];
   let VaryingTypes = AllNumericTypes;

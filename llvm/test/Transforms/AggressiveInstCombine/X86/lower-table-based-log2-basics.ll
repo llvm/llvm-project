@@ -215,6 +215,59 @@ define i32 @log2_128(i128 noundef %0) {
   ret i32 %21
 }
 
+;; int log2_64_isolate_msb(unsigned long long v) {
+;;   static const unsigned char table[] = {
+;;     63,  0, 58,  1, 59, 47, 53,  2, 60, 39, 48, 27, 54, 33, 42,  3,
+;;     61, 51, 37, 40, 49, 18, 28, 20, 55, 30, 34, 11, 43, 14, 22,  4,
+;;     62, 57, 46, 52, 38, 26, 32, 41, 50, 36, 17, 19, 29, 10, 13, 21,
+;;     56, 45, 25, 31, 35, 16,  9, 12, 44, 24, 15,  8, 23,  7,  6,  5
+;;   };
+;;
+;;   v |= v >> 1;
+;;   v |= v >> 2;
+;;   v |= v >> 4;
+;;   v |= v >> 8;
+;;   v |= v >> 16;
+;;   v |= v >> 32;
+;;
+;;   return table[((v - (v >> 1)) * 0x07EDD5E59A4E28C2ULL) >> 58];
+;; }
+@log2_64_isolate_msb.table = internal unnamed_addr constant [64 x i8] c"?\00:\01;/5\02<'0\1B6!*\03=3%(1\12\1C\147\1E\22\0B+\0E\16\04>9.4&\1A )2$\11\13\1D\0A\0D\158-\19\1F#\10\09\0C,\18\0F\08\17\07\06\05", align 1
+
+define i32 @log2_64_isolate_msb(i64 noundef %v) {
+; CHECK-LABEL: @log2_64_isolate_msb(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[V:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 63, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[V]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 63, i64 [[TMP1]], !prof [[PROF1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i8
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP4]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %shr = lshr i64 %v, 1
+  %or = or i64 %shr, %v
+  %shr1 = lshr i64 %or, 2
+  %or2 = or i64 %shr1, %or
+  %shr3 = lshr i64 %or2, 4
+  %or4 = or i64 %shr3, %or2
+  %shr5 = lshr i64 %or4, 8
+  %or6 = or i64 %shr5, %or4
+  %shr7 = lshr i64 %or6, 16
+  %or8 = or i64 %shr7, %or6
+  %shr9 = lshr i64 %or8, 32
+  %or10 = or i64 %shr9, %or8
+  %shr11 = lshr i64 %or10, 1
+  %sub = sub i64 %or10, %shr11
+  %mul = mul i64 %sub, u0x7EDD5E59A4E28C2
+  %shr12 = lshr i64 %mul, 58
+  %arrayidx = getelementptr inbounds nuw i8, ptr @log2_64_isolate_msb.table, i64 %shr12
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %0 to i32
+  ret i32 %conv
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}

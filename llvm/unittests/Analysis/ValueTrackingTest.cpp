@@ -1274,7 +1274,7 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
   EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CxtI3, &DT));
 }
 
-TEST(ValueTracking, canCreatePoisonOrUndef) {
+TEST_F(ValueTrackingTest, canCreatePoisonOrUndef) {
   std::string AsmHead =
       "@s = external dso_local global i32, align 1\n"
       "declare i32 @g(i32)\n"
@@ -1285,7 +1285,8 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       "declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)\n"
       "declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)\n"
       "define void @f(i32 %x, i32 %y, float %fx, float %fy, i1 %cond, "
-      "<4 x i32> %vx, <4 x i32> %vx2, <vscale x 4 x i32> %svx, ptr %p) {\n";
+      "<4 x i32> %vx, <4 x i32> %vx2, <vscale x 4 x i32> %svx, ptr %p,"
+      "<4 x float> %vf) {\n";
   std::string AsmTail = "  ret void\n}";
   // (can create poison?, can create undef?, IR instruction)
   SmallVector<std::pair<std::pair<bool, bool>, std::string>, 32> Data = {
@@ -1369,26 +1370,24 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false},
        "call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %vx)"},
       {{false, false},
-       "call i32 @llvm.vector.reduce.fmax.v4i32(<4 x i32> %vx)"},
+       "call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %vf)"},
       {{false, false},
-       "call i32 @llvm.vector.reduce.fmin.v4i32(<4 x i32> %vx)"},
+       "call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %vf)"},
       {{false, false},
-       "call i32 @llvm.vector.reduce.fmaximum.v4i32(<4 x i32> %vx)"},
+       "call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %vf)"},
       {{false, false},
-       "call i32 @llvm.vector.reduce.fmaximum.v4i32(<4 x i32> %vx)"}};
+       "call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %vf)"}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)
     AssemblyStr += Itm.second + "\n";
   AssemblyStr += AsmTail;
 
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(AssemblyStr, Error, Context);
-  assert(M && "Bad assembly?");
+  auto M = parseModule(AssemblyStr);
+  ASSERT_TRUE(M) << "Bad assembly?";
 
-  auto *F = M->getFunction("f");
-  assert(F && "Bad assembly?");
+  Function *F = M->getFunction("f");
+  ASSERT_TRUE(F) << "Bad assembly?";
 
   auto &BB = F->getEntryBlock();
 
@@ -2880,7 +2879,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   IRBuilder<> Builder(Context);
   Function *TheFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::vscale,
                                                       {Builder.getInt32Ty()});
-  CallInst *CI = Builder.CreateCall(TheFn, {}, {}, "");
+  CallInst *CI = Builder.CreateCall(TheFn, {});
 
   KnownBits Known = computeKnownBits(CI, M.getDataLayout());
   // There is no parent function so we cannot look up the vscale_range
@@ -3115,6 +3114,29 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for an inverted mask: (X & ~M) op (Y & M).
     auto M = parseModule(R"(
+  define i32 @test(i32 %X, i32 %Y, i32 %M) {
+    %1 = xor i32 %M, -1
+    %LHS = and i32 %1, %X
+    %RHS = and i32 %Y, %M
+    %Ret = add i32 %LHS, %RHS
+    ret i32 %Ret
+  })");
+
+    auto *F = M->getFunction("test");
+    auto *LHS = findInstructionByNameOrNull(F, "LHS");
+    auto *RHS = findInstructionByNameOrNull(F, "RHS");
+
+    const DataLayout &DL = M->getDataLayout();
+    EXPECT_FALSE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
+    EXPECT_FALSE(haveNoCommonBitsSet(RHS, LHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
+  }
+  {
+    // Check for an inverted mask: (X & ~M) op (Y & M) where M is noundef.
+    auto M = parseModule(R"(
   define i32 @test(i32 %X, i32 %Y, i32 noundef %M) {
     %1 = xor i32 %M, -1
     %LHS = and i32 %1, %X
@@ -3129,10 +3151,50 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
 
     const DataLayout &DL = M->getDataLayout();
     EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
   }
   {
     // Check for (A & B) and ~(A | B)
+    auto M = parseModule(R"(
+  define void @test(i32 %A, i32 %B) {
+    %LHS = and i32 %A, %B
+    %or = or i32 %A, %B
+    %RHS = xor i32 %or, -1
+
+    %LHS2 = and i32 %B, %A
+    %or2 = or i32 %A, %B
+    %RHS2 = xor i32 %or2, -1
+
+    ret void
+  })");
+
+    auto *F = M->getFunction("test");
+    const DataLayout &DL = M->getDataLayout();
+
+    auto *LHS = findInstructionByNameOrNull(F, "LHS");
+    auto *RHS = findInstructionByNameOrNull(F, "RHS");
+    EXPECT_FALSE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
+    EXPECT_FALSE(haveNoCommonBitsSet(RHS, LHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
+
+    auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
+    auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
+    EXPECT_FALSE(haveNoCommonBitsSet(LHS2, RHS2, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(LHS2, RHS2, DL));
+    EXPECT_FALSE(haveNoCommonBitsSet(RHS2, LHS2, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(RHS2, LHS2, DL));
+  }
+  {
+    // Check for (A & B) and ~(A | B) where A and B are noundef
     auto M = parseModule(R"(
   define void @test(i32 noundef %A, i32 noundef %B) {
     %LHS = and i32 %A, %B
@@ -3152,15 +3214,60 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
     auto *LHS = findInstructionByNameOrNull(F, "LHS");
     auto *RHS = findInstructionByNameOrNull(F, "RHS");
     EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
 
     auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
     auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
     EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS2, RHS2, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS2, LHS2, DL));
   }
   {
     // Check for (A & B) and ~(A | B) in vector version
+    auto M = parseModule(R"(
+  define void @test(<2 x i32> %A, <2 x i32> %B) {
+    %LHS = and <2 x i32> %A, %B
+    %or = or <2 x i32> %A, %B
+    %RHS = xor <2 x i32> %or, <i32 -1, i32 -1>
+
+    %LHS2 = and <2 x i32> %B, %A
+    %or2 = or <2 x i32> %A, %B
+    %RHS2 = xor <2 x i32> %or2, <i32 -1, i32 -1>
+
+    ret void
+  })");
+
+    auto *F = M->getFunction("test");
+    const DataLayout &DL = M->getDataLayout();
+
+    auto *LHS = findInstructionByNameOrNull(F, "LHS");
+    auto *RHS = findInstructionByNameOrNull(F, "RHS");
+    EXPECT_FALSE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
+    EXPECT_FALSE(haveNoCommonBitsSet(RHS, LHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
+
+    auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
+    auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
+    EXPECT_FALSE(haveNoCommonBitsSet(LHS2, RHS2, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(LHS2, RHS2, DL));
+    EXPECT_FALSE(haveNoCommonBitsSet(RHS2, LHS2, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(RHS2, LHS2, DL));
+  }
+  {
+    // Check for (A & B) and ~(A | B) in vector version where A and B are
+    // noundef
     auto M = parseModule(R"(
   define void @test(<2 x i32> noundef %A, <2 x i32> noundef %B) {
     %LHS = and <2 x i32> %A, %B
@@ -3180,12 +3287,20 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
     auto *LHS = findInstructionByNameOrNull(F, "LHS");
     auto *RHS = findInstructionByNameOrNull(F, "RHS");
     EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
 
     auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
     auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
     EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS2, RHS2, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS2, LHS2, DL));
   }
 }
 

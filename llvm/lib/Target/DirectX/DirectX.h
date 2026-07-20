@@ -79,6 +79,12 @@ void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 /// Pass to lowering LLVM intrinsic call to DXIL op function call.
 ModulePass *createDXILOpLoweringLegacyPass();
 
+/// Initializer for DXILRemoveUnusedResources
+void initializeDXILRemoveUnusedResourcesLegacyPass(PassRegistry &);
+
+/// Pass to update remove unsused resources.
+FunctionPass *createDXILRemoveUnusedResourcesLegacyPass();
+
 /// Initializer for DXILResourceAccess
 void initializeDXILResourceAccessLegacyPass(PassRegistry &);
 
@@ -120,6 +126,12 @@ void initializeDXContainerGlobalsPass(PassRegistry &);
 
 /// Pass for generating DXContainer part globals.
 ModulePass *createDXContainerGlobalsPass();
+
+/// Initializer for DXContainerPDB pass.
+void initializeDXContainerPDBPass(PassRegistry &);
+
+/// Pass for emitting DirectX PDB files.
+ModulePass *createDXContainerPDBPass();
 
 /// Initializer for DXILFinalizeLinkage pass.
 void initializeDXILFinalizeLinkageLegacyPass(PassRegistry &);

@@ -651,7 +651,13 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
   // recipes. optimizeInductionLiveOutUsers will later compute the proper
   // DerivedIV.
-  auto ReplaceExtractsWithExitingIVValue = [&](VPHeaderPHIRecipe *WideIV) {
+  //
+  // For an IV that requires SCEV predicate, keep extracting the exit values
+  // from the loop directly, as the pre-computed exit value as-is would  be
+  // incorrect outside the loop.
+  auto ReplaceExtractsWithExitingIVValueIfPossible = [&](VPWidenInductionRecipe
+                                                             *WideIV) {
+    bool IsPredicated = !WideIV->getNoWrapPredicates().empty();
     for (VPUser *U : to_vector(BackedgeVal->users())) {
       if (!match(U, m_ExtractLastPart(m_VPValue())))
         continue;
@@ -664,6 +670,14 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
       assert(is_contained(ExtractLastLane->getParent()->successors(),
                           Plan.getScalarPreheader()) &&
              "last lane must be extracted in the middle block");
+      // Keep the vector extract for exit-block live-out uses of a predicated
+      // IV.
+      if (IsPredicated &&
+          any_of(ExtractLastLane->users(), [&](VPUser *LaneUser) {
+            auto *R = cast<VPRecipeBase>(LaneUser);
+            return Plan.isExitBlock(R->getParent());
+          }))
+        continue;
       VPBuilder Builder(ExtractLastLane);
       ExtractLastLane->replaceAllUsesWith(
           Builder.createNaryOp(VPInstruction::ExitingIVValue, {WideIV}));
@@ -675,7 +689,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   if (IndDesc.getKind() == InductionDescriptor::IK_PtrInduction) {
     auto *WideIV = new VPWidenPointerInductionRecipe(
         Phi, Start, Step, &Plan.getVFxUF(), IndDesc, DL);
-    ReplaceExtractsWithExitingIVValue(WideIV);
+    ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
     return WideIV;
   }
 
@@ -697,7 +711,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
       Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
 
-  ReplaceExtractsWithExitingIVValue(WideIV);
+  ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
   return WideIV;
 }
 
@@ -1003,28 +1017,6 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
       PSE.addPredicate(*P);
   }
 
-  // Bail out if exit phis use predicated IVs via ExitingIVValue, as the
-  // predicated SCEV may not hold outside the loop (PR33706). Check each IV's
-  // predicates directly, regardless of whether PSE was already non-trivial
-  // from other sources (e.g., LAI predicates).
-  // TODO: Overly conservative; the pre-computed exit values are not correct
-  // outside the loop, but the exit values could be extracted from the vector
-  // loop.
-  if (!PredicatedIVs.empty())
-    for (auto *EB : Plan.getExitBlocks())
-      for (VPRecipeBase &R : EB->phis())
-        for (VPValue *Op : R.operands()) {
-          VPValue *Inner;
-          if (!match(Op, m_ExitingIVValue(m_VPValue(Inner))))
-            continue;
-          auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Inner);
-          if (!WideIV || !PredicatedIVs.contains(WideIV))
-            continue;
-          LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Predicated IV has "
-                               "outside-loop use via ExitingIVValue\n");
-          return false;
-        }
-
   unsigned TotalComplexity = PSE.getPredicate().getComplexity();
   if (TotalComplexity && OptForSize) {
     LLVM_DEBUG(
@@ -1301,7 +1293,7 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
   return true;
 }
 
-void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
+void VPlanTransforms::addMiddleCheck(VPlan &Plan) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   // If MiddleVPBB has a single successor then the original loop does not exit
   // via the latch and the single successor must be the scalar preheader.
@@ -1332,12 +1324,9 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
-  VPValue *Cmp;
-  if (TailFolded)
-    Cmp = Plan.getTrue();
-  else
-    Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
-                             &Plan.getVectorTripCount(), LatchDL, "cmp.n");
+  VPValue *Cmp =
+      Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
+                         &Plan.getVectorTripCount(), LatchDL, "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp}, LatchDL);
 }
 
@@ -1369,14 +1358,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
 
   Header->splitAt(Header->getFirstNonPhi());
 
-  // Create the header mask, insert it in the header and branch on it.
-  auto *IV = new VPWidenCanonicalIVRecipe(
-      LoopRegion->getCanonicalIV(),
-      VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false));
+  // Abstract header mask, materialized into concrete recipes later.
+  VPValue *HeaderMask = LoopRegion->createHeaderMask();
   VPBuilder Builder(Header, Header->getFirstNonPhi());
-  Builder.insert(IV);
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  VPValue *HeaderMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
   Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
 
   VPBasicBlock *OrigLatch = LoopRegion->getExitingBasicBlock();
@@ -1416,8 +1400,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   for (const auto &[V, Users] : NeedsPhi) {
     if (isa<VPIRValue>(V))
       continue;
-    VPValue *TailVal =
-        Plan.getOrAddLiveIn(PoisonValue::get(V->getScalarType()));
+    VPValue *TailVal = Plan.getPoison(V->getScalarType());
     VPIRFlags Flags;
     assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
            "Value used by more than two reduction phis?");
@@ -1449,6 +1432,14 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
         Builder.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
     R.getVPSingleValue()->replaceAllUsesWith(Ext);
   }
+
+  // VectorTripCount now equals TripCount so simplify the MiddleVPBB branch.
+  assert(match(Plan.getMiddleBlock()->getTerminator(),
+               m_BranchOnCond(m_SpecificICmp(
+                   CmpInst::ICMP_EQ, m_Specific(Plan.getTripCount()),
+                   m_Specific(&Plan.getVectorTripCount())))) &&
+         "Unexpected MiddleVPBB branch");
+  Plan.getMiddleBlock()->getTerminator()->setOperand(0, Plan.getTrue());
 }
 
 /// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,
@@ -1763,7 +1754,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       continue;
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
       VPValue *DIVTC = DerivedIV->getOperand(1);
-      if (DerivedIV->getNumUsers() == 1 && IsTC(DIVTC)) {
+      if (DerivedIV->hasOneUse() && IsTC(DIVTC)) {
         auto *NewSel = MiddleBuilder.createSelect(
             AnyNaNLane, LoopRegion->getCanonicalIV(), DIVTC);
         DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());
@@ -1829,7 +1820,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   if (Phis.empty())
     return true;
 
-  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+  VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
   for (VPReductionPHIRecipe *PhiR : Phis) {
     // Find the condition for the select/blend.
     VPValue *BackedgeSelect = PhiR->getBackedgeValue();
@@ -1837,9 +1828,10 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // If there's a header mask, the backedge select will not be the find-last
     // select.
-    if (HeaderMask && !match(BackedgeSelect,
-                             m_Select(m_Specific(HeaderMask),
-                                      m_VPValue(CondSelect), m_Specific(PhiR))))
+    if (HeaderMask &&
+        !match(BackedgeSelect,
+               m_SelectLike(m_Specific(HeaderMask), m_VPValue(CondSelect),
+                            m_Specific(PhiR))))
       return false;
 
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
@@ -1976,7 +1968,7 @@ static bool handleFirstArgMinOrMax(
     FindIVSelectR->setOperand(FindIVSelectR->getOperand(1) == WideIV ? 1 : 2,
                               WidenCanIV);
   }
-  FindLastIVPhiR->setOperand(0, Plan.getOrAddLiveIn(PoisonValue::get(Ty)));
+  FindLastIVPhiR->setOperand(0, Plan.getPoison(Ty));
 
   // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
   // result:

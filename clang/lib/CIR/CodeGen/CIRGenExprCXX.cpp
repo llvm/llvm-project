@@ -1068,10 +1068,10 @@ void CIRGenFunction::emitNewArrayInitializer(
       remainingSize = builder.createSub(loc, remainingSize, initSizeOp);
     }
 
-    // Create the memset.
-    mlir::Value castOp =
-        builder.createPtrBitcast(curPtr.getPointer(), cgm.voidTy);
-    builder.createMemSet(loc, castOp, builder.getConstInt(loc, cgm.uInt8Ty, 0),
+    // Create the memset.  Use the Address overload so the destination
+    // alignment from curPtr is carried onto the memset.
+    Address voidPtr = curPtr.withElementType(builder, cgm.voidTy);
+    builder.createMemSet(loc, voidPtr, builder.getConstInt(loc, cgm.uInt8Ty, 0),
                          remainingSize);
     return true;
   };
@@ -1228,12 +1228,11 @@ void CIRGenFunction::emitNewArrayInitializer(
     if (ctor->isTrivial()) {
       // If new expression did not specify value-initialization, then there
       // is no initialization.
-      if (!cce->requiresZeroInitialization())
+      if (!cce->requiresZeroInitialization() || ctor->getParent()->isEmpty())
         return;
 
-      cgm.errorNYI(cce->getSourceRange(),
-                   "emitNewArrayInitializer: trivial ctor zero-init");
-      return;
+      if (tryMemsetInitialization())
+        return;
     }
 
     // Store the new Cleanup position for irregular Cleanups.
@@ -1917,9 +1916,8 @@ mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
                                          destCirTy, isRefCast, thisAddr);
 }
 
-static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
-                                           mlir::Type typeInfoPtrTy,
-                                           bool hasNullCheck) {
+static Address emitCXXTypeidOperand(CIRGenFunction &cgf, const Expr *e,
+                                    bool hasNullCheck) {
   Address thisPtr = cgf.emitLValue(e).getAddress();
   QualType srcType = e->getType();
 
@@ -1941,7 +1939,7 @@ static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
         });
   }
 
-  return cgf.cgm.getCXXABI().emitTypeid(cgf, srcType, thisPtr, typeInfoPtrTy);
+  return thisPtr;
 }
 
 mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
@@ -1959,11 +1957,13 @@ mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
   //   polymorphic class type, the result refers to a std::type_info object
   //   representing the type of the most derived object (that is, the dynamic
   //   type) to which the glvalue refers.
-  // If the operand is already most derived object, no need to look up vtable.
-  if (!e->isTypeOperand() && e->isPotentiallyEvaluated() &&
-      !e->isMostDerived(getContext()))
-    return emitCXXTypeidFromVTable(*this, e->getExprOperand(), resultType,
-                                   e->hasNullCheck());
+  if (!e->isTypeOperand() && e->isPotentiallyEvaluated()) {
+    Address thisPtr =
+        emitCXXTypeidOperand(*this, e->getExprOperand(), e->hasNullCheck());
+    if (!e->isMostDerived(getContext()))
+      return cgm.getCXXABI().emitTypeid(*this, ty, thisPtr, resultType);
+    // If the operand is already most derived object, no need to look up vtable.
+  }
 
   auto typeInfo =
       cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(loc, ty));

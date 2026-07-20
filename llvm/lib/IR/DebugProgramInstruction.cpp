@@ -526,6 +526,8 @@ const Instruction *DbgRecord::getInstruction() const {
   return Marker->MarkedInstr;
 }
 
+Instruction *DbgRecord::getInstruction() { return Marker->MarkedInstr; }
+
 const BasicBlock *DbgRecord::getParent() const {
   return Marker->MarkedInstr->getParent();
 }
