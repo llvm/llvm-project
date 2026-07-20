@@ -11,6 +11,7 @@ add_mlir_conversion_library(MLIRFuncToEmitC
   LINK_LIBS PUBLIC
   MLIREmitCCommonConversion
   MLIREmitCDialect
+  MLIREmitCTransforms
   MLIRFuncDialect
   MLIRPass
   MLIRTransformUtils

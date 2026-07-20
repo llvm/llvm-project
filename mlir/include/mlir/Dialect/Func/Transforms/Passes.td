@@ -21,4 +21,12 @@ def DuplicateFunctionEliminationPass : Pass<"duplicate-function-elimination",
   }];
 }
 
+def WrapFuncInModulePass : Pass<"wrap-func-in-module", "ModuleOp"> {
+  let summary = "Wrap functions in nested modules";
+  let description = [{
+    Wrap top-level func ops (directly under a root moduleop) in another moduleop
+    individually, not batched.
+  }];
+}
+
 #endif // MLIR_DIALECT_FUNC_TRANSFORMS_PASSES_TD

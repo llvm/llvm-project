@@ -37,7 +37,12 @@ void populateWrapFuncInClass(
     RewritePatternSet &patterns, StringRef funcName,
     DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove);
 
+void populateLowerNestedModuleToClassPatterns(RewritePatternSet &patterns,
+                                              bool lowerAll = false,
+                                              bool useHeuristic = true);
+
 } // namespace emitc
 } // namespace mlir
 
 #endif // MLIR_DIALECT_EMITC_TRANSFORMS_TRANSFORMS_H
+
