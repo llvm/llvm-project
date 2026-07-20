@@ -49,9 +49,14 @@ public:
                                              "saw top-level declaration '%0'",
                                              "print-fns");
     if (WarnOnDecls)
+      // The trailing stable ID becomes this diagnostic's SARIF ruleId. It is
+      // independent of registration order, unlike the numeric ID SARIF would
+      // otherwise fall back to; a plugin generating its diagnostics from
+      // TableGen would pass the generated enum name here.
       WarnID = Diags.getCustomPluginDiagID(
           DiagnosticsEngine::Warning, "suspicious top-level declaration '%0'",
-          "print-fns");
+          "print-fns", /*Subgroup=*/"",
+          /*StableID=*/"print_fns_suspicious_decl");
     if (ErrorOnDecls)
       ErrorID = Diags.getCustomPluginDiagID(
           DiagnosticsEngine::Error, "forbidden top-level declaration '%0'",
