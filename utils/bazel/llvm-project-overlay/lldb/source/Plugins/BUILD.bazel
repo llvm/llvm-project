@@ -609,6 +609,21 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginObjectContainerBigArchive",
+    srcs = glob(["ObjectContainer/Big-Archive/*.cpp"]),
+    hdrs = glob(["ObjectContainer/Big-Archive/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginObjectContainerMachOFileset",
     srcs = glob(["ObjectContainer/Mach-O-Fileset/*.cpp"]),
     hdrs = glob(["ObjectContainer/Mach-O-Fileset/*.h"]),

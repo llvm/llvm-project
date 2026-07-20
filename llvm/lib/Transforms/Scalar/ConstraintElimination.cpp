@@ -822,12 +822,13 @@ bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
 
 std::optional<bool>
 ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
-  bool IsConditionImplied = CS.isConditionImplied(Coefficients);
+  const auto &[SubCS, NewCoefficients] = CS.getSubSystem(Coefficients);
+  bool IsConditionImplied = SubCS.isConditionImplied(NewCoefficients);
 
   if (IsEq || IsNe) {
-    auto NegatedOrEqual = ConstraintSystem::negateOrEqual(Coefficients);
+    auto NegatedOrEqual = ConstraintSystem::negateOrEqual(NewCoefficients);
     bool IsNegatedOrEqualImplied =
-        !NegatedOrEqual.empty() && CS.isConditionImplied(NegatedOrEqual);
+        !NegatedOrEqual.empty() && SubCS.isConditionImplied(NegatedOrEqual);
 
     // In order to check that `%a == %b` is true (equality), both conditions `%a
     // >= %b` and `%a <= %b` must hold true. When checking for equality (`IsEq`
@@ -835,12 +836,13 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
     if (IsConditionImplied && IsNegatedOrEqualImplied)
       return IsEq;
 
-    auto Negated = ConstraintSystem::negate(Coefficients);
-    bool IsNegatedImplied = !Negated.empty() && CS.isConditionImplied(Negated);
+    auto Negated = ConstraintSystem::negate(NewCoefficients);
+    bool IsNegatedImplied =
+        !Negated.empty() && SubCS.isConditionImplied(Negated);
 
-    auto StrictLessThan = ConstraintSystem::toStrictLessThan(Coefficients);
+    auto StrictLessThan = ConstraintSystem::toStrictLessThan(NewCoefficients);
     bool IsStrictLessThanImplied =
-        !StrictLessThan.empty() && CS.isConditionImplied(StrictLessThan);
+        !StrictLessThan.empty() && SubCS.isConditionImplied(StrictLessThan);
 
     // In order to check that `%a != %b` is true (non-equality), either
     // condition `%a > %b` or `%a < %b` must hold true. When checking for
@@ -855,8 +857,8 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
   if (IsConditionImplied)
     return true;
 
-  auto Negated = ConstraintSystem::negate(Coefficients);
-  auto IsNegatedImplied = !Negated.empty() && CS.isConditionImplied(Negated);
+  auto Negated = ConstraintSystem::negate(NewCoefficients);
+  auto IsNegatedImplied = !Negated.empty() && SubCS.isConditionImplied(Negated);
   if (IsNegatedImplied)
     return false;
 
@@ -868,7 +870,7 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
                               Value *B) const {
   auto R = getConstraintForSolving(Pred, A, B);
   return R.isValid(*this) &&
-         getCS(R.IsSigned).isConditionImplied(R.Coefficients);
+         getCS(R.IsSigned).isConditionImpliedInSubSystem(R.Coefficients);
 }
 
 void ConstraintInfo::transferToOtherSystem(
@@ -1176,8 +1178,8 @@ void State::addInfoFor(BasicBlock &BB) {
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
   for (Instruction &I : BB) {
-    if (auto *Cmp = dyn_cast<ICmpInst>(&I)) {
-      for (Use &U : Cmp->uses()) {
+    if (match(&I, m_ICmpLike(Pred, m_Value(), m_Value()))) {
+      for (Use &U : I.uses()) {
         auto *UserI = getContextInstForUse(U);
         auto *DTN = DT.getNode(UserI->getParent());
         if (!DTN)
@@ -1262,12 +1264,14 @@ void State::addInfoFor(BasicBlock &BB) {
       break;
     }
 
-    // Add facts from unsigned division and remainder.
+    // Add facts from unsigned division, remainder and logical shift right.
     //   urem x, n: result < n  and  result <= x
     //   udiv x, n: result <= x
+    //   lshr x, n: result <= x
     if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
       if ((BO->getOpcode() == Instruction::URem ||
-           BO->getOpcode() == Instruction::UDiv) &&
+           BO->getOpcode() == Instruction::UDiv ||
+           BO->getOpcode() == Instruction::LShr) &&
           isGuaranteedNotToBePoison(BO))
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
@@ -1380,7 +1384,7 @@ struct ReproducerEntry {
 /// will then be added as function arguments. \p DT is used to order cloned
 /// instructions. The reproducer function will get added to \p M, if it is
 /// non-null. Otherwise no reproducer function is generated.
-static void generateReproducer(CmpInst *Cond, Module *M,
+static void generateReproducer(Instruction *Cond, bool IsSigned, Module *M,
                                ArrayRef<ReproducerEntry> Stack,
                                ConstraintInfo &Info, DominatorTree &DT) {
   if (!M)
@@ -1425,7 +1429,7 @@ static void generateReproducer(CmpInst *Cond, Module *M,
   for (auto &Entry : Stack)
     if (Entry.Pred != ICmpInst::BAD_ICMP_PREDICATE)
       CollectArguments({Entry.LHS, Entry.RHS}, ICmpInst::isSigned(Entry.Pred));
-  CollectArguments(Cond, ICmpInst::isSigned(Cond->getPredicate()));
+  CollectArguments(Cond, IsSigned);
 
   SmallVector<Type *> ParamTys;
   for (auto *P : Args)
@@ -1501,7 +1505,7 @@ static void generateReproducer(CmpInst *Cond, Module *M,
 
   // Finally, clone the condition to reproduce and remap instruction operands in
   // the reproducer using Old2New.
-  CloneInstructions(Cond, CmpInst::isSigned(Cond->getPredicate()));
+  CloneInstructions(Cond, IsSigned);
   Entry->getTerminator()->setOperand(0, Cond);
   remapInstructionsInBlocks({Entry}, Old2New);
 
@@ -1513,41 +1517,63 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
                                           ConstraintInfo &Info) {
   LLVM_DEBUG(dbgs() << "Checking " << *CheckInst << "\n");
 
-  auto R = Info.getConstraintForSolving(Pred, A, B);
-  if (R.empty() || !R.isValid(Info)) {
-    LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
-    return std::nullopt;
-  }
+  auto TryWithConstraint = [&](const ConstraintTy &R) -> std::optional<bool> {
+    if (R.empty() || !R.isValid(Info)) {
+      LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
+      return std::nullopt;
+    }
 
-  auto &CSToUse = Info.getCS(R.IsSigned);
-  if (auto ImpliedCondition = R.isImpliedBy(CSToUse)) {
-    if (!DebugCounter::shouldExecute(EliminatedCounter))
+    auto &CSToUse = Info.getCS(R.IsSigned);
+    if (auto ImpliedCondition = R.isImpliedBy(CSToUse)) {
+      if (!DebugCounter::shouldExecute(EliminatedCounter))
+        return std::nullopt;
+      LLVM_DEBUG({
+        dbgs() << "Condition ";
+        dumpUnpackedICmp(dbgs(),
+                         *ImpliedCondition ? Pred
+                                           : CmpInst::getInversePredicate(Pred),
+                         A, B);
+        dbgs() << " implied by dominating constraints\n";
+        CSToUse.dump();
+      });
+      return ImpliedCondition;
+    }
+    return std::nullopt;
+  };
+
+  auto R = Info.getConstraintForSolving(Pred, A, B);
+  if (auto ImpliedCondition = TryWithConstraint(R))
+    return ImpliedCondition;
+
+  // Additionally, query the signed system for eq/ne predicates if we know about
+  // A or B.
+  if (CmpInst::isEquality(Pred)) {
+    const auto &Value2Index = Info.getValue2Index(/*Signed=*/true);
+    if (!Value2Index.contains(A) && !Value2Index.contains(B))
       return std::nullopt;
 
-    LLVM_DEBUG({
-      dbgs() << "Condition ";
-      dumpUnpackedICmp(
-          dbgs(), *ImpliedCondition ? Pred : CmpInst::getInversePredicate(Pred),
-          A, B);
-      dbgs() << " implied by dominating constraints\n";
-      CSToUse.dump();
-    });
-    return ImpliedCondition;
+    SmallVector<Value *> NewVariables;
+    auto SR = Info.getConstraint(Pred, A, B, NewVariables,
+                                 /*ForceSignedSystem=*/true);
+    if (NewVariables.empty())
+      if (auto ImpliedCondition = TryWithConstraint(SR))
+        return ImpliedCondition;
   }
-
   return std::nullopt;
 }
 
 static bool checkAndReplaceCondition(
-    ICmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
+    CmpPredicate Pred, Value *A, Value *B, Instruction *CheckInst,
+    ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
     Instruction *ContextInst, Module *ReproducerModule,
     ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT,
     SmallVectorImpl<Instruction *> &ToRemove) {
-  auto ReplaceCmpWithConstant = [&](CmpInst *Cmp, bool IsTrue) {
-    generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
+  auto ReplaceCmpWithConstant = [&](Instruction *CheckInst, bool IsTrue) {
+    generateReproducer(CheckInst, ICmpInst::isSigned(Pred), ReproducerModule,
+                       ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
-        CmpInst::makeCmpResultType(Cmp->getType()), IsTrue);
-    bool Changed = Cmp->replaceUsesWithIf(ConstantC, [&](Use &U) {
+        CmpInst::makeCmpResultType(CheckInst->getType()), IsTrue);
+    bool Changed = CheckInst->replaceUsesWithIf(ConstantC, [&](Use &U) {
       auto *UserI = getContextInstForUse(U);
       auto *DTN = DT.getNode(UserI->getParent());
       if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
@@ -1566,7 +1592,7 @@ static bool checkAndReplaceCondition(
     // Update the debug value records that satisfy the same condition used
     // in replaceUsesWithIf.
     SmallVector<DbgVariableRecord *> DVRUsers;
-    findDbgUsers(Cmp, DVRUsers);
+    findDbgUsers(CheckInst, DVRUsers);
 
     for (auto *DVR : DVRUsers) {
       auto *DTN = DT.getNode(DVR->getParent());
@@ -1578,27 +1604,24 @@ static bool checkAndReplaceCondition(
           MarkedI->comesBefore(ContextInst))
         continue;
 
-      DVR->replaceVariableLocationOp(Cmp, ConstantC);
+      DVR->replaceVariableLocationOp(CheckInst, ConstantC);
     }
 
-    if (Cmp->use_empty())
-      ToRemove.push_back(Cmp);
+    if (CheckInst->use_empty())
+      ToRemove.push_back(CheckInst);
 
     return Changed;
   };
 
-  if (auto ImpliedCondition =
-          checkCondition(Cmp->getPredicate(), Cmp->getOperand(0),
-                         Cmp->getOperand(1), Cmp, Info))
-    return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
+  if (auto ImpliedCondition = checkCondition(Pred, A, B, CheckInst, Info))
+    return ReplaceCmpWithConstant(CheckInst, *ImpliedCondition);
 
   // When the predicate is samesign and unsigned, we can also make use of the
   // signed predicate information.
-  if (Cmp->hasSameSign() && Cmp->isUnsigned())
-    if (auto ImpliedCondition =
-            checkCondition(Cmp->getSignedPredicate(), Cmp->getOperand(0),
-                           Cmp->getOperand(1), Cmp, Info))
-      return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
+  if (Pred.hasSameSign() && ICmpInst::isUnsigned(Pred))
+    if (auto ImpliedCondition = checkCondition(
+            ICmpInst::getSignedPredicate(Pred), A, B, CheckInst, Info))
+      return ReplaceCmpWithConstant(CheckInst, *ImpliedCondition);
 
   return false;
 }
@@ -1672,7 +1695,7 @@ static bool checkOrAndOpImpliedByOther(
   if (JoinOp->use_empty())
     return false;
 
-  CmpInst *CmpToCheck = cast<CmpInst>(CB.getInstructionToSimplify());
+  Instruction *CmpToCheck = cast<Instruction>(CB.getInstructionToSimplify());
   unsigned OtherOpIdx = JoinOp->getOperand(0) == CmpToCheck ? 1 : 0;
 
   // Don't try to simplify the first condition of a select by the second, as
@@ -1697,7 +1720,7 @@ static bool checkOrAndOpImpliedByOther(
     Value *Val = Worklist.pop_back_val();
     Value *LHS, *RHS;
     CmpPredicate Pred;
-    if (match(Val, m_ICmp(Pred, m_Value(LHS), m_Value(RHS)))) {
+    if (match(Val, m_ICmpLike(Pred, m_Value(LHS), m_Value(RHS)))) {
       // For OR, check if the negated condition implies CmpToCheck.
       if (IsOr)
         Pred = CmpInst::getInversePredicate(Pred);
@@ -1714,10 +1737,13 @@ static bool checkOrAndOpImpliedByOther(
   if (OldSize == DFSInStack.size())
     return false;
 
+  Value *A, *B;
+  CmpPredicate Pred;
+  [[maybe_unused]] bool Matched =
+      match(CmpToCheck, m_ICmpLike(Pred, m_Value(A), m_Value(B)));
+  assert(Matched && "expected icmp-like match");
   // Check if the second condition can be simplified now.
-  if (auto ImpliedCondition =
-          checkCondition(CmpToCheck->getPredicate(), CmpToCheck->getOperand(0),
-                         CmpToCheck->getOperand(1), CmpToCheck, Info)) {
+  if (auto ImpliedCondition = checkCondition(Pred, A, B, CmpToCheck, Info)) {
     if (IsOr == *ImpliedCondition)
       JoinOp->replaceAllUsesWith(
           ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
@@ -1794,7 +1820,8 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   if (R.isEq()) {
     // Also add the inverted constraint for equality constraints.
     for (auto &Coeff : R.Coefficients)
-      Coeff *= -1;
+      if (MulOverflow(Coeff, int64_t(-1), Coeff))
+        return;
     CSToUse.addVariableRowFill(R.Coefficients);
 
     DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
@@ -1844,7 +1871,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
       return false;
 
     auto &CSToUse = Info.getCS(R.IsSigned);
-    return CSToUse.isConditionImplied(R.Coefficients);
+    return CSToUse.isConditionImpliedInSubSystem(R.Coefficients);
   };
 
   bool Changed = false;
@@ -1941,6 +1968,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                            DFSInStack);
     }
 
+    CmpPredicate Pred;
+    Value *A, *B;
     // For a block, check if any CmpInsts become known based on the current set
     // of constraints.
     if (CB.isCheck()) {
@@ -1951,9 +1980,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                         << "\n");
       if (auto *II = dyn_cast<WithOverflowInst>(Inst)) {
         Changed |= tryToSimplifyOverflowMath(II, Info, ToRemove);
-      } else if (auto *Cmp = dyn_cast<ICmpInst>(Inst)) {
+      } else if (match(Inst, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
         bool Simplified = checkAndReplaceCondition(
-            Cmp, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
+            Pred, A, B, Inst, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
             ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove);
         if (!Simplified &&
             match(CB.getContextInst(), m_LogicalOp(m_Value(), m_Value()))) {
@@ -2033,7 +2062,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       }
     };
 
-    CmpPredicate Pred;
     if (!CB.isConditionFact()) {
       Value *X;
       if (match(CB.Inst, m_Intrinsic<Intrinsic::abs>(m_Value(X)))) {
@@ -2079,6 +2107,11 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
           continue;
         }
+        if (BO->getOpcode() == Instruction::LShr) {
+          // lshr x, n: result <= x (right shift cannot increase the value)
+          AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
       }
 
       auto &DL = F.getDataLayout();
@@ -2102,7 +2135,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       }
     }
 
-    Value *A = nullptr, *B = nullptr;
     if (CB.isConditionFact()) {
       Pred = CB.Cond.Pred;
       A = CB.Cond.Op0;
@@ -2120,9 +2152,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         continue;
       }
     } else {
-      bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(m_ICmpLike(
-                                        Pred, m_Value(A), m_Value(B))));
-      (void)Matched;
+      [[maybe_unused]] bool Matched =
+          match(CB.Inst, m_Intrinsic<Intrinsic::assume>(
+                             m_ICmpLike(Pred, m_Value(A), m_Value(B))));
       assert(Matched &&
              "Must have an assume intrinsic with a icmp like operand");
     }

@@ -287,7 +287,7 @@ static void echoWrapper(orc_rt_SessionRef S, uint64_t CallId,
 
 TEST(InProcessControllerAccessTest, CallFromControllerSuccess) {
   // The mock IPEPC initiates a wrapper call into IPCA. The Session's
-  // RunWrapperCall hook (a QueueingRunner over `Tasks`) enqueues the
+  // dispatch hook (a QueueingRunner over `Tasks`) enqueues the
   // invocation; draining the queue runs the wrapper, which echoes its
   // arguments back. Verify the mock receives the echoed bytes via
   // ReturnWrapperResult.

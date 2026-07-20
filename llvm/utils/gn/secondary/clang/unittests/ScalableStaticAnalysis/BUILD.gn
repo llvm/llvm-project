@@ -24,6 +24,7 @@ unittest("ClangScalableAnalysisTests") {
     "Analyses/CallGraph/CallGraphExtractorTest.cpp",
     "Analyses/PointerFlow/PointerFlowTest.cpp",
     "Analyses/PointerFlow/PointerFlowWPATest.cpp",
+    "Analyses/SharedLexicalRepresentation/EntitySourceLocationExtractorTest.cpp",
     "Analyses/TypeConstrainedPointers/TypeConstrainedPointersExtractorTest.cpp",
     "Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp",
     "Analyses/UnsafeBufferUsage/UnsafeBufferUsageWPATest.cpp",
