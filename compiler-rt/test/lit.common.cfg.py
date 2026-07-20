@@ -968,9 +968,12 @@ else:
 def target_page_size():
     if config.target_arch in ("amdgcn", "nvptx64"):
         return 4096
+    if emulator:
+        # Emulators may not provide a target-side Python executable.
+        return 4096
     try:
         proc = subprocess.Popen(
-            f"{emulator or ''} {shlex.quote(config.python_executable)}",
+            shlex.quote(config.python_executable),
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
