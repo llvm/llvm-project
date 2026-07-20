@@ -989,26 +989,6 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 
-void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPValue *HeaderMask = LoopRegion->getHeaderMask();
-  Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
-
-  VPBuilder Builder(Plan.getVectorPreheader());
-  auto *AliasMask = Builder.createNaryOp(
-      VPInstruction::IncomingAliasMask, {}, nullptr, {}, {},
-      DebugLoc::getUnknown(), "incoming.alias.mask", I1Ty);
-
-  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
-  Builder = VPBuilder(Header, Header->getFirstNonPhi());
-
-  // Update all existing users of the header mask to "HeaderMask & AliasMask".
-  auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);
-  HeaderMask->replaceUsesWithIf(ClampedHeaderMask, [&](VPUser &U, unsigned) {
-    return &U != ClampedHeaderMask;
-  });
-}
-
 VPValue *
 VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
                                       ArrayRef<PointerDiffInfo> DiffChecks) {
