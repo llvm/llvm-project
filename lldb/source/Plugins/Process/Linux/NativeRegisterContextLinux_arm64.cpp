@@ -180,8 +180,6 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_max_hwp_supported = 16;
   m_max_hbp_supported = 16;
 
-  m_refresh_hwdebug_info = true;
-
   // SME adds the tpidr2 register
   m_tls_size = GetRegisterInfo().IsSSVEPresent() ? sizeof(m_tls_regs)
                                                  : sizeof(m_tls_regs.tpidr_reg);
