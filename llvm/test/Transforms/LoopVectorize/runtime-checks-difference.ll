@@ -516,14 +516,14 @@ define void @diff_check_via_i32_ptrarith(ptr %origin, ptr %dst, ptr %base, i32 %
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[OP]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_PH:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoaddr ptr [[DST]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoaddr ptr [[ORIGIN]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[D]], [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP15]] to i32
+; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoaddr ptr [[ORIGIN]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP16]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[D]], [[TMP9]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP2]], [[TMP11]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP14]], -1
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
@@ -585,16 +585,16 @@ define void @phi_of_ptrtoint_diff_check(ptr %base, ptr %end, i64 %n, i1 %cond) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[SRC]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_PREHEADER:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], [[DST_INT]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], [[TMP10]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[DST_INT]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[N]], [[DST_PTR1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP2]], [[DST_INT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[DST_INT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 3
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
 ;
 entry:

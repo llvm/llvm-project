@@ -109,11 +109,11 @@ define void @diff_memcheck_known_false_for_vf_4(ptr %B, ptr %A, ptr %end) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[ADD_PTR11]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[ADD_PTR11]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi ptr [ [[IV_1_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi ptr [ [[IV_2_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi ptr [ [[IV_2_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_2_NEXT]] = getelementptr nusw i8, ptr [[IV_2]], i64 -8
 ; CHECK-NEXT:    [[IV_1_NEXT]] = getelementptr i8, ptr [[IV_1]], i64 -8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[IV_2_NEXT]], align 8

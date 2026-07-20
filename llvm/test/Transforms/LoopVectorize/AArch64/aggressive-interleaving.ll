@@ -73,12 +73,12 @@ define void @test_interleave_reduction(ptr %arg, ptr %arg1) {
 ; A320-NEXT:    br i1 [[CMP_N]], label %[[EXIT_INNER:.*]], label %[[SCALAR_PH]]
 ; A320:       [[SCALAR_PH]]:
 ; A320-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[TPM27]], %[[OUTER]] ]
-; A320-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[IND_END3]], %[[MIDDLE_BLOCK]] ], [ [[TPM32]], %[[OUTER]] ]
+; A320-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi ptr [ [[IND_END3]], %[[MIDDLE_BLOCK]] ], [ [[TPM32]], %[[OUTER]] ]
 ; A320-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[OUTER]] ]
 ; A320-NEXT:    br label %[[INNER:.*]]
 ; A320:       [[INNER]]:
 ; A320-NEXT:    [[PHI_PTR_I32:%.*]] = phi ptr [ [[NEXT_I32:%.*]], %[[INNER]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; A320-NEXT:    [[PHI_PTR_F64:%.*]] = phi ptr [ [[NEXT_F64:%.*]], %[[INNER]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
+; A320-NEXT:    [[PHI_PTR_F64:%.*]] = phi ptr [ [[NEXT_F64:%.*]], %[[INNER]] ], [ [[BC_RESUME_VAL7]], %[[SCALAR_PH]] ]
 ; A320-NEXT:    [[PHI_ACC:%.*]] = phi double [ [[TPM50:%.*]], %[[INNER]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
 ; A320-NEXT:    [[TPM44:%.*]] = load double, ptr [[PHI_PTR_F64]], align 8
 ; A320-NEXT:    [[TPM45:%.*]] = load i32, ptr [[PHI_PTR_I32]], align 4

@@ -110,9 +110,9 @@ define i32 @or_reduction_with_freeze(ptr %dst, ptr %src) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SRC7:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[DST6:%.*]] = ptrtoaddr ptr [[DST]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoaddr ptr [[DST]] to i64
-; CHECK-NEXT:    [[TMP33:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[TMP11]], [[TMP33]]
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 10
