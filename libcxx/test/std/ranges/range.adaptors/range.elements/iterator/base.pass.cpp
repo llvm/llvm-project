@@ -22,8 +22,7 @@
 
 // Test Noexcept
 template <class T>
-concept IsBaseNoexcept =
-    requires {
+concept IsBaseNoexcept = requires {
   { std::declval<T>().base() } noexcept;
 };
 
