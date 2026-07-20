@@ -65,6 +65,8 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
 
 Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
                             size_t Size) {
+  assert(PatternSize < Size && "PatternSize < Size is unsupported");
+
   if (Size == 0 || PatternSize == 0)
     return Plugin::success();
 
@@ -106,7 +108,7 @@ Error L0QueueTy::memoryFillHostImpl(void *Ptr, const void *Pattern,
   // Seed the pattern once.
   std::copy_n(Pat, PatternSize, Dst);
   // Replicate the pattern until it fills the entire destination.
-  for(size_t Offset = PatternSize; Offset < Size; ++Offset) {
+  for (size_t Offset = PatternSize; Offset < Size; ++Offset) {
     Dst[Offset] = Dst[Offset - PatternSize];
   }
   return Plugin::success();
