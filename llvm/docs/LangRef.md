@@ -2794,7 +2794,8 @@ fn -> other_fn -> other_fn ; fn is norecurse
     optimizations that require assumptions about the floating-point rounding
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
-    not introduce any new floating-point instructions that may trap.
+    not introduce any new floating-point instructions that may trap. All
+    function definitions that contain strictfp calls must be marked strictfp.
 
 (denormal_fpenv)=
 
@@ -14993,6 +14994,28 @@ If the source pointer is poison, the instruction returns poison.
 The resulting pointer belongs to the same address space as `source`.
 This instruction does not dereference the pointer.
 
+##### Aliasing rules:
+
+Common {ref}`aliasing rules <pointeraliasing>` apply to pointers returned
+by this intrinsic, as well as the following additional rules:
+
+The pointer returned by `@llvm.structured.gep` can only be used to access
+memory that is part of the indexed subobject, otherwise the behavior is
+undefined.
+
+```llvm
+   %S = { i32, i32 } ; assuming these are laid out next to each other
+                     ; and sizeof(i32) < sizeof(64).
+
+   %ptr0 = call ptr @llvm.structured.gep(ptr elementtype(%S) %src, i32 0)
+   %field0 = load i64, ptr %ptr0 ; undefined behavior, because the access
+                                 ; crosses into the second field.
+```
+
+This implies that two `llvm.structured.gep` calls with the same pointer
+and element type do not alias unless the index sequence of one if a prefix
+of the other.
+
 ##### Example:
 
 **Simple case: logical access of a struct field**
@@ -26586,9 +26609,6 @@ All function *calls* done in a function that uses constrained floating
 point intrinsics must have the `strictfp` attribute either on the
 calling instruction or on the declaration or definition of the function
 being called.
-
-All function *definitions* that use constrained floating point intrinsics
-must have the `strictfp` attribute.
 
 #### '`llvm.experimental.constrained.fadd`' Intrinsic
 

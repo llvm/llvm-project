@@ -2,6 +2,24 @@
 # RUN: llc -mtriple=amdgpu8.03-mesa-mesa3d -run-pass=legalizer %s -o - | FileCheck %s
 
 ---
+name: test_bitcast_i16_to_f16
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_bitcast_i16_to_f16
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: $vgpr0 = COPY [[COPY]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i16) = G_TRUNC %0(i32)
+    %2:_(f16) = G_BITCAST %1(i16)
+    %3:_(i32) = G_ANYEXT %2(f16)
+    $vgpr0 = COPY %3(i32)
+...
+
+---
 name: test_bitcast_s32_to_v2s16
 body: |
   bb.0:

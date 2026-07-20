@@ -5,16 +5,35 @@
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu11.00-mesa-mesa3d -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
 
 define i16 @v_powi_f16(i16 %l, i32 %r) {
-; GFX78-LABEL: v_powi_f16:
-; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX78-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX78-NEXT:    v_cvt_f32_i32_e32 v1, v1
-; GFX78-NEXT:    v_log_f32_e32 v0, v0
-; GFX78-NEXT:    v_mul_legacy_f32_e32 v0, v1, v0
-; GFX78-NEXT:    v_exp_f32_e32 v0, v0
-; GFX78-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX78-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: v_powi_f16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_i32_e32 v1, v1
+; GFX7-NEXT:    v_mov_b32_e32 v2, 0xc2fc0000
+; GFX7-NEXT:    v_mov_b32_e32 v3, 0x42800000
+; GFX7-NEXT:    v_log_f32_e32 v0, v0
+; GFX7-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v2
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
+; GFX7-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_exp_f32_e32 v0, v0
+; GFX7-NEXT:    v_not_b32_e32 v1, 63
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX7-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_powi_f16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX8-NEXT:    v_cvt_f32_i32_e32 v1, v1
+; GFX8-NEXT:    v_log_f32_e32 v0, v0
+; GFX8-NEXT:    v_mul_legacy_f32_e32 v0, v1, v0
+; GFX8-NEXT:    v_exp_f32_e32 v0, v0
+; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: v_powi_f16:
 ; GFX11-TRUE16:       ; %bb.0:

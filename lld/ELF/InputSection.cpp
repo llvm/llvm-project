@@ -837,18 +837,15 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOTPLTREL:
     return r.sym->getVA(ctx, a) - ctx.in.gotPlt->getVA();
   case R_GOTPLT:
-  case R_RELAX_TLS_GD_TO_IE_GOTPLT:
     return r.sym->getGotVA(ctx) + a - ctx.in.gotPlt->getVA();
   case R_TLSLD_GOT_OFF:
   case R_GOT_OFF:
-  case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return r.sym->getGotOffset(ctx) + a;
   case RE_AARCH64_GOT_PAGE_PC:
     return getAArch64Page(r.sym->getGotVA(ctx) + a) - getAArch64Page(p);
   case RE_AARCH64_GOT_PAGE:
     return r.sym->getGotVA(ctx) + a - getAArch64Page(ctx.in.got->getVA());
   case R_GOT_PC:
-  case R_RELAX_TLS_GD_TO_IE:
     return r.sym->getGotVA(ctx) + a - p;
   case R_GOTPLT_GOTREL:
     return r.sym->getGotPltVA(ctx) + a - ctx.in.got->getVA();
@@ -986,9 +983,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return getPPC64TocBase(ctx) + a;
   case R_RELAX_GOT_PC:
     return r.sym->getVA(ctx, a) - p;
-  case R_RELAX_TLS_GD_TO_LE:
-  case R_RELAX_TLS_IE_TO_LE:
-  case R_RELAX_TLS_LD_TO_LE:
   case R_TPREL:
     // It is not very clear what to return if the symbol is undefined. With
     // --noinhibit-exec, even a non-weak undefined reference may reach here.
@@ -997,7 +991,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     if (r.sym->isUndefined())
       return a;
     return getTlsTpOffset(ctx, *r.sym) + a;
-  case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_TPREL_NEG:
     if (r.sym->isUndefined())
       return a;

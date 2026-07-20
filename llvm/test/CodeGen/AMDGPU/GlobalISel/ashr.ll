@@ -731,6 +731,7 @@ define amdgpu_ps i16 @s_ashr_i16_15(i16 inreg %value) {
 define amdgpu_ps half @ashr_i16_sv(i16 inreg %value, i16 %amount) {
 ; GFX6-LABEL: ashr_i16_sv:
 ; GFX6:       ; %bb.0:
+; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX6-NEXT:    v_ashr_i32_e32 v0, s0, v0
 ; GFX6-NEXT:    ; return to shader part epilog
@@ -767,6 +768,7 @@ define amdgpu_ps half @ashr_i16_sv(i16 inreg %value, i16 %amount) {
 define amdgpu_ps half @ashr_i16_vs(i16 %value, i16 inreg %amount) {
 ; GFX6-LABEL: ashr_i16_vs:
 ; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX6-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v0, s0, v0
 ; GFX6-NEXT:    ; return to shader part epilog

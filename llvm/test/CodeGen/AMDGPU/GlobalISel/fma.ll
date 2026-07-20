@@ -4,9 +4,9 @@
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu9.00 < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu9.0a < %s | FileCheck -check-prefix=GFX90A %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu10.10 < %s | FileCheck -check-prefix=GFX10 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu11.00 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu11.00 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu12.00 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX12 %s
+; RUN: llc -global-isel -mtriple=amdgpu11.00 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -global-isel -mtriple=amdgpu11.00 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -global-isel -mtriple=amdgpu12.00 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX12 %s
 
 define float @v_fma_f32(float %x, float %y, float %z) {
 ; GFX6-LABEL: v_fma_f32:

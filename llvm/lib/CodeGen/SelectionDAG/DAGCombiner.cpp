@@ -4560,8 +4560,10 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       // fold (sub Sym+c1, Sym+c2) -> c1-c2
       if (GlobalAddressSDNode *GB = dyn_cast<GlobalAddressSDNode>(N1))
         if (GA->getGlobal() == GB->getGlobal())
-          return DAG.getConstant((uint64_t)GA->getOffset() - GB->getOffset(),
-                                 DL, VT);
+          return DAG.getConstant(
+              APInt(VT.getScalarSizeInBits(), GA->getOffset() - GB->getOffset(),
+                    /*isSigned=*/false, /*implicitTrunc=*/true),
+              DL, VT);
     }
 
   // sub X, (sextinreg Y i1) -> add X, (and Y 1)
