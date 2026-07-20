@@ -79,9 +79,6 @@ constexpr bool test() {
       constexpr bool operator==(const MoveOnlyIter&) const { return true; }
     };
 
-    using MoveOnlyElemIter =
-        std::ranges::iterator_t<std::ranges::elements_view<std::ranges::subrange<MoveOnlyIter, Sent>, 0>>;
-
     auto it =
         std::ranges::elements_view<std::ranges::subrange<MoveOnlyIter, Sent>, 0>{
             std::ranges::subrange{MoveOnlyIter{{}, MoveOnly{5}}, Sent{}}}
