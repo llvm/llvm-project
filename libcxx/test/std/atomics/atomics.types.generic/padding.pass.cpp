@@ -70,7 +70,7 @@ void libcpp_assert_padding(const T& obj, unsigned char pad_byte) {
 #ifdef _LIBCPP_VERSION
   assert_padding(obj, pad_byte);
 #else
-  (void)f;
+  (void)obj;
   (void)pad_byte;
 #endif
 }
@@ -105,8 +105,6 @@ void test() {
     T loaded = a.load();
     assert(loaded.i == 42);
     assert(loaded.c == 'b');
-    // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
-    libcpp_assert_padding(loaded, 0);
   }
 
   {
@@ -135,8 +133,6 @@ void test() {
     T loaded = a.load();
     assert(loaded.i == 10);
     assert(loaded.c == 'a');
-    // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
-    libcpp_assert_padding(loaded, 0);
   }
   {
     // compare_exchange_strong
@@ -165,8 +161,6 @@ void test() {
     T loaded = a.load();
     assert(loaded.i == 42);
     assert(loaded.c == 'b');
-    // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
-    libcpp_assert_padding(loaded, 0);
   }
 
   {
@@ -210,8 +204,6 @@ void test() {
     T loaded = a.load();
     assert(loaded.i == 42);
     assert(loaded.c == 'b');
-    // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
-    libcpp_assert_padding(loaded, 0);
   }
 
   {
@@ -240,8 +232,6 @@ void test() {
     T loaded = a.load();
     assert(loaded.i == 10);
     assert(loaded.c == 'a');
-    // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
-    libcpp_assert_padding(loaded, 0);
   }
 
   {

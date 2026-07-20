@@ -72,6 +72,16 @@ void assert_padding(const T& obj, unsigned char pad_byte) {
 }
 
 template <class T>
+void assert_padding(const std::atomic<T>& obj, unsigned char pad_byte) {
+  alignas(T) unsigned char buf[sizeof(T)];
+  std::memset(buf, pad_byte, sizeof(T));
+  T& reference = *reinterpret_cast<T*>(buf);
+  T loaded     = obj.load();
+  set(reference, loaded.i, loaded.c);
+  assert(std::memcmp(&obj, &reference, sizeof(T)) == 0);
+}
+
+template <class T>
 void test() {
   {
     // atomic();
@@ -79,7 +89,7 @@ void test() {
     T loaded = a.load();
     assert(loaded.i == 0);
     assert(loaded.c == '\0');
-    assert_padding(loaded, 0);
+    assert_padding(a, 0);
   }
 
   {
@@ -91,7 +101,7 @@ void test() {
     T loaded = a.load();
     assert(loaded.i == 10);
     assert(loaded.c == 'a');
-    assert_padding(loaded, 0);
+    assert_padding(a, 0);
   }
   {
     // atomic::store
@@ -103,7 +113,7 @@ void test() {
     T loaded = a.load();
     assert(loaded.i == 5);
     assert(loaded.c == 'x');
-    assert_padding(loaded, 0);
+    assert_padding(a, 0);
   }
   {
     // atomic::exchange
@@ -121,7 +131,7 @@ void test() {
     T loaded = a.load();
     assert(loaded.i == 2);
     assert(loaded.c == 'b');
-    assert_padding(loaded, 0);
+    assert_padding(a, 0);
   }
   {
     // atomic_init
@@ -133,7 +143,7 @@ void test() {
     T loaded = a.load();
     assert(loaded.i == 7);
     assert(loaded.c == 'z');
-    assert_padding(loaded, 0);
+    assert_padding(a, 0);
   }
 }
 
