@@ -3494,8 +3494,8 @@ mapBuiltinToOpcode(StringRef DemangledCall,
 /// type implied by the mangled name, true otherwise.
 static bool demangledArgTypesMatchIR(const SPIRV::IncomingCall *Call,
                                      StringRef DemangledCall,
-                                     SPIRVGlobalRegistry *GR,
-                                     LLVMContext &Ctx) {
+                                     SPIRVGlobalRegistry *GR, LLVMContext &Ctx,
+                                     const CallBase &CB) {
   if (Call->isSpirvOp())
     return true;
 
@@ -3503,8 +3503,12 @@ static bool demangledArgTypesMatchIR(const SPIRV::IncomingCall *Call,
   if (!SPIRV::parseBuiltinTypeStr(ArgTypeStrs, DemangledCall, Ctx))
     return true;
 
+  unsigned ArgBase = CB.hasStructRetAttr() ? 1 : 0;
+  if (Call->Arguments.size() < ArgBase)
+    return true;
+  unsigned NumMangledArgs = Call->Arguments.size() - ArgBase;
   unsigned NumArgsToCheck =
-      std::min(Call->Arguments.size(), ArgTypeStrs.size());
+      std::min<unsigned>(NumMangledArgs, ArgTypeStrs.size());
   for (unsigned ArgIdx = 0; ArgIdx < NumArgsToCheck; ++ArgIdx) {
     StringRef ArgTypeStr = ArgTypeStrs[ArgIdx].trim();
     // Opaque/builtin OpenCL and SPIR-V types (images, samplers, pipes,
@@ -3519,7 +3523,8 @@ static bool demangledArgTypesMatchIR(const SPIRV::IncomingCall *Call,
         ExpectedType->isPointerTy() || ExpectedType->isTargetExtTy())
       continue;
 
-    SPIRVTypeInst ArgType = GR->getSPIRVTypeForVReg(Call->Arguments[ArgIdx]);
+    SPIRVTypeInst ArgType =
+        GR->getSPIRVTypeForVReg(Call->Arguments[ArgIdx + ArgBase]);
     if (!ArgType)
       continue;
     unsigned ArgTypeOpcode = ArgType->getOpcode();
@@ -3593,7 +3598,7 @@ std::optional<bool> lowerBuiltin(StringRef DemangledCall,
   // (e.g. broken mangling), treat the call as a regular function call
   // rather than crashing.
   if (!demangledArgTypesMatchIR(Call.get(), DemangledCall, GR,
-                                MIRBuilder.getContext())) {
+                                MIRBuilder.getContext(), CB)) {
     LLVM_DEBUG(dbgs() << "Argument types do not match mangled types for "
                       << "builtin " << DemangledCall
                       << "; treating as a normal function\n");
