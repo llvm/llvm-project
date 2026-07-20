@@ -81,15 +81,16 @@ namespace {
 /// classifyX86_64Function.  A struct that merely contains an empty record is
 /// rejected too, but through the member recursion in isSupportedType.
 static bool recordIsEmptyForABI(cir::RecordType recTy) {
-  for (mlir::Type m : recTy.getMembers()) {
-    auto arr = dyn_cast<cir::ArrayType>(m);
-    if (!arr)
-      return false;
-    auto elt = dyn_cast<cir::IntType>(arr.getElementType());
-    if (!elt || elt.getWidth() != 8 || arr.getSize() != 1)
-      return false;
-  }
-  return true;
+  mlir::ArrayRef<mlir::Type> members = recTy.getMembers();
+  if (members.empty())
+    return true;
+  if (members.size() != 1)
+    return false;
+  auto arr = dyn_cast<cir::ArrayType>(members[0]);
+  if (!arr)
+    return false;
+  auto elt = dyn_cast<cir::IntType>(arr.getElementType());
+  return elt && elt.getWidth() == 8 && arr.getSize() == 1;
 }
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -102,8 +103,9 @@ static bool recordCanPassInRegs(ModuleOp module, cir::RecordType recTy) {
     return true;
   auto dict = module->getAttrOfType<DictionaryAttr>(
       cir::CIRDialect::getRecordLayoutsAttrName());
-  auto layout =
-      dict ? dict.getAs<cir::RecordLayoutAttr>(name) : cir::RecordLayoutAttr();
+  if (!dict)
+    return true;
+  auto layout = dict.getAs<cir::RecordLayoutAttr>(name);
   if (!layout)
     return true;
   return layout.getArgPassingKind() == cir::ArgPassingKind::CanPassInRegs;
@@ -168,6 +170,7 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
             return nullptr;
           fieldTypes.push_back(fieldCIR);
         }
+        // Coercion types are plain register tuples, not the source record.
         return cir::StructType::get(ctx, fieldTypes, /*packed=*/false,
                                     /*padded=*/false, /*is_class=*/false);
       })
