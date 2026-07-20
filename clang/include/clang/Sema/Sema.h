@@ -4780,9 +4780,6 @@ public:
                             const IdentifierInfo *FieldName, QualType FieldTy,
                             bool IsMsStruct, Expr *BitWidth);
 
-  /// CacheFlagEnum - Insert flag enum into cache and compute its flag bit mask.
-  void CacheFlagEnum(const EnumDecl *ED);
-
   /// IsValueInFlagEnum - Determine if a value is allowed as part of a flag
   /// enum. If AllowMask is true, then we also allow the complement of a valid
   /// value, to be used as a mask.

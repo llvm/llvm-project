@@ -20959,22 +20959,6 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
   }
 }
 
-void Sema::CacheFlagEnum(const EnumDecl *ED) {
-  assert(ED->hasAttr<FlagEnumAttr>() && "expected flag enum");
-
-  auto R = FlagBitsCache.try_emplace(ED);
-  llvm::APInt &FlagBits = R.first->second;
-
-  if (R.second) {
-    for (auto *E : ED->enumerators()) {
-      const auto &EVal = E->getInitVal();
-      // Only single-bit enumerators introduce new flag values.
-      if (EVal.isPowerOf2())
-        FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
-    }
-  }
-}
-
 bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
                              bool AllowMask) const {
   assert(ED->isClosedFlag() && "looking for value in non-flag or open enum");
@@ -21191,8 +21175,19 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
   CheckForDuplicateEnumValues(*this, Elements, Enum, EnumType);
   CheckForComparisonInEnumInitializer(*this, Enum);
 
-  if (Enum->hasAttr<FlagEnumAttr>())
-    CacheFlagEnum(Enum);
+  if (Enum->hasAttr<FlagEnumAttr>()) {
+    auto R = FlagBitsCache.try_emplace(Enum);
+    llvm::APInt &FlagBits = R.first->second;
+
+    if (R.second) {
+      for (auto *E : Enum->enumerators()) {
+        const auto &EVal = E->getInitVal();
+        // Only single-bit enumerators introduce new flag values.
+        if (EVal.isPowerOf2())
+          FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
+      }
+    }
+  }
 
   if (Enum->isClosedFlag()) {
     for (Decl *D : Elements) {
