@@ -37,8 +37,10 @@ passes the profile name as ``%0``:
    def err_profile_type_cast_reinterpret : ProfileRuleError<
      "'reinterpret_cast' is unsafe under profile '%0'">;
 
-There are four implementation patterns, keyed on when the rule can be
-checked.
+There are four implementation patterns for compile-time rules, keyed on when
+the rule can be checked.  A fifth mechanism, for a profile that acts at run
+time, inserts checks during code generation (see `Runtime Checks in CodeGen:
+std::core_ub`_).
 
 
 Pattern 1: Parse-Time Check Sites
@@ -206,6 +208,47 @@ declaration from the same module family (the exported set under-approximates
 the interface TU's dominion, which the current unit inherits anyway).  A
 textual or PCH previous declaration shares the current TU's dominion and is
 not checked; implicit template instantiations are exempt.
+
+
+Runtime Checks in CodeGen: std::core_ub
+=======================================
+
+``std::core_ub`` (documented in :doc:`ProfilesFramework`) is the first profile
+whose checks run at run time, so its enforcement has to reach CodeGen -- unlike
+the four compile-time patterns, which live entirely in Sema.  It reuses the
+UndefinedBehaviorSanitizer's existing check emission rather than adding any of
+its own; the profile only decides *which* checks are on and that they trap.
+
+The bridge is a single choke point.  ``SemaProfiles::addProfileEnforcement`` is
+the one function every enforcement source passes through (the
+``[[profiles::enforce]]`` attribute, an imported module, and a restored PCH),
+so it mirrors each enforced profile name onto ``ASTContext`` via
+``setProfileEnforced``.  ``ASTContext::isProfileEnforced`` is what CodeGen
+reads; the ``SemaProfiles`` enforcement list itself does not outlive Sema.
+
+CodeGen then turns enforcement into trapping UBSan checks in three steps:
+
+- ``CodeGenModule::getProfileCoreUBChecks`` returns the ``SanitizerSet`` the
+  profile guards when ``std::core_ub`` is enforced (empty otherwise).  Adding a
+  guarded case is one ``Checks.set(SanitizerKind::X, true)`` line here.  It is
+  queried per function, not cached, because enforcement is recorded only once
+  the leading ``[[profiles::enforce]]`` declaration is parsed, after the module
+  is built.
+- ``CodeGenFunction::StartFunction`` ORs that set into the function's
+  ``SanOpts`` -- so every per-site UBSan gate (``SanOpts.has(Kind)``) fires --
+  and records it in ``ProfileTrapChecks``.  A whole-profile
+  ``[[profiles::suppress(std::core_ub)]]`` on the function or an enclosing
+  declaration clears the set first (``isCoreUBSuppressed``).  This runs before
+  the ignorelist and ``no_sanitize`` handling, so both can still turn a guarded
+  check back off.
+- ``CodeGenFunction::EmitCheck`` routes a check to a trap when
+  ``SanitizeTrap`` names it *or* ``isProfileTrapCheck`` does, so a
+  profile-enabled check traps even with no ``-fsanitize-trap`` flag.
+
+Because the profile only augments ``SanOpts`` and the trap decision, it needs
+no new check emission, no new diagnostics, and no TableGen changes, and it
+composes with an explicitly requested ``-fsanitize=`` for the same kind (the
+check is emitted once; the profile forces it to trap).
 
 
 Test Profiles

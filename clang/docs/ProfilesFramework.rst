@@ -34,8 +34,10 @@ Profile names are open-ended: standard (``std::``-prefixed),
 implementation-defined, and third-party profiles are all requested with the
 same syntax, and enforcing a profile the implementation does not know is not
 an error -- it simply has no rules to enforce.  Clang currently implements
-one real profile, an initial slice of the proposed ``std::init``
-initialization profile (see `The std::init Profile`_).  The
+two real profiles: an initial slice of the proposed ``std::init``
+initialization profile (see `The std::init Profile`_), which checks at compile
+time, and an initial slice of the proposed ``std::core_ub`` profile (see
+`The std::core_ub Profile`_), which inserts runtime checks.  The
 feature is experimental: attribute spellings, rule names, and diagnostics may
 change.
 
@@ -693,6 +695,60 @@ false positive.
   in fully dependent code a missed diagnostic as well.
 - In a template, a violation in non-dependent code is diagnosed at definition
   time and may be repeated at instantiation.
+
+
+The ``std::core_ub`` Profile
+============================
+
+``std::core_ub`` is an initial slice of the proposed profile from Vinnie
+Falco's "A Profile for Runtime-Checkable Core-Language Undefined Behavior:
+std::core_ub" (P4317; the case identifiers below, in braces, are from its
+Appendix A).  Its guarantee: **a checkable core-language operation whose
+precondition is violated ends the program rather than proceeding into
+undefined behavior**.  Unlike ``std::init``, it acts at run time.
+
+When the profile is enforced over a translation unit, the guarded operations
+gain a check that traps (``llvm.ubsantrap``) on a violation, with no
+in-process diagnostic -- the smallest codegen, matching deployed library
+hardening.  The checks are the same ones the UndefinedBehaviorSanitizer
+emits, so no ``-fsanitize`` flag is needed and the two compose: a guarded
+operation traps under the profile whether or not the corresponding sanitizer
+is also requested.
+
+This slice covers the locally checkable cases of P4317 Appendix A.1 that map
+to an existing check:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 42 58
+
+   * - Guarded case
+     - Operation
+   * - ``{expr.mul.div.by.zero}``
+     - Integer division or remainder by zero.
+   * - ``{expr.mul.representable.type.result}``
+     - Signed ``+``, ``-``, ``*``, unary ``-``, and ``INT_MIN / -1`` overflow.
+   * - ``{expr.shift.neg.and.width}``
+     - A negative or too-large shift width, or a signed left shift that loses
+       bits.
+   * - ``{basic.align.object.alignment}``
+     - An access through an underaligned pointer.
+   * - ``{expr.unary.dereference}``
+     - A dereference of a null pointer.
+   * - ``{expr.add.out.of.bounds}``
+     - A subscript past the end of an array whose bound is known at the access.
+   * - ``{conv.fpint.*}``
+     - A floating-point value converted to an integer type that cannot hold it.
+   * - ``{expr.static.cast.enum.outside.range}``
+     - A load of an out-of-range enumeration value.
+   * - ``{stmt.return.flow.off}``
+     - Flowing off the end of a value-returning function.
+
+Enforcement can be turned off for a function, or a declaration enclosing it,
+with a whole-profile ``[[profiles::suppress(std::core_ub)]]`` (see `Suppressing
+Enforcement`_).  Suppression at finer granularity -- a single statement, or a
+single guarded case by rule name -- is not yet implemented, nor are the many
+cases of P4317 that require whole-program instrumentation.
 
 
 Test Profiles

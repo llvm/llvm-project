@@ -145,6 +145,16 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- The experimental C++ Profiles framework (``-fprofiles``) gained an initial
+  slice of the ``std::core_ub`` profile (P4317).  Under
+  ``[[profiles::enforce(std::core_ub)]]`` a set of locally checkable
+  core-language undefined behaviors -- integer division by zero, signed integer
+  overflow, invalid shifts, misaligned and null access, statically sized array
+  bounds, float-to-integer conversion overflow, out-of-range enumeration loads,
+  and flowing off the end of a value-returning function -- trap at run time,
+  reusing the UndefinedBehaviorSanitizer checks with no ``-fsanitize`` flag.
+  See :doc:`ProfilesFramework`.
+
 - Added support for floating point and pointer values in most ``__atomic_``
   builtins.
 
