@@ -99,6 +99,10 @@ private:
     POE = 1 << 12,       // Permission Overlay registers.
   };
 
+  // Validity management functions are class members who are friends of
+  // CacheValidity. This means we don't have to write "m_validity." every time
+  // we do an update.
+
   void MakeValid(RegisterSetType set) {
     m_validity.m_valid_flags |= static_cast<CacheValidity::Storage>(set);
   }
