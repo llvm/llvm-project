@@ -62,7 +62,7 @@ define i32 @test_undef() {
   ret i32 %r
 }
 
-; vector containing zero and undef -> should NOT fold
+; vector containing an undef element -> leave constant fold to expansion
 define i32 @test_zero_and_undef() {
 ; CHECK-LABEL: test_zero_and_undef:
 ; CHECK:       // %bb.0:
