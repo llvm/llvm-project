@@ -1734,8 +1734,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Custom);
           } else if (Subtarget.hasStdExtZvbc()) {
             // Promote to i64 as is done for scalable vectors.
-            if (useRVVForFixedLengthVectorVT(
-                    MVT::getVectorVT(MVT::i64, VT.getVectorElementCount())))
+            MVT I64VecVT =
+                MVT::getVectorVT(MVT::i64, VT.getVectorElementCount());
+            if (I64VecVT.isValid() && useRVVForFixedLengthVectorVT(I64VecVT))
               setOperationAction(ISD::CLMUL, VT, Custom);
           }
         }
