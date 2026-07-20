@@ -1832,6 +1832,43 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+/// The `llvm.byval`, `llvm.sret`, and `llvm.byref` argument attributes carry
+/// the pointee type as a TypeAttr.  After the CallConvLowering pass that type
+/// is still a CIR record; remap it to the lowered LLVM type so translation to
+/// LLVM IR does not encounter a CIR type in an attribute.  Returns the input
+/// unchanged when there is nothing to convert.
+static mlir::ArrayAttr
+convertTypedArgAttrs(mlir::ArrayAttr argAttrs,
+                     const mlir::TypeConverter &converter,
+                     mlir::MLIRContext *ctx) {
+  if (!argAttrs)
+    return argAttrs;
+  bool changed = false;
+  SmallVector<mlir::Attribute> loweredArgAttrs;
+  loweredArgAttrs.reserve(argAttrs.size());
+  for (mlir::Attribute a : argAttrs) {
+    auto dict = cast<mlir::DictionaryAttr>(a);
+    SmallVector<mlir::NamedAttribute> entries(dict.begin(), dict.end());
+    for (mlir::NamedAttribute &entry : entries) {
+      StringRef name = entry.getName().strref();
+      if (name != mlir::LLVM::LLVMDialect::getByValAttrName() &&
+          name != mlir::LLVM::LLVMDialect::getStructRetAttrName() &&
+          name != mlir::LLVM::LLVMDialect::getByRefAttrName())
+        continue;
+      auto typeAttr = dyn_cast<mlir::TypeAttr>(entry.getValue());
+      if (!typeAttr)
+        continue;
+      mlir::Type lowered = converter.convertType(typeAttr.getValue());
+      if (lowered && lowered != typeAttr.getValue()) {
+        entry.setValue(mlir::TypeAttr::get(lowered));
+        changed = true;
+      }
+    }
+    loweredArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, entries));
+  }
+  return changed ? mlir::ArrayAttr::get(ctx, loweredArgAttrs) : argAttrs;
+}
+
 static void lowerCallAttributes(cir::CIRCallOpInterface op,
                                 SmallVectorImpl<mlir::NamedAttribute> &result) {
   for (mlir::NamedAttribute attr : op->getAttrs()) {
@@ -1937,6 +1974,9 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         op, llvmFnTy, calleeAttr, callOperands);
     newOp->setAttrs(attributes);
+    if (mlir::ArrayAttr argAttrs = newOp.getArgAttrsAttr())
+      newOp.setArgAttrsAttr(
+          convertTypedArgAttrs(argAttrs, *converter, rewriter.getContext()));
     if (memoryEffects)
       newOp.setMemoryEffectsAttr(memoryEffects);
     newOp.setNoUnwind(noUnwind);
@@ -2425,6 +2465,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   mlir::LLVM::LLVMFuncOp fn = mlir::LLVM::LLVMFuncOp::create(
       rewriter, loc, op.getName(), llvmFnTy, linkage, isDsoLocal, cconv,
       mlir::SymbolRefAttr(), attributes);
+
+  if (mlir::ArrayAttr argAttrs = fn.getArgAttrsAttr())
+    fn.setArgAttrsAttr(
+        convertTypedArgAttrs(argAttrs, *getTypeConverter(), getContext()));
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
