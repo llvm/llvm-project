@@ -398,9 +398,7 @@ define ptr @find_deref_pointer_distance_align_attribute_argument(ptr align 2 %fi
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp eq ptr [[FIRST]], [[LAST]]
 ; CHECK-NEXT:    br i1 [[C_0]], label %[[EXIT:.*]], label %[[LOOP_HEADER_PREHEADER:.*]]
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoaddr ptr [[LAST]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[FIRST]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[TMP10]], [[TMP15]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[LAST_I64]], [[FIRST_I64]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -2
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[TMP2]], 1
@@ -493,9 +491,7 @@ define ptr @find_deref_pointer_distance_align_assumption(ptr %first, ptr %last) 
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp eq ptr [[FIRST]], [[LAST]]
 ; CHECK-NEXT:    br i1 [[C_0]], label %[[EXIT:.*]], label %[[LOOP_HEADER_PREHEADER:.*]]
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoaddr ptr [[LAST]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[FIRST]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[TMP10]], [[TMP15]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[LAST_I64]], [[FIRST_I64]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -2
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[TMP2]], 1
@@ -708,9 +704,7 @@ define i64 @find_if_pointer_distance_deref_via_assumption(ptr %vec) nofree nosyn
 ; CHECK-NEXT:    br i1 [[IS_EMPTY]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    [[END_PTR:%.*]] = getelementptr i8, ptr [[BEGIN]], i64 [[DISTANCE]]
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoaddr ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[BEGIN]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[TMP10]], [[TMP15]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[END_INT]], [[BEGIN_INT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -2
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[TMP2]], 1
@@ -1114,9 +1108,7 @@ define i64 @VectorizingWithoutNoSyncAttributeTest(ptr noundef nonnull readonly a
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L_V]], [[L_GEP_V]]
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoaddr ptr [[L_GEP_V]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[L_V]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[TMP9]], [[TMP15]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[PI_L_GEP_V]], [[PI_L_V]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -4
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
@@ -1233,9 +1225,7 @@ define i64 @volatileNotVectorizingTest(ptr noundef nonnull readonly align 8 capt
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L_V]], [[L_GEP_V]]
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[L_GEP_V]] to i64
-; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoaddr ptr [[L_V]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[TMP15]], [[TMP16]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[PI_L_GEP_V]], [[PI_L_V]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -4
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1

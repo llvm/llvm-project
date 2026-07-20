@@ -253,9 +253,7 @@ define ptr @std_find_caller(ptr noundef %first, ptr noundef %last) {
 ; CHECK-NEXT:    [[FIRST3:%.*]] = ptrtoint ptr [[FIRST]] to i64
 ; CHECK-NEXT:    [[PTR_SUB:%.*]] = sub i64 [[LAST_I64]], [[FIRST3]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[FIRST]], i64 [[PTR_SUB]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoaddr ptr [[LAST]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoaddr ptr [[FIRST]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[LAST_I64]], [[FIRST3]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -2
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr exact i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[TMP2]], 1

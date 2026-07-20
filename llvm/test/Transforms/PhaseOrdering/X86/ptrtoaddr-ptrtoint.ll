@@ -129,8 +129,7 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[BASE]] to i64
 ; CHECK-NEXT:    br i1 [[NE_I_NOT6]], label %[[RET:.*]], label %[[LOOP1_INC_PREHEADER:.*]]
 ; CHECK:       [[LOOP1_INC_PREHEADER]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[BASE]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 add (i64 ptrtoaddr (ptr @end to i64), i64 -48), [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 add (i64 ptrtoaddr (ptr @end to i64), i64 -48), [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP2]], 48
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 144
@@ -157,7 +156,10 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK:       [[LOOP2_BODY_LR_PH]]:
 ; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ [[SEL:%.*]], %[[LOOP1_INC]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = uitofp nneg i64 [[SEL_LCSSA]] to double
-; CHECK-NEXT:    [[MIN_ITERS_CHECK18:%.*]] = icmp ult i64 [[TMP2]], 144
+; CHECK-NEXT:    [[TMP21:%.*]] = sub i64 add (i64 ptrtoaddr (ptr @end to i64), i64 -48), [[TMP0]]
+; CHECK-NEXT:    [[TMP27:%.*]] = udiv i64 [[TMP21]], 48
+; CHECK-NEXT:    [[TMP28:%.*]] = add nuw nsw i64 [[TMP27]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK18:%.*]] = icmp ult i64 [[TMP21]], 144
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK18]], label %[[LOOP2_BODY_PREHEADER:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 8
@@ -167,7 +169,7 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[LOOP2_BODY_PREHEADER]], label %[[VECTOR_PH19:.*]]
 ; CHECK:       [[VECTOR_PH19]]:
-; CHECK-NEXT:    [[N_VEC21:%.*]] = and i64 [[TMP4]], 1152921504606846974
+; CHECK-NEXT:    [[N_VEC21:%.*]] = and i64 [[TMP28]], 1152921504606846974
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT22:%.*]] = insertelement <2 x double> poison, double [[TMP9]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC21]], 48
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP10]]
@@ -201,7 +203,7 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK34:.*]], label %[[VECTOR_BODY28]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK34]]:
 ; CHECK-NEXT:    [[TMP26:%.*]] = tail call i64 @llvm.experimental.vector.extract.last.active.v2i64(<2 x i64> [[TMP24]], <2 x i1> [[TMP23]], i64 [[TMP0]])
-; CHECK-NEXT:    [[CMP_N35:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC21]]
+; CHECK-NEXT:    [[CMP_N35:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC21]]
 ; CHECK-NEXT:    br i1 [[CMP_N35]], label %[[RET]], label %[[LOOP2_BODY_PREHEADER]]
 ; CHECK:       [[LOOP2_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[RES12_PH:%.*]] = phi i64 [ [[TMP0]], %[[VECTOR_MEMCHECK]] ], [ [[TMP0]], %[[LOOP2_BODY_LR_PH]] ], [ [[TMP26]], %[[MIDDLE_BLOCK34]] ]
