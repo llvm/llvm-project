@@ -337,29 +337,62 @@ void PPCMCPlusBuilder::createLongTailCall(std::vector<MCInst> &Seq,
                                           MCContext *Ctx) {
   Seq.clear();
 
-  const unsigned R2 = PPC::X2;   // TOC base
-  const unsigned R12 = PPC::X12; // scratch / ELFv2 entry register
+  // --- Absolute 64-bit materialization of Target into r12 (no TOC/r2) ---
+  // r12 = Target, assembled from four 16-bit pieces via logical ORs.
+  const unsigned R12 = PPC::X12;
 
-  // sym@ha and sym@lo specifiers (same as buildCallStubAbsolute)
-  const MCExpr *HA = MCSymbolRefExpr::create(Target, PPC::S_HA, *Ctx);
-  const MCExpr *LO = MCSymbolRefExpr::create(Target, PPC::S_LO, *Ctx);
+  const MCExpr *HST =
+      MCSymbolRefExpr::create(Target, PPC::S_HIGHEST, *Ctx); // bits 48..63
+  const MCExpr *HER =
+      MCSymbolRefExpr::create(Target, PPC::S_HIGHER, *Ctx); // bits 32..47
+  const MCExpr *HI =
+      MCSymbolRefExpr::create(Target, PPC::S_HI, *Ctx); // bits 16..31  (@h)
+  const MCExpr *LO =
+      MCSymbolRefExpr::create(Target, PPC::S_LO, *Ctx); // bits 0..15   (@l)
 
   MCInst I;
 
-  // addis r12, r2, sym@ha        ; high-adjusted part of address
-  I.setOpcode(PPC::ADDIS);
+  // lis    r12, Target@highest         ; r12 = highest << 16
+  I = MCInst();
+  I.setOpcode(PPC::LIS8);
   I.addOperand(MCOperand::createReg(R12));
-  I.addOperand(MCOperand::createReg(R2));
-  I.addOperand(MCOperand::createExpr(HA));
+  I.addOperand(MCOperand::createExpr(HST));
   Seq.push_back(I);
 
-  // ld r12, sym@lo(r12)          ; load full target address
+  // ori    r12, r12, Target@higher     ; r12 |= higher
   I = MCInst();
-  I.setOpcode(PPC::LD);
+  I.setOpcode(PPC::ORI8);
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createExpr(HER));
+  Seq.push_back(I);
+
+  // rldicr r12, r12, 32, 31            ; shift the top 32 bits up
+  I = MCInst();
+  I.setOpcode(PPC::RLDICR);
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createImm(32)); // shift amount
+  I.addOperand(MCOperand::createImm(
+      31)); // mask end (MB..ME semantics from PPCInstrInfo.cpp:3470)
+  Seq.push_back(I);
+
+  // oris   r12, r12, Target@h          ; r12 |= (high << 16)
+  I = MCInst();
+  I.setOpcode(PPC::ORIS8);
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createExpr(HI));
+  Seq.push_back(I);
+
+  // ori    r12, r12, Target@l          ; r12 |= low
+  I = MCInst();
+  I.setOpcode(PPC::ORI8);
+  I.addOperand(MCOperand::createReg(R12));
   I.addOperand(MCOperand::createReg(R12));
   I.addOperand(MCOperand::createExpr(LO));
-  I.addOperand(MCOperand::createReg(R12));
   Seq.push_back(I);
+  // --- r12 now holds the absolute address of Target ---
 
   // mtctr r12                    ; move target into CTR
   I = MCInst();
@@ -540,19 +573,26 @@ static inline MCOperand R(unsigned Reg) { return MCOperand::createReg(Reg); }
 // Build a 64-bit absolute address of the callee's function address (e.g.
 // "puts") into r12, then tail-call it via BCTR.
 void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
-                                             const MCSymbol *TargetSym,
+                                             const MCSymbol *Target,
                                              std::vector<MCInst> &Out) const {
-  // Registers
-  const unsigned R2 = PPC::X2;   // caller TOC
-  const unsigned R12 = PPC::X12; // scratch / entry per ELFv2
+  Out.clear();
+  // --- Absolute 64-bit materialization of Target into r12 (no TOC/r2) ---
+  // r12 = Target, assembled from four 16-bit pieces via logical ORs.
+  const unsigned R12 = PPC::X12;
 
-  // Wrap with PPC specifiers:
-  const MCExpr *HA = MCSymbolRefExpr::create(TargetSym, PPC::S_HA, *Ctx);
-  const MCExpr *LO = MCSymbolRefExpr::create(TargetSym, PPC::S_LO, *Ctx);
+  const MCExpr *HST =
+      MCSymbolRefExpr::create(Target, PPC::S_HIGHEST, *Ctx); // bits 48..63
+  const MCExpr *HER =
+      MCSymbolRefExpr::create(Target, PPC::S_HIGHER, *Ctx); // bits 32..47
+  const MCExpr *HI =
+      MCSymbolRefExpr::create(Target, PPC::S_HI, *Ctx); // bits 16..31  (@h)
+  const MCExpr *LO =
+      MCSymbolRefExpr::create(Target, PPC::S_LO, *Ctx); // bits 0..15   (@l)
 
   MCInst I;
 
   // std r2, 24(r1)      ; save caller's TOC
+  I = MCInst();
   I.setOpcode(PPC::STD);
   I.addOperand(R(PPC::X2)); // reg (src)
   I.addOperand(MCOperand::createExpr(
@@ -560,21 +600,47 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
   I.addOperand(R(PPC::X1));               // base (slot #2)
   Out.push_back(I);
 
-  // addis r12, r2, sym@ha
+  // lis    r12, Target@highest         ; r12 = highest << 16
   I = MCInst();
-  I.setOpcode(PPC::ADDIS);
-  I.addOperand(R(R12));
-  I.addOperand(R(R2));
-  I.addOperand(MCOperand::createExpr(HA));
+  I.setOpcode(PPC::LIS8);
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createExpr(HST));
   Out.push_back(I);
 
-  // ld r12, sym@lo(r12) ; DS-form: (dst, imm/expr, base)
+  // ori    r12, r12, Target@higher     ; r12 |= higher
   I = MCInst();
-  I.setOpcode(PPC::LD);
-  I.addOperand(R(PPC::X12));               // reg (dst)
-  I.addOperand(MCOperand::createExpr(LO)); // disp expr (slot #1)
-  I.addOperand(R(PPC::X12));               // base (slot #2)
+  I.setOpcode(PPC::ORI8);
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createExpr(HER));
   Out.push_back(I);
+
+  // rldicr r12, r12, 32, 31            ; shift the top 32 bits up
+  I = MCInst();
+  I.setOpcode(PPC::RLDICR);
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createImm(32)); // shift amount
+  I.addOperand(MCOperand::createImm(
+      31)); // mask end (MB..ME semantics from PPCInstrInfo.cpp:3470)
+  Out.push_back(I);
+
+  // oris   r12, r12, Target@h          ; r12 |= (high << 16)
+  I = MCInst();
+  I.setOpcode(PPC::ORIS8);
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createExpr(HI));
+  Out.push_back(I);
+
+  // ori    r12, r12, Target@l          ; r12 |= low
+  I = MCInst();
+  I.setOpcode(PPC::ORI8);
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createExpr(LO));
+  Out.push_back(I);
+  // --- r12 now holds the absolute address of Target ---
 
   // mtctr r12
   I = MCInst();
@@ -588,6 +654,7 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
   Out.push_back(I);
 
   // ld r2, 24(r1)       ; restore TOC
+  I = MCInst();
   I.setOpcode(PPC::LD);
   I.addOperand(R(PPC::X2)); // reg (dst)
   I.addOperand(MCOperand::createExpr(
