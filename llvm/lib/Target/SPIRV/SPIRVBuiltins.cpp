@@ -3500,11 +3500,12 @@ static bool demangledArgTypesMatchIR(const SPIRV::IncomingCall *Call,
     return true;
 
   SmallVector<StringRef, 10> ArgTypeStrs;
-  SPIRV::parseBuiltinTypeStr(ArgTypeStrs, DemangledCall, Ctx);
+  if (!SPIRV::parseBuiltinTypeStr(ArgTypeStrs, DemangledCall, Ctx))
+    return true;
 
-  for (unsigned ArgIdx = 0; ArgIdx < Call->Arguments.size(); ++ArgIdx) {
-    if (ArgIdx >= ArgTypeStrs.size())
-      continue;
+  unsigned NumArgsToCheck =
+      std::min(Call->Arguments.size(), ArgTypeStrs.size());
+  for (unsigned ArgIdx = 0; ArgIdx < NumArgsToCheck; ++ArgIdx) {
     StringRef ArgTypeStr = ArgTypeStrs[ArgIdx].trim();
     // Opaque/builtin OpenCL and SPIR-V types (images, samplers, pipes,
     // reserve_id, etc.) are not validated here, as mangling does not enforce
@@ -3528,28 +3529,24 @@ static bool demangledArgTypesMatchIR(const SPIRV::IncomingCall *Call,
         ArgTypeOpcode != SPIRV::OpTypeVector)
       continue;
 
+    auto *ExpectedVecType = dyn_cast<VectorType>(ExpectedType);
     Type *ExpectedScalarType =
-        ExpectedType->isVectorTy()
-            ? cast<VectorType>(ExpectedType)->getElementType()
-            : ExpectedType;
+        ExpectedVecType ? ExpectedVecType->getElementType() : ExpectedType;
     SPIRVTypeInst ArgScalarType = GR->getScalarOrVectorComponentType(ArgType);
     if (!ArgScalarType)
       continue;
 
     bool ExpectedIsInt = ExpectedScalarType->isIntegerTy();
-    bool ExpectedIsFloat = ExpectedScalarType->isFloatingPointTy();
     unsigned ArgOpcode = ArgScalarType->getOpcode();
     bool ArgIsInt =
         ArgOpcode == SPIRV::OpTypeInt || ArgOpcode == SPIRV::OpTypeBool;
-    bool ArgIsFloat = ArgOpcode == SPIRV::OpTypeFloat;
 
-    if ((ExpectedIsInt && !ArgIsInt) || (ExpectedIsFloat && !ArgIsFloat))
+    if (ExpectedIsInt != ArgIsInt)
       return false;
 
     unsigned ExpectedElts =
-        ExpectedType->isVectorTy()
-            ? cast<VectorType>(ExpectedType)->getElementCount().getFixedValue()
-            : 1;
+        ExpectedVecType ? ExpectedVecType->getElementCount().getFixedValue()
+                        : 1;
     if (ExpectedElts != GR->getScalarOrVectorComponentCount(ArgType))
       return false;
   }
