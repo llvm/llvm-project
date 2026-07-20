@@ -57,6 +57,22 @@
 //         fetch_xor(integral op, memory_order m = memory_order_seq_cst) volatile;
 //     integral fetch_xor(integral op, memory_order m = memory_order_seq_cst);
 //
+//     void
+//         store_add(integral op, memory_order m = memory_order_seq_cst) volatile;
+//     void store_add(integral op, memory_order m = memory_order_seq_cst);
+//     void
+//         store_sub(integral op, memory_order m = memory_order_seq_cst) volatile;
+//     void store_sub(integral op, memory_order m = memory_order_seq_cst);
+//     void
+//         store_and(integral op, memory_order m = memory_order_seq_cst) volatile;
+//     void store_and(integral op, memory_order m = memory_order_seq_cst);
+//     void
+//         store_or(integral op, memory_order m = memory_order_seq_cst) volatile;
+//     void store_or(integral op, memory_order m = memory_order_seq_cst);
+//     void
+//         store_xor(integral op, memory_order m = memory_order_seq_cst) volatile;
+//     void store_xor(integral op, memory_order m = memory_order_seq_cst);
+//
 //     atomic() = default;
 //     constexpr atomic(integral desr);
 //     atomic(const atomic&) = delete;
@@ -153,6 +169,43 @@ do_test()
     assert(obj == T(7));
     assert((obj ^= T(0xF)) == T(8));
     assert(obj == T(8));
+
+#if TEST_STD_VER >= 26
+    // Test store_add
+    obj.store(T(1));
+    obj.store_add(T(2));
+    assert(obj == T(3));
+    obj.store_add(T(0), std::memory_order_relaxed);
+    assert(obj == T(3));
+
+    // Test store_sub
+    obj.store(T(10));
+    obj.store_sub(T(3));
+    assert(obj == T(7));
+    obj.store_sub(T(0), std::memory_order_release);
+    assert(obj == T(7));
+
+    // Test store_and
+    obj.store(T(0b1111));
+    obj.store_and(T(0b1010));
+    assert(obj == T(0b1010));
+    obj.store_and(T(0b1111), std::memory_order_relaxed);
+    assert(obj == T(0b1010));
+
+    // Test store_or
+    obj.store(T(0b1010));
+    obj.store_or(T(0b0101));
+    assert(obj == T(0b1111));
+    obj.store_or(T(0b0000), std::memory_order_release);
+    assert(obj == T(0b1111));
+
+    // Test store_xor
+    obj.store(T(0b1100));
+    obj.store_xor(T(0b1010));
+    assert(obj == T(0b0110));
+    obj.store_xor(T(0b0000), std::memory_order_relaxed);
+    assert(obj == T(0b0110));
+#endif
 
     {
         TEST_ALIGNAS_TYPE(A) char storage[sizeof(A)] = {23};
