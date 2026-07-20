@@ -2732,8 +2732,10 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
   // UnknownVal(), and handle every non-CompoundVal case exhaustively (like
   // bindStruct()/bindVector() do) rather than enumerating specific SVal
   // kinds one at a time.
-  if (!isa<nonloc::CompoundVal>(Init))
+  if (!isa<nonloc::CompoundVal>(Init)) {
+    assert((isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init)));
     return bindAggregate(B, R, Init);
+  }
 
   // Remaining case: explicit compound values.
   const nonloc::CompoundVal& CV = Init.castAs<nonloc::CompoundVal>();
