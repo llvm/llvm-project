@@ -1046,36 +1046,41 @@ TEST(APFloatTest, IsSmallestNormalized) {
     if (I == APFloat::S_Float8E8M0FNU)
       continue;
 
-    EXPECT_FALSE(APFloat::getZero(Semantics).isSmallestNormalized());
+    EXPECT_FALSE(
+        APFloat::getZero(Semantics, /*Negative=*/false).isSmallestNormalized());
     if (Semantics.hasSignedRepr)
-      EXPECT_FALSE(APFloat::getZero(Semantics, /* Negative */ true)
+      EXPECT_FALSE(APFloat::getZero(Semantics, /*Negative=*/true)
                        .isSmallestNormalized());
 
     if (APFloat::semanticsHasNaN(Semantics)) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
-      EXPECT_FALSE(APFloat::getInf(Semantics).isSmallestNormalized());
+      EXPECT_FALSE(APFloat::getInf(Semantics, /*Negative=*/false)
+                       .isSmallestNormalized());
       if (Semantics.hasSignedRepr)
-        EXPECT_FALSE(APFloat::getInf(Semantics, /* Negative */ true)
+        EXPECT_FALSE(APFloat::getInf(Semantics, /*Negative=*/true)
                          .isSmallestNormalized());
 
       EXPECT_FALSE(APFloat::getQNaN(Semantics).isSmallestNormalized());
       EXPECT_FALSE(APFloat::getSNaN(Semantics).isSmallestNormalized());
     }
 
-    EXPECT_FALSE(APFloat::getLargest(Semantics).isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getLargest(Semantics, /*Negative=*/false)
+                     .isSmallestNormalized());
     if (Semantics.hasSignedRepr)
-      EXPECT_FALSE(APFloat::getLargest(Semantics, /* Negative */ true)
+      EXPECT_FALSE(APFloat::getLargest(Semantics, /*Negative=*/true)
                        .isSmallestNormalized());
 
-    EXPECT_FALSE(APFloat::getSmallest(Semantics).isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getSmallest(Semantics, /*Negative=*/false)
+                     .isSmallestNormalized());
     if (Semantics.hasSignedRepr)
-      EXPECT_FALSE(APFloat::getSmallest(Semantics, /* Negative */ true)
+      EXPECT_FALSE(APFloat::getSmallest(Semantics, /*Negative=*/true)
                        .isSmallestNormalized());
 
     EXPECT_FALSE(APFloat::getAllOnesValue(Semantics).isSmallestNormalized());
 
-    APFloat PosSmallestNormalized = APFloat::getSmallestNormalized(Semantics);
+    APFloat PosSmallestNormalized =
+        APFloat::getSmallestNormalized(Semantics, /*Negative=*/false);
     EXPECT_TRUE(PosSmallestNormalized.isSmallestNormalized());
     EXPECT_EQ(fcPosNormal, PosSmallestNormalized.classify());
 
@@ -1102,7 +1107,7 @@ TEST(APFloatTest, IsSmallestNormalized) {
     SmallestNormalized(&PosSmallestNormalized);
     if (Semantics.hasSignedRepr) {
       APFloat NegSmallestNormalized =
-          APFloat::getSmallestNormalized(Semantics, /* Negative */ true);
+          APFloat::getSmallestNormalized(Semantics, /*Negative=*/true);
       EXPECT_TRUE(NegSmallestNormalized.isSmallestNormalized());
       EXPECT_EQ(fcNegNormal, NegSmallestNormalized.classify());
       SmallestNormalized(&NegSmallestNormalized);
@@ -9589,40 +9594,46 @@ TEST(APFloatTest, getExactLog2) {
       }
     }
 
-    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics).getExactLog2());
-    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN,
+              APFloat::getZero(Semantics, /*Negative=*/false).getExactLog2());
+    EXPECT_EQ(
+        INT_MIN,
+        APFloat::getZero(Semantics, /*Negative=*/false).getExactLog2Abs());
     if (Semantics.hasSignedRepr) {
+      EXPECT_EQ(INT_MIN,
+                APFloat::getZero(Semantics, /*Negative=*/true).getExactLog2());
       EXPECT_EQ(
           INT_MIN,
-          APFloat::getZero(Semantics, /* Negative */ true).getExactLog2());
-      EXPECT_EQ(
-          INT_MIN,
-          APFloat::getZero(Semantics, /* Negative */ true).getExactLog2Abs());
+          APFloat::getZero(Semantics, /*Negative=*/true).getExactLog2Abs());
     }
 
     if (APFloat::semanticsHasNaN(Semantics)) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
-      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2());
-      EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics).getExactLog2());
+      EXPECT_EQ(INT_MIN,
+                APFloat::getInf(Semantics, /*Negative=*/false).getExactLog2());
+      EXPECT_EQ(INT_MIN,
+                APFloat::getNaN(Semantics, /*Negative=*/false).getExactLog2());
       if (Semantics.hasSignedRepr) {
-        EXPECT_EQ(
-            INT_MIN,
-            APFloat::getInf(Semantics, /* Negative */ true).getExactLog2());
-        EXPECT_EQ(
-            INT_MIN,
-            APFloat::getNaN(Semantics, /* Negative */ true).getExactLog2());
+        EXPECT_EQ(INT_MIN,
+                  APFloat::getInf(Semantics, /*Negative=*/true).getExactLog2());
+        EXPECT_EQ(INT_MIN,
+                  APFloat::getNaN(Semantics, /*Negative=*/true).getExactLog2());
       }
 
-      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2Abs());
-      EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics).getExactLog2Abs());
+      EXPECT_EQ(
+          INT_MIN,
+          APFloat::getInf(Semantics, /*Negative=*/false).getExactLog2Abs());
+      EXPECT_EQ(
+          INT_MIN,
+          APFloat::getNaN(Semantics, /*Negative=*/false).getExactLog2Abs());
       if (Semantics.hasSignedRepr) {
         EXPECT_EQ(
             INT_MIN,
-            APFloat::getInf(Semantics, /* Negative */ true).getExactLog2Abs());
+            APFloat::getInf(Semantics, /*Negative=*/true).getExactLog2Abs());
         EXPECT_EQ(
             INT_MIN,
-            APFloat::getNaN(Semantics, /* Negative */ true).getExactLog2Abs());
+            APFloat::getNaN(Semantics, /*Negative=*/true).getExactLog2Abs());
       }
     }
 
@@ -10035,8 +10046,8 @@ TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
   // non-negative.
   APFloat::Semantics Sem = APFloat::S_Float8E5M3FNU;
   const llvm::fltSemantics &S = APFloat::EnumToSemantics(Sem);
-  for (int i = 0; i < 256; i++) {
-    for (int j = 0; j < 256; j++) {
+  for (int i = 0; i < 256; ++i) {
+    for (int j = 0; j < 256; ++j) {
       SCOPED_TRACE("sem=" + std::to_string(Sem) + ",i=" + std::to_string(i) +
                    ",j=" + std::to_string(j));
       APFloat x(S, APInt(8, i));
