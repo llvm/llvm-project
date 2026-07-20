@@ -112,8 +112,8 @@ end subroutine
 ! CHECK:   %[[LOOP_VAR_J_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_J_REF]]
 ! CHECK:   %[[LOOP_VAR_K_REF:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFnested_unstructuredEk"}
 ! CHECK:   %[[LOOP_VAR_K_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_K_REF]]
-! CHECK:   fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{[^ ]+}} = %{{.*}}) -> (i32) {
-! CHECK:     fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{[^ ]+}} = %{{.*}}) -> (i32) {
+! CHECK:   fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
+! CHECK:     fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
 ! CHECK:       scf.execute_region no_inline {
 ! CHECK:         cf.br ^[[HEADER_K:.*]]
 ! CHECK:       ^[[HEADER_K]]:
@@ -131,9 +131,7 @@ end subroutine
 ! CHECK:       ^[[EXIT_K]]:
 ! CHECK:         scf.yield
 ! CHECK:       }
-! CHECK:       fir.result %{{.*}} : i32
 ! CHECK:     }
-! CHECK:     fir.result %{{.*}} : i32
 ! CHECK:   }
 ! CHECK:   return
 

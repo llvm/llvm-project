@@ -101,7 +101,6 @@ end
 ! CHECK:           omp.yield
 ! CHECK:         }
 ! CHECK:       }
-! CHECK:       fir.result
 ! CHECK:     }
 ! CHECK:     omp.terminator
 ! CHECK:   }
@@ -217,7 +216,6 @@ end
 ! CHECK:          omp.yield
 ! CHECK:        }
 ! CHECK:      }
-! CHECK:      fir.result
 ! CHECK:    }
 ! CHECK:    omp.terminator
 ! CHECK:  }
@@ -263,7 +261,6 @@ end
 ! CHECK:       }
 ! CHECK:       omp.terminator
 ! CHECK:     }
-! CHECK:     fir.result
 ! CHECK:   }
 ! CHECK:   return
 subroutine ss7() ! EXIT inside OpenMP parallel do (inside do loop)

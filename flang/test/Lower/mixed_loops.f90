@@ -12,7 +12,7 @@ subroutine while_inside_do_loop
   ! CHECK-DAG: %[[J:.*]]:2 = hlfir.declare %[[J_ADDR]]
   integer :: i, j
 
-  ! CHECK: fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[I_IV:.*]] = %{{.*}}) -> (i32) {
+  ! CHECK: fir.do_loop %[[I_IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
   ! CHECK:   fir.store %[[I_IV]] to %[[I]]#0 : !fir.ref<i32>
   do i=8,13
     ! CHECK:   %[[C3:.*]] = arith.constant 3 : i32
@@ -38,7 +38,6 @@ subroutine while_inside_do_loop
     ! CHECK:   ^[[EXIT2]]:
     ! CHECK:     scf.yield
     ! CHECK:   }
-    ! CHECK:   fir.result %{{.*}} : i32
   end do
   ! CHECK: }
 
