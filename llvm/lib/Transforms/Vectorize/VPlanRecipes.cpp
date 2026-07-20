@@ -1922,7 +1922,7 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
       Op->printAsOperand(O, SlotTracker);
     });
     O << ")";
-    break;
+    return;
   }
   case Instruction::Load:
     O << "load";
