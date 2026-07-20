@@ -74,11 +74,14 @@ void addMemoryAllocationOpt(mlir::PassManager &pm) {
 }
 
 void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays) {
-  fir::AllocationPlacementOptions options;
-  options.stackArrays = stackArrays;
-  options.smallArrayThresholdBytes = allocationPlacementSmallArraySize;
-  options.totalStackLimitBytes = allocationPlacementStackLimit;
-  pm.addPass(fir::createAllocationPlacement(options));
+  addNestedPassConditionally<mlir::func::FuncOp>(
+      pm, disableAllocationPlacement, [&]() {
+        fir::AllocationPlacementOptions options;
+        options.stackArrays = stackArrays;
+        options.smallArrayThresholdBytes = allocationPlacementSmallArraySize;
+        options.totalStackLimitBytes = allocationPlacementStackLimit;
+        return fir::createAllocationPlacement(options);
+      });
 }
 
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
