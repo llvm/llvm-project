@@ -1963,9 +1963,7 @@ public:
     return *this;
   }
 
-  std::optional<uint64_t> getDesiredOffset() const {
-    return DesiredOffset;
-  }
+  std::optional<uint64_t> getDesiredOffset() const { return DesiredOffset; }
 
   BinaryFunction &setImageAddress(uint64_t Address) {
     getLayout().getMainFragment().setImageAddress(Address);

@@ -316,7 +316,8 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
       DesiredOffset = Function.getDesiredOffset();
 
     if (DesiredOffset) {
-      const MCExpr *OffsetExpr = MCConstantExpr::create(*DesiredOffset, *BC.Ctx);
+      const MCExpr *OffsetExpr =
+          MCConstantExpr::create(*DesiredOffset, *BC.Ctx);
       const unsigned FillValue = BC.Ctx->getAsmInfo().getTextAlignFillValue();
       static_cast<MCObjectStreamer &>(Streamer).emitValueToOffset(
           OffsetExpr, FillValue, SMLoc(), /*AllowOmission=*/true);

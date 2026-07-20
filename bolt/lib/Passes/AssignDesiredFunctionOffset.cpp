@@ -97,7 +97,8 @@ Error AssignDesiredFunctionOffset::runOnFunctions(BinaryContext &BC) {
     if (!BF) {
       if (opts::Verbosity >= 1)
         BC.errs() << "BOLT-WARNING: --function-layout-file: cannot find "
-                     "function '" << Name << "'\n";
+                     "function '"
+                  << Name << "'\n";
       ++NotFound;
       continue;
     }

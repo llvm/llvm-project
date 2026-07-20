@@ -20,10 +20,8 @@ namespace bolt {
 /// Merge two layout files \p PathA and \p PathB into an aligned layout stored
 /// to \p OutputPath. Only common functions that occur in the same relative
 /// order are included.
-Error mergeFunctionLayouts(StringRef PathA,
-                           StringRef PathB,
-                           StringRef OutputPath,
-                           raw_ostream &Log);
+Error mergeFunctionLayouts(StringRef PathA, StringRef PathB,
+                           StringRef OutputPath, raw_ostream &Log);
 
 } // namespace bolt
 } // namespace llvm

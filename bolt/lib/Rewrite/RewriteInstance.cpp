@@ -4015,8 +4015,7 @@ static void printFunctionLayoutStats(BinaryContext &BC) {
   uint64_t LayoutConstraints = 0;
   uint64_t SatisfiedLayoutConstraints = 0;
   for (const BinaryFunction *Function : BC.getAllBinaryFunctions()) {
-    const std::optional<uint64_t> DesiredOffset =
-        Function->getDesiredOffset();
+    const std::optional<uint64_t> DesiredOffset = Function->getDesiredOffset();
 
     if (!DesiredOffset || !Function->isEmitted())
       continue;
@@ -4051,8 +4050,8 @@ static void generateFunctionLayoutFile(BinaryContext &BC) {
                     sys::fs::OpenFlags::OF_None);
   if (EC) {
     BC.errs() << "BOLT-ERROR: cannot open --generate-function-layout-file '"
-               << opts::GenerateFunctionLayoutFile << "': " << EC.message()
-               << "\n";
+              << opts::GenerateFunctionLayoutFile << "': " << EC.message()
+              << "\n";
     exit(1);
   }
 
@@ -4078,8 +4077,8 @@ static void generateFunctionLayoutFile(BinaryContext &BC) {
   }
 
   BC.outs() << "BOLT-INFO: --generate-function-layout-file: wrote "
-             << Functions.size() << " functions to "
-             << opts::GenerateFunctionLayoutFile << "\n";
+            << Functions.size() << " functions to "
+            << opts::GenerateFunctionLayoutFile << "\n";
 }
 
 void RewriteInstance::emitAndLink() {

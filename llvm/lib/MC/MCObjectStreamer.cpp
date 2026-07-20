@@ -708,8 +708,8 @@ void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
-                                         unsigned char Value,
-                                         SMLoc Loc, bool AllowOmission) {
+                                         unsigned char Value, SMLoc Loc,
+                                         bool AllowOmission) {
   newSpecialFragment<MCOrgFragment>(*Offset, Value, Loc, AllowOmission);
 }
 

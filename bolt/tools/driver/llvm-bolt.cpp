@@ -255,8 +255,8 @@ static int boltAlignMode(int argc, char **argv, StringRef ToolPath) {
           (Twine("--generate-function-layout-file=") + NaturalLayoutB).str()))
     report_error(opts::InputFilename2, std::move(E));
 
-  if (Error E = bolt::mergeFunctionLayouts(
-          NaturalLayoutA, NaturalLayoutB, Merged, outs()))
+  if (Error E = bolt::mergeFunctionLayouts(NaturalLayoutA, NaturalLayoutB,
+                                           Merged, outs()))
     report_error("llvm-bolt-align", std::move(E));
 
   outs() << "BOLT-ALIGN: rewriting binary A\n";

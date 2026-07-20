@@ -104,7 +104,8 @@ static std::vector<Match> findMatches(ArrayRef<Entry> EntriesA,
   return Matches;
 }
 
-static std::vector<Match> findLongestIncreasingSubsequence(ArrayRef<Match> Matches) {
+static std::vector<Match>
+findLongestIncreasingSubsequence(ArrayRef<Match> Matches) {
   if (Matches.empty())
     return {};
 
@@ -136,10 +137,8 @@ static std::vector<Match> findLongestIncreasingSubsequence(ArrayRef<Match> Match
 
 } // namespace
 
-Error bolt::mergeFunctionLayouts(StringRef PathA,
-                                 StringRef PathB,
-                                 StringRef OutputPath,
-                                 raw_ostream &Log) {
+Error bolt::mergeFunctionLayouts(StringRef PathA, StringRef PathB,
+                                 StringRef OutputPath, raw_ostream &Log) {
   Expected<std::vector<Entry>> EntriesA = parseFile(PathA);
   if (!EntriesA)
     return EntriesA.takeError();
@@ -171,7 +170,8 @@ Error bolt::mergeFunctionLayouts(StringRef PathA,
       MergedOff = alignTo(std::max(AOff, BOff), LayoutAlignment);
     } else {
       const uint64_t RequiredGap = std::max(AOff - PrevAOff, BOff - PrevBOff);
-      MergedOff = alignTo(PrevMergedOff + RequiredGap + LayoutSlack, LayoutAlignment);
+      MergedOff =
+          alignTo(PrevMergedOff + RequiredGap + LayoutSlack, LayoutAlignment);
     }
 
     OS << A.Name << " 0x" << Twine::utohexstr(MergedOff) << "\n";
