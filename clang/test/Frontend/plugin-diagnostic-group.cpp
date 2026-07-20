@@ -11,14 +11,15 @@
 // RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
 // RUN:   -plugin print-fns -plugin-arg-print-fns -warn-decls %t/simple.cpp 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN %s
-// A warning is silenced by -Wno-<group> and by the -Wno-plugin umbrella.
+// A warning is silenced by -Wno-<group>. (The -Wplugin umbrella and the
+// per-group / most-specific-wins mechanics are covered by DiagnosticTest unit
+// tests; with a single plugin loaded -Wno-plugin behaves identically to
+// -Wno-<group>, so it is not re-tested here.)
 // RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
 // RUN:   -plugin print-fns -plugin-arg-print-fns -warn-decls \
 // RUN:   -Wno-print-fns-plugin %t/simple.cpp 2>&1 | FileCheck --check-prefix=SILENT %s
-// RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
-// RUN:   -plugin print-fns -plugin-arg-print-fns -warn-decls \
-// RUN:   -Wno-plugin %t/simple.cpp 2>&1 | FileCheck --check-prefix=SILENT %s
-// A warning is silenced by the -Wno-user-defined-warnings root over every group.
+// A warning is silenced by the -Wno-user-defined-warnings root over every group
+// (a static group reaching runtime plugin members -- a distinct code path).
 // RUN: %clang_cc1 -load %llvmshlibdir/PrintFunctionNames%pluginext \
 // RUN:   -plugin print-fns -plugin-arg-print-fns -warn-decls \
 // RUN:   -Wno-user-defined-warnings %t/simple.cpp 2>&1 | FileCheck --check-prefix=SILENT %s
