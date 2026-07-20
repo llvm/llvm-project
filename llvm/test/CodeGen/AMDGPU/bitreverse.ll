@@ -2,11 +2,11 @@
 ; RUN: llc < %s -mtriple=amdgpu6.00-- | FileCheck %s --check-prefix=SI
 ; RUN: llc < %s -mtriple=amdgpu8.02-- -mattr=-flat-for-global | FileCheck %s --check-prefix=FLAT
 ; RUN: llc < %s -mtriple=amdgpu8.03-- -mattr=-flat-for-global | FileCheck %s --check-prefix=FLAT
-; RUN: llc < %s -mtriple=amdgpu8.03-- -global-isel -global-isel-abort=2 | FileCheck %s --check-prefix=GISEL
+; RUN: llc < %s -mtriple=amdgpu8.03-- -global-isel | FileCheck %s --check-prefix=GISEL
 ; RUN: llc < %s -mtriple=amdgpu11.00-- -mattr=+real-true16 -mattr=-flat-for-global | FileCheck %s --check-prefixes=GFX11-FLAT,GFX11-FLAT-TRUE16
 ; RUN: llc < %s -mtriple=amdgpu11.00-- -mattr=-real-true16 -mattr=-flat-for-global | FileCheck %s --check-prefixes=GFX11-FLAT,GFX11-FLAT-FAKE16
 ; RUN: llc < %s -mtriple=amdgpu11.00-- -mattr=+real-true16 -global-isel | FileCheck %s --check-prefixes=GFX11-GISEL,GFX11-GISEL-TRUE16
-; RUN: llc < %s -mtriple=amdgpu11.00-- -mattr=-real-true16 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=GFX11-GISEL,GFX11-GISEL-FAKE16
+; RUN: llc < %s -mtriple=amdgpu11.00-- -mattr=-real-true16 -global-isel | FileCheck %s --check-prefixes=GFX11-GISEL,GFX11-GISEL-FAKE16
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
