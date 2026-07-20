@@ -336,8 +336,9 @@ FunctionSamples *SampleContextTracker::getBaseSamplesFor(FunctionId Name,
     for (auto *CSamples : FuncToCtxtProfiles[Name]) {
       SampleContext &Context = CSamples->getContext();
       // Skip inlined/merged contexts. Also skip SyntheticContext: its node was
-      // already relocated into the base by an earlier promotion (which frees the
-      // original subtree), so re-promoting it is redundant and a use-after-free.
+      // already relocated into the base by an earlier promotion (which frees
+      // the original subtree), so re-promoting it is redundant and a
+      // use-after-free.
       if (Context.hasState(InlinedContext) || Context.hasState(MergedContext) ||
           Context.hasState(SyntheticContext))
         continue;
