@@ -34472,6 +34472,17 @@ AArch64TargetLowering::LowerGET_ACTIVE_LANE_MASK(SDValue Op,
                      DAG.getVectorIdxConstant(0, DL));
 }
 
+static unsigned getSVEOpcodeForFPToInt(unsigned Opc) {
+  switch (Opc) {
+  case ISD::FP_TO_UINT:
+    return AArch64ISD::FCVTZU_MERGE_PASSTHRU;
+  case ISD::FP_TO_SINT:
+    return AArch64ISD::FCVTZS_MERGE_PASSTHRU;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+}
+
 SDValue AArch64TargetLowering::tryLowerFPToIntToSVE(SDValue Op,
                                                     SelectionDAG &DAG) const {
   // Strict FP_TO_INT is not yet implemented.
@@ -34480,18 +34491,6 @@ SDValue AArch64TargetLowering::tryLowerFPToIntToSVE(SDValue Op,
 
   EVT InVT = Op.getOperand(0).getValueType();
   EVT VT = Op.getValueType();
-
-  unsigned NewOpcode;
-  switch (Op.getOpcode()) {
-  case ISD::FP_TO_UINT:
-    NewOpcode = AArch64ISD::FCVTZU_MERGE_PASSTHRU;
-    break;
-  case ISD::FP_TO_SINT:
-    NewOpcode = AArch64ISD::FCVTZS_MERGE_PASSTHRU;
-    break;
-  default:
-    llvm_unreachable("Unexpected opcode");
-  }
 
   SDLoc DL(Op);
   if (VT.isScalableVector()) {
@@ -34506,22 +34505,30 @@ SDValue AArch64TargetLowering::tryLowerFPToIntToSVE(SDValue Op,
     // Let common code split the operation.
     if (InVT == MVT::nxv8f32)
       return Op;
-    return LowerToPredicatedOp(Op, DAG, NewOpcode);
+
+    SmallVector<SDValue, 4> Operands;
+    Operands.push_back(getPredicateForVector(DAG, DL, VT));
+    Operands.push_back(Op.getOperand(0));
+    Operands.push_back(DAG.getPOISON(VT));
+    return DAG.getNode(getSVEOpcodeForFPToInt(Op.getOpcode()), DL, VT, Operands,
+                       Op->getFlags());
   }
 
   bool UseSVE = !Subtarget->isNeonAvailable();
   if (useSVEForFixedLengthVectorVT(VT, UseSVE) ||
       useSVEForFixedLengthVectorVT(InVT, UseSVE))
-    return LowerFixedLengthFPToIntToSVE(Op, DAG, NewOpcode);
+    return LowerFixedLengthFPToIntToSVE(Op, DAG);
 
   return SDValue();
 }
 
-SDValue AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(
-    SDValue Op, SelectionDAG &DAG, unsigned Opcode) const {
+SDValue
+AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(SDValue Op,
+                                                    SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
   assert(!Op->isStrictFPOpcode() && "Strict FP_TO_INT not yet supported");
+  unsigned Opcode = getSVEOpcodeForFPToInt(Op.getOpcode());
 
   SDLoc DL(Op);
   SDValue Val = Op.getOperand(0);
