@@ -822,12 +822,13 @@ bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
 
 std::optional<bool>
 ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
-  bool IsConditionImplied = CS.isConditionImplied(Coefficients);
+  const auto &[SubCS, NewCoefficients] = CS.getSubSystem(Coefficients);
+  bool IsConditionImplied = SubCS.isConditionImplied(NewCoefficients);
 
   if (IsEq || IsNe) {
-    auto NegatedOrEqual = ConstraintSystem::negateOrEqual(Coefficients);
+    auto NegatedOrEqual = ConstraintSystem::negateOrEqual(NewCoefficients);
     bool IsNegatedOrEqualImplied =
-        !NegatedOrEqual.empty() && CS.isConditionImplied(NegatedOrEqual);
+        !NegatedOrEqual.empty() && SubCS.isConditionImplied(NegatedOrEqual);
 
     // In order to check that `%a == %b` is true (equality), both conditions `%a
     // >= %b` and `%a <= %b` must hold true. When checking for equality (`IsEq`
@@ -835,12 +836,13 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
     if (IsConditionImplied && IsNegatedOrEqualImplied)
       return IsEq;
 
-    auto Negated = ConstraintSystem::negate(Coefficients);
-    bool IsNegatedImplied = !Negated.empty() && CS.isConditionImplied(Negated);
+    auto Negated = ConstraintSystem::negate(NewCoefficients);
+    bool IsNegatedImplied =
+        !Negated.empty() && SubCS.isConditionImplied(Negated);
 
-    auto StrictLessThan = ConstraintSystem::toStrictLessThan(Coefficients);
+    auto StrictLessThan = ConstraintSystem::toStrictLessThan(NewCoefficients);
     bool IsStrictLessThanImplied =
-        !StrictLessThan.empty() && CS.isConditionImplied(StrictLessThan);
+        !StrictLessThan.empty() && SubCS.isConditionImplied(StrictLessThan);
 
     // In order to check that `%a != %b` is true (non-equality), either
     // condition `%a > %b` or `%a < %b` must hold true. When checking for
@@ -855,8 +857,8 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
   if (IsConditionImplied)
     return true;
 
-  auto Negated = ConstraintSystem::negate(Coefficients);
-  auto IsNegatedImplied = !Negated.empty() && CS.isConditionImplied(Negated);
+  auto Negated = ConstraintSystem::negate(NewCoefficients);
+  auto IsNegatedImplied = !Negated.empty() && SubCS.isConditionImplied(Negated);
   if (IsNegatedImplied)
     return false;
 
@@ -868,7 +870,7 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
                               Value *B) const {
   auto R = getConstraintForSolving(Pred, A, B);
   return R.isValid(*this) &&
-         getCS(R.IsSigned).isConditionImplied(R.Coefficients);
+         getCS(R.IsSigned).isConditionImpliedInSubSystem(R.Coefficients);
 }
 
 void ConstraintInfo::transferToOtherSystem(
@@ -1867,7 +1869,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
       return false;
 
     auto &CSToUse = Info.getCS(R.IsSigned);
-    return CSToUse.isConditionImplied(R.Coefficients);
+    return CSToUse.isConditionImpliedInSubSystem(R.Coefficients);
   };
 
   bool Changed = false;

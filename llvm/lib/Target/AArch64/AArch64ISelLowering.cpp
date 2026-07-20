@@ -29365,6 +29365,84 @@ static SDValue performVselectPowCombine(SDNode *N,
   return DAG.getNode(ISD::VSELECT, DL, VT, Cond, TrueVal, NewPow);
 }
 
+// A vselect can zero the lanes with an out-of-range shift amount with either:
+//   vselect(setcc_ult(amt, EltSize), val, zeros)
+//   vselect(setcc_uge(amt, EltSize), zeros, val)
+// Returns val for whichever polarity is present and sets RequiredCC to the
+// condition code the setcc has to be using.
+static SDValue matchZeroSelectArm(SDValue TVal, SDValue FVal,
+                                  ISD::CondCode &RequiredCC) {
+  if (ISD::isConstantSplatVectorAllZeros(FVal.getNode())) {
+    RequiredCC = ISD::SETULT;
+    return TVal;
+  }
+  if (ISD::isConstantSplatVectorAllZeros(TVal.getNode())) {
+    RequiredCC = ISD::SETUGE;
+    return FVal;
+  }
+  return SDValue();
+}
+
+// ushl already produces zero for shift amounts of EltSize or more, so a
+// select zeroing those lanes is redundant. However, ushl reads each lane's
+// shift amount as a signed value from its low byte and would misread amounts
+// above 127, so the amounts must either be provably at most 127 or get
+// clamped to EltSize with umin.
+static SDValue foldMaskedShiftToUSHL(SelectionDAG &DAG,
+                                     const AArch64Subtarget *Subtarget,
+                                     SDNode *N, SDValue X, SDValue Amt,
+                                     SDValue Cond, ISD::CondCode RequiredCC,
+                                     bool IsSRL) {
+  using namespace llvm::SDPatternMatch;
+  EVT VT = N->getValueType(0);
+  // ushl only exists for 64 and 128 bit vectors.
+  if (!Subtarget->isNeonAvailable() || !VT.isFixedLengthVector() ||
+      !VT.isInteger() || !(VT.is64BitVector() || VT.is128BitVector()) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
+  unsigned EltSize = VT.getScalarSizeInBits();
+  if (!sd_match(Cond, m_SetCC(m_Specific(Amt), m_SpecificInt(EltSize),
+                              m_SpecificCondCode(RequiredCC))))
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // Amounts that might exceed 127 need the umin clamp.
+  if (!DAG.computeKnownBits(Amt).getMaxValue().ule(127)) {
+    // Only SVE has a umin for 64-bit lanes.
+    if (EltSize == 64 && !Subtarget->isSVEAvailable())
+      return SDValue();
+    Amt = DAG.getNode(ISD::UMIN, DL, VT, Amt, DAG.getConstant(EltSize, DL, VT));
+  }
+
+  // There is no shift right register instruction but ushl shifts right when
+  // the amount is negative.
+  if (IsSRL)
+    Amt = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Amt);
+  return DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, VT,
+      DAG.getTargetConstant(Intrinsic::aarch64_neon_ushl, DL, MVT::i32), X,
+      Amt);
+}
+
+// vselect(setcc_ult(amt, EltSize), shl(x, amt), zeros) -> ushl(x, amt)
+// vselect(setcc_ult(amt, EltSize), srl(x, amt), zeros) -> ushl(x, -amt)
+static SDValue
+performVSelectMaskedShiftCombine(SDNode *N, SelectionDAG &DAG,
+                                 const AArch64Subtarget *Subtarget) {
+  ISD::CondCode RequiredCC;
+  SDValue Shift =
+      matchZeroSelectArm(N->getOperand(1), N->getOperand(2), RequiredCC);
+  if (!Shift ||
+      (Shift.getOpcode() != ISD::SHL && Shift.getOpcode() != ISD::SRL))
+    return SDValue();
+
+  return foldMaskedShiftToUSHL(DAG, Subtarget, N, Shift.getOperand(0),
+                               Shift.getOperand(1), N->getOperand(0),
+                               RequiredCC, Shift.getOpcode() == ISD::SRL);
+}
+
 // vselect (v1i1 setcc) ->
 //     vselect (v1iXX setcc)  (XX is the size of the compared operand type)
 // FIXME: Currently the type legalizer can't handle VSELECT having v1i1 as
@@ -29377,6 +29455,9 @@ static SDValue performVSelectCombine(SDNode *N,
 
   if (auto SwapResult = trySwapVSelectOperands(N, DAG))
     return SwapResult;
+
+  if (SDValue Shift = performVSelectMaskedShiftCombine(N, DAG, Subtarget))
+    return Shift;
 
   SDValue N0 = N->getOperand(0);
   SDValue IfTrue = N->getOperand(1);
