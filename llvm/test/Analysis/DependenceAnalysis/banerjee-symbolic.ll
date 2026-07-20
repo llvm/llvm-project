@@ -4,6 +4,8 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=banerjee-miv 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-BANERJEE-MIV
 
+; Assuming 1 <= n <= 100:
+;
 ;   for (int64_t i = 0; i < n; ++i)
 ;     for (int64_t j = 0; j < n; ++j) {
 ;       a[i + j] = 0;
@@ -59,6 +61,8 @@ exit:
   ret void
 }
 
+; Assuming 1 <= n <= 100:
+;
 ;   for (int64_t i = 0; i < 10; ++i)
 ;     for (int64_t j = 0; j < 10; ++j) {
 ;       a[n * i + n * j] = 0;
@@ -101,6 +105,65 @@ loop.j:
 loop.i.latch:
   %i.inc = add nuw nsw i64 %i, 1
   %i.done = icmp eq i64 %i.inc, 10
+  br i1 %i.done, label %exit, label %loop.i
+
+exit:
+  ret void
+}
+
+; Assuming 1 <= n <= 20:
+;
+;   for (int64_t i = 0; i < n; ++i)
+;     for (int64_t j = 0; j < n; ++j) {
+;       a[(int8_t)i + (int8_t)j] = 0;
+;       a[(int8_t)i + (int8_t)j + 2 * (int8_t)n] = 1;
+;     }
+;
+; The subscript recurrences are i8, while their exact backedge-taken counts
+; are i64. The widened analysis type must account for both widths.
+define void @wider_backedge_count(ptr %a, i64 range(i64 1, 21) %n) {
+; CHECK-ALL-LABEL: 'wider_backedge_count'
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
+; CHECK-ALL-NEXT:    da analyze - output [* *]!
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
+; CHECK-ALL-NEXT:    da analyze - output [* *|<]!
+; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
+; CHECK-ALL-NEXT:    da analyze - output [* *]!
+;
+; CHECK-BANERJEE-MIV-LABEL: 'wider_backedge_count'
+; CHECK-BANERJEE-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
+; CHECK-BANERJEE-MIV-NEXT:    da analyze - output [* *]!
+; CHECK-BANERJEE-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
+; CHECK-BANERJEE-MIV-NEXT:    da analyze - none!
+; CHECK-BANERJEE-MIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
+; CHECK-BANERJEE-MIV-NEXT:    da analyze - output [* *]!
+;
+entry:
+  %n.i8 = trunc nuw nsw i64 %n to i8
+  %twice.n = shl nuw nsw i8 %n.i8, 1
+  br label %loop.i
+
+loop.i:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  %i.i8 = trunc nuw nsw i64 %i to i8
+  br label %loop.j
+
+loop.j:
+  %j = phi i64 [ 0, %loop.i ], [ %j.inc, %loop.j ]
+  %j.i8 = trunc nuw nsw i64 %j to i8
+  %sum = add nuw nsw i8 %i.i8, %j.i8
+  %far = add nuw nsw i8 %sum, %twice.n
+  %gep.0 = getelementptr i8, ptr %a, i8 %sum
+  %gep.1 = getelementptr i8, ptr %a, i8 %far
+  store i8 0, ptr %gep.0
+  store i8 1, ptr %gep.1
+  %j.inc = add nuw nsw i64 %j, 1
+  %j.done = icmp eq i64 %j.inc, %n
+  br i1 %j.done, label %loop.i.latch, label %loop.j
+
+loop.i.latch:
+  %i.inc = add nuw nsw i64 %i, 1
+  %i.done = icmp eq i64 %i.inc, %n
   br i1 %i.done, label %exit, label %loop.i
 
 exit:

@@ -1924,15 +1924,27 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
 //===----------------------------------------------------------------------===//
 
 namespace {
+/// A closed signed interval containing the possible values of part of the
+/// Banerjee subscript-difference expression.
+/// A null Lower denotes -infinity, and a null Upper denotes +infinity. If
+/// both finite endpoints are in reverse signed order (Lower >s Upper), the
+/// interval is empty.
 struct BanerjeeInterval {
   const SCEV *Lower;
   const SCEV *Upper;
 
   BanerjeeInterval(const SCEV *Lower, const SCEV *Upper)
       : Lower(Lower), Upper(Upper) {}
+
+  bool isEmpty(ScalarEvolution &SE) const {
+    return Lower && Upper &&
+           SE.isKnownPredicate(CmpInst::ICMP_SGT, Lower, Upper);
+  }
 };
 } // namespace
 
+/// Add two intervals. A missing endpoint propagates the corresponding
+/// infinity.
 static BanerjeeInterval addIntervals(const BanerjeeInterval &A,
                                      const BanerjeeInterval &B,
                                      ScalarEvolution &SE) {
@@ -1945,8 +1957,9 @@ static BanerjeeInterval addIntervals(const BanerjeeInterval &A,
   return BanerjeeInterval(Lower, Upper);
 }
 
-// Both intervals conservatively contain the feasible values, so their
-// intersection does too and may provide tighter one-sided bounds.
+/// Intersect two intervals. Both inputs conservatively contain the feasible
+/// values, so their intersection does too and may provide tighter one-sided
+/// bounds.
 static BanerjeeInterval intersectIntervals(const BanerjeeInterval &A,
                                            const BanerjeeInterval &B,
                                            ScalarEvolution &SE) {
@@ -1959,30 +1972,32 @@ static BanerjeeInterval intersectIntervals(const BanerjeeInterval &A,
   return BanerjeeInterval(Lower, Upper);
 }
 
+/// Return the singleton interval containing C.
 static BanerjeeInterval constantInterval(const SCEV *C) {
   return BanerjeeInterval(C, C);
 }
 
+/// Return the canonical empty interval [1, 0].
 static BanerjeeInterval emptyInterval(Type *Ty, ScalarEvolution &SE) {
   return BanerjeeInterval(SE.getOne(Ty), SE.getZero(Ty));
 }
 
-static bool isEmptyInterval(const BanerjeeInterval &Interval,
-                            ScalarEvolution &SE) {
-  return Interval.Lower && Interval.Upper &&
-         SE.isKnownPredicate(CmpInst::ICMP_SGT, Interval.Lower, Interval.Upper);
-}
-
+/// Compute the range of Coeff * X for Lower <=s X <=s Upper.
 static BanerjeeInterval signedRangeInterval(const SCEV *Coeff,
                                             const SCEV *Lower,
                                             const SCEV *Upper,
                                             ScalarEvolution &SE) {
+  // Coeff and the endpoints have already been extended to WideType. The
+  // width proof in banerjeeMIVtest guarantees that these multiplications do
+  // not wrap, so their SCEV values match mathematical signed integers.
   const SCEV *LowerValue = SE.getMulExpr(Coeff, Lower);
   const SCEV *UpperValue = SE.getMulExpr(Coeff, Upper);
   return BanerjeeInterval(SE.getSMinExpr(LowerValue, UpperValue),
                           SE.getSMaxExpr(LowerValue, UpperValue));
 }
 
+/// Compute the range of Coeff * X for 0 <= X <= Upper. A null Upper denotes
+/// an unbounded nonnegative X.
 static BanerjeeInterval variableInterval(const SCEV *Coeff, const SCEV *Upper,
                                          ScalarEvolution &SE) {
   const SCEV *Zero = SE.getZero(Coeff->getType());
@@ -1998,6 +2013,8 @@ static BanerjeeInterval variableInterval(const SCEV *Coeff, const SCEV *Upper,
   return signedRangeInterval(Coeff, Zero, Upper, SE);
 }
 
+/// Compute any finite one-sided bound available when the iteration index is
+/// unbounded for a strict (< or >) direction.
 static BanerjeeInterval
 unboundedStrictDirectionInterval(const SCEV *ACoeff, const SCEV *BCoeff,
                                  unsigned char Direction, ScalarEvolution &SE) {
@@ -2028,6 +2045,7 @@ unboundedStrictDirectionInterval(const SCEV *ACoeff, const SCEV *BCoeff,
   }
 }
 
+/// Return the smallest closed interval containing Values.
 static BanerjeeInterval intervalFromValues(ArrayRef<const SCEV *> Values,
                                            ScalarEvolution &SE) {
   assert(!Values.empty() && "expected at least one value");
@@ -2040,31 +2058,48 @@ static BanerjeeInterval intervalFromValues(ArrayRef<const SCEV *> Values,
   return BanerjeeInterval(Lower, Upper);
 }
 
-static const SCEV *evaluateBanerjeeTerm(const SCEV *A, const SCEV *SrcIndex,
-                                        const SCEV *B, const SCEV *DstIndex,
-                                        ScalarEvolution &SE) {
+/// Evaluate one loop level's contribution A * SrcIndex - B * DstIndex to the
+/// complete source-minus-destination subscript difference.
+static const SCEV *
+evaluateSubscriptDifference(const SCEV *A, const SCEV *SrcIndex, const SCEV *B,
+                            const SCEV *DstIndex, ScalarEvolution &SE) {
   return SE.getMinusSCEV(SE.getMulExpr(A, SrcIndex),
                          SE.getMulExpr(B, DstIndex));
 }
 
-// banerjeeMIVtest -
-// Use Banerjee's Inequalities to test an MIV subscript pair.
-// (Wolfe calls this the Extreme Value Test; see Section 2.5.2 of
-// Optimizing Supercompilers for Supercomputers, Michael Wolfe.)
-//
-// The original Wolfe formulae are algebraically simplified for normalized
-// loops (L_k=0, N_k=1); we now evaluate the subscript difference directly
-// at the vertices of the constraint polytope for each direction (e.g., (0,1),
-// (0,U), (U-1,U) for <). All operands are extended to a sufficiently wide
-// SCEV integer type before the arithmetic, so symbolic expressions remain
-// available to ScalarEvolution without wrapping intermediate
-// results.
-//
-// Loop bounds are backedge-taken counts (maximum normalized iteration
-// index). A single-iteration loop has bound 0, making < and > impossible.
-// Unknown interval endpoints are treated conservatively as infinities.
-//
-// Return true if dependence disproved.
+/// Return the widest type used by a subscript or by an exact backedge-taken
+/// count of one of its recurrences.
+static Type *getBanerjeeBaseType(const SCEV *Src, const SCEV *Dst,
+                                 ScalarEvolution &SE) {
+  Type *BaseType = SE.getWiderType(Src->getType(), Dst->getType());
+  for (const SCEV *Subscript : {Src, Dst}) {
+    while (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Subscript)) {
+      const SCEV *MaxIterIndex = SE.getBackedgeTakenCount(AddRec->getLoop());
+      if (!isa<SCEVCouldNotCompute>(MaxIterIndex))
+        BaseType = SE.getWiderType(BaseType, MaxIterIndex->getType());
+      Subscript = AddRec->getStart();
+    }
+  }
+  return BaseType;
+}
+
+/// banerjeeMIVtest -
+/// Use Banerjee's Inequalities to test an MIV subscript pair.
+/// (Wolfe calls this the Extreme Value Test; see Section 2.5.2 of
+/// Optimizing Supercompilers for Supercomputers, Michael Wolfe.)
+///
+/// The original Wolfe formulae are algebraically simplified for normalized
+/// loops (L_k=0, N_k=1); we now evaluate the subscript difference directly
+/// at the vertices of the constraint polytope for each direction (e.g., (0,1),
+/// (0,U), (U-1,U) for <). All operands are extended to a sufficiently wide
+/// SCEV integer type before the arithmetic, so symbolic expressions remain
+/// available to ScalarEvolution without wrapping intermediate results.
+///
+/// Loop bounds are backedge-taken counts (maximum normalized iteration
+/// index). A single-iteration loop has bound 0, making < and > impossible.
+/// Unknown interval endpoints are treated conservatively as infinities.
+///
+/// Return true if dependence disproved.
 bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                                      const SmallBitVector &Loops,
                                      FullDependence &Result) const {
@@ -2074,14 +2109,17 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
   LLVM_DEBUG(dbgs() << "starting Banerjee\n");
   ++BanerjeeApplications;
 
-  unsigned SrcBits = SE->getTypeSizeInBits(Src->getType());
-  unsigned DstBits = SE->getTypeSizeInBits(Dst->getType());
-  unsigned BaseBits = std::max(SrcBits, DstBits);
-  // Let B = BaseBits and L = MaxLevels. Coefficients are signed B-bit values,
-  // so |C| <= 2^(B-1), while normalized iteration indices satisfy I < 2^B.
-  // Thus |C*I| < 2^(2B-1), and each term |A*I-B*J| < 2^(2B). The total is
-  // bounded by L*2^(2B) <= 2^(2B+L); one additional bit holds the sign, so the
-  // WideBits that can hold arthimetic should be 2B+L+1.
+  Type *BaseType = getBanerjeeBaseType(Src, Dst, *SE);
+  unsigned BaseBits = SE->getTypeSizeInBits(BaseType);
+  // Let B be the maximum bit width among the source and destination
+  // subscripts and the exact backedge-taken counts of the loops appearing
+  // in their recurrences. Let L = MaxLevels. A coefficient C is a signed
+  // B-bit value, so |C| <= 2^(B-1). A normalized iteration index I is a
+  // nonnegative B-bit value, so I < 2^B. Therefore |C*I| < 2^(2B-1), and one
+  // level's contribution |A*I-B*J| < 2^(2B). The accumulated
+  // subscript-difference bound across L levels is less than
+  // L*2^(2B) <= 2^(2B+L). One additional bit holds the sign, so 2B+L+1 bits
+  // are sufficient for every intermediate Banerjee computation.
   unsigned WideBits = 2 * BaseBits + MaxLevels + 1;
   Type *WideType = IntegerType::get(F->getContext(), WideBits);
   const SCEV *Zero = SE->getZero(WideType);
@@ -2100,8 +2138,8 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
   if (!B0)
     return false;
 
-  A0 = SE->getTruncateOrSignExtend(A0, WideType);
-  B0 = SE->getTruncateOrSignExtend(B0, WideType);
+  A0 = SE->getNoopOrSignExtend(A0, WideType);
+  B0 = SE->getNoopOrSignExtend(B0, WideType);
   const SCEV *Delta = SE->getMinusSCEV(B0, A0);
   LLVM_DEBUG(dbgs() << "\tDelta = " << *Delta << '\n');
 
@@ -2146,9 +2184,9 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
   return false;
 }
 
-// Walks through the subscript and collects the coefficient and maximum
-// iteration index associated with each loop level. Both are extended to the
-// widened analysis type before Banerjee arithmetic.
+/// Walks through the subscript and collects the coefficient and maximum
+/// iteration index associated with each loop level. Both are extended to the
+/// widened analysis type before Banerjee arithmetic.
 const SCEV *
 DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
                                  Type *WideType,
@@ -2157,21 +2195,22 @@ DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
   while (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Subscript)) {
     unsigned K =
         SrcFlag ? mapSrcLoop(AddRec->getLoop()) : mapDstLoop(AddRec->getLoop());
-    if (K == 0 || K > MaxLevels || SeenLevels[K])
-      return nullptr;
+    assert(K > 0 && K <= MaxLevels && "invalid mapped loop level");
+    assert(!SeenLevels[K] && "duplicate recurrence for loop level");
     SeenLevels.set(K);
 
     const SCEV *Step = AddRec->getStepRecurrence(*SE);
-    CI[K].Coeff = SE->getTruncateOrSignExtend(Step, WideType);
-    if (const SCEV *MaxIterIndex =
-            collectUpperBound(AddRec->getLoop(), AddRec->getType())) {
-      // Backedge counts are nonnegative. Prefer a sign extension when SCEV can
-      // prove that fact because it preserves more symbolic relationships than
-      // a zero extension; otherwise zero extension is always conservative.
+    CI[K].Coeff = SE->getNoopOrSignExtend(Step, WideType);
+    const SCEV *MaxIterIndex = SE->getBackedgeTakenCount(AddRec->getLoop());
+    if (!isa<SCEVCouldNotCompute>(MaxIterIndex)) {
+      // A backedge-taken count is semantically an unsigned, nonnegative
+      // iteration index. When its signed nonnegativity is also known, sign
+      // extension preserves more symbolic relationships. Otherwise use zero
+      // extension; this fallback does not assume that the value is negative.
       CI[K].MaxIterIndex =
           SE->isKnownNonNegative(MaxIterIndex)
-              ? SE->getTruncateOrSignExtend(MaxIterIndex, WideType)
-              : SE->getTruncateOrZeroExtend(MaxIterIndex, WideType);
+              ? SE->getNoopOrSignExtend(MaxIterIndex, WideType)
+              : SE->getNoopOrZeroExtend(MaxIterIndex, WideType);
     }
 
     Subscript = AddRec->getStart();
@@ -2179,7 +2218,7 @@ DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
   return Subscript;
 }
 
-// Looks through all the bounds info and computes the selected lower bound.
+/// Looks through all the bounds info and computes the selected lower bound.
 const SCEV *DependenceInfo::getLowerBound(ArrayRef<BoundInfo> Bound) const {
   const SCEV *Sum = Bound[1].Lower[Bound[1].Direction];
   for (unsigned K = 2; Sum && K <= MaxLevels; ++K) {
@@ -2190,7 +2229,7 @@ const SCEV *DependenceInfo::getLowerBound(ArrayRef<BoundInfo> Bound) const {
   return Sum;
 }
 
-// Looks through all the bounds info and computes the selected upper bound.
+/// Looks through all the bounds info and computes the selected upper bound.
 const SCEV *DependenceInfo::getUpperBound(ArrayRef<BoundInfo> Bound) const {
   const SCEV *Sum = Bound[1].Upper[Bound[1].Direction];
   for (unsigned K = 2; Sum && K <= MaxLevels; ++K) {
@@ -2201,7 +2240,8 @@ const SCEV *DependenceInfo::getUpperBound(ArrayRef<BoundInfo> Bound) const {
   return Sum;
 }
 
-// Returns true iff the current bounds are plausible.
+/// Returns false when the selected bounds are proven infeasible. Returns true
+/// when they may be feasible or ScalarEvolution cannot decide.
 bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
                                 MutableArrayRef<BoundInfo> Bound,
                                 const SCEV *Delta) const {
@@ -2210,7 +2250,7 @@ bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
     unsigned char Direction = Bound[K].Direction;
     BanerjeeInterval Interval(Bound[K].Lower[Direction],
                               Bound[K].Upper[Direction]);
-    if (isEmptyInterval(Interval, *SE))
+    if (Interval.isEmpty(*SE))
       return false;
   }
   if (const SCEV *Lower = getLowerBound(Bound))
@@ -2222,7 +2262,7 @@ bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
   return true;
 }
 
-// Hierarchically expands the direction-vector search space.
+/// Hierarchically expands the direction-vector search space.
 unsigned DependenceInfo::exploreDirections(unsigned Level,
                                            MutableArrayRef<BoundInfo> Bound,
                                            const SmallBitVector &Loops,
@@ -2260,21 +2300,21 @@ unsigned DependenceInfo::exploreDirections(unsigned Level,
   return NewDeps;
 }
 
-// Computes the lower and upper bounds for level K using the * direction.
-//
-// At this level the contribution to the subscript difference is
-//
-//   F_k(i, j) = A_k i - B_k j.
-//
-// The * direction imposes no relation between i and j, so the feasible domain
-// is the rectangle [0, U_A] x [0, U_B]. The extrema of this affine expression
-// occur at its corners. Equivalently, when U_A = U_B = U, Wolfe's normalized
-// bounds are
-//
-//   LB^*_k = (A^-_k - B^+_k) U
-//   UB^*_k = (A^+_k - B^-_k) U,
-//
-// where X^+ = max(X, 0) and X^- = min(X, 0).
+/// Computes the lower and upper bounds for level K using the * direction.
+///
+/// At this level the contribution to the subscript difference is
+///
+///   F_k(i, j) = A_k i - B_k j.
+///
+/// The * direction imposes no relation between i and j, so the feasible domain
+/// is the rectangle [0, U_A] x [0, U_B]. The extrema of this affine expression
+/// occur at its corners. Equivalently, when U_A = U_B = U, Wolfe's normalized
+/// bounds are
+///
+///   LB^*_k = (A^-_k - B^+_k) U
+///   UB^*_k = (A^+_k - B^-_k) U,
+///
+/// where X^+ = max(X, 0) and X^- = min(X, 0).
 void DependenceInfo::findBoundsALL(ArrayRef<CoefficientInfo> A,
                                    ArrayRef<CoefficientInfo> B,
                                    MutableArrayRef<BoundInfo> Bound,
@@ -2288,14 +2328,14 @@ void DependenceInfo::findBoundsALL(ArrayRef<CoefficientInfo> A,
   Bound[K].Upper[Dependence::DVEntry::ALL] = Interval.Upper;
 }
 
-// Computes the lower and upper bounds for level K using the = direction.
-//
-// Here i = j, so F_k(i, i) = (A_k - B_k)i over the common range
-// [0, min(U_A, U_B)]. The extrema therefore occur at the two endpoints.
-// When the common upper bound is U, Wolfe's normalized bounds are
-//
-//   LB^=_k = (A_k - B_k)^- U
-//   UB^=_k = (A_k - B_k)^+ U.
+/// Computes the lower and upper bounds for level K using the = direction.
+///
+/// Here i = j, so F_k(i, i) = (A_k - B_k)i over the common range
+/// [0, min(U_A, U_B)]. The extrema therefore occur at the two endpoints.
+/// When the common upper bound is U, Wolfe's normalized bounds are
+///
+///   LB^=_k = (A_k - B_k)^- U
+///   UB^=_k = (A_k - B_k)^+ U.
 void DependenceInfo::findBoundsEQ(ArrayRef<CoefficientInfo> A,
                                   ArrayRef<CoefficientInfo> B,
                                   MutableArrayRef<BoundInfo> Bound,
@@ -2312,19 +2352,19 @@ void DependenceInfo::findBoundsEQ(ArrayRef<CoefficientInfo> A,
   Bound[K].Upper[Dependence::DVEntry::EQ] = Interval.Upper;
 }
 
-// Computes the lower and upper bounds for level K using the < direction.
-//
-// For a known common upper bound U, the feasible domain is
-// 0 <= i < j <= U. Its vertices are (0, 1), (0, U), and (U - 1, U), so
-// evaluating F_k at those points gives the exact extrema. Equivalently,
-// Wolfe's normalized bounds are
-//
-//   LB^<_k = (A^-_k - B_k)^- (U - 1) - B_k
-//   UB^<_k = (A^+_k - B_k)^+ (U - 1) - B_k.
-//
-// If U is zero the domain is empty. If no common upper bound is known, the
-// implementation computes any finite one-sided bound it can prove and leaves
-// the other side unbounded.
+/// Computes the lower and upper bounds for level K using the < direction.
+///
+/// For a known common upper bound U, the feasible domain is
+/// 0 <= i < j <= U. Its vertices are (0, 1), (0, U), and (U - 1, U), so
+/// evaluating F_k at those points gives the exact extrema. Equivalently,
+/// Wolfe's normalized bounds are
+///
+///   LB^<_k = (A^-_k - B_k)^- (U - 1) - B_k
+///   UB^<_k = (A^+_k - B_k)^+ (U - 1) - B_k.
+///
+/// If U is zero the domain is empty. If no common upper bound is known, the
+/// implementation computes any finite one-sided bound it can prove and leaves
+/// the other side unbounded.
 void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> A,
                                   ArrayRef<CoefficientInfo> B,
                                   MutableArrayRef<BoundInfo> Bound,
@@ -2349,11 +2389,12 @@ void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> A,
     const SCEV *One = SE->getOne(ACoeff->getType());
     const SCEV *MaxMinusOne = SE->getMinusSCEV(MaxIterIndex, One);
     SmallVector<const SCEV *, 3> Values;
-    Values.push_back(evaluateBanerjeeTerm(ACoeff, Zero, BCoeff, One, *SE));
     Values.push_back(
-        evaluateBanerjeeTerm(ACoeff, Zero, BCoeff, MaxIterIndex, *SE));
+        evaluateSubscriptDifference(ACoeff, Zero, BCoeff, One, *SE));
     Values.push_back(
-        evaluateBanerjeeTerm(ACoeff, MaxMinusOne, BCoeff, MaxIterIndex, *SE));
+        evaluateSubscriptDifference(ACoeff, Zero, BCoeff, MaxIterIndex, *SE));
+    Values.push_back(evaluateSubscriptDifference(ACoeff, MaxMinusOne, BCoeff,
+                                                 MaxIterIndex, *SE));
     Interval =
         intersectIntervals(Interval, intervalFromValues(Values, *SE), *SE);
   }
@@ -2361,19 +2402,19 @@ void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> A,
   Bound[K].Upper[Dependence::DVEntry::LT] = Interval.Upper;
 }
 
-// Computes the lower and upper bounds for level K using the > direction.
-//
-// For a known common upper bound U, the feasible domain is
-// 0 <= j < i <= U. Its vertices are (1, 0), (U, 0), and (U, U - 1), so
-// evaluating F_k at those points gives the exact extrema. Equivalently,
-// Wolfe's normalized bounds are
-//
-//   LB^>_k = (A_k - B^+_k)^- (U - 1) + A_k
-//   UB^>_k = (A_k - B^-_k)^+ (U - 1) + A_k.
-//
-// If U is zero the domain is empty. If no common upper bound is known, the
-// implementation computes any finite one-sided bound it can prove and leaves
-// the other side unbounded.
+/// Computes the lower and upper bounds for level K using the > direction.
+///
+/// For a known common upper bound U, the feasible domain is
+/// 0 <= j < i <= U. Its vertices are (1, 0), (U, 0), and (U, U - 1), so
+/// evaluating F_k at those points gives the exact extrema. Equivalently,
+/// Wolfe's normalized bounds are
+///
+///   LB^>_k = (A_k - B^+_k)^- (U - 1) + A_k
+///   UB^>_k = (A_k - B^-_k)^+ (U - 1) + A_k.
+///
+/// If U is zero the domain is empty. If no common upper bound is known, the
+/// implementation computes any finite one-sided bound it can prove and leaves
+/// the other side unbounded.
 void DependenceInfo::findBoundsGT(ArrayRef<CoefficientInfo> A,
                                   ArrayRef<CoefficientInfo> B,
                                   MutableArrayRef<BoundInfo> Bound,
@@ -2398,11 +2439,12 @@ void DependenceInfo::findBoundsGT(ArrayRef<CoefficientInfo> A,
     const SCEV *One = SE->getOne(ACoeff->getType());
     const SCEV *MaxMinusOne = SE->getMinusSCEV(MaxIterIndex, One);
     SmallVector<const SCEV *, 3> Values;
-    Values.push_back(evaluateBanerjeeTerm(ACoeff, One, BCoeff, Zero, *SE));
     Values.push_back(
-        evaluateBanerjeeTerm(ACoeff, MaxIterIndex, BCoeff, Zero, *SE));
+        evaluateSubscriptDifference(ACoeff, One, BCoeff, Zero, *SE));
     Values.push_back(
-        evaluateBanerjeeTerm(ACoeff, MaxIterIndex, BCoeff, MaxMinusOne, *SE));
+        evaluateSubscriptDifference(ACoeff, MaxIterIndex, BCoeff, Zero, *SE));
+    Values.push_back(evaluateSubscriptDifference(ACoeff, MaxIterIndex, BCoeff,
+                                                 MaxMinusOne, *SE));
     Interval =
         intersectIntervals(Interval, intervalFromValues(Values, *SE), *SE);
   }

@@ -651,7 +651,8 @@ private:
                              const SmallBitVector &Loops, const SCEV *Delta,
                              const FullDependence &Result) const;
 
-  /// testBounds - Returns true iff the current bounds are plausible.
+  /// testBounds - Returns true when the current bounds may be feasible
+  /// or their feasibility is unknown.
   bool testBounds(unsigned char DirKind, unsigned Level,
                   MutableArrayRef<BoundInfo> Bound, const SCEV *Delta) const;
 
