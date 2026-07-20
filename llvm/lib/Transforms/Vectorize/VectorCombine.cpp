@@ -405,9 +405,10 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Result = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
   Worklist.pushValue(Result);
   Result = Builder.CreateShuffleVector(Result, Mask);
-  Worklist.pushValue(Result);
-  if (NeedCast)
+  if (NeedCast) {
+    Worklist.pushValue(Result);
     Result = Builder.CreateBitOrPointerCast(Result, I.getType());
+  }
 
   replaceValue(I, *Result);
   ++NumVecLoad;
