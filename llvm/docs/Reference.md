@@ -33,6 +33,7 @@ FaultMaps
 Atomics
 ExceptionHandling
 Extensions
+AlignedBundling
 HowToSetUpLLVMStyleRTTI
 BlockFrequencyTerminology
 BranchWeightMetadata
@@ -170,6 +171,10 @@ XRayFDRFormat
 
 {doc}`Extensions`
 :   LLVM-specific extensions to tools and formats LLVM seeks compatibility with.
+
+{doc}`AlignedBundling`
+:   The `.bundle_align_mode`, `.bundle_lock`, and `.bundle_unlock` assembler
+    directives.
 
 {doc}`HowToSetUpLLVMStyleRTTI`
 :   How to make `isa<>`, `dyn_cast<>`, etc. available for clients of your
