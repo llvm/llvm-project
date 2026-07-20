@@ -1,4 +1,7 @@
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -14,13 +17,37 @@ static cl::opt<bool> Wave("wave-goodbye", cl::init(false),
 static cl::opt<bool> LastWords("last-words", cl::init(false),
                                cl::desc("say last words (suppress codegen)"));
 
+static cl::opt<bool>
+    ByeWarn("bye-warn", cl::init(false),
+            cl::desc("emit a warning per function through the frontend, in the "
+                     "backend plugin's own warning group"));
+
 namespace {
+
+// A backend (IR-layer) diagnostic that names its own warning group. Overriding
+// getWarningGroup() lets the frontend control it with -W<group> just like a
+// frontend plugin's diagnostic, instead of the coarse -Wbackend-plugin
+// umbrella. Using a plugin diagnostic kind routes it through the frontend's
+// generic backend-diagnostic path. By convention the group is "<plugin>-plugin".
+class DiagnosticInfoBye : public DiagnosticInfo {
+  const Twine &Msg;
+
+public:
+  DiagnosticInfoBye(const Twine &Msg LLVM_LIFETIME_BOUND)
+      : DiagnosticInfo(getNextAvailablePluginDiagnosticKind(), DS_Warning),
+        Msg(Msg) {}
+  void print(DiagnosticPrinter &DP) const override { DP << Msg; }
+  StringRef getWarningGroup() const override { return "bye-plugin"; }
+};
 
 bool runBye(Function &F) {
   if (Wave) {
     errs() << "Bye: ";
     errs().write_escaped(F.getName()) << '\n';
   }
+  if (ByeWarn)
+    F.getContext().diagnose(
+        DiagnosticInfoBye("Bye saw function '" + F.getName() + "'"));
   return false;
 }
 
