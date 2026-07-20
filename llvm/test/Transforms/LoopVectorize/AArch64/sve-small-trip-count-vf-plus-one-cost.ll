@@ -13,7 +13,7 @@ define void @tc3_udiv_i8_reject(ptr noalias %a, ptr noalias %b,
 ; DBG: LV: Picking MaxVF=2 with 1 scalar iteration remaining.
 ; DBG: LV: Scalar loop costs: 9.
 ; DBG: Cost for VF 2: 19
-; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 37 >= scalar cost 27.
+; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 47 >= scalar cost 27.
 ; DBG: LV: Selecting VF: 1.
 ; DBG: LV: Vectorization is possible but not beneficial.
 entry:
@@ -44,7 +44,7 @@ define void @tc3_smin_i8_reject(ptr noalias %a, ptr noalias %b) #0 {
 ; DBG: LV: Picking MaxVF=2 with 1 scalar iteration remaining.
 ; DBG: LV: Scalar loop costs: 10.
 ; DBG: Cost for VF 2: 15
-; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 35 >= scalar cost 30.
+; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 40 >= scalar cost 30.
 ; DBG: LV: Selecting VF: 1.
 ; DBG: LV: Vectorization is possible but not beneficial.
 entry:
@@ -100,7 +100,7 @@ define void @tc5_udiv_i8_reject_ic2(ptr noalias %a, ptr noalias %b, ptr noalias 
 
 ; DBG-LABEL: LV: Checking a loop in 'tc5_udiv_i8_reject_ic2'
 ; DBG-NOT: LV: Selecting VF: 2.
-; DBG: Rejecting VF 2
+; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 85 >= scalar cost 45.
 entry:
   br label %loop
 
@@ -128,7 +128,7 @@ define void @tc5_sin_f32_select_smaller_vf(ptr noalias %a,
 
 ; DBG-LABEL: LV: Checking a loop in 'tc5_sin_f32_select_smaller_vf' 
 ; DBG: Picking MaxVF=4 with 1 scalar iteration remaining.
-; DBG: LV: Rejecting VF 4 for one-scalar-tail low trip count: vector cost 88 >= scalar cost 80.
+; DBG: LV: Accepting VF 4 for one-scalar-tail low trip count: vector cost 72 < scalar cost 80.
 ; DBG-NOT: Selecting VF: 4
 ; DBG: LV: Selecting VF: 2.
 
