@@ -15,6 +15,7 @@
 #include <cassert>
 #include <cstring>
 #include <type_traits>
+#include <iostream>
 
 struct WithTailPadding {
   int i;
@@ -70,9 +71,17 @@ void libcpp_assert_padding(const T& obj, unsigned char pad_byte) {
 #ifdef _LIBCPP_VERSION
   assert_padding(obj, pad_byte);
 #else
-  (void)f;
+  (void)obj;
   (void)pad_byte;
 #endif
+}
+
+template <class T>
+void print_memory(const T& obj) {
+  for (size_t i = 0; i < sizeof(T); ++i) {
+    std::cerr << std::hex << static_cast<int>(reinterpret_cast<const unsigned char*>(&obj)[i]) << " ";
+  }
+  std::cerr << std::endl;
 }
 
 template <class T>
@@ -84,11 +93,15 @@ void test() {
 
     T init;
     initialize(init, 10, 'a', 0xBB);
+    std::cerr << "test1 init padding should be 0xBB: " << std::endl;
+    print_memory(init);
     assert_padding(init, 0xBB);
     a.store(init);
 
     T expected;
     initialize(expected, 10, 'a', 0xAA);
+    std::cerr << "test1 expected padding should be 0xAA: " << std::endl;
+    print_memory(expected);
     assert_padding(expected, 0xAA);
 
     T original_expected; // make a copy including padding bits
@@ -96,6 +109,8 @@ void test() {
 
     T new_value;
     initialize(new_value, 42, 'b', 0xCC);
+    std::cerr << "test1 new_value padding should be 0xCC: " << std::endl;
+    print_memory(new_value);
     assert_padding(new_value, 0xCC);
 
     bool r = a.compare_exchange_strong(expected, new_value);
@@ -106,6 +121,8 @@ void test() {
     assert(loaded.i == 42);
     assert(loaded.c == 'b');
     // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
+    std::cerr << "test1 loaded padding should be 0: " << std::endl;
+    print_memory(loaded);
     libcpp_assert_padding(loaded, 0);
   }
 
@@ -115,14 +132,20 @@ void test() {
     std::atomic<T> a;
     T stored;
     initialize(stored, 10, 'a', 0xBB);
+    std::cerr << "test2 stored padding should be 0xBB: " << std::endl;
+    print_memory(stored);
     assert_padding(stored, 0xBB);
     a.store(stored);
 
     T expected;
     initialize(expected, 99, 'a', 0xAA);
+    std::cerr << "test2 expected padding should be 0xAA: " << std::endl;
+    print_memory(expected);
     assert_padding(expected, 0xAA);
     T new_value;
     initialize(new_value, 42, 'b', 0xCC);
+    std::cerr << "test2 new_value padding should be 0xCC: " << std::endl;
+    print_memory(new_value);
     assert_padding(new_value, 0xCC);
 
     bool r = a.compare_exchange_strong(expected, new_value);
@@ -131,11 +154,15 @@ void test() {
     assert(expected.i == 10);
     assert(expected.c == 'a');
     // expected is updated to contain atomic's value and in libc++, the paddings bits are always zero
+    std::cerr << "test2 expected padding should be 0: " << std::endl;
+    print_memory(expected);
     libcpp_assert_padding(expected, 0);
     T loaded = a.load();
     assert(loaded.i == 10);
     assert(loaded.c == 'a');
     // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
+    std::cerr << "test2 loaded padding should be 0: " << std::endl;
+    print_memory(loaded);
     libcpp_assert_padding(loaded, 0);
   }
   {
@@ -144,11 +171,15 @@ void test() {
     std::atomic<T> a;
     T init;
     initialize(init, 10, 'a', 0x00);
+    std::cerr << "test3 init padding should be 0x00: " << std::endl;
+    print_memory(init);
     assert_padding(init, 0x00);
     a.store(init);
 
     T expected;
     initialize(expected, 10, 'a', 0x00);
+    std::cerr << "test3 expected padding should be 0x00: " << std::endl;
+    print_memory(expected);
     assert_padding(expected, 0x00);
 
     T original_expected; // make a copy including padding bits
@@ -156,6 +187,8 @@ void test() {
 
     T new_value;
     initialize(new_value, 42, 'b', 0x42);
+    std::cerr << "test3 new_value padding should be 0x42: " << std::endl;
+    print_memory(new_value);
     assert_padding(new_value, 0x42);
 
     bool r = a.compare_exchange_strong(expected, new_value);
@@ -166,6 +199,8 @@ void test() {
     assert(loaded.i == 42);
     assert(loaded.c == 'b');
     // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
+    std::cerr << "test3 loaded padding should be 0: " << std::endl;
+    print_memory(loaded);
     libcpp_assert_padding(loaded, 0);
   }
 
@@ -175,15 +210,21 @@ void test() {
     std::atomic<T> a;
     T stored;
     initialize(stored, 10, 'a', 0xBB);
+    std::cerr << "test4 stored padding should be 0xBB: " << std::endl;
+    print_memory(stored);
     assert_padding(stored, 0xBB);
     a.store(stored);
 
     T new_value;
     initialize(new_value, 42, 'b', 0xCC);
+    std::cerr << "test4 new_value padding should be 0xCC: " << std::endl;
+    print_memory(new_value);
     assert_padding(new_value, 0xCC);
 
     T original_expected;
     initialize(original_expected, 10, 'a', 0xAA);
+    std::cerr << "test4 original_expected padding should be 0xAA: " << std::endl;
+    print_memory(original_expected);
     assert_padding(original_expected, 0xAA);
 
     bool r                  = false;
@@ -194,6 +235,8 @@ void test() {
       assert(current_attempt < max_attempts && "compare_exchange_weak did not succeed within 3 seconds");
       T expected;
       initialize(expected, 10, 'a', 0xAA);
+      std::cerr << "test4 expected padding should be 0xAA: " << std::endl;
+      print_memory(expected);
       assert_padding(expected, 0xAA);
       r = a.compare_exchange_weak(expected, new_value);
       if (r) {
@@ -203,6 +246,8 @@ void test() {
         assert(expected.i == 10);
         assert(expected.c == 'a');
         // expected is updated to contain atomic's value and in libc++, the paddings bits are always zero
+        std::cerr << "test4 expected padding should be 0: " << std::endl;
+        print_memory(expected);
         libcpp_assert_padding(expected, 0);
       }
     }
@@ -211,6 +256,8 @@ void test() {
     assert(loaded.i == 42);
     assert(loaded.c == 'b');
     // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
+    std::cerr << "test4 loaded padding should be 0: " << std::endl;
+    print_memory(loaded);
     libcpp_assert_padding(loaded, 0);
   }
 
@@ -220,14 +267,20 @@ void test() {
     std::atomic<T> a;
     T stored;
     initialize(stored, 10, 'a', 0xBB);
+    std::cerr << "test5 stored padding should be 0xBB: " << std::endl;
+    print_memory(stored);
     assert_padding(stored, 0xBB);
     a.store(stored);
 
     T expected;
     initialize(expected, 99, 'a', 0xAA);
+    std::cerr << "test5 expected padding should be 0xAA: " << std::endl;
+    print_memory(expected);
     assert_padding(expected, 0xAA);
     T new_value;
     initialize(new_value, 42, 'b', 0xCC);
+    std::cerr << "test5 new_value padding should be 0xCC: " << std::endl;
+    print_memory(new_value);
     assert_padding(new_value, 0xCC);
 
     bool r = a.compare_exchange_weak(expected, new_value);
@@ -236,11 +289,15 @@ void test() {
     assert(expected.i == 10);
     assert(expected.c == 'a');
     // expected is updated to contain atomic's value and in libc++, the paddings bits are always zero
+    std::cerr << "test5 expected padding should be 0: " << std::endl;
+    print_memory(expected);
     libcpp_assert_padding(expected, 0);
     T loaded = a.load();
     assert(loaded.i == 10);
     assert(loaded.c == 'a');
     // libc++ always maintains the invariant of the atomic to have zeros in the padding bits
+    std::cerr << "test5 loaded padding should be 0: " << std::endl;
+    print_memory(loaded);
     libcpp_assert_padding(loaded, 0);
   }
 
@@ -262,10 +319,13 @@ void test() {
 int main(int, char**) {
 // TODO(LLVM-23): Switch to XFAIL with clang-22
 #if __has_builtin(__builtin_clear_padding)
+  std::cerr << "\nWithTailPadding\n" << std::endl;
   test<WithTailPadding>();
+  std::cerr << "\nWithInternalPadding\n" << std::endl;
   test<WithInternalPadding>();
+  std::cerr << "\nWithInternalAndTailPadding\n" << std::endl;
   test<WithInternalAndTailPadding>();
 #endif
 
-  return 0;
+  return 1;
 }
