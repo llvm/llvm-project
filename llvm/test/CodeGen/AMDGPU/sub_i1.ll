@@ -40,16 +40,16 @@ define amdgpu_kernel void @sub_var_var_i1(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u8 v1, v0, s[2:3] glc dlc
+; GFX11-NEXT:    global_load_u8 v0, v1, s[2:3] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_load_u8 v2, v0, s[4:5] glc dlc
+; GFX11-NEXT:    global_load_u8 v2, v1, s[4:5] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_xor_b32_e32 v1, v1, v2
+; GFX11-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX11-NEXT:    global_store_b8 v0, v1, s[0:1]
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    global_store_b8 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %a = load volatile i1, ptr addrspace(1) %in0
   %b = load volatile i1, ptr addrspace(1) %in1
@@ -94,19 +94,19 @@ define amdgpu_kernel void @sub_var_imm_i1(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX11-LABEL: sub_var_imm_i1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u8 v1, v0, s[2:3] glc dlc
+; GFX11-NEXT:    global_load_u8 v0, v1, s[2:3] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    s_xor_b32 s2, vcc_lo, -1
 ; GFX11-NEXT:    s_and_b32 s2, s2, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b32_e32 v1, s2
-; GFX11-NEXT:    global_store_b8 v0, v1, s[0:1]
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-NEXT:    global_store_b8 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %a = load volatile i1, ptr addrspace(1) %in
   %sub = sub i1 %a, 1

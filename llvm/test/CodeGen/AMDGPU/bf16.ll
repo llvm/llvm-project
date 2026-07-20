@@ -3981,72 +3981,139 @@ define void @test_call_v3bf16(<3 x bfloat> %in, ptr addrspace(5) %out) #0 {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: test_call_v3bf16:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s2, s33
-; GFX11-NEXT:    s_mov_b32 s33, s32
-; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX11-NEXT:    scratch_store_b32 off, v3, s33 ; 4-byte Folded Spill
-; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    v_writelane_b32 v3, s30, 0
-; GFX11-NEXT:    s_add_i32 s32, s32, 16
-; GFX11-NEXT:    v_writelane_b32 v3, s31, 1
-; GFX11-NEXT:    s_getpc_b64 s[0:1]
-; GFX11-NEXT:    s_add_u32 s0, s0, test_arg_store_v2bf16@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s1, s1, test_arg_store_v2bf16@gotpcrel32@hi+12
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX11-NEXT:    v_readlane_b32 s30, v3, 0
-; GFX11-NEXT:    scratch_store_b16 v2, v1, off offset:4 dlc
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    scratch_store_b32 v2, v0, off dlc
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_readlane_b32 s31, v3, 1
-; GFX11-NEXT:    s_mov_b32 s32, s33
-; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX11-NEXT:    scratch_load_b32 v3, off, s33 ; 4-byte Folded Reload
-; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    s_mov_b32 s33, s2
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11TRUE16-LABEL: test_call_v3bf16:
+; GFX11TRUE16:       ; %bb.0: ; %entry
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    s_mov_b32 s2, s33
+; GFX11TRUE16-NEXT:    s_mov_b32 s33, s32
+; GFX11TRUE16-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX11TRUE16-NEXT:    scratch_store_b32 off, v3, s33 ; 4-byte Folded Spill
+; GFX11TRUE16-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11TRUE16-NEXT:    v_writelane_b32 v3, s30, 0
+; GFX11TRUE16-NEXT:    s_add_i32 s32, s32, 16
+; GFX11TRUE16-NEXT:    v_writelane_b32 v3, s31, 1
+; GFX11TRUE16-NEXT:    s_getpc_b64 s[0:1]
+; GFX11TRUE16-NEXT:    s_add_u32 s0, s0, test_arg_store_v2bf16@gotpcrel32@lo+4
+; GFX11TRUE16-NEXT:    s_addc_u32 s1, s1, test_arg_store_v2bf16@gotpcrel32@hi+12
+; GFX11TRUE16-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11TRUE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; GFX11TRUE16-NEXT:    v_readlane_b32 s30, v3, 0
+; GFX11TRUE16-NEXT:    scratch_store_b32 v2, v0, off dlc
+; GFX11TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11TRUE16-NEXT:    scratch_store_b16 v2, v1, off offset:4 dlc
+; GFX11TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11TRUE16-NEXT:    v_readlane_b32 s31, v3, 1
+; GFX11TRUE16-NEXT:    s_mov_b32 s32, s33
+; GFX11TRUE16-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX11TRUE16-NEXT:    scratch_load_b32 v3, off, s33 ; 4-byte Folded Reload
+; GFX11TRUE16-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11TRUE16-NEXT:    s_mov_b32 s33, s2
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-LABEL: test_call_v3bf16:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_mov_b32 s2, s33
-; GFX1250-NEXT:    s_mov_b32 s33, s32
-; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX1250-NEXT:    scratch_store_b32 off, v5, s33 nv ; 4-byte Folded Spill
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1250-NEXT:    v_writelane_b32 v5, s30, 0
-; GFX1250-NEXT:    s_add_co_i32 s32, s32, 16
-; GFX1250-NEXT:    v_writelane_b32 v5, s31, 1
-; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
-; GFX1250-NEXT:    v_mov_b32_e32 v4, v2
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0 nv
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
-; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
-; GFX1250-NEXT:    scratch_store_b16 v4, v1, off offset:4 scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    scratch_store_b32 v4, v0, off scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
-; GFX1250-NEXT:    s_mov_b32 s32, s33
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX1250-NEXT:    scratch_load_b32 v5, off, s33 nv ; 4-byte Folded Reload
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1250-NEXT:    s_mov_b32 s33, s2
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX11FAKE16-LABEL: test_call_v3bf16:
+; GFX11FAKE16:       ; %bb.0: ; %entry
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    s_mov_b32 s2, s33
+; GFX11FAKE16-NEXT:    s_mov_b32 s33, s32
+; GFX11FAKE16-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX11FAKE16-NEXT:    scratch_store_b32 off, v3, s33 ; 4-byte Folded Spill
+; GFX11FAKE16-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11FAKE16-NEXT:    v_writelane_b32 v3, s30, 0
+; GFX11FAKE16-NEXT:    s_add_i32 s32, s32, 16
+; GFX11FAKE16-NEXT:    v_writelane_b32 v3, s31, 1
+; GFX11FAKE16-NEXT:    s_getpc_b64 s[0:1]
+; GFX11FAKE16-NEXT:    s_add_u32 s0, s0, test_arg_store_v2bf16@gotpcrel32@lo+4
+; GFX11FAKE16-NEXT:    s_addc_u32 s1, s1, test_arg_store_v2bf16@gotpcrel32@hi+12
+; GFX11FAKE16-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11FAKE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; GFX11FAKE16-NEXT:    v_readlane_b32 s30, v3, 0
+; GFX11FAKE16-NEXT:    scratch_store_b16 v2, v1, off offset:4 dlc
+; GFX11FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11FAKE16-NEXT:    scratch_store_b32 v2, v0, off dlc
+; GFX11FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11FAKE16-NEXT:    v_readlane_b32 s31, v3, 1
+; GFX11FAKE16-NEXT:    s_mov_b32 s32, s33
+; GFX11FAKE16-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX11FAKE16-NEXT:    scratch_load_b32 v3, off, s33 ; 4-byte Folded Reload
+; GFX11FAKE16-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11FAKE16-NEXT:    s_mov_b32 s33, s2
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250TRUE16-LABEL: test_call_v3bf16:
+; GFX1250TRUE16:       ; %bb.0: ; %entry
+; GFX1250TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250TRUE16-NEXT:    s_mov_b32 s2, s33
+; GFX1250TRUE16-NEXT:    s_mov_b32 s33, s32
+; GFX1250TRUE16-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX1250TRUE16-NEXT:    scratch_store_b32 off, v5, s33 nv ; 4-byte Folded Spill
+; GFX1250TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250TRUE16-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1250TRUE16-NEXT:    v_writelane_b32 v5, s30, 0
+; GFX1250TRUE16-NEXT:    s_add_co_i32 s32, s32, 16
+; GFX1250TRUE16-NEXT:    v_writelane_b32 v5, s31, 1
+; GFX1250TRUE16-NEXT:    s_get_pc_i64 s[0:1]
+; GFX1250TRUE16-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX1250TRUE16-NEXT:    v_mov_b32_e32 v4, v2
+; GFX1250TRUE16-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0 nv
+; GFX1250TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250TRUE16-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250TRUE16-NEXT:    v_readlane_b32 s30, v5, 0
+; GFX1250TRUE16-NEXT:    scratch_store_b32 v4, v0, off scope:SCOPE_SYS
+; GFX1250TRUE16-NEXT:    s_wait_storecnt 0x0
+; GFX1250TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250TRUE16-NEXT:    scratch_store_b16 v4, v1, off offset:4 scope:SCOPE_SYS
+; GFX1250TRUE16-NEXT:    s_wait_storecnt 0x0
+; GFX1250TRUE16-NEXT:    v_readlane_b32 s31, v5, 1
+; GFX1250TRUE16-NEXT:    s_mov_b32 s32, s33
+; GFX1250TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250TRUE16-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX1250TRUE16-NEXT:    scratch_load_b32 v5, off, s33 nv ; 4-byte Folded Reload
+; GFX1250TRUE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250TRUE16-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1250TRUE16-NEXT:    s_mov_b32 s33, s2
+; GFX1250TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250FAKE16-LABEL: test_call_v3bf16:
+; GFX1250FAKE16:       ; %bb.0: ; %entry
+; GFX1250FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250FAKE16-NEXT:    s_mov_b32 s2, s33
+; GFX1250FAKE16-NEXT:    s_mov_b32 s33, s32
+; GFX1250FAKE16-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX1250FAKE16-NEXT:    scratch_store_b32 off, v5, s33 nv ; 4-byte Folded Spill
+; GFX1250FAKE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250FAKE16-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1250FAKE16-NEXT:    v_writelane_b32 v5, s30, 0
+; GFX1250FAKE16-NEXT:    s_add_co_i32 s32, s32, 16
+; GFX1250FAKE16-NEXT:    v_writelane_b32 v5, s31, 1
+; GFX1250FAKE16-NEXT:    s_get_pc_i64 s[0:1]
+; GFX1250FAKE16-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX1250FAKE16-NEXT:    v_mov_b32_e32 v4, v2
+; GFX1250FAKE16-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0 nv
+; GFX1250FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250FAKE16-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250FAKE16-NEXT:    v_readlane_b32 s30, v5, 0
+; GFX1250FAKE16-NEXT:    scratch_store_b16 v4, v1, off offset:4 scope:SCOPE_SYS
+; GFX1250FAKE16-NEXT:    s_wait_storecnt 0x0
+; GFX1250FAKE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250FAKE16-NEXT:    scratch_store_b32 v4, v0, off scope:SCOPE_SYS
+; GFX1250FAKE16-NEXT:    s_wait_storecnt 0x0
+; GFX1250FAKE16-NEXT:    v_readlane_b32 s31, v5, 1
+; GFX1250FAKE16-NEXT:    s_mov_b32 s32, s33
+; GFX1250FAKE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250FAKE16-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX1250FAKE16-NEXT:    scratch_load_b32 v5, off, s33 nv ; 4-byte Folded Reload
+; GFX1250FAKE16-NEXT:    s_wait_xcnt 0x0
+; GFX1250FAKE16-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1250FAKE16-NEXT:    s_mov_b32 s33, s2
+; GFX1250FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %result = call <3 x bfloat> @test_arg_store_v2bf16(<3 x bfloat> %in)
   store volatile <3 x bfloat> %result, ptr addrspace(5) %out

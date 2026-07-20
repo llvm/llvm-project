@@ -107,14 +107,16 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX11-NEXT: FLAT_STORE_SHORT [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16))
+    ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY1]].lo16
+    ; GFX11-NEXT: FLAT_STORE_SHORT_t16 [[COPY]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16))
     ;
     ; GFX12-LABEL: name: store_flat_s32_to_2
     ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX12-NEXT: FLAT_STORE_SHORT [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16))
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY1]].lo16
+    ; GFX12-NEXT: FLAT_STORE_SHORT_t16 [[COPY]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16))
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     G_STORE %1, %0 :: (store (s16), align 2, addrspace 0)
@@ -164,14 +166,16 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX11-NEXT: FLAT_STORE_BYTE [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8))
+    ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY1]].lo16
+    ; GFX11-NEXT: FLAT_STORE_BYTE_t16 [[COPY]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8))
     ;
     ; GFX12-LABEL: name: store_flat_s32_to_1
     ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX12-NEXT: FLAT_STORE_BYTE [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8))
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY1]].lo16
+    ; GFX12-NEXT: FLAT_STORE_BYTE_t16 [[COPY]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s8))
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     G_STORE %1, %0 :: (store (s8), align 1, addrspace 0)

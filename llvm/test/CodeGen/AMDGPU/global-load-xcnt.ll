@@ -146,19 +146,19 @@ define i16 @test_v7i16_load_store(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2
 ; GCN-SDAG-REAL16-NEXT:    global_load_b128 v[4:7], v[0:1], off
 ; GCN-SDAG-REAL16-NEXT:    global_load_b128 v[8:11], v[2:3], off
 ; GCN-SDAG-REAL16-NEXT:    s_wait_xcnt 0x0
-; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[2:3], 12
-; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[12:13], 8
+; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[2:3], 8
+; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[12:13], 12
 ; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[14:15], 0
 ; GCN-SDAG-REAL16-NEXT:    s_wait_loadcnt 0x0
-; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v1, v7, v11
 ; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v0, v6, v10
+; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v1, v7, v11
 ; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v5, v5, v9
 ; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v4, v4, v8
 ; GCN-SDAG-REAL16-NEXT:    s_clause 0x2
-; GCN-SDAG-REAL16-NEXT:    global_store_b16 v[2:3], v1, off
-; GCN-SDAG-REAL16-NEXT:    global_store_b32 v[12:13], v0, off
+; GCN-SDAG-REAL16-NEXT:    global_store_b32 v[2:3], v0, off
+; GCN-SDAG-REAL16-NEXT:    global_store_b16 v[12:13], v1, off
 ; GCN-SDAG-REAL16-NEXT:    global_store_b64 v[14:15], v[4:5], off
-; GCN-SDAG-REAL16-NEXT:    s_wait_xcnt 0x1
+; GCN-SDAG-REAL16-NEXT:    s_wait_xcnt 0x2
 ; GCN-SDAG-REAL16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GCN-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -483,35 +483,35 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 }
 
 define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2, ptr addrspace(1) %out) {
-; GCN-SDAG-LABEL: test_v7i16_load_store_kernel:
-; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    global_wb
-; GCN-SDAG-NEXT:    v_nop
-; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GCN-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
-; GCN-SDAG-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
-; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
-; GCN-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10 nv
-; GCN-SDAG-NEXT:    v_mov_b64_e32 v[10:11], 8
-; GCN-SDAG-NEXT:    v_mov_b64_e32 v[12:13], 0
-; GCN-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GCN-SDAG-NEXT:    s_clause 0x1
-; GCN-SDAG-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
-; GCN-SDAG-NEXT:    global_load_b128 v[4:7], v8, s[2:3] scale_offset
-; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
-; GCN-SDAG-NEXT:    v_mov_b64_e32 v[8:9], 12
-; GCN-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GCN-SDAG-NEXT:    v_pk_add_u16 v3, v3, v7
-; GCN-SDAG-NEXT:    v_pk_add_u16 v2, v2, v6
-; GCN-SDAG-NEXT:    v_pk_add_u16 v1, v1, v5
-; GCN-SDAG-NEXT:    v_pk_add_u16 v0, v0, v4
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v4, 0
-; GCN-SDAG-NEXT:    s_clause 0x2
-; GCN-SDAG-NEXT:    global_store_b16 v[8:9], v3, off
-; GCN-SDAG-NEXT:    global_store_b32 v[10:11], v2, off
-; GCN-SDAG-NEXT:    global_store_b64 v[12:13], v[0:1], off
-; GCN-SDAG-NEXT:    global_store_d16_hi_b16 v4, v2, s[4:5]
-; GCN-SDAG-NEXT:    s_endpgm
+; GCN-SDAG-FAKE16-LABEL: test_v7i16_load_store_kernel:
+; GCN-SDAG-FAKE16:       ; %bb.0:
+; GCN-SDAG-FAKE16-NEXT:    global_wb
+; GCN-SDAG-FAKE16-NEXT:    v_nop
+; GCN-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-SDAG-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
+; GCN-SDAG-FAKE16-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GCN-SDAG-FAKE16-NEXT:    s_wait_xcnt 0x0
+; GCN-SDAG-FAKE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10 nv
+; GCN-SDAG-FAKE16-NEXT:    v_mov_b64_e32 v[10:11], 8
+; GCN-SDAG-FAKE16-NEXT:    v_mov_b64_e32 v[12:13], 0
+; GCN-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GCN-SDAG-FAKE16-NEXT:    s_clause 0x1
+; GCN-SDAG-FAKE16-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
+; GCN-SDAG-FAKE16-NEXT:    global_load_b128 v[4:7], v8, s[2:3] scale_offset
+; GCN-SDAG-FAKE16-NEXT:    s_wait_xcnt 0x0
+; GCN-SDAG-FAKE16-NEXT:    v_mov_b64_e32 v[8:9], 12
+; GCN-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GCN-SDAG-FAKE16-NEXT:    v_pk_add_u16 v3, v3, v7
+; GCN-SDAG-FAKE16-NEXT:    v_pk_add_u16 v2, v2, v6
+; GCN-SDAG-FAKE16-NEXT:    v_pk_add_u16 v1, v1, v5
+; GCN-SDAG-FAKE16-NEXT:    v_pk_add_u16 v0, v0, v4
+; GCN-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-SDAG-FAKE16-NEXT:    s_clause 0x2
+; GCN-SDAG-FAKE16-NEXT:    global_store_b16 v[8:9], v3, off
+; GCN-SDAG-FAKE16-NEXT:    global_store_b32 v[10:11], v2, off
+; GCN-SDAG-FAKE16-NEXT:    global_store_b64 v[12:13], v[0:1], off
+; GCN-SDAG-FAKE16-NEXT:    global_store_d16_hi_b16 v4, v2, s[4:5]
+; GCN-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GCN-GISEL-LABEL: test_v7i16_load_store_kernel:
 ; GCN-GISEL:       ; %bb.0:
@@ -550,6 +550,36 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-GISEL-NEXT:    global_store_b16 v[20:21], v3, off
 ; GCN-GISEL-NEXT:    global_store_d16_hi_b16 v4, v2, s[4:5]
 ; GCN-GISEL-NEXT:    s_endpgm
+;
+; GCN-SDAG-REAL16-LABEL: test_v7i16_load_store_kernel:
+; GCN-SDAG-REAL16:       ; %bb.0:
+; GCN-SDAG-REAL16-NEXT:    global_wb
+; GCN-SDAG-REAL16-NEXT:    v_nop
+; GCN-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-SDAG-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
+; GCN-SDAG-REAL16-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GCN-SDAG-REAL16-NEXT:    s_wait_xcnt 0x0
+; GCN-SDAG-REAL16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10 nv
+; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[10:11], 12
+; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[12:13], 0
+; GCN-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GCN-SDAG-REAL16-NEXT:    s_clause 0x1
+; GCN-SDAG-REAL16-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
+; GCN-SDAG-REAL16-NEXT:    global_load_b128 v[4:7], v8, s[2:3] scale_offset
+; GCN-SDAG-REAL16-NEXT:    s_wait_xcnt 0x0
+; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[8:9], 8
+; GCN-SDAG-REAL16-NEXT:    s_wait_loadcnt 0x0
+; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v2, v2, v6
+; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v3, v3, v7
+; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v1, v1, v5
+; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v0, v0, v4
+; GCN-SDAG-REAL16-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-SDAG-REAL16-NEXT:    s_clause 0x2
+; GCN-SDAG-REAL16-NEXT:    global_store_b32 v[8:9], v2, off
+; GCN-SDAG-REAL16-NEXT:    global_store_b16 v[10:11], v3, off
+; GCN-SDAG-REAL16-NEXT:    global_store_b64 v[12:13], v[0:1], off
+; GCN-SDAG-REAL16-NEXT:    global_store_d16_hi_b16 v4, v2, s[4:5]
+; GCN-SDAG-REAL16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep1 = getelementptr inbounds <7 x i16>, ptr addrspace(1) %ptr1, i32 %tid
   %gep2 = getelementptr inbounds <7 x i16>, ptr addrspace(1) %ptr2, i32 %tid
