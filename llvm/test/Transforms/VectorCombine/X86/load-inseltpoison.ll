@@ -426,9 +426,7 @@ define <4 x i32> @gep012_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceab
   ret <4 x i32> %r
 }
 
-; Negative test - if we are shuffling a load from the base pointer, the address offset
-; must be a multiple of element size and the offset must be low enough to fit in the vector
-; (bitcasting would not help this case).
+; The scalar access extends beyond the widened vector load range.
 
 define <4 x i32> @gep013_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceable(20) %p) nofree nosync {
 ; CHECK-LABEL: @gep013_bitcast_load_i32_insert_v4i32(
