@@ -35,6 +35,29 @@ def AbstractResultOpt
   ];
 }
 
+def SimplifyDoLoop : Pass<"simplify-fir-loop", "::mlir::func::FuncOp"> {
+  let summary = "Canonicalize fir.do_loop nests for affine promotion.";
+  let description = [{
+    General-purpose FIR loop canonicalization pass.  Transforms perfectly nested
+    fir.do_loop nests into a canonical form suitable for affine promotion and
+    loop optimizations (tiling, fusion, interchange, etc.).
+
+    Analysis phase (per nest):
+    1. Verifies each iter_arg is a shadow of the loop induction variable.
+    2. Builds an IV map: { loop -> (ivAlloca, lb, ub, step, ivType) }.
+    3. Checks safety: single IV store, no calls, IV doesn't escape.
+
+    Transformation phase:
+    1. Removes iter_args, init/final stores, and IV increment ops.
+    2. Forwards loads of the IV alloca to fir.convert(induction_var).
+    3. Emits final IV value stores after the outermost loop using the
+       Fortran formula: final = lb + ((ub - lb + step) / step) * step.
+  }];
+  let constructor = "::fir::createSimplifyDoLoopPass()";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect",
+                           "mlir::arith::ArithDialect"];
+}
+
 def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
   let summary = "Promotes `fir.{do_loop,if}` to `affine.{for,if}`.";
   let description = [{

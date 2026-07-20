@@ -4,6 +4,7 @@ add_flang_library(FIRTransforms
   AddDebugInfo.cpp
   AffineDemotion.cpp
   AffinePromotion.cpp
+  SimplifyDoLoop.cpp
   AlgebraicSimplification.cpp
   AnnotateConstant.cpp
   ArrayValueCopy.cpp
