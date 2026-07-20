@@ -104,21 +104,26 @@ public:
   void clear() { Order.clear(); }
   void compute(const CycleInfoT &CI);
 
-  unsigned count(BlockT *BB) const { return POIndex.count(BB); }
+  unsigned count(BlockT *BB) const {
+    unsigned Num = GraphTraits<BlockT *>::getNumber(BB);
+    return Num < POIndex.size() && POIndex[Num] != InvalidIndex;
+  }
   const BlockT *operator[](size_t Idx) const { return Order[Idx]; }
 
   void appendBlock(const BlockT &BB, bool IsReducibleCycleHeader = false) {
-    POIndex[&BB] = Order.size();
+    unsigned Num = GraphTraits<const BlockT *>::getNumber(&BB);
+    POIndex[Num] = Order.size();
     Order.push_back(&BB);
-    LLVM_DEBUG(dbgs() << "ModifiedPO(" << POIndex[&BB]
+    LLVM_DEBUG(dbgs() << "ModifiedPO(" << POIndex[Num]
                       << "): " << Context.print(&BB) << "\n");
     if (IsReducibleCycleHeader)
       ReducibleCycleHeaders.insert(&BB);
   }
 
   unsigned getIndex(const BlockT *BB) const {
-    assert(POIndex.count(BB));
-    return POIndex.lookup(BB);
+    unsigned Num = GraphTraits<const BlockT *>::getNumber(BB);
+    assert(Num < POIndex.size() && POIndex[Num] != InvalidIndex);
+    return POIndex[Num];
   }
 
   bool isReducibleCycleHeader(const BlockT *BB) const {
@@ -126,8 +131,10 @@ public:
   }
 
 private:
+  static constexpr unsigned InvalidIndex = -1u;
+
   SmallVector<const BlockT *> Order;
-  DenseMap<const BlockT *, unsigned> POIndex;
+  SmallVector<unsigned> POIndex;
   SmallPtrSet<const BlockT *, 32> ReducibleCycleHeaders;
   const ContextT &Context;
 
@@ -1434,6 +1441,7 @@ void llvm::ModifiedPostOrder<ContextT>::compute(const CycleInfoT &CI) {
   SmallPtrSet<const BlockT *, 32> Finalized;
   SmallVector<const BlockT *> Stack;
   auto *F = CI.getFunction();
+  POIndex.assign(GraphTraits<const FunctionT *>::getMaxNumber(F), InvalidIndex);
   Stack.reserve(24); // FIXME made-up number
   Stack.push_back(&F->front());
   computeStackPO(Stack, CI, CycleRef(), Finalized);
