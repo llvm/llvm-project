@@ -1039,7 +1039,9 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
   if (PVD) {
     unsigned Index = PVD->getFunctionScopeIndex();
-    const Expr *CallSite = SF->getCallSite();
+    const Expr *CallSite = nullptr;
+    if (SF)
+      CallSite = SF->getCallSite();
     if (CallSite) {
       const Decl *CalleeDecl = SF->getDecl();
       bool CurrentParam = true;
