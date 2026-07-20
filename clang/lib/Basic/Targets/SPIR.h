@@ -288,8 +288,7 @@ public:
            "Invalid architecture for 32-bit SPIR.");
     PointerWidth = PointerAlign = 32;
     const TargetInfo *HostTarget = getHostTarget();
-    if (!HostTarget) {
-      PointerWidth = PointerAlign = 32;
+    if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 32) {
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     }
