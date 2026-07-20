@@ -16068,10 +16068,19 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           ConstantRange::makeExactICmpRegion(Pred, C2->getAPInt())
               .sub(C1->getAPInt());
 
-      // Bail out, unless we have a non-wrapping, monotonic range.
-      if (ExactRegion.isWrappedSet() || ExactRegion.isFullSet())
-        return false;
+      // Tighten the raw range with what we already know about LHSUnknown
+      // from prior guards recorded in RewriteMap, or from SCEV's own range
+      // analysis.
       const SCEV *RewrittenLHS = GetMaybeRewritten(LHSUnknown);
+      ExactRegion = ExactRegion.intersectWith(SE.getUnsignedRange(RewrittenLHS),
+                                              ConstantRange::Unsigned);
+
+      // Bail if the guard is inconsistent with prior facts, or if the range
+      // is still not a monotonic non-wrapping interval after tightening.
+      if (ExactRegion.isEmptySet() || ExactRegion.isWrappedSet() ||
+          ExactRegion.isFullSet())
+        return false;
+
       const SCEV *RegionMin = SE.getConstant(ExactRegion.getUnsignedMin());
       const SCEV *RegionMax = SE.getConstant(ExactRegion.getUnsignedMax());
       const SCEV *ClampedLHS =
