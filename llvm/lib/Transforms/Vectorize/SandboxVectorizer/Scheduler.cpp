@@ -11,6 +11,18 @@
 
 namespace llvm::sandboxir {
 
+#ifndef NDEBUG
+StringLiteral schedDirectionToStr(SchedDirection Dir) {
+  switch (Dir) {
+  case SchedDirection::BottomUp:
+    return "BottomUp";
+  case SchedDirection::TopDown:
+    return "TopDown";
+  }
+  llvm_unreachable("Unhandled Dir!");
+}
+#endif // NDEBUG
+
 // TODO: Check if we can cache top/bottom to reduce compile-time.
 DGNode *SchedBundle::getTop() const {
   DGNode *TopN = Nodes.front();
@@ -69,18 +81,34 @@ void ReadyListContainer::dump() const {
 void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
   // Find where we should schedule the instructions.
   assert(ScheduleTopItOpt && "Should have been set by now!");
-  auto Where = *ScheduleTopItOpt;
+  auto Where = Dir == SchedDirection::BottomUp ? *ScheduleTopItOpt
+                                               : std::next(*ScheduleTopItOpt);
   // Move all instructions in `Bndl` to `Where`.
   Bndl.cluster(Where);
   // Update the last scheduled bundle.
-  ScheduleTopItOpt = Bndl.getTop()->getInstruction()->getIterator();
-  // Set nodes as "scheduled" and decrement the UnsceduledSuccs counter of all
-  // dependency predecessors.
+  ScheduleTopItOpt = Dir == SchedDirection::BottomUp
+                         ? Bndl.getTop()->getInstruction()->getIterator()
+                         : Bndl.getBot()->getInstruction()->getIterator();
+  // Set nodes as "scheduled" and decrement the UnscheduledSuccs/Preds counter
+  // of all dependency predecessors/successors.
   for (DGNode *N : Bndl) {
-    for (auto *DepN : N->preds(DAG)) {
-      DepN->decrUnscheduledSuccs();
-      if (DepN->readyBottomUp() && !DepN->scheduled())
-        ReadyList.insert(DepN);
+    switch (Dir) {
+    case SchedDirection::BottomUp: {
+      for (auto *DepN : N->preds(DAG)) {
+        DepN->decrUnscheduledSuccs();
+        if (DepN->readyBottomUp() && !DepN->scheduled())
+          ReadyList.insert(DepN);
+      }
+      break;
+    }
+    case SchedDirection::TopDown: {
+      for (auto *DepN : N->succs(DAG)) {
+        DepN->decrUnscheduledPreds();
+        if (DepN->readyTopDown() && !DepN->scheduled())
+          ReadyList.insert(DepN);
+      }
+      break;
+    }
     }
     N->setScheduled();
   }
@@ -97,16 +125,26 @@ void Scheduler::notifyCreateInstr(Instruction *I) {
   // "scheduled".
   bool IsScheduled = ScheduleTopItOpt &&
                      *ScheduleTopItOpt != I->getParent()->end() &&
-                     (*ScheduleTopItOpt.value()).comesBefore(I);
+                     ((Dir == SchedDirection::BottomUp &&
+                       (*ScheduleTopItOpt.value()).comesBefore(I)) ||
+                      (Dir == SchedDirection::TopDown &&
+                       I->comesBefore(&*ScheduleTopItOpt.value())));
   if (IsScheduled)
     N->setScheduled();
   // If the new instruction is above the top of schedule we need to remove its
   // dependency predecessors from the ready list and increment their
   // `UnscheduledSuccs` counters.
   if (!IsScheduled) {
-    for (auto *PredN : N->preds(DAG)) {
-      ReadyList.remove(PredN);
-      PredN->incrUnscheduledSuccs();
+    if (Dir == SchedDirection::BottomUp) {
+      for (auto *PredN : N->preds(DAG)) {
+        ReadyList.remove(PredN);
+        PredN->incrUnscheduledSuccs();
+      }
+    } else {
+      for (auto *SuccN : N->succs(DAG)) {
+        ReadyList.remove(SuccN);
+        SuccN->incrUnscheduledPreds();
+      }
     }
   }
 }
@@ -152,7 +190,7 @@ bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
         scheduleAndUpdateReadyList(*SingletonSB);
         return TryScheduleRes::Success;
       }
-      if (SB->ready()) {
+      if (SB->ready(Dir)) {
         // Remove the rest of the bundle from the ready list.
         // TODO: Perhaps change the Scheduler + ReadyList to operate on
         // SchedBundles instead of DGNodes.
@@ -251,32 +289,46 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
   //  N
   //  N <- DAGInterval.bottom()
   //
-  Instruction *TopI = &*ScheduleTopItOpt.value();
-  Instruction *LowestI = VecUtils::getLowest(Instrs);
-  // Destroy the singleton schedule bundles from LowestI all the way to the top.
-  for (auto *I = LowestI, *E = TopI->getPrevNode(); I != E;
-       I = I->getPrevNode()) {
-    auto *N = DAG.getNode(I);
+  // Note: this figure assumes bottom-up scheduling. In top-down we have the
+  // top-down mirror image.
+  Instruction *TopI = Dir == SchedDirection::BottomUp
+                          ? &*ScheduleTopItOpt.value()
+                          : VecUtils::getHighest(Instrs);
+  Instruction *LowestI = Dir == SchedDirection::BottomUp
+                             ? VecUtils::getLowest(Instrs)
+                             : &*ScheduleTopItOpt.value();
+  Interval<Instruction> ResetIntvl(TopI, LowestI);
+  // The DAG Nodes contain state like the number of UnscheduledSuccs and the
+  // Scheduled flag. We need to reset their state. We need to do this for all
+  // nodes in ResetIntvl. Also destroy the singleton schedule bundles from
+  // LowestI all the way to the top.
+  for (auto &I : ResetIntvl) {
+    auto *N = DAG.getNode(&I);
     if (N == nullptr)
       continue;
     auto *SB = N->getSchedBundle();
     if (SB->isSingleton())
       eraseBundle(SB);
+    N->resetScheduleState();
   }
-  // The DAG Nodes contain state like the number of UnscheduledSuccs and the
-  // Scheduled flag. We need to reset their state. We need to do this for all
-  // nodes from LowestI to the top of the schedule. DAG Nodes that are above the
-  // top of schedule that depend on nodes that got reset need to have their
-  // UnscheduledSuccs adjusted.
-  Interval<Instruction> ResetIntvl(TopI, LowestI);
+  // Nodes that depend on the nodes in ResetIntvl also need to have their
+  // UnscheduledSuccs/UnscheduledPreds adjusted.
   for (Instruction &I : ResetIntvl) {
     auto *N = DAG.getNode(&I);
-    N->resetScheduleState();
-    // Recompute UnscheduledSuccs for nodes not only in ResetIntvl but even for
-    // nodes above the top of schedule.
-    for (auto *PredN : N->preds(DAG))
-      PredN->incrUnscheduledSuccs();
+    if (Dir == SchedDirection::BottomUp) {
+      // Recompute UnscheduledSuccs for nodes not only in ResetIntvl but even
+      // for nodes above the top of schedule.
+      for (auto *PredN : N->preds(DAG))
+        PredN->incrUnscheduledSuccs();
+    } else {
+      assert(Dir == SchedDirection::TopDown);
+      // Recompute UnscheduledPreds for nodes not only in ResetIntvl but even
+      // for nodes below the bottom of schedule.
+      for (auto *SuccN : N->succs(DAG))
+        SuccN->incrUnscheduledPreds();
+    }
   }
+
   // Refill the ready list by visiting all nodes from the top of DAG to LowestI.
   ReadyList.clear();
   Interval<Instruction> RefillIntvl(DAG.getInterval().top(), LowestI);
@@ -305,6 +357,16 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
   if (any_of(Instrs,
              [this](Instruction *I) { return I->getParent() != ScheduledBB; }))
     return false;
+
+  auto GetSchedPoint = [](SchedDirection Dir, const auto &Instrs) {
+    switch (Dir) {
+    case SchedDirection::BottomUp:
+      return std::next(VecUtils::getLowest(Instrs)->getIterator());
+    case SchedDirection::TopDown:
+      return VecUtils::getHighest(Instrs)->getIterator();
+    }
+    llvm_unreachable("Unhandled Dir!");
+  };
   auto SchedState = getBndlSchedState(Instrs);
   switch (SchedState) {
   case BndlSchedState::FullyScheduled:
@@ -321,19 +383,20 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // re-schedule.
     DAG.extend(Instrs);
     trimSchedule(Instrs);
-    ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
+    ScheduleTopItOpt = GetSchedPoint(Dir, Instrs);
     return tryScheduleUntil(Instrs);
   case BndlSchedState::NoneScheduled: {
     // TODO: Set the window of the DAG that we are interested in.
     if (!ScheduleTopItOpt)
-      // We start scheduling at the bottom instr of Instrs.
-      ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
+      // We start scheduling at the bottom instr of Instrs (top in TopDown).
+      ScheduleTopItOpt = GetSchedPoint(Dir, Instrs);
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);
-    // Add nodes to ready list.
+    // Add nodes from the new interval to ready list if they are ready.
     for (auto &I : Extension) {
       auto *N = DAG.getNode(&I);
-      if (N->readyBottomUp())
+      if (Dir == SchedDirection::BottomUp ? N->readyBottomUp()
+                                          : N->readyTopDown())
         ReadyList.insert(N);
     }
     // Try schedule all nodes until we can schedule Instrs back-to-back.
@@ -347,7 +410,9 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
 void Scheduler::dump(raw_ostream &OS) const {
   OS << "ReadyList:\n";
   ReadyList.dump(OS);
-  OS << "Top of schedule: ";
+  OS << "Dir=" << schedDirectionToStr(Dir) << " "
+     << (Dir == SchedDirection::BottomUp ? "Top" : "Bottom")
+     << " of schedule: ";
   if (ScheduleTopItOpt)
     OS << **ScheduleTopItOpt;
   else

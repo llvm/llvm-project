@@ -57,6 +57,7 @@ endif()
 add_clang_library(clangBasic
   ASTSourceDescriptor.cpp
   Attributes.cpp
+  AtomicLineLogger.cpp
   Builtins.cpp
   CLWarnings.cpp
   CharInfo.cpp

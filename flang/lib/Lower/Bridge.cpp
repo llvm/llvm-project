@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
@@ -49,7 +50,6 @@
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -618,8 +618,10 @@ public:
       createBuilderOutsideOfFuncOpAndDo([&]() {
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
-                              getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::CUDA),
+                              (getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::CUDA) &&
+                               getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::CUDAInit)),
                               getFoldingContext().languageFeatures().IsEnabled(
                                   Fortran::common::LanguageFeature::Coarray));
       });
@@ -2416,7 +2418,8 @@ private:
     Fortran::lower::omp::ReductionProcessor rp;
     bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
-        reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
+        reduceVarByRef, reductionDeclSymbols, info.reduceSymList,
+        /*reductionObjects=*/{}, getSymbolMap());
     if (!result)
       TODO(toLocation(), "Lowering unrecognised reduction type");
 
@@ -2535,6 +2538,50 @@ private:
     }
   }
 
+  /// Wrap an unstructured construct's CFG in a self-contained
+  /// scf.execute_region and set the builder insertion point inside it. Returns
+  /// the created op (null if the construct isn't wrappable).
+  mlir::scf::ExecuteRegionOp
+  wrapUnstructuredConstruct(Fortran::lower::pft::Evaluation &eval,
+                            mlir::Block *&savedExitBlock) {
+    if (!Fortran::lower::pft::isWrappableConstruct(eval))
+      return nullptr;
+
+    mlir::Location loc = toLocation();
+    auto wrapOp =
+        mlir::scf::ExecuteRegionOp::create(*builder, loc, mlir::TypeRange{},
+                                           /*noInline=*/builder->getUnitAttr());
+    ++wrapUnstructuredCount;
+    mlir::Block *entry = builder->createBlock(&wrapOp.getRegion());
+    builder->setInsertionPointToEnd(entry);
+    createEmptyBlocks(eval.getNestedEvaluations());
+    mlir::Block *yieldBlock = builder->createBlock(&wrapOp.getRegion());
+    builder->setInsertionPointToEnd(yieldBlock);
+    mlir::scf::YieldOp::create(*builder, loc);
+
+    if (eval.constructExit) {
+      savedExitBlock = eval.constructExit->block;
+      eval.constructExit->block = yieldBlock;
+    }
+
+    builder->setInsertionPointToEnd(entry);
+    return wrapOp;
+  }
+
+  /// Finalize a wrap created by wrapUnstructuredConstruct: restore the
+  /// original exit block and set the insertion point after the wrap op.
+  void closeUnstructuredWrap(mlir::scf::ExecuteRegionOp wrapOp,
+                             Fortran::lower::pft::Evaluation &eval,
+                             mlir::Block *savedExitBlock) {
+    if (!wrapOp)
+      return;
+
+    if (eval.constructExit)
+      eval.constructExit->block = savedExitBlock;
+
+    builder->setInsertionPointAfter(wrapOp);
+  }
+
   /// Generate FIR for a DO construct. There are six variants:
   ///  - unstructured infinite and while loops
   ///  - structured and unstructured increment loops
@@ -2600,15 +2647,55 @@ private:
       // blocks, created in outermost to innermost order.
       return beginBlock = beginBlock->splitBlock(beginBlock->end());
     };
-    mlir::Block *headerBlock =
-        unstructuredContext ? createNextBeginBlock() : nullptr;
+    // headerBlock is computed per-branch below, after wrapping, so that
+    // beginBlock can be corrected to the scf entry when wrapping occurs.
+    mlir::Block *headerBlock = nullptr;
     mlir::Block *bodyBlock = doStmtEval.lexicalSuccessor->block;
     mlir::Block *exitBlock = doStmtEval.parentConstruct->constructExit->block;
+
+    mlir::Block *savedExitBlock = nullptr;
+    mlir::scf::ExecuteRegionOp wrapOp = nullptr;
+
+    // Helper: called after maybeStartBlock(preheaderBlock) to create the
+    // scf.execute_region (if the construct is wrappable) and then update
+    // beginBlock/bodyBlock/exitBlock so that all loop structure lands inside
+    // the newly created region.
+    auto maybeWrapAndRecalc = [&]() {
+      wrapOp = unstructuredContext
+                   ? wrapUnstructuredConstruct(eval, savedExitBlock)
+                   : nullptr;
+      if (wrapOp) {
+        LLVM_DEBUG({
+          llvm::dbgs() << "[wrap-unstructured] wrapped DO at ";
+          wrapOp.getLoc().print(llvm::dbgs());
+          llvm::dbgs() << "\n";
+        });
+        // After wrapping, the builder is positioned at the scf entry block.
+        // createEmptyBlocks (called inside wrapUnstructuredConstruct) may have
+        // allocated a dedicated preheader block inside the scf region and
+        // stored it in doStmtEval.block.  If so, branch to it from scf_entry
+        // and use it as beginBlock; otherwise use scf_entry directly.
+        mlir::Block *newPreheader = doStmtEval.block;
+        if (newPreheader && newPreheader != preheaderBlock) {
+          beginBlock = newPreheader;
+          maybeStartBlock(beginBlock);
+        } else {
+          beginBlock = builder->getBlock();
+        }
+        bodyBlock = doStmtEval.lexicalSuccessor->block;
+        exitBlock = doStmtEval.parentConstruct->constructExit->block;
+      }
+      headerBlock = createNextBeginBlock();
+    };
+
     IncrementLoopNestInfo incrementLoopNestInfo;
     const Fortran::parser::ScalarLogicalExpr *whileCondition = nullptr;
     bool infiniteLoop = !loopControl.has_value();
     if (infiniteLoop) {
       assert(unstructuredContext && "infinite loop must be unstructured");
+      // Infinite loops are never wrappable; maybeWrapAndRecalc is a no-op here,
+      // but call it for uniformity so wrapOp stays null.
+      maybeWrapAndRecalc();
       startBlock(headerBlock);
     } else if ((whileCondition =
                     std::get_if<Fortran::parser::ScalarLogicalExpr>(
@@ -2625,6 +2712,7 @@ private:
 
       assert(unstructuredContext && "while loop must be unstructured");
       maybeStartBlock(preheaderBlock); // no block or empty block
+      maybeWrapAndRecalc();
       startBlock(headerBlock);
       genConditionalBranch(*whileCondition, bodyBlock, exitBlock);
     } else if (const auto *bounds =
@@ -2636,6 +2724,7 @@ private:
           bounds->Step());
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
+        maybeWrapAndRecalc();
         info.hasRealControl = info.loopVariableSym->GetType()->IsNumeric(
             Fortran::common::TypeCategory::Real);
         info.headerBlock = headerBlock;
@@ -2652,6 +2741,7 @@ private:
           std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent->t));
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
+        maybeWrapAndRecalc();
         for (IncrementLoopInfo &info : incrementLoopNestInfo) {
           // The original loop body provides the body and latch blocks of the
           // innermost dimension. The (first) body block of a non-innermost
@@ -2716,6 +2806,8 @@ private:
     for (IncrementLoopInfo &info : incrementLoopNestInfo)
       if (auto loopOp = mlir::dyn_cast_if_present<fir::DoLoopOp>(info.loopOp))
         attachAttributesToDoLoopOperations(loopOp, doStmtEval.dirs);
+
+    closeUnstructuredWrap(wrapOp, eval, savedExitBlock);
   }
 
   /// Generate FIR to evaluate loop control values (lower, upper and step).
@@ -3194,7 +3286,29 @@ private:
       return;
     }
 
-    // Unstructured branch sequence.
+    // Start a new block before generating the scf.execute_region op if needed.
+    // This avoids generating the region directly after a terminator (e.g. a
+    // conditional branch from a parent construct).
+    if (Fortran::lower::pft::isWrappableConstruct(eval) &&
+        eval.hasNestedEvaluations()) {
+      Fortran::lower::pft::Evaluation &firstStmt =
+          eval.getFirstNestedEvaluation();
+      if (firstStmt.block)
+        maybeStartBlock(firstStmt.block);
+    }
+
+    mlir::Block *savedExitBlock = nullptr;
+    mlir::scf::ExecuteRegionOp wrapOp =
+        wrapUnstructuredConstruct(eval, savedExitBlock);
+
+    if (wrapOp) {
+      LLVM_DEBUG({
+        llvm::dbgs() << "[wrap-unstructured] wrapped IF at ";
+        wrapOp.getLoc().print(llvm::dbgs());
+        llvm::dbgs() << "\n";
+      });
+    }
+
     llvm::SmallVector<Fortran::lower::pft::Evaluation *> exits, fallThroughs;
     collectFinalEvaluations(eval, exits, fallThroughs);
 
@@ -3226,6 +3340,8 @@ private:
         }
       }
     }
+
+    closeUnstructuredWrap(wrapOp, eval, savedExitBlock);
   }
 
   void genCaseOrRankConstruct() {
@@ -5384,9 +5500,14 @@ private:
     mlir::Value rhsVal = getRefFromValue(rhs.getBase());
     mlir::Value lhsVal = getRefFromValue(lhs.getBase());
     // Get shape from the rhs if available otherwise get it from lhs.
-    mlir::Value shape = getShapeFromDecl(rhs.getBase());
-    if (!shape)
-      shape = getShapeFromDecl(lhs.getBase());
+    mlir::Value shape;
+    if (fir::isa_ref_type(rhsVal.getType()) ||
+        fir::isa_ref_type(lhsVal.getType())) {
+      if (mlir::Value rhsShape = getShapeFromDecl(rhs.getBase()))
+        shape = rhsShape;
+      else
+        shape = getShapeFromDecl(lhs.getBase());
+    }
 
     // device = host
     if (lhsIsDevice && !rhsIsDevice) {
@@ -5443,8 +5564,13 @@ private:
       }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
-                                  transferKindAttr, hasManagedOrUnifedSymbols);
+      if (fir::isa_trivial(rhsVal.getType())) {
+        fir::StoreOp::create(builder, loc, rhsVal, lhsVal);
+      } else {
+        cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
+                                    transferKindAttr,
+                                    hasManagedOrUnifedSymbols);
+      }
       return;
     }
 
@@ -5559,8 +5685,18 @@ private:
 
     // Helper to generate the code evaluating the right-hand side.
     auto evaluateRhs = [&](Fortran::lower::StatementContext &stmtCtx) {
+      const Fortran::lower::SomeExpr *rhsExpr = &assign.rhs;
+      std::optional<Fortran::lower::SomeExpr> rewritten;
+      if (bridge.getLoweringOptions().getSplitSumExpressionTree() &&
+          Fortran::evaluate::CanBuildSplitSumExpressionTree(assign.lhs,
+                                                            assign.rhs)) {
+        rewritten =
+            Fortran::evaluate::TryBuildSplitSumExpressionTree(assign.rhs);
+        if (rewritten)
+          rhsExpr = &*rewritten;
+      }
       hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
-          loc, *this, assign.rhs, localSymbols, stmtCtx);
+          loc, *this, *rhsExpr, localSymbols, stmtCtx);
       // Load trivial scalar RHS to allow the loads to be hoisted outside of
       // loops early if possible. This also dereferences pointer and
       // allocatable RHS: the target is being assigned from.
@@ -6393,7 +6529,16 @@ private:
       if (eval.isNewBlock)
         eval.block = builder->createBlock(region);
       if (eval.isConstruct() || eval.isDirective()) {
-        if (eval.lowerAsUnstructured()) {
+        if (Fortran::lower::pft::isWrappableConstruct(eval)) {
+          // The wrap owns internal blocks; only create the entry block here
+          // so the enclosing CFG can branch to it.
+          if (eval.hasNestedEvaluations()) {
+            Fortran::lower::pft::Evaluation &constructStmt =
+                eval.getFirstNestedEvaluation();
+            if (constructStmt.isNewBlock)
+              constructStmt.block = builder->createBlock(region);
+          }
+        } else if (eval.lowerAsUnstructured()) {
           createEmptyBlocks(eval.getNestedEvaluations());
         } else if (eval.hasNestedEvaluations()) {
           // A structured construct that is a target starts a new block.
@@ -6575,8 +6720,21 @@ private:
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
       startNewFunction(funit); // the entry point for lowering this procedure
+      wrapUnstructuredCount = 0;
+
       for (Fortran::lower::pft::Evaluation &eval : funit.evaluationList)
         genFIR(eval);
+
+      if (wrapUnstructuredCount > 0) {
+        LLVM_DEBUG({
+          llvm::dbgs()
+              << "[wrap-unstructured] summary: " << wrapUnstructuredCount
+              << " execute_region(s) wrapping unstructured constructs at ";
+          toLocation().print(llvm::dbgs());
+          llvm::dbgs() << "\n";
+        });
+      }
+
       endNewFunction(funit);
     }
     funit.setActiveEntry(0);
@@ -6613,15 +6771,6 @@ private:
         if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
             DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
-
-        if (Fortran::evaluate::IsCoarray(sym) &&
-            !Fortran::semantics::IsAllocatable(sym) &&
-            Fortran::semantics::IsSaved(sym)) {
-          mlir::Location loc = toLocation();
-          TODO(
-              loc,
-              "coarray: non-ALLOCATABLE SAVE coarray outside the main program");
-        }
       }
       Fortran::lower::defineModuleVariable(*this, var);
     }
@@ -6982,6 +7131,11 @@ private:
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;
+
+  /// Counter of `scf.execute_region` ops created when
+  /// `--wrap-unstructured-constructs-in-execute-region` is enabled for the
+  /// currently-lowered function.
+  unsigned wrapUnstructuredCount = 0;
 
   // Stack to manage object deallocation and finalization at construct exits.
   llvm::SmallVector<ConstructContext> activeConstructStack;

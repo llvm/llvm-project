@@ -58,7 +58,16 @@ bool FactsGenerator::hasOrigins(const Expr *E) const {
 ///     * Level 1: pp <- p's address
 ///     * Level 2: (*pp) <- what p points to (i.e., &x)
 ///   - `View v = obj;` flows origins from `obj` (depth 1) to `v` (depth 1)
-void FactsGenerator::flow(OriginList *Dst, OriginList *Src, bool Kill) {
+///
+/// \param Dst The destination origin list.
+/// \param Src The source origin list.
+/// \param Kill If true, the destination's existing loans are killed before
+///             flowing.
+/// \param Block Optional. If provided, the generated flow facts are appended to
+///              this specific CFG block. Otherwise, they are appended to the
+///              current block being visited.
+void FactsGenerator::flow(OriginList *Dst, OriginList *Src, bool Kill,
+                          const CFGBlock *Block) {
   if (!Dst)
     return;
   assert(Src &&
@@ -67,8 +76,12 @@ void FactsGenerator::flow(OriginList *Dst, OriginList *Src, bool Kill) {
          "Lists must have the same length");
 
   while (Dst && Src) {
-    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-        Dst->getOuterOriginID(), Src->getOuterOriginID(), Kill));
+    Fact *F = FactMgr.createFact<OriginFlowFact>(Dst->getOuterOriginID(),
+                                                 Src->getOuterOriginID(), Kill);
+    if (Block)
+      FactMgr.appendBlockFact(Block, F);
+    else
+      CurrentBlockFacts.push_back(F);
     Dst = Dst->peelOuterOrigin();
     Src = Src->peelOuterOrigin();
   }
@@ -386,6 +399,17 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
     killAndFlowOrigin(*UO, *SubExpr);
     return;
   }
+  case UO_Plus: {
+    // Unary plus on a pointer is the identity (`+p == p`), so the prvalue
+    // result carries the operand's loans. Flow the operand's rvalue origins
+    // (peeling storage only when the operand is itself a glvalue).
+    if (!UO->getType()->isPointerType())
+      return;
+    const Expr *SubExpr = UO->getSubExpr();
+    flow(getOriginsList(*UO),
+         getRValueOrigins(SubExpr, getOriginsList(*SubExpr)), /*Kill=*/true);
+    return;
+  }
   case UO_PreInc:
   case UO_PostInc:
   case UO_PreDec:
@@ -497,6 +521,27 @@ void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
+  if (BO->getOpcode() == BO_PtrMemD || BO->getOpcode() == BO_PtrMemI) {
+    // `obj.*pm` / `objptr->*pm` names a member of the object, so a borrow of it
+    // borrows the object; flow the object's origin into the result. For `.*`
+    // the object is the LHS; for `->*` it is the LHS pointer's pointee.
+    //
+    // Only the result's outer (storage) origin relates to the object: borrowing
+    // the member borrows the object's storage. Deeper levels of the result (a
+    // pointer/view member's own pointee) are the member's value, with no
+    // counterpart in the object's origin -- so the lists may differ in length
+    // and we flow just the top level, leaving the member's value untouched.
+    OriginList *Dst = getOriginsList(*BO);
+    OriginList *ObjSrc =
+        BO->getOpcode() == BO_PtrMemD
+            ? getOriginsList(*BO->getLHS())
+            : getRValueOrigins(BO->getLHS(), getOriginsList(*BO->getLHS()));
+    if (Dst && ObjSrc)
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          Dst->getOuterOriginID(), ObjSrc->getOuterOriginID(), /*Kill=*/true));
+    handleUse(BO->getLHS());
+    return;
+  }
   if (BO->getOpcode() == BO_Comma) {
     killAndFlowOrigin(*BO, *BO->getRHS());
     return;
@@ -520,66 +565,47 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   // TODO: Handle assignments involving dereference like `*p = q`.
 }
 
+static const CFGBlock *findPredBlockForExpr(const CFGBlock *MergeBlock,
+                                            const Expr *ArmExpr) {
+  if (!ArmExpr)
+    return nullptr;
+  const Expr *Target = ArmExpr->IgnoreParenImpCasts();
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(Target))
+    if (const Expr *Src = OVE->getSourceExpr())
+      Target = Src->IgnoreParenImpCasts();
+
+  for (const CFGBlock *Pred : MergeBlock->preds()) {
+    if (!Pred)
+      continue;
+    for (const CFGElement &Elt : *Pred)
+      if (auto CS = Elt.getAs<CFGStmt>())
+        if (const auto *E = dyn_cast<Expr>(CS->getStmt()))
+          if (E->IgnoreParenImpCasts() == Target)
+            return Pred;
+  }
+  return nullptr;
+}
+
+/// Visits conditional operators (e.g., `cond ? a : b`).
+///
+/// To prevent liveness leakage across loop backedges (which causes false
+/// positives like in `while (...) { int x; consume(cond ? &x : nullptr); }`),
+/// we generate the flow facts in the respective predecessor blocks of the arms
+/// rather than in the merge block. This ensures that the liveness of the
+/// temporary origin from one arm does not propagate into the other arm's path.
 void FactsGenerator::VisitAbstractConditionalOperator(
     const AbstractConditionalOperator *CO) {
   if (!hasOrigins(CO))
     return;
 
-  // For the GNU binary conditional `a ?: b`, getTrueExpr() is the
-  // OpaqueValueExpr wrapping the common subexpression.
   const Expr *TrueExpr = CO->getTrueExpr();
   const Expr *FalseExpr = CO->getFalseExpr();
 
-  const auto Preds = CurrentBlock->preds();
-
-  // Skip origin flow from conditional operator arms that cannot produce the
-  // result value: throw arms and calls to noreturn functions.
-  bool TBHasEdge = true;
-  bool FBHasEdge = true;
-
-  switch (CurrentBlock->pred_size()) {
-  case 0:
-    return;
-  case 1: {
-    // For `a ?: b`, getTrueExpr() is the OpaqueValueExpr; the common
-    // subexpression it wraps is what appears in the predecessor block.
-    const Expr *TrueArm = TrueExpr->IgnoreParenImpCasts();
-    if (const auto *OVE = dyn_cast<OpaqueValueExpr>(TrueArm))
-      if (const Expr *Src = OVE->getSourceExpr())
-        TrueArm = Src->IgnoreParenImpCasts();
-    TBHasEdge = llvm::any_of(**Preds.begin(), [TrueArm](const CFGElement &Elt) {
-      if (auto CS = Elt.getAs<CFGStmt>())
-        return CS->getStmt() == TrueArm;
-      return false;
-    });
-    FBHasEdge = !TBHasEdge;
-    break;
-  }
-  case 2: {
-    const auto *It = Preds.begin();
-    TBHasEdge = It->isReachable();
-    FBHasEdge = (++It)->isReachable();
-    break;
-  }
-  default:
-    llvm_unreachable("expected at most 2 predecessors");
-    return;
-  }
-
-  bool FirstFlow = true;
-  auto HandleFlow = [&](const Expr *E) {
-    if (FirstFlow) {
-      killAndFlowOrigin(*CO, *E);
-      FirstFlow = false;
-    } else {
-      flowOrigin(*CO, *E);
-    }
-  };
-
-  if (TBHasEdge)
-    HandleFlow(TrueExpr);
-  if (FBHasEdge)
-    HandleFlow(FalseExpr);
+  if (const CFGBlock *TBPred = findPredBlockForExpr(CurrentBlock, TrueExpr))
+    flow(getOriginsList(*CO), getOriginsList(*TrueExpr), /*Kill=*/true, TBPred);
+  if (const CFGBlock *FBPred = findPredBlockForExpr(CurrentBlock, FalseExpr))
+    flow(getOriginsList(*CO), getOriginsList(*FalseExpr), /*Kill=*/true,
+         FBPred);
 }
 
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
@@ -611,7 +637,7 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
+  ArrayRef<const Expr *> Args(OCE->getArgs(), OCE->getNumArgs());
   // For `static operator()`, the first argument is the object argument,
   // remove it from the argument list to avoid off-by-one errors.
   if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic())
@@ -780,6 +806,21 @@ void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
       FactMgr.createFact<InvalidateOriginFact>(List->getOuterOriginID(), DE));
 }
 
+void FactsGenerator::VisitStmtExpr(const StmtExpr *SE) {
+  // A statement expression (`({ ...; e; })`) yields the value of its final
+  // expression `e`. Flow `e`'s origins into the statement expression's origin
+  // so a borrow `e` carries reaches the value's users.
+  const auto *CS = SE->getSubStmt();
+  if (!CS || CS->body_empty())
+    return;
+  const auto *Last = dyn_cast<Expr>(CS->body_back());
+  if (!Last)
+    return;
+  if (OriginList *Dst = getOriginsList(*SE))
+    if (OriginList *Src = getRValueOrigins(Last, getOriginsList(*Last)))
+      flow(Dst, Src, /*Kill=*/true);
+}
+
 bool FactsGenerator::escapesViaReturn(OriginID OID) const {
   return llvm::any_of(EscapesInCurrentBlock, [OID](const Fact *F) {
     if (const auto *EF = F->getAs<ReturnEscapeFact>())
@@ -815,9 +856,12 @@ void FactsGenerator::handleFullExprCleanup(
 }
 
 void FactsGenerator::handleExitBlock() {
+  bool IsDestructor = isa_and_nonnull<CXXDestructorDecl>(AC.getDecl());
   for (const Origin &O : FactMgr.getOriginMgr().getOrigins())
-    if (auto *FD = dyn_cast_if_present<FieldDecl>(O.getDecl()))
-      // Create FieldEscapeFacts for all field origins that remain live at exit.
+    // Create FieldEscapeFacts for all field origins that remain live at exit.
+    // Fields in destructors do not escape since the object is being destroyed.
+    if (auto *FD = dyn_cast_if_present<FieldDecl>(O.getDecl());
+        FD && !IsDestructor)
       EscapesInCurrentBlock.push_back(
           FactMgr.createFact<FieldEscapeFact>(O.ID, FD));
     else if (auto *VD = dyn_cast_if_present<VarDecl>(O.getDecl())) {
@@ -886,6 +930,12 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
        I < Args.size() && I < FD->getNumParams() + IsInstance; ++I) {
     const ParmVarDecl *PVD = FD->getParamDecl(I - IsInstance);
     if (!PVD->getType()->isRValueReferenceType())
+      continue;
+    // Skip lifetime annotated r-value reference parameters. Lifetime annotation
+    // indicates that the parameter is borrowed (not consumed), so it should not
+    // be marked as moved even though it's an r-value reference.
+    if (PVD->hasAttr<LifetimeBoundAttr>() ||
+        PVD->hasAttr<LifetimeCaptureByAttr>())
       continue;
     const Expr *Arg = Args[I];
     OriginList *MovedOrigins = getOriginsList(*Arg);

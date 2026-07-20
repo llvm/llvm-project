@@ -259,6 +259,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ExpandPseudoLegacyPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptLegacyPass(PR);
+  initializeAArch64PTrueCoalescingLegacyPass(PR);
   initializeAArch64SIMDInstrOptLegacyPass(PR);
   initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
@@ -276,7 +277,7 @@ LLVMInitializeAArch64Target() {
   initializeLDTLSCleanupPass(PR);
   initializeMachineKCFILegacyPass(PR);
   initializeMachineSMEABIPass(PR);
-  initializeAArch64SRLTDefineSuperRegsPass(PR);
+  initializeAArch64SRLTDefineSuperRegsLegacyPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
@@ -510,6 +511,18 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+// Encourage placing FORM_TRANSPOSED_REG immediately before the instruction that
+// uses/consumes it. This ensures its def has a short live range, which means
+// we're more likely to allocate registers its operands first (which works best
+// for the hints in AArch64RegisterInfo::getRegAllocationHints).
+static bool scheduleFormTransposedTupleAdjacentToUsers(
+    const TargetInstrInfo &TII, const TargetSubtargetInfo &TSI,
+    const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
+  return !FirstMI ||
+         FirstMI->getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
+         FirstMI->getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO;
+}
+
 ScheduleDAGInstrs *
 AArch64TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
@@ -518,6 +531,9 @@ AArch64TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.hasFusion())
     DAG->addMutation(createAArch64MacroFusionDAGMutation());
+  if (ST.hasSME() && ST.isStreaming())
+    DAG->addMutation(createMacroFusionDAGMutation(
+        scheduleFormTransposedTupleAdjacentToUsers));
   return DAG;
 }
 
@@ -815,8 +831,10 @@ void AArch64PassConfig::addMachineSSAOptimization() {
   // Run default MachineSSAOptimization first.
   TargetPassConfig::addMachineSSAOptimization();
 
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createAArch64MIPeepholeOptLegacyPass());
+    addPass(createAArch64PTrueCoalescingLegacyPass());
+  }
 }
 
 bool AArch64PassConfig::addILPOpts() {
@@ -860,7 +878,7 @@ void AArch64PassConfig::addPreRegAlloc() {
 
 void AArch64PassConfig::addPostRewrite() {
   if (EnableSRLTSubregToRegMitigation)
-    addPass(createAArch64SRLTDefineSuperRegsPass());
+    addPass(createAArch64SRLTDefineSuperRegsLegacyPass());
 }
 
 void AArch64PassConfig::addPostRegAlloc() {

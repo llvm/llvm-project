@@ -53,11 +53,12 @@ Quick start
    tests.
 
 By default, you get a release build with assertions enabled that targets
-the host arch. You can set build options by editing ``out/gn/args.gn``, for
-example putting ``is_debug = true`` in there gives you a debug build. Run
-``llvm/utils/gn/gn.py args --list out/gn`` to see a list of all possible
-options. After touching ``out/gn/args.gn`` just run ninja: it will re-invoke gn
-before starting the build.
+the host arch. You can set build options by editing ``out/gn/args.gn``,
+for example putting ``is_debug = true`` in there gives you a debug build
+(but see also "Debug builds" below). Run ``llvm/utils/gn/gn.py args
+--list out/gn`` to see a list of all possible options. After touching
+``out/gn/args.gn`` just run ninja: it will re-invoke gn before starting
+the build.
 
 GN has extensive built-in help; try e.g. ``llvm/utils/gn/gn.py help gen`` to see
 the help for the ``gen`` command. The full GN reference is also `available
@@ -70,6 +71,16 @@ after making GN build changes is your friend.
 To not put ``BUILD.gn`` files into the main tree, they are all below
 ``utils/gn/secondary``.  For example, the build file for ``llvm/lib/Support``
 is in ``utils/gn/secondary/llvm/lib/Support``.
+
+.. _Debug builds:
+
+Debug builds
+============
+
+As well as being able to build in debug mode by setting ``is_debug =
+true``, you can also build debug binaries in a release mode tree. The
+binaries may be built using the target name ``$TARGET.dbg`` and are
+stored in the ``bin.dbg`` subdirectory of the build tree.
 
 .. _Syncing GN files from CMake files:
 

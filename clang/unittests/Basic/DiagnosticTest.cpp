@@ -449,4 +449,25 @@ TEST_F(SuppressionMappingTest, CanonicalizesSlashesOnWindows) {
 }
 #endif
 
+TEST(EscapeSingleCodepointForDiagnosticTest, printableDisplaysQuoted) {
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'A'), "'A'");
+  // This test fails when msvc is not using /utf-8.
+  // EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'🤡'), "'🤡' U+1F921");
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U' '), "' '");
+}
+
+TEST(EscapeSingleCodepointForDiagnosticTest, nonPrintableDisplaysNoQuoted) {
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'\n'), "U+000A");
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'\0'), "U+0000");
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'\x1B'), "U+001B");
+}
+
+TEST(EscapeSingleCodepointForDiagnosticTest, nonScalarValues) {
+  // Low and high surrogates:
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(0xD800), "<0xD800>");
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(0xDFFF), "<0xDFFF>");
+  // Overly large values:
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(0x110000), "<0x110000>");
+}
+
 } // namespace

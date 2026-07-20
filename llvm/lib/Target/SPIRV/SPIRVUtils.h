@@ -175,10 +175,8 @@ StringRef getOriginalAsmConstraints(const CallBase &CB);
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
 // little-endian words.
-void addStringImm(const StringRef &Str, MCInst &Inst);
-void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB);
-void addStringImm(const StringRef &Str, IRBuilder<> &B,
-                  std::vector<Value *> &Args);
+void addStringImm(StringRef Str, MCInst &Inst);
+void addStringImm(StringRef Str, MachineInstrBuilder &MIB);
 
 // Read the series of integer operands back as a null-terminated string using
 // the reverse of the logic in addStringImm.
@@ -192,9 +190,8 @@ std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
 // Add an OpName instruction for the given target register.
-void buildOpName(Register Target, const StringRef &Name,
-                 MachineIRBuilder &MIRBuilder);
-void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+void buildOpName(Register Target, StringRef Name, MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, StringRef Name, MachineInstr &I,
                  const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
@@ -207,10 +204,6 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
-                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
-void buildOpMemberDecorate(Register Reg, MachineInstr &I,
-                           const SPIRVInstrInfo &TII,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
                            ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
@@ -309,6 +302,10 @@ bool isSpvIntrinsic(const Value *Arg);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
+
+// Get the i-th operand of the metadata node as a ConstantInt, or nullptr if it
+// is out of range or not a ConstantInt.
+ConstantInt *getMDOperandAsConstInt(const MDNode *N, unsigned I);
 
 // If OpenCL or SPIR-V builtin function name is recognized, return a demangled
 // name, otherwise return an empty string.
@@ -539,8 +536,6 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
 #define SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR "spv.was-available-externally"
-
-bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
                      MachineIRBuilder &MIRBuilder,

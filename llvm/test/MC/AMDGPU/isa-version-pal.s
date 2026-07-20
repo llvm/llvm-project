@@ -6,9 +6,9 @@
 // RUN: llvm-mc -triple amdgcn-amd-amdpal -mcpu=iceland %s | FileCheck --check-prefix=OSABI-PAL %s
 // RUN: not llvm-mc -triple amdgcn-amd-amdpal -mcpu=gfx803 %s -filetype=null 2>&1 | FileCheck --check-prefix=OSABI-PAL-ERR %s
 
-// OSABI-PAL: .amd_amdgpu_isa "amdgcn-amd-amdpal--gfx802"
-// OSABI-UNK-ERR: error: target id must match options
-// OSABI-HSA-ERR: error: .amdgcn_target directive's target id amdgcn-amd-amdpal--gfx802 does not match the specified target id amdgcn-amd-amdhsa--gfx802
-// OSABI-PAL-ERR: error: target id must match options
+// OSABI-PAL: .amd_amdgpu_isa "amdgcn-amd-amdpal-unknown-gfx802"
+// OSABI-UNK-ERR: error: .amd_amdgpu_isa amdgcn-amd-amdpal-unknown-gfx802 is incompatible with amdgcn-amd-unknown-unknown-gfx802
+// OSABI-HSA-ERR: error: .amdgcn_target amdgcn-amd-amdpal-unknown-gfx802 is incompatible with amdgcn-amd-amdhsa-unknown-gfx802
+// OSABI-PAL-ERR: error: .amd_amdgpu_isa directive processor gfx802 does not match the specified processor gfx803
 .amd_amdgpu_isa "amdgcn-amd-amdpal--gfx802"
 .amdgcn_target "amdgcn-amd-amdpal--gfx802"

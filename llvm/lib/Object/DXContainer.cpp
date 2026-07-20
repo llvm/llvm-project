@@ -127,6 +127,13 @@ Error DXContainer::parseDebugName(StringRef Part) {
   return Error::success();
 }
 
+Error DXContainer::parsePrivateData(StringRef Part) {
+  if (PrivateData)
+    return parseFailed("more than one PRIV part is present in the file");
+  PrivateData.emplace(Part);
+  return Error::success();
+}
+
 Error DXContainer::parseShaderFeatureFlags(StringRef Part) {
   if (ShaderFeatureFlags)
     return parseFailed("More than one SFI0 part is present in the file");
@@ -575,6 +582,10 @@ Error DXContainer::parsePartOffsets() {
       break;
     case dxbc::PartType::ILDN:
       if (Error Err = parseDebugName(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::PRIV:
+      if (Error Err = parsePrivateData(PartData))
         return Err;
       break;
     case dxbc::PartType::SFI0:

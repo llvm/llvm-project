@@ -375,7 +375,7 @@ bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
                                              const LangOptions &LO,
                                              StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple()))
     return false;
 
   if (!isBranchProtectionSupportedArch(Arch))
@@ -647,7 +647,7 @@ void ARMTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   llvm::ARM::fillValidCPUArchList(Values);
 }
 
-bool ARMTargetInfo::setCPU(const std::string &Name) {
+bool ARMTargetInfo::setCPU(StringRef Name) {
   if (Name != "generic")
     setArchInfo(llvm::ARM::parseCPUArch(Name));
 

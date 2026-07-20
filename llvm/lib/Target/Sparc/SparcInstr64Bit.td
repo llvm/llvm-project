@@ -500,3 +500,15 @@ def : Pat<(add iPTR:$r, (SPlo tconstpool:$in)),  (ADDri $r, tconstpool:$in)>;
 def : Pat<(add iPTR:$r, (SPlo tblockaddress:$in)),
                         (ADDri $r, tblockaddress:$in)>;
 }
+
+// Endian adjusted memory operations.
+let Predicates = [HasV9, Is64Bit] in {
+  // LDSWA is only usable on 64-bit environment.
+  def : Pat<(sext (i32 (SPloadbig    ForceADDRrr:$src, i32))), (LDSWArr ForceADDRrr:$src, 0x80)>;
+  def : Pat<(sext (i32 (SPloadlittle ForceADDRrr:$src, i32))), (LDSWArr ForceADDRrr:$src, 0x88)>;
+
+  def : Pat<(SPloadbig    ForceADDRrr:$src, i64), (LDXArr ForceADDRrr:$src, 0x80)>;
+  def : Pat<(SPloadlittle ForceADDRrr:$src, i64), (LDXArr ForceADDRrr:$src, 0x88)>;
+  def : Pat<(SPstorebig    i64:$val, ForceADDRrr:$dst, i64), (STXArr ForceADDRrr:$dst, $val, 0x80)>;
+  def : Pat<(SPstorelittle i64:$val, ForceADDRrr:$dst, i64), (STXArr ForceADDRrr:$dst, $val, 0x88)>;
+}

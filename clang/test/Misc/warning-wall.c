@@ -73,6 +73,8 @@ CHECK-NEXT:      -Wunused-argument
 CHECK-NEXT:      -Wunused-function
 CHECK-NEXT:        -Wunneeded-internal-declaration
 CHECK-NEXT:      -Wunused-label
+CHECK-NEXT:      -Wunused-template
+CHECK-NEXT:        -Wunneeded-internal-declaration
 CHECK-NEXT:      -Wunused-private-field
 CHECK-NEXT:      -Wunused-lambda-capture
 CHECK-NEXT:      -Wunused-local-typedef
