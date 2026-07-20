@@ -1090,6 +1090,7 @@ PreservedAnalyses ExpandMemCmpPass::run(Function &F,
   if (F.hasFnAttribute(Attribute::SanitizeAddress) ||
       F.hasFnAttribute(Attribute::SanitizeMemory) ||
       F.hasFnAttribute(Attribute::SanitizeThread) ||
+      F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
       F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return PreservedAnalyses::all();
 
