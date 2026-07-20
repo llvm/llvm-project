@@ -160,7 +160,11 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
                  F.getParent()->getModuleFlag("probe-stack")))
       ProbeKind = PS->getString();
     if (ProbeKind.size()) {
-      if (ProbeKind != "inline-asm")
+      // Apple Swift emits __chkstk_darwin for Darwin bitcode. Treat it as a
+      // request for the existing inline probe sequence; this backend does not
+      // provide Apple's out-of-tree helper-based implementation.
+      if (ProbeKind != "inline-asm" &&
+          !(STI->isTargetDarwin() && ProbeKind == "__chkstk_darwin"))
         report_fatal_error("Unsupported stack probing method");
       StackProbeSize = ProbeSize;
     }
