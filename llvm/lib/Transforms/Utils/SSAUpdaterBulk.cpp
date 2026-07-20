@@ -210,7 +210,10 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
 
       auto *User = cast<Instruction>(U->getUser());
       BasicBlock *BB = getUserBB(U);
-      Value *V = ComputeValue(BB, /*IsLiveOut=*/BB != User->getParent());
+      // For PHI uses, BB is the incoming block and we always want the live-out
+      // value at the end of that block. For non-PHI uses, BB == User->getParent()
+      // and we want the live-in value reaching the use point within the block.
+      Value *V = ComputeValue(BB, /*IsLiveOut=*/isa<PHINode>(User));
       Value *OldVal = U->get();
       assert(OldVal && "Invalid use!");
       // Notify that users of the existing value that it is being replaced.
