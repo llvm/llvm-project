@@ -230,7 +230,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   read_write_test
   SUITE
     libc_unistd_unittests
