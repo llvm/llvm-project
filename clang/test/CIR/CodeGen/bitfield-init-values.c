@@ -26,3 +26,9 @@ struct BS { int a : 4; int b : 4; };
 struct BS bs = { -1, 3 };
 // CIR: cir.global external @bs = #cir.const_record<{#cir.int<63> : !u8i, #cir.zero : !cir.array<!u8i x 3>}> : !rec_BS
 // LLVM: @bs = global %struct.BS { i8 63, [3 x i8] zeroinitializer }
+
+struct BA { int a : 24; char c; };
+struct BA ba = { 0x123456, 7 };
+// CIR: cir.global external @ba = #cir.const_record<{#cir.const_array<[#cir.int<86> : !u8i, #cir.int<52> : !u8i, #cir.int<18> : !u8i]> : !cir.array<!u8i x 3>, #cir.int<7> : !s8i}> : !rec_BA
+// LLVMCIR: @ba = global %struct.BA { [3 x i8] c"V4\12", i8 7 }
+// OGCG: @ba = global { i8, i8, i8, i8 } { i8 86, i8 52, i8 18, i8 7 }
