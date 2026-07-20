@@ -1717,7 +1717,7 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
                                  Wait.get(AMDGPU::STORE_CNT));
     Modified |= promoteSoftWaitCnt(WaitcntVsCntInstr);
 
-    ScoreBrackets.applyWaitcnt(AMDGPU::STORE_CNT, Wait.get(AMDGPU::STORE_CNT));
+    ScoreBrackets.applyWaitcnt(Wait, AMDGPU::STORE_CNT);
     Wait.set(AMDGPU::STORE_CNT, ~0u);
 
     LLVM_DEBUG(It.isEnd()
@@ -2004,8 +2004,8 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Modified |= updateOperandIfDifferent(*CombinedLoadDsCntInstr,
                                            AMDGPU::OpName::simm16, NewEnc);
       Modified |= promoteSoftWaitCnt(CombinedLoadDsCntInstr);
-      ScoreBrackets.applyWaitcnt(AMDGPU::LOAD_CNT, Wait.get(AMDGPU::LOAD_CNT));
-      ScoreBrackets.applyWaitcnt(AMDGPU::DS_CNT, Wait.get(AMDGPU::DS_CNT));
+      ScoreBrackets.applyWaitcnt(Wait, AMDGPU::LOAD_CNT);
+      ScoreBrackets.applyWaitcnt(Wait, AMDGPU::DS_CNT);
       Wait.set(AMDGPU::LOAD_CNT, ~0u);
       Wait.set(AMDGPU::DS_CNT, ~0u);
 
@@ -2116,11 +2116,9 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         std::min(Wait.get(AMDGPU::VA_VDST_RD), Wait.get(AMDGPU::VA_VDST_WR));
     Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, VaVdst);
 
-    ScoreBrackets.applyWaitcnt(AMDGPU::VA_VDST_RD,
-                               Wait.get(AMDGPU::VA_VDST_RD));
-    ScoreBrackets.applyWaitcnt(AMDGPU::VA_VDST_WR,
-                               Wait.get(AMDGPU::VA_VDST_WR));
-    ScoreBrackets.applyWaitcnt(AMDGPU::VM_VSRC, Wait.get(AMDGPU::VM_VSRC));
+    ScoreBrackets.applyWaitcnt(Wait, AMDGPU::VA_VDST_RD);
+    ScoreBrackets.applyWaitcnt(Wait, AMDGPU::VA_VDST_WR);
+    ScoreBrackets.applyWaitcnt(Wait, AMDGPU::VM_VSRC);
     Wait.set(AMDGPU::VA_VDST_RD, ~0u);
     Wait.set(AMDGPU::VA_VDST_WR, ~0u);
     Wait.set(AMDGPU::VM_VSRC, ~0u);

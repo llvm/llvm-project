@@ -63,6 +63,79 @@ exit:
   ret void
 }
 
+define void @loop_1_switch(i1 %PredEntry, i32 %PredB, i32 %PredC, i32 %PredD) {
+; CHECK-LABEL: define void @loop_1_switch(
+; CHECK-SAME: i1 [[PREDENTRY:%.*]], i32 [[PREDB:%.*]], i32 [[PREDC:%.*]], i32 [[PREDD:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[PREDENTRY]], label %[[A:.*]], label %[[G:.*]]
+; CHECK:       [[A]]:
+; CHECK-NEXT:    br label %[[B:.*]]
+; CHECK:       [[B]]:
+; CHECK-NEXT:    switch i32 [[PREDB]], label %[[C:.*]] [
+; CHECK-NEXT:      i32 0, label %[[B_TARGET_E:.*]]
+; CHECK-NEXT:      i32 1, label %[[B_TARGET_E]]
+; CHECK-NEXT:    ]
+; CHECK:       [[C]]:
+; CHECK-NEXT:    switch i32 [[PREDC]], label %[[D:.*]] [
+; CHECK-NEXT:      i32 0, label %[[C_TARGET_F:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[D]]:
+; CHECK-NEXT:    switch i32 [[PREDD]], label %[[A]] [
+; CHECK-NEXT:      i32 0, label %[[D_TARGET_F:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[E:.*]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[F:.*]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[G]]:
+; CHECK-NEXT:    br label %[[F]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[B_TARGET_E]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD:.*]]
+; CHECK:       [[C_TARGET_F]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[D_TARGET_F]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[LOOP_EXIT_GUARD]]:
+; CHECK-NEXT:    [[GUARD_E:%.*]] = phi i1 [ true, %[[B_TARGET_E]] ], [ false, %[[C_TARGET_F]] ], [ false, %[[D_TARGET_F]] ]
+; CHECK-NEXT:    br i1 [[GUARD_E]], label %[[E]], label %[[F]]
+;
+entry:
+  br i1 %PredEntry, label %A, label %G
+
+A:
+  br label %B
+
+B:
+  switch i32 %PredB, label %C [
+  i32 0, label %E
+  i32 1, label %E
+  ]
+
+C:
+  switch i32 %PredC, label %D [
+  i32 0, label %F
+  ]
+
+D:
+  switch i32 %PredD, label %A [
+  i32 0, label %F
+  ]
+
+E:
+  br label %exit
+
+F:
+  br label %exit
+
+G:
+  br label %F
+
+exit:
+  ret void
+}
+
 define void @multiedge_both_callbr(i1 %Pred) {
 ; CHECK-LABEL: define void @multiedge_both_callbr(
 ; CHECK-SAME: i1 [[PRED:%.*]]) {
@@ -90,6 +163,47 @@ loop:
 loop.next:
   %phi.internal = phi i32 [ 1, %loop ], [ 1, %loop ]
   callbr void asm "", "r,!i,!i"(i1 %Pred) to label %loop [label %exit, label %exit]
+
+exit:
+  %phi.external = phi i32 [ 2, %loop.next ], [ 2, %loop.next ]
+  ret void
+}
+
+define void @multiedge_both_switch(i32 %Pred) {
+; CHECK-LABEL: define void @multiedge_both_switch(
+; CHECK-SAME: i32 [[PRED:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    switch i32 [[PRED]], label %[[LOOP_NEXT:.*]] [
+; CHECK-NEXT:      i32 0, label %[[LOOP_NEXT]]
+; CHECK-NEXT:    ]
+; CHECK:       [[LOOP_NEXT]]:
+; CHECK-NEXT:    [[PHI_INTERNAL:%.*]] = phi i32 [ 1, %[[LOOP]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    switch i32 [[PRED]], label %[[LOOP]] [
+; CHECK-NEXT:      i32 0, label %[[LOOP_NEXT_TARGET_EXIT:.*]]
+; CHECK-NEXT:      i32 1, label %[[LOOP_NEXT_TARGET_EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       [[EXIT:.*]]:
+; CHECK-NEXT:    [[PHI_EXTERNAL:%.*]] = phi i32 [ 2, %[[LOOP_NEXT_TARGET_EXIT]] ]
+; CHECK-NEXT:    ret void
+; CHECK:       [[LOOP_NEXT_TARGET_EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+;
+entry:
+  br label %loop
+
+loop:
+  switch i32 %Pred, label %loop.next [
+  i32 0, label %loop.next
+  ]
+
+loop.next:
+  %phi.internal = phi i32 [ 1, %loop ], [ 1, %loop ]
+  switch i32 %Pred, label %loop [
+  i32 0, label %exit
+  i32 1, label %exit
+  ]
 
 exit:
   %phi.external = phi i32 [ 2, %loop.next ], [ 2, %loop.next ]
@@ -134,6 +248,63 @@ header:                                           ; preds = %second_exiting, %en
 
 second_exiting:                                   ; preds = %header
   callbr void asm "", "r,!i,!i"(i1 false) to label %header [label %exit1, label %common.ret]
+
+common.ret:                                       ; preds = %second_exiting, %header
+  ret i32 0
+
+exit1:                                            ; preds = %second_exiting, %header
+  %use1 = or i32 %val, 0
+  ret i32 0
+}
+
+define i32 @multiedge_restore_ssa_switch() {
+; CHECK-LABEL: define i32 @multiedge_restore_ssa_switch() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[HEADER:.*]]
+; CHECK:       [[HEADER]]:
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 0, 0
+; CHECK-NEXT:    switch i32 0, label %[[HEADER_TARGET_EXIT1:.*]] [
+; CHECK-NEXT:      i32 0, label %[[HEADER_TARGET_COMMON_RET:.*]]
+; CHECK-NEXT:      i32 1, label %[[SECOND_EXITING:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[SECOND_EXITING]]:
+; CHECK-NEXT:    switch i32 0, label %[[HEADER]] [
+; CHECK-NEXT:      i32 0, label %[[SECOND_EXITING_TARGET_EXIT1:.*]]
+; CHECK-NEXT:      i32 1, label %[[SECOND_EXITING_TARGET_COMMON_RET:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[COMMON_RET:.*]]:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[EXIT1:.*]]:
+; CHECK-NEXT:    [[USE1:%.*]] = or i32 [[VAL_MOVED:%.*]], 0
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[HEADER_TARGET_EXIT1]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD:.*]]
+; CHECK:       [[HEADER_TARGET_COMMON_RET]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[SECOND_EXITING_TARGET_EXIT1]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[SECOND_EXITING_TARGET_COMMON_RET]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[LOOP_EXIT_GUARD]]:
+; CHECK-NEXT:    [[VAL_MOVED]] = phi i32 [ [[VAL]], %[[HEADER_TARGET_EXIT1]] ], [ [[VAL]], %[[SECOND_EXITING_TARGET_EXIT1]] ], [ [[VAL]], %[[HEADER_TARGET_COMMON_RET]] ], [ [[VAL]], %[[SECOND_EXITING_TARGET_COMMON_RET]] ]
+; CHECK-NEXT:    [[GUARD_EXIT1:%.*]] = phi i1 [ true, %[[HEADER_TARGET_EXIT1]] ], [ false, %[[HEADER_TARGET_COMMON_RET]] ], [ true, %[[SECOND_EXITING_TARGET_EXIT1]] ], [ false, %[[SECOND_EXITING_TARGET_COMMON_RET]] ]
+; CHECK-NEXT:    br i1 [[GUARD_EXIT1]], label %[[EXIT1]], label %[[COMMON_RET]]
+;
+entry:
+  br label %header
+
+header:                                           ; preds = %second_exiting, %entry
+  %val = add i32 0, 0
+  switch i32 0, label %exit1 [
+  i32 0, label %common.ret
+  i32 1, label %second_exiting
+  ]
+
+second_exiting:                                   ; preds = %header
+  switch i32 0, label %header [
+  i32 0, label %exit1
+  i32 1, label %common.ret
+  ]
 
 common.ret:                                       ; preds = %second_exiting, %header
   ret i32 0

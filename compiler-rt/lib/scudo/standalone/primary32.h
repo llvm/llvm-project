@@ -131,17 +131,8 @@ public:
   uptr tryReleaseToOS(uptr ClassId, ReleaseToOS ReleaseType);
   uptr releaseToOS(ReleaseToOS ReleaseType);
 
-  const char *getRegionInfoArrayAddress() const { return nullptr; }
-  static uptr getRegionInfoArraySize() { return 0; }
-
   // Not supported in SizeClassAllocator32.
   BlockInfo findNearestBlock(UNUSED uptr Ptr) { return {}; }
-
-  // Not supported in SizeClassAllocator32.
-  static BlockInfo findNearestBlock(UNUSED const char *RegionInfoData,
-                                    UNUSED uptr Ptr) {
-    return {};
-  }
 
   AtomicOptions Options;
 

@@ -102,7 +102,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   static constexpr llvm::StringRef Allowed[] = {
 #define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) "UETT_" #Name,
 #define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) "UETT_" #Name,
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/Traits.inc"
   };
   if (Value.isString())
     return ::getBestGuess(Value.getString(), llvm::ArrayRef(Allowed), "UETT_");

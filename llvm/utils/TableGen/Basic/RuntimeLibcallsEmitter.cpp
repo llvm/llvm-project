@@ -27,28 +27,30 @@
 using namespace llvm;
 
 namespace {
-// Pair of a RuntimeLibcallPredicate and LibcallCallingConv to use as a map key.
+// Pair of a RuntimeLibcallAvailability and LibcallCallingConv to use as a map
+// key.
 struct PredicateWithCC {
-  const Record *Predicate = nullptr;
+  const Record *Availability = nullptr;
   const Record *CallingConv = nullptr;
 
   PredicateWithCC() = default;
   PredicateWithCC(std::pair<const Record *, const Record *> P)
-      : Predicate(P.first), CallingConv(P.second) {}
+      : Availability(P.first), CallingConv(P.second) {}
 
   PredicateWithCC(const Record *P, const Record *C)
-      : Predicate(P), CallingConv(C) {}
+      : Availability(P), CallingConv(C) {}
 };
 
 inline bool operator==(PredicateWithCC LHS, PredicateWithCC RHS) {
-  return LHS.Predicate == RHS.Predicate && LHS.CallingConv == RHS.CallingConv;
+  return LHS.Availability == RHS.Availability &&
+         LHS.CallingConv == RHS.CallingConv;
 }
 } // namespace
 
 namespace llvm {
 template <> struct DenseMapInfo<PredicateWithCC, void> {
   static unsigned getHashValue(const PredicateWithCC Val) {
-    auto Pair = std::make_pair(Val.Predicate, Val.CallingConv);
+    auto Pair = std::make_pair(Val.Availability, Val.CallingConv);
     return DenseMapInfo<
         std::pair<const Record *, const Record *>>::getHashValue(Pair);
   }
@@ -444,8 +446,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         PredicateSorter.takeVector();
 
     llvm::sort(SortedPredicates, [](PredicateWithCC A, PredicateWithCC B) {
-      StringRef AName = A.Predicate ? A.Predicate->getName() : "";
-      StringRef BName = B.Predicate ? B.Predicate->getName() : "";
+      StringRef AName = A.Availability ? A.Availability->getName() : "";
+      StringRef BName = B.Availability ? B.Availability->getName() : "";
       if (AName != BName)
         return AName < BName;
       // Break ties on the calling convention so predicates that share a name
@@ -456,7 +458,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     });
 
     for (PredicateWithCC Entry : SortedPredicates) {
-      AvailabilityPredicate SubsetPredicate(Entry.Predicate);
+      AvailabilityPredicate SubsetPredicate(Entry.Availability);
       unsigned IndentDepth = 2;
 
       auto It = Pred2Funcs.find(Entry);

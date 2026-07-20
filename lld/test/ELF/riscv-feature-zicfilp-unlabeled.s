@@ -25,6 +25,12 @@
 # RUN: llvm-readelf -n out | FileCheck --check-prefix=ZICFILP %s
 # RUN: ld.lld f1-s.o f3-s.o --shared -o out.so --fatal-warnings
 # RUN: llvm-readelf -n out.so | FileCheck --check-prefix=ZICFILP %s
+
+## Check the unlabeled landing pad-style PLT. f1's `call f2` references the
+## undefined f2, which becomes a preemptible PLT entry in a shared object.
+# RUN: ld.lld rv32-f1-s.o --shared -o out.rv32.so --fatal-warnings
+# RUN: llvm-objdump -h -d --no-show-raw-insn --mattr=+experimental-zicfilp out.rv32.so | FileCheck --check-prefixes=PLT-DIS,PLT-DIS32 %s
+# RUN: llvm-objdump -h -d --no-show-raw-insn --mattr=+experimental-zicfilp out.so | FileCheck --check-prefixes=PLT-DIS,PLT-DIS64 %s
 # RUN: ld.lld f1-s.o f2.o f3-s.o -o out.force -z zicfilp=unlabeled --fatal-warnings
 # RUN: llvm-readelf -n out.force | FileCheck --check-prefix=ZICFILP %s
 # RUN: ld.lld f2-s.o f3.o --shared -o out.force.so -z zicfilp=never -z zicfilp=unlabeled --fatal-warnings
@@ -67,6 +73,32 @@
 ## -z zicfilp=unlabeled should override and disable ZICFILP-func-sig.
 # RUN: llvm-readelf -n out.override | FileCheck --check-prefixes=ZICFILP,OVERRIDE %s
 # OVERRIDE-NOT: ZICFILP-func-sig
+
+# PLT-DIS32:    .plt     00000030         00001220 TEXT
+# PLT-DIS32:    .got.plt 0000000c         000032a8 DATA
+# PLT-DIS64:    .plt     00000030 0000000000001370 TEXT
+# PLT-DIS64:    .got.plt 00000018 0000000000003450 DATA
+
+# PLT-DIS:      Disassembly of section .plt:
+# PLT-DIS:      <.plt>:
+# PLT-DIS-NEXT:     auipc t3, 0x2
+# PLT-DIS-NEXT:     sub t1, t1, t2
+# PLT-DIS32-NEXT:   lw t2, 0x88(t3)
+# PLT-DIS64-NEXT:   ld t2, 0xe0(t3)
+# PLT-DIS-NEXT:     addi t1, t1, -0x30
+# PLT-DIS32-NEXT:   addi t0, t3, 0x88
+# PLT-DIS64-NEXT:   addi t0, t3, 0xe0
+# PLT-DIS32-NEXT:   srli t1, t1, 0x2
+# PLT-DIS64-NEXT:   srli t1, t1, 0x1
+# PLT-DIS32-NEXT:   lw t0, 0x4(t0)
+# PLT-DIS64-NEXT:   ld t0, 0x8(t0)
+# PLT-DIS-NEXT:     jr t2
+
+# PLT-DIS:          lpad 0x0
+# PLT-DIS-NEXT:     auipc t2, 0x2
+# PLT-DIS32-NEXT:   lw t2, 0x6c(t2)
+# PLT-DIS64-NEXT:   ld t2, 0xcc(t2)
+# PLT-DIS-NEXT:     jalr t1, t2
 
 #--- rv32-f1-s.s
 .section ".note.gnu.property", "a"

@@ -88,6 +88,30 @@ public:
   }
 };
 
+/// A tool that mimics debugger_create by returning a fixed new debugger URI.
+class FakeDebuggerCreateTool : public Tool {
+public:
+  FakeDebuggerCreateTool() : Tool("debugger_create", "fake debugger_create") {}
+
+  llvm::Expected<CallToolResult> Call(const ToolArguments &) override {
+    CallToolResult result;
+    result.content.emplace_back(TextContent{{"lldb-mcp://debugger/2"}});
+    return result;
+  }
+};
+
+/// A tool that mimics debugger_delete.
+class FakeDebuggerDeleteTool : public Tool {
+public:
+  FakeDebuggerDeleteTool() : Tool("debugger_delete", "fake debugger_delete") {}
+
+  llvm::Expected<CallToolResult> Call(const ToolArguments &) override {
+    CallToolResult result;
+    result.content.emplace_back(TextContent{{"deleted"}});
+    return result;
+  }
+};
+
 class FakeResourceProvider : public ResourceProvider {
 public:
   using ResourceProvider::ResourceProvider;
@@ -134,20 +158,32 @@ public:
     EXPECT_THAT_ERROR(client->Run(), Succeeded());
   }
 
-  /// Adds a fake backend with a command tool labelled \p label.
+  /// Adds a fake remote backend with a command tool labelled \p label.
   void AddBackend(lldb::pid_t pid, std::string label) {
+    mux->AddBackend(pid, MakeBackend(std::move(label)));
+  }
+
+  /// Adds a fake local (in-process) backend that hosts managed sessions.
+  void AddLocalBackend(lldb::pid_t pid, std::string label) {
+    mux->AddLocalBackend(pid, MakeBackend(std::move(label)));
+  }
+
+  /// Builds a running fake backend client wired to a fake server.
+  std::unique_ptr<Client> MakeBackend(std::string label) {
     auto pair = TestTransport<ProtocolDescriptor>::createConnectedPair(loop);
 
     auto server = std::make_unique<Server>("fake", "0.1.0");
     server->AddTool(std::make_unique<FakeCommandTool>(std::move(label)));
     server->AddTool(std::make_unique<FakeDebuggerListTool>());
+    server->AddTool(std::make_unique<FakeDebuggerCreateTool>());
+    server->AddTool(std::make_unique<FakeDebuggerDeleteTool>());
     server->AddResourceProvider(std::make_unique<FakeResourceProvider>());
     EXPECT_THAT_ERROR(server->Accept(std::move(pair.second)), Succeeded());
 
     auto backend = std::make_unique<Client>(std::move(pair.first));
     EXPECT_THAT_ERROR(backend->Run(), Succeeded());
-    mux->AddBackend(pid, std::move(backend));
     servers.push_back(std::move(server));
+    return backend;
   }
 
   /// Adds a backend whose debugger_list tool always errors, to exercise the
@@ -162,6 +198,21 @@ public:
     auto backend = std::make_unique<Client>(std::move(pair.first));
     EXPECT_THAT_ERROR(backend->Run(), Succeeded());
     mux->AddBackend(pid, std::move(backend));
+    servers.push_back(std::move(server));
+  }
+
+  /// Adds a local backend whose debugger_create tool always errors, to exercise
+  /// the session_create failure path.
+  void AddLocalBackendWithFailingCreate(lldb::pid_t pid) {
+    auto pair = TestTransport<ProtocolDescriptor>::createConnectedPair(loop);
+
+    auto server = std::make_unique<Server>("fake", "0.1.0");
+    server->AddTool(std::make_unique<FakeFailingTool>("debugger_create"));
+    EXPECT_THAT_ERROR(server->Accept(std::move(pair.second)), Succeeded());
+
+    auto backend = std::make_unique<Client>(std::move(pair.first));
+    EXPECT_THAT_ERROR(backend->Run(), Succeeded());
+    mux->AddLocalBackend(pid, std::move(backend));
     servers.push_back(std::move(server));
   }
 
@@ -250,6 +301,10 @@ TEST(MultiplexerURITest, RewriteURIsToGlobal) {
   EXPECT_EQ(RewriteURIsToGlobal("no uris here", 1), "no uris here");
 }
 
+TEST_F(MultiplexerTest, RunWithoutBackendsFails) {
+  EXPECT_THAT_ERROR(mux->Run(), Failed());
+}
+
 TEST_F(MultiplexerTest, Initialize) {
   AddBackend(100, "A");
   Start();
@@ -273,7 +328,9 @@ TEST_F(MultiplexerTest, ToolsListIsUnifiedSurface) {
   std::vector<std::string> names;
   for (const ToolDefinition &tool : result->tools)
     names.push_back(tool.name);
-  EXPECT_THAT(names, testing::UnorderedElementsAre("command", "sessions_list"));
+  EXPECT_THAT(names,
+              testing::UnorderedElementsAre("command", "sessions_list",
+                                            "session_create", "session_close"));
 }
 
 TEST_F(MultiplexerTest, SessionsListAggregatesAcrossBackends) {
@@ -365,7 +422,7 @@ TEST_F(MultiplexerTest, ResourcesReadRoutesAndRewrites) {
   EXPECT_EQ(result->contents.front().text, "resource contents");
 }
 
-TEST_F(MultiplexerTest, SessionsListSurfacesBackendError) {
+TEST_F(MultiplexerTest, SessionsListOmitsErroringBackend) {
   AddBackend(100, "A");
   AddFailingBackend(200);
   Start();
@@ -374,9 +431,12 @@ TEST_F(MultiplexerTest, SessionsListSurfacesBackendError) {
         client->ToolsCall(CallToolParams{"sessions_list", {}},
                           std::move(reply));
       });
-  // One backend erroring fails the whole aggregation rather than silently
-  // dropping that instance's sessions.
-  EXPECT_THAT_EXPECTED(result, Failed());
+  // A backend that errors is dropped from the aggregate rather than failing the
+  // whole listing. The healthy backend's sessions still come back.
+  ASSERT_THAT_EXPECTED(result, Succeeded());
+  std::string text = commandText(*result);
+  EXPECT_THAT(text, testing::HasSubstr("lldb-mcp://instance/100/debugger/1"));
+  EXPECT_THAT(text, testing::Not(testing::HasSubstr("instance/200")));
 }
 
 TEST_F(MultiplexerTest, ResourcesReadMalformedURIErrors) {
@@ -462,6 +522,127 @@ TEST_F(MultiplexerTest, BackendDisconnectFailsPendingRequest) {
   EXPECT_THAT_ERROR(loop.Run().takeError(), Succeeded());
   ASSERT_TRUE(captured.has_value());
   EXPECT_THAT_EXPECTED(*captured, Failed());
+}
+
+TEST_F(MultiplexerTest, SessionCreateOnLocalBackend) {
+  AddLocalBackend(500, "local");
+  Start();
+
+  llvm::Expected<CallToolResult> created =
+      Capture<CallToolResult>([&](Client::Reply<CallToolResult> reply) {
+        client->ToolsCall(CallToolParams{"session_create", {}},
+                          std::move(reply));
+      });
+  ASSERT_THAT_EXPECTED(created, Succeeded());
+  // The fake debugger_create yields debugger/2, rewritten to the global form.
+  EXPECT_THAT(commandText(*created),
+              testing::HasSubstr("lldb-mcp://instance/500/debugger/2"));
+}
+
+TEST_F(MultiplexerTest, SessionCreateRequiresLocalBackend) {
+  AddBackend(100, "A"); // Remote only, no local backend.
+  Start();
+  EXPECT_THAT_EXPECTED(
+      Capture<CallToolResult>([&](Client::Reply<CallToolResult> reply) {
+        client->ToolsCall(CallToolParams{"session_create", {}},
+                          std::move(reply));
+      }),
+      Failed());
+}
+
+TEST_F(MultiplexerTest, SessionCloseOnLocalBackend) {
+  AddLocalBackend(500, "local");
+  Start();
+  llvm::Expected<CallToolResult> closed =
+      Capture<CallToolResult>([&](Client::Reply<CallToolResult> reply) {
+        json::Object args{{"session", "lldb-mcp://instance/500/debugger/1"}};
+        client->ToolsCall(
+            CallToolParams{"session_close", json::Value(std::move(args))},
+            std::move(reply));
+      });
+  ASSERT_THAT_EXPECTED(closed, Succeeded());
+  EXPECT_THAT(commandText(*closed), testing::HasSubstr("deleted"));
+}
+
+TEST_F(MultiplexerTest, SessionCloseRejectsExternalSession) {
+  AddLocalBackend(500, "local");
+  AddBackend(100, "A"); // External, not managed by lldb-mcp.
+  Start();
+  llvm::Expected<CallToolResult> result =
+      Capture<CallToolResult>([&](Client::Reply<CallToolResult> reply) {
+        json::Object args{{"session", "lldb-mcp://instance/100/debugger/1"}};
+        client->ToolsCall(
+            CallToolParams{"session_close", json::Value(std::move(args))},
+            std::move(reply));
+      });
+  EXPECT_THAT_EXPECTED(result, Failed());
+}
+
+TEST_F(MultiplexerTest, SessionCreateSurfacesBackendError) {
+  AddLocalBackendWithFailingCreate(500);
+  Start();
+  EXPECT_THAT_EXPECTED(
+      Capture<CallToolResult>([&](Client::Reply<CallToolResult> reply) {
+        client->ToolsCall(CallToolParams{"session_create", {}},
+                          std::move(reply));
+      }),
+      Failed());
+}
+
+TEST_F(MultiplexerTest, SessionCloseMissingSessionErrors) {
+  AddLocalBackend(500, "local");
+  Start();
+  EXPECT_THAT_EXPECTED(
+      Capture<CallToolResult>([&](Client::Reply<CallToolResult> reply) {
+        client->ToolsCall(CallToolParams{"session_close", {}},
+                          std::move(reply));
+      }),
+      Failed());
+}
+
+TEST_F(MultiplexerTest, SessionCloseMalformedURIErrors) {
+  AddLocalBackend(500, "local");
+  Start();
+  EXPECT_THAT_EXPECTED(
+      Capture<CallToolResult>([&](Client::Reply<CallToolResult> reply) {
+        // Not instance-qualified, so ParseGlobalURI rejects it.
+        json::Object args{{"session", "lldb-mcp://debugger/1"}};
+        client->ToolsCall(
+            CallToolParams{"session_close", json::Value(std::move(args))},
+            std::move(reply));
+      }),
+      Failed());
+}
+
+TEST_F(MultiplexerTest, SessionsListSurvivesBackendDisconnect) {
+  // A backend that never answers must not hang a fanned-out aggregation once it
+  // disconnects. The healthy backend's result still comes back.
+  TestTransport<ProtocolDescriptor> *silent = AddSilentBackend(200);
+  AddBackend(100, "A");
+  Start();
+
+  std::optional<llvm::Expected<CallToolResult>> captured;
+  client->ToolsCall(CallToolParams{"sessions_list", {}},
+                    [&](llvm::Expected<CallToolResult> result) {
+                      captured = std::move(result);
+                      loop.RequestTermination();
+                    });
+  // Disconnect the silent backend after the fan-out has been issued.
+  EXPECT_TRUE(loop.AddPendingCallback(
+      [silent](MainLoopBase &) { silent->SimulateClosed(); }));
+  EXPECT_TRUE(loop.AddCallback(
+      [](MainLoopBase &loop) {
+        loop.RequestTermination();
+        FAIL() << "sessions_list hung after a backend disconnected";
+      },
+      std::chrono::seconds(5)));
+  EXPECT_THAT_ERROR(loop.Run().takeError(), Succeeded());
+
+  ASSERT_TRUE(captured.has_value());
+  ASSERT_THAT_EXPECTED(*captured, Succeeded());
+  std::string text = commandText(**captured);
+  EXPECT_THAT(text, testing::HasSubstr("lldb-mcp://instance/100/debugger/1"));
+  EXPECT_THAT(text, testing::Not(testing::HasSubstr("instance/200")));
 }
 
 #endif // ifndef _WIN32

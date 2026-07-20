@@ -6111,30 +6111,67 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
   replaceValue(*Cast, *NewVP);
   return true;
 }
-
 /// Fold the following cases into a single byte-level bit-reverse operation
 /// and accepts bswap and bitreverse intrinsics:
-///   bswap(bitreverse(x)) --> bitcast(bitreverse(bitcast(x)))
-///   bitreverse(bswap(x)) --> bitcast(bitreverse(bitcast(x)))
+///   bswap(bitreverse(x)) <--> bitcast(bitreverse(bitcast(x)))
+///   bitreverse(bswap(x)) <--> bitcast(bitreverse(bitcast(x)))
+/// The direction of the fold is cost-model driven.
 bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   Value *X;
+
+  if (match(&I, m_BitCast(m_BitReverse(m_BitCast(m_Value(X)))))) {
+    Type *Ty = X->getType();
+    Type *VecTy = I.getOperand(0)->getType();
+    if (Ty->isIntegerTy() && Ty == I.getType() && isa<FixedVectorType>(VecTy) &&
+        cast<FixedVectorType>(VecTy)->getElementType()->isIntegerTy(8) &&
+        Ty->getIntegerBitWidth() % 16 == 0) {
+      auto *InnerCall = dyn_cast<Instruction>(I.getOperand(0));
+      if (!InnerCall)
+        return false;
+      auto *InnerBitCast = dyn_cast<BitCastInst>(InnerCall->getOperand(0));
+      if (!InnerBitCast)
+        return false;
+      InstructionCost OldCost = TTI.getInstructionCost(InnerBitCast, CostKind) +
+                                TTI.getInstructionCost(InnerCall, CostKind) +
+                                TTI.getInstructionCost(&I, CostKind);
+      IntrinsicCostAttributes ICABSwap(Intrinsic::bswap, Ty, {Ty});
+      IntrinsicCostAttributes ICABRev(Intrinsic::bitreverse, Ty, {Ty});
+      InstructionCost NewCost = TTI.getIntrinsicInstrCost(ICABSwap, CostKind) +
+                                TTI.getIntrinsicInstrCost(ICABRev, CostKind);
+      if (!InnerCall->hasOneUse())
+        NewCost += TTI.getInstructionCost(InnerCall, CostKind) +
+                   TTI.getInstructionCost(InnerBitCast, CostKind);
+      else if (!InnerBitCast->hasOneUse())
+        NewCost += TTI.getInstructionCost(InnerBitCast, CostKind);
+      LLVM_DEBUG(dbgs() << "Found bitreverse vector roundtrip: " << I
+                        << "\n  OldCost: " << OldCost
+                        << " vs NewCost: " << NewCost << "\n");
+      if (NewCost.isValid() && NewCost < OldCost) {
+        Builder.SetInsertPoint(&I);
+        Value *BSwap = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X);
+        Worklist.pushValue(BSwap);
+        Value *BRev =
+            Builder.CreateUnaryIntrinsic(Intrinsic::bitreverse, BSwap);
+        replaceValue(I, *BRev);
+        return true;
+      }
+    }
+  }
+
   if (!match(&I, m_BitReverse(m_BSwap(m_Value(X)))) &&
       !match(&I, m_BSwap(m_BitReverse(m_Value(X)))))
     return false;
-
   Type *Ty = I.getType();
   Type *I8Ty = Builder.getInt8Ty();
   TypeSize ElementSize = DL->getTypeStoreSize(Ty);
   ElementCount NewVecCnt = ElementCount::get(ElementSize.getKnownMinValue(),
                                              ElementSize.isScalable());
   Type *NewVecTy = VectorType::get(I8Ty, NewVecCnt);
-
   auto *II = cast<IntrinsicInst>(&I);
   auto *InnerII = cast<IntrinsicInst>(II->getArgOperand(0));
   // OldCost = cost of bitreverse/bswap + cost of bswap/bitreverse
   InstructionCost OldCost = TTI.getInstructionCost(II, CostKind) +
                             TTI.getInstructionCost(InnerII, CostKind);
-
   // NewCost = cost of bitcast to byte vector +
   //           cost of bitreverse/bswap on byte vector +
   //           cost of bitcast back to original type
@@ -6142,21 +6179,17 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
       Instruction::BitCast, NewVecTy, Ty, TTI::CastContextHint::None, CostKind);
   InstructionCost CastToOrigCost = TTI.getCastInstrCost(
       Instruction::BitCast, Ty, NewVecTy, TTI::CastContextHint::None, CostKind);
-
   IntrinsicCostAttributes ICANew(Intrinsic::bitreverse, NewVecTy, {NewVecTy});
   InstructionCost NewIntrinsicCost =
       TTI.getIntrinsicInstrCost(ICANew, CostKind);
   InstructionCost NewCost = CastToVecCost + NewIntrinsicCost + CastToOrigCost;
-
   if (!InnerII->hasOneUse())
     NewCost += TTI.getInstructionCost(InnerII, CostKind);
-
   LLVM_DEBUG(dbgs() << "Found bitorder reverse and swap: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
   if (!NewCost.isValid() || NewCost >= OldCost)
     return false;
-
   // Perform transform: bitcast(arg, <N x i8>), bitreverse, bitcast back
   Builder.SetInsertPoint(II);
   Value *CastToVec = Builder.CreateBitCast(X, NewVecTy);
@@ -6166,7 +6199,6 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   replaceValue(I, *CastToOrig);
   return true;
 }
-
 // Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -6462,6 +6494,9 @@ bool VectorCombine::run() {
       return false;
 
     if (Opcode == Instruction::Call)
+      if (foldBitOrderReverseAndSwap(I))
+        return true;
+    if (Opcode == Instruction::BitCast)
       if (foldBitOrderReverseAndSwap(I))
         return true;
 

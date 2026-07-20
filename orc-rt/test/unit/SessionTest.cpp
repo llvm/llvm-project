@@ -675,6 +675,59 @@ TEST(ControllerAccessTest, CallFromController) {
   EXPECT_EQ(Result, 42);
 }
 
+// Stashes Return, via the address passed as the wrapper call's argument,
+// instead of calling it -- simulating a wrapper function that defers
+// completion past its own return.
+static void deferred_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+                             orc_rt_WrapperFunctionReturn Return,
+                             orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<void(SPSExecutorAddr)>::handle(
+      S, CallId, Return, ArgBytes,
+      [](move_only_function<void()> Return, ExecutorAddr P) {
+        *P.toPtr<move_only_function<void()> *>() = std::move(Return);
+      });
+}
+
+TEST(ControllerAccessTest, WrapperCallTokenReleasedWhenFnReturns) {
+  // A managed-code token acquired for an incoming wrapper call must bracket
+  // only the (synchronous) span of Fn's execution -- not the whole
+  // call/response chain -- per the "Managed code execution and shutdown"
+  // policy in docs/Design.md. Check this by having Fn defer its Return call
+  // past its own return, then confirming that Session shutdown's drain phase
+  // does not wait on that deferred call.
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  MockControllerAccess *CA = nullptr;
+  S.attach<MockControllerAccess>(BootstrapInfo(S), postOnto(Tasks),
+                                 MockControllerAccess::OnConnectFn{}, &CA);
+
+  move_only_function<void()> DeferredReturn;
+
+  bool GotResult = false;
+  SPSWrapperFunction<void(SPSExecutorAddr)>::call(
+      CallViaMockControllerAccess(*CA, deferred_wrapper),
+      [&](Error Err) {
+        cantFail(std::move(Err));
+        GotResult = true;
+      },
+      &DeferredReturn);
+
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
+
+  // Fn ran and deferred its Return call, so no result should have been sent
+  // back yet.
+  ASSERT_TRUE(DeferredReturn);
+  EXPECT_FALSE(GotResult);
+
+  // Fn has already returned, so its managed-code token should have been
+  // released even though the call is still logically outstanding. Shutdown's
+  // drain phase should therefore complete without waiting on the deferred
+  // Return call.
+  bool ShutdownComplete = false;
+  S.shutdown([&] { ShutdownComplete = true; });
+  EXPECT_TRUE(ShutdownComplete);
+}
+
 TEST(ControllerAccessTest, FailConnect) {
   // Simulate failure to connect.
   bool GotError = false;

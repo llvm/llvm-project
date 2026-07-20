@@ -11784,7 +11784,20 @@ def VPTERNLOG132_imm8 : SDNodeXForm<timm, [{
   return getI8Imm(NewImm, SDLoc(N));
 }]>;
 def VPTERNLOG231_imm8 : SDNodeXForm<timm, [{
-  // Convert a VPTERNLOG immediate by moving operand 1 to the end.
+  // Convert a VPTERNLOG immediate by moving operand 2 to the beginning.
+  uint8_t Imm = N->getZExtValue();
+  // Move bits 2->1, 4->2, 6->3, 1->4, 3->5, 5->6
+  uint8_t NewImm = Imm & 0x81;
+  if (Imm & 0x04) NewImm |= 0x02;
+  if (Imm & 0x10) NewImm |= 0x04;
+  if (Imm & 0x40) NewImm |= 0x08;
+  if (Imm & 0x02) NewImm |= 0x10;
+  if (Imm & 0x08) NewImm |= 0x20;
+  if (Imm & 0x20) NewImm |= 0x40;
+  return getI8Imm(NewImm, SDLoc(N));
+}]>;
+def VPTERNLOG312_imm8 : SDNodeXForm<timm, [{
+  // Convert a VPTERNLOG immediate by moving operand 0 to the end.
   uint8_t Imm = N->getZExtValue();
   // Move bits 1->2, 2->4, 3->6, 4->1, 5->3, 6->5
   uint8_t NewImm = Imm & 0x81;
@@ -11796,20 +11809,6 @@ def VPTERNLOG231_imm8 : SDNodeXForm<timm, [{
   if (Imm & 0x40) NewImm |= 0x20;
   return getI8Imm(NewImm, SDLoc(N));
 }]>;
-def VPTERNLOG312_imm8 : SDNodeXForm<timm, [{
-  // Convert a VPTERNLOG immediate by moving operand 2 to the beginning.
-  uint8_t Imm = N->getZExtValue();
-  // Move bits 1->4, 2->1, 3->5, 4->2, 5->6, 6->3
-  uint8_t NewImm = Imm & 0x81;
-  if (Imm & 0x02) NewImm |= 0x10;
-  if (Imm & 0x04) NewImm |= 0x02;
-  if (Imm & 0x08) NewImm |= 0x20;
-  if (Imm & 0x10) NewImm |= 0x04;
-  if (Imm & 0x20) NewImm |= 0x40;
-  if (Imm & 0x40) NewImm |= 0x08;
-  return getI8Imm(NewImm, SDLoc(N));
-}]>;
-
 multiclass avx512_ternlog<bits<8> opc, string OpcodeStr, SDNode OpNode,
                           X86FoldableSchedWrite sched, X86VectorVTInfo _,
                           string Name>{

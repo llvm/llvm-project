@@ -2637,10 +2637,12 @@ GISelValueTracking &GISelValueTrackingAnalysisLegacy::get(MachineFunction &MF) {
 
 AnalysisKey GISelValueTrackingAnalysis::Key;
 
-GISelValueTracking
+GISelValueTrackingAnalysis::Result
 GISelValueTrackingAnalysis::run(MachineFunction &MF,
                                 MachineFunctionAnalysisManager &MFAM) {
-  return Result(MF);
+  unsigned MaxDepth =
+      MF.getTarget().getOptLevel() == CodeGenOptLevel::None ? 2 : 6;
+  return Result(MF, MaxDepth);
 }
 
 PreservedAnalyses

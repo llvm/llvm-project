@@ -12,6 +12,7 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace mlir {
 namespace emitc {
@@ -36,6 +37,13 @@ void populateExpressionPatterns(RewritePatternSet &patterns);
 void populateWrapFuncInClass(
     RewritePatternSet &patterns, StringRef funcName,
     DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove);
+
+//===----------------------------------------------------------------------===//
+// The AddReflectionMap pass.
+//===----------------------------------------------------------------------===//
+
+void populateMLGOAddReflectionMapPatterns(
+    RewritePatternSet &patterns, ArrayRef<std::string> includedFieldAttrs);
 
 } // namespace emitc
 } // namespace mlir

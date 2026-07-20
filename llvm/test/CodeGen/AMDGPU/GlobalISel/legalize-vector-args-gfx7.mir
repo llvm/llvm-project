@@ -50,11 +50,11 @@ body: |
     ; GFX7-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
     ; GFX7-NEXT: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BUILD_VECTOR1]](<2 x s32>)
     ; GFX7-NEXT: [[AND:%[0-9]+]]:_(<2 x s16>) = G_AND [[TRUNC]], [[TRUNC1]]
-    ; GFX7-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[AND]](<2 x s16>)
-    ; GFX7-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX7-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX7-NEXT: $vgpr0 = COPY [[BITCAST]](s32)
-    ; GFX7-NEXT: $vgpr1 = COPY [[LSHR]](s32)
+    ; GFX7-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[AND]](<2 x s16>)
+    ; GFX7-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; GFX7-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST]], [[C]](i32)
+    ; GFX7-NEXT: $vgpr0 = COPY [[BITCAST]](i32)
+    ; GFX7-NEXT: $vgpr1 = COPY [[LSHR]](i32)
     ; GFX7-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     %3:_(s32) = COPY $vgpr0
     %4:_(s32) = COPY $vgpr1

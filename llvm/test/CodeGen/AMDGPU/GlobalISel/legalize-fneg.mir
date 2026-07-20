@@ -264,41 +264,41 @@ body: |
   bb.0:
 
     ; SI-LABEL: name: test_fneg_v3s16
-    ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C]], [[C1]](s32)
+    ; SI: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; SI-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[C]], [[C1]](i32)
     ; SI-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[C]], [[SHL]]
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY [[OR]](i32)
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY]](i32)
     ; SI-NEXT: [[FNEG:%[0-9]+]]:_(<2 x s16>) = G_FNEG [[BITCAST]]
     ; SI-NEXT: [[FNEG1:%[0-9]+]]:_(<2 x s16>) = G_FNEG [[BITCAST1]]
-    ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[FNEG]](<2 x s16>)
-    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C1]](s32)
-    ; SI-NEXT: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[FNEG1]](<2 x s16>)
+    ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(i32) = G_BITCAST [[FNEG]](<2 x s16>)
+    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST2]], [[C1]](i32)
+    ; SI-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST [[FNEG1]](<2 x s16>)
     ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST2]], [[C2]]
     ; SI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C2]]
-    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[LSHR]](s32), [[AND1]](s32)
+    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[LSHR]](i32), [[AND1]](s32)
     ; SI-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s32>)
     ;
     ; VI-LABEL: name: test_fneg_v3s16
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C]], [[C1]](s32)
+    ; VI: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; VI-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[C]], [[C1]](i32)
     ; VI-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[C]], [[SHL]]
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY [[OR]](i32)
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY]](i32)
     ; VI-NEXT: [[FNEG:%[0-9]+]]:_(<2 x s16>) = G_FNEG [[BITCAST]]
     ; VI-NEXT: [[FNEG1:%[0-9]+]]:_(<2 x s16>) = G_FNEG [[BITCAST1]]
-    ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[FNEG]](<2 x s16>)
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C1]](s32)
-    ; VI-NEXT: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[FNEG1]](<2 x s16>)
+    ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(i32) = G_BITCAST [[FNEG]](<2 x s16>)
+    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST2]], [[C1]](i32)
+    ; VI-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST [[FNEG1]](<2 x s16>)
     ; VI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; VI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST2]], [[C2]]
     ; VI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C2]]
-    ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[LSHR]](s32), [[AND1]](s32)
+    ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[LSHR]](i32), [[AND1]](s32)
     ; VI-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s32>)
     ;
     ; GFX9-LABEL: name: test_fneg_v3s16
@@ -307,14 +307,14 @@ body: |
     ; GFX9-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
     ; GFX9-NEXT: [[FNEG:%[0-9]+]]:_(<2 x s16>) = G_FNEG [[BUILD_VECTOR]]
     ; GFX9-NEXT: [[FNEG1:%[0-9]+]]:_(<2 x s16>) = G_FNEG [[BUILD_VECTOR1]]
-    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[FNEG]](<2 x s16>)
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[FNEG1]](<2 x s16>)
+    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[FNEG]](<2 x s16>)
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST]], [[C]](i32)
+    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[FNEG1]](<2 x s16>)
     ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
     ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST1]], [[C1]]
-    ; GFX9-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[LSHR]](s32), [[AND1]](s32)
+    ; GFX9-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[LSHR]](i32), [[AND1]](s32)
     ; GFX9-NEXT: S_NOP 0, implicit [[BUILD_VECTOR2]](<3 x s32>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(<3 x s16>) = G_FNEG %0

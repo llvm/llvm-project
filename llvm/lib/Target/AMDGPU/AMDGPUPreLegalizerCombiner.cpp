@@ -172,9 +172,9 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
 
   Register Src = MatchInfo.Origin;
   assert(MI.getMF()->getRegInfo().getType(Src) == LLT::scalar(64));
-  const LLT S32 = LLT::scalar(32);
+  const LLT I32 = LLT::integer(32);
 
-  auto Unmerge = B.buildUnmerge(S32, Src);
+  auto Unmerge = B.buildUnmerge(I32, Src);
 
   assert(MI.getOpcode() != AMDGPU::G_AMDGPU_CVT_PK_I16_I32);
 
@@ -185,13 +185,13 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
 
   auto MinBoundary = std::min(MatchInfo.Cmp1, MatchInfo.Cmp2);
   auto MaxBoundary = std::max(MatchInfo.Cmp1, MatchInfo.Cmp2);
-  auto MinBoundaryDst = B.buildConstant(S32, MinBoundary);
-  auto MaxBoundaryDst = B.buildConstant(S32, MaxBoundary);
+  auto MinBoundaryDst = B.buildConstant(I32, MinBoundary);
+  auto MaxBoundaryDst = B.buildConstant(I32, MaxBoundary);
 
-  auto Bitcast = B.buildBitcast({S32}, CvtPk);
+  auto Bitcast = B.buildBitcast({I32}, CvtPk);
 
   auto Med3 = B.buildInstr(
-      AMDGPU::G_AMDGPU_SMED3, {S32},
+      AMDGPU::G_AMDGPU_SMED3, {I32},
       {MinBoundaryDst.getReg(0), Bitcast.getReg(0), MaxBoundaryDst.getReg(0)},
       MI.getFlags());
 

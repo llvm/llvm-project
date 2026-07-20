@@ -173,9 +173,7 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    lwz r12, 8(r1)
 ; CHECK-NEXT:    mtlr r0
-; CHECK-NEXT:    mtocrf 32, r12
-; CHECK-NEXT:    mtocrf 16, r12
-; CHECK-NEXT:    mtocrf 8, r12
+; CHECK-NEXT:    mtcrf 56, r12
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_18: # %bb30
 ; CHECK-NEXT:    stb r3, 181(r1)
@@ -333,9 +331,7 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:    ld r0, 16(r1)
 ; CHECK-BE-NEXT:    lwz r12, 8(r1)
 ; CHECK-BE-NEXT:    mtlr r0
-; CHECK-BE-NEXT:    mtocrf 32, r12
-; CHECK-BE-NEXT:    mtocrf 16, r12
-; CHECK-BE-NEXT:    mtocrf 8, r12
+; CHECK-BE-NEXT:    mtcrf 56, r12
 ; CHECK-BE-NEXT:    blr
 ; CHECK-BE-NEXT:  .LBB0_18: # %bb30
 ; CHECK-BE-NEXT:    stb r3, 197(r1)

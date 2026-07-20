@@ -89,9 +89,6 @@ public:
   static bool conditionVariableEnabled() {
     return Config::hasConditionVariableT();
   }
-  static uptr getRegionInfoArraySize() { return sizeof(RegionInfoArray); }
-  static BlockInfo findNearestBlock(const char *RegionInfoData,
-                                    uptr Ptr) NO_THREAD_SAFETY_ANALYSIS;
 
   BlockInfo findNearestBlock(uptr Ptr);
 
@@ -125,17 +122,15 @@ public:
   uptr tryReleaseToOS(uptr ClassId, ReleaseToOS ReleaseType);
   uptr releaseToOS(ReleaseToOS ReleaseType);
 
-  const char *getRegionInfoArrayAddress() const {
-    return reinterpret_cast<const char *>(RegionInfoArray);
-  }
-
   uptr getCompactPtrBaseByClassId(uptr ClassId) {
     return getRegionInfo(ClassId)->RegionBeg;
   }
+
   CompactPtrT compactPtr(uptr ClassId, uptr Ptr) {
     DCHECK_LE(ClassId, SizeClassMap::LargestClassId);
     return compactPtrInternal(getCompactPtrBaseByClassId(ClassId), Ptr);
   }
+
   void *decompactPtr(uptr ClassId, CompactPtrT CompactPtr) {
     DCHECK_LE(ClassId, SizeClassMap::LargestClassId);
     return reinterpret_cast<void *>(
@@ -1403,59 +1398,6 @@ BlockInfo SizeClassAllocator64<Config>::findNearestBlock(uptr Ptr)
     B.BlockBegin += B.BlockSize;
   while (B.RegionEnd < B.BlockBegin + B.BlockSize)
     B.BlockBegin -= B.BlockSize;
-  return B;
-}
-
-template <typename Config>
-/* static */ BlockInfo SizeClassAllocator64<Config>::findNearestBlock(
-    const char *RegionInfoData, uptr Ptr) NO_THREAD_SAFETY_ANALYSIS {
-  const RegionInfo *RegionInfoArray =
-      reinterpret_cast<const RegionInfo *>(RegionInfoData);
-
-  uptr ClassId;
-  uptr MinDistance = -1UL;
-  for (uptr I = 0; I != NumClasses; ++I) {
-    if (I == SizeClassMap::BatchClassId)
-      continue;
-    uptr Begin = RegionInfoArray[I].RegionBeg;
-    // TODO(chiahungduan): In fact, We need to lock the RegionInfo::MMLock.
-    // However, the RegionInfoData is passed with const qualifier and lock the
-    // mutex requires modifying RegionInfoData, which means we need to remove
-    // the const qualifier. This may lead to another undefined behavior (The
-    // first one is accessing `AllocatedUser` without locking. It's better to
-    // pass `RegionInfoData` as `void *` then we can lock the mutex properly.
-    uptr End = Begin + RegionInfoArray[I].MemMapInfo.AllocatedUser;
-    if (Begin > End || End - Begin < SizeClassMap::getSizeByClassId(I))
-      continue;
-    uptr RegionDistance;
-    if (Begin <= Ptr) {
-      if (Ptr < End)
-        RegionDistance = 0;
-      else
-        RegionDistance = Ptr - End;
-    } else {
-      RegionDistance = Begin - Ptr;
-    }
-
-    if (RegionDistance < MinDistance) {
-      MinDistance = RegionDistance;
-      ClassId = I;
-    }
-  }
-
-  BlockInfo B = {};
-  if (MinDistance <= 8192) {
-    B.RegionBegin = RegionInfoArray[ClassId].RegionBeg;
-    B.RegionEnd =
-        B.RegionBegin + RegionInfoArray[ClassId].MemMapInfo.AllocatedUser;
-    B.BlockSize = SizeClassMap::getSizeByClassId(ClassId);
-    B.BlockBegin = B.RegionBegin + uptr(sptr(Ptr - B.RegionBegin) /
-                                        sptr(B.BlockSize) * sptr(B.BlockSize));
-    while (B.BlockBegin < B.RegionBegin)
-      B.BlockBegin += B.BlockSize;
-    while (B.RegionEnd < B.BlockBegin + B.BlockSize)
-      B.BlockBegin -= B.BlockSize;
-  }
   return B;
 }
 

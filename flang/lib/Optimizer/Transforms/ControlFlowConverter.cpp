@@ -78,10 +78,19 @@ public:
 
     // Initalization block
     rewriter.setInsertionPointToEnd(initBlock);
-    auto diff = mlir::arith::SubIOp::create(rewriter, loc, high, low);
-    auto distance = mlir::arith::AddIOp::create(rewriter, loc, diff, step);
+    auto toIndex = [&](mlir::Value value) -> mlir::Value {
+      if (value.getType().isIndex())
+        return value;
+      return fir::ConvertOp::create(rewriter, loc, rewriter.getIndexType(),
+                                    value);
+    };
+    mlir::Value lowIndex = toIndex(low);
+    mlir::Value highIndex = toIndex(high);
+    mlir::Value stepIndex = toIndex(step);
+    auto diff = mlir::arith::SubIOp::create(rewriter, loc, highIndex, lowIndex);
+    auto distance = mlir::arith::AddIOp::create(rewriter, loc, diff, stepIndex);
     mlir::Value iters =
-        mlir::arith::DivSIOp::create(rewriter, loc, distance, step);
+        mlir::arith::DivSIOp::create(rewriter, loc, distance, stepIndex);
 
     if (forceLoopToExecuteOnce) {
       auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);

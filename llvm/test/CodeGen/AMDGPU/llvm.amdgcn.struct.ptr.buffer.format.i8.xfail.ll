@@ -1,5 +1,5 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
-; RUN: not llc -global-isel -mtriple=amdgcn -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu9.00 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel -mtriple=amdgpu9.00 -filetype=null %s 2>&1 | FileCheck %s
 
 ; An i8 buffer.load.format / buffer.store.format has no corresponding real
 ; instruction (no byte-granularity format access exists in hardware), so both

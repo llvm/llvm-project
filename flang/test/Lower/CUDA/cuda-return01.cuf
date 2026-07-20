@@ -9,7 +9,10 @@ end
 
 ! CHECK: func.func @_QPsub1()
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare
-! CHECK: cuf.free %[[DECL]]#0 : !fir.ref<!fir.array<10xi32>>
+! CHECK: %[[SUB1_ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() {{.*}} : () -> i1
+! CHECK-NEXT: fir.if %[[SUB1_ACTIVE]] {
+! CHECK: cuf.free %[[DECL]]#0 : !fir.ref<!fir.array<10xi32>>{{.*}}
+! CHECK-NEXT: }
 ! CHECK: return
 ! CHECK: }
 
@@ -19,9 +22,12 @@ subroutine sub2
 end
 
 ! CHECK-LABEL: func.func @_QPsub2()
+! CHECK: %[[SUB2_ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() {{.*}} : () -> i1
+! CHECK-NEXT: fir.if %[[SUB2_ACTIVE]] {
 ! CHECK: fir.if
-! CHECK: cuf.deallocate 
-! CHECK: cuf.free
+! CHECK: cuf.deallocate
+! CHECK: cuf.free{{.*}}
+! CHECK-NEXT: }
 
 program main
   integer, allocatable, device :: a(:)
@@ -30,4 +36,9 @@ end
 
 ! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "MAIN"}
 ! CHECK: cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK-NOT: cuf.free
+! CHECK: %[[ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() {{.*}} : () -> i1
+! CHECK-NEXT: fir.if %[[ACTIVE]] {
+! CHECK: cuf.deallocate
+! CHECK: cuf.free{{.*}}
+! CHECK-NEXT: }
+! CHECK-NEXT: return

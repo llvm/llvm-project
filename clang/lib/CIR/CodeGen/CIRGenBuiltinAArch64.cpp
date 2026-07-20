@@ -1074,12 +1074,26 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vsm3tt1bq_u32:
   case NEON::BI__builtin_neon_vsm3tt2aq_u32:
   case NEON::BI__builtin_neon_vsm3tt2bq_u32:
+    cgf.cgm.errorNYI(expr->getSourceRange(),
+                     std::string("unimplemented AArch64 builtin call: ") +
+                         ctx.BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vst1_x2_v:
   case NEON::BI__builtin_neon_vst1q_x2_v:
   case NEON::BI__builtin_neon_vst1_x3_v:
   case NEON::BI__builtin_neon_vst1q_x3_v:
   case NEON::BI__builtin_neon_vst1_x4_v:
-  case NEON::BI__builtin_neon_vst1q_x4_v:
+  case NEON::BI__builtin_neon_vst1q_x4_v: {
+    // The builtin call has the pointer first, but the AArch64 st1x2/3/4
+    // intrinsics take the vector operands first and the pointer last.
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    llvm::SmallVector<mlir::Type> argTypes(ops.size() - 1, ty);
+    argTypes.push_back(cgf.getBuilder().getVoidPtrTy());
+    llvm::StringRef llvmIntrName = getLLVMIntrNameNoPrefix(
+        static_cast<llvm::Intrinsic::ID>(llvmIntrinsic));
+    return emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(), argTypes, ops,
+                        llvmIntrName, cgf.cgm.voidTy, loc);
+  }
   case NEON::BI__builtin_neon_vtrn_v:
   case NEON::BI__builtin_neon_vtrnq_v:
   case NEON::BI__builtin_neon_vtst_v:
@@ -2359,6 +2373,12 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   assert(error == ASTContext::GE_None && "Should not codegen an error");
   llvm::SmallVector<mlir::Value> ops;
 
+  // Captures the pointer and its alignment for builtins that store/load
+  // directly through the first argument, i.e. operand 0 (set in the
+  // arg-gathering loop below, used later when lowering the store/load
+  // itself).
+  Address ptrOp0 = Address::invalid();
+
   // Skip extra arguments used to discriminate vector types and that are
   // intended for Sema checking.
   bool hasExtraArg = hasExtraNeonArgument(builtinID);
@@ -2372,20 +2392,29 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       case NEON::BI__builtin_neon_vld1q_dup_v:
       case NEON::BI__builtin_neon_vld1_lane_v:
       case NEON::BI__builtin_neon_vld1q_lane_v:
-      case NEON::BI__builtin_neon_vst1_v:
-      case NEON::BI__builtin_neon_vst1q_v:
-      case NEON::BI__builtin_neon_vst1_lane_v:
-      case NEON::BI__builtin_neon_vst1q_lane_v:
-      case NEON::BI__builtin_neon_vldap1_lane_s64:
-      case NEON::BI__builtin_neon_vldap1q_lane_s64:
-      case NEON::BI__builtin_neon_vstl1_lane_s64:
-      case NEON::BI__builtin_neon_vstl1q_lane_s64:
-        // Get the alignment for the argument in addition to the value;
-        // we'll use it later.
         cgm.errorNYI(
             expr->getSourceRange(),
             std::string("unimplemented AArch64 builtin argument handling ") +
                 getContext().BuiltinInfo.getName(builtinID));
+        break;
+      case NEON::BI__builtin_neon_vst1_v:
+      case NEON::BI__builtin_neon_vst1q_v:
+      case NEON::BI__builtin_neon_vst1_lane_v:
+      case NEON::BI__builtin_neon_vst1q_lane_v:
+        // Get the alignment for the argument in addition to the value;
+        // we'll use it later.
+        ptrOp0 = emitPointerWithAlignment(expr->getArg(0));
+        ops.push_back(ptrOp0.getPointer());
+        continue;
+      case NEON::BI__builtin_neon_vldap1_lane_s64:
+      case NEON::BI__builtin_neon_vldap1q_lane_s64:
+      case NEON::BI__builtin_neon_vstl1_lane_s64:
+      case NEON::BI__builtin_neon_vstl1q_lane_s64:
+        cgm.errorNYI(
+            expr->getSourceRange(),
+            std::string("unimplemented AArch64 builtin argument handling ") +
+                getContext().BuiltinInfo.getName(builtinID));
+        break;
       }
     }
     ops.push_back(
@@ -3211,16 +3240,35 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   }
   case NEON::BI__builtin_neon_vld1_v:
   case NEON::BI__builtin_neon_vld1q_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vst1_v:
-  case NEON::BI__builtin_neon_vst1q_v:
+  case NEON::BI__builtin_neon_vst1q_v: {
+    ops[1] = builder.createBitcast(ops[1], ty);
+    builder.createStore(loc, ops[1], ptrOp0.withElementType(builder, ty));
+    return nullptr;
+  }
   case NEON::BI__builtin_neon_vld1_lane_v:
   case NEON::BI__builtin_neon_vld1q_lane_v:
   case NEON::BI__builtin_neon_vldap1_lane_s64:
   case NEON::BI__builtin_neon_vldap1q_lane_s64:
   case NEON::BI__builtin_neon_vld1_dup_v:
   case NEON::BI__builtin_neon_vld1q_dup_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vst1_lane_v:
-  case NEON::BI__builtin_neon_vst1q_lane_v:
+  case NEON::BI__builtin_neon_vst1q_lane_v: {
+    ops[1] = builder.createBitcast(ops[1], ty);
+    mlir::Value scalar = builder.createExtractElement(
+        loc, ops[1], static_cast<uint64_t>(getIntValueFromConstOp(ops[2])));
+    builder.createStore(loc, scalar,
+                        ptrOp0.withElementType(builder, scalar.getType()));
+    return nullptr;
+  }
   case NEON::BI__builtin_neon_vstl1_lane_s64:
   case NEON::BI__builtin_neon_vstl1q_lane_s64:
   case NEON::BI__builtin_neon_vld2_v:

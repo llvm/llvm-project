@@ -566,9 +566,22 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
 bool AMDGPURegBankCombinerImpl::applyD16Load(
     unsigned D16Opc, MachineInstr &DstMI, MachineInstr *SmallLoad,
     Register SrcReg32ToOverwriteD16) const {
-  B.buildInstr(D16Opc, {DstMI.getOperand(0).getReg()},
+  Register DstReg = DstMI.getOperand(0).getReg();
+  LLT SrcTy = MRI.getType(SrcReg32ToOverwriteD16);
+
+  // Dst and Src for D16 load need to have same type.
+  Register D16Dst =
+      SrcTy == MRI.getType(DstReg)
+          ? DstReg
+          : MRI.createVirtualRegister({MRI.getRegBank(DstReg), SrcTy});
+
+  B.buildInstr(D16Opc, {D16Dst},
                {SmallLoad->getOperand(1).getReg(), SrcReg32ToOverwriteD16})
       .setMemRefs(SmallLoad->memoperands());
+
+  if (D16Dst != DstReg)
+    B.buildBitcast(DstReg, D16Dst);
+
   DstMI.eraseFromParent();
   return true;
 }

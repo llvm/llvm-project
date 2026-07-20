@@ -32,32 +32,31 @@ end subroutine sub
 ! CHECK:             omp.wsloop private({{.*}}) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_53:.*]], %[[VAL_54:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}}) {
 ! [...]
-! CHECK:                 cf.br ^bb1
-! CHECK:               ^bb1:
-! CHECK:                 cf.br ^bb2
-! CHECK:               ^bb2:
+! CHECK:                 scf.execute_region no_inline {
+! CHECK:                   cf.br ^bb1
+! CHECK:                 ^bb1:
 ! [...]
-! CHECK:                 cf.br ^bb3
-! CHECK:               ^bb3:
+! CHECK:                   cf.br ^bb2
+! CHECK:                 ^bb2:
 ! [...]
-! CHECK:                 %[[VAL_63:.*]] = arith.cmpi sgt, %{{.*}}, %{{.*}} : i32
-! CHECK:                 cf.cond_br %[[VAL_63]], ^bb4, ^bb7
-! CHECK:               ^bb4:
+! CHECK:                   %[[VAL_63:.*]] = arith.cmpi sgt, %{{.*}}, %{{.*}} : i32
+! CHECK:                   cf.cond_br %[[VAL_63]], ^bb3, ^bb6
+! CHECK:                 ^bb3:
 ! [...]
-! CHECK:                 %[[VAL_76:.*]] = arith.cmpf olt, %{{.*}}, %{{.*}} fastmath<contract> : f32
-! CHECK:                 cf.cond_br %[[VAL_76]], ^bb5, ^bb6
-! CHECK:               ^bb5:
-! CHECK:                 cf.br ^bb7
-! CHECK:               ^bb6:
+! CHECK:                   %[[VAL_76:.*]] = arith.cmpf olt, %{{.*}}, %{{.*}} fastmath<contract> : f32
+! CHECK:                   cf.cond_br %[[VAL_76]], ^bb4, ^bb5
+! CHECK:                 ^bb4:
+! CHECK:                   cf.br ^bb6
+! CHECK:                 ^bb5:
 ! [...]
-! CHECK:                 cf.br ^bb3
-! CHECK:               ^bb7:
+! CHECK:                   cf.br ^bb2
+! CHECK:                 ^bb6:
+! CHECK:                   scf.yield
+! CHECK:                 }
 ! CHECK:                 omp.yield
 ! CHECK:               }
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
-! CHECK:           cf.br ^bb1
-! CHECK:         ^bb1:
 ! CHECK:           return
 ! CHECK:         }

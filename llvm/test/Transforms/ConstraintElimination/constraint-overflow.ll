@@ -104,3 +104,29 @@ entry:
   %c = icmp ult i64 %i4, %lim
   ret i1 %c
 }
+
+define i1 @eq_inverted_normal_coeff(i64 %a, i64 %b) {
+; CHECK-LABEL: define i1 @eq_inverted_normal_coeff(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[RES:%.*]] = and i1 true, true
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = icmp eq i64 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %t.1 = icmp uge i64 %a, %b
+  %t.2 = icmp ule i64 %a, %b
+  %res = and i1 %t.1, %t.2
+  ret i1 %res
+
+else:
+  ret i1 false
+}

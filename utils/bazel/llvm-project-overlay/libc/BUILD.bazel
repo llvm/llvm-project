@@ -506,6 +506,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_macros_inet_address_macros",
+    hdrs = ["include/llvm-libc-macros/inet-address-macros.h"],
+)
+
+libc_support_library(
+    name = "hdr_inet_address_macros",
+    hdrs = ["hdr/inet-address-macros.h"],
+    deps = [
+        ":llvm_libc_macros_inet_address_macros",
+    ],
+)
+
+libc_support_library(
     name = "hdr_errno_macros",
     hdrs = ["hdr/errno_macros.h"],
 )
@@ -781,6 +794,21 @@ libc_support_library(
 libc_support_library(
     name = "types_socklen_t",
     hdrs = ["hdr/types/socklen_t.h"],
+)
+
+libc_support_library(
+    name = "types_in_addr_t",
+    hdrs = ["hdr/types/in_addr_t.h"],
+)
+
+libc_support_library(
+    name = "types_struct_in_addr",
+    hdrs = ["hdr/types/struct_in_addr.h"],
+)
+
+libc_support_library(
+    name = "types_struct_in6_addr",
+    hdrs = ["hdr/types/struct_in6_addr.h"],
 )
 
 libc_support_library(
@@ -3548,6 +3576,66 @@ libc_function(
         ":__support_common",
         ":__support_macros_config",
         ":hdr_stdint_proxy",
+    ],
+)
+
+libc_function(
+    name = "inet_addr",
+    srcs = ["src/arpa/inet/inet_addr.cpp"],
+    hdrs = ["src/arpa/inet/inet_addr.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_optional",
+        ":__support_macros_config",
+        ":__support_net_address",
+        ":hdr_netinet_in_macros",
+        ":types_in_addr_t",
+    ],
+)
+
+libc_function(
+    name = "inet_aton",
+    srcs = ["src/arpa/inet/inet_aton.cpp"],
+    hdrs = ["src/arpa/inet/inet_aton.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_optional",
+        ":__support_macros_config",
+        ":__support_net_address",
+        ":types_struct_in_addr",
+    ],
+)
+
+libc_function(
+    name = "inet_ntoa",
+    srcs = ["src/arpa/inet/inet_ntoa.cpp"],
+    hdrs = ["src/arpa/inet/inet_ntoa.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_span",
+        ":__support_macros_config",
+        ":__support_net_address",
+        ":hdr_inet_address_macros",
+        ":types_struct_in_addr",
+    ],
+)
+
+libc_function(
+    name = "inet_ntop",
+    srcs = ["src/arpa/inet/inet_ntop.cpp"],
+    hdrs = ["src/arpa/inet/inet_ntop.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_span",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_null_check",
+        ":__support_net_address",
+        ":hdr_errno_macros",
+        ":hdr_sys_socket_macros",
+        ":types_socklen_t",
+        ":types_struct_in6_addr",
+        ":types_struct_in_addr",
     ],
 )
 
@@ -9882,6 +9970,28 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_sincosf_utils",
+    ],
+)
+
+############################### __support/net #################################
+
+libc_support_library(
+    name = "__support_net_address",
+    srcs = ["src/__support/net/address.cpp"],
+    hdrs = ["src/__support/net/address.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_optional",
+        ":__support_cpp_span",
+        ":__support_ctype_utils",
+        ":__support_libc_assert",
+        ":__support_macros_config",
+        ":__support_str_to_integer",
+        ":hdr_inet_address_macros",
+        ":string_memory_utils",
+        ":types_in_addr_t",
+        ":types_struct_in6_addr",
+        ":types_struct_in_addr",
     ],
 )
 

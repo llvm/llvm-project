@@ -411,7 +411,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_IntegralCast: {
         // Delegate to SValBuilder to process.
         SVal V = state->getSVal(Ex, SF);
-        if (AMgr.options.ShouldSupportSymbolicIntegerCasts)
+        if (AMgr.options.analyzerSymbolicIntegerCasts())
           V = svalBuilder.evalCast(V, T, ExTy);
         else
           V = svalBuilder.evalIntegralCast(state, V, T, ExTy);
@@ -750,10 +750,8 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
       // We evaluate "RHSVal != 0" expression which result in 0 if the value is
       // known to be false, 1 if the value is known to be true and a new symbol
       // when the assumption is unknown.
-      nonloc::ConcreteInt Zero(getBasicVals().getValue(0, B->getType()));
-      X = evalBinOp(N->getState(), BO_NE,
-                    svalBuilder.evalCast(RHSVal, B->getType(), RHS->getType()),
-                    Zero, B->getType());
+      X = evalBinOp(N->getState(), BO_NE, RHSVal,
+                    svalBuilder.makeZeroVal(RHS->getType()), B->getType());
     }
   }
   Bldr.generateNode(B, Pred, state->BindExpr(B, Pred->getStackFrame(), X));

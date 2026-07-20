@@ -881,6 +881,10 @@ void visitAllSymbols(const FunctionLikeUnit &funit,
 void visitAllSymbols(const Evaluation &eval,
                      std::function<void(const semantics::Symbol &)> callBack);
 
+/// Return true when \p eval is an unstructured DO or IF construct that can
+/// folded into a self-contained scf.execute_region.
+bool isWrappableConstruct(const Evaluation &eval);
+
 } // namespace Fortran::lower::pft
 
 namespace Fortran::lower {

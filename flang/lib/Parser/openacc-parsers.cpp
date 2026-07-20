@@ -50,8 +50,8 @@ TYPE_PARSER(construct<AccObjectListWithReduction>(
 
 // 2.16 (3249) wait-argument is:
 //   [devnum : int-expr :] [queues :] int-expr-list
-TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM:" >> scalarIntExpr / ":"),
-    "QUEUES:" >> nonemptyList(scalarIntExpr) || nonemptyList(scalarIntExpr)))
+TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM :" >> scalarIntExpr / ":"),
+    "QUEUES :" >> nonemptyList(scalarIntExpr) || nonemptyList(scalarIntExpr)))
 
 // 2.9 (1984-1986) size-expr is one of:
 //   * (represented as an empty std::optional<ScalarIntExpr>)
@@ -97,7 +97,7 @@ TYPE_PARSER(
 
 // 2.9.1 collapse
 TYPE_PARSER(construct<AccCollapseArg>(
-    "FORCE:"_tok >> pure(true) || pure(false), scalarIntConstantExpr))
+    "FORCE :"_tok >> pure(true) || pure(false), scalarIntConstantExpr))
 
 // 2.5.15 Reduction, F'2023 R1131, and CUF reduction-op
 // Operator for reduction
@@ -137,8 +137,8 @@ TYPE_PARSER(sourced(
 
 // Modifier for copyin, copyout, cache and create
 TYPE_PARSER(sourced(construct<AccDataModifier>(
-    first("ZERO:" >> pure(AccDataModifier::Modifier::Zero),
-        "READONLY:" >> pure(AccDataModifier::Modifier::ReadOnly)))))
+    first("ZERO :" >> pure(AccDataModifier::Modifier::Zero),
+        "READONLY :" >> pure(AccDataModifier::Modifier::ReadOnly)))))
 
 // Combined directives
 TYPE_PARSER(sourced(construct<AccCombinedDirective>(

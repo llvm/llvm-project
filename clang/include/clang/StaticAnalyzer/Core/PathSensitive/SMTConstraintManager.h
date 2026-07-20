@@ -128,7 +128,7 @@ public:
     if (const SymbolData *SD = dyn_cast<SymbolData>(Sym)) {
       QualType Ty = Sym->getType();
       assert(!Ty->isRealFloatingType());
-      llvm::APSInt Value(Ctx.getTypeSize(Ty),
+      llvm::APSInt Value(SMTConv::getSMTBitWidth(Ctx, Ty),
                          !Ty->isSignedIntegerOrEnumerationType());
 
       // TODO: this should call checkModel so we can use the cache, however,
