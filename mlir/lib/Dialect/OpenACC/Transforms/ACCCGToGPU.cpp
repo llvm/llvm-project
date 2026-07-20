@@ -1270,27 +1270,111 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
   mlir::acc::GPUParallelDimAttr lowestParDim =
       mlir::acc::GPUParallelDimAttr::threadXDim(ctx);
   if (block) {
-    std::optional<bool> combineThreadYActive;
-    auto applyCombineParDims =
-        [&](Operation *combineOp, Value src,
-            ArrayRef<mlir::acc::GPUParallelDimAttr> combineParDims) {
-          bool isWorkerPrivate =
-              getPrivateScopeForMemref(src) == PrivateMemScope::Worker;
-          for (mlir::acc::GPUParallelDimAttr parDim : combineParDims) {
-            if (parDim.isThreadY()) {
-              if (combineThreadYActive &&
-                  *combineThreadYActive != isWorkerPrivate) {
-                (void)accSupport.emitNYI(
-                    combineOp->getLoc(),
-                    "mixed worker-private and non-worker-private reduction "
-                    "combines require incompatible ThreadY predication");
-                hasFailed = true;
-                return failure();
-              }
-              combineThreadYActive = isWorkerPrivate;
-            } else {
-              mlir::acc::removeParDim(ancestorParDims, parDim);
+    struct ThreadYRequirement {
+      bool active = false;
+      bool inactive = false;
+    };
+    auto analyzeThreadYRequirements =
+        [&](auto &&self,
+            Block &predicateBlock) -> FailureOr<ThreadYRequirement> {
+      ThreadYRequirement requirement;
+      auto requireThreadY = [&](Operation *op, bool active) {
+        if ((active && requirement.inactive) ||
+            (!active && requirement.active)) {
+          (void)accSupport.emitNYI(
+              op->getLoc(),
+              "operations in the same predicate region require incompatible "
+              "ThreadY predication");
+          hasFailed = true;
+          return failure();
+        }
+        requirement.active |= active;
+        requirement.inactive |= !active;
+        return success();
+      };
+      auto applyCombineRequirement =
+          [&](Operation *combineOp, Value src,
+              ArrayRef<mlir::acc::GPUParallelDimAttr> combineParDims) {
+            if (llvm::none_of(combineParDims,
+                              [](auto parDim) { return parDim.isThreadY(); }))
+              return success();
+            bool isWorkerPrivate =
+                getPrivateScopeForMemref(src) == PrivateMemScope::Worker;
+            return requireThreadY(combineOp, isWorkerPrivate);
+          };
+
+      for (Operation &nestedOp : predicateBlock) {
+        if (acc::PredicateRegionOp nestedPredicate =
+                dyn_cast<acc::PredicateRegionOp>(nestedOp)) {
+          FailureOr<ThreadYRequirement> nestedRequirement =
+              self(self, nestedPredicate.getRegion().front());
+          if (failed(nestedRequirement))
+            return failure();
+          // An active descendant must not be excluded by this region's
+          // predicate. Inactive descendants apply their own predicate.
+          if (nestedRequirement->active &&
+              failed(requireThreadY(&nestedOp, /*active=*/true)))
+            return failure();
+          continue;
+        }
+        if (acc::ReductionCombineOp combineOp =
+                dyn_cast<acc::ReductionCombineOp>(nestedOp)) {
+          if (failed(applyCombineRequirement(
+                  combineOp, combineOp.getSrcMemref(),
+                  getReductionCombineParDims(combineOp))))
+            return failure();
+          continue;
+        }
+        if (acc::ReductionCombineRegionOp combineRegionOp =
+                dyn_cast<acc::ReductionCombineRegionOp>(nestedOp)) {
+          if (failed(applyCombineRequirement(
+                  combineRegionOp, combineRegionOp.getSrcVar(),
+                  getReductionCombineParDims(combineRegionOp))))
+            return failure();
+          continue;
+        }
+        if (memref::StoreOp storeOp = dyn_cast<memref::StoreOp>(nestedOp)) {
+          bool threadYActive = false;
+          if (acc::PrivateLocalOp privateLocal =
+                  storeOp.getMemref().getDefiningOp<acc::PrivateLocalOp>()) {
+            if (acc::GPUParallelDimsAttr parDims =
+                    getPrivatizeOp(privateLocal, computeRegion)
+                        .getParDimsAttr()) {
+              threadYActive = llvm::any_of(parDims.getArray(), [](auto parDim) {
+                return parDim.isThreadY();
+              });
             }
+          }
+          if (failed(requireThreadY(storeOp, threadYActive)))
+            return failure();
+          continue;
+        }
+        if (acc::ReductionAccumulateArrayOp accumulateArrayOp =
+                dyn_cast<acc::ReductionAccumulateArrayOp>(nestedOp)) {
+          bool threadYActive =
+              llvm::any_of(accumulateArrayOp.getParDims().getArray(),
+                           [](auto parDim) { return parDim.isThreadY(); });
+          if (failed(requireThreadY(accumulateArrayOp, threadYActive)))
+            return failure();
+          continue;
+        }
+        if (!isMemoryEffectFree(&nestedOp) &&
+            failed(requireThreadY(&nestedOp, /*active=*/false)))
+          return failure();
+      }
+      return requirement;
+    };
+
+    FailureOr<ThreadYRequirement> threadYRequirement =
+        analyzeThreadYRequirements(analyzeThreadYRequirements, *block);
+    if (failed(threadYRequirement))
+      return {};
+
+    auto applyCombineParDims =
+        [&](ArrayRef<mlir::acc::GPUParallelDimAttr> combineParDims) {
+          for (mlir::acc::GPUParallelDimAttr parDim : combineParDims) {
+            if (!parDim.isThreadY())
+              mlir::acc::removeParDim(ancestorParDims, parDim);
           }
           return success();
         };
@@ -1336,14 +1420,12 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
       if (acc::ReductionCombineOp reductionCombineOp =
               dyn_cast<acc::ReductionCombineOp>(op)) {
         if (failed(applyCombineParDims(
-                reductionCombineOp, reductionCombineOp.getSrcMemref(),
                 getReductionCombineParDims(reductionCombineOp))))
           return WalkResult::interrupt();
       }
       if (acc::ReductionCombineRegionOp combineRegionOp =
               dyn_cast<acc::ReductionCombineRegionOp>(op)) {
         if (failed(applyCombineParDims(
-                combineRegionOp, combineRegionOp.getSrcVar(),
                 getReductionCombineParDims(combineRegionOp))))
           return WalkResult::interrupt();
       }
@@ -1359,10 +1441,10 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
       }
       return WalkResult::advance();
     });
-    if (combineThreadYActive) {
+    if (threadYRequirement->active || threadYRequirement->inactive) {
       mlir::acc::GPUParallelDimAttr threadY =
           mlir::acc::GPUParallelDimAttr::threadYDim(ctx);
-      if (*combineThreadYActive)
+      if (threadYRequirement->active)
         mlir::acc::insertParDim(ancestorParDims, threadY);
       else
         mlir::acc::removeParDim(ancestorParDims, threadY);

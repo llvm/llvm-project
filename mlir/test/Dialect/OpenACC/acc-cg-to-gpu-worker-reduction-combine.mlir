@@ -93,3 +93,49 @@ func.func @worker_reduction_combine_region(%result: memref<i32>) {
   }
   return
 }
+
+// Nested predicate regions choose their ThreadY predicates independently. The
+// outer region must keep ThreadY active so it does not exclude worker rows
+// before the nested worker-private combine is reached.
+func.func @nested_worker_reduction_combines(
+    %other: memref<i32>, %result: memref<i32>) {
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c32 = arith.constant 32 : index
+  %block_y = acc.par_width %c1 {par_dim = #acc.par_dim<block_y>}
+  %thread_y = acc.par_width %c4 {par_dim = #acc.par_dim<thread_y>}
+  %thread_x = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+  acc.kernel_environment {
+    %private = acc.privatize [#acc<par_dims[thread_y]>]
+        : () -> !acc.private_type<memref<i32>>
+    acc.compute_region launch(%by = %block_y, %ty = %thread_y, %tx = %thread_x)
+        ins(%private_arg = %private, %other_arg = %other,
+            %result_arg = %result)
+        : (!acc.private_type<memref<i32>>, memref<i32>, memref<i32>) {
+      %c0 = arith.constant 0 : index
+      %c1_inner = arith.constant 1 : index
+      %c0_i32 = arith.constant 0 : i32
+      scf.parallel (%block_iv) = (%c0) to (%by) step (%c1_inner) {
+        %local = acc.private_local %private_arg
+            : (!acc.private_type<memref<i32>>) -> memref<i32>
+        scf.parallel (%worker_iv) = (%c0) to (%ty) step (%c1_inner) {
+          memref.store %c0_i32, %local[] : memref<i32>
+          scf.reduce
+        } {acc.par_dims = #acc<par_dims[thread_y]>}
+        acc.predicate_region {
+          acc.predicate_region {
+            acc.reduction_combine %local into %result_arg <add> : memref<i32>
+                {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
+          }
+          acc.predicate_region {
+            acc.reduction_combine %other_arg into %result_arg <add> : memref<i32>
+                {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
+          }
+        }
+        scf.reduce
+      } {acc.par_dims = #acc<par_dims[block_y]>}
+      acc.yield
+    } {origin = "acc.parallel"}
+  }
+  return
+}
