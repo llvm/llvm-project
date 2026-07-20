@@ -61,15 +61,6 @@ class PHINode;
 class TargetLibraryInfo;
 class Value;
 class IntrinsicInst;
-/// A private "module" namespace for types and utilities used by GVN. These
-/// are implementation details and should not be used by clients.
-namespace LLVM_LIBRARY_VISIBILITY_NAMESPACE gvn {
-
-struct AvailableValue;
-struct AvailableValueInBlock;
-class GVNLegacyPass;
-
-} // end namespace gvn
 
 /// A set of parameters to control various transforms performed by GVN pass.
 //  Each of the optional boolean parameters can be set to:
@@ -133,6 +124,8 @@ class GVNPass : public OptionalPassInfoMixin<GVNPass> {
 
 public:
   struct Expression;
+  struct AvailableValue;
+  struct AvailableValueInBlock;
 
   GVNPass(GVNOptions Options = {}) : Options(Options) {}
 
@@ -248,7 +241,7 @@ public:
   };
 
 private:
-  friend class gvn::GVNLegacyPass;
+  friend class GVNLegacyPass;
   friend struct DenseMapInfo<Expression>;
 
   MemoryDependenceResults *MD = nullptr;
@@ -354,7 +347,7 @@ private:
   bool InvalidBlockRPONumbers = true;
 
   using LoadDepVect = SmallVector<NonLocalDepResult, 64>;
-  using AvailValInBlkVect = SmallVector<gvn::AvailableValueInBlock, 64>;
+  using AvailValInBlkVect = SmallVector<AvailableValueInBlock, 64>;
   using UnavailBlkVect = SmallVector<BasicBlock *, 64>;
 
   bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
@@ -454,7 +447,7 @@ private:
 
   /// Given a local dependency (Def or Clobber) determine if a value is
   /// available for the load.
-  std::optional<gvn::AvailableValue>
+  std::optional<AvailableValue>
   AnalyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
                           Value *Address);
 
@@ -462,7 +455,7 @@ private:
   /// \p TrueAddr and \p FalseAddr guarded by \p Cond), determine whether a
   /// value is available by finding dominating values for both addresses.  If
   /// so, the load can be rematerialized as a select of those two values.
-  std::optional<gvn::AvailableValue>
+  std::optional<AvailableValue>
   AnalyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
                             Value *FalseAddr, Instruction *From);
 
