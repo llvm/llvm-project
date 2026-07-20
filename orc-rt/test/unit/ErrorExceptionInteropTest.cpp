@@ -25,7 +25,7 @@ public:
   std::string toString() const noexcept override { return "CustomError"; }
 };
 
-} // anonymous namespace
+} // namespace
 
 #if ORC_RT_ENABLE_EXCEPTIONS
 #define EXCEPTION_TEST(X)                                                      \

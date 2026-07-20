@@ -491,11 +491,8 @@ elif platform.system() == "AIX":
 # objects only. In order to not affect most test cases, which expect to support
 # 32-bit and 64-bit objects by default, set the environment variable
 # "OBJECT_MODE" to "any" by default on AIX OS.
-
 if "system-aix" in config.available_features:
-   config.substitutions.append(("llvm-nm", "env OBJECT_MODE=any llvm-nm"))
-   config.substitutions.append(("llvm-ar", "env OBJECT_MODE=any llvm-ar"))
-   config.substitutions.append(("llvm-ranlib", "env OBJECT_MODE=any llvm-ranlib"))
+    config.environment["OBJECT_MODE"] = "any"
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable
