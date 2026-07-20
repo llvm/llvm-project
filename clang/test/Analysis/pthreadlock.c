@@ -1,8 +1,8 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=alpha.unix.PthreadLock \
+// RUN:   -analyzer-checker=alpha.unix.PthreadLock,debug.ExprInspection \
 // RUN:   -verify %s
 // RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=alpha.unix.PthreadLock \
+// RUN:   -analyzer-checker=alpha.unix.PthreadLock,debug.ExprInspection \
 // RUN:   -analyzer-config alpha.unix.PthreadLock:WarnOnLockOrderReversal=true \
 // RUN:   -verify=expected,lor %s
 
@@ -17,6 +17,28 @@ lck_grp_t grp1;
 lck_rw_t rw;
 
 #define NULL 0
+
+void clang_analyzer_warnIfReached(void);
+long global_var;
+void noCrash(void) {
+  // Produce a complicated self-contradictory constraint
+  if (((global_var & 137) == 2) &&
+      ((global_var & 137) & 8)) {
+    // This branch is actually dead, but the analyzer does not realize that yet.
+    clang_analyzer_warnIfReached();
+    pthread_mutex_lock(&mtx1); // no-warning
+  }
+}
+
+void noCrashTryLock(void) {
+  // Produce a complicated self-contradictory constraint
+  if (((global_var & 137) == 2) &&
+      ((global_var & 137) & 8)) {
+    // This branch is actually dead, but the analyzer does not realize that yet.
+    clang_analyzer_warnIfReached();
+    pthread_mutex_trylock(&mtx1); // no-warning
+  }
+}
 
 void
 ok1(void)
