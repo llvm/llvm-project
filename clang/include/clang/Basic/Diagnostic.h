@@ -559,6 +559,11 @@ private:
   /// Number of errors reported
   unsigned NumErrors;
 
+  /// Name of the plugin whose diagnostics are currently being registered, set
+  /// by a PluginDiagnosticScope; empty when no plugin is registering. Used to
+  /// auto-scope ungrouped plugin warnings and remarks into "<plugin>-plugin".
+  std::string ActivePluginName;
+
   /// A function pointer that converts an opaque diagnostic
   /// argument to a strings.
   ///
@@ -914,6 +919,14 @@ public:
   // [[deprecated("Pass a group name, or use a CustomDiagDesc instead of a "
   //              "Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
+    // While a plugin is registering diagnostics (a PluginDiagnosticScope is
+    // active), a warning or remark created through this ungrouped overload
+    // would be uncontrollable by the user -- the very problem plugin groups
+    // exist to solve. Place it in the plugin's own "<plugin>-plugin" group
+    // instead, so it behaves like one registered through getCustomPluginDiagID.
+    // An error is not controllable by group flags, so it is left untouched.
+    if (!ActivePluginName.empty() && (L == Warning || L == Remark))
+      return getCustomPluginDiagID(L, FormatString, ActivePluginName);
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
                                   StringRef(FormatString, N - 1));
   }
@@ -974,6 +987,30 @@ public:
   SmallVector<unsigned>
   getCustomPluginDiagIDs(StringRef PluginName,
                          ArrayRef<PluginDiagnostic> Table);
+
+  /// The plugin whose diagnostics are currently being registered, or empty when
+  /// none is (see PluginDiagnosticScope).
+  StringRef getActivePluginName() const { return ActivePluginName; }
+
+  /// While an instance is alive, a warning or remark registered through the
+  /// ungrouped getCustomDiagID(Level, FormatString) overload is redirected into
+  /// \p PluginName's "<plugin>-plugin" group, so a plugin cannot accidentally
+  /// create a diagnostic no -W flag can reach. The frontend brackets each
+  /// plugin's ParseArgs and CreateASTConsumer with one of these. Scopes nest;
+  /// the innermost active name wins, and the previous name is restored on exit.
+  class PluginDiagnosticScope {
+    DiagnosticsEngine &Diags;
+    std::string Saved;
+
+  public:
+    PluginDiagnosticScope(DiagnosticsEngine &Diags, StringRef PluginName)
+        : Diags(Diags), Saved(std::move(Diags.ActivePluginName)) {
+      Diags.ActivePluginName = PluginName.str();
+    }
+    ~PluginDiagnosticScope() { Diags.ActivePluginName = std::move(Saved); }
+    PluginDiagnosticScope(const PluginDiagnosticScope &) = delete;
+    PluginDiagnosticScope &operator=(const PluginDiagnosticScope &) = delete;
+  };
 
   /// Converts a diagnostic argument (as an intptr_t) into the string
   /// that represents it.

@@ -129,6 +129,12 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
          FrontendPluginRegistry::entries()) {
       if (Plugin.getName() == CI.getFrontendOpts().ActionName) {
         std::unique_ptr<PluginASTAction> P(Plugin.instantiate());
+        // Scope ParseArgs so an ungrouped warning/remark the plugin registers
+        // while parsing its arguments is placed in "<plugin>-plugin". The
+        // plugin's CreateASTConsumer is scoped later, in
+        // FrontendAction::CreateWrappedASTConsumer.
+        DiagnosticsEngine::PluginDiagnosticScope DiagScope(CI.getDiagnostics(),
+                                                           Plugin.getName());
         if ((P->getActionType() != PluginASTAction::ReplaceAction &&
              P->getActionType() != PluginASTAction::CmdlineAfterMainAction) ||
             !P->ParseArgs(

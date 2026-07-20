@@ -857,4 +857,63 @@ TEST_F(PluginWarningGroupTest, PluginDiagTableRegistration) {
   EXPECT_FALSE(Fresh.isIgnored(FreshIDs[0], SourceLocation()));
   EXPECT_TRUE(Fresh.isIgnored(FreshIDs[2], SourceLocation()));
 }
+
+// A PluginDiagnosticScope records the active plugin and restores the previous
+// one on exit; scopes nest with the innermost name winning.
+TEST_F(PluginWarningGroupTest, PluginDiagnosticScopeNesting) {
+  EXPECT_TRUE(Diags.getActivePluginName().empty());
+  {
+    DiagnosticsEngine::PluginDiagnosticScope Outer(Diags, "outer");
+    EXPECT_EQ(Diags.getActivePluginName(), "outer");
+    {
+      DiagnosticsEngine::PluginDiagnosticScope Inner(Diags, "inner");
+      EXPECT_EQ(Diags.getActivePluginName(), "inner");
+    }
+    EXPECT_EQ(Diags.getActivePluginName(), "outer");
+  }
+  EXPECT_TRUE(Diags.getActivePluginName().empty());
+}
+
+// Within a plugin scope, a warning or remark created through the ungrouped
+// getCustomDiagID(Level, FormatString) overload is auto-scoped into the
+// plugin's "<plugin>-plugin" group, so a -Wno-<plugin>-plugin silences it even
+// though the plugin never named a group.
+TEST_F(PluginWarningGroupTest, UngroupedPluginWarningIsAutoScoped) {
+  unsigned ID;
+  {
+    DiagnosticsEngine::PluginDiagnosticScope Scope(Diags, "example");
+    ID = Diags.getCustomDiagID(DiagnosticsEngine::Warning, "ungrouped warning");
+  }
+  EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
+
+  DiagOpts.Warnings = {"no-example-plugin"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_TRUE(Diags.isIgnored(ID, SourceLocation()));
+}
+
+// An error created through the ungrouped overload during a plugin scope is left
+// ungrouped: errors are not controllable by group flags, so there is nothing to
+// auto-scope, and existing plugin error-reporting is unchanged. A -Wno on the
+// plugin group must not reach it.
+TEST_F(PluginWarningGroupTest, UngroupedPluginErrorNotAutoScoped) {
+  unsigned ID;
+  {
+    DiagnosticsEngine::PluginDiagnosticScope Scope(Diags, "example");
+    ID = Diags.getCustomDiagID(DiagnosticsEngine::Error, "ungrouped error");
+  }
+  DiagOpts.Warnings = {"no-example-plugin"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_EQ(Diags.getDiagnosticLevel(ID, SourceLocation()),
+            DiagnosticsEngine::Error);
+}
+
+// Outside any plugin scope the ungrouped overload is unchanged: the diagnostic
+// belongs to no group and no plugin-group flag reaches it.
+TEST_F(PluginWarningGroupTest, UngroupedWarningOutsideScopeUnaffected) {
+  unsigned ID =
+      Diags.getCustomDiagID(DiagnosticsEngine::Warning, "plain warning");
+  DiagOpts.Warnings = {"no-example-plugin", "no-user-defined-warnings"};
+  ProcessWarningOptions(Diags, DiagOpts, *FS);
+  EXPECT_FALSE(Diags.isIgnored(ID, SourceLocation()));
+}
 } // namespace
