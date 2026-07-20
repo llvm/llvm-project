@@ -145,14 +145,6 @@ public:
   /// 'access' calculates the past-the-end pointer without dereferencing it.
   ProgramStateRef getValidState() const { return ValidState; }
 
-  /// When the access was ambiguous (that is, mayBeValid() && mayBeInvalid()),
-  /// returns the note "assuming in bounds" note that is relevant for the bug
-  /// report \p BR. When the access wasn't ambiguous or the the assumption is
-  /// irrelevant for \p BR, this returns the empty string (which signifies "do
-  /// not emit a note tag" when returned by a note tag callback).
-  std::string getMessage(PathSensitiveBugReport &BR, StringRef RegName,
-                         SizeUnit SU) const;
-
   friend CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
                                  NonLoc Offset, std::optional<NonLoc> Extent,
                                  CheckFlags Flags);
@@ -560,12 +552,17 @@ static BugDescription describeTaintBug(StringRef RegName,
                   AlsoMentionUnderflow ? "negative or " : "")};
 }
 
-std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
-                                    StringRef RegName, SizeUnit SU) const {
-  bool ShouldReportNonNegative = MayUnderflow;
-  if (!providesInformationAboutInteresting(Offset, BR)) {
-    if (MayOverflowExtent &&
-        providesInformationAboutInteresting(*MayOverflowExtent, BR)) {
+/// When the access was ambiguous (that is, mayBeValid() && mayBeInvalid()),
+/// returns the note "assuming in bounds" note that is relevant for the bug
+/// report \p BR. When the access wasn't ambiguous or the the assumption is
+/// irrelevant for \p BR, this returns the empty string (which signifies "do
+/// not emit a note tag" when returned by a note tag callback).
+static std::string getAssumptionNote(CheckResult Res, PathSensitiveBugReport &BR,
+                                    StringRef RegName, SizeUnit SU) {
+  bool ShouldReportNonNegative = Res.mayUnderflow();
+  if (!providesInformationAboutInteresting(Res.getOffset(), BR)) {
+    std::optional<NonLoc> E = Res.getExtentIfRelevant();
+    if (E && providesInformationAboutInteresting(*E, BR)) {
       // Even if the byte offset isn't interesting (e.g. it's a constant value),
       // the assumption can still be interesting if it provides information
       // about an interesting symbolic upper bound.
@@ -576,8 +573,8 @@ std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
     }
   }
 
-  std::optional<int64_t> OffsetN = getConcreteValue(Offset);
-  std::optional<int64_t> ExtentN = getConcreteValue(MayOverflowExtent);
+  std::optional<int64_t> OffsetN = getConcreteValue(Res.getOffset());
+  std::optional<int64_t> ExtentN = getConcreteValue(Res.getExtentIfRelevant());
 
   const bool UseIndex =
       !SU.isBytes() && tryDividePair(OffsetN, ExtentN, SU.asCharUnits());
@@ -589,7 +586,7 @@ std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
     Out << "index ";
     if (OffsetN)
       Out << "'" << OffsetN << "' ";
-  } else if (MayOverflowExtent) {
+  } else if (Res.mayOverflow()) {
     Out << "byte offset ";
     if (OffsetN)
       Out << "'" << OffsetN << "' ";
@@ -601,7 +598,7 @@ std::string CheckResult::getMessage(PathSensitiveBugReport &BR,
   if (ShouldReportNonNegative) {
     Out << " non-negative";
   }
-  if (MayOverflowExtent) {
+  if (Res.mayOverflow()) {
     if (ShouldReportNonNegative)
       Out << " and";
     Out << " less than ";
@@ -690,7 +687,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     SizeUnit SU = SizeUnit::forExpr(E, C);
     T = C.getNoteTag(
         [Res, RegName, SU](PathSensitiveBugReport &BR) -> std::string {
-          return Res.getMessage(BR, RegName, SU);
+          return getAssumptionNote(Res, BR, RegName, SU);
         });
   }
 
