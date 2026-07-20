@@ -585,6 +585,8 @@ SanitizerSet CodeGenModule::getProfileCoreUBChecks() const {
   // {expr.static.cast.enum.outside.range}: loading an enumeration value that is
   // outside the range of its enumerators.
   Checks.set(SanitizerKind::Enum, true);
+  // {stmt.return.flow.off}: flowing off the end of a value-returning function.
+  Checks.set(SanitizerKind::Return, true);
   return Checks;
 }
 
