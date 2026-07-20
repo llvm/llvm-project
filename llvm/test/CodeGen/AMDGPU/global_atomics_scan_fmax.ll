@@ -4004,13 +4004,12 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_agent
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
 ; GFX1164-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
-; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_permlanex16_b32 v5, v3, 0, 0
 ; GFX1164-DPP-NEXT:    v_permlanex16_b32 v4, v2, 0, 0
-; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
-; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164-DPP-NEXT:    v_permlane64_b32 v5, v3
 ; GFX1164-DPP-NEXT:    v_permlane64_b32 v4, v2
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4085,27 +4084,25 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_agent
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[4:5], v[2:3]
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v5, 0x7ff80000 :: v_dual_mov_b32 v4, 0
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v5, v3 row_xmask:2 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v4, v2 row_xmask:2 row_mask:0xf bank_mask:0xf
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v5, 0x7ff80000 :: v_dual_mov_b32 v4, 0
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v5, v3 row_xmask:4 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v4, v2 row_xmask:4 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v5, 0x7ff80000 :: v_dual_mov_b32 v4, 0
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v5, v3 row_xmask:8 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v4, v2 row_xmask:8 row_mask:0xf bank_mask:0xf
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132-DPP-NEXT:    v_permlanex16_b32 v5, v3, 0, 0
 ; GFX1132-DPP-NEXT:    v_permlanex16_b32 v4, v2, 0, 0
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4115,7 +4112,6 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_agent
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v6, exec_lo, 0
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_mov_b32 v1, v3
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1132-DPP-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-DPP-NEXT:    s_mov_b32 s0, exec_lo
@@ -5200,13 +5196,12 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_one_a
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
 ; GFX1164-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
-; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_permlanex16_b32 v5, v3, 0, 0
 ; GFX1164-DPP-NEXT:    v_permlanex16_b32 v4, v2, 0, 0
-; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
-; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164-DPP-NEXT:    v_permlane64_b32 v5, v3
 ; GFX1164-DPP-NEXT:    v_permlane64_b32 v4, v2
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -5281,27 +5276,25 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_one_a
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[4:5], v[2:3]
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v5, 0x7ff80000 :: v_dual_mov_b32 v4, 0
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v5, v3 row_xmask:2 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v4, v2 row_xmask:2 row_mask:0xf bank_mask:0xf
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v5, 0x7ff80000 :: v_dual_mov_b32 v4, 0
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v5, v3 row_xmask:4 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v4, v2 row_xmask:4 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v5, 0x7ff80000 :: v_dual_mov_b32 v4, 0
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v5, v3 row_xmask:8 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v4, v2 row_xmask:8 row_mask:0xf bank_mask:0xf
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132-DPP-NEXT:    v_permlanex16_b32 v5, v3, 0, 0
 ; GFX1132-DPP-NEXT:    v_permlanex16_b32 v4, v2, 0, 0
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -5311,7 +5304,6 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_one_a
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v6, exec_lo, 0
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_mov_b32 v1, v3
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1132-DPP-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-DPP-NEXT:    s_mov_b32 s0, exec_lo
@@ -6396,13 +6388,12 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_defau
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
 ; GFX1164-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
-; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_permlanex16_b32 v5, v3, 0, 0
 ; GFX1164-DPP-NEXT:    v_permlanex16_b32 v4, v2, 0, 0
-; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
-; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164-DPP-NEXT:    v_permlane64_b32 v5, v3
 ; GFX1164-DPP-NEXT:    v_permlane64_b32 v4, v2
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -6477,27 +6468,25 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_defau
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[4:5], v[2:3]
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v5, 0x7ff80000 :: v_dual_mov_b32 v4, 0
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v5, v3 row_xmask:2 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v4, v2 row_xmask:2 row_mask:0xf bank_mask:0xf
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v5, 0x7ff80000 :: v_dual_mov_b32 v4, 0
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v5, v3 row_xmask:4 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v4, v2 row_xmask:4 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v5, 0x7ff80000 :: v_dual_mov_b32 v4, 0
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v5, v3 row_xmask:8 row_mask:0xf bank_mask:0xf
 ; GFX1132-DPP-NEXT:    v_mov_b32_dpp v4, v2 row_xmask:8 row_mask:0xf bank_mask:0xf
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_max_f64 v[2:3], v[2:3], v[4:5]
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132-DPP-NEXT:    v_permlanex16_b32 v5, v3, 0, 0
 ; GFX1132-DPP-NEXT:    v_permlanex16_b32 v4, v2, 0, 0
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -6507,7 +6496,6 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_defau
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v6, exec_lo, 0
 ; GFX1132-DPP-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_mov_b32 v1, v3
-; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1132-DPP-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-DPP-NEXT:    s_mov_b32 s0, exec_lo

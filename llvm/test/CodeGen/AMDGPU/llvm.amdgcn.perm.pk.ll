@@ -75,7 +75,6 @@ define amdgpu_ps <2 x i32> @test_perm_pk16_b4_u4_sss(i32 inreg %a, i32 inreg %b,
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_perm_pk16_b4_u4 v[0:1], s0, s1, v[0:1]
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -88,7 +87,6 @@ define amdgpu_ps <2 x i32> @test_perm_pk16_b4_u4_sss(i32 inreg %a, i32 inreg %b,
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_perm_pk16_b4_u4 v[0:1], s0, s1, v[0:1]
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %ret = tail call <2 x i32> @llvm.amdgcn.perm.pk16.b4.u4(i32 %a, i32 %b, <2 x i32> %c)
@@ -106,10 +104,9 @@ define amdgpu_ps <3 x i32> @test_perm_pk16_b6_u4_sss(i32 inreg %a, i64 inreg %b,
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s6, s1
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    v_perm_pk16_b6_u4 v[0:2], s0, s[6:7], v[0:1]
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -125,10 +122,9 @@ define amdgpu_ps <3 x i32> @test_perm_pk16_b6_u4_sss(i32 inreg %a, i64 inreg %b,
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s5, s2
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_perm_pk16_b6_u4 v[0:2], s0, s[4:5], v[0:1]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %ret = tail call <3 x i32> @llvm.amdgcn.perm.pk16.b6.u4(i32 %a, i64 %b, <2 x i32> %c)
@@ -145,10 +141,8 @@ define amdgpu_ps <4 x i32> @test_perm_pk16_b8_u4_sss(i64 inreg %a, i64 inreg %b,
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_perm_pk16_b8_u4 v[0:3], s[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -161,10 +155,8 @@ define amdgpu_ps <4 x i32> @test_perm_pk16_b8_u4_sss(i64 inreg %a, i64 inreg %b,
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_perm_pk16_b8_u4 v[0:3], s[0:1], s[2:3], v[0:1]
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %ret = tail call <4 x i32> @llvm.amdgcn.perm.pk16.b8.u4(i64 %a, i64 %b, <2 x i32> %c)

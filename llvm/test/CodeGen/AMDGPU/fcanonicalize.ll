@@ -7821,13 +7821,11 @@ define <2 x double> @v_test_canonicalize_v2f64_uniform(<2 x double> inreg %arg) 
 ; GFX1251-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1251-GISEL-TRUE16-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[0:3]
 ; GFX1251-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1251-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1251-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1251-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX1251-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1251-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1251-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1251-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1251-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1251-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1251-GISEL-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -7850,13 +7848,11 @@ define <2 x double> @v_test_canonicalize_v2f64_uniform(<2 x double> inreg %arg) 
 ; GFX1251-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1251-GISEL-FAKE16-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[0:3]
 ; GFX1251-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1251-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1251-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1251-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX1251-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1251-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1251-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1251-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1251-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1251-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1251-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %canon = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %arg)

@@ -461,7 +461,7 @@ define <2 x float> @test_fmin3_v2f32(<2 x float> %a, <2 x float> %b, <2 x float>
 ; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
 ; GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
 ; GFX12-NEXT:    v_dual_max_num_f32 v4, v4, v4 :: v_dual_max_num_f32 v5, v5, v5
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min3_num_f32 v0, v0, v2, v4
 ; GFX12-NEXT:    v_min3_num_f32 v1, v1, v3, v5
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -494,7 +494,7 @@ define <2 x float> @test_fmax3_v2f32(<2 x float> %a, <2 x float> %b, <2 x float>
 ; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
 ; GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
 ; GFX12-NEXT:    v_dual_max_num_f32 v4, v4, v4 :: v_dual_max_num_f32 v5, v5, v5
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max3_num_f32 v0, v0, v2, v4
 ; GFX12-NEXT:    v_max3_num_f32 v1, v1, v3, v5
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]

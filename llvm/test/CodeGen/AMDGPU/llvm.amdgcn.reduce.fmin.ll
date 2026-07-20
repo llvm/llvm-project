@@ -2109,28 +2109,26 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1164DAGISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v7, v5
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:2 row_mask:0xf bank_mask:0xf
+; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:2 row_mask:0xf bank_mask:0xf
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164DAGISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
+; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v6, v4
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:4 row_mask:0xf bank_mask:0xf
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:4 row_mask:0xf bank_mask:0xf
 ; GFX1164DAGISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v7, v5
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:8 row_mask:0xf bank_mask:0xf
+; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:8 row_mask:0xf bank_mask:0xf
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164DAGISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
 ; GFX1164DAGISEL-NEXT:    ds_swizzle_b32 v6, v4 offset:swizzle(BROADCAST,32,15)
 ; GFX1164DAGISEL-NEXT:    ds_swizzle_b32 v7, v5 offset:swizzle(BROADCAST,32,15)
@@ -2147,7 +2145,6 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164DAGISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[7:8]
 ; GFX1164DAGISEL-NEXT:    v_readlane_b32 s2, v4, 63
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_readlane_b32 s3, v5, 63
 ; GFX1164DAGISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v2, s2
@@ -2185,28 +2182,26 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1164GISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v7, v5
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:2 row_mask:0xf bank_mask:0xf
+; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:2 row_mask:0xf bank_mask:0xf
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164GISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
+; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v6, v4
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX1164GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:4 row_mask:0xf bank_mask:0xf
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:4 row_mask:0xf bank_mask:0xf
 ; GFX1164GISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v7, v5
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:8 row_mask:0xf bank_mask:0xf
+; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:8 row_mask:0xf bank_mask:0xf
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164GISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
 ; GFX1164GISEL-NEXT:    ds_swizzle_b32 v6, v4 offset:swizzle(BROADCAST,32,15)
 ; GFX1164GISEL-NEXT:    ds_swizzle_b32 v7, v5 offset:swizzle(BROADCAST,32,15)
@@ -2223,7 +2218,6 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164GISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[7:8]
 ; GFX1164GISEL-NEXT:    v_readlane_b32 s2, v4, 63
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_readlane_b32 s3, v5, 63
 ; GFX1164GISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v2, s2
@@ -2253,25 +2247,23 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1132DAGISEL-NEXT:    v_cndmask_b32_e64 v4, 0, v2, s2
 ; GFX1132DAGISEL-NEXT:    v_cndmask_b32_e64 v5, 0x7ff80000, v3, s2
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:1 row_mask:0xf bank_mask:0xf
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132DAGISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
+; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:2 row_mask:0xf bank_mask:0xf
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:2 row_mask:0xf bank_mask:0xf
 ; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132DAGISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:4 row_mask:0xf bank_mask:0xf
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:4 row_mask:0xf bank_mask:0xf
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132DAGISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
+; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
@@ -2281,7 +2273,6 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1132DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132DAGISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
 ; GFX1132DAGISEL-NEXT:    v_readlane_b32 s0, v4, 31
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132DAGISEL-NEXT:    v_readlane_b32 s1, v5, 31
 ; GFX1132DAGISEL-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
@@ -2307,25 +2298,23 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1132GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, v2, s2
 ; GFX1132GISEL-NEXT:    v_cndmask_b32_e64 v5, 0x7ff80000, v3, s2
 ; GFX1132GISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1132GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:1 row_mask:0xf bank_mask:0xf
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132GISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
+; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132GISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:2 row_mask:0xf bank_mask:0xf
 ; GFX1132GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:2 row_mask:0xf bank_mask:0xf
 ; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132GISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
 ; GFX1132GISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1132GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:4 row_mask:0xf bank_mask:0xf
 ; GFX1132GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:4 row_mask:0xf bank_mask:0xf
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132GISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
+; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132GISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1132GISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1132GISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
@@ -2335,7 +2324,6 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1132GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132GISEL-NEXT:    v_min_f64 v[4:5], v[4:5], v[6:7]
 ; GFX1132GISEL-NEXT:    v_readlane_b32 s0, v4, 31
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132GISEL-NEXT:    v_readlane_b32 s1, v5, 31
 ; GFX1132GISEL-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1132GISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
@@ -2368,32 +2356,30 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
 ; GFX12DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:1 row_mask:0xf bank_mask:0xf
-; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:1 row_mask:0xf bank_mask:0xf
-; GFX12DAGISEL-NEXT:    v_min_num_f64_e32 v[4:5], v[4:5], v[6:7]
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12DAGISEL-NEXT:    v_min_num_f64_e32 v[4:5], v[4:5], v[6:7]
 ; GFX12DAGISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
+; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:2 row_mask:0xf bank_mask:0xf
-; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:2 row_mask:0xf bank_mask:0xf
 ; GFX12DAGISEL-NEXT:    v_min_num_f64_e32 v[4:5], v[4:5], v[6:7]
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
 ; GFX12DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:4 row_mask:0xf bank_mask:0xf
-; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:4 row_mask:0xf bank_mask:0xf
-; GFX12DAGISEL-NEXT:    v_min_num_f64_e32 v[4:5], v[4:5], v[6:7]
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12DAGISEL-NEXT:    v_min_num_f64_e32 v[4:5], v[4:5], v[6:7]
 ; GFX12DAGISEL-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_mov_b32 v7, v5
+; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_mov_b32_dpp v6, v6 row_shr:8 row_mask:0xf bank_mask:0xf
-; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_mov_b32_dpp v7, v7 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX12DAGISEL-NEXT:    v_min_num_f64_e32 v[4:5], v[4:5], v[6:7]
 ; GFX12DAGISEL-NEXT:    ds_swizzle_b32 v6, v4 offset:swizzle(BROADCAST,32,15)
 ; GFX12DAGISEL-NEXT:    ds_swizzle_b32 v7, v5 offset:swizzle(BROADCAST,32,15)
 ; GFX12DAGISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX12DAGISEL-NEXT:    v_min_num_f64_e32 v[4:5], v[4:5], v[6:7]
-; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_readlane_b32 s0, v4, 31
 ; GFX12DAGISEL-NEXT:    v_readlane_b32 s1, v5, 31
 ; GFX12DAGISEL-NEXT:    s_mov_b32 exec_lo, s2
@@ -3374,7 +3360,6 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1164DAGISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1164DAGISEL-NEXT:    v_min_f64 v[4:5], s[4:5], s[2:3]
 ; GFX1164DAGISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1164DAGISEL-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX1164DAGISEL-NEXT:  ; %bb.2:
@@ -3399,7 +3384,6 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1164GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1164GISEL-NEXT:    v_min_f64 v[4:5], s[4:5], s[2:3]
 ; GFX1164GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX1164GISEL-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX1164GISEL-NEXT:  ; %bb.2:
@@ -3424,7 +3408,6 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1132DAGISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX1132DAGISEL-NEXT:    v_min_f64 v[4:5], s[4:5], s[0:1]
 ; GFX1132DAGISEL-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132DAGISEL-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX1132DAGISEL-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX1132DAGISEL-NEXT:  ; %bb.2:
@@ -3448,7 +3431,6 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1132GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX1132GISEL-NEXT:    v_min_f64 v[4:5], s[4:5], s[0:1]
 ; GFX1132GISEL-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132GISEL-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX1132GISEL-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX1132GISEL-NEXT:  ; %bb.2:
@@ -3476,7 +3458,7 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %in) #0 {
 ; GFX12DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12DAGISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX12DAGISEL-NEXT:    v_min_num_f64_e64 v[4:5], s[4:5], s[0:1]
-; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX12DAGISEL-NEXT:    s_cbranch_scc1 .LBB8_1
@@ -3960,7 +3942,6 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1164DAGISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1164DAGISEL-NEXT:    v_min_f64 v[4:5], s[6:7], s[4:5]
 ; GFX1164DAGISEL-NEXT:    v_readfirstlane_b32 s4, v4
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX1164DAGISEL-NEXT:    s_cbranch_scc1 .LBB9_2
 ; GFX1164DAGISEL-NEXT:  ; %bb.3:
@@ -3985,7 +3966,6 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1164DAGISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1164DAGISEL-NEXT:    v_min_f64 v[2:3], s[6:7], s[4:5]
 ; GFX1164DAGISEL-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX1164DAGISEL-NEXT:    s_cbranch_scc1 .LBB9_6
 ; GFX1164DAGISEL-NEXT:  ; %bb.7:
@@ -4020,7 +4000,6 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1164GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1164GISEL-NEXT:    v_min_f64 v[4:5], s[6:7], s[4:5]
 ; GFX1164GISEL-NEXT:    v_readfirstlane_b32 s4, v4
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX1164GISEL-NEXT:    s_cbranch_scc1 .LBB9_2
 ; GFX1164GISEL-NEXT:  ; %bb.3:
@@ -4045,7 +4024,6 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1164GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX1164GISEL-NEXT:    v_min_f64 v[2:3], s[6:7], s[4:5]
 ; GFX1164GISEL-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX1164GISEL-NEXT:    s_cbranch_scc1 .LBB9_6
 ; GFX1164GISEL-NEXT:  ; %bb.7:
@@ -4080,7 +4058,6 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1132DAGISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX1132DAGISEL-NEXT:    v_min_f64 v[4:5], s[4:5], s[0:1]
 ; GFX1132DAGISEL-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132DAGISEL-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX1132DAGISEL-NEXT:    s_cbranch_scc1 .LBB9_2
 ; GFX1132DAGISEL-NEXT:  ; %bb.3:
@@ -4104,7 +4081,6 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1132DAGISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX1132DAGISEL-NEXT:    v_min_f64 v[2:3], s[4:5], s[0:1]
 ; GFX1132DAGISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132DAGISEL-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX1132DAGISEL-NEXT:    s_cbranch_scc1 .LBB9_6
 ; GFX1132DAGISEL-NEXT:  ; %bb.7:
@@ -4138,7 +4114,6 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1132GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX1132GISEL-NEXT:    v_min_f64 v[4:5], s[4:5], s[0:1]
 ; GFX1132GISEL-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132GISEL-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX1132GISEL-NEXT:    s_cbranch_scc1 .LBB9_2
 ; GFX1132GISEL-NEXT:  ; %bb.3:
@@ -4162,7 +4137,6 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1132GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX1132GISEL-NEXT:    v_min_f64 v[2:3], s[4:5], s[0:1]
 ; GFX1132GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132GISEL-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX1132GISEL-NEXT:    s_cbranch_scc1 .LBB9_6
 ; GFX1132GISEL-NEXT:  ; %bb.7:
@@ -4201,7 +4175,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX12DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12DAGISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX12DAGISEL-NEXT:    v_min_num_f64_e64 v[4:5], s[4:5], s[0:1]
-; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX12DAGISEL-NEXT:    s_cbranch_scc1 .LBB9_2
@@ -4228,7 +4202,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX12DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12DAGISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX12DAGISEL-NEXT:    v_min_num_f64_e64 v[2:3], s[4:5], s[0:1]
-; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX12DAGISEL-NEXT:    s_cbranch_scc1 .LBB9_6

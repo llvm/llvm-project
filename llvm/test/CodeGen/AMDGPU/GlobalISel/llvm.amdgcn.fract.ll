@@ -65,7 +65,7 @@ define amdgpu_ps void @s_fract_f64(double inreg %src, ptr addrspace(1) %out) {
 ; GFX12-NEXT:    v_fract_f64_e32 v[2:3], s[0:1]
 ; GFX12-NEXT:    s_mov_b32 s2, 0
 ; GFX12-NEXT:    s_brev_b32 s3, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX12-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
@@ -87,7 +87,6 @@ define amdgpu_ps double @v_fract_f64(double %src) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-NEXT:    ; return to shader part epilog
   %fract = call double @llvm.amdgcn.fract.f64(double %src)

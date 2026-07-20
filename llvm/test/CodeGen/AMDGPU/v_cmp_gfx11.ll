@@ -52,7 +52,6 @@ define amdgpu_kernel void @ballot_test(half %x, half %y) {
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_cmp_eq_f16_e64 s[0:1], s0, s1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-NEXT:    ds_store_b64 v2, v[0:1]
 ; CHECK-NEXT:    s_endpgm

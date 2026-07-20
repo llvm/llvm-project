@@ -88,7 +88,6 @@ define amdgpu_kernel void @add_v2_ss(ptr addrspace(1) %a, <2 x i64> %x, <2 x i64
 ; GFX1251-GISEL-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[4:7]
 ; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
@@ -698,7 +697,6 @@ define amdgpu_kernel void @sub_v2_ss(ptr addrspace(1) %a, <2 x i64> %x, <2 x i64
 ; GFX1251-GISEL-NEXT:    v_pk_sub_nc_u64 v[0:3], v[0:3], v[4:7]
 ; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s3, v3

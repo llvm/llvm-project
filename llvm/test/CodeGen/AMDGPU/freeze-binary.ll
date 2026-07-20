@@ -153,7 +153,6 @@ define <8 x float> @freeze_frem_vec(<8 x float> %input) nounwind {
 ; CHECK-NEXT:    v_trunc_f32_e32 v10, v10
 ; CHECK-NEXT:    v_dual_mul_f32 v18, 0x3e800000, v3 :: v_dual_mul_f32 v21, 0x3e800000, v4
 ; CHECK-NEXT:    v_trunc_f32_e32 v18, v18
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; CHECK-NEXT:    v_trunc_f32_e32 v21, v21
 ; CHECK-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; CHECK-NEXT:    v_fma_f32 v15, -v8, v11, 1.0

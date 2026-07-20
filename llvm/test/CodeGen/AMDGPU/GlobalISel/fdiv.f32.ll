@@ -1629,7 +1629,6 @@ define <2 x float> @v_fdiv_v2f32_ulp25(<2 x float> %a, <2 x float> %b) #1 {
 ; GFX11-IEEE-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-IEEE-NEXT:    v_dual_mul_f32 v0, v0, v4 :: v_dual_mul_f32 v1, v1, v5
 ; GFX11-IEEE-NEXT:    v_ldexp_f32 v0, v0, v2
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-IEEE-NEXT:    v_ldexp_f32 v1, v1, v3
 ; GFX11-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1644,10 +1643,10 @@ define <2 x float> @v_fdiv_v2f32_ulp25(<2 x float> %a, <2 x float> %b) #1 {
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_dual_mul_f32 v2, v2, v4 :: v_dual_mul_f32 v3, v3, v5
 ; GFX11-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-FLUSH-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-FLUSH-NEXT:    v_dual_mul_f32 v0, v0, v2 :: v_dual_mul_f32 v1, v1, v3
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_dual_mul_f32 v0, v4, v0 :: v_dual_mul_f32 v1, v5, v1
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv <2 x float> %a, %b, !fpmath !0

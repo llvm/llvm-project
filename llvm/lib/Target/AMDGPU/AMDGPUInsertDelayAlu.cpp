@@ -360,6 +360,8 @@ public:
 
     // FIXME: 0 is a valid register unit.
     MCRegUnit LastSGPRFromVALU = static_cast<MCRegUnit>(0);
+    // Track which instruction defined each regunit, for multi-def grouping.
+    DenseMap<MCRegUnit, MachineInstr *> DefiningInstr;
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
     for (auto &MI : MBB.instrs()) {
@@ -388,6 +390,7 @@ public:
         // Forget about all outstanding VALU delays.
         // TODO: This is overkill since it also forgets about SALU delays.
         State = DelayState();
+        DefiningInstr.clear();
       } else if (Type != OTHER) {
         DelayInfo Delay;
         // TODO: Scan implicit uses too?
@@ -403,6 +406,18 @@ public:
               if (It != State.end()) {
                 Delay.merge(It->second);
                 State.erase(Unit);
+                 // If this def was from a multi-def instruction, erase all
+                 // other defs from the same instruction.
+                 MachineInstr *DefMI = DefiningInstr[Unit];
+                 if (DefMI) {
+                   SmallVector<MCRegUnit, 2> Siblings;
+                   for (auto &P : State) {
+                     if (DefiningInstr[P.first] == DefMI)
+                       Siblings.push_back(P.first);
+                   }
+                   for (MCRegUnit Sibling : Siblings)
+                     State.erase(Sibling);
+                 }
               }
             }
           }
@@ -430,8 +445,10 @@ public:
         for (const auto &Op : MI.defs()) {
           unsigned Latency = SchedModel->computeOperandLatency(
               &MI, Op.getOperandNo(), nullptr, 0);
-          for (MCRegUnit Unit : TRI->regunits(Op.getReg()))
+          for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
             State[Unit] = DelayInfo(Type, Latency);
+            DefiningInstr[Unit] = &MI;
+          }
         }
       }
 

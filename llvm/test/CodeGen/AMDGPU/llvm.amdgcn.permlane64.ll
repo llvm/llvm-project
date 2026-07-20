@@ -256,7 +256,6 @@ define amdgpu_kernel void @test_v_f64(ptr addrspace(1) %out, double %src0) #1 {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
 ; GFX11-SDAG-NEXT:    v_permlane64_b32 v1, v1
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_permlane64_b32 v0, v0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -270,7 +269,6 @@ define amdgpu_kernel void @test_v_f64(ptr addrspace(1) %out, double %src0) #1 {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
 ; GFX11-GISEL-NEXT:    v_permlane64_b32 v0, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_permlane64_b32 v1, v1
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]

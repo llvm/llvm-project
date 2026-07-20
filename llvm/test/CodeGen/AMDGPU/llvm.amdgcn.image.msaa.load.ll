@@ -50,7 +50,7 @@ define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, ptr addrsp
 ; GFX12PLUS-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v10, v8
 ; GFX12PLUS-NEXT:    v_dual_mov_b32 v11, v8 :: v_dual_mov_b32 v12, v8
 ; GFX12PLUS-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9
-; GFX12PLUS-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12PLUS-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12PLUS-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v3, v11
 ; GFX12PLUS-NEXT:    v_mov_b32_e32 v4, v12
 ; GFX12PLUS-NEXT:    image_msaa_load v[0:4], [v7, v6, v5], s[0:7] dmask:0x2 dim:SQ_RSRC_IMG_2D_MSAA unorm tfe lwe
@@ -110,7 +110,7 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, ptr ad
 ; GFX12-NEXT:    v_dual_mov_b32 v10, v9 :: v_dual_mov_b32 v11, v9
 ; GFX12-NEXT:    v_dual_mov_b32 v12, v9 :: v_dual_mov_b32 v13, v9
 ; GFX12-NEXT:    v_dual_mov_b32 v0, v9 :: v_dual_mov_b32 v1, v10
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_mov_b32 v2, v11 :: v_dual_mov_b32 v3, v12
 ; GFX12-NEXT:    v_mov_b32_e32 v4, v13
 ; GFX12-NEXT:    image_msaa_load v[0:4], [v8, v7, v6, v5], s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm tfe
@@ -233,7 +233,6 @@ define amdgpu_ps <4 x half> @load_2dmsaa_tfe_d16(<8 x i32> inreg %rsrc, ptr addr
 ; GFX12PLUS-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12PLUS-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v8, v6
 ; GFX12PLUS-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7
-; GFX12PLUS-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12PLUS-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX12PLUS-NEXT:    image_msaa_load v[0:2], [v5, v4, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm tfe d16
 ; GFX12PLUS-NEXT:    s_wait_samplecnt 0x0
@@ -287,7 +286,6 @@ define amdgpu_ps <4 x half> @load_2darraymsaa_tfe_d16(<8 x i32> inreg %rsrc, ptr
 ; GFX12PLUS-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12PLUS-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
 ; GFX12PLUS-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
-; GFX12PLUS-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12PLUS-NEXT:    v_mov_b32_e32 v2, v9
 ; GFX12PLUS-NEXT:    image_msaa_load v[0:2], [v6, v5, v4, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm tfe d16
 ; GFX12PLUS-NEXT:    s_wait_samplecnt 0x0

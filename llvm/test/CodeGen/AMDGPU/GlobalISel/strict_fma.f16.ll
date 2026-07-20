@@ -383,7 +383,7 @@ define void @v_constained_fma_v4f16_fpexcept_strict_uni(<4 x half> inreg %x, <4 
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s16 :: v_dual_mov_b32 v3, s17
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_fma_f16 v2, s0, s2, v2
 ; GFX11-NEXT:    v_pk_fma_f16 v3, s1, s3, v3
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off

@@ -196,10 +196,9 @@ define amdgpu_ps void @fpext_v2f32_to_v2f64_uniform(<2 x float> inreg %a, ptr ad
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[2:3], s0
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[4:5], s1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v4
 ; GFX11-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -212,10 +211,9 @@ define amdgpu_ps void @fpext_v2f32_to_v2f64_uniform(<2 x float> inreg %a, ptr ad
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_cvt_f64_f32_e32 v[2:3], s0
 ; GFX12-NEXT:    v_cvt_f64_f32_e32 v[4:5], s1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_readfirstlane_b32 s2, v4
 ; GFX12-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)

@@ -2234,7 +2234,6 @@ define i64 @v_fshr_i64(i64 %src0, i64 %src1, i64 %src2) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], v5, v[0:1]
 ; GFX11-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2251,7 +2250,6 @@ define i64 @v_fshr_i64(i64 %src0, i64 %src1, i64 %src2) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], v5, v[0:1]
 ; GFX12-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %ret = call i64 @llvm.fshr.i64(i64 %src0, i64 %src1, i64 %src2)
@@ -2344,10 +2342,9 @@ define <2 x i64> @v_fshr_v2i64(<2 x i64> %src0, <2 x i64> %src1, <2 x i64> %src2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], v9, v[0:1]
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], v11, v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GFX11-NEXT:    v_or_b32_e32 v1, v1, v5
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_or_b32_e32 v2, v2, v6
 ; GFX11-NEXT:    v_or_b32_e32 v3, v3, v7
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2368,10 +2365,9 @@ define <2 x i64> @v_fshr_v2i64(<2 x i64> %src0, <2 x i64> %src1, <2 x i64> %src2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], v9, v[0:1]
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[2:3], v11, v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GFX12-NEXT:    v_or_b32_e32 v1, v1, v5
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_or_b32_e32 v2, v2, v6
 ; GFX12-NEXT:    v_or_b32_e32 v3, v3, v7
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
