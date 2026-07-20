@@ -567,6 +567,10 @@ SanitizerSet CodeGenModule::getProfileCoreUBChecks() const {
   // {expr.mul.representable.type.result}: signed +, -, *, unary -, and the
   // INT_MIN/-1 division whose quotient is not representable.
   Checks.set(SanitizerKind::SignedIntegerOverflow, true);
+  // {expr.shift.neg.and.width}: a shift width that is negative or at least the
+  // operand width (exponent), or a signed left shift that loses bits (base).
+  Checks.set(SanitizerKind::ShiftBase, true);
+  Checks.set(SanitizerKind::ShiftExponent, true);
   return Checks;
 }
 
