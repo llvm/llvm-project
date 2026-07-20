@@ -23387,7 +23387,7 @@ public:
             SemaRef.Context, DRE->getQualifierLoc(),
             DRE->getTemplateKeywordLoc(), DD,
             /*RefersToEnclosingVariableOrCapture=*/false, BaseNameInfo,
-            DD->getType(), DRE->getValueKind(), nullptr,
+            DD->getType().getNonReferenceType(), DRE->getValueKind(), nullptr,
             /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
 
         // Create member expression: base.member.
@@ -23402,18 +23402,18 @@ public:
         // handle the field-level mapping.
         return Visit(E);
       }
-      if (isa_and_present<ArraySubscriptExpr>(BindingExpr)) {
-        if (getOriginalVarOrDiagnose(SemaRef, DD, DRE->getExprLoc())) {
-          DeclarationNameInfo NameInfo(D->getDeclName(), DRE->getLocation());
-          E = DeclRefExpr::Create(SemaRef.Context, DRE->getQualifierLoc(),
-                                  DRE->getTemplateKeywordLoc(), DD,
-                                  /*RefersToEnclosingVariableOrCapture=*/false,
-                                  NameInfo, D->getType(), DRE->getValueKind(),
-                                  DRE->getFoundDecl(),
-                                  /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
-          return Visit(E);
-        }
-        return false;
+      if (auto *ASE = dyn_cast_or_null<ArraySubscriptExpr>(BindingExpr)) {
+        DeclarationNameInfo BaseNameInfo(DD->getDeclName(), DRE->getLocation());
+        Expr *BaseExpr = DeclRefExpr::Create(
+            SemaRef.Context, DRE->getQualifierLoc(),
+            DRE->getTemplateKeywordLoc(), DD,
+            /*RefersToEnclosingVariableOrCapture=*/false, BaseNameInfo,
+            DD->getType().getNonReferenceType(), DRE->getValueKind(), nullptr,
+            /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
+        E = new (SemaRef.Context) ArraySubscriptExpr(
+            BaseExpr, ASE->getIdx(), ASE->getType(), ASE->getValueKind(),
+            ASE->getObjectKind(), ASE->getRBracketLoc());
+        return Visit(E);
       }
       // Tuple-like should already be rejected; do not map DD as a silent
       // fallback.
