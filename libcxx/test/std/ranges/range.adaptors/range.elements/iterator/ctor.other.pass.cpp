@@ -57,10 +57,18 @@ static_assert(!std::is_constructible_v<ConstElemIter<NonConvertibleView>, ElemIt
 static_assert(!std::is_constructible_v<ElemIter<NonConvertibleView>, ConstElemIter<NonConvertibleView>>);
 
 constexpr bool test() {
-  // auto iter = std::ranges::elements_view<ConvertibleView, 0>{}.begin();
-  // ConstElemIter<ConvertibleView> constIter = iter; // implicit
-  // assert(constIter.base().movedFromOtherConst);
-  // assert(constIter.base().i == 5);
+  struct TestRange : std::ranges::view_base {
+    constexpr ConvertibleIter<false> begin() { return ConvertibleIter<false>{5}; }
+    constexpr ConvertibleIter<false> end() { return ConvertibleIter<false>{5}; }
+    constexpr ConvertibleIter<true> begin() const { return ConvertibleIter<true>{5}; }
+    constexpr ConvertibleIter<true> end() const { return ConvertibleIter<true>{5}; }
+  };
+
+  std::ranges::elements_view<TestRange, 0> ev{TestRange{}};
+  ElemIter<TestRange> iter           = ev.begin();
+  ConstElemIter<TestRange> constIter = iter; // implicit
+  assert(constIter.base().movedFromOtherConst);
+  assert(constIter.base().i == 5);
 
   return true;
 }
