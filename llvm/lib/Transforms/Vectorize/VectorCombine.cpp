@@ -258,8 +258,9 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   if (!canWidenLoad(Load, TTI))
     return false;
 
-  Type *ScalarTy = Scalar->getType();
-  uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
+  Type *OriginalScalarTy = Scalar->getType();
+  uint64_t OriginalScalarSizeInBits =
+      OriginalScalarTy->getPrimitiveSizeInBits();
   unsigned MinVectorSize = TTI.getMinVectorRegisterBitWidth();
 
   // Check safety of replacing the scalar load with a larger vector load.
@@ -269,10 +270,11 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
 
-  unsigned MinVecNumElts = MinVectorSize / ScalarSize;
-  auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
+  unsigned MinVecNumElts = MinVectorSize / OriginalScalarSizeInBits;
+  auto *MinVecTy =
+      VectorType::get(OriginalScalarTy, MinVecNumElts, false);
   unsigned OffsetEltIndex = 0;
-  unsigned VectorRange = 0;
+  unsigned NumScalarChunks = 1;
   bool NeedCast = false;
   Align Alignment = Load->getAlign();
   if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, SQ.AC,
@@ -293,33 +295,36 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     // If Offset is multiple of a Scalar element, it can be shuffled to the
     // element's size; otherwise, Offset and Scalar must be shuffled to the
     // appropriate element size for both.
-    uint64_t ScalarSizeInBytes = ScalarSize / 8;
-    if (auto UnalignedBytes = Offset.urem(ScalarSizeInBytes)) {
+    const uint64_t OriginalScalarSizeInBytes =
+        OriginalScalarSizeInBits / 8;
+    uint64_t ChunkSizeInBytes = OriginalScalarSizeInBytes;
+    if (uint64_t UnalignedBytes =
+            Offset.urem(OriginalScalarSizeInBytes)) {
       if (DL->isBigEndian())
         return false;
-      uint64_t OldScalarSizeInBytes = ScalarSizeInBytes;
       // Find the largest integer element size that divides both the scalar
       // size and the unaligned byte offset.
-      ScalarSizeInBytes = std::gcd(ScalarSizeInBytes, UnalignedBytes);
-      ScalarSize = ScalarSizeInBytes * 8;
-      VectorRange = OldScalarSizeInBytes / ScalarSizeInBytes;
-      MinVecNumElts = MinVectorSize / ScalarSize;
-      ScalarTy = Type::getIntNTy(I.getContext(), ScalarSize);
-      MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
-      NeedCast = true;
+      ChunkSizeInBytes =
+          std::gcd(OriginalScalarSizeInBytes, UnalignedBytes);
+      const uint64_t ChunkSizeInBits = ChunkSizeInBytes * 8;
+      NumScalarChunks = OriginalScalarSizeInBytes / ChunkSizeInBytes;
+      MinVecNumElts = MinVectorSize / ChunkSizeInBits;
+      Type *ChunkTy = Type::getIntNTy(I.getContext(), ChunkSizeInBits);
+      auto *ChunkVecTy = VectorType::get(ChunkTy, MinVecNumElts, false);
 
-      // In the NeedCast case, the shuffle result is later bitcast to the final
-      // vector type. This is only valid when the widened load vector and the
-      // final result vector have the same total bit width. Cases like <16 x i8>
-      // to <3 x i32> would require a different intermediate shuffle type, so
-      // leave them for a separate enhancement.
-      if (DL->getTypeSizeInBits(MinVecTy) != DL->getTypeSizeInBits(I.getType()))
+      // The chunk vector is later bitcast to the final vector type, so their
+      // total bit widths must match.
+      if (DL->getTypeSizeInBits(ChunkVecTy) !=
+          DL->getTypeSizeInBits(I.getType()))
         return false;
+
+      MinVecTy = ChunkVecTy;
+      NeedCast = true;
     }
 
     // If we load MinVecNumElts, will our target element still be loaded?
-    APInt OffsetEltIndexAP = Offset.udiv(ScalarSizeInBytes);
-    if ((OffsetEltIndexAP + VectorRange).uge(MinVecNumElts))
+    APInt OffsetEltIndexAP = Offset.udiv(ChunkSizeInBytes);
+    if ((OffsetEltIndexAP + NumScalarChunks).ugt(MinVecNumElts))
       return false;
     OffsetEltIndex = OffsetEltIndexAP.getZExtValue();
 
@@ -360,11 +365,11 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // still need a shuffle to change the vector size.
   auto *Ty = cast<FixedVectorType>(I.getType());
   SmallVector<int> Mask;
-  assert(OffsetEltIndex + VectorRange < MinVecNumElts &&
+  assert(OffsetEltIndex + NumScalarChunks <= MinVecNumElts &&
          "Address offset too big");
   if (NeedCast) {
     Mask.assign(MinVecNumElts, PoisonMaskElem);
-    std::iota(Mask.begin(), Mask.begin() + VectorRange, OffsetEltIndex);
+    std::iota(Mask.begin(), Mask.begin() + NumScalarChunks, OffsetEltIndex);
   } else {
     unsigned OutputNumElts = Ty->getNumElements();
     Mask.assign(OutputNumElts, PoisonMaskElem);
