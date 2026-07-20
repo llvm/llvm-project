@@ -1079,6 +1079,9 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         ArrayRef<const Expr *> Args,
                                         bool IsGslConstruction) {
   OriginList *CallList = getOriginsList(*Call);
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+  if (!FD)
+    return;
   SourceManager &SM = AC.getASTContext().getSourceManager();
   // To avoid over-reporting, we assume the following are noescape:
   // - All parameters to functions declared in the system headers
@@ -1114,10 +1117,6 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       }
     }
   }
-  // Ignore functions returning values with no origin.
-  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
-  if (!FD)
-    return;
   handleInvalidatingCall(Call, FD, Args);
   handleDestructiveCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
