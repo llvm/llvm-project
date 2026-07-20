@@ -343,6 +343,19 @@ define <4 x float> @test_pmax_v4f32_ogt(<4 x float> %x, <4 x float> %y) {
   ret <4 x float> %a
 }
 
+define <4 x float> @test_pmax_v4f32_ogt_const(<4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_ogt_const:
+; CHECK:         .functype test_pmax_v4f32_ogt_const (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0x1p0, 0x1p0, 0x1p0, 0x1p0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ogt <4 x float> %y, splat(float 1.0)
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> splat(float 1.0)
+  ret <4 x float> %a
+}
+
 define <4 x float> @test_pmax_v4f32_oge(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: test_pmax_v4f32_oge:
 ; CHECK:         .functype test_pmax_v4f32_oge (v128, v128) -> (v128)

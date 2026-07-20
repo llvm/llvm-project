@@ -1,7 +1,5 @@
 set(files
-  AllocAction.cpp
   BootstrapInfo.cpp
-  SimpleSymbolTable.cpp
   Environment.cpp
   Error.cpp
   ExecutorProcessInfo.cpp
@@ -12,6 +10,7 @@ set(files
   Service.cpp
   Session.cpp
   SimpleNativeMemoryMap.cpp
+  SimpleSymbolTable.cpp
   StandaloneMachOUnwindInfoRegistrar.cpp
   ThreadPoolRunner.cpp
   sps-ci/AllSPSCI.cpp

@@ -43,6 +43,30 @@ func.func @test_constant_in_serial() {
 
 // -----
 
+// Test that an external constant global is hoisted for implicit mapping. Its
+// definition may be in a separately compiled translation unit that does not
+// contain an OpenACC construct and therefore does not emit a device definition.
+
+memref.global constant @gexternalconstant : memref<4xf32>
+
+func.func @test_external_constant_in_serial() {
+  acc.serial {
+    %c0 = arith.constant 0 : index
+    %addr = memref.get_global @gexternalconstant : memref<4xf32>
+    %load = memref.load %addr[%c0] : memref<4xf32>
+    acc.yield
+  }
+  return
+}
+
+// CHECK: memref.global constant @gexternalconstant : memref<4xf32>
+// CHECK-NOT: acc.declare
+// CHECK-LABEL: func.func @test_external_constant_in_serial
+// CHECK: memref.get_global @gexternalconstant
+// CHECK-NEXT: acc.serial
+
+// -----
+
 // Test globals referenced in acc routine functions
 
 memref.global @gscalar_routine : memref<f32> = dense<0.0>

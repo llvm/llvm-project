@@ -76,24 +76,15 @@ public:
   StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) override;
 
-  StructuredData::GenericSP
-  CreateFrameRecognizer(const char *class_name) override;
-
-  lldb::ValueObjectListSP
-  GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
-                         lldb::StackFrameSP frame_sp) override;
-
-  bool ShouldHide(const StructuredData::ObjectSP &implementor,
-                  lldb::StackFrameSP frame_sp) override;
-
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
-
-  lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() override;
 
   lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() override;
 
   lldb::ScriptedBreakpointInterfaceSP
   CreateScriptedBreakpointInterface() override;
+
+  lldb::ScriptedStackFrameRecognizerInterfaceSP
+  CreateScriptedStackFrameRecognizerInterface() override;
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 

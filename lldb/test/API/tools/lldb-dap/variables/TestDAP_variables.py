@@ -13,13 +13,12 @@ from lldbsuite.test.decorators import (
     skipUnlessDarwin,
 )
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.dap_types import (
+from lldbsuite.test.tools.lldb_dap.types import (
     EvaluateContext,
     LaunchArgs,
     VariablesArgs,
 )
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
-from lldbsuite.test.tools.lldb_dap.session_helpers import ExpectEval, ExpectVar
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, ExpectEval, ExpectVar
 
 
 def make_expected_buffer(start_idx, count, offset=0):
