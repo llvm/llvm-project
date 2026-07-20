@@ -54,6 +54,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Clang Frontend Potentially Breaking Changes
 
+- Templight support has been removed.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 ### OpenCL Potentially Breaking Changes
@@ -424,6 +426,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### Python Binding Changes
 
 ### OpenMP Support
+
+- Added parsing and semantic support for `dims` modifier in `num_teams` and
+  `thread_limit` clauses for OpenMP 6.1 or later.
 
 ### SYCL Support
 
