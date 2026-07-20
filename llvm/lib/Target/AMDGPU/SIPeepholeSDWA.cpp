@@ -58,6 +58,11 @@ private:
 
   std::optional<int64_t> foldToImm(const MachineOperand &Op) const;
 
+  // If MI is a v_and_b32 with a 0xffff or 0xff immediate, return the masked
+  // value operand and the matching SDWA selector (WORD_0 / BYTE_0).
+  std::optional<std::pair<MachineOperand *, AMDGPU::SDWA::SdwaSel>>
+  matchAndMask(MachineInstr &MI) const;
+
   void matchSDWAOperands(MachineBasicBlock &MBB);
   std::unique_ptr<SDWAOperand> matchSDWAOperand(MachineInstr &MI);
   void pseudoOpConvertToVOP2(MachineInstr &MI,
@@ -667,6 +672,26 @@ SIPeepholeSDWA::foldToImm(const MachineOperand &Op) const {
   return std::nullopt;
 }
 
+std::optional<std::pair<MachineOperand *, SdwaSel>>
+SIPeepholeSDWA::matchAndMask(MachineInstr &MI) const {
+  if (MI.getOpcode() != AMDGPU::V_AND_B32_e32 &&
+      MI.getOpcode() != AMDGPU::V_AND_B32_e64)
+    return std::nullopt;
+
+  MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+  MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+  MachineOperand *ValSrc = Src1;
+  std::optional<int64_t> Imm = foldToImm(*Src0);
+  if (!Imm) {
+    Imm = foldToImm(*Src1);
+    ValSrc = Src0;
+  }
+  if (!Imm || (*Imm != 0x0000ffff && *Imm != 0x000000ff))
+    return std::nullopt;
+
+  return std::make_pair(ValSrc, *Imm == 0x0000ffff ? WORD_0 : BYTE_0);
+}
+
 std::unique_ptr<SDWAOperand>
 SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
@@ -807,19 +832,10 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     // e.g.:
     // from: v_and_b32_e32 v1, 0x0000ffff/0x000000ff, v0
     // to SDWA src:v0 src_sel:WORD_0/BYTE_0
-
-    MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
-    MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-    auto *ValSrc = Src1;
-    auto Imm = foldToImm(*Src0);
-
-    if (!Imm) {
-      Imm = foldToImm(*Src1);
-      ValSrc = Src0;
-    }
-
-    if (!Imm || (*Imm != 0x0000ffff && *Imm != 0x000000ff))
+    auto Mask = matchAndMask(MI);
+    if (!Mask)
       break;
+    MachineOperand *ValSrc = Mask->first;
 
     MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
@@ -827,8 +843,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
         Dst->getReg().isPhysical())
       break;
 
-    return std::make_unique<SDWASrcOperand>(
-        ValSrc, Dst, *Imm == 0x0000ffff ? WORD_0 : BYTE_0);
+    return std::make_unique<SDWASrcOperand>(ValSrc, Dst, Mask->second);
   }
 
   case AMDGPU::V_OR_B32_e32:
@@ -1360,30 +1375,14 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
   }
 }
 
-// Rewrite the high-half packing idiom
-//   %m = V_AND_B32 0xffff, %z            ; (single use)
-//   %d = V_LSHL_OR_B32 %hi, 16, %m       ; (%hi << 16) | (%z & 0xffff)
-// into
-//   %s = V_LSHLREV_B32 16, %hi
-//   %d = V_OR_B32_sdwa %s, %z src1_sel:WORD_0
-// and erase the now-dead V_AND. The fused V_LSHL_OR_B32 has no SDWA form
-// (getSDWAOp == -1), so once ISel emits it the regular peephole can no longer
-// fold the 0xffff mask into V_OR_B32_sdwa; this restores that fold.
-//
-// The rewrite is done atomically (the sdwa OR is built directly and the V_AND
-// erased) rather than by splitting and hoping the generic matcher re-folds:
-// if the V_AND were left in place a competing fold (e.g. folding a source
-// V_LSHRREV into the V_AND) could win and leave the extra V_LSHLREV behind,
-// increasing the instruction count. Built this way the count is never worse
-// (2 ops -> 2 ops in isolation; the following MachineCSE shares the %hi<<16
-// shift when it already exists, and the generic matcher folds any source
-// select of %z into the new sdwa OR, giving the pre-#206058 codegen).
+// Re-fold the masked high-half pack (hi << 16) | (z & 0xffff) into a single
+// v_or_b32_sdwa src1_sel:WORD_0, which ISel's fused v_lshl_or_b32 blocks.
 bool SIPeepholeSDWA::splitLshlOrForSDWA(MachineBasicBlock &MBB) {
   struct Candidate {
     MachineInstr *LshlOr;
     MachineInstr *AndMI;
-    MachineOperand *Hi;     // V_LSHL_OR_B32 src0 (high half)
-    MachineOperand *ValSrc; // the non-0xffff operand of the V_AND
+    MachineOperand *Hi;
+    MachineOperand *ValSrc;
   };
   SmallVector<Candidate, 4> Candidates;
 
@@ -1391,40 +1390,29 @@ bool SIPeepholeSDWA::splitLshlOrForSDWA(MachineBasicBlock &MBB) {
     if (MI.getOpcode() != AMDGPU::V_LSHL_OR_B32_e64)
       continue;
 
-    // Shift amount must be 16 (packing into the high 16 bits).
     MachineOperand *Shift = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
     std::optional<int64_t> ShiftImm = foldToImm(*Shift);
     if (!ShiftImm || *ShiftImm != 16)
       continue;
 
-    // vdst is copied into the new V_OR_B32_sdwa; it must be a virtual VGPR
-    // (guaranteed pre-RA, checked for consistency with the SDWA matchers).
-    MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
-    if (!Dst->isReg() || Dst->getReg().isPhysical())
-      continue;
-
     MachineOperand *Hi = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
     MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-    if (!Hi->isReg() || Hi->getReg().isPhysical() || !Src2->isReg() ||
-        Src2->getReg().isPhysical())
+    // Src2 must be a virtual reg so getVRegDef below is valid.
+    if (!Hi->isReg() || !Src2->isReg() || !Src2->getReg().isVirtual())
       continue;
 
-    // Src2 must be (V_AND_B32 0xffff, %z), single-use, so it can be replaced
-    // by reading %z's WORD_0 and the V_AND removed.
+    // The 0xffff mask must come from a single-use v_and so it can be dropped.
     if (!MRI->hasOneNonDBGUse(Src2->getReg()))
       continue;
     MachineInstr *AndMI = MRI->getVRegDef(Src2->getReg());
-    if (!AndMI || (AndMI->getOpcode() != AMDGPU::V_AND_B32_e32 &&
-                   AndMI->getOpcode() != AMDGPU::V_AND_B32_e64))
+    if (!AndMI)
       continue;
-    MachineOperand *A0 = TII->getNamedOperand(*AndMI, AMDGPU::OpName::src0);
-    MachineOperand *A1 = TII->getNamedOperand(*AndMI, AMDGPU::OpName::src1);
-    std::optional<int64_t> M0 = foldToImm(*A0);
-    std::optional<int64_t> M1 = foldToImm(*A1);
-    MachineOperand *ValSrc =
-        (M0 && *M0 == 0xffff) ? A1 : ((M1 && *M1 == 0xffff) ? A0 : nullptr);
-    if (!ValSrc || !ValSrc->isReg() || ValSrc->getReg().isPhysical() ||
-        !TRI->isVGPR(*MRI, ValSrc->getReg()))
+    std::optional<std::pair<MachineOperand *, SdwaSel>> Mask =
+        matchAndMask(*AndMI);
+    if (!Mask || Mask->second != WORD_0)
+      continue;
+    MachineOperand *ValSrc = Mask->first;
+    if (!ValSrc->isReg() || !TRI->isVGPR(*MRI, ValSrc->getReg()))
       continue;
 
     Candidates.push_back({&MI, AndMI, Hi, ValSrc});
@@ -1439,8 +1427,8 @@ bool SIPeepholeSDWA::splitLshlOrForSDWA(MachineBasicBlock &MBB) {
         .addImm(16)
         .add(*C.Hi);
 
-    // V_OR_B32_sdwa %d, 0, %s, 0, %z, clamp, dst_sel:DWORD, UNUSED_PAD,
-    //               src0_sel:DWORD, src1_sel:WORD_0
+    // vdst, src0_mods, src0, src1_mods, src1, clamp, dst_sel, dst_unused,
+    // src0_sel, src1_sel.
     BuildMI(*C.LshlOr->getParent(), *C.LshlOr, C.LshlOr->getDebugLoc(),
             TII->get(AMDGPU::V_OR_B32_sdwa))
         .add(*Dst)
@@ -1484,11 +1472,7 @@ bool SIPeepholeSDWA::run(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     bool Changed = false;
     do {
-      // Split fused V_LSHL_OR_B32 high-half packs whose low operand is a
-      // maskable (V_AND 0xffff) value, so the mask can be folded into a
-      // single V_OR_B32_sdwa below.
-      if (splitLshlOrForSDWA(MBB))
-        Ret = true;
+      Ret |= splitLshlOrForSDWA(MBB);
 
       // Preprocess the ADD/SUB pairs so they could be SDWA'ed.
       // Look for a possible ADD or SUB that resulted from a previously lowered
