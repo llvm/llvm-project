@@ -1909,7 +1909,7 @@ POST_SYSCALL(getsockopt)
     // dereferencing since the hook is called with raw, untrusted arguments.
     if (optlen) {
       if (optval)
-        POST_WRITE(optval, *(unsigned int *)optlen);
+        POST_WRITE(optval, *(unsigned int*)optlen);
       POST_WRITE(optlen, sizeof(int));
     }
   }
