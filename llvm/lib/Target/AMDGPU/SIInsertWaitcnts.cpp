@@ -1294,9 +1294,10 @@ void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
 
 void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
                                      AMDGPU::Waitcnt &UpdateWait) const {
-  // Waiting for some counters implies waiting for VM_VSRC, since an
-  // instruction that decrements a counter on completion would have
-  // decremented VM_VSRC once its VGPR operands had been read.
+  // Waiting for a VMEM counter (like LOAD_CNT) implies an equivalent wait for
+  // VM_VSRC, because if the VMEM operation has completed then it must surely
+  // have read its VGPR sources, but only if there are no other outstanding VMEM
+  // operations that use a different counter (like SAMPLE_CNT).
   static constexpr AMDGPU::InstCounterType VmemCounters[] = {
       AMDGPU::LOAD_CNT, AMDGPU::STORE_CNT, AMDGPU::SAMPLE_CNT, AMDGPU::BVH_CNT,
       AMDGPU::DS_CNT};
