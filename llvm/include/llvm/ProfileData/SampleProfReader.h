@@ -477,22 +477,23 @@ public:
   }
 
   /// The interface to read sample profiles from the associated file.
-  std::error_code read() {
+  std::error_code read(bool IgnoreRemapper = false) {
     if (std::error_code EC = readImpl())
       return EC;
-    if (Remapper)
+    if (Remapper && !IgnoreRemapper)
       Remapper->applyRemapping(Ctx);
     FunctionSamples::UseMD5 = useMD5();
     return sampleprof_error::success;
   }
 
   /// Read sample profiles for the given functions.
-  std::error_code read(const DenseSet<StringRef> &FuncsToUse) {
+  std::error_code read(const DenseSet<StringRef> &FuncsToUse,
+                       bool IgnoreRemapper = false) {
     DenseSet<StringRef> S;
     for (StringRef F : FuncsToUse)
       if (Profiles.find(FunctionId(F)) == Profiles.end())
         S.insert(F);
-    if (std::error_code EC = read(S, Profiles))
+    if (std::error_code EC = read(S, Profiles, IgnoreRemapper))
       return EC;
     return sampleprof_error::success;
   }
@@ -664,7 +665,8 @@ protected:
   /// profile map. Currently it's only used for extended binary format to load
   /// the profiles on-demand.
   virtual std::error_code read(const DenseSet<StringRef> &FuncsToUse,
-                               SampleProfileMap &Profiles) {
+                               SampleProfileMap &Profiles,
+                               bool IgnoreRemapper = false) {
     return sampleprof_error::not_implemented;
   }
 
@@ -1029,7 +1031,8 @@ protected:
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readFuncProfiles(const DenseSet<StringRef> &FuncsToUse,
-                                   SampleProfileMap &Profiles);
+                                   SampleProfileMap &Profiles,
+                                   bool IgnoreRemapper = false);
   std::error_code readNameTableSec(bool IsMD5, bool FixedLengthMD5);
   std::error_code readCSNameTableSec();
   std::error_code readProfileSymbolList(bool IsMD5);
@@ -1091,7 +1094,8 @@ private:
   /// at the beginning and we need to loaded the profiles explicitly for
   /// potential matching.
   std::error_code read(const DenseSet<StringRef> &FuncsToUse,
-                       SampleProfileMap &Profiles) override;
+                       SampleProfileMap &Profiles,
+                       bool IgnoreRemapper = false) override;
 };
 
 class LLVM_ABI SampleProfileReaderExtBinary
