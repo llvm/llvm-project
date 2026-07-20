@@ -43,6 +43,14 @@ static bool isDanglingStackSource(const MemRegion *Source,
           Source->getMemorySpaceAs<StackSpaceRegion>(State)) {
     const StackFrame *SF = StackSpace->getStackFrame();
     const StackFrame *CurrentSF = C.getStackFrame();
+
+    for (const StackFrame *DtorSF = CurrentSF; DtorSF;
+         DtorSF = DtorSF->getParent()) {
+      const auto *DDec = dyn_cast_or_null<CXXDestructorDecl>(DtorSF->getDecl());
+      if (DDec)
+        return false;
+    }
+
     if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
       return true;
   }
