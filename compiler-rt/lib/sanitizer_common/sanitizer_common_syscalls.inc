@@ -1910,7 +1910,7 @@ POST_SYSCALL(getsockopt)
     if (optlen) {
       POST_WRITE(optlen, sizeof(int));
       if (optval)
-        POST_WRITE(optval, *(unsigned int *)optlen);
+        POST_WRITE(optval, *(unsigned int*)optlen);
     }
   }
 }
