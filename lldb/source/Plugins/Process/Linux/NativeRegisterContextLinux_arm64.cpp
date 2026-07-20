@@ -1337,7 +1337,7 @@ Status NativeRegisterContextLinux_arm64::WriteFPR() {
 }
 
 void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
-  m_validity = CacheValidity();
+  m_validity = static_cast<RegisterSetType>(0);
 
   // Update SVE and ZA registers in case there is change in configuration.
   ConfigureRegisterContext();

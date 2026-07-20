@@ -16,6 +16,8 @@
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
+#include "llvm/ADT/BitmaskEnum.h"
+
 #include <asm/ptrace.h>
 
 namespace lldb_private {
@@ -82,7 +84,7 @@ private:
   // Bit mask enum used to refer to the types of registers we support. Currently
   // used for tracking cache validity and ReadAll/WriteAllRegister data. Will
   // be used for much more in future.
-  enum RegisterSetType : uint32_t {
+  enum class RegisterSetType : uint32_t {
     GPR = 1 << 0, // General purpose registers.
     FPR = 1 << 1, // When there is no SVE, or SVE in FPSIMD mode, or streaming
                   // only SVE that is in non-streaming mode.
@@ -97,46 +99,21 @@ private:
     FPMR = 1 << 10,      // Floating point mode control registers.
     GCS = 1 << 11,       // Guarded Control Stack registers.
     POE = 1 << 12,       // Permission Overlay registers.
+    LLVM_MARK_AS_BITMASK_ENUM(POE),
   };
 
-  // Validity management functions are class members who are friends of
-  // CacheValidity. This means we don't have to write "m_validity." every time
-  // we do an update.
+  RegisterSetType m_validity = static_cast<RegisterSetType>(0);
 
-  void MakeValid(RegisterSetType set) {
-    m_validity.m_valid_flags |= static_cast<CacheValidity::Storage>(set);
-  }
+  void MakeValid(RegisterSetType set) { m_validity |= set; }
 
-  bool IsValid(RegisterSetType set) {
-    return (m_validity.m_valid_flags &
-            static_cast<CacheValidity::Storage>(set)) != 0;
+  [[nodsicard]] bool IsValid(RegisterSetType set) {
+    return any(m_validity & set);
   }
 
   template <typename... Ts> void Invalidate(RegisterSetType first, Ts... rest) {
     static_assert((std::is_same_v<Ts, RegisterSetType> && ...));
-    m_validity.Invalidate(first);
-    (Invalidate(rest), ...);
+    m_validity &= ~(first | ... | rest);
   }
-
-  // This single object manages all tracking of whether register value caches
-  // are valid. Having a single object makes it easy to reset without missing
-  // anything.
-  class CacheValidity {
-    using Storage = std::underlying_type_t<RegisterSetType>;
-
-  private:
-    Storage m_valid_flags = 0;
-
-    friend void
-    NativeRegisterContextLinux_arm64::MakeValid(RegisterSetType set);
-    friend bool NativeRegisterContextLinux_arm64::IsValid(RegisterSetType set);
-
-  public:
-    void Invalidate(RegisterSetType set) {
-      m_valid_flags &= ~static_cast<Storage>(set);
-    }
-
-  } m_validity;
 
   Status RestoreRegisters(void *buffer, const uint8_t **src, size_t len,
                           const RegisterSetType set,
