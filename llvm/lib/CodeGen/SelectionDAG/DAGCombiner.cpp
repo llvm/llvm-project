@@ -5495,6 +5495,7 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   EVT CCVT = getSetCCResultType(VT);
 
   bool isSigned = (Opcode == ISD::SREM);
+  unsigned DivOpcode = isSigned ? ISD::SDIV : ISD::UDIV;
   SDLoc DL(N);
 
   // fold (rem c1, c2) -> c1%c2
@@ -5551,7 +5552,6 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
         isSigned ? visitSDIVLike(N0, N1, N) : visitUDIVLike(N0, N1, N);
     if (OptimizedDiv.getNode() && OptimizedDiv.getNode() != N) {
       // If the equivalent Div node also exists, update its users.
-      unsigned DivOpcode = isSigned ? ISD::SDIV : ISD::UDIV;
       if (SDNode *DivNode = DAG.getNodeIfExists(DivOpcode, N->getVTList(),
                                                 { N0, N1 }))
         CombineTo(DivNode, OptimizedDiv);
@@ -5570,16 +5570,11 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   if (TLI.getTypeAction(*DAG.getContext(), VT) !=
           TargetLowering::TypePromoteInteger &&
       !TLI.isOperationLegalOrCustom(DivRemOpc, VT.getScalarType()) &&
-      !isDivRemLibcallAvailable(N, isSigned, DAG)) {
-    unsigned DivOpc = isSigned ? ISD::SDIV : ISD::UDIV;
-    for (const SDNode *U : N0->users()) {
-      if (U->getOpcode() == DivOpc && U->getOperand(0) == N0 &&
-          U->getOperand(1) == N1) {
-        SDValue Div = DAG.getNode(DivOpc, DL, VT, N0, N1);
-        SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, Div, N1);
-        return DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
-      }
-    }
+      !isDivRemLibcallAvailable(N, isSigned, DAG) &&
+      DAG.getNodeIfExists(DivOpcode, N->getVTList(), {N0, N1})) {
+    SDValue Div = DAG.getNode(DivOpcode, DL, VT, N0, N1);
+    SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, Div, N1);
+    return DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
   }
 
   // sdiv, srem -> sdivrem
