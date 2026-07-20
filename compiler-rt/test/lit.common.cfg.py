@@ -968,6 +968,8 @@ else:
 def target_page_size():
     if config.target_arch in ("amdgcn", "nvptx64"):
         return 4096
+    if emulator:
+        return None
     try:
         proc = subprocess.Popen(
             f"{emulator or ''} {shlex.quote(config.python_executable)}",
@@ -992,7 +994,9 @@ except ImportError:
         return 4096
 
 
-config.available_features.add(f"page-size-{target_page_size()}")
+page_size = target_page_size()
+if page_size is not None:
+    config.available_features.add(f"page-size-{page_size}")
 
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
