@@ -4080,6 +4080,24 @@ llvm::SmallVector<mlir::Region *> fir::DoLoopOp::getLoopRegions() {
   return {&getRegion()};
 }
 
+std::optional<llvm::APInt> fir::DoLoopOp::getStaticTripCount() {
+  auto getConstant = [](mlir::Value v) -> std::optional<std::int64_t> {
+    while (auto cvt =
+               mlir::dyn_cast_or_null<fir::ConvertOp>(v.getDefiningOp()))
+      v = cvt.getValue();
+    return fir::getIntIfConstant(v);
+  };
+  std::optional<std::int64_t> lb = getConstant(getLowerBound());
+  std::optional<std::int64_t> ub = getConstant(getUpperBound());
+  std::optional<std::int64_t> step = getConstant(getStep());
+  if (!lb || !ub || !step || *step == 0)
+    return std::nullopt;
+  std::int64_t count = (*ub - *lb + *step) / *step;
+  if (count < 0)
+    count = 0;
+  return llvm::APInt(64, static_cast<std::uint64_t>(count));
+}
+
 /// Translate a value passed as an iter_arg to the corresponding block
 /// argument in the body of the loop.
 mlir::BlockArgument fir::DoLoopOp::iterArgToBlockArg(mlir::Value iterArg) {

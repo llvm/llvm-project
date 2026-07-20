@@ -27,6 +27,14 @@ static llvm::cl::opt<bool> disableArgumentFakeUse("disable-argument-fake-use",
                                                   llvm::cl::Hidden,
                                                   llvm::cl::init(false));
 
+static bool isVPlanNativePathEnabled() {
+  auto &registeredOptions = llvm::cl::getRegisteredOptions();
+  auto it = registeredOptions.find("enable-vplan-native-path");
+  if (it == registeredOptions.end())
+    return false;
+  return static_cast<llvm::cl::opt<bool> *>(it->second)->getValue();
+}
+
 namespace fir {
 
 template <typename F>
@@ -220,6 +228,11 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   if (pc.LoopVersioning)
     pm.addPass(fir::createLoopVersioning());
+
+  if ((pc.OptLevel == llvm::OptimizationLevel::O2 ||
+       pc.OptLevel == llvm::OptimizationLevel::O3) &&
+      !isVPlanNativePathEnabled())
+    pm.addPass(fir::createVectorAlwaysUnroll());
 
   pm.addPass(mlir::createCSEPass());
 
