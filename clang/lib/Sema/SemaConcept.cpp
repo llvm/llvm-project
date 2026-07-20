@@ -3070,14 +3070,11 @@ private:
       unsigned Slot = 0;
       for (unsigned ParamIndex : Indexes.set_bits()) {
         TD.AddChild([this, Slot, ParamIndex, Mapping, TPL] {
-          OS << "#" << ParamIndex << ": ";
-          if (TPL && Slot < TPL->size()) {
-            const NamedDecl *Param = TPL->getParam(Slot);
-            OS << "<";
-            Param->print(OS, PP);
-            OS << ">";
-          }
-          OS << " -> ";
+          assert(TPL && Slot < TPL->size());
+          const NamedDecl *Param = TPL->getParam(Slot);
+          OS << "#" << ParamIndex << ": <";
+          Param->print(OS, PP);
+          OS << "> -> ";
           Mapping[Slot].getArgument().print(PP, OS,
                                             /*IncludeType=*/false);
           TD.AddChild([this, Slot, Mapping] {
