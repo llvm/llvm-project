@@ -1140,10 +1140,15 @@ void CompilerInstance::LoadRequestedPlugins() {
     }
   }
 
-  // Every plugin group is now known, so a -W<plugin>-plugin flag that named a
-  // group no loaded plugin owns is a misspelled option -- report it.
-  getDiagnostics().getDiagnosticIDs()->reportUnclaimedPluginGroups(
-      getDiagnostics());
+  // Every frontend plugin group is now known, so a -W<plugin>-plugin flag that
+  // named a group no loaded plugin owns is a misspelled option -- report it. A
+  // backend (pass) plugin, however, registers its group only when it emits a
+  // diagnostic during codegen, which is after this point; so when any pass
+  // plugin is loaded a flag may still be claimed later, and reporting here would
+  // risk a false "unknown warning option". Skip the report in that case.
+  if (getCodeGenOpts().PassPlugins.empty())
+    getDiagnostics().getDiagnosticIDs()->reportUnclaimedPluginGroups(
+        getDiagnostics());
 }
 
 /// Determine the appropriate source input kind based on language
