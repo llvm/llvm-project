@@ -133,7 +133,7 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   LiveIntervals *LIS = nullptr;
   SlotIndexes *SI = nullptr;
   const MachineLoopInfo *Loops = nullptr;
-  RegisterClassInfo *RegClassInfo = nullptr;
+  const RegisterClassInfo *RegClassInfo = nullptr;
 
   /// Position and VReg of a PHI instruction during coalescing.
   struct PHIValPos {
@@ -383,7 +383,7 @@ public:
 
   RegisterCoalescer(LiveIntervals *LIS, SlotIndexes *SI,
                     const MachineLoopInfo *Loops,
-                    RegisterClassInfo *RegClassInfo)
+                    const RegisterClassInfo *RegClassInfo)
       : LIS(LIS), SI(SI), Loops(Loops), RegClassInfo(RegClassInfo) {}
 
   bool run(MachineFunction &MF);
@@ -4324,7 +4324,6 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
   const TargetSubtargetInfo &STI = fn.getSubtarget();
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
-
   if (EnableGlobalCopies == cl::boolOrDefault::BOU_UNSET)
     JoinGlobalCopies = STI.enableJoinGlobalCopies();
   else

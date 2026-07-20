@@ -113,7 +113,7 @@ namespace {
 /// are safe for such insertion.
 class ShrinkWrapImpl {
   /// Hold callee-saved information.
-  RegisterClassInfo *RCI = nullptr;
+  const RegisterClassInfo *RCI = nullptr;
   MachineDominatorTree *MDT = nullptr;
   MachinePostDominatorTree *MPDT = nullptr;
 
@@ -244,7 +244,7 @@ class ShrinkWrapImpl {
   bool ArePointsInteresting() const { return Save != Entry && Save && Restore; }
 
 public:
-  ShrinkWrapImpl(RegisterClassInfo *RCI, MachineDominatorTree *MDT,
+  ShrinkWrapImpl(const RegisterClassInfo *RCI, MachineDominatorTree *MDT,
                  MachinePostDominatorTree *MPDT,
                  MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *MLI,
                  MachineOptimizationRemarkEmitter *ORE)
@@ -1000,7 +1000,7 @@ bool ShrinkWrapLegacy::runOnMachineFunction(MachineFunction &MF) {
       !ShrinkWrapImpl::isShrinkWrapEnabled(MF))
     return false;
 
-  RegisterClassInfo *RCI =
+  const RegisterClassInfo *RCI =
       &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
@@ -1021,7 +1021,8 @@ PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
   if (MF.empty() || !ShrinkWrapImpl::isShrinkWrapEnabled(MF))
     return PreservedAnalyses::all();
 
-  RegisterClassInfo &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  const RegisterClassInfo &RCI =
+      MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachinePostDominatorTree &MPDT =
       MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);

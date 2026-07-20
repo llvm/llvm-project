@@ -80,11 +80,12 @@ class PostRAScheduler {
   MachineLoopInfo *MLI = nullptr;
   AliasAnalysis *AA = nullptr;
   const TargetMachine *TM = nullptr;
-  RegisterClassInfo *RegClassInfo = nullptr;
+  const RegisterClassInfo *RegClassInfo = nullptr;
 
 public:
   PostRAScheduler(MachineFunction &MF, MachineLoopInfo *MLI, AliasAnalysis *AA,
-                  const TargetMachine *TM, RegisterClassInfo *RegClassInfo)
+                  const TargetMachine *TM,
+                  const RegisterClassInfo *RegClassInfo)
       : TII(MF.getSubtarget().getInstrInfo()), MLI(MLI), AA(AA), TM(TM),
         RegClassInfo(RegClassInfo) {}
   bool run(MachineFunction &MF);
@@ -385,9 +386,9 @@ PostRASchedulerPass::run(MachineFunction &MF,
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   AliasAnalysis *AA = &FAM.getResult<AAManager>(MF.getFunction());
-  RegisterClassInfo *RegClassInfo =
-      &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
-  PostRAScheduler Impl(MF, MLI, AA, TM, RegClassInfo);
+  const RegisterClassInfo &RegClassInfo =
+      MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  PostRAScheduler Impl(MF, MLI, AA, TM, &RegClassInfo);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
