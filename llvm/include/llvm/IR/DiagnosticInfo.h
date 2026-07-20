@@ -129,6 +129,15 @@ public:
   /* DiagnosticKind */ int getKind() const { return Kind; }
   DiagnosticSeverity getSeverity() const { return Severity; }
 
+  /// The name of the warning group this diagnostic belongs to, or empty if it
+  /// is not in a user-controllable group. A plugin (its kind obtained from
+  /// getNextAvailablePluginDiagnosticKind) can override this so its backend
+  /// diagnostic is controlled with -W<group> like a frontend plugin's, instead
+  /// of only through the coarse -Wbackend-plugin umbrella. The frontend resolves
+  /// the name against its own diagnostic-group registry; by convention it is
+  /// "<plugin>-plugin", which nests under -Wplugin and -Wuser-defined-warnings.
+  virtual StringRef getWarningGroup() const { return StringRef(); }
+
   /// Print using the given \p DP a user-friendly message.
   /// This is the default message that will be printed to the user.
   /// It is used when the frontend does not directly take advantage

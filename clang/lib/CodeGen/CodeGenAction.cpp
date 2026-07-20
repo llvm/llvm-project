@@ -925,8 +925,32 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
     MisExpectDiagHandler(cast<DiagnosticInfoMisExpect>(DI));
     return;
   default:
-    // Plugin IDs are not bound to any value as they are set dynamically.
-    ComputeDiagRemarkID(Severity, backend_plugin, DiagID);
+    // Plugin IDs are not bound to any value as they are set dynamically. If the
+    // plugin put its diagnostic in a warning group, route it through that
+    // runtime group so it is user-controllable with -W<group> exactly like a
+    // frontend plugin diagnostic (nesting under -Wplugin and
+    // -Wuser-defined-warnings). Otherwise it falls under the coarse
+    // -Wbackend-plugin umbrella, as before.
+    if (StringRef Group = DI.getWarningGroup(); !Group.empty()) {
+      DiagnosticsEngine::Level DiagLevel = DiagnosticsEngine::Warning;
+      switch (Severity) {
+      case llvm::DS_Error:
+        DiagLevel = DiagnosticsEngine::Error;
+        break;
+      case llvm::DS_Warning:
+        DiagLevel = DiagnosticsEngine::Warning;
+        break;
+      case llvm::DS_Remark:
+        DiagLevel = DiagnosticsEngine::Remark;
+        break;
+      case llvm::DS_Note:
+        DiagLevel = DiagnosticsEngine::Note;
+        break;
+      }
+      DiagID = Diags.getCustomDiagID(DiagLevel, "%0", Group);
+    } else {
+      ComputeDiagRemarkID(Severity, backend_plugin, DiagID);
+    }
     break;
   }
   std::string MsgStorage;
