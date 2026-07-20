@@ -53,25 +53,6 @@ template <class N, class M> class LoopInfoBase;
 template <class N, class M> class LoopBase;
 template <class N, class M> class PopulateLoopsDFS;
 
-/// Opaque handle to a loop within a LoopInfoBase. A handle stays valid for as
-/// long as the loop itself. The long-term goal is to move LoopBase operations
-/// to LoopInfoBase.
-class LoopRef {
-  void *Ptr = nullptr;
-
-  template <class N, class M> friend class LoopInfoBase;
-
-public:
-  LoopRef() = default;
-  template <class BlockT, class LoopT>
-  LoopRef(const LoopBase<BlockT, LoopT> *L)
-      : Ptr(static_cast<LoopT *>(const_cast<LoopBase<BlockT, LoopT> *>(L))) {}
-  bool isValid() const { return Ptr != nullptr; }
-  explicit operator bool() const { return isValid(); }
-  bool operator==(LoopRef O) const { return Ptr == O.Ptr; }
-  bool operator!=(LoopRef O) const { return Ptr != O.Ptr; }
-};
-
 //===----------------------------------------------------------------------===//
 /// Instances of this class are used to represent loops that are detected in the
 /// flow graph.
@@ -629,12 +610,6 @@ private:
            "loop info used with outdated block numbers");
   }
 
-  /// Resolve a handle to its loop.
-  LoopT *deref(LoopRef L) const {
-    assert(L.isValid() && "dereferencing an invalid loop handle");
-    return static_cast<LoopT *>(L.Ptr);
-  }
-
 public:
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
@@ -658,37 +633,34 @@ public:
   using Edge = std::pair<BlockT *, BlockT *>;
 
   /// Return true if \p L does not have any exit blocks.
-  bool hasNoExitBlocks(LoopRef L) const;
+  bool hasNoExitBlocks(const LoopT &L) const;
 
   /// Return all pairs of (_inside_block_,_outside_block_).
-  void getExitEdges(LoopRef L, SmallVectorImpl<Edge> &ExitEdges) const;
+  void getExitEdges(const LoopT &L, SmallVectorImpl<Edge> &ExitEdges) const;
 
   /// Return the unique exit block for the latch of \p L, or null if there are
   /// multiple different exit blocks or the latch is not exiting.
-  BlockT *getUniqueLatchExitBlock(LoopRef L) const;
+  BlockT *getUniqueLatchExitBlock(const LoopT &L) const;
 
   /// Remove every block satisfying \p Pred from \p L's block list, preserving
   /// the order of the remaining blocks. Only \p L itself is updated, not its
   /// ancestors or descendants, and not the block-to-loop mapping.
   template <typename PredicateT>
-  void removeBlocksIf(LoopRef L, PredicateT Pred) {
-    LoopT *Lp = deref(L);
-    llvm::erase_if(Lp->Blocks, [&](BlockT *BB) {
+  void removeBlocksIf(LoopT &L, PredicateT Pred) {
+    llvm::erase_if(L.Blocks, [&](BlockT *BB) {
       if (!Pred(BB))
         return false;
-      Lp->DenseBlockSet.erase(BB);
+      L.DenseBlockSet.erase(BB);
       return true;
     });
   }
 
   /// Detach and return the children of \p Parent (the top-level loops if
-  /// \p Parent is invalid) that satisfy \p Pred, clearing their parent
-  /// pointers. Both the remaining and the returned children keep their
-  /// relative order.
+  /// \p Parent is null) that satisfy \p Pred, clearing their parent pointers.
+  /// Both the remaining and the returned children keep their relative order.
   template <typename PredicateT>
-  SmallVector<LoopT *, 4> takeChildrenIf(LoopRef Parent, PredicateT Pred) {
-    std::vector<LoopT *> &List =
-        Parent ? deref(Parent)->SubLoops : TopLevelLoops;
+  SmallVector<LoopT *, 4> takeChildrenIf(LoopT *Parent, PredicateT Pred) {
+    std::vector<LoopT *> &List = Parent ? Parent->SubLoops : TopLevelLoops;
     SmallVector<LoopT *, 4> Taken;
     llvm::erase_if(List, [&](LoopT *Child) {
       if (!Pred(Child))

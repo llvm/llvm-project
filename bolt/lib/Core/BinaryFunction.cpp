@@ -4501,7 +4501,7 @@ void BinaryFunction::calculateLoopInfo() {
 
     // Compute exit count.
     SmallVector<BinaryLoop::Edge, 1> ExitEdges;
-    BLI->getExitEdges(L, ExitEdges);
+    BLI->getExitEdges(*L, ExitEdges);
     for (BinaryLoop::Edge &Exit : ExitEdges) {
       const BinaryBasicBlock *Exiting = Exit.first;
       const BinaryBasicBlock *ExitTarget = Exit.second;

@@ -92,8 +92,8 @@ std::pair<BlockT *, bool> getExitBlockHelper(const LoopBase<BlockT, LoopT> *L,
 }
 
 template <class BlockT, class LoopT>
-bool LoopInfoBase<BlockT, LoopT>::hasNoExitBlocks(LoopRef L) const {
-  auto RC = getExitBlockHelper(deref(L), false);
+bool LoopInfoBase<BlockT, LoopT>::hasNoExitBlocks(const LoopT &L) const {
+  auto RC = getExitBlockHelper(&L, false);
   if (RC.second)
     // found multiple exit blocks
     return false;
@@ -160,13 +160,13 @@ BlockT *LoopBase<BlockT, LoopT>::getUniqueExitBlock() const {
 }
 
 template <class BlockT, class LoopT>
-BlockT *LoopInfoBase<BlockT, LoopT>::getUniqueLatchExitBlock(LoopRef L) const {
-  const LoopT *Lp = deref(L);
-  BlockT *Latch = Lp->getLoopLatch();
+BlockT *
+LoopInfoBase<BlockT, LoopT>::getUniqueLatchExitBlock(const LoopT &L) const {
+  BlockT *Latch = L.getLoopLatch();
   assert(Latch && "Latch block must exists");
-  auto IsExitBlock = [Lp](BlockT *BB, bool AllowRepeats) -> BlockT * {
+  auto IsExitBlock = [&L](BlockT *BB, bool AllowRepeats) -> BlockT * {
     assert(!AllowRepeats && "Unexpected parameter value.");
-    return !Lp->contains(BB) ? BB : nullptr;
+    return !L.contains(BB) ? BB : nullptr;
   };
   return find_singleton<BlockT>(children<BlockT *>(Latch), IsExitBlock);
 }
@@ -174,11 +174,10 @@ BlockT *LoopInfoBase<BlockT, LoopT>::getUniqueLatchExitBlock(LoopRef L) const {
 /// getExitEdges - Return all pairs of (_inside_block_,_outside_block_).
 template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::getExitEdges(
-    LoopRef L, SmallVectorImpl<Edge> &ExitEdges) const {
-  const LoopT *Lp = deref(L);
-  for (const auto BB : Lp->blocks())
+    const LoopT &L, SmallVectorImpl<Edge> &ExitEdges) const {
+  for (const auto BB : L.blocks())
     for (auto *Succ : children<BlockT *>(BB))
-      if (!Lp->contains(Succ))
+      if (!L.contains(Succ))
         // Not in current loop? It must be an exit block.
         ExitEdges.emplace_back(BB, Succ);
 }
