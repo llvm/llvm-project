@@ -3072,6 +3072,8 @@ static APFloat getZeroFP(const Type *LLVMFloatTy) {
   switch (LLVMFloatTy->getScalarType()->getTypeID()) {
   case Type::HalfTyID:
     return APFloat::getZero(APFloat::IEEEhalf());
+  case Type::BFloatTyID:
+    return APFloat::getZero(APFloat::BFloat());
   default:
   case Type::FloatTyID:
     return APFloat::getZero(APFloat::IEEEsingle());
@@ -3086,6 +3088,8 @@ static APFloat getOneFP(const Type *LLVMFloatTy) {
   switch (LLVMFloatTy->getScalarType()->getTypeID()) {
   case Type::HalfTyID:
     return APFloat::getOne(APFloat::IEEEhalf());
+  case Type::BFloatTyID:
+    return APFloat::getOne(APFloat::BFloat());
   default:
   case Type::FloatTyID:
     return APFloat::getOne(APFloat::IEEEsingle());

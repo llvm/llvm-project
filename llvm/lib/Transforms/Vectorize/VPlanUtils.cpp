@@ -363,6 +363,30 @@ bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
          match(Addr, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
 }
 
+unsigned vputils::getOpcode(const VPValue *V) {
+  return TypeSwitch<const VPValue *, unsigned>(V)
+      .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
+            VPReplicateRecipe, VPWidenPHIRecipe>(
+          [](auto *I) { return I->getOpcode(); })
+      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
+          [](auto *I) {
+            // For recipes that do not directly map to LLVM IR instructions,
+            // assign opcodes after the last VPInstruction opcode (which is also
+            // after the last IR Instruction opcode), based on the VPRecipeID.
+            return VPInstruction::OpsEnd + 1 + I->getVPRecipeID();
+          })
+      .Default([](auto *) { return 0; });
+}
+
+std::optional<std::pair<bool, unsigned>>
+vputils::getOpcodeOrIntrinsicID(const VPValue *V) {
+  if (Intrinsic::ID IID = vputils::getIntrinsicID(V))
+    return std::make_pair(true, IID);
+  if (unsigned Opcode = vputils::getOpcode(V))
+    return std::make_pair(false, Opcode);
+  return {};
+}
+
 /// Returns true if \p Opcode preserves uniformity, i.e., if all operands are
 /// uniform, the result will also be uniform.
 static bool preservesUniformity(unsigned Opcode) {
@@ -385,11 +409,10 @@ static bool preservesUniformity(unsigned Opcode) {
 }
 
 bool vputils::isElementwise(const VPValue *V) {
-  unsigned Opcode = TypeSwitch<const VPValue *, unsigned>(V)
-                        .Case<VPInstruction, VPWidenRecipe>(
-                            [](auto *R) { return R->getOpcode(); })
-                        .Default([](auto *) { return 0; });
   // TODO: Handle more opcodes and recipes.
+  if (!isa<VPInstruction, VPWidenRecipe>(V))
+    return false;
+  unsigned Opcode = getOpcode(V);
   return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
 }
 
@@ -903,29 +926,6 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   default:
     return nullptr;
   }
-}
-
-std::optional<std::pair<bool, unsigned>>
-vputils::getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
-  if (Intrinsic::ID IID = vputils::getIntrinsicID(R))
-    return std::make_pair(true, IID);
-  return TypeSwitch<const VPSingleDefRecipe *,
-                    std::optional<std::pair<bool, unsigned>>>(R)
-      .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
-            VPReplicateRecipe>(
-          [](auto *I) { return std::make_pair(false, I->getOpcode()); })
-      .Case([](const VPWidenPHIRecipe *I) {
-        return std::make_pair(false, Instruction::PHI);
-      })
-      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
-          [](auto *I) {
-            // For recipes that do not directly map to LLVM IR instructions,
-            // assign opcodes after the last VPInstruction opcode (which is also
-            // after the last IR Instruction opcode), based on the VPRecipeID.
-            return std::make_pair(false, VPInstruction::OpsEnd + 1 +
-                                             I->getVPRecipeID());
-          })
-      .Default([](auto *) { return std::nullopt; });
 }
 
 bool vputils::isDeadRecipe(VPRecipeBase &R) {
