@@ -22,6 +22,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -68,6 +69,11 @@ public:
   X86DynAllocaExpanderLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
 private:
   StringRef getPassName() const override { return "X86 DynAlloca Expander"; }

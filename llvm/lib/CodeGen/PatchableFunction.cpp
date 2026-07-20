@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -37,6 +38,11 @@ struct PatchableFunctionLegacy : public MachineFunctionPass {
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 

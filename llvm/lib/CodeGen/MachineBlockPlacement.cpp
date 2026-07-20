@@ -41,6 +41,7 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
@@ -669,6 +670,7 @@ public:
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };

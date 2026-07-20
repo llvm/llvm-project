@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -285,6 +286,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };

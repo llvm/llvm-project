@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -226,6 +227,7 @@ public:
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreservedID(MachineLoopInfoID);
     AU.addPreservedID(MachineDominatorsID);
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };

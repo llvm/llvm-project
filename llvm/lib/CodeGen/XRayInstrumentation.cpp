@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -56,6 +57,7 @@ struct XRayInstrumentationLegacy : public MachineFunctionPass {
     AU.setPreservesCFG();
     AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 

@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -231,6 +232,7 @@ char X86SpeculativeLoadHardeningLegacy::ID = 0;
 
 void X86SpeculativeLoadHardeningLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

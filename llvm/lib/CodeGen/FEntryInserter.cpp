@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -33,6 +34,11 @@ struct FEntryInserterLegacy : public MachineFunctionPass {
 
   bool runOnMachineFunction(MachineFunction &F) override {
     return FEntryInserter().run(F);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 }

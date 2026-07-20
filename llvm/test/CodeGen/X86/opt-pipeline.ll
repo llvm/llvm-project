@@ -142,7 +142,6 @@
 ; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
-; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
 ; CHECK-NEXT:       Machine Block Frequency Analysis
@@ -199,7 +198,6 @@
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       Reaching Definitions Analysis
 ; CHECK-NEXT:       X86 Execution Dependency Fix
-; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       BreakFalseDeps
 ; CHECK-NEXT:       X86 Indirect Branch Tracking
 ; CHECK-NEXT:       X86 vzeroupper inserter
