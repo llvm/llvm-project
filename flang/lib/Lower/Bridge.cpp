@@ -3313,7 +3313,11 @@ private:
 
     // Start a new block before generating the scf.execute_region op if needed.
     // This avoids generating the region directly after a terminator (e.g. a
-    // conditional branch from a parent construct).
+    // conditional branch from a parent construct).  A non-null firstStmt.block
+    // here is a landing pad the enclosing wrap's createEmptyBlocks pre-
+    // allocated for us — startNewFunction runs resetEvaluationBlocks before
+    // each entry-point pass, so we can trust the pointer isn't stale from a
+    // previous pass.
     if (Fortran::lower::pft::isWrappableConstruct(eval) &&
         eval.hasNestedEvaluations()) {
       Fortran::lower::pft::Evaluation &firstStmt =
@@ -6512,6 +6516,10 @@ private:
     // with dummy_scope operands.
     resetRegisteredDummySymbols();
 
+    // Clear any Evaluation::block pointers left over from a previous
+    // entry-point pass over this shared PFT.
+    resetEvaluationBlocks(funit.evaluationList);
+
     // Create most function blocks in advance.
     createEmptyBlocks(funit.evaluationList);
 
@@ -6536,6 +6544,18 @@ private:
     if (Fortran::lower::pft::Evaluation *alternateEntryEval =
             funit.getEntryEval())
       genBranch(alternateEntryEval->lexicalSuccessor->block);
+  }
+
+  /// Recursively null every Evaluation::block in \p evaluationList.  Called
+  /// once per entry-point pass over a shared PFT so a later pass never sees
+  /// block pointers that belong to a prior pass's function or wrap region.
+  void resetEvaluationBlocks(
+      std::list<Fortran::lower::pft::Evaluation> &evaluationList) {
+    for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
+      eval.block = nullptr;
+      if (eval.evaluationList)
+        resetEvaluationBlocks(*eval.evaluationList);
+    }
   }
 
   /// Create global blocks for the current function. This eliminates the
