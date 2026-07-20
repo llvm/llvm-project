@@ -43,7 +43,7 @@ define i32 @test_poison() {
   ret i32 %r
 }
 
-; vector containing zero and poison -> should NOT fold
+; vector containing zero and poison -> return poison
 define i32 @test_zero_and_poison() {
 ; CHECK-LABEL: test_zero_and_poison:
 ; CHECK:       // %bb.0:
