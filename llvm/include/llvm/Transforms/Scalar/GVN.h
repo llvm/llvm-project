@@ -45,6 +45,7 @@ class EarliestEscapeAnalysis;
 class ExtractValueInst;
 class Function;
 class FunctionPass;
+class GVNLegacyPass;
 class GetElementPtrInst;
 class ImplicitControlFlowTracking;
 class LoadInst;
