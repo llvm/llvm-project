@@ -58,6 +58,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Clang Python Bindings Potentially Breaking Changes
 
+- Remove the deprecated `CompletionChunk.isKind...` methods.
+  Existing uses should be adapted to directly compare equality of the `CompletionChunk` kind with the corresponding `CompletionChunkKind` variant.
+
+  Affected methods: `isKindOptional`, `isKindTypedText`, `isKindPlaceHolder`,
+  `isKindInformative` and `isKindResultType`.
+
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
