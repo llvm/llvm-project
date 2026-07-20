@@ -7,6 +7,8 @@
 # RUN: not llvm-mc -filetype=obj -triple x86_64 %t/group-too-large.s       2>&1 | FileCheck %t/group-too-large.s
 # RUN: not llvm-mc -filetype=obj -triple x86_64 -mc-relax-all %t/group-too-large.s 2>&1 | FileCheck %t/group-too-large.s
 # RUN: not llvm-mc -filetype=obj -triple x86_64 %t/nested-lock.s           2>&1 | FileCheck %t/nested-lock.s
+# RUN: not llvm-mc -filetype=obj -triple x86_64 %t/mode-zero.s             2>&1 | FileCheck %t/mode-zero.s
+# RUN: not llvm-mc -filetype=obj -triple x86_64 %t/align-in-lock.s         2>&1 | FileCheck %t/align-in-lock.s
 # RUN: not llvm-mc -filetype=obj -triple x86_64 -x86-branches-within-32B-boundaries %t/bundle-with-align-branch.s 2>&1 | FileCheck %t/bundle-with-align-branch.s
 # RUN: not llvm-mc -filetype=obj -triple x86_64 -x86-align-branch-boundary=32 -x86-align-branch=jmp %t/bundle-with-align-branch.s 2>&1 | FileCheck %t/bundle-with-align-branch.s
 
@@ -81,6 +83,21 @@ foo:
 # CHECK: [[#@LINE+1]]:3: error: nested .bundle_lock is not allowed
   .bundle_lock
   .bundle_unlock
+  .bundle_unlock
+
+## `.bundle_align_mode 0` is not supported.
+#--- mode-zero.s
+# CHECK: [[#@LINE+1]]:3: error: disabling .bundle_align_mode is not supported
+  .bundle_align_mode 0
+  imull $17, %ebx, %ebp
+
+#--- align-in-lock.s
+  .bundle_align_mode 4
+  .bundle_lock
+  incl %eax
+  .p2align 3
+  incl %eax
+# CHECK: [[#@LINE+1]]:3: error: alignment and .org directives are not supported inside a .bundle_lock group
   .bundle_unlock
 
 ## Instruction bundling cannot be combined with branch alignment.

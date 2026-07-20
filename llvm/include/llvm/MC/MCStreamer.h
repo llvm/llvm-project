@@ -1131,8 +1131,9 @@ public:
                                const MCPseudoProbeInlineStack &InlineStack,
                                MCSymbol *FnSym);
 
-  /// Set the bundle alignment mode from now on in the section.
-  /// The value 1 means turn the bundle alignment off.
+  /// Enable aligned instruction bundling with the given bundle size, from
+  /// this point onward. Once enabled, bundling cannot be disabled and the
+  /// bundle size cannot be changed.
   virtual void emitBundleAlignMode(Align Alignment);
 
   /// The following instructions are a bundle-locked group.
