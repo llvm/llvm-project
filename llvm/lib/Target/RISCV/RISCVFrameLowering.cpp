@@ -1529,7 +1529,7 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   if (HasVRegister) {
     RISCVVType::VLMUL VLMUL = RISCVVType::encodeLMUL(1, /*Fractional=*/false);
     unsigned VTypeImm = RISCVVType::encodeVTYPE(
-        VLMUL, /*SEW=*/32, /*TailAgnostic=*/false, /*MaskAgnostic=*/false);
+        VLMUL, /*SEW=*/32, /*TailAgnostic=*/true, /*MaskAgnostic=*/true);
 
     MCRegister TemporaryReg = RISCV::X5;
     for (MCRegister Reg : FinalRegsToZero.set_bits()) {

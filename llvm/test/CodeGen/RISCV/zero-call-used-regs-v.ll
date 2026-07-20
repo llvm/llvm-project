@@ -6,7 +6,7 @@
 define void @all() "zero-call-used-regs"="all" {
 ; CHECK-LABEL: all:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 0
 ; CHECK-NEXT:    vmv.v.i v1, 0
 ; CHECK-NEXT:    vmv.v.i v2, 0
@@ -82,7 +82,7 @@ entry:
 define void @all_arg() "zero-call-used-regs"="all-arg" {
 ; CHECK-LABEL: all_arg:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmv.v.i v10, 0
@@ -128,7 +128,7 @@ define i32 @used(i32 %x) "zero-call-used-regs"="used" {
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vredsum.vs v8, v9, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    li t0, 0
@@ -147,7 +147,7 @@ define <4 x i32> @used_arg(<4 x i32> %a, <4 x i32> %b) "zero-call-used-regs"="us
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -160,7 +160,7 @@ define <8 x i32> @used_arg_lmul2(<8 x i32> %a, <8 x i32> %b) "zero-call-used-reg
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv.v.i v11, 0
 ; CHECK-NEXT:    ret
@@ -175,7 +175,7 @@ define <32 x i32> @used_arg_lmul8(<32 x i32> %a, <32 x i32> %b) "zero-call-used-
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vmv.v.i v17, 0
 ; CHECK-NEXT:    vmv.v.i v18, 0
@@ -196,7 +196,7 @@ define <8 x i8> @load_segmented(ptr %base, ptr %out, <8 x i8> %use_v8) "zero-cal
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg2e8.v v9, (a0)
 ; CHECK-NEXT:    vs1r.v v9, (a1)
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    li a0, 0
