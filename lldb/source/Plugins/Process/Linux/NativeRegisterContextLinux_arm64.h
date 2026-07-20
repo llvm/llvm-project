@@ -99,32 +99,36 @@ private:
     POE = 1 << 12,       // Permission Overlay registers.
   };
 
+  void MakeValid(RegisterSetType set) {
+    m_validity.m_valid_flags |= static_cast<CacheValidity::Storage>(set);
+  }
+
+  bool IsValid(RegisterSetType set) {
+    return (m_validity.m_valid_flags & static_cast<CacheValidity::Storage>(set)) != 0;
+  }
+
+  template <typename... Ts>
+  void Invalidate(RegisterSetType first, Ts... rest) {
+    static_assert((std::is_same_v<Ts, RegisterSetType> && ...));
+    m_validity.Invalidate(first);
+    (Invalidate(rest), ...);
+  }
+
   // This single object manages all tracking of whether register value caches
   // are valid. Having a single object makes it easy to reset without missing
   // anything.
   class CacheValidity {
-  private:
     using Storage = std::underlying_type_t<RegisterSetType>;
+  private:
     Storage m_valid_flags = 0;
 
-  public:
+    friend void NativeRegisterContextLinux_arm64::MakeValid(RegisterSetType set);
+    friend bool NativeRegisterContextLinux_arm64::IsValid(RegisterSetType set);
+  public: 
     void Invalidate(RegisterSetType set) {
       m_valid_flags &= ~static_cast<Storage>(set);
     }
 
-    template <typename... Ts>
-    void Invalidate(RegisterSetType first, Ts... rest) {
-      static_assert((std::is_same_v<Ts, RegisterSetType> && ...));
-      Invalidate(first);
-      (Invalidate(rest), ...);
-    }
-
-    void MakeValid(RegisterSetType set) {
-      m_valid_flags |= static_cast<Storage>(set);
-    }
-    bool IsValid(RegisterSetType set) {
-      return (m_valid_flags & static_cast<Storage>(set)) != 0;
-    }
   } m_validity;
 
   Status RestoreRegisters(void *buffer, const uint8_t **src, size_t len,
