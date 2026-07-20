@@ -821,11 +821,11 @@ BB b{};
 // CHECK-LABEL: Dumping GH133132::<deduction guide for BB>:
 // CHECK-NEXT:  FunctionTemplateDecl {{.+}} implicit <deduction guide for BB>
 // CHECK-NEXT:  |-TemplateTemplateParmDecl {{.+}} depth 0 index 0 _X
-// CHECK-NEXT:  | |-TemplateTypeParmDecl {{.+}} class depth 0 index 0
+// CHECK-NEXT:  | |-TemplateTypeParmDecl {{.+}} class depth 1 index 0
 // CHECK-NEXT:  | `-TemplateArgument {{.+}} template 'A':'GH133132::A' qualified
 // CHECK-NEXT:  |   `-ClassTemplateDecl {{.+}} A
 // CHECK-NEXT:  |-TemplateTemplateParmDecl {{.+}} depth 0 index 1 _Y
-// CHECK-NEXT:  | |-TemplateTypeParmDecl {{.+}} class depth 0 index 0
+// CHECK-NEXT:  | |-TemplateTypeParmDecl {{.+}} class depth 1 index 0
 // CHECK-NEXT:  | `-TemplateArgument {{.+}} template '_X':'template-parameter-0-0'
 // CHECK-NEXT:  |   `-TemplateTemplateParmDecl {{.+}} depth 0 index 0 _X
 // CHECK-NEXT:  |-TypeTraitExpr {{.+}} 'bool' __is_deducible

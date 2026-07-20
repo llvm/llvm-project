@@ -244,6 +244,8 @@ let isBranch = 1, isTerminator = 1, isCodeGenOnly = 1 in {
 let isPseudo = 1, isMeta = 1, isNotDuplicable = 1, SchedRW = [WriteSystem] in {
   def SEH_PushReg : I<0, Pseudo, (outs), (ins i32imm:$reg),
                             "#SEH_PushReg $reg", []>;
+  def SEH_Push2Regs : I<0, Pseudo, (outs), (ins i32imm:$reg1, i32imm:$reg2),
+                            "#SEH_Push2Regs $reg1, $reg2", []>;
   def SEH_SaveReg : I<0, Pseudo, (outs), (ins i32imm:$reg, i32imm:$dst),
                             "#SEH_SaveReg $reg, $dst", []>;
   def SEH_SaveXMM : I<0, Pseudo, (outs), (ins i32imm:$reg, i32imm:$dst),
@@ -276,6 +278,8 @@ let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
 let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
   def SEH_SplitChainedAtEndOfBlock : I<0, Pseudo, (outs), (ins),
                             "#SEH_SplitChainedAtEndOfBlock", []>;
+  def SEH_SplitChained : I<0, Pseudo, (outs), (ins),
+                            "#SEH_SplitChained", []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1610,15 +1614,13 @@ let Predicates = [NoNDD] in {
             (SUB16ri GR16:$src1, -128)>;
   def : Pat<(add GR32:$src1, 128),
             (SUB32ri GR32:$src1, -128)>;
+  def : Pat<(add GR64:$src1, 128),
+            (SUB64ri32 GR64:$src1, -128)>;
 
   def : Pat<(X86add_flag_nocf GR16:$src1, 128),
             (SUB16ri GR16:$src1, -128)>;
   def : Pat<(X86add_flag_nocf GR32:$src1, 128),
             (SUB32ri GR32:$src1, -128)>;
-}
-let Predicates = [NoNDDI] in {
-  def : Pat<(add GR64:$src1, 128),
-            (SUB64ri32 GR64:$src1, -128)>;
   def : Pat<(X86add_flag_nocf GR64:$src1, 128),
             (SUB64ri32 GR64:$src1, -128)>;
 }
@@ -1627,15 +1629,13 @@ let Predicates = [HasNDD] in {
             (SUB16ri_ND GR16:$src1, -128)>;
   def : Pat<(add GR32:$src1, 128),
             (SUB32ri_ND GR32:$src1, -128)>;
+  def : Pat<(add GR64:$src1, 128),
+            (SUB64ri32_ND GR64:$src1, -128)>;
 
   def : Pat<(X86add_flag_nocf GR16:$src1, 128),
             (SUB16ri_ND GR16:$src1, -128)>;
   def : Pat<(X86add_flag_nocf GR32:$src1, 128),
             (SUB32ri_ND GR32:$src1, -128)>;
-}
-let Predicates = [HasNDDI] in {
-  def : Pat<(add GR64:$src1, 128),
-            (SUB64ri32_ND GR64:$src1, -128)>;
   def : Pat<(X86add_flag_nocf GR64:$src1, 128),
             (SUB64ri32_ND GR64:$src1, -128)>;
 }
@@ -1662,7 +1662,7 @@ let Predicates = [NoNDD] in {
   def : Pat<(X86add_flag_nocf GR64:$src1, 0x0000000080000000),
             (SUB64ri32 GR64:$src1, 0xffffffff80000000)>;
 }
-let Predicates = [HasNDDI] in {
+let Predicates = [HasNDD] in {
   def : Pat<(add GR64:$src1, 0x0000000080000000),
             (SUB64ri32_ND GR64:$src1, 0xffffffff80000000)>;
   def : Pat<(X86add_flag_nocf GR64:$src1, 0x0000000080000000),
@@ -1680,17 +1680,38 @@ def : Pat<(or (and GR64:$dst, -256),
               (i64 (zextloadi8 addr:$src))),
           (INSERT_SUBREG (i64 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
 
-def : Pat<(or (and GR32:$dst, -256),
-              (i32 (zextloadi8 addr:$src))),
-          (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
-
 def : Pat<(or (and GR64:$dst, -65536),
               (i64 (zextloadi16 addr:$src))),
           (INSERT_SUBREG (i64 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
-def : Pat<(or (and GR32:$dst, -65536),
-              (i32 (zextloadi16 addr:$src))),
-          (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
+let Predicates = [Not64BitMode] in {
+  def : Pat<(or (and GR32:$dst, -256),
+                (i32 (zextloadi8 addr:$src))),
+            (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
+
+  def : Pat<(or (and GR32:$dst, -65536),
+                (i32 (zextloadi16 addr:$src))),
+            (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
+}
+
+let Predicates = [In64BitMode] in {
+  def : Pat<(or (and def32:$dst, -256),
+                (i32 (zextloadi8 addr:$src))),
+            (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
+
+  def : Pat<(or (and def32:$dst, -65536),
+                (i32 (zextloadi16 addr:$src))),
+            (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
+
+  // These patterns use MOV32rr since GR32 could have junk in the upper 32-bits.
+  def : Pat<(or (and GR32:$dst, -256),
+                (i32 (zextloadi8 addr:$src))),
+            (MOV32rr (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit))>;
+
+  def : Pat<(or (and GR32:$dst, -65536),
+                (i32 (zextloadi16 addr:$src))),
+            (MOV32rr (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit))>;
+}
 
 // To avoid needing to materialize an immediate in a register, use a 32-bit and
 // with implicit zero-extension instead of a 64-bit and if the immediate has at
@@ -2087,11 +2108,23 @@ defm : OneBitPats<GR16, i16, BTR16rr, BTS16rr, BTC16rr, shiftMask16>;
 defm : OneBitPats<GR32, i32, BTR32rr, BTS32rr, BTC32rr, shiftMask32>;
 defm : OneBitPats<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
 
+// Flag-producing variants: reuse the BTR/BTS/BTC encodings so CF can replace
+// a separate X86ISD::BT. Emitted by a DAG combine in combineBT. Only i32/i64
+// since getBT promotes <32-bit Src to i32 before creating X86ISD::BT. Unlike
+// the OneBitPats above, the bit index here is already a same-width register
+// (combineBTToBitOpFlag emits it that way), so no GR8 sub-reg insertion.
+def : Pat<(X86btr GR32:$src1, GR32:$src2), (BTR32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86bts GR32:$src1, GR32:$src2), (BTS32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86btc GR32:$src1, GR32:$src2), (BTC32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86btr GR64:$src1, GR64:$src2), (BTR64rr GR64:$src1, GR64:$src2)>;
+def : Pat<(X86bts GR64:$src1, GR64:$src2), (BTS64rr GR64:$src1, GR64:$src2)>;
+def : Pat<(X86btc GR64:$src1, GR64:$src2), (BTC64rr GR64:$src1, GR64:$src2)>;
+
 //===----------------------------------------------------------------------===//
 // EFLAGS-defining Patterns
 //===----------------------------------------------------------------------===//
 
-multiclass EFLAGSDefiningPats<string suffix, Predicate PredNDD, Predicate PredNDDI, bit ndd> {
+multiclass EFLAGSDefiningPats<string suffix, Predicate PredNDD, bit ndd> {
   let Predicates = [PredNDD] in {
     // add reg, reg
     def : Pat<(add GR8 :$src1, GR8 :$src2), (!cast<Instruction>(ADD8rr#suffix) GR8 :$src1, GR8 :$src2)>;
@@ -2234,9 +2267,7 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate PredNDD, Predicate PredND
               (!cast<Instruction>(AND32ri#suffix) GR32:$src1, imm:$src2)>;
     def : Pat<(and GR64:$src1, i64immSExt32:$src2),
               (!cast<Instruction>(AND64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
-  }
 
-  let Predicates = [PredNDDI] in {
     def : Pat<(add GR64:$src1, i64immSExt32:$src2), (!cast<Instruction>(ADD64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
     def : Pat<(sub GR64:$src1, i64immSExt32:$src2),
               (!cast<Instruction>(SUB64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
@@ -2248,28 +2279,25 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate PredNDD, Predicate PredND
     def : Pat<(add_like GR8:$src, 1),   (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
     def : Pat<(add_like GR16:$src, 1),  (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
     def : Pat<(add_like GR32:$src, 1),  (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
+    def : Pat<(add_like GR64:$src, 1),  (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
     def : Pat<(add GR8:$src, -1),  (!cast<Instruction>(DEC8r#suffix) GR8:$src)>;
     def : Pat<(add GR16:$src, -1), (!cast<Instruction>(DEC16r#suffix) GR16:$src)>;
     def : Pat<(add GR32:$src, -1), (!cast<Instruction>(DEC32r#suffix) GR32:$src)>;
+    def : Pat<(add GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
 
     def : Pat<(X86add_flag_nocf GR8:$src, -1),  (!cast<Instruction>(DEC8r#suffix) GR8:$src)>;
     def : Pat<(X86add_flag_nocf GR16:$src, -1), (!cast<Instruction>(DEC16r#suffix) GR16:$src)>;
     def : Pat<(X86add_flag_nocf GR32:$src, -1), (!cast<Instruction>(DEC32r#suffix) GR32:$src)>;
+    def : Pat<(X86add_flag_nocf GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
     def : Pat<(X86sub_flag_nocf GR8:$src, -1),  (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
     def : Pat<(X86sub_flag_nocf GR16:$src, -1), (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
     def : Pat<(X86sub_flag_nocf GR32:$src, -1), (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
-  }
-
-  let Predicates = [UseIncDec, PredNDDI] in {
-    def : Pat<(add_like GR64:$src, 1),  (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
-    def : Pat<(add GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
-    def : Pat<(X86add_flag_nocf GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
     def : Pat<(X86sub_flag_nocf GR64:$src, -1), (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
   }
 }
 
-defm : EFLAGSDefiningPats<"", NoNDD, NoNDDI, 0>;
-defm : EFLAGSDefiningPats<"_ND", HasNDD, HasNDDI, 1>;
+defm : EFLAGSDefiningPats<"", NoNDD, 0>;
+defm : EFLAGSDefiningPats<"_ND", HasNDD, 1>;
 
 let Predicates = [HasZU] in {
   // zext (mul reg/mem, imm) -> imulzu

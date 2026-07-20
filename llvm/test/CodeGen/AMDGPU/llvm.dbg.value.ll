@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefixes=GCN,NOOPT %s
-; RUN: llc -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefixes=GCN,OPT %s
+; RUN: llc -O0 -mtriple=amdgpu7.00-unknown-amdhsa < %s | FileCheck -check-prefixes=GCN,NOOPT %s
+; RUN: llc -mtriple=amdgpu7.00-unknown-amdhsa < %s | FileCheck -check-prefixes=GCN,OPT %s
 
 
 ; GCN-LABEL: {{^}}test_debug_value:
@@ -22,6 +22,8 @@ entry:
 
 ; GCN-LABEL: {{^}}only_undef_dbg_value:
 ; NOOPT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- undef
+; NOOPT-NEXT: .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02 ; CFA is 0 in private_wave aspace
+; NOOPT-NEXT: .cfi_undefined 16
 ; NOOPT-NEXT: s_endpgm
 
 ; OPT: s_endpgm
@@ -33,7 +35,7 @@ bb:
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind  }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

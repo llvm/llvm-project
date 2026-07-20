@@ -34,7 +34,7 @@ func.func @empty_constant() {
 
 func.func @index_args_out_of_range_1() {
     // expected-error @+1 {{'emitc.call_opaque' op index argument is out of range}}
-    emitc.call_opaque "test" () {args = [0 : index]} : () -> ()
+    emitc.call_opaque "test" () <{args = [0 : index]}> : () -> ()
     return
 }
 
@@ -42,7 +42,7 @@ func.func @index_args_out_of_range_1() {
 
 func.func @index_args_out_of_range_2(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op index argument is out of range}}
-    emitc.call_opaque "test" (%arg, %arg) {args = [2 : index]} : (i32, i32) -> ()
+    emitc.call_opaque "test" (%arg, %arg) <{args = [2 : index]}> : (i32, i32) -> ()
     return
 }
 
@@ -58,7 +58,7 @@ func.func @empty_callee() {
 
 func.func @nonetype_arg(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op array argument has no type}}
-    emitc.call_opaque "nonetype_arg"(%arg) {args = [0 : index, [0, 1, 2]]} : (i32) -> i32
+    emitc.call_opaque "nonetype_arg"(%arg) <{args = [0 : index, [0, 1, 2]]}> : (i32) -> i32
     return
 }
 
@@ -66,7 +66,7 @@ func.func @nonetype_arg(%arg : i32) {
 
 func.func @array_template_arg(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op template argument has invalid type}}
-    emitc.call_opaque "nonetype_template_arg"(%arg) {template_args = [[0, 1, 2]]} : (i32) -> i32
+    emitc.call_opaque "nonetype_template_arg"(%arg) <{template_args = [[0, 1, 2]]}> : (i32) -> i32
     return
 }
 
@@ -74,7 +74,7 @@ func.func @array_template_arg(%arg : i32) {
 
 func.func @dense_template_argument(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op template argument has invalid type}}
-    emitc.call_opaque "dense_template_argument"(%arg) {template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]} : (i32) -> i32
+    emitc.call_opaque "dense_template_argument"(%arg) <{template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]}> : (i32) -> i32
     return
 }
 
@@ -88,19 +88,41 @@ func.func @array_result() {
 
 // -----
 
-func.func @empty_operator() {
-    %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-    // expected-error @+1 {{'emitc.apply' op applicable operator must not be empty}}
-    %1 = emitc.apply ""(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+func.func @member_call_empty_callee(%arg0 : !emitc.opaque<"MyClass">) {
+    // expected-error @+1 {{'emitc.member_call_opaque' op callee must not be empty}}
+    emitc.member_call_opaque %arg0 "" () : !emitc.opaque<"MyClass">, () -> ()
     return
 }
 
 // -----
 
-func.func @illegal_operator() {
-    %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-    // expected-error @+1 {{'emitc.apply' op applicable operator is illegal}}
-    %1 = emitc.apply "+"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+func.func @member_call_index_out_of_range(%arg0 : !emitc.opaque<"MyClass">) {
+    // expected-error @+1 {{'emitc.member_call_opaque' op index argument is out of range}}
+    emitc.member_call_opaque %arg0 "test" () <{args = [1 : index]}> : !emitc.opaque<"MyClass">, () -> ()
+    return
+}
+
+// -----
+
+func.func @member_call_array_result(%arg0 : !emitc.opaque<"MyClass">) {
+    // expected-error @+1 {{'emitc.member_call_opaque' op cannot return array type}}
+    emitc.member_call_opaque %arg0 "array_result"() : !emitc.opaque<"MyClass">, () -> !emitc.array<4xi32>
+    return
+}
+
+// -----
+
+func.func @member_call_nonetype_template_arg(%arg0 : !emitc.opaque<"MyClass">) {
+    // expected-error @+1 {{'emitc.member_call_opaque' op template argument has invalid type}}
+    emitc.member_call_opaque %arg0 "nonetype_template_arg"() <{template_args = [[0, 1, 2]]}> : !emitc.opaque<"MyClass">, () -> ()
+    return
+}
+
+// -----
+
+func.func @member_call_dense_template_argument(%arg0 : !emitc.opaque<"MyClass">) {
+    // expected-error @+1 {{'emitc.member_call_opaque' op template argument has invalid type}}
+    emitc.member_call_opaque %arg0 "dense_template_argument"() <{template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]}> : !emitc.opaque<"MyClass">, () -> ()
     return
 }
 
@@ -556,8 +578,24 @@ func.func @use_global() {
 // -----
 
 func.func @member(%arg0: !emitc.lvalue<i32>) {
-  // expected-error @+1 {{'emitc.member' op operand #0 must be emitc.lvalue of EmitC opaque type values, but got '!emitc.lvalue<i32>'}}
+  // expected-error @+1 {{'emitc.member' op operand #0 must be EmitC opaque type or emitc.lvalue of EmitC opaque type values, but got '!emitc.lvalue<i32>'}}
   %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.lvalue<i32>) -> !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @member_of_value_as_lvalue(%arg0: !emitc.opaque<"mystruct">) {
+  // expected-error @+1 {{'emitc.member' op non-lvalues cannot return lvalues or arrays}}
+  %1 = "emitc.member" (%arg0) {member = "a"} : (!emitc.opaque<"mystruct">) -> !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @member_of_value_array(%arg0: !emitc.opaque<"mystruct">) {
+  // expected-error @+1 {{'emitc.member' op non-lvalues cannot return lvalues or arrays}}
+  %1 = "emitc.member" (%arg0) {member = "a"} : (!emitc.opaque<"mystruct">) -> !emitc.array<2xi32>
   return
 }
 
@@ -718,14 +756,14 @@ emitc.field @testField : !emitc.array<1xf32>
 
 // -----
 
-// expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+// expected-error @+1 {{'emitc.get_field' op expects ancestor op 'emitc.class'}}
 %1 = emitc.get_field @testField : !emitc.array<1xf32>
 
 // -----
 
 emitc.func @testMethod() {
   %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
-  // expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+  // expected-error @+1 {{'emitc.get_field' op expects ancestor op 'emitc.class'}}
   %1 = get_field @testField : !emitc.array<1xf32>
   %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
   return
@@ -941,5 +979,21 @@ func.func @address_of(%arg0: !emitc.lvalue<i32>) {
 func.func @dereference(%arg0: !emitc.ptr<i32>) {
   // expected-error @+1 {{failed to verify that input and result reference the same type}}
   %1 = "emitc.dereference"(%arg0) : (!emitc.ptr<i32>) -> !emitc.lvalue<i8>
+  return
+}
+
+// -----
+
+func.func @pre_increment_unmatch_type(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.pre_increment"(%arg0) : (!emitc.lvalue<i32>) -> i8
+  return
+}
+
+// -----
+
+func.func @post_decrement_unmatch_type(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.post_decrement"(%arg0) : (!emitc.lvalue<i32>) -> i8
   return
 }

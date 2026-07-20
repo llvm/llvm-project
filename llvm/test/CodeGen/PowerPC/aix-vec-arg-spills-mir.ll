@@ -4,7 +4,7 @@
 ; RUN:   FileCheck %s --check-prefix=MIR32
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec -vec-extabi \
-; RUN:     -stop-after=machine-cp -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:     -stop-after=machine-cp -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN:   FileCheck %s --check-prefix=MIR64
 
 %struct.Test = type { double, double, double, double }

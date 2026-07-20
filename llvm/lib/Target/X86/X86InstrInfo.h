@@ -51,6 +51,9 @@ std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false,
                        bool HasNDD = false);
 
+/// Return a MOVri opcode for materializing \p Imm into a 32- or 64-bit GPR.
+unsigned getMOVriOpcode(bool Use64BitReg, int64_t Imm);
+
 /// Return the source operand # for condition code by \p MCID. If the
 /// instruction doesn't have a condition code, return -1.
 int getCondSrcNoFromDesc(const MCInstrDesc &MCID);
@@ -79,6 +82,15 @@ int getCCMPCondFlagsFromCondCode(CondCode CC);
 
 // Get the opcode of corresponding NF variant.
 unsigned getNFVariant(unsigned Opc);
+
+// If \p MI clobbers EFLAGS and that clobber can be removed by rewriting the
+// instruction to its NF (no-flags) variant, return that NF opcode; otherwise
+// return 0. The clobber is removable only if the EFLAGS def is dead, an NF
+// variant exists, and (for linker backward-compat) it is not an ADDrm/ADDmr
+// with relocation.
+unsigned
+getNFVariantIfClobberRemovable(const MachineInstr &MI,
+                               const TargetRegisterInfo *TRI = nullptr);
 
 // Get the opcode of corresponding NonND variant.
 unsigned getNonNDVariant(unsigned Opc);
@@ -761,6 +773,25 @@ private:
                             Register SrcReg2, int64_t ImmMask, int64_t ImmValue,
                             const MachineInstr &OI, bool *IsSwapped,
                             int64_t *ImmDelta) const;
+
+  /// Used by optimizeCompareInstr when the backward search for an equivalent
+  /// flag producer reaches a block (\p MultiPredMBB) with multiple
+  /// predecessors. Searches the dominator tree for an instruction that produces
+  /// the same flags as the compare \p CmpInstr and dominates it, such that on
+  /// every path from that producer to \p CmpInstr all EFLAGS clobbers can be
+  /// converted to their NF (no-flags) variants. Those clobbers are appended to
+  /// \p InstsToUpdate as (instruction, NF opcode) pairs for the caller to
+  /// rewrite. Restricted to producers that yield identical flags: it succeeds
+  /// only when isRedundantFlagInstr reports no operand swap and no immediate
+  /// delta, so on success \p IsSwapped is false and \p ImmDelta is 0. Returns
+  /// the flag producer on success, or nullptr otherwise. Requires the NF
+  /// feature (APX).
+  MachineInstr *findDominatingRedundantFlagInstr(
+      MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2,
+      int64_t CmpMask, int64_t CmpValue, MachineBasicBlock *MultiPredMBB,
+      bool &IsSwapped, int64_t &ImmDelta,
+      SmallVectorImpl<std::pair<MachineInstr *, unsigned>> &InstsToUpdate)
+      const;
 
   /// Commute operands of \p MI for memory fold.
   ///

@@ -613,7 +613,8 @@ void ARMLoadStoreOpt::moveLiveRegsBefore(const MachineBasicBlock &MBB,
   // Move backward just before the "Before" position.
   while (LiveRegPos != Before) {
     --LiveRegPos;
-    LiveRegs.stepBackward(*LiveRegPos);
+    if (!LiveRegPos->isDebugInstr())
+      LiveRegs.stepBackward(*LiveRegPos);
   }
 }
 
@@ -1812,21 +1813,23 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
       : (isT2 ? ARM::t2STMIA : ARM::STMIA);
     if (isLd) {
       BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(NewOpc))
-        .addReg(BaseReg, getKillRegState(BaseKill))
-        .addImm(Pred).addReg(PredReg)
-        .addReg(EvenReg, getDefRegState(isLd) | getDeadRegState(EvenDeadKill))
-        .addReg(OddReg,  getDefRegState(isLd) | getDeadRegState(OddDeadKill))
-        .cloneMemRefs(*MI);
+          .add(BaseOp)
+          .addImm(Pred)
+          .addReg(PredReg)
+          .addReg(EvenReg, getDefRegState(isLd) | getDeadRegState(EvenDeadKill))
+          .addReg(OddReg, getDefRegState(isLd) | getDeadRegState(OddDeadKill))
+          .cloneMemRefs(*MI);
       ++NumLDRD2LDM;
     } else {
       BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(NewOpc))
-        .addReg(BaseReg, getKillRegState(BaseKill))
-        .addImm(Pred).addReg(PredReg)
-        .addReg(EvenReg,
-                getKillRegState(EvenDeadKill) | getUndefRegState(EvenUndef))
-        .addReg(OddReg,
-                getKillRegState(OddDeadKill)  | getUndefRegState(OddUndef))
-        .cloneMemRefs(*MI);
+          .add(BaseOp)
+          .addImm(Pred)
+          .addReg(PredReg)
+          .addReg(EvenReg,
+                  getKillRegState(EvenDeadKill) | getUndefRegState(EvenUndef))
+          .addReg(OddReg,
+                  getKillRegState(OddDeadKill) | getUndefRegState(OddUndef))
+          .cloneMemRefs(*MI);
       ++NumSTRD2STM;
     }
   } else {

@@ -106,15 +106,16 @@ end subroutine
 ! CHECK:           %[[VAL_14:.*]] = fir.declare %{{.*}}i"} : (!fir.ref<i32>) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_16:.*]] = fir.declare %{{.*}}ii"} : (!fir.ref<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_17:.*]] = fir.declare %{{.*}}st"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
-! CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_12]] : !fir.ref<i32>
-! CHECK:           %[[VAL_29:.*]] = arith.addi %[[VAL_18]], %[[VAL_5]] overflow<nsw> : i32
-! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i32) -> f32
-! CHECK:           %[[VAL_31:.*]] = arith.subi %[[VAL_20]], %[[VAL_5]] overflow<nsw> : i32
-! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> f32
-! CHECK:           %[[VAL_33:.*]] = fir.load %[[VAL_17]] : !fir.ref<i32>
-! CHECK:           %[[VAL_34:.*]] = arith.muli %[[VAL_33]], %[[VAL_4]] overflow<nsw> : i32
-! CHECK:           %[[VAL_35:.*]] = fir.convert %[[VAL_34]] : (i32) -> f32
+! CHECK:           scf.execute_region no_inline {
+! CHECK:             %[[VAL_18:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
+! CHECK:             %[[VAL_29:.*]] = arith.addi %[[VAL_18]], %[[VAL_5]] overflow<nsw> : i32
+! CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i32) -> f32
+! CHECK:             %[[VAL_20:.*]] = fir.load %[[VAL_12]] : !fir.ref<i32>
+! CHECK:             %[[VAL_31:.*]] = arith.subi %[[VAL_20]], %[[VAL_5]] overflow<nsw> : i32
+! CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> f32
+! CHECK:             %[[VAL_33:.*]] = fir.load %[[VAL_17]] : !fir.ref<i32>
+! CHECK:             %[[VAL_34:.*]] = arith.muli %[[VAL_33]], %[[VAL_4]] overflow<nsw> : i32
+! CHECK:             %[[VAL_35:.*]] = fir.convert %[[VAL_34]] : (i32) -> f32
 ! CHECK:           fir.store %[[VAL_35]] to %[[VAL_9]] : !fir.ref<f32>
 ! CHECK:           %[[VAL_36:.*]] = arith.subf %[[VAL_32]], %[[VAL_30]] fastmath<contract> : f32
 ! CHECK:           %[[VAL_37:.*]] = arith.addf %[[VAL_36]], %[[VAL_35]] fastmath<contract> : f32

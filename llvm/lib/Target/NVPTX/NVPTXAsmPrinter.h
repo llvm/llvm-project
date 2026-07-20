@@ -112,6 +112,9 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
     unsigned getBufferSize() const { return Size; }
 
+    // Number of bytes written so far.
+    unsigned getCurpos() const { return curpos; }
+
     // Copy Num bytes from Ptr.
     // if Bytes > Num, zero fill up to Bytes.
     void addBytes(const unsigned char *Ptr, unsigned Num, unsigned Bytes) {
@@ -185,6 +188,8 @@ private:
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
+  void emitCallPrototype(const CallBase &CB, unsigned UniqueCallSite,
+                         raw_ostream &O) const;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &) override;
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);

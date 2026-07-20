@@ -60,7 +60,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   const GCNSubtarget &ST = *STI;
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
-  MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
+  MaxNumWorkGroups = AMDGPU::getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
   // Temporarily check both the attribute and the subtarget feature, until the
@@ -376,6 +376,9 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     if (RegItr != SpillPhysVGPRs.end()) {
       unsigned Idx = std::distance(SpillPhysVGPRs.begin(), RegItr);
       SpillPhysVGPRs[Idx] = NewReg;
+
+      // For replacing registers used in the CFI instructions.
+      MF.replaceFrameInstRegister(Reg, NewReg);
     }
 
     // The generic `determineCalleeSaves` might have set the old register if it
@@ -563,18 +566,16 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   // otherwise, it could result in an unexpected side effect and bug, in case of
   // any re-mapping of freed frame indices by later pass(es) like "stack slot
   // coloring".
-  for (auto &R : make_early_inc_range(SGPRSpillsToVirtualVGPRLanes)) {
+  for (auto &R : SGPRSpillsToVirtualVGPRLanes)
     MFI.RemoveStackObject(R.first);
-    SGPRSpillsToVirtualVGPRLanes.erase(R.first);
-  }
+  SGPRSpillsToVirtualVGPRLanes.clear();
 
   // Remove the dead frame indices of CSR SGPRs which are spilled to physical
   // VGPR lanes during SILowerSGPRSpills pass.
   if (!ResetSGPRSpillStackIDs) {
-    for (auto &R : make_early_inc_range(SGPRSpillsToPhysicalVGPRLanes)) {
+    for (auto &R : SGPRSpillsToPhysicalVGPRLanes)
       MFI.RemoveStackObject(R.first);
-      SGPRSpillsToPhysicalVGPRLanes.erase(R.first);
-    }
+    SGPRSpillsToPhysicalVGPRLanes.clear();
   }
   bool HaveSGPRToMemory = false;
 
@@ -754,7 +755,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       IsWholeWaveFunction(MFI.isWholeWaveFunction()),
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
-      NumKernargPreloadSGPRs(MFI.getNumKernargPreloadedSGPRs()) {
+      NumKernargPreloadSGPRs(MFI.getNumKernargPreloadedSGPRs()),
+      MinNumAGPRs(MFI.getMinNumAGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 
@@ -801,6 +803,11 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
+  MinNumAGPRs = YamlMFI.MinNumAGPRs;
+  // This can also be set by the function attribute, MFI has higher precedence
+  // though.
+  if (YamlMFI.DynamicVGPRBlockSize != std::nullopt)
+    DynamicVGPRBlockSize = *YamlMFI.DynamicVGPRBlockSize;
 
   UserSGPRInfo.allocKernargPreloadSGPRs(YamlMFI.NumKernargPreloadSGPRs);
 

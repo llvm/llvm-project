@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/func/free.h"
 #include "src/__support/CPP/string.h"
 #include "test/UnitTest/Test.h"
 
@@ -77,7 +78,7 @@ TEST(LlvmLibcStringTest, InitializeRepeatedChar) {
   ASSERT_EQ(string_view(s), string_view("1111"));
 }
 
-TEST(LlvmLibcStringTest, InitializeZeorChar) {
+TEST(LlvmLibcStringTest, InitializeZeroChar) {
   const string s(0, '1');
   ASSERT_TRUE(s.empty());
 }
@@ -135,6 +136,13 @@ TEST(LlvmLibcStringTest, StringViewAssign) {
   ASSERT_EQ(s.back(), 'b');
 }
 
+TEST(LlvmLibcStringTest, CharacterAssign) {
+  string s("abc");
+  s = 'a';
+  ASSERT_EQ(s.size(), size_t(1));
+  ASSERT_STREQ(s.c_str(), "a");
+}
+
 TEST(LlvmLibcStringTest, Concat) {
   const char *const str = "abc";
   string a(str);
@@ -180,10 +188,38 @@ TEST(LlvmLibcStringTest, ResizeCapacityAndNullTermination) {
     ASSERT_EQ(a[i], '\0');
 }
 
+TEST(LlvmLibcStringTest, ResizeWithCapacityPlus1) {
+  string a;
+  a.resize(32);
+
+  size_t previous_capacity = a.capacity();
+  a.resize(previous_capacity);
+  ASSERT_GT(a.capacity(), previous_capacity);
+}
+
 TEST(LlvmLibcStringTest, ConcatWithCString) {
   ASSERT_STREQ((string("a") + string("b")).c_str(), "ab");
   ASSERT_STREQ((string("a") + "b").c_str(), "ab");
   ASSERT_STREQ(("a" + string("b")).c_str(), "ab");
+}
+
+TEST(LlvmLibcStringTest, ReleaseCStrResetsString) {
+  string s("abc");
+
+  char *cstr = s.release_c_str();
+  ASSERT_STREQ(cstr, "abc");
+  ASSERT_STREQ(s.c_str(), "");
+  free(cstr);
+}
+
+TEST(LlvmLibcStringTest, ReleaseCStrOnDefaultString) {
+  string s;
+
+  char *cstr = s.release_c_str();
+  ASSERT_STREQ(cstr, "");
+  ASSERT_STREQ(s.c_str(), "");
+  ASSERT_NE(cstr, s.data()); // Different pointers.
+  free(cstr);
 }
 
 TEST(LlvmLibcStringTest, Comparison) {

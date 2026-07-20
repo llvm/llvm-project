@@ -61,26 +61,29 @@ let HasPassthruOp = true, HasMaskOp = true in {
 // Pseudo Instructions for CodeGen
 //===----------------------------------------------------------------------===//
 
-multiclass VPseudoVDOT4A_VV_VX<bit Commutable = 0> {
+multiclass VPseudoVDOT4A_VX {
   foreach m = MxSet<32>.m in {
-    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
-              SchedBinary<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV", m.MX,
-                          forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_VX<m>,
               SchedBinary<"WriteVIMulAddX", "ReadVIMulAddV", "ReadVIMulAddX", m.MX,
                           forcePassthruRead=true>;
   }
 }
 
-let Predicates = [HasStdExtZvdot4a8i], mayLoad = 0, mayStore = 0,
-    hasSideEffects = 0 in {
+multiclass VPseudoVDOT4A_VV_VX<bit Commutable = 0>
+    : VPseudoVDOT4A_VX {
+  foreach m = MxSet<32>.m in {
+    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
+              SchedBinary<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV", m.MX,
+                          forcePassthruRead=true>;
+  }
+}
+
+let Predicates = [HasStdExtZvdot4a8i] in {
   defm PseudoVDOT4A : VPseudoVDOT4A_VV_VX<Commutable=1>;
   defm PseudoVDOT4AU : VPseudoVDOT4A_VV_VX<Commutable=1>;
   defm PseudoVDOT4ASU : VPseudoVDOT4A_VV_VX;
   // VDOT4AUS does not have a VV variant
-  foreach m = MxListVF4 in {
-    defm "PseudoVDOT4AUS_VX" : VPseudoTernaryWithPolicy<m.vrclass, m.vrclass, GPR, m>;
-  }
+  defm PseudoVDOT4AUS : VPseudoVDOT4A_VX;
 }
 
 //===----------------------------------------------------------------------===//

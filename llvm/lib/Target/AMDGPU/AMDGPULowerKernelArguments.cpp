@@ -221,9 +221,9 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
   if (TotalKernArgSize == 0)
     return false;
 
-  CallInst *KernArgSegment =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {},
-                              nullptr, F.getName() + ".kernarg.segment");
+  CallInst *KernArgSegment = Builder.CreateIntrinsicWithoutFolding(
+      Intrinsic::amdgcn_kernarg_segment_ptr, {}, nullptr,
+      F.getName() + ".kernarg.segment");
   KernArgSegment->addRetAttr(Attribute::NonNull);
   KernArgSegment->addRetAttr(
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
@@ -319,11 +319,19 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
     if (Arg.hasAttribute(Attribute::NoUndef))
       Load->setMetadata(LLVMContext::MD_noundef, MDNode::get(Ctx, {}));
 
-    if (Arg.hasAttribute(Attribute::Range)) {
+    if (Arg.hasAttribute(Attribute::Range) && AdjustedArgTy == ArgTy) {
       const ConstantRange &Range =
           Arg.getAttribute(Attribute::Range).getValueAsConstantRange();
       Load->setMetadata(LLVMContext::MD_range,
                         MDB.createRange(Range.getLower(), Range.getUpper()));
+    }
+
+    if (Arg.hasAttribute(Attribute::NoFPClass) && AdjustedArgTy == ArgTy) {
+      FPClassTest Mask = Arg.getNoFPClass();
+      Load->setMetadata(
+          LLVMContext::MD_nofpclass,
+          MDNode::get(Ctx, ConstantAsMetadata::get(
+                               ConstantInt::get(Type::getInt32Ty(Ctx), Mask))));
     }
 
     if (isa<PointerType>(ArgTy)) {

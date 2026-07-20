@@ -190,7 +190,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vxorps	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vxorps	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [1] Code Region
 
@@ -281,7 +281,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vxorpd	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vxorpd	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [2] Code Region
 
@@ -372,7 +372,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vandnps	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vandnps	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [3] Code Region
 
@@ -463,7 +463,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vandnpd	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vandnpd	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [4] Code Region
 
@@ -554,7 +554,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpxor	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpxor	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [5] Code Region
 
@@ -645,7 +645,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpandn	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpandn	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [6] Code Region
 
@@ -736,7 +736,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubb	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubb	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [7] Code Region
 
@@ -827,7 +827,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubw	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubw	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [8] Code Region
 
@@ -918,7 +918,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubd	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubd	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [9] Code Region
 
@@ -1009,7 +1009,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubq	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubq	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [10] Code Region
 
@@ -1100,7 +1100,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpsubsb	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpxor	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [11] Code Region
 
@@ -1191,7 +1191,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpsubsw	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpxor	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [12] Code Region
 
@@ -1282,7 +1282,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpsubusb	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpxor	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [13] Code Region
 
@@ -1373,7 +1373,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpsubusw	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpxor	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [14] Code Region
 
@@ -1464,7 +1464,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpcmpgtb	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpaddb	%ymm0, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [15] Code Region
 
@@ -1555,7 +1555,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpcmpgtw	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpaddw	%ymm0, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [16] Code Region
 
@@ -1646,7 +1646,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpcmpgtd	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpaddd	%ymm0, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [17] Code Region
 
@@ -1737,7 +1737,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpcmpgtq	%ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpaddq	%ymm0, %ymm0, %ymm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [18] Code Region
 
@@ -1829,7 +1829,7 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       vperm2f128	$136, %ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     6.0    0.0    0.0       vxorps	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     4.5    0.3    0.0       <total>
+# CHECK-NEXT:        4     4.5    0.3    0.0       <total>
 
 # CHECK:      [19] Code Region
 
@@ -1921,4 +1921,4 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       vperm2i128	$136, %ymm0, %ymm0, %ymm0
 # CHECK-NEXT: 1.     2     6.0    0.0    0.0       vpxor	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     4.5    0.3    0.0       <total>
+# CHECK-NEXT:        4     4.5    0.3    0.0       <total>

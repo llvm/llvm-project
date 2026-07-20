@@ -402,6 +402,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -559,6 +564,11 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -718,6 +728,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -876,6 +891,11 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1155,6 +1175,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -1311,6 +1336,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -1466,6 +1496,11 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -3656,6 +3691,38 @@ the configuration (without a prefix: ``Auto``).
        asm volatile("string",
                     :
                     : val);
+
+
+
+.. _BreakBeforeReturnType:
+
+**BreakBeforeReturnType** (``BreakBeforeReturnTypeStyle``) :versionbadge:`clang-format 23` :ref:`¶ <BreakBeforeReturnType>`
+  The function declaration/definition return type breaking style to use.
+  Trailing return types (``auto f() -> T``) are not affected. To have
+  identifier macros (e.g. ``__always_inline``) treated as specifiers,
+  add them to ``AttributeMacros``.
+
+  Possible values:
+
+  * ``BBRTS_None`` (in configuration: ``None``)
+    Do not force a break before the return type.
+
+  * ``BBRTS_All`` (in configuration: ``All``)
+    Always break before the return type.
+
+    .. code-block:: c++
+
+      static inline
+      void f();
+
+  * ``BBRTS_TopLevel`` (in configuration: ``TopLevel``)
+    Break before the return type of top-level functions only.
+
+  * ``BBRTS_AllDefinitions`` (in configuration: ``AllDefinitions``)
+    Break before the return type of function definitions only.
+
+  * ``BBRTS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
+    Break before the return type of top-level definitions only.
 
 
 

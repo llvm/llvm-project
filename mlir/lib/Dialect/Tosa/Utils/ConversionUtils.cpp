@@ -248,3 +248,19 @@ bool mlir::tosa::hasUniqueConstantScatterIndices(
 
   return true;
 }
+
+template <typename T>
+FailureOr<T> mlir::tosa::getConstantScalarIntValue(Value val) {
+  ElementsAttr attr;
+  if (!matchPattern(val, m_Constant(&attr)))
+    return failure();
+
+  if (!llvm::isa<IntegerType>(attr.getElementType()) ||
+      attr.getNumElements() != 1)
+    return failure();
+
+  return attr.getValues<T>()[0];
+}
+
+template FailureOr<int32_t>
+mlir::tosa::getConstantScalarIntValue<int32_t>(Value val);

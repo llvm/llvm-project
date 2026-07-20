@@ -194,8 +194,10 @@ public:
     if (Opt.EnableGlobalISelAbort)
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
 
-    if (!Opt.OptimizeRegAlloc)
-      Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOptLevel::None;
+    if (Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_UNSET)
+      Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOptLevel::None
+                                 ? cl::boolOrDefault::BOU_TRUE
+                                 : cl::boolOrDefault::BOU_FALSE;
   }
 
   Error buildPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
@@ -379,9 +381,7 @@ protected:
 
   /// addPreISel - This method should add any "last minute" LLVM->LLVM
   /// passes (which are run just before instruction selector).
-  void addPreISel(PassManagerWrapper &PMW) const {
-    llvm_unreachable("addPreISel is not overridden");
-  }
+  void addPreISel(PassManagerWrapper &PMW) const {}
 
   /// This method should install an IR translator pass, which converts from
   /// LLVM code to machine instructions with possibly generic opcodes.
@@ -618,7 +618,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   if (auto Err = derived().addMachinePasses(PMW))
     return std::move(Err);
 
-  if (!Opt.DisableVerify)
+  if (!Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier)
     addMachineFunctionPass(MachineVerifierPass(), PMW);
 
   if (PrintAsm) {
@@ -875,19 +875,18 @@ template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addCoreISelPasses(
     PassManagerWrapper &PMW) const {
   // Enable FastISel with -fast-isel, but allow that to be overridden.
-  TM.setO0WantsFastISel(Opt.EnableFastISelOption.value_or(true));
+  TM.setO0WantsFastISel(Opt.EnableFastISelOption !=
+                        cl::boolOrDefault::BOU_FALSE);
 
   // Determine an instruction selector.
   enum class SelectorType { SelectionDAG, FastISel, GlobalISel };
   SelectorType Selector;
 
-  if (Opt.EnableFastISelOption && *Opt.EnableFastISelOption == true)
+  if (Opt.EnableFastISelOption == cl::boolOrDefault::BOU_TRUE)
     Selector = SelectorType::FastISel;
-  else if ((Opt.EnableGlobalISelOption &&
-            *Opt.EnableGlobalISelOption == true) ||
+  else if (Opt.EnableGlobalISelOption == cl::boolOrDefault::BOU_TRUE ||
            (TM.Options.EnableGlobalISel &&
-            (!Opt.EnableGlobalISelOption ||
-             *Opt.EnableGlobalISelOption == false)))
+            Opt.EnableGlobalISelOption != cl::boolOrDefault::BOU_FALSE))
     Selector = SelectorType::GlobalISel;
   else if (TM.getOptLevel() == CodeGenOptLevel::None && TM.getO0WantsFastISel())
     Selector = SelectorType::FastISel;
@@ -989,8 +988,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
 
   // Run register allocation and passes that are tightly coupled with it,
   // including phi elimination and scheduling.
-  if (auto Err = *Opt.OptimizeRegAlloc ? derived().addOptimizedRegAlloc(PMW)
-                                       : derived().addFastRegAlloc(PMW))
+  if (auto Err = Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_TRUE
+                     ? derived().addOptimizedRegAlloc(PMW)
+                     : derived().addFastRegAlloc(PMW))
     return std::move(Err);
 
   // Run post-ra passes.

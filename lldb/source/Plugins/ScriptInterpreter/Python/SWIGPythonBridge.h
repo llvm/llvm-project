@@ -12,10 +12,7 @@
 #include <optional>
 #include <string>
 
-// clang-format off
-// LLDB Python header must be included first
 #include "lldb-python.h"
-//clang-format on
 
 #include "Plugins/ScriptInterpreter/Python/PythonDataObjects.h"
 #include "lldb/lldb-forward.h"
@@ -216,17 +213,6 @@ public:
   LLDBSWIGPythonCreateOSPlugin(const char *python_class_name,
                                const char *session_dictionary_name,
                                const lldb::ProcessSP &process_sp);
-
-  static python::PythonObject
-  LLDBSWIGPython_CreateFrameRecognizer(const char *python_class_name,
-                                       const char *session_dictionary_name);
-
-  static PyObject *
-  LLDBSwigPython_GetRecognizedArguments(PyObject *implementor,
-                                        const lldb::StackFrameSP &frame_sp);
-
-  static bool LLDBSwigPython_ShouldHide(PyObject *implementor,
-                                        const lldb::StackFrameSP &frame_sp);
 
   static bool LLDBSWIGPythonRunScriptKeywordProcess(
       const char *python_function_name, const char *session_dictionary_name,

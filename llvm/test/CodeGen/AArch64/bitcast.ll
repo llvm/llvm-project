@@ -69,28 +69,12 @@ define i32 @bitcast_v4i8_i32(<4 x i8> %a, <4 x i8> %b){
 }
 
 define <4 x i8> @bitcast_i32_v4i8(i32 %a, i32 %b){
-; CHECK-SD-LABEL: bitcast_i32_v4i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    add w8, w0, w1
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bitcast_i32_v4i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add w8, w0, w1
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov b2, v0.b[2]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov b1, v0.b[3]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v0.h[2], w8
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bitcast_i32_v4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w1
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    ret
   %c = add i32 %a, %b
   %d = bitcast i32 %c to <4 x i8>
   ret <4 x i8> %d
@@ -121,22 +105,12 @@ define i32 @bitcast_v2i16_i32(<2 x i16> %a, <2 x i16> %b){
 }
 
 define <2 x i16> @bitcast_i32_v2i16(i32 %a, i32 %b){
-; CHECK-SD-LABEL: bitcast_i32_v2i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    add w8, w0, w1
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bitcast_i32_v2i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add w8, w0, w1
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bitcast_i32_v2i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w1
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    ret
   %c = add i32 %a, %b
   %d = bitcast i32 %c to <2 x i16>
   ret <2 x i16> %d

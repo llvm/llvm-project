@@ -93,7 +93,7 @@ list(APPEND CLANG_TEST_DEPS
   clang
   clang-fuzzer-dictionary
   clang-resource-headers
-  clang-format
+  clang-format-check-format
   clang-tblgen
   clang-offload-bundler
   clang-import-test
@@ -211,7 +211,9 @@ endif()
 if(CLANG_PLUGIN_SUPPORT AND LLVM_ENABLE_PLUGINS AND NOT WIN32)
   list(APPEND CLANG_TEST_DEPS
     SSAFExamplePlugin
+    SSAFTestTransformationPlugin
     )
+  add_subdirectory(Analysis/Scalable/source-edit-generation/Plugins)
 endif()
 
 if (HAVE_CLANG_REPL_SUPPORT)

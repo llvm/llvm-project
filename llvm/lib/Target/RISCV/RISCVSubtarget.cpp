@@ -18,32 +18,45 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
+static cl::opt<unsigned> SchedMispredictPenalty(
+    "riscv-sched-mispredict-penalty", cl::Hidden,
+    cl::init(MCSchedModel::DefaultMispredictPenalty),
+    cl::cat(MCScheduleOptions),
+    cl::desc("Override the mispredict penalty (in cycles) in the scheduler "
+             "model. A non-negative value overrides the target default."));
+
+static cl::opt<unsigned> SchedLoadLatency(
+    "riscv-sched-load-latency", cl::Hidden,
+    cl::init(MCSchedModel::DefaultLoadLatency), cl::cat(MCScheduleOptions),
+    cl::desc("Override the load latency (in cycles) in the scheduler model. "
+             "A non-negative value overrides the target default."));
+
+#define DEBUG_TYPE "riscv-macro-fusion"
+
+#define GET_RISCV_MACRO_FUSION_PRED_IMPL
+#include "RISCVGenMacroFusion.inc"
+
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "riscv-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
-#define GET_RISCV_MACRO_FUSION_PRED_IMPL
-#include "RISCVGenMacroFusion.inc"
-
 namespace llvm::RISCVTuneInfoTable {
 
 #define GET_RISCVTuneInfoTable_IMPL
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCVTuneInfoTable
-
-static cl::opt<unsigned> RVVVectorLMULMax(
-    "riscv-v-fixed-length-vector-lmul-max",
-    cl::desc("The maximum LMUL value to use for fixed length vectors. "
-             "Fractional LMUL values are not supported."),
-    cl::init(8), cl::Hidden);
 
 static cl::opt<bool> RISCVDisableUsingConstantPoolForLargeInts(
     "riscv-disable-using-constant-pool-for-large-ints",
@@ -103,7 +116,7 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   HasStdExtC = hasFeature(RISCV::FeatureStdExtC);
   HasStdExtZce = hasFeature(RISCV::FeatureStdExtZce);
 
-  TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
+  TargetABI = RISCVABI::computeTargetABI(*this, ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
 }
@@ -166,14 +179,24 @@ bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
 }
 
-// Returns true if VT is a P extension packed SIMD type that fits in XLen.
+// Returns true if VT is a P extension packed SIMD type.
 bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
   if (!HasStdExtP)
     return false;
 
-  if (is64Bit())
-    return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
-  return VT == MVT::v4i8 || VT == MVT::v2i16;
+  // RV32 supports 32-bit and 64-bit vectors. RV64 only support 64-bit vectors.
+  if (!is64Bit() && (VT == MVT::v4i8 || VT == MVT::v2i16))
+    return true;
+
+  return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
+}
+
+// Returns true if VT is a P extension packed double-wide SIMD type.
+bool RISCVSubtarget::isPExtPackedDoubleType(MVT VT) const {
+  if (!HasStdExtP || is64Bit())
+    return false;
+
+  return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
@@ -183,8 +206,20 @@ unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
   // building integers (addi, slli, etc.) can be done in one cycle, so here we
   // set the default cost to (LoadLatency + 1) if no threshold is provided.
   return RISCVMaxBuildIntsCost == 0
-             ? getSchedModel().LoadLatency + 1
+             ? getLoadLatency() + 1
              : std::max<unsigned>(2, RISCVMaxBuildIntsCost);
+}
+
+unsigned RISCVSubtarget::getMispredictionPenalty() const {
+  if (SchedMispredictPenalty.getNumOccurrences() > 0)
+    return SchedMispredictPenalty;
+  return getSchedModel().MispredictPenalty;
+}
+
+unsigned RISCVSubtarget::getLoadLatency() const {
+  if (SchedLoadLatency.getNumOccurrences() > 0)
+    return SchedLoadLatency;
+  return getSchedModel().LoadLatency;
 }
 
 unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {
@@ -219,10 +254,7 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
 unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
   assert(hasVInstructions() &&
          "Tried to get vector length without Zve or V extension support!");
-  assert(RVVVectorLMULMax <= 8 &&
-         llvm::has_single_bit<uint32_t>(RVVVectorLMULMax) &&
-         "V extension requires a LMUL to be at most 8 and a power of 2!");
-  return llvm::bit_floor(std::clamp<unsigned>(RVVVectorLMULMax, 1, 8));
+  return 8;
 }
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {

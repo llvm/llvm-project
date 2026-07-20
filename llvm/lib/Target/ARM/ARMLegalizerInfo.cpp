@@ -40,16 +40,17 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
-  auto &LegacyInfo = getLegacyLegalizerInfo();
   if (ST.isThumb1Only()) {
     // Thumb1 is not supported yet.
-    LegacyInfo.computeTables();
     verify(*ST.getInstrInfo());
     return;
   }
 
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
       .legalForCartesianProduct({s8, s16, s32}, {s1, s8, s16});
+
+  getActionDefinitionsBuilder(G_TRUNC).legalForCartesianProduct({s1, s8, s16},
+                                                                {s8, s16, s32});
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
@@ -133,6 +134,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
       .legalFor({{p0, s32}})
       .minScalar(1, s32);
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
   if (!ST.useSoftFloat() && ST.hasVFP2Base()) {
@@ -226,7 +228,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
         .clampScalar(0, s32, s32);
   }
 
-  LegacyInfo.computeTables();
   verify(*ST.getInstrInfo());
 }
 

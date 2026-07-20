@@ -35,6 +35,7 @@ add_extra_unittest(ClangTidyTests
   UsingInserterTest.cpp
   ReadabilityModuleTest.cpp
   TransformerClangTidyCheckTest.cpp
+  TypeTraitsTest.cpp
   )
 
 clang_target_link_libraries(ClangTidyTests

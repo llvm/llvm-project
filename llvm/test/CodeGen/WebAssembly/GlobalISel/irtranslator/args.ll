@@ -144,27 +144,9 @@ define void @test_f128_arg(fp128 %arg) {
   ret void
 }
 
-%externref = type ptr addrspace(10)
-define void @test_externref_arg(%externref %arg) {
-  ; CHECK-LABEL: name: test_externref_arg
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $arguments
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ARGUMENT_externref:%[0-9]+]]:externref(p10) = ARGUMENT_externref 0, implicit $arguments
-  ; CHECK-NEXT:   RETURN implicit-def $arguments
-  ret void
-}
-
-%funcref = type ptr addrspace(20)
-define void @test_funcref_arg(%funcref %arg) {
-  ; CHECK-LABEL: name: test_funcref_arg
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $arguments
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ARGUMENT_funcref:%[0-9]+]]:funcref(p20) = ARGUMENT_funcref 0, implicit $arguments
-  ; CHECK-NEXT:   RETURN implicit-def $arguments
-  ret void
-}
+; NOTE: Reference types (externref/funcref) are intentionally not tested here.
+; GlobalISel currently falls back to SelectionDAG for them; see
+; reference-types-fallback.ll.
 
 define void @test_multiple_args(ptr %arg1, float %arg2, i1 %arg3) {
   ; WASM32-LABEL: name: test_multiple_args

@@ -103,12 +103,14 @@ static ScanningOutputFormat Format = ScanningOutputFormat::Make;
 static ScanningOptimizations OptimizeArgs;
 static std::string ModuleFilesDir;
 static bool EagerLoadModules;
+static bool CacheNegativeStats;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
 static std::optional<std::string> ModuleNames;
 static std::vector<std::string> ModuleDepTargets;
 static std::string TranslationUnitFile;
 static ResourceDirRecipeKind ResourceDirRecipe;
+static std::string LogPath;
 static bool Verbose;
 static bool AsyncScanModules;
 static bool PrintTiming;
@@ -212,6 +214,8 @@ static void ParseArgs(int argc, char **argv) {
 
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
 
+  CacheNegativeStats = Args.hasArg(OPT_cache_negative_stats);
+
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
     StringRef S{A->getValue()};
     if (!llvm::to_integer(S, NumThreads, 0)) {
@@ -262,6 +266,9 @@ static void ParseArgs(int argc, char **argv) {
   NoFlushModuleCache = Args.hasArg(OPT_no_flush_module_cache);
 
   VerbatimArgs = Args.hasArg(OPT_verbatim_args);
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_log_path_EQ))
+    LogPath = A->getValue();
 
   if (const llvm::opt::Arg *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
     CommandLine.assign(A->getValues().begin(), A->getValues().end());
@@ -1102,16 +1109,18 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         SmallVector<StringRef> Names;
         ModuleNameRef.split(Names, ',');
 
+        CallbackActionController Controller(LookupOutput);
+
         if (Names.size() == 1) {
           auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
               Names[0], Input->CommandLine, CWD, AlreadySeenModules,
-              LookupOutput);
+              Controller);
           if (handleModuleResult(Names[0], MaybeModuleDepsGraph, *FD,
                                  LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         } else {
           auto CIWithCtx = CompilerInstanceWithContext::initializeOrError(
-              WorkerTool, CWD, Input->CommandLine, LookupOutput);
+              WorkerTool, CWD, Input->CommandLine, Controller);
           if (llvm::Error Err = CIWithCtx.takeError()) {
             handleErrorWithInfoString(
                 "Compiler instance with context setup error", std::move(Err),
@@ -1123,7 +1132,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           for (auto N : Names) {
             auto MaybeModuleDepsGraph =
                 CIWithCtx->computeDependenciesByNameOrError(
-                    N, AlreadySeenModules, LookupOutput);
+                    N, AlreadySeenModules, Controller);
             if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
                                    DependencyOS, Errs)) {
               HadErrors = true;
@@ -1157,16 +1166,14 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       }
     }
 
-    WorkerTool.getWorkerVFS().visit([&](llvm::vfs::FileSystem &VFS) {
-      if (auto *T = dyn_cast_or_null<llvm::vfs::TracingFileSystem>(&VFS)) {
-        NumStatusCalls += T->NumStatusCalls;
-        NumOpenFileForReadCalls += T->NumOpenFileForReadCalls;
-        NumDirBeginCalls += T->NumDirBeginCalls;
-        NumGetRealPathCalls += T->NumGetRealPathCalls;
-        NumExistsCalls += T->NumExistsCalls;
-        NumIsLocalCalls += T->NumIsLocalCalls;
-      }
-    });
+    if (auto *T = WorkerTool.getWorkerTracingVFS()) {
+      NumStatusCalls += T->NumStatusCalls;
+      NumOpenFileForReadCalls += T->NumOpenFileForReadCalls;
+      NumDirBeginCalls += T->NumDirBeginCalls;
+      NumGetRealPathCalls += T->NumGetRealPathCalls;
+      NumExistsCalls += T->NumExistsCalls;
+      NumIsLocalCalls += T->NumIsLocalCalls;
+    }
   };
 
   DependencyScanningServiceOptions Opts;
@@ -1184,6 +1191,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.TraceVFS = Verbose;
   Opts.AsyncScanModules = AsyncScanModules;
   Opts.FlushModuleCache = !NoFlushModuleCache;
+  Opts.CacheNegativeStats = CacheNegativeStats;
+  Opts.LogPath = LogPath;
 
   llvm::Timer T;
   T.startTimer();

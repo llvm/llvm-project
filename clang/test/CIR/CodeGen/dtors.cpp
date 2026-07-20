@@ -14,7 +14,7 @@ void test_temporary_dtor() {
 }
 
 // CIR: cir.func {{.*}} @_Z19test_temporary_dtorv()
-// CIR:   %[[ALLOCA:.*]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["agg.tmp.ensured"]
+// CIR:   %[[ALLOCA:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_A>
 // CIR:   cir.call @_ZN1AD1Ev(%[[ALLOCA]]) nothrow : (!cir.ptr<!rec_A> {{.*}}) -> ()
 
 // LLVM: define dso_local void @_Z19test_temporary_dtorv(){{.*}}
@@ -35,8 +35,8 @@ bool make_temp(const B &) { return false; }
 bool test_temp_or() { return make_temp(1) || make_temp(2); }
 
 // CIR: cir.func{{.*}} @_Z12test_temp_orv()
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["__retval"]
-// CIR:   %[[REF_TMP0:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp0"]
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:   cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
 // CIR:   cir.cleanup.scope {
@@ -45,8 +45,8 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 // CIR:       %[[TRUE:.*]] = cir.const #true
 // CIR:       cir.yield %[[TRUE]] : !cir.bool
 // CIR:     }, false {
-// CIR:       %[[REF_TMP1:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
-// CIR:       %[[CLEANUP_TMP:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["tmp.exprcleanup"]
+// CIR:       %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
+// CIR:       %[[CLEANUP_TMP:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:       %[[TWO:.*]] = cir.const #cir.int<2>
 // CIR:       cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
 // CIR:       cir.cleanup.scope {
@@ -137,15 +137,15 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 bool test_temp_and() { return make_temp(1) && make_temp(2); }
 
 // CIR: cir.func{{.*}} @_Z13test_temp_andv()
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["__retval"]
-// CIR:   %[[REF_TMP0:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp0"]
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:   cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
 // CIR:     %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
-// CIR:       %[[REF_TMP1:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
-// CIR:       %[[CLEANUP_TMP:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["tmp.exprcleanup"]
+// CIR:       %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
+// CIR:       %[[CLEANUP_TMP:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:       %[[TWO:.*]] = cir.const #cir.int<2>
 // CIR:       cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
 // CIR:       cir.cleanup.scope {
@@ -334,13 +334,13 @@ int test_temp_in_condition(G &obj) {
 }
 
 // CIR: cir.func {{.*}} @_Z22test_temp_in_conditionR1G(%[[ARG0:.*]]: !cir.ptr<!rec_G> {{.*}}) -> (!s32i {{.*}}) {{.*}} {
-// CIR:   %[[OBJ:.*]] = cir.alloca !cir.ptr<!rec_G>, !cir.ptr<!cir.ptr<!rec_G>>, ["obj", init, const]
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[OBJ:.*]] = cir.alloca "obj" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_G>>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.store %[[ARG0]], %[[OBJ]]
 // CIR:   cir.scope {
-// CIR:     %[[REF_TMP0:.*]] = cir.alloca !rec_G, !cir.ptr<!rec_G>, ["ref.tmp0"]
-// CIR:     %[[REF_TMP1:.*]] = cir.alloca !rec_G, !cir.ptr<!rec_G>, ["ref.tmp1"]
-// CIR:     %[[CLEANUP_TMP:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["tmp.exprcleanup"]
+// CIR:     %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_G>
+// CIR:     %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_G>
+// CIR:     %[[CLEANUP_TMP:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:     %[[LOAD_OBJ:.*]] = cir.load{{.*}} %[[OBJ]] : !cir.ptr<!cir.ptr<!rec_G>>, !cir.ptr<!rec_G>
 // CIR:     %[[COPY:.*]] = cir.call @_ZNK1G4copyEv(%[[LOAD_OBJ]]) : (!cir.ptr<!rec_G> {{.*}}) -> !rec_G
 // CIR:     cir.store{{.*}} %[[COPY]], %[[REF_TMP0]]

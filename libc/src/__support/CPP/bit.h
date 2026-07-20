@@ -27,10 +27,14 @@ namespace cpp {
 #endif
 
 template <unsigned N>
-LIBC_INLINE LIBC_CONSTEXPR void inline_copy(const char *from, char *to) {
+LIBC_INLINE constexpr void inline_copy(const char *from, char *to) {
 #if __has_builtin(__builtin_memcpy_inline) &&                                  \
-    !defined(LIBC_HAS_CONSTANT_EVALUATION)
-  __builtin_memcpy_inline(to, from, N);
+    defined(LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+  if (cpp::is_constant_evaluated())
+    for (unsigned i = 0; i < N; ++i)
+      to[i] = from[i];
+  else
+    __builtin_memcpy_inline(to, from, N);
 #else
   for (unsigned i = 0; i < N; ++i)
     to[i] = from[i];
@@ -47,8 +51,7 @@ LIBC_INLINE static constexpr cpp::enable_if_t<
         cpp::is_trivially_copyable<From>::value,
     To>
 bit_cast(const From &from) {
-#if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC) ||     \
-    defined(LIBC_HAS_CONSTANT_EVALUATION)
+#if LIBC_HAS_BUILTIN_BIT_CAST
   return __builtin_bit_cast(To, from);
 #else
   To to{};
@@ -61,12 +64,11 @@ bit_cast(const From &from) {
 
 // The following simple bit copy from a smaller type to maybe-larger type.
 template <typename To, typename From>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    (sizeof(To) >= sizeof(From)) &&
-        cpp::is_trivially_constructible<To>::value &&
-        cpp::is_trivially_copyable<To>::value &&
-        cpp::is_trivially_copyable<From>::value,
-    void>
+LIBC_INLINE cpp::enable_if_t<(sizeof(To) >= sizeof(From)) &&
+                                 cpp::is_trivially_constructible<To>::value &&
+                                 cpp::is_trivially_copyable<To>::value &&
+                                 cpp::is_trivially_copyable<From>::value,
+                             void>
 bit_copy(const From &from, To &to) {
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);

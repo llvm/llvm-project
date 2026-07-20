@@ -1,4 +1,4 @@
-; RUN: llc -aix-ssp-tb-bit -mtriple=powerpc64-ibm-aix-xcoff -O0 < %s | FileCheck %s
+; RUN: llc -aix-ssp-tb-bit -mtriple=powerpc64-ibm-aix-xcoff --code-model=small -O0 < %s | FileCheck %s
 
 ; CHECK-LABEL: f:
 ; CHECK: __ssp_canary_word

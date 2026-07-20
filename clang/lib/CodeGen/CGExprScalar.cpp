@@ -26,6 +26,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
@@ -46,6 +47,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TypeSize.h"
@@ -1688,28 +1690,17 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   bool OBWrapInvolved =
       (DstOBT && DstOBT->isWrapKind()) || (SrcOBT && SrcOBT->isWrapKind());
 
-  // Cast from half through float if half isn't a native type.
-  if (SrcType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-    // Cast to FP using the intrinsic if the half type itself isn't supported.
-    if (DstTy->isFloatingPointTy()) {
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        Value *BitCast = Builder.CreateBitCast(Src, CGF.CGM.HalfTy);
-        return Builder.CreateFPExt(BitCast, DstTy, "conv");
-      }
-    } else {
-      // Cast to other types through float, using either the intrinsic or FPExt,
-      // depending on whether the half type itself is supported
-      // (as opposed to operations on half, available with NativeHalfType).
+  // If half isn't a native type, cast to float for evaluation.
+  if (SrcType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType &&
+      SrcTy == CGF.CGM.HalfTy && DstTy != CGF.CGM.HalfTy) {
+    if (DstTy->isFloatingPointTy())
+      return Builder.CreateFPExt(Src, DstTy, "conv");
 
-      if (Src->getType() != CGF.CGM.HalfTy) {
-        assert(CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics());
-        Src = Builder.CreateBitCast(Src, CGF.CGM.HalfTy);
-      }
-
-      Src = Builder.CreateFPExt(Src, CGF.CGM.FloatTy, "conv");
-      SrcType = CGF.getContext().FloatTy;
-      SrcTy = CGF.FloatTy;
-    }
+    // Cast to other types through float (as opposed to operations on half,
+    // available with NativeHalfType).
+    Src = Builder.CreateFPExt(Src, CGF.CGM.FloatTy, "conv");
+    SrcType = CGF.getContext().FloatTy;
+    SrcTy = CGF.FloatTy;
   }
 
   // Ignore conversions like int -> uint.
@@ -1814,23 +1805,13 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     EmitFloatConversionCheck(OrigSrc, OrigSrcType, Src, SrcType, DstType, DstTy,
                              Loc);
 
-  // Cast to half through float if half isn't a native type.
-  if (DstType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
+  // Cast to half from float if half isn't a native type. When __fp16 isn't
+  // native, arithmetic is evaluated as float.
+  if (DstType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType &&
+      DstTy == CGF.CGM.HalfTy) {
     // Make sure we cast in a single step if from another FP type.
-    if (SrcTy->isFloatingPointTy()) {
-      // Handle the case where the half type is represented as an integer (as
-      // opposed to operations on half, available with NativeHalfType).
-
-      // If the half type is supported, just use an fptrunc.
-      Value *Res = Builder.CreateFPTrunc(Src, CGF.CGM.HalfTy, "conv");
-      if (DstTy == CGF.CGM.HalfTy)
-        return Res;
-
-      assert(DstTy->isIntegerTy(16) &&
-             CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics() &&
-             "Only half FP requires extra conversion");
-      return Builder.CreateBitCast(Res, DstTy);
-    }
+    if (SrcTy->isFloatingPointTy())
+      return Builder.CreateFPTrunc(Src, CGF.CGM.HalfTy, "conv");
 
     DstTy = CGF.FloatTy;
   }
@@ -1842,7 +1823,6 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 
     if (ResTy != CGF.CGM.HalfTy) {
       assert(ResTy->isIntegerTy(16) &&
-             CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics() &&
              "Only half FP requires extra conversion");
       Res = Builder.CreateBitCast(Res, ResTy);
     }
@@ -2245,10 +2225,11 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
   auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
   Value *RowVec = llvm::PoisonValue::get(ResultTy);
 
+  bool IsMatrixRowMajor =
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
+
   for (unsigned Col = 0; Col != NumColumns; ++Col) {
     Value *ColVal = llvm::ConstantInt::get(RowIdx->getType(), Col);
-    bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                            LangOptions::MatrixMemoryLayout::MatrixRowMajor;
     Value *EltIdx = MB.CreateIndex(RowIdx, ColVal, NumRows, NumColumns,
                                    IsMatrixRowMajor, "matrix_row_idx");
     Value *Elt =
@@ -2274,8 +2255,8 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   Value *Idx;
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+  bool IsMatrixRowMajor =
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
   Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
@@ -2360,8 +2341,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // column-major positions rather than inserting sequentially and shuffling.
   const ConstantMatrixType *ColMajorMT = nullptr;
   if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
-      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                LangOptions::MatrixMemoryLayout::MatrixColMajor)
+      MT && !isMatrixRowMajor(CGF.getLangOpts(), E->getType()))
     ColMajorMT = MT;
 
   // Loop over initializers collecting the Value for each, and remembering
@@ -2600,8 +2580,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
-    bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
 
     llvm::Value *V = CGF.Builder.CreateLoad(
         CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
@@ -2839,6 +2818,43 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return CGF.authPointerToPointerCast(Result, E->getType(), DestTy);
   }
   case CK_AddressSpaceConversion: {
+    llvm::Type *DestLTy = ConvertType(DestTy);
+    // WebAssembly reference types are opaque target extension types so an
+    // "address space conversion" involving them is not a real pointer cast.
+    auto IsWasmFuncref = [](llvm::Type *T) {
+      auto *TET = dyn_cast<llvm::TargetExtType>(T);
+      return TET && TET->getName() == "wasm.funcref";
+    };
+    bool SrcIsFuncref = IsWasmFuncref(ConvertType(E->getType()));
+    bool DestIsFuncref = IsWasmFuncref(DestLTy);
+    if (SrcIsFuncref && DestIsFuncref) {
+      // funcref -> funcref (e.g. between differently-typed funcrefs) is the
+      // identity on the opaque reference value.
+      return Visit(E);
+    }
+    if (SrcIsFuncref && !DestIsFuncref) {
+      // funcref -> pointer: use wasm_funcref_to_ptr. This will probably crash
+      // later in codegen since we haven't implemented a way to actually get a
+      // function pointer from a funcref.
+      llvm::Function *ToPtr =
+          CGF.CGM.getIntrinsic(llvm::Intrinsic::wasm_funcref_to_ptr);
+      return CGF.Builder.CreateCall(ToPtr, {Visit(E)});
+    }
+    if (!SrcIsFuncref && DestIsFuncref) {
+      // A null function pointer converts to a null funcref (ref.null func),
+      // rather than a table lookup at index 0.
+      Expr::EvalResult NullResult;
+      if (E->EvaluateAsRValue(NullResult, CGF.getContext()) &&
+          NullResult.Val.isNullPointer()) {
+        if (NullResult.HasSideEffects)
+          Visit(E);
+        return llvm::Constant::getNullValue(DestLTy);
+      }
+      // pointer -> funcref: do a table.get from the indirect function table.
+      llvm::Function *ToFuncref =
+          CGF.CGM.getIntrinsic(llvm::Intrinsic::wasm_ptr_to_funcref);
+      return CGF.Builder.CreateCall(ToFuncref, {Visit(E)});
+    }
     Expr::EvalResult Result;
     if (E->EvaluateAsRValue(Result, CGF.getContext()) &&
         Result.Val.isNullPointer()) {
@@ -2847,12 +2863,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       // eliminate the useless instructions emitted during translating E.
       if (Result.HasSideEffects)
         Visit(E);
-      return CGF.CGM.getNullPointer(cast<llvm::PointerType>(
-          ConvertType(DestTy)), DestTy);
+      return CGF.CGM.getNullPointer(cast<llvm::PointerType>(DestLTy), DestTy);
     }
     // Since target may map different address spaces in AST to the same address
     // space, an address space conversion may end up as a bitcast.
-    return CGF.performAddrSpaceCast(Visit(E), ConvertType(DestTy));
+    return CGF.performAddrSpaceCast(Visit(E), DestLTy);
   }
   case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
@@ -3180,12 +3195,16 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       assert(SrcMatTy && "Source type must be a matrix type.");
       assert(NumRows <= SrcMatTy->getNumRows());
       assert(NumCols <= SrcMatTy->getNumColumns());
-      bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                        LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
+      // isMatrix[Src|Dst]RowMajor needs the full sugared QualType to find
+      // matrix layout attrs. So use E->getType() &  DestTy rather than SrcMatTy
+      // & MatTy b/c getAs<ConstantMatrixType>() strips the sugar.
+      bool IsSrcRowMajor = isMatrixRowMajor(CGF.getLangOpts(), E->getType());
+      bool IsDstRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
       for (unsigned R = 0; R < NumRows; R++)
         for (unsigned C = 0; C < NumCols; C++)
-          Mask[MatTy->getFlattenedIndex(R, C, IsRowMajor)] =
-              SrcMatTy->getFlattenedIndex(R, C, IsRowMajor);
+          Mask[MatTy->getFlattenedIndex(R, C, IsDstRowMajor)] =
+              SrcMatTy->getFlattenedIndex(R, C, IsSrcRowMajor);
 
       return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }
@@ -4072,12 +4091,24 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
 
   llvm::PHINode *atomicPHI = nullptr;
   if (const AtomicType *atomicTy = LHSTy->getAs<AtomicType>()) {
-    QualType type = atomicTy->getValueType();
-    if (!type->isBooleanType() && type->isIntegerType() &&
-        !(type->isUnsignedIntegerType() &&
+    // Type wrapped by _Atomic.
+    QualType AtomicValueTy = atomicTy->getValueType();
+    // Type resulting from FP conversion / integer promotion of the compound
+    // assignment operands.
+    QualType ResultTy = E->getComputationResultType();
+    // Do not try the atomicrmw op fast-path when the compound assignment may
+    // involve FP conversions, as the correct semantics would require promoting
+    // the loaded integer to double, performing FP arithmetics, and truncation
+    // back as a single atomic operation. Integer promotion is still
+    // semantically safe.
+    bool CanEmitAtomicRMW =
+        !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
+        ResultTy->isIntegerType() &&
+        !(AtomicValueTy->isUnsignedIntegerType() &&
           CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
         CGF.getLangOpts().getSignedOverflowBehavior() !=
-            LangOptions::SOB_Trapping) {
+            LangOptions::SOB_Trapping;
+    if (CanEmitAtomicRMW) {
       llvm::AtomicRMWInst::BinOp AtomicOp = llvm::AtomicRMWInst::BAD_BINOP;
       llvm::Instruction::BinaryOps Op;
       switch (OpInfo.Opcode) {
@@ -4130,7 +4161,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     llvm::BasicBlock *startBB = Builder.GetInsertBlock();
     llvm::BasicBlock *opBB = CGF.createBasicBlock("atomic_op", CGF.CurFn);
     OpInfo.LHS = EmitLoadOfLValue(LHSLV, E->getExprLoc());
-    OpInfo.LHS = CGF.EmitToMemory(OpInfo.LHS, type);
+    OpInfo.LHS = CGF.EmitToMemory(OpInfo.LHS, AtomicValueTy);
     Builder.CreateBr(opBB);
     Builder.SetInsertPoint(opBB);
     atomicPHI = Builder.CreatePHI(OpInfo.LHS->getType(), 2);

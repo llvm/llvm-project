@@ -1,4 +1,4 @@
-; RUN: opt < %s -scalable-vectorization=on -force-target-supports-scalable-vectors=true -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=2  -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width="vscale x 4" -force-vector-interleave=2  -S | FileCheck %s
 
 define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 entry:
@@ -24,7 +24,7 @@ for.body:
   store float %add, ptr %arrayidx5, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv, 1599
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !5
+  br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
   ret void
@@ -62,7 +62,7 @@ for.body:
   store float %add, ptr %arrayidx5, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv, 1599
-  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !5
+  br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
   ret void
@@ -105,7 +105,7 @@ if.end5:
   store float %mul, ptr %arrayidx7, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %cmp = icmp eq i64 %indvars.iv.next, %n
-  br i1 %cmp, label %for.cond.cleanup, label %for.body, !llvm.loop !5
+  br i1 %cmp, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
   ret void
@@ -116,8 +116,6 @@ for.cond.cleanup:
 !2 = distinct !{ !2 }
 !3 = distinct !{ !3, !2 }
 !4 = !{ !3 }
-!5 = distinct !{!5, !6}
-!6 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 
 ; CHECK: [[SCOPE0_LIST]] = !{[[SCOPE0:!.*]]}
 ; CHECK: [[SCOPE0]] = distinct !{[[SCOPE0]], [[SCOPE0_DOM:!.*]]}

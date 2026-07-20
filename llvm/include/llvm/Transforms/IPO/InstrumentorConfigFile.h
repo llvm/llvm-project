@@ -14,18 +14,26 @@
 #define LLVM_TRANSFORMS_IPO_INSTRUMENTOR_CONFIGFILE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Transforms/IPO/Instrumentor.h"
 
 namespace llvm {
 namespace instrumentor {
 
 /// Write the configuration in /p IConf to the file with path \p OutputFile.
-void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
-                       LLVMContext &Ctx);
+LLVM_ABI void writeConfigToJSON(InstrumentationConfig &IConf,
+                                StringRef OutputFile, LLVMContext &Ctx);
 
 /// Read the configuration from the file with path \p InputFile  into /p IConf.
-bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
-                        LLVMContext &Ctx);
+LLVM_ABI bool readConfigFromJSON(InstrumentationConfig &IConf,
+                                 StringRef InputFile, LLVMContext &Ctx,
+                                 vfs::FileSystem &FS);
+
+/// Read the configuration paths from the file with path \p InputFile into \p
+/// Configs.
+LLVM_ABI bool readConfigPathsFile(StringRef InputFile,
+                                  cl::list<std::string> &Configs,
+                                  LLVMContext &Ctx, vfs::FileSystem &FS);
 
 } // end namespace instrumentor
 } // end namespace llvm
