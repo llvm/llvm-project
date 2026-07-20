@@ -69,7 +69,6 @@ class SampleProfileMatcher {
   // the new(renamed) function pointer and the value is old(unused) profile
   // name.
   MapVector<Function *, FunctionId> FuncToProfileNameMap;
-  MapVector<Function *, FunctionId> FuncToProfileNameMapByBase;
   // Mapping from matched(renamed) profile name to IR function to during call
   // graph matching. This is a reversed FuncToProfileNameMap to track duplicated
   // profile matching and resolve multiple IR functions being mapped to a single
