@@ -71,7 +71,7 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
   Function &F = *Bndl[0]->getParent()->getParent();
   DL = &F.getParent()->getDataLayout();
   auto &Ctx = F.getContext();
-  Scheduler Sched(A.getAA(), Ctx);
+  Scheduler Sched(A.getAA(), Ctx, SchedDirection::BottomUp);
   if (!VecUtils::areConsecutive<StoreInst, Instruction>(
           Bndl, A.getScalarEvolution(), *DL))
     return false;

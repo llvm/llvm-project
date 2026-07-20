@@ -2008,9 +2008,23 @@ struct TestTryLock {
     }
   }
 
+  void foo3_stmtexpr() {
+    if (({ bool b = mu.TryLock(); b; })) {
+      a = 3;
+      mu.Unlock();
+    }
+  }
+
   void foo3_builtin_expect() {
     bool b = mu.TryLock();
     if (__builtin_expect(b, true)) {
+      a = 3;
+      mu.Unlock();
+    }
+  }
+
+  void foo3_builtin_expect_stmtexpr() {
+    if (({ bool b = mu.TryLock(); __builtin_expect(b, true); })) {
       a = 3;
       mu.Unlock();
     }

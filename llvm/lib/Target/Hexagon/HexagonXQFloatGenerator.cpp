@@ -1394,8 +1394,8 @@ bool HexagonXQFloatGenerator::convertNormalizeMultOp32(
         .addReg(R_mpy)
         .addReg(VR2);
     BuildMI(MBB, MI, DL, HII->get(Hexagon::V6_vmpy_qf32), Dest)
-        .addReg(input_mpy2)
-        .addReg(Reg2);
+        .addReg(Reg1)
+        .addReg(input_mpy2);
   } else {
     // we do nothing if the inputs are not fromadder/subtracter/multiplier unit
     return false;

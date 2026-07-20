@@ -1433,6 +1433,27 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 }
 
+static MCRegister getPhysicalGPR(const TargetRegisterInfo &TRI,
+                                 MCRegister Reg) {
+  if (RISCV::GPRRegClass.contains(Reg))
+    return Reg;
+
+  std::array<TargetRegisterClass const *, 2> RegisterClasses = {
+      &RISCV::GPRF16RegClass, &RISCV::GPRF32RegClass};
+  std::array<unsigned, 2> SubIdx = {RISCV::sub_16, RISCV::sub_32};
+
+  for (auto [RegClass, SubReg] : zip(RegisterClasses, SubIdx)) {
+    if (RegClass->contains(Reg)) {
+      if (MCRegister Super =
+              TRI.getMatchingSuperReg(Reg, SubReg, &RISCV::GPRRegClass))
+        return Super;
+    }
+  }
+
+  llvm::reportFatalInternalError(
+      "getPhysicalGPR called with unsupported register");
+}
+
 static MCRegister getLargestFPRegisterOrZero(const RISCVSubtarget &STI,
                                              const TargetRegisterInfo &TRI,
                                              MCRegister Reg) {
@@ -1481,7 +1502,12 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
-      FinalRegsToZero.set(Reg.id());
+      FinalRegsToZero.set(getPhysicalGPR(TRI, Reg).id());
+    } else if (RISCV::GPRPairRegClass.contains(Reg)) {
+      FinalRegsToZero.set(
+          getPhysicalGPR(TRI, TRI.getSubReg(Reg, RISCV::sub_gpr_even)).id());
+      FinalRegsToZero.set(
+          getPhysicalGPR(TRI, TRI.getSubReg(Reg, RISCV::sub_gpr_odd)).id());
     } else if (TRI.isFPRegister(Reg)) {
       if (MCRegister MaybeReg = getLargestFPRegisterOrZero(STI, TRI, Reg))
         FinalRegsToZero.set(MaybeReg.id());

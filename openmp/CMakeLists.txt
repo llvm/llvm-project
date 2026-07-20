@@ -173,8 +173,8 @@ if(LIBOMP_FORTRAN_MODULES)
 endif()
 
 # Use the current compiler target to determine the appropriate runtime to build.
-if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx|^spirv64" OR
-   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx|^spirv64")
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgpu|^amdgcn|^nvptx|^spirv64" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgpu|^amdgcn|^nvptx|^spirv64")
   add_subdirectory(device)
 else()
   # Build host runtime library, after LIBOMPTARGET variables are set since they

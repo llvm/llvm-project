@@ -107,6 +107,7 @@ public:
   MOCK_METHOD(ol_result_t, olWaitEvents,
               (ol_queue_handle_t Queue, ol_event_handle_t *Events,
                size_t NumEvents));
+  MOCK_METHOD(ol_result_t, olSyncEvent, (ol_event_handle_t Event));
   MOCK_METHOD(ol_result_t, olCreateEvent,
               (ol_queue_handle_t Queue, ol_event_flags_t Flags,
                ol_event_handle_t *Event));

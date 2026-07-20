@@ -9,6 +9,7 @@ static_library("SourceTransformation") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "SARIFTransformationReportFormat.cpp",
     "TransformationRegistry.cpp",
     "YAMLSourceEditFormat.cpp",
   ]

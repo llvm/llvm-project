@@ -406,7 +406,7 @@ public:
   /// induction with \p Start and \p Step values, using \p Start + \p Current *
   /// \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
-                                     FPMathOperator *FPBinOp, VPIRValue *Start,
+                                     FPMathOperator *FPBinOp, VPValue *Start,
                                      VPValue *Current, VPValue *Step) {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
@@ -453,8 +453,8 @@ public:
     return createScalarIntrinsic(Intrinsic::vscale, {}, ResultTy, DL);
   }
 
-  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -464,8 +464,8 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -527,8 +527,7 @@ public:
   /// with element type \p SourceElementTy.
   VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
                                                     Type *SourceElementTy,
-                                                    bool Reverse, bool FoldTail,
-                                                    DebugLoc DL);
+                                                    bool Reverse, DebugLoc DL);
 
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
