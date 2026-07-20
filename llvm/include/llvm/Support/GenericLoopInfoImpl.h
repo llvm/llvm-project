@@ -92,8 +92,8 @@ std::pair<BlockT *, bool> getExitBlockHelper(const LoopBase<BlockT, LoopT> *L,
 }
 
 template <class BlockT, class LoopT>
-bool LoopBase<BlockT, LoopT>::hasNoExitBlocks() const {
-  auto RC = getExitBlockHelper(this, false);
+bool LoopInfoBase<BlockT, LoopT>::hasNoExitBlocks(LoopRef L) const {
+  auto RC = getExitBlockHelper(deref(L), false);
   if (RC.second)
     // found multiple exit blocks
     return false;
@@ -160,24 +160,26 @@ BlockT *LoopBase<BlockT, LoopT>::getUniqueExitBlock() const {
 }
 
 template <class BlockT, class LoopT>
-BlockT *LoopBase<BlockT, LoopT>::getUniqueLatchExitBlock() const {
-  BlockT *Latch = getLoopLatch();
+BlockT *LoopInfoBase<BlockT, LoopT>::getUniqueLatchExitBlock(LoopRef L) const {
+  const LoopT *Lp = deref(L);
+  BlockT *Latch = Lp->getLoopLatch();
   assert(Latch && "Latch block must exists");
-  auto IsExitBlock = [this](BlockT *BB, bool AllowRepeats) -> BlockT * {
+  auto IsExitBlock = [Lp](BlockT *BB, bool AllowRepeats) -> BlockT * {
     assert(!AllowRepeats && "Unexpected parameter value.");
-    return !contains(BB) ? BB : nullptr;
+    return !Lp->contains(BB) ? BB : nullptr;
   };
-  return find_singleton<BlockT>(children<BlockT *>(Latch), IsExitBlock);
+  return find_singleton<BlockT>(llvm::children<BlockT *>(Latch), IsExitBlock);
 }
 
 /// getExitEdges - Return all pairs of (_inside_block_,_outside_block_).
 template <class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::getExitEdges(
-    SmallVectorImpl<Edge> &ExitEdges) const {
-  assert(!isInvalid() && "Loop not in a valid state!");
-  for (const auto BB : blocks())
-    for (auto *Succ : children<BlockT *>(BB))
-      if (!contains(Succ))
+void LoopInfoBase<BlockT, LoopT>::getExitEdges(
+    LoopRef L, SmallVectorImpl<Edge> &ExitEdges) const {
+  const LoopT *Lp = deref(L);
+  assert(!Lp->isInvalid() && "Loop not in a valid state!");
+  for (const auto BB : Lp->blocks())
+    for (auto *Succ : llvm::children<BlockT *>(BB))
+      if (!Lp->contains(Succ))
         // Not in current loop? It must be an exit block.
         ExitEdges.emplace_back(BB, Succ);
 }
@@ -495,7 +497,7 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
       // Discover a subloop of this loop.
       Subloop->setParentLoop(L);
       ++NumSubloops;
-      NumBlocks += Subloop->getBlocksVector().capacity();
+      NumBlocks += Subloop->getBlocksCapacity();
       PredBB = Subloop->getHeader();
       // Continue traversal along predecessors that are not loop-back edges from
       // within this subloop tree itself. Note that a predecessor may directly
@@ -507,7 +509,7 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
       }
     }
   }
-  L->getSubLoopsVector().reserve(NumSubloops);
+  L->reserveSubLoops(NumSubloops);
   L->reserveBlocks(NumBlocks);
 }
 
@@ -544,15 +546,14 @@ void PopulateLoopsDFS<BlockT, LoopT>::insertIntoLoop(BlockT *Block) {
     // We reach this point once per subloop after processing all the blocks in
     // the subloop.
     if (!Subloop->isOutermost())
-      Subloop->getParentLoop()->getSubLoopsVector().push_back(Subloop);
+      Subloop->getParentLoop()->SubLoops.push_back(Subloop);
     else
       LI->addTopLevelLoop(Subloop);
 
     // For convenience, Blocks and Subloops are inserted in postorder. Reverse
     // the lists, except for the loop header, which is always at the beginning.
     Subloop->reverseBlock(1);
-    std::reverse(Subloop->getSubLoopsVector().begin(),
-                 Subloop->getSubLoopsVector().end());
+    std::reverse(Subloop->SubLoops.begin(), Subloop->SubLoops.end());
 
     Subloop = Subloop->getParentLoop();
   }

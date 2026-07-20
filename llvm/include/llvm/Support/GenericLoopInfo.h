@@ -51,6 +51,24 @@ namespace llvm {
 
 template <class N, class M> class LoopInfoBase;
 template <class N, class M> class LoopBase;
+template <class N, class M> class PopulateLoopsDFS;
+
+/// Opaque handle to a loop within a LoopInfoBase. A handle stays valid for as
+/// long as the loop itself. The long-term goal is to move LoopBase operations
+/// to LoopInfoBase.
+class LoopRef {
+  void *Ptr = nullptr;
+
+  explicit LoopRef(void *Ptr) : Ptr(Ptr) {}
+  template <class N, class M> friend class LoopInfoBase;
+
+public:
+  LoopRef() = default;
+  bool isValid() const { return Ptr != nullptr; }
+  explicit operator bool() const { return isValid(); }
+  bool operator==(LoopRef O) const { return Ptr == O.Ptr; }
+  bool operator!=(LoopRef O) const { return Ptr != O.Ptr; }
+};
 
 //===----------------------------------------------------------------------===//
 /// Instances of this class are used to represent loops that are detected in the
@@ -146,10 +164,6 @@ public:
     assert(!isInvalid() && "Loop not in a valid state!");
     return SubLoops;
   }
-  std::vector<LoopT *> &getSubLoopsVector() {
-    assert(!isInvalid() && "Loop not in a valid state!");
-    return SubLoops;
-  }
   using iterator = typename std::vector<LoopT *>::const_iterator;
   using reverse_iterator =
       typename std::vector<LoopT *>::const_reverse_iterator;
@@ -187,19 +201,6 @@ public:
   unsigned getNumBlocks() const {
     assert(!isInvalid() && "Loop not in a valid state!");
     return Blocks.size();
-  }
-
-  /// Return a direct, mutable handle to the blocks vector so that we can
-  /// mutate it efficiently with techniques like `std::remove`.
-  std::vector<BlockT *> &getBlocksVector() {
-    assert(!isInvalid() && "Loop not in a valid state!");
-    return Blocks;
-  }
-  /// Return a direct, mutable handle to the blocks set so that we can
-  /// mutate it efficiently.
-  SmallPtrSetImpl<const BlockT *> &getBlocksSet() {
-    assert(!isInvalid() && "Loop not in a valid state!");
-    return DenseBlockSet;
   }
 
   /// Return a direct, immutable handle to the blocks set.
@@ -294,18 +295,8 @@ public:
   /// Otherwise return null.
   BlockT *getUniqueExitBlock() const;
 
-  /// Return the unique exit block for the latch, or null if there are multiple
-  /// different exit blocks or the latch is not exiting.
-  BlockT *getUniqueLatchExitBlock() const;
-
-  /// Return true if this loop does not have any exit blocks.
-  bool hasNoExitBlocks() const;
-
   /// Edge type.
   using Edge = std::pair<BlockT *, BlockT *>;
-
-  /// Return all pairs of (_inside_block_,_outside_block_).
-  void getExitEdges(SmallVectorImpl<Edge> &ExitEdges) const;
 
   /// If there is a preheader for this loop, return it. A loop has a preheader
   /// if there is only one edge to the header of the loop from outside of the
@@ -434,6 +425,16 @@ public:
     Blocks.reserve(size);
   }
 
+  /// interface to do reserve() for SubLoops
+  void reserveSubLoops(unsigned Size) {
+    assert(!isInvalid() && "Loop not in a valid state!");
+    SubLoops.reserve(Size);
+  }
+
+  /// Capacity of the block list; input to an enclosing loop's reserveBlocks()
+  /// during construction, when this loop's list is not yet fully populated.
+  unsigned getBlocksCapacity() const { return Blocks.capacity(); }
+
   /// This method is used to move BB (which must be part of this loop) to be the
   /// loop header of the loop (the block that dominates all others).
   void moveToHeader(BlockT *BB) {
@@ -480,6 +481,7 @@ public:
 
 protected:
   friend class LoopInfoBase<BlockT, LoopT>;
+  friend class PopulateLoopsDFS<BlockT, LoopT>;
 
   /// This creates an empty loop.
   LoopBase() : ParentLoop(nullptr) {}
@@ -625,6 +627,12 @@ private:
            "loop info used with outdated block numbers");
   }
 
+  /// Resolve a handle to its loop.
+  LoopT *deref(LoopRef L) const {
+    assert(L.isValid() && "dereferencing an invalid loop handle");
+    return static_cast<LoopT *>(L.Ptr);
+  }
+
 public:
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
@@ -642,6 +650,54 @@ public:
   unsigned getLoopDepth(const BlockT *BB) const {
     const LoopT *L = getLoopFor(BB);
     return L ? L->getLoopDepth() : 0;
+  }
+
+  /// The handle for a loop of this LoopInfo; an invalid handle for null.
+  LoopRef ref(const LoopT *L) const { return LoopRef(const_cast<LoopT *>(L)); }
+
+  using Edge = std::pair<BlockT *, BlockT *>;
+
+  /// Return true if \p L does not have any exit blocks.
+  bool hasNoExitBlocks(LoopRef L) const;
+
+  /// Return all pairs of (_inside_block_,_outside_block_).
+  void getExitEdges(LoopRef L, SmallVectorImpl<Edge> &ExitEdges) const;
+
+  /// Return the unique exit block for the latch of \p L, or null if there are
+  /// multiple different exit blocks or the latch is not exiting.
+  BlockT *getUniqueLatchExitBlock(LoopRef L) const;
+
+  /// Remove every block satisfying \p Pred from \p L's block list, preserving
+  /// the order of the remaining blocks. Only \p L itself is updated, not its
+  /// ancestors or descendants, and not the block-to-loop mapping.
+  template <typename PredicateT>
+  void removeBlocksIf(LoopRef L, PredicateT Pred) {
+    LoopT *Lp = deref(L);
+    llvm::erase_if(Lp->Blocks, [&](BlockT *BB) {
+      if (!Pred(BB))
+        return false;
+      Lp->DenseBlockSet.erase(BB);
+      return true;
+    });
+  }
+
+  /// Detach and return the children of \p Parent (the top-level loops if
+  /// \p Parent is invalid) that satisfy \p Pred, clearing their parent
+  /// pointers. Both the remaining and the returned children keep their
+  /// relative order.
+  template <typename PredicateT>
+  SmallVector<LoopT *, 4> takeChildrenIf(LoopRef Parent, PredicateT Pred) {
+    std::vector<LoopT *> &List =
+        Parent ? deref(Parent)->SubLoops : TopLevelLoops;
+    SmallVector<LoopT *, 4> Taken;
+    llvm::erase_if(List, [&](LoopT *Child) {
+      if (!Pred(Child))
+        return false;
+      Child->ParentLoop = nullptr;
+      Taken.push_back(Child);
+      return true;
+    });
+    return Taken;
   }
 
   /// \brief Find the innermost loop containing both given loops.
@@ -663,9 +719,6 @@ public:
 
   /// Return the top-level loops.
   const std::vector<LoopT *> &getTopLevelLoops() const { return TopLevelLoops; }
-
-  /// Return the top-level loops.
-  std::vector<LoopT *> &getTopLevelLoopsVector() { return TopLevelLoops; }
 
   /// This removes the specified top-level loop from this loop info object.
   /// The loop is not deleted, as it will presumably be inserted into

@@ -5982,7 +5982,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   std::optional<uint64_t> MaxRuntimeStep;
   if (auto MaxVScale = getMaxVScale(*CM.TheFunction, CM.TTI))
     MaxRuntimeStep = uint64_t(*MaxVScale) * BestVF.getKnownMinValue() * BestUF;
-  assert((OrigLoop->getUniqueLatchExitBlock() || RequiresScalarEpilogue) &&
+  assert((LI->getUniqueLatchExitBlock(LI->ref(OrigLoop)) ||
+          RequiresScalarEpilogue) &&
          "loops not exiting via the latch without required epilogue?");
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, HasTailFolded, RequiresScalarEpilogue,
