@@ -47,9 +47,10 @@ extern int \u{10D5A};   // GARAY CAPITAL LETTER DA - Added in Unicode 16.0
 extern int \u{16EBE};   // BERIA ERFE SMALL LETTER EH - Added in Unicode 17.0
 extern int \u{16D80};   // CHISOI LETTER A - Added in Unicode 18.0
 extern int a\N{TANGSA LETTER GA};
+extern int a\N{ZWJ};
 extern int a\N{TANGSALETTERGA}; // expected-error {{'TANGSALETTERGA' is not a valid Unicode character name}} \
                                 // expected-error {{expected ';' after top level declarator}} \
-                                // expected-note {{characters names in Unicode escape sequences are sensitive to case and whitespace}}
+                                // expected-note {{character names in Unicode escape sequences are sensitive to case and whitespace}}
 
 extern int 𝛛; // expected-warning {{mathematical notation character <U+1D6DB> in an identifier is a Clang extension}}
 extern int ₉; // expected-error {{character <U+2089> not allowed at the start of an identifier}} \\

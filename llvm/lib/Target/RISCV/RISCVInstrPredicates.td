@@ -217,3 +217,50 @@ def ignoresVXRM
                         ]),
                         MCReturnStatement<CheckImmOperand<3, 0>>>],
                       MCReturnStatement<FalsePred>>>;
+
+// RVI Base Loads, only those using simm12(reg) for addressing
+def isBaseLoad
+    : TIIPredicate<"isBaseLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       LD,
+                       LW,
+                       LWU,
+                       LH,
+                       LHU,
+                       LB,
+                       LBU
+                     ]>>>;
+
+// RVI Base Stores, only those using simm12(reg) for addressing
+def isBaseStore
+    : TIIPredicate<"isBaseStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       SD,
+                       SW,
+                       SH,
+                       SB,
+                     ]>>>;
+
+// Xqcilo 26-bit offset Loads (qc.e.lb, qc.e.lbu, qc.e.lh, qc.e.lhu, qc.e.lw)
+def isBaseQCLoad
+    : TIIPredicate<"isBaseQCLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       QC_E_LB,
+                       QC_E_LBU,
+                       QC_E_LH,
+                       QC_E_LHU,
+                       QC_E_LW
+                     ]>>>;
+
+// Xqcilo 26-bit offset Stores (qc.e.sb, qc.e.sh, qc.e.sw)
+def isBaseQCStore
+    : TIIPredicate<"isBaseQCStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       QC_E_SB,
+                       QC_E_SH,
+                       QC_E_SW
+                     ]>>>;

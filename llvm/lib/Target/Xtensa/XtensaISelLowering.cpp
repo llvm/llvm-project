@@ -110,6 +110,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   // indirect jump.
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
 
+  setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
+
   setOperationAction(ISD::BR_CC, MVT::i32, Legal);
   setOperationAction(ISD::BR_CC, MVT::i64, Expand);
 
@@ -351,6 +353,7 @@ void XtensaTargetLowering::LowerAsmOperandForConstraint(
 // Calling conventions
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "XtensaGenCallingConv.inc"
 
 static const MCPhysReg IntRegs[] = {Xtensa::A2, Xtensa::A3, Xtensa::A4,

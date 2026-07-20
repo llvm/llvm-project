@@ -8,5 +8,5 @@ c.fldsp  fs1, 512(sp) # CHECK: :[[@LINE]]:15: error: immediate must be a multipl
 c.fsdsp  fs2, -8(sp) # CHECK: :[[@LINE]]:15: error: immediate must be a multiple of 8 bytes in the range [0, 504]
 
 ## uimm8_lsb000
-c.fld  fs0, -8(sp) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 8 bytes in the range [0, 248]
-c.fsd  fs1, 256(sp) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 8 bytes in the range [0, 248]
+c.fld  fs0, -8(sp) # CHECK: :[[@LINE]]:1: error: invalid instruction
+c.fsd  fs1, 256(sp) # CHECK: :[[@LINE]]:1: error: invalid instruction

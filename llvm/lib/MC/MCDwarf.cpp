@@ -144,8 +144,7 @@ void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
   // The line table may be empty, which we should skip adding an end entry.
   // There are three cases:
   // (1) MCAsmStreamer - emitDwarfLocDirective emits a location directive in
-  //     place instead of adding a line entry if the target has
-  //     usesDwarfFileAndLocDirectives.
+  //     place instead of adding a line entry.
   // (2) MCObjectStreamer - if a function has incomplete debug info where
   //     instructions don't have DILocations, the line entries are missing.
   // (3) It's also possible that there are no prior line entries if the section

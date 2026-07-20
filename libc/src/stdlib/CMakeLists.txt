@@ -77,6 +77,24 @@ if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
       "-fdisable-tree-waccess3")
 endif()
 
+set(environ_internal_deps
+  libc.config.app_h
+  libc.hdr.types.size_t
+  libc.src.__support.alloc_checker
+  libc.src.__support.CPP.new
+  libc.src.__support.CPP.optional
+  libc.src.__support.CPP.string_view
+  libc.src.__support.macros.attributes
+  libc.src.__support.macros.config
+  libc.src.string.memory_utils.inline_memcpy
+)
+set(environ_internal_compile_options ${environ_internal_gcc12_workaround})
+
+if("libc.src.unistd.environ" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  list(APPEND environ_internal_deps libc.src.unistd.environ)
+  list(APPEND environ_internal_compile_options "-DLIBC_COPT_SUPPORT_ENVIRON")
+endif()
+
 add_object_library(
   environ_internal
   SRCS
@@ -84,16 +102,9 @@ add_object_library(
   HDRS
     environ_internal.h
   COMPILE_OPTIONS
-    ${environ_internal_gcc12_workaround}
+    ${environ_internal_compile_options}
   DEPENDS
-    libc.config.app_h
-    libc.hdr.types.size_t
-    libc.src.__support.CPP.new
-    libc.src.__support.CPP.optional
-    libc.src.__support.CPP.string_view
-    libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
-    libc.src.string.memory_utils.inline_memcpy
+    ${environ_internal_deps}
 )
 
 add_entrypoint_object(
@@ -585,6 +596,17 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   endif()
 endif()
 
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
+add_entrypoint_object(
+  realpath
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.realpath
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
@@ -666,15 +688,18 @@ add_entrypoint_object(
     libc.src.__support.str_to_integer
 )
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-endif()
-
 add_entrypoint_object(
   setenv
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.setenv
+)
+
+add_entrypoint_object(
+  unsetenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.unsetenv
 )
 
 if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
@@ -683,6 +708,12 @@ if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
     ALIAS
     DEPENDS
       .${LIBC_TARGET_OS}.malloc
+  )
+  add_entrypoint_object(
+    malloc_usable_size
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.malloc_usable_size
   )
   add_entrypoint_object(
     free

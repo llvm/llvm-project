@@ -303,9 +303,6 @@ def FeatureXS : Extension<"xs", "XS", "FEAT_XS",
 def FeatureWFxT : ExtensionWithMArch<"wfxt", "WFxT", "FEAT_WFxT",
   "Enable Armv8.7-A WFET and WFIT instruction">;
 
-def FeatureHCX : Extension<"hcx", "HCX", "FEAT_HCX",
-  "Enable Armv8.7-A HCRX_EL2 system register">;
-
 def FeatureLS64 : ExtensionWithMArch<"ls64", "LS64",
   "FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA",
   "Enable Armv8.7-A LD64B/ST64B Accelerator Extension">;
@@ -410,6 +407,9 @@ def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
 
 def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
   "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureFullFP16]>;
+def FeatureMCAStreamingSched : SubtargetFeature<
+  "mca-streaming-sched", "MCAStreamingSched", "true",
+  "Enable streaming-SVE schedule predicates for MC analysis tools">;
 
 def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
@@ -579,6 +579,9 @@ def FeatureSME_TMOP: ExtensionWithMArch<"sme-tmop", "SME_TMOP", "FEAT_SME_TMOP",
 def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSVE_FEXPA",
   "Enable SVE FEXPA instruction in Streaming SVE mode", [FeatureSME2]>;
 
+def FeatureHINTE: ExtensionWithMArch<"hinte", "HINTE", "FEAT_HINTE",
+  "Enable extended A64 hint instruction space">;
+
 //===----------------------------------------------------------------------===//
 //  Armv9.7 Architecture Extensions
 //===----------------------------------------------------------------------===//
@@ -656,41 +659,51 @@ def FeatureExperimentalZeroingPseudos
                        "UseExperimentalZeroingPseudos", "true",
                        "Hint to the compiler that the MOVPRFX instruction is "
                        "merged with destructive operations",
-                       []>;
+                       [], InlineIgnore>;
 
 def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
-  "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP">;
+  "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP",
+  [], InlineIgnore>;
 
 def FeatureZCRegMoveGPR64 : SubtargetFeature<"zcm-gpr64", "HasZeroCycleRegMoveGPR64", "true",
-                                        "Has zero-cycle register moves for GPR64 registers">;
+                                        "Has zero-cycle register moves for GPR64 registers",
+                                        [], InlineIgnore>;
 
 def FeatureZCRegMoveGPR32 : SubtargetFeature<"zcm-gpr32", "HasZeroCycleRegMoveGPR32", "true",
-                                        "Has zero-cycle register moves for GPR32 registers">;
+                                        "Has zero-cycle register moves for GPR32 registers",
+                                        [], InlineIgnore>;
 
 def FeatureZCRegMoveFPR128 : SubtargetFeature<"zcm-fpr128", "HasZeroCycleRegMoveFPR128", "true",
-                                        "Has zero-cycle register moves for FPR128 registers">;
+                                        "Has zero-cycle register moves for FPR128 registers",
+                                        [], InlineIgnore>;
 
 def FeatureZCRegMoveFPR64 : SubtargetFeature<"zcm-fpr64", "HasZeroCycleRegMoveFPR64", "true",
-                                        "Has zero-cycle register moves for FPR64 registers">;
+                                        "Has zero-cycle register moves for FPR64 registers",
+                                        [], InlineIgnore>;
 
 def FeatureZCRegMoveFPR32 : SubtargetFeature<"zcm-fpr32", "HasZeroCycleRegMoveFPR32", "true",
-                                        "Has zero-cycle register moves for FPR32 registers">;
+                                        "Has zero-cycle register moves for FPR32 registers",
+                                        [], InlineIgnore>;
 
 def FeatureZCZeroingGPR64 : SubtargetFeature<"zcz-gpr64", "HasZeroCycleZeroingGPR64", "true",
-                                        "Has zero-cycle zeroing instructions for GPR64 registers">;
+                                        "Has zero-cycle zeroing instructions for GPR64 registers",
+                                        [], InlineIgnore>;
 
 def FeatureZCZeroingGPR32 : SubtargetFeature<"zcz-gpr32", "HasZeroCycleZeroingGPR32", "true",
-                                        "Has zero-cycle zeroing instructions for GPR32 registers">;
+                                        "Has zero-cycle zeroing instructions for GPR32 registers",
+                                        [], InlineIgnore>;
 
 def FeatureZCZeroingFPR128 : SubtargetFeature<"zcz-fpr128", "HasZeroCycleZeroingFPR128", "true",
-                                        "Has zero-cycle zeroing instructions for FPR128 registers">;
+                                        "Has zero-cycle zeroing instructions for FPR128 registers",
+                                        [], InlineIgnore>;
 
 // It is generally beneficial to rewrite "fmov s0, wzr" to "movi d0, #0".
 // as movi is more efficient across all cores. Newer cores can eliminate
 // fmovs early and there is no difference with movi, but this not true for
 // all implementations.
 def FeatureNoZCZeroingFPR64 : SubtargetFeature<"no-zcz-fpr64", "HasZeroCycleZeroingFPR64", "false",
-                                        "Has no zero-cycle zeroing instructions for FPR64 registers">;
+                                        "Has no zero-cycle zeroing instructions for FPR64 registers",
+                                        [], InlineIgnore>;
 
 /// ... but the floating-point version doesn't quite work in rare cases on older
 /// CPUs.
@@ -703,10 +716,13 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "Disallow all unaligned memory "
                                           "access">;
 
+// +execute-only callee can be inlined into caller without +execute-only,
+// but not vice versa.
 def FeatureExecuteOnly : SubtargetFeature<"execute-only",
                                           "GenExecuteOnly", "true",
                                           "Enable the generation of "
-                                          "execute only code.">;
+                                          "execute only code.",
+                                          [], InlineInverse>;
 
 foreach i = {1-7,9-15,18,20-28} in
     def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
@@ -723,118 +739,147 @@ foreach i = {8-15,18} in
 
 def FeatureBalanceFPOps : SubtargetFeature<"balance-fp-ops", "BalanceFPOps",
     "true",
-    "balance mix of odd and even D-registers for fp multiply(-accumulate) ops">;
+    "balance mix of odd and even D-registers for fp multiply(-accumulate) ops",
+    [], InlineIgnore>;
 
 def FeaturePredictableSelectIsExpensive : SubtargetFeature<
     "predictable-select-expensive", "PredictableSelectIsExpensive", "true",
-    "Prefer likely predicted branches over selects">;
+    "Prefer likely predicted branches over selects",
+    [], InlineIgnore>;
 
 def FeatureEnableSelectOptimize : SubtargetFeature<
     "enable-select-opt", "EnableSelectOptimize", "true",
-    "Enable the select optimize pass for select loop heuristics">;
+    "Enable the select optimize pass for select loop heuristics",
+    [], InlineIgnore>;
 
 def FeatureExynosCheapAsMoveHandling : SubtargetFeature<"exynos-cheap-as-move",
     "HasExynosCheapAsMoveHandling", "true",
-    "Use Exynos specific handling of cheap instructions">;
+    "Use Exynos specific handling of cheap instructions",
+    [], InlineIgnore>;
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
-    "UsePostRAScheduler", "true", "Schedule again after register allocation">;
+    "UsePostRAScheduler", "true", "Schedule again after register allocation",
+    [], InlineIgnore>;
 
 def FeatureSlowMisaligned128Store : SubtargetFeature<"slow-misaligned-128store",
-    "IsMisaligned128StoreSlow", "true", "Misaligned 128 bit stores are slow">;
+    "IsMisaligned128StoreSlow", "true", "Misaligned 128 bit stores are slow",
+    [], InlineIgnore>;
 
 def FeatureSlowPaired128 : SubtargetFeature<"slow-paired-128",
-    "IsPaired128Slow", "true", "Paired 128 bit loads and stores are slow">;
+    "IsPaired128Slow", "true", "Paired 128 bit loads and stores are slow",
+    [], InlineIgnore>;
 
 def FeatureAscendStoreAddress : SubtargetFeature<"ascend-store-address",
     "IsStoreAddressAscend", "true",
-    "Schedule vector stores by ascending address">;
+    "Schedule vector stores by ascending address",
+    [], InlineIgnore>;
 
 def FeatureSlowSTRQro : SubtargetFeature<"slow-strqro-store", "IsSTRQroSlow",
-    "true", "STR of Q register with register offset is slow">;
+    "true", "STR of Q register with register offset is slow",
+    [], InlineIgnore>;
 
 def FeatureAlternateSExtLoadCVTF32Pattern : SubtargetFeature<
     "alternate-sextload-cvt-f32-pattern", "UseAlternateSExtLoadCVTF32Pattern",
-    "true", "Use alternative pattern for sextload convert to f32">;
+    "true", "Use alternative pattern for sextload convert to f32",
+    [], InlineIgnore>;
 
 def FeatureArithmeticBccFusion : SubtargetFeature<
     "arith-bcc-fusion", "HasArithmeticBccFusion", "true",
-    "CPU fuses arithmetic+bcc operations">;
+    "CPU fuses arithmetic+bcc operations",
+    [], InlineIgnore>;
 
 def FeatureArithmeticCbzFusion : SubtargetFeature<
     "arith-cbz-fusion", "HasArithmeticCbzFusion", "true",
-    "CPU fuses arithmetic + cbz/cbnz operations">;
+    "CPU fuses arithmetic + cbz/cbnz operations",
+    [], InlineIgnore>;
 
 def FeatureCmpBccFusion : SubtargetFeature<
     "cmp-bcc-fusion", "HasCmpBccFusion", "true",
-    "CPU fuses cmp+bcc operations">;
+    "CPU fuses cmp+bcc operations",
+    [], InlineIgnore>;
 
 def FeatureFuseAddress : SubtargetFeature<
     "fuse-address", "HasFuseAddress", "true",
-    "CPU fuses address generation and memory operations">;
+    "CPU fuses address generation and memory operations",
+    [], InlineIgnore>;
 
 def FeatureFuseAES : SubtargetFeature<
     "fuse-aes", "HasFuseAES", "true",
-    "CPU fuses AES crypto operations">;
+    "CPU fuses AES crypto operations",
+    [], InlineIgnore>;
 
 def FeatureFuseArithmeticLogic : SubtargetFeature<
     "fuse-arith-logic", "HasFuseArithmeticLogic", "true",
-    "CPU fuses arithmetic and logic operations">;
+    "CPU fuses arithmetic and logic operations",
+    [], InlineIgnore>;
 
 def FeatureFuseCmpCSel : SubtargetFeature<
     "fuse-csel", "HasFuseCmpCSel", "true",
-    "CPU can fuse CMP and CSEL operations">;
+    "CPU can fuse CMP and CSEL operations",
+    [], InlineIgnore>;
 
 def FeatureFuseCmpCSet : SubtargetFeature<
     "fuse-cset", "HasFuseCmpCSet", "true",
-    "CPU can fuse CMP and CSET operations">;
+    "CPU can fuse CMP and CSET operations",
+    [], InlineIgnore>;
 
 def FeatureFuseFCmpFCSel : SubtargetFeature<
     "fuse-fcsel", "HasFuseFCmpFCSel", "true",
-    "CPU can fuse FCMP and FCSEL operations">;
+    "CPU can fuse FCMP and FCSEL operations",
+    [], InlineIgnore>;
 
 def FeatureAlignCmpCSelPairs : SubtargetFeature<
     "align-cmp-csel-pairs", "HasAlignCmpCSelPairs", "true",
-    "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs">;
+    "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs",
+    [], InlineIgnore>;
 
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
-    "CPU fuses AES/PMULL and EOR operations">;
+    "CPU fuses AES/PMULL and EOR operations",
+    [], InlineIgnore>;
 
 def FeatureFuseAdrpAdd : SubtargetFeature<
     "fuse-adrp-add", "HasFuseAdrpAdd", "true",
-    "CPU fuses adrp+add operations">;
+    "CPU fuses adrp+add operations",
+    [], InlineIgnore>;
 
 def FeatureFuseLiterals : SubtargetFeature<
     "fuse-literals", "HasFuseLiterals", "true",
-    "CPU fuses literal generation operations">;
+    "CPU fuses literal generation operations",
+    [], InlineIgnore>;
 
 def FeatureFuseAddSub2RegAndConstOne : SubtargetFeature<
    "fuse-addsub-2reg-const1", "HasFuseAddSub2RegAndConstOne", "true",
-   "CPU fuses (a + b + 1) and (a - b - 1)">;
+   "CPU fuses (a + b + 1) and (a - b - 1)",
+   [], InlineIgnore>;
 
 def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
     "disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
-    "Disable latency scheduling heuristic">;
+    "Disable latency scheduling heuristic",
+    [], InlineIgnore>;
 
 def FeatureStorePairSuppress : SubtargetFeature<
     "store-pair-suppress", "EnableStorePairSuppress", "true",
-    "Enable Store Pair Suppression heuristics">;
+    "Enable Store Pair Suppression heuristics",
+    [], InlineIgnore>;
 
 def FeatureForce32BitJumpTables
    : SubtargetFeature<"force-32bit-jump-tables", "Force32BitJumpTables", "true",
-                      "Force jump table entries to be 32-bits wide except at MinSize">;
+                      "Force jump table entries to be 32-bits wide except at MinSize",
+                      [], InlineIgnore>;
 
 def FeatureUseRSqrt : SubtargetFeature<
     "use-reciprocal-square-root", "UseRSqrt", "true",
-    "Use the reciprocal square root approximation">;
+    "Use the reciprocal square root approximation",
+    [], InlineIgnore>;
 
 def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
                                         "NegativeImmediates", "false",
                                         "Convert immediates and instructions "
                                         "to their negated or complemented "
                                         "equivalent when the immediate does "
-                                        "not fit in the encoding.">;
+                                        "not fit in the encoding.",
+                                        [], InlineIgnore>;
 
 // Address operands with shift amount 2 or 3 are fast on all Arm chips except
 // some old Apple cores (A7-A10?) which handle all shifts slowly. Cortex-A57
@@ -847,21 +892,25 @@ def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
 // are modeled by FeatureAddrLSLSlow14.
 def FeatureAddrLSLSlow14 : SubtargetFeature<
     "addr-lsl-slow-14", "HasAddrLSLSlow14", "true",
-    "Address operands with shift amount of 1 or 4 are slow">;
+    "Address operands with shift amount of 1 or 4 are slow",
+    [], InlineIgnore>;
 
 def FeatureALULSLFast : SubtargetFeature<
     "alu-lsl-fast", "HasALULSLFast", "true",
-    "Add/Sub operations with lsl shift <= 4 are cheap">;
+    "Add/Sub operations with lsl shift <= 4 are cheap",
+    [], InlineIgnore>;
 
 def FeatureFastLD1Single : SubtargetFeature<
     "fast-ld1-single", "HasFastLD1Single", "true",
-    "Single-element LD1 to vector lane has same performance as regular load">;
+    "Single-element LD1 to vector lane has same performance as regular load",
+    [], InlineIgnore>;
 
 def FeatureAggressiveFMA :
   SubtargetFeature<"aggressive-fma",
                    "HasAggressiveFMA",
                    "true",
-                   "Enable Aggressive FMA for floating-point.">;
+                   "Enable Aggressive FMA for floating-point.",
+                   [], InlineIgnore>;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
@@ -883,34 +932,40 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  "after a return-twice">;
 
 def FeatureDisableLdp : SubtargetFeature<"disable-ldp", "HasDisableLdp",
-    "true", "Do not emit ldp">;
+    "true", "Prefer not to emit ldp", [], InlineIgnore>;
 
 def FeatureDisableStp : SubtargetFeature<"disable-stp", "HasDisableStp",
-    "true", "Do not emit stp">;
+    "true", "Prefer not to emit stp", [], InlineIgnore>;
 
 def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedOnly",
-    "true", "In order to emit ldp, first check if the load will be aligned to 2 * element_size">;
+    "true", "In order to emit ldp, first check if the load will be aligned to 2 * element_size",
+    [], InlineIgnore>;
 
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
-    "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
+    "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size",
+    [], InlineIgnore>;
 
 def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
   "UseFixedOverScalableIfEqualCost", "true",
-  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
+  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs",
+  [], InlineIgnore>;
 
 def FeatureDisableMaximizeScalableBandwidth : SubtargetFeature< "disable-maximize-scalable-bandwidth",
     "DisableMaximizeScalableBandwidth", "true",
     "Determine the maximum scalable vector length for a loop by the "
-    "largest scalar type rather than the smallest">;
+    "largest scalar type rather than the smallest",
+    [], InlineIgnore>;
 
 // For performance reasons we prefer to use ldapr to ldapur on certain cores.
 def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
-  "Prefer add+ldapr to offset ldapur">;
+  "Prefer add+ldapr to offset ldapur",
+  [], InlineIgnore>;
 
 // Some INC/DEC forms have better latency and throughput than ADDVL.
 def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
                                                "HasDisableFastIncVL", "true",
-                                               "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL">;
+                                               "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL",
+                                               [], InlineIgnore>;
 
 // For some cores it is preferable to choose a destination predicate register
 // that does not match the governing predicate, for example integer compares
@@ -922,26 +977,40 @@ def FeatureDisableDistinctPredicateDstReg : SubtargetFeature<
     "disable-distinct-predicate-dst-reg", "UseDistinctPredicateDstReg",
     "false",
     "Disabling selecting a distinct predicate register for the destination "
-    "operand of instructions that take a governing predicate">;
+    "operand of instructions that take a governing predicate",
+    [], InlineIgnore>;
 
 // On most processors we want to avoid moving from WZR to vector registers
 // (relying on materializing 0 to a FPR and moving from there instead),
 // but on some (in-order) cores it's preferable to avoid the extra instruction instead.
 def FeatureUseWzrToVecMove : SubtargetFeature<"use-wzr-to-vec-move",
                                               "UseWzrToVecMove", "true",
-                                              "Move from WZR to insert 0 into vector registers">;
+                                              "Move from WZR to insert 0 into vector registers",
+                                              [], InlineIgnore>;
 
 def FeatureDisableUnpredicatedLdStLower : SubtargetFeature<
     "disable-unpredicated-ld-st-lower", "DisableUnpredicatedLdStLower",
-    "true", "Disable lowering unpredicated loads/stores as LDR/STR">;
+    "true", "Disable lowering unpredicated loads/stores as LDR/STR",
+    [], InlineIgnore>;
 
 def FeatureAggressiveInterleaving : SubtargetFeature<"aggressive-interleaving",
                                                      "AggressiveInterleaving", "true",
-                                                     "Make use of aggressive interleaving during vectorization">;
+                                                     "Make use of aggressive interleaving during vectorization",
+                                                     [], InlineIgnore>;
 
 def FeatureMaxInterleaveFactor4 : SubtargetFeature<
     "max-interleave-factor-4", "MaxInterleaveFactor", "4",
-    "Set the MaxInterleaveFactor to 4 (from the default 2)">;
+    "Set the MaxInterleaveFactor to 4 (from the default 2)",
+    [], InlineIgnore>;
+
+def FeatureFixedLoadLatency4 : SubtargetFeature<
+    "fixed-load-latency-4", "FixedLoadLatency", "4",
+    "Use a fixed latency of 4 for loads instead of querying the scheduling model">;
+
+def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
+    "has-limited-64bit-vector-mul-bandwidth", "HasLimited64bitVectorMulBandwidth", "true",
+    "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
+    [], InlineIgnore>;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
@@ -993,7 +1062,7 @@ def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
-  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
+  [HasV8_6aOps, FeatureXS, FeatureWFxT],
   !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT, FeatureSPE_EEF])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
@@ -1026,9 +1095,9 @@ def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO],
+  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO, FeatureHINTE],
   !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR,
-    FeatureLSUI, FeatureOCCMO])>;
+    FeatureLSUI, FeatureOCCMO, FeatureHINTE])>;
 def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
   [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT, FeatureF16F32DOT],
   !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT,

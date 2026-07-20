@@ -134,11 +134,12 @@ private:
 
   MemoryBufferRef MbRef;
   bool IsFatLTOObject = false;
-  // For distributed compilation, each input must exist as an individual bitcode
-  // file on disk and be identified by its ModuleID. Archive members and FatLTO
-  // objects violate this. So, in these cases we flag that the bitcode must be
-  // written out to a new standalone file.
-  bool SerializeForDistribution = false;
+  // For distributed compilation, each input must exist as an individual
+  // bitcode file on disk identified by its ModuleID. For archive members and
+  // FatLTO objects, the input bitcode is a sub-section of a larger file. In
+  // these cases we flag that the bitcode must be written to a temporary
+  // standalone file. Effectively, extracted from its container.
+  bool ExtractForDistribution = false;
   bool IsThinLTO = false;
   StringRef ArchivePath;
   StringRef MemberName;
@@ -212,12 +213,12 @@ public:
   LLVM_ABI BitcodeModule &getPrimaryBitcodeModule();
   // Returns the memory buffer reference for this input file.
   MemoryBufferRef getFileBuffer() const { return MbRef; }
-  // Returns true if this input should be serialized to disk for distribution.
-  // See the comment on SerializeForDistribution for details.
-  bool getSerializeForDistribution() const { return SerializeForDistribution; }
-  // Mark whether this input should be serialized to disk for distribution.
-  // See the comment on SerializeForDistribution for details.
-  void setSerializeForDistribution(bool SFD) { SerializeForDistribution = SFD; }
+  // Returns true if this input should be extracted to disk for distribution.
+  // See the comment on ExtractForDistribution for details.
+  bool getExtractForDistribution() const { return ExtractForDistribution; }
+  // Mark whether this input should be extracted to disk for distribution.
+  // See the comment on ExtractForDistribution for details.
+  void setExtractForDistribution(bool EFD) { ExtractForDistribution = EFD; }
   // Returns true if this bitcode came from a FatLTO object.
   bool isFatLTOObject() const { return IsFatLTOObject; }
   // Mark this bitcode as coming from a FatLTO object.
@@ -519,6 +520,8 @@ private:
   // been added and the client has called run(). During run() we apply
   // internalization decisions either directly to the module (for regular LTO)
   // or to the combined index (for ThinLTO).
+  // FIXME: Make this GlobalResolution a class, it has been becoming more than
+  // just a data bag.
   struct GlobalResolution {
     /// The unmangled name of the global.
     std::string IRName;
@@ -554,6 +557,24 @@ private:
     /// Any partitioning of the combined LTO object is done internally by the
     /// LTO backend.
     unsigned Partition = Unknown;
+
+  private:
+    GlobalValue::GUID GUID = 0;
+
+  public:
+    void setGUID(GlobalValue::GUID G) {
+      assert(G);
+      assert(!GUID || GUID == G);
+      GUID = G;
+    }
+
+    GlobalValue::GUID getGUID() const {
+      return GUID ? GUID
+                  : GlobalValue::getGUIDAssumingExternalLinkage(
+                        GlobalValue::getGlobalIdentifier(
+                            IRName, GlobalValue::LinkageTypes::ExternalLinkage,
+                            ""));
+    }
 
     /// Special partition numbers.
     enum : unsigned {

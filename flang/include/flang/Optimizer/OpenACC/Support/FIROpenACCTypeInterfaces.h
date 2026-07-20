@@ -57,6 +57,9 @@ struct OpenACCPointerLikeModel
                       mlir::Location loc, mlir::Value value,
                       mlir::Type resultType) const;
 
+  mlir::MemRefType getAsMemRefType(mlir::Type pointer,
+                                   mlir::ModuleOp module) const;
+
   bool isDeviceData(mlir::Type pointer, mlir::Value var) const;
 };
 

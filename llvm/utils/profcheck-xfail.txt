@@ -57,6 +57,7 @@ Transforms/FixIrreducible/basic.ll
 Transforms/FixIrreducible/bug45623.ll
 Transforms/FixIrreducible/callbr.ll
 Transforms/FixIrreducible/nested.ll
+Transforms/FixIrreducible/pr191979.ll
 Transforms/FixIrreducible/switch.ll
 Transforms/GVN/PRE/pre-load-through-select.ll
 Transforms/GVN/PRE/pre-loop-load-through-select.ll

@@ -624,6 +624,33 @@ module @return_void_with_unused_argument {
 
 // -----
 
+// CHECK-LABEL: func.func private @keep_region_branch_operands_valid() {
+func.func private @keep_region_branch_operands_valid(%arg0: memref<f64>) {
+  %false = arith.constant false
+  %cst = arith.constant 2.000000e+00 : f64
+  %0 = memref.load %arg0[] {name = "caller"} : memref<f64>
+  memref.store %cst, %arg0[] {name = "callee"} : memref<f64>
+  // CHECK: %[[COND:.*]] = ub.poison : i1
+  // CHECK: scf.if %[[COND]]
+  // CHECK: %[[YIELD0:.*]] = ub.poison : memref<f64>
+  // CHECK: scf.yield %[[YIELD0]] : memref<f64>
+  // CHECK: %[[YIELD1:.*]] = ub.poison : memref<f64>
+  // CHECK: scf.yield %[[YIELD1]] : memref<f64>
+  %1 = scf.if %false -> (memref<f64>) {
+    scf.yield %arg0 : memref<f64>
+  } else {
+    %2 = bufferization.clone %arg0 : memref<f64> to memref<f64>
+    scf.yield %2 : memref<f64>
+  }
+  %true = arith.constant true
+  %base_buffer, %offset = memref.extract_strided_metadata %arg0 : memref<f64> -> memref<f64>, index
+  %base_buffer_0, %offset_1 = memref.extract_strided_metadata %1 : memref<f64> -> memref<f64>, index
+  bufferization.dealloc (%base_buffer, %base_buffer_0 : memref<f64>, memref<f64>) if (%false, %true)
+  return
+}
+
+// -----
+
 // CHECK-LABEL: module @dynamically_unreachable
 module @dynamically_unreachable {
   func.func @dynamically_unreachable() {

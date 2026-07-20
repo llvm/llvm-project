@@ -264,11 +264,11 @@ static bool isOnlyUsedInComparisonWithZero(Value *V) {
 }
 
 static bool canTransformToMemCmp(CallInst *CI, Value *Str, uint64_t Len,
-                                 const DataLayout &DL) {
+                                 const SimplifyQuery &SQ) {
   if (!isOnlyUsedInComparisonWithZero(CI))
     return false;
 
-  if (!isDereferenceableAndAlignedPointer(Str, Align(1), APInt(64, Len), DL))
+  if (!isDereferenceablePointer(Str, APInt(64, Len), SQ))
     return false;
 
   if (CI->getFunction()->hasFnAttribute(Attribute::SanitizeMemory))
@@ -608,13 +608,14 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
   }
 
   // strcmp to memcmp
+  SimplifyQuery SQ(DL, TLI, DT, AC, CI);
   if (!HasStr1 && HasStr2) {
-    if (canTransformToMemCmp(CI, Str1P, Len2, DL))
+    if (canTransformToMemCmp(CI, Str1P, Len2, SQ))
       return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
                                        TLI->getAsSizeT(Len2, *CI->getModule()),
                                        B, DL, TLI));
   } else if (HasStr1 && !HasStr2) {
-    if (canTransformToMemCmp(CI, Str2P, Len1, DL))
+    if (canTransformToMemCmp(CI, Str2P, Len1, SQ))
       return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
                                        TLI->getAsSizeT(Len1, *CI->getModule()),
                                        B, DL, TLI));
@@ -2251,9 +2252,8 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
       hasFloatFn(M, TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l)) {
 
     if (Pow->doesNotAccessMemory()) {
-      CallInst *NewExp10 =
-          B.CreateIntrinsic(Intrinsic::exp10, {Ty}, {Expo}, Pow, "exp10");
-      return copyFlags(*Pow, NewExp10);
+      return B.CreateIntrinsic(Intrinsic::exp10, {Ty}, {Expo}, Pow, "exp10", {},
+                               [Pow](CallInst *CI) { CI->copyIRFlags(Pow); });
     }
 
     return copyFlags(*Pow, emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10,
@@ -2984,10 +2984,8 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
     Sin = B.CreateExtractValue(SinCos, 0, "sinpi");
     Cos = B.CreateExtractValue(SinCos, 1, "cospi");
   } else {
-    Sin = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 0),
-                                 "sinpi");
-    Cos = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 1),
-                                 "cospi");
+    Sin = B.CreateExtractElement(SinCos, uint64_t{0}, "sinpi");
+    Cos = B.CreateExtractElement(SinCos, uint64_t{1}, "cospi");
   }
 
   return true;
@@ -2999,8 +2997,7 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   Value *Src = CI->getArgOperand(0);
 
   if (match(Src, m_OneUse(m_FNeg(m_Value(X))))) {
-    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
-    Call->copyFastMathFlags(CI);
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     auto *CallInst = copyFlags(*CI, Call);
     if (IsEven) {
       // Even function: f(-x) = f(x)
@@ -3013,8 +3010,7 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   // Even function: f(abs(x)) = f(x), f(copysign(x, y)) = f(x)
   if (IsEven && (match(Src, m_FAbs(m_Value(X))) ||
                  match(Src, m_CopySign(m_Value(X), m_Value())))) {
-    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
-    Call->copyFastMathFlags(CI);
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     return copyFlags(*CI, Call);
   }
 
@@ -4041,6 +4037,16 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cospif:
   case LibFunc_cospi:
     return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
+  case LibFunc_sinf:
+  case LibFunc_sinl:
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::sin);
+    return nullptr;
+  case LibFunc_cosf:
+  case LibFunc_cosl:
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::cos);
+    return nullptr;
   case LibFunc_powf:
   case LibFunc_pow:
   case LibFunc_powl:
@@ -4107,6 +4113,16 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return replaceUnaryCall(CI, Builder, Intrinsic::rint);
   case LibFunc_trunc:
     return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
+  case LibFunc_sin:
+  case LibFunc_cos:
+    if (UnsafeFPShrink &&
+        hasFloatVersion(M, CI->getCalledFunction()->getName()))
+      if (Value *V = optimizeUnaryDoubleFP(CI, Builder, TLI, true))
+        return V;
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(
+          CI, Builder, Func == LibFunc_sin ? Intrinsic::sin : Intrinsic::cos);
+    return nullptr;
   case LibFunc_acos:
   case LibFunc_acosh:
   case LibFunc_asin:
@@ -4115,8 +4131,6 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp:
   case LibFunc_exp10:
   case LibFunc_expm1:
-  case LibFunc_cos:
-  case LibFunc_sin:
   case LibFunc_tanh:
     if (UnsafeFPShrink && hasFloatVersion(M, CI->getCalledFunction()->getName()))
       return optimizeUnaryDoubleFP(CI, Builder, TLI, true);

@@ -952,6 +952,8 @@ public:
   /// equivalent to:
   ///   (this->zext(NewWidth) << NewLSB.getBitWidth()) | NewLSB.zext(NewWidth)
   APInt concat(const APInt &NewLSB) const {
+    if (getBitWidth() == 0)
+      return NewLSB;
     /// If the result will be small, then both the merged values are small.
     unsigned NewWidth = getBitWidth() + NewLSB.getBitWidth();
     if (NewWidth <= APINT_BITS_PER_WORD)
@@ -2495,9 +2497,9 @@ LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
 /// and packs them contiguously into the least significant bits of the result.
 ///
 /// Examples:
-/// (1) compressBits(i8 0b1010'1010, i8 0b1100'1100) = 0b0000'1010
-/// (2) compressBits(i8 0b1111'1111, i8 0b1010'1010) = 0b0000'1111
-LLVM_ABI APInt compressBits(const APInt &Val, const APInt &Mask);
+/// (1) pext(i8 0b1010'1010, i8 0b1100'1100) = 0b0000'1010
+/// (2) pext(i8 0b1111'1111, i8 0b1010'1010) = 0b0000'1111
+LLVM_ABI APInt pext(const APInt &Val, const APInt &Mask);
 
 /// Perform an "expand" operation, also known as pdep or bdep.
 ///
@@ -2505,9 +2507,9 @@ LLVM_ABI APInt compressBits(const APInt &Val, const APInt &Mask);
 /// has a 1-bit, and zeros the remaining bits.
 ///
 /// Examples:
-/// (1) expandBits(i8 0b0000'1010, i8 0b1100'1100) = 0b1000'1000
-/// (2) expandBits(i8 0b0000'1111, i8 0b1010'1010) = 0b1010'1010
-LLVM_ABI APInt expandBits(const APInt &Val, const APInt &Mask);
+/// (1) pdep(i8 0b0000'1010, i8 0b1100'1100) = 0b1000'1000
+/// (2) pdep(i8 0b0000'1111, i8 0b1010'1010) = 0b1010'1010
+LLVM_ABI APInt pdep(const APInt &Val, const APInt &Mask);
 
 } // namespace APIntOps
 

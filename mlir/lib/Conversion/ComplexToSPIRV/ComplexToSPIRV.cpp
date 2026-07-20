@@ -125,6 +125,36 @@ struct ElementwiseBinaryOpPattern final : OpConversionPattern<ComplexOp> {
   }
 };
 
+template <typename ComplexOp, typename SPIRVCompareOp, typename SPIRVCombinerOp>
+struct ComparisonOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
+
+    Value lhsRe = spirv::CompositeExtractOp::create(rewriter, loc, lhs, {0});
+    Value lhsIm = spirv::CompositeExtractOp::create(rewriter, loc, lhs, {1});
+    Value rhsRe = spirv::CompositeExtractOp::create(rewriter, loc, rhs, {0});
+    Value rhsIm = spirv::CompositeExtractOp::create(rewriter, loc, rhs, {1});
+
+    Value cmpRe = SPIRVCompareOp::create(rewriter, loc, lhsRe, rhsRe);
+    Value cmpIm = SPIRVCompareOp::create(rewriter, loc, lhsIm, rhsIm);
+
+    rewriter.replaceOpWithNewOp<SPIRVCombinerOp>(op, spirvType, cmpRe, cmpIm);
+    return success();
+  }
+};
+
 struct MulOpPattern final : OpConversionPattern<complex::MulOp> {
   using Base::Base;
 
@@ -267,6 +297,10 @@ void mlir::populateComplexToSPIRVPatterns(
   patterns.add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern,
                ElementwiseBinaryOpPattern<complex::AddOp, spirv::FAddOp>,
                ElementwiseBinaryOpPattern<complex::SubOp, spirv::FSubOp>,
+               ComparisonOpPattern<complex::EqualOp, spirv::FOrdEqualOp,
+                                   spirv::LogicalAndOp>,
+               ComparisonOpPattern<complex::NotEqualOp, spirv::FUnordNotEqualOp,
+                                   spirv::LogicalOrOp>,
                MulOpPattern, DivOpPattern,
                NegationOpPattern<complex::NegOp, /*NegateReal=*/true>,
                NegationOpPattern<complex::ConjOp, /*NegateReal=*/false>,

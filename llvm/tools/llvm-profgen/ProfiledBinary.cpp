@@ -745,6 +745,16 @@ void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
   Expected<SubtargetFeatures> Features = Obj->getFeatures();
   if (!Features)
     exitWithError(Features.takeError(), FileName);
+  // AArch64 object files do not generally carry complete ISA feature metadata,
+  // so the subtarget would default to the baseline (Armv8.0-A) feature set.
+  // That disassembler cannot decode feature-gated instructions (LSE atomics,
+  // RCPC loads, SVE, ...) that are pervasive in modern AArch64 binaries; they
+  // would be miscounted as "invalid instructions" and, worse, their addresses
+  // would be absent from the code/branch maps used for sample attribution.
+  // Enable all instructions so the disassembler recognizes whatever the
+  // compiler emitted, matching llvm-objdump's default for AArch64.
+  if (TheTriple.isAArch64())
+    Features->AddFeature("+all");
   STI.reset(
       TheTarget->createMCSubtargetInfo(TheTriple, "", Features->getString()));
   if (!STI)
@@ -1165,8 +1175,8 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
     }
 
     LineLocation Line(LineOffset, Discriminator);
-    auto It = NameStrings.insert(FunctionName.str());
-    CallStack.emplace_back(FunctionId(StringRef(*It.first)), Line);
+    auto It = NameStrings.insert(FunctionName);
+    CallStack.emplace_back(FunctionId(It.first->getKey()), Line);
   }
 
   return CallStack;
@@ -1177,9 +1187,7 @@ StringRef ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
       unwrapOrError(Symbolizer->symbolizeData(SymbolizerPath.str(),
                                               getSectionedAddress(Address)),
                     SymbolizerPath);
-  decltype(NameStrings)::iterator Iter;
-  std::tie(Iter, std::ignore) = NameStrings.insert(DataDIGlobal.Name);
-  return StringRef(*Iter);
+  return NameStrings.insert(DataDIGlobal.Name).first->getKey();
 }
 
 void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,
@@ -1250,7 +1258,7 @@ void ProfiledBinary::loadSymbolsFromPseudoProbe() {
                "Top level pseudo probe does not match function range");
 
         const auto *ProbeDesc = getFuncDescForGUID(InlineTreeNode->Guid);
-        auto Ret = PseudoProbeNames.emplace(Func, ProbeDesc->FuncName);
+        auto Ret = PseudoProbeNames.try_emplace(Func, ProbeDesc->FuncName);
         if (!Ret.second && Ret.first->second != ProbeDesc->FuncName &&
             ShowDetailedWarning)
           WithColor::warning()

@@ -49,7 +49,8 @@ class TargetInstrInfo;
 class TargetLowering;
 class TargetPassConfig;
 class TargetRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class ConstantFP;
 class APFloat;
 
@@ -544,19 +545,17 @@ getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI);
 LLVM_ABI bool isConstantOrConstantVector(MachineInstr &MI,
                                          const MachineRegisterInfo &MRI);
 
-/// Determines if \p MI defines a constant integer or a splat vector of
+/// Determines if \p Def defines a constant integer or a splat vector of
 /// constant integers.
 /// \returns the scalar constant or std::nullopt.
 LLVM_ABI std::optional<APInt>
-isConstantOrConstantSplatVector(MachineInstr &MI,
-                                const MachineRegisterInfo &MRI);
+isConstantOrConstantSplatVector(Register Def, const MachineRegisterInfo &MRI);
 
-/// Determines if \p MI defines a float constant integer or a splat vector of
+/// Determines if \p Def defines a float constant integer or a splat vector of
 /// float constant integers.
 /// \returns the float constant or std::nullopt.
 LLVM_ABI std::optional<APFloat>
-isConstantOrConstantSplatVectorFP(MachineInstr &MI,
-                                  const MachineRegisterInfo &MRI);
+isConstantOrConstantSplatVectorFP(Register Def, const MachineRegisterInfo &MRI);
 
 /// Attempt to match a unary predicate against a scalar/splat constant or every
 /// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source

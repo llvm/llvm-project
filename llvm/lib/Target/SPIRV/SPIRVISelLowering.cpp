@@ -512,6 +512,13 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
         break;
+      // multiplication of bool operands is equivalent to a logical AND
+      case SPIRV::OpIMulS:
+      case SPIRV::OpIMulV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalAnd));
+        break;
 
       // ensure that LLVM IR bitwise instructions result in logical SPIR-V
       // instructions when applied to bool type
@@ -682,5 +689,20 @@ TargetLowering::AtomicExpansionKind
 SPIRVTargetLowering::shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
   // TODO: Pointer operand should be cast to integer in atomicrmw xchg, since
   // SPIR-V only supports atomic exchange for integer and floating-point types.
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
+  // TODO: pointer load should return CastToInteger, but
+  // convertAtomicLoadToIntegerType uses BitCast which asserts on pointer types.
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
+  // TODO: pointer store should return CastToInteger, but
+  // convertAtomicStoreToIntegerType uses BitCast which asserts on pointer
+  // types.
   return AtomicExpansionKind::None;
 }
