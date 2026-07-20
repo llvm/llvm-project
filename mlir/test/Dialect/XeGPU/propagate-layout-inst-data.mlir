@@ -128,37 +128,65 @@ func.func @store_matrix(%arg0: !xegpu.mem_desc<16x64xf16>) {
 }
 }
 
+// TODO: colaesce_chunksize tests should be adjusted when we enable colasce optimization
 // -----
+gpu.module @test {
+// CHECK-LABEL: func.func @load_matrix_with_coalesce_chunksize(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<2048x512xf32>, %[[ARG1:[0-9a-zA-Z]+]]: memref<2048x512xf32>)
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[ALLOCA:.*]] = memref.alloca() : memref<128xf32, 3>
+// CHECK: %[[MDESC:.*]] = xegpu.create_mem_desc %[[ALLOCA]] : memref<128xf32, 3> -> !xegpu.mem_desc<128xf32>
+// CHECK: %[[LOAD:.*]] = xegpu.load_matrix %[[MDESC]][%[[C0]]] <{layout = #xegpu.layout<inst_data = [1], lane_layout = [1], lane_data = [1]>}>: !xegpu.mem_desc<128xf32>, index -> vector<16xf32>
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [16, 8], lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>} : vector<16xf32> to vector<16x16xf32>
+// CHECK: %[[TRANS:.*]] = vector.transpose %[[BCAST]], [1, 0] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x16xf32> to vector<16x16xf32>
+// CHECK: %[[EXP:.*]] = math.exp %[[TRANS]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x16xf32>
+// CHECK: %[[DIV:.*]] = arith.divf %[[EXP]], %[[TRANS]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x16xf32>
+// CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG1]] : memref<2048x512xf32> -> !xegpu.tensor_desc<16x16xf32, #xegpu.block_tdesc_attr<boundary_check = false>, #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK: xegpu.store_nd %[[DIV]], %[[TDESC]][%[[C0]], %[[C0]]] <{layout = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<16x16xf32>, !xegpu.tensor_desc<16x16xf32, #xegpu.block_tdesc_attr<boundary_check = false>, #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
+func.func @load_matrix_with_coalesce_chunksize(%arg0: memref<2048x512xf32>, %arg1: memref<2048x512xf32>) {
+  %c0 = arith.constant 0 : index
+  %alloca = memref.alloca() : memref<128xf32, 3>
+  %6 = xegpu.create_mem_desc %alloca : memref<128xf32, 3> -> !xegpu.mem_desc<128xf32>
+  %13 = xegpu.load_matrix %6[%c0] : !xegpu.mem_desc<128xf32>, index -> vector<16xf32>
+  %14 = vector.broadcast %13 : vector<16xf32> to vector<16x16xf32>
+  %15 = vector.transpose %14, [1, 0] : vector<16x16xf32> to vector<16x16xf32>
+  %17 = math.exp %15 : vector<16x16xf32>
+  %18 = arith.divf %17, %15 : vector<16x16xf32>
+  %22 = xegpu.create_nd_tdesc %arg1 : memref<2048x512xf32> -> !xegpu.tensor_desc<16x16xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
+  xegpu.store_nd %18, %22[%c0, %c0]  : vector<16x16xf32>, !xegpu.tensor_desc<16x16xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
+  return
+}
+}
 
+// -----
 gpu.module @test {
 // CHECK-LABEL: func.func @scatter_ops_coalesce_chunksize(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<512xf32>) {
-// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>} dense<true> : vector<16x32xi1>
-// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>} dense<12> : vector<16x32xindex>
-// CHECK: %{{.*}} = xegpu.load %[[ARG0]][%{{.*}}], %{{.*}} <{layout = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> :
+// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>} dense<true> : vector<16x32xi1>
+// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>} dense<12> : vector<16x32xindex>
+// CHECK: %{{.*}} = xegpu.load %[[ARG0]][%{{.*}}], %{{.*}} <{layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}> :
 // CHECK-SAME: memref<512xf32>, vector<16x32xindex>, vector<16x32xi1> -> vector<16x32xf32>
-// CHECK: xegpu.store %0, %[[ARG0]][%{{.*}}], %{{.*}} <{layout = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> :
+// CHECK: xegpu.store %0, %[[ARG0]][%{{.*}}], %{{.*}} <{layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}> :
 // CHECK-SAME: vector<16x32xf32>, memref<512xf32>, vector<16x32xindex>, vector<16x32xi1>
 func.func @scatter_ops_coalesce_chunksize(%src: memref<512xf32>) {
   %1 = arith.constant dense<1>: vector<16x32xi1>
   %offset = arith.constant dense<12> : vector<16x32xindex>
   %3 = xegpu.load %src[%offset], %1
       : memref<512xf32>, vector<16x32xindex>, vector<16x32xi1> -> vector<16x32xf32>
-  xegpu.store %3, %src[%offset], %1 <{layout = #xegpu.layout<inst_data = [16, 16]>}>
+  xegpu.store %3, %src[%offset], %1 <{layout = #xegpu.layout<inst_data = [1, 32]>}>
       : vector<16x32xf32>, memref<512xf32>, vector<16x32xindex>, vector<16x32xi1>
   return
 }
 }
 
 // -----
-
 gpu.module @test {
 // CHECK-LABEL: func.func @load_gather_with_coalesce_chunksize(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<256xf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
-// CHECK: %[[OFFSET:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16, 16], lane_layout = [16, 1], lane_data = [1, 2]>}
+// CHECK: %[[OFFSET:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16, 2], lane_layout = [16, 1], lane_data = [1, 2]>}
 // CHECK-SAME:  dense<0> : vector<16x16xindex>
-// CHECK-NEXT: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16, 16], lane_layout = [16, 1], lane_data = [1, 2]>} dense<true> : vector<16x16xi1>
-// CHECK-NEXT: %{{.*}} = xegpu.load %arg1[%[[OFFSET]]], %[[MASK]] <{layout = #xegpu.layout<inst_data = [16, 16], lane_layout = [16, 1], lane_data = [1, 2]>}> : memref<256xf16>, vector<16x16xindex>, vector<16x16xi1> -> vector<16x16xf16>
+// CHECK-NEXT: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16, 2], lane_layout = [16, 1], lane_data = [1, 2]>} dense<true> : vector<16x16xi1>
+// CHECK-NEXT: %{{.*}} = xegpu.load %arg1[%[[OFFSET]]], %[[MASK]] <{layout = #xegpu.layout<inst_data = [16, 2], lane_layout = [16, 1], lane_data = [1, 2]>}> : memref<256xf16>, vector<16x16xindex>, vector<16x16xi1> -> vector<16x16xf16>
 func.func @load_gather_with_coalesce_chunksize(%arg0: memref<8x16xf16>, %arg1: memref<256xf16>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %0 = xegpu.create_nd_tdesc %arg0 : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
@@ -176,6 +204,7 @@ func.func @load_gather_with_coalesce_chunksize(%arg0: memref<8x16xf16>, %arg1: m
 }
 
 // -----
+
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_expand_non_unit_dims(
 // CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP:.*]]], %[[CST:.*]] <{layout = #xegpu.layout<inst_data = [16], lane_layout = [16], lane_data = [1]>}> : memref<1024xf16>, vector<1024xindex>, vector<1024xi1> -> vector<1024xf16>

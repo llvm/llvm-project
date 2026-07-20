@@ -25,6 +25,12 @@ namespace ento {
 
 class SMTConv {
 public:
+  static inline uint64_t getSMTBitWidth(ASTContext &Ctx, QualType Ty) {
+    if (Ty->isIntegralOrEnumerationType())
+      return Ctx.getIntWidth(Ty);
+    return Ctx.getTypeSize(Ty);
+  }
+
   // Returns an appropriate sort, given a QualType and it's bit width.
   static inline llvm::SMTSortRef mkSort(llvm::SMTSolverRef &Solver,
                                         const QualType &Ty, unsigned BitWidth) {
@@ -325,7 +331,7 @@ public:
   fromData(llvm::SMTSolverRef &Solver, ASTContext &Ctx, const SymbolData *Sym) {
     const SymbolID ID = Sym->getSymbolID();
     const QualType Ty = Sym->getType();
-    const uint64_t BitWidth = Ctx.getTypeSize(Ty);
+    const uint64_t BitWidth = SMTConv::getSMTBitWidth(Ctx, Ty);
 
     llvm::SmallString<16> Str;
     llvm::raw_svector_ostream OS(Str);
@@ -338,8 +344,8 @@ public:
                                              ASTContext &Ctx,
                                              const llvm::SMTExprRef &Exp,
                                              QualType FromTy, QualType ToTy) {
-    return fromCast(Solver, Exp, ToTy, Ctx.getTypeSize(ToTy), FromTy,
-                    Ctx.getTypeSize(FromTy));
+    return fromCast(Solver, Exp, ToTy, SMTConv::getSMTBitWidth(Ctx, ToTy),
+                    FromTy, SMTConv::getSMTBitWidth(Ctx, FromTy));
   }
 
   static inline std::optional<llvm::SMTExprRef>
@@ -358,7 +364,7 @@ public:
         Ty->isBlockPointerType() || Ty->isReferenceType())
       return fromBinOp(Solver, Exp, BO_NE,
                        Solver->mkBitvector(llvm::APSInt::getUnsigned(0),
-                                           Ctx.getTypeSize(Ty)),
+                                           SMTConv::getSMTBitWidth(Ctx, Ty)),
                        Ty->isSignedIntegerOrEnumerationType());
     assert(false && "Unsupported type for boolean conversion!");
     return std::nullopt;
@@ -568,10 +574,10 @@ public:
       if (Ty->isBooleanType())
         return Assumption ? fromUnOp(Solver, UO_LNot, Exp) : Exp;
 
-      return fromBinOp(
-          Solver, Exp, Assumption ? BO_EQ : BO_NE,
-          Solver->mkBitvector(llvm::APSInt("0"), Ctx.getTypeSize(Ty)),
-          isSigned);
+      return fromBinOp(Solver, Exp, Assumption ? BO_EQ : BO_NE,
+                       Solver->mkBitvector(llvm::APSInt("0"),
+                                           SMTConv::getSMTBitWidth(Ctx, Ty)),
+                       isSigned);
     }
 
     llvm_unreachable("Unsupported type for zero value!");
@@ -627,38 +633,13 @@ public:
   // TODO: Refactor to put elsewhere
   static inline QualType getAPSIntType(ASTContext &Ctx,
                                        const llvm::APSInt &Int) {
-    const QualType Ty =
-        Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
-    if (!Ty.isNull())
-      return Ty;
-    // If Ty is Null, could be because the original type was a _BitInt.
-    // Get the size of the _BitInt type (expressed in bits) and round it up to
-    // the next power of 2 that is at least the bit size of 'char' (usually 8).
-    unsigned CharTypeSize = Ctx.getTypeSize(Ctx.CharTy);
-    unsigned Pow2DestWidth =
-        std::max(llvm::bit_ceil(Int.getBitWidth()), CharTypeSize);
-    return Ctx.getIntTypeForBitwidth(Pow2DestWidth, Int.isSigned());
+    return Ctx.getBitIntType(Int.isUnsigned(), Int.getBitWidth());
   }
 
   // Get the QualTy for the input APSInt, and fix it if it has a bitwidth of 1.
   static inline std::pair<llvm::APSInt, QualType>
   fixAPSInt(ASTContext &Ctx, const llvm::APSInt &Int) {
-    llvm::APSInt NewInt;
-    unsigned APSIntBitwidth = Int.getBitWidth();
-    QualType Ty = getAPSIntType(Ctx, Int);
-
-    // FIXME: This should be a cast from a 1-bit integer type to a boolean type,
-    // but the former is not available in Clang. Instead, extend the APSInt
-    // directly.
-    if (APSIntBitwidth == 1 && Ty.isNull())
-      return {Int.extend(Ctx.getTypeSize(Ctx.BoolTy)),
-              getAPSIntType(Ctx, NewInt)};
-    else if (APSIntBitwidth == 1 && !Ty.isNull())
-      return {Int.extend(Ctx.getTypeSize(getAPSIntType(Ctx, Int))),
-              getAPSIntType(Ctx, NewInt)};
-    if (llvm::isPowerOf2_32(APSIntBitwidth) || Ty.isNull())
-      return {Int, Ty};
-    return {Int.extend(Ctx.getTypeSize(Ty)), Ty};
+    return {Int, getAPSIntType(Ctx, Int)};
   }
 
   // Perform implicit type conversion on binary symbolic expressions.
@@ -744,8 +725,8 @@ public:
   static inline void doIntTypeConversion(llvm::SMTSolverRef &Solver,
                                          ASTContext &Ctx, T &LHS, QualType &LTy,
                                          T &RHS, QualType &RTy) {
-    uint64_t LBitWidth = Ctx.getTypeSize(LTy);
-    uint64_t RBitWidth = Ctx.getTypeSize(RTy);
+    uint64_t LBitWidth = SMTConv::getSMTBitWidth(Ctx, LTy);
+    uint64_t RBitWidth = SMTConv::getSMTBitWidth(Ctx, RTy);
 
     assert(!LTy.isNull() && !RTy.isNull() && "Input type is null!");
     // Always perform integer promotion before checking type equality.

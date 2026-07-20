@@ -123,6 +123,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Attribute Changes in Clang
 
+- Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
+
 ### Improvements to Clang's diagnostics
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
@@ -290,6 +292,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   against or converted to a null pointer, the same as a bare function name.
   (#GH46362)
 
+- Clang now attempts to print enumerator names rather than C-style cast expressions
+  in more diagnostics.
+
 
 ### Improvements to Clang's time-trace
 
@@ -426,6 +431,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### Python Binding Changes
 
 ### OpenMP Support
+
+- Added parsing and semantic support for `dims` modifier in `num_teams` and
+  `thread_limit` clauses for OpenMP 6.1 or later.
 
 ### SYCL Support
 

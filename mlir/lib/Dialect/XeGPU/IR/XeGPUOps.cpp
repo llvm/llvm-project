@@ -846,7 +846,6 @@ LogicalResult ConvertLayoutOp::verify() {
   auto resLayout = getTargetLayout();
   if (!resLayout)
     return emitOpError("expected target layout.");
-  // `input_layout` is optional; when omitted it defaults to `target_layout`.
   auto srcLayout = getEffectiveInputLayout();
 
   // both input and target layouts should be WgLayout or SgLayout at the same

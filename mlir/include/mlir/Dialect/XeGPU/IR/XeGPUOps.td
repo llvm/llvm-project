@@ -1257,9 +1257,7 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", 
         setTargetLayoutAttr(anchorLayout);
       }
 
-      /// Returns the effective input layout: the explicit `input_layout` when
-      /// set, otherwise `target_layout` (the source is assumed to already be in
-      /// the target distribution).
+      /// Returns `input_layout` if set, otherwise `target_layout`.
       xegpu::DistributeLayoutAttr getEffectiveInputLayout() {
         if (auto layout = getInputLayoutAttr())
           return layout;
