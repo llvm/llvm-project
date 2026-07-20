@@ -24,6 +24,8 @@
 #include <string>
 #include <vector>
 
+#include "gtest/gtest.h"
+
 inline void noErrors(orc_rt::Error Err) { orc_rt::cantFail(std::move(Err)); }
 
 /// ReportError callback for tests that records the message of every reported
@@ -44,12 +46,14 @@ inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
   return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384);
 }
 
-/// RunWrapperCall callback for tests that should never dispatch a wrapper
-/// call. Asserts on invocation.
-inline void noDispatch(orc_rt_SessionRef, uint64_t,
-                       orc_rt_WrapperFunctionReturn, orc_rt_WrapperFunction,
-                       orc_rt::WrapperFunctionBuffer) {
-  assert(false && "strictly no dispatching!");
+/// DispatchFn for tests that should never dispatch a task. Records a test
+/// failure on invocation, then runs the task inline so that any caller
+/// awaiting a result unblocks (rather than hanging) and the managed-code token
+/// is released, even in -Asserts builds or when the dispatch arrives on a
+/// non-test thread.
+inline void noDispatch(orc_rt::move_only_function<void()> Task) {
+  ADD_FAILURE() << "unexpected dispatch in a no-dispatch session";
+  Task();
 }
 
 template <size_t Idx = 0> class OpCounter {

@@ -331,10 +331,10 @@ define amdgpu_kernel void @add_i32_high_active_lanes(ptr addrspace(1) %out) {
 ; GFX1164-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1164-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164-NEXT:    v_readlane_b32 s2, v1, 63
 ; GFX1164-NEXT:    v_readlane_b32 s6, v1, 47
 ; GFX1164-NEXT:    v_writelane_b32 v3, s3, 32
+; GFX1164-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v4, exec_hi, v0
@@ -648,10 +648,10 @@ define amdgpu_kernel void @add_i32_no_metadata(ptr addrspace(1) %out) {
 ; GFX1164-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1164-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164-NEXT:    v_readlane_b32 s2, v1, 63
 ; GFX1164-NEXT:    v_readlane_b32 s6, v1, 47
 ; GFX1164-NEXT:    v_writelane_b32 v3, s3, 32
+; GFX1164-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v4, exec_hi, v0
