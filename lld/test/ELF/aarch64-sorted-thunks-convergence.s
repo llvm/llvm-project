@@ -13,6 +13,8 @@
 // linker wouldn't converge. We only test absolute thunks which are the default
 // thunks in the absence of --pic-thunks.
 
+.set NCALLS, 30
+
 .macro gen_call i
   bl fn\i
   .space 12
@@ -29,8 +31,8 @@ fn\i:
 .global _start
 _start:
 
-.irp i, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
-  gen_call \i
+.rept NCALLS
+  gen_call \+
 .endr
 
 // <Linker will create thunk section here>
@@ -39,10 +41,10 @@ _start:
 // Position fn30 just past the 128 MiB (0x8000000) limit from created short thunk
 // while all other functions are within 128MiB from their respective short thunks
 // Absolute thunks are 16 bytes long.
-.space 0x8000000 - 29 * 16
+.space 0x8000000 - (NCALLS - 1) * 16
 
 .section .text.targets, "ax", %progbits
 
-.irp i, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
-  gen_target \i
+.rept NCALLS
+  gen_target \+
 .endr

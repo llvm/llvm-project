@@ -4086,31 +4086,10 @@ InputSection *ThunkSection::getTargetInputSection() const {
 
 bool ThunkSection::assignOffsets(bool sort) {
   if (sort) {
-    // For thunk section before sorting:
-    //    destA
-    //    destB
-    //    ...
-    //    backwards A
-    //    backwards B
-    //    forward C
-    //    forward D
-    //    ...
-    //    destC
-    //    destD
-    //
-    // Sorting will rearrange thunks as follows:
-    //
-    //    destA
-    //    destB
-    //    ...
-    //    backwards B
-    //    backwards A
-    //    ...
-    //    forwards D
-    //    forwards C
-    //    ...
-    //    destC
-    //    destD
+    // Sorting rearranges thunk sequence from:
+    // destA, destB, ..., [backwards A, B], [forward C, D], ..., destC, destD
+    // to
+    // destA, destB, ..., [backwards B, A], [forwards D, C], ..., destC, destD
     //
     // Since we iterate on thunks from first to last in a thunk section while
     // doing upgradation, any thunk that is found to be out of range is
