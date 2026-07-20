@@ -15992,9 +15992,9 @@ support all bit widths however.
 
 ```
 declare void @llvm.memcpy.p0.p0.i32(ptr <dest>, ptr <src>,
-                                    i32 <len>, i1 <isvolatile>)
+                                    i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memcpy.p0.p0.i64(ptr <dest>, ptr <src>,
-                                    i64 <len>, i1 <isvolatile>)
+                                    i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16046,9 +16046,9 @@ support all bit widths however.
 
 ```
 declare void @llvm.memcpy.inline.p0.p0.i32(ptr <dest>, ptr <src>,
-                                           i32 <len>, i1 <isvolatile>)
+                                           i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memcpy.inline.p0.p0.i64(ptr <dest>, ptr <src>,
-                                           i64 <len>, i1 <isvolatile>)
+                                           i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16098,9 +16098,9 @@ bit widths however.
 
 ```
 declare void @llvm.memmove.p0.p0.i32(ptr <dest>, ptr <src>,
-                                     i32 <len>, i1 <isvolatile>)
+                                     i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memmove.p0.p0.i64(ptr <dest>, ptr <src>,
-                                     i64 <len>, i1 <isvolatile>)
+                                     i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16154,9 +16154,9 @@ support all bit widths.
 
 ```
 declare void @llvm.memset.p0.i32(ptr <dest>, i8 <val>,
-                                 i32 <len>, i1 <isvolatile>)
+                                 i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memset.p0.i64(ptr <dest>, i8 <val>,
-                                 i64 <len>, i1 <isvolatile>)
+                                 i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16207,9 +16207,9 @@ support all bit widths however.
 
 ```
 declare void @llvm.memset.inline.p0.i32(ptr <dest>, i8 <val>,
-                                        i32 <len>, i1 <isvolatile>)
+                                        i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memset.inline.p0.i64(ptr <dest>, i8 <val>,
-                                        i64 <len>, i1 <isvolatile>)
+                                        i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
