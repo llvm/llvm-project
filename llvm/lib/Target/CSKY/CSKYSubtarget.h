@@ -56,6 +56,10 @@ class CSKYSubtarget : public CSKYGenSubtargetInfo {
 
   bool UseHardFloat;
   bool UseHardFloatABI;
+
+  /// The floating-point ABI in effect for this subtarget, resolved from the
+  /// "float-abi" module flag or the target options.
+  FloatABI::ABIType FloatABIType;
   bool HasFPUv2SingleFloat;
   bool HasFPUv2DoubleFloat;
   bool HasFPUv3HalfWord;
@@ -109,7 +113,8 @@ class CSKYSubtarget : public CSKYGenSubtargetInfo {
 
 public:
   CSKYSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                StringRef FS, const TargetMachine &TM);
+                StringRef FS, FloatABI::ABIType FloatABI,
+                const TargetMachine &TM);
 
   ~CSKYSubtarget() override;
 
