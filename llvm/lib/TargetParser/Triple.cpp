@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
@@ -2554,6 +2555,24 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
 
   // Default to none.
   return ExceptionHandling::None;
+}
+
+StringRef Triple::getAArch64TargetMemLocName(IRMemLocation Kind) const {
+  switch (Kind) {
+  default:
+    return "";
+  case IRMemLocation::TargetMem0:
+    return "/*aarch64_fpmr*/ ";
+  case IRMemLocation::TargetMem1:
+    return "/*aarch64_za*/ ";
+  }
+}
+
+std::string Triple::getTargetMemLocName(IRMemLocation Kind) const {
+  std::string OS;
+  if (isAArch64())
+    OS += getAArch64TargetMemLocName(Kind);
+  return OS;
 }
 
 // HLSL triple environment orders are relied on in the front end

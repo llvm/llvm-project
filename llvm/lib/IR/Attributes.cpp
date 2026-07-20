@@ -549,7 +549,7 @@ static const char *getModRefStr(ModRefInfo MR) {
   llvm_unreachable("Invalid ModRefInfo");
 }
 
-std::string Attribute::getAsString(bool InAttrGrp) const {
+std::string Attribute::getAsString(const Triple *TT, bool InAttrGrp) const {
   if (!pImpl) return {};
 
   if (isEnumAttribute())
@@ -694,9 +694,11 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         llvm_unreachable("This is represented as the default access kind");
       case IRMemLocation::TargetMem0:
         OS << "target_mem0: ";
+        OS << TT->getTargetMemLocName(Loc);
         break;
       case IRMemLocation::TargetMem1:
         OS << "target_mem1: ";
+        OS << TT->getTargetMemLocName(Loc);
         break;
       }
       OS << getModRefStr(MR);
@@ -1271,8 +1273,8 @@ FPClassTest AttributeSet::getNoFPClass() const {
   return SetNode ? SetNode->getNoFPClass() : fcNone;
 }
 
-std::string AttributeSet::getAsString(bool InAttrGrp) const {
-  return SetNode ? SetNode->getAsString(InAttrGrp) : "";
+std::string AttributeSet::getAsString(const Triple *TT, bool InAttrGrp) const {
+  return SetNode ? SetNode->getAsString(TT, InAttrGrp) : "";
 }
 
 bool AttributeSet::hasParentContext(LLVMContext &C) const {
@@ -1295,7 +1297,7 @@ AttributeSet::iterator AttributeSet::end() const {
 LLVM_DUMP_METHOD void AttributeSet::dump() const {
   dbgs() << "AS =\n";
     dbgs() << "  { ";
-    dbgs() << getAsString(true) << " }\n";
+    dbgs() << getAsString(nullptr, true) << " }\n";
 }
 #endif
 
@@ -1473,12 +1475,13 @@ FPClassTest AttributeSetNode::getNoFPClass() const {
   return fcNone;
 }
 
-std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
+std::string AttributeSetNode::getAsString(const Triple *TT,
+                                          bool InAttrGrp) const {
   std::string Str;
   for (iterator I = begin(), E = end(); I != E; ++I) {
     if (I != begin())
       Str += ' ';
-    Str += I->getAsString(InAttrGrp);
+    Str += I->getAsString(TT, InAttrGrp);
   }
   return Str;
 }
@@ -2073,7 +2076,7 @@ MemoryEffects AttributeList::getMemoryEffects() const {
 }
 
 std::string AttributeList::getAsString(unsigned Index, bool InAttrGrp) const {
-  return getAttributes(Index).getAsString(InAttrGrp);
+  return getAttributes(Index).getAsString(nullptr, InAttrGrp);
 }
 
 AttributeSet AttributeList::getAttributes(unsigned Index) const {
