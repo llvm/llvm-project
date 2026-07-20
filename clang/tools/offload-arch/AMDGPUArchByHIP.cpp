@@ -221,12 +221,9 @@ static std::pair<std::string, bool> findNewestHIPDLL() {
 }
 
 #ifdef _WIN32
-using LoadLibraryExWFn = decltype(&::LoadLibraryExW);
-
 // Pre-load DLL with LOAD_WITH_ALTERED_SEARCH_PATH so transitive deps
 // resolve from its directory. Pinned so getPermanentLibrary reuses it.
-void primeLibraryLoad(StringRef Path,
-                      LoadLibraryExWFn Loader = &::LoadLibraryExW) {
+static void primeLibraryLoad(StringRef Path) {
   // One DLL primed per process; subsequent calls are no-ops.
   // Not thread-safe, but offload-arch is single-threaded.
   static HMODULE PinnedModule = nullptr;
@@ -248,8 +245,8 @@ void primeLibraryLoad(StringRef Path,
   if (!convertUTF8ToUTF16String(NativePath, WPath))
     return;
   WPath.push_back(0);
-  PinnedModule = Loader(reinterpret_cast<LPCWSTR>(WPath.data()), nullptr,
-                        LOAD_WITH_ALTERED_SEARCH_PATH);
+  PinnedModule = LoadLibraryExW(reinterpret_cast<LPCWSTR>(WPath.data()),
+                                nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
   DWORD Err = GetLastError();
   if (!PinnedModule && Verbose)
     WithColor::note() << "priming LoadLibraryExW failed for " << Path
