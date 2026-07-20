@@ -3205,9 +3205,7 @@ static BinaryFunction *getOrCreatePPCAbsoluteCallStub(BinaryContext &BC,
     return It->second;
 
   // Create an injected fuction for the stub.
-  auto *StubBF = BC.createInjectedBinaryFunction(StubName);
-  StubBF->setSimple(true);
-  StubBF->setCodeSectionName(".text"); // or a dedicated stubs section
+  auto *StubBF = BC.createInjectedBinaryFunction(StubName, /*IsSimple=*/true);
 
   // Build one basic block
   BinaryBasicBlock *BB = StubBF->addBasicBlock(/*Label=*/nullptr);
