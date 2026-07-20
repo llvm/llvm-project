@@ -463,7 +463,8 @@ private:
 
   void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
                          WrapperFunctionBuffer ArgBytes) {
-    if (!ManagedCodeTaskGroup->acquireToken()) {
+    TaskGroup::Token T(ManagedCodeTaskGroup);
+    if (!T) {
       // The ManagedCodeTaskGroup is only closed after detach, so if token
       // acquisition fails we don't try to return an error: the controller
       // should already have signalled error to the caller, and we have no
@@ -471,7 +472,8 @@ private:
       return;
     }
 
-    Dispatch([this, CallId, Fn, ArgBytes = std::move(ArgBytes)]() mutable {
+    Dispatch([this, CallId, Fn, ArgBytes = std::move(ArgBytes),
+              T = std::move(T)]() mutable {
       Fn(wrap(this), CallId, &wrapperReturn, ArgBytes.release());
     });
   }
