@@ -8,13 +8,13 @@ define void @test(ptr %r, ptr %p, ptr %q) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[P0]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr [[Q0]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <4 x i64> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[R:%.*]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i64 2
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP3]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP3]], i64 3
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP7]]
 ; CHECK-NEXT:    ret void
 ;
@@ -52,8 +52,8 @@ define void @test(ptr %r, ptr %p, ptr %q) #0 {
 
 define void @test2(ptr %a, ptr %b) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[B:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 1, i64 3>
 ; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>

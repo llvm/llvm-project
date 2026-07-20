@@ -2705,9 +2705,13 @@ class NVVM_MMA_OPS {
   list<list<WMMA_REGS>> bit_mma_ops = MMA_OPS<
             [GEOM<8,8,128>, GEOM<16,8,128>, GEOM<16,8,256>],
             ["b1"], [], ["s32"], []>.ret;
+  list<list<WMMA_REGS>> fp8_mma_ops = MMA_OPS<
+            [GEOM<16,8,16>, GEOM<16,8,32>],
+            ["e4m3", "e5m2"], ["e4m3", "e5m2"], ["f16", "f32"], []>.ret;
   list<list<WMMA_REGS>> all_mma_sync_ops = !listconcat(
             tf32_mma_ops, bf16_mma_ops, f64_mma_ops,
-            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops);
+            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops,
+            fp8_mma_ops);
 
   list<list<WMMA_REGS>> bf16_mma_sp_ops = MMA_OPS<
             [GEOM<16,8,16>, GEOM<16,8,32>],
@@ -3384,9 +3388,9 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     `intOverflowBehavior` is only relevant when the `multiplicandType` attribute
     is one of `u8, s8, u4, s4`, this attribute describes how overflow is handled
     in the accumulator. When the attribute is `satfinite`, the accumulator values
-    are clamped in the int32 range on overflow. This is the default behavior.
-    Alternatively, accumulator behavior `wrapped` can also be specified, in
-    which case overflow wraps from one end of the range to the other.
+    are clamped in the int32 range on overflow. Alternatively, accumulator
+    behavior `wrapped` can be specified (this is the default), in which case
+    overflow wraps from one end of the range to the other.
 
     `layoutA` and `layoutB` are required and should generally be set to
     `#nvvm.mma_layout<row>` and `#nvvm.mma_layout<col>` respectively, but other
@@ -3477,9 +3481,16 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 
   string llvmBuilder = [{
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+    // `intOverflowBehavior` is optional and defaults to `wrapped` when omitted.
+    // We initialize it to a concrete value so that the intrinsic selector never
+    // speculatively reads an empty optional's uninitialized payload (benign,
+    // but flagged by Valgrind).
+    std::optional<mlir::NVVM::MMAIntOverflow> intOverflow = mlir::NVVM::MMAIntOverflow::wrapped;
+    if (mlir::NVVM::MMAIntOverflowAttr satAttr = op.getIntOverflowBehaviorAttr())
+      intOverflow = satAttr.getValue();
     auto intId = mlir::NVVM::MmaOp::getIntrinsicID(
         $shape.getM(), $shape.getN(), $shape.getK(),
-        $b1Op, $intOverflowBehavior,
+        $b1Op, intOverflow,
         $layoutA, $layoutB,
         *$multiplicandAPtxType,
         *$multiplicandBPtxType,

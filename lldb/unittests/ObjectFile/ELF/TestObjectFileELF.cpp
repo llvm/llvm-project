@@ -310,7 +310,7 @@ Sections:
   EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, arch.GetCore());
   EXPECT_EQ(model.name, arch.GetClangTargetCPU());
   bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
-  EXPECT_EQ(is_gcn ? llvm::Triple::amdgcn : llvm::Triple::r600,
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
             arch.GetTriple().getArch());
   EXPECT_EQ(llvm::Triple::AMD, arch.GetTriple().getVendor());
   EXPECT_EQ(llvm::Triple::AMDHSA, arch.GetTriple().getOS());

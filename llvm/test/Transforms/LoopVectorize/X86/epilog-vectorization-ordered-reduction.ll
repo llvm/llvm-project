@@ -135,12 +135,12 @@ define float @ordered_reduction_epilogue_single_vector_iterations(ptr %p, i64 %n
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[RESUME:%.*]] = phi i64 [ 64, %[[VEC_EPILOG_ITER_CHECK]] ]
-; CHECK-NEXT:    [[RESUME5:%.*]] = phi float [ [[TMP7]], %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX8:%.*]] = phi float [ [[TMP7]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[RESUME]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[RESUME5]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[FADD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[BC_MERGE_RDX8]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[FADD:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[FADD]] = fadd float [[RED]], [[LOAD]]
@@ -210,12 +210,12 @@ define float @ordered_reduction_nonzero_start_single_iteration_vector_loops(ptr 
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[RESUME:%.*]] = phi i64 [ 64, %[[VEC_EPILOG_ITER_CHECK]] ]
-; CHECK-NEXT:    [[RESUME5:%.*]] = phi float [ [[TMP7]], %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX8:%.*]] = phi float [ [[TMP7]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[RESUME]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[RESUME5]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[FADD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[BC_MERGE_RDX8]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[FADD:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[FADD]] = fadd float [[RED]], [[LOAD]]

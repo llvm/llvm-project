@@ -6039,6 +6039,14 @@ Constant *llvm::UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy) {
   return nullptr;
 }
 
+static std::optional<StringRef> getModuleFlagNameSafely(const MDNode &Flag) {
+  if (Flag.getNumOperands() < 3)
+    return std::nullopt;
+  if (MDString *Name = dyn_cast_or_null<MDString>(Flag.getOperand(1)))
+    return Name->getString();
+  return std::nullopt;
+}
+
 /// Check the debug info version number, if it is out-dated, drop the debug
 /// info. Return true if module is modified.
 bool llvm::UpgradeDebugInfo(Module &M) {
@@ -6052,10 +6060,8 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   unsigned Version = 0;
   if (NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
     auto OpIt = find_if(ModFlags->operands(), [](const MDNode *Flag) {
-      if (Flag->getNumOperands() < 3)
-        return false;
-      if (MDString *K = dyn_cast_or_null<MDString>(Flag->getOperand(1)))
-        return K->getString() == "Debug Info Version";
+      if (auto Name = getModuleFlagNameSafely(*Flag))
+        return *Name == "Debug Info Version";
       return false;
     });
     if (OpIt != ModFlags->op_end()) {
@@ -6372,12 +6378,123 @@ void llvm::UpgradeARCRuntime(Module &M) {
     UpgradeToIntrinsic(I.first, I.second);
 }
 
+// Upgrade the way signing of pointers to init/fini functions is described.
+//
+// Originally, the `@llvm.global_(ctors|dtors)` arrays contained `ptrauth`
+// constants, if signing was requested. After the upgrade, these arrays contain
+// plain function pointers and the desired signing schema is described via a
+// pair of module flags.
+//
+// Note that the upgrade is only performed if all elements of *both* arrays
+// agree on a common signing schema.
+static bool upgradePtrauthInitFiniArrays(Module &M) {
+  // As we cannot always decide whether the particular module should have
+  // ptrauth-init-fini flags, we have to treat absent flags as having zero
+  // values for compatibility reasons. Thus, upgradePtrauthInitFiniArrays
+  // returns as soon as it spots any non-signed init/fini pointer: either we
+  // should request non-signed pointers (safe to omit both flags) or there is
+  // no common schema (and thus we do not modify anything).
+  //
+  // UseAddressDisc's value either represents "not decided yet" state (nullopt)
+  // or whether we should request address diversity in addition to the basic
+  // constant diversity. There is no value representing "decided not to sign"
+  // for the reasons explained above.
+  std::optional<bool> UseAddressDisc;
+
+  // Do not attempt upgrading if the new module flags already exist.
+  if (const NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
+    for (const MDNode *Flag : ModFlags->operands()) {
+      std::optional<StringRef> Name = getModuleFlagNameSafely(*Flag);
+      if (Name && (*Name == "ptrauth-init-fini" ||
+                   *Name == "ptrauth-init-fini-address-discrimination"))
+        return false;
+    }
+  }
+
+  auto UpgradeSinglePointer = [&UseAddressDisc](Constant *CV) -> Constant * {
+    constexpr unsigned ExpectedConstDisc = 0xD9D4;
+    constexpr unsigned ExpectedAddressMarker = 1;
+
+    auto *CPA = dyn_cast<ConstantPtrAuth>(CV);
+    if (!CPA || !CPA->getDiscriminator()->equalsInt(ExpectedConstDisc))
+      return nullptr; // Nothing to upgrade or unknown pattern found.
+
+    bool HasAddressDisc;
+    if (!CPA->hasAddressDiscriminator())
+      HasAddressDisc = false;
+    else if (CPA->hasSpecialAddressDiscriminator(ExpectedAddressMarker))
+      HasAddressDisc = true;
+    else
+      return nullptr; // Unknown pattern.
+
+    if (UseAddressDisc && *UseAddressDisc != HasAddressDisc)
+      return nullptr; // Disagreement with the decided mode.
+
+    UseAddressDisc = HasAddressDisc;
+    return CPA->getPointer();
+  };
+
+  // Do not apply any changes until we know the upgrade is non-ambiguous.
+  using PendingUpgrade = std::pair<GlobalVariable *, Constant *>;
+  SmallVector<PendingUpgrade, 2> GlobalArraysToUpgrade;
+
+  for (const char *Name : {"llvm.global_ctors", "llvm.global_dtors"}) {
+    auto *GV = dyn_cast_if_present<GlobalVariable>(M.getNamedValue(Name));
+    if (!GV || !GV->hasInitializer())
+      continue; // Skip, but it is okay to upgrade the other variable.
+
+    auto *OldStructorsArray = dyn_cast<ConstantArray>(GV->getInitializer());
+    if (!OldStructorsArray || OldStructorsArray->getNumOperands() == 0)
+      return false;
+
+    std::vector<Constant *> NewStructors;
+    NewStructors.reserve(OldStructorsArray->getNumOperands());
+
+    for (Use &U : OldStructorsArray->operands()) {
+      ConstantStruct *Structor = dyn_cast<ConstantStruct>(U.get());
+      if (!Structor || Structor->getNumOperands() != 3)
+        return false;
+
+      Constant *Prio = Structor->getOperand(0);
+      Constant *Func = Structor->getOperand(1);
+      Constant *Arg = Structor->getOperand(2);
+
+      Func = UpgradeSinglePointer(Func);
+      if (!Func)
+        return false;
+
+      NewStructors.push_back(
+          ConstantStruct::get(Structor->getType(), {Prio, Func, Arg}));
+    }
+
+    Constant *NewInit =
+        ConstantArray::get(OldStructorsArray->getType(), NewStructors);
+    GlobalArraysToUpgrade.emplace_back(GV, NewInit);
+  }
+
+  if (GlobalArraysToUpgrade.empty())
+    return false;
+  assert(UseAddressDisc.has_value());
+
+  for (auto [GV, NewInit] : GlobalArraysToUpgrade)
+    GV->setInitializer(NewInit);
+
+  M.addModuleFlag(Module::Error, "ptrauth-init-fini", 1);
+  M.addModuleFlag(Module::Error, "ptrauth-init-fini-address-discrimination",
+                  *UseAddressDisc);
+
+  return true;
+}
+
 bool llvm::UpgradeModuleFlags(Module &M) {
+  bool Changed = false;
+  Changed |= upgradePtrauthInitFiniArrays(M);
+
   NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
   if (!ModFlags)
-    return false;
+    return Changed;
 
-  bool HasObjCFlag = false, HasClassProperties = false, Changed = false;
+  bool HasObjCFlag = false, HasClassProperties = false;
   bool HasSwiftVersionFlag = false;
   uint8_t SwiftMajorVersion, SwiftMinorVersion;
   uint32_t SwiftABIVersion;

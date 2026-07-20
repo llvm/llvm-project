@@ -292,6 +292,8 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
         .Case("0x004", "carmel")
         .Case("0x10", "olympus")
         .Case("0x010", "olympus")
+        .Case("0x11", "rigel")
+        .Case("0x011", "rigel")
         .Default("generic");
   }
 

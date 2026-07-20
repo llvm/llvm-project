@@ -197,14 +197,14 @@ define i64 @find_last_and_any_of(ptr %Dst, ptr %Src) {
 ; CHECK-NEXT:    [[TMP37:%.*]] = freeze i1 [[TMP36]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[RESUME:%.*]] = phi i64 [ 0, %[[VECTOR_MEMCHECK]] ], [ 1008, %[[VEC_EPILOG_ITER_CHECK]] ]
-; CHECK-NEXT:    [[RESUME19:%.*]] = phi i32 [ -1, %[[VECTOR_MEMCHECK]] ], [ [[TMP18]], %[[VEC_EPILOG_ITER_CHECK]] ]
-; CHECK-NEXT:    [[RESUME20:%.*]] = phi i1 [ false, %[[VECTOR_MEMCHECK]] ], [ [[TMP20]], %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[VECTOR_MEMCHECK]] ], [ 1008, %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX19:%.*]] = phi i32 [ -1, %[[VECTOR_MEMCHECK]] ], [ [[TMP18]], %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX20:%.*]] = phi i1 [ false, %[[VECTOR_MEMCHECK]] ], [ [[TMP20]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[RESUME]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[RESUME19]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[RES_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ANY:%.*]] = phi i1 [ [[RESUME20]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ANY_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX19]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[RES_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ANY:%.*]] = phi i1 [ [[BC_MERGE_RDX20]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ANY_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[V]], 0

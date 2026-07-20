@@ -408,12 +408,12 @@ define float @fsub_reduction_nsz(ptr %a, ptr %b, ptr %c, i64 %n) #1{
 ; CHECK-EPI-NEXT:    [[TMP24:%.*]] = fsub float [[TMP10]], [[TMP20]]
 ; CHECK-EPI-NEXT:    br label %[[FOR_EXIT]]
 ; CHECK-EPI:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-EPI-NEXT:    [[RESUME:%.*]] = phi i64 [ 1024, %[[VEC_EPILOG_ITER_CHECK]] ]
-; CHECK-EPI-NEXT:    [[RESUME12:%.*]] = phi float [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-EPI-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-EPI-NEXT:    [[BC_MERGE_RDX12:%.*]] = phi float [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-EPI-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-EPI:       [[FOR_BODY]]:
-; CHECK-EPI-NEXT:    [[IV:%.*]] = phi i64 [ [[RESUME]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-EPI-NEXT:    [[ACCUM:%.*]] = phi float [ [[RESUME12]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
+; CHECK-EPI-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-EPI-NEXT:    [[ACCUM:%.*]] = phi float [ [[BC_MERGE_RDX12]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
 ; CHECK-EPI-NEXT:    [[GEP_A:%.*]] = getelementptr half, ptr [[A]], i64 [[IV]]
 ; CHECK-EPI-NEXT:    [[LOAD_A:%.*]] = load half, ptr [[GEP_A]], align 2
 ; CHECK-EPI-NEXT:    [[EXT_A:%.*]] = fpext half [[LOAD_A]] to float

@@ -491,12 +491,12 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[RESUME:%.*]] = phi i64 [ 81, %[[VEC_EPILOG_ITER_CHECK]] ]
-; CHECK-NEXT:    [[RESUME13:%.*]] = phi i8 [ [[TMP2]], %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi i64 [ 81, %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL15:%.*]] = phi i8 [ [[TMP2]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[RESUME]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ [[RESUME13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL14]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL15]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[INNER]] ]
 ; CHECK-NEXT:    [[IV_2_NEXT]] = sub i8 [[IV_2]], [[TRUNC_ADD]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 [[IV_2]], ptr [[GEP_DST]], align 1

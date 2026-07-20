@@ -1004,7 +1004,8 @@ template <typename Opnd_t> struct Argument_match {
       if (R->getOpcode() == Instruction::Call)
         return Val.match(R->getOperand(OpI));
     if (const auto *R = dyn_cast<VPInstruction>(V))
-      if (R->getOpcode() == Instruction::Call)
+      if (R->getOpcode() == Instruction::Call ||
+          R->getOpcode() == VPInstruction::Intrinsic)
         return Val.match(R->getOperand(OpI));
     return false;
   }
@@ -1062,9 +1063,7 @@ struct LiveIn_match {
   }
 };
 
-inline VPInstruction_match<VPInstruction::VScale> m_VScale() {
-  return m_VPInstruction<VPInstruction::VScale>();
-}
+inline auto m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
 
 inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
 

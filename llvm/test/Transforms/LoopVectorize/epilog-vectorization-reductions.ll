@@ -747,11 +747,11 @@ define i16 @test_no_op_or_reduction_single_vector_iteration(i64 %N) {
 ; CHECK-NEXT:    br i1 [[CMP_N5]], label %[[EXIT:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX1:%.*]] = phi i16 [ [[TMP2]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX4:%.*]] = phi i16 [ [[TMP2]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i16 [ [[BC_MERGE_RDX1]], %[[VEC_EPILOG_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i16 [ [[BC_MERGE_RDX4]], %[[VEC_EPILOG_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RED_NEXT]] = or i16 [[RED]], 0
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[CLAMPED]]
@@ -811,14 +811,14 @@ define i16 @test_or_reduction_with_induction_single_vector_iteration(i64 %N) {
 ; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[CLAMPED]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N4]], label %[[EXIT:.*]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[TMP2]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX3:%.*]] = phi i16 [ [[TMP6]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[TMP2]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i16 [ [[TMP6]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SHIFT:%.*]] = phi i32 [ [[BC_RESUME_VAL2]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SHIFT_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i16 [ [[BC_MERGE_RDX3]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL4]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SHIFT:%.*]] = phi i32 [ [[BC_RESUME_VAL5]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SHIFT_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i16 [ [[BC_MERGE_RDX6]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHIFT]] to i16
 ; CHECK-NEXT:    [[RED_NEXT]] = or i16 [[RED]], [[TRUNC]]
 ; CHECK-NEXT:    [[SHIFT_NEXT]] = add i32 [[SHIFT]], 1
@@ -947,12 +947,12 @@ define i64 @reduction_with_ptr_iv_inttoptr_exit_cond(ptr %base, ptr %src) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP22]])
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[RESUME:%.*]] = phi ptr [ [[START]], %[[ITER_CHECK]] ], [ [[TMP24]], %[[VEC_EPILOG_ITER_CHECK]] ]
-; CHECK-NEXT:    [[RESUME3:%.*]] = phi i64 [ 0, %[[ITER_CHECK]] ], [ [[TMP26]], %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[START]], %[[ITER_CHECK]] ], [ [[TMP24]], %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX4:%.*]] = phi i64 [ 0, %[[ITER_CHECK]] ], [ [[TMP26]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV_PTR:%.*]] = phi ptr [ [[RESUME]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_PTR_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ [[RESUME3]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_PTR:%.*]] = phi ptr [ [[BC_RESUME_VAL3]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_PTR_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ [[BC_MERGE_RDX4]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SUM_INC:%.*]] = add i64 [[SUM]], 1
 ; CHECK-NEXT:    [[LOAD_VAL:%.*]] = load i8, ptr [[SRC]], align 1
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[LOAD_VAL]] to i64
