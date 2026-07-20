@@ -1364,15 +1364,14 @@ static HTTPResult handleGetCompareFunctionDetail(CoreClient &Client,
   std::vector<Remark> BeforeRems = collectRemarks(Before);
   std::vector<Remark> AfterRems = collectRemarks(After);
 
-  // Match by (pass, name, type) — group and count
   struct Key { std::string Pass, Name; int64_t Type; };
   auto makeKey = [](const Remark &R) {
     return R.Pass + std::string(1, '\0') + R.Name + std::string(1, '\0') + std::to_string(R.Type);
   };
 
   StringMap<int64_t> BeforeCounts, AfterCounts;
-  StringMap<std::string> AfterFile; // first file seen for each key
-  StringMap<int64_t> AfterLine;      // first line seen for each key
+  StringMap<std::string> AfterFile;
+  StringMap<int64_t> AfterLine;
   for (auto &R : BeforeRems) BeforeCounts[makeKey(R)]++;
   for (auto &R : AfterRems) {
     std::string Key = makeKey(R);
