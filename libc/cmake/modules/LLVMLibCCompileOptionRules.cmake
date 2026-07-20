@@ -169,6 +169,14 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_CONF_WCTYPE_MODE=${LIBC_CONF_WCTYPE_MODE}")
   endif()
 
+  if(LIBC_CONF_DEFAULT_LOCALE)
+    libc_add_definition(config_options "LIBC_CONF_DEFAULT_LOCALE=\"${LIBC_CONF_DEFAULT_LOCALE}\"")
+  endif()
+
+  if(LIBC_CONF_DISABLE_RUNTIME_LOCALE)
+    libc_add_definition(config_options "LIBC_CONF_DISABLE_RUNTIME_LOCALE")
+  endif()
+
   if(LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT)
     libc_add_definition(config_options "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT}")
   endif()
