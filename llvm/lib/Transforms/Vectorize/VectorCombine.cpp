@@ -298,8 +298,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
       if (DL->isBigEndian())
         return false;
       uint64_t OldScalarSizeInBytes = ScalarSizeInBytes;
-      // Assign the greatest common divisor between UnalignedBytes and Offset to
-      // ScalarSizeInBytes
+      // Find the largest integer element size that divides both the scalar
+      // size and the unaligned byte offset.
       ScalarSizeInBytes = std::gcd(ScalarSizeInBytes, UnalignedBytes);
       ScalarSize = ScalarSizeInBytes * 8;
       VectorRange = OldScalarSizeInBytes / ScalarSizeInBytes;
