@@ -145,8 +145,10 @@ void addOpenMPRuntimeLibraryPath(const ToolChain &TC,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
 
-bool addLLVMOffloadingRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
-                                   const ToolChain &TC, const llvm::opt::ArgList &Args);
+bool addLLVMOffloadingRuntime(const Compilation &C,
+                              llvm::opt::ArgStringList &CmdArgs,
+                              const ToolChain &TC,
+                              const llvm::opt::ArgList &Args);
 
 /// Returns true, if an OpenMP runtime has been added.
 bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,

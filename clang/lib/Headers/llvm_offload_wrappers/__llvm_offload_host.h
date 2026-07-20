@@ -11,5 +11,6 @@
 
 extern "C" {
 unsigned __llvmLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
-                            void **args, size_t sharedMem = 0, void *stream = 0);
+                            void **args, size_t sharedMem = 0,
+                            void *stream = 0);
 }

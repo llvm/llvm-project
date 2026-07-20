@@ -489,8 +489,8 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
       Kind, ConstantInt::get(Type::getInt16Ty(C),
                              IsHIP ? object::OffloadKind::OFK_HIP
                                    : object::OffloadKind::OFK_Cuda));
-  auto *KindCond = Builder.CreateICmpNE(
-      KindAnd, ConstantInt::get(Type::getInt16Ty(C), 0));
+  auto *KindCond =
+      Builder.CreateICmpNE(KindAnd, ConstantInt::get(Type::getInt16Ty(C), 0));
   Builder.CreateCondBr(KindCond, IfKindBB, IfEndBB);
   Builder.SetInsertPoint(IfKindBB);
   auto *FnCond = Builder.CreateICmpEQ(

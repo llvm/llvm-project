@@ -5064,7 +5064,8 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     types::ID InputType = Input.first;
     const Arg *InputArg = Input.second;
 
-    // Allow the toolchain to be active for unsupported file types if we are "offload-cross-compiling" via llvm-offload.
+    // Allow the toolchain to be active for unsupported file types if we are
+    // "offload-cross-compiling" via llvm-offload.
     if ((Kind == Action::OFK_Cuda && !types::isCuda(InputType)) ||
         (Kind == Action::OFK_HIP && !types::isHIP(InputType)))
       continue;
@@ -7069,7 +7070,8 @@ const ToolChain &Driver::getOffloadToolChain(
       // For AMDHSA offloading (HIP, OpenMP), use the unified AMDGPUToolChain
       // This handles both amdgpu-amd-amdhsa and spirv64-amd-amdhsa
       // FIXME: This should not key off language or OS.
-      if (Kind == Action::OFK_HIP || Kind == Action::OFK_OpenMP || Kind == Action::OFK_Cuda)
+      if (Kind == Action::OFK_HIP || Kind == Action::OFK_OpenMP ||
+          Kind == Action::OFK_Cuda)
         TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args,
                                                            HostTC.get(), Kind);
       break;

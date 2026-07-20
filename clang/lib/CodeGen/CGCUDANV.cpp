@@ -344,8 +344,8 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
 
 /// CUDA passes the arguments with a level of indirection. For example, a
 /// (void*, short, void*) is passed as {void **, short *, void **} to the launch
-/// function. For the LLVM/Offload launch we include the number of arguments and their size.
-/// Thus, we pass {{void **, short*, void **}, 3, {sizeof(void*),
+/// function. For the LLVM/Offload launch we include the number of arguments and
+/// their size. Thus, we pass {{void **, short*, void **}, 3, {sizeof(void*),
 /// sizeof(short), sizeof(void*)}}.
 Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
                                                       FunctionArgList &Args) {
@@ -382,10 +382,12 @@ Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
         VoidVarPtr, CGF.Builder.CreateConstGEP1_32(
                         PtrTy, KernelArgs.emitRawPointer(CGF), i));
 
-    auto ArgSize = CGM.getDataLayout().getTypeAllocSize( CGM.getTypes().ConvertType(Args[i]->getType()));
+    auto ArgSize = CGM.getDataLayout().getTypeAllocSize(
+        CGM.getTypes().ConvertType(Args[i]->getType()));
     CGF.Builder.CreateDefaultAlignedStore(
-        llvm::ConstantInt::get(SizeTy, ArgSize), CGF.Builder.CreateConstGEP1_32(
-                        PtrTy, KernelArgSizes.emitRawPointer(CGF), i));
+        llvm::ConstantInt::get(SizeTy, ArgSize),
+        CGF.Builder.CreateConstGEP1_32(PtrTy,
+                                       KernelArgSizes.emitRawPointer(CGF), i));
   }
 
   return KernelLaunchParams;
@@ -417,8 +419,8 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
   bool UsesLLVMOffloading = CGF.getLangOpts().OffloadViaLLVM;
   // Build the shadow stack entry at the very start of the function.
   Address KernelArgs = UsesLLVMOffloading
-                          ? prepareKernelArgsLLVMOffload(CGF, Args) :
-                            prepareKernelArgs(CGF, Args);
+                           ? prepareKernelArgsLLVMOffload(CGF, Args)
+                           : prepareKernelArgs(CGF, Args);
 
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
 
@@ -963,9 +965,12 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   Values.add(FatBinStr);
   // Unused in fatbin v1.
   if (CGM.getLangOpts().OffloadViaLLVM && CudaGpuBinary)
-    Values.add(llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, FatBinStr, llvm::ConstantInt::get(CGM.Int32Ty, CudaGpuBinary->getBuffer().size())));
+    Values.add(llvm::ConstantExpr::getGetElementPtr(
+        CGM.Int8Ty, FatBinStr,
+        llvm::ConstantInt::get(CGM.Int32Ty,
+                               CudaGpuBinary->getBuffer().size())));
   else
-   Values.add(llvm::ConstantPointerNull::get(PtrTy));
+    Values.add(llvm::ConstantPointerNull::get(PtrTy));
   llvm::GlobalVariable *FatbinWrapper = Values.finishAndCreateGlobal(
       addUnderscoredPrefixToName("_fatbin_wrapper"), CGM.getPointerAlign(),
       /*constant*/ true);
@@ -1296,11 +1301,13 @@ void CGNVCUDARuntime::createOffloadingEntries() {
                                        : llvm::object::OffloadKind::OFK_Cuda;
 
   // For offload via llvm it doesn't matter if the source is HIP or CUDA or
-  // something else. The bundler will allow LLVM offload kinds for all languages.
+  // something else. The bundler will allow LLVM offload kinds for all
+  // languages.
   if (CGM.getLangOpts().OffloadViaLLVM)
     Kind = llvm::object::OffloadKind::OFK_LLVM;
 
-  llvm::errs() << __PRETTY_FUNCTION__ << " : : " << EmittedKernels.size() << "\n";
+  llvm::errs() << __PRETTY_FUNCTION__ << " : : " << EmittedKernels.size()
+               << "\n";
   llvm::Module &M = CGM.getModule();
   for (KernelInfo &I : EmittedKernels)
     llvm::offloading::emitOffloadingEntry(

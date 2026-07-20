@@ -39,8 +39,7 @@ static inline hipError_t hipHostMalloc(T **Ptr, size_t Size,
   return ::hipHostMalloc((void **)Ptr, Size, Flags);
 }
 
-template <class T>
-static inline hipError_t hipHostFree(T *Ptr) {
+template <class T> static inline hipError_t hipHostFree(T *Ptr) {
   return ::hipHostFree((void *)Ptr);
 }
 

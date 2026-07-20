@@ -586,8 +586,7 @@ Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
 }
 
 Error olElfIsCompatibleWithDevice_impl(ol_device_handle_t Device,
-                                       const void *ElfData,
-                                       size_t ElfSize,
+                                       const void *ElfData, size_t ElfSize,
                                        bool *IsCompatible) {
   GenericDeviceTy *DeviceTy = Device->Device;
   int32_t DeviceId = DeviceTy->getDeviceId();
@@ -602,7 +601,6 @@ Error olElfIsCompatibleWithDevice_impl(ol_device_handle_t Device,
   *IsCompatible = *ResultOrErr;
   return Error::success();
 }
-
 
 TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
   switch (Type) {

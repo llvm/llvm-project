@@ -74,25 +74,26 @@ __LLVM_OFFLOAD_DEVICE_ATTR inline void __syncthreads(void) {
 #pragma push_macro("__GPU_COORD_BUILTIN")
 #if __LLVM_OFFLOAD_HAS_GPU_INTRINSICS
 #pragma push_macro("__GPU_COORD_GETTER")
-#define __GPU_COORD_GETTER(__expr) { return __expr; }
+#define __GPU_COORD_GETTER(__expr)                                             \
+  {                                                                            \
+    return __expr;                                                             \
+  }
 
 #define __GPU_COORD_BUILTIN(__tag, __fx, __fy, __fz)                           \
   struct __tag {                                                               \
     __declspec(property(get = __get_x)) unsigned int x;                        \
     __declspec(property(get = __get_y)) unsigned int y;                        \
     __declspec(property(get = __get_z)) unsigned int z;                        \
-    static inline __LLVM_OFFLOAD_DEVICE_ATTR __attribute__((always_inline))    \
-    unsigned int                                                               \
-    __get_x() __GPU_COORD_GETTER(__fx)                                         \
-    static inline __LLVM_OFFLOAD_DEVICE_ATTR __attribute__((always_inline))    \
-    unsigned int                                                               \
-    __get_y() __GPU_COORD_GETTER(__fy)                                         \
-    static inline __LLVM_OFFLOAD_DEVICE_ATTR __attribute__((always_inline))    \
-    unsigned int                                                               \
-    __get_z() __GPU_COORD_GETTER(__fz)                                         \
+  static inline __LLVM_OFFLOAD_DEVICE_ATTR                                     \
+      __attribute__((always_inline)) unsigned int                              \
+      __get_x()                                                                \
+          __GPU_COORD_GETTER(__fx) static inline __LLVM_OFFLOAD_DEVICE_ATTR    \
+      __attribute__((always_inline)) unsigned int __get_y()                    \
+          __GPU_COORD_GETTER(__fy) static inline __LLVM_OFFLOAD_DEVICE_ATTR    \
+      __attribute__((always_inline)) unsigned int __get_z()                    \
+          __GPU_COORD_GETTER(__fz)                                             \
                                                                                \
-  private:                                                                     \
-    __GPU_DISALLOW_BUILTINVAR_ACCESS(__tag);                                   \
+              private : __GPU_DISALLOW_BUILTINVAR_ACCESS(__tag);               \
   }
 #else
 #define __GPU_COORD_BUILTIN(__tag, __fx, __fy, __fz)                           \
@@ -121,7 +122,8 @@ __GPU_COORD_BUILTIN(__gpu_builtin_gridDim_t, __gpu_num_blocks_x(),
 #pragma pop_macro("__GPU_COORD_BUILTIN")
 #pragma pop_macro("__GPU_DISALLOW_BUILTINVAR_ACCESS")
 
-extern const __LLVM_OFFLOAD_DEVICE_WEAK_ATTR __gpu_builtin_threadIdx_t threadIdx;
+extern const __LLVM_OFFLOAD_DEVICE_WEAK_ATTR __gpu_builtin_threadIdx_t
+    threadIdx;
 extern const __LLVM_OFFLOAD_DEVICE_WEAK_ATTR __gpu_builtin_blockIdx_t blockIdx;
 extern const __LLVM_OFFLOAD_DEVICE_WEAK_ATTR __gpu_builtin_blockDim_t blockDim;
 extern const __LLVM_OFFLOAD_DEVICE_WEAK_ATTR __gpu_builtin_gridDim_t gridDim;

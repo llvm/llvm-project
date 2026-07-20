@@ -132,7 +132,7 @@ struct AMDGPUKernelArgumentInfo {
 /// Container for the kernel argument layout, as read from MetaData.
 struct AMDGPUKernelArgumentLayout {
   SmallVector<AMDGPUKernelArgumentInfo, 32> Arguments;
-  int32_t NumUserArguments = -1; 
+  int32_t NumUserArguments = -1;
 };
 
 /// Struct for holding metadata related to AMDGPU kernels, for more information

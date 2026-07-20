@@ -41,7 +41,8 @@
 #define FreeHost COMBINE(LANGUAGE, FreeHost)
 #define DriverGetVersion COMBINE(LANGUAGE, DriverGetVersion)
 #define GetDeviceProperties COMBINE(LANGUAGE, GetDeviceProperties)
-#define OccupancyMaxPotentialBlockSizeVariableSMem COMBINE(LANGUAGE, OccupancyMaxPotentialBlockSizeVariableSMem)
+#define OccupancyMaxPotentialBlockSizeVariableSMem                             \
+  COMBINE(LANGUAGE, OccupancyMaxPotentialBlockSizeVariableSMem)
 #define Stream_t COMBINE(LANGUAGE, Stream_t)
 #define StreamCreate COMBINE(LANGUAGE, StreamCreate)
 #define StreamCreateWithFlags COMBINE(LANGUAGE, StreamCreateWithFlags)

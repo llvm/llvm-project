@@ -144,8 +144,8 @@ static inline Error_t OccupancyMaxPotentialBlockSizeVariableSMem(
 #include <gpuintrin.h>
 
 #define __LLVM_OFFLOAD_DEVICE_BUILTIN(FIELD, OFFSET)                           \
-  __declspec(                                                                  \
-      property(get = __get_##FIELD, put = __put_##FIELD)) unsigned int FIELD;  \
+  __declspec(property(get = __get_##FIELD,                                     \
+                      put = __put_##FIELD)) unsigned int FIELD;                \
   __device__ inline __attribute__((always_inline)) T __get_##FIELD(void)       \
       const {                                                                  \
     return Vec[OFFSET];                                                        \
@@ -159,11 +159,11 @@ template <class T, int Size> struct BaseVector {
   VT Vec;
 
   __device__ __host__ BaseVector() = default;
-//  __device__ __host__ BaseVector(std::initializer_list<T> List) {
-//    auto It = List.begin();
-//    for (int I = 0, E = List.size(); I < E; ++I, ++It)
-//      Vec[I] = *It;
-//  }
+  //  __device__ __host__ BaseVector(std::initializer_list<T> List) {
+  //    auto It = List.begin();
+  //    for (int I = 0, E = List.size(); I < E; ++I, ++It)
+  //      Vec[I] = *It;
+  //  }
 
   template <typename... Args>
   __device__ __host__ BaseVector(Args... args) : BaseVector({args...}) {}

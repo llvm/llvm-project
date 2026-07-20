@@ -69,7 +69,7 @@ ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
     size_t NumArgs;
     size_t *ArgSizes;
   };
-  OffloadKernelArgs *OKA = reinterpret_cast<OffloadKernelArgs*>(KernelArgsPtr);
+  OffloadKernelArgs *OKA = reinterpret_cast<OffloadKernelArgs *>(KernelArgsPtr);
 
   ol_result_t Result;
   Result = olLaunchKernel(Queue, Device, Kernel, &LaunchSizeArgs, &Properties,
@@ -81,9 +81,8 @@ ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
   unsigned __llvmLaunchKernel##SUFFIX(const char *KernelID, dim3 GridDim,      \
                                       dim3 BlockDim, void *KernelArgsPtr,      \
                                       size_t DynamicSharedMem, void *Stream) { \
-    ol_result_t Result =                                                       \
-        __llvmLaunchKernelImpl(KernelID, GridDim, BlockDim, KernelArgsPtr,     \
-                               DynamicSharedMem, Stream);                \
+    ol_result_t Result = __llvmLaunchKernelImpl(                               \
+        KernelID, GridDim, BlockDim, KernelArgsPtr, DynamicSharedMem, Stream); \
     return Result ? Result->Code : 0;                                          \
   }
 
