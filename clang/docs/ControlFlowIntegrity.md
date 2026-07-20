@@ -209,7 +209,7 @@ shared library boundaries are handled as if the callee was not compiled with
 `-fsanitize=cfi-icall`.
 
 This scheme is currently supported on a limited set of targets: x86,
-x86_64, arm, arch64 and wasm.
+x86_64, arm, arch64, wasm and Hexagon.
 
 ### `-fsanitize-cfi-icall-generalize-pointers`
 
