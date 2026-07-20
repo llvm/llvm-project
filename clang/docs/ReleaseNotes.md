@@ -58,6 +58,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Clang Python Bindings Potentially Breaking Changes
 
+- Remove the deprecated `SPELLING_CACHE` alias.
+  All usage should be migrated to use `CompletionChunk.SPELLING_CACHE` instead.
+  Note that this uses `CompletionChunkKind` as keys, instead of the enum values.
+
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
