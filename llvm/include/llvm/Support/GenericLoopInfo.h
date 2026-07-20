@@ -59,11 +59,13 @@ template <class N, class M> class PopulateLoopsDFS;
 class LoopRef {
   void *Ptr = nullptr;
 
-  explicit LoopRef(void *Ptr) : Ptr(Ptr) {}
   template <class N, class M> friend class LoopInfoBase;
 
 public:
   LoopRef() = default;
+  template <class BlockT, class LoopT>
+  LoopRef(const LoopBase<BlockT, LoopT> *L)
+      : Ptr(static_cast<LoopT *>(const_cast<LoopBase<BlockT, LoopT> *>(L))) {}
   bool isValid() const { return Ptr != nullptr; }
   explicit operator bool() const { return isValid(); }
   bool operator==(LoopRef O) const { return Ptr == O.Ptr; }
@@ -652,9 +654,7 @@ public:
     return L ? L->getLoopDepth() : 0;
   }
 
-  /// The handle for a loop of this LoopInfo; an invalid handle for null.
-  LoopRef ref(const LoopT *L) const { return LoopRef(const_cast<LoopT *>(L)); }
-
+  /// Edge type.
   using Edge = std::pair<BlockT *, BlockT *>;
 
   /// Return true if \p L does not have any exit blocks.

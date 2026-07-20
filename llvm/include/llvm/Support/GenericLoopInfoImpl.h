@@ -168,7 +168,7 @@ BlockT *LoopInfoBase<BlockT, LoopT>::getUniqueLatchExitBlock(LoopRef L) const {
     assert(!AllowRepeats && "Unexpected parameter value.");
     return !Lp->contains(BB) ? BB : nullptr;
   };
-  return find_singleton<BlockT>(llvm::children<BlockT *>(Latch), IsExitBlock);
+  return find_singleton<BlockT>(children<BlockT *>(Latch), IsExitBlock);
 }
 
 /// getExitEdges - Return all pairs of (_inside_block_,_outside_block_).
@@ -176,9 +176,8 @@ template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::getExitEdges(
     LoopRef L, SmallVectorImpl<Edge> &ExitEdges) const {
   const LoopT *Lp = deref(L);
-  assert(!Lp->isInvalid() && "Loop not in a valid state!");
   for (const auto BB : Lp->blocks())
-    for (auto *Succ : llvm::children<BlockT *>(BB))
+    for (auto *Succ : children<BlockT *>(BB))
       if (!Lp->contains(Succ))
         // Not in current loop? It must be an exit block.
         ExitEdges.emplace_back(BB, Succ);

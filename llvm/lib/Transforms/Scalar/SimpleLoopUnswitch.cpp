@@ -509,7 +509,7 @@ static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
   // no-longer-containing loops to reflect the nesting change.
   for (Loop *OldContainingL = OldParentL; OldContainingL != NewParentL;
        OldContainingL = OldContainingL->getParentLoop()) {
-    LI.removeBlocksIf(LI.ref(OldContainingL), [&](const BasicBlock *BB) {
+    LI.removeBlocksIf(OldContainingL, [&](const BasicBlock *BB) {
       return BB == &Preheader || L.contains(BB);
     });
 
@@ -588,7 +588,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
 
   std::optional<int> LatchIdx = std::nullopt;
   auto *LoopLatch = L.getLoopLatch();
-  auto *ULExit = LI.getUniqueLatchExitBlock(LI.ref(&L));
+  auto *ULExit = LI.getUniqueLatchExitBlock(&L);
   if (SE && FullUnswitch && ULExit) {
     if (BI.getSuccessor(0) == LoopLatch && L.contains(BI.getSuccessor(1)))
       LatchIdx = 0;
@@ -1841,7 +1841,7 @@ static void deleteDeadBlocksFromLoop(Loop &L,
 
   // Walk from this loop up through its parents removing all of the dead blocks.
   for (Loop *ParentL = &L; ParentL; ParentL = ParentL->getParentLoop())
-    LI.removeBlocksIf(LI.ref(ParentL),
+    LI.removeBlocksIf(ParentL,
                       [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
   // Now delete the dead child loops. Run the per-child deletion callbacks
@@ -1862,7 +1862,7 @@ static void deleteDeadBlocksFromLoop(Loop &L,
     if (SE)
       SE->forgetBlockAndLoopDispositions();
   }
-  for (Loop *ChildL : LI.takeChildrenIf(LI.ref(&L), [&](Loop *ChildL) {
+  for (Loop *ChildL : LI.takeChildrenIf(&L, [&](Loop *ChildL) {
          return DeadBlockSet.count(ChildL->getHeader());
        }))
     LI.destroy(ChildL);
@@ -2041,9 +2041,8 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
   if (!LoopBlockSet.empty() && L.getParentLoop() != ParentL) {
     // Remove this loop's (original) blocks from all of the intervening loops.
     for (Loop *IL = L.getParentLoop(); IL != ParentL; IL = IL->getParentLoop())
-      LI.removeBlocksIf(LI.ref(IL), [&](BasicBlock *BB) {
-        return BB == PH || L.contains(BB);
-      });
+      LI.removeBlocksIf(
+          IL, [&](BasicBlock *BB) { return BB == PH || L.contains(BB); });
 
     LI.changeLoopFor(PH, ParentL);
     L.getParentLoop()->removeChildLoop(&L);
@@ -2056,7 +2055,7 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
   // Now we update all the blocks which are no longer within the loop, building
   // the set of them as they are removed.
   SmallPtrSet<BasicBlock *, 16> UnloopedBlocks;
-  LI.removeBlocksIf(LI.ref(&L), [&](BasicBlock *BB) {
+  LI.removeBlocksIf(&L, [&](BasicBlock *BB) {
     if (LoopBlockSet.count(BB))
       return false;
     UnloopedBlocks.insert(BB);
@@ -2077,9 +2076,8 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
 
   auto RemoveUnloopedBlocksFromLoop =
       [&LI](Loop &L, SmallPtrSetImpl<BasicBlock *> &UnloopedBlocks) {
-        LI.removeBlocksIf(LI.ref(&L), [&](BasicBlock *BB) {
-          return UnloopedBlocks.count(BB);
-        });
+        LI.removeBlocksIf(
+            &L, [&](BasicBlock *BB) { return UnloopedBlocks.count(BB); });
       };
 
   SmallVector<BasicBlock *, 16> Worklist;
@@ -2154,7 +2152,7 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
 
   // Sink all the child loops whose headers are no longer in the loop set to
   // the parent (or to be top level loops).
-  for (Loop *HoistedL : LI.takeChildrenIf(LI.ref(&L), [&](Loop *SubL) {
+  for (Loop *HoistedL : LI.takeChildrenIf(&L, [&](Loop *SubL) {
          return !LoopBlockSet.count(SubL->getHeader());
        })) {
     HoistedLoops.push_back(HoistedL);

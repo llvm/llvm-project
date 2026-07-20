@@ -183,7 +183,7 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
   // Any candidate (sibling of NewLoop, or top-level loop if there is no
   // parent) is a child iff its header is owned by the new loop.
   SmallVector<Loop *, 4> ChildLoops =
-      LI.takeChildrenIf(LI.ref(ParentLoop), [&](Loop *L) {
+      LI.takeChildrenIf(ParentLoop, [&](Loop *L) {
         return NewLoop != L && NewLoop->contains(L->getHeader());
       });
 
@@ -201,7 +201,7 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
                           << "\n");
       }
       for (Loop *GrandChildLoop :
-           LI.takeChildrenIf(LI.ref(Child), [](const Loop *) { return true; }))
+           LI.takeChildrenIf(Child, [](const Loop *) { return true; }))
         NewLoop->addChildLoop(GrandChildLoop);
       LI.destroy(Child);
       LLVM_DEBUG(dbgs() << "subsumed child loop (common header)\n");
