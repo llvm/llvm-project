@@ -36,9 +36,19 @@ define i32 @cmp_tsan(ptr nocapture readonly %x, ptr nocapture readonly %y) sanit
   ret i32 %call
 }
 
+define i32 @cmp_csan(ptr nocapture readonly %x, ptr nocapture readonly %y) sanitize_concurrency {
+; CHECK-LABEL: define i32 @cmp_csan(
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(ptr [[X]], ptr [[Y]], i64 4)
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+  %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 4)
+  ret i32 %call
+}
+
 define i32 @cmp_hwasan(ptr nocapture readonly %x, ptr nocapture readonly %y) sanitize_hwaddress {
 ; CHECK-LABEL: define i32 @cmp_hwasan(
-; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(ptr [[X]], ptr [[Y]], i64 4)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;

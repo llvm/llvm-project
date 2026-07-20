@@ -1008,6 +1008,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::SanitizeMemory:
       case Attribute::SanitizeNumericalStability:
       case Attribute::SanitizeThread:
+      case Attribute::SanitizeConcurrency:
       case Attribute::SanitizeType:
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:

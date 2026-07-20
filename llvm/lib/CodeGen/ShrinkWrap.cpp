@@ -1051,6 +1051,7 @@ bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
            // sanitizers to be able to get a correct stack frame.
            !(MF.getFunction().hasFnAttribute(Attribute::SanitizeAddress) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeThread) ||
+             MF.getFunction().hasFnAttribute(Attribute::SanitizeConcurrency) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeMemory) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeType) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeHWAddress));

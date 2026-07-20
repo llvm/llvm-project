@@ -1827,7 +1827,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #87
+  ; CHECK: call void @f.nobuiltin() #88
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -2536,6 +2536,9 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
   ret void
 }
 
+declare void @f.sanitize_concurrency() sanitize_concurrency
+; CHECK: declare void @f.sanitize_concurrency() #87
+
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }
 ; CHECK: attributes #2 = { alwaysinline }
@@ -2623,7 +2626,8 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
 ; CHECK: attributes #84 = { denormal_fpenv(float: dynamic|positivezero) }
 ; CHECK: attributes #85 = { denormal_fpenv(float: dynamic) }
 ; CHECK: attributes #86 = { denormal_fpenv(preservesign, float: dynamic) }
-; CHECK: attributes #87 = { builtin }
+; CHECK: attributes #87 = { sanitize_concurrency }
+; CHECK: attributes #88 = { builtin }
 
 ;; Metadata
 

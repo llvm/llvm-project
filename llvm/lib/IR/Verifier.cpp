@@ -2555,6 +2555,12 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
         "'sanitize_realtime and sanitize_realtime_blocking' are incompatible!",
         V);
 
+  Check(!(Attrs.hasFnAttr(Attribute::SanitizeThread) &&
+          Attrs.hasFnAttr(Attribute::SanitizeConcurrency)),
+        "Attributes 'sanitize_thread and sanitize_concurrency' are "
+        "incompatible!",
+        V);
+
   if (Attrs.hasFnAttr(Attribute::OptimizeForDebugging)) {
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
           "Attributes 'optsize and optdebug' are incompatible!", V);

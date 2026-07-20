@@ -444,6 +444,7 @@ static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
   const Function &F = *CtxI.getFunction();
   // Speculative load may create a race that did not exist in the source.
   return F.hasFnAttribute(Attribute::SanitizeThread) ||
+         F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
          // Speculative load may load data from dirty regions.
          F.hasFnAttribute(Attribute::SanitizeAddress) ||
          F.hasFnAttribute(Attribute::SanitizeHWAddress);
