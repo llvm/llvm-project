@@ -63,11 +63,19 @@ install(
 )
 
 foreach(file ${added_bitcode_targets})
-  install(FILES $<TARGET_FILE:${file}>
-          DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-          RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
-          COMPONENT libc
-  )
+  if(CMAKE_HOST_WIN32)
+    install(FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
+            DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+            RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
+            COMPONENT libc
+    )
+  else()
+    install(FILES $<TARGET_FILE:${file}>
+            DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+            RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
+            COMPONENT libc
+    )
+  endif()
 endforeach()
 
 # Add empty archive libraries for compatibility with systems expecting certain
