@@ -141,10 +141,9 @@ static cl::opt<bool> EnableExtToTBL("aarch64-enable-ext-to-tbl", cl::Hidden,
                                     cl::desc("Combine ext and trunc to TBL"),
                                     cl::init(true));
 
-static cl::opt<bool> EnableSveMultiVectorLowering(
-    "aarch64-enable-sve-multivector-lowering", cl::Hidden,
-    cl::desc("Enable lowering of oversized SVE loads and stores that are two"
-             "or four times the width of a legeal SVE type to multi-vector "
+static cl::opt<bool> EnableSME2MultiVectorStoreLowering(
+    "aarch64-enable-sme2-multivector-store-lowering", cl::Hidden,
+    cl::desc("Enable lowering of oversized SVE stores to SME2 multi-vector "
              "operations."),
     cl::init(false));
 
@@ -2109,6 +2108,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          (Subtarget->hasSME2() && Subtarget->isStreaming()))) {
 
       for (unsigned Opcode : {ISD::LOAD, ISD::STORE}) {
+        if (Opcode == ISD::STORE && Subtarget->hasSME2() &&
+            Subtarget->isStreaming() && !EnableSME2MultiVectorStoreLowering)
+          continue;
+
         // 2x multi-vector load/stores
         setOperationAction(Opcode, MVT::nxv32i8, Custom);
         setOperationAction(Opcode, MVT::nxv16i16, Custom);
@@ -7898,9 +7901,8 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   }
 
   if (VT.isVector()) {
-    if (EnableSveMultiVectorLowering)
-      if (SDValue Store = tryLowerMultiVectorStore(StoreNode, DAG))
-        return Store;
+    if (SDValue Store = tryLowerMultiVectorStore(StoreNode, DAG))
+      return Store;
 
     if (useSVEForFixedLengthVectorVT(
             VT,
@@ -32242,9 +32244,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
     }
 
     if (auto *Load = dyn_cast<LoadSDNode>(N))
-      if (EnableSveMultiVectorLowering)
-        if (tryLowerMultiVectorLoad(Load, Results, DAG))
-          return;
+      if (tryLowerMultiVectorLoad(Load, Results, DAG))
+        return;
 
     if ((!LoadNode->isVolatile() && !LoadNode->isAtomic()) ||
         LoadNode->getMemoryVT() != MVT::i128) {
