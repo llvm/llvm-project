@@ -4173,8 +4173,12 @@ void CodeGenFunction::EmitCheck(
       GuardedCheck = Builder.CreateOr(Check, Builder.CreateNot(Allow));
     }
 
-    // -fsanitize-trap= overrides -fsanitize-recover=.
-    llvm::Value *&Cond = CGM.getCodeGenOpts().SanitizeTrap.has(Ord) ? TrapCond
+    // -fsanitize-trap= overrides -fsanitize-recover=. A check the std::core_ub
+    // profile (P4317) turned on always traps, even when -fsanitize-trap does
+    // not name it: the profile's response to a violation is termination.
+    bool IsTrap =
+        CGM.getCodeGenOpts().SanitizeTrap.has(Ord) || isProfileTrapCheck(Ord);
+    llvm::Value *&Cond = IsTrap ? TrapCond
                          : CGM.getCodeGenOpts().SanitizeRecover.has(Ord)
                              ? RecoverableCond
                              : FatalCond;

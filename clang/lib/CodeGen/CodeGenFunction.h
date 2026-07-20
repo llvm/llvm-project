@@ -577,6 +577,17 @@ public:
   /// Sanitizers enabled for this function.
   SanitizerSet SanOpts;
 
+  /// The subset of SanOpts turned on by an enforced std::core_ub profile
+  /// (P4317). These always trap on a violation, even when -fsanitize-trap does
+  /// not name them; EmitCheck consults this to route them to a trap.
+  SanitizerSet ProfileTrapChecks;
+
+  /// True if \p Ord is guarded by the std::core_ub profile in this function,
+  /// and so must trap rather than call a diagnostic handler.
+  bool isProfileTrapCheck(SanitizerKind::SanitizerOrdinal Ord) const {
+    return ProfileTrapChecks.has(Ord);
+  }
+
   /// True if CodeGen currently emits code implementing sanitizer checks.
   bool IsSanitizerScope = false;
 

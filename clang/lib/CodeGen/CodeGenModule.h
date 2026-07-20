@@ -849,6 +849,14 @@ public:
 
   ASTContext &getContext() const { return Context; }
   const LangOptions &getLangOpts() const { return LangOpts; }
+
+  /// The UBSan checks the std::core_ub profile (P4317) guards when it is
+  /// enforced over this TU, to be emitted in trap mode; an empty set when the
+  /// profile is not enforced. Each CodeGenFunction ORs these into its SanOpts
+  /// and traps them. Queried per function rather than cached, because the
+  /// enforcement it reads is recorded only once the leading
+  /// [[profiles::enforce]] declaration is parsed, after this module is built.
+  SanitizerSet getProfileCoreUBChecks() const;
   const IntrusiveRefCntPtr<llvm::vfs::FileSystem> &getFileSystem() const {
     return FS;
   }

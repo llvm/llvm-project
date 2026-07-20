@@ -61,6 +61,10 @@ bool SemaProfiles::addProfileEnforcement(StringRef Name, StringRef Designator,
     return true;
   }
   EnforcedProfiles.push_back({{Name.str(), Designator.str()}, Loc});
+  // Mirror the enforcement onto ASTContext so CodeGen can see it: this is the
+  // one choke point every enforcement source passes through (attribute, module
+  // import, PCH restore), and SemaProfiles itself does not outlive Sema.
+  getASTContext().setProfileEnforced(Name);
   return true;
 }
 

@@ -769,6 +769,14 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   CurFnInfo = &FnInfo;
   assert(CurFn->isDeclaration() && "Function already has body?");
 
+  // std::core_ub (P4317): an enforced profile adds its guarded UBSan checks to
+  // this function, in trap mode. Done before the ignorelist and no_sanitize
+  // handling below so both can still turn a guarded check off; a kind cleared
+  // from SanOpts is never emitted, so its leftover ProfileTrapChecks bit is
+  // harmless.
+  ProfileTrapChecks = CGM.getProfileCoreUBChecks();
+  SanOpts.Mask |= ProfileTrapChecks.Mask;
+
   // If this function is ignored for any of the enabled sanitizers,
   // disable the sanitizer for the function.
   do {

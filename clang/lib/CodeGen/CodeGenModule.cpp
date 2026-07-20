@@ -557,6 +557,16 @@ CodeGenModule::CodeGenModule(ASTContext &C,
 
 CodeGenModule::~CodeGenModule() {}
 
+SanitizerSet CodeGenModule::getProfileCoreUBChecks() const {
+  SanitizerSet Checks;
+  if (!LangOpts.Profiles || !Context.isProfileEnforced("std::core_ub"))
+    return Checks;
+  // The locally checkable cases of P4317 Appendix A.1, each reusing the UBSan
+  // check that already implements it. One case is added per commit.
+  Checks.set(SanitizerKind::IntegerDivideByZero, true); // {expr.mul.div.by.zero}
+  return Checks;
+}
+
 void CodeGenModule::createObjCRuntime() {
   // This is just isGNUFamily(), but we want to force implementors of
   // new ABIs to decide how best to do this.

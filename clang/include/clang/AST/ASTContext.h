@@ -764,6 +764,12 @@ private:
   /// to decide which entities should be instrumented.
   std::unique_ptr<ProfileList> ProfList;
 
+  /// Names of the C++ profiles (P3589R2) enforced over this translation unit.
+  /// Sema records each one as [[profiles::enforce]] is processed; CodeGen
+  /// reads them to decide whether to emit a profile's runtime checks. The
+  /// only such profile today is std::core_ub (P4317).
+  llvm::StringSet<> EnforcedProfiles;
+
   /// The allocator used to create AST objects.
   ///
   /// AST objects are never destructed; rather, all memory associated with the
@@ -949,6 +955,17 @@ public:
   bool AtomicUsesUnsupportedLibcall(const AtomicExpr *E) const;
 
   const LangOptions& getLangOpts() const { return LangOpts; }
+
+  /// Record that the named C++ profile (P3589R2) is enforced over this
+  /// translation unit. Called from Sema for every enforcement source:
+  /// [[profiles::enforce]], an imported module, and a restored PCH.
+  void setProfileEnforced(StringRef Name) { EnforcedProfiles.insert(Name); }
+
+  /// True if the named C++ profile is enforced over this translation unit.
+  /// This is the bridge Sema-recorded enforcement takes to reach CodeGen.
+  bool isProfileEnforced(StringRef Name) const {
+    return EnforcedProfiles.contains(Name);
+  }
 
   // If this condition is false, typo correction must be performed eagerly
   // rather than delayed in many places, as it makes use of dependent types.
