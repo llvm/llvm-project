@@ -10709,6 +10709,7 @@ cc_library(
         ":SCFUtils",
         ":Support",
         ":TransformUtils",
+        ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
         "//llvm:ir_headers",
