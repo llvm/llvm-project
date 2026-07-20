@@ -831,10 +831,10 @@ def MP : Flag<["-"], "MP">, Group<M_Group>, Visibility<[ClangOption, CC1Option]>
     HelpText<"Create phony target for each dependency (other than main file)">,
     MarshallingInfoFlag<DependencyOutputOpts<"UsePhonyTargets">>;
 def MQ : JoinedOrSeparate<["-"], "MQ">, Group<M_Group>,
-  Visibility<[ClangOption, CC1Option, FlangOption]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"Specify name of main file output to quote in depfile">;
 def MT : JoinedOrSeparate<["-"], "MT">, Group<M_Group>,
-  Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"Specify name of main file output in depfile">,
     MarshallingInfoStringVector<DependencyOutputOpts<"Targets">>;
 def MV : Flag<["-"], "MV">, Group<M_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -1533,7 +1533,7 @@ def dM : Flag<["-"], "dM">, Group<d_Group>, Visibility<[ClangOption, CC1Option, 
   HelpText<"Print macro definitions in -E mode instead of normal output">;
 def dead__strip : Flag<["-"], "dead_strip">;
 def dependency_file : Separate<["-"], "dependency-file">,
-  Visibility<[ClangOption, CC1Option, FC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Filename (or -) to write dependency output to">,
   MarshallingInfoString<DependencyOutputOpts<"OutputFile">>;
 def dependency_dot : Separate<["-"], "dependency-dot">,
@@ -7971,6 +7971,10 @@ def vectorize_loops : Flag<["-"], "vectorize-loops">,
 def vectorize_slp : Flag<["-"], "vectorize-slp">,
   HelpText<"Run the SLP vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
+
+def Eonly : Flag<["-"], "Eonly">, Group<Action_Group>,
+  HelpText<"Just run preprocessor, no output (for timings or dependency "
+           "generation)">;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -8675,11 +8679,6 @@ def finitial_counter_value_EQ : Joined<["-"], "finitial-counter-value=">,
   MarshallingInfoInt<PreprocessorOpts<"InitialCounterValue">, "0">;
 
 } // let Visibility = [CC1Option]
-
-def Eonly : Flag<["-"], "Eonly">, Group<Action_Group>,
-  Visibility<[CC1Option, FC1Option]>,
-  HelpText<"Just run preprocessor, no output (for timings or dependency "
-           "generation)">;
 
 //===----------------------------------------------------------------------===//
 // Language Options
