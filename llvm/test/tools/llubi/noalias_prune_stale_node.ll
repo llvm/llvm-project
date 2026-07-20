@@ -26,25 +26,23 @@ define void @main() {
 ; CHECK-NEXT: Entering function: capture
 ; CHECK-NEXT:   ptr %x = ptr 0x8 [a]
 ; CHECK-NEXT:   ptr %slot = ptr 0x10 [slot]
-; CHECK-NEXT: NoAlias: created protector node #1 for 'a' based on raw/root
+; CHECK-NEXT: NoAlias: created protector node #1 for 'a' in activation #1 based on raw/root
 ; CHECK-NEXT:   store ptr %x, ptr %slot, align 8
 ; CHECK-NEXT:   ret void
-; CHECK-NEXT: NoAlias: ended protector node #1
 ; CHECK-NEXT: NoAlias: erased inactive protector node #1
+; CHECK-NEXT: NoAlias: ended activation #1
 ; CHECK-NEXT: Exiting function: capture
 ; CHECK-NEXT:   call void @capture(ptr %a, ptr %slot)
 ; CHECK-NEXT:   %stale = load ptr, ptr %slot, align 8 => ptr 0x8 [a]
 ; CHECK-NEXT: Entering function: write_one
 ; CHECK-NEXT:   ptr %x = ptr 0x8 [a]
-; CHECK-NEXT: NoAlias: created protector node #2 for 'a' based on raw/root
-; CHECK-NEXT: NoAlias: node #2 local write through node #2 on 'a' bytes [0, 4): Reserved -> Unique
-; CHECK-NEXT: NoAlias: write through node #2 on 'a' bytes [0, 4) checked 1 active noalias protector
+; CHECK-NEXT: NoAlias: created protector node #2 for 'a' in activation #2 based on raw/root
+; CHECK-NEXT: NoAlias: activation #2 write through node #2 on 'a' bytes [0, 4): unaccessed -> access including a write by node #2
+; CHECK-NEXT: NoAlias: write through node #2 on 'a' bytes [0, 4) checked 1 active noalias activation
 ; CHECK-NEXT:   store i32 1, ptr %x, align 4
 ; CHECK-NEXT:   ret void
-; CHECK-NEXT: NoAlias: protector end for node #2 triggers synthetic write on 'a' bytes [0, 4)
-; CHECK-NEXT: NoAlias: protector end: node #2 local write through node #2 on 'a' bytes [0, 4): Unique -> Unique
-; CHECK-NEXT: NoAlias: ended protector node #2
 ; CHECK-NEXT: NoAlias: erased inactive protector node #2
+; CHECK-NEXT: NoAlias: ended activation #2
 ; CHECK-NEXT: Exiting function: write_one
 ; CHECK-NEXT:   call void @write_one(ptr %stale)
 ; CHECK-NEXT:   ret void

@@ -1317,32 +1317,19 @@ StringRef Context::getNoAliasAccessKindName(NoAliasAccessKind Kind) {
   llvm_unreachable("Unknown NoAliasAccessKind");
 }
 
-StringRef Context::getNoAliasStateName(NoAliasState State) {
-  switch (State) {
-  case NoAliasState::Reserved:
-    return "Reserved";
-  case NoAliasState::ReservedL:
-    return "ReservedL";
-  case NoAliasState::ReservedF:
-    return "ReservedF";
-  case NoAliasState::ReservedLF:
-    return "ReservedLF";
-  case NoAliasState::Unique:
-    return "Unique";
-  case NoAliasState::Disabled:
-    return "Disabled";
-  case NoAliasState::Dummy:
-    return "Dummy";
-  }
-  llvm_unreachable("Unknown NoAliasState");
-}
-
 std::string Context::getNoAliasNodeName(uint64_t NodeID) {
   if (!NodeID)
     return "raw/root";
   std::string S;
   raw_string_ostream OS(S);
   OS << "node #" << NodeID;
+  return S;
+}
+
+std::string Context::getNoAliasActivationName(uint64_t ActivationID) {
+  std::string S;
+  raw_string_ostream OS(S);
+  OS << "activation #" << ActivationID;
   return S;
 }
 
@@ -1361,222 +1348,172 @@ void Context::appendNoAliasEvent(std::string Msg) {
   NoAliasEvents.push_back(std::move(Msg));
 }
 
-void Context::setNoAliasViolation(uint64_t ProtectedNodeId, uint64_t AccessNode,
-                                  const MemoryObject &MO, uint64_t Begin,
-                                  uint64_t End, NoAliasAccessKind Kind,
-                                  bool IsLocal, NoAliasState State,
-                                  bool IsProtectorEndAction) {
-  std::string S;
-  raw_string_ostream OS(S);
-  OS << "noalias ";
-  if (IsProtectorEndAction)
-    OS << "protector end ";
-  OS << "violation: " << getNoAliasAccessKindName(Kind) << " through "
-     << getNoAliasNodeName(AccessNode) << " on " << getNoAliasObjectName(MO)
-     << " bytes [" << Begin << ", " << End << ") is "
-     << (IsLocal ? "local" : "foreign") << " to protected "
-     << getNoAliasNodeName(ProtectedNodeId) << ", but that protector is in "
-     << getNoAliasStateName(State) << " state";
-  LastNoAliasError = std::move(S);
-  appendNoAliasEvent(LastNoAliasError);
-}
-
-std::optional<Context::NoAliasState>
-Context::transitionNoAliasState(NoAliasState State, NoAliasAccessKind Kind,
-                                bool IsLocal) {
-  if (State == NoAliasState::Dummy)
-    return NoAliasState::Dummy;
-
-  // For the complete state machine, please refer to the original blog
-  // https://jhostert.de/blog/2025/noalias/.
-  const bool IsWrite = Kind == NoAliasAccessKind::Write;
-  switch (State) {
-  case NoAliasState::Reserved: {
-    if (!IsWrite)
-      return IsLocal ? NoAliasState::ReservedL : NoAliasState::ReservedF;
-    return IsLocal ? NoAliasState::Unique : NoAliasState::Disabled;
-  }
-  case NoAliasState::ReservedL: {
-    if (IsLocal)
-      return IsWrite ? NoAliasState::Unique : NoAliasState::ReservedL;
-    if (!IsWrite)
-      return NoAliasState::ReservedLF;
-    return std::nullopt;
-  }
-  case NoAliasState::ReservedF: {
-    if (!IsLocal)
-      return IsWrite ? NoAliasState::Disabled : NoAliasState::ReservedF;
-    if (!IsWrite)
-      return NoAliasState::ReservedLF;
-    return std::nullopt;
-  }
-  case NoAliasState::ReservedLF: {
-    if (!IsWrite)
-      return NoAliasState::ReservedLF;
-    return std::nullopt;
-  }
-  case NoAliasState::Unique: {
-    if (IsLocal)
-      return NoAliasState::Unique;
-    return std::nullopt;
-  }
-  case NoAliasState::Disabled: {
-    if (!IsLocal)
-      return NoAliasState::Disabled;
-    return std::nullopt;
-  }
-  case NoAliasState::Dummy:
-    llvm_unreachable("Dummy state should be handled earlier");
-  }
-  llvm_unreachable("Unknown NoAliasState");
-}
-
-bool Context::accessNoAliasImpl(MemoryObject &MO, uint64_t Offset,
-                                uint64_t Size, uint64_t AccessNode,
-                                NoAliasAccessKind Kind,
-                                uint64_t SkipDescendantsOf) {
-  if (!ActiveNoAliasScopes || !Size)
-    return true;
-
-  const auto It = NoAliasNodesByObject.find(&MO);
-  if (It == NoAliasNodesByObject.end())
-    return true;
-
-  const uint64_t End = Offset + Size;
-  uint32_t CheckedNodes = 0;
-  for (uint64_t NodeID : It->second) {
-    auto NodeIt = NoAliasNodes.find(NodeID);
-    if (NodeIt == NoAliasNodes.end() || !NodeIt->second.Active)
+uint64_t Context::classifyNoAliasAccess(const NoAliasActivation &Activation,
+                                        const MemoryObject &MO,
+                                        uint64_t AccessNode) const {
+  for (uint64_t NodeID : Activation.Nodes) {
+    const auto It = NoAliasNodes.find(NodeID);
+    if (It == NoAliasNodes.end() || !It->second.Active ||
+        It->second.Object != &MO)
       continue;
-    if (SkipDescendantsOf && NodeID != SkipDescendantsOf &&
-        isNoAliasAncestor(SkipDescendantsOf, NodeID))
-      continue;
-    ++CheckedNodes;
-    // A protected node judges the same concrete memory access differently
-    // depending on whether the pointer used for the access is in its subtree.
-    if (const bool IsLocal = isNoAliasAncestor(NodeID, AccessNode);
-        !updateNoAliasNodeForAccess(
-            NodeIt->second, Offset, End, Kind, IsLocal, NodeID, AccessNode,
-            /*IsProtectorEndAction=*/SkipDescendantsOf != 0))
-      return false;
+    if (isNoAliasAncestor(NodeID, AccessNode))
+      return NodeID;
   }
-  if (CheckedNodes && !SkipDescendantsOf) {
-    std::string S;
-    raw_string_ostream OS(S);
-    OS << getNoAliasAccessKindName(Kind) << " through "
-       << getNoAliasNodeName(AccessNode) << " on " << getNoAliasObjectName(MO)
-       << " bytes [" << Offset << ", " << End << ") checked " << CheckedNodes
-       << " active noalias protector" << (CheckedNodes == 1 ? "" : "s");
-    appendNoAliasEvent(std::move(S));
-  }
-  return true;
+  return 0;
 }
 
-bool Context::updateNoAliasNodeForAccess(NoAliasNode &Node, uint64_t Begin,
-                                         uint64_t End, NoAliasAccessKind Kind,
-                                         bool IsLocal, uint64_t ProtectedNodeID,
-                                         uint64_t AccessNode,
-                                         bool IsProtectorEndAction) {
+bool Context::updateNoAliasAccesses(NoAliasActivation &Activation,
+                                    MemoryObject &MO, uint64_t Begin,
+                                    uint64_t End, uint64_t AccessClass,
+                                    NoAliasAccessKind Kind,
+                                    uint64_t ActivationID) {
   assert(Begin < End && "empty accesses should not reach noalias tracking");
 
-  SmallVector<NoAliasStateRun, 4> NewRuns;
-  auto AppendRun = [&](uint64_t RunBegin, uint64_t RunEnd, NoAliasState State) {
-    if (RunBegin == RunEnd || State == NoAliasState::Reserved)
+  SmallVector<NoAliasAccessRun, 4> NewRuns;
+  auto AppendRun = [&](uint64_t RunBegin, uint64_t RunEnd,
+                       NoAliasAccessSummary Summary) {
+    if (RunBegin == RunEnd)
       return;
     if (!NewRuns.empty() && NewRuns.back().End == RunBegin &&
-        NewRuns.back().State == State) {
+        NewRuns.back().Summary == Summary) {
       NewRuns.back().End = RunEnd;
       return;
     }
-    NewRuns.push_back({RunBegin, RunEnd, State});
+    NewRuns.push_back({RunBegin, RunEnd, Summary});
+  };
+
+  auto DescribeSummary = [&](raw_ostream &OS,
+                             const NoAliasAccessSummary &Summary) {
+    if (Summary.MultipleClasses) {
+      OS << "reads by multiple access classes";
+      return;
+    }
+    OS << (Summary.HasWrite ? "access including a write by " : "reads by ")
+       << getNoAliasNodeName(Summary.AccessClass);
   };
 
   auto AppendTransitioned = [&](uint64_t RunBegin, uint64_t RunEnd,
-                                NoAliasState State) -> bool {
+                                const NoAliasAccessSummary *Old) -> bool {
     if (RunBegin == RunEnd)
       return true;
-    std::optional<NoAliasState> NewState =
-        transitionNoAliasState(State, Kind, IsLocal);
-    if (!NewState) {
-      setNoAliasViolation(ProtectedNodeID, AccessNode, *Node.Object, RunBegin,
-                          RunEnd, Kind, IsLocal, State, IsProtectorEndAction);
+
+    const bool IsWrite = Kind == NoAliasAccessKind::Write;
+    NoAliasAccessSummary New{AccessClass, false, IsWrite};
+    if (Old) {
+      New = *Old;
+      if (Old->MultipleClasses) {
+        if (IsWrite)
+          New.HasWrite = true;
+      } else if (Old->AccessClass == AccessClass) {
+        New.HasWrite |= IsWrite;
+      } else if (Old->HasWrite || IsWrite) {
+        New.MultipleClasses = true;
+        New.HasWrite = true;
+      } else {
+        New.AccessClass = 0;
+        New.MultipleClasses = true;
+      }
+    }
+
+    if (New.MultipleClasses && New.HasWrite) {
+      std::string S;
+      raw_string_ostream OS(S);
+      OS << "noalias violation: " << getNoAliasAccessKindName(Kind)
+         << " through " << getNoAliasNodeName(AccessClass) << " on "
+         << getNoAliasObjectName(MO) << " bytes [" << RunBegin << ", " << RunEnd
+         << ") combines multiple access classes with a write in "
+         << getNoAliasActivationName(ActivationID);
+      LastNoAliasError = std::move(S);
+      appendNoAliasEvent(LastNoAliasError);
       return false;
     }
+
     std::string S;
     raw_string_ostream OS(S);
-    if (IsProtectorEndAction)
-      OS << "protector end: ";
-    OS << getNoAliasNodeName(ProtectedNodeID) << ' '
-       << (IsLocal ? "local" : "foreign") << ' '
+    OS << getNoAliasActivationName(ActivationID) << ' '
        << getNoAliasAccessKindName(Kind) << " through "
-       << getNoAliasNodeName(AccessNode) << " on "
-       << getNoAliasObjectName(*Node.Object) << " bytes [" << RunBegin << ", "
-       << RunEnd << "): " << getNoAliasStateName(State) << " -> "
-       << getNoAliasStateName(*NewState);
+       << getNoAliasNodeName(AccessClass) << " on " << getNoAliasObjectName(MO)
+       << " bytes [" << RunBegin << ", " << RunEnd << "): ";
+    if (Old)
+      DescribeSummary(OS, *Old);
+    else
+      OS << "unaccessed";
+    OS << " -> ";
+    DescribeSummary(OS, New);
     appendNoAliasEvent(std::move(S));
-    AppendRun(RunBegin, RunEnd, *NewState);
+    AppendRun(RunBegin, RunEnd, New);
     return true;
   };
 
+  auto &Runs = Activation.Accesses[&MO];
   uint64_t Cur = Begin;
   bool InsertedAccessTail = false;
-  for (const NoAliasStateRun &Run : Node.States) {
+  for (const NoAliasAccessRun &Run : Runs) {
     if (Run.End <= Begin) {
-      AppendRun(Run.Begin, Run.End, Run.State);
+      AppendRun(Run.Begin, Run.End, Run.Summary);
       continue;
     }
     if (Run.Begin >= End) {
       if (!InsertedAccessTail) {
-        // The access ends before this run begins, so [Cur, End) is an implicit
-        // Reserved gap that still needs transition.
-        if (!AppendTransitioned(Cur, End, NoAliasState::Reserved))
+        if (!AppendTransitioned(Cur, End, nullptr))
           return false;
         InsertedAccessTail = true;
       }
-      AppendRun(Run.Begin, Run.End, Run.State);
+      AppendRun(Run.Begin, Run.End, Run.Summary);
       continue;
     }
 
     if (Run.Begin < Begin)
-      AppendRun(Run.Begin, Begin, Run.State);
+      AppendRun(Run.Begin, Begin, Run.Summary);
 
     const uint64_t OverlapBegin = std::max(Cur, Run.Begin);
-    // Any gap between the previous covered byte and this run is also implicit
-    // Reserved state.
-    if (!AppendTransitioned(Cur, OverlapBegin, NoAliasState::Reserved))
+    if (!AppendTransitioned(Cur, OverlapBegin, nullptr))
       return false;
 
     const uint64_t OverlapEnd = std::min(End, Run.End);
-    if (!AppendTransitioned(OverlapBegin, OverlapEnd, Run.State))
+    if (!AppendTransitioned(OverlapBegin, OverlapEnd, &Run.Summary))
       return false;
     Cur = OverlapEnd;
 
     if (Run.End > End) {
-      AppendRun(End, Run.End, Run.State);
+      AppendRun(End, Run.End, Run.Summary);
       InsertedAccessTail = true;
     }
   }
   if (!InsertedAccessTail) {
-    if (!AppendTransitioned(Cur, End, NoAliasState::Reserved))
+    if (!AppendTransitioned(Cur, End, nullptr))
       return false;
   }
 
-  Node.States = std::move(NewRuns);
+  Runs = std::move(NewRuns);
   return true;
 }
 
-Pointer Context::createNoAliasPointer(const Pointer &Ptr) {
+uint64_t Context::beginNoAliasActivation() {
   if (!ExperimentalNoAlias)
+    return 0;
+  const uint64_t ActivationID = NextNoAliasActivation++;
+  NoAliasActivations.try_emplace(ActivationID);
+  return ActivationID;
+}
+
+Pointer Context::createNoAliasPointer(const Pointer &Ptr,
+                                      uint64_t ActivationID) {
+  if (!ExperimentalNoAlias || !ActivationID)
     return Ptr;
 
   MemoryObject *MO = Ptr.getMemoryObject();
   if (!MO)
     return Ptr;
 
+  auto ActivationIt = NoAliasActivations.find(ActivationID);
+  assert(ActivationIt != NoAliasActivations.end() &&
+         "Noalias activation must be live before creating a parameter node.");
+
   const uint64_t NodeID = NextNoAliasNode++;
   uint64_t Parent = Ptr.getNoAliasNodeID();
-  // If the parent node was pruned after its protector ended, the incoming
-  // pointer is treated as a raw/root-derived pointer for this new scope.
+  // If the parent node was pruned after its activation ended, the incoming
+  // pointer is treated as a raw/root-derived pointer for this new activation.
   if (Parent && NoAliasNodes.find(Parent) == NoAliasNodes.end())
     Parent = 0;
   NoAliasNode Node;
@@ -1584,92 +1521,86 @@ Pointer Context::createNoAliasPointer(const Pointer &Ptr) {
   Node.Object = MO;
   Node.Active = true;
   NoAliasNodes.try_emplace(NodeID, std::move(Node));
-  NoAliasNodesByObject[MO].push_back(NodeID);
-  ++ActiveNoAliasScopes;
+  ActivationIt->second.Nodes.push_back(NodeID);
+
+  auto &Activations = NoAliasActivationsByObject[MO];
+  if (std::find(Activations.begin(), Activations.end(), ActivationID) ==
+      Activations.end())
+    Activations.push_back(ActivationID);
+
   std::string S;
   raw_string_ostream OS(S);
   OS << "created protector " << getNoAliasNodeName(NodeID) << " for "
-     << getNoAliasObjectName(*MO) << " based on " << getNoAliasNodeName(Parent);
+     << getNoAliasObjectName(*MO) << " in "
+     << getNoAliasActivationName(ActivationID) << " based on "
+     << getNoAliasNodeName(Parent);
   appendNoAliasEvent(std::move(S));
   return Ptr.getWithNoAliasNode(NodeID);
 }
 
 bool Context::accessNoAlias(MemoryObject &MO, uint64_t Offset, uint64_t Size,
                             uint64_t AccessNode, NoAliasAccessKind Kind) {
-  if (!ExperimentalNoAlias)
+  if (!ExperimentalNoAlias || !Size)
     return true;
 
-  return accessNoAliasImpl(MO, Offset, Size, AccessNode, Kind,
-                           /*SkipDescendantsOf=*/0);
-}
-
-bool Context::endNoAliasScopes(ArrayRef<uint64_t> Nodes) {
-  if (!ExperimentalNoAlias)
+  auto It = NoAliasActivationsByObject.find(&MO);
+  if (It == NoAliasActivationsByObject.end())
     return true;
 
-  for (uint64_t NodeID : Nodes) {
-    auto It = NoAliasNodes.find(NodeID);
-    if (It == NoAliasNodes.end() || !It->second.Active)
+  const uint64_t End = Offset + Size;
+  uint32_t CheckedActivations = 0;
+  for (uint64_t ActivationID : It->second) {
+    auto ActivationIt = NoAliasActivations.find(ActivationID);
+    if (ActivationIt == NoAliasActivations.end())
       continue;
+    ++CheckedActivations;
+    const uint64_t AccessClass =
+        classifyNoAliasAccess(ActivationIt->second, MO, AccessNode);
+    if (!updateNoAliasAccesses(ActivationIt->second, MO, Offset, End,
+                               AccessClass, Kind, ActivationID))
+      return false;
+  }
 
-    SmallVector<NoAliasStateRun, 4> States(It->second.States.begin(),
-                                           It->second.States.end());
-    for (const NoAliasStateRun &Run : States) {
-      std::optional<NoAliasAccessKind> EndAction;
-      // Protector end actions. Quote from the original blog:
-      // "Unique triggers writes, ReservedL and ReservedLF triggers reads, and
-      // the other states trigger nothing since they have not yet been locally
-      // accessed. Like in Tree Borrows, these end actions are “special” in
-      // that they don’t affect children of the node which was protected."
-      switch (Run.State) {
-      case NoAliasState::Unique:
-        EndAction = NoAliasAccessKind::Write;
-        break;
-      case NoAliasState::ReservedL:
-      case NoAliasState::ReservedLF:
-        EndAction = NoAliasAccessKind::Read;
-        break;
-      case NoAliasState::Reserved:
-      case NoAliasState::ReservedF:
-      case NoAliasState::Disabled:
-      case NoAliasState::Dummy:
-        break;
-      }
-      if (EndAction) {
-        std::string S;
-        raw_string_ostream OS(S);
-        OS << "protector end for " << getNoAliasNodeName(NodeID)
-           << " triggers synthetic " << getNoAliasAccessKindName(*EndAction)
-           << " on " << getNoAliasObjectName(*It->second.Object) << " bytes ["
-           << Run.Begin << ", " << Run.End << ")";
-        appendNoAliasEvent(std::move(S));
-        if (!accessNoAliasImpl(*It->second.Object, Run.Begin,
-                               Run.End - Run.Begin, NodeID, *EndAction,
-                               /*SkipDescendantsOf=*/NodeID))
-          return false;
-      }
-    }
-
-    It->second.Active = false;
-    It->second.States.clear();
-    // Remove inactive nodes from the per-object active list immediately, but
-    // keep the node record itself until no active child depends on its parent
-    // identity.
-    if (auto ObjIt = NoAliasNodesByObject.find(It->second.Object);
-        ObjIt != NoAliasNodesByObject.end()) {
-      SmallVectorImpl<uint64_t> &ObjectNodes = ObjIt->second;
-      ObjectNodes.erase(
-          std::remove(ObjectNodes.begin(), ObjectNodes.end(), NodeID),
-          ObjectNodes.end());
-      if (ObjectNodes.empty())
-        NoAliasNodesByObject.erase(ObjIt);
-    }
-    assert(ActiveNoAliasScopes && "mismatched noalias protector count");
-    --ActiveNoAliasScopes;
-    appendNoAliasEvent("ended protector " + getNoAliasNodeName(NodeID));
-    tryEraseInactiveNoAliasNode(NodeID);
+  if (CheckedActivations) {
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << getNoAliasAccessKindName(Kind) << " through "
+       << getNoAliasNodeName(AccessNode) << " on " << getNoAliasObjectName(MO)
+       << " bytes [" << Offset << ", " << End << ") checked "
+       << CheckedActivations << " active noalias activation"
+       << (CheckedActivations == 1 ? "" : "s");
+    appendNoAliasEvent(std::move(S));
   }
   return true;
+}
+
+void Context::endNoAliasActivation(uint64_t ActivationID) {
+  if (!ExperimentalNoAlias)
+    return;
+
+  auto ActivationIt = NoAliasActivations.find(ActivationID);
+  if (ActivationIt == NoAliasActivations.end())
+    return;
+
+  SmallVector<uint64_t, 4> Nodes(ActivationIt->second.Nodes.begin(),
+                                 ActivationIt->second.Nodes.end());
+  for (uint64_t NodeID : Nodes) {
+    auto NodeIt = NoAliasNodes.find(NodeID);
+    if (NodeIt == NoAliasNodes.end())
+      continue;
+    MemoryObject *MO = NodeIt->second.Object;
+    NodeIt->second.Active = false;
+    tryEraseInactiveNoAliasNode(NodeID);
+    auto ObjectIt = NoAliasActivationsByObject.find(MO);
+    if (ObjectIt == NoAliasActivationsByObject.end())
+      continue;
+    auto &IDs = ObjectIt->second;
+    IDs.erase(std::remove(IDs.begin(), IDs.end(), ActivationID), IDs.end());
+    if (IDs.empty())
+      NoAliasActivationsByObject.erase(ObjectIt);
+  }
+  appendNoAliasEvent("ended " + getNoAliasActivationName(ActivationID));
+  NoAliasActivations.erase(ActivationIt);
 }
 
 SmallVector<std::string, 4> Context::takeNoAliasEvents() {
@@ -1682,19 +1613,23 @@ void Context::clearNoAliasState(const MemoryObject &MO) {
   if (!ExperimentalNoAlias)
     return;
 
-  const auto It = NoAliasNodesByObject.find(&MO);
-  if (It == NoAliasNodesByObject.end())
+  const auto It = NoAliasActivationsByObject.find(&MO);
+  if (It == NoAliasActivationsByObject.end())
     return;
-  for (uint64_t NodeID : It->second) {
-    auto NodeIt = NoAliasNodes.find(NodeID);
-    if (NodeIt == NoAliasNodes.end() || !NodeIt->second.Active)
+  SmallVector<uint64_t, 4> ActivationIDs(It->second.begin(), It->second.end());
+  for (uint64_t ActivationID : ActivationIDs) {
+    auto ActivationIt = NoAliasActivations.find(ActivationID);
+    if (ActivationIt == NoAliasActivations.end())
       continue;
-    NodeIt->second.Active = false;
-    NodeIt->second.States.clear();
-    assert(ActiveNoAliasScopes && "mismatched noalias protector count");
-    --ActiveNoAliasScopes;
+    for (uint64_t NodeID : ActivationIt->second.Nodes) {
+      auto NodeIt = NoAliasNodes.find(NodeID);
+      if (NodeIt != NoAliasNodes.end() && NodeIt->second.Object == &MO)
+        NodeIt->second.Active = false;
+      tryEraseInactiveNoAliasNode(NodeID);
+    }
+    ActivationIt->second.Accesses.erase(const_cast<MemoryObject *>(&MO));
   }
-  NoAliasNodesByObject.erase(It);
+  NoAliasActivationsByObject.erase(It);
 }
 
 } // namespace llvm::ubi

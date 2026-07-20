@@ -30,23 +30,23 @@ define void @main() {
 ; CHECK-NEXT: Entering function: stuff
 ; CHECK-NEXT:   ptr %x = ptr 0x8 [data]
 ; CHECK-NEXT:   ptr %raw = ptr 0x8 [data]
-; CHECK-NEXT: NoAlias: created protector node #1 for 'data' based on raw/root
+; CHECK-NEXT: NoAlias: created protector node #1 for 'data' in activation #1 based on raw/root
 ; CHECK-NEXT:   %raw1 = getelementptr i8, ptr %raw, i64 1 => ptr 0x9 [data + 1]
-; CHECK-NEXT: NoAlias: node #1 foreign write through raw/root on 'data' bytes [1, 2): Reserved -> Disabled
-; CHECK-NEXT: NoAlias: write through raw/root on 'data' bytes [1, 2) checked 1 active noalias protector
+; CHECK-NEXT: NoAlias: activation #1 write through raw/root on 'data' bytes [1, 2): unaccessed -> access including a write by raw/root
+; CHECK-NEXT: NoAlias: write through raw/root on 'data' bytes [1, 2) checked 1 active noalias activation
 ; CHECK-NEXT:   store i8 42, ptr %raw1, align 1
 ; CHECK-NEXT:   %x2 = getelementptr i8, ptr %x, i64 2 => ptr 0xA [data + 2]
-; CHECK-NEXT: NoAlias: node #1 local read through node #1 on 'data' bytes [2, 3): Reserved -> ReservedL
-; CHECK-NEXT: NoAlias: read through node #1 on 'data' bytes [2, 3) checked 1 active noalias protector
+; CHECK-NEXT: NoAlias: activation #1 read through node #1 on 'data' bytes [2, 3): unaccessed -> reads by node #1
+; CHECK-NEXT: NoAlias: read through node #1 on 'data' bytes [2, 3) checked 1 active noalias activation
 ; CHECK-NEXT:   %v2 = load i8, ptr %x2, align 1 => i8 62
 ; CHECK-NEXT:   %x3 = getelementptr i8, ptr %x, i64 3 => ptr 0xB [data + 3]
-; CHECK-NEXT: NoAlias: node #1 local read through node #1 on 'data' bytes [3, 4): Reserved -> ReservedL
-; CHECK-NEXT: NoAlias: read through node #1 on 'data' bytes [3, 4) checked 1 active noalias protector
+; CHECK-NEXT: NoAlias: activation #1 read through node #1 on 'data' bytes [3, 4): unaccessed -> reads by node #1
+; CHECK-NEXT: NoAlias: read through node #1 on 'data' bytes [3, 4) checked 1 active noalias activation
 ; CHECK-NEXT:   %v3 = load i8, ptr %x3, align 1 => i8 -117
 ; CHECK-NEXT:   %raw3 = getelementptr i8, ptr %raw, i64 3 => ptr 0xB [data + 3]
-; CHECK-NEXT: NoAlias: noalias violation: write through raw/root on 'data' bytes [3, 4) is foreign to protected node #1, but that protector is in ReservedL state
+; CHECK-NEXT: NoAlias: noalias violation: write through raw/root on 'data' bytes [3, 4) combines multiple access classes with a write in activation #1
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   store i8 42, ptr %raw3, align 1 at @stuff
-; CHECK-NEXT: #1   call void @stuff(ptr %raw, ptr %raw) at @main
-; CHECK-NEXT: Immediate UB detected: noalias violation: write through raw/root on 'data' bytes [3, 4) is foreign to protected node #1, but that protector is in ReservedL state
+; CHECK-NEXT: #0   store i8 42, ptr %raw3, align 1 at @stuff <stdin>:16
+; CHECK-NEXT: #1   call void @stuff(ptr %raw, ptr %raw) at @main <stdin>:23
+; CHECK-NEXT: Immediate UB detected: noalias violation: write through raw/root on 'data' bytes [3, 4) combines multiple access classes with a write in activation #1
 ; CHECK-NEXT: error: Execution of function 'main' failed.

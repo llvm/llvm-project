@@ -18,15 +18,13 @@ define void @main() {
 ; CHECK-NEXT:   %a = alloca i32, align 4 => ptr 0x8 [a]
 ; CHECK-NEXT: Entering function: write_one
 ; CHECK-NEXT:   ptr %x = ptr 0x8 [a]
-; CHECK-NEXT: NoAlias: created protector node #1 for 'a' based on raw/root
-; CHECK-NEXT: NoAlias: node #1 local write through node #1 on 'a' bytes [0, 4): Reserved -> Unique
-; CHECK-NEXT: NoAlias: write through node #1 on 'a' bytes [0, 4) checked 1 active noalias protector
+; CHECK-NEXT: NoAlias: created protector node #1 for 'a' in activation #1 based on raw/root
+; CHECK-NEXT: NoAlias: activation #1 write through node #1 on 'a' bytes [0, 4): unaccessed -> access including a write by node #1
+; CHECK-NEXT: NoAlias: write through node #1 on 'a' bytes [0, 4) checked 1 active noalias activation
 ; CHECK-NEXT:   store i32 1, ptr %x, align 4
 ; CHECK-NEXT:   ret void
-; CHECK-NEXT: NoAlias: protector end for node #1 triggers synthetic write on 'a' bytes [0, 4)
-; CHECK-NEXT: NoAlias: protector end: node #1 local write through node #1 on 'a' bytes [0, 4): Unique -> Unique
-; CHECK-NEXT: NoAlias: ended protector node #1
 ; CHECK-NEXT: NoAlias: erased inactive protector node #1
+; CHECK-NEXT: NoAlias: ended activation #1
 ; CHECK-NEXT: Exiting function: write_one
 ; CHECK-NEXT:   call void @write_one(ptr %a)
 ; CHECK-NEXT:   %v = load i32, ptr %a, align 4 => i32 1

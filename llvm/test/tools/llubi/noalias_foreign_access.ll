@@ -20,13 +20,13 @@ define void @main() {
 ; CHECK-NEXT: Entering function: violates
 ; CHECK-NEXT:   ptr %x = ptr 0x8 [a]
 ; CHECK-NEXT:   ptr %y = ptr 0x8 [a]
-; CHECK-NEXT: NoAlias: created protector node #1 for 'a' based on raw/root
-; CHECK-NEXT: NoAlias: node #1 local write through node #1 on 'a' bytes [0, 4): Reserved -> Unique
-; CHECK-NEXT: NoAlias: write through node #1 on 'a' bytes [0, 4) checked 1 active noalias protector
+; CHECK-NEXT: NoAlias: created protector node #1 for 'a' in activation #1 based on raw/root
+; CHECK-NEXT: NoAlias: activation #1 write through node #1 on 'a' bytes [0, 4): unaccessed -> access including a write by node #1
+; CHECK-NEXT: NoAlias: write through node #1 on 'a' bytes [0, 4) checked 1 active noalias activation
 ; CHECK-NEXT:   store i32 1, ptr %x, align 4
-; CHECK-NEXT: NoAlias: noalias violation: read through raw/root on 'a' bytes [0, 4) is foreign to protected node #1, but that protector is in Unique state
+; CHECK-NEXT: NoAlias: noalias violation: read through raw/root on 'a' bytes [0, 4) combines multiple access classes with a write in activation #1
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   %v = load i32, ptr %y, align 4 at @violates
-; CHECK-NEXT: #1   call void @violates(ptr %a, ptr %a) at @main
-; CHECK-NEXT: Immediate UB detected: noalias violation: read through raw/root on 'a' bytes [0, 4) is foreign to protected node #1, but that protector is in Unique state
+; CHECK-NEXT: #0   %v = load i32, ptr %y, align 4 at @violates <stdin>:6
+; CHECK-NEXT: #1   call void @violates(ptr %a, ptr %a) at @main <stdin>:13
+; CHECK-NEXT: Immediate UB detected: noalias violation: read through raw/root on 'a' bytes [0, 4) combines multiple access classes with a write in activation #1
 ; CHECK-NEXT: error: Execution of function 'main' failed.

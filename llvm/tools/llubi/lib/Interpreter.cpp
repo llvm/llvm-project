@@ -2847,13 +2847,7 @@ public:
       if (Top.State == FrameState::Exit) {
         assert((Top.Func.getReturnType()->isVoidTy() || !Top.RetVal.isNone()) &&
                "Expected return value to be set on function exit.");
-        // End protectors before freeing frame allocas: protector end actions
-        // are still accesses to the protected memory object.
-        if (!Ctx.endNoAliasScopes(Top.NoAliasNodes)) {
-          flushNoAliasEvents();
-          reportImmediateUB() << Ctx.getLastNoAliasError();
-          break;
-        }
+        Ctx.endNoAliasActivation(Top.NoAliasActivation);
         flushNoAliasEvents();
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         // Free stack objects allocated in this frame.

@@ -28,11 +28,12 @@ Frame::Frame(Context &Ctx, Function &F, CallBase *CallSite, Frame *LastFrame,
     // protected node for the dynamic call frame without changing the normal
     // provenance carried by the pointer.
     if (Ctx.isExperimentalNoAliasEnabled() && Arg.hasNoAliasAttr() &&
-        Arg.getType()->isPointerTy() && !ArgValue.isPoison()) {
-      Pointer Retagged = Ctx.createNoAliasPointer(ArgValue.asPointer());
-      if (uint64_t NodeID = Retagged.getNoAliasNodeID())
-        NoAliasNodes.push_back(NodeID);
-      ArgValue = Retagged;
+        Arg.getType()->isPointerTy() && !ArgValue.isPoison() &&
+        ArgValue.asPointer().getMemoryObject()) {
+      if (!NoAliasActivation)
+        NoAliasActivation = Ctx.beginNoAliasActivation();
+      ArgValue =
+          Ctx.createNoAliasPointer(ArgValue.asPointer(), NoAliasActivation);
     }
     ValueMap[&Arg] = std::move(ArgValue);
   }

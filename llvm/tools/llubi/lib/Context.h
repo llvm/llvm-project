@@ -293,43 +293,47 @@ class Context {
   /// Get the tag for the given pointer provenance.
   APInt getTag(uint32_t BitWidth, Provenance &Prov);
 
-  /// Experimental noalias states (see https://jhostert.de/blog/2025/noalias/).
-  /// The states Frozen and FrozenL from the original state machine are omitted
-  /// as proposed. Note that the Reserved state is the implicit default and is
-  /// intentionally omitted from sparse state runs below.
-  enum class NoAliasState : uint8_t {
-    Reserved,
-    ReservedL,
-    ReservedF,
-    ReservedLF,
-    Unique,
-    Disabled,
-    Dummy,
+  /// Summary of the access classes that touched a byte range during one
+  /// dynamic function activation. Multiple access classes are permitted only
+  /// while every access is a read.
+  struct NoAliasAccessSummary {
+    uint64_t AccessClass = 0;
+    bool MultipleClasses = false;
+    bool HasWrite = false;
+
+    bool operator==(const NoAliasAccessSummary &Other) const {
+      return AccessClass == Other.AccessClass &&
+             MultipleClasses == Other.MultipleClasses &&
+             HasWrite == Other.HasWrite;
+    }
   };
 
-  /// A non-Reserved state over the byte interval [Begin, End).
-  struct NoAliasStateRun {
+  struct NoAliasAccessRun {
     uint64_t Begin;
     uint64_t End;
-    NoAliasState State;
+    NoAliasAccessSummary Summary;
   };
 
-  /// A protected noalias node created by retagging a noalias function argument.
-  /// Parent is another noalias node, or 0 for the raw/root parent. The
-  /// underlying pointer provenance remains represented by Pointer::Obj.
+  /// A noalias access class created by retagging a function argument. Parent is
+  /// another node, or 0 for the raw/root parent. Nodes carry no memory state;
+  /// they are used only to classify accesses in active function activations.
   struct NoAliasNode {
     uint64_t Parent = 0;
     MemoryObject *Object = nullptr;
     bool Active = false;
-    // Run-Length Encoding to reduce memory consumption.
-    SmallVector<NoAliasStateRun, 1> States;
   };
 
-  // The node ID 0 is reserved for raw/root nodes.
+  struct NoAliasActivation {
+    SmallVector<uint64_t, 4> Nodes;
+    DenseMap<MemoryObject *, SmallVector<NoAliasAccessRun, 1>> Accesses;
+  };
+
+  // ID 0 is reserved for the raw/root access class and for no activation.
   uint64_t NextNoAliasNode = 1;
-  uint64_t ActiveNoAliasScopes = 0;
+  uint64_t NextNoAliasActivation = 1;
   DenseMap<uint64_t, NoAliasNode> NoAliasNodes;
-  DenseMap<MemoryObject *, SmallVector<uint64_t, 2>> NoAliasNodesByObject;
+  DenseMap<uint64_t, NoAliasActivation> NoAliasActivations;
+  DenseMap<MemoryObject *, SmallVector<uint64_t, 2>> NoAliasActivationsByObject;
 
   // noalias-related diagnostics
   std::string LastNoAliasError;
@@ -355,36 +359,16 @@ class Context {
   /// Try to erase the node if it is inactive and has no active descendant.
   void tryEraseInactiveNoAliasNode(uint64_t NodeID);
   static StringRef getNoAliasAccessKindName(NoAliasAccessKind Kind);
-  static StringRef getNoAliasStateName(NoAliasState State);
   static std::string getNoAliasNodeName(uint64_t NodeID);
+  static std::string getNoAliasActivationName(uint64_t ActivationID);
   static std::string getNoAliasObjectName(const MemoryObject &MO);
   void appendNoAliasEvent(std::string Msg);
-  /// Record a noalias violation in both the user-facing error slot and verbose
-  /// event queue.
-  void setNoAliasViolation(uint64_t ProtectedNodeId, uint64_t AccessNode,
-                           const MemoryObject &MO, uint64_t Begin, uint64_t End,
-                           NoAliasAccessKind Kind, bool IsLocal,
-                           NoAliasState State, bool IsProtectorEndAction);
-  /// Apply the noalias state machine for one homogeneous byte range. Returns
-  /// std::nullopt when the access is forbidden and should be reported as an
-  /// immediate UB.
-  static std::optional<NoAliasState>
-  transitionNoAliasState(NoAliasState State, NoAliasAccessKind Kind,
-                         bool IsLocal);
-  /// Apply a memory access to every active protector for \p MO. \p
-  /// SkipDescendantsOf is used for protector-end synthetic accesses.
-  bool accessNoAliasImpl(MemoryObject &MO, uint64_t Offset, uint64_t Size,
-                         uint64_t AccessNode, NoAliasAccessKind Kind,
-                         uint64_t SkipDescendantsOf);
-  /// Update one node's sparse byte-state runs for access to [Begin, End).
-  /// The nodes store only non-Reserved runs, so this routine splits old runs,
-  /// treats gaps as implicit Reserved ranges, transitions each touches segment,
-  /// and coalesces adjacent ranges that end in the same non-Reserved state.
-  bool updateNoAliasNodeForAccess(NoAliasNode &Node, uint64_t Begin,
-                                  uint64_t End, NoAliasAccessKind Kind,
-                                  bool IsLocal, uint64_t ProtectedNodeID,
-                                  uint64_t AccessNode,
-                                  bool IsProtectorEndAction);
+  uint64_t classifyNoAliasAccess(const NoAliasActivation &Activation,
+                                 const MemoryObject &MO,
+                                 uint64_t AccessNode) const;
+  bool updateNoAliasAccesses(NoAliasActivation &Activation, MemoryObject &MO,
+                             uint64_t Begin, uint64_t End, uint64_t AccessClass,
+                             NoAliasAccessKind Kind, uint64_t ActivationID);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -522,15 +506,15 @@ public:
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);
 
-  /// Create a new protected noalias node based on \p Ptr and return a pointer
-  /// associated with that node. The underlying pointer provenance is unchanged.
-  Pointer createNoAliasPointer(const Pointer &Ptr);
-  /// Apply a memory access to the active noalias state machines for \p MO.
-  /// Returns false when the protected state machine detects UB.
+  /// Begin one dynamic function activation containing noalias parameters.
+  uint64_t beginNoAliasActivation();
+  /// Create an access class for a noalias parameter in \p ActivationID.
+  Pointer createNoAliasPointer(const Pointer &Ptr, uint64_t ActivationID);
+  /// Apply an access to every active activation protecting \p MO.
   bool accessNoAlias(MemoryObject &MO, uint64_t Offset, uint64_t Size,
                      uint64_t AccessNode, NoAliasAccessKind Kind);
-  /// End all noalias protectors created for a call frame.
-  bool endNoAliasScopes(ArrayRef<uint64_t> Nodes);
+  /// End an activation and discard its access summaries.
+  void endNoAliasActivation(uint64_t ActivationID);
   StringRef getLastNoAliasError() const { return LastNoAliasError; }
   SmallVector<std::string, 4> takeNoAliasEvents();
   /// Drop noalias state for an object \p MO that is no longer usable.
