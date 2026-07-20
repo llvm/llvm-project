@@ -27,7 +27,7 @@ entry:
 !2 = !{!"_ZTSFicE"}
 !3 = !{!2}
 !4 = !{!5}
-!5 = !{!"_ZTSFPvS_"}
+!5 = !{!"_ZTSFPvS_E"}
 
 ;; Make sure following type IDs are in call graph section
 ;; 0x5eecb3e2444f731f, 0x814b8e305486bc59, 0xf897fd777ade6814
