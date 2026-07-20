@@ -6512,6 +6512,50 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
                      DAG.getConstant(Index * EltBits, DL, MVT::i32));
 }
 
+// Match a strided-interleave shuffle that forms a P-extension packed pair:
+//   <a0, b0, a2, b2, ...> -> ppaire.*
+//   <a1, b1, a3, b3, ...> -> ppairo.*
+static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
+                                          SelectionDAG &DAG) {
+  MVT VT = SVN->getSimpleValueType(0);
+  if (VT != MVT::v4i8 && VT != MVT::v8i8 && VT != MVT::v4i16)
+    return SDValue();
+
+  SDValue V1 = SVN->getOperand(0);
+  SDValue V2 = SVN->getOperand(1);
+  SDLoc DL(SVN);
+  unsigned NumElts = VT.getVectorNumElements();
+  ArrayRef<int> Mask = SVN->getMask();
+  if (V2.isUndef())
+    return SDValue();
+
+  // Match <start, N+start, start+2, N+start+2, ...>: each widened element of
+  // V1/V2 contributes its low (start=0, ppaire) or high (start=1, ppairo) byte.
+  // Trailing lanes may be undef when a 4-byte source was widened to v8i8.
+  auto IsStrided = [&](unsigned Start) {
+    for (unsigned I = 0; I != NumElts / 2; ++I) {
+      int M0 = Mask[2 * I];
+      int M1 = Mask[2 * I + 1];
+      if (M0 < 0 && M1 < 0)
+        continue;
+      if (M0 != (int)(Start + 2 * I) || M1 != (int)(NumElts + Start + 2 * I))
+        return false;
+    }
+    return true;
+  };
+
+  bool IsOdd;
+  if (IsStrided(0))
+    IsOdd = false;
+  else if (IsStrided(1))
+    IsOdd = true;
+  else
+    return SDValue();
+
+  unsigned Opc = IsOdd ? RISCVISD::PPAIRO : RISCVISD::PPAIRE;
+  return DAG.getNode(Opc, DL, VT, V1, V2);
+}
+
 SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDValue V1 = Op.getOperand(0);
@@ -6559,6 +6603,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       return V;
     if (SDValue V =
             lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(SVN, Subtarget, DAG))
+      return V;
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPPair(SVN, DAG))
       return V;
     return SDValue();
   }
