@@ -218,12 +218,19 @@ public:
     // "<plugin>-plugin"), empty when the diagnostic is not part of one. Unlike
     // Group above, this is not a member of the static (TableGen'd) group table.
     std::string DynGroupName;
+    // Stable, build-independent identifier for this diagnostic, empty when none
+    // was given. A custom diagnostic's numeric ID is assigned in registration
+    // order and so is not reproducible across runs; a caller that generates its
+    // diagnostics from TableGen (whose enum names are stable) supplies that name
+    // here so tools keying on identity -- notably SARIF's ruleId -- stay stable.
+    std::string StableID;
 
     auto get_as_tuple() const {
       return std::tuple(DefaultSeverity, DiagClass, ShowInSystemHeader,
                         ShowInSystemMacro, HasGroup, Group,
                         std::string_view{Description},
-                        std::string_view{DynGroupName});
+                        std::string_view{DynGroupName},
+                        std::string_view{StableID});
     }
 
   public:
@@ -232,13 +239,13 @@ public:
                    bool ShowInSystemHeader = false,
                    bool ShowInSystemMacro = false,
                    std::optional<diag::Group> Group = std::nullopt,
-                   std::string DynGroupName = {})
+                   std::string DynGroupName = {}, std::string StableID = {})
         : DefaultSeverity(static_cast<unsigned>(DefaultSeverity)),
           DiagClass(Class), ShowInSystemHeader(ShowInSystemHeader),
           ShowInSystemMacro(ShowInSystemMacro), HasGroup(Group != std::nullopt),
           Group(Group.value_or(diag::Group{})),
           Description(std::move(Description)),
-          DynGroupName(std::move(DynGroupName)) {}
+          DynGroupName(std::move(DynGroupName)), StableID(std::move(StableID)) {}
 
     std::optional<diag::Group> GetGroup() const {
       if (HasGroup)
@@ -247,6 +254,8 @@ public:
     }
 
     StringRef GetDynGroup() const { return DynGroupName; }
+
+    StringRef GetStableID() const { return StableID; }
 
     diag::Severity GetDefaultSeverity() const {
       return static_cast<diag::Severity>(DefaultSeverity);
@@ -394,15 +403,22 @@ public:
   /// -Wno-<group> / -Werror=<group> (and -R<group> for a remark), just like a
   /// built-in warning. Two callers may share a group name; that simply groups
   /// their diagnostics together.
-  unsigned getCustomDiagID(Level Level, StringRef Message, StringRef Group);
+  ///
+  /// \p StableID, when non-empty, is a build-independent identifier for the
+  /// diagnostic (see CustomDiagDesc::StableID) used as its SARIF ruleId; leave
+  /// it empty to fall back to the diagnostic's numeric (non-reproducible) ID.
+  unsigned getCustomDiagID(Level Level, StringRef Message, StringRef Group,
+                           StringRef StableID = {});
 
   /// Convenience over getCustomDiagID(Level, Message, Group) that places a
   /// plugin's diagnostic in its own runtime group "<PluginName>-plugin" (or the
   /// subgroup "<PluginName>-plugin-<Subgroup>"), the naming convention that the
   /// -Wplugin umbrella is built on. A plugin that instead wants to join an
   /// existing group can call getCustomDiagID(Level, Message, Group) directly.
+  /// \p StableID is forwarded as the diagnostic's SARIF ruleId (see above).
   unsigned getCustomPluginDiagID(Level Level, StringRef Message,
-                                 StringRef PluginName, StringRef Subgroup = {});
+                                 StringRef PluginName, StringRef Subgroup = {},
+                                 StringRef StableID = {});
 
   /// Ensure a runtime plugin group named \p Name exists, so a -W flag can
   /// target it before the plugin that owns it is loaded. Returns true if

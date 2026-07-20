@@ -923,26 +923,29 @@ public:
   /// diagnostic can join a built-in group such as -Wdeprecated, or a
   /// runtime-registered group whose name is not known at build time. Either way
   /// it is controllable with -W<group> / -Wno-<group> / -Werror=<group> (and
-  /// -R<group> for a remark), like a built-in warning.
+  /// -R<group> for a remark), like a built-in warning. \p StableID, when given,
+  /// is a build-independent identifier used as the diagnostic's SARIF ruleId.
   template <unsigned N>
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N],
-                           StringRef Group) {
+                           StringRef Group, StringRef StableID = {}) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
-                                  StringRef(FormatString, N - 1), Group);
+                                  StringRef(FormatString, N - 1), Group,
+                                  StableID);
   }
 
   /// Convenience over the group-taking getCustomDiagID that places a plugin's
   /// diagnostic in its own runtime group "<PluginName>-plugin" (or the subgroup
   /// "<PluginName>-plugin-<Subgroup>"), the naming convention behind the
   /// -Wplugin umbrella. A plugin that instead wants to join an existing group
-  /// can call getCustomDiagID(L, FormatString, Group) directly.
+  /// can call getCustomDiagID(L, FormatString, Group) directly. \p StableID,
+  /// when given, is used as the diagnostic's SARIF ruleId.
   template <unsigned N>
   unsigned getCustomPluginDiagID(Level L, const char (&FormatString)[N],
-                                 StringRef PluginName,
-                                 StringRef Subgroup = {}) {
+                                 StringRef PluginName, StringRef Subgroup = {},
+                                 StringRef StableID = {}) {
     return Diags->getCustomPluginDiagID((DiagnosticIDs::Level)L,
                                         StringRef(FormatString, N - 1),
-                                        PluginName, Subgroup);
+                                        PluginName, Subgroup, StableID);
   }
 
   /// Converts a diagnostic argument (as an intptr_t) into the string

@@ -499,7 +499,7 @@ unsigned DiagnosticIDs::getCustomDiagID(CustomDiagDesc Diag) {
 }
 
 unsigned DiagnosticIDs::getCustomDiagID(Level Level, StringRef Message,
-                                        StringRef Group) {
+                                        StringRef Group, StringRef StableID) {
   unsigned Class = CLASS_WARNING;
   diag::Severity Sev = diag::Severity::Warning;
   switch (Level) {
@@ -534,12 +534,13 @@ unsigned DiagnosticIDs::getCustomDiagID(Level Level, StringRef Message,
   return getCustomDiagID(CustomDiagDesc(
       Sev, std::string(Message), Class,
       /*ShowInSystemHeader=*/false, /*ShowInSystemMacro=*/false, StaticGroup,
-      StaticGroup ? std::string() : std::string(Group)));
+      StaticGroup ? std::string() : std::string(Group), std::string(StableID)));
 }
 
 unsigned DiagnosticIDs::getCustomPluginDiagID(Level Level, StringRef Message,
                                               StringRef PluginName,
-                                              StringRef Subgroup) {
+                                              StringRef Subgroup,
+                                              StringRef StableID) {
   // A thin convention over getCustomDiagID: place the diagnostic in the
   // plugin's own runtime group "<plugin>-plugin[-<sub>]" that the -Wplugin
   // umbrella controls. A plugin that wants to join an existing group instead
@@ -547,7 +548,7 @@ unsigned DiagnosticIDs::getCustomPluginDiagID(Level Level, StringRef Message,
   std::string Group = (Twine(PluginName) + "-plugin").str();
   if (!Subgroup.empty())
     Group = (Twine(Group) + "-" + Subgroup).str();
-  return getCustomDiagID(Level, Message, Group);
+  return getCustomDiagID(Level, Message, Group, StableID);
 }
 
 bool DiagnosticIDs::isWarningOrExtension(unsigned DiagID) const {
@@ -595,9 +596,14 @@ std::string DiagnosticIDs::getStableID(unsigned DiagID) const {
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
     return Info->getStableID().str();
   assert(CustomDiagInfo && "Invalid CustomDiagInfo");
-  // TODO: Stable IDs for custom diagnostics?
-  // If we have to go through every custom diagnostic and add a stable ID, we
-  // should instead just go replace them all with declared diagnostics.
+  // A custom diagnostic that was given a stable ID (e.g. a plugin diagnostic
+  // generated from TableGen, whose enum name does not change across runs) uses
+  // it verbatim, so a tool keying on identity such as SARIF's ruleId is stable.
+  // Otherwise fall back to the numeric ID, which is assigned in registration
+  // order and is therefore not reproducible -- documented as best-effort.
+  if (StringRef SID = CustomDiagInfo->getDescription(DiagID).GetStableID();
+      !SID.empty())
+    return SID.str();
   return std::to_string(DiagID);
 }
 

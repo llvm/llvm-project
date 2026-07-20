@@ -769,6 +769,21 @@ TEST_F(PluginWarningGroupTest, UserDefinedWarningsPromotesPluginGroup) {
             DiagnosticsEngine::Error);
 }
 
+// A custom diagnostic given a stable ID reports it verbatim (used as the SARIF
+// ruleId); without one it falls back to the numeric, non-reproducible ID.
+TEST_F(PluginWarningGroupTest, StableIDReportedForSarifRuleId) {
+  const DiagnosticIDs &DiagIDs = *Diags.getDiagnosticIDs();
+
+  unsigned WithID = Diags.getCustomPluginDiagID(
+      DiagnosticsEngine::Warning, "reused an AST node", "example",
+      /*Subgroup=*/"", /*StableID=*/"example_plugin_reused_node");
+  EXPECT_EQ(DiagIDs.getStableID(WithID), "example_plugin_reused_node");
+
+  unsigned Without = Diags.getCustomPluginDiagID(DiagnosticsEngine::Warning,
+                                                 "other", "example");
+  EXPECT_EQ(DiagIDs.getStableID(Without), std::to_string(Without));
+}
+
 // The root controls warnings only: -Rno-user-defined-warnings does not exist as
 // a remark root, and a -W root flag must not touch a grouped remark.
 TEST_F(PluginWarningGroupTest, UserDefinedWarningsRootLeavesRemarksAlone) {
