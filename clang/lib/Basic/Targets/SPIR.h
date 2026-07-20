@@ -317,9 +317,9 @@ public:
       : SPIRTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spir64 &&
            "Invalid architecture for 64-bit SPIR.");
-    PointerWidth = PointerAlign = 64;
     const TargetInfo *HostTarget = getHostTarget();
     if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 64) {
+      PointerWidth = PointerAlign = 64;
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
     }
