@@ -286,9 +286,9 @@ public:
       : SPIRTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spir &&
            "Invalid architecture for 32-bit SPIR.");
-    PointerWidth = PointerAlign = 32;
     const TargetInfo *HostTarget = getHostTarget();
     if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 32) {
+      PointerWidth = PointerAlign = 32;
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     }
