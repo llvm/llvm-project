@@ -266,8 +266,9 @@ spirv.module Logical GLSL450 {
       spirv.mlir.merge %1, %2 : i32, i32
     }
     // CHECK: ^bb4({{.*}}: i32, {{.*}}: i32):
-    %one = spirv.Constant 1 : i32
-    spirv.ReturnValue %one : i32
+    // Makes sure both values are used.
+    %sum = spirv.IAdd %0#0, %0#1 : i32
+    spirv.ReturnValue %sum : i32
   }
 }
 
