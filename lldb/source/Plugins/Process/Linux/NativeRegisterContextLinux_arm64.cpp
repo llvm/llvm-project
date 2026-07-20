@@ -775,9 +775,7 @@ static uint8_t *AddSavedRegistersData(uint8_t *dst, void *src, size_t size) {
 }
 
 uint8_t *NativeRegisterContextLinux_arm64::AddSavedRegisters(
-    uint8_t *dst,
-    NativeRegisterContextLinux_arm64::RegisterSetType register_set_type,
-    void *src, size_t size) {
+    uint8_t *dst, RegisterSetType register_set_type, void *src, size_t size) {
   dst = AddRegisterSetType(dst, register_set_type);
   return AddSavedRegistersData(dst, src, size);
 }
