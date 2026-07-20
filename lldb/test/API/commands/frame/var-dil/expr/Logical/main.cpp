@@ -6,6 +6,7 @@ void stop() {}
 int main(int argc, char **argv) {
   bool trueVar = true;
   bool falseVar = false;
+  bool &trueRef = trueVar;
 
   const char *p_ptr = "str";
   const char *p_nullptr = nullptr;

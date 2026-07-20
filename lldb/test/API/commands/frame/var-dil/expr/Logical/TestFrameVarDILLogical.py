@@ -31,6 +31,8 @@ class TestFrameVarLogical(TestBase):
         self.expect_var_path("!!trueVar", value="true")
         self.expect_var_path("!falseVar", value="true")
         self.expect_var_path("!!falseVar", value="false")
+        self.expect_var_path("!trueRef", value="false")
+        self.expect_var_path("!!trueRef", value="true")
 
         self.expect_var_path("trueVar || true", value="true")
         self.expect_var_path("trueVar && false", value="false")
