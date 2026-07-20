@@ -1280,9 +1280,10 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
             if (parDim.isThreadY()) {
               if (combineThreadYActive &&
                   *combineThreadYActive != isWorkerPrivate) {
-                combineOp->emitError()
-                    << "mixed worker-private and non-worker-private reduction "
-                       "combines require incompatible ThreadY predication";
+                (void)accSupport.emitNYI(
+                    combineOp->getLoc(),
+                    "mixed worker-private and non-worker-private reduction "
+                    "combines require incompatible ThreadY predication");
                 hasFailed = true;
                 return failure();
               }
