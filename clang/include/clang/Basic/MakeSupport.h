@@ -31,7 +31,8 @@ enum class DependencyOutputFormat { Make, NMake };
 /// \param PhonyTargets If true, also emit an empty "prereq:" line for each
 ///   prerequisite (except \p InputFileIndex), so later deleting a prerequisite
 ///   doesn't break the build.
-/// \param InputFileIndex Index in \p Files of the main input, skipped above.
+/// \param InputFileIndex Index in \p Files of the main input, skipped for
+///   phony target emission.
 void printMakeDependencyFile(
     llvm::raw_ostream &OS, llvm::ArrayRef<std::string> Targets,
     llvm::ArrayRef<std::string> Files,

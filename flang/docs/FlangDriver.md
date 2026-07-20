@@ -241,8 +241,9 @@ Flang can emit Makefile-style dependency rules with `-M`, `-MM`, `-MD` and
 `-MMD` (paired with `-MF`, `-MT` and `-MQ` to control the output file and the
 rule target).
 
-There is one behavioural difference to be aware of regarding module
-dependencies (the `.mod` files brought in by `use` statements):
+There is one behavioural difference between `-M`/`-MM` and `-MD`/`-MMD` to
+be aware of regarding module dependencies (the `.mod` files read via `use`
+statements):
 
 * `-MD` and `-MMD` run a full compilation, so the `.mod` files opened during
   semantic analysis are recorded and appear in the dependency rule.

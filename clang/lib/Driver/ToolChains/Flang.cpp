@@ -59,6 +59,10 @@ static void renderDependencyGenerationOptions(Compilation &C,
   Arg *ArgM = Args.getLastArg(options::OPT_M, options::OPT_MM);
   Arg *ArgMD = Args.getLastArg(options::OPT_MD, options::OPT_MMD);
 
+  if (!ArgM && !ArgMD) {
+    return;
+  }
+
   // Drop warnings for -M/-MM so they don't mix into the dependency output.
   if (ArgM) {
     CmdArgs.push_back("-w");
@@ -66,19 +70,16 @@ static void renderDependencyGenerationOptions(Compilation &C,
     ArgM = ArgMD;
   }
 
-  if (!ArgM) {
-    return;
-  }
-
   // Emit "-MT <target>", quoting Make metacharacters when requested.
   auto addTarget = [&](StringRef Target, bool Quote) {
-    SmallString<128> Quoted;
-    if (Quote) {
-      clang::quoteMakeTarget(Target, Quoted);
-      Target = Quoted;
-    }
     CmdArgs.push_back("-MT");
-    CmdArgs.push_back(Args.MakeArgString(Target));
+    if (Quote) {
+      SmallString<128> Quoted;
+      clang::quoteMakeTarget(Target, Quoted);
+      CmdArgs.push_back(Args.MakeArgString(Quoted));
+    } else {
+      CmdArgs.push_back(Args.MakeArgString(Target));
+    }
   };
 
   // Decide where to write the dependency file.
@@ -119,8 +120,8 @@ static void renderDependencyGenerationOptions(Compilation &C,
   // With no explicit target, default to the object file. In -M/-MM mode -o
   // names the dependency file, not the target, so derive <base>.o instead.
   if (!HasTarget) {
-    if (Arg *OutputOpt = Args.getLastArg(options::OPT_o);
-        OutputOpt && Output.getType() != types::TY_Dependencies) {
+    Arg *OutputOpt = Args.getLastArg(options::OPT_o);
+    if (OutputOpt && Output.getType() != types::TY_Dependencies) {
       addTarget(OutputOpt->getValue(), /*Quote=*/true);
     } else {
       SmallString<128> P(llvm::sys::path::filename(Inputs[0].getBaseInput()));
