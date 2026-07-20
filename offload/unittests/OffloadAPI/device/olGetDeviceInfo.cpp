@@ -228,6 +228,10 @@ OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(SharedMemSize, uint64_t,
                                     0);
 OL_DEVICE_INFO_TEST_HOST_SUCCESS(SharedMemSize, uint64_t,
                                  OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE);
+OL_DEVICE_INFO_TEST_SUCCESS(IsVASupported, bool,
+                            OL_DEVICE_INFO_IS_VA_SUPPORTED);
+OL_DEVICE_INFO_TEST_SUCCESS(UseAutoZeroCopy, bool,
+                            OL_DEVICE_INFO_USE_AUTO_ZERO_COPY);
 
 TEST_P(olGetDeviceInfoTest, InvalidNullHandleDevice) {
   ol_device_type_t DeviceType;
