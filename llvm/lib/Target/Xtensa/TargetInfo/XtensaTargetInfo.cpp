@@ -17,7 +17,8 @@ Target &llvm::getTheXtensaTarget() {
   return TheXtensaTarget;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetInfo() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeXtensaTargetInfo() {
   RegisterTarget<Triple::xtensa> X(getTheXtensaTarget(), "xtensa", "Xtensa 32",
                                    "XTENSA");
 }

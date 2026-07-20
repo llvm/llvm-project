@@ -107,7 +107,7 @@ static MCInstPrinter *createM68kMCInstPrinter(const Triple &T,
   return new M68kInstPrinter(MAI, MII, MRI);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTargetMC() {
   Target &T = getTheM68kTarget();
 
   // Register the MC asm info.
