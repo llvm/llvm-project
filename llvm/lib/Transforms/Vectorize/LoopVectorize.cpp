@@ -5981,7 +5981,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
     std::optional<uint64_t> MaxRuntimeStep;
     if (auto MaxVScale = getMaxVScale(*CM.TheFunction, CM.TTI))
-      MaxRuntimeStep = uint64_t(*MaxVScale) * BestVF.getKnownMinValue() * BestUF;
+      MaxRuntimeStep = *MaxVScale * BestVF.getKnownMinValue() * BestUF;
     assert((OrigLoop->getUniqueLatchExitBlock() || RequiresScalarEpilogue) &&
            "loops not exiting via the latch without required epilogue?");
     VPlanTransforms::materializeVectorTripCount(
@@ -5989,7 +5989,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
         &BestVPlan.getVFxUF(), MaxRuntimeStep);
     VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   }
-
   // Limit expansions to VPInstruction to when not vectorizing the epilogue.
   // Currently this code path still relies on code re-using SCEVs expanded
   // directly to IR instructions.
@@ -7782,7 +7781,9 @@ static void fixScalarResumeValuesFromBypass(
         continue;
       // If the resume phi was folded, ResumeV is the common incoming value.
       Value *BypassIncoming = ResumeV->getUnderlyingValue();
-      assert(BypassIncoming && "no IR value");
+      assert(
+          BypassIncoming &&
+          "Expected to have set underlying value for epilogue resume values");
       if (auto *MainResumePhi = dyn_cast<PHINode>(BypassIncoming))
         if (MainResumePhi->getBasicBlockIndex(BypassBlock) != -1)
           BypassIncoming = MainResumePhi->getIncomingValueForBlock(BypassBlock);
@@ -7862,9 +7863,8 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
     // stale incoming values still recorded for them.
     for (BasicBlock *BB :
          {EPI.EpilogueIterationCountCheck, SCEVCheckBlock, MemCheckBlock}) {
-      if (!BB || Phi->getBasicBlockIndex(BB) == -1)
-        continue;
-      Phi->removeIncomingValue(BB);
+      if (Phi->getBasicBlockIndex(BB) != -1)
+        Phi->removeIncomingValue(BB);
     }
   }
 
@@ -8349,12 +8349,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     EPI.EpilogueIterationCountCheck = EntryBB;
 
     BasicBlock *LastCheck = EntryBB;
-    auto IsLive = [](BasicBlock *BB) {
-      return BB && !isa<UnreachableInst>(BB->getTerminator());
+    auto GetLiveCheckBB = [](BasicBlock *BB) {
+      bool IsLive = BB && !isa<UnreachableInst>(BB->getTerminator());
+      return IsLive ? BB : nullptr;
     };
-    if (BasicBlock *BB = Checks.getMemRuntimeChecks().second; IsLive(BB))
+    if (BasicBlock *BB = GetLiveCheckBB(Checks.getMemRuntimeChecks().second))
       LastCheck = BB;
-    else if (BasicBlock *BB = Checks.getSCEVChecks().second; IsLive(BB))
+    else if (BasicBlock *BB = GetLiveCheckBB(Checks.getSCEVChecks().second))
       LastCheck = BB;
 
     BasicBlock *ScalarPH = L->getLoopPreheader();
