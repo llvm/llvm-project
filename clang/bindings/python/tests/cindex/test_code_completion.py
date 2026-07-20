@@ -19,7 +19,7 @@ class TestCodeCompletion(unittest.TestCase):
 
         with warnings.catch_warnings(record=True) as log:
             completions = [str(c) for c in cr]
-            self.assertEqual(len(log), 2)
+            self.assertEqual(len(log), 1)
             for warning in log:
                 self.assertIsInstance(warning.message, DeprecationWarning)
 
@@ -28,7 +28,7 @@ class TestCodeCompletion(unittest.TestCase):
 
         with warnings.catch_warnings(record=True) as log:
             completions_deprecated = [str(c) for c in cr.results]
-            self.assertEqual(len(log), 3)
+            self.assertEqual(len(log), 2)
             for warning in log:
                 self.assertIsInstance(warning.message, DeprecationWarning)
 
@@ -65,9 +65,9 @@ void f() {
         )
 
         expected = [
-            "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
-            "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: ",
+            "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: Aaa.",
+            "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: Bbb.",
+            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
@@ -105,9 +105,9 @@ void f() {
         )
 
         expected = [
-            "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
-            "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: ",
+            "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: Aaa.",
+            "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: Bbb.",
+            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
@@ -141,63 +141,22 @@ void f(P x, Q y) {
         cr = tu.codeComplete("fake.cpp", 12, 5, unsaved_files=files)
 
         expected = [
-            "{'const', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
-            "{'volatile', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
-            "{'operator', TypedText} || Priority: 40 || Availability: Available || Brief comment: ",
-            "{'P', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
-            "{'Q', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'const', TypedText} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'volatile', TypedText} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'operator', TypedText} || Priority: 40 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'P', TypedText} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'Q', TypedText} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
         cr = tu.codeComplete("fake.cpp", 13, 5, unsaved_files=files)
         expected = [
-            "{'P', TypedText} | {'::', Text} || Priority: 75 || Availability: Available || Brief comment: ",
-            "{'P &', ResultType} | {'operator=', TypedText} | {'(', LeftParen} | {'const P &', Placeholder} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
-            "{'int', ResultType} | {'member', TypedText} || Priority: 35 || Availability: NotAccessible || Brief comment: ",
-            "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
+            "{'P', TypedText} | {'::', Text} || Priority: 75 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'P &', ResultType} | {'operator=', TypedText} | {'(', LeftParen} | {'const P &', Placeholder} | {')', RightParen} || Priority: 79 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'int', ResultType} | {'member', TypedText} || Priority: 35 || Availability: AvailabilityKind.NOT_ACCESSIBLE || Brief comment: ",
+            "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
-
-    def test_availability_kind_compat(self):
-        numKinds = len(CompletionString.AvailabilityKindCompat)
-
-        # Compare with regular kind
-        for compatKind in CompletionString.AvailabilityKindCompat:
-            commonKind = AvailabilityKind.from_id(compatKind.value)
-            nextKindId = (compatKind.value + 1) % numKinds
-            commonKindUnequal = AvailabilityKind.from_id(nextKindId)
-            self.assertEqual(commonKind, compatKind)
-            self.assertEqual(compatKind, commonKind)
-            self.assertNotEqual(commonKindUnequal, compatKind)
-            self.assertNotEqual(compatKind, commonKindUnequal)
-
-        # Compare two compat kinds
-        for compatKind in CompletionString.AvailabilityKindCompat:
-            compatKind2 = CompletionString.AvailabilityKindCompat.from_id(
-                compatKind.value
-            )
-            nextKindId = (compatKind.value + 1) % numKinds
-            compatKind2Unequal = CompletionString.AvailabilityKindCompat.from_id(
-                nextKindId
-            )
-            self.assertEqual(compatKind, compatKind2)
-            self.assertEqual(compatKind2, compatKind)
-            self.assertNotEqual(compatKind2Unequal, compatKind)
-            self.assertNotEqual(compatKind, compatKind2Unequal)
-
-    def test_compat_str(self):
-        kindStringMap = {
-            0: "Available",
-            1: "Deprecated",
-            2: "NotAvailable",
-            3: "NotAccessible",
-        }
-        for id, string in kindStringMap.items():
-            kind = CompletionString.AvailabilityKindCompat.from_id(id)
-            with warnings.catch_warnings(record=True) as log:
-                self.assertEqual(str(kind), string)
-                self.assertEqual(len(log), 1)
-                self.assertIsInstance(log[0].message, DeprecationWarning)
 
     def test_completion_chunk_kind_compatibility(self):
         value_to_old_str = {
