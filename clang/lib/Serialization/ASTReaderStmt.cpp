@@ -154,7 +154,7 @@ void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
   VisitStmt(S);
   SmallVector<Stmt *, 16> Stmts;
   unsigned NumStmts = Record.readInt();
-  unsigned HasFPFeatures = Record.readInt();
+  bool HasFPFeatures = Record.readBool();
   assert(S->hasStoredFPFeatures() == HasFPFeatures);
   while (NumStmts--)
     Stmts.push_back(Record.readSubStmt());
@@ -1159,7 +1159,7 @@ void ASTStmtReader::VisitCastExpr(CastExpr *E) {
 
   CurrentUnpackingBits.emplace(Record.readInt());
   E->setCastKind((CastKind)CurrentUnpackingBits->getNextBits(/*Width=*/7));
-  unsigned HasFPFeatures = CurrentUnpackingBits->getNextBit();
+  bool HasFPFeatures = CurrentUnpackingBits->getNextBit();
   assert(E->hasStoredFPFeatures() == HasFPFeatures);
 
   E->setSubExpr(Record.readSubExpr());
