@@ -564,6 +564,9 @@ SanitizerSet CodeGenModule::getProfileCoreUBChecks() const {
   // The locally checkable cases of P4317 Appendix A.1, each reusing the UBSan
   // check that already implements it. One case is added per commit.
   Checks.set(SanitizerKind::IntegerDivideByZero, true); // {expr.mul.div.by.zero}
+  // {expr.mul.representable.type.result}: signed +, -, *, unary -, and the
+  // INT_MIN/-1 division whose quotient is not representable.
+  Checks.set(SanitizerKind::SignedIntegerOverflow, true);
   return Checks;
 }
 
