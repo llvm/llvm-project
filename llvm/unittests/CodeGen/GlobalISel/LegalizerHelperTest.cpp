@@ -1900,9 +1900,8 @@ TEST_F(AArch64GISelMITest, WidenScalarMergeValuesFloat) {
   if (!TM)
     GTEST_SKIP();
 
-  constexpr ElementCount EC0 = ElementCount::getFixed(0);
-  const LLT I8 = LLT(LLT::Kind::INTEGER, EC0, 8);
-  const LLT I16 = LLT(LLT::Kind::INTEGER, EC0, 16);
+  const LLT I8 = LLT::integer(8);
+  const LLT I16 = LLT::integer(16);
   const LLT F16 = LLT::float16();
 
   DefineLegalizerInfo(A, {});
@@ -1940,9 +1939,8 @@ TEST_F(AArch64GISelMITest, WidenScalarMergeValuesBFloat) {
   if (!TM)
     GTEST_SKIP();
 
-  constexpr ElementCount EC0 = ElementCount::getFixed(0);
-  const LLT I8 = LLT(LLT::Kind::INTEGER, EC0, 8);
-  const LLT I16 = LLT(LLT::Kind::INTEGER, EC0, 16);
+  const LLT I8 = LLT::integer(8);
+  const LLT I16 = LLT::integer(16);
   const LLT BF16 = LLT::bfloat16();
 
   DefineLegalizerInfo(A, {});
