@@ -4108,8 +4108,8 @@ For a simpler introduction to the ordering constraints, see the
 For the following, we call two or more accesses *perfectly overlapping*
 if they all access the exact same set of bytes, i.e., they access the
 same address and have the same access size. By the constraints of the
-previous section, racing atomic accesses must be perfectly overlapping
-to act atomically.
+previous section, overlapping atomic accesses that are not ordered by
+happens-before must be perfectly overlapping to act atomically.
 
 `unordered`
 :   The set of values that can be read is governed by the happens-before
