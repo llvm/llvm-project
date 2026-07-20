@@ -747,6 +747,21 @@ static llvm::Constant *getPrologueSignature(CodeGenModule &CGM,
   return CGM.getTargetCodeGenInfo().getUBSanFunctionSignature(CGM);
 }
 
+// std::core_ub (P4317): true if \p D, or a declaration lexically enclosing it,
+// carries a whole-profile [[profiles::suppress(std::core_ub)]] (an empty rule,
+// which suppresses every case). A rule-qualified suppression names a case the
+// runtime checks do not track individually, so it does not disable them here.
+static bool isCoreUBSuppressed(const Decl *D) {
+  for (; D;) {
+    for (const auto *PSA : D->specific_attrs<ProfilesSuppressAttr>())
+      if (PSA->getProfileName() == "std::core_ub" && PSA->getRule().empty())
+        return true;
+    const DeclContext *DC = D->getLexicalDeclContext();
+    D = DC ? dyn_cast<Decl>(DC) : nullptr;
+  }
+  return false;
+}
+
 void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
                                     llvm::Function *Fn,
                                     const CGFunctionInfo &FnInfo,
@@ -770,11 +785,14 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   assert(CurFn->isDeclaration() && "Function already has body?");
 
   // std::core_ub (P4317): an enforced profile adds its guarded UBSan checks to
-  // this function, in trap mode. Done before the ignorelist and no_sanitize
-  // handling below so both can still turn a guarded check off; a kind cleared
-  // from SanOpts is never emitted, so its leftover ProfileTrapChecks bit is
-  // harmless.
+  // this function, in trap mode, unless the function opts out with
+  // [[profiles::suppress(std::core_ub)]]. Done before the ignorelist and
+  // no_sanitize handling below so both can still turn a guarded check off; a
+  // kind cleared from SanOpts is never emitted, so its leftover
+  // ProfileTrapChecks bit is harmless.
   ProfileTrapChecks = CGM.getProfileCoreUBChecks();
+  if (D && isCoreUBSuppressed(D))
+    ProfileTrapChecks.clear();
   SanOpts.Mask |= ProfileTrapChecks.Mask;
 
   // If this function is ignored for any of the enabled sanitizers,
