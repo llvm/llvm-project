@@ -171,8 +171,11 @@ private:
   ProgramStateRef ValidState = nullptr;
 };
 
-struct Messages {
-  std::string Short, Full;
+/// Strings that will be passed to the parameters 'desc' and 'fullDesc' of the
+/// constructor of 'PathSensitiveBugReport'.
+struct BugDescription {
+  std::string Short;
+  std::string Full;
 };
 
 // NOTE: The `ArraySubscriptExpr` and `UnaryOperator` callbacks are `PostStmt`
@@ -190,9 +193,9 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
 
   void handleAccessExpr(const Expr *E, CheckerContext &C) const;
 
-  void reportOOB(CheckerContext &C, ProgramStateRef ErrorState, Messages Msgs,
-                 NonLoc Offset, std::optional<NonLoc> Extent,
-                 bool IsTaintBug = false) const;
+  void reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
+                 BugDescription Desc, NonLoc Offset,
+                 std::optional<NonLoc> Extent, bool IsTaintBug = false) const;
 
   static void markPartsInteresting(PathSensitiveBugReport &BR,
                                    ProgramStateRef ErrorState, NonLoc Val,
@@ -492,8 +495,10 @@ static const char *getPreposition(const CheckResult &R) {
   return (R.mayUnderflow() ? (R.mayOverflow() ? "around" : "preceding")
                            : (R.mayOverflow() ? "after the end of" : "within"));
 }
-static Messages getNonTaintMsgs(const ASTContext &ACtx, StringRef RegName,
-                                CheckResult Res, SVal Location) {
+
+static BugDescription describeInvalidAccess(const ASTContext &ACtx,
+                                            StringRef RegName, CheckResult Res,
+                                            SVal Location) {
   const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
   assert(EReg && "this checker only handles element access");
   QualType ElemType = EReg->getElementType();
@@ -545,8 +550,9 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx, StringRef RegName,
           std::string(Buf)};
 }
 
-static Messages getTaintMsgs(StringRef RegName, const char *OffsetName,
-                             bool AlsoMentionUnderflow) {
+static BugDescription describeTaintBug(StringRef RegName,
+                                       const char *OffsetName,
+                                       bool AlsoMentionUnderflow) {
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
           formatv("Access of {0} with a tainted {1} that may be {2}too large",
@@ -660,9 +666,9 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   const NoteTag *T = nullptr;
   if (Res.mayBeInvalid()) {
     if (!Res.mayBeValid()) {
-      Messages Msgs =
-          getNonTaintMsgs(C.getASTContext(), RegName, Res, Location);
-      reportOOB(C, State, Msgs, ByteOffset, Res.getExtentIfRelevant());
+      BugDescription Desc =
+          describeInvalidAccess(C.getASTContext(), RegName, Res, Location);
+      reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfRelevant());
       return;
     }
 
@@ -675,8 +681,9 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
           OffsetName = "index";
 
-      Messages Msgs = getTaintMsgs(RegName, OffsetName, Res.mayUnderflow());
-      reportOOB(C, State, Msgs, ByteOffset, Extent, /*IsTaintBug=*/true);
+      BugDescription Desc =
+          describeTaintBug(RegName, OffsetName, Res.mayUnderflow());
+      reportOOB(C, State, Desc, ByteOffset, Extent, /*IsTaintBug=*/true);
       return;
     }
 
@@ -811,7 +818,7 @@ void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
 }
 
 void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
-                                  Messages Msgs, NonLoc Offset,
+                                  BugDescription Desc, NonLoc Offset,
                                   std::optional<NonLoc> Extent,
                                   bool IsTaintBug /*=false*/) const {
 
@@ -820,7 +827,7 @@ void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
     return;
 
   auto BR = std::make_unique<PathSensitiveBugReport>(
-      IsTaintBug ? TaintBT : BT, Msgs.Short, Msgs.Full, ErrorNode);
+      IsTaintBug ? TaintBT : BT, Desc.Short, Desc.Full, ErrorNode);
 
   // FIXME: ideally we would just call trackExpressionValue() and that would
   // "do the right thing": mark the relevant symbols as interesting, track the
