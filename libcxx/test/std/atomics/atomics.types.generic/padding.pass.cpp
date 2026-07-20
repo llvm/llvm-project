@@ -246,7 +246,7 @@ void test() {
 }
 
 int main(int, char**) {
-// TODO(LLVM-23): Switch to X_F_A_I_L: clang-22
+// TODO(LLVM-23): Switch to XFAIL with clang-22
 #if __has_builtin(__builtin_clear_padding)
   test<WithTailPadding>();
   test<WithInternalPadding>();
