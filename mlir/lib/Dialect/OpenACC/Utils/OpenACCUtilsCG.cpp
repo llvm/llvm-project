@@ -22,6 +22,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -317,10 +318,9 @@ collectPrivateLocalParDims(PrivateLocalOp privateLocal,
   return parDims;
 }
 
-static FailureOr<std::optional<int64_t>>
-getWorkerPrivateSharedMemoryNumCopies(PrivateLocalOp privateLocal,
-                                      ComputeRegionOp computeRegion,
-                                      bool isWorkerPrivate, OpenACCSupport *) {
+static FailureOr<std::optional<int64_t>> getWorkerPrivateSharedMemoryNumCopies(
+    PrivateLocalOp privateLocal, ComputeRegionOp computeRegion,
+    bool isWorkerPrivate, OpenACCSupport *support) {
   if (!isWorkerPrivate)
     return std::optional<int64_t>(1);
 
@@ -331,11 +331,22 @@ getWorkerPrivateSharedMemoryNumCopies(PrivateLocalOp privateLocal,
     return std::optional<int64_t>();
 
   auto workerArgConst = workerArg->getDefiningOp<arith::ConstantIndexOp>();
-  // ThreadY is bounded by 32 after subgroup alignment. Use that upper bound
-  // when the exact worker count is known only at runtime.
-  if (!workerArgConst)
-    return std::optional<int64_t>(32);
-  return std::optional<int64_t>(workerArgConst.value());
+  if (workerArgConst)
+    return std::optional<int64_t>(workerArgConst.value());
+
+  FailureOr<int64_t> workerArgBound =
+      ValueBoundsConstraintSet::computeConstantBound(presburger::BoundType::EQ,
+                                                     *workerArg);
+  if (succeeded(workerArgBound))
+    return std::optional<int64_t>(*workerArgBound);
+
+  if (support) {
+    (void)support->emitNYI(privateLocal.getLoc(),
+                           "worker-private variables in shared memory "
+                           "require compile-time constant num_workers");
+    return failure();
+  }
+  return std::optional<int64_t>();
 }
 
 static bool isInsideACCSpecializedRoutine(Operation *op) {
