@@ -398,6 +398,22 @@ define <2 x i64> @gep01_bitcast_load_i32_from_v4i32_insert_v2i64(ptr align 1 der
   ret <2 x i64> %r
 }
 
+; The widened vector and the result vector have different total bit widths,
+; so the result cannot be reconstructed with a bitcast.
+
+define <3 x i32> @load_insert_unequal_total_bitwidth(ptr align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_insert_unequal_total_bitwidth(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <3 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    ret <3 x i32> [[R]]
+;
+  %gep = getelementptr inbounds i8, ptr %p, i64 1
+  %x = load i32, ptr %gep, align 1
+  %r = insertelement <3 x i32> poison, i32 %x, i64 0
+  ret <3 x i32> %r
+}
+
 define <4 x i32> @gep012_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceable(20) %p) nofree nosync {
 ; CHECK-LABEL: @gep012_bitcast_load_i32_insert_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 1
