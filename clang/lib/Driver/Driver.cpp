@@ -7069,12 +7069,9 @@ const ToolChain &Driver::getOffloadToolChain(
       // For AMDHSA offloading (HIP, OpenMP), use the unified AMDGPUToolChain
       // This handles both amdgpu-amd-amdhsa and spirv64-amd-amdhsa
       // FIXME: This should not key off language or OS.
-      if (Kind == Action::OFK_HIP || Kind == Action::OFK_OpenMP)
+      if (Kind == Action::OFK_HIP || Kind == Action::OFK_OpenMP || Kind == Action::OFK_Cuda)
         TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args,
                                                            HostTC.get(), Kind);
-      else if (Kind == Action::OFK_Cuda)
-        TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
-                                                           *HostTC, Args);
       break;
     default:
       break;
