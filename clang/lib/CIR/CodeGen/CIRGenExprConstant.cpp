@@ -231,13 +231,11 @@ mlir::Attribute updateBitfieldInit(CIRGenModule &cgm,
   // Extend to the full storage size so we can shift/mask.
   curValue = curValue.zext(bfInfo.storageSize);
 
-  unsigned offset = bfInfo.offset;
-  if (isBigEndian)
-    offset = bfInfo.storageSize - bfInfo.size - offset;
-
-  curValue = curValue.shl(offset);
+  // bfInfo.offset is already adjusted for endianness, so no endian-changes need
+  // to happen here.
+  curValue = curValue.shl(bfInfo.offset);
   llvm::APInt mask(bfInfo.storageSize, 0);
-  mask.setBits(offset, offset + bfInfo.size);
+  mask.setBits(bfInfo.offset, bfInfo.offset + bfInfo.size);
 
   result &= ~mask;
   result |= curValue;
