@@ -724,15 +724,14 @@ ProcessWindows::OnDebugException(bool first_chance,
       m_pending_halt = false;
     } else if (m_expecting_loader_int3 && first_chance &&
                m_session_data->m_initial_stop_received &&
-               !GetBreakpointSiteList().FindByAddress(bp_addr)) {
+               !GetBreakpointSiteList().FindByAddress(bp_addr) &&
+               IsSystemModuleAddress(bp_addr)) {
       m_expecting_loader_int3 = false;
-      if (IsSystemModuleAddress(bp_addr)) {
-        LLDB_LOG(log,
-                 "Skipping expected loader breakpoint at address {0:x} in a "
-                 "system module.",
-                 bp_addr);
-        return ExceptionResult::MaskException;
-      }
+      LLDB_LOG(log,
+               "Skipping expected loader breakpoint at address {0:x} in a "
+               "system module.",
+               bp_addr);
+      return ExceptionResult::MaskException;
     }
 
     // Handle breakpoints at the first chance.

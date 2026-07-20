@@ -27,24 +27,20 @@
 #include "ExceptionRecord.h"
 #include "ProcessWindowsLog.h"
 
-#include <cctype>
 #include <string>
 #include <string_view>
 
 using namespace lldb;
 using namespace lldb_private;
 
-static void NormalizeWindowsPath(std::string &s) {
-  for (char &c : s) {
+static void NormalizeWindowsPathSeparators(std::string &s) {
+  for (char &c : s)
     if (c == '/')
       c = '\\';
-    else
-      c = std::tolower(static_cast<unsigned char>(c));
-  }
 }
 
-bool ProcessDebugger::IsSystemDLL(const FileSpec &spec) {
-  if (!spec)
+bool ProcessDebugger::IsSystemDLL(llvm::StringRef path) {
+  if (path.empty())
     return false;
 
   static const std::string windows_prefix = []() {
@@ -54,7 +50,7 @@ bool ProcessDebugger::IsSystemDLL(const FileSpec &spec) {
     if (len == 0 || len >= MAX_PATH)
       return prefix;
     llvm::convertWideToUTF8(std::wstring_view(buf, len), prefix);
-    NormalizeWindowsPath(prefix);
+    NormalizeWindowsPathSeparators(prefix);
     if (!prefix.empty() && prefix.back() != '\\')
       prefix += '\\';
     return prefix;
@@ -63,9 +59,9 @@ bool ProcessDebugger::IsSystemDLL(const FileSpec &spec) {
   if (windows_prefix.empty())
     return false;
 
-  std::string path = spec.GetPath();
-  NormalizeWindowsPath(path);
-  return llvm::StringRef(path).starts_with(windows_prefix);
+  std::string normalized = path.str();
+  NormalizeWindowsPathSeparators(normalized);
+  return llvm::StringRef(normalized).starts_with_insensitive(windows_prefix);
 }
 
 bool ProcessDebugger::IsSystemModuleAddress(lldb::addr_t addr) {
@@ -95,7 +91,7 @@ bool ProcessDebugger::IsSystemModuleAddress(lldb::addr_t addr) {
 
   std::string path_utf8;
   llvm::convertWideToUTF8(std::wstring_view(module_path, len), path_utf8);
-  return IsSystemDLL(FileSpec(path_utf8));
+  return IsSystemDLL(path_utf8);
 }
 
 static DWORD ConvertLldbToWinApiProtect(uint32_t protect) {

@@ -627,15 +627,13 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     return ExceptionResult::BreakInDebugger;
   }
 
-  if (m_expecting_loader_int3) {
+  if (m_expecting_loader_int3 && IsSystemModuleAddress(exception_addr)) {
     m_expecting_loader_int3 = false;
-    if (IsSystemModuleAddress(exception_addr)) {
-      LLDB_LOG(log,
-               "Skipping expected loader breakpoint at address {0:x} in a "
-               "system module.",
-               exception_addr);
-      return ExceptionResult::MaskException;
-    }
+    LLDB_LOG(log,
+             "Skipping expected loader breakpoint at address {0:x} in a "
+             "system module.",
+             exception_addr);
+    return ExceptionResult::MaskException;
   }
 
   std::string desc = formatv("Exception {0:x8} encountered at address {1:x8}",
@@ -750,7 +748,7 @@ DllEventAction NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
     return DllEventAction::ContinueDebugLoop;
 
   // Can't resolve a breakpoint in a system DLL.
-  if (!resolved || ProcessDebugger::IsSystemDLL(resolved))
+  if (!resolved || ProcessDebugger::IsSystemDLL(resolved.GetPath()))
     return DllEventAction::ContinueDebugLoop;
 
   NativeThreadWindows *loader_thread = GetThreadByID(thread_id);
@@ -793,7 +791,7 @@ DllEventAction NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
   if (!m_initial_stop_seen || !m_client_supports_libraries_read)
     return DllEventAction::ContinueDebugLoop;
 
-  if (!unloaded_spec || ProcessDebugger::IsSystemDLL(unloaded_spec))
+  if (!unloaded_spec || ProcessDebugger::IsSystemDLL(unloaded_spec.GetPath()))
     return DllEventAction::ContinueDebugLoop;
 
   NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);

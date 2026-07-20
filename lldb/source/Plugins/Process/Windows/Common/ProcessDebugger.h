@@ -15,6 +15,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Mutex.h"
@@ -29,7 +30,6 @@ class HostProcess;
 class HostThread;
 class ProcessLaunchInfo;
 class ProcessAttachInfo;
-class FileSpec;
 
 class ProcessWindowsData {
 public:
@@ -69,7 +69,7 @@ public:
                              uint16_t length_lower_word);
   virtual void OnDebuggerError(const Status &error, uint32_t type);
 
-  static bool IsSystemDLL(const FileSpec &spec);
+  static bool IsSystemDLL(llvm::StringRef path);
 
   bool IsSystemModuleAddress(lldb::addr_t addr);
 
