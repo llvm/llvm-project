@@ -129,7 +129,35 @@ ASTNodeUP DILParser::Run() {
 //  expression:
 //    assignment_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseAssignmentExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseConditionalExpression(); }
+
+// Parse a conditional_expression.
+//
+//  conditional_expression:
+//    assignment_expression
+//    assignment_expression "?" expression ":" expression
+//
+ASTNodeUP DILParser::ParseConditionalExpression() {
+  auto lhs = ParseAssignmentExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  // Check if it's a ternary operator.
+  if (CurToken().Is(Token::question)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto true_op = ParseExpression();
+    assert(true_op && "ASTNodeUP must not contain a nullptr");
+    Expect(Token::colon);
+    m_dil_lexer.Advance();
+    auto false_op = ParseExpression();
+    assert(false_op && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<ConditionalNode>(token.GetLocation(), std::move(lhs),
+                                            std::move(true_op),
+                                            std::move(false_op));
+  }
+
+  return lhs;
+}
 
 // Parse an assignment_expression
 //
