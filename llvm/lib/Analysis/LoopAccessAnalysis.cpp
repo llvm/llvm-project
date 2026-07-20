@@ -344,13 +344,10 @@ static bool isKnownNonDecreasingInLoop(const SCEV *S, const Loop *L,
     return SE.isLoopInvariant(UDiv->getRHS(), L) &&
            isKnownNonDecreasingInLoop(UDiv->getLHS(), L, SE);
   }
-  case scAddRecExpr: {
-    // Non-decreasing if affine for L, without unsigned wrap and non-negative
-    // step.
-    const auto *AR = cast<SCEVAddRecExpr>(S);
-    return AR->getLoop() == L && AR->isAffine() && AR->hasNoUnsignedWrap() &&
-           SE.isKnownNonNegative(AR->getStepRecurrence(SE));
-  }
+  case scAddRecExpr:
+    return SE.getMonotonicPredicateType(cast<SCEVAddRecExpr>(S),
+                                        ICmpInst::ICMP_UGE) ==
+           ScalarEvolution::MonotonicPredicateType::MonotonicallyIncreasing;
   default:
     return false;
   }

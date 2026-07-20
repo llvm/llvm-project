@@ -19,7 +19,7 @@ define void @bitset_copy_symbolic_tc(ptr %src, ptr %out, i64 %N) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -265,7 +265,7 @@ define void @udiv3_copy(ptr %a, ptr %b, i64 %N) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -280,16 +280,16 @@ define void @udiv3_copy(ptr %a, ptr %b, i64 %N) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP3]], i64 3
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP5]], align 1, !alias.scope [[META16:![0-9]+]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP7]], align 1, !alias.scope [[META16]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP9]], align 1, !alias.scope [[META16]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP11]], align 1, !alias.scope [[META16]]
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i8> [[TMP16]], i8 [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i8> [[TMP17]], i8 [[TMP14]], i32 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP18]], i8 [[TMP15]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP5]], align 1, !alias.scope [[META16:![0-9]+]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP7]], align 1, !alias.scope [[META16]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP9]], align 1, !alias.scope [[META16]]
+; CHECK-NEXT:    [[TMP16:%.*]] = load i8, ptr [[TMP11]], align 1, !alias.scope [[META16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i8> poison, i8 [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i8> [[TMP17]], i8 [[TMP14]], i64 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP18]], i8 [[TMP15]], i64 2
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP16]], i64 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i8> [[TMP19]], ptr [[TMP20]], align 1, !alias.scope [[META19:![0-9]+]], !noalias [[META16]]
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], ptr [[TMP20]], align 1, !alias.scope [[META19:![0-9]+]], !noalias [[META16]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

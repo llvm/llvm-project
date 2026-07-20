@@ -275,6 +275,51 @@ exit:
   ret void
 }
 
+; AddRec with NUW and symbolic step.
+define void @symbolic_step_nuw_udiv(ptr %a, ptr %b, i64 %N, i64 %s) {
+; CHECK-LABEL: 'symbolic_step_nuw_udiv'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i8, ptr %a, i64 %div
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %a High: (1 + (((-1 + %N) * %s) /u 64) + %a))
+; CHECK-NEXT:            Member: (({0,+,%s}<nuw><%loop> /u 64) + %a)<nuw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %j = phi i64 [ 0, %entry ], [ %j.next, %loop ]
+  %div = lshr i64 %j, 6
+  %gep.a = getelementptr inbounds i8, ptr %a, i64 %div
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %j.next = add nuw i64 %j, %s
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 define void @staircase_self_dependence(ptr %a) {
 ; CHECK-LABEL: 'staircase_self_dependence'
 ; CHECK-NEXT:    loop:
