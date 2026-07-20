@@ -416,7 +416,6 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool UsesLLVMOffloading = Args.hasFlag(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
-  assert((UsesLLVMOffloading || TC.getTriple().isNVPTX()) && "Wrong platform");
 
   BoundArch GPUArch;
   // If this is a CUDA action we need to extract the device architecture

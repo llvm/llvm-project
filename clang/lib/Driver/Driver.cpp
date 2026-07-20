@@ -7073,7 +7073,6 @@ const ToolChain &Driver::getOffloadToolChain(
         TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args,
                                                            HostTC.get(), Kind);
       else if (Kind == Action::OFK_Cuda)
-        // TODO: [h15] figure out if this should be a new TC
         TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
                                                            *HostTC, Args);
       break;

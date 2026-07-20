@@ -958,7 +958,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   bool UsesLLVMOffloading = Args.hasFlag(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   if (JA.isOffloading(Action::OFK_Cuda) && !UsesLLVMOffloading) {
-    getToolChain().printVerboseInfo(llvm::errs());
     getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
   }
   if (JA.isOffloading(Action::OFK_HIP) && !UsesLLVMOffloading)
