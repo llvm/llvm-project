@@ -24,7 +24,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/DarwinSDKInfo.h"
-#include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -32,7 +31,6 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/CXXFieldCollector.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ExternalSemaSource.h"
@@ -2744,10 +2742,12 @@ bool Sema::shouldRetainCommentsInAST(SourceLocation Loc) const {
   if (PP.isCodeCompletionEnabled())
     return true;
 
-  // Keep the comment if -Wdocumentation is enabled at its location (checking
-  // the location handles warnings turned on by `#pragma clang diagnostic`).
-  if (!Diags.isIgnored(diag::warn_doc_param_not_found, Loc) ||
-      !Diags.isIgnored(diag::warn_unknown_comment_command_name, Loc))
+  // Keep the comment if any of the -Wdocumentation warnings is enabled at
+  // its location (checking the location handles warnings turned on by
+  // `#pragma clang diagnostic`). -Wdocumentation-pedantic is checked
+  // separately because it is not a subgroup of -Wdocumentation.
+  if (!Diags.areAllIgnored("documentation", Loc) ||
+      !Diags.areAllIgnored("documentation-pedantic", Loc))
     return true;
 
   return false;
