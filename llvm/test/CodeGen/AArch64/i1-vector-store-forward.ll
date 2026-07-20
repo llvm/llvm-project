@@ -9,27 +9,7 @@ define void @copy_v8i1(ptr %s, ptr %d) {
 ; CHECK-LABEL: copy_v8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    sbfx w9, w8, #0, #1
-; CHECK-NEXT:    sbfx w10, w8, #1, #1
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    sbfx w9, w8, #2, #1
-; CHECK-NEXT:    mov v0.b[1], w10
-; CHECK-NEXT:    mov v0.b[2], w9
-; CHECK-NEXT:    sbfx w9, w8, #3, #1
-; CHECK-NEXT:    mov v0.b[3], w9
-; CHECK-NEXT:    sbfx w9, w8, #4, #1
-; CHECK-NEXT:    mov v0.b[4], w9
-; CHECK-NEXT:    sbfx w9, w8, #5, #1
-; CHECK-NEXT:    mov v0.b[5], w9
-; CHECK-NEXT:    sbfx w9, w8, #6, #1
-; CHECK-NEXT:    sbfx w8, w8, #7, #1
-; CHECK-NEXT:    mov v0.b[6], w9
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    addv b0, v0.8b
-; CHECK-NEXT:    str b0, [x1]
+; CHECK-NEXT:    strb w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <8 x i1>, ptr %s
   store <8 x i1> %ld, ptr %d
@@ -40,45 +20,7 @@ define void @copy_v16i1(ptr %s, ptr %d) {
 ; CHECK-LABEL: copy_v16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    sbfx w9, w8, #0, #1
-; CHECK-NEXT:    sbfx w10, w8, #1, #1
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    sbfx w9, w8, #2, #1
-; CHECK-NEXT:    mov v0.b[1], w10
-; CHECK-NEXT:    mov v0.b[2], w9
-; CHECK-NEXT:    sbfx w9, w8, #3, #1
-; CHECK-NEXT:    mov v0.b[3], w9
-; CHECK-NEXT:    sbfx w9, w8, #4, #1
-; CHECK-NEXT:    mov v0.b[4], w9
-; CHECK-NEXT:    sbfx w9, w8, #5, #1
-; CHECK-NEXT:    mov v0.b[5], w9
-; CHECK-NEXT:    sbfx w9, w8, #6, #1
-; CHECK-NEXT:    mov v0.b[6], w9
-; CHECK-NEXT:    sbfx w9, w8, #7, #1
-; CHECK-NEXT:    mov v0.b[7], w9
-; CHECK-NEXT:    sbfx w9, w8, #8, #1
-; CHECK-NEXT:    mov v0.b[8], w9
-; CHECK-NEXT:    sbfx w9, w8, #9, #1
-; CHECK-NEXT:    mov v0.b[9], w9
-; CHECK-NEXT:    sbfx w9, w8, #10, #1
-; CHECK-NEXT:    mov v0.b[10], w9
-; CHECK-NEXT:    sbfx w9, w8, #11, #1
-; CHECK-NEXT:    mov v0.b[11], w9
-; CHECK-NEXT:    sbfx w9, w8, #12, #1
-; CHECK-NEXT:    mov v0.b[12], w9
-; CHECK-NEXT:    sbfx w9, w8, #13, #1
-; CHECK-NEXT:    mov v0.b[13], w9
-; CHECK-NEXT:    sbfx w9, w8, #14, #1
-; CHECK-NEXT:    sbfx w8, w8, #15, #1
-; CHECK-NEXT:    mov v0.b[14], w9
-; CHECK-NEXT:    mov v0.b[15], w8
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    str h0, [x1]
+; CHECK-NEXT:    strh w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <16 x i1>, ptr %s
   store <16 x i1> %ld, ptr %d
