@@ -166,7 +166,7 @@ void CodeMetrics::analyzeBasicBlock(
         ++NumCalls;
         // When preparing for LTO, consider indirect calls as potential inline
         // candidates since LTO may resolve them via devirtualization.
-        if (PrepareForLTO)
+        if (PrepareForLTO && !Call->isNoInline())
           ++NumInlineCandidates;
       }
     }
