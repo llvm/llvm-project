@@ -2760,10 +2760,10 @@ public:
       ISD = ISD::BITREVERSE;
       break;
     case Intrinsic::pdep:
+      ISD = ISD::PDEP;
+      break;
     case Intrinsic::pext:
-      ISD = IID == Intrinsic::pdep ? ISD::PDEP : ISD::PEXT;
-      // When not legal/custom, pdep/pext expand to a long inline sequence
-      SingleCallCost = 20;
+      ISD = ISD::PEXT;
       break;
     case Intrinsic::ucmp:
       ISD = ISD::UCMP;
@@ -3159,6 +3159,32 @@ public:
                                       ICmpInst::ICMP_NE, CostKind);
       InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
       return BW * PerBitCost;
+    }
+    case Intrinsic::pdep:
+    case Intrinsic::pext: {
+      if (RetTy->isVectorTy())
+        break;
+      // Based on Hacker's Delight §7-5: Expand, or Generalized Insert.
+      // Below cost is accurate for pext, pdep will be similar.
+      unsigned BW = RetTy->getScalarSizeInBits();
+      InstructionCost AndCost =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind);
+      InstructionCost ShiftCost =
+          thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind);
+      InstructionCost OrCost =
+          thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
+      InstructionCost XorCost =
+          thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      IntrinsicCostAttributes ClmulAttrs(Intrinsic::clmul, RetTy,
+                                         {RetTy, RetTy});
+      InstructionCost MulCost =
+          thisT()->getIntrinsicInstrCost(ClmulAttrs, CostKind);
+
+      int Iterations = Log2_32_Ceil(BW);
+      InstructionCost Cost = AndCost + ShiftCost; // Prefix cost
+      Cost += Iterations *
+              (MulCost + 2 * AndCost + 2 * ShiftCost + OrCost + 2 * XorCost);
+      return Cost;
     }
     default:
       break;

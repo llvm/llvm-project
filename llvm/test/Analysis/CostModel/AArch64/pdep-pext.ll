@@ -4,10 +4,16 @@
 
 define void @pdep() {
 ; CHECK-NO-BITPERM-LABEL: 'pdep'
-; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %i8 = call i8 @llvm.pdep.i8(i8 poison, i8 poison)
-; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %i16 = call i16 @llvm.pdep.i16(i16 poison, i16 poison)
-; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %i32 = call i32 @llvm.pdep.i32(i32 poison, i32 poison)
-; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %i64 = call i64 @llvm.pdep.i64(i64 poison, i64 poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %i8 = call i8 @llvm.pdep.i8(i8 poison, i8 poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 222 for instruction: %i16 = call i16 @llvm.pdep.i16(i16 poison, i16 poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 252 for instruction: %i32 = call i32 @llvm.pdep.i32(i32 poison, i32 poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 302 for instruction: %i64 = call i64 @llvm.pdep.i64(i64 poison, i64 poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 1792 for instruction: %v8i16 = call <8 x i16> @llvm.pdep.v8i16(<8 x i16> poison, <8 x i16> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 1016 for instruction: %v4i32 = call <4 x i32> @llvm.pdep.v4i32(<4 x i32> poison, <4 x i32> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 608 for instruction: %v2i64 = call <2 x i64> @llvm.pdep.v2i64(<2 x i64> poison, <2 x i64> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Invalid cost for instruction: %nxv8i16 = call <vscale x 8 x i16> @llvm.pdep.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Invalid cost for instruction: %nxv4i32 = call <vscale x 4 x i32> @llvm.pdep.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Invalid cost for instruction: %nxv2i64 = call <vscale x 2 x i64> @llvm.pdep.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
 ; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-BITPERM-LABEL: 'pdep'
@@ -15,21 +21,39 @@ define void @pdep() {
 ; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %i16 = call i16 @llvm.pdep.i16(i16 poison, i16 poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %i32 = call i32 @llvm.pdep.i32(i32 poison, i32 poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %i64 = call i64 @llvm.pdep.i64(i64 poison, i64 poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v8i16 = call <8 x i16> @llvm.pdep.v8i16(<8 x i16> poison, <8 x i16> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v4i32 = call <4 x i32> @llvm.pdep.v4i32(<4 x i32> poison, <4 x i32> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v2i64 = call <2 x i64> @llvm.pdep.v2i64(<2 x i64> poison, <2 x i64> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i16 = call <vscale x 8 x i16> @llvm.pdep.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i32 = call <vscale x 4 x i32> @llvm.pdep.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2i64 = call <vscale x 2 x i64> @llvm.pdep.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %i8 = call i8 @llvm.pdep.i8(i8 poison, i8 poison)
   %i16 = call i16 @llvm.pdep.i16(i16 poison, i16 poison)
   %i32 = call i32 @llvm.pdep.i32(i32 poison, i32 poison)
   %i64 = call i64 @llvm.pdep.i64(i64 poison, i64 poison)
+  %v8i16 = call <8 x i16> @llvm.pdep.v8i16(<8 x i16> poison, <8 x i16> poison)
+  %v4i32 = call <4 x i32> @llvm.pdep.v4i32(<4 x i32> poison, <4 x i32> poison)
+  %v2i64 = call <2 x i64> @llvm.pdep.v2i64(<2 x i64> poison, <2 x i64> poison)
+  %nxv8i16 = call <vscale x 8 x i16> @llvm.pdep.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+  %nxv4i32 = call <vscale x 4 x i32> @llvm.pdep.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv2i64 = call <vscale x 2 x i64> @llvm.pdep.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
   ret void
 }
 
 define void @pext() {
 ; CHECK-NO-BITPERM-LABEL: 'pext'
-; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %i8 = call i8 @llvm.pext.i8(i8 poison, i8 poison)
-; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %i16 = call i16 @llvm.pext.i16(i16 poison, i16 poison)
-; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %i32 = call i32 @llvm.pext.i32(i32 poison, i32 poison)
-; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %i64 = call i64 @llvm.pext.i64(i64 poison, i64 poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %i8 = call i8 @llvm.pext.i8(i8 poison, i8 poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 222 for instruction: %i16 = call i16 @llvm.pext.i16(i16 poison, i16 poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 252 for instruction: %i32 = call i32 @llvm.pext.i32(i32 poison, i32 poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 302 for instruction: %i64 = call i64 @llvm.pext.i64(i64 poison, i64 poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 1792 for instruction: %v8i16 = call <8 x i16> @llvm.pext.v8i16(<8 x i16> poison, <8 x i16> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 1016 for instruction: %v4i32 = call <4 x i32> @llvm.pext.v4i32(<4 x i32> poison, <4 x i32> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 608 for instruction: %v2i64 = call <2 x i64> @llvm.pext.v2i64(<2 x i64> poison, <2 x i64> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Invalid cost for instruction: %nxv8i16 = call <vscale x 8 x i16> @llvm.pext.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Invalid cost for instruction: %nxv4i32 = call <vscale x 4 x i32> @llvm.pext.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Invalid cost for instruction: %nxv2i64 = call <vscale x 2 x i64> @llvm.pext.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
 ; CHECK-NO-BITPERM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-BITPERM-LABEL: 'pext'
@@ -37,11 +61,23 @@ define void @pext() {
 ; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %i16 = call i16 @llvm.pext.i16(i16 poison, i16 poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %i32 = call i32 @llvm.pext.i32(i32 poison, i32 poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %i64 = call i64 @llvm.pext.i64(i64 poison, i64 poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v8i16 = call <8 x i16> @llvm.pext.v8i16(<8 x i16> poison, <8 x i16> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v4i32 = call <4 x i32> @llvm.pext.v4i32(<4 x i32> poison, <4 x i32> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v2i64 = call <2 x i64> @llvm.pext.v2i64(<2 x i64> poison, <2 x i64> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i16 = call <vscale x 8 x i16> @llvm.pext.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i32 = call <vscale x 4 x i32> @llvm.pext.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2i64 = call <vscale x 2 x i64> @llvm.pext.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %i8 = call i8 @llvm.pext.i8(i8 poison, i8 poison)
   %i16 = call i16 @llvm.pext.i16(i16 poison, i16 poison)
   %i32 = call i32 @llvm.pext.i32(i32 poison, i32 poison)
   %i64 = call i64 @llvm.pext.i64(i64 poison, i64 poison)
+  %v8i16 = call <8 x i16> @llvm.pext.v8i16(<8 x i16> poison, <8 x i16> poison)
+  %v4i32 = call <4 x i32> @llvm.pext.v4i32(<4 x i32> poison, <4 x i32> poison)
+  %v2i64 = call <2 x i64> @llvm.pext.v2i64(<2 x i64> poison, <2 x i64> poison)
+  %nxv8i16 = call <vscale x 8 x i16> @llvm.pext.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+  %nxv4i32 = call <vscale x 4 x i32> @llvm.pext.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv2i64 = call <vscale x 2 x i64> @llvm.pext.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
   ret void
 }
