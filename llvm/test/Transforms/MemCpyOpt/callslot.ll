@@ -239,7 +239,7 @@ define void @dest_not_writable(ptr noalias dereferenceable(128) %dst) {
 define void @dest_alignment(ptr %src) {
 ; CHECK-LABEL: @dest_alignment(
 ; CHECK-NEXT:    [[SRC_2:%.*]] = alloca [24 x i8], align 4
-; CHECK-NEXT:    [[DST:%.*]] = alloca [24 x i8], align 4
+; CHECK-NEXT:    [[DST:%.*]] = alloca [24 x i8], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[DST]], ptr [[SRC:%.*]], i64 24, i1 false)
 ; CHECK-NEXT:    call void @accept_ptr(ptr [[DST]])
 ; CHECK-NEXT:    ret void
