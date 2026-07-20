@@ -3032,26 +3032,6 @@ class CompletionChunkKind(BaseEnumeration):
     Describes a single piece of text within a code-completion string.
     """
 
-    def __str__(self) -> str:
-        """
-        Converts enum value to string in the old camelCase format.
-        This is a temporary measure that will be changed in the future release
-        to return string in ALL_CAPS format, like for other enums.
-        """
-
-        warnings.warn(
-            "String representation of 'CompletionChunkKind' will be "
-            "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
-            "match other enums. 'CompletionChunkKind's can be "
-            "compared to one another without conversion to string.",
-            DeprecationWarning,
-        )
-        # Remove underscores
-        components = self.name.split("_")
-        # Upper-camel case each split component
-        components = [component.lower().capitalize() for component in components]
-        return "".join(components)
-
     OPTIONAL = 0
     TYPED_TEXT = 1
     TEXT = 2

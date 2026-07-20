@@ -58,6 +58,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Clang Python Bindings Potentially Breaking Changes
 
+- `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
+  The representation now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
+
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
