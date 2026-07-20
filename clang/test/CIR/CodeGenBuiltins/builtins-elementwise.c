@@ -306,6 +306,50 @@ void test_builtin_elementwise_floor(float f, double d, vfloat4 vf4,
   vd4 = __builtin_elementwise_floor(vd4);
 }
 
+void test_builtin_elementwise_fmod(float f, double d, vfloat4 vf4,
+                                   vdouble4 vd4) {
+  // CIR-LABEL: test_builtin_elementwise_fmod
+  // LLVM-LABEL: test_builtin_elementwise_fmod
+
+  // CIR: cir.fmod %{{.*}}, %{{.*}} : !cir.float
+  // LLVM: frem float %{{.*}}, %{{.*}}
+  f = __builtin_elementwise_fmod(f, f);
+
+  // CIR: cir.fmod %{{.*}}, %{{.*}} : !cir.double
+  // LLVM: frem double %{{.*}}, %{{.*}}
+  d = __builtin_elementwise_fmod(d, d);
+
+  // CIR: cir.fmod %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>
+  // LLVM: frem <4 x float> %{{.*}}, %{{.*}}
+  vf4 = __builtin_elementwise_fmod(vf4, vf4);
+
+  // CIR: cir.fmod %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.double>
+  // LLVM: frem <4 x double> %{{.*}}, %{{.*}}
+  vd4 = __builtin_elementwise_fmod(vd4, vd4);
+}
+
+void test_builtin_elementwise_roundeven(float f, double d, vfloat4 vf4,
+                                        vdouble4 vd4) {
+  // CIR-LABEL: test_builtin_elementwise_roundeven
+  // LLVM-LABEL: test_builtin_elementwise_roundeven
+
+  // CIR: cir.roundeven %{{.*}} : !cir.float
+  // LLVM: call float @llvm.roundeven.f32(float %{{.*}})
+  f = __builtin_elementwise_roundeven(f);
+
+  // CIR: cir.roundeven %{{.*}} : !cir.double
+  // LLVM: call double @llvm.roundeven.f64(double %{{.*}})
+  d = __builtin_elementwise_roundeven(d);
+
+  // CIR: cir.roundeven %{{.*}} : !cir.vector<4 x !cir.float>
+  // LLVM: call <4 x float> @llvm.roundeven.v4f32(<4 x float> %{{.*}})
+  vf4 = __builtin_elementwise_roundeven(vf4);
+
+  // CIR: cir.roundeven %{{.*}} : !cir.vector<4 x !cir.double>
+  // LLVM: call <4 x double> @llvm.roundeven.v4f64(<4 x double> %{{.*}})
+  vd4 = __builtin_elementwise_roundeven(vd4);
+}
+
 void test_builtin_elementwise_round(float f, double d, vfloat4 vf4,
                    vdouble4 vd4) {
   // CIR-LABEL: test_builtin_elementwise_round
@@ -595,4 +639,13 @@ void test_builtin_elementwise_sub_sat(int i1, int i2, unsigned u1, unsigned u2,
   // CIR: cir.sub sat %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
   // LLVM: call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vs1 = __builtin_elementwise_sub_sat(vs1, vs2);
+}
+
+vfloat4 test_builtin_elementwise_fma(vfloat4 a, vfloat4 b, vfloat4 c) {
+  // CIR-LABEL: test_builtin_elementwise_fma
+  // LLVM-LABEL: test_builtin_elementwise_fma
+
+  // CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>
+  // LLVM: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
+  return __builtin_elementwise_fma(a, b, c);
 }

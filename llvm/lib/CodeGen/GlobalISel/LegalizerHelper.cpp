@@ -2139,13 +2139,13 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   }
 }
 
-Register LegalizerHelper::coerceToScalar(Register Val) {
+Register LegalizerHelper::coerceToInteger(Register Val) {
   LLT Ty = MRI.getType(Val);
   if (Ty.isScalar())
     return Val;
 
   const DataLayout &DL = MIRBuilder.getDataLayout();
-  LLT NewTy = LLT::scalar(Ty.getSizeInBits());
+  LLT NewTy = LLT::integer(Ty.getSizeInBits());
   if (Ty.isPointer()) {
     if (DL.isNonIntegralAddressSpace(Ty.getAddressSpace()))
       return Register();
@@ -3640,6 +3640,26 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
     return Legalized;
   }
+  case TargetOpcode::G_BITCAST:
+    if (WideTy.isVector())
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    if (TypeIdx == 0)
+      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_TRUNC);
+    else
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+    Observer.changedInstr(MI);
+
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    if (MRI.getType(Dst) == MRI.getType(Src)) {
+      Observer.changingAllUsesOfReg(MRI, Dst);
+      MRI.replaceRegWith(Dst, Src);
+      Observer.finishedChangingAllUsesOfReg();
+      MI.eraseFromParent();
+    }
+
+    return Legalized;
   }
 }
 
@@ -9322,7 +9342,7 @@ LegalizerHelper::lowerMergeValues(MachineInstr &MI) {
   auto [DstReg, DstTy, Src0Reg, Src0Ty] = MI.getFirst2RegLLTs();
   unsigned PartSize = Src0Ty.getSizeInBits();
 
-  LLT WideTy = LLT::scalar(DstTy.getSizeInBits());
+  LLT WideTy = LLT::integer(DstTy.getSizeInBits());
   Register ResultReg = MIRBuilder.buildZExt(WideTy, Src0Reg).getReg(0);
 
   for (unsigned I = 2; I != NumOps; ++I) {
@@ -9363,7 +9383,7 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
   if (DstTy.isPointer())
     return UnableToLegalize; // TODO
 
-  SrcReg = coerceToScalar(SrcReg);
+  SrcReg = coerceToInteger(SrcReg);
   if (!SrcReg)
     return UnableToLegalize;
 
@@ -9538,7 +9558,7 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
 
   Register LastWriteVal;
   std::optional<APInt> PassthruSplatVal =
-      isConstantOrConstantSplatVector(*MRI.getVRegDef(Passthru), MRI);
+      isConstantOrConstantSplatVector(Passthru, MRI);
 
   if (PassthruSplatVal.has_value()) {
     LastWriteVal =
