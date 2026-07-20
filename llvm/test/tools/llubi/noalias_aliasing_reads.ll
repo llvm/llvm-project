@@ -20,26 +20,18 @@ define void @main() {
 ; CHECK-NEXT: Entering function: read_both
 ; CHECK-NEXT:   ptr %x = ptr 0x8 [a]
 ; CHECK-NEXT:   ptr %y = ptr 0x8 [a]
-; CHECK-NEXT: NoAlias: created protector node #1 for 'a' based on raw/root
-; CHECK-NEXT: NoAlias: created protector node #2 for 'a' based on raw/root
-; CHECK-NEXT: NoAlias: node #1 local read through node #1 on 'a' bytes [0, 4): Reserved -> ReservedL
-; CHECK-NEXT: NoAlias: node #2 foreign read through node #1 on 'a' bytes [0, 4): Reserved -> ReservedF
-; CHECK-NEXT: NoAlias: read through node #1 on 'a' bytes [0, 4) checked 2 active noalias protectors
+; CHECK-NEXT: NoAlias: created protector node #1 for 'a' in activation #1 based on raw/root
+; CHECK-NEXT: NoAlias: created protector node #2 for 'a' in activation #1 based on raw/root
+; CHECK-NEXT: NoAlias: activation #1 read through node #1 on 'a' bytes [0, 4): unaccessed -> reads by node #1
+; CHECK-NEXT: NoAlias: read through node #1 on 'a' bytes [0, 4) checked 1 active noalias activation
 ; CHECK-NEXT:   %vx = load i32, ptr %x, align 4 => i32 42
-; CHECK-NEXT: NoAlias: node #1 foreign read through node #2 on 'a' bytes [0, 4): ReservedL -> ReservedLF
-; CHECK-NEXT: NoAlias: node #2 local read through node #2 on 'a' bytes [0, 4): ReservedF -> ReservedLF
-; CHECK-NEXT: NoAlias: read through node #2 on 'a' bytes [0, 4) checked 2 active noalias protectors
+; CHECK-NEXT: NoAlias: activation #1 read through node #2 on 'a' bytes [0, 4): reads by node #1 -> reads by multiple access classes
+; CHECK-NEXT: NoAlias: read through node #2 on 'a' bytes [0, 4) checked 1 active noalias activation
 ; CHECK-NEXT:   %vy = load i32, ptr %y, align 4 => i32 42
 ; CHECK-NEXT:   ret void
-; CHECK-NEXT: NoAlias: protector end for node #1 triggers synthetic read on 'a' bytes [0, 4)
-; CHECK-NEXT: NoAlias: protector end: node #1 local read through node #1 on 'a' bytes [0, 4): ReservedLF -> ReservedLF
-; CHECK-NEXT: NoAlias: protector end: node #2 foreign read through node #1 on 'a' bytes [0, 4): ReservedLF -> ReservedLF
-; CHECK-NEXT: NoAlias: ended protector node #1
 ; CHECK-NEXT: NoAlias: erased inactive protector node #1
-; CHECK-NEXT: NoAlias: protector end for node #2 triggers synthetic read on 'a' bytes [0, 4)
-; CHECK-NEXT: NoAlias: protector end: node #2 local read through node #2 on 'a' bytes [0, 4): ReservedLF -> ReservedLF
-; CHECK-NEXT: NoAlias: ended protector node #2
 ; CHECK-NEXT: NoAlias: erased inactive protector node #2
+; CHECK-NEXT: NoAlias: ended activation #1
 ; CHECK-NEXT: Exiting function: read_both
 ; CHECK-NEXT:   call void @read_both(ptr %a, ptr %a)
 ; CHECK-NEXT:   ret void

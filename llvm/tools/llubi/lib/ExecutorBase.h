@@ -58,8 +58,8 @@ struct Frame {
   // Stack objects allocated in this frame. They will be automatically freed
   // when the function returns.
   SmallVector<IntrusiveRefCntPtr<MemoryObject>> Allocas;
-  // Protected noalias nodes created for this frame's arguments
-  SmallVector<uint64_t, 4> NoAliasNodes;
+  // Dynamic noalias activation shared by this frame's noalias parameters.
+  uint64_t NoAliasActivation = 0;
   // Values of arguments and executed instructions in this function.
   DenseMap<Value *, AnyValue> ValueMap;
 

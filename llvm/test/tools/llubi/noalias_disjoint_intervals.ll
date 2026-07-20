@@ -22,26 +22,18 @@ define void @main() {
 ; CHECK-NEXT: Entering function: write_disjoint
 ; CHECK-NEXT:   ptr %x = ptr 0x8 [a]
 ; CHECK-NEXT:   ptr %y = ptr 0xC [a + 4]
-; CHECK-NEXT: NoAlias: created protector node #1 for 'a' based on raw/root
-; CHECK-NEXT: NoAlias: created protector node #2 for 'a' based on raw/root
-; CHECK-NEXT: NoAlias: node #1 local write through node #1 on 'a' bytes [0, 4): Reserved -> Unique
-; CHECK-NEXT: NoAlias: node #2 foreign write through node #1 on 'a' bytes [0, 4): Reserved -> Disabled
-; CHECK-NEXT: NoAlias: write through node #1 on 'a' bytes [0, 4) checked 2 active noalias protectors
+; CHECK-NEXT: NoAlias: created protector node #1 for 'a' in activation #1 based on raw/root
+; CHECK-NEXT: NoAlias: created protector node #2 for 'a' in activation #1 based on raw/root
+; CHECK-NEXT: NoAlias: activation #1 write through node #1 on 'a' bytes [0, 4): unaccessed -> access including a write by node #1
+; CHECK-NEXT: NoAlias: write through node #1 on 'a' bytes [0, 4) checked 1 active noalias activation
 ; CHECK-NEXT:   store i32 1, ptr %x, align 4
-; CHECK-NEXT: NoAlias: node #1 foreign write through node #2 on 'a' bytes [4, 8): Reserved -> Disabled
-; CHECK-NEXT: NoAlias: node #2 local write through node #2 on 'a' bytes [4, 8): Reserved -> Unique
-; CHECK-NEXT: NoAlias: write through node #2 on 'a' bytes [4, 8) checked 2 active noalias protectors
+; CHECK-NEXT: NoAlias: activation #1 write through node #2 on 'a' bytes [4, 8): unaccessed -> access including a write by node #2
+; CHECK-NEXT: NoAlias: write through node #2 on 'a' bytes [4, 8) checked 1 active noalias activation
 ; CHECK-NEXT:   store i32 2, ptr %y, align 4
 ; CHECK-NEXT:   ret void
-; CHECK-NEXT: NoAlias: protector end for node #1 triggers synthetic write on 'a' bytes [0, 4)
-; CHECK-NEXT: NoAlias: protector end: node #1 local write through node #1 on 'a' bytes [0, 4): Unique -> Unique
-; CHECK-NEXT: NoAlias: protector end: node #2 foreign write through node #1 on 'a' bytes [0, 4): Disabled -> Disabled
-; CHECK-NEXT: NoAlias: ended protector node #1
 ; CHECK-NEXT: NoAlias: erased inactive protector node #1
-; CHECK-NEXT: NoAlias: protector end for node #2 triggers synthetic write on 'a' bytes [4, 8)
-; CHECK-NEXT: NoAlias: protector end: node #2 local write through node #2 on 'a' bytes [4, 8): Unique -> Unique
-; CHECK-NEXT: NoAlias: ended protector node #2
 ; CHECK-NEXT: NoAlias: erased inactive protector node #2
+; CHECK-NEXT: NoAlias: ended activation #1
 ; CHECK-NEXT: Exiting function: write_disjoint
 ; CHECK-NEXT:   call void @write_disjoint(ptr %x, ptr %y)
 ; CHECK-NEXT:   %v = load [2 x i32], ptr %a, align 4 => { i32 1, i32 2 }
