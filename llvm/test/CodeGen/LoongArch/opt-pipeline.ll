@@ -121,7 +121,6 @@
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Slot index numbering
 ; LAXX-NEXT:       Live Interval Analysis
-; LAXX-NEXT:       Machine Register Class Info Analysis
 ; LAXX-NEXT:       Register Coalescer
 ; LAXX-NEXT:       Rename Disconnected Subregister Components
 ; LAXX-NEXT:       Machine Instruction Scheduler
@@ -148,7 +147,6 @@
 ; LAXX-NEXT:       MachinePostDominator Tree Construction
 ; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
 ; LAXX-NEXT:       Machine Optimization Remark Emitter
-; LAXX-NEXT:       Machine Register Class Info Analysis
 ; LAXX-NEXT:       Shrink Wrapping analysis
 ; LAXX-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
 ; LAXX-NEXT:       Machine Late Instructions Cleanup Pass

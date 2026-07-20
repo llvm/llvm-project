@@ -118,6 +118,7 @@
 ; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
+; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Machine Trace Metrics 
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis 
 ; CHECK-NEXT:       Machine InstCombiner 
@@ -128,7 +129,6 @@
 ; CHECK-NEXT:       Machine Common Subexpression Elimination
 ; CHECK-NEXT:       MachinePostDominator Tree Construction
 ; CHECK-NEXT:       Machine Cycle Info Analysis
-; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Machine code sinking
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
@@ -150,7 +150,6 @@
 ; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
-; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
 ; CHECK-NEXT:       Machine Instruction Scheduler
