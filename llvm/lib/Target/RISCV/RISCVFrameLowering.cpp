@@ -1541,10 +1541,9 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
     }
 
     if (TemporaryReg == RISCV::NoRegister) {
-      RS->enterBasicBlock(MBB);
-      RS->backward(MBBI);
+      RS->enterBasicBlockEnd(MBB);
       TemporaryReg = RS->scavengeRegisterBackwards(RISCV::GPRRegClass, MBBI,
-                                                   /*RestoreAfter=*/true,
+                                                   /*RestoreAfter=*/false,
                                                    /*SPAdj=*/0);
     }
 

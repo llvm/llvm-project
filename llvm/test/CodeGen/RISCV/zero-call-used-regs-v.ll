@@ -175,7 +175,7 @@ define <32 x i32> @used_arg_lmul8(<32 x i32> %a, <32 x i32> %b) "zero-call-used-
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vmv.v.i v17, 0
 ; CHECK-NEXT:    vmv.v.i v18, 0
