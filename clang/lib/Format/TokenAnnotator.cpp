@@ -2310,7 +2310,7 @@ private:
             break;
           if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
               Previous->isPointerOrReference() && Previous->Previous &&
-              Previous->Previous->isNot(tok::equal)) {
+              Previous->Previous->isNot(tok::equal) && !Previous->isTypeFinalized()) {
             Previous->setType(TT_PointerOrReference);
           }
         }
