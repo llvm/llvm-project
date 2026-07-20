@@ -569,6 +569,15 @@ template <typename T> struct DenseMapInfo<ArrayRef<T>, void> {
   }
 
   static bool isEqual(ArrayRef<T> LHS, ArrayRef<T> RHS) { return LHS == RHS; }
+
+  static inline ArrayRef<T> getEmptyKey() {
+    assert(false && "Obsoleted");
+    abort();
+  }
+  static inline ArrayRef<T> getTombstoneKey() {
+    assert(false && "Obsoleted");
+    abort();
+  }
 };
 
 } // end namespace llvm

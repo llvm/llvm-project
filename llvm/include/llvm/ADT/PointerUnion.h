@@ -433,6 +433,15 @@ template <typename... PTs> struct DenseMapInfo<PointerUnion<PTs...>> {
   static bool isEqual(const Union &LHS, const Union &RHS) {
     return LHS == RHS;
   }
+
+  static inline Union getEmptyKey() {
+    assert(false && "Obsoleted");
+    abort();
+  }
+  static inline Union getTombstoneKey() {
+    assert(false && "Obsoleted");
+    abort();
+  }
 };
 
 } // end namespace llvm
