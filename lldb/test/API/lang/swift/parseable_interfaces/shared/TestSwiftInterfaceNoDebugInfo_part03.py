@@ -165,6 +165,9 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
 
         # Check the host toolchain has a prebuilt cache in the same subdirectory of its swift resource directory
         prebuilt_path = os.path.join(self.get_toolchain(), 'usr', 'lib', 'swift', expected_suffix)
+        # Not every toolchain ships a prebuilt module cache.
+        if not os.path.isdir(prebuilt_path):
+            self.skipTest('toolchain does not ship a prebuilt module cache')
         self.assertTrue(len(os.listdir(prebuilt_path)) > 0)
 
 OLD_TIMESTAMP = 1390550700 # 2014-01-24T08:05:00+00:00
