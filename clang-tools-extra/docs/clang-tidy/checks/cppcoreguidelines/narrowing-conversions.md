@@ -9,4 +9,3 @@ from the C++ Core Guidelines.
 The `cppcoreguidelines-narrowing-conversions` check is an alias, please see
 {doc}`bugprone-narrowing-conversions <../bugprone/narrowing-conversions>`
 for more information.
-

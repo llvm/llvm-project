@@ -11,4 +11,3 @@ unrelated type `Z`.
 
 This rule is part of the [Type safety (Type.1.1)](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-reinterpretcast)
 profile from the C++ Core Guidelines.
-

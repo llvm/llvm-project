@@ -9,4 +9,3 @@ from the C++ Core Guidelines.
 The `cppcoreguidelines-noexcept-destructor` check is an alias, please see
 {doc}`performance-noexcept-destructor <../performance/noexcept-destructor>`
 for more information.
-

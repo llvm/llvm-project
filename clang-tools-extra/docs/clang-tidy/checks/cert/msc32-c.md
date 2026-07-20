@@ -9,4 +9,3 @@ for more information.
 
 This check corresponds to the CERT C Coding Standard rule
 [MSC32-C. Properly seed pseudorandom number generators](https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/miscellaneous-msc/msc32-c/).
-

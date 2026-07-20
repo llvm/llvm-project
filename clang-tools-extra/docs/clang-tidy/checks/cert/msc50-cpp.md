@@ -8,4 +8,3 @@ The `cert-msc50-cpp` check is an alias, please see
 
 This check corresponds to the CERT C Coding Standard rule
 [MSC50-CPP. Do not use std::rand() for generating pseudorandom numbers](https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/miscellaneous-msc/msc50-cpp).
-

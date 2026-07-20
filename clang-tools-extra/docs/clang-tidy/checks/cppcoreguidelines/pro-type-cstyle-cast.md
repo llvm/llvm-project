@@ -16,4 +16,3 @@ This rule bans `(T)expression` only when used to perform an unsafe cast.
 
 This rule is part of the [Type safety (Type.4)](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-cstylecast)
 profile from the C++ Core Guidelines.
-

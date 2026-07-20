@@ -10,4 +10,3 @@ alternative to using pointers to access arrays.
 
 This rule is part of the [Bounds safety (Bounds 3)](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-bounds-decay)
 profile from the C++ Core Guidelines.
-

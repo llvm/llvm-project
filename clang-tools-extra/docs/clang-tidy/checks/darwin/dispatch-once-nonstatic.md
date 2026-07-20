@@ -20,4 +20,3 @@ libdispatch requirements.
 See the discussion section of
 [Apple's dispatch_once documentation](https://developer.apple.com/documentation/dispatch/1447169-dispatch_once)
 for more information.
-

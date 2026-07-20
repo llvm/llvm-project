@@ -24,6 +24,4 @@ for (int i = 0; i < 100; ++i) {
 }
 ```
 
-Based on the [Altera SDK for OpenCL: Best Practices Guide][altera-guide].
-
-[altera-guide]: https://www.altera.com/en_US/pdfs/literature/hb/opencl-sdk/aocl_optimization_guide.pdf
+Based on the [Altera SDK for OpenCL: Best Practices Guide](https://www.altera.com/en_US/pdfs/literature/hb/opencl-sdk/aocl_optimization_guide.pdf).

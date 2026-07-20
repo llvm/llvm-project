@@ -14,4 +14,3 @@ get it right.
 
 This rule is part of the [Type safety (Type.7)](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-unions)
 profile from the C++ Core Guidelines.
-

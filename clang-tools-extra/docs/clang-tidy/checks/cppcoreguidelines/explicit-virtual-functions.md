@@ -6,4 +6,3 @@
 The `cppcoreguidelines-explicit-virtual-functions` check is an alias,
 please see {doc}`modernize-use-override <../modernize/use-override>`
 for more information.
-

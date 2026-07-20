@@ -8,4 +8,3 @@ function call to another constructor of the same class.
 
 The user most likely meant to use a delegating constructor or base class
 initializer.
-

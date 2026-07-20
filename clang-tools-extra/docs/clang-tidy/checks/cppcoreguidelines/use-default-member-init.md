@@ -9,4 +9,3 @@ from the C++ Core Guidelines.
 The `cppcoreguidelines-use-default-member-init` check is an alias, please see
 {doc}`modernize-use-default-member-init <../modernize/use-default-member-init>`
 for more information.
-

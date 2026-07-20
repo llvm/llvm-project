@@ -16,4 +16,3 @@ relies on programmer discipline to get it right.
 
 This rule is part of the [Type safety (Type.8)](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-varargs)
 profile from the C++ Core Guidelines.
-
