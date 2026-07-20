@@ -534,6 +534,14 @@ private:
   }
 
 public:
+  // Do some internal consistency checks.
+  void verify() {
+    // These track the same underlying hardware counter so the score ranges
+    // should be identical.
+    assert(getScoreLB(AMDGPU::VA_VDST_RD) == getScoreLB(AMDGPU::VA_VDST_WR));
+    assert(getScoreUB(AMDGPU::VA_VDST_RD) == getScoreUB(AMDGPU::VA_VDST_WR));
+  }
+
   bool merge(const WaitcntBrackets &Other);
 
   bool counterOutOfOrder(AMDGPU::InstCounterType T) const;
@@ -1484,8 +1492,16 @@ void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
 }
 
 void WaitcntBrackets::applyWaitcnt(const AMDGPU::Waitcnt &Wait) {
-  for (AMDGPU::InstCounterType T : AMDGPU::inst_counter_types())
-    applyWaitcnt(Wait, T);
+  for (AMDGPU::InstCounterType T : AMDGPU::inst_counter_types()) {
+    unsigned Cnt;
+    if (T == AMDGPU::VA_VDST_RD || T == AMDGPU::VA_VDST_WR) {
+      Cnt =
+          std::min(Wait.get(AMDGPU::VA_VDST_RD), Wait.get(AMDGPU::VA_VDST_WR));
+    } else {
+      Cnt = Wait.get(T);
+    }
+    applyWaitcnt(T, Cnt);
+  }
 }
 
 void WaitcntBrackets::applyWaitcnt(AMDGPU::InstCounterType T, unsigned Count) {
@@ -2116,10 +2132,8 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         std::min(Wait.get(AMDGPU::VA_VDST_RD), Wait.get(AMDGPU::VA_VDST_WR));
     Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, VaVdst);
 
-    ScoreBrackets.applyWaitcnt(AMDGPU::VA_VDST_RD,
-                               Wait.get(AMDGPU::VA_VDST_RD));
-    ScoreBrackets.applyWaitcnt(AMDGPU::VA_VDST_WR,
-                               Wait.get(AMDGPU::VA_VDST_WR));
+    ScoreBrackets.applyWaitcnt(AMDGPU::VA_VDST_RD, VaVdst);
+    ScoreBrackets.applyWaitcnt(AMDGPU::VA_VDST_WR, VaVdst);
     ScoreBrackets.applyWaitcnt(AMDGPU::VM_VSRC, Wait.get(AMDGPU::VM_VSRC));
     Wait.set(AMDGPU::VA_VDST_RD, ~0u);
     Wait.set(AMDGPU::VA_VDST_WR, ~0u);
@@ -3032,6 +3046,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   MachineInstr *OldWaitcntInstr = nullptr;
 
   // NOTE: We may append instrs after Inst while iterating.
+  ScoreBrackets.verify();
   for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin(),
                                          E = Block.instr_end();
        Iter != E; ++Iter) {
@@ -3089,6 +3104,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     // If the target suffers from the vccz bugs, this may emit the necessary
     // vccz recompute instruction before \p Inst if needed.
     Modified |= VCCZW.tryRecomputeVCCZ(Inst);
+
+    ScoreBrackets.verify();
   }
 
   // Flush counters at the end of the block if needed (for preheaders with no
