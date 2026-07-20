@@ -16016,9 +16016,9 @@ boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the `isvolatile` parameter is `true`, the `llvm.memcpy` call is a
-{ref}`volatile operation <volatile>`. The detailed access behavior is not very
-cleanly specified and it is unwise to depend on it.
+If the `isvolatile` parameter is `true`, the `llvm.memcpy` call is
+a {ref}`volatile operation <volatile>`. The detailed access behavior is not
+very cleanly specified and it is unwise to depend on it.
 
 ##### Semantics:
 
@@ -16071,9 +16071,9 @@ boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the `isvolatile` parameter is `true`, the `llvm.memcpy.inline` call is a
-{ref}`volatile operation <volatile>`. The detailed access behavior is not very
-cleanly specified and it is unwise to depend on it.
+If the `isvolatile` parameter is `true`, the `llvm.memcpy.inline` call is
+a {ref}`volatile operation <volatile>`. The detailed access behavior is not
+very cleanly specified and it is unwise to depend on it.
 
 ##### Semantics:
 
@@ -16124,9 +16124,9 @@ boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the `isvolatile` parameter is `true`, the `llvm.memmove` call is a
-{ref}`volatile operation <volatile>`. The detailed access behavior is not very
-cleanly specified and it is unwise to depend on it.
+If the `isvolatile` parameter is `true`, the `llvm.memmove` call
+is a {ref}`volatile operation <volatile>`. The detailed access behavior is
+not very cleanly specified and it is unwise to depend on it.
 
 ##### Semantics:
 
@@ -16178,9 +16178,9 @@ is a boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first arguments.
 
-If the `isvolatile` parameter is `true`, the `llvm.memset` call is a
-{ref}`volatile operation <volatile>`. The detailed access behavior is not very
-cleanly specified and it is unwise to depend on it.
+If the `isvolatile` parameter is `true`, the `llvm.memset` call is
+a {ref}`volatile operation <volatile>`. The detailed access behavior is not
+very cleanly specified and it is unwise to depend on it.
 
 ##### Semantics:
 
@@ -16231,9 +16231,9 @@ is a boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first argument.
 
-If the `isvolatile` parameter is `true`, the `llvm.memset.inline` call is a
-{ref}`volatile operation <volatile>`. The detailed access behavior is not very
-cleanly specified and it is unwise to depend on it.
+If the `isvolatile` parameter is `true`, the `llvm.memset.inline` call is
+a {ref}`volatile operation <volatile>`. The detailed access behavior is not
+very cleanly specified and it is unwise to depend on it.
 
 ##### Semantics:
 
