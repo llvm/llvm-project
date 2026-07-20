@@ -269,7 +269,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
         unsigned SrcN = SrcTy.getNumElements();
         if (DstN <= MaxVectorSize || SrcN <= MaxVectorSize)
           return false;
-        // Power-of-two shuffles  can use generic lowering handles
+        // Power-of-two shuffles can use generic lowering handles
         if (isPowerOf2_32(DstN) || isPowerOf2_32(SrcN))
           return false;
         // past this point is non-power-of-two matrix eg (6, 9, 12)
@@ -772,8 +772,7 @@ static bool legalizeStore(LegalizerHelper &Helper, MachineInstr &MI,
 // Lowers wide G_SHUFFLE_VECTORs into legal-width chunked OpVectorShuffles
 // instead of scalarizing. Unmerge/concat artifacts fold away naturally.
 // Requires shader targets and matching chunk widths (see shuffleChunkable).
-static bool legalizeShuffleVector(LegalizerHelper &Helper, MachineInstr &MI,
-                                  SPIRVGlobalRegistry *GR) {
+static bool legalizeShuffleVector(LegalizerHelper &Helper, MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   Register DstReg = MI.getOperand(0).getReg();
@@ -819,46 +818,42 @@ static bool legalizeShuffleVector(LegalizerHelper &Helper, MachineInstr &MI,
   unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
   unsigned DstN = DstTy.getNumElements();
   unsigned SrcN = SrcTy.getNumElements();
-  unsigned W = getVectorSplitWidth(DstN, MaxVectorSize, ST.isShader());
+  unsigned VectorSplitWidth = getVectorSplitWidth(DstN, MaxVectorSize, ST.isShader());
 
-  LLT ChunkTy = LLT::fixed_vector(W, EltTy);
-  unsigned NumSrcChunks = SrcN / W; // per source operand
-  unsigned NumDstChunks = DstN / W;
+  LLT ChunkTy = LLT::fixed_vector(VectorSplitWidth, EltTy);
+  unsigned NumSrcChunks = SrcN / VectorSplitWidth; // per source operand
+  unsigned NumDstChunks = DstN / VectorSplitWidth;
 
   // Split both sources into W-wide chunks. The G_SHUFFLE_VECTOR mask indexes a
   // logical concatenation of the two sources, so lay the chunks out the same
   // way: global chunk indices [0, NumSrcChunks) are Src1, the next NumSrcChunks
   // are Src2. A source lane L lives in chunk L / W at lane L % W.
-  SmallVector<Register, 8> SrcChunks;
-  auto unmergeInto = [&](Register SrcReg) {
-    // A source that is already a single legal chunk needs no unmerge.
-    if (NumSrcChunks == 1) {
-      SrcChunks.push_back(SrcReg);
-      return;
-    }
-    SmallVector<Register, 4> Regs;
+  SmallVector<Register> SrcChunks;
+  auto UnmergeInto = [&](Register SrcReg) {
+    assert (NumSrcChunks >= 2 && "ShuffleChunkable should have handled this case");
+    SmallVector<Register> Regs;
     for (unsigned I = 0; I < NumSrcChunks; ++I)
       Regs.push_back(MRI.createGenericVirtualRegister(ChunkTy));
     MIRBuilder.buildUnmerge(Regs, SrcReg);
     SrcChunks.append(Regs.begin(), Regs.end());
   };
-  unmergeInto(Src1Reg);
-  unmergeInto(Src2Reg);
+  UnmergeInto(Src1Reg);
+  UnmergeInto(Src2Reg);
 
-  SmallVector<Register, 4> DstChunks;
+  SmallVector<Register> DstChunks;
   for (unsigned D = 0; D < NumDstChunks; ++D) {
-    SmallVector<int, 8> LaneSrcChunk(W, -1);
-    SmallVector<int, 8> LaneInChunk(W, -1);
-    SmallVector<unsigned, 4> UsedChunks;
-    for (unsigned J = 0; J < W; ++J) {
-      int M = Mask[D * W + J];
-      if (M < 0)
+    SmallVector<int> LaneSrcChunk(VectorSplitWidth, -1);
+    SmallVector<int> LaneInChunk(VectorSplitWidth, -1);
+    SmallVector<unsigned> UsedChunks;
+    for (unsigned J = 0; J < VectorSplitWidth; ++J) {
+      int ChunkElementMask = Mask[D * VectorSplitWidth + J];
+      if (ChunkElementMask < 0)
         continue;
-      unsigned SC = static_cast<unsigned>(M) / W;
-      LaneSrcChunk[J] = static_cast<int>(SC);
-      LaneInChunk[J] = static_cast<int>(static_cast<unsigned>(M) % W);
-      if (!is_contained(UsedChunks, SC))
-        UsedChunks.push_back(SC);
+      int SrcChunk = ChunkElementMask / VectorSplitWidth;
+      LaneSrcChunk[J] = SrcChunk;
+      LaneInChunk[J] = ChunkElementMask % VectorSplitWidth;
+      if (!is_contained(UsedChunks, SrcChunk))
+        UsedChunks.push_back(SrcChunk);
     }
 
     Register Partial;
@@ -868,27 +863,27 @@ static bool legalizeShuffleVector(LegalizerHelper &Helper, MachineInstr &MI,
     } else {
       // Build the chunk by chaining legal-width shuffles to accumulate
       // lanes from each source chunk.
-      SmallVector<bool, 8> Resolved(W, false);
+      SmallVector<bool> Resolved(VectorSplitWidth, false);
       for (unsigned Step = 0; Step < UsedChunks.size(); ++Step) {
         unsigned SC = UsedChunks[Step];
         Register SrcChunk = SrcChunks[SC];
-        SmallVector<int, 8> ShufMask(W, -1);
+        SmallVector<int> ShufMask(VectorSplitWidth, -1);
         Register Res = MRI.createGenericVirtualRegister(ChunkTy);
         if (Step == 0) {
-          for (unsigned J = 0; J < W; ++J)
+          for (unsigned J = 0; J < VectorSplitWidth; ++J)
             if (LaneSrcChunk[J] == static_cast<int>(SC))
               ShufMask[J] = LaneInChunk[J];
           MIRBuilder.buildShuffleVector(Res, SrcChunk, SrcChunk, ShufMask);
         } else {
-          for (unsigned J = 0; J < W; ++J) {
+          for (unsigned J = 0; J < VectorSplitWidth; ++J) {
             if (LaneSrcChunk[J] == static_cast<int>(SC))
-              ShufMask[J] = static_cast<int>(W) + LaneInChunk[J];
+              ShufMask[J] = static_cast<int>(VectorSplitWidth) + LaneInChunk[J];
             else if (Resolved[J])
               ShufMask[J] = static_cast<int>(J);
           }
           MIRBuilder.buildShuffleVector(Res, Partial, SrcChunk, ShufMask);
         }
-        for (unsigned J = 0; J < W; ++J)
+        for (unsigned J = 0; J < VectorSplitWidth; ++J)
           if (LaneSrcChunk[J] == static_cast<int>(SC))
             Resolved[J] = true;
         Partial = Res;
@@ -950,7 +945,7 @@ bool SPIRVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_STORE:
     return legalizeStore(Helper, MI, GR);
   case TargetOpcode::G_SHUFFLE_VECTOR:
-    return legalizeShuffleVector(Helper, MI, GR);
+    return legalizeShuffleVector(Helper, MI);
   }
 }
 
