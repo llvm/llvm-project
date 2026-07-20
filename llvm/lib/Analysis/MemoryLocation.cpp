@@ -74,6 +74,15 @@ MemoryLocation MemoryLocation::get(const AtomicRMWInst *RMWI) {
                         RMWI->getAAMetadata());
 }
 
+MemoryLocation MemoryLocation::get(const StoreRMWInst *SI) {
+  const auto &DL = SI->getDataLayout();
+
+  return MemoryLocation(SI->getPointerOperand(),
+                        LocationSize::precise(DL.getTypeStoreSize(
+                            SI->getValOperand()->getType())),
+                        SI->getAAMetadata());
+}
+
 std::optional<MemoryLocation>
 MemoryLocation::getOrNone(const Instruction *Inst) {
   switch (Inst->getOpcode()) {
@@ -87,6 +96,8 @@ MemoryLocation::getOrNone(const Instruction *Inst) {
     return get(cast<AtomicCmpXchgInst>(Inst));
   case Instruction::AtomicRMW:
     return get(cast<AtomicRMWInst>(Inst));
+  case Instruction::StoreRMW:
+    return get(cast<StoreRMWInst>(Inst));
   default:
     return std::nullopt;
   }

@@ -109,6 +109,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_FMAX:           return "AtomicLoadFMax";
   case ISD::ATOMIC_LOAD_FMINIMUM:       return "AtomicLoadFMinimum";
   case ISD::ATOMIC_LOAD_FMAXIMUM:       return "AtomicLoadFMaximum";
+  case ISD::ATOMIC_LOAD_FMINIMUMNUM:    return "AtomicLoadFMinimumNum";
+  case ISD::ATOMIC_LOAD_FMAXIMUMNUM:    return "AtomicLoadFMaximumNum";
   case ISD::ATOMIC_LOAD_UINC_WRAP:
     return "AtomicLoadUIncWrap";
   case ISD::ATOMIC_LOAD_UDEC_WRAP:
@@ -119,6 +121,28 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "AtomicLoadUSubSat";
   case ISD::ATOMIC_LOAD:                return "AtomicLoad";
   case ISD::ATOMIC_STORE:               return "AtomicStore";
+  case ISD::ATOMIC_STORE_ADD:           return "AtomicStoreAdd";
+  case ISD::ATOMIC_STORE_SUB:           return "AtomicStoreSub";
+  case ISD::ATOMIC_STORE_AND:           return "AtomicStoreAnd";
+  case ISD::ATOMIC_STORE_NAND:          return "AtomicStoreNand";
+  case ISD::ATOMIC_STORE_OR:            return "AtomicStoreOr";
+  case ISD::ATOMIC_STORE_XOR:           return "AtomicStoreXor";
+  case ISD::ATOMIC_STORE_MIN:           return "AtomicStoreMin";
+  case ISD::ATOMIC_STORE_MAX:           return "AtomicStoreMax";
+  case ISD::ATOMIC_STORE_UMIN:          return "AtomicStoreUMin";
+  case ISD::ATOMIC_STORE_UMAX:          return "AtomicStoreUMax";
+  case ISD::ATOMIC_STORE_FADD:          return "AtomicStoreFAdd";
+  case ISD::ATOMIC_STORE_FSUB:          return "AtomicStoreFSub";
+  case ISD::ATOMIC_STORE_FMIN:          return "AtomicStoreFMin";
+  case ISD::ATOMIC_STORE_FMAX:          return "AtomicStoreFMax";
+  case ISD::ATOMIC_STORE_FMINIMUM:      return "AtomicStoreFMinimum";
+  case ISD::ATOMIC_STORE_FMAXIMUM:      return "AtomicStoreFMaximum";
+  case ISD::ATOMIC_STORE_FMINIMUMNUM:   return "AtomicStoreFMinimumNum";
+  case ISD::ATOMIC_STORE_FMAXIMUMNUM:   return "AtomicStoreFMaximumNum";
+  case ISD::ATOMIC_STORE_UINC_WRAP:     return "AtomicStoreUIncWrap";
+  case ISD::ATOMIC_STORE_UDEC_WRAP:     return "AtomicStoreUDecWrap";
+  case ISD::ATOMIC_STORE_USUB_COND:     return "AtomicStoreUSubCond";
+  case ISD::ATOMIC_STORE_USUB_SAT:      return "AtomicStoreUSubSat";
   case ISD::PCMARKER:                   return "PCMarker";
   case ISD::READCYCLECOUNTER:           return "ReadCycleCounter";
   case ISD::READSTEADYCOUNTER:          return "ReadSteadyCounter";

@@ -979,6 +979,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(store,       Store);
   INSTKEYWORD(cmpxchg,     AtomicCmpXchg);
   INSTKEYWORD(atomicrmw,   AtomicRMW);
+  INSTKEYWORD(storermw, StoreRMW);
   INSTKEYWORD(fence,       Fence);
   INSTKEYWORD(getelementptr, GetElementPtr);
 

@@ -1078,6 +1078,31 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(1).getValueType());
     break;
+  case ISD::ATOMIC_STORE_ADD:
+  case ISD::ATOMIC_STORE_SUB:
+  case ISD::ATOMIC_STORE_AND:
+  case ISD::ATOMIC_STORE_NAND:
+  case ISD::ATOMIC_STORE_OR:
+  case ISD::ATOMIC_STORE_XOR:
+  case ISD::ATOMIC_STORE_MIN:
+  case ISD::ATOMIC_STORE_MAX:
+  case ISD::ATOMIC_STORE_UMIN:
+  case ISD::ATOMIC_STORE_UMAX:
+  case ISD::ATOMIC_STORE_FADD:
+  case ISD::ATOMIC_STORE_FSUB:
+  case ISD::ATOMIC_STORE_FMIN:
+  case ISD::ATOMIC_STORE_FMAX:
+  case ISD::ATOMIC_STORE_FMINIMUM:
+  case ISD::ATOMIC_STORE_FMAXIMUM:
+  case ISD::ATOMIC_STORE_FMINIMUMNUM:
+  case ISD::ATOMIC_STORE_FMAXIMUMNUM:
+  case ISD::ATOMIC_STORE_UINC_WRAP:
+  case ISD::ATOMIC_STORE_UDEC_WRAP:
+  case ISD::ATOMIC_STORE_USUB_COND:
+  case ISD::ATOMIC_STORE_USUB_SAT:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                                    Node->getOperand(2).getValueType());
+    break;
   case ISD::SELECT_CC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:

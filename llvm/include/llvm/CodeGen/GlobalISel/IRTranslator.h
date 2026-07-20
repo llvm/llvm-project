@@ -571,6 +571,12 @@ private:
 
   // Stubs to keep the compiler happy while we implement the rest of the
   // translation.
+
+  // TODO: missing GlobalISel support
+  bool translateStoreRMW(const User &U, MachineIRBuilder &MIRBuilder) {
+    return false;
+  }
+
   bool translateResume(const User &U, MachineIRBuilder &MIRBuilder) {
     return false;
   }

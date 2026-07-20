@@ -32,6 +32,7 @@ class MemTransferInst;
 class MemIntrinsic;
 class AtomicCmpXchgInst;
 class AtomicRMWInst;
+class StoreRMWInst;
 class AnyMemTransferInst;
 class AnyMemIntrinsic;
 class TargetLibraryInfo;
@@ -246,6 +247,7 @@ public:
   LLVM_ABI static MemoryLocation get(const VAArgInst *VI);
   LLVM_ABI static MemoryLocation get(const AtomicCmpXchgInst *CXI);
   LLVM_ABI static MemoryLocation get(const AtomicRMWInst *RMWI);
+  LLVM_ABI static MemoryLocation get(const StoreRMWInst *SI);
   static MemoryLocation get(const Instruction *Inst) {
     return *MemoryLocation::getOrNone(Inst);
   }
