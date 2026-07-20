@@ -8,6 +8,7 @@ import inspect
 import os
 import re
 import sys
+import textwrap
 from io import TextIOWrapper
 from typing import Set
 
@@ -27,9 +28,9 @@ with open(PLURALS_FILE) as f:
 
 
 def substitute(text, tag, contents):
-    replacement = "\n.. START_%s\n\n%s\n\n.. END_%s\n" % (tag, contents, tag)
-    pattern = r"\n\.\. START_%s\n.*\n\.\. END_%s\n" % (tag, tag)
-    return re.sub(pattern, "%s", text, flags=re.S) % replacement
+    replacement = f"\n% START_{tag}\n\n{contents}\n\n% END_{tag}\n"
+    pattern = rf"\n% START_{tag}\n.*\n% END_{tag}\n"
+    return re.sub(pattern, lambda _: replacement, text, flags=re.S)
 
 
 def register_plural(singular: str, plural: str):
@@ -70,6 +71,39 @@ def pluralize(word: str):
         return register_plural(word, word + "s")
 
 
+def reindent_fenced_code_blocks(text):
+    """Reindent fenced code body text to match the fence nesting indent.
+
+    For example, this collapses the code body's internal Doxygen indentation:
+
+      ```yaml
+        BasedOnStyle: LLVM
+      ```
+
+    to this Markdown shape:
+
+      ```yaml
+      BasedOnStyle: LLVM
+      ```
+    """
+
+    def dedent_block(match):
+        indent = match.group("indent")
+        lang = match.group("lang")
+        body = match.group("body")
+        dedented_body = "".join(
+            indent + line for line in textwrap.dedent(body).splitlines(keepends=True)
+        )
+        return f"{indent}```{lang}\n{dedented_body}{indent}```{match.group('trailing')}"
+
+    return re.sub(
+        r"(?ms)^(?P<indent>[^\S\n]*)```(?P<lang>[^\n]*)\n"
+        r"(?P<body>.*?)(?P=indent)```(?P<trailing>\n|$)",
+        dedent_block,
+        text,
+    )
+
+
 def to_yaml_type(typestr: str):
     if typestr == "bool":
         return "Boolean"
@@ -93,11 +127,33 @@ def to_yaml_type(typestr: str):
     return typestr
 
 
-def doxygen2rst(text):
-    text = re.sub(r"<tt>\s*(.*?)\s*<\/tt>", r"``\1``", text)
-    text = re.sub(r"\\c ([^ ,;\.]+)", r"``\1``", text)
+def doxygen2md(text):
+    text = re.sub(r"<tt>\s*(.*?)\s*<\/tt>", r"`\1`", text)
+    text = re.sub(r"\\c ([^ ,;\.]+)", r"`\1`", text)
+    text = re.sub(r"(?m)^(\s*)\* ", r"\1- ", text)
     text = re.sub(r"\\\w+ ", "", text)
+    text = re.sub(
+        r"(?ms)^(?P<indent>[^\S\n]*)```(?P<lang>[^\n]*)\n"
+        r"(?P<body>.*?)(?P=indent)```\n"
+        r"(?P<rest>(?P=indent) false:\n(?:(?P=indent)  .*(?:\n|$))+)",
+        lambda match: (
+            f"{match.group('indent')}```{match.group('lang')}\n"
+            f"{match.group('body')}{match.group('rest').rstrip()}\n"
+            f"{match.group('indent')}```\n"
+        ),
+        text,
+    )
+    text = reindent_fenced_code_blocks(text)
     return text
+
+
+def definition_body(text):
+    lines = doxygen2md(text.strip()).splitlines()
+    if not lines:
+        return ":"
+    result = [": " + lines[0]]
+    result.extend(("  " + line) if line else "" for line in lines[1:])
+    return "\n".join(result)
 
 
 def indent(text, columns, indent_first_line=True):
@@ -118,14 +174,14 @@ class Option(object):
         self.version = version
 
     def __str__(self):
-        s = ".. _%s:\n\n**%s** (``%s``) " % (
-            self.name,
+        s = "(%s)=\n\n**%s** (`%s`) " % (
+            self.name.lower(),
             self.name,
             to_yaml_type(self.type),
         )
         if self.version:
-            s += ":versionbadge:`clang-format %s` " % self.version
-        s += ":ref:`¶ <%s>`\n%s" % (self.name, doxygen2rst(indent(self.comment, 2)))
+            s += "{versionbadge}`clang-format %s` " % self.version
+        s += "{ref}`¶ <%s>`\n\n%s" % (self.name, definition_body(self.comment))
         if self.enum and self.enum.values:
             s += indent("\n\nPossible values:\n\n%s\n" % self.enum, 2)
         if self.nested_struct:
@@ -143,7 +199,7 @@ class NestedStruct(object):
         self.values = []
 
     def __str__(self):
-        return self.comment + "\n" + "\n".join(map(str, self.values))
+        return doxygen2md(self.comment) + "\n" + "\n".join(map(str, self.values))
 
 
 class NestedField(object):
@@ -154,14 +210,14 @@ class NestedField(object):
 
     def __str__(self):
         if self.version:
-            return "\n* ``%s`` :versionbadge:`clang-format %s` %s" % (
+            return "\n- `%s` {versionbadge}`clang-format %s` %s" % (
                 self.name,
                 self.version,
-                doxygen2rst(indent(self.comment, 2, indent_first_line=False)),
+                doxygen2md(indent(self.comment, 2, indent_first_line=False)),
             )
-        return "\n* ``%s`` %s" % (
+        return "\n- `%s` %s" % (
             self.name,
-            doxygen2rst(indent(self.comment, 2, indent_first_line=False)),
+            doxygen2md(indent(self.comment, 2, indent_first_line=False)),
         )
 
 
@@ -186,17 +242,17 @@ class NestedEnum(object):
     def __str__(self):
         s = ""
         if self.version:
-            s = "\n* ``%s %s`` :versionbadge:`clang-format %s`\n\n%s" % (
+            s = "\n- `%s %s` {versionbadge}`clang-format %s`\n\n%s" % (
                 to_yaml_type(self.type),
                 self.name,
                 self.version,
-                doxygen2rst(indent(self.comment, 2)),
+                doxygen2md(indent(self.comment, 2)),
             )
         else:
-            s = "\n* ``%s %s``\n%s" % (
+            s = "\n- `%s %s`\n%s" % (
                 to_yaml_type(self.type),
                 self.name,
-                doxygen2rst(indent(self.comment, 2)),
+                doxygen2md(indent(self.comment, 2)),
             )
         s += indent("\nPossible values:\n\n", 2)
         s += indent("\n".join(map(str, self.values)), 2)
@@ -210,10 +266,10 @@ class EnumValue(object):
         self.config = config
 
     def __str__(self):
-        return "* ``%s`` (in configuration: ``%s``)\n%s" % (
+        return "- `%s` (in configuration: `%s`)\n%s" % (
             self.name,
             re.sub(".*_", "", self.config),
-            doxygen2rst(indent(self.comment, 2)),
+            doxygen2md(indent(self.comment, 2)),
         )
 
 
@@ -248,7 +304,7 @@ class OptionsReader:
             lang = match.group("lang")
             if not lang:
                 lang = "c++"
-            return f"\n{indent_str}.. code-block:: {lang}\n\n"
+            return f"{indent_str}```{lang}\n"
 
         endcode_match = re.match(r"^/// +\\endcode$", line)
         if endcode_match:
@@ -257,7 +313,7 @@ class OptionsReader:
                     "no correct `\\code` found before this `\\endcode`", line
                 )
             self.in_code_block = False
-            return ""
+            return " " * self.code_indent + "```\n"
 
         # check code block indentation
         if (
@@ -270,22 +326,26 @@ class OptionsReader:
             else:
                 self.__warning("code block should be indented", line)
             self.last_err_lineno = self.lineno
+        if self.in_code_block:
+            if line == "///":
+                return "\n"
+            return " " * self.code_indent + line[6 + self.code_indent :] + "\n"
 
         match = re.match(r"^/// \\warning$", line)
         if match:
-            return "\n.. warning::\n\n"
+            return ":::{warning}\n"
 
         endwarning_match = re.match(r"^/// +\\endwarning$", line)
         if endwarning_match:
-            return ""
+            return ":::\n"
 
         match = re.match(r"^/// \\note$", line)
         if match:
-            return "\n.. note::\n\n"
+            return ":::{note}\n"
 
         endnote_match = re.match(r"^/// +\\endnote$", line)
         if endnote_match:
-            return ""
+            return ":::\n"
         return line[4:] + "\n"
 
     def read_options(self):
