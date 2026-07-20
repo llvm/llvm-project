@@ -79,6 +79,11 @@ namespace {
     Align Alignment;            // CP alignment.
     unsigned char SymbolFlags = X86II::MO_NO_FLAG;  // X86II::MO_*
     bool NegateIndex = false;
+    // True when this address is being matched to be emitted as a LEA rather
+    // than folded into a memory operand. Unlike a memory operand, a LEA turns
+    // the folded arithmetic into real instructions, so it is not profitable to
+    // split an already-materialized (multi-use) value here. (Issue #51707)
+    bool IsForLEA = false;
 
     X86ISelAddressMode() = default;
 
@@ -206,6 +211,7 @@ namespace {
     bool matchAddress(SDValue N, X86ISelAddressMode &AM);
     bool matchVectorAddress(SDValue N, X86ISelAddressMode &AM);
     bool matchAdd(SDValue &N, X86ISelAddressMode &AM, unsigned Depth);
+    bool hasMaterializingUse(SDValue V) const;
     SDValue matchIndexRecursively(SDValue N, X86ISelAddressMode &AM,
                                   unsigned Depth);
     bool matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
@@ -2061,22 +2067,90 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
   return false;
 }
 
+// Returns true if V has a use that materializes it in a register as a value -
+// a stored value operand or a CopyToReg (a return value, call argument, or a
+// value that is live out of the block). Such a use means V will be in a
+// register regardless, so reusing it when forming an LEA is free. Uses where V
+// is only an address (a load/store pointer, or folded into another address
+// computation) do not materialize it. This is a more precise replacement for
+// the !hasOneUse() proxy: an address-only multi-use value is not materialized.
+bool X86DAGToDAGISel::hasMaterializingUse(SDValue V) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  for (SDUse &U : V->uses()) {
+    if (U.getResNo() != V.getResNo())
+      continue;
+    SDNode *User = U.getUser();
+    // A return value, call argument, or a value live out of the block.
+    if (User->getOpcode() == ISD::CopyToReg)
+      return true;
+    // A stored value materializes V (V as a store *address* does not).
+    if (auto *St = dyn_cast<StoreSDNode>(User)) {
+      if (St->getValue() == V)
+        return true;
+      continue;
+    }
+    // Selection may already have turned the ISD::STORE into a machine store by
+    // the time we get here. For a store the memory reference comes first, so
+    // the stored value is the operand at X86::AddrNumOperands (as in e.g.
+    // X86AvoidStoreForwardingBlocks). Note there is no getOperandBias() here:
+    // unlike a MachineInstr, an SDNode's operand list has no leading defs.
+    if (User->isMachineOpcode() &&
+        TII->get(User->getMachineOpcode()).mayStore() &&
+        User->getNumOperands() > X86::AddrNumOperands &&
+        User->getOperand(X86::AddrNumOperands) == V)
+      return true;
+  }
+  return false;
+}
+
 bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
                                unsigned Depth) {
   // Add an artificial use to this node so that we can keep track of
   // it if it gets CSE'd with a different node.
   HandleSDNode Handle(N);
 
+  auto IsAddLike = [&](SDValue V) {
+    return V.getOpcode() == ISD::ADD || CurDAG->isADDLike(V);
+  };
+
+  // When forming a LEA, avoid splitting an already-materialized value: use the
+  // operand directly as a base/index register instead. hasMaterializingUse()
+  // decides whether the operand is genuinely materialized - it has a use that
+  // puts it in a register as a value. A value used only as an address is not
+  // materialized, and splitting it there would only add a redundant
+  // materialization (see the two_ptrs test).
+  auto SplitsMaterializedValue = [&](SDValue Op) {
+    if (!AM.IsForLEA || !hasMaterializingUse(Op))
+      return false;
+
+    // add-like: decomposes to base + index (+ disp)
+    if (IsAddLike(Op))
+      return IsAddLike(Op.getOperand(0)) || IsAddLike(Op.getOperand(1));
+
+    // shl by 1/2/3 folds to a scaled index
+    if (Op.getOpcode() == ISD::SHL)
+      if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1)))
+        return C->getZExtValue() >= 1 && C->getZExtValue() <= 3 &&
+               IsAddLike(Op.getOperand(0));
+
+    return false;
+  };
+
+  auto MatchOperand = [&](SDValue Op) {
+    if (SplitsMaterializedValue(Op))
+      return matchAddressBase(Op, AM);
+    return matchAddressRecursively(Op, AM, Depth + 1);
+  };
+
   X86ISelAddressMode Backup = AM;
-  if (!matchAddressRecursively(N.getOperand(0), AM, Depth+1) &&
-      !matchAddressRecursively(Handle.getValue().getOperand(1), AM, Depth+1))
+  if (!MatchOperand(N.getOperand(0)) &&
+      !MatchOperand(Handle.getValue().getOperand(1)))
     return false;
   AM = Backup;
 
   // Try again after commutating the operands.
-  if (!matchAddressRecursively(Handle.getValue().getOperand(1), AM,
-                               Depth + 1) &&
-      !matchAddressRecursively(Handle.getValue().getOperand(0), AM, Depth + 1))
+  if (!MatchOperand(Handle.getValue().getOperand(1)) &&
+      !MatchOperand(Handle.getValue().getOperand(0)))
     return false;
   AM = Backup;
 
@@ -3153,6 +3227,7 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
                                     SDValue &Index, SDValue &Disp,
                                     SDValue &Segment) {
   X86ISelAddressMode AM;
+  AM.IsForLEA = true;
 
   // Save the DL and VT before calling matchAddress, it can invalidate N.
   SDLoc DL(N);
