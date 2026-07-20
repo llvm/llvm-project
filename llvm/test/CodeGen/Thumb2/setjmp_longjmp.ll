@@ -4,15 +4,14 @@ target triple = "thumbv7-apple-ios"
 
 declare i32 @llvm.eh.sjlj.setjmp(ptr)
 declare void @llvm.eh.sjlj.longjmp(ptr)
-declare ptr @llvm.frameaddress(i32)
-declare ptr @llvm.stacksave()
 @g = external global i32
 
-define void @double_foobar() {
+define void @double_foobar() "frame-pointer"="all" {
 ; CHECK-LABEL: double_foobar:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r10, r11, lr}
-; CHECK-NEXT:    add r7, sp, #24
+; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    add r7, sp, #12
+; CHECK-NEXT:    push.w {r8, r10, r11}
 ; CHECK-NEXT:    sub sp, #24
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    add r0, sp, #4
@@ -52,8 +51,9 @@ define void @double_foobar() {
 ; CHECK-NEXT:    ldrne r1, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    strne r0, [r1]
 ; CHECK-NEXT:    addne sp, #24
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    popne.w {r4, r5, r6, r7, r8, r10, r11, pc}
+; CHECK-NEXT:    itt ne
+; CHECK-NEXT:    popne.w {r8, r10, r11}
+; CHECK-NEXT:    popne {r4, r5, r6, r7, pc}
 ; CHECK-NEXT:  LBB0_2: @ %if2.else
 ; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    movs r0, #2
@@ -82,12 +82,6 @@ define void @double_foobar() {
 entry:
   %buf = alloca [5 x ptr], align 4
 
-  %fa = tail call ptr @llvm.frameaddress(i32 0)
-  store ptr %fa, ptr %buf, align 4
-  %ss = tail call ptr @llvm.stacksave()
-  %ssgep = getelementptr [5 x ptr], ptr %buf, i32 0, i32 2
-  store ptr %ss, ptr %ssgep, align 4
-
   %setjmpres = call i32 @llvm.eh.sjlj.setjmp(ptr %buf)
   %tobool = icmp ne i32 %setjmpres, 0
   br i1 %tobool, label %if.then, label %if.else
@@ -102,11 +96,6 @@ if.else:
   unreachable
 
 if.end:
-  %fa2 = tail call ptr @llvm.frameaddress(i32 0)
-  store ptr %fa2, ptr %buf, align 4
-  %ss2 = tail call ptr @llvm.stacksave()
-  store ptr %ss2, ptr %ssgep, align 4
-
   %setjmpres2 = call i32 @llvm.eh.sjlj.setjmp(ptr %buf)
   %tobool2 = icmp ne i32 %setjmpres2, 0
   br i1 %tobool2, label %if2.then, label %if2.else

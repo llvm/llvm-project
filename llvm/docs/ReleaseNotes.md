@@ -77,6 +77,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the ARM Backend
 
+* The backend now stores the frame pointer and stack pointer into the jump buffer
+  when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
+
 ### Changes to the AVR Backend
 
 ### Changes to the DirectX Backend
@@ -89,13 +92,26 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the PowerPC Backend
 
+* The backend now stores the frame pointer and stack pointer into the jump buffer
+  when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
+
 ### Changes to the RISC-V Backend
+
+### Changes to the SystemZ Backend
+
+### Changes to the VE Backend
+
+* The backend now stores the frame pointer and stack pointer into the jump buffer
+  when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
 
 ### Changes to the WebAssembly Backend
 
 ### Changes to the Windows Target
 
 ### Changes to the X86 Backend
+
+* The backend now stores the frame pointer and stack pointer into the jump buffer
+  when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
 
 ### Changes to the OCaml bindings
 

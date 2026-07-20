@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple x86_64-apple-macosx10.13.0 < %s | FileCheck %s --check-prefix=X86_64
 ; RUN: llc -mtriple i386-apple-macosx10.13.0 < %s | FileCheck %s --check-prefix=X86
 
-; The MacOS tripples are used to get trapping behavior on the "unreachable" IR
+; The MacOS triples are used to get trapping behavior on the "unreachable" IR
 ; instruction, so that the placement of the ud2 instruction could be verified.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -108,7 +108,7 @@ declare void @llvm.eh.sjlj.longjmp(ptr)
 
 ; Functions that call SetJmp should save the current ShadowStackPointer for
 ; future fixing of the Shadow Stack.
-define i32 @foo(i32 %i) local_unnamed_addr {
+define i32 @foo(i32 %i) local_unnamed_addr "frame-pointer"="all" {
 ; X86_64-LABEL: foo:
 ; X86_64:       ## %bb.0: ## %entry
 ; X86_64-NEXT:    pushq %rbp
@@ -181,7 +181,7 @@ define i32 @foo(i32 %i) local_unnamed_addr {
 ; X86-NEXT:    movl L_buf$non_lazy_ptr, %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl %ebp, (%eax)
-; X86-NEXT:    movl %esp, 16(%eax)
+; X86-NEXT:    movl %esp, 8(%eax)
 ; X86-NEXT:    movl $LBB1_4, 4(%eax)
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    rdsspd %ecx
@@ -211,13 +211,8 @@ define i32 @foo(i32 %i) local_unnamed_addr {
 ; X86-NEXT:    ud2
 entry:
   %0 = load ptr, ptr @buf, align 8
-  %1 = tail call ptr @llvm.frameaddress(i32 0)
-  store ptr %1, ptr %0, align 8
-  %2 = tail call ptr @llvm.stacksave()
-  %3 = getelementptr inbounds i8, ptr %0, i64 16
-  store ptr %2, ptr %3, align 8
-  %4 = tail call i32 @llvm.eh.sjlj.setjmp(ptr %0)
-  %tobool = icmp eq i32 %4, 0
+  %1 = tail call i32 @llvm.eh.sjlj.setjmp(ptr %0)
+  %tobool = icmp eq i32 %1, 0
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
@@ -229,8 +224,6 @@ if.end:                                           ; preds = %entry
   ret i32 %add2
 }
 
-declare ptr @llvm.frameaddress(i32)
-declare ptr @llvm.stacksave()
 declare i32 @llvm.eh.sjlj.setjmp(ptr)
 
 !llvm.module.flags = !{!0}

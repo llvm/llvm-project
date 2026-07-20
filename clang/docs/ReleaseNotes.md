@@ -302,6 +302,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Bug Fixes to Compiler Builtins
 
+- Fixed a `__builtin_setjmp` miscompilation on Windows x64. (#GH186843)
+
 #### Bug Fixes to Attribute Support
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
