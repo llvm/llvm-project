@@ -30,6 +30,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
@@ -6296,13 +6297,20 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       else if (const auto *FPT =
                    Callee.getAbstractInfo().getCalleeFunctionProtoType())
         CST = QualType(FPT, 0);
+      else if (const auto *FT =
+                   Callee.getAbstractInfo().getCalleeFunctionType())
+        CST = QualType(FT, 0);
       else
         llvm_unreachable(
             "Cannot find the callee type to generate callee_type metadata.");
 
       // Set type identifier metadata of indirect calls for call graph section.
-      if (!CST.isNull())
+      if (!CST.isNull()) {
         CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
+        if (!CST->isFunctionProtoType() &&
+            CGM.getCodeGenOpts().CallGraphSection)
+          CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto);
+      }
     }
   }
 

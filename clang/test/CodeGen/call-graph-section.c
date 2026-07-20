@@ -6,6 +6,9 @@
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fexperimental-call-graph-section \
 // RUN: -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,MS %s
 
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fexperimental-call-graph-section \
+// RUN: -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefixes=WARNING %s
+
 // CHECK-LABEL: define {{(dso_local)?}} void @foo(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID:![0-9]+]]
 void foo() {
@@ -17,6 +20,7 @@ void bar() {
   void (*fp)() = foo;
   // ITANIUM: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
   // MS: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
+  // WARNING: warning: indirect call to a function with no prototype will be treated as a wildcard in the call graph section [-Wcall-graph-section-no-prototype]
   fp();
 }
 

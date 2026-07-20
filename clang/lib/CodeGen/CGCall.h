@@ -41,22 +41,23 @@ namespace CodeGen {
 
 /// Abstract information about a function or function prototype.
 class CGCalleeInfo {
-  /// The function prototype of the callee.
-  const FunctionProtoType *CalleeProtoTy;
+  /// The function type of the callee.
+  const FunctionType *CalleeFunctionTy;
   /// The function declaration of the callee.
   GlobalDecl CalleeDecl;
 
 public:
-  explicit CGCalleeInfo() : CalleeProtoTy(nullptr) {}
-  CGCalleeInfo(const FunctionProtoType *calleeProtoTy, GlobalDecl calleeDecl)
-      : CalleeProtoTy(calleeProtoTy), CalleeDecl(calleeDecl) {}
-  CGCalleeInfo(const FunctionProtoType *calleeProtoTy)
-      : CalleeProtoTy(calleeProtoTy) {}
+  explicit CGCalleeInfo() : CalleeFunctionTy(nullptr) {}
+  CGCalleeInfo(const FunctionType *calleeFunctionTy, GlobalDecl calleeDecl)
+      : CalleeFunctionTy(calleeFunctionTy), CalleeDecl(calleeDecl) {}
+  CGCalleeInfo(const FunctionType *calleeFunctionTy)
+      : CalleeFunctionTy(calleeFunctionTy) {}
   CGCalleeInfo(GlobalDecl calleeDecl)
-      : CalleeProtoTy(nullptr), CalleeDecl(calleeDecl) {}
+      : CalleeFunctionTy(nullptr), CalleeDecl(calleeDecl) {}
 
+  const FunctionType *getCalleeFunctionType() const { return CalleeFunctionTy; }
   const FunctionProtoType *getCalleeFunctionProtoType() const {
-    return CalleeProtoTy;
+    return dyn_cast_or_null<FunctionProtoType>(CalleeFunctionTy);
   }
   const GlobalDecl getCalleeDecl() const { return CalleeDecl; }
 };
