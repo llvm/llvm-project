@@ -3580,7 +3580,7 @@ public:
 
   /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
-  mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
+  llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
   /// A cache of enumerator values for enums checked by -Wassign-enum.
   llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
@@ -4779,6 +4779,9 @@ public:
   ExprResult VerifyBitField(SourceLocation FieldLoc,
                             const IdentifierInfo *FieldName, QualType FieldTy,
                             bool IsMsStruct, Expr *BitWidth);
+
+  /// CacheFlagEnum - Insert flag enum into cache and compute its flag bit mask.
+  void CacheFlagEnum(const EnumDecl *ED);
 
   /// IsValueInFlagEnum - Determine if a value is allowed as part of a flag
   /// enum. If AllowMask is true, then we also allow the complement of a valid
