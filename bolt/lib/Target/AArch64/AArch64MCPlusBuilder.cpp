@@ -2194,12 +2194,19 @@ public:
   BranchLivenessInfo
   createBranchLivenessInfo(BinaryFunction &BF,
                            DataflowInfoManager &DIM) const override {
-    BranchLivenessInfo Info;
-    LivenessAnalysis &LA = DIM.getLivenessAnalysis();
+    SmallVector<MCInst *> CompAndBranchInsts;
     for (BinaryBasicBlock &BB : BF)
       for (MCInst &Inst : BB)
         if (isCompAndBranch(Inst))
-          Info.FlagsLiveIn[&Inst] = LA.getLiveIn(Inst).test(getFlagsReg());
+          CompAndBranchInsts.push_back(&Inst);
+    if (CompAndBranchInsts.empty())
+      return {};
+
+    BranchLivenessInfo Info;
+    LivenessAnalysis &LA = DIM.getLivenessAnalysis();
+    for (MCInst *Inst : CompAndBranchInsts)
+      if (!LA.getLiveIn(*Inst).test(getFlagsReg()))
+        Info.FlagsDead.insert(Inst);
     return Info;
   }
 

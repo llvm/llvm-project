@@ -76,11 +76,10 @@ enum BTIKind {
 };
 
 struct BranchLivenessInfo {
-  DenseMap<const MCInst *, bool> FlagsLiveIn;
+  DenseSet<const MCInst *> FlagsDead;
 
   bool mustPreserveFlags(const MCInst &Inst) const {
-    auto It = FlagsLiveIn.find(&Inst);
-    return It == FlagsLiveIn.end() || It->second;
+    return !FlagsDead.count(&Inst);
   }
 };
 
@@ -2160,7 +2159,8 @@ public:
   }
 
   /// Reverses the branch condition in Inst and update its taken target to TBB.
-  /// Assumes that the branch is reversible.
+  /// Assumes that the branch is reversible. It may replace Inst with a longer
+  /// instruction sequence on some targets.
   virtual void
   reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
                          const MCSymbol *TBB, MCContext *Ctx,

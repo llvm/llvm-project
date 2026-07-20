@@ -711,18 +711,20 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
     DenseMap<const BinaryBasicBlock *, BinaryBasicBlock *> FragmentTrampolines;
 
     // Create a trampoline code after \p BB or at the end of the fragment if BB
-    // is nullptr. \p Offset is the fragment size delta caused by the insertion,
-    // including any growth of \p BB before the trampoline.
+    // is nullptr. \p Offset reflects the size delta of BB caused by splitting
+    // unconditional branches, or replacing a branch with a longer instruction
+    // sequence. It is used to update the output addresses of basic blocks
+    // following the trampoline.
     auto addTrampolineAfter = [&](BinaryBasicBlock *BB,
                                   BinaryBasicBlock *TargetBB, uint64_t Count,
-                                  uint64_t Offset) {
+                                  uint64_t Offset = 0) {
       FunctionTrampolines.emplace_back(BB ? BB : FF.back(),
                                        BF.createBasicBlock());
       BinaryBasicBlock *TrampolineBB = FunctionTrampolines.back().second.get();
-      const uint64_t BBGrowth = Offset ? Offset - TrampolineSize : 0;
-
-      if (BB)
-        BB->setOutputEndAddress(BB->getOutputEndAddress() + BBGrowth);
+      const uint64_t OldBBEnd = BB ? BB->getOutputEndAddress() : 0;
+      if (BB && Offset)
+        BB->setOutputEndAddress(OldBBEnd + Offset);
+      Offset += TrampolineSize;
 
       MCInst Inst;
       {
@@ -763,7 +765,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
 
       // Update offsets for blocks after BB.
       for (BinaryBasicBlock *IBB : FF)
-        adjustBasicBlockAddress(IBB, TrampolineAddress - BBGrowth, Offset);
+        adjustBasicBlockAddress(IBB, OldBBEnd, Offset);
 
       // Update offsets for trampolines in this fragment that are placed after
       // the new trampoline. Note that trampoline blocks are not part of the
@@ -775,7 +777,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
           continue;
         if (IBB == TrampolineBB)
           continue;
-        adjustBasicBlockAddress(IBB, TrampolineAddress - BBGrowth, Offset);
+        adjustBasicBlockAddress(IBB, OldBBEnd, Offset);
       }
 
       return TrampolineBB;
@@ -796,7 +798,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol, BI);
 
       BinaryBasicBlock *TrampolineBB =
-          addTrampolineAfter(BB, TargetBB, BI.Count, /*Offset=*/0);
+          addTrampolineAfter(BB, TargetBB, BI.Count, /*Offset=*/-4);
       BB->replaceSuccessor(TargetBB, TrampolineBB, BI.Count);
     }
 
@@ -829,8 +831,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       // case we will need further relaxation.
       const int64_t OffsetToEnd = FragmentSize - InstAddress;
       if (Count == 0 && isBranchOffsetInRange(Inst, OffsetToEnd)) {
-        TrampolineBB =
-            addTrampolineAfter(nullptr, TargetBB, Count, TrampolineSize);
+        TrampolineBB = addTrampolineAfter(nullptr, TargetBB, Count);
         BB->replaceSuccessor(TargetBB, TrampolineBB, Count);
         auto L = BC.scopeLock();
         MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
@@ -849,7 +850,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       if (ShouldReverseBranch && !IsReversibleBranch) {
         const uint64_t NextCount = BB->getBranchInfo(*NextBB).Count;
         BinaryBasicBlock *FallThrough =
-            addTrampolineAfter(BB, NextBB, NextCount, TrampolineSize);
+            addTrampolineAfter(BB, NextBB, NextCount);
         BB->replaceSuccessor(NextBB, FallThrough, NextCount);
       }
 
@@ -864,11 +865,11 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
         const uint64_t NewBBSize = BB->estimateSize();
 
         // Create a trampoline basic block for the original taken target.
-        TrampolineBB = addTrampolineAfter(
-            BB, TargetBB, Count, TrampolineSize + (NewBBSize - OldBBSize));
+        TrampolineBB =
+            addTrampolineAfter(BB, TargetBB, Count, NewBBSize - OldBBSize);
       } else {
         // Create a trampoline basic block for the taken target of the branch.
-        TrampolineBB = addTrampolineAfter(BB, TargetBB, Count, TrampolineSize);
+        TrampolineBB = addTrampolineAfter(BB, TargetBB, Count);
         auto L = BC.scopeLock();
         MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());
       }
