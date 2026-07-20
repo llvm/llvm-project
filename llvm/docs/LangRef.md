@@ -16016,7 +16016,7 @@ boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the immediate `isvolatile` parameter is `true`, the `llvm.memcpy` call is
+If the `isvolatile` immediate parameter is `true`, the `llvm.memcpy` call is
 a {ref}`volatile operation <volatile>`. The detailed access behavior is not
 very cleanly specified and it is unwise to depend on it.
 
@@ -16071,7 +16071,7 @@ boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the immediate `isvolatile` parameter is `true`, the `llvm.memcpy.inline` call
+If the `isvolatile` immediate parameter is `true`, the `llvm.memcpy.inline` call
 is a {ref}`volatile operation <volatile>`. The detailed access behavior is not
 very cleanly specified and it is unwise to depend on it.
 
@@ -16124,7 +16124,7 @@ boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the `isvolatile` parameter is `true`, the `llvm.memmove` call
+If the `isvolatile` immediate parameter is `true`, the `llvm.memmove` call
 is a {ref}`volatile operation <volatile>`. The detailed access behavior is
 not very cleanly specified and it is unwise to depend on it.
 
@@ -16178,7 +16178,7 @@ is a boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first arguments.
 
-If the immediate `isvolatile` parameter is `true`, the `llvm.memset` call is a
+If the `isvolatile` immediate parameter is `true`, the `llvm.memset` call is a
 {ref}`volatile operation <volatile>`. The detailed access behavior is not very
 cleanly specified and it is unwise to depend on it.
 
@@ -16231,9 +16231,9 @@ is a boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first argument.
 
-If the immediate `isvolatile` parameter is `true`, the `llvm.memset.inline` call
-is a {ref}`volatile operation <volatile>`. The detailed access behavior is not
-very cleanly specified and it is unwise to depend on it.
+If the `isvolatile` immediate parameter is `true`, the `llvm.memset.inline`
+call is a {ref}`volatile operation <volatile>`. The detailed access behavior is
+not very cleanly specified and it is unwise to depend on it.
 
 ##### Semantics:
 
