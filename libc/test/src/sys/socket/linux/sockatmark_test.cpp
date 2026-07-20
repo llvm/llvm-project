@@ -31,17 +31,17 @@ TEST_F(LlvmLibcSockatmarkTest, Socketpair) {
   int sockpair[2] = {-1, -1};
   ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair),
               Succeeds(0));
+  scope_exit close_sockpair([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));
+  });
+
   if (LIBC_NAMESPACE::send(sockpair[0], ".", 1, MSG_OOB) != 1) {
     ASSERT_ERRNO_EQ(EOPNOTSUPP);
     LIBC_NAMESPACE::testing::tlog << "No kernel support for AF_UNIX OOB\n";
     ASSERT_THAT(LIBC_NAMESPACE::sockatmark(sockpair[0]), Fails(ENOTTY));
     return;
   }
-
-  scope_exit close_sockpair([&] {
-    ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
-    ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));
-  });
 
   // sockpair[1] has OOB data because we've sent it above. sockpair[0] does not
   // because it's empty.
