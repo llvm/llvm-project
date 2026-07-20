@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// For all alloca instructions, and add a pair of cast to local address for
+// For all alloca instructions, add a pair of casts to local address for
 // each of them. For example,
 //
 //   %A = alloca i32
-//   store i32 0, i32* %A ; emits st.u32
+//   store i32 0, ptr %A ; emits st.u32
 //
 // will be transformed to
 //
 //   %A = alloca i32
-//   %Local = addrspacecast i32* %A to i32 addrspace(5)*
-//   %Generic = addrspacecast i32 addrspace(5)* %A to i32*
-//   store i32 0, i32 addrspace(5)* %Generic ; emits st.local.u32
+//   %Local = addrspacecast ptr %A to ptr addrspace(5)
+//   %Generic = addrspacecast ptr addrspace(5) %Local to ptr
+//   store i32 0, ptr %Generic ; emits st.local.u32
 //
 // And we will rely on NVPTXInferAddressSpaces to combine the last two
 // instructions.
