@@ -511,6 +511,27 @@ gpu.module @test_kernel {
 }
 
 // -----
+
+// Test regrouping when input and target inst_data differ ([8, 64] vs [8, 16]).
+#in = #xegpu.layout<inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 4]>
+#tgt = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>
+
+gpu.module @test_kernel {
+  //CHECK-LABEL: gpu.func @convert_layout_regroup_swapped
+  //CHECK-SAME: ([[arg0:%.+]]: vector<16x64xbf16>)
+  //CHECK: vector.extract_strided_slice [[arg0]] {offsets = [0, 0], sizes = [8, 64], strides = [1, 1]} : vector<16x64xbf16> to vector<8x64xbf16>
+  //CHECK-NOT: vector.extract_strided_slice [[arg0]] {{.*}}sizes = [8, 16]
+  //CHECK: [[cvt:%.+]] = xegpu.convert_layout {{.*}} : vector<8x64xbf16>
+  //CHECK: vector.extract_strided_slice [[cvt]] {{.*}}sizes = [8, 16]{{.*}} : vector<8x64xbf16> to vector<8x16xbf16>
+  //CHECK: vector.insert_strided_slice {{.*}} : vector<8x16xbf16> into vector<16x64xbf16>
+  gpu.func @convert_layout_regroup_swapped(%a: vector<16x64xbf16>) -> vector<16x64xbf16> {
+    %p = math.exp %a {layout_result_0 = #in} : vector<16x64xbf16>
+    %0 = xegpu.convert_layout %p <{input_layout = #in, target_layout = #tgt}> : vector<16x64xbf16>
+    gpu.return %0 : vector<16x64xbf16>
+  }
+}
+
+// -----
 gpu.module @test_kernel {
   //CHECK-LABEL: unroll_load_matrix
   gpu.func @unroll_load_matrix(%arg0: memref<4096xi8, 3>) -> vector<32x32xf32> {
