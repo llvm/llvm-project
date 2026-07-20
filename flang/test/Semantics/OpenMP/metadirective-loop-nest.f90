@@ -199,7 +199,7 @@ end subroutine
 ! subprogram for its execution part.
 subroutine no_loop_in_interface_body_preserves_outer(n, a)
   integer :: n, a(n), i
-  !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
+  !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
   !BECAUSE: COLLAPSE clause was specified with argument 2
   !$omp metadirective when(implementation={vendor(llvm)}: do collapse(2)) default(nothing)
   interface
