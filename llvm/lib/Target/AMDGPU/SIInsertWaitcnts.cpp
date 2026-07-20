@@ -1305,18 +1305,15 @@ void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
         return Acc | Context->getWaitEvents(T);
       });
   HWEvents PendingVmemEvents = PendingEvents & VmemEvents;
-  auto Simplify = [&](AMDGPU::InstCounterType T) {
+  for (AMDGPU::InstCounterType T :
+       {AMDGPU::LOAD_CNT, AMDGPU::STORE_CNT, AMDGPU::SAMPLE_CNT,
+        AMDGPU::BVH_CNT, AMDGPU::DS_CNT}) {
     unsigned CheckCount = CheckWait.get(T);
     if (UpdateWait.get(AMDGPU::VM_VSRC) >= CheckCount &&
         (CheckCount == 0 || !counterOutOfOrder(T)) &&
         (PendingVmemEvents & ~Context->getWaitEvents(T)) == 0)
       UpdateWait.set(AMDGPU::VM_VSRC, ~0u);
-  };
-  Simplify(AMDGPU::LOAD_CNT);
-  Simplify(AMDGPU::STORE_CNT);
-  Simplify(AMDGPU::SAMPLE_CNT);
-  Simplify(AMDGPU::BVH_CNT);
-  Simplify(AMDGPU::DS_CNT);
+  }
 
   simplifyWaitcnt(UpdateWait, AMDGPU::VM_VSRC);
 }
