@@ -805,41 +805,17 @@ define i8 @reduce_umax_v64i8_signbit(ptr %pa, ptr %pb) {
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
-; AVX512BW-LABEL: reduce_umax_v64i8_signbit:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa64 (%rsi), %zmm0
-; AVX512BW-NEXT:    vpandq (%rdi), %zmm0, %zmm0
-; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BW-NEXT:    vpmaxub %ymm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
-; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm1
-; AVX512BW-NEXT:    vpminub %xmm1, %xmm0, %xmm0
-; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512BW-NEXT:    vmovd %xmm0, %eax
-; AVX512BW-NEXT:    shrb $7, %al
-; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512BWVL-LABEL: reduce_umax_v64i8_signbit:
-; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vmovdqa64 (%rsi), %zmm0
-; AVX512BWVL-NEXT:    vpandq (%rdi), %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BWVL-NEXT:    vpmaxub %ymm1, %ymm0, %ymm0
-; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
-; AVX512BWVL-NEXT:    vpsrlw $8, %xmm0, %xmm1
-; AVX512BWVL-NEXT:    vpminub %xmm1, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vmovd %xmm0, %eax
-; AVX512BWVL-NEXT:    shrb $7, %al
-; AVX512BWVL-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512BWVL-NEXT:    vzeroupper
-; AVX512BWVL-NEXT:    retq
+; AVX512-LABEL: reduce_umax_v64i8_signbit:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqa64 (%rsi), %zmm0
+; AVX512-NEXT:    vpandq (%rdi), %zmm0, %zmm0
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpmovmskb %ymm0, %eax
+; AVX512-NEXT:    testl %eax, %eax
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %a = load <64 x i8>, ptr %pa
   %b = load <64 x i8>, ptr %pb
   %and = and <64 x i8> %b, %a
@@ -1016,37 +992,19 @@ define i16 @reduce_umax_v32i16_signbit_not(ptr %pa, ptr %pb) {
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
-; AVX512BW-LABEL: reduce_umax_v32i16_signbit_not:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512BW-NEXT:    vpandnq (%rsi), %zmm0, %zmm0
-; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BW-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
-; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    shrl $15, %eax
-; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512BWVL-LABEL: reduce_umax_v32i16_signbit_not:
-; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512BWVL-NEXT:    vpandnq (%rsi), %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BWVL-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm0
-; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
-; AVX512BWVL-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BWVL-NEXT:    shrl $15, %eax
-; AVX512BWVL-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512BWVL-NEXT:    vzeroupper
-; AVX512BWVL-NEXT:    retq
+; AVX512-LABEL: reduce_umax_v32i16_signbit_not:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
+; AVX512-NEXT:    vpandnq (%rsi), %zmm0, %zmm0
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX512-NEXT:    xorl %eax, %eax
+; AVX512-NEXT:    testl $-1431655766, %ecx # imm = 0xAAAAAAAA
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %a = load <32 x i16>, ptr %pa
   %b = load <32 x i16>, ptr %pb
   %a.not = xor <32 x i16> %a, splat (i16 -1)
@@ -1126,23 +1084,29 @@ define i32 @reduce_umax_v16i32_signbit(ptr %pa, ptr %pb) {
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
 ;
-; AVX512-LABEL: reduce_umax_v16i32_signbit:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqa64 (%rsi), %zmm0
-; AVX512-NEXT:    vpandd (%rdi), %zmm0, %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    notl %eax
-; AVX512-NEXT:    shrl $31, %eax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: reduce_umax_v16i32_signbit:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vmovdqa64 (%rsi), %zmm0
+; AVX512BW-NEXT:    vpandd (%rdi), %zmm0, %zmm0
+; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512BW-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    xorl %eax, %eax
+; AVX512BW-NEXT:    vtestps %ymm0, %ymm0
+; AVX512BW-NEXT:    sete %al
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: reduce_umax_v16i32_signbit:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vmovaps (%rsi), %zmm0
+; AVX512BWVL-NEXT:    vandps (%rdi), %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
+; AVX512BWVL-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX512BWVL-NEXT:    xorl %eax, %eax
+; AVX512BWVL-NEXT:    vtestps %ymm0, %ymm0
+; AVX512BWVL-NEXT:    sete %al
+; AVX512BWVL-NEXT:    vzeroupper
+; AVX512BWVL-NEXT:    retq
   %a = load <16 x i32>, ptr %pa
   %b = load <16 x i32>, ptr %pb
   %and = and <16 x i32> %b, %a
@@ -1414,30 +1378,22 @@ define i64 @reduce_umax_v8i64_signbit_not(ptr %pa, ptr %pb) {
 ; AVX512BW-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512BW-NEXT:    vpandnq (%rsi), %zmm0, %zmm0
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BW-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512BW-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX512BW-NEXT:    vmovq %xmm0, %rax
-; AVX512BW-NEXT:    notq %rax
-; AVX512BW-NEXT:    shrq $63, %rax
+; AVX512BW-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    xorl %eax, %eax
+; AVX512BW-NEXT:    vtestpd %ymm0, %ymm0
+; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: reduce_umax_v8i64_signbit_not:
 ; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512BWVL-NEXT:    vpandnq (%rsi), %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BWVL-NEXT:    vpmaxuq %ymm1, %ymm0, %ymm0
-; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpmaxuq %xmm1, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512BWVL-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vmovq %xmm0, %rax
-; AVX512BWVL-NEXT:    notq %rax
-; AVX512BWVL-NEXT:    shrq $63, %rax
+; AVX512BWVL-NEXT:    vmovapd (%rdi), %zmm0
+; AVX512BWVL-NEXT:    vandnpd (%rsi), %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
+; AVX512BWVL-NEXT:    vorpd %ymm1, %ymm0, %ymm0
+; AVX512BWVL-NEXT:    xorl %eax, %eax
+; AVX512BWVL-NEXT:    vtestpd %ymm0, %ymm0
+; AVX512BWVL-NEXT:    sete %al
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = load <8 x i64>, ptr %pa

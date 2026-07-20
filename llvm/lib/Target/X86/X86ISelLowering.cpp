@@ -50923,7 +50923,12 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
       SDValue V = X.getOperand(0);
       EVT VecVT = V.getValueType();
       if (DAG.getTargetLoweringInfo().isTypeLegal(VecVT) &&
-          (VecVT.is128BitVector() || VecVT.is256BitVector())) {
+          VecVT.getScalarSizeInBits() >= 8) {
+        if (VecVT.is512BitVector()) {
+          auto [Lo, Hi] = DAG.SplitVector(V, DL);
+          V = DAG.getNode(ISD::OR, DL, Lo.getValueType(), Lo, Hi);
+          VecVT = V.getValueType();
+        }
         if (VecVT == MVT::v16i16) {
           auto [Lo, Hi] = DAG.SplitVector(V, DL);
           V = DAG.getNode(X86ISD::PACKSS, DL, MVT::v16i8, Lo, Hi);
