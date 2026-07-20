@@ -17,5 +17,8 @@ int main(int argc, char **argv) {
   uint64_t i64 = 1;
   uint32_t mask_ff = 0xFF;
 
+  uint16_t sh = 1;
+  uint16_t &sh_ref = sh;
+
   return 0; // Set a breakpoint here
 }

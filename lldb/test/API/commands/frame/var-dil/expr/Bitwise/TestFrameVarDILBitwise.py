@@ -32,6 +32,8 @@ class TestFrameVarDILBitwise(TestBase):
         self.expect_var_path("~var_false", value="-1")
         self.expect_var_path("~ull_max", value="0")
         self.expect_var_path("~0b1011", value="-12")
+        self.expect_var_path("~sh", value="-2")
+        self.expect_var_path("~sh_ref", value="-2")
 
         # Check bitwise shifts
         self.expect_var_path("(1 << 5)", value="32")

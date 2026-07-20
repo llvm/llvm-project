@@ -560,6 +560,11 @@ Interpreter::Visit(const UnaryOpNode &node) {
     return operand;
   }
   case UnaryOpKind::Not: {
+    if (operand->GetCompilerType().IsReferenceType()) {
+      operand = operand->Dereference(error);
+      if (error.Fail())
+        return error.ToError();
+    }
     llvm::Expected<lldb::ValueObjectSP> conv_op =
         UnaryConversion(operand, node.GetLocation());
     if (!conv_op)
