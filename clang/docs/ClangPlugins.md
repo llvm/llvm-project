@@ -111,6 +111,96 @@ attribute, are:
 
 To see a working example of an attribute plugin, see [the Attribute.cpp example](https://github.com/llvm/llvm-project/blob/main/clang/examples/Attribute/Attribute.cpp).
 
+## Emitting diagnostics
+
+A plugin emits diagnostics through the `DiagnosticsEngine` obtained from the
+`CompilerInstance`. Calling `getCustomPluginDiagID` with the plugin's own name
+places the diagnostic in that plugin's warning group, so users can control it
+with `-W` flags exactly like a built-in warning. The group is named
+`<plugin>-plugin` (for the plugin registered under `<plugin>`); clang registers
+that group for every loaded plugin. Deriving the group from the plugin's name
+keeps every plugin in its own namespace, so two plugins can never collide on a
+group and a plugin diagnostic is never left in a name no `-W` flag reaches.
+
+```c++
+  DiagnosticsEngine &D = CI.getDiagnostics();
+  unsigned ID = D.getCustomPluginDiagID(
+      DiagnosticsEngine::Warning, "my plugin found something odd about '%0'",
+      "print-fns");
+  D.Report(Loc, ID) << Name;
+```
+
+The warning is on by default, prints `[-Wprint-fns-plugin]` so users can see how
+to control it, and can be:
+
+- silenced with `-Wno-print-fns-plugin`, with the `-Wno-plugin` umbrella that
+  covers every loaded plugin, or with `-Wno-user-defined-warnings` which is the
+  root over every runtime group (it also covers `diagnose_if`), and
+- turned into an error with `-Werror=print-fns-plugin`.
+
+The same grouping applies to remarks and errors. A remark
+(`DiagnosticsEngine::Remark`) placed in a group is off by default, like a
+built-in remark, and is opted into with `-R<group>`; `-W` flags do not affect
+it. An error keeps its severity regardless of any group flag, so a
+`-Wno-<group>` can never silence a grouped error.
+
+A plugin may further split its diagnostics into subgroups by passing a subgroup
+name as the final argument to `getCustomPluginDiagID`, producing
+`<plugin>-plugin-<subgroup>`; each subgroup is controlled by its own name, by the
+`<plugin>-plugin` group, and by the `-Wplugin` umbrella, with the most specific
+flag winning. A `-W<plugin>-plugin` flag that no loaded plugin claims is reported
+as an unknown warning option once all plugins have loaded, so misspellings are
+still caught.
+
+By convention plugin diagnostics live in their own `<plugin>-plugin` namespace
+under `-Wplugin`, which in turn nests under `-Wuser-defined-warnings`.
+`getCustomPluginDiagID` is a thin convenience over the general primitive
+
+```c++
+  unsigned getCustomDiagID(Level, StringRef Message, StringRef Group);
+```
+
+which places a diagnostic in any warning group named by `Group`. `Group` may
+also be an existing built-in group, so a plugin that deliberately wants to
+extend, say, `-Wdeprecated` can do so; the diagnostic is then controlled by that
+group's flag like any other member. Prefer the `<plugin>-plugin` convention
+unless there is a specific reason to join a built-in group.
+
+A backend (IR-layer) plugin controls its diagnostics the same way. An
+`llvm::DiagnosticInfo` that overrides `getWarningGroup()` to name a group is
+routed by clang through the same mechanism, so a pass plugin naming
+`<plugin>-plugin` gets the same `-W` control and nests under `-Wplugin` and
+`-Wuser-defined-warnings`. A backend diagnostic that names no group falls under
+`-Wbackend-plugin` as before.
+
+## Organizing diagnostics like the compiler does
+
+A plugin with more than a handful of diagnostics can organize them the way Clang
+organizes its own: as a table, with a stable name per diagnostic that doubles as
+its SARIF `ruleId`. Clang's diagnostics are defined as TableGen records in `.td`
+files, from which `clang-tblgen -gen-clang-diags-defs` generates a table of
+`DIAG(...)` rows. A plugin can do the same and register the generated table at
+runtime with `getCustomPluginDiagIDs`:
+
+```c++
+  static const DiagnosticsEngine::PluginDiagnostic Table[] = {
+    {"suspicious_decl", DiagnosticsEngine::Warning, "suspicious %0", ""},
+    {"forbidden_decl",  DiagnosticsEngine::Error,   "forbidden %0",  ""},
+  };
+  llvm::SmallVector<unsigned> IDs =
+      CI.getDiagnostics().getCustomPluginDiagIDs("my-plugin", Table);
+```
+
+Each entry lands in the plugin's `my-plugin-plugin` group and gets a stable
+`ruleId` `my_plugin_<record>` (both derived from the names, so the plugin spells
+neither). The returned IDs are in table order, so a parallel enumeration
+generated from the same table gives type-safe call sites, exactly like Clang's
+`diag::warn_*`. The `PrintFunctionNames` example shows this end to end,
+hand-writing the table with an X-macro that a real plugin would instead generate
+from a `.td`. Moving a plugin's diagnostics under its own TableGen this way is a
+drop-in: the group names, the `-W` control, and the SARIF `ruleId` all stay the
+same, so users and tooling see no churn.
+
 ## Putting it all together
 
 Let's look at an example plugin that prints top-level function names. This
