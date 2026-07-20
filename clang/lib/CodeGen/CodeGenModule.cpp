@@ -1380,6 +1380,21 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "wchar_size",
                               static_cast<uint32_t>(WCharWidth));
 
+  // Record the floating-point ABI as a module flag when it differs from the
+  // target default. softfp collapses to soft.
+  llvm::FloatABI::ABIType FloatABI =
+      llvm::StringSwitch<llvm::FloatABI::ABIType>(CodeGenOpts.FloatABI)
+          .Cases({"soft", "softfp"}, llvm::FloatABI::Soft)
+          .Case("hard", llvm::FloatABI::Hard)
+          .Default(llvm::FloatABI::Default);
+  if (FloatABI != llvm::FloatABI::Default &&
+      FloatABI != getTriple().getDefaultFloatABI()) {
+    getModule().addModuleFlag(
+        llvm::Module::Error, "float-abi",
+        llvm::MDString::get(getLLVMContext(),
+                            llvm::FloatABI::getABITypeName(FloatABI)));
+  }
+
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
                               "zos_product_major_version",
