@@ -435,9 +435,10 @@ define i64 @select_w_optsize(i64 %true, i64 %false, i1 zeroext %c) optsize {
 ;
 ; RV64ZICOND-LABEL: select_w_optsize:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    czero.nez a1, a1, a2
-; RV64ZICOND-NEXT:    czero.eqz a0, a0, a2
-; RV64ZICOND-NEXT:    or a0, a0, a1
+; RV64ZICOND-NEXT:    bnez a2, .LBB16_2
+; RV64ZICOND-NEXT:  # %bb.1:
+; RV64ZICOND-NEXT:    mv a0, a1
+; RV64ZICOND-NEXT:  .LBB16_2:
 ; RV64ZICOND-NEXT:    ret
   %r = select i1 %c, i64 %true, i64 %false
   ret i64 %r
@@ -455,9 +456,10 @@ define i64 @select_w_minsize(i64 %true, i64 %false, i1 zeroext %c) minsize {
 ;
 ; RV64ZICOND-LABEL: select_w_minsize:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    czero.nez a1, a1, a2
-; RV64ZICOND-NEXT:    czero.eqz a0, a0, a2
-; RV64ZICOND-NEXT:    or a0, a0, a1
+; RV64ZICOND-NEXT:    bnez a2, .LBB17_2
+; RV64ZICOND-NEXT:  # %bb.1:
+; RV64ZICOND-NEXT:    mv a0, a1
+; RV64ZICOND-NEXT:  .LBB17_2:
 ; RV64ZICOND-NEXT:    ret
   %r = select i1 %c, i64 %true, i64 %false
   ret i64 %r

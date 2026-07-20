@@ -10474,7 +10474,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     // Unless we have the short forward branch optimization or CondV has one use
     // when optimizaing for size.
     if (!Subtarget.hasConditionalMoveFusion() &&
-        (!DAG.shouldOptForSize() || CondV.hasOneUse()))
+        !DAG.shouldOptForSize())
       return DAG.getNode(
           ISD::OR, DL, VT,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
