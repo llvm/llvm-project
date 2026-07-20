@@ -579,6 +579,9 @@ SanitizerSet CodeGenModule::getProfileCoreUBChecks() const {
   // {expr.add.out.of.bounds}, statically known bound: indexing past the end of
   // an array whose bound is visible at the subscript.
   Checks.set(SanitizerKind::ArrayBounds, true);
+  // {conv.fpint.*} and {conv.double.out.of.range}: a floating-point value whose
+  // truncation toward zero is outside the destination type's range.
+  Checks.set(SanitizerKind::FloatCastOverflow, true);
   return Checks;
 }
 
