@@ -4,9 +4,15 @@ if(NOT TARGET libc.src.__support.OSUtil.osutil)
   return()
 endif()
 
+if(LLVM_LIBC_FULL_BUILD)
+  set(MATCHING_CONFIG_ONLY HERMETIC_TEST_ONLY)
+else()
+  set(MATCHING_CONFIG_ONLY UNIT_TEST_ONLY)
+endif()
+
 add_libc_test(
   err_test
-  UNIT_TEST_ONLY
+  ${MATCHING_CONFIG_ONLY}
   SUITE
     libc_err_unittests
   SRCS
@@ -18,7 +24,7 @@ add_libc_test(
 
 add_libc_test(
   errx_test
-  UNIT_TEST_ONLY
+  ${MATCHING_CONFIG_ONLY}
   SUITE
     libc_err_unittests
   SRCS
@@ -29,7 +35,7 @@ add_libc_test(
 
 add_libc_test(
   verr_test
-  UNIT_TEST_ONLY
+  ${MATCHING_CONFIG_ONLY}
   SUITE
     libc_err_unittests
   SRCS
@@ -41,7 +47,7 @@ add_libc_test(
 
 add_libc_test(
   verrx_test
-  UNIT_TEST_ONLY
+  ${MATCHING_CONFIG_ONLY}
   SUITE
     libc_err_unittests
   SRCS
@@ -52,7 +58,7 @@ add_libc_test(
 
 add_libc_test(
   warn_test
-  UNIT_TEST_ONLY
+  ${MATCHING_CONFIG_ONLY}
   SUITE
     libc_err_unittests
   SRCS
@@ -64,7 +70,7 @@ add_libc_test(
 
 add_libc_test(
   warnx_test
-  UNIT_TEST_ONLY
+  ${MATCHING_CONFIG_ONLY}
   SUITE
     libc_err_unittests
   SRCS
@@ -76,7 +82,7 @@ add_libc_test(
 
 add_libc_test(
   vwarn_test
-  UNIT_TEST_ONLY
+  ${MATCHING_CONFIG_ONLY}
   SUITE
     libc_err_unittests
   SRCS
@@ -88,7 +94,7 @@ add_libc_test(
 
 add_libc_test(
   vwarnx_test
-  UNIT_TEST_ONLY
+  ${MATCHING_CONFIG_ONLY}
   SUITE
     libc_err_unittests
   SRCS

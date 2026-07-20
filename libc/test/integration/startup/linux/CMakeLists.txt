@@ -19,6 +19,17 @@ add_integration_test(
 )
 
 add_integration_test(
+  invocation_name_test
+  SUITE libc-startup-tests
+  SRCS
+    invocation_name_test.cpp
+  DEPENDS
+    libc.src.errno.program_invocation_name
+    libc.src.errno.program_invocation_short_name
+    libc.src.unistd.execve
+)
+
+add_integration_test(
   startup_no_envp_test
   SUITE libc-startup-tests
   SRCS

@@ -1219,6 +1219,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.ctype.tolower_l
     libc.src.ctype.toupper_l
 
+    # errno.h entrypoints
+    libc.src.errno.program_invocation_name
+    libc.src.errno.program_invocation_short_name
+
     # stdlib.h entrypoints
     libc.src.stdlib.strtod_l
     libc.src.stdlib.strtof_l

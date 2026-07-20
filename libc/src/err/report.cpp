@@ -23,8 +23,13 @@
 #include "src/__support/printf_core/printf_main.h"
 #include "src/__support/printf_core/writer.h"
 
-#ifdef __linux__
+#ifdef LIBC_FULL_BUILD
+#include "src/errno/program_invocation_short_name.h"
+#define PROGRAM_INVOCATION_SHORT_NAME                                          \
+  LIBC_NAMESPACE::program_invocation_short_name
+#else
 extern "C" char *program_invocation_short_name;
+#define PROGRAM_INVOCATION_SHORT_NAME ::program_invocation_short_name
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -32,12 +37,7 @@ namespace err_reporting {
 
 void report(bool show_err, int err_num, const char *fmt,
             internal::ArgList &args) {
-  const char *progname = "libllvmlibc";
-  // TODO: Use a proper way to get progname if available.
-#ifdef __linux__
-  progname = program_invocation_short_name;
-#endif
-
+  const char *progname = PROGRAM_INVOCATION_SHORT_NAME;
   char buffer[1024];
   printf_core::FlushingBuffer wb(
       buffer, sizeof(buffer),
