@@ -1546,7 +1546,9 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
     BuildMI(MBB, MBBI, DL, TII.get(RISCV::VSETVLI), TemporaryReg)
         .addReg(RISCV::X0)
-        .addImm(VTypeImm);
+        .addImm(VTypeImm)
+        .addReg(RISCV::VL, RegState::ImplicitDefine)
+        .addReg(RISCV::VTYPE, RegState::ImplicitDefine);
   }
 
   for (MCRegister Reg : FinalRegsToZero.set_bits())
