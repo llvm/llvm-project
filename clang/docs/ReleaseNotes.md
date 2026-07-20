@@ -54,6 +54,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Clang Frontend Potentially Breaking Changes
 
+- Templight support has been removed.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 ### OpenCL Potentially Breaking Changes
@@ -121,7 +123,175 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Attribute Changes in Clang
 
+- Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
+
 ### Improvements to Clang's diagnostics
+
+- Fixed bug in `-Wdocumentation` so that it correctly handles explicit
+  function template instantiations (#64087).
+
+- Fixed concept template parameters not being recognized in `-Wdocumentation`
+  when mentioned in tparam comments. (#GH64087)
+
+- `-Wunused-but-set-variable` now diagnoses file-scope variables with
+  internal linkage (`static` storage class) that are assigned but never used.
+  This new coverage is added under the subgroup `-Wunused-but-set-global`,
+  allowing it to be disabled independently with `-Wno-unused-but-set-global`.
+  (#GH148361)
+
+- `-Wunused-template` is now part of `-Wunused` (which is enabled by `-Wall`).
+  It diagnoses unused function and variable templates with internal linkage,
+  which in a header is a latent ODR hazard. It can be disabled with
+  `-Wno-unused-template`. (#GH202945)
+
+- Added `-Wlifetime-safety` to enable lifetime safety analysis,
+  a CFG-based intra-procedural analysis that detects use-after-free and related
+  temporal safety bugs. See the
+  [RFC](https://discourse.llvm.org/t/rfc-intra-procedural-lifetime-analysis-in-clang/86291)
+  for more details. By design, this warning is enabled in `-Weverything`. To disable
+  the analysis, use `-Wno-lifetime-safety` or `-fno-lifetime-safety`.
+
+- Added `-Wlifetime-safety-suggestions` to enable lifetime annotation suggestions.
+  This provides suggestions for function parameters that
+  should be marked `[[clang::lifetimebound]]` based on lifetime analysis. For
+  example, for the following function:
+
+  ```c++
+  int* p(int *in) { return in; }
+  ```
+
+  Clang will suggest:
+
+  ```c++
+  warning: parameter in intra-TU function should be marked [[clang::lifetimebound]]
+  int* p(int *in) { return in; }
+         ^~~~~~~
+                 [[clang::lifetimebound]]
+  note: param returned here
+  int* p(int *in) { return in; }
+                           ^~
+  ```
+
+- Added `-Wlifetime-safety-noescape` to detect misuse of `[[clang::noescape]]`
+  annotation where the parameter escapes through return. For example:
+
+  ```c++
+  int* p(int *in [[clang::noescape]]) { return in; }
+  ```
+
+  Clang will warn:
+
+  ```c++
+  warning: parameter is marked [[clang::noescape]] but escapes
+  int* p(int *in [[clang::noescape]]) { return in; }
+         ^~~~~~~
+  note: returned here
+  int* p(int *in [[clang::noescape]]) { return in; }
+                                               ^~
+  ```
+
+- Added `-Wlifetime-safety-dangling-field` to detect dangling field references
+  when stack memory escapes to class fields. This is part of `-Wlifetime-safety`
+  and detects cases where local variables or parameters are stored in fields but
+  outlive their scope. For example:
+
+  ```c++
+  struct DanglingView {
+    std::string_view view;
+    DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
+  };
+  ```
+
+- Improved `-Wassign-enum` performance by caching enum enumerator values. (#GH176454)
+
+- Fixed a false negative in `-Warray-bounds` where the warning was suppressed
+  when accessing a member function on a past-the-end array element.
+  (#GH179128)
+
+- Added a missing space to the FixIt for the `implicit-int` group of diagnostics and
+  made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
+
+- Fixed the Fix-It insertion point for `expected ';' after alias declaration`
+  when parsing alias declarations involving a token-split `>>` sequence
+  (for example, `using A = X<int>>;`). (#GH184425)
+
+- Fixed incorrect `implicitly deleted` diagnostic for explicitly deleted
+  candidate function. (#GH185693)
+
+- The `-Wloop-analysis` warning has been extended to catch more cases of
+  variable modification inside lambda expressions (#GH132038).
+
+- Clang now emits `-Wsizeof-pointer-memaccess` when snprintf/vsnprintf use the sizeof
+  the destination buffer(dynamically allocated) in the len parameter(#GH162366)
+
+- Added `-Wmodule-map-path-outside-directory` (off by default) to warn on
+  header and umbrella directory paths that use `..` to refer outside the module
+  directory in module maps found via implicit search
+  (`-fimplicit-module-maps`). This does not affect module maps specified
+  explicitly via `-fmodule-map-file=`.
+
+- Honour `[[maybe_unused]]` attribute on private fields.
+  `-Wunused-private-field` no longer emits a warning for annotated private
+  fields.
+
+- Improved `-Wgnu-zero-variadic-macro-arguments` to suggest using
+  `__VA_OPT__` if the current language version supports it(#GH188624)
+
+- Clang now emits an error when implicitly casting a complex type to a built-in vector type. (#GH186805)
+
+- Added `-Wnonportable-include-path-separator` (off by default) to catch
+  #include directives that use backslashes as a path separator. The warning
+  includes a FixIt to change all the backslashes to forward slashes, so that the
+  code can automatically be made portable to other host platforms that don't
+  support backslashes.
+
+- Clang now explains why template deduction fails for explicit template arguments.
+
+- No longer emitting a `-Wpre-c2y-compat` or extension diagnostic about use
+  of octal literals with a `0o` prefix, and no longer emitting a
+  `-Wdeprecated-octal-literals` diagnostic for use of octal literals without
+  a `0o` prefix, when the literal is expanded from a macro defined in a
+  system header. (#GH192389)
+
+- Improved error recovery for missing semicolons after class members. Clang now avoids
+  skipping subsequent valid declarations when their previous decl is missing semicolon.
+
+- Removed the body of lambdas from some diagnostic messages.
+
+- Fixed false positive host-device mismatch errors in discarded `if constexpr` branches for CUDA/HIP;
+  such calls are now correctly skipped.
+
+- Clang now errors when a function declaration aliases a variable or vice versa. (#GH195550)
+
+- Added `-Wattribute-alias` to diagnose type mismatches between an alias and its aliased function. (#GH195550)
+
+- The diagnostics around `__block` now explain why a variable cannot be marked `__block`. (#GH197213)
+
+- Extended `-Wnonportable-include-path` to warn about trailing whitespace and dots in `#include` paths. (#GH190610)
+
+- Clang now emits error when attribute is missing closing `]]` followed by `;;`. (#GH187223)
+
+- Clang now rejects inline asm constraints and clobbers that contain an
+  embedded null character, instead of silently truncating them. (#GH173900)
+
+- Added `-Wstringop-overread` to warn when `memcpy`, `memmove`, `memcmp`,
+  and related builtins read more bytes than the source buffer size (#GH83728).
+
+- Diagnostics for the C++11 range-based for statement now report the correct
+  iterator type in notes for invalid iterator types.
+
+- `-Wfortify-source` now warns when the constant-evaluated argument to
+  `umask` has bits set outside `0777`. Those bits are silently discarded
+  by the kernel, so setting them is almost always a typo (matching the
+  bionic libc `diagnose_if` check).
+
+- Improved how Unicode characters are displayed in diagnostic messages.
+
+- `-Wtautological-pointer-compare` and `-Wpointer-bool-conversion` now
+  diagnose a reference to a function (e.g. of type `void (&)()`) compared
+  against or converted to a null pointer, the same as a bare function name.
+  (#GH46362)
+
 
 ### Improvements to Clang's time-trace
 
@@ -145,7 +315,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Bug Fixes to C++ Support
 
--Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
+- Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
+
+- Fixed a crash when a using-declaration naming an unresolvable member of a
+  dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
 #### Bug Fixes to AST Handling
 
@@ -184,6 +357,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### X86 Support
 
 #### Arm and AArch64 Support
+
+- On AArch64 Windows targets, `-mbranch-protection=standard` and `-mbranch-protection=pac-ret`
+  now uses the B-key by default.
 
 #### Android Support
 
@@ -252,6 +428,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### Python Binding Changes
 
 ### OpenMP Support
+
+- Added parsing and semantic support for `dims` modifier in `num_teams` and
+  `thread_limit` clauses for OpenMP 6.1 or later.
 
 ### SYCL Support
 

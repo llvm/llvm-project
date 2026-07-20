@@ -49,7 +49,7 @@ void initializeSPIRVPostLegalizerPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
-void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
+void initializeSPIRVEmitIntrinsicsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);
 void initializeSPIRVRegularizerLegacyPass(PassRegistry &);
 void initializeSPIRVMergeRegionExitTargetsLegacyPass(PassRegistry &);

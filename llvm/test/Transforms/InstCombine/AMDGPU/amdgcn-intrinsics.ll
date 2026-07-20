@@ -4018,6 +4018,55 @@ define amdgpu_kernel void @image_load_a16_mip_2d_const_noopt(ptr addrspace(1) %o
   ret void
 }
 
+define void @image_load_a16_mip_2d_sext_vec(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, <2 x i16> %coord) {
+; CHECK-LABEL: @image_load_a16_mip_2d_sext_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i16> [[COORD:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i16> [[COORD]], i64 1
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i16.v8i32(i32 15, i16 [[TMP1]], i16 [[TMP2]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], ptr addrspace(1) [[OUT:%.*]], align 16
+; CHECK-NEXT:    ret void
+;
+  %coord32 = sext <2 x i16> %coord to <2 x i32>
+  %s32 = extractelement <2 x i32> %coord32, i64 0
+  %t32 = extractelement <2 x i32> %coord32, i64 1
+  %res = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32.v8i32(i32 15, i32 %s32, i32 %t32, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  store <4 x float> %res, ptr addrspace(1) %out
+  ret void
+}
+
+define void @image_load_a16_mip_2d_zext_vec(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, <2 x i16> %coord) {
+; CHECK-LABEL: @image_load_a16_mip_2d_zext_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i16> [[COORD:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i16> [[COORD]], i64 1
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i16.v8i32(i32 15, i16 [[TMP1]], i16 [[TMP2]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], ptr addrspace(1) [[OUT:%.*]], align 16
+; CHECK-NEXT:    ret void
+;
+  %coord32 = zext <2 x i16> %coord to <2 x i32>
+  %s32 = extractelement <2 x i32> %coord32, i64 0
+  %t32 = extractelement <2 x i32> %coord32, i64 1
+  %res = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32.v8i32(i32 15, i32 %s32, i32 %t32, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  store <4 x float> %res, ptr addrspace(1) %out
+  ret void
+}
+
+define void @image_load_a16_mip_2d_zext_vec_i8_noopt(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, <2 x i8> %coord) {
+; CHECK-LABEL: @image_load_a16_mip_2d_zext_vec_i8_noopt(
+; CHECK-NEXT:    [[COORD32:%.*]] = zext <2 x i8> [[COORD:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[S32:%.*]] = extractelement <2 x i32> [[COORD32]], i64 0
+; CHECK-NEXT:    [[T32:%.*]] = extractelement <2 x i32> [[COORD32]], i64 1
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32.v8i32(i32 15, i32 [[S32]], i32 [[T32]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; CHECK-NEXT:    store <4 x float> [[RES]], ptr addrspace(1) [[OUT:%.*]], align 16
+; CHECK-NEXT:    ret void
+;
+  %coord32 = zext <2 x i8> %coord to <2 x i32>
+  %s32 = extractelement <2 x i32> %coord32, i64 0
+  %t32 = extractelement <2 x i32> %coord32, i64 1
+  %res = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32.v8i32(i32 15, i32 %s32, i32 %t32, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  store <4 x float> %res, ptr addrspace(1) %out
+  ret void
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample g16
 ; --------------------------------------------------------------------
