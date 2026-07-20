@@ -582,6 +582,9 @@ SanitizerSet CodeGenModule::getProfileCoreUBChecks() const {
   // {conv.fpint.*} and {conv.double.out.of.range}: a floating-point value whose
   // truncation toward zero is outside the destination type's range.
   Checks.set(SanitizerKind::FloatCastOverflow, true);
+  // {expr.static.cast.enum.outside.range}: loading an enumeration value that is
+  // outside the range of its enumerators.
+  Checks.set(SanitizerKind::Enum, true);
   return Checks;
 }
 
