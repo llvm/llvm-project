@@ -10,7 +10,6 @@
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <memory>
 
@@ -35,9 +34,13 @@ static void process(cir::FuncOp func,
   llvm::StringMap<Block *> labels;
   llvm::SmallVector<cir::GotoOp, 4> gotos;
   llvm::SmallVector<cir::IndirectGotoOp> indirectGotos;
-  // Labels whose address is taken by a cir.block_address op in this function,
-  // in IR order.
-  llvm::SmallVector<StringRef> opBlockAddrLabels;
+  // Address-taken labels in a deterministic order: those referenced from global
+  // initializers first (in initializer order), then those taken by a
+  // cir.block_address op (in IR order).  A label may be named more than once (a
+  // dispatch table can list it twice); a block only needs to be a successor
+  // once, so keep the first occurrence.
+  llvm::SmallSetVector<StringRef, 4> addrTakenLabels(llvm::from_range,
+                                                     globalBlockAddrLabels);
 
   func.getBody().walk([&](mlir::Operation *op) {
     if (auto lab = dyn_cast<cir::LabelOp>(op)) {
@@ -47,30 +50,14 @@ static void process(cir::FuncOp func,
     } else if (auto indirect = dyn_cast<cir::IndirectGotoOp>(op)) {
       indirectGotos.push_back(indirect);
     } else if (auto blockAddr = dyn_cast<cir::BlockAddressOp>(op)) {
-      opBlockAddrLabels.push_back(blockAddr.getBlockAddrInfo().getLabel());
+      addrTakenLabels.insert(blockAddr.getBlockAddrInfo().getLabel());
     }
   });
-
-  // Address-taken labels in a deterministic order: those referenced from
-  // global initializers first (in initializer order), then those taken by a
-  // cir.block_address op (in IR order).  A label may be named more than once (a
-  // dispatch table can list it twice); a block only needs to be a successor
-  // once, so keep the first occurrence.
-  llvm::SmallVector<StringRef> addrTakenLabels;
-  llvm::StringSet<> addrTaken;
-  auto noteAddrTaken = [&](StringRef name) {
-    if (addrTaken.insert(name).second)
-      addrTakenLabels.push_back(name);
-  };
-  for (StringRef name : globalBlockAddrLabels)
-    noteAddrTaken(name);
-  for (StringRef name : opBlockAddrLabels)
-    noteAddrTaken(name);
 
   // Drop LabelOps whose address is never taken; the rest may be indirect-branch
   // successors and must survive.
   for (auto &lab : labels) {
-    if (!addrTaken.contains(lab.getKey())) {
+    if (!addrTakenLabels.contains(lab.getKey())) {
       if (auto labelOp = dyn_cast<cir::LabelOp>(&lab.getValue()->front()))
         labelOp.erase();
     }
@@ -96,13 +83,11 @@ static void process(cir::FuncOp func,
   // live in func's body now -- the cross-region branch that broke a nested
   // `goto *` during CIRGen cannot arise here.
   // The shared block represents every `goto *expr` that funnels into it, so
-  // fuse their locations when there is more than one.
+  // fuse their locations.
   llvm::SmallVector<mlir::Location> gotoLocs;
   for (cir::IndirectGotoOp indirect : indirectGotos)
     gotoLocs.push_back(indirect.getLoc());
-  mlir::Location loc = gotoLocs.size() == 1
-                           ? gotoLocs.front()
-                           : mlir::FusedLoc::get(func.getContext(), gotoLocs);
+  mlir::Location loc = mlir::FusedLoc::get(func.getContext(), gotoLocs);
   mlir::Type addrType = indirectGotos.front().getAddr().getType();
   Block *indirectGotoBlock = rewriter.createBlock(
       &func.getBody(), func.getBody().end(), {addrType}, {loc});

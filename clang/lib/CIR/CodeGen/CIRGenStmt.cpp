@@ -706,12 +706,10 @@ mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitIndirectGotoStmt(const IndirectGotoStmt &s) {
-  // An indirect goto that branches out of a scope needing cleanup (a VLA stack
-  // restore or a non-trivial destructor on the edge) must run that cleanup on
-  // the branch.  That is not implemented, so report it rather than emit a
-  // branch that silently skips the cleanup.
+  // An indirect goto with an active cleanup may leave its scope.  Determining
+  // whether its dynamic destination requires cleanup is not implemented.
   if (ehStack.stable_begin() != prologueCleanupDepth) {
-    cgm.errorNYI(s.getSourceRange(), "indirect goto across a cleanup scope");
+    cgm.errorNYI(s.getSourceRange(), "indirect goto with active cleanup");
     return mlir::success();
   }
 
