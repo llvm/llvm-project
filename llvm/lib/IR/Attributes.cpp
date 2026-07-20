@@ -2793,6 +2793,8 @@ bool AttributeFuncs::areOutlineCompatible(const Function &A,
 void AttributeFuncs::mergeAttributesForInlining(Function &Caller,
                                                 const Function &Callee) {
   mergeFnAttrs(Caller, Callee);
+  if (Callee.isStrictFP())
+    Caller.addFnAttr(Attribute::StrictFP);
 }
 
 void AttributeFuncs::mergeAttributesForOutlining(Function &Base,
