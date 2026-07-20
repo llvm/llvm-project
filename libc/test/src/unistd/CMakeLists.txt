@@ -237,15 +237,12 @@ add_libc_unittest(
   SRCS
     read_write_test.cpp
   DEPENDS
-    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
-    libc.src.fcntl.open
     libc.src.unistd.close
-    libc.src.unistd.fsync
+    libc.src.unistd.pipe
     libc.src.unistd.read
     libc.src.unistd.write
-    libc.src.stdio.remove
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
