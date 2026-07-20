@@ -2187,6 +2187,7 @@ public:
       return Cost;
     }
     case Intrinsic::get_active_lane_mask:
+    case Intrinsic::mask_beforefirst:
     case Intrinsic::experimental_vector_match:
     case Intrinsic::experimental_vector_histogram_add:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
@@ -2682,6 +2683,28 @@ public:
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
                                           CmpInst::ICMP_ULT, CostKind);
       return Cost;
+    }
+    case Intrinsic::mask_beforefirst: {
+      ISD = ISD::MASK_BEFOREFIRST;
+      std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
+      if (!getTLI()->isOperationExpand(ISD, LT.second))
+        break;
+
+      // Expansion via (get_active_lane_mask 0, (cttz.elts mask))
+      RetTy = VectorType::get(RetTy->getScalarType(),
+                              LT.second.getVectorElementCount());
+      Type *IdxTy =
+          IntegerType::get(RetTy->getContext(),
+                           getTLI()->getVectorIdxTy(DL).getFixedSizeInBits());
+      IntrinsicCostAttributes CttzEltsAttrs(Intrinsic::experimental_cttz_elts,
+                                            IdxTy, RetTy, FMF);
+      InstructionCost Cost =
+          thisT()->getIntrinsicInstrCost(CttzEltsAttrs, CostKind);
+
+      IntrinsicCostAttributes ActiveLaneMaskAttrs(
+          Intrinsic::get_active_lane_mask, RetTy, {IdxTy, IdxTy}, FMF);
+      Cost += thisT()->getIntrinsicInstrCost(ActiveLaneMaskAttrs, CostKind);
+      return Cost * LT.first;
     }
     case Intrinsic::experimental_memset_pattern:
       // This cost is set to match the cost of the memset_pattern16 libcall.
