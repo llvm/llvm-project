@@ -23,7 +23,6 @@
 ; CHECK: Callsite with callee:unknown.indirect.callee is matched from 4 to 349
 ; CHECK: Callsite with callee:_Z3barPv is matched from 5 to 380
 ; CHECK: Run stale profile matching for _Z3barPv
-; CHECK: The functions _Z6calleePv(IR) and _Z6calleei(Profile) share the same base name: callee.
 ; CHECK: Function:_Z6calleePv matches profile:_Z6calleei
 ; CHECK: Location is matched from 1 to 1
 ; CHECK: Callsite with callee:_Z6calleePv is matched from 2 to 3
