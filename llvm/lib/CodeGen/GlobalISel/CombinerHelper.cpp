@@ -2579,7 +2579,7 @@ void CombinerHelper::applyCombineShiftToUnmerge(
   unsigned HalfSize = Size / 2;
   assert(ShiftVal >= HalfSize);
 
-  LLT HalfTy = LLT::scalar(HalfSize);
+  LLT HalfTy = Ty.changeElementSize(HalfSize);
 
   auto Unmerge = Builder.buildUnmerge(HalfTy, SrcReg);
   unsigned NarrowShiftAmt = ShiftVal - HalfSize;

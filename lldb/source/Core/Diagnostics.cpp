@@ -25,12 +25,14 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Version/Version.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
@@ -149,6 +151,20 @@ void Diagnostics::Record(llvm::StringRef message) {
   m_log_handler.Emit(message);
 }
 
+Diagnostics::ArtifactProviderID
+Diagnostics::AddArtifactProvider(std::string name, ArtifactProvider provider) {
+  std::lock_guard<std::mutex> guard(m_artifact_providers_mutex);
+  ArtifactProviderID id = m_next_artifact_provider_id++;
+  m_artifact_providers.push_back({id, std::move(name), std::move(provider)});
+  return id;
+}
+
+void Diagnostics::RemoveArtifactProvider(ArtifactProviderID id) {
+  std::lock_guard<std::mutex> guard(m_artifact_providers_mutex);
+  llvm::erase_if(m_artifact_providers,
+                 [id](const ArtifactProviderEntry &e) { return e.id == id; });
+}
+
 // Write a single artifact into the bundle and, on success, record its name in
 // \p files. Best-effort: a write failure leaves the file out of the list, so a
 // missing artifact stays visible. The file is made owner-only because the
@@ -253,6 +269,7 @@ Diagnostics::Collect(Debugger &debugger, const ExecutionContext &exe_ctx,
   CollectCommands(debugger, exe_ctx, dir, report.attachments.files);
   if (GetGlobalProperties().GetCollectBinaries())
     CollectBinaries(exe_ctx, dir, report.attachments.files);
+  CollectArtifactProviders(dir, report.attachments.files);
 
   report.version = lldb_private::GetVersion();
   report.os = GetHostDescription(exe_ctx);
@@ -315,6 +332,19 @@ void Diagnostics::CollectBinaries(const ExecutionContext &exe_ctx,
 
   if (Process *process = exe_ctx.GetProcessPtr())
     CopyBinary(process->GetCoreFile(), dir, files);
+}
+
+void Diagnostics::CollectArtifactProviders(const FileSpec &dir,
+                                           std::vector<std::string> &files) {
+  // Snapshot under the lock, then run providers without it: a provider can be
+  // slow and must not block registration or removal.
+  std::vector<ArtifactProviderEntry> providers;
+  {
+    std::lock_guard<std::mutex> guard(m_artifact_providers_mutex);
+    providers = m_artifact_providers;
+  }
+  for (const ArtifactProviderEntry &entry : providers)
+    WriteArtifact(dir, entry.name, entry.provider(), files);
 }
 
 std::string Diagnostics::GetHostDescription(const ExecutionContext &exe_ctx) {

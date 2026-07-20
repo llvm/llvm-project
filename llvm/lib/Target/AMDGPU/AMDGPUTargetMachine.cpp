@@ -1111,6 +1111,13 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
+        // Clean up redundant memory round-trips that the full-LTO pipeline,
+        // unlike the non-LTO/ThinLTO ones, otherwise leaves for codegen.
+        if (Level != OptimizationLevel::O0) {
+          PM.addPass(createModuleToFunctionPassAdaptor(
+              EarlyCSEPass(/*UseMemorySSA=*/true)));
+        }
+
         // When we are using -fgpu-rdc, we can only run accelerator code
         // selection after linking to prevent, otherwise we end up removing
         // potentially reachable symbols that were exported as external in other

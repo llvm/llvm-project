@@ -822,6 +822,109 @@ def executeScriptInternal(
     return out, err, exitCode, timeoutInfo, update_output
 
 
+def executeScript(
+    test, litConfig, tmpBase, commands, cwd
+) -> tuple[str, str, int, str | None, str | None]:
+    bashPath = litConfig.getBashPath()
+    isWin32CMDEXE = litConfig.isWindows and not bashPath
+    script = tmpBase + ".script"
+    if isWin32CMDEXE:
+        script += ".bat"
+
+    # Write script file
+    if isWin32CMDEXE:
+        for i, ln in enumerate(commands):
+            match = re.fullmatch(kPdbgRegex, ln)
+            if match:
+                command = match.group(2)
+                commands[i] = match.expand(
+                    "echo '\\1' > nul && " if command else "echo '\\1' > nul"
+                )
+        with open(script, "w", encoding="utf-8") as f:
+            f.write("@echo on\n")
+            f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
+    else:
+        for i, ln in enumerate(commands):
+            match = re.fullmatch(kPdbgRegex, ln)
+            if match:
+                dbg = match.group(1)
+                command = match.group(2)
+                # Echo the debugging diagnostic to stderr.
+                #
+                # For that echo command, use 'set' commands to suppress the
+                # shell's execution trace, which would just add noise.  Suppress
+                # the shell's execution trace for the 'set' commands by
+                # redirecting their stderr to /dev/null.
+                if command:
+                    msg = f"{shlex.quote(command.lstrip())} \\# '{dbg}'"
+                else:
+                    msg = f"'{dbg}' has no command after substitutions"
+                commands[i] = (
+                    f"{{ set +x; }} 2>/dev/null && "
+                    f"echo {msg} >&2 && "
+                    f"{{ set -x; }} 2>/dev/null"
+                )
+                # Execute the command, if any.
+                #
+                # 'command' might be something like:
+                #
+                #   subcmd & PID=$!
+                #
+                # In that case, we need something like:
+                #
+                #   echo_dbg && { subcmd & PID=$!; }
+                #
+                # Without the '{ ...; }' enclosing the original 'command', '&'
+                # would put all of 'echo_dbg && subcmd' in the background.  This
+                # would cause 'echo_dbg' to execute at the wrong time, and a
+                # later kill of $PID would target the wrong process. We have
+                # seen the latter manage to terminate the shell running lit.
+                if command:
+                    commands[i] += f" && {{ {command}; }}"
+
+        # Manually export any DYLD_* variables used by dyld on macOS because
+        # otherwise they are lost when the shell executable is run, before the
+        # lit test is executed.
+        env_str = "\n".join(
+            "export {}={};".format(k, shlex.quote(v))
+            for k, v in test.config.environment.items()
+            if k.startswith("DYLD_")
+        )
+
+        with open(script, "w", encoding="utf-8", newline="") as f:
+            if test.config.pipefail:
+                f.write("set -o pipefail;")
+            f.write(env_str)
+            f.write("set -x;")
+            f.write("{ " + "; } &&\n{ ".join(commands) + "; }")
+            f.write("\n")
+
+    if isWin32CMDEXE:
+        command = ["cmd", "/c", script]
+    else:
+        if bashPath:
+            command = [bashPath, script]
+        else:
+            command = ["/bin/sh", script]
+        if litConfig.useValgrind:
+            # FIXME: Running valgrind on sh is overkill. We probably could just
+            # run on clang with no real loss.
+            command = litConfig.valgrindArgs + command
+
+    env = dict(test.config.environment)
+    env["LIT_CURRENT_TESTCASE"] = test.getFullName()
+    try:
+        out, err, exitCode = lit.util.executeCommand(
+            command,
+            cwd=cwd,
+            env=env,
+            timeout=test.config.maxIndividualTestTime,
+        )
+        return (out, err, exitCode, None, None)
+    except lit.util.ExecuteCommandTimeoutException as e:
+        return (e.out, e.err, e.exitCode, e.msg, None)
+
+
 def parseIntegratedTestScriptCommands(source_path, keywords):
     """
     parseIntegratedTestScriptCommands(source_path) -> commands
@@ -1704,7 +1807,7 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     return script
 
 
-def _runShTest(test, litConfig, script, tmpBase) -> lit.Test.Result:
+def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Result:
     # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
     def runOnce(
         execdir,
@@ -1736,7 +1839,12 @@ def _runShTest(test, litConfig, script, tmpBase) -> lit.Test.Result:
                 scriptCopy[i] = command
 
         try:
-            res = executeScriptInternal(test, litConfig, tmpBase, scriptCopy, execdir)
+            if useExternalSh:
+                res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
+            else:
+                res = executeScriptInternal(
+                    test, litConfig, tmpBase, scriptCopy, execdir
+                )
         except ScriptFatal as e:
             out = f"# " + "\n# ".join(str(e).splitlines()) + "\n"
             return out, "", 1, None, Test.UNRESOLVED, None
@@ -1795,7 +1903,25 @@ def _runShTest(test, litConfig, script, tmpBase) -> lit.Test.Result:
     )
 
 
-def executeShTest(test, litConfig, extra_substitutions=[], preamble_commands=[]):
+def _expandLateSubstitutionsExternal(commandLine):
+    filePaths = []
+
+    def _replaceReadFile(match):
+        filePath = match.group(1)
+        filePaths.append(filePath)
+        return "$(cat %s)" % shlex.quote(filePath)
+
+    commandLine = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, commandLine)
+    # Add test commands before the command to check if the file exists as
+    # cat inside a subshell will never return a non-zero exit code outside
+    # of the subshell.
+    for filePath in filePaths:
+        commandLine = "%s && test -e %s" % (commandLine, filePath)
+    return commandLine
+
+def executeShTest(
+    test, litConfig, useExternalSh, extra_substitutions=[], preamble_commands=[]
+):
     if test.config.unsupported:
         return lit.Test.Result(Test.UNSUPPORTED, "Test is unsupported")
 
@@ -1816,7 +1942,7 @@ def executeShTest(test, litConfig, extra_substitutions=[], preamble_commands=[])
         test,
         tmpDir,
         tmpBase,
-        normalize_slashes=False
+        normalize_slashes=useExternalSh
         or litConfig.params.get("use_normalized_slashes", False),
     )
     conditions = {feature: True for feature in test.config.available_features}
@@ -1827,4 +1953,8 @@ def executeShTest(test, litConfig, extra_substitutions=[], preamble_commands=[])
         recursion_limit=test.config.recursiveExpansionLimit,
     )
 
-    return _runShTest(test, litConfig, script, tmpBase)
+    if useExternalSh:
+        for index, command in enumerate(script):
+            script[index] = _expandLateSubstitutionsExternal(command)
+
+    return _runShTest(test, litConfig, useExternalSh, script, tmpBase)

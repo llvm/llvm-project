@@ -205,8 +205,12 @@ def parseScript(test, preamble):
         )
 
     # Perform substitutions in the script itself.
+    conditions = {feature: True for feature in test.config.available_features}
     script = lit.TestRunner.applySubstitutions(
-        script, substitutions, recursion_limit=test.config.recursiveExpansionLimit
+        script,
+        substitutions,
+        conditions,
+        recursion_limit=test.config.recursiveExpansionLimit,
     )
 
     return script
@@ -384,7 +388,10 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             )
         else:
             _, tmpBase = _getTempPaths(test)
-            return lit.TestRunner._runShTest(test, litConfig, script, tmpBase)
+            useExternalSh = False
+            return lit.TestRunner._runShTest(
+                test, litConfig, useExternalSh, script, tmpBase
+            )
 
     def _generateGenTest(self, testSuite, pathInSuite, litConfig, localConfig):
         generator = lit.Test.Test(testSuite, pathInSuite, localConfig)
