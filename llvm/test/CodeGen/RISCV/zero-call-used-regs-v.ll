@@ -128,10 +128,10 @@ define i32 @used(i32 %x) "zero-call-used-regs"="used" {
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vredsum.vs v8, v9, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    li t0, 0
+; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    ret
 entry:
     %tmp = insertelement <4 x i32> poison, i32 %x, i32 0
@@ -147,7 +147,7 @@ define <4 x i32> @used_arg(<4 x i32> %a, <4 x i32> %b) "zero-call-used-regs"="us
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -160,7 +160,7 @@ define <8 x i32> @used_arg_lmul2(<8 x i32> %a, <8 x i32> %b) "zero-call-used-reg
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv.v.i v11, 0
 ; CHECK-NEXT:    ret
@@ -175,7 +175,7 @@ define <32 x i32> @used_arg_lmul8(<32 x i32> %a, <32 x i32> %b) "zero-call-used-
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
-; CHECK-NEXT:    vsetvli t0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vmv.v.i v17, 0
 ; CHECK-NEXT:    vmv.v.i v18, 0
@@ -214,4 +214,18 @@ entry:
           target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %tuple, i32 0)
   store <vscale x 8 x i8> %v0, ptr %out
   ret <8 x i8> %use_v8
+}
+
+define <4 x i32> @used_arg_fixed_x10(<4 x i32> %a, <4 x i32> %b) "zero-call-used-regs"="used" "target-features"="+reserve-x10" {
+; CHECK-LABEL: used_arg_fixed_x10:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+entry:
+    %sum = add <4 x i32> %a, %b
+    ret <4 x i32> %sum
 }

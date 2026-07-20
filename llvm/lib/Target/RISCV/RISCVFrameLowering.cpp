@@ -1485,7 +1485,8 @@ static MCRegister getLargestFPRegisterOrZero(const RISCVSubtarget &STI,
 }
 
 void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
-                                              MachineBasicBlock &MBB) const {
+                                              MachineBasicBlock &MBB,
+                                              RegScavenger *RS) const {
   // Insertion point.
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
 
@@ -1531,13 +1532,22 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
     unsigned VTypeImm = RISCVVType::encodeVTYPE(
         VLMUL, /*SEW=*/32, /*TailAgnostic=*/true, /*MaskAgnostic=*/true);
 
-    MCRegister TemporaryReg = RISCV::X5;
+    MCRegister TemporaryReg = RISCV::NoRegister;
     for (MCRegister Reg : FinalRegsToZero.set_bits()) {
       if (TRI.isGeneralPurposeRegister(MF, Reg)) {
         TemporaryReg = Reg;
         break;
       }
     }
+
+    if (TemporaryReg == RISCV::NoRegister) {
+      RS->enterBasicBlock(MBB);
+      RS->backward(MBBI);
+      TemporaryReg = RS->scavengeRegisterBackwards(RISCV::GPRRegClass, MBBI,
+                                                   /*RestoreAfter=*/true,
+                                                   /*SPAdj=*/0);
+    }
+
     if (MBB.getParent()
             ->getFunction()
             .getFnAttribute("zero-call-used-regs")

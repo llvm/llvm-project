@@ -606,7 +606,8 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
 }
 
 void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
-                                            MachineBasicBlock &MBB) const {
+                                            MachineBasicBlock &MBB,
+                                            RegScavenger *) const {
   const MachineFunction &MF = *MBB.getParent();
 
   // Insertion point.
