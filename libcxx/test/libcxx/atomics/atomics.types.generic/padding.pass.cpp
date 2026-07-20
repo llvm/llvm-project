@@ -57,11 +57,9 @@ void set(WithInternalAndTailPadding& obj, int i, char c) {
 }
 
 template <class T>
-T make(int i, char c, unsigned char pad_byte) {
-  T obj;
+void initialize(T& obj, int i, char c, unsigned char pad_byte) {
   std::memset(&obj, pad_byte, sizeof(T));
   set(obj, i, c);
-  return obj;
 }
 
 template <class T>
@@ -86,7 +84,8 @@ void test() {
 
   {
     // atomic(T);
-    T init = make<T>(10, 'a', 0xBB);
+    T init;
+    initialize(init, 10, 'a', 0xBB);
     assert_padding(init, 0xBB);
     std::atomic<T> a(init);
     T loaded = a.load();
@@ -97,7 +96,8 @@ void test() {
   {
     // atomic::store
     std::atomic<T> a;
-    T value = make<T>(5, 'x', 0xAB);
+    T value;
+    initialize(value, 5, 'x', 0xAB);
     assert_padding(value, 0xAB);
     a.store(value);
     T loaded = a.load();
@@ -107,10 +107,12 @@ void test() {
   }
   {
     // atomic::exchange
-    T initial = make<T>(1, 'a', 0x00);
+    T initial;
+    initialize(initial, 1, 'a', 0x00);
     assert_padding(initial, 0x00);
     std::atomic<T> a(initial);
-    T new_val = make<T>(2, 'b', 0xCD);
+    T new_val;
+    initialize(new_val, 2, 'b', 0xCD);
     assert_padding(new_val, 0xCD);
     T old = a.exchange(new_val);
     assert(old.i == 1);
@@ -124,7 +126,8 @@ void test() {
   {
     // atomic_init
     std::atomic<T> a;
-    T init = make<T>(7, 'z', 0xEF);
+    T init;
+    initialize(init, 7, 'z', 0xEF);
     assert_padding(init, 0xEF);
     std::atomic_init(&a, init);
     T loaded = a.load();

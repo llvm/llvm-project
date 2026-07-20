@@ -51,11 +51,9 @@ void set(WithInternalAndTailPadding& obj, int i, char c) {
 }
 
 template <class T>
-T make(int i, char c, unsigned char pad_byte) {
-  T obj;
+void initialize(T& obj, int i, char c, unsigned char pad_byte) {
   std::memset(&obj, pad_byte, sizeof(T));
   set(obj, i, c);
-  return obj;
 }
 
 template <class T>
@@ -84,17 +82,20 @@ void test() {
     // CAS should succeed when only padding differs in expected; expected is unchanged.
     std::atomic<T> a;
 
-    T init = make<T>(10, 'a', 0xBB);
+    T init;
+    initialize(init, 10, 'a', 0xBB);
     assert_padding(init, 0xBB);
     a.store(init);
 
-    T expected = make<T>(10, 'a', 0xAA);
+    T expected;
+    initialize(expected, 10, 'a', 0xAA);
     assert_padding(expected, 0xAA);
 
     T original_expected; // make a copy including padding bits
     std::memcpy(&original_expected, &expected, sizeof(T));
 
-    T new_value = make<T>(42, 'b', 0xCC);
+    T new_value;
+    initialize(new_value, 42, 'b', 0xCC);
     assert_padding(new_value, 0xCC);
 
     bool r = a.compare_exchange_strong(expected, new_value);
@@ -112,13 +113,16 @@ void test() {
     // compare_exchange_strong
     // atomic and expected values are different; failure
     std::atomic<T> a;
-    T stored = make<T>(10, 'a', 0xBB);
+    T stored;
+    initialize(stored, 10, 'a', 0xBB);
     assert_padding(stored, 0xBB);
     a.store(stored);
 
-    T expected = make<T>(99, 'a', 0xAA);
+    T expected;
+    initialize(expected, 99, 'a', 0xAA);
     assert_padding(expected, 0xAA);
-    T new_value = make<T>(42, 'b', 0xCC);
+    T new_value;
+    initialize(new_value, 42, 'b', 0xCC);
     assert_padding(new_value, 0xCC);
 
     bool r = a.compare_exchange_strong(expected, new_value);
@@ -138,17 +142,20 @@ void test() {
     // compare_exchange_strong
     // atomic and expected are the same, including padding
     std::atomic<T> a;
-    T init = make<T>(10, 'a', 0x00);
+    T init;
+    initialize(init, 10, 'a', 0x00);
     assert_padding(init, 0x00);
     a.store(init);
 
-    T expected = make<T>(10, 'a', 0x00);
+    T expected;
+    initialize(expected, 10, 'a', 0x00);
     assert_padding(expected, 0x00);
 
     T original_expected; // make a copy including padding bits
     std::memcpy(&original_expected, &expected, sizeof(T));
 
-    T new_value = make<T>(42, 'b', 0x42);
+    T new_value;
+    initialize(new_value, 42, 'b', 0x42);
     assert_padding(new_value, 0x42);
 
     bool r = a.compare_exchange_strong(expected, new_value);
@@ -166,14 +173,17 @@ void test() {
     // compare_exchange_weak
     // atomic and expected only differs in padding bits. It should either succeed or spuriously fail
     std::atomic<T> a;
-    T stored = make<T>(10, 'a', 0xBB);
+    T stored;
+    initialize(stored, 10, 'a', 0xBB);
     assert_padding(stored, 0xBB);
     a.store(stored);
 
-    T new_value = make<T>(42, 'b', 0xCC);
+    T new_value;
+    initialize(new_value, 42, 'b', 0xCC);
     assert_padding(new_value, 0xCC);
 
-    T original_expected = make<T>(10, 'a', 0xAA);
+    T original_expected;
+    initialize(original_expected, 10, 'a', 0xAA);
     assert_padding(original_expected, 0xAA);
 
     bool r                  = false;
@@ -182,7 +192,8 @@ void test() {
     while (!r) {
       ++current_attempt;
       assert(current_attempt < max_attempts && "compare_exchange_weak did not succeed within 3 seconds");
-      T expected = make<T>(10, 'a', 0xAA);
+      T expected;
+      initialize(expected, 10, 'a', 0xAA);
       assert_padding(expected, 0xAA);
       r = a.compare_exchange_weak(expected, new_value);
       if (r) {
@@ -207,13 +218,16 @@ void test() {
     // compare_exchange_strong
     // atomic and expected values are different; failure
     std::atomic<T> a;
-    T stored = make<T>(10, 'a', 0xBB);
+    T stored;
+    initialize(stored, 10, 'a', 0xBB);
     assert_padding(stored, 0xBB);
     a.store(stored);
 
-    T expected = make<T>(99, 'a', 0xAA);
+    T expected;
+    initialize(expected, 99, 'a', 0xAA);
     assert_padding(expected, 0xAA);
-    T new_value = make<T>(42, 'b', 0xCC);
+    T new_value;
+    initialize(new_value, 42, 'b', 0xCC);
     assert_padding(new_value, 0xCC);
 
     bool r = a.compare_exchange_weak(expected, new_value);
