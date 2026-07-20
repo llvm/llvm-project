@@ -324,8 +324,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
 - A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
-  libstdc++15 has been extended to handle the case of the input being preprocessed first (via `-E`) and
-  only then compiled; previously, this would result in the fix not being applied. (#GH160314)
+  libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
+  compilation step would result in the fix not being applied. (#GH160314)
 
 #### Bug Fixes to AST Handling
 
