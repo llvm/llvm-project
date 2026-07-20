@@ -155,6 +155,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Miscellaneous Clang Crashes Fixed
 
+- Fixed a crash when parsing invalid C++ declarations that combine `auto` with
+  an anonymous tag definition. (#GH210014)
+
 ### OpenACC Specific Changes
 
 ### OpenCL Specific Changes
