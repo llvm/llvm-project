@@ -1057,8 +1057,10 @@ bool X86AsmBackend::optimizeBundleNops(const MCAssembler &Asm) const {
 }
 
 bool X86AsmBackend::finishLayout() const {
-  if (Asm->isBundlingEnabled() && TargetPrefixMax != 0)
-    return optimizeBundleNops(*Asm);
+  // With bundling, padding is fully determined during layout and the only
+  // post-layout optimization is prefix padding.
+  if (Asm->isBundlingEnabled())
+    return TargetPrefixMax != 0 && optimizeBundleNops(*Asm);
   // See if we can further relax some instructions to cut down on the number of
   // nop bytes required for code alignment.  The actual win is in reducing
   // instruction count, not number of bytes.  Modern X86-64 can easily end up
