@@ -283,14 +283,14 @@ define <8 x i16> @gep01_load_i16_insert_v8i16_deref_minalign(ptr align 2 derefer
   ret <8 x i16> %r
 }
 
-define <4 x i32> @gep01_bitcast_load_i32_from_v16i8_insert_v4i32(ptr align 1 dereferenceable(16) %p) {
-; SSE2-LABEL: @gep01_bitcast_load_i32_from_v16i8_insert_v4i32(
+define <4 x i32> @load_insert_unaligned_offset1_i32_gcd_i8(ptr align 1 dereferenceable(16) %p) {
+; SSE2-LABEL: @load_insert_unaligned_offset1_i32_gcd_i8(
 ; SSE2-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P:%.*]], i64 0, i64 1
 ; SSE2-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 1
 ; SSE2-NEXT:    [[R:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
 ; SSE2-NEXT:    ret <4 x i32> [[R]]
 ;
-; AVX2-LABEL: @gep01_bitcast_load_i32_from_v16i8_insert_v4i32(
+; AVX2-LABEL: @load_insert_unaligned_offset1_i32_gcd_i8(
 ; AVX2-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[P:%.*]], align 1
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:    [[R:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
@@ -302,14 +302,14 @@ define <4 x i32> @gep01_bitcast_load_i32_from_v16i8_insert_v4i32(ptr align 1 der
   ret <4 x i32> %r
 }
 
-define <2 x i64> @gep01_bitcast_load_i64_from_v16i8_insert_v2i64(ptr align 1 dereferenceable(16) %p) {
-; SSE2-LABEL: @gep01_bitcast_load_i64_from_v16i8_insert_v2i64(
+define <2 x i64> @load_insert_unaligned_offset1_i64_gcd_i8(ptr align 1 dereferenceable(16) %p) {
+; SSE2-LABEL: @load_insert_unaligned_offset1_i64_gcd_i8(
 ; SSE2-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P:%.*]], i64 0, i64 1
 ; SSE2-NEXT:    [[S:%.*]] = load i64, ptr [[GEP]], align 1
 ; SSE2-NEXT:    [[R:%.*]] = insertelement <2 x i64> poison, i64 [[S]], i64 0
 ; SSE2-NEXT:    ret <2 x i64> [[R]]
 ;
-; AVX2-LABEL: @gep01_bitcast_load_i64_from_v16i8_insert_v2i64(
+; AVX2-LABEL: @load_insert_unaligned_offset1_i64_gcd_i8(
 ; AVX2-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[P:%.*]], align 1
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:    [[R:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
@@ -321,14 +321,14 @@ define <2 x i64> @gep01_bitcast_load_i64_from_v16i8_insert_v2i64(ptr align 1 der
   ret <2 x i64> %r
 }
 
-define <4 x i32> @gep11_bitcast_load_i32_from_v16i8_insert_v4i32(ptr align 1 dereferenceable(16) %p) {
-; SSE2-LABEL: @gep11_bitcast_load_i32_from_v16i8_insert_v4i32(
+define <4 x i32> @load_insert_unaligned_offset11_i32_gcd_i8(ptr align 1 dereferenceable(16) %p) {
+; SSE2-LABEL: @load_insert_unaligned_offset11_i32_gcd_i8(
 ; SSE2-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P:%.*]], i64 0, i64 11
 ; SSE2-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 1
 ; SSE2-NEXT:    [[R:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
 ; SSE2-NEXT:    ret <4 x i32> [[R]]
 ;
-; AVX2-LABEL: @gep11_bitcast_load_i32_from_v16i8_insert_v4i32(
+; AVX2-LABEL: @load_insert_unaligned_offset11_i32_gcd_i8(
 ; AVX2-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[P:%.*]], align 1
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <16 x i32> <i32 11, i32 12, i32 13, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:    [[R:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
@@ -340,8 +340,8 @@ define <4 x i32> @gep11_bitcast_load_i32_from_v16i8_insert_v4i32(ptr align 1 der
   ret <4 x i32> %r
 }
 
-define <4 x i32> @gep01_bitcast_load_i32_from_v8i16_insert_v4i32(ptr align 1 dereferenceable(16) %p) {
-; CHECK-LABEL: @gep01_bitcast_load_i32_from_v8i16_insert_v4i32(
+define <4 x i32> @load_insert_unaligned_offset2_i32_gcd_i16(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_insert_unaligned_offset2_i32_gcd_i16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
@@ -353,14 +353,14 @@ define <4 x i32> @gep01_bitcast_load_i32_from_v8i16_insert_v4i32(ptr align 1 der
   ret <4 x i32> %r
 }
 
-define <2 x i64> @gep01_bitcast_load_i64_from_v8i16_insert_v2i64(ptr align 1 dereferenceable(16) %p) {
-; SSE2-LABEL: @gep01_bitcast_load_i64_from_v8i16_insert_v2i64(
+define <2 x i64> @load_insert_unaligned_offset2_i64_gcd_i16(ptr align 1 dereferenceable(16) %p) {
+; SSE2-LABEL: @load_insert_unaligned_offset2_i64_gcd_i16(
 ; SSE2-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 1
 ; SSE2-NEXT:    [[S:%.*]] = load i64, ptr [[GEP]], align 1
 ; SSE2-NEXT:    [[R:%.*]] = insertelement <2 x i64> poison, i64 [[S]], i64 0
 ; SSE2-NEXT:    ret <2 x i64> [[R]]
 ;
-; AVX2-LABEL: @gep01_bitcast_load_i64_from_v8i16_insert_v2i64(
+; AVX2-LABEL: @load_insert_unaligned_offset2_i64_gcd_i16(
 ; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 1
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:    [[R:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
@@ -372,8 +372,8 @@ define <2 x i64> @gep01_bitcast_load_i64_from_v8i16_insert_v2i64(ptr align 1 der
   ret <2 x i64> %r
 }
 
-define <4 x i32> @gep05_bitcast_load_i32_from_v8i16_insert_v4i32(ptr align 1 dereferenceable(16) %p) {
-; CHECK-LABEL: @gep05_bitcast_load_i32_from_v8i16_insert_v4i32(
+define <4 x i32> @load_insert_unaligned_offset10_i32_gcd_i16(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_insert_unaligned_offset10_i32_gcd_i16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 5, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
@@ -385,8 +385,8 @@ define <4 x i32> @gep05_bitcast_load_i32_from_v8i16_insert_v4i32(ptr align 1 der
   ret <4 x i32> %r
 }
 
-define <2 x i64> @gep01_bitcast_load_i32_from_v4i32_insert_v2i64(ptr align 1 dereferenceable(16) %p) {
-; CHECK-LABEL: @gep01_bitcast_load_i32_from_v4i32_insert_v2i64(
+define <2 x i64> @load_insert_unaligned_offset4_i64_gcd_i32(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_insert_unaligned_offset4_i64_gcd_i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
@@ -414,8 +414,8 @@ define <3 x i32> @load_insert_unequal_total_bitwidth(ptr align 16 dereferenceabl
   ret <3 x i32> %r
 }
 
-define <4 x i32> @gep012_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceable(20) %p) nofree nosync {
-; CHECK-LABEL: @gep012_bitcast_load_i32_insert_v4i32(
+define <4 x i32> @load_insert_aligned_offset12_i32(ptr align 1 dereferenceable(20) %p) nofree nosync {
+; CHECK-LABEL: @load_insert_aligned_offset12_i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 3, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
@@ -428,8 +428,8 @@ define <4 x i32> @gep012_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceab
 
 ; The scalar access extends beyond the widened vector load range.
 
-define <4 x i32> @gep013_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceable(20) %p) nofree nosync {
-; CHECK-LABEL: @gep013_bitcast_load_i32_insert_v4i32(
+define <4 x i32> @load_insert_access_exceeds_vector_range(ptr align 1 dereferenceable(20) %p) nofree nosync {
+; CHECK-LABEL: @load_insert_access_exceeds_vector_range(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P:%.*]], i64 0, i64 13
 ; CHECK-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
