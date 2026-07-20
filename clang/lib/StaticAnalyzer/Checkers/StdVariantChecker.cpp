@@ -222,15 +222,7 @@ private:
   bool handleStdGetCall(const CallEvent &Call, CheckerContext &C) const {
     ProgramStateRef State = C.getState();
 
-    SVal ArgSVal = Call.getArgSVal(0);
-    if (ArgSVal.isUnknown())
-      return false;
-
-    QualType SValType = ArgSVal.getType(C.getASTContext());
-    if (SValType.isNull() || !SValType->isPointerType())
-      return false;
-
-    const auto &ArgType = SValType->getPointeeType().getTypePtr();
+    const auto *ArgType = Call.getArgExpr(0)->getType().getTypePtr();
     // We have to make sure that the argument is an std::variant.
     // There is another std::get with std::pair argument
     if (!isStdVariant(ArgType))
