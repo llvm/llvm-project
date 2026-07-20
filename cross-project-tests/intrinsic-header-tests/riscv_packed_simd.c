@@ -2494,3 +2494,83 @@ int8x8_t test_psabs_i8x8(int8x8_t a) { return __riscv_psabs_i8x8(a); }
 // RV32:        psabs.dh
 // RV64:        psabs.h
 int16x4_t test_psabs_i16x4(int16x4_t a) { return __riscv_psabs_i16x4(a); }
+
+// CHECK-LABEL: test_pnzip_i8x4:
+// CHECK:       ppaire.b
+int8x4_t test_pnzip_i8x4(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pnzip_i8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnzip_u8x4:
+// CHECK:       ppaire.b
+uint8x4_t test_pnzip_u8x4(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pnzip_u8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnziph_i8x4:
+// CHECK:       ppairo.b
+int8x4_t test_pnziph_i8x4(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pnziph_i8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnziph_u8x4:
+// CHECK:       ppairo.b
+uint8x4_t test_pnziph_u8x4(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pnziph_u8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnzip_i8x8:
+// RV32:        ppaire.db
+// RV64:        ppaire.b
+int8x8_t test_pnzip_i8x8(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pnzip_i8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnzip_u8x8:
+// RV32:        ppaire.db
+// RV64:        ppaire.b
+uint8x8_t test_pnzip_u8x8(uint16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_pnzip_u8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnzip_i16x4:
+// RV32:        ppaire.dh
+// RV64:        ppaire.h
+int16x4_t test_pnzip_i16x4(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pnzip_i16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnzip_u16x4:
+// RV32:        ppaire.dh
+// RV64:        ppaire.h
+uint16x4_t test_pnzip_u16x4(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_pnzip_u16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnziph_i8x8:
+// RV32:        ppairo.db
+// RV64:        ppairo.b
+int8x8_t test_pnziph_i8x8(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pnziph_i8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnziph_u8x8:
+// RV32:        ppairo.db
+// RV64:        ppairo.b
+uint8x8_t test_pnziph_u8x8(uint16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_pnziph_u8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnziph_i16x4:
+// RV32:        ppairo.dh
+// RV64:        ppairo.h
+int16x4_t test_pnziph_i16x4(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pnziph_i16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pnziph_u16x4:
+// RV32:        ppairo.dh
+// RV64:        ppairo.h
+uint16x4_t test_pnziph_u16x4(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_pnziph_u16x4(rs1, rs2);
+}
