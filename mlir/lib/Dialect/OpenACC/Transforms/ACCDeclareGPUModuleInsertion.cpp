@@ -110,7 +110,7 @@ public:
       auto declareAttr =
           globalOp.getAttrOfType<acc::DeclareAttr>(acc::getDeclareAttrName());
       if (cudaUnified && declareAttr.getDataClause().getValue() !=
-          acc::DataClause::acc_declare_device_resident)
+                             acc::DataClause::acc_declare_device_resident)
         makeDeviceGlobalDeclaration(*deviceGlobal);
 
       if (Operation *existing = gpuSymTable.lookup(name.getValue())) {
