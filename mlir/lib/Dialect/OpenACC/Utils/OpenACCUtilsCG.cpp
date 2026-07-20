@@ -317,9 +317,10 @@ collectPrivateLocalParDims(PrivateLocalOp privateLocal,
   return parDims;
 }
 
-static FailureOr<std::optional<int64_t>> getWorkerPrivateSharedMemoryNumCopies(
-    PrivateLocalOp privateLocal, ComputeRegionOp computeRegion,
-    bool isWorkerPrivate, OpenACCSupport *support) {
+static FailureOr<std::optional<int64_t>>
+getWorkerPrivateSharedMemoryNumCopies(PrivateLocalOp privateLocal,
+                                      ComputeRegionOp computeRegion,
+                                      bool isWorkerPrivate, OpenACCSupport *) {
   if (!isWorkerPrivate)
     return std::optional<int64_t>(1);
 
@@ -330,15 +331,10 @@ static FailureOr<std::optional<int64_t>> getWorkerPrivateSharedMemoryNumCopies(
     return std::optional<int64_t>();
 
   auto workerArgConst = workerArg->getDefiningOp<arith::ConstantIndexOp>();
-  if (!workerArgConst) {
-    if (support) {
-      (void)support->emitNYI(privateLocal.getLoc(),
-                             "worker-private variables in shared memory "
-                             "require compile-time constant num_workers");
-      return failure();
-    }
-    return std::optional<int64_t>();
-  }
+  // ThreadY is bounded by 32 after subgroup alignment. Use that upper bound
+  // when the exact worker count is known only at runtime.
+  if (!workerArgConst)
+    return std::optional<int64_t>(32);
   return std::optional<int64_t>(workerArgConst.value());
 }
 

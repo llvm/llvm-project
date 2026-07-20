@@ -793,7 +793,7 @@ TEST_F(OpenACCUtilsCGTest, getSharedMemoryBytesGangWorkerReductionAccumulator) {
 }
 
 TEST_F(OpenACCUtilsCGTest,
-       isPrivateLocalSharedMemoryCandidateWorkerPrivateDynamicFails) {
+       isPrivateLocalSharedMemoryCandidateWorkerPrivateDynamicUsesUpperBound) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
   b.setInsertionPointToStart(module->getBody());
   GPUParallelDimsAttr workerDims = GPUParallelDimsAttr::get(
@@ -801,8 +801,7 @@ TEST_F(OpenACCUtilsCGTest,
   auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
   auto bx =
       ParWidthOp::create(b, loc, c1, GPUParallelDimAttr::blockXDim(&context));
-  // A non-constant num_workers: the launch operand exists but is not an
-  // arith.constant, which is what triggers the diagnostic / failure path.
+  // A non-constant num_workers uses the maximum ThreadY width.
   auto dynNumWorkers = arith::AddIOp::create(b, loc, c1, c1);
   auto ty = ParWidthOp::create(b, loc, dynNumWorkers,
                                GPUParallelDimAttr::threadYDim(&context));
@@ -818,11 +817,18 @@ TEST_F(OpenACCUtilsCGTest,
   FailureOr<bool> silent =
       isPrivateLocalSharedMemoryCandidate(privateLocal, cr, *module, policy);
   ASSERT_TRUE(succeeded(silent));
-  EXPECT_FALSE(*silent);
+  EXPECT_TRUE(*silent);
 
   FailureOr<bool> diagnosed = isPrivateLocalSharedMemoryCandidate(
       privateLocal, cr, *module, policy, &support);
-  EXPECT_TRUE(failed(diagnosed));
+  ASSERT_TRUE(succeeded(diagnosed));
+  EXPECT_TRUE(*diagnosed);
+
+  std::optional<int64_t> upperBound =
+      getPrivateLocalSharedMemoryUpperBoundBytes(privateLocal, cr, *module,
+                                                 policy);
+  ASSERT_TRUE(upperBound.has_value());
+  EXPECT_EQ(*upperBound, 512);
 }
 
 TEST_F(OpenACCUtilsCGTest, getPrivateLocalSharedMemoryUpperBoundBytes) {
