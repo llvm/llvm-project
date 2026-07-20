@@ -48,3 +48,28 @@ return:                                           ; preds = %entry, %if.then
   %retval = phi i32 [ %0, %if.then ], [ 0, %entry ]
   ret i32 %retval
 }
+
+define i32 @TestCsan(i32 %cond) nounwind readonly uwtable sanitize_concurrency {
+; CHECK-LABEL: @TestCsan(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[COND:%.*]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[RETURN:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @g, align 4
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+entry:
+  %tobool = icmp eq i32 %cond, 0
+  br i1 %tobool, label %return, label %if.then
+
+if.then:                                          ; preds = %entry
+  %0 = load i32, ptr @g, align 4
+  br label %return
+
+return:                                           ; preds = %entry, %if.then
+  %retval = phi i32 [ %0, %if.then ], [ 0, %entry ]
+  ret i32 %retval
+}
