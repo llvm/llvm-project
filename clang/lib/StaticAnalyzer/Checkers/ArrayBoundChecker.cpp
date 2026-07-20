@@ -99,9 +99,6 @@ struct CheckFlags {
   unsigned AcceptPastTheEnd : 1;
 };
 
-// FIXME: This will be removed in a follow-up change:
-enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
-
 class CheckResult;
 
 CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
@@ -131,9 +128,15 @@ public:
   /// When true, the checked offset may be out of bounds.
   bool mayBeInvalid() const { return MayUnderflow || MayOverflowExtent; }
 
+  /// Returns the offset of the accessed location from the beginning of the
+  /// accessd region.
+  NonLoc getOffset() const { return Offset; }
+
   /// Returns the extent of the accessed region if it is relevant (because the
   /// offset may overflow it), otherwise returns std::nullopt.
-  std::optional<NonLoc> extentIfRelevant() const { return MayOverflowExtent; }
+  std::optional<NonLoc> getExtentIfRelevant() const {
+    return MayOverflowExtent;
+  }
 
   /// Returns the program state that should be used for continuing the analysis
   /// after this bounds check. This returns null if mayBeValid() is false, in
@@ -141,15 +144,6 @@ public:
   /// Note that we also have a valid state in the exception case when the
   /// 'access' calculates the past-the-end pointer without dereferencing it.
   ProgramStateRef getValidState() const { return ValidState; }
-
-  /// FIXME: This is a temporary hack to postpone the removal of BadOffsetKind.
-  /// Will be removed in a follow-up change.
-  BadOffsetKind getBadOffsetKind() const {
-    assert(mayBeInvalid() && "this is only used when the access is invalid");
-    return (MayUnderflow ? (MayOverflowExtent ? BadOffsetKind::Indeterminate
-                                              : BadOffsetKind::Negative)
-                         : BadOffsetKind::Overflowing);
-  }
 
   /// When the access was ambiguous (that is, mayBeValid() && mayBeInvalid()),
   /// returns the note "assuming in bounds" note that is relevant for the bug
@@ -180,18 +174,6 @@ private:
 struct Messages {
   std::string Short, Full;
 };
-
-constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing",
-                                              "a negative or overflowing"};
-static StringRef asAdjective(BadOffsetKind Problem) {
-  return Adjectives[static_cast<int>(Problem)];
-}
-
-constexpr llvm::StringLiteral Prepositions[] = {"preceding", "after the end of",
-                                                "around"};
-static StringRef asPreposition(BadOffsetKind Problem) {
-  return Prepositions[static_cast<int>(Problem)];
-}
 
 // NOTE: The `ArraySubscriptExpr` and `UnaryOperator` callbacks are `PostStmt`
 // instead of `PreStmt` because the current implementation passes the whole
@@ -500,15 +482,24 @@ static bool tryDividePair(std::optional<int64_t> &Val1,
   return true;
 }
 
+static const char *getAdjective(const CheckResult &R) {
+  return (R.mayUnderflow()
+              ? (R.mayOverflow() ? "a negative or overflowing" : "a negative")
+              : (R.mayOverflow() ? "an overflowing" : "a valid"));
+}
+
+static const char *getPreposition(const CheckResult &R) {
+  return (R.mayUnderflow() ? (R.mayOverflow() ? "around" : "preceding")
+                           : (R.mayOverflow() ? "after the end of" : "within"));
+}
 static Messages getNonTaintMsgs(const ASTContext &ACtx, StringRef RegName,
-                                NonLoc Offset, std::optional<NonLoc> Extent,
-                                SVal Location, BadOffsetKind Problem) {
+                                CheckResult Res, SVal Location) {
   const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
   assert(EReg && "this checker only handles element access");
   QualType ElemType = EReg->getElementType();
 
-  std::optional<int64_t> OffsetN = getConcreteValue(Offset);
-  std::optional<int64_t> ExtentN = getConcreteValue(Extent);
+  std::optional<int64_t> OffsetN = getConcreteValue(Res.getOffset());
+  std::optional<int64_t> ExtentN = getConcreteValue(Res.getExtentIfRelevant());
 
   int64_t ElemSize = ACtx.getTypeSizeInChars(ElemType).getQuantity();
 
@@ -528,11 +519,11 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx, StringRef RegName,
   }
   Out << RegName << " at ";
   if (OffsetN) {
-    if (Problem == BadOffsetKind::Negative)
+    if (Res.mayUnderflow() && !Res.mayOverflow())
       Out << "negative ";
     Out << OffsetOrIndex << " " << *OffsetN;
   } else {
-    Out << asAdjective(Problem) << " " << OffsetOrIndex;
+    Out << getAdjective(Res) << " " << OffsetOrIndex;
   }
   if (ExtentN) {
     Out << ", while it holds only ";
@@ -549,8 +540,8 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx, StringRef RegName,
       Out << "s";
   }
 
-  return {formatv("Out of bound access to memory {0} {1}",
-                  asPreposition(Problem), RegName),
+  return {formatv("Out of bound access to memory {0} {1}", getPreposition(Res),
+                  RegName),
           std::string(Buf)};
 }
 
@@ -669,10 +660,9 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   const NoteTag *T = nullptr;
   if (Res.mayBeInvalid()) {
     if (!Res.mayBeValid()) {
-      Messages Msgs = getNonTaintMsgs(C.getASTContext(), RegName, ByteOffset,
-                                      Res.extentIfRelevant(), Location,
-                                      Res.getBadOffsetKind());
-      reportOOB(C, State, Msgs, ByteOffset, Res.extentIfRelevant());
+      Messages Msgs =
+          getNonTaintMsgs(C.getASTContext(), RegName, Res, Location);
+      reportOOB(C, State, Msgs, ByteOffset, Res.getExtentIfRelevant());
       return;
     }
 
