@@ -12,7 +12,8 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[START_1_INT]], [[START_2_INT]]
 ; CHECK-NEXT:    [[START_2_DIFF:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[DIFF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoaddr ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START_1_INT]]
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoaddr ptr [[START_1]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP1]], 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP12]], 2305843009213693951
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
