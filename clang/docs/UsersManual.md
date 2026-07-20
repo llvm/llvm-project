@@ -4426,6 +4426,13 @@ Sets the limit for iterative calls to 'operator->' functions to N.  The
 default is 256.
 :::
 
+:::{option} -fmax-init-list-elements=N
+
+Sets the maximum number of elements Clang may materialize for an array
+initializer's dense semantic representation. An array designator with an
+inclusive end index of N requires N + 1 elements. The default is 1048576.
+:::
+
 (objc)=
 
 ## Objective-C Language Features

@@ -1664,6 +1664,12 @@ def emit_sgf_symbol_labels_for_testing: Flag<["--"], "emit-sgf-symbol-labels-for
    Visibility<[CC1Option]>,
    MarshallingInfoFlag<FrontendOpts<"EmitSymbolGraphSymbolLabelsForTesting">>;
 def e : Separate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
+def fmax_init_list_elements_EQ :
+  Joined<["-"], "fmax-init-list-elements=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Set the maximum number of elements Clang may materialize for an "
+           "array initializer's dense semantic representation">,
+  MarshallingInfoInt<LangOpts<"MaxInitListElements">, "1048576">;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Max total number of preprocessed tokens for -Wmax-tokens.">,

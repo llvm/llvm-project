@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <limits>
 
 using namespace clang;
@@ -3377,16 +3378,24 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
   }
 
   // The semantic form of an initializer list stores one pointer for every
-  // array element, including the elements omitted before a designator. Avoid
-  // creating an initializer list whose dense representation is too large for
-  // an unsigned-sized allocation.
-  constexpr unsigned MaxInitListElements =
+  // array element, including the elements omitted before a designator. Compute
+  // the required number of elements in a wider type so adding one cannot
+  // overflow.
+  llvm::APSInt NumInits = DesignatedEndIndex;
+  NumInits.setIsUnsigned(true);
+  NumInits = NumInits.extend(NumInits.getBitWidth() + 1);
+  ++NumInits;
+
+  // Keep a non-configurable ceiling so even an excessive command-line limit
+  // cannot request an initializer list too large for an unsigned-sized
+  // allocation.
+  constexpr unsigned MaxAllocatableInitListElements =
       std::numeric_limits<unsigned>::max() / sizeof(Stmt *);
-  if (DesignatedEndIndex.uge(MaxInitListElements)) {
+  const unsigned MaxInitListElements =
+      std::min(SemaRef.getLangOpts().MaxInitListElements,
+               MaxAllocatableInitListElements);
+  if (NumInits.ugt(MaxInitListElements)) {
     if (!VerifyOnly) {
-      llvm::APSInt NumInits =
-          DesignatedEndIndex.extend(DesignatedEndIndex.getBitWidth() + 1);
-      ++NumInits;
       SemaRef.Diag(IndexExpr->getBeginLoc(), diag::err_array_too_large)
           << toString(NumInits, 10) << IndexExpr->getSourceRange();
     }

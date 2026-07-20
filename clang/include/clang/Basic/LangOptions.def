@@ -394,6 +394,8 @@ LANGOPT(EnableNewConstInterp, 1, CLANG_USE_EXPERIMENTAL_CONST_INTERP, Benign,
         "enable the experimental new constant interpreter")
 LANGOPT(BracketDepth, 32, 256, Benign,
         "maximum bracket nesting depth")
+VALUE_LANGOPT(MaxInitListElements, 32, 1048576, Benign,
+              "maximum number of elements in a dense semantic initializer list")
 LANGOPT(NumLargeByValueCopy, 32, 0, Benign,
         "if non-zero, warn about parameter or return Warn if parameter/return value is larger in bytes than this setting. 0 is no check.")
 VALUE_LANGOPT(MSCompatibilityVersion, 32, 0, NotCompatible, "Microsoft Visual C/C++ Version")
