@@ -2013,6 +2013,16 @@ Verifier::visitModuleFlag(const MDNode *Op,
             "invalid long-double-type metadata value", Op);
   }
 
+  if (ID->getString() == "float-abi") {
+    Check(MFB == Module::Error,
+          "float-abi module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "float-abi metadata requires a string argument");
+    if (Value)
+      Check(FloatABI::parseABIType(Value->getString()).has_value(),
+            "invalid float-abi metadata value", Op);
+  }
+
   if (ID->getString() == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might
