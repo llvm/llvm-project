@@ -106,6 +106,12 @@ public:
         continue;
 
       StringAttr name = symOp.getNameAttr();
+      Operation *deviceGlobal = globalOp.clone();
+      auto declareAttr =
+          globalOp.getAttrOfType<acc::DeclareAttr>(acc::getDeclareAttrName());
+      if (cudaUnified && declareAttr.getDataClause().getValue() !=
+          acc::DataClause::acc_declare_device_resident)
+        makeDeviceGlobalDeclaration(*deviceGlobal);
 
       if (Operation *existing = gpuSymTable.lookup(name.getValue())) {
         // Reuse when structurally equivalent ignoring locations and discardable
@@ -113,11 +119,12 @@ public:
         // true definition mismatch is a conflict.
         if (existing->getName() != globalOp.getName() ||
             !OperationEquivalence::isEquivalentTo(
-                existing, &globalOp,
+                existing, deviceGlobal,
                 OperationEquivalence::ignoreValueEquivalence,
                 /*markEquivalent=*/nullptr,
                 OperationEquivalence::IgnoreLocations |
                     OperationEquivalence::IgnoreDiscardableAttrs)) {
+          deviceGlobal->destroy();
           accSupport.emitNYI(globalOp.getLoc(),
                              llvm::Twine("duplicate global symbol '") +
                                  name.getValue() + "' in gpu module");
@@ -129,15 +136,10 @@ public:
           if (Attribute declareAttr =
                   globalOp.getAttr(acc::getDeclareAttrName()))
             existing->setAttr(acc::getDeclareAttrName(), declareAttr);
+        deviceGlobal->destroy();
         continue;
       }
 
-      Operation *deviceGlobal = globalOp.clone();
-      auto declareAttr =
-          globalOp.getAttrOfType<acc::DeclareAttr>(acc::getDeclareAttrName());
-      if (cudaUnified && declareAttr.getDataClause().getValue() !=
-          acc::DataClause::acc_declare_device_resident)
-        makeDeviceGlobalDeclaration(*deviceGlobal);
       gpuSymTable.insert(deviceGlobal);
     }
     return success();

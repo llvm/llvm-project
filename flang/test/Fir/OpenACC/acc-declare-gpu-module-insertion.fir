@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --pass-pipeline="builtin.module(acc-declare-gpu-module-insertion{cuda-unified=true})" | FileCheck %s
+// RUN: fir-opt %s --pass-pipeline="builtin.module(acc-declare-gpu-module-insertion{cuda-unified=true},acc-declare-gpu-module-insertion{cuda-unified=true})" | FileCheck %s
 
 // Globals registered as host variables must be declarations in device code.
 // device_resident globals remain device definitions.
@@ -15,7 +15,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.conta
 }
 
 // CHECK-LABEL: gpu.module @acc_gpu_module {
-// CHECK: fir.global @shared {{.*}} : !fir.array<7xf32>
+// CHECK: fir.global @shared {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.array<7xf32>
 // CHECK-NOT: fir.has_value
 // CHECK: fir.global @initialized_shared {acc.declare = #acc.declare<dataClause = acc_copyin>} : !fir.array<1xf32>
 // CHECK-NOT: fir.has_value
