@@ -75,27 +75,30 @@ public:
       disablePass<RegisterCoalescerPass>();
   }
 
-  void addIRPasses(PassManagerWrapper &PMW) const;
-  void addISelPrepare(PassManagerWrapper &PMW) const;
-  Error addInstSelector(PassManagerWrapper &PMW) const;
-  void addPreEmitPass(PassManagerWrapper &PMW) const;
+  void addIRPasses(CodeGenModulePassManager &CGMPM) const;
+  void addISelPrepare(CodeGenModulePassManager &CGMPM) const;
+  Error addInstSelector(CodeGenMachineFunctionPassManager &CGMFPM) const;
+  void addPreEmitPass(CodeGenMachineFunctionPassManager &CGMFPM) const;
 };
 
-void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
+void WebAssemblyCodeGenPassBuilder::addIRPasses(
+    CodeGenModulePassManager &CGMPM) const {
+  CodeGenFunctionPassManager CGFPM;
   // Add signatures to prototype-less function declarations
-  flushFPMsToMPM(PMW);
-  addModulePass(WebAssemblyAddMissingPrototypesPass(), PMW);
+  CGMPM.addPass(WebAssemblyAddMissingPrototypesPass());
 
   // Lower .llvm.global_dtors into .llvm.global_ctors with __cxa_atexit calls.
-  addModulePass(LowerGlobalDtorsPass(), PMW);
+  CGMPM.addPass(LowerGlobalDtorsPass());
 
   // Fix function bitcasts, as WebAssembly requires caller and callee signatures
   // to match.
-  addModulePass(WebAssemblyFixFunctionBitcastsPass(), PMW);
+  CGMPM.addPass(WebAssemblyFixFunctionBitcastsPass());
+
+  CGMPM.addCodeGenFunctionPassManager(std::move(CGFPM));
 
   // Optimize "returned" function attributes.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addFunctionPass(WebAssemblyOptimizeReturnedPass(), PMW);
+    CGFPM.addPass(WebAssemblyOptimizeReturnedPass());
 
   // If exception handling is not enabled and setjmp/longjmp handling is
   // enabled, we lower invokes into calls and delete unreachable landingpad
@@ -104,10 +107,10 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
   if (!WasmEnableEmEH && !WasmEnableEH) {
-    addFunctionPass(LowerInvokePass(), PMW);
+    CGFPM.addPass(LowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
-    addFunctionPass(UnreachableBlockElimPass(), PMW);
+    CGFPM.addPass(UnreachableBlockElimPass());
   }
 
   // Handle exceptions and setjmp/longjmp if enabled. Unlike Wasm EH preparation
@@ -115,81 +118,85 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   // transformation algorithms with Emscripten SjLj, so we run
   // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
   if (WasmEnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj) {
-    flushFPMsToMPM(PMW);
-    addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(), PMW);
+    CGMPM.addCodeGenFunctionPassManager(std::move(CGFPM));
+    CGMPM.addPass(WebAssemblyLowerEmscriptenEHSjLjPass());
   }
 
   // Expand indirectbr instructions to switches.
-  addFunctionPass(IndirectBrExpandPass(TM), PMW);
+  CGFPM.addPass(IndirectBrExpandPass(TM));
 
   // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
-  addFunctionPass(WebAssemblyReduceToAnyAllTruePass(TM), PMW);
+  CGFPM.addPass(WebAssemblyReduceToAnyAllTruePass(TM));
 
-  Base::addIRPasses(PMW);
+  CGMPM.addCodeGenFunctionPassManager(std::move(CGFPM));
+
+  Base::addIRPasses(CGMPM);
 }
 
 void WebAssemblyCodeGenPassBuilder::addISelPrepare(
-    PassManagerWrapper &PMW) const {
+    CodeGenModulePassManager &CGMPM) const {
+  CodeGenFunctionPassManager CGFPM;
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
-  addFunctionPass(WebAssemblyRefTypeMem2LocalPass(), PMW);
+  CGFPM.addPass(WebAssemblyRefTypeMem2LocalPass());
   // Lower atomics and TLS if necessary
-  flushFPMsToMPM(PMW);
-  addModulePass(WebAssemblyCoalesceFeaturesAndStripAtomicsPass(TM), PMW);
+  CGMPM.addCodeGenFunctionPassManager(std::move(CGFPM));
+  CGMPM.addPass(WebAssemblyCoalesceFeaturesAndStripAtomicsPass(TM));
 
   // This is a no-op if atomics are not used in the module
-  addFunctionPass(AtomicExpandPass(TM), PMW);
+  CGFPM.addPass(AtomicExpandPass(TM));
 
-  Base::addISelPrepare(PMW);
+  CGMPM.addCodeGenFunctionPassManager(std::move(CGFPM));
+  Base::addISelPrepare(CGMPM);
 }
 
 Error WebAssemblyCodeGenPassBuilder::addInstSelector(
-    PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(WebAssemblyISelDAGToDAGPass(TM, getOptLevel()), PMW);
+    CodeGenMachineFunctionPassManager &CGMFPM) const {
+  CGMFPM.addPass(WebAssemblyISelDAGToDAGPass(TM, getOptLevel()));
 
   // Run the argument-move pass immediately after the ScheduleDAG scheduler
   // so that we can fix up the ARGUMENT instructions before anything else
   // sees them in the wrong place.
-  addMachineFunctionPass(WebAssemblyArgumentMovePass(), PMW);
+  CGMFPM.addPass(WebAssemblyArgumentMovePass());
 
   // Set the p2align operands. This information is present during ISel, however
   // it's inconvenient to collect. Collect it now, and update the immediate
   // operands.
-  addMachineFunctionPass(WebAssemblySetP2AlignOperandsPass(), PMW);
+  CGMFPM.addPass(WebAssemblySetP2AlignOperandsPass());
 
   // Eliminate range checks and add default targets to br_table instructions.
-  addMachineFunctionPass(WebAssemblyFixBrTableDefaultsPass(), PMW);
+  CGMFPM.addPass(WebAssemblyFixBrTableDefaultsPass());
 
   // unreachable is terminator, non-terminator instruction after it is not
   // allowed.
-  addMachineFunctionPass(WebAssemblyCleanCodeAfterTrapPass(), PMW);
+  CGMFPM.addPass(WebAssemblyCleanCodeAfterTrapPass());
 
   return Error::success();
 }
 
 void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
-    PassManagerWrapper &PMW) const {
-  Base::addPreEmitPass(PMW);
+    CodeGenMachineFunctionPassManager &CGMFPM) const {
+  Base::addPreEmitPass(CGMFPM);
 
   // Nullify DBG_VALUE_LISTs that we cannot handle.
-  addMachineFunctionPass(WebAssemblyNullifyDebugValueListsPass(), PMW);
+  CGMFPM.addPass(WebAssemblyNullifyDebugValueListsPass());
 
   // Remove any unreachable blocks that may be left floating around.
   // Rare, but possible. Needed for WebAssemblyFixIrreducibleControlFlow.
-  addMachineFunctionPass(UnreachableMachineBlockElimPass(), PMW);
+  CGMFPM.addPass(UnreachableMachineBlockElimPass());
 
   // Eliminate multiple-entry loops.
-  addMachineFunctionPass(WebAssemblyFixIrreducibleControlFlowPass(), PMW);
+  CGMFPM.addPass(WebAssemblyFixIrreducibleControlFlowPass());
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
   if (TM.Options.ExceptionModel == ExceptionHandling::Wasm)
-    addMachineFunctionPass(WebAssemblyLateEHPreparePass(), PMW);
+    CGMFPM.addPass(WebAssemblyLateEHPreparePass());
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,
   // colored, and numbered with the rest of the registers.
-  addMachineFunctionPass(WebAssemblyReplacePhysRegsPass(), PMW);
+  CGMFPM.addPass(WebAssemblyReplacePhysRegsPass());
 
   // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOptLevel::None) {

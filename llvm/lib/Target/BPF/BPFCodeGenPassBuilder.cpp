@@ -36,59 +36,66 @@ public:
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
-  void addIRPasses(PassManagerWrapper &PMW) const;
-  Error addInstSelector(PassManagerWrapper &PMW) const;
-  void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
-  void addPreEmitPass(PassManagerWrapper &PMW) const;
-  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
-  void addAsmPrinter(PassManagerWrapper &PMW) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
+  void addIRPasses(CodeGenModulePassManager &CGMPM) const;
+  Error addInstSelector(CodeGenMachineFunctionPassManager &CGMFPM) const;
+  void
+  addMachineSSAOptimization(CodeGenMachineFunctionPassManager &CGMFPM) const;
+  void addPreEmitPass(CodeGenMachineFunctionPassManager &CGMFPM) const;
+  void addAsmPrinterBegin(CodeGenModulePassManager &CGMPM) const;
+  void addAsmPrinter(CodeGenMachineFunctionPassManager &CGMFPM) const;
+  void addAsmPrinterEnd(CodeGenModulePassManager &CGMPM) const;
 };
 
-void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
-  addFunctionPass(AtomicExpandPass(TM), PMW);
-  flushFPMsToMPM(PMW);
-  addModulePass(BPFCheckAndAdjustIRPass(), PMW);
+void BPFCodeGenPassBuilder::addIRPasses(CodeGenModulePassManager &CGMPM) const {
+  CodeGenFunctionPassManager CGFPM;
+  CGFPM.addPass(AtomicExpandPass(TM));
+  CGMPM.addCodeGenFunctionPassManager(std::move(CGFPM));
+  CGMPM.addPass(BPFCheckAndAdjustIRPass());
 
-  Base::addIRPasses(PMW);
+  Base::addIRPasses(CGMPM);
 }
 
-Error BPFCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(BPFISelDAGToDAGPass(TM), PMW);
+Error BPFCodeGenPassBuilder::addInstSelector(
+    CodeGenMachineFunctionPassManager &CGMFPM) const {
+  CGMFPM.addPass(BPFISelDAGToDAGPass(TM));
   return Error::success();
 }
 
 void BPFCodeGenPassBuilder::addMachineSSAOptimization(
-    PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(BPFMISimplifyPatchablePass(), PMW);
+    CodeGenMachineFunctionPassManager &CGMFPM) const {
+  CGMFPM.addPass(BPFMISimplifyPatchablePass());
 
-  Base::addMachineSSAOptimization(PMW);
+  Base::addMachineSSAOptimization(CGMFPM);
 
   const BPFSubtarget *Subtarget = TM.getSubtargetImpl();
   if (!DisableMIPeephole) {
     if (Subtarget->getHasAlu32())
-      addMachineFunctionPass(BPFMIPeepholePass(), PMW);
+      CGMFPM.addPass(BPFMIPeepholePass());
   }
 }
 
-void BPFCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(BPFMIPreEmitCheckingPass(), PMW);
+void BPFCodeGenPassBuilder::addPreEmitPass(
+    CodeGenMachineFunctionPassManager &CGMFPM) const {
+  CGMFPM.addPass(BPFMIPreEmitCheckingPass());
   if (!DisableMIPeephole) {
-    addMachineFunctionPass(BPFMIExpandStackArgPseudosPass(), PMW);
-    addMachineFunctionPass(BPFMIPreEmitPeepholePass(), PMW);
+    CGMFPM.addPass(BPFMIExpandStackArgPseudosPass());
+    CGMFPM.addPass(BPFMIPreEmitPeepholePass());
   }
 }
 
-void BPFCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) const {
-  addModulePass(BPFAsmPrinterBeginPass(), PMW, /*Force=*/true);
+void BPFCodeGenPassBuilder::addAsmPrinterBegin(
+    CodeGenModulePassManager &CGMPM) const {
+  CGMPM.addPass(BPFAsmPrinterBeginPass());
 }
 
-void BPFCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(BPFAsmPrinterPass(), PMW);
+void BPFCodeGenPassBuilder::addAsmPrinter(
+    CodeGenMachineFunctionPassManager &CGMFPM) const {
+  CGMFPM.addPass(BPFAsmPrinterPass());
 }
 
-void BPFCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
-  addModulePass(BPFAsmPrinterEndPass(), PMW);
+void BPFCodeGenPassBuilder::addAsmPrinterEnd(
+    CodeGenModulePassManager &CGMPM) const {
+  CGMPM.addPass(BPFAsmPrinterEndPass());
 }
 
 } // namespace

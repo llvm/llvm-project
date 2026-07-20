@@ -57,11 +57,11 @@ public:
   R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
                          PassInstrumentationCallbacks *PIC);
 
-  void addPreISel(PassManagerWrapper &PMW) const;
-  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
-  void addAsmPrinter(PassManagerWrapper &PMW) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
-  Error addInstSelector(PassManagerWrapper &PMW) const;
+  CodeGenFunctionPassManager addPreISel() const;
+  void addAsmPrinterBegin(CodeGenModulePassManager &CGMPM) const;
+  void addAsmPrinter(CodeGenMachineFunctionPassManager &CGMFPM) const;
+  void addAsmPrinterEnd(CodeGenModulePassManager &CGMPM) const;
+  Error addInstSelector(CodeGenMachineFunctionPassManager &CGMFPM) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -186,23 +186,28 @@ R600CodeGenPassBuilder::R600CodeGenPassBuilder(
   Opt.RequiresCodeGenSCCOrder = true;
 }
 
-void R600CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
+CodeGenFunctionPassManager R600CodeGenPassBuilder::addPreISel() const {
   // TODO: Add passes pre instruction selection.
+  return CodeGenFunctionPassManager();
 }
 
-void R600CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) const {
+void R600CodeGenPassBuilder::addAsmPrinterBegin(
+    CodeGenModulePassManager &CGMPM) const {
   // TODO: Add AsmPrinterBegin
 }
 
-void R600CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
+void R600CodeGenPassBuilder::addAsmPrinter(
+    CodeGenMachineFunctionPassManager &CGMFPM) const {
   // TODO: Add AsmPrinter.
 }
 
-void R600CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
+void R600CodeGenPassBuilder::addAsmPrinterEnd(
+    CodeGenModulePassManager &CGMPM) const {
   // TODO: Add AsmPrinterEnd
 }
 
-Error R600CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
+Error R600CodeGenPassBuilder::addInstSelector(
+    CodeGenMachineFunctionPassManager &CGMFPM) const {
   // TODO: Add instruction selector.
   return Error::success();
 }
