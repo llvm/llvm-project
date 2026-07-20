@@ -237,8 +237,7 @@ spirv.module Logical GLSL450 {
       spirv.mlir.merge %1 : i32
     }
     // CHECK: ^bb4({{.*}}: i32):
-    %one = spirv.Constant 1 : i32
-    spirv.ReturnValue %one : i32
+    spirv.ReturnValue %0 : i32
   }
 
   spirv.func @selection_with_multiple_yielding_values(%cond: i1) -> i32 "None" {
