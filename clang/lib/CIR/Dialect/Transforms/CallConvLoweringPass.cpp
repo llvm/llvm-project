@@ -69,39 +69,20 @@ namespace {
 // dialect-agnostic mlir::abi::FunctionClassification that CIRABIRewriteContext
 // consumes.  Integer / pointer / bool / f32 / f64 scalars and struct / array
 // aggregates are handled; unions, `_BitInt`, `_Complex`, vectors, wider
-// floats, and empty-for-ABI records are reported NYI by classifyX86_64Function
-// so an unsupported signature fails the pass instead of being misclassified.
+// floats, and packed or padded records are reported NYI by
+// classifyX86_64Function so an unsupported signature fails the pass instead of
+// being misclassified.
 //===----------------------------------------------------------------------===//
-
-/// Proxy for the AST notion of an empty record (a C++ empty class): CIRGen
-/// materializes an empty class as a single padding byte, so a record whose
-/// members are all single-byte i8 arrays is empty for ABI purposes.  A real
-/// `char` array of size > 1 is data, not padding.  The bridge only uses this
-/// to reject empty records -- classifying them as Ignore is reported NYI in
-/// classifyX86_64Function.  A struct that merely contains an empty record is
-/// rejected too, but through the member recursion in isSupportedType.
-static bool recordIsEmptyForABI(cir::RecordType recTy) {
-  mlir::ArrayRef<mlir::Type> members = recTy.getMembers();
-  if (members.empty())
-    return true;
-  if (members.size() != 1)
-    return false;
-  auto arr = dyn_cast<cir::ArrayType>(members[0]);
-  if (!arr)
-    return false;
-  auto elt = dyn_cast<cir::IntType>(arr.getElementType());
-  return elt && elt.getWidth() == 8 && arr.getSize() == 1;
-}
 
 /// Whether a struct's declared argument-passing kind (from the module's
 /// record-layout metadata) allows it to be passed in registers.  A record with
 /// no layout entry (e.g. an anonymous struct) has no C++ non-trivial reason to
 /// be forced to memory, so it defaults to can-pass-in-registers.
-static bool recordCanPassInRegs(ModuleOp module, cir::RecordType recTy) {
+static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
   mlir::StringAttr name = recTy.getName();
   if (!name)
     return true;
-  auto dict = module->getAttrOfType<DictionaryAttr>(
+  auto dict = modOp->getAttrOfType<DictionaryAttr>(
       cir::CIRDialect::getRecordLayoutsAttrName());
   if (!dict)
     return true;
@@ -115,8 +96,8 @@ static bool recordCanPassInRegs(ModuleOp module, cir::RecordType recTy) {
 /// 64 bits, pointer, bool, void, f32, or f64.  Aggregates: a complete struct
 /// whose fields are all themselves supported, or an array of a supported
 /// element type.  `_BitInt`, `__int128`, unions, `_Complex`, vectors, wider
-/// floats, and empty-for-ABI records are not handled and are reported NYI at
-/// the reject() choke point in classifyX86_64Function.
+/// floats, and packed or padded records are not handled and are reported NYI
+/// at the reject() choke point in classifyX86_64Function.
 static bool isSupportedType(mlir::Type ty) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
@@ -131,12 +112,16 @@ static bool isSupportedType(mlir::Type ty) {
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
     return isSupportedType(arrTy.getElementType());
   if (auto recTy = dyn_cast<cir::RecordType>(ty)) {
-    // Unions, packed / padded records, and empty-for-ABI records each need
-    // classification this bridge does not implement (a union widen fixup,
-    // pad-aware eightbyte classification, and Ignore respectively), so reject
-    // them here and report NYI rather than misclassify.
+    // Unions and packed / padded records each need classification this bridge
+    // does not implement (a union widen fixup and pad-aware eightbyte
+    // classification), so reject them here and report NYI rather than
+    // misclassify.  Empty-for-ABI records classify as Ignore, which is also
+    // deferred: a C empty struct is a zero-field record, and CIRGen lays out
+    // an empty C++ class as a single padded byte (caught by the padded check).
+    // A real one-byte struct such as `{char[1]}` has a field and is not
+    // padded, so it is classified normally.
     if (recTy.isUnion() || !recTy.isComplete() || recTy.getPacked() ||
-        recTy.getPadded() || recordIsEmptyForABI(recTy))
+        recTy.getPadded() || recTy.getMembers().empty())
       return false;
     return llvm::all_of(recTy.getMembers(),
                         [](mlir::Type m) { return isSupportedType(m); });
@@ -182,8 +167,7 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
 /// reach this function.
 static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                          mlir::abi::ABITypeMapper &typeMapper,
-                                         const DataLayout &dl,
-                                         ModuleOp module) {
+                                         const DataLayout &dl, ModuleOp modOp) {
   llvm::abi::TypeBuilder &tb = typeMapper.getTypeBuilder();
   return llvm::TypeSwitch<mlir::Type, const llvm::abi::Type *>(type)
       .Case([&](cir::IntType intTy) {
@@ -217,7 +201,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
       })
       .Case([&](cir::ArrayType arrTy) {
         const llvm::abi::Type *elemAbi =
-            mapCIRType(arrTy.getElementType(), typeMapper, dl, module);
+            mapCIRType(arrTy.getElementType(), typeMapper, dl, modOp);
         return tb.getArrayType(elemAbi, arrTy.getSize(),
                                dl.getTypeSizeInBits(type).getFixedValue());
       })
@@ -230,14 +214,14 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         uint64_t offsetBits = 0;
         for (mlir::Type fieldTy : recTy.getMembers()) {
           const llvm::abi::Type *mappedField =
-              mapCIRType(fieldTy, typeMapper, dl, module);
+              mapCIRType(fieldTy, typeMapper, dl, modOp);
           offsetBits =
               llvm::alignTo(offsetBits, dl.getTypeABIAlignment(fieldTy) * 8);
           fields.push_back(llvm::abi::FieldInfo(mappedField, offsetBits));
           offsetBits += dl.getTypeSizeInBits(fieldTy).getFixedValue();
         }
         llvm::abi::RecordFlags flags = llvm::abi::RecordFlags::None;
-        if (recordCanPassInRegs(module, recTy))
+        if (recordCanPassInRegs(modOp, recTy))
           flags = flags | llvm::abi::RecordFlags::CanPassInRegisters;
         return tb.getRecordType(fields,
                                 llvm::TypeSize::getFixed(
@@ -313,7 +297,7 @@ static std::optional<FunctionClassification>
 classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
                        mlir::abi::ABITypeMapper &typeMapper,
                        const llvm::abi::TargetInfo &targetInfo,
-                       ModuleOp module) {
+                       ModuleOp modOp) {
   MLIRContext *ctx = func->getContext();
   cir::FuncType fnTy = func.getFunctionType();
   mlir::Type retCIR = fnTy.getReturnType();
@@ -336,10 +320,10 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
 
   const llvm::abi::Type *retAbi =
       voidRet ? typeMapper.getTypeBuilder().getVoidType()
-              : mapCIRType(retCIR, typeMapper, dl, module);
+              : mapCIRType(retCIR, typeMapper, dl, modOp);
   SmallVector<const llvm::abi::Type *> argAbi;
   for (mlir::Type a : fnTy.getInputs())
-    argAbi.push_back(mapCIRType(a, typeMapper, dl, module));
+    argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
 
   std::unique_ptr<llvm::abi::FunctionInfo> fi =
       llvm::abi::FunctionInfo::create(llvm::CallingConv::C, retAbi, argAbi);

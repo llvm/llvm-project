@@ -14,12 +14,23 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
 
-  // A 24-byte struct does not fit in registers: passed byval.
-  cir.func @take_big(%arg0: !rec_Big) {
-    cir.return
+  // A 24-byte struct does not fit in registers: passed byval.  The body reads
+  // a field, so the load the rewriter inserts at entry (turning the byval
+  // pointer back into the record value) is visible.
+  cir.func @take_big(%arg0: !rec_Big) -> !s64i {
+    %0 = cir.alloca "b" align(8) : !cir.ptr<!rec_Big>
+    cir.store %arg0, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.get_member %0[2] {name = "c"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
+    %2 = cir.load %1 : !cir.ptr<!s64i>, !s64i
+    cir.return %2 : !s64i
   }
 
-  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> !s64i
+  // CHECK:   %[[VAL:.*]] = cir.load %arg0 : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:   %[[LOCAL:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_Big>
+  // CHECK:   cir.store %[[VAL]], %[[LOCAL]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:   %[[FLD:.*]] = cir.get_member %[[LOCAL]][2] {name = "c"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
+  // CHECK:   %{{.*}} = cir.load %[[FLD]] : !cir.ptr<!s64i>, !s64i
 
   // A 24-byte struct return uses an sret pointer argument.
   cir.func @ret_big() -> !rec_Big {
