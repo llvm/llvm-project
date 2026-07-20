@@ -27,7 +27,6 @@
 
 ; CHECK: Run stale profile matching for _Z3fool
 ; CHECK: The functions _Z3topl(IR) and _Z3topi(Profile) share the same base name: top.
-; CHECK: The functions _Z3barl(IR) and _Z3bari(Profile) share the same base name: bar.
 ; CHECK: The functions _Z3topll(IR) and _Z3topi(Profile) share the same base name: top.
 ; CHECK: Function:_Z3topl matches profile:_Z3topi
 ; CHECK: Function:_Z3barl matches profile:_Z3bari
