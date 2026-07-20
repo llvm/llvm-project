@@ -19,8 +19,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: vector.ph:
 ; VPLANS-NEXT:   EMIT vp<[[VF_PER_PART:%.+]]> = VF * Part + ir<0>
-; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = active lane mask control flow vp<[[VF_PER_PART]]>, vp<[[TC]]>
-; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY_EXTRACT:%.+]]> = extract-subvector-for-part vp<[[LANEMASK_ENTRY]]>, ir<0>
+; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = wide active lane mask vp<[[VF_PER_PART]]>, vp<[[TC]]>
+; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY_EXTRACT:%.+]]> = extract-vector-for-part vp<[[LANEMASK_ENTRY]]>, ir<0>
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: <x1> vector loop: {
@@ -34,8 +34,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%val>, vp<[[LANEMASK_PHI]]>
 ; VPLANS-NEXT:     EMIT vp<[[INDV_UPDATE:%.+]]> = add vp<[[INDV]]>, vp<[[VFxUF]]>
 ; VPLANS-NEXT:     EMIT vp<[[INC:%[0-9]+]]> = VF * Part + vp<[[INDV_UPDATE]]>, vp<[[VF]]>
-; VPLANS-NEXT:     EMIT vp<[[LANEMASK_LOOP_MASK:%.+]]> = active lane mask control flow vp<[[INC]]>, vp<[[TC]]>
-; VPLANS-NEXT:     EMIT vp<[[LANEMASK_LOOP]]> = extract-subvector-for-part vp<[[LANEMASK_LOOP_MASK]]>, ir<0>
+; VPLANS-NEXT:     EMIT vp<[[LANEMASK_LOOP_MASK:%.+]]> = wide active lane mask vp<[[INC]]>, vp<[[TC]]>
+; VPLANS-NEXT:     EMIT vp<[[LANEMASK_LOOP]]> = extract-vector-for-part vp<[[LANEMASK_LOOP_MASK]]>, ir<0>
 ; VPLANS-NEXT:     EMIT vp<[[NOT:%[0-9]+]]> = not vp<[[LANEMASK_LOOP]]>
 ; VPLANS-NEXT:     EMIT branch-on-cond vp<[[NOT]]>
 ; VPLANS-NEXT:   No successors

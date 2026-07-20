@@ -505,7 +505,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     AssertOperandType(1, Op0Ty);
     return IntegerType::get(Ctx, 1);
   case VPInstruction::ActiveLaneMask:
-  case VPInstruction::ActiveLaneMaskForControlFlow:
+  case VPInstruction::WideActiveLaneMask:
     assert(Op0Ty->isIntegerTy() && "expected integer operand");
     AssertOperandType(1, Op0Ty);
     return IntegerType::get(Ctx, 1);
@@ -667,12 +667,12 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::WideIVStep:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::ResumeForEpilogue:
-  case VPInstruction::ExtractSubvectorForPart:
+  case VPInstruction::ExtractVectorForPart:
     return 2;
   case Instruction::InsertElement:
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
-  case VPInstruction::ActiveLaneMaskForControlFlow:
+  case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ReductionStartVector:
     return 3;
   case Instruction::Call:
@@ -797,7 +797,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                    Name);
   }
   case VPInstruction::ActiveLaneMask:
-  case VPInstruction::ActiveLaneMaskForControlFlow: {
+  case VPInstruction::WideActiveLaneMask: {
     // Get first lane of vector induction variable.
     Value *VIVElem0 = State.get(getOperand(0), VPLane(0));
     // Get the original loop tripcount.
@@ -1116,7 +1116,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return Result;
   }
-  case VPInstruction::ExtractSubvectorForPart: {
+  case VPInstruction::ExtractVectorForPart: {
     Value *Src = State.get(getOperand(0));
     Type *DstTy = VectorType::get(getScalarType(), State.VF);
     unsigned Part = cast<VPConstantInt>(getOperand(1))->getZExtValue();
@@ -1129,8 +1129,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     VPValue *Start, *TC;
     if (State.VF.isScalar() &&
         match(getOperand(0),
-              m_ActiveLaneMaskForControlFlow(m_VPValue(Start), m_VPValue(TC),
-                                             m_VPValue()))) {
+              m_WideActiveLaneMask(m_VPValue(Start), m_VPValue(TC),
+                                   m_VPValue()))) {
       Value *StartV = State.get(Start);
       if (Part > 0)
         StartV = Builder.CreateAdd(StartV, State.get(getOperand(1)));
@@ -1450,7 +1450,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         cast<VectorType>(VectorTy), {}, Ctx.CostKind, -1);
   }
   case VPInstruction::ActiveLaneMask:
-  case VPInstruction::ActiveLaneMaskForControlFlow: {
+  case VPInstruction::WideActiveLaneMask: {
     Type *ArgTy = getOperand(0)->getScalarType();
     unsigned Multiplier = cast<VPConstantInt>(getOperand(2))->getZExtValue();
     Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF * Multiplier);
@@ -1662,14 +1662,14 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
-  case VPInstruction::ActiveLaneMaskForControlFlow:
+  case VPInstruction::WideActiveLaneMask:
   case VPInstruction::IncomingAliasMask:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::ExtractLastActive:
-  case VPInstruction::ExtractSubvectorForPart:
+  case VPInstruction::ExtractVectorForPart:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
@@ -1720,7 +1720,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return vputils::onlyFirstLaneUsed(this);
   case Instruction::Load:
   case VPInstruction::ActiveLaneMask:
-  case VPInstruction::ActiveLaneMaskForControlFlow:
+  case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -1793,8 +1793,8 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
     break;
-  case VPInstruction::ActiveLaneMaskForControlFlow:
-    O << "active lane mask control flow";
+  case VPInstruction::WideActiveLaneMask:
+    O << "wide active lane mask";
     break;
   case VPInstruction::IncomingAliasMask:
     O << "incoming-alias-mask";
@@ -1847,8 +1847,8 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
     break;
-  case VPInstruction::ExtractSubvectorForPart:
-    O << "extract-subvector-for-part";
+  case VPInstruction::ExtractVectorForPart:
+    O << "extract-vector-for-part";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";

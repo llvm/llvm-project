@@ -448,9 +448,9 @@ m_ExtractLastLaneOfLastPart(const Op0_t &Op0) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline VPInstruction_match<VPInstruction::ExtractSubvectorForPart, Op0_t, Op1_t>
-m_ExtractSubvectorForPart(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_VPInstruction<VPInstruction::ExtractSubvectorForPart>(Op0, Op1);
+inline VPInstruction_match<VPInstruction::ExtractVectorForPart, Op0_t, Op1_t>
+m_ExtractVectorForPart(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::ExtractVectorForPart>(Op0, Op1);
 }
 
 template <typename Op0_t>
@@ -466,12 +466,10 @@ m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline VPInstruction_match<VPInstruction::ActiveLaneMaskForControlFlow, Op0_t,
-                           Op1_t, Op2_t>
-m_ActiveLaneMaskForControlFlow(const Op0_t &Op0, const Op1_t &Op1,
-                               const Op2_t &Op2) {
-  return m_VPInstruction<VPInstruction::ActiveLaneMaskForControlFlow>(Op0, Op1,
-                                                                      Op2);
+inline VPInstruction_match<VPInstruction::WideActiveLaneMask, Op0_t, Op1_t,
+                           Op2_t>
+m_WideActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<VPInstruction::WideActiveLaneMask>(Op0, Op1, Op2);
 }
 
 inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {

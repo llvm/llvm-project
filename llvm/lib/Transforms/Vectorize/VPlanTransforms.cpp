@@ -2054,13 +2054,13 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
                       m_VPValue())) ||
       match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
                       m_VPValue(), m_VPValue(), m_VPValue())))) ||
-      match(Term, m_BranchOnCond(m_Not(m_ExtractSubvectorForPart(
-                      m_ActiveLaneMaskForControlFlow(m_VPValue(), m_VPValue(),
-                                                     m_VPValue()),
-                      m_ZeroInt()))))) {
+      match(Term,
+            m_BranchOnCond(m_Not(m_ExtractVectorForPart(
+                m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()),
+                m_ZeroInt()))))) {
     // Try to simplify the branch condition if VectorTC <= VF * UF when the
     // latch terminator is BranchOnCount, BranchOnCond(Not(ActiveLaneMask)) or
-    // BranchOnCond(Not(ExtractSubvectorForPart(ActiveLaneMaskForControlFlow),
+    // BranchOnCond(Not(ExtractVectorForPart(WideActiveLaneMask),
     // 0))
     const SCEV *VectorTripCount =
         vputils::getSCEVExprForVPValue(&Plan.getVectorTripCount(), PSE);

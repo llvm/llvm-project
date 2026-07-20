@@ -1244,10 +1244,9 @@ public:
     //    mask[i] = icmpt ult (op0 + i), op1
     // The size of the mask returned is VF * Multiplier (UF, third op).
     ActiveLaneMask,
-    ActiveLaneMaskForControlFlow,
-    // Extracts each unrolled part of a widened active lane mask when used
-    // for control flow.
-    ExtractSubvectorForPart,
+    WideActiveLaneMask,
+    // Extracts each unrolled part of a (VF * UF) widened vector/mask.
+    ExtractVectorForPart,
     ExplicitVectorLength,
     // Represents the incoming loop-invariant alias-mask. All memory accesses
     // in the loop must stay within the active lanes.

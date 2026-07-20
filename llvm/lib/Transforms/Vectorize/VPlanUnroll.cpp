@@ -332,7 +332,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractSubvectorForPart>(
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractVectorForPart>(
                       m_VPValue(Op), m_VPValue()))) {
       Copy->setOperand(0, Op);
       Copy->setOperand(1, Plan.getConstantInt(64, Part));
@@ -477,8 +477,8 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
-    if (match(&R, m_ActiveLaneMaskForControlFlow(m_VPValue(), m_VPValue(),
-                                                 m_VPValue()))) {
+    if (match(&R,
+              m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()))) {
       auto *ALM = cast<VPInstruction>(&R);
       addUniformForAllParts(ALM);
       ALM->setOperand(2, Plan.getConstantInt(64, UF));

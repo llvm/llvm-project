@@ -197,13 +197,12 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
     // (an intrinsic or a phi), or the icmp checked below.
     if (match(Mask, m_HeaderMask()) || isa<VPActiveLaneMaskPHIRecipe>(Mask) ||
         match(Mask, m_VPInstruction<VPInstruction::ActiveLaneMask>()) ||
-        match(Mask,
-              m_VPInstruction<VPInstruction::ActiveLaneMaskForControlFlow>()))
+        match(Mask, m_VPInstruction<VPInstruction::WideActiveLaneMask>()))
       continue;
 
     if (match(Mask, m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue())) ||
-        match(Mask, m_ActiveLaneMaskForControlFlow(m_VPValue(), m_VPValue(),
-                                                   m_VPValue())))
+        match(Mask,
+              m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue())))
       continue;
 
     CmpPredicate Pred;
