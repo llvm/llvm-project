@@ -14938,8 +14938,8 @@ define void @freeze_v2i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 3, v0
@@ -14958,8 +14958,8 @@ define void @freeze_v2i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GFX7-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
+; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NEXT:    v_and_b32_e32 v0, 3, v0
@@ -14974,8 +14974,8 @@ define void @freeze_v2i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX8-NEXT:    v_lshlrev_b16_e32 v1, 1, v1
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-NEXT:    v_and_b32_e32 v0, 3, v0
@@ -14990,8 +14990,8 @@ define void @freeze_v2i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v1, 1, v1
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_and_b32_e32 v0, 3, v0
@@ -15007,8 +15007,8 @@ define void @freeze_v2i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX10-NEXT:    v_lshlrev_b16 v1, 1, v1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-NEXT:    v_lshlrev_b16 v1, 1, v1
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_and_b32_e32 v0, 3, v0
 ; GFX10-NEXT:    global_store_byte v[2:3], v0, off
@@ -15022,8 +15022,8 @@ define void @freeze_v2i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 3
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[2:3], v0, off
@@ -15037,8 +15037,8 @@ define void @freeze_v2i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v1, 1, v1
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v1, 1, v1
 ; GFX11-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX11-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 3, v0
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[2:3], v0, off
@@ -15052,8 +15052,8 @@ define void @freeze_v2i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 1, v1
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 1, v1
 ; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 3, v0
 ; GFX11-GISEL-NEXT:    global_store_b8 v[2:3], v0, off
@@ -15162,11 +15162,11 @@ define void @freeze_v3i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
-; GFX10-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX10-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX10-NEXT:    v_lshlrev_b16 v1, 2, v4
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_and_b32_e32 v0, 7, v0
@@ -15181,12 +15181,12 @@ define void @freeze_v3i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
-; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 2, v4.l
+; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 7
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[2:3], v0, off
@@ -15200,11 +15200,11 @@ define void @freeze_v3i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
-; GFX11-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX11-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v1, 2, v4
 ; GFX11-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX11-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 7, v0
@@ -15219,11 +15219,11 @@ define void @freeze_v3i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX11-GISEL-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
-; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 2, v4
 ; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 7, v0
@@ -15252,8 +15252,8 @@ define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v6
 ; GFX6-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GFX6-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v4, 2, v4
 ; GFX6-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -15280,8 +15280,8 @@ define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX7-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v6
 ; GFX7-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GFX7-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v4, 2, v4
 ; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -15304,8 +15304,8 @@ define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v6
 ; GFX8-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GFX8-NEXT:    v_lshlrev_b16_e32 v0, 1, v0
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GFX8-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; GFX8-NEXT:    v_lshlrev_b16_e32 v4, 2, v4
 ; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -15328,8 +15328,8 @@ define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v6
 ; GFX9-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v0, 1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GFX9-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v4, 2, v4
 ; GFX9-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -15349,13 +15349,13 @@ define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
-; GFX10-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v7
 ; GFX10-NEXT:    v_lshlrev_b16 v4, 2, v4
+; GFX10-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GFX10-NEXT:    v_lshlrev_b16 v1, 3, v1
@@ -15372,16 +15372,16 @@ define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
-; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v7
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 2, v4.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 2, v4.l
+; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v5.l
+; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 3, v1.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 15
@@ -15396,13 +15396,13 @@ define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
-; GFX11-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v7
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v4, 2, v4
+; GFX11-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v1, 3, v1
@@ -15419,13 +15419,13 @@ define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX11-GISEL-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
-; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v7
 ; GFX11-GISEL-NEXT:    v_lshlrev_b16 v4, 2, v4
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 3, v1

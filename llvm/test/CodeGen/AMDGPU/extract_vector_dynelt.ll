@@ -3059,15 +3059,15 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0x3ff19999
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0x4000cccc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
+; GCN-NEXT:    v_mov_b32_e32 v4, 0x4008cccc
 ; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x9999999a
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0xcccccccd
-; GCN-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
-; GCN-NEXT:    v_mov_b32_e32 v4, 0x4008cccc
-; GCN-NEXT:    s_or_b64 vcc, s[4:5], vcc
 ; GCN-NEXT:    v_cndmask_b32_e64 v3, v3, v4, s[4:5]
-; GCN-NEXT:    v_cndmask_b32_e32 v2, v1, v2, vcc
+; GCN-NEXT:    s_or_b64 vcc, s[4:5], vcc
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0x40106666
+; GCN-NEXT:    v_cndmask_b32_e32 v2, v1, v2, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0x40146666

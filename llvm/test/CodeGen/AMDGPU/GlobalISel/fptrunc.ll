@@ -305,11 +305,11 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
 ; GFX11-FAKE16-NEXT:    v_bfe_u32 v3, v1, 20, 11
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX11-FAKE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-FAKE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_and_or_b32 v0, 0xffe, v2, v0
 ; GFX11-FAKE16-NEXT:    v_med3_i32 v2, v4, 0, 13
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -352,11 +352,11 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ; GFX11-TRUE16-NEXT:    v_and_or_b32 v0, 0x1ff, v1, v0
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
 ; GFX11-TRUE16-NEXT:    v_bfe_u32 v3, v1, 20, 11
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX11-TRUE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_and_or_b32 v0, 0xffe, v2, v0
 ; GFX11-TRUE16-NEXT:    v_med3_i32 v2, v4, 0, 13
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -401,11 +401,11 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
 ; GFX12-FAKE16-NEXT:    v_bfe_u32 v3, v1, 20, 11
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX12-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX12-FAKE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-FAKE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_and_or_b32 v0, 0xffe, v2, v0
 ; GFX12-FAKE16-NEXT:    v_med3_i32 v2, v4, 0, 13
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -455,11 +455,11 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0x1ff, v1, v0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v3, v1, 20, 11
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX12-TRUE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-TRUE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xffe, v2, v0
 ; GFX12-TRUE16-NEXT:    v_med3_i32 v2, v4, 0, 13
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -515,12 +515,12 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ; GFX1250-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
 ; GFX1250-FAKE16-NEXT:    v_bfe_u32 v3, v1, 20, 11
 ; GFX1250-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1250-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GFX1250-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-FAKE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
 ; GFX1250-FAKE16-NEXT:    v_add_nc_u32_e32 v3, 0xfffffc10, v3
-; GFX1250-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-FAKE16-NEXT:    v_and_or_b32 v0, 0xffe, v2, v0
 ; GFX1250-FAKE16-NEXT:    v_med3_i32 v2, v4, 0, 13
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -529,10 +529,10 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-FAKE16-NEXT:    v_lshlrev_b32_e32 v2, v2, v5
 ; GFX1250-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v4
-; GFX1250-FAKE16-NEXT:    v_lshl_or_b32 v4, v3, 12, v0
 ; GFX1250-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-FAKE16-NEXT:    v_lshl_or_b32 v4, v3, 12, v0
 ; GFX1250-FAKE16-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 1, v3
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-FAKE16-NEXT:    v_or_b32_e32 v2, v5, v2
 ; GFX1250-FAKE16-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc_lo
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
@@ -564,12 +564,12 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ; GFX1250-TRUE16-NEXT:    v_and_or_b32 v0, 0x1ff, v1, v0
 ; GFX1250-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
 ; GFX1250-TRUE16-NEXT:    v_bfe_u32 v3, v1, 20, 11
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1250-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GFX1250-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-TRUE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
 ; GFX1250-TRUE16-NEXT:    v_add_nc_u32_e32 v3, 0xfffffc10, v3
-; GFX1250-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-TRUE16-NEXT:    v_and_or_b32 v0, 0xffe, v2, v0
 ; GFX1250-TRUE16-NEXT:    v_med3_i32 v2, v4, 0, 13
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -578,10 +578,10 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, v2, v5
 ; GFX1250-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v4
-; GFX1250-TRUE16-NEXT:    v_lshl_or_b32 v4, v3, 12, v0
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX1250-TRUE16-NEXT:    v_lshl_or_b32 v4, v3, 12, v0
 ; GFX1250-TRUE16-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 1, v3
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_or_b32_e32 v2, v5, v2
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc_lo
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)

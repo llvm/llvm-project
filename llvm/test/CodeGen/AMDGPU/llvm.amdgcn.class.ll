@@ -865,9 +865,9 @@ define amdgpu_kernel void @test_fold_or_class_f32_0(ptr addrspace(1) %out, ptr a
 ; SI-SDAG-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-SDAG-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
+; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, s0
 ; SI-SDAG-NEXT:    s_mov_b32 s5, s1
-; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SI-SDAG-NEXT:    v_cmp_class_f32_e64 s[0:1], v0, 3
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
@@ -919,9 +919,9 @@ define amdgpu_kernel void @test_fold_or3_class_f32_0(ptr addrspace(1) %out, ptr 
 ; SI-SDAG-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-SDAG-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
+; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, s0
 ; SI-SDAG-NEXT:    s_mov_b32 s5, s1
-; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SI-SDAG-NEXT:    v_cmp_class_f32_e64 s[0:1], v0, 7
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
@@ -978,9 +978,9 @@ define amdgpu_kernel void @test_fold_or_all_tests_class_f32_0(ptr addrspace(1) %
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-SDAG-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
 ; SI-SDAG-NEXT:    s_movk_i32 s2, 0x3ff
+; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, s0
 ; SI-SDAG-NEXT:    s_mov_b32 s5, s1
-; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SI-SDAG-NEXT:    v_cmp_class_f32_e64 s[0:1], v0, s2
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
@@ -1066,9 +1066,9 @@ define amdgpu_kernel void @test_fold_or_class_f32_1(ptr addrspace(1) %out, ptr a
 ; SI-SDAG-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-SDAG-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
+; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, s0
 ; SI-SDAG-NEXT:    s_mov_b32 s5, s1
-; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SI-SDAG-NEXT:    v_cmp_class_f32_e64 s[0:1], v0, 12
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
@@ -1120,9 +1120,9 @@ define amdgpu_kernel void @test_fold_or_class_f32_2(ptr addrspace(1) %out, ptr a
 ; SI-SDAG-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-SDAG-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
+; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s4, s0
 ; SI-SDAG-NEXT:    s_mov_b32 s5, s1
-; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SI-SDAG-NEXT:    v_cmp_class_f32_e64 s[0:1], v0, 7
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]

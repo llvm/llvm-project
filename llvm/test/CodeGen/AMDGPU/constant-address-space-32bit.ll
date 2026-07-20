@@ -2503,8 +2503,8 @@ define amdgpu_vs <2 x bfloat> @load_v2bf16(ptr addrspace(6) inreg %p0, ptr addrs
 ; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v1, v0
 ; GFX8-NEXT:    v_add_u32_e32 v1, vcc, 0x7fff, v1
 ; GFX8-NEXT:    v_or_b32_e32 v2, 0x400000, v0
-; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX8-NEXT:    s_and_b32 s1, s1, 0xffff0000
+; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff0000
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
@@ -2535,8 +2535,8 @@ define amdgpu_vs <2 x bfloat> @load_v2bf16(ptr addrspace(6) inreg %p0, ptr addrs
 ; GFX9-NEXT:    v_add_u32_e32 v1, v1, v0
 ; GFX9-NEXT:    v_add_u32_e32 v1, 0x7fff, v1
 ; GFX9-NEXT:    v_or_b32_e32 v2, 0x400000, v0
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX9-NEXT:    s_lshl_b32 s0, s5, 16
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GFX9-NEXT:    s_lshl_b32 s1, s4, 16
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0

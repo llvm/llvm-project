@@ -650,8 +650,8 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX9-NEXT:    v_rndne_f32_e32 v3, v3
 ; GFX9-NEXT:    v_fma_f32 v1, -v3, v0, v1
 ; GFX9-NEXT:    v_add_f32_e32 v0, v1, v0
-; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v1
 ; GFX9-NEXT:    v_add_u32_e32 v2, -1, v2
+; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX9-NEXT:    v_ldexp_f32 v0, v0, v2
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -732,9 +732,9 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX942-NEXT:    v_rndne_f32_e32 v3, v3
 ; GFX942-NEXT:    v_fma_f32 v1, -v3, v0, v1
 ; GFX942-NEXT:    v_add_f32_e32 v0, v1, v0
-; GFX942-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v1
 ; GFX942-NEXT:    v_add_u32_e32 v2, -1, v2
-; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v1
+; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX942-NEXT:    v_ldexp_f32 v0, v0, v2
 ; GFX942-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0

@@ -1445,8 +1445,8 @@ define amdgpu_kernel void @commute_frameindex(ptr addrspace(1) nocapture %out) #
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s14, -1
-; GCN-NEXT:    s_mov_b32 s4, 0
 ; GCN-NEXT:    s_mov_b32 s15, 0xe8f000
+; GCN-NEXT:    s_mov_b32 s4, 0
 ; GCN-NEXT:    s_add_u32 s12, s12, s11
 ; GCN-NEXT:    s_addc_u32 s13, s13, 0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v0

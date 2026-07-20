@@ -37,9 +37,9 @@ define amdgpu_ps <2 x i32> @uniform_v_to_s_2_i32(<2 x float> inreg %a, <2 x floa
 ; GFX11-LABEL: uniform_v_to_s_2_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_max_f32_e64 v0, s0, s2
-; GFX11-NEXT:    v_cmp_o_f32_e64 vcc_lo, s0, s2
 ; GFX11-NEXT:    v_max_f32_e64 v1, s1, s3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_cmp_o_f32_e64 vcc_lo, s0, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v0, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e64 vcc_lo, s1, s3
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v1, vcc_lo

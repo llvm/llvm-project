@@ -1765,10 +1765,10 @@ define i65 @v_ashr_i65(i65 %value, i65 %amount) {
 ; GFX10-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX10-NEXT:    v_lshlrev_b64 v[8:9], v8, v[4:5]
-; GFX10-NEXT:    v_or_b32_e32 v7, v7, v9
 ; GFX10-NEXT:    v_or_b32_e32 v6, v6, v8
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc_lo
+; GFX10-NEXT:    v_or_b32_e32 v7, v7, v9
 ; GFX10-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v3
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
@@ -1784,9 +1784,9 @@ define i65 @v_ashr_i65(i65 %value, i65 %amount) {
 ; GFX11-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX11-NEXT:    v_lshlrev_b64 v[8:9], v8, v[4:5]
-; GFX11-NEXT:    v_or_b32_e32 v7, v7, v9
 ; GFX11-NEXT:    v_or_b32_e32 v6, v6, v8
-; GFX11-NEXT:    v_dual_cndmask_b32 v5, v5, v7 :: v_dual_cndmask_b32 v4, v4, v6
+; GFX11-NEXT:    v_or_b32_e32 v7, v7, v9
+; GFX11-NEXT:    v_dual_cndmask_b32 v4, v4, v6 :: v_dual_cndmask_b32 v5, v5, v7
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v3
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v4, v0 :: v_dual_cndmask_b32 v1, v5, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

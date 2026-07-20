@@ -571,8 +571,8 @@ define amdgpu_kernel void @v_fabs_fold_self_v2bf16(ptr addrspace(1) %out, ptr ad
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, s2, v4
 ; VI-NEXT:    v_add_u32_e32 v6, vcc, 0x7fff, v6
 ; VI-NEXT:    v_or_b32_e32 v5, 0x400000, v3
-; VI-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; VI-NEXT:    v_or_b32_e32 v7, 0x400000, v2
+; VI-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v4, v5, vcc
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v6, v7, vcc
@@ -597,12 +597,12 @@ define amdgpu_kernel void @v_fabs_fold_self_v2bf16(ptr addrspace(1) %out, ptr ad
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v3, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v0, v0, v4
 ; GFX9-NEXT:    v_bfe_u32 v3, v2, 16, 1
-; GFX9-NEXT:    v_or_b32_e32 v4, 0x400000, v2
 ; GFX9-NEXT:    v_bfe_u32 v5, v0, 16, 1
-; GFX9-NEXT:    v_add3_u32 v3, v3, v2, s2
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    v_or_b32_e32 v4, 0x400000, v2
 ; GFX9-NEXT:    v_or_b32_e32 v6, 0x400000, v0
+; GFX9-NEXT:    v_add3_u32 v3, v3, v2, s2
 ; GFX9-NEXT:    v_add3_u32 v5, v5, v0, s2
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, v3, v4, vcc
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v5, v6, vcc
@@ -633,14 +633,14 @@ define amdgpu_kernel void @v_fabs_fold_self_v2bf16(ptr addrspace(1) %out, ptr ad
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX11-TRUE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
 ; GFX11-TRUE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
+; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_cndmask_b32 v1, v3, v5
+; GFX11-TRUE16-NEXT:    v_dual_cndmask_b32 v1, v3, v5 :: v_dual_mov_b32 v2, 0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
 ; GFX11-TRUE16-NEXT:    global_store_b32 v2, v1, s[0:1]
@@ -752,8 +752,8 @@ define amdgpu_kernel void @v_fabs_fold_v2bf16(ptr addrspace(1) %out, ptr addrspa
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, s2, v4
 ; VI-NEXT:    v_add_u32_e32 v6, vcc, 0x7fff, v6
 ; VI-NEXT:    v_or_b32_e32 v5, 0x400000, v3
-; VI-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; VI-NEXT:    v_or_b32_e32 v7, 0x400000, v2
+; VI-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v4, v5, vcc
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v6, v7, vcc
@@ -779,12 +779,12 @@ define amdgpu_kernel void @v_fabs_fold_v2bf16(ptr addrspace(1) %out, ptr addrspa
 ; GFX9-NEXT:    v_mul_f32_e32 v2, s3, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v0, s4, v0
 ; GFX9-NEXT:    v_bfe_u32 v3, v2, 16, 1
-; GFX9-NEXT:    v_or_b32_e32 v4, 0x400000, v2
 ; GFX9-NEXT:    v_bfe_u32 v5, v0, 16, 1
-; GFX9-NEXT:    v_add3_u32 v3, v3, v2, s2
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    v_or_b32_e32 v4, 0x400000, v2
 ; GFX9-NEXT:    v_or_b32_e32 v6, 0x400000, v0
+; GFX9-NEXT:    v_add3_u32 v3, v3, v2, s2
 ; GFX9-NEXT:    v_add3_u32 v5, v5, v0, s2
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, v3, v4, vcc
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v5, v6, vcc
@@ -863,7 +863,7 @@ define amdgpu_kernel void @v_fabs_fold_v2bf16(ptr addrspace(1) %out, ptr addrspa
 ; GFX11-FAKE16-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
 ; GFX11-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_cndmask_b32 v1, v3, v5
+; GFX11-FAKE16-NEXT:    v_dual_cndmask_b32 v1, v3, v5 :: v_dual_mov_b32 v2, 0
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
 ; GFX11-FAKE16-NEXT:    global_store_b32 v2, v0, s[0:1]
@@ -931,8 +931,8 @@ define amdgpu_kernel void @v_extract_fabs_fold_v2bf16(ptr addrspace(1) %in) #0 {
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s0, v2
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 0x7fff, v4
 ; VI-NEXT:    v_or_b32_e32 v3, 0x400000, v1
-; VI-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; VI-NEXT:    v_or_b32_e32 v5, 0x400000, v0
+; VI-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
@@ -957,12 +957,12 @@ define amdgpu_kernel void @v_extract_fabs_fold_v2bf16(ptr addrspace(1) %in) #0 {
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 4.0, v1
 ; GFX9-NEXT:    v_add_f32_e32 v0, 2.0, v0
 ; GFX9-NEXT:    v_bfe_u32 v2, v1, 16, 1
-; GFX9-NEXT:    v_or_b32_e32 v3, 0x400000, v1
 ; GFX9-NEXT:    v_bfe_u32 v4, v0, 16, 1
-; GFX9-NEXT:    v_add3_u32 v2, v2, v1, s0
-; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
+; GFX9-NEXT:    v_or_b32_e32 v3, 0x400000, v1
 ; GFX9-NEXT:    v_or_b32_e32 v5, 0x400000, v0
+; GFX9-NEXT:    v_add3_u32 v2, v2, v1, s0
 ; GFX9-NEXT:    v_add3_u32 v4, v4, v0, s0
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
@@ -992,8 +992,8 @@ define amdgpu_kernel void @v_extract_fabs_fold_v2bf16(ptr addrspace(1) %in) #0 {
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX11-TRUE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
 ; GFX11-TRUE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
+; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
 ; GFX11-TRUE16-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)

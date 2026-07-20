@@ -2655,8 +2655,8 @@ define i48 @v_uaddsat_i48(i48 %lhs, i48 %rhs) {
 ; GFX6-NEXT:    s_mov_b32 s4, -1
 ; GFX6-NEXT:    s_mov_b32 s5, 0xffff
 ; GFX6-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
-; GFX6-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[0:1]
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0xffff
+; GFX6-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[0:1]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
@@ -2758,8 +2758,8 @@ define amdgpu_ps <2 x float> @uaddsat_i48_sv(i48 inreg %lhs, i48 %rhs) {
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_mov_b32 s3, 0xffff
 ; GFX6-NEXT:    v_addc_u32_e32 v1, vcc, v2, v1, vcc
-; GFX6-NEXT:    v_cmp_gt_u64_e32 vcc, s[2:3], v[0:1]
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0xffff
+; GFX6-NEXT:    v_cmp_gt_u64_e32 vcc, s[2:3], v[0:1]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
 ; GFX6-NEXT:    ; return to shader part epilog
@@ -2814,8 +2814,8 @@ define amdgpu_ps <2 x float> @uaddsat_i48_vs(i48 %lhs, i48 inreg %rhs) {
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_mov_b32 s3, 0xffff
 ; GFX6-NEXT:    v_addc_u32_e32 v1, vcc, v1, v2, vcc
-; GFX6-NEXT:    v_cmp_gt_u64_e32 vcc, s[2:3], v[0:1]
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0xffff
+; GFX6-NEXT:    v_cmp_gt_u64_e32 vcc, s[2:3], v[0:1]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
 ; GFX6-NEXT:    ; return to shader part epilog

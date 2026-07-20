@@ -140,11 +140,11 @@ define <2 x double> @test_v2s64(<2 x double> %a) #0 {
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_gt_f64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_cmp_gt_f64_e64 s[4:5], 0, v[2:3]
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s[4:5]
+; GCN-NEXT:    v_cmp_gt_f64_e32 vcc, 0, v[2:3]
+; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %fcmp = fcmp olt <2 x double> %a, zeroinitializer

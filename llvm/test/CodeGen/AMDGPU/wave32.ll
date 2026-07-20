@@ -2654,8 +2654,8 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) #1 {
 ; GFX1032-NEXT:  .LBB51_8: ; %Flow14
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX1032-NEXT:    v_cmp_lg_f32_e64 vcc_lo, s0, 0
-; GFX1032-NEXT:    s_brev_b32 s1, 1
 ; GFX1032-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v1, vcc_lo
+; GFX1032-NEXT:    s_brev_b32 s1, 1
 ; GFX1032-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_lshr_b32 s0, vcc_lo, 1
 ; GFX1032-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v0

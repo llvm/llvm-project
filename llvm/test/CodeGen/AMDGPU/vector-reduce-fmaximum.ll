@@ -266,8 +266,8 @@ define half @test_vector_reduce_fmaximum_v4half(<4 x half> %v) {
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v2, v3
 ; GFX7-NEXT:    v_cndmask_b32_e32 v2, v5, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v3, v0, v1
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v5, v3, vcc
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
@@ -288,8 +288,8 @@ define half @test_vector_reduce_fmaximum_v4half(<4 x half> %v) {
 ; GFX8-NEXT:    v_max_f16_e32 v4, v3, v2
 ; GFX8-NEXT:    v_mov_b32_e32 v5, 0x7e00
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v3, v2
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v5, v4, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v3, v0, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v5, v4, vcc
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v5, v3, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v1, v0, v2
@@ -321,8 +321,8 @@ define half @test_vector_reduce_fmaximum_v4half(<4 x half> %v) {
 ; GFX10-NEXT:    v_cmp_o_f16_sdwa vcc_lo, v0, v1 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0x7e00
 ; GFX10-NEXT:    v_cmp_o_f16_e64 s4, v0, v1
-; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v3, v2, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, v2, s4
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v3, v2, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_max_f16_e32 v2, v0, v1
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v1
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v2, vcc_lo
@@ -433,22 +433,22 @@ define half @test_vector_reduce_fmaximum_v8half(<8 x half> %v) {
 ; GFX7-NEXT:    v_cndmask_b32_e32 v5, v9, v5, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v6, v0, v2
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v2
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v9, v6, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v2, v1, v3
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v9, v6, vcc
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v1, v3
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v9, v2, vcc
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v9, v2, vcc
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v5
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v3, v4
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v5
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    v_max_f32_e32 v4, v3, v2
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v3, v2
-; GFX7-NEXT:    v_cndmask_b32_e32 v2, v9, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v3, v0, v1
+; GFX7-NEXT:    v_cndmask_b32_e32 v2, v9, v4, vcc
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v9, v3, vcc
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -477,14 +477,14 @@ define half @test_vector_reduce_fmaximum_v8half(<8 x half> %v) {
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v7, v8, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v6, v1, v3
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v1, v3
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v7, v6, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v3, v0, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v7, v6, vcc
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v0, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v7, v3, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v2, v5, v4
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v5, v4
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v7, v2, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v3, v0, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v7, v2, vcc
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v7, v3, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v1, v0, v2
@@ -536,13 +536,13 @@ define half @test_vector_reduce_fmaximum_v8half(<8 x half> %v) {
 ; GFX10-NEXT:    v_pk_max_f16 v6, v1, v3
 ; GFX10-NEXT:    v_cmp_o_f16_sdwa s4, v1, v3 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-NEXT:    v_cmp_o_f16_e64 s5, v0, v2
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, v5, s5
 ; GFX10-NEXT:    v_cndmask_b32_sdwa v2, v4, v5, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1, v3
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, v5, s5
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v6, vcc_lo
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, s4
-; GFX10-NEXT:    v_perm_b32 v5, v2, v0, 0x5040100
 ; GFX10-NEXT:    v_cndmask_b32_sdwa v3, v4, v6, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_perm_b32 v5, v2, v0, 0x5040100
 ; GFX10-NEXT:    v_cmp_o_f16_e64 s4, v0, v1
 ; GFX10-NEXT:    v_perm_b32 v6, v3, v1, 0x5040100
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v2, v3
@@ -585,35 +585,35 @@ define half @test_vector_reduce_fmaximum_v8half(<8 x half> %v) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0: ; %entry
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v4, v0, v2
+; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v7, v1, v3
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v2
-; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v7, v1, v3
-; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v10, 16, v4
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v8, 16, v3
+; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v10, 16, v4
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
+; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v2
+; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v7
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v4, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v6, v5
-; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v7
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v4, 0x7e00, v10, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1, v3
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v7, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v9, v8
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v3, v4, v0, 0x5040100
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v2, 0x7e00, v2, vcc_lo
+; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v3, v4, v0, 0x5040100
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v1
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v5, v2, v1, 0x5040100
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v3, v3, v5
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v3
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v3, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v4, v2
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v5, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-FAKE16-NEXT:    v_max_f16_e32 v2, v0, v1
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v1
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v2, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -708,32 +708,32 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v9, v14
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v6, v6
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-NEXT:    v_cndmask_b32_e32 v9, v17, v12, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v12, v8, v13
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v8, v13
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v6, v6
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-NEXT:    v_cndmask_b32_e32 v8, v17, v12, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v12, v1, v5
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v1, v5
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, v17, v12, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v5, v3, v7
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v3, v7
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v8, v8
 ; GFX7-NEXT:    v_cndmask_b32_e32 v3, v17, v5, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v5, v0, v4
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v4
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v5, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v4, v2, v6
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v2, v6
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v5, vcc
+; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v2, v6
 ; GFX7-NEXT:    v_cndmask_b32_e32 v2, v17, v4, vcc
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v5, v8
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v7, v9
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v6, v10
@@ -750,22 +750,22 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX7-NEXT:    v_cndmask_b32_e32 v5, v17, v5, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v6, v0, v2
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v2
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v6, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v2, v1, v3
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v6, vcc
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v1, v3
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v17, v2, vcc
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v17, v2, vcc
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v5
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v3, v4
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v5
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    v_max_f32_e32 v4, v3, v2
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v3, v2
-; GFX7-NEXT:    v_cndmask_b32_e32 v2, v17, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v3, v0, v1
+; GFX7-NEXT:    v_cndmask_b32_e32 v2, v17, v4, vcc
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v3, vcc
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -822,14 +822,14 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v11, v5, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v6, v1, v3
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v1, v3
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v11, v6, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v3, v0, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v11, v6, vcc
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v0, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v11, v3, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v2, v5, v4
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v5, v4
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v11, v2, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v3, v0, v1
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v11, v2, vcc
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v11, v3, vcc
 ; GFX8-NEXT:    v_max_f16_e32 v1, v0, v2
@@ -928,24 +928,24 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, s4
 ; GFX10-NEXT:    v_cndmask_b32_sdwa v6, v9, v12, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1, v5
-; GFX10-NEXT:    v_perm_b32 v5, v4, v0, 0x5040100
-; GFX10-NEXT:    v_cmp_o_f16_e64 s4, v0, v2
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v8, vcc_lo
+; GFX10-NEXT:    v_perm_b32 v5, v4, v0, 0x5040100
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v3, v7
 ; GFX10-NEXT:    v_perm_b32 v8, v6, v2, 0x5040100
-; GFX10-NEXT:    v_perm_b32 v7, v11, v1, 0x5040100
 ; GFX10-NEXT:    v_cndmask_b32_e32 v3, 0x7e00, v10, vcc_lo
-; GFX10-NEXT:    v_pk_max_f16 v5, v5, v8
+; GFX10-NEXT:    v_perm_b32 v7, v11, v1, 0x5040100
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v4, v6
+; GFX10-NEXT:    v_cmp_o_f16_e64 s4, v0, v2
+; GFX10-NEXT:    v_pk_max_f16 v5, v5, v8
 ; GFX10-NEXT:    v_perm_b32 v8, v13, v3, 0x5040100
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, v5, s4
+; GFX10-NEXT:    v_pk_max_f16 v2, v7, v8
 ; GFX10-NEXT:    v_cmp_o_f16_e64 s4, v11, v13
 ; GFX10-NEXT:    v_cndmask_b32_sdwa v4, v9, v5, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1, v3
-; GFX10-NEXT:    v_pk_max_f16 v2, v7, v8
-; GFX10-NEXT:    v_perm_b32 v3, v4, v0, 0x5040100
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v2, vcc_lo
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, s4
+; GFX10-NEXT:    v_perm_b32 v3, v4, v0, 0x5040100
 ; GFX10-NEXT:    v_cndmask_b32_sdwa v2, v9, v2, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_cmp_o_f16_e64 s4, v0, v1
 ; GFX10-NEXT:    v_perm_b32 v5, v2, v1, 0x5040100
@@ -1009,53 +1009,51 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0: ; %entry
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v8, v1, v5
+; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v10, v0, v4
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1, v5
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v10, v0, v4
-; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v11, 16, v4
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v9, 0x7e00, v8, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v8, 16, v8
-; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1, v5
+; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v11, 16, v4
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v12, 16, v0
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v13, 16, v10
-; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v5, v3, v7
+; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v1, v5
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v8, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v4
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v8, v2, v6
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v15, 16, v5
+; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v5, v3, v7
+; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v4
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v10, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v12, v11
+; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v4, 0x7e00, v13, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v12, 16, v6
+; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v13, 16, v2
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v14, 16, v8
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v10, 16, v7
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v11, 16, v3
-; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v4, 0x7e00, v13, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v13, 16, v2
+; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v15, 16, v5
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v2, v6
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v2, 0x7e00, v8, vcc_lo
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v13, v12
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v6, 0x7e00, v14, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v3, v7
-; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v7, v4, v0, 0x5040100
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v3, 0x7e00, v5, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v11, v10
-; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v10, v1, v9, 0x5040100
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v5, 0x7e00, v15, vcc_lo
+; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v7, v4, v0, 0x5040100
 ; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v8, v6, v2, 0x5040100
+; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v10, v1, v9, 0x5040100
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v2
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-FAKE16-NEXT:    v_perm_b32 v11, v5, v3, 0x5040100
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v7, v7, v8
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v8, v10, v11
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_4)
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v10, 16, v7
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v7, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v4, v6
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v8
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v4, 0x7e00, v10, vcc_lo
 ; GFX11-SDAG-FAKE16-NEXT:    v_cmp_o_f16_e32 vcc_lo, v9, v3
 ; GFX11-SDAG-FAKE16-NEXT:    v_cndmask_b32_e32 v3, 0x7e00, v8, vcc_lo
@@ -1310,8 +1308,8 @@ define float @test_vector_reduce_fmaximum_v4float(<4 x float> %v) {
 ; GFX7-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX7-NEXT:    v_mov_b32_e32 v5, 0x7fc00000
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v1, v3
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v5, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v3, v0, v2
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v5, v4, vcc
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v2
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v5, v3, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v2, v0, v1
@@ -1325,8 +1323,8 @@ define float @test_vector_reduce_fmaximum_v4float(<4 x float> %v) {
 ; GFX8-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v5, 0x7fc00000
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v1, v3
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v5, v4, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v3, v0, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v5, v4, vcc
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v5, v3, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v2, v0, v1
@@ -1356,8 +1354,8 @@ define float @test_vector_reduce_fmaximum_v4float(<4 x float> %v) {
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_max_f32_e32 v4, v1, v3
-; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v3
 ; GFX10-NEXT:    v_max_f32_e32 v5, v0, v2
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v3
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v4, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v2
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v5, vcc_lo
@@ -1415,8 +1413,8 @@ define float @test_vector_reduce_fmaximum_v8float(<8 x float> %v) {
 ; GFX7-NEXT:    v_cndmask_b32_e32 v2, v9, v8, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v6, v0, v4
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v4
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v9, v6, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v4, v3, v7
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v9, v6, vcc
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v3, v7
 ; GFX7-NEXT:    v_cndmask_b32_e32 v3, v9, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v4, v1, v5
@@ -1424,8 +1422,8 @@ define float @test_vector_reduce_fmaximum_v8float(<8 x float> %v) {
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, v9, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v1, v3
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v9, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v3, v0, v2
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v9, v4, vcc
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v2
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v9, v3, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v2, v0, v1
@@ -1442,8 +1440,8 @@ define float @test_vector_reduce_fmaximum_v8float(<8 x float> %v) {
 ; GFX8-NEXT:    v_cndmask_b32_e32 v2, v9, v8, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v6, v0, v4
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v4
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v9, v6, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v4, v3, v7
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v9, v6, vcc
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v3, v7
 ; GFX8-NEXT:    v_cndmask_b32_e32 v3, v9, v4, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v4, v1, v5
@@ -1451,8 +1449,8 @@ define float @test_vector_reduce_fmaximum_v8float(<8 x float> %v) {
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v9, v4, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v1, v3
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v9, v4, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v3, v0, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v9, v4, vcc
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v9, v3, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v2, v0, v1
@@ -1498,18 +1496,18 @@ define float @test_vector_reduce_fmaximum_v8float(<8 x float> %v) {
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_max_f32_e32 v8, v2, v6
-; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v6
 ; GFX10-NEXT:    v_max_f32_e32 v9, v3, v7
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v6
 ; GFX10-NEXT:    v_max_f32_e32 v6, v1, v5
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, 0x7fc00000, v8, vcc_lo
-; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v3, v7
 ; GFX10-NEXT:    v_max_f32_e32 v8, v0, v4
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v3, v7
 ; GFX10-NEXT:    v_cndmask_b32_e32 v3, 0x7fc00000, v9, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v5
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v6, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v4
-; GFX10-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v8, vcc_lo
+; GFX10-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v3
 ; GFX10-NEXT:    v_max_f32_e32 v5, v0, v2
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v4, vcc_lo
@@ -1534,12 +1532,12 @@ define float @test_vector_reduce_fmaximum_v8float(<8 x float> %v) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_dual_max_f32 v8, v0, v4 :: v_dual_cndmask_b32 v1, 0x7fc00000, v6
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v4
-; GFX11-NEXT:    v_max_f32_e32 v4, v1, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v8, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v3
 ; GFX11-NEXT:    v_max_f32_e32 v5, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v4, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v5, vcc_lo
@@ -1599,8 +1597,8 @@ define float @test_vector_reduce_fmaximum_v16float(<16 x float> %v) {
 ; GFX7-NEXT:    v_cndmask_b32_e32 v4, v17, v9, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v9, v0, v8
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v8
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v9, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v8, v6, v14
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v9, vcc
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v6, v14
 ; GFX7-NEXT:    v_cndmask_b32_e32 v6, v17, v8, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v8, v2, v10
@@ -1611,8 +1609,8 @@ define float @test_vector_reduce_fmaximum_v16float(<16 x float> %v) {
 ; GFX7-NEXT:    v_cndmask_b32_e32 v2, v17, v8, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v6, v0, v4
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v4
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v6, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v4, v3, v7
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v6, vcc
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v3, v7
 ; GFX7-NEXT:    v_cndmask_b32_e32 v3, v17, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v4, v1, v5
@@ -1620,8 +1618,8 @@ define float @test_vector_reduce_fmaximum_v16float(<16 x float> %v) {
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, v17, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v1, v3
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v17, v4, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v3, v0, v2
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v17, v4, vcc
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v2
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v17, v3, vcc
 ; GFX7-NEXT:    v_max_f32_e32 v2, v0, v1
@@ -1650,8 +1648,8 @@ define float @test_vector_reduce_fmaximum_v16float(<16 x float> %v) {
 ; GFX8-NEXT:    v_cndmask_b32_e32 v4, v17, v9, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v9, v0, v8
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v8
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v17, v9, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v8, v6, v14
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v17, v9, vcc
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v6, v14
 ; GFX8-NEXT:    v_cndmask_b32_e32 v6, v17, v8, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v8, v2, v10
@@ -1662,8 +1660,8 @@ define float @test_vector_reduce_fmaximum_v16float(<16 x float> %v) {
 ; GFX8-NEXT:    v_cndmask_b32_e32 v2, v17, v8, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v6, v0, v4
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v4
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v17, v6, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v4, v3, v7
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v17, v6, vcc
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v3, v7
 ; GFX8-NEXT:    v_cndmask_b32_e32 v3, v17, v4, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v4, v1, v5
@@ -1671,8 +1669,8 @@ define float @test_vector_reduce_fmaximum_v16float(<16 x float> %v) {
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v17, v4, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v1, v3
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v17, v4, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v3, v0, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v17, v4, vcc
 ; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v17, v3, vcc
 ; GFX8-NEXT:    v_max_f32_e32 v2, v0, v1
@@ -1750,31 +1748,31 @@ define float @test_vector_reduce_fmaximum_v16float(<16 x float> %v) {
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_max_f32_e32 v16, v5, v13
-; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v5, v13
 ; GFX10-NEXT:    v_max_f32_e32 v17, v1, v9
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v5, v13
 ; GFX10-NEXT:    v_max_f32_e32 v18, v7, v15
 ; GFX10-NEXT:    v_max_f32_e32 v13, v3, v11
 ; GFX10-NEXT:    v_cndmask_b32_e32 v5, 0x7fc00000, v16, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v9
 ; GFX10-NEXT:    v_max_f32_e32 v9, v6, v14
-; GFX10-NEXT:    v_max_f32_e32 v16, v4, v12
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v17, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v7, v15
 ; GFX10-NEXT:    v_max_f32_e32 v15, v2, v10
 ; GFX10-NEXT:    v_cndmask_b32_e32 v7, 0x7fc00000, v18, vcc_lo
+; GFX10-NEXT:    v_max_f32_e32 v16, v4, v12
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v6, v14
 ; GFX10-NEXT:    v_cndmask_b32_e32 v6, 0x7fc00000, v9, vcc_lo
-; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v10
 ; GFX10-NEXT:    v_max_f32_e32 v9, v0, v8
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v10
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, 0x7fc00000, v15, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v3, v11
-; GFX10-NEXT:    v_max_f32_e32 v10, v2, v6
 ; GFX10-NEXT:    v_cndmask_b32_e32 v3, 0x7fc00000, v13, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v4, v12
 ; GFX10-NEXT:    v_cndmask_b32_e32 v4, 0x7fc00000, v16, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v8
-; GFX10-NEXT:    v_max_f32_e32 v8, v3, v7
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v9, vcc_lo
+; GFX10-NEXT:    v_max_f32_e32 v10, v2, v6
+; GFX10-NEXT:    v_max_f32_e32 v8, v3, v7
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v6
 ; GFX10-NEXT:    v_max_f32_e32 v6, v1, v5
 ; GFX10-NEXT:    v_max_f32_e32 v9, v0, v4
@@ -1784,8 +1782,8 @@ define float @test_vector_reduce_fmaximum_v16float(<16 x float> %v) {
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v5
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v6, vcc_lo
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v4
-; GFX10-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v9, vcc_lo
+; GFX10-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v3
 ; GFX10-NEXT:    v_max_f32_e32 v5, v0, v2
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v4, vcc_lo
@@ -1805,46 +1803,46 @@ define float @test_vector_reduce_fmaximum_v16float(<16 x float> %v) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v5, 0x7fc00000, v16, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v9
-; GFX11-NEXT:    v_dual_max_f32 v16, v4, v12 :: v_dual_max_f32 v13, v3, v11
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v17, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, 0x7fc00000, v17 :: v_dual_max_f32 v16, v4, v12
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v7, v15
 ; GFX11-NEXT:    v_max_f32_e32 v15, v2, v10
 ; GFX11-NEXT:    v_max_f32_e32 v9, v6, v14
 ; GFX11-NEXT:    v_cndmask_b32_e32 v7, 0x7fc00000, v18, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v6, v14
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v6, 0x7fc00000, v9, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_dual_max_f32 v13, v3, v11 :: v_dual_cndmask_b32 v6, 0x7fc00000, v9
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v10
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, 0x7fc00000, v15, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v3, v11
-; GFX11-NEXT:    v_dual_max_f32 v10, v2, v6 :: v_dual_cndmask_b32 v3, 0x7fc00000, v13
+; GFX11-NEXT:    v_cndmask_b32_e32 v3, 0x7fc00000, v13, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v4, v12
-; GFX11-NEXT:    v_max_f32_e32 v9, v0, v8
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, 0x7fc00000, v16, vcc_lo
+; GFX11-NEXT:    v_dual_max_f32 v10, v2, v6 :: v_dual_max_f32 v9, v0, v8
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v8
 ; GFX11-NEXT:    v_max_f32_e32 v8, v3, v7
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v9, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v6
-; GFX11-NEXT:    v_dual_max_f32 v9, v0, v4 :: v_dual_cndmask_b32 v2, 0x7fc00000, v10
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, 0x7fc00000, v10, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v3, v7
 ; GFX11-NEXT:    v_dual_max_f32 v6, v1, v5 :: v_dual_cndmask_b32 v3, 0x7fc00000, v8
+; GFX11-NEXT:    v_max_f32_e32 v9, v0, v4
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v5
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v6, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v4
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v9, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_max_f32_e32 v4, v1, v3
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_max_f32_e32 v5, v0, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v4, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v5, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_max_f32_e32 v2, v0, v1
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v2, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1896,20 +1894,20 @@ define double @test_vector_reduce_fmaximum_v2double(<2 x double> %v) {
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
+; GFX7-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
 ; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
-; GFX7-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX7-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_vector_reduce_fmaximum_v2double:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
+; GFX8-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
 ; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
-; GFX8-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_vector_reduce_fmaximum_v2double:
@@ -1967,8 +1965,8 @@ define double @test_vector_reduce_fmaximum_v3double(<3 x double> %v) {
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_max_f64 v[6:7], v[0:1], v[2:3]
-; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX7-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX7-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
 ; GFX7-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
@@ -1981,8 +1979,8 @@ define double @test_vector_reduce_fmaximum_v3double(<3 x double> %v) {
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_max_f64 v[6:7], v[0:1], v[2:3]
-; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX8-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
 ; GFX8-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
@@ -2065,36 +2063,36 @@ define double @test_vector_reduce_fmaximum_v4double(<4 x double> %v) {
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_max_f64 v[8:9], v[2:3], v[6:7]
+; GFX7-NEXT:    v_max_f64 v[10:11], v[0:1], v[4:5]
+; GFX7-NEXT:    v_mov_b32_e32 v12, 0x7ff80000
 ; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[6:7]
-; GFX7-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[4:5], v[0:1], v[4:5]
-; GFX7-NEXT:    v_mov_b32_e32 v10, 0x7ff80000
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v9, v10, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v3, v3, v10, s[4:5]
-; GFX7-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[4:5]
-; GFX7-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[0:1]
+; GFX7-NEXT:    v_cndmask_b32_e32 v3, v9, v12, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v11, v12, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v10, 0, vcc
+; GFX7-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX7-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v5, v10, vcc
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v5, v12, vcc
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: test_vector_reduce_fmaximum_v4double:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_max_f64 v[8:9], v[2:3], v[6:7]
+; GFX8-NEXT:    v_max_f64 v[10:11], v[0:1], v[4:5]
+; GFX8-NEXT:    v_mov_b32_e32 v12, 0x7ff80000
 ; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[6:7]
-; GFX8-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[4:5], v[0:1], v[4:5]
-; GFX8-NEXT:    v_mov_b32_e32 v10, 0x7ff80000
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v9, v10, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v3, v3, v10, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[4:5]
-; GFX8-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[0:1]
+; GFX8-NEXT:    v_cndmask_b32_e32 v3, v9, v12, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v11, v12, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, v10, 0, vcc
+; GFX8-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v5, v10, vcc
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v5, v12, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_vector_reduce_fmaximum_v4double:
@@ -2122,15 +2120,15 @@ define double @test_vector_reduce_fmaximum_v4double(<4 x double> %v) {
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_max_f64 v[8:9], v[2:3], v[6:7]
+; GFX10-NEXT:    v_max_f64 v[10:11], v[0:1], v[4:5]
 ; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[6:7]
-; GFX10-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s4, v[0:1], v[4:5]
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v9, 0x7ff80000, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s4
-; GFX10-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[0:1]
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, v9, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[4:5]
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v11, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v10, 0, vcc_lo
+; GFX10-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, v5, 0x7ff80000, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -2139,17 +2137,17 @@ define double @test_vector_reduce_fmaximum_v4double(<4 x double> %v) {
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_max_f64 v[8:9], v[2:3], v[6:7]
+; GFX11-NEXT:    v_max_f64 v[10:11], v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[6:7]
-; GFX11-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[0:1], v[4:5]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v9, 0x7ff80000, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_cndmask_b32_e64 v3, v9, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[4:5]
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v11, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v10, 0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[0:1]
+; GFX11-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v5, 0x7ff80000, vcc_lo
@@ -2186,30 +2184,30 @@ define double @test_vector_reduce_fmaximum_v8double(<8 x double> %v) {
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_max_f64 v[16:17], v[4:5], v[12:13]
-; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[12:13]
-; GFX7-NEXT:    v_max_f64 v[4:5], v[0:1], v[8:9]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[4:5], v[0:1], v[8:9]
-; GFX7-NEXT:    v_max_f64 v[0:1], v[6:7], v[14:15]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[6:7], v[6:7], v[14:15]
-; GFX7-NEXT:    v_max_f64 v[6:7], v[2:3], v[10:11]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[8:9], v[2:3], v[10:11]
 ; GFX7-NEXT:    v_mov_b32_e32 v18, 0x7ff80000
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[12:13]
+; GFX7-NEXT:    v_max_f64 v[4:5], v[6:7], v[14:15]
+; GFX7-NEXT:    v_cndmask_b32_e32 v13, v17, v18, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v12, v16, 0, vcc
+; GFX7-NEXT:    v_max_f64 v[16:17], v[2:3], v[10:11]
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[14:15]
+; GFX7-NEXT:    v_max_f64 v[6:7], v[0:1], v[8:9]
+; GFX7-NEXT:    v_cndmask_b32_e32 v5, v5, v18, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[10:11]
 ; GFX7-NEXT:    v_cndmask_b32_e32 v3, v17, v18, vcc
 ; GFX7-NEXT:    v_cndmask_b32_e64 v2, v16, 0, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v5, v5, v18, s[4:5]
-; GFX7-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s[4:5]
-; GFX7-NEXT:    v_cndmask_b32_e64 v1, v1, v18, s[6:7]
-; GFX7-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[6:7]
-; GFX7-NEXT:    v_cndmask_b32_e64 v7, v7, v18, s[8:9]
-; GFX7-NEXT:    v_cndmask_b32_e64 v6, v6, 0, s[8:9]
-; GFX7-NEXT:    v_max_f64 v[8:9], v[6:7], v[0:1]
-; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[0:1]
-; GFX7-NEXT:    v_max_f64 v[0:1], v[4:5], v[2:3]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[4:5], v[4:5], v[2:3]
-; GFX7-NEXT:    v_cndmask_b32_e32 v3, v9, v18, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v1, v1, v18, s[4:5]
-; GFX7-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[4:5]
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[8:9]
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v7, v18, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX7-NEXT:    v_max_f64 v[10:11], v[2:3], v[4:5]
+; GFX7-NEXT:    v_max_f64 v[6:7], v[0:1], v[12:13]
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e32 v3, v11, v18, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v2, v10, 0, vcc
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[12:13]
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v7, v18, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
 ; GFX7-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
 ; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX7-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
@@ -2220,30 +2218,30 @@ define double @test_vector_reduce_fmaximum_v8double(<8 x double> %v) {
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_max_f64 v[16:17], v[4:5], v[12:13]
-; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[12:13]
-; GFX8-NEXT:    v_max_f64 v[4:5], v[0:1], v[8:9]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[4:5], v[0:1], v[8:9]
-; GFX8-NEXT:    v_max_f64 v[0:1], v[6:7], v[14:15]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[6:7], v[6:7], v[14:15]
-; GFX8-NEXT:    v_max_f64 v[6:7], v[2:3], v[10:11]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[8:9], v[2:3], v[10:11]
 ; GFX8-NEXT:    v_mov_b32_e32 v18, 0x7ff80000
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[12:13]
+; GFX8-NEXT:    v_max_f64 v[4:5], v[6:7], v[14:15]
+; GFX8-NEXT:    v_cndmask_b32_e32 v13, v17, v18, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v12, v16, 0, vcc
+; GFX8-NEXT:    v_max_f64 v[16:17], v[2:3], v[10:11]
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[14:15]
+; GFX8-NEXT:    v_max_f64 v[6:7], v[0:1], v[8:9]
+; GFX8-NEXT:    v_cndmask_b32_e32 v5, v5, v18, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[10:11]
 ; GFX8-NEXT:    v_cndmask_b32_e32 v3, v17, v18, vcc
 ; GFX8-NEXT:    v_cndmask_b32_e64 v2, v16, 0, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v5, v5, v18, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e64 v1, v1, v18, s[6:7]
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[6:7]
-; GFX8-NEXT:    v_cndmask_b32_e64 v7, v7, v18, s[8:9]
-; GFX8-NEXT:    v_cndmask_b32_e64 v6, v6, 0, s[8:9]
-; GFX8-NEXT:    v_max_f64 v[8:9], v[6:7], v[0:1]
-; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[0:1]
-; GFX8-NEXT:    v_max_f64 v[0:1], v[4:5], v[2:3]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[4:5], v[4:5], v[2:3]
-; GFX8-NEXT:    v_cndmask_b32_e32 v3, v9, v18, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v1, v1, v18, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[4:5]
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[8:9]
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v7, v18, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX8-NEXT:    v_max_f64 v[10:11], v[2:3], v[4:5]
+; GFX8-NEXT:    v_max_f64 v[6:7], v[0:1], v[12:13]
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e32 v3, v11, v18, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, v10, 0, vcc
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[12:13]
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v7, v18, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
 ; GFX8-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
 ; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
@@ -2295,31 +2293,31 @@ define double @test_vector_reduce_fmaximum_v8double(<8 x double> %v) {
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_max_f64 v[16:17], v[4:5], v[12:13]
+; GFX10-NEXT:    v_max_f64 v[18:19], v[6:7], v[14:15]
+; GFX10-NEXT:    v_max_f64 v[20:21], v[2:3], v[10:11]
+; GFX10-NEXT:    v_max_f64 v[22:23], v[0:1], v[8:9]
 ; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[4:5], v[12:13]
-; GFX10-NEXT:    v_max_f64 v[4:5], v[6:7], v[14:15]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s4, v[6:7], v[14:15]
-; GFX10-NEXT:    v_max_f64 v[6:7], v[2:3], v[10:11]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s5, v[2:3], v[10:11]
-; GFX10-NEXT:    v_max_f64 v[2:3], v[0:1], v[8:9]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s6, v[0:1], v[8:9]
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v17, 0x7ff80000, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v16, 0, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v5, v5, 0x7ff80000, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v7, v7, 0x7ff80000, s5
-; GFX10-NEXT:    v_cndmask_b32_e64 v6, v6, 0, s5
-; GFX10-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s6
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s6
-; GFX10-NEXT:    v_max_f64 v[8:9], v[6:7], v[4:5]
-; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[6:7], v[4:5]
-; GFX10-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s4, v[2:3], v[0:1]
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v9, 0x7ff80000, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v3, v5, 0x7ff80000, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v4, 0, s4
-; GFX10-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[0:1]
+; GFX10-NEXT:    v_cndmask_b32_e64 v5, v17, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v4, v16, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[6:7], v[14:15]
+; GFX10-NEXT:    v_cndmask_b32_e64 v7, v19, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v6, v18, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[10:11]
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, v21, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v20, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[8:9]
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v23, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v22, 0, vcc_lo
+; GFX10-NEXT:    v_max_f64 v[8:9], v[2:3], v[6:7]
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[6:7]
+; GFX10-NEXT:    v_max_f64 v[10:11], v[0:1], v[4:5]
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, v9, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[4:5]
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v11, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v10, 0, vcc_lo
+; GFX10-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, v5, 0x7ff80000, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -2328,36 +2326,36 @@ define double @test_vector_reduce_fmaximum_v8double(<8 x double> %v) {
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_max_f64 v[16:17], v[4:5], v[12:13]
+; GFX11-NEXT:    v_max_f64 v[18:19], v[6:7], v[14:15]
+; GFX11-NEXT:    v_max_f64 v[20:21], v[2:3], v[10:11]
+; GFX11-NEXT:    v_max_f64 v[22:23], v[0:1], v[8:9]
 ; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[4:5], v[12:13]
-; GFX11-NEXT:    v_max_f64 v[4:5], v[6:7], v[14:15]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[6:7], v[14:15]
-; GFX11-NEXT:    v_max_f64 v[6:7], v[2:3], v[10:11]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s1, v[2:3], v[10:11]
-; GFX11-NEXT:    v_max_f64 v[2:3], v[0:1], v[8:9]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s2, v[0:1], v[8:9]
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v17, 0x7ff80000, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v16, 0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v5, v5, 0x7ff80000, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v7, v7, 0x7ff80000, s1
-; GFX11-NEXT:    v_cndmask_b32_e64 v6, v6, 0, s1
-; GFX11-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s2
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_max_f64 v[8:9], v[6:7], v[4:5]
-; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[6:7], v[4:5]
-; GFX11-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[2:3], v[0:1]
+; GFX11-NEXT:    v_cndmask_b32_e64 v5, v17, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v4, v16, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[6:7], v[14:15]
+; GFX11-NEXT:    v_cndmask_b32_e64 v7, v19, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v6, v18, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[10:11]
+; GFX11-NEXT:    v_cndmask_b32_e64 v3, v21, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, v20, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[8:9]
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v23, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v22, 0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v9, 0x7ff80000, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v3, v5, 0x7ff80000, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v4, 0, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[0:1]
+; GFX11-NEXT:    v_max_f64 v[8:9], v[2:3], v[6:7]
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[6:7]
+; GFX11-NEXT:    v_max_f64 v[10:11], v[0:1], v[4:5]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_cndmask_b32_e64 v3, v9, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[4:5]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v11, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v10, 0, vcc_lo
+; GFX11-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v5, 0x7ff80000, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2402,64 +2400,64 @@ define double @test_vector_reduce_fmaximum_v16double(<16 x double> %v) {
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_load_dword v31, off, s[0:3], s32
-; GFX7-NEXT:    v_max_f64 v[32:33], v[8:9], v[24:25]
-; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[8:9], v[24:25]
-; GFX7-NEXT:    v_max_f64 v[8:9], v[0:1], v[16:17]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[4:5], v[0:1], v[16:17]
-; GFX7-NEXT:    v_max_f64 v[0:1], v[12:13], v[28:29]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[6:7], v[12:13], v[28:29]
-; GFX7-NEXT:    v_max_f64 v[12:13], v[10:11], v[26:27]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[8:9], v[10:11], v[26:27]
-; GFX7-NEXT:    v_max_f64 v[10:11], v[2:3], v[18:19]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[10:11], v[2:3], v[18:19]
+; GFX7-NEXT:    v_max_f64 v[32:33], v[4:5], v[20:21]
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[20:21]
+; GFX7-NEXT:    v_max_f64 v[4:5], v[2:3], v[18:19]
+; GFX7-NEXT:    v_cmp_u_f64_e64 s[4:5], v[2:3], v[18:19]
+; GFX7-NEXT:    v_max_f64 v[2:3], v[10:11], v[26:27]
+; GFX7-NEXT:    v_cmp_u_f64_e64 s[6:7], v[10:11], v[26:27]
+; GFX7-NEXT:    v_max_f64 v[10:11], v[12:13], v[28:29]
+; GFX7-NEXT:    v_max_f64 v[18:19], v[8:9], v[24:25]
+; GFX7-NEXT:    v_cmp_u_f64_e64 s[8:9], v[12:13], v[28:29]
+; GFX7-NEXT:    v_max_f64 v[12:13], v[0:1], v[16:17]
 ; GFX7-NEXT:    v_mov_b32_e32 v34, 0x7ff80000
-; GFX7-NEXT:    v_max_f64 v[2:3], v[4:5], v[20:21]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[12:13], v[4:5], v[20:21]
-; GFX7-NEXT:    v_max_f64 v[4:5], v[6:7], v[22:23]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[14:15], v[6:7], v[22:23]
-; GFX7-NEXT:    v_cndmask_b32_e64 v7, v13, v34, s[8:9]
-; GFX7-NEXT:    v_cndmask_b32_e64 v6, v12, 0, s[8:9]
-; GFX7-NEXT:    v_cndmask_b32_e64 v11, v11, v34, s[10:11]
-; GFX7-NEXT:    v_cndmask_b32_e64 v10, v10, 0, s[10:11]
-; GFX7-NEXT:    v_cndmask_b32_e32 v13, v33, v34, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v12, v32, 0, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v9, v9, v34, s[4:5]
-; GFX7-NEXT:    v_cndmask_b32_e64 v8, v8, 0, s[4:5]
-; GFX7-NEXT:    v_max_f64 v[16:17], v[10:11], v[6:7]
-; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[10:11], v[6:7]
-; GFX7-NEXT:    v_cndmask_b32_e64 v1, v1, v34, s[6:7]
-; GFX7-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[6:7]
-; GFX7-NEXT:    v_cndmask_b32_e64 v3, v3, v34, s[12:13]
-; GFX7-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[12:13]
-; GFX7-NEXT:    v_cndmask_b32_e64 v5, v5, v34, s[14:15]
-; GFX7-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s[14:15]
-; GFX7-NEXT:    v_max_f64 v[10:11], v[2:3], v[0:1]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[6:7], v[2:3], v[0:1]
-; GFX7-NEXT:    v_max_f64 v[0:1], v[8:9], v[12:13]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[8:9], v[8:9], v[12:13]
-; GFX7-NEXT:    v_cndmask_b32_e32 v3, v17, v34, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v2, v16, 0, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v1, v1, v34, s[8:9]
-; GFX7-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[8:9]
+; GFX7-NEXT:    v_cndmask_b32_e64 v5, v5, v34, s[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e64 v3, v3, v34, s[6:7]
+; GFX7-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[6:7]
+; GFX7-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e32 v21, v33, v34, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v20, v32, 0, vcc
+; GFX7-NEXT:    v_max_f64 v[26:27], v[6:7], v[22:23]
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[8:9], v[24:25]
+; GFX7-NEXT:    v_cndmask_b32_e32 v9, v19, v34, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v8, v18, 0, vcc
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[16:17]
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v13, v34, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v12, 0, vcc
+; GFX7-NEXT:    v_max_f64 v[12:13], v[4:5], v[2:3]
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[22:23]
+; GFX7-NEXT:    v_cndmask_b32_e64 v11, v11, v34, s[8:9]
+; GFX7-NEXT:    v_cndmask_b32_e64 v10, v10, 0, s[8:9]
+; GFX7-NEXT:    v_cndmask_b32_e32 v7, v27, v34, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v6, v26, 0, vcc
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[2:3]
+; GFX7-NEXT:    v_max_f64 v[18:19], v[20:21], v[10:11]
+; GFX7-NEXT:    v_cndmask_b32_e32 v3, v13, v34, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v2, v12, 0, vcc
+; GFX7-NEXT:    v_max_f64 v[22:23], v[0:1], v[8:9]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_max_f64 v[6:7], v[14:15], v[30:31]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[4:5], v[14:15], v[30:31]
-; GFX7-NEXT:    v_cndmask_b32_e64 v7, v7, v34, s[4:5]
-; GFX7-NEXT:    v_cndmask_b32_e64 v6, v6, 0, s[4:5]
-; GFX7-NEXT:    v_max_f64 v[8:9], v[4:5], v[6:7]
-; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[6:7]
-; GFX7-NEXT:    v_cndmask_b32_e64 v5, v11, v34, s[6:7]
-; GFX7-NEXT:    v_cndmask_b32_e64 v4, v10, 0, s[6:7]
-; GFX7-NEXT:    v_max_f64 v[6:7], v[0:1], v[4:5]
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[4:5], v[0:1], v[4:5]
+; GFX7-NEXT:    v_max_f64 v[16:17], v[14:15], v[30:31]
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[14:15], v[30:31]
+; GFX7-NEXT:    v_cndmask_b32_e32 v5, v17, v34, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v4, v16, 0, vcc
+; GFX7-NEXT:    v_max_f64 v[12:13], v[6:7], v[4:5]
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[20:21], v[10:11]
+; GFX7-NEXT:    v_cndmask_b32_e32 v11, v19, v34, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v10, v18, 0, vcc
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[8:9]
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v23, v34, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v22, 0, vcc
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e32 v5, v13, v34, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v4, v12, 0, vcc
+; GFX7-NEXT:    v_max_f64 v[8:9], v[0:1], v[10:11]
+; GFX7-NEXT:    v_max_f64 v[6:7], v[2:3], v[4:5]
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[10:11]
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, v9, v34, vcc
 ; GFX7-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc
-; GFX7-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[0:1]
-; GFX7-NEXT:    v_cndmask_b32_e64 v1, v7, v34, s[4:5]
-; GFX7-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s[4:5]
-; GFX7-NEXT:    v_cndmask_b32_e32 v3, v5, v34, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e32 v3, v7, v34, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v2, v6, 0, vcc
 ; GFX7-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
 ; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX7-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
@@ -2470,64 +2468,64 @@ define double @test_vector_reduce_fmaximum_v16double(<16 x double> %v) {
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_load_dword v31, off, s[0:3], s32
-; GFX8-NEXT:    v_max_f64 v[32:33], v[8:9], v[24:25]
-; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[8:9], v[24:25]
-; GFX8-NEXT:    v_max_f64 v[8:9], v[0:1], v[16:17]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[4:5], v[0:1], v[16:17]
-; GFX8-NEXT:    v_max_f64 v[0:1], v[12:13], v[28:29]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[6:7], v[12:13], v[28:29]
-; GFX8-NEXT:    v_max_f64 v[12:13], v[10:11], v[26:27]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[8:9], v[10:11], v[26:27]
-; GFX8-NEXT:    v_max_f64 v[10:11], v[2:3], v[18:19]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[10:11], v[2:3], v[18:19]
+; GFX8-NEXT:    v_max_f64 v[32:33], v[4:5], v[20:21]
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[20:21]
+; GFX8-NEXT:    v_max_f64 v[4:5], v[2:3], v[18:19]
+; GFX8-NEXT:    v_cmp_u_f64_e64 s[4:5], v[2:3], v[18:19]
+; GFX8-NEXT:    v_max_f64 v[2:3], v[10:11], v[26:27]
+; GFX8-NEXT:    v_cmp_u_f64_e64 s[6:7], v[10:11], v[26:27]
+; GFX8-NEXT:    v_max_f64 v[10:11], v[12:13], v[28:29]
+; GFX8-NEXT:    v_max_f64 v[18:19], v[8:9], v[24:25]
+; GFX8-NEXT:    v_cmp_u_f64_e64 s[8:9], v[12:13], v[28:29]
+; GFX8-NEXT:    v_max_f64 v[12:13], v[0:1], v[16:17]
 ; GFX8-NEXT:    v_mov_b32_e32 v34, 0x7ff80000
-; GFX8-NEXT:    v_max_f64 v[2:3], v[4:5], v[20:21]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[12:13], v[4:5], v[20:21]
-; GFX8-NEXT:    v_max_f64 v[4:5], v[6:7], v[22:23]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[14:15], v[6:7], v[22:23]
-; GFX8-NEXT:    v_cndmask_b32_e64 v7, v13, v34, s[8:9]
-; GFX8-NEXT:    v_cndmask_b32_e64 v6, v12, 0, s[8:9]
-; GFX8-NEXT:    v_cndmask_b32_e64 v11, v11, v34, s[10:11]
-; GFX8-NEXT:    v_cndmask_b32_e64 v10, v10, 0, s[10:11]
-; GFX8-NEXT:    v_cndmask_b32_e32 v13, v33, v34, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v12, v32, 0, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v9, v9, v34, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e64 v8, v8, 0, s[4:5]
-; GFX8-NEXT:    v_max_f64 v[16:17], v[10:11], v[6:7]
-; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[10:11], v[6:7]
-; GFX8-NEXT:    v_cndmask_b32_e64 v1, v1, v34, s[6:7]
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[6:7]
-; GFX8-NEXT:    v_cndmask_b32_e64 v3, v3, v34, s[12:13]
-; GFX8-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[12:13]
-; GFX8-NEXT:    v_cndmask_b32_e64 v5, v5, v34, s[14:15]
-; GFX8-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s[14:15]
-; GFX8-NEXT:    v_max_f64 v[10:11], v[2:3], v[0:1]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[6:7], v[2:3], v[0:1]
-; GFX8-NEXT:    v_max_f64 v[0:1], v[8:9], v[12:13]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[8:9], v[8:9], v[12:13]
-; GFX8-NEXT:    v_cndmask_b32_e32 v3, v17, v34, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v2, v16, 0, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v1, v1, v34, s[8:9]
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[8:9]
+; GFX8-NEXT:    v_cndmask_b32_e64 v5, v5, v34, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e64 v3, v3, v34, s[6:7]
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[6:7]
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e32 v21, v33, v34, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v20, v32, 0, vcc
+; GFX8-NEXT:    v_max_f64 v[26:27], v[6:7], v[22:23]
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[8:9], v[24:25]
+; GFX8-NEXT:    v_cndmask_b32_e32 v9, v19, v34, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v8, v18, 0, vcc
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[16:17]
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v13, v34, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, v12, 0, vcc
+; GFX8-NEXT:    v_max_f64 v[12:13], v[4:5], v[2:3]
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[22:23]
+; GFX8-NEXT:    v_cndmask_b32_e64 v11, v11, v34, s[8:9]
+; GFX8-NEXT:    v_cndmask_b32_e64 v10, v10, 0, s[8:9]
+; GFX8-NEXT:    v_cndmask_b32_e32 v7, v27, v34, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v6, v26, 0, vcc
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[2:3]
+; GFX8-NEXT:    v_max_f64 v[18:19], v[20:21], v[10:11]
+; GFX8-NEXT:    v_cndmask_b32_e32 v3, v13, v34, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, v12, 0, vcc
+; GFX8-NEXT:    v_max_f64 v[22:23], v[0:1], v[8:9]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_max_f64 v[6:7], v[14:15], v[30:31]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[4:5], v[14:15], v[30:31]
-; GFX8-NEXT:    v_cndmask_b32_e64 v7, v7, v34, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e64 v6, v6, 0, s[4:5]
-; GFX8-NEXT:    v_max_f64 v[8:9], v[4:5], v[6:7]
-; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[6:7]
-; GFX8-NEXT:    v_cndmask_b32_e64 v5, v11, v34, s[6:7]
-; GFX8-NEXT:    v_cndmask_b32_e64 v4, v10, 0, s[6:7]
-; GFX8-NEXT:    v_max_f64 v[6:7], v[0:1], v[4:5]
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[4:5], v[0:1], v[4:5]
+; GFX8-NEXT:    v_max_f64 v[16:17], v[14:15], v[30:31]
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[14:15], v[30:31]
+; GFX8-NEXT:    v_cndmask_b32_e32 v5, v17, v34, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, v16, 0, vcc
+; GFX8-NEXT:    v_max_f64 v[12:13], v[6:7], v[4:5]
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[20:21], v[10:11]
+; GFX8-NEXT:    v_cndmask_b32_e32 v11, v19, v34, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v10, v18, 0, vcc
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[8:9]
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v23, v34, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, v22, 0, vcc
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e32 v5, v13, v34, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v4, v12, 0, vcc
+; GFX8-NEXT:    v_max_f64 v[8:9], v[0:1], v[10:11]
+; GFX8-NEXT:    v_max_f64 v[6:7], v[2:3], v[4:5]
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[10:11]
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v9, v34, vcc
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc
-; GFX8-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[0:1]
-; GFX8-NEXT:    v_cndmask_b32_e64 v1, v7, v34, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v3, v5, v34, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e32 v3, v7, v34, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, v6, 0, vcc
 ; GFX8-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
 ; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
@@ -2615,64 +2613,64 @@ define double @test_vector_reduce_fmaximum_v16double(<16 x double> %v) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX10-NEXT:    v_max_f64 v[32:33], v[8:9], v[24:25]
+; GFX10-NEXT:    v_max_f64 v[34:35], v[0:1], v[16:17]
+; GFX10-NEXT:    v_max_f64 v[36:37], v[12:13], v[28:29]
+; GFX10-NEXT:    v_max_f64 v[48:49], v[10:11], v[26:27]
+; GFX10-NEXT:    v_max_f64 v[50:51], v[2:3], v[18:19]
+; GFX10-NEXT:    v_max_f64 v[38:39], v[4:5], v[20:21]
 ; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[8:9], v[24:25]
-; GFX10-NEXT:    v_max_f64 v[8:9], v[0:1], v[16:17]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s4, v[0:1], v[16:17]
-; GFX10-NEXT:    v_max_f64 v[0:1], v[12:13], v[28:29]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s5, v[12:13], v[28:29]
-; GFX10-NEXT:    v_max_f64 v[12:13], v[10:11], v[26:27]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s6, v[10:11], v[26:27]
-; GFX10-NEXT:    v_max_f64 v[10:11], v[2:3], v[18:19]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s7, v[2:3], v[18:19]
-; GFX10-NEXT:    v_max_f64 v[2:3], v[4:5], v[20:21]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s8, v[4:5], v[20:21]
-; GFX10-NEXT:    v_max_f64 v[4:5], v[6:7], v[22:23]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s9, v[6:7], v[22:23]
-; GFX10-NEXT:    v_cndmask_b32_e64 v9, v9, 0x7ff80000, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v8, v8, 0, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s5
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s5
-; GFX10-NEXT:    v_cndmask_b32_e64 v13, v13, 0x7ff80000, s6
-; GFX10-NEXT:    v_cndmask_b32_e64 v12, v12, 0, s6
-; GFX10-NEXT:    v_cndmask_b32_e64 v11, v11, 0x7ff80000, s7
-; GFX10-NEXT:    v_cndmask_b32_e64 v10, v10, 0, s7
-; GFX10-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s8
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s8
-; GFX10-NEXT:    v_cndmask_b32_e64 v5, v5, 0x7ff80000, s9
-; GFX10-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s9
-; GFX10-NEXT:    v_max_f64 v[16:17], v[10:11], v[12:13]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s4, v[2:3], v[0:1]
+; GFX10-NEXT:    v_max_f64 v[8:9], v[6:7], v[22:23]
+; GFX10-NEXT:    v_cmp_u_f64_e64 s4, v[10:11], v[26:27]
+; GFX10-NEXT:    v_cndmask_b32_e64 v25, v33, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v24, v32, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[16:17]
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v35, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v34, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[12:13], v[28:29]
+; GFX10-NEXT:    v_cndmask_b32_e64 v13, v37, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v12, v36, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[4:5], v[20:21]
+; GFX10-NEXT:    v_cndmask_b32_e64 v11, v49, 0x7ff80000, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v10, v48, 0, s4
+; GFX10-NEXT:    v_cmp_u_f64_e64 s4, v[2:3], v[18:19]
+; GFX10-NEXT:    v_cndmask_b32_e64 v17, v51, 0x7ff80000, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v16, v50, 0, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v4, v39, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, v38, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[6:7], v[22:23]
+; GFX10-NEXT:    v_cndmask_b32_e64 v6, v9, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v5, v8, 0, vcc_lo
+; GFX10-NEXT:    v_max_f64 v[7:8], v[16:17], v[10:11]
+; GFX10-NEXT:    v_max_f64 v[18:19], v[3:4], v[12:13]
+; GFX10-NEXT:    v_max_f64 v[20:21], v[0:1], v[24:25]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_max_f64 v[6:7], v[14:15], v[30:31]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s10, v[14:15], v[30:31]
+; GFX10-NEXT:    v_max_f64 v[32:33], v[14:15], v[30:31]
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[14:15], v[30:31]
 ; GFX10-NEXT:    v_cndmask_b32_e64 v15, v33, 0x7ff80000, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v14, v32, 0, vcc_lo
-; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[10:11], v[12:13]
-; GFX10-NEXT:    v_max_f64 v[10:11], v[2:3], v[0:1]
-; GFX10-NEXT:    v_max_f64 v[0:1], v[8:9], v[14:15]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s5, v[8:9], v[14:15]
-; GFX10-NEXT:    v_cndmask_b32_e64 v7, v7, 0x7ff80000, s10
-; GFX10-NEXT:    v_cndmask_b32_e64 v6, v6, 0, s10
-; GFX10-NEXT:    v_max_f64 v[2:3], v[4:5], v[6:7]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s6, v[4:5], v[6:7]
-; GFX10-NEXT:    v_cndmask_b32_e64 v5, v17, 0x7ff80000, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v4, v16, 0, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v7, v11, 0x7ff80000, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v6, v10, 0, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s5
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s5
-; GFX10-NEXT:    v_max_f64 v[8:9], v[0:1], v[6:7]
-; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[6:7]
-; GFX10-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s6
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s6
-; GFX10-NEXT:    v_max_f64 v[0:1], v[4:5], v[2:3]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s4, v[4:5], v[2:3]
-; GFX10-NEXT:    v_cndmask_b32_e64 v3, v9, 0x7ff80000, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s4
-; GFX10-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[0:1]
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[16:17], v[10:11]
+; GFX10-NEXT:    v_cndmask_b32_e64 v8, v8, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v7, v7, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[3:4], v[12:13]
+; GFX10-NEXT:    v_max_f64 v[22:23], v[5:6], v[14:15]
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, v19, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v18, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[24:25]
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v21, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v20, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[5:6], v[14:15]
+; GFX10-NEXT:    v_max_f64 v[9:10], v[0:1], v[2:3]
+; GFX10-NEXT:    v_cndmask_b32_e64 v5, v23, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v4, v22, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX10-NEXT:    v_max_f64 v[11:12], v[7:8], v[4:5]
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v10, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v9, 0, vcc_lo
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[7:8], v[4:5]
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, v12, 0x7ff80000, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v11, 0, vcc_lo
+; GFX10-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
+; GFX10-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, v5, 0x7ff80000, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -2682,68 +2680,68 @@ define double @test_vector_reduce_fmaximum_v16double(<16 x double> %v) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
 ; GFX11-NEXT:    v_max_f64 v[32:33], v[8:9], v[24:25]
+; GFX11-NEXT:    v_max_f64 v[34:35], v[0:1], v[16:17]
+; GFX11-NEXT:    v_max_f64 v[36:37], v[12:13], v[28:29]
+; GFX11-NEXT:    v_max_f64 v[48:49], v[10:11], v[26:27]
+; GFX11-NEXT:    v_max_f64 v[50:51], v[2:3], v[18:19]
+; GFX11-NEXT:    v_max_f64 v[38:39], v[4:5], v[20:21]
+; GFX11-NEXT:    v_max_f64 v[52:53], v[6:7], v[22:23]
 ; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[8:9], v[24:25]
-; GFX11-NEXT:    v_max_f64 v[8:9], v[0:1], v[16:17]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[0:1], v[16:17]
-; GFX11-NEXT:    v_max_f64 v[0:1], v[12:13], v[28:29]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s1, v[12:13], v[28:29]
-; GFX11-NEXT:    v_max_f64 v[12:13], v[10:11], v[26:27]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s2, v[10:11], v[26:27]
-; GFX11-NEXT:    v_max_f64 v[10:11], v[2:3], v[18:19]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s3, v[2:3], v[18:19]
-; GFX11-NEXT:    v_max_f64 v[2:3], v[4:5], v[20:21]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s4, v[4:5], v[20:21]
-; GFX11-NEXT:    v_max_f64 v[4:5], v[6:7], v[22:23]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s5, v[6:7], v[22:23]
-; GFX11-NEXT:    v_cndmask_b32_e64 v9, v9, 0x7ff80000, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v8, v8, 0, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s1
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s1
-; GFX11-NEXT:    v_cndmask_b32_e64 v13, v13, 0x7ff80000, s2
-; GFX11-NEXT:    v_cndmask_b32_e64 v12, v12, 0, s2
-; GFX11-NEXT:    v_cndmask_b32_e64 v11, v11, 0x7ff80000, s3
-; GFX11-NEXT:    v_cndmask_b32_e64 v10, v10, 0, s3
-; GFX11-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s4
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s4
-; GFX11-NEXT:    v_cndmask_b32_e64 v5, v5, 0x7ff80000, s5
-; GFX11-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s5
-; GFX11-NEXT:    v_max_f64 v[16:17], v[10:11], v[12:13]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[2:3], v[0:1]
+; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[10:11], v[26:27]
+; GFX11-NEXT:    v_cndmask_b32_e64 v9, v33, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v8, v32, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[16:17]
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v35, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v34, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[12:13], v[28:29]
+; GFX11-NEXT:    v_cndmask_b32_e64 v13, v37, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v12, v36, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[4:5], v[20:21]
+; GFX11-NEXT:    v_cndmask_b32_e64 v11, v49, 0x7ff80000, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v10, v48, 0, s0
+; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[2:3], v[18:19]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v17, v51, 0x7ff80000, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v16, v50, 0, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v4, v39, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v3, v38, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[6:7], v[22:23]
+; GFX11-NEXT:    v_cndmask_b32_e64 v6, v53, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v5, v52, 0, vcc_lo
+; GFX11-NEXT:    v_max_f64 v[18:19], v[16:17], v[10:11]
+; GFX11-NEXT:    v_max_f64 v[20:21], v[3:4], v[12:13]
+; GFX11-NEXT:    v_max_f64 v[22:23], v[0:1], v[8:9]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_max_f64 v[6:7], v[14:15], v[30:31]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s6, v[14:15], v[30:31]
-; GFX11-NEXT:    v_cndmask_b32_e64 v15, v33, 0x7ff80000, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v14, v32, 0, vcc_lo
-; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[10:11], v[12:13]
-; GFX11-NEXT:    v_max_f64 v[10:11], v[2:3], v[0:1]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_max_f64 v[0:1], v[8:9], v[14:15]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s1, v[8:9], v[14:15]
-; GFX11-NEXT:    v_cndmask_b32_e64 v7, v7, 0x7ff80000, s6
-; GFX11-NEXT:    v_cndmask_b32_e64 v6, v6, 0, s6
-; GFX11-NEXT:    v_max_f64 v[2:3], v[4:5], v[6:7]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s2, v[4:5], v[6:7]
-; GFX11-NEXT:    v_cndmask_b32_e64 v5, v17, 0x7ff80000, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v4, v16, 0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v7, v11, 0x7ff80000, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v6, v10, 0, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s1
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_max_f64 v[8:9], v[0:1], v[6:7]
-; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[6:7]
-; GFX11-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s2
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s2
-; GFX11-NEXT:    v_max_f64 v[0:1], v[4:5], v[2:3]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[4:5], v[2:3]
+; GFX11-NEXT:    v_max_f64 v[54:55], v[14:15], v[30:31]
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[14:15], v[30:31]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_cndmask_b32_e64 v15, v55, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v14, v54, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[16:17], v[10:11]
+; GFX11-NEXT:    v_cndmask_b32_e64 v11, v19, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v10, v18, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[3:4], v[12:13]
+; GFX11-NEXT:    v_max_f64 v[24:25], v[5:6], v[14:15]
+; GFX11-NEXT:    v_cndmask_b32_e64 v3, v21, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, v20, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[8:9]
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v23, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v22, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[5:6], v[14:15]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_max_f64 v[6:7], v[0:1], v[2:3]
+; GFX11-NEXT:    v_cndmask_b32_e64 v5, v25, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v4, v24, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX11-NEXT:    v_max_f64 v[8:9], v[10:11], v[4:5]
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v7, 0x7ff80000, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[10:11], v[4:5]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v9, 0x7ff80000, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
-; GFX11-NEXT:    v_max_f64 v[4:5], v[2:3], v[0:1]
-; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[0:1]
+; GFX11-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
+; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v5, 0x7ff80000, vcc_lo

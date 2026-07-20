@@ -8964,11 +8964,11 @@ define <2 x half> @v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum(<2 x half
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    v_min_f32_e32 v4, 4.0, v0
-; SI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; SI-NEXT:    v_min_f32_e32 v3, 4.0, v1
+; SI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
-; SI-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0

@@ -85,8 +85,8 @@ define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CI-NEXT:    v_mul_f32_e32 v5, v4, v6
 ; CI-NEXT:    v_rndne_f32_e32 v5, v5
 ; CI-NEXT:    v_fma_f32 v4, -v5, v3, v4
-; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v4
 ; CI-NEXT:    v_add_f32_e32 v3, v4, v3
+; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v4
 ; CI-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
 ; CI-NEXT:    v_ldexp_f32_e32 v2, v3, v2
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -189,8 +189,8 @@ define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; VI-NEXT:    v_mul_f32_e32 v5, v4, v6
 ; VI-NEXT:    v_rndne_f32_e32 v5, v5
 ; VI-NEXT:    v_fma_f32 v4, -v5, v3, v4
-; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v4
 ; VI-NEXT:    v_add_f32_e32 v3, v4, v3
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v4
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
 ; VI-NEXT:    v_ldexp_f32 v2, v3, v2
 ; VI-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -1220,8 +1220,8 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_mul_f32_e32 v5, v4, v6
 ; CI-NEXT:    v_rndne_f32_e32 v5, v5
 ; CI-NEXT:    v_fma_f32 v4, -v5, v3, v4
-; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v4
 ; CI-NEXT:    v_add_f32_e32 v3, v4, v3
+; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v4
 ; CI-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
 ; CI-NEXT:    v_ldexp_f32_e32 v2, v3, v2
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -1298,8 +1298,8 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_mul_f32_e32 v8, v7, v9
 ; CI-NEXT:    v_rndne_f32_e32 v8, v8
 ; CI-NEXT:    v_fma_f32 v7, -v8, v6, v7
-; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v7
 ; CI-NEXT:    v_add_f32_e32 v6, v7, v6
+; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v7
 ; CI-NEXT:    v_cndmask_b32_e32 v6, v7, v6, vcc
 ; CI-NEXT:    v_ldexp_f32_e32 v5, v6, v5
 ; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
@@ -1411,8 +1411,8 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_mul_f32_e32 v5, v4, v6
 ; VI-NEXT:    v_rndne_f32_e32 v5, v5
 ; VI-NEXT:    v_fma_f32 v4, -v5, v3, v4
-; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v4
 ; VI-NEXT:    v_add_f32_e32 v3, v4, v3
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v4
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
 ; VI-NEXT:    v_ldexp_f32 v2, v3, v2
 ; VI-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -1488,8 +1488,8 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_mul_f32_e32 v8, v7, v9
 ; VI-NEXT:    v_rndne_f32_e32 v8, v8
 ; VI-NEXT:    v_fma_f32 v7, -v8, v6, v7
-; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v7
 ; VI-NEXT:    v_add_f32_e32 v6, v7, v6
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v7
 ; VI-NEXT:    v_cndmask_b32_e32 v6, v7, v6, vcc
 ; VI-NEXT:    v_ldexp_f32 v5, v6, v5
 ; VI-NEXT:    v_cvt_f16_f32_e32 v5, v5
@@ -1605,8 +1605,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_mul_f32_e32 v5, v4, v6
 ; CI-NEXT:    v_rndne_f32_e32 v5, v5
 ; CI-NEXT:    v_fma_f32 v4, -v5, v3, v4
-; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v4
 ; CI-NEXT:    v_add_f32_e32 v3, v4, v3
+; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v4
 ; CI-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
 ; CI-NEXT:    v_ldexp_f32_e32 v2, v3, v2
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -1690,8 +1690,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_mul_f32_e32 v8, v7, v9
 ; CI-NEXT:    v_rndne_f32_e32 v8, v8
 ; CI-NEXT:    v_fma_f32 v7, -v8, v6, v7
-; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v7
 ; CI-NEXT:    v_add_f32_e32 v6, v7, v6
+; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v7
 ; CI-NEXT:    v_cndmask_b32_e32 v6, v7, v6, vcc
 ; CI-NEXT:    v_ldexp_f32_e32 v5, v6, v5
 ; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
@@ -1770,8 +1770,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_mul_f32_e32 v9, v8, v10
 ; CI-NEXT:    v_rndne_f32_e32 v9, v9
 ; CI-NEXT:    v_fma_f32 v8, -v9, v7, v8
-; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v8
 ; CI-NEXT:    v_add_f32_e32 v7, v8, v7
+; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v8
 ; CI-NEXT:    v_cndmask_b32_e32 v7, v8, v7, vcc
 ; CI-NEXT:    v_ldexp_f32_e32 v6, v7, v6
 ; CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
@@ -1850,8 +1850,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_mul_f32_e32 v10, v9, v11
 ; CI-NEXT:    v_rndne_f32_e32 v10, v10
 ; CI-NEXT:    v_fma_f32 v9, -v10, v8, v9
-; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v9
 ; CI-NEXT:    v_add_f32_e32 v8, v9, v8
+; CI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v9
 ; CI-NEXT:    v_cndmask_b32_e32 v8, v9, v8, vcc
 ; CI-NEXT:    v_ldexp_f32_e32 v7, v8, v7
 ; CI-NEXT:    v_cvt_f16_f32_e32 v7, v7
@@ -1981,8 +1981,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_mul_f32_e32 v7, v6, v8
 ; VI-NEXT:    v_rndne_f32_e32 v7, v7
 ; VI-NEXT:    v_fma_f32 v6, -v7, v5, v6
-; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v6
 ; VI-NEXT:    v_add_f32_e32 v5, v6, v5
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v6
 ; VI-NEXT:    v_cndmask_b32_e32 v5, v6, v5, vcc
 ; VI-NEXT:    v_ldexp_f32 v4, v5, v4
 ; VI-NEXT:    v_cvt_f16_f32_e32 v4, v4
@@ -2058,8 +2058,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_mul_f32_e32 v10, v9, v11
 ; VI-NEXT:    v_rndne_f32_e32 v10, v10
 ; VI-NEXT:    v_fma_f32 v9, -v10, v8, v9
-; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v9
 ; VI-NEXT:    v_add_f32_e32 v8, v9, v8
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v9
 ; VI-NEXT:    v_cndmask_b32_e32 v8, v9, v8, vcc
 ; VI-NEXT:    v_ldexp_f32 v7, v8, v7
 ; VI-NEXT:    v_cvt_f16_f32_e32 v7, v7
@@ -2133,8 +2133,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_mul_f32_e32 v11, v10, v12
 ; VI-NEXT:    v_rndne_f32_e32 v11, v11
 ; VI-NEXT:    v_fma_f32 v10, -v11, v9, v10
-; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v10
 ; VI-NEXT:    v_add_f32_e32 v9, v10, v9
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v10
 ; VI-NEXT:    v_cndmask_b32_e32 v9, v10, v9, vcc
 ; VI-NEXT:    v_ldexp_f32 v8, v9, v8
 ; VI-NEXT:    v_cvt_f16_f32_e32 v8, v8
@@ -2210,8 +2210,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_mul_f32_e32 v14, v13, v15
 ; VI-NEXT:    v_rndne_f32_e32 v14, v14
 ; VI-NEXT:    v_fma_f32 v13, -v14, v12, v13
-; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v13
 ; VI-NEXT:    v_add_f32_e32 v12, v13, v12
+; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v13
 ; VI-NEXT:    v_cndmask_b32_e32 v12, v13, v12, vcc
 ; VI-NEXT:    v_ldexp_f32 v11, v12, v11
 ; VI-NEXT:    v_cvt_f16_f32_e32 v11, v11
