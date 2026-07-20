@@ -175,3 +175,51 @@ __device__ void test_sqrt_f32(float* out, float a) {
 __device__ void test_sqrt_f64(double* out, double a) {
   *out = __builtin_amdgcn_sqrt(a);
 }
+
+// CIR-LABEL: @_Z13test_sinf_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.sin" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z13test_sinf_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.sin.f32(float %{{.*}})
+__device__ void test_sinf_f32(float* out, float a) {
+  *out = __builtin_amdgcn_sinf(a);
+}
+
+// CIR-LABEL: @_Z13test_cosf_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.cos" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z13test_cosf_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.cos.f32(float %{{.*}})
+__device__ void test_cosf_f32(float* out, float a) {
+  *out = __builtin_amdgcn_cosf(a);
+}
+
+// CIR-LABEL: @_Z13test_exp2_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.exp2" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z13test_exp2_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.exp2.f32(float %{{.*}})
+__device__ void test_exp2_f32(float* out, float a) {
+  *out = __builtin_amdgcn_exp2f(a);
+}
+
+// CIR-LABEL: @_Z12test_log_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.log" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z12test_log_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.log.f32(float %{{.*}})
+__device__ void test_log_f32(float* out, float a) {
+  *out = __builtin_amdgcn_logf(a);
+}
+
+// CIR-LABEL: @_Z19test_frexp_mant_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z19test_frexp_mant_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.frexp.mant.f32(float %{{.*}})
+__device__ void test_frexp_mant_f32(float* out, float a) {
+  *out = __builtin_amdgcn_frexp_mantf(a);
+}
+
+// CIR-LABEL: @_Z19test_frexp_mant_f64Pdd
+// CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.double) -> !cir.double
+// LLVM: define{{.*}} void @_Z19test_frexp_mant_f64Pdd
+// LLVM: call{{.*}} double @llvm.amdgcn.frexp.mant.f64(double %{{.*}})
+__device__ void test_frexp_mant_f64(double* out, double a) {
+  *out = __builtin_amdgcn_frexp_mant(a);
+}

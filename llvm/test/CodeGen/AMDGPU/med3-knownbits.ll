@@ -59,7 +59,6 @@ define i32 @v_known_signbits_smed3(i16 %a, i16 %b) {
 ; SI-SDAG-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, |v2|
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; SI-SDAG-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
-; SI-SDAG-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-GISEL-LABEL: v_known_signbits_smed3:

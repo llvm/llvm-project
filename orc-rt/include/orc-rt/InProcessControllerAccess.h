@@ -107,13 +107,13 @@ public:
 
   void disconnect() override;
 
-  void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturnFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) override;
   void sendWrapperResult(uint64_t CallId,
                          WrapperFunctionBuffer ResultBytes) override;
 
 private:
-  uint64_t registerPendingHandler(OnCallHandlerCompleteFn OnComplete);
+  uint64_t registerPendingHandler(OnControllerCallReturnFn OnComplete);
   void doDisconnect();
 
   void callWrapper(uint64_t CallId, void *Fn,
@@ -133,7 +133,8 @@ private:
   std::mutex M;
   uint64_t NextPendingCall = 0;
 
-  using PendingCallsMap = std::unordered_map<uint64_t, OnCallHandlerCompleteFn>;
+  using PendingCallsMap =
+      std::unordered_map<uint64_t, OnControllerCallReturnFn>;
   PendingCallsMap PendingCalls;
 };
 

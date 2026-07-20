@@ -130,6 +130,29 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     if (MI.getOperand(0).getReg() != AArch64::LR)
       return 8;
     return 4;
+  case AArch64::RETAA:
+  case AArch64::RETAB:
+    // Authenticated returns expand to 3 instructions (authenticate + guard +
+    // ret).
+    return 12;
+  case AArch64::BRAA:
+  case AArch64::BRAAZ:
+  case AArch64::BRAB:
+  case AArch64::BRABZ:
+  case AArch64::BLRAA:
+  case AArch64::BLRAAZ:
+  case AArch64::BLRAB:
+  case AArch64::BLRABZ:
+    // Authenticated branches/calls expand to 3 instructions (authenticate +
+    // guard + branch).
+    return 12;
+  case AArch64::AUTIASP:
+  case AArch64::AUTIBSP:
+  case AArch64::AUTIAZ:
+  case AArch64::AUTIBZ:
+  case AArch64::XPACLRI:
+    // Authenticating LR expands to the instruction plus a deferred LR guard.
+    return 8;
   case AArch64::SYSxt:
     // VA-based DC/IC ops (op1=3, Cn=7, op2=1) expand to 2 instructions.
     if (MI.getOperand(0).getImm() == 3 && MI.getOperand(1).getImm() == 7 &&
