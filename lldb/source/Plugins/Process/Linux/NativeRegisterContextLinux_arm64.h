@@ -104,11 +104,11 @@ private:
   }
 
   bool IsValid(RegisterSetType set) {
-    return (m_validity.m_valid_flags & static_cast<CacheValidity::Storage>(set)) != 0;
+    return (m_validity.m_valid_flags &
+            static_cast<CacheValidity::Storage>(set)) != 0;
   }
 
-  template <typename... Ts>
-  void Invalidate(RegisterSetType first, Ts... rest) {
+  template <typename... Ts> void Invalidate(RegisterSetType first, Ts... rest) {
     static_assert((std::is_same_v<Ts, RegisterSetType> && ...));
     m_validity.Invalidate(first);
     (Invalidate(rest), ...);
@@ -119,12 +119,15 @@ private:
   // anything.
   class CacheValidity {
     using Storage = std::underlying_type_t<RegisterSetType>;
+
   private:
     Storage m_valid_flags = 0;
 
-    friend void NativeRegisterContextLinux_arm64::MakeValid(RegisterSetType set);
+    friend void
+    NativeRegisterContextLinux_arm64::MakeValid(RegisterSetType set);
     friend bool NativeRegisterContextLinux_arm64::IsValid(RegisterSetType set);
-  public: 
+
+  public:
     void Invalidate(RegisterSetType set) {
       m_valid_flags &= ~static_cast<Storage>(set);
     }

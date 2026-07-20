@@ -613,8 +613,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
         uint64_t vg_value = reg_value.GetAsUInt64();
 
         if (sve::vl_valid(vg_value * 8)) {
-          if (IsValid(RegisterSetType::SVE_HEADER) &&
-              vg_value == GetSVERegVG())
+          if (IsValid(RegisterSetType::SVE_HEADER) && vg_value == GetSVERegVG())
             return error;
 
           SetSVERegVG(vg_value);
@@ -627,8 +626,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
             ConfigureRegisterContext();
           }
 
-          if (IsValid(RegisterSetType::SVE_HEADER) &&
-              vg_value == GetSVERegVG())
+          if (IsValid(RegisterSetType::SVE_HEADER) && vg_value == GetSVERegVG())
             return error;
         }
 
@@ -1139,9 +1137,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
         if (error.Success()) {
           // Wrote FPU, and SVE overlaps FPU.
-          Invalidate(RegisterSetType::FPR,
-                                RegisterSetType::SVE_HEADER,
-                                RegisterSetType::SVE);
+          Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
+                     RegisterSetType::SVE);
 
           m_sve_state = SVEState::Unknown;
           ConfigureRegisterContext();
@@ -1336,7 +1333,7 @@ Status NativeRegisterContextLinux_arm64::WriteFPR() {
 
   // SVE Z registers overlap the FP registers.
   Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-                        RegisterSetType::SVE);
+             RegisterSetType::SVE);
 
   return WriteRegisterSet(&ioVec, GetFPRSize(), llvm::ELF::NT_FPREGSET);
 }
@@ -1406,7 +1403,7 @@ Status NativeRegisterContextLinux_arm64::WriteSVEHeader() {
   ioVec.iov_len = GetSVEHeaderSize();
 
   Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-                        RegisterSetType::SVE);
+             RegisterSetType::SVE);
 
   return WriteRegisterSet(&ioVec, GetSVEHeaderSize(), GetSVERegSet());
 }
@@ -1441,7 +1438,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllSVE() {
   ioVec.iov_len = GetSVEBufferSize();
 
   Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-                        RegisterSetType::SVE);
+             RegisterSetType::SVE);
 
   return WriteRegisterSet(&ioVec, GetSVEBufferSize(), GetSVERegSet());
 }
@@ -1618,10 +1615,9 @@ Status NativeRegisterContextLinux_arm64::WriteZA() {
   ioVec.iov_base = GetZABuffer();
   ioVec.iov_len = GetZABufferSize();
 
-  Invalidate(
-      RegisterSetType::ZA_HEADER, RegisterSetType::ZA,
-      // Writing to ZA may enable ZA, which means ZT0 may change too.
-      RegisterSetType::ZT);
+  Invalidate(RegisterSetType::ZA_HEADER, RegisterSetType::ZA,
+             // Writing to ZA may enable ZA, which means ZT0 may change too.
+             RegisterSetType::ZT);
 
   return WriteRegisterSet(&ioVec, GetZABufferSize(), llvm::ELF::NT_ARM_ZA);
 }
@@ -1655,9 +1651,9 @@ Status NativeRegisterContextLinux_arm64::WriteZT() {
   ioVec.iov_len = GetZTBufferSize();
 
   Invalidate(RegisterSetType::ZT,
-                        // Writing to an inactive ZT0 will enable ZA as well,
-                        // which invalidates our current copy of it.
-                        RegisterSetType::ZA_HEADER, RegisterSetType::ZA);
+             // Writing to an inactive ZT0 will enable ZA as well,
+             // which invalidates our current copy of it.
+             RegisterSetType::ZA_HEADER, RegisterSetType::ZA);
 
   return WriteRegisterSet(&ioVec, GetZTBufferSize(), llvm::ELF::NT_ARM_ZT);
 }
