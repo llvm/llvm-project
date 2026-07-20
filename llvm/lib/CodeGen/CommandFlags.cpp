@@ -270,7 +270,9 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   CGBINDOPT(EnableHonorSignDependentRoundingFPMath);
 
   static cl::opt<FloatABI::ABIType> FloatABIForCalls(
-      "float-abi", cl::desc("Choose float ABI type"),
+      "float-abi",
+      cl::desc(
+          "Choose float ABI type (writes the \"float-abi\" IR module flag)"),
       cl::init(FloatABI::Default),
       cl::values(clEnumValN(FloatABI::Default, "default",
                             "Target default float ABI type"),
@@ -774,6 +776,14 @@ void codegen::setFunctionAttributes(Function &F, StringRef CPU,
 
 void codegen::setFunctionAttributes(Module &M, StringRef CPU,
                                     StringRef Features, StringRef TuneCPU) {
+  // Synthesize the "float-abi" module flag from the -float-abi option,
+  FloatABI::ABIType ABI = getFloatABIForCalls();
+  if (ABI != FloatABI::Default && !M.getModuleFlag("float-abi")) {
+    M.addModuleFlag(
+        Module::Error, "float-abi",
+        MDString::get(M.getContext(), FloatABI::getABITypeName(ABI)));
+  }
+
   for (Function &F : M)
     setFunctionAttributes(F, CPU, Features, TuneCPU);
 }
