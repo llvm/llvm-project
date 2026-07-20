@@ -276,7 +276,7 @@ private:
 #define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) .Case(#Name, UETT_##Name)
 #define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key)                    \
   .Case(#Name, UETT_##Name)
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/Traits.inc"
         .Default(std::nullopt);
   }
 

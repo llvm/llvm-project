@@ -696,7 +696,11 @@ work with Arm or AArch64, but support for other architectures can be added easil
 
 On non-Windows platforms, you can use the `-d` option to `dotest.py` which
 will cause the script to print out the pid of the test and wait for a while
-until a debugger is attached. Then run `lldb -p <pid>` to attach.
+until a debugger is attached. Then run `lldb -p <pid>` to attach manually.
+
+Alternatively, `dotest.py` can invoke a supported debugging tool and have it
+attach to the test process automatically. Use `--debug-with=...` to select the
+debugger.
 
 To instead debug a test's python source, edit the test and insert `import pdb; pdb.set_trace()` or `breakpoint()` (Python 3 only) at the point you want to start debugging. The `breakpoint()` command can be used for any LLDB Python script, not just for API tests.
 

@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -stress-regalloc=2 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa -stress-regalloc=2 -filetype=null %s 2>&1 | FileCheck %s
 
 ; A negative test to capture the expected error when the VGPRs are insufficient for wwm-regalloc.
 
