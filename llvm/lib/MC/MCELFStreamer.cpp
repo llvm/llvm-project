@@ -342,11 +342,17 @@ void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
   setAllowAutoPadding(true);
 
   if (Alignment > 1 && (Assembler.getBundleAlignSize() == 0 ||
-                        Assembler.getBundleAlignSize() == Alignment.value()))
+                        Assembler.getBundleAlignSize() == Alignment.value())) {
+    if (Assembler.getBundleAlignSize() == 0 &&
+        Assembler.getBackend().allowAutoPadding())
+      getContext().reportError(
+          getStartTokLoc(),
+          ".bundle_align_mode is incompatible with branch alignment");
     Assembler.setBundleAlignSize(Alignment.value());
-  else
+  } else {
     getContext().reportError(getStartTokLoc(),
                              ".bundle_align_mode cannot be changed once set");
+  }
 }
 
 void MCELFStreamer::emitBundleLock(bool AlignToEnd,

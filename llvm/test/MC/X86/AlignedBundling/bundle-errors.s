@@ -7,6 +7,8 @@
 # RUN: not llvm-mc -filetype=obj -triple x86_64 %t/group-too-large.s       2>&1 | FileCheck %t/group-too-large.s
 # RUN: not llvm-mc -filetype=obj -triple x86_64 -mc-relax-all %t/group-too-large.s 2>&1 | FileCheck %t/group-too-large.s
 # RUN: not llvm-mc -filetype=obj -triple x86_64 %t/nested-lock.s           2>&1 | FileCheck %t/nested-lock.s
+# RUN: not llvm-mc -filetype=obj -triple x86_64 -x86-branches-within-32B-boundaries %t/bundle-with-align-branch.s 2>&1 | FileCheck %t/bundle-with-align-branch.s
+# RUN: not llvm-mc -filetype=obj -triple x86_64 -x86-align-branch-boundary=32 -x86-align-branch=jmp %t/bundle-with-align-branch.s 2>&1 | FileCheck %t/bundle-with-align-branch.s
 
 
 ## .bundle_lock can't come without a .bundle_align_mode before it
@@ -80,3 +82,9 @@ foo:
   .bundle_lock
   .bundle_unlock
   .bundle_unlock
+
+## Instruction bundling cannot be combined with branch alignment.
+#--- bundle-with-align-branch.s
+# CHECK: [[#@LINE+1]]:3: error: .bundle_align_mode is incompatible with branch alignment
+  .bundle_align_mode 5
+  imull $17, %ebx, %ebp
