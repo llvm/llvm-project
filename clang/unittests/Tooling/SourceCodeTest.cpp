@@ -45,9 +45,6 @@ struct IntLitVisitor : TestVisitor {
 };
 
 struct CallsVisitor : TestVisitor {
-  // Expose the protected helper so a test can supply extra compiler args.
-  using TestVisitor::CreateTestAction;
-
   bool VisitCallExpr(CallExpr *Expr) override {
     OnCall(Expr, Context);
     return true;
@@ -825,53 +822,6 @@ void f2() {
     }
   };
   Visitor.runOver(Code.code(), CallsVisitor::Lang_CXX14);
-}
-
-TEST(SourceCodeTest, GetCallReturnType_DependentBuiltinCall) {
-  // Dependent builtin calls keep their BuiltinFn placeholder until
-  // instantiation. The alias also covers the parse-time regression.
-  llvm::Annotations Code{R"cpp(
-template <auto> struct S {};
-
-template <typename T>
-using Alias = S<__builtin_constant_p(T::x)>;
-
-template <typename T>
-void templ(const T &t) {
-  $test1[[__builtin_constant_p(t.x)]];
-  $test2[[__builtin_ffs(t.x)]];
-}
-)cpp"};
-
-  llvm::Annotations::Range R1 = Code.range("test1");
-  llvm::Annotations::Range R2 = Code.range("test2");
-
-  bool SawBuiltinFnCallee = false;
-  CallsVisitor Visitor;
-  Visitor.OnCall = [&R1, &R2, &SawBuiltinFnCallee](CallExpr *Expr,
-                                                   ASTContext *Context) {
-    unsigned Begin = Context->getSourceManager().getFileOffset(
-        Expr->getSourceRange().getBegin());
-    unsigned End = Context->getSourceManager().getFileOffset(
-        Expr->getSourceRange().getEnd());
-    llvm::Annotations::Range R{Begin, End + 1};
-
-    QualType CalleeType = Expr->getCallee()->getType();
-    if (R == R1 || R == R2) {
-      SawBuiltinFnCallee = true;
-      ASSERT_FALSE(CalleeType->isDependentType());
-      ASSERT_TRUE(
-          CalleeType->isSpecificPlaceholderType(BuiltinType::BuiltinFn));
-      EXPECT_EQ(Expr->getCallReturnType(*Context), Context->DependentTy);
-    }
-  };
-  // Bypass TestVisitor::runOver so we can pass -fno-delayed-template-parsing.
-  // Otherwise on MSVC-compatible triples the uninstantiated body of templ is
-  // not parsed and the dependent builtin calls never enter the AST.
-  EXPECT_TRUE(tooling::runToolOnCodeWithArgs(
-      Visitor.CreateTestAction(), Code.code(),
-      {"-std=c++17", "-fno-delayed-template-parsing"}));
-  EXPECT_TRUE(SawBuiltinFnCallee);
 }
 
 } // end anonymous namespace

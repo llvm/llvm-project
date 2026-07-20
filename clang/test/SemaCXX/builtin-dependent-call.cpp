@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -fdelayed-template-parsing -verify %s
 // expected-no-diagnostics
 
 // Dependent builtin calls used to assert during auto NTTP deduction.
