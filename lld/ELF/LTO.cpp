@@ -231,9 +231,9 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
-void BitcodeCompiler::cleanupLTO() {
+void BitcodeCompiler::waitForLTOCleanup() {
   if (ltoObj)
-    ltoObj->cleanupAfterRun();
+    ltoObj->waitForCleanup();
 }
 
 void BitcodeCompiler::add(BitcodeFile &f) {

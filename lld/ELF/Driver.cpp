@@ -625,9 +625,9 @@ constexpr const char *saveTempsValues[] = {
 
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
-void LinkerDriver::cleanupLTO() {
+void LinkerDriver::waitForLTOCleanup() {
   if (lto)
-    lto->cleanupLTO();
+    lto->waitForLTOCleanup();
 }
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
@@ -712,7 +712,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     invokeELFT(link, args);
   }
 
-  cleanupLTO();
+  // LTO cleanup may create time trace events. Wait for it to complete before
+  // writing the time trace data.
+  waitForLTOCleanup();
 
   if (ctx.arg.timeTraceEnabled) {
     checkError(ctx.e, timeTraceProfilerWrite(

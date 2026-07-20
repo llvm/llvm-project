@@ -100,7 +100,11 @@ public:
   /// Cache) for each task identifier.
   virtual Error run(AddStreamFn AddStream, FileCache Cache = {}) override;
 
-  void cleanupAfterRun() override;
+  /// Wait for LTO cleanup. Clients may call this after run() once subsequent
+  /// linking work that can overlap with cleanup is complete. Cleanup may emit
+  /// time trace events, so this must be called before time trace data is
+  /// finalized.
+  void waitForCleanup() override;
 
 private:
   /// DTLTO archive support.
@@ -370,7 +374,7 @@ private:
     BackgroundDeletion();
     ~BackgroundDeletion();
 
-    void remove(std::vector<std::string> &&Files, const Config &Conf);
+    void removeFiles(std::vector<std::string> &&Files, const Config &Conf);
     void waitForTasks();
 
     std::vector<std::string> Warnings;

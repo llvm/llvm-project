@@ -47,8 +47,8 @@ void lto::DTLTO::BackgroundDeletion::waitForTasks() {
   Warnings.clear();
 }
 
-void lto::DTLTO::BackgroundDeletion::remove(std::vector<std::string> &&Files,
-                                            const Config &Conf) {
+void lto::DTLTO::BackgroundDeletion::removeFiles(
+    std::vector<std::string> &&Files, const Config &Conf) {
   if (Files.empty())
     return;
 
@@ -72,16 +72,14 @@ void lto::DTLTO::BackgroundDeletion::remove(std::vector<std::string> &&Files,
   });
 }
 
-void lto::DTLTO::cleanupAfterRun() { BackgroundDeleter.waitForTasks(); }
+void lto::DTLTO::waitForCleanup() { BackgroundDeleter.waitForTasks(); }
 
 // Remove temporary files created to enable distribution.
 void lto::DTLTO::cleanup() {
   if (SaveTemps)
     return;
 
-  BackgroundDeleter.remove(std::move(CleanupList), Conf);
-  // Clean the CleanupList for safety.
-  CleanupList.clear();
+  BackgroundDeleter.removeFiles(std::move(CleanupList), Conf);
 }
 
 // Runs the DTLTO thin link phase, producing per-module summary indices,

@@ -46,7 +46,7 @@ public:
   void add(BitcodeFile &f);
   std::vector<InputFile *> compile();
   void setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs);
-  void cleanupLTO();
+  void waitForLTOCleanup();
 
 private:
   std::unique_ptr<llvm::lto::LTO> ltoObj;

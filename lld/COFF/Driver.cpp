@@ -2960,7 +2960,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Write the result.
   writeResult(ctx);
-  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.cleanupLTO(); });
+  // LTO cleanup may create time trace events. Wait for it to complete before
+  // writing the time trace data.
+  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.waitForLTOCleanup(); });
 
   // Stop early so we can print the results.
   rootTimer.stop();
