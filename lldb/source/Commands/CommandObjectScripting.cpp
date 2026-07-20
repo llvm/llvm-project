@@ -545,11 +545,6 @@ protected:
       should_open_editor = false;
       break;
     case eLazyBoolCalculate:
-      // Only auto-open when the command was invoked interactively.
-      // `result.GetInteractive()` is set to false by
-      // SBCommandInterpreter::HandleCommand and by batch command sourcing
-      // (test suite, scripts, headless drivers), so it's the accurate signal
-      // even when the process' stdin is a TTY inherited from the parent.
       should_open_editor = result.GetInteractive();
       break;
     }
@@ -557,10 +552,6 @@ protected:
     if (should_open_editor) {
       if (llvm::Error err = Host::OpenFileInExternalEditor(
               "", *generated_file_or_err, 1, true)) {
-        // Opening the file in an editor is a convenience, not a requirement:
-        // the template was already written to disk successfully, so don't
-        // fail the whole command over it (e.g. no external editor available
-        // on this platform).
         LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(err),
                        "OpenFileInExternalEditor failed: {0}");
       }
