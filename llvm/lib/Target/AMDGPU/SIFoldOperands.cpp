@@ -1065,7 +1065,7 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
     if (!Op->isImm()) {
       if (Op->isReg()) {
         MachineInstr *Def = MRI->getVRegDef(Op->getReg());
-        if (Def && Def->isImplicitDef())
+        if (!Def || Def->isImplicitDef())
           continue;
       }
       return {};
