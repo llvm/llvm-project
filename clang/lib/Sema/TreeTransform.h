@@ -16077,6 +16077,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         TPL->containsUnexpandedParameterPack();
   }
 
+  LSI->BeforeCompoundStatement = true;
   TypeLocBuilder NewCallOpTLBuilder;
   TypeLoc OldCallOpTypeLoc =
       E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
@@ -16101,6 +16102,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       !TRC.ArgPackSubstIndex)
     TRC.ArgPackSubstIndex = SemaRef.ArgPackSubstIndex;
 
+  LSI->BeforeCompoundStatement = false;
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
       E->getCallOperator()->getInnerLocStart(), TRC, NewCallOpTSI,
