@@ -40,6 +40,8 @@
         integer, parameter, public :: omp_alloctrait_val_kind = c_intptr_t
         integer, parameter, public :: omp_interop_kind = c_intptr_t
         integer, parameter, public :: omp_interop_fr_kind = omp_integer_kind
+        integer, parameter, public :: omp_interop_property_kind = omp_integer_kind
+        integer, parameter, public :: omp_interop_rc_kind = omp_integer_kind
 
         type omp_alloctrait
           integer(kind=omp_alloctrait_key_kind) key
@@ -84,6 +86,8 @@
         public :: omp_alloctrait_val_kind
         public :: omp_interop_kind
         public :: omp_interop_fr_kind
+        public :: omp_interop_property_kind
+        public :: omp_interop_rc_kind
         public :: omp_alloctrait
         public :: omp_pause_resource_kind
         public :: omp_depend_kind
@@ -215,6 +219,26 @@
         integer (kind=omp_interop_fr_kind), parameter, public :: omp_ifr_hip = 5
         integer (kind=omp_interop_fr_kind), parameter, public :: omp_ifr_level_zero = 6
         integer (kind=omp_interop_fr_kind), parameter, public :: omp_ifr_last = 7
+
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_fr_id = -1
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_fr_name = -2
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_vendor = -3
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_vendor_name = -4
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_device_num = -5
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_platform = -6
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_device = -7
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_device_context = -8
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_targetsync = -9
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_first = -9
+
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_no_value = 1
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_success = 0
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_empty = -1
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_out_of_range = -2
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_type_int = -3
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_type_ptr = -4
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_type_str = -5
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_other = -6
 
         integer (kind=omp_interop_kind), parameter, public :: omp_interop_none = 0
 
@@ -1061,6 +1085,63 @@
             logical (kind=omp_logical_kind) kmp_get_cancellation_status
           end function kmp_get_cancellation_status
 
+          !
+          ! Interface used internally to support Fortran API implementation
+          !
+
+          integer(c_int) function kmp_strlen(charptr) bind(c, name="strlen")
+            use, intrinsic :: iso_c_binding, only : c_int, c_ptr
+            type(c_ptr), value :: charptr
+          end function kmp_strlen
+
+          type(c_ptr) function kmp_get_uid_from_device(device_num)             &
+              bind(c, name="__kmpc_get_uid_from_device")
+            use, intrinsic :: iso_c_binding, only : c_ptr
+            integer, value :: device_num
+          end function kmp_get_uid_from_device
+
+          function kmp_get_interop_ptr(interop, property_id, ret_code)         &
+              bind(c, name="__kmpc_get_interop_ptr")
+            use, intrinsic :: iso_c_binding, only : c_int, c_intptr_t, c_ptr
+            type(c_ptr) :: kmp_get_interop_ptr
+            integer(c_intptr_t), value :: interop
+            integer(c_int), value :: property_id
+            integer(c_int) :: ret_code
+          end function kmp_get_interop_ptr
+
+          function kmp_get_interop_str(interop, property_id, ret_code)         &
+              bind(c, name="__kmpc_get_interop_str")
+            use, intrinsic :: iso_c_binding, only : c_int, c_intptr_t, c_ptr
+            type(c_ptr) :: kmp_get_interop_str
+            integer(c_intptr_t), value :: interop
+            integer(c_int), value :: property_id
+            integer(c_int) :: ret_code
+          end function kmp_get_interop_str
+
+          function kmp_get_interop_name(interop, property_id)                  &
+              bind(c, name="__kmpc_get_interop_name")
+            use, intrinsic :: iso_c_binding, only : c_int, c_intptr_t, c_ptr
+            type(c_ptr) :: kmp_get_interop_name
+            integer(c_intptr_t), value :: interop
+            integer(c_int), value :: property_id
+          end function kmp_get_interop_name
+
+          function kmp_get_interop_type_desc(interop, property_id)             &
+              bind(c, name="__kmpc_get_interop_type_desc")
+            use, intrinsic :: iso_c_binding, only : c_int, c_intptr_t, c_ptr
+            type(c_ptr) :: kmp_get_interop_type_desc
+            integer(c_intptr_t), value :: interop
+            integer(c_int), value :: property_id
+          end function kmp_get_interop_type_desc
+
+          function kmp_get_interop_rc_desc(interop, ret_code)                  &
+              bind(c, name="__kmpc_get_interop_rc_desc")
+            use, intrinsic :: iso_c_binding, only : c_int, c_intptr_t, c_ptr
+            type(c_ptr) :: kmp_get_interop_rc_desc
+            integer(c_intptr_t), value :: interop
+            integer(c_int), value :: ret_code
+          end function kmp_get_interop_rc_desc
+
         end interface
 
         ! make the above routine definitions public
@@ -1182,5 +1263,108 @@
         public :: kmp_set_warnings_on
         public :: kmp_set_warnings_off
         public :: kmp_get_cancellation_status
+        contains
+
+!       *
+!       * Routines implemented in Fortran
+!       *
+
+!       This routine is implemented in Fortran since it returns assumed-size
+!       character array which requires a dope vector.
+
+        character(:) function omp_get_uid_from_device(device_num)
+          use, intrinsic :: iso_c_binding
+          pointer :: omp_get_uid_from_device
+          integer, intent(in) :: device_num
+          integer(c_int) :: length
+          type(c_ptr) :: charptr_c
+
+          charptr_c = kmp_get_uid_from_device(device_num)
+          if (.not. c_associated(charptr_c)) then
+            nullify (omp_get_uid_from_device)
+          else
+            length = kmp_strlen(charptr_c)
+            call c_f_strpointer(charptr_c, omp_get_uid_from_device, length)
+          endif
+        end function omp_get_uid_from_device
+
+        function omp_get_interop_ptr(interop, property_id, ret_code)
+          use, intrinsic :: iso_c_binding
+          type (c_ptr) :: omp_get_interop_ptr
+          integer (kind=omp_interop_kind), intent(in) :: interop
+          integer (kind=omp_interop_property_kind) property_id
+          integer (kind=omp_interop_rc_kind), intent(out), optional :: ret_code
+
+          omp_get_interop_ptr = kmp_get_interop_ptr(interop, property_id, ret_code)
+        end function omp_get_interop_ptr
+
+        character(:) function omp_get_interop_str(interop, property_id, ret_code)
+          use, intrinsic :: iso_c_binding
+          pointer :: omp_get_interop_str
+          integer (kind=omp_interop_kind), intent(in) :: interop
+          integer (kind=omp_interop_property_kind) property_id
+          integer (kind=omp_interop_rc_kind), intent(out), optional :: ret_code
+          integer (kind=c_int) :: length
+          type(c_ptr) :: cstr
+
+          cstr = kmp_get_interop_str(interop, property_id, ret_code)
+          if (c_associated(cstr)) then
+            length = kmp_strlen(cstr)
+            call c_f_strpointer(cstr, omp_get_interop_str, length)
+          else
+            nullify (omp_get_interop_str)
+          endif
+        end function omp_get_interop_str
+
+        character(:) function omp_get_interop_name(interop, property_id)
+          use, intrinsic :: iso_c_binding
+          pointer :: omp_get_interop_name
+          integer (kind=omp_interop_kind), intent(in) :: interop
+          integer (kind=omp_interop_property_kind) property_id
+          integer (kind=c_int) :: length
+          type(c_ptr) :: cstr
+
+          cstr = kmp_get_interop_name(interop, property_id)
+          if (c_associated(cstr)) then
+            length = kmp_strlen(cstr)
+            call c_f_strpointer(cstr, omp_get_interop_name, length)
+          else
+            nullify (omp_get_interop_name)
+          endif
+        end function omp_get_interop_name
+
+        character(:) function omp_get_interop_type_desc(interop, property_id)
+          use, intrinsic :: iso_c_binding
+          pointer :: omp_get_interop_type_desc
+          integer (kind=omp_interop_kind), intent(in) :: interop
+          integer (kind=omp_interop_property_kind) property_id
+          integer (kind=c_int) :: length
+          type(c_ptr) :: cstr
+
+          cstr = kmp_get_interop_type_desc(interop, property_id)
+          if (c_associated(cstr)) then
+            length = kmp_strlen(cstr)
+            call c_f_strpointer(cstr, omp_get_interop_type_desc, length)
+          else
+            nullify (omp_get_interop_type_desc)
+          endif
+        end function omp_get_interop_type_desc
+
+        character(:) function omp_get_interop_rc_desc(interop, ret_code)
+          use, intrinsic :: iso_c_binding
+          pointer :: omp_get_interop_rc_desc
+          integer (kind=omp_interop_kind), intent(in) :: interop
+          integer (kind=omp_interop_rc_kind) ret_code
+          integer (kind=c_int) :: length
+          type(c_ptr) :: cstr
+
+          cstr = kmp_get_interop_rc_desc(interop, ret_code)
+          if (c_associated(cstr)) then
+            length = kmp_strlen(cstr)
+            call c_f_strpointer(cstr, omp_get_interop_rc_desc, length)
+          else
+            nullify (omp_get_interop_rc_desc)
+          endif
+        end function omp_get_interop_rc_desc
 
       end module omp_lib
