@@ -781,9 +781,9 @@ void DWARF5AcceleratorTable::emitHeader() const {
   if (Format == dwarf::DwarfFormat::DWARF64)
     support::endian::write(*FullTableStream, dwarf::DW_LENGTH_DWARF64,
                            llvm::endianness::little);
-  writeDWARFOLengthOrOffset(*FullTableStream, Format,
-                            HeaderSize + StrBuffer->size() +
-                                AugmentationStringSize);
+  writeDWARFLengthOrOffset(*FullTableStream, Format,
+                           HeaderSize + StrBuffer->size() +
+                               AugmentationStringSize);
   // Version
   support::endian::write(*FullTableStream, static_cast<uint16_t>(5),
                          llvm::endianness::little);
@@ -823,11 +823,11 @@ void DWARF5AcceleratorTable::emitHeader() const {
 
 void DWARF5AcceleratorTable::emitCUList() const {
   for (const uint64_t CUID : CUList)
-    writeDWARFOLengthOrOffset(*StrStream, Format, CUID);
+    writeDWARFLengthOrOffset(*StrStream, Format, CUID);
 }
 void DWARF5AcceleratorTable::emitTUList() const {
   for (const uint64_t TUID : LocalTUList)
-    writeDWARFOLengthOrOffset(*StrStream, Format, TUID);
+    writeDWARFLengthOrOffset(*StrStream, Format, TUID);
 
   for (const uint64_t TUID : ForeignTUList)
     support::endian::write(*StrStream, TUID, llvm::endianness::little);
@@ -850,13 +850,13 @@ void DWARF5AcceleratorTable::emitHashes() const {
 void DWARF5AcceleratorTable::emitStringOffsets() const {
   for (const auto &Bucket : getBuckets()) {
     for (const DWARF5AcceleratorTable::HashData *Hash : Bucket)
-      writeDWARFOLengthOrOffset(*StrStream, Format, Hash->StrOffset);
+      writeDWARFLengthOrOffset(*StrStream, Format, Hash->StrOffset);
   }
 }
 void DWARF5AcceleratorTable::emitOffsets() const {
   for (const auto &Bucket : getBuckets()) {
     for (const DWARF5AcceleratorTable::HashData *Hash : Bucket)
-      writeDWARFOLengthOrOffset(*StrStream, Format, Hash->EntryOffset);
+      writeDWARFLengthOrOffset(*StrStream, Format, Hash->EntryOffset);
   }
 }
 void DWARF5AcceleratorTable::emitAbbrevs() {

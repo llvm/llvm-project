@@ -221,8 +221,8 @@ getDWARF5Header(const LocListsRangelistsHeader &Header) {
   if (Header.Format == dwarf::DwarfFormat::DWARF64)
     support::endian::write(*HeaderStream, dwarf::DW_LENGTH_DWARF64,
                            llvm::endianness::little);
-  writeDWARFOLengthOrOffset(*HeaderStream, Header.Format,
-                            Header.UnitLength + HeaderSize);
+  writeDWARFLengthOrOffset(*HeaderStream, Header.Format,
+                           Header.UnitLength + HeaderSize);
   support::endian::write(*HeaderStream, Header.Version,
                          llvm::endianness::little);
   support::endian::write(*HeaderStream, Header.AddressSize,
@@ -328,8 +328,8 @@ void DebugRangeListsSectionWriter::finalizeSection() {
   const uint64_t SizeOfArraySection =
       RangeEntries.size() * dwarf::getDwarfOffsetByteSize(Format);
   for (uint64_t Offset : RangeEntries)
-    writeDWARFOLengthOrOffset(*CUArrayStream, Format,
-                              Offset + SizeOfArraySection);
+    writeDWARFLengthOrOffset(*CUArrayStream, Format,
+                             Offset + SizeOfArraySection);
 
   std::unique_ptr<DebugBufferVector> Header =
       getDWARF5Header({Format, SizeOfArraySection + CUBodyBuffer->size(), 5, 8,
@@ -369,12 +369,12 @@ void DebugARangesSectionWriter::writeARangesSection(
 
     // Emit header.
 
-    // Header size： version(2) + offset(4/8) + address size(1) + segment(1).
+    // Header size: version(2) + offset(4/8) + address size(1) + segment(1).
     const uint64_t HeaderSize = sizeof(uint16_t) + DwarfOffsetByteSize +
                                 sizeof(uint8_t) + sizeof(uint8_t);
 
-    // Size of this set: header（8/16 bytes depending on the DWARF format) +
-    // padding after header （4/8 bytes）+ 2 * sizeof(uint64_t) bytes for each
+    // Size of this set: header (8/12 bytes depending on the DWARF format) +
+    // padding after header (4/8 bytes) + 2 * sizeof(uint64_t) bytes for each
     // of the ranges, plus an extra pair of uint64_t's for the terminating,
     // zero-length range. Does not include size field itself.
     const uint64_t Size = HeaderSize + DwarfOffsetByteSize +
@@ -384,14 +384,14 @@ void DebugARangesSectionWriter::writeARangesSection(
     if (Format == dwarf::DwarfFormat::DWARF64)
       support::endian::write(RangesStream, dwarf::DW_LENGTH_DWARF64,
                              llvm::endianness::little);
-    writeDWARFOLengthOrOffset(RangesStream, Format, Size);
+    writeDWARFLengthOrOffset(RangesStream, Format, Size);
 
     // Header field #2: version number, 2 as per the specification.
     support::endian::write(RangesStream, static_cast<uint16_t>(2),
                            llvm::endianness::little);
 
     // Header field #3: debug info offset of the correspondent compile unit.
-    writeDWARFOLengthOrOffset(RangesStream, Format, Info.Offset);
+    writeDWARFLengthOrOffset(RangesStream, Format, Info.Offset);
 
     // Header field #4: address size.
     // 8 since we only write ELF64 binaries for now.
@@ -401,7 +401,7 @@ void DebugARangesSectionWriter::writeARangesSection(
     RangesStream << char(0);
 
     // Padding before address table - 4/8 bytes.
-    writeDWARFOLengthOrOffset(RangesStream, Format, 0);
+    writeDWARFLengthOrOffset(RangesStream, Format, 0);
 
     writeAddressRanges(RangesStream, AddressRanges, true);
   }
@@ -551,7 +551,7 @@ DebugAddrWriterDwarf5::finalize(const size_t BufferSize) {
   const uint64_t Length = SortedMap.size() * AddressByteSize + 4;
   if (Format == dwarf::DwarfFormat::DWARF64)
     support::endian::write(*AddressStream, dwarf::DW_LENGTH_DWARF64, Endian);
-  writeDWARFOLengthOrOffset(*AddressStream, Format, Length, Endian);
+  writeDWARFLengthOrOffset(*AddressStream, Format, Length, Endian);
   support::endian::write(*AddressStream, static_cast<uint16_t>(5), Endian);
   support::endian::write(*AddressStream, static_cast<uint8_t>(AddressByteSize),
                          Endian);
@@ -780,8 +780,8 @@ void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
       NumberOfEntries * dwarf::getDwarfOffsetByteSize(Format);
   // Write out IndexArray
   for (uint64_t RelativeOffset : RelativeLocListOffsets)
-    writeDWARFOLengthOrOffset(*LocArrayStream, Format,
-                              SizeOfArraySection + RelativeOffset);
+    writeDWARFLengthOrOffset(*LocArrayStream, Format,
+                             SizeOfArraySection + RelativeOffset);
 
   std::unique_ptr<DebugBufferVector> Header =
       getDWARF5Header({Format, SizeOfArraySection + LocBodyBuffer->size(), 5, 8,
@@ -932,10 +932,10 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
     if (Format == dwarf::DwarfFormat::DWARF64)
       support::endian::write(*StrOffsetsStream, dwarf::DW_LENGTH_DWARF64,
                              llvm::endianness::little);
-    writeDWARFOLengthOrOffset(*StrOffsetsStream, Format,
-                              StrOffsets.size() *
-                                      dwarf::getDwarfOffsetByteSize(Format) +
-                                  sizeof(uint16_t) + sizeof(uint16_t));
+    writeDWARFLengthOrOffset(*StrOffsetsStream, Format,
+                             StrOffsets.size() *
+                                     dwarf::getDwarfOffsetByteSize(Format) +
+                                 sizeof(uint16_t) + sizeof(uint16_t));
     support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(5),
                            llvm::endianness::little);
     support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(0),
@@ -948,7 +948,7 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
                            StrListBaseAttrInfo.getForm(),
                            DIEInteger(BaseOffset));
     for (const uint64_t Offset : StrOffsets)
-      writeDWARFOLengthOrOffset(*StrOffsetsStream, Format, Offset);
+      writeDWARFLengthOrOffset(*StrOffsetsStream, Format, Offset);
   } else {
     DIEBldr.replaceValue(&Die, dwarf::DW_AT_str_offsets_base,
                          StrListBaseAttrInfo.getForm(),
