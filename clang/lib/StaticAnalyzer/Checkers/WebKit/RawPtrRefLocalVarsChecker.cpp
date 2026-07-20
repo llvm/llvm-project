@@ -419,9 +419,11 @@ public:
       Os << " is a ";
       printPointerTypeAndType(Os, V->getType());
 
-      PathDiagnosticLocation BSLoc(Value->getExprLoc(), BR->getSourceManager());
+      SourceLocation ExprLoc = (Value) ? Value->getExprLoc() : V->getLocation();
+      PathDiagnosticLocation BSLoc(ExprLoc, BR->getSourceManager());
       auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
-      Report->addRange(Value->getSourceRange());
+      if (Value)
+        Report->addRange(Value->getSourceRange());
       BR->emitReport(std::move(Report));
     } else {
       if (V->hasLocalStorage())
