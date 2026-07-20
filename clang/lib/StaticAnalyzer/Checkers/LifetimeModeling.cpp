@@ -43,11 +43,13 @@ static bool isDanglingStackSource(const MemRegion *Source,
           Source->getMemorySpaceAs<StackSpaceRegion>(State)) {
     const StackFrame *SF = StackSpace->getStackFrame();
     const StackFrame *CurrentSF = C.getStackFrame();
-
+    // If any frame on the current stack belongs to a destructor
+    // the warning should be suppressed. When a lifetimebound method
+    // is called from a destructor then its return value is not expected
+    // to outlive the object being destroyed.
     for (const StackFrame *DtorSF = CurrentSF; DtorSF;
          DtorSF = DtorSF->getParent()) {
-      const auto *DDec = dyn_cast_or_null<CXXDestructorDecl>(DtorSF->getDecl());
-      if (DDec)
+      if (isa<CXXDestructorDecl>(DtorSF->getDecl()))
         return false;
     }
 
