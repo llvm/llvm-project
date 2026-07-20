@@ -11,7 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "hdr/sys_socket_macros.h" // For AF_UNIX and SOCK_DGRAM
+#include "hdr/sys_socket_macros.h" // For AF_UNIX and SOCK_STREAM
 #include "src/__support/CPP/scope.h"
 #include "src/sys/socket/send.h"
 #include "src/sys/socket/sockatmark.h"
