@@ -2707,6 +2707,10 @@ class AsmConstraintsInfo {
   bool ReadOnly = true;
   bool ReadNone = true;
 
+  // If true, emit an asm statement that prefers to use a register.
+  // If false, emit an asm statement that prefers to use memory.
+  bool PreferRegs;
+
   bool GetOutputAndInputConstraints();
   void HandleOutputConstraints();
   void HandleMSStyleAsmBlob();
@@ -2742,6 +2746,50 @@ class AsmConstraintsInfo {
     return CGM.getTargetCodeGenInfo();
   }
 
+  /// Returns true if the raw constraint string contains a general-memory code
+  /// ('m' or 'g') as a standalone constraint code (not inside a braced hard-
+  /// register specifier like "{xmm0}"). This mirrors the backend's
+  /// MayFoldRegister condition, which only activates for 'm' (general memory),
+  /// not broader alternatives like 'o' (offsettable) or 'V' (non-offsettable).
+  bool ConstraintHasGeneralMem(StringRef RawConstraint) {
+    bool InBrace = false;
+    for (char C : RawConstraint) {
+      if (C == '{')
+        InBrace = true;
+      else if (C == '}')
+        InBrace = false;
+      else if (!InBrace && (C == 'm' || C == 'g'))
+        return true;
+    }
+    return false;
+  }
+
+  /// Reset for reuse. No need to recalculate the constraint infos.
+  void reset() {
+    Constraints.clear();
+    InOutConstraints.clear();
+    OutputConstraints.clear();
+    Args.clear();
+    ArgTypes.clear();
+    ArgElemTypes.clear();
+    ResultRegDests.clear();
+    ResultRegQualTys.clear();
+    ResultRegTypes.clear();
+    ResultTruncRegTypes.clear();
+    ResultTypeRequiresCast.clear();
+    InOutArgs.clear();
+    InOutArgTypes.clear();
+    InOutArgElemTypes.clear();
+    IndirectDests.clear();
+    ResultBounds.clear();
+
+    DefaultDest = nullptr;
+    ReadOnly = true;
+    ReadNone = true;
+  }
+
+  void EmitAsmStmtImpl();
+
 public:
   AsmConstraintsInfo(CodeGenFunction &CGF, const AsmStmt &S)
       : CGF(CGF), CGM(CGF.CGM), S(S), Builder(CGF.Builder),
@@ -2756,7 +2804,6 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   // Pop all cleanup blocks at the end of the asm statement.
   CodeGenFunction::RunCleanupsScope Cleanups(*this);
 
-  // Get all the output and input constraints together.
   AsmConstraintsInfo AsmInfo(*this, S);
   AsmInfo.EmitAsmStmt();
 }
@@ -2765,6 +2812,64 @@ void AsmConstraintsInfo::EmitAsmStmt() {
   if (!GetOutputAndInputConstraints())
     return EmitHipStdParUnsupportedAsm();
 
+  // If any *output* constraints allow for both register and memory options, we
+  // need to delay choosing which to prefer until ISel, where the
+  // 'llvm.asm.constraint.br' intrinsic is resolved. Input-only "rm"
+  // constraints don't need this: PreferRegs only affects output emission, so
+  // both paths would be identical for pure inputs.
+  bool HasRegMemConstraints =
+      llvm::all_of(llvm::concat<TargetInfo::ConstraintInfo>(
+                       OutputConstraintInfos, InputConstraintInfos),
+                   [](const TargetInfo::ConstraintInfo &Info) {
+                     // FIXME: Should we allow for alternative constraints?
+                     return !StringRef(Info.getConstraintStr()).contains(",");
+                   }) &&
+      llvm::any_of(OutputConstraintInfos,
+                   [this](const TargetInfo::ConstraintInfo &Info) {
+                     return Info.allowsRegister() &&
+                            ConstraintHasGeneralMem(Info.getConstraintStr());
+                   });
+
+  llvm::BasicBlock *PrefRegBlock = nullptr;
+  llvm::BasicBlock *PrefMemBlock = nullptr;
+  llvm::BasicBlock *MergeBlock = nullptr;
+
+  if (HasRegMemConstraints) {
+    PrefRegBlock = CGF.createBasicBlock("asm.pref.reg");
+    PrefMemBlock = CGF.createBasicBlock("asm.pref.mem");
+    MergeBlock = CGF.createBasicBlock("asm.merge");
+
+    CGF.CurFn->insert(CGF.CurFn->end(), PrefRegBlock);
+    CGF.CurFn->insert(CGF.CurFn->end(), PrefMemBlock);
+    CGF.CurFn->insert(CGF.CurFn->end(), MergeBlock);
+
+    Builder.CreateCallBr(CGM.getIntrinsic(llvm::Intrinsic::asm_constraint_br),
+                         PrefRegBlock, PrefMemBlock);
+    Builder.SetInsertPoint(PrefMemBlock);
+  }
+
+  // The memory path keeps the full "rm" constraint rather than simplifying it
+  // to "m". We could strip the "r" alternative here, but reusing the same
+  // constraint string from both paths keeps the frontend simpler and the
+  // backend's InlineAsmPrepare pass already routes to this block only when
+  // memory is intended.
+  PreferRegs = false;
+  EmitAsmStmtImpl();
+
+  if (HasRegMemConstraints) {
+    Builder.CreateBr(MergeBlock);
+    Builder.SetInsertPoint(PrefRegBlock);
+
+    reset();
+    PreferRegs = true;
+    EmitAsmStmtImpl();
+
+    Builder.CreateBr(MergeBlock);
+    Builder.SetInsertPoint(MergeBlock);
+  }
+}
+
+void AsmConstraintsInfo::EmitAsmStmtImpl() {
   // Handle output constraints.
   HandleOutputConstraints();
 
@@ -2956,14 +3061,30 @@ void AsmConstraintsInfo::HandleOutputConstraints() {
     if (!Constraints.empty())
       Constraints += ',';
 
-    // If this is a register output, then make the inline asm return it
-    // by-value.  If this is a memory result, return the value by-reference.
+    // - If this is a register output, then make the inline asm return it
+    //   by-value.
+    // - If this is a memory output, return the value by reference.
+    // - If this is a register and memory output, treat it like a register
+    //   output at -O[1-3]. This allows the optimizing register allocators to
+    //   choose a register, while the fast register allocator defaults to
+    //   memory.
     QualType QTy = OutExpr->getType();
     const bool IsScalarOrAggregate =
         CodeGenFunction::hasScalarEvaluationKind(QTy) ||
         CodeGenFunction::hasAggregateEvaluationKind(QTy);
 
-    if (!Info.allowsMemory() && IsScalarOrAggregate) {
+    // Only treat as register-memory when the constraint contains the literal
+    // 'm' or 'g' code. The backend's MayFoldRegister flag (which drives the
+    // register preference at -O1+) is set only for 'm', not for broader memory
+    // alternatives like 'o' (offsettable). Emitting broader constraints like
+    // "=ro" as a direct return value would cause the backend to select 'o'
+    // (C_Memory) for a non-indirect output, hitting an assertion.
+    const bool RegisterMemoryConstraints =
+        PreferRegs && Info.allowsRegister() &&
+        ConstraintHasGeneralMem(Info.getConstraintStr());
+
+    if (IsScalarOrAggregate &&
+        (!Info.allowsMemory() || RegisterMemoryConstraints)) {
       Constraints += "=" + OutputConstraint;
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);

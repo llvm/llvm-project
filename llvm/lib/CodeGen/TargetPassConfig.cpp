@@ -1401,6 +1401,7 @@ static void initializeDefaultRegisterAllocatorOnce() {
 /// allocation may still override this for per-target regalloc
 /// selection. But -regalloc=... always takes precedence.
 FunctionPass *TargetPassConfig::createTargetRegisterAllocator(bool Optimized) {
+  TM->Options.FastRA = !Optimized;
   if (Optimized)
     return createGreedyRegisterAllocator();
   else

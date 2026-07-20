@@ -3484,9 +3484,7 @@ void Verifier::visitIndirectBrInst(IndirectBrInst &BI) {
 }
 
 static bool isSupportedCallBrIntrinsic(Intrinsic::ID ID) {
-  // Currently we only support callbr for amdgcn.kill. Add more checks here as
-  // needed.
-  return isAMDGPUCallBrIntrinsic(ID);
+  return isAMDGPUCallBrIntrinsic(ID) || ID == Intrinsic::asm_constraint_br;
 }
 
 void Verifier::visitCallBrInst(CallBrInst &CBI) {
@@ -3496,11 +3494,12 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
     Check(!CBI.hasOperandBundles(),
           "callbr for intrinsics currently doesn't support operand bundles");
 
-    if (!isSupportedCallBrIntrinsic(CBI.getIntrinsicID())) {
+    Intrinsic::ID ID = CBI.getIntrinsicID();
+    if (!isSupportedCallBrIntrinsic(ID)) {
       CheckFailed(
           "callbr currently only supports asm-goto and selected intrinsics");
     }
-    visitIntrinsicCall(CBI.getIntrinsicID(), CBI);
+    visitIntrinsicCall(ID, CBI);
   } else {
     const InlineAsm *IA = cast<InlineAsm>(CBI.getCalledOperand());
     Check(!IA->canThrow(), "Unwinding from Callbr is not allowed");
@@ -7045,6 +7044,29 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(MD->getNumOperands() == 1 && isa<MDString>(MD->getOperand(0)),
           "llvm.write_volatile_register metadata must be a single MDString",
           &Call);
+    break;
+  }
+  case Intrinsic::asm_constraint_br: {
+    Check(isa<CallBrInst>(Call),
+          "llvm.asm.constraint.br must be called only by callbr", &Call);
+
+    const CallBrInst &CBI = cast<CallBrInst>(Call);
+    Check(CBI.getNumIndirectDests() == 1,
+          "Callbr asm_constraint_br only supports one indirect dest");
+    Check(CBI.getDefaultDest()->hasNPredecessors(1),
+          "Callbr asm_constraint_br default dest must have only one "
+          "predecessor");
+    Check(isa<CallBrInst>(CBI.getDefaultDest()->getTerminator()) ||
+              CBI.getDefaultDest()->getSingleSuccessor(),
+          "Callbr asm_constraint_br default dest must have only "
+          "one successor");
+    Check(CBI.getIndirectDest(0)->hasNPredecessors(1),
+          "Callbr asm_constraint_br indirect dest must have only one "
+          "predecessor");
+    Check(isa<CallBrInst>(CBI.getIndirectDest(0)->getTerminator()) ||
+              CBI.getIndirectDest(0)->getSingleSuccessor(),
+          "Callbr asm_constraint_br indirect dest must have only "
+          "one successor");
     break;
   }
   case Intrinsic::ptrauth_auth_with_pc_and_resign: {

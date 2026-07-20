@@ -90,11 +90,11 @@
 ; CHECK-NEXT:     A No-Op Barrier Pass
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Merge internal globals
+; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
-; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Natural Loop Information
