@@ -53,6 +53,10 @@ private:
   // Tracks nested DEC structures and fields of that type
   UnorderedSymbolSet emittedDECStructures_, emittedDECFields_;
   UnorderedSymbolSet usedNonIntrinsicModules_;
+  // Modules already re-exported by a plain USE for an operator-less declare
+  // reduction, so the USE is written once even when several such reductions
+  // come from the same module.
+  UnorderedSymbolSet reexportedReductionModules_;
 
   llvm::raw_string_ostream needs_{needsBuf_};
   llvm::raw_string_ostream uses_{usesBuf_};

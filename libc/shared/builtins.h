@@ -21,6 +21,7 @@
 #include "builtins/addsf3.h"
 #include "builtins/addtf3.h"
 #include "builtins/divdf3.h"
+#include "builtins/divsf3.h"
 #include "builtins/divtf3.h"
 #include "builtins/muldf3.h"
 #include "builtins/mulsf3.h"

@@ -904,12 +904,13 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
     ProfileHasAttribute =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute);
-    if (std::error_code EC = readFuncMetadata(ProfileHasAttribute))
+    if (std::error_code EC = readFuncMetadata())
       return EC;
     break;
   }
   case SecProfileSymbolList:
-    if (std::error_code EC = readProfileSymbolList())
+    if (std::error_code EC = readProfileSymbolList(
+            hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5)))
       return EC;
     break;
   default:
@@ -966,8 +967,7 @@ SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
       ProfilesToReadMetadata.insert(&I->second);
   }
 
-  if (std::error_code EC =
-          readFuncMetadata(ProfileHasAttribute, ProfilesToReadMetadata))
+  if (std::error_code EC = readFuncMetadata(ProfilesToReadMetadata))
     return EC;
   return sampleprof_error::success;
 }
@@ -1136,7 +1136,29 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileReaderExtBinaryBase::readProfileSymbolList() {
+std::error_code
+SampleProfileReaderExtBinaryBase::readProfileSymbolList(bool IsMD5) {
+  if (IsMD5)
+    return readMD5ProfileSymbolList();
+  return readStringBasedProfileSymbolList();
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::readMD5ProfileSymbolList() {
+  size_t Size = End - Data;
+  if (Size % sizeof(uint64_t) != 0)
+    return sampleprof_error::truncated;
+  const auto *Table = reinterpret_cast<const support::ulittle64_t *>(Data);
+  size_t NumEntries = Size / sizeof(uint64_t);
+  if (!ProfSymList)
+    ProfSymList = std::make_unique<ProfileSymbolList>();
+  ProfSymList->setColdGUIDTable(
+      EytzingerTableSpan<support::ulittle64_t>(Table, NumEntries));
+  Data = End;
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderExtBinaryBase::readStringBasedProfileSymbolList() {
   if (!ProfSymList)
     ProfSymList = std::make_unique<ProfileSymbolList>();
 
@@ -1380,8 +1402,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
 }
 
 std::error_code
-SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
-                                                   FunctionSamples *FProfile) {
+SampleProfileReaderExtBinaryBase::readFuncMetadata(FunctionSamples *FProfile) {
   if (Data < End) {
     if (ProfileIsProbeBased) {
       auto Checksum = readNumber<uint64_t>();
@@ -1425,8 +1446,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
               &FProfile->functionSamplesAt(LineLocation(
                   *LineOffset, *Discriminator))[FContext.getFunction()]);
         }
-        if (std::error_code EC =
-                readFuncMetadata(ProfileHasAttribute, CalleeProfile))
+        if (std::error_code EC = readFuncMetadata(CalleeProfile))
           return EC;
       }
     }
@@ -1436,7 +1456,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
 }
 
 std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata(
-    bool ProfileHasAttribute, DenseSet<FunctionSamples *> &Profiles) {
+    DenseSet<FunctionSamples *> &Profiles) {
   if (FuncMetadataIndex.empty())
     return sampleprof_error::success;
 
@@ -1447,15 +1467,14 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata(
 
     Data = R->second.first;
     End = R->second.second;
-    if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, FProfile))
+    if (std::error_code EC = readFuncMetadata(FProfile))
       return EC;
     assert(Data == End && "More data is read than expected");
   }
   return sampleprof_error::success;
 }
 
-std::error_code
-SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
+std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata() {
   while (Data < End) {
     auto FContextHash(readSampleContextFromTable());
     if (std::error_code EC = FContextHash.getError())
@@ -1467,7 +1486,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
       FProfile = &It->second;
 
     const uint8_t *Start = Data;
-    if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, FProfile))
+    if (std::error_code EC = readFuncMetadata(FProfile))
       return EC;
 
     FuncMetadataIndex[FContext.getHashCode()] = {Start, Data};
@@ -1593,6 +1612,10 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
     if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute))
       Flags.append("attr,");
     break;
+  case SecProfileSymbolList:
+    if (hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5))
+      Flags.append("md5,");
+    break;
   default:
     break;
   }
@@ -1635,8 +1658,9 @@ std::error_code SampleProfileReaderBinary::readMagicIdent() {
   auto Version = readNumber<uint64_t>();
   if (std::error_code EC = Version.getError())
     return EC;
-  else if (*Version != SPVersion())
+  else if (!formatVersionIsSupported(*Version))
     return sampleprof_error::unsupported_version;
+  FormatVersion = *Version;
 
   return sampleprof_error::success;
 }

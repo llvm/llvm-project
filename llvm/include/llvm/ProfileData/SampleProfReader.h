@@ -227,6 +227,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -515,6 +516,9 @@ public:
   /// Print all the profiles on stream \p OS in the JSON format.
   LLVM_ABI void dumpJson(raw_ostream &OS = dbgs());
 
+  /// Return the format version of the profile. For tests only.
+  uint64_t getFormatVersion() const { return FormatVersion; }
+
   /// Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
     // The function name may have been updated by adding suffix. Call
@@ -696,6 +700,9 @@ protected:
 
   /// Whether the function profiles use FS discriminators.
   bool ProfileIsFS = false;
+
+  /// Format version of the profile.
+  uint64_t FormatVersion = 0;
 
   /// If true, the profile has vtable profiles and reader should decode them
   /// to parse profiles correctly.
@@ -935,6 +942,14 @@ public:
   using OnDiskTableType =
       llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
 
+  SampleProfileFuncOffsetTable() = delete;
+  SampleProfileFuncOffsetTable(const SampleProfileFuncOffsetTable &) = delete;
+  SampleProfileFuncOffsetTable &
+  operator=(const SampleProfileFuncOffsetTable &) = delete;
+  SampleProfileFuncOffsetTable(SampleProfileFuncOffsetTable &&) = delete;
+  SampleProfileFuncOffsetTable &
+  operator=(SampleProfileFuncOffsetTable &&) = delete;
+
   explicit SampleProfileFuncOffsetTable(InMemoryModeT,
                                         size_t InitialCapacity = 0) {
     InMemoryTable.reserve(InitialCapacity);
@@ -967,12 +982,6 @@ public:
         return Iter->second;
     }
     return std::nullopt;
-  }
-
-  /// Clear the in-memory map and release the on-disk table.
-  void clear() {
-    InMemoryTable.clear();
-    OnDiskTable.reset();
   }
 
 private:
@@ -1014,18 +1023,18 @@ protected:
   std::error_code readSecHdrTableEntry(uint64_t Idx);
   std::error_code readSecHdrTable();
 
-  std::error_code readFuncMetadata(bool ProfileHasAttribute,
-                                   DenseSet<FunctionSamples *> &Profiles);
-  std::error_code readFuncMetadata(bool ProfileHasAttribute);
-  std::error_code readFuncMetadata(bool ProfileHasAttribute,
-                                   FunctionSamples *FProfile);
+  std::error_code readFuncMetadata(DenseSet<FunctionSamples *> &Profiles);
+  std::error_code readFuncMetadata();
+  std::error_code readFuncMetadata(FunctionSamples *FProfile);
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readFuncProfiles(const DenseSet<StringRef> &FuncsToUse,
                                    SampleProfileMap &Profiles);
   std::error_code readNameTableSec(bool IsMD5, bool FixedLengthMD5);
   std::error_code readCSNameTableSec();
-  std::error_code readProfileSymbolList();
+  std::error_code readProfileSymbolList(bool IsMD5);
+  std::error_code readStringBasedProfileSymbolList();
+  std::error_code readMD5ProfileSymbolList();
 
   std::error_code readHeader() override;
   std::error_code verifySPMagic(uint64_t Magic) override = 0;
@@ -1155,6 +1164,23 @@ protected:
   /// GCOV tags used to separate sections in the profile file.
   static const uint32_t GCOVTagAFDOFileNames = 0xaa000000;
   static const uint32_t GCOVTagAFDOFunction = 0xac000000;
+};
+
+/// A helper class that wraps a local set of string names from NameTable.
+class SampleProfileNameSet {
+  const SampleProfileReader &Reader;
+  StringSet<> NamesInProfile;
+
+public:
+  explicit SampleProfileNameSet(const SampleProfileReader &R) : Reader(R) {
+    for (FunctionId Name : Reader.getNameTable())
+      NamesInProfile.insert(Name.stringRef());
+  }
+
+  /// Check if a canonical function name exists in the profile name table.
+  bool contains(StringRef CanonName) const {
+    return NamesInProfile.contains(CanonName);
+  }
 };
 
 } // end namespace sampleprof

@@ -1445,7 +1445,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       if (llvm::any_of(CmdArgs, isPAuthLR))
         EnablePAuthLR = true;
     }
-    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg,
+    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg, Triple,
                                           EnablePAuthLR))
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << DiagMsg;
@@ -2168,6 +2168,10 @@ void Clang::AddSystemZTargetArgs(const ArgList &Args,
     CmdArgs.push_back("-mfloat-abi");
     CmdArgs.push_back("soft");
   }
+
+  if (Triple.isOSzOS())
+    Args.AddLastArg(CmdArgs, options::OPT_mzos_ppa1_name,
+                    options::OPT_mno_zos_ppa1_name);
 }
 
 void Clang::AddX86TargetArgs(const ArgList &Args,
@@ -3978,6 +3982,14 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
   }
   if (Arg *A = Args.getLastArg(options::OPT_dxc_Zsb))
     A->claim(); // /Zsb is the default behavior, no need to forward it to llc.
+  if (Args.hasArg(options::OPT_dxc_source_in_debug_module)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--dx-source-in-debug-module");
+  }
+  if (Args.hasArg(options::OPT_dxc_Qstrip_debug)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--dx-strip-debug");
+  }
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
@@ -8073,6 +8085,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_extract_summaries);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_tu_summary_file);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_compilation_unit_id);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_include_local_entities);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_no_extract_from_system_headers);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_source_transformation);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_global_scope_analysis_result);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_src_edit_file);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_transformation_report_file);
 
   // Handle serialized diagnostics.
   if (Arg *A = Args.getLastArg(options::OPT__serialize_diags)) {
@@ -8485,7 +8503,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Triple.isAArch64() &&
       (Args.hasArg(options::OPT_mno_fmv) ||
-       (Triple.isAndroid() && Triple.isAndroidVersionLT(23)) ||
        getToolChain().GetRuntimeLibType(Args) != ToolChain::RLT_CompilerRT)) {
     // Disable Function Multiversioning on AArch64 target.
     CmdArgs.push_back("-target-feature");
@@ -10047,20 +10064,16 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
   addOffloadCompressArgs(Args, CmdArgs);
 
-  if (Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ)) {
-    StringRef Val = A->getValue();
-
-    if (Val.equals_insensitive("jobserver"))
+  OffloadJobsOpt OffloadJobs = parseOffloadJobs(Args);
+  if (OffloadJobs.A) {
+    if (OffloadJobs.K == OffloadJobsOpt::Kind::Jobserver) {
       CmdArgs.push_back(Args.MakeArgString("--wrapper-jobs=jobserver"));
-    else {
-      int NumThreads;
-      if (Val.getAsInteger(10, NumThreads) || NumThreads <= 0) {
-        C.getDriver().Diag(diag::err_drv_invalid_int_value)
-            << A->getAsString(Args) << Val;
-      } else {
-        CmdArgs.push_back(
-            Args.MakeArgString("--wrapper-jobs=" + Twine(NumThreads)));
-      }
+    } else if (OffloadJobs.K == OffloadJobsOpt::Kind::Fixed) {
+      CmdArgs.push_back(Args.MakeArgString("--wrapper-jobs=" +
+                                           Twine(OffloadJobs.NumThreads)));
+    } else if (!OffloadJobs.A->isClaimed()) {
+      C.getDriver().Diag(diag::err_drv_invalid_int_value)
+          << OffloadJobs.A->getAsString(Args) << OffloadJobs.Value;
     }
   }
 

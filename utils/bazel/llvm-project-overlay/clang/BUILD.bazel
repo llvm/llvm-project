@@ -431,6 +431,16 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "basic_builtins_zos_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsZOS.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsZOS.td",
+    deps = [
+        ":BuiltinsBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
     name = "basic_builtins_x86_64_gen",
     tbl_outs = {"include/clang/Basic/BuiltinsX86_64.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
@@ -760,6 +770,7 @@ cc_library(
         ":basic_builtins_systemz_gen",
         ":basic_builtins_x86_64_gen",
         ":basic_builtins_x86_gen",
+        ":basic_builtins_zos_gen",
         ":basic_riscv_andes_vector_builtins_gen",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",
@@ -1288,6 +1299,25 @@ cc_library(
         ":basic",
         ":lex",
         ":rewrite",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "tooling_headers",
+    hdrs = glob([
+        "include/clang/Tooling/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":ast_matchers",
+        ":basic",
+        ":dependency_scanning",
+        ":frontend",
+        ":support",
+        ":tooling_core",
+        "//llvm:Option",
         "//llvm:Support",
     ],
 )
@@ -2678,6 +2708,7 @@ cc_library(
         ":analysis",
         ":ast",
         ":basic",
+        ":frontend",
         ":scalable_static_analysis_core",
         "//llvm:Support",
     ],
@@ -2708,6 +2739,7 @@ cc_library(
         ":scalable_static_analysis_core",
         ":support",
         ":tooling_core",
+        ":tooling_headers",
         "//llvm:Support",
     ],
 )
@@ -2723,7 +2755,9 @@ cc_library(
         ":basic",
         ":frontend",
         ":scalable_static_analysis_core",
+        ":scalable_static_analysis_source_transformation",
         ":sema",
+        ":tooling_core",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -2745,7 +2779,10 @@ cc_binary(
 
 cc_binary(
     name = "clang-ssaf-linker",
-    srcs = ["tools/clang-ssaf-linker/SSAFLinker.cpp"],
+    srcs = glob([
+        "tools/clang-ssaf-linker/*.cpp",
+        "tools/clang-ssaf-linker/*.h",
+    ]),
     deps = [
         ":basic",
         ":scalable_static_analysis_analyses",
@@ -2754,5 +2791,6 @@ cc_binary(
         ":scalable_static_analysis_tool",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )

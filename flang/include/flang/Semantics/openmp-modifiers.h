@@ -90,6 +90,7 @@ DECLARE_DESCRIPTOR(parser::OmpInteropType);
 DECLARE_DESCRIPTOR(parser::OmpIterator);
 DECLARE_DESCRIPTOR(parser::OmpLastprivateModifier);
 DECLARE_DESCRIPTOR(parser::OmpLinearModifier);
+DECLARE_DESCRIPTOR(parser::OmpLoopModifier);
 DECLARE_DESCRIPTOR(parser::OmpLowerBound);
 DECLARE_DESCRIPTOR(parser::OmpMapper);
 DECLARE_DESCRIPTOR(parser::OmpMapType);

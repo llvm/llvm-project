@@ -146,6 +146,10 @@ clang_tablegen(BuiltinsX86_64.inc -gen-clang-builtins
   SOURCE BuiltinsX86_64.td
   TARGET ClangBuiltinsX86_64)
 
+clang_tablegen(BuiltinsZOS.inc -gen-clang-builtins
+  SOURCE BuiltinsZOS.td
+  TARGET ClangBuiltinsZOS)
+
 clang_tablegen(BuiltinTemplates.inc -gen-clang-builtin-templates
   SOURCE BuiltinTemplates.td
   TARGET ClangBuiltinTemplates)
