@@ -161,6 +161,11 @@ mlirRewriterBaseClone(MlirRewriterBase rewriter, MlirOperation op);
 MLIR_CAPI_EXPORTED MlirOperation mlirRewriterBaseCloneWithoutRegions(
     MlirRewriterBase rewriter, MlirOperation op);
 
+/// Clones the given operation using the rewriter and the provided IRMapping.
+/// The mapping is updated with the results of the cloned operation.
+MLIR_CAPI_EXPORTED MlirOperation mlirRewriterBaseCloneWithMapping(
+    MlirRewriterBase rewriter, MlirOperation op, MlirIRMapping mapping);
+
 /// Clone the blocks that belong to "region" before the given position in
 /// another region "parent".
 MLIR_CAPI_EXPORTED void
@@ -527,6 +532,50 @@ mlirConversionTargetAddLegalDialect(MlirConversionTarget target,
 MLIR_CAPI_EXPORTED void
 mlirConversionTargetAddIllegalDialect(MlirConversionTarget target,
                                       MlirStringRef dialectName);
+
+/// Result of a dynamic legality callback.
+typedef enum {
+  /// The operation instance is legal.
+  MLIR_CONVERSION_TARGET_LEGALITY_LEGAL,
+  /// The operation instance is illegal.
+  MLIR_CONVERSION_TARGET_LEGALITY_ILLEGAL,
+  /// The callback has no opinion on this instance. The decision is deferred to
+  /// other registered callbacks (legality callbacks are composed) or, failing
+  /// that, to the operation's static legality action.
+  MLIR_CONVERSION_TARGET_LEGALITY_NO_OPINION
+} MlirConversionTargetLegality;
+
+/// Callback for dynamic legality checks. Returns the legality of the given
+/// operation instance (see MlirConversionTargetLegality).
+typedef MlirConversionTargetLegality (
+    *MlirConversionTargetDynamicLegalityCallback)(MlirOperation op,
+                                                  void *userData);
+
+/// Register the given operation as dynamically legal, with a callback to
+/// determine per-instance legality. The callback must not be NULL.
+MLIR_CAPI_EXPORTED void mlirConversionTargetAddDynamicallyLegalOp(
+    MlirConversionTarget target, MlirStringRef opName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
+/// Register the given dialect as dynamically legal, with a callback to
+/// determine per-instance legality for all operations in the dialect. The
+/// callback must not be NULL.
+MLIR_CAPI_EXPORTED void mlirConversionTargetAddDynamicallyLegalDialect(
+    MlirConversionTarget target, MlirStringRef dialectName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
+/// Mark the given operation as recursively legal. The optional callback (may
+/// be NULL) determines whether a specific instance is recursively legal; a NULL
+/// callback marks the operation as unconditionally recursively legal.
+MLIR_CAPI_EXPORTED void mlirConversionTargetMarkOpRecursivelyLegal(
+    MlirConversionTarget target, MlirStringRef opName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
+/// Mark unknown operations as dynamically legal, with a callback. The callback
+/// must not be NULL.
+MLIR_CAPI_EXPORTED void mlirConversionTargetMarkUnknownOpDynamicallyLegal(
+    MlirConversionTarget target,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
 
 //===----------------------------------------------------------------------===//
 /// TypeConverter API

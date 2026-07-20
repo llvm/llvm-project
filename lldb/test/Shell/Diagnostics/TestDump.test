@@ -1,13 +1,33 @@
-# Check that the diagnostics dump command uses the correct directory and
-# creates one if needed.
+# Check that 'diagnostics dump' collects a bundle and prints a JSON summary of
+# what a bug report would carry.
 
 # Dump to an existing directory.
 # RUN: rm -rf %t.existing
 # RUN: mkdir -p %t.existing
-# RUN: %lldb -o 'diagnostics dump -d %t.existing'
+# RUN: %lldb --no-lldbinit -b -o 'diagnostics dump -d %t.existing' | FileCheck %s
 # RUN: test -d %t.existing
 
-# Dump to a non-existing directory.
+# Dump to a non-existing directory; it is created.
 # RUN: rm -rf %t.nonexisting
-# RUN: %lldb -o 'diagnostics dump -d %t.nonexisting'
+# RUN: %lldb --no-lldbinit -b -o 'diagnostics dump -d %t.nonexisting'
 # RUN: test -d %t.nonexisting
+
+# The terminal output is a JSON summary. The bundle directory and the files
+# written into it are nested under "attachments".
+# CHECK-DAG: "version":
+# CHECK-DAG: "os":
+# CHECK-DAG: "attachments":
+# CHECK-DAG: "directory":
+# CHECK-DAG: "files":
+# CHECK-DAG: "diagnostics.log"
+# CHECK-DAG: "statistics.json"
+# CHECK-DAG: "commands.txt"
+
+# The bundle holds the collected artifacts; the scalars above are not repeated
+# as redundant files.
+# RUN: test -f %t.existing/statistics.json
+# RUN: test -f %t.existing/commands.txt
+
+# The command snapshot is populated, not just present.
+# RUN: FileCheck %s --check-prefix=CMDS --input-file=%t.existing/commands.txt
+# CMDS: target list

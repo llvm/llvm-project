@@ -37,6 +37,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -45,6 +46,20 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
+enum class SPIRVFPContractMode { On, Off, Fast };
+
+static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
+    "spirv-fp-contract",
+    cl::desc("Override FP contraction policy for SPIR-V kernel entry points"),
+    cl::values(
+        clEnumValN(SPIRVFPContractMode::On, "on",
+                   "Follow IR metadata (default)"),
+        clEnumValN(SPIRVFPContractMode::Off, "off",
+                   "Force ContractionOff on all kernel entry points"),
+        clEnumValN(SPIRVFPContractMode::Fast, "fast",
+                   "Suppress ContractionOff on all kernel entry points")),
+    cl::init(SPIRVFPContractMode::On));
+
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
   SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
@@ -82,6 +97,8 @@ public:
       SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionModeFromEnableMaximalReconvergenceAttr(
       const MCRegister &Reg, const SPIRVSubtarget &ST);
+  void emitSimpleExecutionMode(MCRegister Reg,
+                               SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
@@ -530,18 +547,21 @@ void SPIRVAsmPrinter::outputExecutionModeFromNumthreadsAttribute(
   outputMCInst(Inst);
 }
 
+void SPIRVAsmPrinter::emitSimpleExecutionMode(
+    MCRegister Reg, SPIRV::ExecutionMode::ExecutionMode EM) {
+  MCInst Inst;
+  Inst.setOpcode(SPIRV::OpExecutionMode);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  Inst.addOperand(MCOperand::createImm(static_cast<unsigned>(EM)));
+  outputMCInst(Inst);
+}
+
 void SPIRVAsmPrinter::outputExecutionModeFromEnableMaximalReconvergenceAttr(
     const MCRegister &Reg, const SPIRVSubtarget &ST) {
   assert(ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence) &&
          "Function called when SPV_KHR_maximal_reconvergence is not enabled.");
 
-  MCInst Inst;
-  Inst.setOpcode(SPIRV::OpExecutionMode);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  unsigned EM =
-      static_cast<unsigned>(SPIRV::ExecutionMode::MaximallyReconvergesKHR);
-  Inst.addOperand(MCOperand::createImm(EM));
-  outputMCInst(Inst);
+  emitSimpleExecutionMode(Reg, SPIRV::ExecutionMode::MaximallyReconvergesKHR);
 }
 
 void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
@@ -588,13 +608,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       // VUID-StandaloneSpirv-OriginLowerLeft-04653: Fragment must declare
       // OriginUpperLeft.
       if (Attr.getValueAsString() == "pixel") {
-        MCInst Inst;
-        Inst.setOpcode(SPIRV::OpExecutionMode);
-        Inst.addOperand(MCOperand::createReg(FReg));
-        unsigned EM =
-            static_cast<unsigned>(SPIRV::ExecutionMode::OriginUpperLeft);
-        Inst.addOperand(MCOperand::createImm(EM));
-        outputMCInst(Inst);
+        emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::OriginUpperLeft);
       }
     }
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
@@ -635,16 +649,16 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     // all entry points must use the ArithmeticPoisonKHR execution mode".
     if (llvm::is_contained(MAI->Reqs.getMinimalCapabilities(),
                            SPIRV::Capability::PoisonFreezeKHR)) {
-      MCInst Inst;
-      Inst.setOpcode(SPIRV::OpExecutionMode);
-      Inst.addOperand(MCOperand::createReg(FReg));
-      unsigned EM =
-          static_cast<unsigned>(SPIRV::ExecutionMode::ArithmeticPoisonKHR);
-      Inst.addOperand(MCOperand::createImm(EM));
-      outputMCInst(Inst);
+      emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ArithmeticPoisonKHR);
     }
-    if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
-        !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
+    // --spirv-fp-contract=off forces to emit ContractionOff for this kernel
+    // entry point, --spirv-fp-contract=fast suppresses it.
+    bool EmitContractionOff =
+        ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
+        SPIRVFPContract != SPIRVFPContractMode::Fast &&
+        (SPIRVFPContract == SPIRVFPContractMode::Off ||
+         !M.getNamedMetadata("opencl.enable.FP_CONTRACT"));
+    if (EmitContractionOff) {
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
         // When SPV_KHR_float_controls2 is enabled, ContractionOff is
         // deprecated. We need to use FPFastMathDefault with the appropriate
@@ -716,13 +730,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
           outputMCInst(Inst);
         }
       } else {
-        MCInst Inst;
-        Inst.setOpcode(SPIRV::OpExecutionMode);
-        Inst.addOperand(MCOperand::createReg(FReg));
-        unsigned EM =
-            static_cast<unsigned>(SPIRV::ExecutionMode::ContractionOff);
-        Inst.addOperand(MCOperand::createImm(EM));
-        outputMCInst(Inst);
+        emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ContractionOff);
       }
     }
   }
@@ -775,7 +783,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
   // int32, that might be used as FP Fast Math Mode.
   std::vector<const MachineInstr *> SPIRVFloatTypes;
   // Hashtable to associate immediate values with the constant holding them.
-  std::unordered_map<int, const MachineInstr *> ConstMap;
+  DenseMap<int, const MachineInstr *> ConstMap;
   for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
     // Skip if the instruction is not OpTypeFloat or OpConstant.
     unsigned OpCode = MI->getOpcode();
@@ -934,7 +942,7 @@ bool SPIRVAsmPrinter::doInitialization(Module &M) {
   if (!M.getModuleInlineAsm().empty()) {
     M.getContext().emitError(
         "SPIR-V does not support module-level inline assembly");
-    M.setModuleInlineAsm("");
+    M.removeModuleInlineAsm();
   }
 
   // Register the NSDI handler before calling the base class so that

@@ -268,7 +268,7 @@ static void ParseSupportFilesFromPrologue(
                 return tmp_file;
               llvm::SmallString<0> name;
               int fd;
-              auto orig_name = m_file_spec.GetFilename().GetStringRef();
+              auto orig_name = m_file_spec.GetFilename();
               auto ec = llvm::sys::fs::createTemporaryFile(
                   "", llvm::sys::path::filename(orig_name, style), fd, name);
               if (ec || fd <= 0) {
@@ -652,8 +652,7 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
       if (section)
         debug_line_file_size = section->GetFileSize();
     } else {
-      llvm::StringRef symfile_dir =
-          m_objfile_sp->GetFileSpec().GetDirectory().GetStringRef();
+      llvm::StringRef symfile_dir = m_objfile_sp->GetFileSpec().GetDirectory();
       if (symfile_dir.contains_insensitive(".dsym")) {
         if (m_objfile_sp->GetType() == ObjectFile::eTypeDebugInfo) {
           // We have a dSYM file that didn't have a any debug info. If the
@@ -926,12 +925,16 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
     for (const auto &range : *die_ranges) {
       if (range.valid() && range.LowPC < m_first_code_address)
         continue;
+      // Require the low PC to resolve to a section. This rejects addresses that
+      // don't correspond to any real code, such as the "(dead code)" tombstone
+      // a linker leaves on the DW_AT_low_pc of an eliminated function.
       if (Address base_addr(range.LowPC, module_sp->GetSectionList());
-          base_addr.IsValid() && FixupAddress(base_addr))
+          base_addr.IsSectionOffset() && FixupAddress(base_addr))
         ranges.emplace_back(std::move(base_addr), range.HighPC - range.LowPC);
     }
   } else {
-    LLDB_LOG_ERROR(log, die_ranges.takeError(), "DIE({1:x}): {0}", die.GetID());
+    LLDB_LOG_ERRORV(log, die_ranges.takeError(), "DIE({1:x}): {0}",
+                    die.GetID());
   }
   if (ranges.empty())
     return nullptr;
@@ -1825,7 +1828,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
         // launched.
         FileSpec relative_to_binary = dwo_file;
         relative_to_binary.PrependPathComponent(
-            m_objfile_sp->GetFileSpec().GetDirectory().GetStringRef());
+            m_objfile_sp->GetFileSpec().GetDirectory());
         FileSystem::Instance().Resolve(relative_to_binary);
         relative_to_binary.AppendPathComponent(dwo_name);
         dwo_paths.Append(relative_to_binary);
@@ -1868,8 +1871,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     FileSpec dwo_name_spec(dwo_name);
     llvm::StringRef filename_only = dwo_name_spec.GetFilename();
 
-    FileSpec binary_directory(
-        m_objfile_sp->GetFileSpec().GetDirectory().GetStringRef());
+    FileSpec binary_directory(m_objfile_sp->GetFileSpec().GetDirectory());
     FileSystem::Instance().Resolve(binary_directory);
 
     if (dwo_name_spec.IsRelative()) {
@@ -3159,9 +3161,9 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
   if (!die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
     return die;
 
-  Progress progress(llvm::formatv(
-      "Searching definition DIE in {0}: '{1}'",
-      GetObjectFile()->GetFileSpec().GetFilename().GetString(), name));
+  Progress progress(llvm::formatv("Searching definition DIE in {0}: '{1}'",
+                                  GetObjectFile()->GetFileSpec().GetFilename(),
+                                  name));
 
   const dw_tag_t tag = die.Tag();
 
@@ -3367,8 +3369,8 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
         ParseBlocksRecursive(*comp_unit, &func.GetBlock(false),
                              function_die.GetFirstChild(), function_file_addr);
     } else {
-      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
-                     "{1:x}: {0}", dwarf_cu->GetOffset());
+      LLDB_LOG_ERRORV(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                      "{1:x}: {0}", dwarf_cu->GetOffset());
     }
   }
 
@@ -3404,8 +3406,8 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         if (!ranges->empty())
           func_lo_pc = ranges->begin()->LowPC;
       } else {
-        LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
-                       "DIE({1:x}): {0}", function_die.GetID());
+        LLDB_LOG_ERRORV(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                        "DIE({1:x}): {0}", function_die.GetID());
       }
       if (func_lo_pc != LLDB_INVALID_ADDRESS) {
         const size_t num_variables =
@@ -4512,7 +4514,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       // If we don't have a separate debug info file, then try stripping the
       // extension. The main module could be "a.debug" and the .dwp file could
       // be "a.dwp" instead of "a.debug.dwp".
-      ConstString filename_no_ext =
+      llvm::StringRef filename_no_ext =
           module_fspec.GetFileNameStrippingExtension();
       if (filename_no_ext != module_fspec.GetFilename()) {
         FileSpec module_spec_no_ext(module_fspec);

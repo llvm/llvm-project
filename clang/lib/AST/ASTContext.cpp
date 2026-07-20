@@ -989,6 +989,8 @@ void ASTContext::cleanup() {
     A->second->~AttrVec();
   DeclAttrs.clear();
 
+  CtorClosureDefaultArgs.clear();
+
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
   ModuleInitializers.clear();
@@ -1552,6 +1554,17 @@ void ASTContext::eraseDeclAttrs(const Decl *D) {
     Pos->second->~AttrVec();
     DeclAttrs.erase(Pos);
   }
+}
+
+ArrayRef<CXXDefaultArgExpr *>
+ASTContext::getCtorClosureDefaultArgs(const CXXConstructorDecl *CD) {
+  return CtorClosureDefaultArgs.lookup(CD);
+}
+
+void ASTContext::setCtorClosureDefaultArgs(const CXXConstructorDecl *CD,
+                                           ArrayRef<CXXDefaultArgExpr *> Args) {
+  assert(!CtorClosureDefaultArgs.contains(CD));
+  CtorClosureDefaultArgs[CD] = Args;
 }
 
 ArrayRef<ExplicitInstantiationDecl *>
@@ -7963,6 +7976,12 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     return NAX->getNamespace()->Equals(NAY->getNamespace());
   }
 
+  if (const auto *UX = dyn_cast<UsingEnumDecl>(X)) {
+    const auto *UY = cast<UsingEnumDecl>(Y);
+    return isSameQualifier(UX->getQualifier(), UY->getQualifier()) &&
+           declaresSameEntity(UX->getEnumDecl(), UY->getEnumDecl());
+  }
+
   return false;
 }
 
@@ -10012,6 +10031,15 @@ static TypedefDecl *CreateMSVaListDecl(const ASTContext *Context) {
   return CreateCharPtrNamedVaListDecl(Context, "__builtin_ms_va_list");
 }
 
+static TypedefDecl *CreateZOSVaListDecl(const ASTContext *Context) {
+  // typedef char *__builtin_zos_va_list[2];
+  llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 2);
+  QualType T = Context->getPointerType(Context->CharTy);
+  QualType ArrayType = Context->getConstantArrayType(
+      T, Size, nullptr, ArraySizeModifier::Normal, 0);
+  return Context->buildImplicitTypedef(ArrayType, "__builtin_zos_va_list");
+}
+
 static TypedefDecl *CreateCharPtrBuiltinVaListDecl(const ASTContext *Context) {
   return CreateCharPtrNamedVaListDecl(Context, "__builtin_va_list");
 }
@@ -10437,6 +10465,13 @@ TypedefDecl *ASTContext::getBuiltinMSVaListDecl() const {
     BuiltinMSVaListDecl = CreateMSVaListDecl(this);
 
   return BuiltinMSVaListDecl;
+}
+
+TypedefDecl *ASTContext::getBuiltinZOSVaListDecl() const {
+  if (!BuiltinZOSVaListDecl)
+    BuiltinZOSVaListDecl = CreateZOSVaListDecl(this);
+
+  return BuiltinZOSVaListDecl;
 }
 
 bool ASTContext::canBuiltinBeRedeclared(const FunctionDecl *FD) const {

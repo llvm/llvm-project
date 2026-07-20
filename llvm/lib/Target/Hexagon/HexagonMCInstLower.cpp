@@ -123,6 +123,10 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
     AP.LowerPATCHABLE_EVENT_CALL(*MI, true);
     return;
   }
+  if (MI->getOpcode() == Hexagon::KCFI_CHECK) {
+    AP.LowerKCFI_CHECK(*MI);
+    return;
+  }
 
   MCInst *MCI = AP.OutContext.createMCInst();
   MCI->setOpcode(MI->getOpcode());

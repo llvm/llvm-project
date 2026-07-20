@@ -41,6 +41,10 @@ enum {
   Use64BitVectors = (1 << 7),
   Use128BitVectors = (1 << 8),
 
+  // Source operands are double-element-width of the result (e.g. vraddhn).
+  // ClangIR-only; classic code-gen derives this from the intrinsic's .td.
+  WidenArgs = (1 << 9),
+
   Vectorize1ArgType = Add1ArgType | VectorizeArgTypes,
   VectorRet = AddRetType | VectorizeRetType,
   VectorRetGetArgs01 =
@@ -49,7 +53,14 @@ enum {
       AddRetType | VectorizeRetType | Add1ArgType | InventFloatType
 };
 
-struct ARMVectorIntrinsicInfo {
+/// Describes an ARM or AArch64 NEON intrinsic, or an AArch64 SISD intrinsic.
+///
+/// NEON and SISD code generation use NameHint and AltLLVMIntrinsic in addition
+/// to BuiltinID, LLVMIntrinsic, and TypeModifier. SVE and SME code generation
+/// does not use those fields, so AArch64SVEAndSMEVectorIntrinsicInfo omits
+/// them. On 64-bit hosts, the separate structure reduces each SVE and SME map
+/// entry from 32 to 16 bytes and avoids storing a name pointer for each entry.
+struct ARMNeonVectorIntrinsicInfo {
   const char *NameHint;
   unsigned BuiltinID;
   unsigned LLVMIntrinsic;
@@ -59,10 +70,31 @@ struct ARMVectorIntrinsicInfo {
   bool operator<(unsigned RHSBuiltinID) const {
     return BuiltinID < RHSBuiltinID;
   }
-  bool operator<(const ARMVectorIntrinsicInfo &TE) const {
+  bool operator<(const ARMNeonVectorIntrinsicInfo &TE) const {
     return BuiltinID < TE.BuiltinID;
   }
 };
+
+static_assert(sizeof(ARMNeonVectorIntrinsicInfo) == 16 + 2 * sizeof(void *));
+
+/// Describes an AArch64 SVE or SME intrinsic.
+///
+/// See ARMNeonVectorIntrinsicInfo for the reason that SVE and SME use a
+/// separate structure.
+struct AArch64SVEAndSMEVectorIntrinsicInfo {
+  unsigned BuiltinID;
+  unsigned LLVMIntrinsic;
+  uint64_t TypeModifier;
+
+  bool operator<(unsigned RHSBuiltinID) const {
+    return BuiltinID < RHSBuiltinID;
+  }
+  bool operator<(const AArch64SVEAndSMEVectorIntrinsicInfo &TE) const {
+    return BuiltinID < TE.BuiltinID;
+  }
+};
+
+static_assert(sizeof(AArch64SVEAndSMEVectorIntrinsicInfo) == 16);
 
 #define NEONMAP0(NameBase)                                                     \
   {#NameBase, NEON::BI__builtin_neon_##NameBase, 0, 0, 0}
@@ -77,7 +109,7 @@ struct ARMVectorIntrinsicInfo {
    TypeModifier}
 
 // clang-format off
-const inline ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
+const inline ARMNeonVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
   NEONMAP0(splat_lane_v),
   NEONMAP0(splat_laneq_v),
   NEONMAP0(splatq_lane_v),
@@ -158,10 +190,8 @@ const inline ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
   NEONMAP1(vcmlaq_rot90_f64, aarch64_neon_vcmla_rot90, Add1ArgType),
   NEONMAP1(vcnt_v, ctpop, Add1ArgType),
   NEONMAP1(vcntq_v, ctpop, Add1ArgType),
-  NEONMAP1(vcvt_f16_f32, aarch64_neon_vcvtfp2hf, 0),
   NEONMAP0(vcvt_f16_s16),
   NEONMAP0(vcvt_f16_u16),
-  NEONMAP1(vcvt_f32_f16, aarch64_neon_vcvthf2fp, 0),
   NEONMAP0(vcvt_f32_v),
   NEONMAP1(vcvt_n_f16_s16, aarch64_neon_vcvtfxs2fp, 0),
   NEONMAP1(vcvt_n_f16_u16, aarch64_neon_vcvtfxu2fp, 0),
@@ -233,7 +263,7 @@ const inline ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
   NEONMAP1(vld1q_x2_v, aarch64_neon_ld1x2, 0),
   NEONMAP1(vld1q_x3_v, aarch64_neon_ld1x3, 0),
   NEONMAP1(vld1q_x4_v, aarch64_neon_ld1x4, 0),
-  NEONMAP1(vmmlaq_f16_f16, aarch64_neon_fmmla, 0),
+  NEONMAP1(vmmlaq_f16, aarch64_neon_fmmla, 0),
   NEONMAP1(vmmlaq_f32_f16, aarch64_neon_fmmla, 0),
   NEONMAP1(vmmlaq_s32, aarch64_neon_smmla, 0),
   NEONMAP1(vmmlaq_u32, aarch64_neon_ummla, 0),
@@ -286,7 +316,7 @@ const inline ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
   NEONMAP1(vqshluq_n_v, aarch64_neon_sqshlu, 0),
   NEONMAP2(vqsub_v, aarch64_neon_uqsub, aarch64_neon_sqsub, Add1ArgType | UnsignedAlts),
   NEONMAP2(vqsubq_v, aarch64_neon_uqsub, aarch64_neon_sqsub, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vraddhn_v, aarch64_neon_raddhn, Add1ArgType),
+  NEONMAP1(vraddhn_v, aarch64_neon_raddhn, Add1ArgType | WidenArgs),
   NEONMAP1(vrax1q_u64, aarch64_crypto_rax1, 0),
   NEONMAP2(vrecpe_v, aarch64_neon_frecpe, aarch64_neon_urecpe, 0),
   NEONMAP2(vrecpeq_v, aarch64_neon_frecpe, aarch64_neon_urecpe, 0),
@@ -320,7 +350,7 @@ const inline ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
   NEONMAP2(vrsqrteq_v, aarch64_neon_frsqrte, aarch64_neon_ursqrte, 0),
   NEONMAP1(vrsqrts_v, aarch64_neon_frsqrts, Add1ArgType),
   NEONMAP1(vrsqrtsq_v, aarch64_neon_frsqrts, Add1ArgType),
-  NEONMAP1(vrsubhn_v, aarch64_neon_rsubhn, Add1ArgType),
+  NEONMAP1(vrsubhn_v, aarch64_neon_rsubhn, Add1ArgType | WidenArgs),
   NEONMAP1(vsha1su0q_u32, aarch64_crypto_sha1su0, 0),
   NEONMAP1(vsha1su1q_u32, aarch64_crypto_sha1su1, 0),
   NEONMAP1(vsha256h2q_u32, aarch64_crypto_sha256h2, 0),
@@ -375,7 +405,7 @@ const inline ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
 //
 // TODO: Either rename this table to better reflect its contents, or
 // restrict it to true SISD intrinsics only.
-const inline ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
+const inline ARMNeonVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vabdd_f64, aarch64_sisd_fabd, Add1ArgType),
   NEONMAP1(vabds_f32, aarch64_sisd_fabd, Add1ArgType),
   NEONMAP1(vabsd_s64, aarch64_neon_abs, Add1ArgType),

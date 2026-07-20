@@ -52,7 +52,7 @@ static bool isInitializedByLiteral(const EnumConstantDecl *Enumerator) {
   return Init->isIntegerConstantExpr(Enumerator->getASTContext());
 }
 
-static void cleanInitialValue(DiagnosticBuilder &Diag,
+static void cleanInitialValue(const DiagnosticBuilder &Diag,
                               const EnumConstantDecl *ECD,
                               const SourceManager &SM,
                               const LangOptions &LangOpts) {
@@ -203,14 +203,15 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
     const SourceLocation Loc = ECD->getLocation();
     if (Loc.isInvalid() || Loc.isMacroID())
       return;
-    DiagnosticBuilder Diag = diag(Loc, "zero initial value for the first "
-                                       "enumerator in '%0' can be disregarded")
-                             << getName(Enum);
+    const DiagnosticBuilder Diag =
+        diag(Loc, "zero initial value for the first "
+                  "enumerator in '%0' can be disregarded")
+        << getName(Enum);
     cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
     return;
   }
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("sequential")) {
-    DiagnosticBuilder Diag =
+    const DiagnosticBuilder Diag =
         diag(Enum->getBeginLoc(),
              "sequential initial value in '%0' can be ignored")
         << getName(Enum);

@@ -20,7 +20,9 @@ namespace llvm::sandboxir {
 
 class TransactionAlwaysAccept : public RegionPass {
 public:
-  TransactionAlwaysAccept() : RegionPass("tr-accept") {}
+  TransactionAlwaysAccept(StringRef AuxArg) : RegionPass("tr-accept") {
+    assert(AuxArg.empty() && "This pass ignores aux arg!");
+  }
   bool runOnRegion(Region &Rgn, const Analyses &A) final {
     auto &Tracker = Rgn.getContext().getTracker();
     bool HasChanges = !Tracker.empty();

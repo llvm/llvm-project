@@ -11,8 +11,8 @@
 // RUN: split-file %s %t
 
 // Extract per-TU PointerFlow + UnsafeBufferUsage summaries.
-// RUN: %{extract} %t/tu1.cpp --ssaf-tu-summary-file=%t/tu1.summary.json
-// RUN: %{extract} %t/tu2.cpp --ssaf-tu-summary-file=%t/tu2.summary.json
+// RUN: %{extract} %t/tu1.cpp --ssaf-compilation-unit-id=cu_1 --ssaf-tu-summary-file=%t/tu1.summary.json
+// RUN: %{extract} %t/tu2.cpp --ssaf-compilation-unit-id=cu_2 --ssaf-tu-summary-file=%t/tu2.summary.json
 
 // Link the two TU summaries into a single LU summary.
 // RUN: clang-ssaf-linker %t/tu1.summary.json %t/tu2.summary.json \
@@ -26,7 +26,7 @@
 
 //--- shared.h
 inline int shared_inline(int *p) {
-  int * l = p;      
+  int * l = p;
   return l[5];
 }
 
@@ -55,5 +55,3 @@ int g(int *y) {
 
 // Confirm UnsafeBufferReachableAnalysisResult is present in the output.
 // CHECK: "analysis_name": "UnsafeBufferReachableAnalysisResult"
-
-

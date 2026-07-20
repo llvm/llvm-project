@@ -59,6 +59,7 @@ def SplitDoubleTy : DXILOpParamType;
 def BinaryWithCarryTy : DXILOpParamType;
 def DimensionsTy : DXILOpParamType;
 def Fouri32s : DXILOpParamType;
+def TwoI32Ty : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -800,6 +801,28 @@ def Fma : DXILOp<47, tertiary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def IMul : DXILOp<41, binaryWithTwoOuts> {
+  let Doc = "Signed integer multiply returning the high and low halves of the "
+            "full-width product.";
+  let intrinsics = [IntrinSelect<int_dx_imul>];
+  let arguments = [OverloadTy, OverloadTy];
+  let result = TwoI32Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def UMul : DXILOp<42, binaryWithTwoOuts> {
+  let Doc = "Unsigned integer multiply returning the high and low halves of the "
+            "full-width product.";
+  let intrinsics = [IntrinSelect<int_dx_umul>];
+  let arguments = [OverloadTy, OverloadTy];
+  let result = TwoI32Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def IMad : DXILOp<48, tertiary> {
   let Doc = "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m "
             "* a + b.";
@@ -1320,6 +1343,10 @@ def QuadOp : DXILOp<123, quadOp> {
     IntrinSelect<int_dx_quad_read_across_y,
                  [
                    IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossY>
+                 ]>,
+    IntrinSelect<int_dx_quad_read_across_diagonal,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossDiagonal>
                  ]>,
   ];
 

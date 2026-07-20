@@ -11,13 +11,13 @@ define dso_local void @_Z3fooPiii(ptr %A, i32 %N, i32 %M) #0 {
 ; CHECK-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[M:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP3]], i1 [[CMP21]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       for.cond1.preheader.lr.ph.split.us:
+; CHECK:       for.cond1.preheader.lr.ph.split:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[M]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[FLATTEN_TRIPCOUNT:%.*]] = mul nuw nsw i64 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
-; CHECK:       for.cond1.preheader.us:
-; CHECK-NEXT:    [[INDVAR6:%.*]] = phi i64 [ [[INDVAR_NEXT7:%.*]], [[FOR_COND1_PREHEADER_US]] ], [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US]] ]
+; CHECK:       for.cond1.preheader:
+; CHECK-NEXT:    [[INDVAR6:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US]] ], [ [[INDVAR_NEXT7:%.*]], [[FOR_COND1_PREHEADER_US]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A:%.*]], i64 [[INDVAR6]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    tail call void @_Z1fi(i32 [[TMP2]])

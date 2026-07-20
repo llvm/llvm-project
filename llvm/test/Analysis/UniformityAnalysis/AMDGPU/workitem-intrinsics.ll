@@ -67,7 +67,7 @@ define amdgpu_kernel void @workitem_id_z_singlethreaded() #2 {
 
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_singlethreaded_md':
 ; CHECK-NOT: DIVERGENT
-define amdgpu_kernel void @workitem_id_x_singlethreaded_md() "amdgpu-no-wwm" !reqd_work_group_size !0 {
+define amdgpu_kernel void @workitem_id_x_singlethreaded_md() "amdgpu-flat-work-group-size"="1,1" "amdgpu-no-wwm" !reqd_work_group_size !0 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   store volatile i32 %id.x, ptr addrspace(1) undef
   ret void
@@ -75,7 +75,7 @@ define amdgpu_kernel void @workitem_id_x_singlethreaded_md() "amdgpu-no-wwm" !re
 
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_y_singlethreaded_md':
 ; CHECK-NOT: DIVERGENT
-define amdgpu_kernel void @workitem_id_y_singlethreaded_md() !reqd_work_group_size !0 {
+define amdgpu_kernel void @workitem_id_y_singlethreaded_md() "amdgpu-flat-work-group-size"="1,1" !reqd_work_group_size !0 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.y()
   store volatile i32 %id.x, ptr addrspace(1) undef
   ret void
@@ -83,7 +83,7 @@ define amdgpu_kernel void @workitem_id_y_singlethreaded_md() !reqd_work_group_si
 
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_z_singlethreaded_md':
 ; CHECK-NOT: DIVERGENT
-define amdgpu_kernel void @workitem_id_z_singlethreaded_md() !reqd_work_group_size !0 {
+define amdgpu_kernel void @workitem_id_z_singlethreaded_md() "amdgpu-flat-work-group-size"="1,1" !reqd_work_group_size !0 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.y()
   store volatile i32 %id.x, ptr addrspace(1) undef
   ret void
@@ -91,7 +91,7 @@ define amdgpu_kernel void @workitem_id_z_singlethreaded_md() !reqd_work_group_si
 
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_not_singlethreaded_dimx':
 ; CHECK: DIVERGENT:  %id.x = call i32 @llvm.amdgcn.workitem.id.x()
-define amdgpu_kernel void @workitem_id_x_not_singlethreaded_dimx() !reqd_work_group_size !1 {
+define amdgpu_kernel void @workitem_id_x_not_singlethreaded_dimx() "amdgpu-flat-work-group-size"="2,2" !reqd_work_group_size !1 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   store volatile i32 %id.x, ptr addrspace(1) undef
   ret void
@@ -99,7 +99,7 @@ define amdgpu_kernel void @workitem_id_x_not_singlethreaded_dimx() !reqd_work_gr
 
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_not_singlethreaded_dimy':
 ; CHECK: DIVERGENT:  %id.x = call i32 @llvm.amdgcn.workitem.id.x()
-define amdgpu_kernel void @workitem_id_x_not_singlethreaded_dimy() !reqd_work_group_size !2 {
+define amdgpu_kernel void @workitem_id_x_not_singlethreaded_dimy() "amdgpu-flat-work-group-size"="2,2" !reqd_work_group_size !2 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   store volatile i32 %id.x, ptr addrspace(1) undef
   ret void
@@ -107,7 +107,7 @@ define amdgpu_kernel void @workitem_id_x_not_singlethreaded_dimy() !reqd_work_gr
 
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_not_singlethreaded_dimz':
 ; CHECK: DIVERGENT:  %id.x = call i32 @llvm.amdgcn.workitem.id.x()
-define amdgpu_kernel void @workitem_id_x_not_singlethreaded_dimz() !reqd_work_group_size !3 {
+define amdgpu_kernel void @workitem_id_x_not_singlethreaded_dimz() "amdgpu-flat-work-group-size"="2,2" !reqd_work_group_size !3 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   store volatile i32 %id.x, ptr addrspace(1) undef
   ret void
@@ -115,7 +115,7 @@ define amdgpu_kernel void @workitem_id_x_not_singlethreaded_dimz() !reqd_work_gr
 
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_z_uniform_len_1'
 ; CHECK-NOT: DIVERGENT
-define amdgpu_kernel void @workitem_id_z_uniform_len_1(ptr %o) !reqd_work_group_size !4 {
+define amdgpu_kernel void @workitem_id_z_uniform_len_1(ptr %o) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !4 {
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()
   store i32 %id.z, ptr %o
   ret void
@@ -142,7 +142,7 @@ define amdgpu_kernel void @workitem_id_y_uniform_in_subgroup(ptr %o) #3 !reqd_wo
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 attributes #2 = { "amdgpu-flat-work-group-size"="1,1" "amdgpu-no-wwm" }
-attributes #3 = { "target-cpu"="gfx900" "amdgpu-flat-work-group-size"="256,256" }
+attributes #3 = { "amdgpu-flat-work-group-size"="256,256" }
 
 !0 = !{i32 1, i32 1, i32 1}
 !1 = !{i32 2, i32 1, i32 1}

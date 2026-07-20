@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/time/gmtime_r.h"
 #include "src/time/time_constants.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -55,4 +56,15 @@ TEST_F(LlvmLibcGmTimeR, Max64BitYear) {
           0}),
       *tm_data_ptr);
   EXPECT_TM_EQ(*tm_data_ptr, tm_data);
+}
+
+TEST_F(LlvmLibcGmTimeR, NullPtr) {
+  struct tm tm_data;
+  time_t seconds = 0;
+  EXPECT_DEATH([] { LIBC_NAMESPACE::gmtime_r(nullptr, nullptr); },
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::gmtime_r(nullptr, &tm_data); },
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::gmtime_r(&seconds, nullptr); },
+               WITH_SIGNAL(-1));
 }

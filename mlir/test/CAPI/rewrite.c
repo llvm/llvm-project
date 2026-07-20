@@ -581,6 +581,228 @@ void testGreedyRewriteDriverConfig(MlirContext ctx) {
   mlirGreedyRewriteDriverConfigDestroy(config);
 }
 
+void testCloneWithMapping(MlirContext ctx) {
+  // CHECK-LABEL: @testCloneWithMapping
+  fprintf(stderr, "@testCloneWithMapping\n");
+
+  const char *moduleString =
+      "%x, %y = \"dialect.create_values\"() : () -> (index, index)\n"
+      "%sum = \"dialect.add\"(%x, %y) : (index, index) -> index\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  MlirBlock body = mlirModuleGetBody(module);
+
+  MlirOperation createValues = mlirBlockGetFirstOperation(body);
+  MlirValue x = mlirOperationGetResult(createValues, 0);
+  MlirValue y = mlirOperationGetResult(createValues, 1);
+  MlirOperation addOp = mlirOperationGetNextInBlock(createValues);
+
+  MlirRewriterBase rewriter = mlirIRRewriterCreate(ctx);
+  mlirRewriterBaseSetInsertionPointAfter(rewriter, addOp);
+
+  // Clone addOp with a mapping that swaps x -> y, y -> x
+  MlirIRMapping mapping = mlirIRMappingCreate();
+  mlirIRMappingMapValue(mapping, x, y);
+  mlirIRMappingMapValue(mapping, y, x);
+
+  MlirOperation cloned =
+      mlirRewriterBaseCloneWithMapping(rewriter, addOp, mapping);
+  assert(!mlirOperationIsNull(cloned));
+
+  // Verify operands are remapped
+  MlirValue clonedOp0 = mlirOperationGetOperand(cloned, 0);
+  MlirValue clonedOp1 = mlirOperationGetOperand(cloned, 1);
+  assert(mlirValueEqual(clonedOp0, y));
+  assert(mlirValueEqual(clonedOp1, x));
+
+  mlirIRMappingDestroy(mapping);
+  mlirIRRewriterDestroy(rewriter);
+  mlirModuleDestroy(module);
+
+  // CHECK: testCloneWithMapping: PASSED
+  fprintf(stderr, "testCloneWithMapping: PASSED\n");
+}
+
+static MlirConversionTargetLegality dynamicLegalityAlwaysLegal(MlirOperation op,
+                                                               void *userData) {
+  (void)op;
+  intptr_t *counter = (intptr_t *)userData;
+  (*counter)++;
+  return MLIR_CONVERSION_TARGET_LEGALITY_LEGAL;
+}
+
+static MlirConversionTargetLegality
+dynamicLegalityAlwaysIllegal(MlirOperation op, void *userData) {
+  (void)op;
+  intptr_t *counter = (intptr_t *)userData;
+  (*counter)++;
+  return MLIR_CONVERSION_TARGET_LEGALITY_ILLEGAL;
+}
+
+static MlirConversionTargetLegality dynamicLegalityNoOpinion(MlirOperation op,
+                                                             void *userData) {
+  (void)op;
+  intptr_t *counter = (intptr_t *)userData;
+  (*counter)++;
+  return MLIR_CONVERSION_TARGET_LEGALITY_NO_OPINION;
+}
+
+// Runs a partial conversion of `moduleString` against `target` with an empty
+// pattern set and returns whether it succeeded. This is what actually drives
+// the registered dynamic-legality callbacks.
+static bool runPartialConversion(MlirContext ctx, const char *moduleString,
+                                 MlirConversionTarget target) {
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  assert(!mlirModuleIsNull(module) && "expected module to parse");
+  MlirOperation moduleOp = mlirModuleGetOperation(module);
+
+  MlirRewritePatternSet patterns = mlirRewritePatternSetCreate(ctx);
+  MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
+  MlirConversionConfig config = mlirConversionConfigCreate();
+
+  MlirLogicalResult result =
+      mlirApplyPartialConversion(moduleOp, target, frozen, config);
+
+  mlirConversionConfigDestroy(config);
+  mlirFrozenRewritePatternSetDestroy(frozen);
+  mlirModuleDestroy(module);
+
+  return mlirLogicalResultIsSuccess(result);
+}
+
+void testConversionTargetDynamicLegality(MlirContext ctx) {
+  // CHECK-LABEL: @testConversionTargetDynamicLegality
+  fprintf(stderr, "@testConversionTargetDynamicLegality\n");
+
+  const char *opModule = "\"dialect.op1\"() : () -> ()\n";
+
+  // addDynamicallyLegalOp: callback returning true makes the op legal, so the
+  // (pattern-free) partial conversion succeeds and the callback is invoked.
+  {
+    MlirConversionTarget target = mlirConversionTargetCreate(ctx);
+    intptr_t counter = 0;
+    mlirConversionTargetAddDynamicallyLegalOp(
+        target, mlirStringRefCreateFromCString("dialect.op1"),
+        dynamicLegalityAlwaysLegal, &counter);
+    assert(runPartialConversion(ctx, opModule, target));
+    assert(counter > 0 && "legality callback must be invoked");
+    mlirConversionTargetDestroy(target);
+  }
+
+  // addDynamicallyLegalOp: callback returning false makes the op illegal. With
+  // no pattern to legalize it, the partial conversion fails -- proving the
+  // callback's return value actually drives the result.
+  {
+    MlirConversionTarget target = mlirConversionTargetCreate(ctx);
+    intptr_t counter = 0;
+    mlirConversionTargetAddDynamicallyLegalOp(
+        target, mlirStringRefCreateFromCString("dialect.op1"),
+        dynamicLegalityAlwaysIllegal, &counter);
+    assert(!runPartialConversion(ctx, opModule, target));
+    assert(counter > 0 && "legality callback must be invoked");
+    mlirConversionTargetDestroy(target);
+  }
+
+  // addDynamicallyLegalOp composition: callbacks registered for the same op are
+  // chained, most-recent first. A callback returning NoOpinion abstains and
+  // defers to the previously-registered callback. Here the first callback marks
+  // the op illegal and the second abstains, so the op stays illegal (conversion
+  // fails) and BOTH callbacks are invoked.
+  {
+    MlirConversionTarget target = mlirConversionTargetCreate(ctx);
+    intptr_t illegalCounter = 0;
+    intptr_t noOpinionCounter = 0;
+    mlirConversionTargetAddDynamicallyLegalOp(
+        target, mlirStringRefCreateFromCString("dialect.op1"),
+        dynamicLegalityAlwaysIllegal, &illegalCounter);
+    mlirConversionTargetAddDynamicallyLegalOp(
+        target, mlirStringRefCreateFromCString("dialect.op1"),
+        dynamicLegalityNoOpinion, &noOpinionCounter);
+    assert(!runPartialConversion(ctx, opModule, target));
+    assert(noOpinionCounter > 0 && "abstaining callback must be invoked");
+    assert(illegalCounter > 0 && "deferred-to callback must be invoked");
+    mlirConversionTargetDestroy(target);
+  }
+
+  // addDynamicallyLegalDialect: the callback applies to every op in the
+  // dialect. Returning true keeps `dialect.op1` legal -> success.
+  {
+    MlirConversionTarget target = mlirConversionTargetCreate(ctx);
+    intptr_t counter = 0;
+    mlirConversionTargetAddDynamicallyLegalDialect(
+        target, mlirStringRefCreateFromCString("dialect"),
+        dynamicLegalityAlwaysLegal, &counter);
+    assert(runPartialConversion(ctx, opModule, target));
+    assert(counter > 0 && "dialect legality callback must be invoked");
+    mlirConversionTargetDestroy(target);
+  }
+
+  // markUnknownOpDynamicallyLegal: `dialect.op1` is unregistered and otherwise
+  // unmarked, so the unknown-op callback decides its legality.
+  {
+    MlirConversionTarget target = mlirConversionTargetCreate(ctx);
+    intptr_t counter = 0;
+    mlirConversionTargetMarkUnknownOpDynamicallyLegal(
+        target, dynamicLegalityAlwaysLegal, &counter);
+    assert(runPartialConversion(ctx, opModule, target));
+    assert(counter > 0 && "unknown-op legality callback must be invoked");
+    mlirConversionTargetDestroy(target);
+  }
+
+  // markOpRecursivelyLegal: an op marked recursively legal short-circuits the
+  // walk so nested ops are never checked. Here `dialect.inner` is illegal, but
+  // because `dialect.outer` is recursively legal the conversion still succeeds
+  // and the inner op's (illegal) callback is never invoked.
+  {
+    const char *nestedModule = "\"dialect.outer\"() ({\n"
+                               "  \"dialect.inner\"() : () -> ()\n"
+                               "}) : () -> ()\n";
+    MlirConversionTarget target = mlirConversionTargetCreate(ctx);
+    intptr_t innerCounter = 0;
+    intptr_t recursiveCounter = 0;
+    mlirConversionTargetAddDynamicallyLegalOp(
+        target, mlirStringRefCreateFromCString("dialect.inner"),
+        dynamicLegalityAlwaysIllegal, &innerCounter);
+    mlirConversionTargetAddLegalOp(
+        target, mlirStringRefCreateFromCString("dialect.outer"));
+    mlirConversionTargetMarkOpRecursivelyLegal(
+        target, mlirStringRefCreateFromCString("dialect.outer"),
+        dynamicLegalityAlwaysLegal, &recursiveCounter);
+    assert(runPartialConversion(ctx, nestedModule, target));
+    assert(recursiveCounter > 0 && "recursive legality callback must run");
+    assert(innerCounter == 0 &&
+           "nested op must not be visited under recursive legality");
+    mlirConversionTargetDestroy(target);
+  }
+
+  // markOpRecursivelyLegal with a NULL callback: the op is unconditionally
+  // recursively legal (no per-instance check), so the nested illegal op is
+  // still skipped and the conversion succeeds.
+  {
+    const char *nestedModule = "\"dialect.outer\"() ({\n"
+                               "  \"dialect.inner\"() : () -> ()\n"
+                               "}) : () -> ()\n";
+    MlirConversionTarget target = mlirConversionTargetCreate(ctx);
+    intptr_t innerCounter = 0;
+    mlirConversionTargetAddDynamicallyLegalOp(
+        target, mlirStringRefCreateFromCString("dialect.inner"),
+        dynamicLegalityAlwaysIllegal, &innerCounter);
+    mlirConversionTargetAddLegalOp(
+        target, mlirStringRefCreateFromCString("dialect.outer"));
+    mlirConversionTargetMarkOpRecursivelyLegal(
+        target, mlirStringRefCreateFromCString("dialect.outer"), NULL, NULL);
+    assert(runPartialConversion(ctx, nestedModule, target));
+    assert(innerCounter == 0 &&
+           "nested op must not be visited under recursive legality");
+    mlirConversionTargetDestroy(target);
+  }
+
+  // CHECK: testConversionTargetDynamicLegality: PASSED
+  fprintf(stderr, "testConversionTargetDynamicLegality: PASSED\n");
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirContextSetAllowUnregisteredDialects(ctx, true);
@@ -595,6 +817,8 @@ int main(void) {
   testOpModification(ctx);
   testReplaceUses(ctx);
   testGreedyRewriteDriverConfig(ctx);
+  testCloneWithMapping(ctx);
+  testConversionTargetDynamicLegality(ctx);
 
   mlirContextDestroy(ctx);
   return 0;

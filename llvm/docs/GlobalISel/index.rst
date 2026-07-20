@@ -10,8 +10,23 @@ Global Instruction Selection
    :local:
    :depth: 1
 
+.. toctree::
+   :hidden:
+
+   GMIR
+   GenericOpcode
+   MIRPatterns
+   Pipeline
+   Porting
+   Resources
+   IRTranslator
+   Legalizer
+   RegBankSelect
+   InstructionSelect
+   KnownBits
+
 Introduction
-============
+------------
 
 GlobalISel is a framework that provides a set of reusable passes and utilities
 for instruction selection --- translation from LLVM IR to target-specific
@@ -41,36 +56,30 @@ solve three major problems:
   configure that pipeline to better suit their needs.
 
 Design and Implementation Reference
-===================================
+-----------------------------------
 
 More information on the design and implementation of GlobalISel can be found in
 the following sections.
 
-.. toctree::
-  :maxdepth: 1
-
-  GMIR
-  GenericOpcode
-  MIRPatterns
-  Pipeline
-  Porting
-  Resources
+* :doc:`GMIR`
+* :doc:`GenericOpcode`
+* :doc:`MIRPatterns`
+* :doc:`Pipeline`
+* :doc:`Porting`
+* :doc:`Resources`
 
 More information on specific passes can be found in the following sections:
 
-.. toctree::
-  :maxdepth: 1
-
-  IRTranslator
-  Legalizer
-  RegBankSelect
-  InstructionSelect
-  KnownBits
+* :doc:`IRTranslator`
+* :doc:`Legalizer`
+* :doc:`RegBankSelect`
+* :doc:`InstructionSelect`
+* :doc:`KnownBits`
 
 .. _progress:
 
 Progress and Future Work
-========================
+------------------------
 
 The initial goal is to replace FastISel on AArch64.  The next step will be to
 replace SelectionDAG as the optimized ISel.
@@ -84,7 +93,7 @@ that is destroyed after :ref:`instructionselect`.
 .. _progress-fastisel:
 
 FastISel Replacement
---------------------
+^^^^^^^^^^^^^^^^^^^^
 
 For the initial FastISel replacement, we intend to fallback to SelectionDAG on
 selection failures.

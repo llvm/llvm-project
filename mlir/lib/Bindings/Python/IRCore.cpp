@@ -1272,17 +1272,17 @@ nb::object PyOperation::create(std::string_view name,
         auto &attribute = nb::cast<PyAttribute &>(it.second);
         // TODO: Verify attribute originates from the same context.
         mlirAttributes.emplace_back(std::move(key), attribute);
-      } catch (nb::cast_error &err) {
+      } catch (std::exception &err) {
+        if (it.second.is_none()) {
+          std::string msg = join(
+              "Found an invalid (`None`?) attribute value for the key \"", key,
+              "\" when attempting to create the operation \"", name, "\"");
+          throw std::runtime_error(msg);
+        }
         std::string msg = join("Invalid attribute value for the key \"", key,
                                "\" when attempting to create the operation \"",
                                name, "\" (", err.what(), ")");
         throw nb::type_error(msg.c_str());
-      } catch (std::runtime_error &) {
-        // This exception seems thrown when the value is "None".
-        std::string msg = join(
-            "Found an invalid (`None`?) attribute value for the key \"", key,
-            "\" when attempting to create the operation \"", name, "\"");
-        throw std::runtime_error(msg);
       }
     }
   }
@@ -5292,6 +5292,15 @@ void populateIRCore(nb::module_ &m) {
 
   // MLIRError exception.
   MLIRError::bind(m);
+
+  // Register an atexit handler to clear the thread-local context stack.
+  // The stack holds nb::object references that prevent Python GC of Contexts.
+  // At interpreter shutdown, thread_local storage outlives Py_Finalize() on
+  // the main thread. When the thread_local vector destructs, its nb::object
+  // members call Py_DECREF through the dead runtime, causing a segfault.
+  // Clearing the stack in atexit releases references while alive.
+  nb::module_::import_("atexit").attr("register")(
+      nb::cpp_function([]() { PyThreadContextEntry::getStack().clear(); }));
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

@@ -323,6 +323,10 @@
 #  define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 0
 #endif
 
+// Controls whether the implementation for text_encoding::environment() is available
+#define _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23
+#define _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
+
 // Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
 #  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
 #    define _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8

@@ -86,12 +86,19 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
   int64_t offset;
-  if (failed(srcTy.getStridesAndOffset(strides, offset)) || strides.back() != 1)
+  if (failed(srcTy.getStridesAndOffset(strides, offset)))
+    return rewriter.notifyMatchFailure(xferOp,
+                                       "The memref strides cannot be inferred");
+  if (strides.empty())
+    return rewriter.notifyMatchFailure(xferOp, "0D memref is not supported");
+  if (strides.back() != 1)
     return rewriter.notifyMatchFailure(
         xferOp, "Buffer must be contiguous in the innermost dimension");
 
   VectorType vecTy = xferOp.getVectorType();
   unsigned vecRank = vecTy.getRank();
+  if (vecRank == 0)
+    return rewriter.notifyMatchFailure(xferOp, "0D vectors are not supported");
   if (xferOp.hasOutOfBoundsDim() && vecRank < 2)
     return rewriter.notifyMatchFailure(
         xferOp, "Boundary check is available only for block instructions.");
@@ -249,13 +256,8 @@ computeMemrefMeta(OpType xferOp, PatternRewriter &rewriter) {
       offsetVal = meta.getOffset();
   }
 
-  if constexpr (llvm::is_one_of<std::decay_t<OpType>, vector::TransferReadOp,
-                                vector::TransferWriteOp>::value) {
-    AffineMap permMap = xferOp.getPermutationMap();
-    // Adjust strides according to the permutation map (e.g., for transpose)
-    adjustStridesForPermutation(permMap, strides);
-  }
-
+  // Strides are returned in original memref order; permutation is applied in
+  // computeOffsets only where offsets are indexed in vector order.
   return {strides, offsetVal};
 }
 
@@ -305,13 +307,18 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     return stepOp;
   });
 
+  // Local offsets are indexed in vector order, so permute strides; the base
+  // offset below uses the original memref-order strides.
+  SmallVector<Value> permutedStrides(strides.begin(), strides.end());
+  adjustStridesForPermutation(xferOp.getPermutationMap(), permutedStrides);
+
   // Multiply step vectors by corresponding strides
-  size_t memrefRank = strides.size();
+  size_t memrefRank = permutedStrides.size();
   size_t vectorRank = vectorShape.size();
   SmallVector<Value> strideMultiplied;
   for (size_t i = 0; i < vectorRank; ++i) {
     size_t memrefDim = memrefRank - vectorRank + i;
-    Value strideValue = strides[memrefDim];
+    Value strideValue = permutedStrides[memrefDim];
     auto mulType = dyn_cast<VectorType>(stepVectors[i].getType());
     auto bcastOp =
         vector::BroadcastOp::create(rewriter, loc, mulType, strideValue);
@@ -499,7 +506,7 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
       /*l1_hint=*/xegpu::CachePolicyAttr{},
       /*l2_hint=*/xegpu::CachePolicyAttr{},
       /*l3_hint=*/xegpu::CachePolicyAttr{},
-      /*layout=*/nullptr);
+      /*layout=*/nullptr, /*contiguity=*/nullptr);
 
   rewriter.replaceOp(readOp, gatherOp.getResult());
   return success();
@@ -534,7 +541,7 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
                                 /*l1_hint=*/xegpu::CachePolicyAttr{},
                                 /*l2_hint=*/xegpu::CachePolicyAttr{},
                                 /*l3_hint=*/xegpu::CachePolicyAttr{},
-                                /*layout=*/nullptr);
+                                /*layout=*/nullptr, /*contiguity=*/nullptr);
   rewriter.eraseOp(writeOp);
   return success();
 }
@@ -555,10 +562,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     bool isSharedMemory = xegpu::XeGPUDialect::isSharedMemory(readMemTy);
     // Handle the SLM case.
     if (isSharedMemory) {
-      // If the memref is SLM only support 2D case for now.
-      if (loadedVecTy.getRank() != 2)
+      // load_matrix supports 1D and 2D loads from SLM.
+      if (loadedVecTy.getRank() != 1 && loadedVecTy.getRank() != 2)
         return rewriter.notifyMatchFailure(
-            readOp, "Only 2D vector loads are supported for SLM");
+            readOp, "Only 1D and 2D vector loads are supported for SLM");
       AffineMap readMap = readOp.getPermutationMap();
       if (!readMap.isMinorIdentity())
         return rewriter.notifyMatchFailure(
@@ -695,10 +702,10 @@ struct TransferWriteLowering
     // For shared local memory (address space 3), use create_mem_desc +
     // store_matrix
     if (isSharedMemory) {
-      // Only support 2D case for now.
-      if (vecTy.getRank() != 2)
+      // store_matrix supports 1D and 2D stores to SLM.
+      if (vecTy.getRank() != 1 && vecTy.getRank() != 2)
         return rewriter.notifyMatchFailure(
-            writeOp, "Only 2D vector stores are supported for SLM");
+            writeOp, "Only 1D and 2D vector stores are supported for SLM");
       // Create mem_desc for SLM
       auto memDescType =
           xegpu::MemDescType::get(rewriter.getContext(), writeMemTy.getShape(),
@@ -790,7 +797,7 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
         /*l1_hint=*/xegpu::CachePolicyAttr{},
         /*l2_hint=*/xegpu::CachePolicyAttr{},
         /*l3_hint=*/xegpu::CachePolicyAttr{},
-        /*layout=*/nullptr);
+        /*layout=*/nullptr, /*contiguity=*/nullptr);
 
     auto selectOp =
         arith::SelectOp::create(rewriter, loc, gatherOp.getMask(),
@@ -825,7 +832,8 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
                                   /*l1_hint=*/xegpu::CachePolicyAttr{},
                                   /*l2_hint=*/xegpu::CachePolicyAttr{},
                                   /*l3_hint=*/xegpu::CachePolicyAttr{},
-                                  /*layout=*/nullptr);
+                                  /*layout=*/nullptr,
+                                  /*contiguity=*/nullptr);
     rewriter.eraseOp(scatterOp);
     return success();
   }

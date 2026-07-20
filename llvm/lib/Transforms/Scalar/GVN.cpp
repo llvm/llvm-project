@@ -81,9 +81,11 @@
 #include <utility>
 
 using namespace llvm;
-using namespace llvm::gvn;
 using namespace llvm::VNCoercion;
 using namespace PatternMatch;
+
+using AvailableValue = GVNPass::AvailableValue;
+using AvailableValueInBlock = GVNPass::AvailableValueInBlock;
 
 #define DEBUG_TYPE "gvn"
 
@@ -193,7 +195,7 @@ template <> struct llvm::DenseMapInfo<GVNPass::Expression> {
 /// Materialization of an AvailableValue never fails.  An AvailableValue is
 /// implicitly associated with a rematerialization point which is the
 /// location of the instruction from which it was formed.
-struct llvm::gvn::AvailableValue {
+struct llvm::GVNPass::AvailableValue {
   enum class ValType {
     SimpleVal, // A simple offsetted value that is accessed.
     LoadVal,   // A value produced by a load.
@@ -246,9 +248,9 @@ struct llvm::gvn::AvailableValue {
     return Res;
   }
 
-  static AvailableValue getSelect(SelectInst *Sel, Value *V1, Value *V2) {
+  static AvailableValue getSelect(Value *Cond, Value *V1, Value *V2) {
     AvailableValue Res;
-    Res.Val = Sel;
+    Res.Val = Cond;
     Res.Kind = ValType::SelectVal;
     Res.Offset = 0;
     Res.V1 = V1;
@@ -277,9 +279,9 @@ struct llvm::gvn::AvailableValue {
     return cast<MemIntrinsic>(Val);
   }
 
-  SelectInst *getSelectValue() const {
+  Value *getSelectCondition() const {
     assert(isSelectValue() && "Wrong accessor");
-    return cast<SelectInst>(Val);
+    return Val;
   }
 
   /// Emit code at the specified insertion point to adjust the value defined
@@ -289,7 +291,7 @@ struct llvm::gvn::AvailableValue {
 
 /// Represents an AvailableValue which can be rematerialized at the end of
 /// the associated BasicBlock.
-struct llvm::gvn::AvailableValueInBlock {
+struct llvm::GVNPass::AvailableValueInBlock {
   /// BB - The basic block in question.
   BasicBlock *BB = nullptr;
 
@@ -310,11 +312,6 @@ struct llvm::gvn::AvailableValueInBlock {
 
   static AvailableValueInBlock getUndef(BasicBlock *BB) {
     return get(BB, AvailableValue::getUndef());
-  }
-
-  static AvailableValueInBlock getSelect(BasicBlock *BB, SelectInst *Sel,
-                                         Value *V1, Value *V2) {
-    return get(BB, AvailableValue::getSelect(Sel, V1, V2));
   }
 
   /// Emit code at the end of this block to adjust the value defined here to
@@ -755,6 +752,14 @@ uint32_t GVNPass::ValueTable::lookupOrAddCmp(unsigned Opcode,
   return assignExpNewValueNum(Exp).first;
 }
 
+/// Returns the value number of ptrtoint \p Ptr to \Ty.
+uint32_t GVNPass::ValueTable::lookupPtrToInt(Value *Ptr, Type *Ty) {
+  Expression Exp(Instruction::PtrToInt);
+  Exp.Ty = Ty;
+  Exp.VarArgs.push_back(lookupOrAdd(Ptr));
+  return ExpressionNumbering.lookup(Exp);
+}
+
 /// Remove all entries from the ValueTable.
 void GVNPass::ValueTable::clear() {
   ValueNumbering.clear();
@@ -1168,13 +1173,15 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
       // Drop all metadata that is not known to cause immediate UB on violation,
       // unless the load has !noundef, in which case all metadata violations
       // will be promoted to UB.
-      // TODO: We can combine noalias/alias.scope metadata here, because it is
-      // independent of the load type.
+      // !noalias and !alias.scope are kept: the load is not moved and still
+      // accesses the same memory, and these are independent of the load type
+      // and offset, so they remain valid for the coerced result.
       if (!CoercedLoad->hasMetadata(LLVMContext::MD_noundef))
         CoercedLoad->dropUnknownNonDebugMetadata(
             {LLVMContext::MD_dereferenceable,
              LLVMContext::MD_dereferenceable_or_null,
-             LLVMContext::MD_invariant_load, LLVMContext::MD_invariant_group});
+             LLVMContext::MD_invariant_load, LLVMContext::MD_invariant_group,
+             LLVMContext::MD_alias_scope, LLVMContext::MD_noalias});
       LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL LOAD:\nOffset: " << Offset
                         << "  " << *getCoercedLoadValue() << '\n'
                         << *Res << '\n'
@@ -1189,10 +1196,9 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
                       << "\n\n\n");
   } else if (isSelectValue()) {
     // Introduce a new value select for a load from an eligible pointer select.
-    SelectInst *Sel = getSelectValue();
+    Value *Cond = getSelectCondition();
     assert(V1 && V2 && "both value operands of the select must be present");
-    Res =
-        SelectInst::Create(Sel->getCondition(), V1, V2, "", Sel->getIterator());
+    Res = SelectInst::Create(Cond, V1, V2, "", InsertPt->getIterator());
     // We use the DebugLoc from the original load here, as this instruction
     // materializes the value that would previously have been loaded.
     cast<SelectInst>(Res)->setDebugLoc(Load->getDebugLoc());
@@ -1324,6 +1330,28 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
 }
 
 std::optional<AvailableValue>
+GVNPass::AnalyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
+                                   Value *FalseAddr, Instruction *From) {
+  assert(TrueAddr->getType() == Load->getPointerOperandType() &&
+         "Invalid address type of true side of select dependency");
+  assert(FalseAddr->getType() == Load->getPointerOperandType() &&
+         "Invalid address type of false side of select dependency");
+  // We can convert a load through a select address into a select of the two
+  // loaded values only if both sides have a dominating, non-clobbered value of
+  // the right type in the extended basic block ending at From.
+  auto Loc = MemoryLocation::get(Load);
+  Value *V1 = findDominatingValue(Loc.getWithNewPtr(TrueAddr), Load->getType(),
+                                  From, getAliasAnalysis());
+  if (!V1)
+    return std::nullopt;
+  Value *V2 = findDominatingValue(Loc.getWithNewPtr(FalseAddr), Load->getType(),
+                                  From, getAliasAnalysis());
+  if (!V2)
+    return std::nullopt;
+  return AvailableValue::getSelect(Cond, V1, V2);
+}
+
+std::optional<AvailableValue>
 GVNPass::AnalyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
                                  Value *Address) {
   assert(Load->isUnordered() && "rules below are incorrect for ordered access");
@@ -1451,18 +1479,11 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
   // loads and DepInst that may clobber the loads.
   if (auto *Sel = dyn_cast<SelectInst>(DepInst)) {
     assert(Sel->getType() == Load->getPointerOperandType());
-    auto Loc = MemoryLocation::get(Load);
-    Value *V1 =
-        findDominatingValue(Loc.getWithNewPtr(Sel->getTrueValue()),
-                            Load->getType(), DepInst, getAliasAnalysis());
-    if (!V1)
-      return std::nullopt;
-    Value *V2 =
-        findDominatingValue(Loc.getWithNewPtr(Sel->getFalseValue()),
-                            Load->getType(), DepInst, getAliasAnalysis());
-    if (!V2)
-      return std::nullopt;
-    return AvailableValue::getSelect(Sel, V1, V2);
+    if (auto AV = AnalyzeSelectAvailability(Load, Sel->getCondition(),
+                                            Sel->getTrueValue(),
+                                            Sel->getFalseValue(), DepInst))
+      return AV;
+    return std::nullopt;
   }
 
   // Unknown def - must be conservative.
@@ -1493,6 +1514,22 @@ void GVNPass::AnalyzeLoadAvailability(LoadInst *Load,
 
     if (Dep.Kind == DepKind::Other) {
       UnavailableBlocks.push_back(DepBB);
+      continue;
+    }
+
+    // The load address is a select in this block: try to rematerialize the
+    // load as a select of the two reaching values (one per side).  The values
+    // are searched for at the end of DepBB.
+    if (Dep.Kind == DepKind::Select) {
+      if (auto AV = AnalyzeSelectAvailability(
+              Load, const_cast<Value *>(Dep.SelCond),
+              const_cast<Value *>(Dep.SelTrueAddr),
+              const_cast<Value *>(Dep.SelFalseAddr), DepBB->getTerminator())) {
+        ValuesPerBlock.push_back(
+            AvailableValueInBlock::get(DepBB, std::move(*AV)));
+      } else {
+        UnavailableBlocks.push_back(DepBB);
+      }
       continue;
     }
 
@@ -1592,10 +1629,10 @@ void GVNPass::eliminatePartiallyRedundantLoad(
     BasicBlock *UnavailableBlock = AvailableLoad.first;
     Value *LoadPtr = AvailableLoad.second;
 
-    auto *NewLoad = new LoadInst(
-        Load->getType(), LoadPtr, Load->getName() + ".pre", Load->isVolatile(),
-        Load->getAlign(), Load->getOrdering(), Load->getSyncScopeID(),
-        UnavailableBlock->getTerminator()->getIterator());
+    auto *NewLoad =
+        new LoadInst(Load->getType(), LoadPtr, Load->getName() + ".pre",
+                     Load->getProperties(),
+                     UnavailableBlock->getTerminator()->getIterator());
     NewLoad->setDebugLoc(Load->getDebugLoc());
     if (MSSAU) {
       auto *NewAccess = MSSAU->createMemoryAccessInBB(
@@ -2039,9 +2076,16 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
 
   for (const NonLocalDepResult &Dep : Deps) {
     const auto &R = Dep.getResult();
-    Value *Address = Dep.getAddress();
+    SelectAddr SelAddr = Dep.getAddress();
     BasicBlock *BB = Dep.getBB();
     Instruction *Inst = R.getInst();
+    if (R.isSelect()) {
+      auto [Cond, Addrs] = SelAddr.getSelectCondAndAddrs();
+      MemVals.emplace_back(
+          ReachingMemVal::getSelect(BB, Cond, Addrs.first, Addrs.second));
+      continue;
+    }
+    Value *Address = SelAddr.getAddr();
     if (R.isClobber())
       MemVals.emplace_back(ReachingMemVal::getClobber(Address, Inst));
     else if (R.isDef())
@@ -3366,6 +3410,23 @@ bool GVNPass::processInstruction(Instruction *I) {
     return false;
   }
 
+  // A ptrtoaddr and a ptrtoint of the same pointer compute the same value when
+  // the address width equals the pointer representation width.
+  if (auto *PTA = dyn_cast<PtrToAddrInst>(I)) {
+    const DataLayout &DL = I->getDataLayout();
+    unsigned AS = PTA->getPointerAddressSpace();
+    if (DL.getAddressSizeInBits(AS) == DL.getPointerSizeInBits(AS) &&
+        !DL.hasUnstableRepresentation(AS)) {
+      uint32_t PTINum =
+          VN.lookupPtrToInt(PTA->getPointerOperand(), PTA->getType());
+      if (Value *PTI = findLeader(I->getParent(), PTINum)) {
+        patchAndReplaceAllUsesWith(I, PTI);
+        salvageAndRemoveInstruction(I);
+        return true;
+      }
+    }
+  }
+
   // If the number we were assigned was a brand new VN, then we don't
   // need to do a lookup to see if the number already exists
   // somewhere in the domtree: it can't!
@@ -3937,7 +3998,7 @@ void GVNPass::assignValNumForDeadCode() {
   }
 }
 
-class llvm::gvn::GVNLegacyPass : public FunctionPass {
+class llvm::GVNLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
 

@@ -134,9 +134,6 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple &Triple = ToolChain.getTriple();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
-  const bool IsPIE =
-      !Args.hasArg(options::OPT_shared) &&
-      (Args.hasArg(options::OPT_pie) || ToolChain.isPIEDefault(Args));
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
@@ -150,25 +147,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
-  if (IsPIE)
-    CmdArgs.push_back("-pie");
-
   CmdArgs.push_back("--eh-frame-hdr");
-  if (Args.hasArg(options::OPT_static)) {
-    CmdArgs.push_back("-Bstatic");
-  } else {
-    if (Args.hasArg(options::OPT_rdynamic))
-      CmdArgs.push_back("-export-dynamic");
-    if (Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back("-shared");
-    } else if (!Args.hasArg(options::OPT_r)) {
-      CmdArgs.push_back("-dynamic-linker");
-      CmdArgs.push_back("/libexec/ld-elf.so.1");
-    }
-    if (Arch == llvm::Triple::arm || Triple.isX86())
-      CmdArgs.push_back("--hash-style=both");
-    CmdArgs.push_back("--enable-new-dtags");
-  }
 
   // Explicitly set the linker emulation for platforms that might not
   // be the default emulation for the linker.
@@ -224,6 +203,27 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");
+  }
+
+  const bool IsShared = Args.hasArg(options::OPT_shared);
+  if (IsShared)
+    CmdArgs.push_back("-shared");
+  bool IsPIE = false;
+  if (Args.hasArg(options::OPT_static)) {
+    CmdArgs.push_back("-static");
+  } else if (!Args.hasArg(options::OPT_r)) {
+    if (Args.hasArg(options::OPT_rdynamic))
+      CmdArgs.push_back("-export-dynamic");
+    if (!IsShared) {
+      IsPIE = Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                           ToolChain.isPIEDefault(Args));
+      if (IsPIE)
+        CmdArgs.push_back("-pie");
+      CmdArgs.push_back("-dynamic-linker");
+      CmdArgs.push_back("/libexec/ld-elf.so.1");
+    }
+    if (Arch == llvm::Triple::arm || Triple.isX86())
+      CmdArgs.push_back("--hash-style=both");
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_G)) {
@@ -477,14 +477,13 @@ bool FreeBSD::isPIEDefault(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerMask
-FreeBSD::getSupportedSanitizers(StringRef BoundArch,
+FreeBSD::getSupportedSanitizers(BoundArch BA,
                                 Action::OffloadKind DeviceOffloadKind) const {
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64;
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsMIPS64 = getTriple().isMIPS64();
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

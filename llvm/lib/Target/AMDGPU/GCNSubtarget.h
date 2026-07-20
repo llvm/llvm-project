@@ -71,7 +71,7 @@ private:
 
 protected:
   // Basic subtarget description.
-  AMDGPU::IsaInfo::AMDGPUTargetID TargetID;
+  AMDGPU::TargetID TargetID;
   unsigned Gen = INVALID;
   InstrItineraryData InstrItins;
   int LDSBankCount = 0;
@@ -157,9 +157,7 @@ public:
     return RegBankInfo.get();
   }
 
-  const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
-    return TargetID;
-  }
+  const AMDGPU::TargetID &getTargetID() const { return TargetID; }
 
   const InstrItineraryData *getInstrItineraryData() const override {
     return &InstrItins;
@@ -346,8 +344,6 @@ public:
   }
 
   bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
-
-  bool isTgSplitEnabled() const { return EnableTgSplit; }
 
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
@@ -640,9 +636,9 @@ public:
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return HasGFX11Insts; }
 
-  /// Return true if the target's EXP instruction has the COMPR flag, which
-  /// affects the meaning of the EN (enable) bits.
-  bool hasCompressedExport() const { return !HasGFX11Insts; }
+  /// Return true if the target has the V_CVT_PK_I16_F32/V_CVT_PK_U16_F32
+  /// instructions.
+  bool hasVCvtPkIU16F32() const { return HasGFX11Insts; }
 
   /// Return true if the target's EXP instruction supports the NULL export
   /// target.
@@ -752,8 +748,6 @@ public:
   bool hasCondSubInsts() const { return HasGFX12Insts; }
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
-
-  bool hasFmaLegacy32Insts() const { return hasGFX10_3Insts(); }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1037,8 +1031,8 @@ public:
     return hasTrue16BitInsts() && EnableRealTrue16Insts;
   }
 
-  bool requiresWaitOnWorkgroupReleaseFence() const {
-    return getGeneration() >= GFX10 || isTgSplitEnabled();
+  bool requiresWaitOnWorkgroupReleaseFence(bool TgSplit) const {
+    return getGeneration() >= GFX10 || TgSplit;
   }
 };
 
