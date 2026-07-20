@@ -2854,6 +2854,8 @@ TEST(TargetParserTest, testAMDGPUgetNumSGPRs) {
   EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX1030), 106u);
   EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX802),
             AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX805),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
 }
 
 TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
