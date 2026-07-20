@@ -292,6 +292,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   against or converted to a null pointer, the same as a bare function name.
   (#GH46362)
 
+- Clang now attempts to print enumerator names rather than C-style cast expressions
+  in more diagnostics.
+
 
 ### Improvements to Clang's time-trace
 
