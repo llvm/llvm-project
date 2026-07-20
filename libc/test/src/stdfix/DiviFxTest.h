@@ -108,7 +108,8 @@ public:
 
     // Only valid when integral bits (excluding sign) exceed fraction bits.
     // Otherwise 1<<FRACTION_LEN may not fit in IntType.
-    if constexpr ((FXRep::INTEGRAL_LEN) > FXRep::FRACTION_LEN) {
+    if constexpr ((FXRep::INTEGRAL_LEN) > FXRep::FRACTION_LEN &&
+                  FXRep::FRACTION_LEN < cpp::numeric_limits<IntType>::digits) {
       constexpr IntType epsilon_result = static_cast<IntType>(1)
                                          << FXRep::FRACTION_LEN;
       EXPECT_EQ(func(1, epsilon), epsilon_result);
@@ -119,7 +120,8 @@ public:
       }
     }
 
-    if constexpr (has_integral) {
+    if constexpr (has_integral &&
+                  FXRep::INTEGRAL_LEN < cpp::numeric_limits<IntType>::digits) {
       constexpr IntType largest_positive =
           ((static_cast<IntType>(1) << FXRep::INTEGRAL_LEN) - 1);
       EXPECT_EQ(func(largest_positive, static_cast<FXType>(largest_positive)),
