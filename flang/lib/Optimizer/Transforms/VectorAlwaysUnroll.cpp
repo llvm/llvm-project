@@ -8,13 +8,13 @@
 
 //===----------------------------------------------------------------------===//
 /// \file
-/// This pass tags inner loops when their outer loop has a user provided 
-/// vectorization attribute:(`!dir$ vector always`, `!dir$ vector length`, 
+/// This pass tags inner loops when their outer loop has a user provided
+/// vectorization attribute:(`!dir$ vector always`, `!dir$ vector length`,
 /// and `!dir$ simd`).
 ///
-/// For each such loop, this pass attaches an `llvm.loop.unroll.full` annotation 
-/// to every `fir.do_loop` nested within it. Fully unrolling those inner loops 
-/// later (in LLVM's LoopFullUnrollPass), which allows outer-loop vectorization 
+/// For each such loop, this pass attaches an `llvm.loop.unroll.full` annotation
+/// to every `fir.do_loop` nested within it. Fully unrolling those inner loops
+/// later (in LLVM's LoopFullUnrollPass), which allows outer-loop vectorization
 /// of the annotated loop.
 ///
 /// Full unrolling of nested loops is multiplicative in code size and compile
@@ -80,7 +80,8 @@ public:
   void runOnOperation() override;
 
 private:
-  /// Tag qualifying nested inner loops with `llvm.loop.unroll.full` annotations.
+  /// Tag qualifying nested inner loops with `llvm.loop.unroll.full`
+  /// annotations.
   void tagNest(fir::DoLoopOp outerLoop,
                mlir::LLVM::LoopAnnotationAttr unrollAnnotation);
 };
@@ -107,7 +108,6 @@ void VectorAlwaysUnrollPass::runOnOperation() {
           /*mustProgress=*/{}, /*isVectorized=*/{}, /*startLoc=*/{},
           /*endLoc=*/{}, /*parallelAccesses=*/{});
 
-
   func.walk([&](fir::DoLoopOp outerLoop) {
     // Only act on loops that request vectorization. Lowering encodes
     // `!dir$ vector always`, `!dir$ vector length`, and `!dir$ simd` as a
@@ -131,8 +131,7 @@ void VectorAlwaysUnrollPass::runOnOperation() {
 }
 
 void VectorAlwaysUnrollPass::tagNest(
-    fir::DoLoopOp outerLoop,
-    mlir::LLVM::LoopAnnotationAttr unrollAnnotation) {
+    fir::DoLoopOp outerLoop, mlir::LLVM::LoopAnnotationAttr unrollAnnotation) {
   std::uint64_t estimatedOps = 0;
   for (mlir::Operation &op : outerLoop.getBody()->without_terminator()) {
     auto nested = mlir::dyn_cast<fir::DoLoopOp>(&op);
@@ -162,13 +161,12 @@ void VectorAlwaysUnrollPass::tagNest(
       return;
     LLVM_DEBUG(llvm::dbgs() << "    tagging loop at " << innerLoop.getLoc()
                             << " with unroll.full\n");
-    mlir::LLVM::LoopAnnotationAttr existing =
-        innerLoop.getLoopAnnotationAttr();
+    mlir::LLVM::LoopAnnotationAttr existing = innerLoop.getLoopAnnotationAttr();
     if (!existing) {
       innerLoop.setLoopAnnotationAttr(unrollAnnotation);
       return;
     }
-    
+
     if (existing.getUnroll()) {
       LLVM_DEBUG(llvm::dbgs()
                  << "    keep: loop already has an unroll annotation\n");
@@ -176,16 +174,14 @@ void VectorAlwaysUnrollPass::tagNest(
     }
     // Append the unroll.full annotation to the existing loop_annotation
     mlir::MLIRContext *ctx = innerLoop.getContext();
-    mlir::LLVM::LoopAnnotationAttr merged =
-        mlir::LLVM::LoopAnnotationAttr::get(
-            ctx, existing.getDisableNonforced(), existing.getVectorize(),
-            existing.getInterleave(), /*unroll=*/unrollAnnotation.getUnroll(),
-            existing.getUnrollAndJam(), existing.getLicm(),
-            existing.getDistribute(), existing.getPipeline(),
-            existing.getPeeled(), existing.getUnswitch(),
-            existing.getMustProgress(), existing.getIsVectorized(),
-            existing.getStartLoc(), existing.getEndLoc(),
-            existing.getParallelAccesses());
+    mlir::LLVM::LoopAnnotationAttr merged = mlir::LLVM::LoopAnnotationAttr::get(
+        ctx, existing.getDisableNonforced(), existing.getVectorize(),
+        existing.getInterleave(), /*unroll=*/unrollAnnotation.getUnroll(),
+        existing.getUnrollAndJam(), existing.getLicm(),
+        existing.getDistribute(), existing.getPipeline(), existing.getPeeled(),
+        existing.getUnswitch(), existing.getMustProgress(),
+        existing.getIsVectorized(), existing.getStartLoc(),
+        existing.getEndLoc(), existing.getParallelAccesses());
     innerLoop.setLoopAnnotationAttr(merged);
   });
 }

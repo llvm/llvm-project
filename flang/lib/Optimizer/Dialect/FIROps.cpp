@@ -4082,8 +4082,7 @@ llvm::SmallVector<mlir::Region *> fir::DoLoopOp::getLoopRegions() {
 
 std::optional<llvm::APInt> fir::DoLoopOp::getStaticTripCount() {
   auto getConstant = [](mlir::Value v) -> std::optional<std::int64_t> {
-    while (auto cvt =
-               mlir::dyn_cast_or_null<fir::ConvertOp>(v.getDefiningOp()))
+    while (auto cvt = mlir::dyn_cast_or_null<fir::ConvertOp>(v.getDefiningOp()))
       v = cvt.getValue();
     return fir::getIntIfConstant(v);
   };
