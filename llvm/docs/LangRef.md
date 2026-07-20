@@ -15992,9 +15992,9 @@ support all bit widths however.
 
 ```
 declare void @llvm.memcpy.p0.p0.i32(ptr <dest>, ptr <src>,
-                                    i32 <len>, i1 <isvolatile>)
+                                    i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memcpy.p0.p0.i64(ptr <dest>, ptr <src>,
-                                    i64 <len>, i1 <isvolatile>)
+                                    i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16016,7 +16016,7 @@ boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the `isvolatile` parameter is `true`, the `llvm.memcpy` call is
+If the immediate `isvolatile` parameter is `true`, the `llvm.memcpy` call is
 a {ref}`volatile operation <volatile>`. The detailed access behavior is not
 very cleanly specified and it is unwise to depend on it.
 
@@ -16046,9 +16046,9 @@ support all bit widths however.
 
 ```
 declare void @llvm.memcpy.inline.p0.p0.i32(ptr <dest>, ptr <src>,
-                                           i32 <len>, i1 <isvolatile>)
+                                           i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memcpy.inline.p0.p0.i64(ptr <dest>, ptr <src>,
-                                           i64 <len>, i1 <isvolatile>)
+                                           i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16071,8 +16071,8 @@ boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the `isvolatile` parameter is `true`, the `llvm.memcpy.inline` call is
-a {ref}`volatile operation <volatile>`. The detailed access behavior is not
+If the immediate `isvolatile` parameter is `true`, the `llvm.memcpy.inline` call
+is a {ref}`volatile operation <volatile>`. The detailed access behavior is not
 very cleanly specified and it is unwise to depend on it.
 
 ##### Semantics:
@@ -16098,9 +16098,9 @@ bit widths however.
 
 ```
 declare void @llvm.memmove.p0.p0.i32(ptr <dest>, ptr <src>,
-                                     i32 <len>, i1 <isvolatile>)
+                                     i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memmove.p0.p0.i64(ptr <dest>, ptr <src>,
-                                     i64 <len>, i1 <isvolatile>)
+                                     i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16118,7 +16118,7 @@ argument and the pointers can be in specified address spaces.
 
 The first argument is a pointer to the destination, the second is a
 pointer to the source. The third argument is an integer argument
-specifying the number of bytes to copy, and the fourth is a
+specifying the number of bytes to copy, and the fourth immediate argument is a
 boolean indicating a volatile access.
 
 The {ref}`align <attr_align>` parameter attribute can be provided
@@ -16154,9 +16154,9 @@ support all bit widths.
 
 ```
 declare void @llvm.memset.p0.i32(ptr <dest>, i8 <val>,
-                                 i32 <len>, i1 <isvolatile>)
+                                 i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memset.p0.i64(ptr <dest>, i8 <val>,
-                                 i64 <len>, i1 <isvolatile>)
+                                 i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16178,9 +16178,9 @@ is a boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first arguments.
 
-If the `isvolatile` parameter is `true`, the `llvm.memset` call is
-a {ref}`volatile operation <volatile>`. The detailed access behavior is not
-very cleanly specified and it is unwise to depend on it.
+If the immediate `isvolatile` parameter is `true`, the `llvm.memset` call is a
+{ref}`volatile operation <volatile>`. The detailed access behavior is not very
+cleanly specified and it is unwise to depend on it.
 
 ##### Semantics:
 
@@ -16207,9 +16207,9 @@ support all bit widths however.
 
 ```
 declare void @llvm.memset.inline.p0.i32(ptr <dest>, i8 <val>,
-                                        i32 <len>, i1 <isvolatile>)
+                                        i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memset.inline.p0.i64(ptr <dest>, i8 <val>,
-                                        i64 <len>, i1 <isvolatile>)
+                                        i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16231,8 +16231,8 @@ is a boolean indicating a volatile access.
 The {ref}`align <attr_align>` parameter attribute can be provided
 for the first argument.
 
-If the `isvolatile` parameter is `true`, the `llvm.memset.inline` call is
-a {ref}`volatile operation <volatile>`. The detailed access behavior is not
+If the immediate `isvolatile` parameter is `true`, the `llvm.memset.inline` call
+is a {ref}`volatile operation <volatile>`. The detailed access behavior is not
 very cleanly specified and it is unwise to depend on it.
 
 ##### Semantics:
