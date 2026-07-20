@@ -574,6 +574,8 @@ SanitizerSet CodeGenModule::getProfileCoreUBChecks() const {
   // {basic.align.object.alignment}: an access through a pointer that does not
   // meet the referenced type's alignment.
   Checks.set(SanitizerKind::Alignment, true);
+  // {expr.unary.dereference}, null case: dereferencing a null pointer.
+  Checks.set(SanitizerKind::Null, true);
   return Checks;
 }
 
