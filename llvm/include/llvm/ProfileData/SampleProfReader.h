@@ -227,6 +227,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -515,6 +516,9 @@ public:
   /// Print all the profiles on stream \p OS in the JSON format.
   LLVM_ABI void dumpJson(raw_ostream &OS = dbgs());
 
+  /// Return the format version of the profile. For tests only.
+  uint64_t getFormatVersion() const { return FormatVersion; }
+
   /// Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
     // The function name may have been updated by adding suffix. Call
@@ -696,6 +700,9 @@ protected:
 
   /// Whether the function profiles use FS discriminators.
   bool ProfileIsFS = false;
+
+  /// Format version of the profile.
+  uint64_t FormatVersion = 0;
 
   /// If true, the profile has vtable profiles and reader should decode them
   /// to parse profiles correctly.
@@ -908,6 +915,80 @@ public:
   }
 };
 
+/// Tags to select the initialization mode of SampleProfileFuncOffsetTable.
+struct InMemoryModeT {};
+struct OnDiskModeT {};
+inline constexpr InMemoryModeT InMemoryMode{};
+inline constexpr OnDiskModeT OnDiskMode{};
+
+/// A unified wrapper representing the function offset table.
+///
+/// This class abstracts away the physical representation of the offset table,
+/// which can either be:
+///
+/// - An llvm::DenseMap mapping function GUIDs (or context hashes) to their
+///   profile offsets, populated when reading the array of offsets in
+///   context-sensitive (CS) profiles or version 103 profiles.
+///
+/// - An OnDiskIterableChainedHashTable providing the same mapping directly from
+///   the file in (non-context-sensitive) version 104 profiles.
+///
+/// It exposes a single, type-agnostic lookup interface, shielding the reader
+/// from the underlying container types. To prevent hybrid-state corruption, the
+/// table's mode is locked at construction time, and assertions prevent
+/// modification in on-disk mode.
+class SampleProfileFuncOffsetTable {
+public:
+  using OnDiskTableType =
+      llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
+
+  SampleProfileFuncOffsetTable() = delete;
+  SampleProfileFuncOffsetTable(const SampleProfileFuncOffsetTable &) = delete;
+  SampleProfileFuncOffsetTable &
+  operator=(const SampleProfileFuncOffsetTable &) = delete;
+  SampleProfileFuncOffsetTable(SampleProfileFuncOffsetTable &&) = delete;
+  SampleProfileFuncOffsetTable &
+  operator=(SampleProfileFuncOffsetTable &&) = delete;
+
+  explicit SampleProfileFuncOffsetTable(InMemoryModeT,
+                                        size_t InitialCapacity = 0) {
+    InMemoryTable.reserve(InitialCapacity);
+  }
+
+  /// Insert a function GUID and its profile offset into the in-memory map.
+  /// Enforces that the on-disk table must not have been set first.
+  void insert(uint64_t GUID, uint64_t Offset) {
+    assert(!OnDiskTable &&
+           "Cannot insert in-memory elements after on-disk table has been set");
+    InMemoryTable[GUID] = Offset;
+  }
+
+  /// Instantiate the on-disk chained hash table using raw stream pointers.
+  SampleProfileFuncOffsetTable(OnDiskModeT, const uint8_t *Buckets,
+                               const uint8_t *Payload, const uint8_t *Base) {
+    OnDiskTable.reset(OnDiskTableType::Create(Buckets, Payload, Base));
+  }
+
+  /// Query the offset table for the profile offset associated with the given
+  /// GUID. Returns the offset if found, or std::nullopt if the key is missing.
+  std::optional<uint64_t> lookup(uint64_t GUID) const {
+    if (OnDiskTable) {
+      auto Iter = OnDiskTable->find(GUID);
+      if (Iter != OnDiskTable->end())
+        return *Iter;
+    } else {
+      auto Iter = InMemoryTable.find(GUID);
+      if (Iter != InMemoryTable.end())
+        return Iter->second;
+    }
+    return std::nullopt;
+  }
+
+private:
+  llvm::DenseMap<hash_code, uint64_t> InMemoryTable;
+  std::unique_ptr<OnDiskTableType> OnDiskTable;
+};
+
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase defines
 /// the basic structure of the extensible binary format.
 /// The format is organized in sections except the magic and version number
@@ -942,18 +1023,18 @@ protected:
   std::error_code readSecHdrTableEntry(uint64_t Idx);
   std::error_code readSecHdrTable();
 
-  std::error_code readFuncMetadata(bool ProfileHasAttribute,
-                                   DenseSet<FunctionSamples *> &Profiles);
-  std::error_code readFuncMetadata(bool ProfileHasAttribute);
-  std::error_code readFuncMetadata(bool ProfileHasAttribute,
-                                   FunctionSamples *FProfile);
+  std::error_code readFuncMetadata(DenseSet<FunctionSamples *> &Profiles);
+  std::error_code readFuncMetadata();
+  std::error_code readFuncMetadata(FunctionSamples *FProfile);
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readFuncProfiles(const DenseSet<StringRef> &FuncsToUse,
                                    SampleProfileMap &Profiles);
   std::error_code readNameTableSec(bool IsMD5, bool FixedLengthMD5);
   std::error_code readCSNameTableSec();
-  std::error_code readProfileSymbolList();
+  std::error_code readProfileSymbolList(bool IsMD5);
+  std::error_code readStringBasedProfileSymbolList();
+  std::error_code readMD5ProfileSymbolList();
 
   std::error_code readHeader() override;
   std::error_code verifySPMagic(uint64_t Magic) override = 0;
@@ -971,7 +1052,7 @@ protected:
   /// The table mapping from a function context's MD5 to the offset of its
   /// FunctionSample towards file start.
   /// At most one of FuncOffsetTable and FuncOffsetList is populated.
-  DenseMap<hash_code, uint64_t> FuncOffsetTable;
+  std::optional<SampleProfileFuncOffsetTable> FuncOffsetTable;
 
   /// The list version of FuncOffsetTable. This is used if every entry is
   /// being accessed.
@@ -983,7 +1064,9 @@ protected:
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
                                    LLVMContext &C, SampleProfileFormat Format)
-      : SampleProfileReaderBinary(std::move(B), C, Format) {}
+      : SampleProfileReaderBinary(std::move(B), C, Format) {
+    FuncOffsetTable.emplace(InMemoryMode);
+  }
 
   /// Read sample profiles in extensible format from the associated file.
   std::error_code readImpl() override;
@@ -1081,6 +1164,23 @@ protected:
   /// GCOV tags used to separate sections in the profile file.
   static const uint32_t GCOVTagAFDOFileNames = 0xaa000000;
   static const uint32_t GCOVTagAFDOFunction = 0xac000000;
+};
+
+/// A helper class that wraps a local set of string names from NameTable.
+class SampleProfileNameSet {
+  const SampleProfileReader &Reader;
+  StringSet<> NamesInProfile;
+
+public:
+  explicit SampleProfileNameSet(const SampleProfileReader &R) : Reader(R) {
+    for (FunctionId Name : Reader.getNameTable())
+      NamesInProfile.insert(Name.stringRef());
+  }
+
+  /// Check if a canonical function name exists in the profile name table.
+  bool contains(StringRef CanonName) const {
+    return NamesInProfile.contains(CanonName);
+  }
 };
 
 } // end namespace sampleprof

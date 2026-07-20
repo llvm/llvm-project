@@ -2,6 +2,7 @@
 
 set(BOLT_PGO_CMAKE_CACHE "PGO" CACHE STRING "")
 set(LLVM_ENABLE_PROJECTS "bolt;clang;flang;lld" CACHE STRING "")
+set(LLVM_ENABLE_RUNTIMES "compiler-rt;flang-rt;libunwind;openmp" CACHE STRING "")
 
 set(CLANG_BOOTSTRAP_TARGETS
   stage2-clang-bolt

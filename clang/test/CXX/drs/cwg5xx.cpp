@@ -472,7 +472,7 @@ namespace cwg535 { // cwg535: 3.1
 // cwg538: na
 
 namespace cwg539 { // cwg539: 3.4
-const f(const a) {
+const cwg539_f(const a) {
 // expected-error@-1 {{unknown type name 'a'}}
 // expected-error@-2 {{a type specifier is required for all declarations}}
   const b;

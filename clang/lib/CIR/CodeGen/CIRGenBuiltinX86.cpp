@@ -811,6 +811,60 @@ static mlir::Value emitX86MaskedLoad(CIRGenBuilderTy &builder,
   return builder.createMaskedLoad(loc, ty, ptr, alignment, maskVec, ops[1]);
 }
 
+static mlir::Value emitX86PackedByteShift(CIRGenBuilderTy &builder,
+                                          unsigned builtinID,
+                                          mlir::Location loc,
+                                          llvm::ArrayRef<mlir::Value> ops,
+                                          llvm::Boolean isLeftShift) {
+  auto byteVecType = cast<cir::VectorType>(ops[0].getType());
+  assert(!byteVecType.getIsScalable() &&
+         "This is only intended for fixed-width vectors");
+
+  unsigned shiftVal = CIRGenFunction::getZExtIntValueFromConstOp(ops[1]) & 0xFF;
+  mlir::Value zeroVector = builder.getZero(loc, byteVecType);
+
+  // If pslldq is shifting the vector more than 15 bytes, emit zero.
+  // This matches the hardware behavior where shifting by 16+ bytes
+  // clears the entire 128-bit lane.
+  if (shiftVal >= 16)
+    return zeroVector;
+
+  uint64_t numElts = byteVecType.getSize();
+  assert(numElts % 16 == 0 && "Expected a multiple of 16");
+
+  llvm::SmallVector<int64_t, 64> shuffleMask;
+
+  constexpr unsigned laneSize = 16;
+  const int switchOperand = numElts - laneSize;
+
+  // 256/512-bit pslldq/psrldq operates on 128-bit lanes so we need to
+  // handle that
+  for (auto laneOffset = 0ull; laneOffset < numElts; laneOffset += laneSize) {
+    for (auto elt : llvm::seq<unsigned>(0, laneSize)) {
+      unsigned idx =
+          isLeftShift ? (numElts + elt - shiftVal) : (elt + shiftVal);
+
+      bool isZeroPadding = isLeftShift ? (idx < numElts) : (idx >= laneSize);
+      if (isZeroPadding)
+        idx += isLeftShift ? (-switchOperand) : switchOperand;
+
+      shuffleMask.push_back(idx + laneOffset);
+    }
+  }
+
+  // Perform the shuffle
+  // (left concatenating zeros on left, right concatenating zeros on right)
+  auto [firstOperand, secondOperand] = isLeftShift
+                                           ? std::make_pair(zeroVector, ops[0])
+                                           : std::make_pair(ops[0], zeroVector);
+
+  // Mask the result using circular arithmetic on concatenated buffer
+  mlir::Value shuffleResult =
+      builder.createVecShuffle(loc, firstOperand, secondOperand, shuffleMask);
+
+  return shuffleResult;
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -1801,16 +1855,22 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vperm2f128_ps256:
   case X86::BI__builtin_ia32_vperm2f128_si256:
   case X86::BI__builtin_ia32_permti256:
-  case X86::BI__builtin_ia32_pslldqi128_byteshift:
-  case X86::BI__builtin_ia32_pslldqi256_byteshift:
-  case X86::BI__builtin_ia32_pslldqi512_byteshift:
-  case X86::BI__builtin_ia32_psrldqi128_byteshift:
-  case X86::BI__builtin_ia32_psrldqi256_byteshift:
-  case X86::BI__builtin_ia32_psrldqi512_byteshift:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+  case X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case X86::BI__builtin_ia32_pslldqi512_byteshift:
+    return emitX86PackedByteShift(builder, builtinID,
+                                  getLoc(expr->getExprLoc()), ops,
+                                  /**isLeftShift=*/true);
+  case X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case X86::BI__builtin_ia32_psrldqi512_byteshift:
+    return emitX86PackedByteShift(builder, builtinID,
+                                  getLoc(expr->getExprLoc()), ops,
+                                  /**isLeftShift=*/false);
   case X86::BI__builtin_ia32_kshiftliqi:
   case X86::BI__builtin_ia32_kshiftlihi:
   case X86::BI__builtin_ia32_kshiftlisi:
@@ -1858,6 +1918,24 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Value zero = builder.getNullValue(in.getType(), loc);
     mlir::Value sv = builder.createVecShuffle(loc, in, zero, indices);
     return builder.createBitcast(sv, ops[0].getType());
+  }
+  case X86::BI__builtin_ia32_movnti:
+  case X86::BI__builtin_ia32_movnti64:
+  case X86::BI__builtin_ia32_movntsd:
+  case X86::BI__builtin_ia32_movntss: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+
+    Address dest = Address{ops[0], CharUnits::One()};
+    mlir::Value src = ops[1];
+
+    if (builtinID == X86::BI__builtin_ia32_movntsd ||
+        builtinID == X86::BI__builtin_ia32_movntss)
+      src = builder.createExtractElement(loc, ops[1], 0);
+
+    cir::StoreOp so =
+        builder.createStore(loc, src, dest,
+                            /*isVolatile=*/false, /*isNontemporal=*/true);
+    return so.getValue();
   }
   case X86::BI__builtin_ia32_vprotbi:
   case X86::BI__builtin_ia32_vprotwi:

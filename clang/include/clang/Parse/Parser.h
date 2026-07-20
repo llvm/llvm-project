@@ -1752,6 +1752,7 @@ private:
     SourceLocation ColonLoc;
     ExprResult RangeExpr;
     SmallVector<MaterializeTemporaryExpr *, 8> LifetimeExtendTemps;
+    CXXExpansionStmtDecl *ExpansionStmt = nullptr;
     bool ParsedForRangeDecl() { return !ColonLoc.isInvalid(); }
   };
   struct ForRangeInfo : ForRangeInit {
@@ -4231,7 +4232,8 @@ private:
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
-                           bool FailImmediatelyOnInvalidExpr = false);
+                           bool FailImmediatelyOnInvalidExpr = false,
+                           bool ParsingExpansionStmtInitList = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -4996,7 +4998,7 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ if/switch/while/for condition expression.
 
-  /// ParseCXXCondition - if/switch/while condition expression.
+  /// ParseCondition - if/switch/while condition expression.
   ///
   /// \verbatim
   ///       condition:
@@ -5027,11 +5029,9 @@ private:
   /// returned.
   ///
   /// \returns The parsed condition.
-  Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
-                                          SourceLocation Loc,
-                                          Sema::ConditionKind CK,
-                                          bool MissingOK,
-                                          ForRangeInfo *FRI = nullptr);
+  Sema::ConditionResult ParseCondition(StmtResult *InitStmt, SourceLocation Loc,
+                                       Sema::ConditionKind CK, bool MissingOK,
+                                       ForRangeInfo *FRI = nullptr);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
@@ -5318,6 +5318,16 @@ private:
   /// \endverbatim
   ///
   ExprResult ParseBraceInitializer();
+
+  /// ParseExpansionInitList - Called when the initializer of an expansion
+  /// statement starts with an open brace.
+  ///
+  /// \verbatim
+  ///       expansion-init-list: [C++26 [stmt.expand]]
+  ///          '{' expression-list ','[opt] '}'
+  ///          '{' '}'
+  /// \endverbatim
+  ExprResult ParseExpansionInitList();
 
   struct DesignatorCompletionInfo {
     SmallVectorImpl<Expr *> &InitExprs;
@@ -7542,7 +7552,11 @@ public:
   /// [C++0x]   braced-init-list            [TODO]
   /// \endverbatim
   StmtResult ParseForStatement(SourceLocation *TrailingElseLoc,
-                               LabelDecl *PrecedingLabel);
+                               LabelDecl *PrecedingLabel,
+                               CXXExpansionStmtDecl *ESD = nullptr);
+
+  void ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
+                                          ParsingDeclSpec *VarDeclSpec);
 
   /// ParseGotoStatement
   /// \verbatim
@@ -7598,6 +7612,23 @@ public:
   ///         unlabeled-statement
   /// \endverbatim
   StmtResult ParseDeferStatement(SourceLocation *TrailingElseLoc);
+
+  /// ParseExpansionStatement - Parse a C++26 expansion
+  /// statement ('template for').
+  ///
+  /// \verbatim
+  ///     expansion-statement:
+  ///       'template' 'for' '(' init-statement[opt]
+  ///           for-range-declaration ':' expansion-initializer ')'
+  ///           compound-statement
+  ///
+  ///     expansion-initializer:
+  ///       expression
+  ///       expansion-init-list
+  /// \endverbatim
+  StmtResult ParseExpansionStatement(SourceLocation *TrailingElseLoc,
+                                     LabelDecl *PrecedingLabel,
+                                     SourceLocation TemplateLoc);
 
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,

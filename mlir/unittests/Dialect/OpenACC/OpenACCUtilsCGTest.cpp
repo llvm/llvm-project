@@ -11,13 +11,17 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/IR/PatternMatch.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -32,7 +36,72 @@ protected:
   OpenACCUtilsCGTest() : b(&context), loc(UnknownLoc::get(&context)) {
     context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
                         func::FuncDialect, scf::SCFDialect, gpu::GPUDialect,
-                        DLTIDialect>();
+                        memref::MemRefDialect, DLTIDialect>();
+  }
+
+  static ComputeRegionOp buildComputeRegionWithPrivateLocal(
+      MLIRContext &context, OpBuilder &b, Location loc, ModuleOp module,
+      GPUParallelDimsAttr privatizeParDims, ValueRange launchArgs,
+      PrivateLocalOp &privateLocalOut, PrivatizeOp &privatizeOut) {
+    IRRewriter rewriter(&context);
+    rewriter.setInsertionPointToStart(module.getBody());
+
+    MemRefType memTy = MemRefType::get({4}, b.getI32Type());
+    Type privateTy = PrivateType::get(&context, memTy);
+    privatizeOut = PrivatizeOp::create(rewriter, loc, privateTy, ValueRange{},
+                                       privatizeParDims);
+
+    Region sourceRegion;
+    Block *srcBlock = new Block();
+    sourceRegion.push_back(srcBlock);
+    BlockArgument privArg = srcBlock->addArgument(privateTy, loc);
+    OpBuilder srcBuilder(&context);
+    srcBuilder.setInsertionPointToStart(srcBlock);
+
+    Value c0 = arith::ConstantIndexOp::create(srcBuilder, loc, 0);
+    Value c1 = arith::ConstantIndexOp::create(srcBuilder, loc, 1);
+    YieldOp::create(srcBuilder, loc);
+
+    // Nest one scf.parallel per privatization dimension so that
+    // collectPrivateLocalParDims recovers them from the parent loops.
+    srcBuilder.setInsertionPoint(srcBlock->getTerminator());
+    for (GPUParallelDimAttr parDim : privatizeParDims.getArray()) {
+      auto par = scf::ParallelOp::create(srcBuilder, loc, ValueRange{c0},
+                                         ValueRange{c1}, ValueRange{c1});
+      setParDimsAttr(par, GPUParallelDimsAttr::get(&context, {parDim}));
+      srcBuilder.setInsertionPoint(par.getBody()->getTerminator());
+    }
+    PrivateLocalOp::create(srcBuilder, loc, memTy, privArg);
+
+    IRMapping mapping;
+    auto cr = buildComputeRegion(
+        loc, launchArgs, ValueRange{privatizeOut.getResult()},
+        ParallelOp::getOperationName(), sourceRegion, rewriter, mapping,
+        /*output=*/{}, /*kernelFuncName=*/{}, /*kernelModuleName=*/{},
+        /*stream=*/{}, ValueRange{privArg});
+
+    privateLocalOut = {};
+    cr.walk([&](PrivateLocalOp op) { privateLocalOut = op; });
+    return cr;
+  }
+
+  static ComputeRegionOp createEmptyComputeRegion(MLIRContext &context,
+                                                  Location loc,
+                                                  ModuleOp module) {
+    IRRewriter rewriter(&context);
+    rewriter.setInsertionPointToStart(module.getBody());
+
+    Region sourceRegion;
+    Block *block = new Block();
+    sourceRegion.push_back(block);
+    OpBuilder regionBuilder(&context);
+    regionBuilder.setInsertionPointToStart(block);
+    YieldOp::create(regionBuilder, loc);
+
+    IRMapping mapping;
+    return buildComputeRegion(loc, ValueRange{}, ValueRange{},
+                              ParallelOp::getOperationName(), sourceRegion,
+                              rewriter, mapping);
   }
 
   MLIRContext context;
@@ -81,6 +150,95 @@ TEST_F(OpenACCUtilsCGTest, getDataLayoutWithSpec) {
 
   auto dl2 = getDataLayout(module->getOperation(), /*allowDefault=*/true);
   EXPECT_TRUE(dl2.has_value());
+}
+
+//===----------------------------------------------------------------------===//
+// ParDim utilities Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsCGTest, insertParDimOrdersAndDeduplicates) {
+  SmallVector<GPUParallelDimAttr> parDims;
+  GPUParallelDimAttr threadX = GPUParallelDimAttr::threadXDim(&context);
+  GPUParallelDimAttr blockX = GPUParallelDimAttr::blockXDim(&context);
+  GPUParallelDimAttr threadY = GPUParallelDimAttr::threadYDim(&context);
+
+  insertParDim(parDims, threadX);
+  insertParDim(parDims, blockX);
+  insertParDim(parDims, threadY);
+  insertParDim(parDims, threadX);
+
+  ASSERT_EQ(parDims.size(), 3u);
+  EXPECT_EQ(parDims[0], blockX);
+  EXPECT_EQ(parDims[1], threadY);
+  EXPECT_EQ(parDims[2], threadX);
+}
+
+TEST_F(OpenACCUtilsCGTest, removeParDimRemovesOnlyMatchingDim) {
+  GPUParallelDimAttr threadX = GPUParallelDimAttr::threadXDim(&context);
+  GPUParallelDimAttr blockX = GPUParallelDimAttr::blockXDim(&context);
+  GPUParallelDimAttr threadY = GPUParallelDimAttr::threadYDim(&context);
+  SmallVector<GPUParallelDimAttr> parDims{blockX, threadY, threadX};
+
+  removeParDim(parDims, threadX);
+  removeParDim(parDims, GPUParallelDimAttr::blockYDim(&context));
+
+  ASSERT_EQ(parDims.size(), 2u);
+  EXPECT_EQ(parDims[0], blockX);
+  EXPECT_EQ(parDims[1], threadY);
+}
+
+TEST_F(OpenACCUtilsCGTest, parDimsOperationAttributes) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  OwningOpRef<ModuleOp> otherModule = ModuleOp::create(b, loc);
+  Operation *op = module->getOperation();
+  Operation *otherOp = otherModule->getOperation();
+  GPUParallelDimsAttr seqAttr = GPUParallelDimsAttr::seq(&context);
+  GPUParallelDimsAttr blockAttr = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context)});
+
+  EXPECT_FALSE(hasParDimsAttr(op));
+  setParDimsAttr(op, seqAttr);
+  EXPECT_TRUE(hasParDimsAttr(op));
+  EXPECT_TRUE(hasSeqParDims(op));
+  EXPECT_EQ(getParDimsAttr(op), seqAttr);
+
+  updateParDimsAttr(op, blockAttr);
+  EXPECT_FALSE(hasSeqParDims(op));
+  EXPECT_EQ(getParDimsAttr(op), blockAttr);
+
+  copyParDimsAttr(op, otherOp);
+  EXPECT_EQ(getParDimsAttr(otherOp), blockAttr);
+}
+
+TEST_F(OpenACCUtilsCGTest, getParDimsAttrReadsInherentAttribute) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+
+  GPUParallelDimsAttr blockAttr = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context)});
+  Type privateTy = PrivateType::get(&context, b.getI32Type());
+  auto privatize =
+      PrivatizeOp::create(b, loc, privateTy,
+                          /*dynamicSizes=*/ValueRange{}, blockAttr);
+
+  EXPECT_TRUE(hasParDimsAttr(privatize));
+  EXPECT_EQ(getParDimsAttr(privatize), blockAttr);
+  EXPECT_EQ(privatize.getParDimsAttr(), blockAttr);
+}
+
+TEST_F(OpenACCUtilsCGTest, setParDimsAttrSetsInherentAttribute) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+
+  Type privateTy = PrivateType::get(&context, b.getI32Type());
+  auto privatize =
+      PrivatizeOp::create(b, loc, privateTy, /*dynamicSizes=*/ValueRange{});
+  GPUParallelDimsAttr blockAttr = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context)});
+
+  setParDimsAttr(privatize, blockAttr);
+  EXPECT_EQ(getParDimsAttr(privatize), blockAttr);
+  EXPECT_EQ(privatize.getParDimsAttr(), blockAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -222,4 +380,426 @@ TEST_F(OpenACCUtilsCGTest, buildComputeRegionWithInputArgsToMap) {
             crBlock.getArgument(0));
 
   func::ReturnOp::create(rewriter, loc);
+}
+
+//===----------------------------------------------------------------------===//
+// SharedMemoryBudget Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsCGTest, SharedMemoryBudgetAlignAndAllocate) {
+  EXPECT_EQ(SharedMemoryBudget::alignOffset(0), 0);
+  EXPECT_EQ(SharedMemoryBudget::alignOffset(1), 16);
+  EXPECT_EQ(SharedMemoryBudget::alignOffset(16), 16);
+
+  SharedMemoryBudget budget(100);
+  EXPECT_TRUE(budget.tryAllocate(50));
+  EXPECT_EQ(budget.bytesUsed(), 50);
+  EXPECT_TRUE(budget.tryAllocate(34));
+  EXPECT_EQ(budget.bytesUsed(), 98);
+  EXPECT_FALSE(budget.tryAllocate(10));
+}
+
+TEST_F(OpenACCUtilsCGTest, SharedMemoryBudgetInitialBytesUsed) {
+  SharedMemoryBudget budget(64, /*initialBytesUsed=*/48);
+  EXPECT_FALSE(budget.tryAllocate(32));
+  EXPECT_TRUE(budget.tryAllocate(16));
+  EXPECT_EQ(budget.bytesUsed(), 64);
+}
+
+//===----------------------------------------------------------------------===//
+// sumExistingSharedMemoryBytes Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsCGTest, sumExistingSharedMemoryBytes) {
+  Region region;
+  Block *block = new Block();
+  region.push_back(block);
+  b.setInsertionPointToStart(block);
+
+  MemRefType ty = MemRefType::get({4}, b.getI32Type());
+  GPUSharedMemoryOp::create(b, loc, ty, b.getI64IntegerAttr(1),
+                            b.getI64IntegerAttr(100), ValueRange{},
+                            IntegerAttr{}, IntegerAttr{});
+  GPUSharedMemoryOp::create(b, loc, ty, b.getI64IntegerAttr(1),
+                            b.getI64IntegerAttr(50), ValueRange{},
+                            IntegerAttr{}, IntegerAttr{});
+
+  EXPECT_EQ(sumExistingSharedMemoryBytes(region), 162);
+}
+
+//===----------------------------------------------------------------------===//
+// getPrivateBaseMemRefType Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsCGTest, getPrivateBaseMemRefType) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  MemRefType memTy = MemRefType::get({10}, b.getI64Type());
+
+  EXPECT_EQ(getPrivateBaseMemRefType(memTy, *module), memTy);
+}
+
+//===----------------------------------------------------------------------===//
+// getPrivatizeOp Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsCGTest, getPrivatizeOpFromHandle) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+
+  MemRefType memTy = MemRefType::get({4}, b.getI32Type());
+  Type privateTy = PrivateType::get(&context, memTy);
+  auto privatize =
+      PrivatizeOp::create(b, loc, privateTy, /*dynamicSizes=*/ValueRange{});
+  auto privateLocal = PrivateLocalOp::create(b, loc, memTy, privatize);
+  auto computeRegion = createEmptyComputeRegion(context, loc, *module);
+
+  EXPECT_EQ(getPrivatizeOp(privateLocal, computeRegion), privatize);
+}
+
+TEST_F(OpenACCUtilsCGTest, getPrivatizeOpFromComputeRegionBlockArg) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+  GPUParallelDimsAttr gangDims = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context)});
+  auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
+  auto bx =
+      ParWidthOp::create(b, loc, c1, GPUParallelDimAttr::blockXDim(&context));
+
+  PrivateLocalOp privateLocal;
+  PrivatizeOp privatize;
+  auto cr = buildComputeRegionWithPrivateLocal(
+      context, b, loc, *module, gangDims, ValueRange{bx.getResult()},
+      privateLocal, privatize);
+
+  EXPECT_EQ(getPrivatizeOp(privateLocal, cr), privatize);
+}
+
+//===----------------------------------------------------------------------===//
+// collectPrivateLocalParDims Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsCGTest, collectPrivateLocalParDimsFromParentLoops) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  IRRewriter rewriter(&context);
+  rewriter.setInsertionPointToStart(module->getBody());
+
+  auto c1 = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  auto bx = ParWidthOp::create(rewriter, loc, c1,
+                               GPUParallelDimAttr::blockXDim(&context));
+  auto tx = ParWidthOp::create(rewriter, loc, c1,
+                               GPUParallelDimAttr::threadXDim(&context));
+
+  MemRefType memTy = MemRefType::get({4}, b.getI32Type());
+  Type privateTy = PrivateType::get(&context, memTy);
+  auto privatize = PrivatizeOp::create(rewriter, loc, privateTy, ValueRange{});
+
+  Region sourceRegion;
+  Block *srcBlock = new Block();
+  sourceRegion.push_back(srcBlock);
+  BlockArgument privArg = srcBlock->addArgument(privateTy, loc);
+  OpBuilder srcBuilder(&context);
+  srcBuilder.setInsertionPointToStart(srcBlock);
+  auto c0 = arith::ConstantIndexOp::create(srcBuilder, loc, 0);
+  auto c1Body = arith::ConstantIndexOp::create(srcBuilder, loc, 1);
+  YieldOp::create(srcBuilder, loc);
+  srcBuilder.setInsertionPoint(srcBlock->getTerminator());
+
+  // Outer gang (block_x) loop containing an inner vector (thread_x) loop.
+  auto gangLoop = scf::ParallelOp::create(
+      srcBuilder, loc, ValueRange{c0}, ValueRange{c1Body}, ValueRange{c1Body});
+  setParDimsAttr(gangLoop,
+                 GPUParallelDimsAttr::get(
+                     &context, {GPUParallelDimAttr::blockXDim(&context)}));
+  srcBuilder.setInsertionPoint(gangLoop.getBody()->getTerminator());
+  auto vectorLoop = scf::ParallelOp::create(
+      srcBuilder, loc, ValueRange{c0}, ValueRange{c1Body}, ValueRange{c1Body});
+  setParDimsAttr(vectorLoop,
+                 GPUParallelDimsAttr::get(
+                     &context, {GPUParallelDimAttr::threadXDim(&context)}));
+  srcBuilder.setInsertionPoint(vectorLoop.getBody()->getTerminator());
+  PrivateLocalOp::create(srcBuilder, loc, memTy, privArg);
+
+  IRMapping mapping;
+  auto cr = buildComputeRegion(
+      loc, ValueRange{bx.getResult(), tx.getResult()},
+      ValueRange{privatize.getResult()}, ParallelOp::getOperationName(),
+      sourceRegion, rewriter, mapping, /*output=*/{}, /*kernelFuncName=*/{},
+      /*kernelModuleName=*/{}, /*stream=*/{}, ValueRange{privArg});
+
+  PrivateLocalOp clonedLocal;
+  cr.walk([&](PrivateLocalOp op) { clonedLocal = op; });
+
+  DefaultACCToGPUMappingPolicy policy;
+  SmallVector<GPUParallelDimAttr> parDims =
+      collectPrivateLocalParDims(clonedLocal, cr);
+  ASSERT_EQ(parDims.size(), 2u);
+  EXPECT_TRUE(policy.isGang(parDims[0]));
+  EXPECT_TRUE(policy.isVector(parDims[1]));
+}
+
+TEST_F(OpenACCUtilsCGTest, collectPrivateLocalParDimsFromLaunchFallback) {
+  // With no enclosing parallel loops, collectPrivateLocalParDims falls back to
+  // the block-level launch dimensions.
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+  GPUParallelDimsAttr gangDims = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context)});
+  auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
+  auto bx =
+      ParWidthOp::create(b, loc, c1, GPUParallelDimAttr::blockXDim(&context));
+
+  MemRefType memTy = MemRefType::get({4}, b.getI32Type());
+  Type privateTy = PrivateType::get(&context, memTy);
+  auto privatize = PrivatizeOp::create(b, loc, privateTy, ValueRange{});
+
+  Region sourceRegion;
+  Block *srcBlock = new Block();
+  sourceRegion.push_back(srcBlock);
+  BlockArgument privArg = srcBlock->addArgument(privateTy, loc);
+  OpBuilder srcBuilder(&context);
+  srcBuilder.setInsertionPointToStart(srcBlock);
+  PrivateLocalOp::create(srcBuilder, loc, memTy, privArg);
+  YieldOp::create(srcBuilder, loc);
+
+  IRRewriter rewriter(&context);
+  rewriter.setInsertionPointToStart(module->getBody());
+  IRMapping mapping;
+  auto cr = buildComputeRegion(
+      loc, ValueRange{bx.getResult()}, ValueRange{privatize.getResult()},
+      ParallelOp::getOperationName(), sourceRegion, rewriter, mapping,
+      /*output=*/{}, /*kernelFuncName=*/{}, /*kernelModuleName=*/{},
+      /*stream=*/{}, ValueRange{privArg});
+  (void)gangDims;
+
+  PrivateLocalOp clonedLocal;
+  cr.walk([&](PrivateLocalOp op) { clonedLocal = op; });
+
+  DefaultACCToGPUMappingPolicy policy;
+  SmallVector<GPUParallelDimAttr> parDims =
+      collectPrivateLocalParDims(clonedLocal, cr);
+  ASSERT_EQ(parDims.size(), 1u);
+  EXPECT_TRUE(policy.isGang(parDims[0]));
+}
+
+TEST_F(OpenACCUtilsCGTest,
+       collectPrivateLocalParDimsStopsAtComputeRegionBoundary) {
+  // Parallel loops enclosing the compute region must not contribute par-dims.
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  IRRewriter rewriter(&context);
+  rewriter.setInsertionPointToStart(module->getBody());
+
+  auto c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  auto c1 = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  auto bx = ParWidthOp::create(rewriter, loc, c1,
+                               GPUParallelDimAttr::blockXDim(&context));
+  auto tx = ParWidthOp::create(rewriter, loc, c1,
+                               GPUParallelDimAttr::threadXDim(&context));
+
+  // Outer loop outside the compute region carries block_y.
+  // This is a synthetic test only and normally this scenario would hopefully
+  // not be encountered.
+  auto outerLoop = scf::ParallelOp::create(rewriter, loc, ValueRange{c0},
+                                           ValueRange{c1}, ValueRange{c1});
+  setParDimsAttr(outerLoop,
+                 GPUParallelDimsAttr::get(
+                     &context, {GPUParallelDimAttr::blockYDim(&context)}));
+  rewriter.setInsertionPoint(outerLoop.getBody()->getTerminator());
+
+  MemRefType memTy = MemRefType::get({4}, b.getI32Type());
+  Type privateTy = PrivateType::get(&context, memTy);
+  auto privatize = PrivatizeOp::create(rewriter, loc, privateTy, ValueRange{});
+
+  Region sourceRegion;
+  Block *srcBlock = new Block();
+  sourceRegion.push_back(srcBlock);
+  BlockArgument privArg = srcBlock->addArgument(privateTy, loc);
+  OpBuilder srcBuilder(&context);
+  srcBuilder.setInsertionPointToStart(srcBlock);
+  auto c0Body = arith::ConstantIndexOp::create(srcBuilder, loc, 0);
+  auto c1Body = arith::ConstantIndexOp::create(srcBuilder, loc, 1);
+  YieldOp::create(srcBuilder, loc);
+  srcBuilder.setInsertionPoint(srcBlock->getTerminator());
+
+  // Inner vector (thread_x) loop inside the compute region.
+  auto vectorLoop =
+      scf::ParallelOp::create(srcBuilder, loc, ValueRange{c0Body},
+                              ValueRange{c1Body}, ValueRange{c1Body});
+  setParDimsAttr(vectorLoop,
+                 GPUParallelDimsAttr::get(
+                     &context, {GPUParallelDimAttr::threadXDim(&context)}));
+  srcBuilder.setInsertionPoint(vectorLoop.getBody()->getTerminator());
+  PrivateLocalOp::create(srcBuilder, loc, memTy, privArg);
+
+  IRMapping mapping;
+  auto cr = buildComputeRegion(
+      loc, ValueRange{bx.getResult(), tx.getResult()},
+      ValueRange{privatize.getResult()}, ParallelOp::getOperationName(),
+      sourceRegion, rewriter, mapping, /*output=*/{}, /*kernelFuncName=*/{},
+      /*kernelModuleName=*/{}, /*stream=*/{}, ValueRange{privArg});
+
+  PrivateLocalOp clonedLocal;
+  cr.walk([&](PrivateLocalOp op) { clonedLocal = op; });
+
+  DefaultACCToGPUMappingPolicy policy;
+  SmallVector<GPUParallelDimAttr> parDims =
+      collectPrivateLocalParDims(clonedLocal, cr);
+  ASSERT_EQ(parDims.size(), 1u);
+  EXPECT_TRUE(policy.isVector(parDims[0]));
+  EXPECT_FALSE(policy.isGang(parDims[0]));
+}
+
+TEST_F(OpenACCUtilsCGTest, collectPrivateLocalParDimsFromReductionUsers) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+
+  MemRefType memTy = MemRefType::get({}, b.getI32Type());
+  Type privateTy = PrivateType::get(&context, memTy);
+  auto privatize =
+      PrivatizeOp::create(b, loc, privateTy, /*dynamicSizes=*/ValueRange{});
+  auto privateLocal = PrivateLocalOp::create(b, loc, memTy, privatize);
+  auto computeRegion = createEmptyComputeRegion(context, loc, *module);
+
+  GPUParallelDimsAttr accDims = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context),
+                 GPUParallelDimAttr::threadXDim(&context)});
+  Value partial = arith::ConstantIntOp::create(b, loc, b.getI32Type(), 1);
+  ReductionAccumulateOp::create(b, loc, partial, privateLocal.getResult(),
+                                ReductionOperator::AccAdd, accDims);
+
+  DefaultACCToGPUMappingPolicy policy;
+  SmallVector<GPUParallelDimAttr> parDims =
+      collectPrivateLocalParDims(privateLocal, computeRegion);
+  ASSERT_EQ(parDims.size(), 2u);
+  EXPECT_TRUE(policy.isGang(parDims[0]));
+  EXPECT_TRUE(policy.isVector(parDims[1]));
+}
+
+//===----------------------------------------------------------------------===//
+// Shared-memory private_local eligibility Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsCGTest, isPrivateLocalSharedMemoryCandidateGangPrivate) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+  GPUParallelDimsAttr gangDims = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context)});
+  auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
+  auto bx =
+      ParWidthOp::create(b, loc, c1, GPUParallelDimAttr::blockXDim(&context));
+
+  PrivateLocalOp privateLocal;
+  PrivatizeOp privatize;
+  auto cr = buildComputeRegionWithPrivateLocal(
+      context, b, loc, *module, gangDims, ValueRange{bx.getResult()},
+      privateLocal, privatize);
+
+  DefaultACCToGPUMappingPolicy policy;
+  FailureOr<bool> isCandidate =
+      isPrivateLocalSharedMemoryCandidate(privateLocal, cr, *module, policy);
+  ASSERT_TRUE(succeeded(isCandidate));
+  EXPECT_TRUE(*isCandidate);
+}
+
+TEST_F(OpenACCUtilsCGTest, isPrivateLocalSharedMemoryCandidateThreadXPrivate) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+  GPUParallelDimsAttr vectorDims = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::threadXDim(&context)});
+  auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
+  auto tx =
+      ParWidthOp::create(b, loc, c1, GPUParallelDimAttr::threadXDim(&context));
+
+  PrivateLocalOp privateLocal;
+  PrivatizeOp privatize;
+  auto cr = buildComputeRegionWithPrivateLocal(
+      context, b, loc, *module, vectorDims, ValueRange{tx.getResult()},
+      privateLocal, privatize);
+
+  DefaultACCToGPUMappingPolicy policy;
+  FailureOr<bool> isCandidate =
+      isPrivateLocalSharedMemoryCandidate(privateLocal, cr, *module, policy);
+  ASSERT_TRUE(succeeded(isCandidate));
+  EXPECT_FALSE(*isCandidate);
+}
+
+TEST_F(OpenACCUtilsCGTest,
+       isPrivateLocalSharedMemoryCandidateWorkerPrivateConstant) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+  GPUParallelDimsAttr workerDims = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::threadYDim(&context)});
+  auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
+  auto c4 = arith::ConstantIndexOp::create(b, loc, 4);
+  auto bx =
+      ParWidthOp::create(b, loc, c1, GPUParallelDimAttr::blockXDim(&context));
+  auto ty =
+      ParWidthOp::create(b, loc, c4, GPUParallelDimAttr::threadYDim(&context));
+
+  PrivateLocalOp privateLocal;
+  PrivatizeOp privatize;
+  auto cr = buildComputeRegionWithPrivateLocal(
+      context, b, loc, *module, workerDims,
+      ValueRange{bx.getResult(), ty.getResult()}, privateLocal, privatize);
+
+  DefaultACCToGPUMappingPolicy policy;
+  FailureOr<bool> isCandidate =
+      isPrivateLocalSharedMemoryCandidate(privateLocal, cr, *module, policy);
+  ASSERT_TRUE(succeeded(isCandidate));
+  EXPECT_TRUE(*isCandidate);
+}
+
+TEST_F(OpenACCUtilsCGTest,
+       isPrivateLocalSharedMemoryCandidateWorkerPrivateDynamicFails) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+  GPUParallelDimsAttr workerDims = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::threadYDim(&context)});
+  auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
+  auto bx =
+      ParWidthOp::create(b, loc, c1, GPUParallelDimAttr::blockXDim(&context));
+  // A non-constant num_workers: the launch operand exists but is not an
+  // arith.constant, which is what triggers the diagnostic / failure path.
+  auto dynNumWorkers = arith::AddIOp::create(b, loc, c1, c1);
+  auto ty = ParWidthOp::create(b, loc, dynNumWorkers,
+                               GPUParallelDimAttr::threadYDim(&context));
+
+  PrivateLocalOp privateLocal;
+  PrivatizeOp privatize;
+  auto cr = buildComputeRegionWithPrivateLocal(
+      context, b, loc, *module, workerDims,
+      ValueRange{bx.getResult(), ty.getResult()}, privateLocal, privatize);
+
+  DefaultACCToGPUMappingPolicy policy;
+  OpenACCSupport support;
+  FailureOr<bool> silent =
+      isPrivateLocalSharedMemoryCandidate(privateLocal, cr, *module, policy);
+  ASSERT_TRUE(succeeded(silent));
+  EXPECT_FALSE(*silent);
+
+  FailureOr<bool> diagnosed = isPrivateLocalSharedMemoryCandidate(
+      privateLocal, cr, *module, policy, &support);
+  EXPECT_TRUE(failed(diagnosed));
+}
+
+TEST_F(OpenACCUtilsCGTest, getPrivateLocalSharedMemoryUpperBoundBytes) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+  GPUParallelDimsAttr gangDims = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context)});
+  auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
+  auto bx =
+      ParWidthOp::create(b, loc, c1, GPUParallelDimAttr::blockXDim(&context));
+
+  PrivateLocalOp privateLocal;
+  PrivatizeOp privatize;
+  auto cr = buildComputeRegionWithPrivateLocal(
+      context, b, loc, *module, gangDims, ValueRange{bx.getResult()},
+      privateLocal, privatize);
+
+  DefaultACCToGPUMappingPolicy policy;
+  std::optional<int64_t> upperBound =
+      getPrivateLocalSharedMemoryUpperBoundBytes(privateLocal, cr, *module,
+                                                 policy);
+  ASSERT_TRUE(upperBound.has_value());
+  EXPECT_EQ(*upperBound, 16);
 }

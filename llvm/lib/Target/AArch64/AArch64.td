@@ -67,7 +67,7 @@ include "AArch64LFI.td"
 
 class AArch64Unsupported { list<Predicate> F; }
 
-let F = [HasSVE2p1, HasSVE2p1_or_SME2, HasSVE2p1_or_StreamingSME2, HasSVE2p1_or_SME2p1] in
+let F = [HasSVE2p1, HasSVE2p1_or_SME, HasSVE2p1_or_SME2, HasSVE2p1_or_StreamingSME2, HasSVE2p1_or_SME2p1] in
 def SVE2p1Unsupported : AArch64Unsupported;
 
 def SVE2Unsupported : AArch64Unsupported {
@@ -105,12 +105,13 @@ def SME2Unsupported : AArch64Unsupported {
   let F = !listconcat([HasSME2, HasNonStreamingSVE2_or_SME2, HasSVE2p1_or_SME2, HasSSVE_FP8FMA,
                       HasSSVE_FP8DOT2, HasSSVE_FP8DOT4,
                       HasSMEF8F16, HasSMEF8F32, HasSMEF16F16_or_SMEF8F16, HasSMEB16B16,
-                      HasNonStreamingSVE_or_SSVE_AES, HasSVE2p1_or_StreamingSME2],
+                      HasNonStreamingSVE_or_SSVE_AES, HasSVE2p1_or_StreamingSME2, HasSME2andIsNonStreamingSafe],
                       SME2p1Unsupported.F);
 }
 
 def SMEUnsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME, HasSMEI16I64, HasSMEF16F16, HasSMEF64F64, HasSMEFA64],
+  let F = !listconcat([HasSME, HasSMEI16I64, HasSMEF16F16, HasSMEF64F64, HasSMEFA64,
+                       HasSMEandIsNonStreamingSafe],
                       SME2Unsupported.F);
 }
 

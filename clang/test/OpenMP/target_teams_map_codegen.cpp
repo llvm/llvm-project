@@ -2374,8 +2374,9 @@ void mapInt128() {
 // CHECK5-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK5-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP1]], align 8
 // CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1:[0-9]+]], i32 0, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14mapWithPrivatev_l27.omp_outlined)
 // CHECK5-NEXT:    ret void
@@ -2402,20 +2403,23 @@ void mapInt128() {
 // CHECK5-NEXT:    [[Y_CASTED:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// CHECK5-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK5-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK5-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP2]], align 8
+// CHECK5-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK5-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP4]], align 8
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// CHECK5-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP5]], align 8
 // CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
-// CHECK5-NEXT:    [[TMP3:%.*]] = load i32, ptr [[X]], align 4
-// CHECK5-NEXT:    store i32 [[TMP3]], ptr [[X_CASTED]], align 4
-// CHECK5-NEXT:    [[TMP4:%.*]] = load i64, ptr [[X_CASTED]], align 8
-// CHECK5-NEXT:    [[TMP5:%.*]] = load i32, ptr [[Y]], align 4
-// CHECK5-NEXT:    store i32 [[TMP5]], ptr [[Y_CASTED]], align 4
-// CHECK5-NEXT:    [[TMP6:%.*]] = load i64, ptr [[Y_CASTED]], align 8
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33.omp_outlined, i64 [[TMP4]], i64 [[TMP6]])
+// CHECK5-NEXT:    [[TMP6:%.*]] = load i32, ptr [[X]], align 4
+// CHECK5-NEXT:    store i32 [[TMP6]], ptr [[X_CASTED]], align 4
+// CHECK5-NEXT:    [[TMP7:%.*]] = load i64, ptr [[X_CASTED]], align 8
+// CHECK5-NEXT:    [[TMP8:%.*]] = load i32, ptr [[Y]], align 4
+// CHECK5-NEXT:    store i32 [[TMP8]], ptr [[Y_CASTED]], align 4
+// CHECK5-NEXT:    [[TMP9:%.*]] = load i64, ptr [[Y_CASTED]], align 8
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33.omp_outlined, i64 [[TMP7]], i64 [[TMP9]])
 // CHECK5-NEXT:    ret void
 //
 //
@@ -2440,12 +2444,15 @@ void mapInt128() {
 // CHECK5-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// CHECK5-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK5-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK5-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP2]], align 8
+// CHECK5-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK5-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP4]], align 8
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// CHECK5-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP5]], align 8
 // CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39.omp_outlined, ptr [[X]], ptr [[Y]])
 // CHECK5-NEXT:    ret void
@@ -2538,15 +2545,17 @@ void mapInt128() {
 // CHECK5-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// CHECK5-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK5-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP2]], align 8
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK5-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP3]], align 8
 // CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
-// CHECK5-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// CHECK5-NEXT:    store i32 [[TMP2]], ptr [[X_CASTED]], align 4
-// CHECK5-NEXT:    [[TMP3:%.*]] = load i64, ptr [[X_CASTED]], align 8
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45.omp_outlined, i64 [[TMP3]])
+// CHECK5-NEXT:    [[TMP4:%.*]] = load i32, ptr [[X]], align 4
+// CHECK5-NEXT:    store i32 [[TMP4]], ptr [[X_CASTED]], align 4
+// CHECK5-NEXT:    [[TMP5:%.*]] = load i64, ptr [[X_CASTED]], align 8
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45.omp_outlined, i64 [[TMP5]])
 // CHECK5-NEXT:    ret void
 //
 //
@@ -2570,15 +2579,17 @@ void mapInt128() {
 // CHECK5-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// CHECK5-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK5-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP2]], align 8
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK5-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP3]], align 8
 // CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
-// CHECK5-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// CHECK5-NEXT:    store i32 [[TMP2]], ptr [[X_CASTED]], align 4
-// CHECK5-NEXT:    [[TMP3:%.*]] = load i64, ptr [[X_CASTED]], align 8
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51.omp_outlined, i64 [[TMP3]])
+// CHECK5-NEXT:    [[TMP4:%.*]] = load i32, ptr [[X]], align 4
+// CHECK5-NEXT:    store i32 [[TMP4]], ptr [[X_CASTED]], align 4
+// CHECK5-NEXT:    [[TMP5:%.*]] = load i64, ptr [[X_CASTED]], align 8
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51.omp_outlined, i64 [[TMP5]])
 // CHECK5-NEXT:    ret void
 //
 //
@@ -2602,15 +2613,17 @@ void mapInt128() {
 // CHECK5-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// CHECK5-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK5-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP2]], align 8
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK5-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP3]], align 8
 // CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
-// CHECK5-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// CHECK5-NEXT:    store i32 [[TMP2]], ptr [[X_CASTED]], align 4
-// CHECK5-NEXT:    [[TMP3:%.*]] = load i64, ptr [[X_CASTED]], align 8
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57.omp_outlined, i64 [[TMP3]])
+// CHECK5-NEXT:    [[TMP4:%.*]] = load i32, ptr [[X]], align 4
+// CHECK5-NEXT:    store i32 [[TMP4]], ptr [[X_CASTED]], align 4
+// CHECK5-NEXT:    [[TMP5:%.*]] = load i64, ptr [[X_CASTED]], align 8
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57.omp_outlined, i64 [[TMP5]])
 // CHECK5-NEXT:    ret void
 //
 //
@@ -2633,12 +2646,15 @@ void mapInt128() {
 // CHECK5-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK5-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// CHECK5-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP2]], align 8
+// CHECK5-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK5-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK5-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP4]], align 8
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// CHECK5-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP5]], align 8
 // CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63.omp_outlined, ptr [[Y]], ptr [[Z]])
 // CHECK5-NEXT:    ret void
@@ -2758,12 +2774,15 @@ void mapInt128() {
 // CHECK5-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK5-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// CHECK5-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP2]], align 8
+// CHECK5-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK5-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK5-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP4]], align 8
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// CHECK5-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP5]], align 8
 // CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65.omp_outlined, ptr [[Y]], ptr [[Z]])
 // CHECK5-NEXT:    ret void
@@ -2883,12 +2902,15 @@ void mapInt128() {
 // CHECK5-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK5-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// CHECK5-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP2]], align 8
+// CHECK5-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK5-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK5-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP4]], align 8
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// CHECK5-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP5]], align 8
 // CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l72.omp_outlined, ptr [[Y]], ptr [[Z]])
 // CHECK5-NEXT:    ret void
@@ -2980,12 +3002,15 @@ void mapInt128() {
 // CHECK5-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK5-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// CHECK5-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK5-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK5-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP2]], align 8
+// CHECK5-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK5-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK5-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP4]], align 8
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// CHECK5-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// CHECK5-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP5]], align 8
 // CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l74.omp_outlined, ptr [[Y]], ptr [[Z]])
 // CHECK5-NEXT:    ret void
@@ -3077,8 +3102,9 @@ void mapInt128() {
 // CHECK7-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK7-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP1]], align 4
 // CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1:[0-9]+]], i32 0, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14mapWithPrivatev_l27.omp_outlined)
 // CHECK7-NEXT:    ret void
@@ -3105,20 +3131,23 @@ void mapInt128() {
 // CHECK7-NEXT:    [[Y_CASTED:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// CHECK7-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP1]], align 4
-// CHECK7-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// CHECK7-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP2]], align 4
-// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK7-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// CHECK7-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP2]], align 4
+// CHECK7-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK7-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 4
+// CHECK7-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP4]], align 4
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// CHECK7-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP5]], align 4
 // CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
-// CHECK7-NEXT:    [[TMP3:%.*]] = load i32, ptr [[X]], align 4
-// CHECK7-NEXT:    store i32 [[TMP3]], ptr [[X_CASTED]], align 4
-// CHECK7-NEXT:    [[TMP4:%.*]] = load i32, ptr [[X_CASTED]], align 4
-// CHECK7-NEXT:    [[TMP5:%.*]] = load i32, ptr [[Y]], align 4
-// CHECK7-NEXT:    store i32 [[TMP5]], ptr [[Y_CASTED]], align 4
-// CHECK7-NEXT:    [[TMP6:%.*]] = load i32, ptr [[Y_CASTED]], align 4
-// CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33.omp_outlined, i32 [[TMP4]], i32 [[TMP6]])
+// CHECK7-NEXT:    [[TMP6:%.*]] = load i32, ptr [[X]], align 4
+// CHECK7-NEXT:    store i32 [[TMP6]], ptr [[X_CASTED]], align 4
+// CHECK7-NEXT:    [[TMP7:%.*]] = load i32, ptr [[X_CASTED]], align 4
+// CHECK7-NEXT:    [[TMP8:%.*]] = load i32, ptr [[Y]], align 4
+// CHECK7-NEXT:    store i32 [[TMP8]], ptr [[Y_CASTED]], align 4
+// CHECK7-NEXT:    [[TMP9:%.*]] = load i32, ptr [[Y_CASTED]], align 4
+// CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33.omp_outlined, i32 [[TMP7]], i32 [[TMP9]])
 // CHECK7-NEXT:    ret void
 //
 //
@@ -3143,12 +3172,15 @@ void mapInt128() {
 // CHECK7-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// CHECK7-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP1]], align 4
-// CHECK7-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// CHECK7-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP2]], align 4
-// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK7-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// CHECK7-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP2]], align 4
+// CHECK7-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK7-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 4
+// CHECK7-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP4]], align 4
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// CHECK7-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP5]], align 4
 // CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39.omp_outlined, ptr [[X]], ptr [[Y]])
 // CHECK7-NEXT:    ret void
@@ -3241,15 +3273,17 @@ void mapInt128() {
 // CHECK7-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// CHECK7-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP1]], align 4
-// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK7-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// CHECK7-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP2]], align 4
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK7-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP3]], align 4
 // CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
-// CHECK7-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// CHECK7-NEXT:    store i32 [[TMP2]], ptr [[X_CASTED]], align 4
-// CHECK7-NEXT:    [[TMP3:%.*]] = load i32, ptr [[X_CASTED]], align 4
-// CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45.omp_outlined, i32 [[TMP3]])
+// CHECK7-NEXT:    [[TMP4:%.*]] = load i32, ptr [[X]], align 4
+// CHECK7-NEXT:    store i32 [[TMP4]], ptr [[X_CASTED]], align 4
+// CHECK7-NEXT:    [[TMP5:%.*]] = load i32, ptr [[X_CASTED]], align 4
+// CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45.omp_outlined, i32 [[TMP5]])
 // CHECK7-NEXT:    ret void
 //
 //
@@ -3273,15 +3307,17 @@ void mapInt128() {
 // CHECK7-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// CHECK7-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP1]], align 4
-// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK7-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// CHECK7-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP2]], align 4
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK7-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP3]], align 4
 // CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
-// CHECK7-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// CHECK7-NEXT:    store i32 [[TMP2]], ptr [[X_CASTED]], align 4
-// CHECK7-NEXT:    [[TMP3:%.*]] = load i32, ptr [[X_CASTED]], align 4
-// CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51.omp_outlined, i32 [[TMP3]])
+// CHECK7-NEXT:    [[TMP4:%.*]] = load i32, ptr [[X]], align 4
+// CHECK7-NEXT:    store i32 [[TMP4]], ptr [[X_CASTED]], align 4
+// CHECK7-NEXT:    [[TMP5:%.*]] = load i32, ptr [[X_CASTED]], align 4
+// CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51.omp_outlined, i32 [[TMP5]])
 // CHECK7-NEXT:    ret void
 //
 //
@@ -3305,15 +3341,17 @@ void mapInt128() {
 // CHECK7-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// CHECK7-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP1]], align 4
-// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK7-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// CHECK7-NEXT:    [[X:%.*]] = load ptr, ptr [[TMP2]], align 4
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK7-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP3]], align 4
 // CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
-// CHECK7-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// CHECK7-NEXT:    store i32 [[TMP2]], ptr [[X_CASTED]], align 4
-// CHECK7-NEXT:    [[TMP3:%.*]] = load i32, ptr [[X_CASTED]], align 4
-// CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57.omp_outlined, i32 [[TMP3]])
+// CHECK7-NEXT:    [[TMP4:%.*]] = load i32, ptr [[X]], align 4
+// CHECK7-NEXT:    store i32 [[TMP4]], ptr [[X_CASTED]], align 4
+// CHECK7-NEXT:    [[TMP5:%.*]] = load i32, ptr [[X_CASTED]], align 4
+// CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57.omp_outlined, i32 [[TMP5]])
 // CHECK7-NEXT:    ret void
 //
 //
@@ -3336,12 +3374,15 @@ void mapInt128() {
 // CHECK7-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// CHECK7-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP1]], align 4
-// CHECK7-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// CHECK7-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP2]], align 4
-// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK7-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// CHECK7-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP2]], align 4
+// CHECK7-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK7-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 4
+// CHECK7-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP4]], align 4
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// CHECK7-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP5]], align 4
 // CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63.omp_outlined, ptr [[Y]], ptr [[Z]])
 // CHECK7-NEXT:    ret void
@@ -3461,12 +3502,15 @@ void mapInt128() {
 // CHECK7-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// CHECK7-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP1]], align 4
-// CHECK7-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// CHECK7-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP2]], align 4
-// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// CHECK7-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// CHECK7-NEXT:    [[Y:%.*]] = load ptr, ptr [[TMP2]], align 4
+// CHECK7-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// CHECK7-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 4
+// CHECK7-NEXT:    [[Z:%.*]] = load ptr, ptr [[TMP4]], align 4
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// CHECK7-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// CHECK7-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP5]], align 4
 // CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65.omp_outlined, ptr [[Y]], ptr [[Z]])
 // CHECK7-NEXT:    ret void

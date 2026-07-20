@@ -143,7 +143,7 @@ add_entrypoint_object(
     pthread_condattr_getclock.h
   DEPENDS
     libc.include.pthread
-    libc.include.sys_types
+    libc.hdr.types.clockid_t
 )
 
 add_entrypoint_object(
@@ -174,8 +174,9 @@ add_entrypoint_object(
   HDRS
     pthread_condattr_setclock.h
   DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
     libc.include.pthread
-    libc.include.sys_types
     libc.include.time
     libc.src.errno.errno
 )

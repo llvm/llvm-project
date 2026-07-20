@@ -237,6 +237,9 @@ template <typename... T> constexpr bool isVOP3(const T &...O) {
 template <typename... T> constexpr bool isVOP3P(const T &...O) {
   return getTSFlags(O...) & VOP3P;
 }
+template <typename... T> constexpr bool isVOP3Like(const T &...O) {
+  return getTSFlags(O...) & (VOP3 | VOP3P);
+}
 template <typename... T> constexpr bool isVINTRP(const T &...O) {
   return getTSFlags(O...) & VINTRP;
 }
@@ -254,6 +257,9 @@ template <typename... T> constexpr bool isMUBUF(const T &...O) {
 }
 template <typename... T> constexpr bool isMTBUF(const T &...O) {
   return getTSFlags(O...) & MTBUF;
+}
+template <typename... T> constexpr bool isBuffer(const T &...O) {
+  return getTSFlags(O...) & (MUBUF | MTBUF);
 }
 template <typename... T> constexpr bool isSMRD(const T &...O) {
   return getTSFlags(O...) & SMRD;

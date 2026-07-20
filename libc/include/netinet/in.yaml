@@ -3,6 +3,11 @@ standards:
   - posix
 merge_yaml_files:
   - ../htons-family.yaml
+public_includes:
+  # This is permitted (but not required) by POSIX and many applications depend
+  # on it. If we have a "pedantic" mode in the future, we might want to exclude
+  # it there.
+  - sys/socket.h
 macros:
   - macro_name: IPPROTO_IP
     macro_header: netinet-in-macros.h
@@ -100,19 +105,65 @@ macros:
   - macro_name: IP_LOCAL_PORT_RANGE
     macro_value: 51 # uint32_t
 
+  # IPv6 level socket options
+  - macro_name: IPV6_ADDRFORM
+    macro_value: 1 # int
+  - macro_name: IPV6_AUTHHDR
+    macro_value: 10 # int
+  - macro_name: IPV6_FLOWINFO
+    macro_value: 11 # int
+  - macro_name: IPV6_UNICAST_HOPS
+    macro_value: 16 # int
+  - macro_name: IPV6_MULTICAST_IF
+    macro_value: 17 # int
+  - macro_name: IPV6_MULTICAST_HOPS
+    macro_value: 18 # int
+  - macro_name: IPV6_MULTICAST_LOOP
+    macro_value: 19 # int
+  - macro_name: IPV6_JOIN_GROUP
+    macro_value: 20 # struct ipv6_mreq
+  - macro_name: IPV6_ADD_MEMBERSHIP
+    macro_value: IPV6_JOIN_GROUP
+  - macro_name: IPV6_LEAVE_GROUP
+    macro_value: 21 # struct ipv6_mreq
+  - macro_name: IPV6_DROP_MEMBERSHIP
+    macro_value: IPV6_LEAVE_GROUP
+  - macro_name: IPV6_ROUTER_ALERT
+    macro_value: 22 # int
+  - macro_name: IPV6_MTU_DISCOVER
+    macro_value: 23 # int
+  - macro_name: IPV6_MTU
+    macro_value: 24 # int
+  - macro_name: IPV6_RECVERR
+    macro_value: 25 # int
+  - macro_name: IPV6_V6ONLY
+    macro_value: 26 # int
+  - macro_name: IPV6_RECVPKTINFO
+    macro_value: 49 # int
+  - macro_name: IPV6_HOPLIMIT
+    macro_value: 52 # int
+  - macro_name: IPV6_HOPOPTS
+    macro_value: 54 # int
+  - macro_name: IPV6_RTHDR
+    macro_value: 57 # int
+  - macro_name: IPV6_DSTOPTS
+    macro_value: 59 # int
 types:
   - type_name: in_port_t
   - type_name: in_addr_t
-  - type_name: sa_family_t
   - type_name: struct_sockaddr_in
   - type_name: struct_sockaddr_in6
   - type_name: struct_in_addr
   - type_name: struct_in6_addr
+  - type_name: struct_ipv6_mreq
   - type_name: struct_ip_mreq
   - type_name: struct_ip_mreq_source
   - type_name: struct_ip_mreqn
   - type_name: struct_ip_msfilter
   - type_name: struct_ip_opts
+  # Type also defined by sys/socket.h, but listing it explicitly as it is
+  # required by POSIX.
+  - type_name: sa_family_t
 enums: []
 objects:
   - object_name: in6addr_any

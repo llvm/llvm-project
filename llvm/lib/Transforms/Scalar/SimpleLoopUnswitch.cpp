@@ -489,7 +489,6 @@ static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
   if (NewParentL)
     assert(NewParentL->contains(OldParentL) &&
            "Can only hoist this loop up the nest!");
-
   // The preheader will need to move with the body of this loop. However,
   // because it isn't in this loop we also need to update the primary loop map.
   assert(OldParentL == LI.getLoopFor(&Preheader) &&
@@ -603,9 +602,16 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   }
 
   bool ModifiedBranch = false;
+  // Redirecting the latch edge to the exit block will cause us to skip latch
+  // instructions. This can only be done if the latch instructions don't have
+  // side effects and don't have any convergent instructions.
   if (LatchIdx && areLoopExitPHIsLoopInvariant(L, *LoopLatch, *ULExit) &&
-      !llvm::any_of(*LoopLatch,
-                    [](Instruction &I) { return I.mayHaveSideEffects(); })) {
+      !llvm::any_of(*LoopLatch, [](Instruction &I) {
+        if (const auto *CB = dyn_cast<CallBase>(&I))
+          if (CB->isConvergent())
+            return true;
+        return I.mayHaveSideEffects();
+      })) {
 
     // We need to prove the loop is finite, otherwise this change will convert
     // it to a finite loop. This conservative check is good enough as we are
@@ -1174,8 +1180,12 @@ static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
       if (auto *Defs = MSSAU->getMemorySSA()->getBlockDefs(CurrentBB))
         if (!isa<MemoryPhi>(*Defs->begin()) || (++Defs->begin() != Defs->end()))
           return Changed;
-    if (llvm::any_of(*CurrentBB,
-                     [](Instruction &I) { return I.mayHaveSideEffects(); }))
+    if (llvm::any_of(*CurrentBB, [](Instruction &I) {
+          if (const auto *CB = dyn_cast<CallBase>(&I))
+            if (CB->isConvergent())
+              return true;
+          return I.mayHaveSideEffects();
+        }))
       return Changed;
 
     Instruction *CurrentTerm = CurrentBB->getTerminator();
