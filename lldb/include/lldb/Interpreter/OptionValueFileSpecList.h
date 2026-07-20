@@ -65,6 +65,8 @@ protected:
     m_current_value.Clear();
     m_value_was_set = false;
   }
+  // FIXME: This could use the existing m_mutex from the OptionValue
+  // parent class, but needs clean up in callsites to avoid deadlock.
   mutable std::recursive_mutex m_rmutex;
   FileSpecList m_current_value;
 };
