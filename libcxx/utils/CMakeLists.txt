@@ -61,3 +61,11 @@ add_custom_target(libcxx-generate-files
             libcxx-generate-width-estimation-table
             libcxx-indic-conjunct-break-table
     COMMENT "Create all the auto-generated files in libc++ and its tests.")
+
+# Install the GDB pretty printers.
+install(
+    FILES "${LIBCXX_SOURCE_DIR}/utils/gdb/libcxx/printers.py"
+    DESTINATION "${LIBCXX_INSTALL_EXTRAS_DIR}/gdb/libcxx"
+    COMPONENT cxx-extras
+    PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
+)

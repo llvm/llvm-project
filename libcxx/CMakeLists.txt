@@ -452,6 +452,8 @@ set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
     "Path where built libc++ runtime libraries should be installed.")
 set(LIBCXX_INSTALL_MODULES_DIR "share/libc++/v1" CACHE STRING
     "Path where target-agnostic libc++ module source files should be installed.")
+set(LIBCXX_INSTALL_EXTRAS_DIR "share" CACHE STRING
+    "Path where target-agnostic additional libc++ content is installed (e.g. debugger data formatters).")
 
 # On platforms that don't support shared library targets
 # (e.g. CMAKE_SYSTEM_NAME of "Generic", used for GPU and other
