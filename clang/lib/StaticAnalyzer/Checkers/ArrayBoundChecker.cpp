@@ -115,6 +115,10 @@ public:
   }
 };
 
+} // anonymous namespace
+
+namespace clang::ento::bounds {
+
 struct CheckFlags {
   unsigned CheckUnderflow : 1;
   unsigned OffsetObviouslyNonnegative : 1;
@@ -173,8 +177,8 @@ public:
 
 private:
   // Offset of the accessed location, measured from the start of the region.
-  // As of now, the offset and the extent are always measured in bytes, but it
-  // may be necessary to change this in the future.
+  // TODO: As of now, the offset and the extent are always measured in bytes,
+  // but we will probably need to allow other size units in the future.
   const NonLoc Offset;
 
   explicit CheckResult(NonLoc Offs) : Offset(Offs) {}
@@ -185,6 +189,9 @@ private:
   ProgramStateRef ValidState = nullptr;
 };
 
+} // namespace clang::ento::bounds
+
+namespace {
 /// Strings that will be passed to the parameters 'desc' and 'fullDesc' of the
 /// constructor of 'PathSensitiveBugReport'.
 struct BugDescription {
@@ -480,18 +487,18 @@ static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
   return SV ? getConcreteValue(*SV) : std::nullopt;
 }
 
-static const char *getAdjective(const CheckResult &R) {
+static const char *getAdjective(const bounds::CheckResult &R) {
   return (R.mayUnderflow()
               ? (R.mayOverflow() ? "a negative or overflowing" : "a negative")
               : (R.mayOverflow() ? "an overflowing" : "a valid"));
 }
 
-static const char *getPreposition(const CheckResult &R) {
+static const char *getPreposition(const bounds::CheckResult &R) {
   return (R.mayUnderflow() ? (R.mayOverflow() ? "around" : "preceding")
                            : (R.mayOverflow() ? "after the end of" : "within"));
 }
 
-static BugDescription describeInvalidAccess(CheckResult Res, StringRef RegName,
+static BugDescription describeInvalidAccess(bounds::CheckResult Res, StringRef RegName,
                                             SizeUnit SU) {
   std::optional<int64_t> OffsetN = getConcreteValue(Res.getOffset());
   std::optional<int64_t> ExtentN = getConcreteValue(Res.getExtentIfRelevant());
@@ -560,7 +567,7 @@ static BugDescription describeTaintBug(StringRef RegName,
 /// report \p BR. When the access wasn't ambiguous or the the assumption is
 /// irrelevant for \p BR, this returns the empty string (which signifies "do
 /// not emit a note tag" when returned by a note tag callback).
-static std::string getAssumptionNote(CheckResult Res, PathSensitiveBugReport &BR,
+static std::string getAssumptionNote(bounds::CheckResult Res, PathSensitiveBugReport &BR,
                                     StringRef RegName, SizeUnit SU) {
   bool ShouldReportNonNegative = Res.mayUnderflow();
   if (!providesInformationAboutInteresting(Res.getOffset(), BR)) {
@@ -653,7 +660,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   // non-symbolic regions (e.g. a field subregion of a symbolic region) in
   // unknown space.
 
-  CheckFlags Flags = {
+  bounds::CheckFlags Flags = {
       /*CheckUnderflow=*/!(isa<SymbolicRegion>(Reg) &&
                            isa<UnknownSpaceRegion>(Space)),
       /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C),
@@ -661,7 +668,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
           isInAddressOf(E, C.getASTContext()),
   };
 
-  CheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
+  bounds::CheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
 
   if (Res.isCorruptedState()) {
     C.addSink();
@@ -704,12 +711,10 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   C.addTransition(Res.getValidState(), T);
 }
 
-namespace {
+bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
+                        std::optional<NonLoc> Extent, bounds::CheckFlags Flags) {
 
-CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
-                        std::optional<NonLoc> Extent, CheckFlags Flags) {
-
-  CheckResult Res(Offset);
+  bounds::CheckResult Res(Offset);
 
   // CHECK LOWER BOUND
   if (Flags.CheckUnderflow) {
@@ -798,8 +803,6 @@ CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
   Res.ValidState = State;
   return Res;
 }
-
-} // anonymous namespace
 
 void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
                                              ProgramStateRef ErrorState,
