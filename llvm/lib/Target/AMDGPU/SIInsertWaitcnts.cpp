@@ -625,11 +625,9 @@ public:
   }
 
   void setStateOnFunctionEntryOrReturn() {
-    if (Context->ST.hasVscnt()) {
-      setScoreUB(AMDGPU::STORE_CNT,
-                 getScoreUB(AMDGPU::STORE_CNT) + getLimit(AMDGPU::STORE_CNT));
-      PendingEvents |= Context->getWaitEvents(AMDGPU::STORE_CNT);
-    }
+    setScoreUB(AMDGPU::STORE_CNT,
+               getScoreUB(AMDGPU::STORE_CNT) + getLimit(AMDGPU::STORE_CNT));
+    PendingEvents |= Context->getWaitEvents(AMDGPU::STORE_CNT);
   }
 
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
