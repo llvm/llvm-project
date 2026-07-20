@@ -1870,6 +1870,7 @@ convertTypedArgAttrs(mlir::ArrayAttr argAttrs,
 }
 
 static void lowerCallAttributes(cir::CIRCallOpInterface op,
+                                const mlir::TypeConverter &converter,
                                 SmallVectorImpl<mlir::NamedAttribute> &result) {
   for (mlir::NamedAttribute attr : op->getAttrs()) {
     if (attr.getName() == CIRDialect::getCalleeAttrName() ||
@@ -1881,6 +1882,13 @@ static void lowerCallAttributes(cir::CIRCallOpInterface op,
       continue;
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
+    if (attr.getName() == CIRDialect::getArgAttrsAttrName()) {
+      auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
+      result.emplace_back(
+          attr.getName(),
+          convertTypedArgAttrs(argAttrs, converter, op->getContext()));
+      continue;
+    }
     result.push_back(attr);
   }
 }
@@ -1910,7 +1918,7 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                            memoryEffects, noUnwind, willReturn, noReturn);
 
   SmallVector<mlir::NamedAttribute, 4> attributes;
-  lowerCallAttributes(call, attributes);
+  lowerCallAttributes(call, *converter, attributes);
 
   mlir::LLVM::LLVMFunctionType llvmFnTy;
 
@@ -1974,9 +1982,6 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         op, llvmFnTy, calleeAttr, callOperands);
     newOp->setAttrs(attributes);
-    if (mlir::ArrayAttr argAttrs = newOp.getArgAttrsAttr())
-      newOp.setArgAttrsAttr(
-          convertTypedArgAttrs(argAttrs, *converter, rewriter.getContext()));
     if (memoryEffects)
       newOp.setMemoryEffectsAttr(memoryEffects);
     newOp.setNoUnwind(noUnwind);
@@ -2391,6 +2396,13 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
       continue;
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
+    if (attr.getName() == func.getArgAttrsAttrName()) {
+      auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
+      result.emplace_back(
+          attr.getName(),
+          convertTypedArgAttrs(argAttrs, *getTypeConverter(), getContext()));
+      continue;
+    }
     result.push_back(attr);
   }
 }
@@ -2465,10 +2477,6 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   mlir::LLVM::LLVMFuncOp fn = mlir::LLVM::LLVMFuncOp::create(
       rewriter, loc, op.getName(), llvmFnTy, linkage, isDsoLocal, cconv,
       mlir::SymbolRefAttr(), attributes);
-
-  if (mlir::ArrayAttr argAttrs = fn.getArgAttrsAttr())
-    fn.setArgAttrsAttr(
-        convertTypedArgAttrs(argAttrs, *getTypeConverter(), getContext()));
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
