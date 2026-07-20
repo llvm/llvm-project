@@ -2973,7 +2973,7 @@ are listed below.
 ```
 
 ```{eval-rst}
-.. option:: -fstable-pointer-subtraction
+.. option:: -fdefined-pointer-subtraction
 
   The C and C++ standards require both operands of a pointer subtraction to
   refer to elements of the same array object. Clang normally exploits this
@@ -2981,7 +2981,7 @@ are listed below.
   IR constructs such as ``sdiv exact`` that rely on the computed byte offset
   being an exact multiple of the pointee size.
 
-  ``-fstable-pointer-subtraction`` disables these assumptions and emits IR
+  ``-fdefined-pointer-subtraction`` disables these assumptions and emits IR
   that preserves the behavior of pointer subtraction even when the standard
   requirements are violated. This is primarily intended for low-level code,
   such as kernels and boot loaders, that performs pointer arithmetic over

@@ -113,7 +113,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### New Compiler Flags
 
-- New option `-fstable-pointer-subtraction` added to preserve stable semantics
+- New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
 
 ### Deprecated Compiler Flags
