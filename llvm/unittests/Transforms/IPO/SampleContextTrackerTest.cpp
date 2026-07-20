@@ -33,10 +33,12 @@ addProfile(SampleProfileMap &Profiles,
 //
 // When a function appears in nested (e.g. recursive) contexts, promoting the
 // outer context relocates the inner same-function node into the base subtree
-// (marking its FunctionSamples SyntheticContext) and frees the original subtree
-// via clear(). getBaseSamplesFor() iterates a pre-collected list of all context
-// profiles for the function; without skipping the already-relocated
-// SyntheticContext profiles it re-promotes a freed node and reads freed memory.
+// and later merges/frees it via clear()/removeChildContext().
+// getBaseSamplesFor() iterates a pre-collected list of all context profiles for
+// the function; the profile of a freed node otherwise still maps to that node
+// in ProfileToNodeMap, so re-promoting it reads freed memory. The fix drops
+// such stale map entries when a node is destroyed, so
+// getContextNodeForProfile() returns null and the entry is skipped.
 //
 // This builds exactly that shape (foo nested under foo) and checks the base
 // profile is produced without crashing. Under an ASAN build this test fails on
@@ -60,7 +62,7 @@ TEST(SampleContextTrackerTest, GetBaseSamplesForNestedRecursiveContext) {
 }
 
 // A single (non-nested) context should also merge cleanly and is a sanity check
-// that the SyntheticContext skip does not drop a legitimate first-time
+// that fixing the use-after-free does not drop a legitimate first-time
 // promotion.
 TEST(SampleContextTrackerTest, GetBaseSamplesForSingleContext) {
   std::list<SampleContextFrameVector> CSNameTable;
@@ -73,6 +75,32 @@ TEST(SampleContextTrackerTest, GetBaseSamplesForSingleContext) {
       Tracker.getBaseSamplesFor(FunctionId("bar"), /*MergeContext=*/true);
   ASSERT_NE(Base, nullptr);
   EXPECT_EQ(Base->getTotalSamples(), 42u);
+}
+
+// A distinct callee nested under another function must still get its own base
+// profile. Promoting foo relocates bar's node into foo's base subtree (marking
+// bar SyntheticContext); the relocated node stays live, so getBaseSamplesFor
+// for bar must still promote it. A too-broad "skip all SyntheticContext"
+// use-after-free workaround would drop bar's samples here.
+TEST(SampleContextTrackerTest, GetBaseSamplesForDistinctNestedCallee) {
+  std::list<SampleContextFrameVector> CSNameTable;
+  SampleProfileMap Profiles;
+
+  addProfile(Profiles, CSNameTable, "[main:1 @ foo]", 100);
+  addProfile(Profiles, CSNameTable, "[main:1 @ foo:3 @ bar]", 42);
+
+  SampleContextTracker Tracker(Profiles, /*GUIDToFuncNameMap=*/nullptr);
+
+  // Promote foo first; this relocates bar's node under foo's base.
+  FunctionSamples *FooBase =
+      Tracker.getBaseSamplesFor(FunctionId("foo"), /*MergeContext=*/true);
+  ASSERT_NE(FooBase, nullptr);
+
+  // bar must still be promotable to its own base with its samples intact.
+  FunctionSamples *BarBase =
+      Tracker.getBaseSamplesFor(FunctionId("bar"), /*MergeContext=*/true);
+  ASSERT_NE(BarBase, nullptr);
+  EXPECT_EQ(BarBase->getTotalSamples(), 42u);
 }
 
 } // namespace
