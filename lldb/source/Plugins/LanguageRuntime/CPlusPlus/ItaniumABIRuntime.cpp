@@ -317,7 +317,7 @@ bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
       in_value.GetPointerValue().address + offset_to_top;
   if (!m_process->GetTarget().ResolveLoadAddress(dynamic_addr,
                                                  dynamic_address)) {
-    dynamic_address.SetRawAddress(dynamic_addr);
+    dynamic_address = Address(dynamic_addr);
   }
   return true;
 }

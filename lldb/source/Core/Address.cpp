@@ -154,7 +154,7 @@ static bool ReadAddress(ExecutionContextScope *exe_scope,
     // We couldn't make "deref_addr" into a section offset value, but we were
     // able to read the address, so we return a section offset address with no
     // section and "deref_addr" as the offset (address).
-    deref_so_addr.SetRawAddress(deref_addr);
+    deref_so_addr = Address(deref_addr);
     return true;
   }
   return false;
@@ -230,8 +230,6 @@ static size_t ReadCStringFromMemory(ExecutionContextScope *exe_scope,
   strm->PutChar('"');
   return total_len;
 }
-
-Address::Address(lldb::addr_t abs_addr) : m_section_wp(), m_offset(abs_addr) {}
 
 Address::Address(addr_t address, const SectionList *section_list)
     : m_section_wp() {
