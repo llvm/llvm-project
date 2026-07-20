@@ -15230,20 +15230,12 @@ void Sema::LookupOverloadedUnaryOp(OverloadCandidateSet &CandidateSet,
   SourceLocation OpLoc = CandidateSet.getLocation();
   DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
 
-  // Add the candidates from the given function set.
   AddNonMemberOperatorCandidates(Fns, Args, CandidateSet);
-
-  // Add operator candidates that are member functions.
   AddMemberOperatorCandidates(Op, OpLoc, Args, CandidateSet);
-
-  // Add candidates from ADL.
-  if (PerformADL) {
+  if (PerformADL)
     AddArgumentDependentLookupCandidates(OpName, OpLoc, Args,
                                          /*ExplicitTemplateArgs*/ nullptr,
                                          CandidateSet);
-  }
-
-  // Add builtin operator candidates.
   AddBuiltinOperatorCandidates(Op, OpLoc, Args, CandidateSet);
 }
 
