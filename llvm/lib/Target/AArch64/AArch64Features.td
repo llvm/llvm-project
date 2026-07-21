@@ -881,6 +881,10 @@ def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
                                         "not fit in the encoding.",
                                         [], InlineIgnore>;
 
+// Use the MachinePipeliner for instruction scheduling for the subtarget.
+def FeatureUseMIPipeliner: SubtargetFeature<"use-mipipeliner", "UseMIPipeliner", "true",
+                                            "Use the MachinePipeliner">;
+
 // Address operands with shift amount 2 or 3 are fast on all Arm chips except
 // some old Apple cores (A7-A10?) which handle all shifts slowly. Cortex-A57
 // and derived designs through Cortex-X1 take an extra micro-op for shifts

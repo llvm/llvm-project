@@ -98,6 +98,11 @@ static cl::opt<bool>
                                  cl::desc("Enable subreg liveness tracking"));
 
 static cl::opt<bool>
+    EnableMachinePipeliner("aarch64-enable-pipeliner",
+                           cl::desc("Enable Machine Pipeliner for AArch64"),
+                           cl::init(false), cl::Hidden);
+
+static cl::opt<bool>
     UseScalarIncVL("sve-use-scalar-inc-vl", cl::init(false), cl::Hidden,
                    cl::desc("Prefer add+cnt over addvl/inc/dec"));
 
@@ -649,5 +654,6 @@ bool AArch64Subtarget::isX16X17Safer() const {
 }
 
 bool AArch64Subtarget::enableMachinePipeliner() const {
-  return getSchedModel().hasInstrSchedModel();
+  return getSchedModel().hasInstrSchedModel() &&
+         (UseMIPipeliner || EnableMachinePipeliner);
 }
