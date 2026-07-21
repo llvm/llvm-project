@@ -119,7 +119,7 @@ private:
 
   void MakeValid(RegisterSetType set) { m_validity |= set; }
 
-  [[nodiscard]] bool IsValid(RegisterSetType set) {
+  [[nodiscard]] bool IsValid(RegisterSetType set) const {
     return any(m_validity & set);
   }
 
