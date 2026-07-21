@@ -7,22 +7,21 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Linux implementation of cfgetospeed.
+/// Proxy header for macros from termios.h.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/termios/cfgetospeed.h"
+#ifndef LLVM_LIBC_HDR_TERMIOS_MACROS_H
+#define LLVM_LIBC_HDR_TERMIOS_MACROS_H
 
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#ifdef LIBC_FULL_BUILD
 
-#include "hdr/types/speed_t.h"
-#include "hdr/types/struct_termios.h"
+#include "include/llvm-libc-macros/termios-macros.h"
 
-namespace LIBC_NAMESPACE_DECL {
+#else // Overlay mode
 
-LLVM_LIBC_FUNCTION(speed_t, cfgetospeed, (const struct termios *t)) {
-  return t->c_ospeed;
-}
+#include <termios.h>
 
-} // namespace LIBC_NAMESPACE_DECL
+#endif // LIBC_FULL_BUILD
+
+#endif // LLVM_LIBC_HDR_TERMIOS_MACROS_H

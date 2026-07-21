@@ -1,11 +1,18 @@
-//===-- Unittests for a bunch of functions in termios.h -------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for functions in termios.h.
+///
+//===----------------------------------------------------------------------===//
 
+#include "hdr/termios_macros.h"
+#include "hdr/types/struct_termios.h"
 #include "src/__support/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/termios/cfgetispeed.h"
@@ -19,8 +26,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <termios.h>
 
 using LlvmLibcTermiosTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;

@@ -7,22 +7,21 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Linux implementation of cfgetospeed.
+/// Proxy header for tcflag_t.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/termios/cfgetospeed.h"
+#ifndef LLVM_LIBC_HDR_TYPES_TCFLAG_T_H
+#define LLVM_LIBC_HDR_TYPES_TCFLAG_T_H
 
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#ifdef LIBC_FULL_BUILD
 
-#include "hdr/types/speed_t.h"
-#include "hdr/types/struct_termios.h"
+#include "include/llvm-libc-types/tcflag_t.h"
 
-namespace LIBC_NAMESPACE_DECL {
+#else
 
-LLVM_LIBC_FUNCTION(speed_t, cfgetospeed, (const struct termios *t)) {
-  return t->c_ospeed;
-}
+#include <termios.h>
 
-} // namespace LIBC_NAMESPACE_DECL
+#endif // LIBC_FULL_BUILD
+
+#endif // LLVM_LIBC_HDR_TYPES_TCFLAG_T_H
