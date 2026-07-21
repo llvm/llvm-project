@@ -39,7 +39,7 @@ LIBC_INLINE double tgamma(double x) {
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
     }
-    // tgamma(+inf) = +inf.
+    // tgamma(+inf) = +inf
     return x;
   }
 
