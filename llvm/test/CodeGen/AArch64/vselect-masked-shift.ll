@@ -247,10 +247,7 @@ define <4 x i32> @masked_input_shl_v4i32(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: masked_input_shl_v4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #63
-; CHECK-NEXT:    movi v3.4s, #32
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    cmhi v2.4s, v3.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -265,10 +262,7 @@ define <4 x i32> @masked_input_shl_v4i32_swapped(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: masked_input_shl_v4i32_swapped:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #63
-; CHECK-NEXT:    movi v3.4s, #32
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    cmhi v2.4s, v3.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -283,11 +277,8 @@ define <4 x i32> @masked_input_srl_v4i32(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: masked_input_srl_v4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #63
-; CHECK-NEXT:    movi v3.4s, #32
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    cmhi v2.4s, v3.4s, v1.4s
 ; CHECK-NEXT:    neg v1.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -301,9 +292,6 @@ entry:
 define <4 x i32> @unbounded_input_shl_v4i32(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: unbounded_input_shl_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #32
-; CHECK-NEXT:    cmhi v2.4s, v2.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -317,10 +305,7 @@ define <4 x i32> @masked_input_shl_srl_multiuse_v4i32(<4 x i32> %x, <4 x i32> %a
 ; CHECK-LABEL: masked_input_shl_srl_multiuse_v4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #63
-; CHECK-NEXT:    movi v3.4s, #32
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    cmhi v2.4s, v3.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    neg v2.4s, v1.4s
 ; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v2.4s
@@ -340,11 +325,8 @@ define <4 x i32> @masked_input_sra_v4i32(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: masked_input_sra_v4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.4s, #63
-; CHECK-NEXT:    movi v3.4s, #32
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    cmhi v2.4s, v3.4s, v1.4s
 ; CHECK-NEXT:    neg v1.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    sshl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -359,11 +341,8 @@ define <8 x i16> @masked_input_sra_v8i16(<8 x i16> %x, <8 x i16> %amt) {
 ; CHECK-LABEL: masked_input_sra_v8i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.8h, #31
-; CHECK-NEXT:    movi v3.8h, #16
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    cmhi v2.8h, v3.8h, v1.8h
 ; CHECK-NEXT:    neg v1.8h, v1.8h
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    sshl v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -377,11 +356,8 @@ entry:
 define <4 x i32> @unbounded_input_sra_v4i32(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: unbounded_input_sra_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #32
-; CHECK-NEXT:    neg v3.4s, v1.4s
-; CHECK-NEXT:    cmhi v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    sshl v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    sshl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %ok = icmp ult <4 x i32> %amt, splat (i32 32)

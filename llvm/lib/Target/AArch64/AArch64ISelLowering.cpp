@@ -1247,7 +1247,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
 
-  setTargetDAGCombine(ISD::SHL);
+  setTargetDAGCombine({ISD::SHL, ISD::SRL, ISD::SRA});
   setTargetDAGCombine(ISD::VECTOR_DEINTERLEAVE);
   setTargetDAGCombine(ISD::CTPOP);
 
@@ -29419,12 +29419,19 @@ static SDValue matchZeroSelectArm(SDValue TVal, SDValue FVal,
 // select zeroing those lanes is redundant. However, ushl reads each lane's
 // shift amount as a signed value from its low byte and would misread amounts
 // above 127, so the amounts must either be provably at most 127 or get
-// clamped to EltSize with umin.
+// clamped to EltSize with umin. sra uses sshl and is only valid when the
+// out-of-range lanes are poison.
 static SDValue foldMaskedShiftToUSHL(SelectionDAG &DAG,
                                      const AArch64Subtarget *Subtarget,
                                      SDNode *N, SDValue X, SDValue Amt,
                                      SDValue Cond, ISD::CondCode RequiredCC,
-                                     bool IsSRL) {
+                                     unsigned ShiftOpcode,
+                                     bool AmtOutOfRangeIsPoison) {
+  assert((ShiftOpcode == ISD::SHL || ShiftOpcode == ISD::SRL ||
+          ShiftOpcode == ISD::SRA) &&
+         "Unexpected shift opcode");
+  assert((ShiftOpcode != ISD::SRA || AmtOutOfRangeIsPoison) &&
+         "sshl sign fills where the select needs zero");
   using namespace llvm::SDPatternMatch;
   EVT VT = N->getValueType(0);
   // ushl only exists for 64 and 128 bit vectors.
@@ -29441,21 +29448,22 @@ static SDValue foldMaskedShiftToUSHL(SelectionDAG &DAG,
   SDLoc DL(N);
 
   // Amounts that might exceed 127 need the umin clamp.
-  if (!DAG.computeKnownBits(Amt).getMaxValue().ule(127)) {
+  if (!AmtOutOfRangeIsPoison &&
+      !DAG.computeKnownBits(Amt).getMaxValue().ule(127)) {
     // Only SVE has a umin for 64-bit lanes.
     if (EltSize == 64 && !Subtarget->isSVEAvailable())
       return SDValue();
     Amt = DAG.getNode(ISD::UMIN, DL, VT, Amt, DAG.getConstant(EltSize, DL, VT));
   }
 
-  // There is no shift right register instruction but ushl shifts right when
-  // the amount is negative.
-  if (IsSRL)
+  // There is no shift right register instruction but ushl and sshl shift
+  // right when the amount is negative.
+  if (ShiftOpcode != ISD::SHL)
     Amt = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Amt);
-  return DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, VT,
-      DAG.getTargetConstant(Intrinsic::aarch64_neon_ushl, DL, MVT::i32), X,
-      Amt);
+  unsigned IID = ShiftOpcode == ISD::SRA ? Intrinsic::aarch64_neon_sshl
+                                         : Intrinsic::aarch64_neon_ushl;
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                     DAG.getTargetConstant(IID, DL, MVT::i32), X, Amt);
 }
 
 // vselect(setcc_ult(amt, EltSize), shl(x, amt), zeros) -> ushl(x, amt)
@@ -29472,7 +29480,29 @@ performVSelectMaskedShiftCombine(SDNode *N, SelectionDAG &DAG,
 
   return foldMaskedShiftToUSHL(DAG, Subtarget, N, Shift.getOperand(0),
                                Shift.getOperand(1), N->getOperand(0),
-                               RequiredCC, Shift.getOpcode() == ISD::SRL);
+                               RequiredCC, Shift.getOpcode(),
+                               /*AmtOutOfRangeIsPoison=*/false);
+}
+
+// shl/srl(vselect(setcc_ult(amt, EltSize), x, zeros), amt) -> ushl(x, amt)
+// sra(vselect(setcc_ult(amt, EltSize), x, zeros), amt) -> sshl(x, -amt)
+// The zeroed lanes are shifted by EltSize or more which is poison.
+static SDValue
+performShiftOfZeroSelectCombine(SDNode *N, SelectionDAG &DAG,
+                                const AArch64Subtarget *Subtarget) {
+  SDValue Sel = N->getOperand(0);
+  if (Sel.getOpcode() != ISD::VSELECT)
+    return SDValue();
+
+  ISD::CondCode RequiredCC;
+  SDValue X =
+      matchZeroSelectArm(Sel.getOperand(1), Sel.getOperand(2), RequiredCC);
+  if (!X)
+    return SDValue();
+
+  return foldMaskedShiftToUSHL(DAG, Subtarget, N, X, N->getOperand(1),
+                               Sel.getOperand(0), RequiredCC, N->getOpcode(),
+                               /*AmtOutOfRangeIsPoison=*/true);
 }
 
 // vselect (v1i1 setcc) ->
@@ -31334,7 +31364,12 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SCALAR_TO_VECTOR:
     return performScalarToVectorCombine(N, DCI, DAG);
   case ISD::SHL:
+    if (SDValue R = performShiftOfZeroSelectCombine(N, DAG, Subtarget))
+      return R;
     return performSHLCombine(N, DCI, DAG);
+  case ISD::SRL:
+  case ISD::SRA:
+    return performShiftOfZeroSelectCombine(N, DAG, Subtarget);
   case ISD::CTPOP:
     return performCTPOPCombine(N, DCI, DAG);
   case ISD::BITCAST:
