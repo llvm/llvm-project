@@ -1017,8 +1017,15 @@ bool PPCMIPeephole::simplifyCode() {
         MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
         unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
-        // just do a sign-extending load.
-        if ((SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX)) {
+        // just do a sign-extending load. The source may be a 32-bit gprc load
+        // consumed directly, or a 64-bit g8rc load consumed through its sub_32
+        // subregister.
+        bool SrcIsGPRCWordZextLoad =
+            SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX;
+        bool SrcIsG8RCWordZextLoad =
+            SrcOpcode == PPC::LWZ8 || SrcOpcode == PPC::LWZX8;
+        if ((!NarrowSubReg && SrcIsGPRCWordZextLoad) ||
+            (NarrowSubReg == PPC::sub_32 && SrcIsG8RCWordZextLoad)) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
 
@@ -1044,7 +1051,8 @@ bool PPCMIPeephole::simplifyCode() {
           // Likewise if the source is X-Form the new opcode should also be
           // X-Form.
           unsigned Opc = PPC::LWA_32;
-          bool SourceIsXForm = SrcOpcode == PPC::LWZX;
+          bool SourceIsXForm =
+              SrcOpcode == PPC::LWZX || SrcOpcode == PPC::LWZX8;
           bool MIIs64Bit = MI.getOpcode() == PPC::EXTSW ||
             MI.getOpcode() == PPC::EXTSW_32_64;
 
