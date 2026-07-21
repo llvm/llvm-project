@@ -84,6 +84,35 @@ func.func @array_reduction_small_shared() {
   return
 }
 
+// A reduction private that exceeds the per-thread stack budget uses indexed
+// backing storage shared by thread_x lanes. It must not be reduced again.
+// CHECK-LABEL: func.func @array_reduction_large_indexed_private
+// CHECK: acc.unwrap_private
+// CHECK: memref.view
+// CHECK: memref.subview
+// CHECK-NOT: gpu.all_reduce
+// CHECK-NOT: acc.reduction_accumulate_array
+func.func @array_reduction_large_indexed_private() {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  %private = acc.privatize [#acc<par_dims[block_x, thread_x]>]
+      : () -> !acc.private_type<memref<8192xi32>>
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx)
+      ins(%arg0 = %private) : (!acc.private_type<memref<8192xi32>>) {
+    %c8192 = arith.constant 8192 : index
+    %local = acc.private_local %arg0
+        {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
+        : (!acc.private_type<memref<8192xi32>>) -> memref<8192xi32>
+    %bounds = acc.bounds extent(%c8192 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        : memref<8192xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
 // CHECK-LABEL: func.func @array_reduction_dynamic_shared
 // CHECK: %[[DYN_SHARED:.*]] = acc.gpu_shared_memory
 // CHECK: builtin.unrealized_conversion_cast %[[DYN_SHARED]]

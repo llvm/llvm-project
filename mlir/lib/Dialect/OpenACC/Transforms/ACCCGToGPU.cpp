@@ -339,6 +339,119 @@ static bool getPassThroughResults(Operation *userOp, Value trackedOperand,
     }
     return false;
   }
+
+  bool hasMemoryEffects = false;
+  if (auto effects = dyn_cast<MemoryEffectOpInterface>(userOp)) {
+    SmallVector<MemoryEffects::EffectInstance> instances;
+    effects.getEffects(instances);
+    hasMemoryEffects = !instances.empty();
+  }
+  if (userOp->getNumResults() == 1 &&
+      llvm::is_contained(userOp->getOperands(), trackedOperand) &&
+      !hasMemoryEffects) {
+    passThroughResults.push_back(userOp->getResult(0));
+    return true;
+  }
+  return false;
+}
+
+template <typename Effect>
+static bool hasEffectOnValue(Operation *op, Value value) {
+  auto effects = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!effects)
+    return false;
+  SmallVector<MemoryEffects::EffectInstance> instances;
+  effects.getEffects(instances);
+  return llvm::any_of(instances, [&](const auto &instance) {
+    return isa<Effect>(instance.getEffect()) && instance.getValue() == value;
+  });
+}
+
+static Value getReadAddress(Operation *op) {
+  auto effects = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!effects)
+    return {};
+  SmallVector<MemoryEffects::EffectInstance> instances;
+  effects.getEffects(instances);
+  Value address;
+  for (const auto &instance : instances) {
+    Value value = instance.getValue();
+    if (!isa<MemoryEffects::Read>(instance.getEffect()) || !value)
+      continue;
+    if (address && address != value)
+      return {};
+    address = value;
+  }
+  return address;
+}
+
+/// Returns the unique pointer-like value stored to \p address before \p before.
+static Value getUniqueStoredPointerValue(Value address, Operation *before) {
+  Operation *storedBy = nullptr;
+  Value stored;
+  SmallVector<Value> worklist{address};
+  DenseSet<Value> seen;
+  while (!worklist.empty()) {
+    Value alias = worklist.pop_back_val();
+    if (!seen.insert(alias).second)
+      continue;
+    for (Operation *user : alias.getUsers()) {
+      if (hasEffectOnValue<MemoryEffects::Write>(user, alias)) {
+        if (storedBy || user->getBlock() != before->getBlock() ||
+            !user->isBeforeInBlock(before))
+          return {};
+        Value candidate;
+        for (Value operand : user->getOperands()) {
+          if (operand == alias)
+            continue;
+          if (candidate)
+            return {};
+          candidate = operand;
+        }
+        if (!candidate)
+          return {};
+        storedBy = user;
+        stored = candidate;
+        continue;
+      }
+      SmallVector<Value> through;
+      if (getPassThroughResults(user, alias, through))
+        worklist.append(through.begin(), through.end());
+    }
+  }
+  return stored;
+}
+
+/// Tracks a uniquely stored pointer-like value through its subsequent load.
+static bool
+getMemoryPassThroughResults(Operation *userOp, Value trackedOperand,
+                            SmallVectorImpl<Value> &passThroughResults) {
+  if (hasEffectOnValue<MemoryEffects::Read>(userOp, trackedOperand) &&
+      userOp->getNumResults() == 1) {
+    passThroughResults.push_back(userOp->getResult(0));
+    return true;
+  }
+
+  if (!llvm::is_contained(userOp->getOperands(), trackedOperand))
+    return false;
+  auto effects = dyn_cast<MemoryEffectOpInterface>(userOp);
+  if (!effects)
+    return false;
+  SmallVector<MemoryEffects::EffectInstance> instances;
+  effects.getEffects(instances);
+  for (const auto &instance : instances) {
+    Value target = instance.getValue();
+    if (!isa<MemoryEffects::Write>(instance.getEffect()) || !target ||
+        target == trackedOperand)
+      continue;
+    unsigned writers = llvm::count_if(target.getUsers(), [&](Operation *user) {
+      return hasEffectOnValue<MemoryEffects::Write>(user, target);
+    });
+    if (writers != 1)
+      return false;
+    passThroughResults.push_back(target);
+    return true;
+  }
   return false;
 }
 
@@ -742,6 +855,8 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
       SmallVector<Value> through;
       if (getPassThroughResults(user, cur, through))
         worklist.append(through.begin(), through.end());
+      else if (getMemoryPassThroughResults(user, cur, through))
+        worklist.append(through.begin(), through.end());
       else if (isa<ViewLikeOpInterface>(user))
         worklist.append(user->result_begin(), user->result_end());
     }
@@ -788,6 +903,41 @@ static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
     indices.pop_back();
   };
   buildLoopNest(buildLoopNest, 0);
+}
+
+/// True when \p memref resolves to storage owned by the current thread.
+static bool isPerThreadArrayReductionStorage(Value memref) {
+  DenseSet<Value> seen;
+  SmallVector<Value> worklist{memref};
+  while (!worklist.empty()) {
+    Value current = worklist.pop_back_val();
+    if (!current || !seen.insert(current).second)
+      continue;
+    Operation *def = current.getDefiningOp();
+    if (!def)
+      continue;
+    if (isa<memref::AllocaOp>(def))
+      return true;
+    if (isa<acc::UnwrapPrivateOp, acc::GPUSharedMemoryOp>(def))
+      return false;
+
+    if (Value address = getReadAddress(def)) {
+      Value stored = getUniqueStoredPointerValue(address, def);
+      if (!stored)
+        return false;
+      worklist.push_back(stored);
+      continue;
+    }
+
+    if (mlir::acc::GPUParallelDimsAttr parDims =
+            mlir::acc::getParDimsAttr(def)) {
+      return llvm::any_of(parDims.getArray(),
+                          [](auto dim) { return dim.isThreadX(); });
+    }
+
+    worklist.append(def->getOperands().begin(), def->getOperands().end());
+  }
+  return false;
 }
 
 std::optional<int64_t>
@@ -3342,9 +3492,8 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
 
   // Per-element gpu.all_reduce is only correct when each thread owns its own
   // accumulator copy. Classify the operand from its underlying allocation
-  // rather than its shape or par_dims: only memref.alloca is thread-private.
-  Operation *rootOp = unwrapMemRefConversion(memref).getDefiningOp();
-  bool isPerThreadPrivate = isa_and_nonnull<memref::AllocaOp>(rootOp);
+  // rather than its shape or the accumulate's par_dims.
+  bool isPerThreadPrivate = isPerThreadArrayReductionStorage(memref);
   if (!isPerThreadPrivate) {
     // Block-shared accumulator: no-op only when the accumulate spans a block
     // dim (threads distribute distinct elements, so the block partial is in
