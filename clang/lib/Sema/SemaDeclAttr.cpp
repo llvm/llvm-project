@@ -1509,8 +1509,7 @@ void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
   }
 
   ParamIdx Idx;
-  const auto *FuncDecl = cast<FunctionDecl>(D);
-  if (!checkFunctionOrMethodParameterIndex(FuncDecl, CI,
+  if (!checkFunctionOrMethodParameterIndex(D, CI,
                                            /*AttrArgNum=*/1, ParamExpr, Idx))
     return;
 
@@ -1518,7 +1517,7 @@ void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
   if (!Ty->isDependentType() && !Ty->isIntegralType(Context) &&
       !Ty->isAlignValT()) {
     Diag(ParamExpr->getBeginLoc(), diag::err_attribute_integers_only)
-        << CI << FuncDecl->getParamDecl(Idx.getASTIndex())->getSourceRange();
+        << CI << getFunctionOrMethodParamRange(D, Idx.getASTIndex());
     return;
   }
 
