@@ -4,8 +4,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-mesa-mesa3d -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG,GFX1250-SDAG-TRUE16 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-mesa-mesa3d -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL,GFX1250-GISEL-TRUE16 %s
 
-; RUN: llc -mtriple=amdgpu12.50-mesa-mesa3d -mattr=+real-true16,-sramecc < %s | FileCheck -check-prefixes=GFX1250,GFX1250-NOECC,GFX1250-NOECC-SDAG-TRUE16 %s
-; RUN: llc -mtriple=amdgpu12.50-mesa-mesa3d -mattr=-real-true16,-sramecc < %s | FileCheck -check-prefixes=GFX1250,GFX1250-NOECC,GFX1250-NOECC-SDAG-FAKE16 %s
+; RUN: llc -mtriple=amdgpu12.50-mesa-mesa3d -mattr=+real-true16 --amdgpu-sramecc=false < %s | FileCheck -check-prefixes=GFX1250,GFX1250-NOECC,GFX1250-NOECC-SDAG-TRUE16 %s
+; RUN: llc -mtriple=amdgpu12.50-mesa-mesa3d -mattr=-real-true16 --amdgpu-sramecc=false < %s | FileCheck -check-prefixes=GFX1250,GFX1250-NOECC,GFX1250-NOECC-SDAG-FAKE16 %s
 
 ; Test using saddr addressing mode of flat_*load_* instructions.
 
