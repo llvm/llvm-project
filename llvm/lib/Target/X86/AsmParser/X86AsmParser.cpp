@@ -45,6 +45,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 using namespace llvm;
 
@@ -445,6 +446,7 @@ private:
     IntelExprState State = IES_INIT, PrevState = IES_ERROR;
     MCRegister BaseReg, IndexReg, TmpReg;
     unsigned Scale = 0;
+    std::optional<unsigned> TmpScale = {};
     int64_t Imm = 0;
     const MCExpr *Sym = nullptr;
     StringRef SymName;
@@ -700,20 +702,27 @@ private:
         IC.pushOperator(IC_PLUS);
         NegativeAdditiveTerm = false;
         NegativeAdditiveTermLoc = SMLoc();
-        if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
-          // If we already have a BaseReg, then assume this is the IndexReg with
-          // no explicit scale.
-          if (!BaseReg) {
+        if (TmpReg) {
+          // A pending scale forces this to be the IndexReg; otherwise a free
+          // BaseReg takes it as an unscaled base.
+          if (!BaseReg && !TmpScale.has_value()) {
             BaseReg = TmpReg;
+            TmpReg = MCRegister::NoRegister;
           } else {
             if (IndexReg)
               return regsUseUpError(ErrMsg);
             IndexReg = TmpReg;
-            Scale = 0;
+            TmpReg = MCRegister::NoRegister;
+            if (TmpScale.has_value() && checkScale(TmpScale.value(), ErrMsg)) {
+              return true;
+            }
+            Scale = TmpScale.value_or(0);
           }
         }
         break;
       }
+      // A '+' ends the current additive term, so clear the pending scale.
+      TmpScale.reset();
       PrevState = CurrState;
       return false;
     }
@@ -761,20 +770,27 @@ private:
           return true;
         } else
           IC.pushOperator(IC_NEG);
-        if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
-          // If we already have a BaseReg, then assume this is the IndexReg with
-          // no explicit scale.
-          if (!BaseReg) {
+        if (TmpReg) {
+          // A pending scale forces this to be the IndexReg; otherwise a free
+          // BaseReg takes it as an unscaled base.
+          if (!BaseReg && !TmpScale.has_value()) {
             BaseReg = TmpReg;
+            TmpReg = MCRegister::NoRegister;
           } else {
             if (IndexReg)
               return regsUseUpError(ErrMsg);
             IndexReg = TmpReg;
-            Scale = 0;
+            TmpReg = MCRegister::NoRegister;
+            if (TmpScale.has_value() && checkScale(TmpScale.value(), ErrMsg)) {
+              return true;
+            }
+            Scale = TmpScale.value_or(0);
           }
         }
         break;
       }
+      // A '-' ends the current additive term, so clear the pending scale.
+      TmpScale.reset();
       PrevState = CurrState;
       return false;
     }
@@ -816,33 +832,42 @@ private:
       default:
         State = IES_ERROR;
         break;
-      case IES_PLUS:
       case IES_MINUS:
-      case IES_LPAREN:
+      case IES_PLUS:
       case IES_LBRAC:
         State = IES_REGISTER;
         TmpReg = Reg;
         IC.pushOperand(IC_REGISTER);
+        if (NegativeAdditiveTerm) {
+          ErrMsg = "Scale can't be negative";
+          return true;
+        }
         break;
+      case IES_LPAREN:
       case IES_MULTIPLY:
-        // Index Register - Scale * Register
-        if (PrevState == IES_INTEGER) {
+        // A register already held in TmpReg means we are multiplying two reg
+        if (TmpReg) {
+          ErrMsg = "Register can't be multiplied with register!";
+          return true;
+        }
+        State = IES_REGISTER;
+        TmpReg = Reg;
+        // Recognize this register as a scaled index register. This covers
+        // 'scale * reg' and 'scale * (reg)', including parenthesized or
+        // multi-factor scales where the accumulated value is held in TmpScale.
+        if (TmpScale.has_value() || PrevState == IES_MULTIPLY ||
+            (PrevState == IES_INTEGER && CurrState == IES_MULTIPLY)) {
           if (IndexReg)
             return regsUseUpError(ErrMsg);
           if (NegativeAdditiveTerm) {
             ErrMsg = "Scale can't be negative";
             return true;
           }
-          State = IES_REGISTER;
-          IndexReg = Reg;
-          // Get the scale and replace the 'Scale * Register' with '0'.
-          Scale = IC.popOperand();
-          if (checkScale(Scale, ErrMsg))
-            return true;
+          // Push an immediate, not the register, so the infix calculator
+          // won't evaluate reg * int; this is a scaled index reg.
           IC.pushOperand(IC_IMM);
-          IC.popOperator();
         } else {
-          State = IES_ERROR;
+          IC.pushOperand(IC_REGISTER);
         }
         break;
       }
@@ -911,23 +936,16 @@ private:
       case IES_INIT:
       case IES_LBRAC:
         State = IES_INTEGER;
-        if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
-          // Index Register - Register * Scale
-          if (IndexReg)
-            return regsUseUpError(ErrMsg);
-          if (NegativeAdditiveTerm) {
-            ErrMsg = "Scale can't be negative";
-            return true;
-          }
-          IndexReg = TmpReg;
-          Scale = TmpInt;
-          if (checkScale(Scale, ErrMsg))
-            return true;
-          // Get the scale and replace the 'Register * Scale' with '0'.
-          IC.popOperator();
+        // Accumulate the scale: multiply into a pending scale or seed it.
+        if (TmpScale.has_value()) {
+          TmpScale.value() *= TmpInt;
         } else {
-          IC.pushOperand(IC_IMM, TmpInt);
+          TmpScale = TmpInt;
         }
+        // Once an index register is pending, check if TmpScale is valid.
+        if (TmpReg && checkScale(TmpScale.value(), ErrMsg))
+          return true;
+        IC.pushOperand(IC_IMM, TmpInt);
         break;
       }
       PrevState = CurrState;
@@ -940,10 +958,26 @@ private:
         State = IES_ERROR;
         break;
       case IES_INTEGER:
-      case IES_REGISTER:
-      case IES_RPAREN:
+        // Seed the scale accumulator with the integer just parsed (the left
+        // operand of this '*'), reading it back from the operand stack.
+        if (!TmpScale.has_value()) {
+          TmpScale = IC.popOperand();
+          IC.pushOperand(IC_IMM, TmpScale.value());
+        }
         State = IES_MULTIPLY;
         IC.pushOperator(IC_MULTIPLY);
+        break;
+      case IES_REGISTER:
+      case IES_RPAREN:
+        // A register before '*' is a scaled index register. If no scale is
+        // pending yet, replace its operand-stack entry with an immediate so
+        // the infix calculator does not evaluate a reg * int product.
+        if (TmpReg && (!TmpScale.has_value())) {
+          IC.popOperand();
+          IC.pushOperand(IC_IMM);
+        }
+        IC.pushOperator(IC_MULTIPLY);
+        State = IES_MULTIPLY;
         break;
       }
     }
@@ -993,6 +1027,8 @@ private:
       case IES_CAST:
         assert(!BracCount && "BracCount should be zero on parsing's start");
         State = IES_LBRAC;
+        // Entering a new memory expression; clear the pending scale.
+        TmpScale.reset();
         break;
       }
       MemExpr = true;
@@ -1015,26 +1051,34 @@ private:
           return true;
         }
         State = IES_RBRAC;
-        if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
-          // If we already have a BaseReg, then assume this is the IndexReg with
-          // no explicit scale.
-          if (!BaseReg) {
+
+        if (TmpReg) {
+          // A pending scale forces this to be the IndexReg; otherwise a free
+          // BaseReg takes it as an unscaled base.
+          if (!BaseReg && !TmpScale.has_value()) {
             BaseReg = TmpReg;
-          } else {
-            if (IndexReg)
-              return regsUseUpError(ErrMsg);
+            TmpReg = MCRegister::NoRegister;
+          } else if (!IndexReg) {
             if (NegativeAdditiveTerm) {
               ErrMsg = "Scale can't be negative";
               return true;
             }
             IndexReg = TmpReg;
-            Scale = 0;
+            TmpReg = MCRegister::NoRegister;
+            if (TmpScale.has_value() && checkScale(TmpScale.value(), ErrMsg)) {
+                return true;
+            }
+            Scale = TmpScale.value_or(0);
+          } else {
+            return regsUseUpError(ErrMsg);
           }
         }
         NegativeAdditiveTerm = false;
         NegativeAdditiveTermLoc = SMLoc();
         break;
       }
+      // Leaving the memory expression; clear the pending scale.
+      TmpScale.reset();
       PrevState = CurrState;
       return false;
     }
@@ -1082,26 +1126,6 @@ private:
       case IES_RBRAC:
       case IES_RPAREN:
         State = IES_RPAREN;
-        // In the case of a multiply, onRegister has already set IndexReg
-        // directly, with appropriate scale.
-        // Otherwise if we just saw a register it has only been stored in
-        // TmpReg, so we need to store it into the state machine.
-        if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
-          // If we already have a BaseReg, then assume this is the IndexReg with
-          // no explicit scale.
-          if (!BaseReg) {
-            BaseReg = TmpReg;
-          } else {
-            if (IndexReg)
-              return regsUseUpError(ErrMsg);
-            if (NegativeAdditiveTerm) {
-              ErrMsg = "Scale can't be negative";
-              return true;
-            }
-            IndexReg = TmpReg;
-            Scale = 0;
-          }
-        }
         IC.pushOperator(IC_RPAREN);
         break;
       }
