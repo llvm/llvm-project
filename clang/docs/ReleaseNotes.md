@@ -125,6 +125,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Improvements to Clang's diagnostics
 
+- More consistent rendering of Unicode characters in diagnostic messages.
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
