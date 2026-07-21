@@ -16820,6 +16820,18 @@ SITargetLowering::performInsertVectorEltCombine(SDNode *N,
   EVT VecVT = Vec.getValueType();
   EVT EltVT = VecVT.getVectorElementType();
 
+  // INSERT_VECTOR_ELT (BUILD_VECTOR (...undef...), val, C)
+  // => BUILD_VECTOR (... with element C replaced by val ...)
+  if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
+    if (Vec.getOpcode() == ISD::BUILD_VECTOR &&
+        CIdx->getZExtValue() < VecVT.getVectorNumElements() &&
+        any_of(Vec->op_values(), [](SDValue Op) { return Op.isUndef(); })) {
+      SmallVector<SDValue, 16> Ops(Vec->op_begin(), Vec->op_end());
+      Ops[CIdx->getZExtValue()] = N->getOperand(1);
+      return DCI.DAG.getBuildVector(VecVT, SDLoc(N), Ops);
+    }
+  }
+
   // INSERT_VECTOR_ELT (<n x e>, var-idx)
   // => BUILD_VECTOR n x select (e, const-idx)
   if (!shouldExpandVectorDynExt(N))
