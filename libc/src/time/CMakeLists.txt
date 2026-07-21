@@ -222,6 +222,7 @@ add_entrypoint_object(
     strptime.h
   DEPENDS
     libc.hdr.types.struct_tm
+    libc.src.__support.common
     libc.src.__support.macros.config
 )
 
