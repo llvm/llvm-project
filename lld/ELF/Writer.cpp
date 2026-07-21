@@ -26,9 +26,11 @@
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -260,25 +262,31 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 // references to /DISCARD/ discarded symbols will lead to errors.
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
-  DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
-  for (Symbol *sym : ctx.symtab->getSymbols()) {
-    if (auto *d = dyn_cast<Defined>(sym)) {
-      if (d->section && !d->section->isLive())
-        demoteDefined(*d, sectionIndexMap[d->file]);
-    } else {
-      auto *s = dyn_cast<SharedSymbol>(sym);
-      if (sym->isLazy() || (s && !cast<SharedFile>(s->file)->isNeeded)) {
-        uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
-        Undefined(ctx.internalFile, sym->getName(), binding, sym->stOther,
-                  sym->type)
-            .overwrite(*sym);
-        sym->versionId = VER_NDX_GLOBAL;
+  ArrayRef<Symbol *> syms = ctx.symtab->getSymbols();
+  constexpr size_t chunkSize = 4096;
+  parallelFor(0, (syms.size() + chunkSize - 1) / chunkSize, [&](size_t c) {
+    DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
+    size_t begin = c * chunkSize;
+    for (Symbol *sym :
+         syms.slice(begin, std::min(chunkSize, syms.size() - begin))) {
+      if (auto *d = dyn_cast<Defined>(sym)) {
+        if (d->section && !d->section->isLive())
+          demoteDefined(*d, sectionIndexMap[d->file]);
+      } else {
+        auto *s = dyn_cast<SharedSymbol>(sym);
+        if (sym->isLazy() || (s && !cast<SharedFile>(s->file)->isNeeded)) {
+          uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
+          Undefined(ctx.internalFile, sym->getName(), binding, sym->stOther,
+                    sym->type)
+              .overwrite(*sym);
+          sym->versionId = VER_NDX_GLOBAL;
+        }
       }
-    }
 
-    sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
-                         computeIsPreemptible(ctx, *sym);
-  }
+      sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
+                           computeIsPreemptible(ctx, *sym);
+    }
+  });
 }
 
 static OutputSection *findSection(Ctx &ctx, StringRef name) {
@@ -357,7 +365,14 @@ template <class ELFT> void Writer<ELFT>::run() {
     if (errCount(ctx))
       return;
 
-    if (!ctx.e.disableOutput) {
+    // With -o -, write to lld::outs() (the stdoutOS argument of
+    // link()) instead of committing the buffer, which would write to the
+    // process's stdout.
+    if (ctx.arg.outputFile == "-") {
+      ctx.e.outs() << StringRef(
+          reinterpret_cast<const char *>(buffer->getBufferStart()),
+          buffer->getBufferSize());
+    } else if (!ctx.e.disableOutput) {
       if (auto e = buffer->commit())
         Err(ctx) << "failed to write output '" << buffer->getPath()
                  << "': " << std::move(e);
@@ -368,44 +383,10 @@ template <class ELFT> void Writer<ELFT>::run() {
   }
 }
 
-template <class ELFT, class RelTy>
-static void markUsedLocalSymbolsImpl(ObjFile<ELFT> *file,
-                                     llvm::ArrayRef<RelTy> rels) {
-  for (const RelTy &rel : rels) {
-    Symbol &sym = file->getRelocTargetSym(rel);
-    if (sym.isLocal())
-      sym.setFlags(USED);
-  }
-}
-
-// The function ensures that the USED flag of local symbols reflects the fact
-// that the symbol is used in a relocation from a live section.
-template <class ELFT> static void markUsedLocalSymbols(Ctx &ctx) {
-  // With --gc-sections, the field is already filled.
-  // See MarkLive<ELFT>::resolveReloc().
-  if (ctx.arg.gcSections)
-    return;
-  for (ELFFileBase *file : ctx.objectFiles) {
-    ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
-    for (InputSectionBase *s : f->getSections()) {
-      InputSection *isec = dyn_cast_or_null<InputSection>(s);
-      if (!isec)
-        continue;
-      if (isec->type == SHT_REL) {
-        markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rel>());
-      } else if (isec->type == SHT_RELA) {
-        markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rela>());
-      } else if (isec->type == SHT_CREL) {
-        // The is64=true variant also works with ELF32 since only the r_symidx
-        // member is used.
-        for (Elf_Crel_Impl<true> r : RelocsCrel<true>(isec->content_)) {
-          Symbol &sym = file->getSymbol(r.r_symidx);
-          if (sym.isLocal())
-            sym.setFlags(USED);
-        }
-      }
-    }
-  }
+static bool retainKeepsInSymtab(Ctx &ctx, const Symbol &sym) {
+  if (sym.hasFlag(USED) && ctx.arg.copyRelocs)
+    return true;
+  return ctx.arg.retainSymbols->contains(sym.getName());
 }
 
 static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
@@ -440,6 +421,10 @@ static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
       (ctx.arg.discard == DiscardPolicy::Locals ||
        (sym.section && (sym.section->flags & SHF_MERGE))))
     return false;
+  // If --retain-symbols-file= is specified, keep in .symtab only listed symbols
+  // plus those referenced by emitted relocations.
+  if (LLVM_UNLIKELY(ctx.arg.retainSymbols))
+    return retainKeepsInSymtab(ctx, sym);
   return true;
 }
 
@@ -482,9 +467,24 @@ static void demoteAndCopyLocalSymbols(Ctx &ctx) {
         symsVec[i].push_back(b);
     }
   });
-  for (auto &syms : ArrayRef(symsVec.get(), ctx.objectFiles.size()))
+  for (size_t i = 0, e = ctx.objectFiles.size(); i != e; ++i) {
+    // For -r, synthesize an STT_FILE named after the input file for an input
+    // that contributes local symbols but no STT_FILE, so that its symbols are
+    // not attributed to another file's STT_FILE (matching GNU ld).
+    // --discard-all discards STT_FILE symbols.
+    auto &syms = symsVec[i];
+    if (ctx.arg.relocatable && ctx.arg.discard != DiscardPolicy::All &&
+        !syms.empty() &&
+        llvm::none_of(syms, [](Symbol *s) { return s->isFile(); })) {
+      InputFile *file = ctx.objectFiles[i];
+      ctx.in.symTab->addSymbol(
+          makeDefined(ctx, file, sys::path::filename(file->getName()),
+                      STB_LOCAL, /*stOther=*/0, STT_FILE, /*value=*/0,
+                      /*size=*/0, nullptr));
+    }
     for (Symbol *sym : syms)
       ctx.in.symTab->addSymbol(sym);
+  }
 }
 
 // Create a section symbol for each output section so that we can represent
@@ -819,6 +819,22 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
       addOptionalRegular(ctx, name, ctx.out.elfHeader.get(), 0, STV_HIDDEN);
 }
 
+static bool updateRelIpltSymbols(Ctx &ctx) {
+  if (ctx.sym.relaIpltStart) {
+    auto &dyn = getIRelativeSection(ctx);
+    if (dyn.isNeeded()) {
+      SectionBase *oldSec = ctx.sym.relaIpltEnd->section;
+      uint64_t oldVal = ctx.sym.relaIpltEnd->value;
+      ctx.sym.relaIpltStart->section = &dyn;
+      ctx.sym.relaIpltEnd->section = &dyn;
+      ctx.sym.relaIpltEnd->value = dyn.getSize();
+      return (oldSec != ctx.sym.relaIpltEnd->section ||
+              oldVal != ctx.sym.relaIpltEnd->value);
+    }
+  }
+  return false;
+}
+
 // This function generates assignments for predefined symbols (e.g. _end or
 // _etext) and inserts them into the commands sequence to be processed at the
 // appropriate time. This ensures that the value is going to be correct by the
@@ -837,14 +853,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 
   // .rela_iplt_{start,end} mark the start and the end of the section containing
   // IRELATIVE relocations.
-  if (ctx.sym.relaIpltStart) {
-    auto &dyn = getIRelativeSection(ctx);
-    if (dyn.isNeeded()) {
-      ctx.sym.relaIpltStart->section = &dyn;
-      ctx.sym.relaIpltEnd->section = &dyn;
-      ctx.sym.relaIpltEnd->value = dyn.getSize();
-    }
-  }
+  (void)updateRelIpltSymbols(ctx);
 
   PhdrEntry *last = nullptr;
   OutputSection *lastRO = nullptr;
@@ -1507,6 +1516,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
 
+  if (ctx.arg.branchToBranch)
+    ctx.target->relaxCFIJumpTables();
+
   // Iterate until a fixed point is reached, skipping relocatable links since
   // the final addresses are unavailable.
   uint32_t pass = 0, assignPasses = 0;
@@ -1567,6 +1579,18 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= ctx.in.relrDyn->updateAllocSize(ctx);
     if (ctx.in.relrAuthDyn)
       changed |= ctx.in.relrAuthDyn->updateAllocSize(ctx);
+    if (ctx.in.relrAuthDyn && ctx.in.dynamic && ctx.in.dynamic->getParent()) {
+      size_t oldSize = ctx.in.dynamic->getSize();
+      finalizeSynthetic(ctx, ctx.in.dynamic.get());
+      changed |= (oldSize != ctx.in.dynamic->getSize());
+    }
+
+    // .rela_iplt_{start,end} mark the start and the end of the section
+    // containing IRELATIVE relocations. Update them on each iteration because
+    // they might be affected by the above move of relocations from
+    // .relr.auth.dyn to .rela.dyn.
+    changed |= updateRelIpltSymbols(ctx);
+
     if (ctx.in.memtagGlobalDescriptors)
       changed |= ctx.in.memtagGlobalDescriptors->updateAllocSize(ctx);
     if (ctx.in.ehFrameHdr && ctx.in.ehFrameHdr->isNeeded())
@@ -1756,7 +1780,8 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
         // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
         // we would fail to remove it here.
         if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.relrPackDynRelocs &&
-            sec == ctx.in.relaDyn.get())
+            sec == ctx.in.relaDyn.get() && ctx.in.relrAuthDyn &&
+            ctx.in.relrAuthDyn->isNeeded())
           return false;
         unused.insert(sec);
         return true;
@@ -1865,8 +1890,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   demoteSymbolsAndComputeIsPreemptible(ctx);
 
-  if (ctx.arg.copyRelocs && ctx.arg.discard != DiscardPolicy::None)
-    markUsedLocalSymbols<ELFT>(ctx);
   demoteAndCopyLocalSymbols(ctx);
 
   if (ctx.arg.copyRelocs)
@@ -1937,6 +1960,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   {
     llvm::TimeTraceScope timeScope("Add symbols to symtabs");
+    if (ctx.in.symTab)
+      ctx.in.symTab->markGlobalPart();
     // Now that we have defined all possible global symbols including linker-
     // synthesized ones. Visit all symbols to give the finishing touches.
     for (Symbol *sym : ctx.symtab->getSymbols()) {
@@ -1944,7 +1969,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         continue;
       if (!ctx.arg.relocatable)
         sym->binding = sym->computeBinding(ctx);
-      if (ctx.in.symTab)
+      if (ctx.in.symTab &&
+          (!ctx.arg.retainSymbols || retainKeepsInSymtab(ctx, *sym)))
         ctx.in.symTab->addSymbol(sym);
 
       // computeBinding might localize a symbol that was considered exported
@@ -1956,7 +1982,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
             addVerneed(ctx, *sym);
       }
     }
-
+    if (ctx.in.symTab && !ctx.arg.relocatable)
+      ctx.in.symTab->maybeAddSttFile();
   }
 
   if (ctx.in.mipsGot)
@@ -2274,29 +2301,27 @@ SmallVector<std::unique_ptr<PhdrEntry>, 0> Writer<ELFT>::createPhdrs() {
     load->add(ctx.out.programHeaders.get());
   }
 
-  // PT_GNU_RELRO includes all sections that should be marked as
-  // read-only by dynamic linker after processing relocations.
-  // Current dynamic loaders only support one PT_GNU_RELRO PHDR, give
-  // an error message if more than one PT_GNU_RELRO PHDR is required.
-  auto relRo = std::make_unique<PhdrEntry>(ctx, PT_GNU_RELRO, PF_R);
-  bool inRelroPhdr = false;
-  OutputSection *relroEnd = nullptr;
+  // PT_GNU_RELRO includes all sections that should be marked as read-only by
+  // dynamic linker after processing relocations. Create one PT_GNU_RELRO for
+  // each run of contiguous relro sections. No diagnostics even if some loaders
+  // only honor one PT_GNU_RELRO.
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> relRos;
+  SmallPtrSet<OutputSection *, 1> relroEnds;
+  PhdrEntry *activeRelRo = nullptr;
   for (OutputSection *sec : ctx.outputSections) {
     if (!needsPtLoad(sec))
       continue;
     if (isRelroSection(ctx, sec)) {
-      inRelroPhdr = true;
-      if (!relroEnd)
-        relRo->add(sec);
-      else
-        ErrAlways(ctx) << "section: " << sec->name
-                       << " is not contiguous with other relro" << " sections";
-    } else if (inRelroPhdr) {
-      inRelroPhdr = false;
-      relroEnd = sec;
+      if (!activeRelRo) {
+        relRos.push_back(std::make_unique<PhdrEntry>(ctx, PT_GNU_RELRO, PF_R));
+        activeRelRo = relRos.back().get();
+      }
+      activeRelRo->add(sec);
+    } else if (activeRelRo) {
+      activeRelRo = nullptr;
+      relroEnds.insert(sec);
     }
   }
-  relRo->p_align = 1;
 
   for (OutputSection *sec : ctx.outputSections) {
     if (!needsPtLoad(sec))
@@ -2334,7 +2359,7 @@ SmallVector<std::unique_ptr<PhdrEntry>, 0> Writer<ELFT>::createPhdrs() {
 
     bool sameLMARegion =
         load && !sec->lmaExpr && sec->lmaRegion == load->firstSec->lmaRegion;
-    if (load && sec != relroEnd &&
+    if (load && !relroEnds.contains(sec) &&
         sec->memRegion == load->firstSec->memRegion &&
         (sameLMARegion || load->lastSec == ctx.out.programHeaders.get()) &&
         (ctx.script->hasSectionsCommand || sec->type == SHT_NOBITS ||
@@ -2361,8 +2386,10 @@ SmallVector<std::unique_ptr<PhdrEntry>, 0> Writer<ELFT>::createPhdrs() {
     if (OutputSection *sec = ctx.in.dynamic->getParent())
       addHdr(PT_DYNAMIC, sec->getPhdrFlags())->add(sec);
 
-  if (relRo->firstSec)
-    ret.push_back(std::move(relRo));
+  for (std::unique_ptr<PhdrEntry> &phdr : relRos) {
+    phdr->p_align = 1;
+    ret.push_back(std::move(phdr));
+  }
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
   if (ctx.in.ehFrameHdr && ctx.in.ehFrameHdr->isNeeded())

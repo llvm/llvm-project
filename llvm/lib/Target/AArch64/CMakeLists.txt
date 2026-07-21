@@ -73,9 +73,11 @@ add_llvm_target(AArch64CodeGen
   AArch64MacroFusion.cpp
   AArch64MIPeepholeOpt.cpp
   AArch64MCInstLower.cpp
+  AArch64PerfectShuffle.cpp
   AArch64PointerAuth.cpp
   AArch64PostCoalescerPass.cpp
   AArch64PromoteConstant.cpp
+  AArch64PTrueCoalescing.cpp
   AArch64PBQPRegAlloc.cpp
   AArch64RegisterInfo.cpp
   AArch64SMEAttributes.cpp
@@ -91,6 +93,7 @@ add_llvm_target(AArch64CodeGen
   AArch64TargetTransformInfo.cpp
   SMEPeepholeOpt.cpp
   SVEIntrinsicOpts.cpp
+  SVEShuffleOpts.cpp
   MachineSMEABIPass.cpp
   AArch64SRLTDefineSuperRegs.cpp
   AArch64SIMDInstrOpt.cpp

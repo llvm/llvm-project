@@ -67,17 +67,15 @@ public:
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
 class DILParser {
 public:
-  static llvm::Expected<ASTNodeUP> Parse(llvm::StringRef dil_input_expr,
-                                         DILLexer lexer,
-                                         std::shared_ptr<StackFrame> frame_sp,
-                                         lldb::DynamicValueType use_dynamic,
-                                         lldb::DILMode mode);
+  static llvm::Expected<ASTNodeUP>
+  Parse(llvm::StringRef dil_input_expr, DILLexer lexer, StackFrame &stack_frame,
+        lldb::DynamicValueType use_dynamic, lldb::DILMode mode);
 
   ~DILParser() = default;
 
 private:
   explicit DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
-                     std::shared_ptr<StackFrame> frame_sp,
+                     StackFrame &stack_frame,
                      lldb::DynamicValueType use_dynamic, llvm::Error &error,
                      lldb::DILMode mode);
 
@@ -128,7 +126,7 @@ private:
   // Parser doesn't own the evaluation context. The produced AST may depend on
   // it (for example, for source locations), so it's expected that expression
   // context will outlive the parser.
-  std::shared_ptr<StackFrame> m_ctx_scope;
+  StackFrame &m_stack_frame;
 
   llvm::StringRef m_input_expr;
 

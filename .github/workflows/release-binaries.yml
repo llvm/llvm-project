@@ -72,16 +72,16 @@ jobs:
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
+    - name: Checkout LLVM
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+          persist-credentials: false
+
     - name: Validate Release Version
       if: inputs.release-version != ''
       uses: ./.github/workflows/validate-release-version
       with:
         release-version: ${{ inputs.release-version }}
-
-    - name: Checkout LLVM
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      with:
-          persist-credentials: false
 
     - name: Check Permissions
       if: github.event_name != 'pull_request'
@@ -228,15 +228,15 @@ jobs:
     # to do that we need to specify a specific python version.  It's also
     # good practice to do this on other OSes so the version of python doesn't
     # get changed unexpectedly.
-    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
       with:
-        python-version: '3.11.9'
+        python-version: '3.14.6'
 
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
       if: runner.os == 'Windows'
       run: |
-        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.11.9\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
+        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.14.6\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
 
     - name: Setup crlf
       if: runner.os == 'Windows'
@@ -244,7 +244,7 @@ jobs:
         git config --global core.autocrlf false
 
     - name: Checkout LLVM
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         persist-credentials: false
         ref: ${{ needs.prepare.outputs.ref }}
@@ -289,25 +289,39 @@ jobs:
       id: build-windows
       if: runner.os == 'Windows'
       env:
+        INPUTS_RUNS_ON: ${{ inputs.runs-on }}
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
         .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout
-        $installer = (Get-ChildItem -Recurse -Filter "*.exe" | Select-Object -First 1).fullName
+        if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
+          $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
+          mv $zstd $env:GITHUB_WORKSPACE
+        }
+        $installer = (Get-ChildItem -Recurse -Filter "LLVM-*.msi" | Select-Object -First 1).fullName
         $tarball = (Get-ChildItem -Recurse -Filter "*.tar.xz" | Select-Object -First 1).fullName
         # Move installer to top-level directory so it is easier to upload.
         mv $installer $env:GITHUB_WORKSPACE
         mv $tarball $env:GITHUB_WORKSPACE
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
+    
+    - name: Dump Wix logs
+      if: runner.os == 'Windows'
+      env:
+        LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
+        BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}
+      run: |
+        cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)/_CPack_Packages/win64/WIX/wix.log
 
     - name: Create zstd compressed tarball
       shell: bash
       env:
         RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
         RELEASE_BINARY_FILENAME_ZSTD: ${{ needs.prepare.outputs.release-binary-filename-zstd }}
+        ZSTD: ${{ inputs.runs-on == 'windows-11-arm' && './zstd.exe' || 'zstd' }}
       run: |
-        xz -dc "$RELEASE_BINARY_FILENAME" | zstd --ultra -22 -T0 -o "$RELEASE_BINARY_FILENAME_ZSTD"
+        xz -dc "$RELEASE_BINARY_FILENAME" | "$ZSTD" --ultra -22 -T0 -o "$RELEASE_BINARY_FILENAME_ZSTD"
 
     - name: Generate sha256 digest for binaries
       id: digest
@@ -367,11 +381,12 @@ jobs:
 
     steps:
       - name: Checkout Release Scripts
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           sparse-checkout: |
             .github/workflows/upload-release-artifact
+            .github/workflows/validate-release-version
             llvm/utils/release/github-upload-release.py
             llvm/utils/git/requirements.txt
           sparse-checkout-cone-mode: false

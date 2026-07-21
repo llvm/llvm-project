@@ -401,6 +401,7 @@ struct Part {
   std::optional<DXContainerYAML::DebugName> DebugName;
   std::optional<DXContainerYAML::CompilerVersion> CompilerVersion;
   std::optional<DXContainerYAML::SourceInfo> SourceInfo;
+  std::optional<std::vector<llvm::yaml::Hex8>> PrivateData;
 };
 
 struct Object {
@@ -508,7 +509,7 @@ template <> struct MappingTraits<DXContainerYAML::SignatureElement> {
 };
 
 template <> struct MappingTraits<DXContainerYAML::StringTableEntry> {
-  static void mapping(IO &IO, DXContainerYAML::StringTableEntry &E);
+  LLVM_ABI static void mapping(IO &IO, DXContainerYAML::StringTableEntry &E);
 };
 
 template <> struct MappingTraits<DXContainerYAML::SignatureParameter> {

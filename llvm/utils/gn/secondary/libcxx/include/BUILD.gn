@@ -77,7 +77,7 @@ if (current_toolchain == default_toolchain) {
 
   action("copy_headers") {
     script = "//llvm/utils/gn/build/sync_dir.py"
-    inputs = [
+    sources = [
       "__algorithm/adjacent_find.h",
       "__algorithm/all_of.h",
       "__algorithm/any_of.h",
@@ -401,8 +401,8 @@ if (current_toolchain == default_toolchain) {
       "__concepts/equality_comparable.h",
       "__concepts/invocable.h",
       "__concepts/movable.h",
-      "__concepts/primary_template.h",
       "__concepts/predicate.h",
+      "__concepts/primary_template.h",
       "__concepts/referenceable.h",
       "__concepts/regular.h",
       "__concepts/relation.h",
@@ -422,6 +422,7 @@ if (current_toolchain == default_toolchain) {
       "__configuration/language.h",
       "__configuration/namespace.h",
       "__configuration/platform.h",
+      "__configuration/pstl.h",
       "__configuration/utility.h",
       "__coroutine/coroutine_handle.h",
       "__coroutine/coroutine_traits.h",
@@ -1197,13 +1198,13 @@ if (current_toolchain == default_toolchain) {
       "__locale_dir/support/fuchsia.h",
       "__locale_dir/support/linux.h",
       "__locale_dir/support/llvm_libc.h",
-      "__locale_dir/support/openbsd.h",
       "__locale_dir/support/netbsd.h",
       "__locale_dir/support/newlib.h",
       "__locale_dir/support/no_locale/characters.h",
       "__locale_dir/support/no_locale/conversions.h",
       "__locale_dir/support/no_locale/formatting.h",
       "__locale_dir/support/no_locale/strtonum.h",
+      "__locale_dir/support/openbsd.h",
       "__locale_dir/support/windows.h",
       "__locale_dir/time.h",
       "__locale_dir/wbuffer_convert.h",
@@ -1268,6 +1269,7 @@ if (current_toolchain == default_toolchain) {
       "__memory/temp_value.h",
       "__memory/temporary_buffer.h",
       "__memory/uninitialized_algorithms.h",
+      "__memory/uninitialized_multidimensional_algorithms.h",
       "__memory/unique_ptr.h",
       "__memory/unique_temporary_buffer.h",
       "__memory/uses_allocator.h",
@@ -1477,7 +1479,6 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/copy_cvref.h",
       "__type_traits/datasizeof.h",
       "__type_traits/decay.h",
-      "__type_traits/dependent_type.h",
       "__type_traits/desugars_to.h",
       "__type_traits/detected_or.h",
       "__type_traits/disjunction.h",
@@ -1549,7 +1550,6 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_void.h",
       "__type_traits/is_volatile.h",
       "__type_traits/is_within_lifetime.h",
-      "__type_traits/lazy.h",
       "__type_traits/make_32_64_or_128_bit.h",
       "__type_traits/make_const_lvalue_ref.h",
       "__type_traits/make_signed.h",
@@ -1614,6 +1614,7 @@ if (current_toolchain == default_toolchain) {
       "__vector/comparison.h",
       "__vector/container_traits.h",
       "__vector/erase.h",
+      "__vector/layout.h",
       "__vector/pmr.h",
       "__vector/swap.h",
       "__vector/vector.h",
@@ -1743,6 +1744,7 @@ if (current_toolchain == default_toolchain) {
       "strstream",
       "syncstream",
       "system_error",
+      "text_encoding",
       "tgmath.h",
       "thread",
       "tuple",
@@ -1760,7 +1762,7 @@ if (current_toolchain == default_toolchain) {
       "wchar.h",
       "wctype.h",
     ]
-    response_file_contents = inputs
+    response_file_contents = sources
     outputs = [ "$target_gen_dir/copy_headers.stamp" ]
     args = [
       "--stamp",

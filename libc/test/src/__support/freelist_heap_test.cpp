@@ -1,9 +1,14 @@
-//===-- Unittests for freelist_heap ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for freelist_heap.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/span.h"
@@ -23,7 +28,7 @@ _end:
 __llvm_libc_heap_limit:
 )");
 
-using LIBC_NAMESPACE::Block;
+using LIBC_NAMESPACE::BlockRef;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
@@ -124,12 +129,12 @@ TEST_FOR_EACH_ALLOCATOR(ReturnedPointersAreAligned, 2048) {
   void *ptr1 = allocator.allocate(1);
 
   uintptr_t ptr1_start = reinterpret_cast<uintptr_t>(ptr1);
-  EXPECT_EQ(ptr1_start % Block::MIN_ALIGN, static_cast<size_t>(0));
+  EXPECT_EQ(ptr1_start % BlockRef::MIN_ALIGN, static_cast<size_t>(0));
 
   void *ptr2 = allocator.allocate(1);
   uintptr_t ptr2_start = reinterpret_cast<uintptr_t>(ptr2);
 
-  EXPECT_EQ(ptr2_start % Block::MIN_ALIGN, static_cast<size_t>(0));
+  EXPECT_EQ(ptr2_start % BlockRef::MIN_ALIGN, static_cast<size_t>(0));
 }
 
 TEST_FOR_EACH_ALLOCATOR(CanRealloc, 2048) {
@@ -340,4 +345,24 @@ TEST_FOR_EACH_ALLOCATOR(InvalidAlignedAllocAlignment, 2048) {
   // Don't accept zero alignment.
   ptr = allocator.aligned_allocate(0, 8);
   EXPECT_EQ(ptr, static_cast<void *>(nullptr));
+}
+
+TEST_FOR_EACH_ALLOCATOR(AllocationSize, 2048) {
+  constexpr size_t ALLOC_SIZE = 256;
+
+  // 1. Null pointer returns 0.
+  EXPECT_EQ(allocator.allocation_size(nullptr), size_t(0));
+
+  // 2. Invalid pointer (outside heap) returns 0.
+  int dummy = 0;
+  EXPECT_EQ(allocator.allocation_size(&dummy), size_t(0));
+
+  // 3. Valid pointer returns >= allocation size.
+  void *ptr = allocator.allocate(ALLOC_SIZE);
+  ASSERT_NE(ptr, static_cast<void *>(nullptr));
+  EXPECT_GE(allocator.allocation_size(ptr), ALLOC_SIZE);
+
+  // 4. Freed pointer returns 0.
+  allocator.free(ptr);
+  EXPECT_EQ(allocator.allocation_size(ptr), size_t(0));
 }

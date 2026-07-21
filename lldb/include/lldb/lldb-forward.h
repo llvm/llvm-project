@@ -44,6 +44,7 @@ class BreakpointSite;
 class BroadcastEventSpec;
 class Broadcaster;
 class BroadcasterManager;
+class BugReporter;
 class CXXSyntheticChildren;
 struct CacheSignature;
 class CallFrameInfo;
@@ -79,6 +80,7 @@ class Disassembler;
 class DumpValueObjectOptions;
 class DynamicCheckerFunctions;
 class DynamicLoader;
+class DynamicRegisterInfo;
 class Editline;
 class EmulateInstruction;
 class Environment;
@@ -194,9 +196,9 @@ class ScriptedBreakpointInterface;
 class ScriptedHookInterface;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
-class ScriptedStopHookInterface;
 class ScriptedThreadInterface;
 class ScriptedThreadPlanInterface;
+class ScriptedStackFrameRecognizerInterface;
 class ScriptedSyntheticChildren;
 class SearchFilter;
 class Section;
@@ -350,6 +352,8 @@ typedef std::shared_ptr<lldb_private::Disassembler> DisassemblerSP;
 typedef std::unique_ptr<lldb_private::DynamicCheckerFunctions>
     DynamicCheckerFunctionsUP;
 typedef std::unique_ptr<lldb_private::DynamicLoader> DynamicLoaderUP;
+typedef std::shared_ptr<lldb_private::DynamicRegisterInfo>
+    DynamicRegisterInfoSP;
 typedef std::shared_ptr<lldb_private::Event> EventSP;
 typedef std::shared_ptr<lldb_private::EventData> EventDataSP;
 typedef std::shared_ptr<lldb_private::EventDataStructuredData>
@@ -424,8 +428,6 @@ typedef std::unique_ptr<lldb_private::ScriptedPlatformInterface>
     ScriptedPlatformInterfaceUP;
 typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
-typedef std::shared_ptr<lldb_private::ScriptedStopHookInterface>
-    ScriptedStopHookInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedHookInterface>
     ScriptedHookInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
@@ -434,6 +436,8 @@ typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>
     ScriptedThreadPlanInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedBreakpointInterface>
     ScriptedBreakpointInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedStackFrameRecognizerInterface>
+    ScriptedStackFrameRecognizerInterfaceSP;
 typedef std::shared_ptr<lldb_private::Section> SectionSP;
 typedef std::unique_ptr<lldb_private::SectionList> SectionListUP;
 typedef std::weak_ptr<lldb_private::Section> SectionWP;

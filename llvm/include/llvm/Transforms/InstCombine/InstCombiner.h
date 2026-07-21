@@ -49,7 +49,8 @@ class TargetTransformInfo;
 class LLVM_LIBRARY_VISIBILITY InstCombiner {
   /// IRBuilder inserter that adds new instructions to the worklist and new
   /// assumptions to the AssumptionCache.
-  class IRBuilderInstCombineInserter final : public IRBuilderDefaultInserter {
+  class LLVM_ABI IRBuilderInstCombineInserter final
+      : public IRBuilderDefaultInserter {
     InstCombiner &IC;
 
   public:

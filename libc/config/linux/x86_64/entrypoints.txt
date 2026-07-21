@@ -4,6 +4,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.arpa.inet.htons
     libc.src.arpa.inet.inet_addr
     libc.src.arpa.inet.inet_aton
+    libc.src.arpa.inet.inet_ntoa
+    libc.src.arpa.inet.inet_ntop
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
@@ -32,6 +34,16 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.dlfcn.dlopen
     libc.src.dlfcn.dlsym
 
+    # err.h entrypoints
+    libc.src.err.err
+    libc.src.err.verr
+    libc.src.err.errx
+    libc.src.err.verrx
+    libc.src.err.warn
+    libc.src.err.vwarn
+    libc.src.err.warnx
+    libc.src.err.vwarnx
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -40,6 +52,14 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.fcntl.openat
+
+    # net/if.h entrypoints
+    libc.src.net.if_indextoname
+    libc.src.net.if_nametoindex
+
+    # netinet/in.h entrypoints
+    libc.src.netinet.in6addr_any
+    libc.src.netinet.in6addr_loopback
 
     # poll.h entrypoints
     libc.src.poll.poll
@@ -120,6 +140,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoumax
     libc.src.inttypes.wcstoimax
     libc.src.inttypes.wcstoumax
+
+    # libgen.h entrypoints
+    libc.src.libgen.basename
+    libc.src.libgen.dirname
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
@@ -208,6 +232,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.memalignment
+    libc.src.stdlib.mkstemp
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -324,10 +349,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.sendto
     libc.src.sys.socket.setsockopt
     libc.src.sys.socket.shutdown
+    libc.src.sys.socket.sockatmark
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     # TODO: These functions are not compatible with 64-bit musl. They need to
     # be excluded if overlaying musl.
+    libc.src.sys.socket.recvmmsg
     libc.src.sys.socket.recvmsg
     libc.src.sys.socket.sendmmsg
     libc.src.sys.socket.sendmsg
@@ -493,6 +520,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.setitimer
     libc.src.sys.time.getitimer
+    libc.src.sys.time.gettimeofday
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -504,6 +532,10 @@ endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.cabs
+    libc.src.complex.cabsf
+    libc.src.complex.carg
+    libc.src.complex.cargf
     libc.src.complex.creal
     libc.src.complex.crealf
     libc.src.complex.creall
@@ -566,11 +598,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosf
     libc.src.math.coshf
     libc.src.math.cospif
+    libc.src.math.daddl
+    libc.src.math.ddivl
     libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
-    libc.src.math.daddl
-    libc.src.math.ddivl
     libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
@@ -800,6 +832,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.atanhf16
     libc.src.math.atanpif16
     libc.src.math.canonicalizef16
+    libc.src.math.cbrtf16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.cosf16
@@ -856,6 +889,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
+    libc.src.math.lgammaf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
@@ -962,6 +996,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
     libc.src.math.iscanonicalf128
+    libc.src.math.isnanf128
     libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
@@ -997,6 +1032,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.acosbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -1016,6 +1052,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16
@@ -1063,6 +1100,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.sqrtbf16
+  libc.src.math.tanbf16
   libc.src.math.truncbf16
   libc.src.math.totalorderbf16
   libc.src.math.totalordermagbf16
@@ -1157,6 +1195,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
     libc.src.stdfix.rdivi
+    libc.src.stdfix.divir
+    libc.src.stdfix.divilr
+    libc.src.stdfix.divik
+    libc.src.stdfix.divilk
+    libc.src.stdfix.diviur
+    libc.src.stdfix.diviulr
+    libc.src.stdfix.diviuk
+    libc.src.stdfix.diviulk
   )
 endif()
 
@@ -1206,6 +1252,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
+    libc.src.dirent.fdopendir
 
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork
@@ -1287,10 +1334,17 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.__sched_andcpuset
+    libc.src.sched.__sched_clrcpuset
+    libc.src.sched.__sched_cpualloc
+    libc.src.sched.__sched_cpuequal
+    libc.src.sched.__sched_cpufree
     libc.src.sched.__sched_getcpucount
-    libc.src.sched.__sched_setcpuzero
-    libc.src.sched.__sched_setcpuset
     libc.src.sched.__sched_getcpuisset
+    libc.src.sched.__sched_orcpuset
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_setcpuzero
+    libc.src.sched.__sched_xorcpuset
 
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
@@ -1354,6 +1408,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.setenv
+    libc.src.stdlib.unsetenv
     libc.src.stdlib.mbstowcs
     libc.src.stdlib.mbtowc
     libc.src.stdlib.mblen
@@ -1433,7 +1488,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime
-    libc.src.time.gettimeofday
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.localtime
@@ -1501,6 +1555,10 @@ if(LLVM_LIBC_FULL_BUILD)
 endif()
 
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    libc.src.stdlib.realpath
+  )
+
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # regex.h entrypoints
@@ -1522,7 +1580,37 @@ set(TARGET_LIBMVEC_ENTRYPOINTS)
 
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
 list(APPEND TARGET_LIBMVEC_ENTRYPOINTS
+    libc.src.mathvec.acosf
+    libc.src.mathvec.acoshf
+    libc.src.mathvec.acospif
+    libc.src.mathvec.asinf
+    libc.src.mathvec.asinhf
+    libc.src.mathvec.asinpif
+    libc.src.mathvec.atanf
+    libc.src.mathvec.atanhf
+    libc.src.mathvec.cbrtf
+    libc.src.mathvec.cosf
+    libc.src.mathvec.coshf
+    libc.src.mathvec.cospif
+    libc.src.mathvec.erff
+    libc.src.mathvec.exp2f
+    libc.src.mathvec.exp2m1f
+    libc.src.mathvec.exp10f
+    libc.src.mathvec.exp10m1f
     libc.src.mathvec.expf
+    libc.src.mathvec.expm1f
+    libc.src.mathvec.log10f
+    libc.src.mathvec.log1pf
+    libc.src.mathvec.log2f
+    libc.src.mathvec.logf
+    libc.src.mathvec.rsqrtf
+    libc.src.mathvec.sinf
+    libc.src.mathvec.sinhf
+    libc.src.mathvec.sinpif
+    libc.src.mathvec.sqrtf
+    libc.src.mathvec.tanf
+    libc.src.mathvec.tanhf
+    libc.src.mathvec.tanpif
   )
 endif()
 

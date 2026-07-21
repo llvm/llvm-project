@@ -112,7 +112,7 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
   if (IsSPMD) {
     initializeRuntime(/*IsSPMD=*/true, KernelEnvironment,
                       KernelLaunchEnvironment);
-    synchronize::threadsAligned(atomic::relaxed);
+    synchronize::threadsAligned(atomic::acq_rel);
   } else {
     initializeRuntime(/*IsSPMD=*/false, KernelEnvironment,
                       KernelLaunchEnvironment);

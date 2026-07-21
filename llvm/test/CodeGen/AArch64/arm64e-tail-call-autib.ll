@@ -13,7 +13,6 @@ define swifttailcc void @test_async_tail_call(ptr swiftasync %ctx) "ptrauth-retu
 ; CHECK-LABEL: test_async_tail_call:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    pacibsp
-; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    orr x29, x29, #0x1000000000000000
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
@@ -39,8 +38,8 @@ define swifttailcc void @test_async_tail_call(ptr swiftasync %ctx) "ptrauth-retu
 ; CHECK-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-NEXT:    and x29, x29, #0xefffffffffffffff
 ; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    mov x17, x30
 ; CHECK-NEXT:    add x16, sp, #16
+; CHECK-NEXT:    mov x17, x30
 ; CHECK-NEXT:    autib1716
 ; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    eor x16, x30, x30, lsl #1
@@ -57,7 +56,6 @@ define swifttailcc void @test_no_fpdiff_tail_call(ptr swiftasync %ctx) "ptrauth-
 ; CHECK-LABEL: test_no_fpdiff_tail_call:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    pacibsp
-; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    orr x29, x29, #0x1000000000000000
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill

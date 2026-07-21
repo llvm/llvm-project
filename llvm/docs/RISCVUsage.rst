@@ -586,7 +586,11 @@ The current vendor extensions supported are:
 
 ``XSMTVDot``
   SpacemiT defines `Integrated Matrix Extension (IME) specification <https://github.com/spacemit-com/riscv-ime-extension-spec/releases/tag/v1.0>`__.
-  LLVM implement the hardware-adapted subset for SpacemiT X60, defined in the `feature document <https://developer.spacemit.com/documentation?token=BWbGwbx7liGW21kq9lucSA6Vnpb#2.1>`__ by SpacemiT. All instructions are prefixed with `smt.` as described in the implementation guide. Note that this implemented subset is `version 1.0.0 of the SpacemiT Vector Dot Product Extension specification`, which is strictly a subset of the full IME specification to reflect the capabilities of SpacemiT X60 hardware correctly.
+  LLVM implements the hardware-adapted subset for SpacemiT X60, defined in the `feature document <https://developer.spacemit.com/documentation?token=BWbGwbx7liGW21kq9lucSA6Vnpb#2.1>`__ by SpacemiT. All instructions are prefixed with `smt.` as described in the implementation guide. Note that this implemented subset is `version 1.0.0 of the SpacemiT Vector Dot Product Extension specification`, which is strictly a subset of the full IME specification to reflect the capabilities of SpacemiT X60 hardware correctly.
+
+``XSMTVDotII``
+  SpacemiT defines the `Integrated Matrix Extension (IME) specification <https://github.com/spacemit-com/docs-ai/blob/main/en/architecture/ime_extension.md>`__
+  LLVM implements the hardware-adapted subset for SpacemiT A100
 
 Experimental C Intrinsics
 =========================
@@ -627,7 +631,7 @@ To use this functionality, you need to be doing all of the following:
 
 LLD will relax (rewrite) any code sequences that materialize an address within 2048 bytes of ``__global_pointer$`` (which will be defined if it is used and does not already exist) to instead generate the address using ``gp`` and the correct (signed) 12-bit immediate. This usually saves at least one instruction compared to materialising a full 32-bit address value.
 
-There can only be one ``gp`` value in a process (as ``gp`` is not changed when calling into a function in a shared library), so the symbol is is only defined and this relaxation is only done for executables, and not for shared libraries. The linker expects executable startup code to put the value of ``__global_pointer$`` (from the executable) into ``gp`` before any user code is run.
+There can only be one ``gp`` value in a process (as ``gp`` is not changed when calling into a function in a shared library), so the symbol is only defined and this relaxation is only done for executables, and not for shared libraries. The linker expects executable startup code to put the value of ``__global_pointer$`` (from the executable) into ``gp`` before any user code is run.
 
 Arguably, the most efficient use for this addressing mode is for smaller global variables, as larger global variables likely need many more loads or stores when they are being accessed anyway, so the cost of materializing the upper bits can be shared.
 
@@ -659,16 +663,29 @@ Sanitizers
 
   MSan intrinsics support is only required if code (including dependencies) manually calls the intrinsic.
 
+Scheduling Model and Tuning
+===========================
+
+RISC-V is highly configurable, meaning its scheduling models could be highly diversified as well. Yet we still believe it is helpful to provide a "generic" tuning processor / scheduling model that represents the "lowest common denominator" RISC-V implementation at the time. The idea is that it could serve as a "good-enough" baseline model for performance tuning purposes on some of the most common use cases.
+
+Though details of this generic scheduling model might evolve over time, we always have some _expectations_ on the kind of processors it is used for.
+
+For example, the ``generic`` tuning processor is expected to target in-order, superscalar application processors designed for general-purpose computing. It is usually RVA22U64- or RVA23U64-capable intended to run Linux. The ``generic-ooo`` has a similar set of expectations, except it is targeting out-of-order application processors.
+
+Right now, we simply assign a scheduling model that is widely used by the community to ``generic``. But in the future, we can create a standalone scheduling model for ``generic``, or even create a generic model for each of the individual sectors. For example, a ``generic-embedded`` for embedded processors and a ``generic-server`` for server workloads.
+
+These future generic models could even serve as the "base" model for other scheduling models to derive from: it's not uncommon for multiple processors to share a similar set of instruction scheduling info except a few key instructions, and this is especially true for RISC-V given its highly configurable nature. If we could design the base model in a way that it can be _parameterized_ by subtarget tuning features, we can substitue the traditional way of creating individual scheduling models with a combination of base scheduling model + different subtarget features.
+
 Processor-Specific Tuning Feature String
 ========================================
 Due to RISC-V's highly configurable nature, it is often desirable to share a single scheduling model across multiple similar RISC-V processors that only differ in a small number of (uArch) tuning features. An example of such tuning feature could be whether the latency of vector operations depend on VL or not. This could be extended to tuning features that are not directly connected to scheduling model but other parts of the RISC-V backend, like the cost of ``vrgather.vv`` instruction.
 
-To that end, RISC-V LLVM supports a tuning feature string format that helps users to build a performance model by "configuring" an existing tune CPU, along with its scheduling model. For example, this string
+To that end, RISC-V LLVM supports a tuning feature string format, through frontend flags like ``-mtune`` in Clang, to help users building a performance model by "configuring" an existing tune CPU, along with its scheduling model. For example, this flag
 
 ::
-    "sifive-x280:single-element-vec-fp64"
+    -mtune=sifive-x280:single-element-vec-fp64
 
-takes ``sifive-x280`` as the "base" tune CPU and configured it with ``single-element-vec-fp64``. This gives us a performance model that looks exactly like that of ``sifive-x280``, except some of the 64-bit vector floating point instructions now produce only a single element per cycle due to ``single-element-vec-fp64``. This string could eventually be used in places like ``-mtune`` at the frontend.
+takes ``sifive-x280`` as the "base" tune CPU and configured it with ``single-element-vec-fp64``. This gives us a performance model that looks exactly like that of ``sifive-x280``, except some of the 64-bit vector floating point instructions now produce only a single element per cycle due to ``single-element-vec-fp64``.
 
 More formally speaking, each tuning feature string has the following format:
 

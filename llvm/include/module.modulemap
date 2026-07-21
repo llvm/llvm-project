@@ -274,6 +274,7 @@ module LLVM_IR {
   extern module LLVM_Extern_IR_Intrinsics_Enum "module.extern.modulemap"
 
   // These are intended for (repeated) textual inclusion.
+  textual header "llvm/IR/BundleAttributes.def"
   textual header "llvm/IR/ConstrainedOps.def"
   textual header "llvm/IR/DebugInfoFlags.def"
   textual header "llvm/IR/FunctionProperties.def"
@@ -426,6 +427,7 @@ module LLVM_Utils {
     textual header "llvm/TargetParser/X86TargetParser.def"
     textual header "llvm/TargetParser/LoongArchTargetParser.def"
     textual header "llvm/TargetParser/PPCTargetParser.def"
+    textual header "llvm/TargetParser/TripleName.def"
     textual header "llvm/TargetParser/XtensaTargetParser.def"
   }
 

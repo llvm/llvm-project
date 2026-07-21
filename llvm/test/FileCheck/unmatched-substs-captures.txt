@@ -1,0 +1,123 @@
+; Check that all substitutions and attempted captures, whether for string or
+; numeric variables, are reported when an unexpected pattern (e.g., CHECK-NOT)
+; or expected pattern (e.g., CHECK) does not match the input.
+;
+; Because an unmatched pattern cannot actually capture, it might somehow seem
+; wrong to report attempted captures.  However, that report can be enlightening
+; when the match failed because the test author has forgotten that square
+; brackets are special in FileCheck patterns.  For example:
+;
+;   CHECK: [[clang::optnone]] void foo() {
+
+RUN: rm -rf %t
+RUN: split-file %s %t
+
+DEFINE: %{opts} =
+DEFINE: %{run} = \
+DEFINE:  %ProtectFileCheckOutput \
+DEFINE:  not FileCheck %{opts} %t/check.txt < %t/input.txt 2>&1 | \
+DEFINE:    FileCheck %s -match-full-lines -strict-whitespace -check-prefixes
+
+REDEFINE: %{opts} = -dump-input=never
+RUN: %{run} ERR
+
+REDEFINE: %{opts} = -dump-input=never -vv
+RUN: %{run} ERR,ERR-VV
+
+REDEFINE: %{opts} = -dump-input=always
+RUN: %{run} ERR,DMP
+
+REDEFINE: %{opts} = -dump-input=always -vv
+RUN: %{run} ERR,DMP,DMP-VV
+
+    ERR-NOT:{{.}}
+     ERR-VV:{{.*}}/check.txt:1:9: remark: CHECK: expected string found in input
+ERR-VV-NEXT: CHECK: {{.*}}
+ERR-VV-NEXT:        ^
+ERR-VV-NEXT:<stdin>:1:1: note: found here
+ERR-VV-NEXT:abc 16
+ERR-VV-NEXT:^~~~~~
+ERR-VV-NEXT:<stdin>:1:1: note: with "NUM_OLD:0x10" equal to "16"
+ERR-VV-NEXT:abc 16
+ERR-VV-NEXT:^
+ERR-VV-NEXT:<stdin>:1:1: note: captured var "STR_OLD"
+ERR-VV-NEXT:abc 16
+ERR-VV-NEXT:^~~
+ERR-VV-NEXT:<stdin>:1:5: note: captured var "NUM_OLD"
+ERR-VV-NEXT:abc 16
+ERR-VV-NEXT:    ^~
+ERR-VV-NEXT:{{.*}}/check.txt:3:9: remark: CHECK: expected string found in input
+ERR-VV-NEXT: CHECK: end
+ERR-VV-NEXT:        ^
+ERR-VV-NEXT:<stdin>:2:1: note: found here
+ERR-VV-NEXT:end
+ERR-VV-NEXT:^~~
+ERR-VV-NEXT:{{.*}}/check.txt:2:12: remark: CHECK-NOT: excluded string not found in input
+ERR-VV-NEXT:CHECK-NOT: {{.*}}
+ERR-VV-NEXT:           ^
+ERR-VV-NEXT:<stdin>:1:7: note: scanning from here
+ERR-VV-NEXT:abc 16
+ERR-VV-NEXT:      ^
+ERR-VV-NEXT:<stdin>:1:7: note: with "STR_OLD" equal to "abc"
+ERR-VV-NEXT:abc 16
+ERR-VV-NEXT:      ^
+ERR-VV-NEXT:<stdin>:1:7: note: with "NUM_OLD + 1" equal to "17"
+ERR-VV-NEXT:abc 16
+ERR-VV-NEXT:      ^
+ERR-VV-NEXT:<stdin>:1:7: note: with "NUM_NEW:456" equal to "456"
+ERR-VV-NEXT:abc 16
+ERR-VV-NEXT:      ^
+ERR-VV-NEXT:<stdin>:1:7: note: pattern attempts to capture variables: "STR_NEW", "clang", "NUM_NEW"
+ERR-VV-NEXT:abc 16
+ERR-VV-NEXT:      ^
+ ERR-VV-NOT:{{.}}
+        ERR:{{.*}}/check.txt:4:9: error: CHECK: expected string not found in input
+   ERR-NEXT: CHECK: {{.*}}
+   ERR-NEXT:        ^
+   ERR-NEXT:<stdin>:2:4: note: scanning from here
+   ERR-NEXT:end
+   ERR-NEXT:   ^
+   ERR-NEXT:<stdin>:2:4: note: with "STR_OLD" equal to "abc"
+   ERR-NEXT:end
+   ERR-NEXT:   ^
+   ERR-NEXT:<stdin>:2:4: note: with "NUM_OLD + 1" equal to "17"
+   ERR-NEXT:end
+   ERR-NEXT:   ^
+   ERR-NEXT:<stdin>:2:4: note: with "NUM_NEW:456" equal to "456"
+   ERR-NEXT:end
+   ERR-NEXT:   ^
+   ERR-NEXT:<stdin>:2:4: note: pattern attempts to capture variables: "STR_NEW", "clang", "NUM_NEW"
+   ERR-NEXT:end
+   ERR-NEXT:   ^
+    ERR-NOT:{{.*}}{{error|note|remark|<stdin>}}:
+
+        DMP:<<<<<<
+   DMP-NEXT:           1: abc 16 
+DMP-VV-NEXT:check:1'0     ^~~~~~
+DMP-VV-NEXT:check:1'1              with "NUM_OLD:0x10" equal to "16"
+DMP-VV-NEXT:check:1'2     ^~~      captured var "STR_OLD"
+DMP-VV-NEXT:check:1'3         ^~   captured var "NUM_OLD"
+DMP-VV-NEXT:not:2'0            { } search range (exclusive bounds)
+DMP-VV-NEXT:not:2'1                with "STR_OLD" equal to "abc"
+DMP-VV-NEXT:not:2'2                with "NUM_OLD + 1" equal to "17"
+DMP-VV-NEXT:not:2'3                with "NUM_NEW:456" equal to "456"
+DMP-VV-NEXT:not:2'4                pattern attempts to capture variables: "STR_NEW", "clang", "NUM_NEW"
+   DMP-NEXT:           2: end 
+DMP-VV-NEXT:check:3       ^~~
+   DMP-NEXT:check:4'0       { } search range (exclusive bounds)
+   DMP-NEXT:check:4'1           error: no match found in search range
+   DMP-NEXT:check:4'2           with "STR_OLD" equal to "abc"
+   DMP-NEXT:check:4'3           with "NUM_OLD + 1" equal to "17"
+   DMP-NEXT:check:4'4           with "NUM_NEW:456" equal to "456"
+   DMP-NEXT:check:4'5           pattern attempts to capture variables: "STR_NEW", "clang", "NUM_NEW"
+   DMP-NEXT:>>>>>>
+
+;--- check.txt
+    CHECK: [[STR_OLD:abc]] [[#NUM_OLD:0x10]]
+CHECK-NOT: [[STR_OLD]] [[STR_NEW:xyz]] [[clang::optnone]] [[#NUM_OLD + 1]] [[#NUM_NEW:456]]
+    CHECK: end
+    CHECK: [[STR_OLD]] [[STR_NEW:xyz]] [[clang::optnone]] [[#NUM_OLD + 1]] [[#NUM_NEW:456]]
+
+;--- input.txt
+abc 16
+end

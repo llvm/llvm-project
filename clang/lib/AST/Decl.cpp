@@ -51,7 +51,6 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Visibility.h"
-#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2552,13 +2551,13 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
   return dyn_cast_if_present<EvaluatedStmt *>(Init);
 }
 
-APValue *VarDecl::evaluateValue() const {
-  SmallVector<PartialDiagnosticAt, 8> Notes;
-  return evaluateValueImpl(Notes, hasConstantInitialization());
+const APValue *VarDecl::evaluateValue() const {
+  return evaluateValueImpl(/*Notes=*/nullptr, hasConstantInitialization());
 }
 
-APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                                    bool IsConstantInitialization) const {
+const APValue *
+VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                           bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
   const auto *Init = getInit();
@@ -2578,8 +2577,11 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   Eval->IsEvaluating = true;
 
   ASTContext &Ctx = getASTContext();
-  bool Result = Init->EvaluateAsInitializer(Eval->Evaluated, Ctx, this, Notes,
-                                            IsConstantInitialization);
+  Expr::EvalResult EStatus;
+  EStatus.Diag = Notes;
+  bool Result =
+      Init->EvaluateAsInitializer(Ctx, this, EStatus, IsConstantInitialization);
+  Eval->Evaluated = std::move(EStatus.Val);
 
   // In C++, or in C23 if we're initialising a 'constexpr' variable, this isn't
   // a constant initializer if we produced notes. In that case, we can't keep
@@ -2588,7 +2590,7 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   if (IsConstantInitialization &&
       (Ctx.getLangOpts().CPlusPlus ||
        (isConstexpr() && Ctx.getLangOpts().C23)) &&
-      !Notes.empty())
+      EStatus.DiagEmitted)
     Result = false;
 
   // Ensure the computed APValue is cleaned up later if evaluation succeeded,
@@ -2605,10 +2607,10 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   return Result ? &Eval->Evaluated : nullptr;
 }
 
-APValue *VarDecl::getEvaluatedValue() const {
-  if (EvaluatedStmt *Eval = getEvaluatedStmt())
-    if (Eval->WasEvaluated)
-      return &Eval->Evaluated;
+const APValue *VarDecl::getEvaluatedValue() const {
+  if (EvaluatedStmt *Eval = getEvaluatedStmt();
+      Eval && Eval->WasEvaluated && !Eval->Evaluated.isAbsent())
+    return &Eval->Evaluated;
 
   return nullptr;
 }
@@ -2657,7 +2659,7 @@ bool VarDecl::checkForConstantInitialization(
 
   // Evaluate the initializer to check whether it's a constant expression.
   Eval->HasConstantInitialization =
-      evaluateValueImpl(Notes, true) && Notes.empty();
+      evaluateValueImpl(&Notes, true) && Notes.empty();
 
   // If evaluation as a constant initializer failed, allow re-evaluation as a
   // non-constant initializer if we later find we want the value.
@@ -3114,7 +3116,7 @@ bool FunctionDecl::isVariadic() const {
 FunctionDecl::DefaultedOrDeletedFunctionInfo *
 FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
     ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
-    StringLiteral *DeletedMessage) {
+    FPOptionsOverride FPFeatures, StringLiteral *DeletedMessage) {
   static constexpr size_t Alignment =
       std::max({alignof(DefaultedOrDeletedFunctionInfo),
                 alignof(DeclAccessPair), alignof(StringLiteral *)});
@@ -3125,6 +3127,7 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
       new (Context.Allocate(Size, Alignment)) DefaultedOrDeletedFunctionInfo;
   Info->NumLookups = Lookups.size();
   Info->HasDeletedMessage = DeletedMessage != nullptr;
+  Info->FPFeatures = FPFeatures;
 
   llvm::uninitialized_copy(Lookups, Info->getTrailingObjects<DeclAccessPair>());
   if (DeletedMessage)
@@ -3150,7 +3153,7 @@ void FunctionDecl::setDeletedAsWritten(bool D, StringLiteral *Message) {
       DefaultedOrDeletedInfo->setDeletedMessage(Message);
     else
       setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo::Create(
-          getASTContext(), /*Lookups=*/{}, Message));
+          getASTContext(), /*Lookups=*/{}, FPOptionsOverride(), Message));
   }
 }
 
@@ -4205,7 +4208,6 @@ bool FunctionDecl::isImplicitlyInstantiable() const {
   case TSK_ExplicitSpecialization:
     return false;
 
-  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     return true;
 
@@ -4326,21 +4328,12 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
   return nullptr;
 }
 
-const TemplateParameterList *
-FunctionDecl::getTemplateSpecializationParameters() const {
-  if (const auto *Info = getTemplateSpecializationInfo())
-    return Info->TemplateParameters;
-  if (const auto *Info = getDependentSpecializationInfo())
-    return Info->TemplateParameters;
-  return nullptr;
-}
-
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
     TemplateArgumentList *TemplateArgs, void *InsertPos,
-    TemplateSpecializationKind TSK, const TemplateParameterList *TemplateParams,
+    TemplateSpecializationKind TSK,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
-    SourceLocation PointOfInstantiation, bool AddSpecialization) {
+    SourceLocation PointOfInstantiation) {
   assert((TemplateOrSpecialization.isNull() ||
           isa<MemberSpecializationInfo *>(TemplateOrSpecialization)) &&
          "Member function is already a specialization");
@@ -4352,23 +4345,21 @@ void FunctionDecl::setFunctionTemplateSpecialization(
          "Member specialization must be an explicit specialization");
   FunctionTemplateSpecializationInfo *Info =
       FunctionTemplateSpecializationInfo::Create(
-          C, this, Template, TSK, TemplateArgs, TemplateParams,
-          TemplateArgsAsWritten, PointOfInstantiation,
+          C, this, Template, TSK, TemplateArgs, TemplateArgsAsWritten,
+          PointOfInstantiation,
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
-  if (AddSpecialization)
-    Template->addSpecialization(Info, InsertPos);
+  Template->addSpecialization(Info, InsertPos);
 }
 
 void FunctionDecl::setDependentTemplateSpecialization(
     ASTContext &Context, const UnresolvedSetImpl &Templates,
-    const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TemplateArgs) {
   assert(TemplateOrSpecialization.isNull());
   DependentFunctionTemplateSpecializationInfo *Info =
-      DependentFunctionTemplateSpecializationInfo::Create(
-          Context, Templates, TemplateParams, TemplateArgs);
+      DependentFunctionTemplateSpecializationInfo::Create(Context, Templates,
+                                                          TemplateArgs);
   TemplateOrSpecialization = Info;
 }
 
@@ -4381,22 +4372,19 @@ FunctionDecl::getDependentSpecializationInfo() const {
 DependentFunctionTemplateSpecializationInfo *
 DependentFunctionTemplateSpecializationInfo::Create(
     ASTContext &Context, const UnresolvedSetImpl &Candidates,
-    const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TArgs) {
   const auto *TArgsWritten =
       TArgs ? ASTTemplateArgumentListInfo::Create(Context, *TArgs) : nullptr;
   return new (Context.Allocate(
       totalSizeToAlloc<FunctionTemplateDecl *>(Candidates.size())))
-      DependentFunctionTemplateSpecializationInfo(Candidates, TemplateParams,
-                                                  TArgsWritten);
+      DependentFunctionTemplateSpecializationInfo(Candidates, TArgsWritten);
 }
 
 DependentFunctionTemplateSpecializationInfo::
     DependentFunctionTemplateSpecializationInfo(
         const UnresolvedSetImpl &Candidates,
-        const TemplateParameterList *TemplateParams,
         const ASTTemplateArgumentListInfo *TemplateArgsWritten)
-    : NumCandidates(Candidates.size()), TemplateParameters(TemplateParams),
+    : NumCandidates(Candidates.size()),
       TemplateArgumentsAsWritten(TemplateArgsWritten) {
   std::transform(Candidates.begin(), Candidates.end(), getTrailingObjects(),
                  [](NamedDecl *ND) {
@@ -4554,17 +4542,6 @@ bool FunctionDecl::isOutOfLine() const {
   }
 
   return false;
-}
-
-SourceLocation FunctionDecl::getFunctionLocStart() const {
-  if (const TemplateParameterList *TemplateParams =
-          getTemplateSpecializationParameters()) {
-    const ASTContext &Ctx = getASTContext();
-    return Lexer::findNextToken(TemplateParams->getSourceRange().getEnd(),
-                                Ctx.getSourceManager(), Ctx.getLangOpts())
-        ->getLocation();
-  }
-  return getInnerLocStart();
 }
 
 SourceRange FunctionDecl::getSourceRange() const {

@@ -40,7 +40,7 @@ public:
     deque() noexcept(is_nothrow_default_constructible<allocator_type>::value);
     explicit deque(const allocator_type& a);
     explicit deque(size_type n);
-    explicit deque(size_type n, const allocator_type& a); // C++14
+    explicit deque(size_type n, const allocator_type& a);
     deque(size_type n, const value_type& v);
     deque(size_type n, const value_type& v, const allocator_type& a);
     template <class InputIterator>
@@ -263,10 +263,17 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#  ifndef _LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE
 template <class _ValueType, class _DiffType>
 struct __deque_block_size {
   static const _DiffType value = sizeof(_ValueType) < 256 ? 4096 / sizeof(_ValueType) : 16;
 };
+#  else
+template <class _ValueType, class _DiffType>
+struct __deque_block_size {
+  static const _DiffType value = sizeof(_ValueType) < 128 ? 512 / sizeof(_ValueType) : 4;
+};
+#  endif
 
 template <class _ValueType,
           class _Pointer,
@@ -637,9 +644,7 @@ public:
   }
 
   explicit _LIBCPP_HIDE_FROM_ABI deque(size_type __n);
-#  if _LIBCPP_STD_VER >= 14
   explicit _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const _Allocator& __a);
-#  endif
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v);
 
   template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
@@ -1316,7 +1321,6 @@ deque<_Tp, _Allocator>::deque(size_type __n) : __start_(0), __size_(0) {
     __append(__n);
 }
 
-#  if _LIBCPP_STD_VER >= 14
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n, const _Allocator& __a)
     : __map_(__pointer_allocator(__a)), __start_(0), __size_(0), __alloc_(__a) {
@@ -1324,7 +1328,6 @@ deque<_Tp, _Allocator>::deque(size_type __n, const _Allocator& __a)
   if (__n > 0)
     __append(__n);
 }
-#  endif
 
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n, const value_type& __v) : __start_(0), __size_(0) {

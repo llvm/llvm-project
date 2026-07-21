@@ -47,7 +47,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -79,12 +79,12 @@ jobs:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Setup Python env
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           cache: 'pip'
           cache-dependency-path: './llvm/docs/requirements.txt'
@@ -93,21 +93,27 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-              doxygen \
               graphviz \
               python3-github \
               ninja-build \
               texlive-font-utils
           pip3 install --require-hashes --user -r ./llvm/docs/requirements.txt
 
+      - name: Install Doxygen
+        run: |
+          curl -L https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.linux.bin.tar.gz -o doxygen.tar.gz
+          echo "75419ef4f446fc1c24ef12514b574e66e898ee6f527c6ae2ad84f91a905823c2  doxygen.tar.gz" | shasum --check -
+          tar -xf doxygen.tar.gz
+          sudo install -m 755 doxygen-1.17.0/bin/doxygen /usr/local/bin/doxygen
+
       - name: Build Doxygen
         env:
           RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ./llvm/utils/release/build-docs.sh -release "$RELEASE_VERSION" -no-sphinx
+          ./llvm/utils/release/build-docs.sh -release "$RELEASE_VERSION" -no-sphinx -no-man-pages
 
       - id: app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
         with:
           app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
           private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}

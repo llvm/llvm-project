@@ -108,11 +108,16 @@ namespace llvm {
   ///  - guarded-control-stack
   ///  - sign-return-address
   ///  - sign-return-address-with-bkey
-  void copyModuleAttrToFunctions(Module &M);
+  LLVM_ABI void copyModuleAttrToFunctions(Module &M);
 
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {
-    return Name.starts_with("llvm.vectorizer.");
+    // "llvm.loop.distribute.enable" is intentionally included: the current
+    // single-operand form shares the tag with the removed two-operand form
+    // (!{!"llvm.loop.distribute.enable", i1 X}), so we can only decide by
+    // inspecting the operands, which happens in upgradeLoopArgument().
+    return Name.starts_with("llvm.vectorizer.") ||
+           Name == "llvm.loop.distribute.enable";
   }
 
   /// Upgrade the loop attachment metadata node.

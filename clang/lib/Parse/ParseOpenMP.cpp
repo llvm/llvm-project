@@ -1283,8 +1283,7 @@ void Parser::parseOMPContextSelectorSet(
     Diag(Tok.getLocation(), diag::warn_omp_declare_variant_expected)
         << "="
         << ("context set name \"" + getOpenMPContextTraitSetName(TISet.Kind) +
-            "\"")
-               .str();
+            "\"");
 
   // Parse '{'.
   if (Tok.is(tok::l_brace)) {
@@ -3690,6 +3689,61 @@ bool Parser::ParseOpenMPIndirectClause(
   return false;
 }
 
+ExprResult Parser::ParseOMPInteropFrSelector() {
+  ConsumeToken(); // 'fr'
+  BalancedDelimiterTracker FT(*this, tok::l_paren,
+                              tok::annot_pragma_openmp_end);
+  if (FT.expectAndConsume(diag::err_expected_lparen_after, "fr")) {
+    SkipUntil(
+        {tok::comma, tok::r_brace, tok::r_paren, tok::annot_pragma_openmp_end},
+        StopBeforeMatch);
+    return ExprError();
+  }
+  SourceLocation Loc = Tok.getLocation();
+  ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
+  ExprResult Arg = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
+  Arg = Actions.ActOnFinishFullExpr(Arg.get(), Loc, /*DiscardedValue=*/false);
+  FT.consumeClose();
+  return Arg;
+}
+
+bool Parser::ParseOMPInteropAttrSelector(SmallVectorImpl<Expr *> &Attrs) {
+  ConsumeToken(); // 'attr'
+  BalancedDelimiterTracker AT(*this, tok::l_paren,
+                              tok::annot_pragma_openmp_end);
+  if (AT.expectAndConsume(diag::err_expected_lparen_after, "attr")) {
+    SkipUntil(
+        {tok::comma, tok::r_brace, tok::r_paren, tok::annot_pragma_openmp_end},
+        StopBeforeMatch);
+    return true;
+  }
+  bool HasError = false;
+  // attr() requires at least one ext-string-literal argument; an empty list is
+  // not permitted by the prefer_type grammar.
+  if (Tok.is(tok::r_paren)) {
+    Diag(Tok, diag::err_omp_interop_attr_not_string);
+    HasError = true;
+  }
+  while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::r_brace) &&
+         Tok.isNot(tok::annot_pragma_openmp_end)) {
+    if (Tok.is(tok::string_literal)) {
+      ExprResult S = ParseStringLiteralExpression();
+      if (S.isUsable())
+        Attrs.push_back(S.get());
+      else
+        HasError = true;
+    } else {
+      HasError = true;
+      Diag(Tok, diag::err_omp_interop_attr_not_string);
+      ConsumeToken();
+    }
+    if (Tok.is(tok::comma))
+      ConsumeToken();
+  }
+  AT.consumeClose();
+  return HasError;
+}
+
 bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
                                  OpenMPClauseKind Kind) {
   const Token &Tok = getCurToken();
@@ -3699,9 +3753,8 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
 
   while (Tok.is(tok::identifier)) {
     // Currently prefer_type is only allowed with 'init' and it must be first.
-    bool PreferTypeAllowed = Kind == OMPC_init &&
-                             InteropInfo.PreferTypes.empty() && !IsTarget &&
-                             !IsTargetSync;
+    bool PreferTypeAllowed = Kind == OMPC_init && InteropInfo.Prefs.empty() &&
+                             !IsTarget && !IsTargetSync;
     if (Tok.getIdentifierInfo()->isStr("target")) {
       // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
       // Each interop-type may be specified on an action-clause at most
@@ -3723,18 +3776,91 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
       if (PT.expectAndConsume(diag::err_expected_lparen_after, "prefer_type"))
         HasError = true;
 
-      while (Tok.isNot(tok::r_paren)) {
-        SourceLocation Loc = Tok.getLocation();
-        ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
-        ExprResult PTExpr = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
-        PTExpr = Actions.ActOnFinishFullExpr(PTExpr.get(), Loc,
-                                             /*DiscardedValue=*/false);
-        if (PTExpr.isUsable()) {
-          InteropInfo.PreferTypes.push_back(PTExpr.get());
-        } else {
-          HasError = true;
-          SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+      // prefer_type requires at least one preference-specification.
+      if (Tok.is(tok::r_paren)) {
+        Diag(Tok, diag::err_omp_expected_pref_spec);
+        HasError = true;
+      }
+
+      while (Tok.isNot(tok::r_paren) &&
+             Tok.isNot(tok::annot_pragma_openmp_end)) {
+        // OMP 6.0: { fr(...), attr(...) } brace-grouped pref-spec
+        if (Tok.is(tok::l_brace)) {
+          // The brace-grouped form was introduced in OpenMP 6.0; earlier
+          // versions only allow the flat foreign-runtime-id list.
+          if (getLangOpts().OpenMP < 60) {
+            Diag(Tok, diag::err_omp_prefer_type_brace_60);
+            HasError = true;
+          }
+          BalancedDelimiterTracker BT(*this, tok::l_brace,
+                                      tok::annot_pragma_openmp_end);
+          BT.consumeOpen();
+          Expr *FrExpr = nullptr;
+          SmallVector<Expr *, 2> AttrExprs;
+          bool SeenFr = false;
+
+          // A pref-spec requires at least one 'fr'/'attr' selector; {} is not
+          // permitted by the grammar.
+          if (Tok.is(tok::r_brace)) {
+            Diag(Tok, diag::err_omp_expected_fr_or_attr_selector);
+            HasError = true;
+          }
+
+          while (Tok.isNot(tok::r_brace) &&
+                 Tok.isNot(tok::annot_pragma_openmp_end)) {
+            if (Tok.is(tok::identifier) &&
+                Tok.getIdentifierInfo()->isStr("fr")) {
+              if (SeenFr) {
+                Diag(Tok, diag::err_omp_interop_multiple_fr);
+                HasError = true;
+                ConsumeToken(); // 'fr'
+                SkipUntil(
+                    {tok::comma, tok::r_brace, tok::annot_pragma_openmp_end},
                     StopBeforeMatch);
+                continue;
+              }
+              SeenFr = true;
+              ExprResult Fr = ParseOMPInteropFrSelector();
+              if (Fr.isUsable())
+                FrExpr = Fr.get();
+              else
+                HasError = true;
+            } else if (Tok.is(tok::identifier) &&
+                       Tok.getIdentifierInfo()->isStr("attr")) {
+              if (ParseOMPInteropAttrSelector(AttrExprs))
+                HasError = true;
+            } else {
+              // Neither 'fr' nor 'attr' (a non-identifier or some other word).
+              HasError = true;
+              Diag(Tok, diag::err_omp_expected_fr_or_attr_selector);
+              ConsumeToken();
+            }
+            if (Tok.is(tok::comma))
+              ConsumeToken();
+          }
+          if (BT.consumeClose())
+            HasError = true;
+
+          if (FrExpr || !AttrExprs.empty())
+            InteropInfo.Prefs.emplace_back(FrExpr, AttrExprs);
+          InteropInfo.HasPreferAttrs = true;
+        } else {
+          // OMP 5.1: flat foreign-runtime-id (string or int). Stored as a
+          // pref-spec with Fr=expr and no attr() entries.
+          SourceLocation Loc = Tok.getLocation();
+          ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
+          ExprResult PTExpr =
+              ParseRHSOfBinaryExpression(LHS, prec::Conditional);
+          PTExpr = Actions.ActOnFinishFullExpr(PTExpr.get(), Loc,
+                                               /*DiscardedValue=*/false);
+          if (PTExpr.isUsable()) {
+            InteropInfo.Prefs.emplace_back(PTExpr.get(),
+                                           llvm::SmallVector<Expr *, 2>{});
+          } else {
+            HasError = true;
+            SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                      StopBeforeMatch);
+          }
         }
 
         if (Tok.is(tok::comma))
@@ -5163,62 +5289,77 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
           Diag(Tok, diag::err_modifier_expected_colon) << "fallback";
       }
     }
-  } // Handle num_teams clause with optional lower-bound:upper-bound syntax
-  if (Kind == OMPC_num_teams && !Tok.is(tok::r_paren) &&
-      !Tok.is(tok::annot_pragma_openmp_end)) {
-    ExprResult FirstExpr = ParseAssignmentExpression();
-    if (FirstExpr.isInvalid()) {
-      SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
-      Data.RLoc = Tok.getLocation();
-      if (!T.consumeClose())
-        Data.RLoc = T.getCloseLocation();
-      return true;
-    }
+  } else if (Kind == OMPC_num_teams || Kind == OMPC_thread_limit) {
+    int Mod = 0;
+    // Handle optional dims and lower-bound modifiers for num_teams clause, and
+    // the optional dims modifier for thread_limit clause.
+    Data.ExtraModifierArray[0] = Data.ExtraModifierArray[1] =
+        Kind == OMPC_num_teams ? static_cast<int>(OMPC_NUMTEAMS_unknown)
+                               : static_cast<int>(OMPC_THREADLIMIT_unknown);
 
-    if (Tok.is(tok::colon)) {
-      // Lower-bound:upper-bound syntax
+    // Lower-bound modifier is only accepted in num_teams.
+    bool CanParseLowerBoundModifier = (Kind == OMPC_num_teams);
+    if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()->isStr("dims") &&
+        NextToken().is(tok::l_paren)) {
+      SourceLocation TLoc = Tok.getLocation();
       ConsumeToken();
-      ExprResult UpperBound = ParseAssignmentExpression();
-      if (UpperBound.isInvalid()) {
+      SourceLocation RLoc;
+      ExprResult ExprR = ParseOpenMPParensExpr(getOpenMPClauseName(Kind), RLoc);
+      if (ExprR.isUsable()) {
+        Data.ExtraModifierArray[Mod] =
+            Kind == OMPC_num_teams ? static_cast<int>(OMPC_NUMTEAMS_dims)
+                                   : static_cast<int>(OMPC_THREADLIMIT_dims);
+        Data.ExtraModifierExprArray[Mod] = ExprR.get();
+        Data.ExtraModifierLocArray[Mod] = TLoc;
+        ++Mod;
+      }
+
+      if (Tok.is(tok::colon)) {
+        // A colon was found, no more modifiers are expected.
+        ConsumeToken();
+        CanParseLowerBoundModifier = false;
+      } else if (CanParseLowerBoundModifier && Tok.is(tok::comma)) {
+        // num_teams(dims(N), lower : upper) is invalid. Only lower:upper may
+        // follow dims via comma, but sema will reject the combination.
+        ConsumeToken();
+      } else {
+        Diag(Tok, diag::err_modifier_expected_colon)
+            << getOpenMPClauseName(Kind);
         SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
         Data.RLoc = Tok.getLocation();
         if (!T.consumeClose())
           Data.RLoc = T.getCloseLocation();
         return true;
       }
-      Vars.push_back(FirstExpr.get());  // lower-bound
-      Vars.push_back(UpperBound.get()); // upper-bound
-      Data.RLoc = Tok.getLocation();
-      if (!T.consumeClose())
-        Data.RLoc = T.getCloseLocation();
-      return false; // Success
-    }
-    if (Tok.is(tok::comma)) {
-      Vars.push_back(FirstExpr.get());
-      while (Tok.is(tok::comma)) {
-        ConsumeToken();
-        ExprResult NextExpr = ParseAssignmentExpression();
-        if (NextExpr.isUsable()) {
-          Vars.push_back(NextExpr.get());
-        } else {
-          SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
-                    StopBeforeMatch);
-          break;
-        }
-      }
-      Data.RLoc = Tok.getLocation();
-      bool HadError = T.consumeClose();
-      if (!HadError)
-        Data.RLoc = T.getCloseLocation();
-      return HadError;
     }
 
-    // Single value - parse closing paren
-    Vars.push_back(FirstExpr.get());
-    Data.RLoc = Tok.getLocation();
-    if (!T.consumeClose())
-      Data.RLoc = T.getCloseLocation();
-    return false; // Success
+    // The lower bound modifier must appear as the last modifier.
+    if (CanParseLowerBoundModifier) {
+      TentativeParsingAction TPA(*this);
+      SourceLocation TLoc = Tok.getLocation();
+      ExprResult FirstExpr = ParseAssignmentExpression();
+      if (FirstExpr.isInvalid()) {
+        SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
+        Data.RLoc = Tok.getLocation();
+        if (!T.consumeClose())
+          Data.RLoc = T.getCloseLocation();
+        TPA.Commit();
+        return true;
+      }
+
+      if (Tok.is(tok::colon)) {
+        // Correctly parsed the lower bound modifier.
+        ConsumeToken();
+        Data.ExtraModifierArray[Mod] = OMPC_NUMTEAMS_lower_bound;
+        Data.ExtraModifierExprArray[Mod] = FirstExpr.get();
+        Data.ExtraModifierLocArray[Mod] = TLoc;
+        TPA.Commit();
+      } else {
+        // Could not find the colon after the expression, revert it and let this
+        // function parse it as a list of expressions.
+        TPA.Revert();
+      }
+    }
   }
 
   bool IsComma =

@@ -291,8 +291,21 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   m_process_launch_info.GetFlags().Set(eLaunchFlagDebug);
 
   if (should_forward_stdio) {
+#if defined(_WIN32)
+    ProcessLaunchInfo::STDIOWindowSize win_size =
+        m_process_launch_info.GetSTDIOWindowSize();
+    if (m_process_launch_info.IsSTDIOWindowSizeExplicit() &&
+        win_size.cols == 0 && win_size.rows == 0) {
+      if (llvm::Error Err = m_process_launch_info.SetUpPipeRedirection())
+        return Status::FromError(std::move(Err));
+    } else {
+      if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
+        return Status::FromError(std::move(Err));
+    }
+#else
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
       return Status::FromError(std::move(Err));
+#endif
   }
 
   {
@@ -2569,12 +2582,21 @@ GDBRemoteCommunicationServerLLGS::Handle_I(StringExtractorGDBRemote &packet) {
     // write directly to stdin *this might block if stdin buffer is full*
     // TODO: enqueue this block in circular buffer and send window size to
     // remote host
-    ConnectionStatus status;
     Status error;
+
+#if defined(_WIN32)
+    // On Windows the inferior's stdio is owned by NativeProcessWindows (which
+    // holds the ConPTY). Route stdin through NativeProcessProtocol::WriteStdin
+    // rather than m_stdio_communication, which is unconnected on Windows.
+    if (m_current_process->WriteStdin(tmp, read, error) != read || error.Fail())
+      return SendErrorResponse(0x15);
+#else
+    ConnectionStatus status;
     m_stdio_communication.WriteAll(tmp, read, status, &error);
     if (error.Fail()) {
       return SendErrorResponse(0x15);
     }
+#endif
   }
 
   return SendOKResponse();
@@ -2949,6 +2971,10 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
 
     if (std::optional<unsigned> protection_key = region_info.GetProtectionKey())
       response.Printf("protection-key:%" PRIu32 ";", *protection_key);
+
+    LazyBool is_stack = region_info.IsStackMemory();
+    if (is_stack != eLazyBoolDontKnow)
+      response.Printf("type: %s", is_stack ? "stack" : "heap");
   }
 
   return SendPacketNoLock(response.GetString());
@@ -4485,6 +4511,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
             .Case("multiprocess+", Extension::multiprocess)
             .Case("fork-events+", Extension::fork)
             .Case("vfork-events+", Extension::vfork)
+            .Case("qXfer:libraries:read+", Extension::libraries)
+            .Case("qXfer:libraries-svr4:read+", Extension::libraries_svr4)
             .Default({});
 
   // We consume lldb's swbreak/hwbreak feature, but it doesn't change the

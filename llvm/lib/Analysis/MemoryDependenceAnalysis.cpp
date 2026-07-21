@@ -21,6 +21,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PHITransAddr.h"
@@ -192,6 +193,7 @@ MemDepResult MemoryDependenceResults::getCallDependencyFrom(
     CallBase *Call, bool isReadOnlyCall, BasicBlock::iterator ScanIt,
     BasicBlock *BB) {
   unsigned Limit = getDefaultBlockScanLimit();
+  bool IsInvariantLoad = Call->hasMetadata(LLVMContext::MD_invariant_load);
 
   // Walk backwards through the block, looking for dependencies.
   while (ScanIt != BB->begin()) {
@@ -208,25 +210,38 @@ MemDepResult MemoryDependenceResults::getCallDependencyFrom(
     ModRefInfo MR = GetLocation(Inst, Loc, TLI);
     if (Loc.Ptr) {
       // A simple instruction.
-      if (isModOrRefSet(AA.getModRefInfo(Call, Loc)))
+      if (isModOrRefSet(AA.getModRefInfo(Call, Loc))) {
+        if (IsInvariantLoad)
+          continue;
         return MemDepResult::getClobber(Inst);
+      }
       continue;
     }
 
     if (auto *CallB = dyn_cast<CallBase>(Inst)) {
+      bool IsIdenticalReadOnlyCall = isReadOnlyCall && !isModSet(MR) &&
+                                     Call->isIdenticalToWhenDefined(CallB);
+
+      // An identical earlier invariant load-like call is an available value
+      // even if AA sees both calls as reading the same memory.
+      if (IsInvariantLoad && IsIdenticalReadOnlyCall)
+        return MemDepResult::getDef(Inst);
+
       // If these two calls do not interfere, look past it.
       if (isNoModRef(AA.getModRefInfo(Call, CallB))) {
         // If the two calls are the same, return Inst as a Def, so that
         // Call can be found redundant and eliminated.
-        if (isReadOnlyCall && !isModSet(MR) &&
-            Call->isIdenticalToWhenDefined(CallB))
+        if (IsIdenticalReadOnlyCall)
           return MemDepResult::getDef(Inst);
 
         // Otherwise if the two calls don't interact (e.g. CallB is readnone)
         // keep scanning.
         continue;
-      } else
+      } else if (IsInvariantLoad) {
+        continue;
+      } else {
         return MemDepResult::getClobber(Inst);
+      }
     }
 
     // If we could not obtain a pointer for the instruction and the instruction
@@ -413,12 +428,11 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // do want to respect mustalias results since defs are useful for value
   // forwarding, but any mayalias write can be assumed to be noalias.
   // Arguably, this logic should be pushed inside AliasAnalysis itself.
-  if (isLoad && QueryInst)
-    if (LoadInst *LI = dyn_cast<LoadInst>(QueryInst)) {
-      if (LI->hasMetadata(LLVMContext::MD_invariant_load))
-        isInvariantLoad = true;
+  if (isLoad && QueryInst) {
+    isInvariantLoad = QueryInst->hasMetadata(LLVMContext::MD_invariant_load);
+    if (LoadInst *LI = dyn_cast<LoadInst>(QueryInst))
       MemLocAlign = LI->getAlign();
-    }
+  }
 
   // True for volatile instruction.
   // For Load/Store return true if atomic ordering is stronger than AO,
@@ -908,8 +922,8 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
 
   bool isInvariantLoad = false;
 
-  if (LoadInst *LI = dyn_cast_or_null<LoadInst>(QueryInst))
-    isInvariantLoad = LI->getMetadata(LLVMContext::MD_invariant_load);
+  if (QueryInst)
+    isInvariantLoad = QueryInst->hasMetadata(LLVMContext::MD_invariant_load);
 
   // Do a binary search to see if we already have an entry for this block in
   // the cache set.  If so, find it.
@@ -1072,8 +1086,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   InitialNLPI.AATags = Loc.AATags;
 
   bool isInvariantLoad = false;
-  if (LoadInst *LI = dyn_cast_or_null<LoadInst>(QueryInst))
-    isInvariantLoad = LI->getMetadata(LLVMContext::MD_invariant_load);
+  if (QueryInst)
+    isInvariantLoad = QueryInst->hasMetadata(LLVMContext::MD_invariant_load);
 
   // Get the NLPI for CacheKey, inserting one into the map if it doesn't
   // already have one.
@@ -1354,8 +1368,26 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       // predecessor, then we have to assume that the pointer is clobbered in
       // that predecessor.  We can still do PRE of the load, which would insert
       // a computation of the pointer in this predecessor.
-      if (!PredPtrVal)
+      if (!PredPtrVal) {
+        // If translation failed but the (partially) translated address
+        // expression depends on a select instruction, try to translate both
+        // sides of that select.  The select condition is recovered from the
+        // failed `PredPointer` (the phi has already been resolved to the
+        // select there), but the two sides must be translated from the
+        // original, untranslated `Pointer`.
+        if (Value *Cond = PredPointer.getSelectCondition()) {
+          SelectAddr::SelectAddrs SelAddrs =
+              PHITransAddr(Pointer).translateValue(BB, Pred, &DT, Cond);
+          if (SelAddrs.first && SelAddrs.second) {
+            Result.push_back(NonLocalDepResult(Pred, MemDepResult::getSelect(),
+                                               SelectAddr(Cond, SelAddrs)));
+            NonLocalPointerInfo &NLPI = NonLocalPointerDeps[CacheKey];
+            NLPI.Pair = BBSkipFirstBlockPair();
+            continue;
+          }
+        }
         CanTranslate = false;
+      }
 
       // FIXME: it is entirely possible that PHI translating will end up with
       // the same value.  Consider PHI translating something like:

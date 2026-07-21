@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-- -data-layout=A5 -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -mtriple=r600-- -data-layout=A5 -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=amdgpu-- -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=r600-- -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Function: test
 ; CHECK: NoAlias:      i8 addrspace(5)* %p, i8 addrspace(1)* %p1

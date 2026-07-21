@@ -17,7 +17,6 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Pass/Pass.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Debug.h"
 

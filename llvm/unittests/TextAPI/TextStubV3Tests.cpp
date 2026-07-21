@@ -81,10 +81,6 @@ TEST(TBDv3, ReadFile) {
   for (auto &&arch : Archs)
     Targets.emplace_back(Target(arch, Platform));
   EXPECT_EQ(Archs, File->getArchitectures());
-  TargetToAttr Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
-                         "00000000-0000-0000-0000-000000000000"},
-                        {Target(AK_arm64, PLATFORM_UNKNOWN),
-                         "11111111-1111-1111-1111-111111111111"}};
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
   EXPECT_EQ(std::string("Test.dylib"), File->getInstallName());
@@ -165,10 +161,6 @@ TEST(TBDv3, ReadMultipleDocuments) {
   for (auto &&arch : Archs)
     Targets.emplace_back(Target(arch, Platform));
   EXPECT_EQ(Archs, File->getArchitectures());
-  TargetToAttr Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
-                         "00000000-0000-0000-0000-000000000000"},
-                        {Target(AK_arm64, PLATFORM_UNKNOWN),
-                         "11111111-1111-1111-1111-111111111111"}};
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
   EXPECT_EQ(std::string("Test.dylib"), File->getInstallName());
@@ -358,7 +350,7 @@ TEST(TBDv3, WriteMultipleDocuments) {
   Document.addSymbol(EncodeKind::GlobalSymbol, "_sym3", Targets);
   Document.addSymbol(EncodeKind::GlobalSymbol, "_sym4", Targets);
   File.addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
-  
+
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
   Error Result = TextAPIWriter::writeToStream(OS, File);

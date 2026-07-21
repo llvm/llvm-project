@@ -395,6 +395,18 @@ entry:
   ret i32 %0
 }
 
+define i32 @align_63bit(ptr %p) {
+; CHECK-LABEL: define i32 @align_63bit
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 -9223372036854775808) ]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i64 -9223372036854775808) ]
+  %v = load i32, ptr %p, align 4
+  ret i32 %v
+}
+
 declare void @llvm.assume(i1) nounwind
 
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind

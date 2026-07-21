@@ -610,6 +610,9 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsAllocate:
     case LengthModifier::AsMAllocate:
     case LengthModifier::AsWide:
+    case LengthModifier::AsDecimal32:
+    case LengthModifier::AsDecimal64:
+    case LengthModifier::AsDecimal128:
       return ArgType::Invalid();
     }
 
@@ -651,6 +654,9 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsAllocate:
     case LengthModifier::AsMAllocate:
     case LengthModifier::AsWide:
+    case LengthModifier::AsDecimal32:
+    case LengthModifier::AsDecimal64:
+    case LengthModifier::AsDecimal128:
       return ArgType::Invalid();
     }
 
@@ -667,9 +673,18 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
       }
     }
 
-    if (LM.getKind() == LengthModifier::AsLongDouble)
+    switch (LM.getKind()) {
+    case LengthModifier::AsLongDouble:
       return Ctx.LongDoubleTy;
-    return Ctx.DoubleTy;
+    case LengthModifier::AsDecimal32:
+      return ArgType::Unsupported("_Decimal32");
+    case LengthModifier::AsDecimal64:
+      return ArgType::Unsupported("_Decimal64");
+    case LengthModifier::AsDecimal128:
+      return ArgType::Unsupported("_Decimal128");
+    default:
+      return Ctx.DoubleTy;
+    }
   }
 
   if (CS.getKind() == ConversionSpecifier::nArg) {
@@ -704,6 +719,9 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
     case LengthModifier::AsInt3264:
     case LengthModifier::AsInt64:
     case LengthModifier::AsWide:
+    case LengthModifier::AsDecimal32:
+    case LengthModifier::AsDecimal64:
+    case LengthModifier::AsDecimal128:
       return ArgType::Invalid();
     case LengthModifier::AsShortLong:
       llvm_unreachable("only used for OpenCL which doesn not handle nArg");

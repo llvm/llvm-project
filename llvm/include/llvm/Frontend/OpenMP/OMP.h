@@ -17,6 +17,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -32,6 +33,14 @@ LLVM_ABI Directive getCompoundConstruct(ArrayRef<Directive> Parts);
 LLVM_ABI bool isLeafConstruct(Directive D);
 LLVM_ABI bool isCompositeConstruct(Directive D);
 LLVM_ABI bool isCombinedConstruct(Directive D);
+
+static constexpr inline auto clauses() {
+  return llvm::enum_seq_inclusive(Clause::First_, Clause::Last_);
+}
+
+static constexpr inline auto directives() {
+  return llvm::enum_seq_inclusive(Directive::First_, Directive::Last_);
+}
 
 /// Can clause C have an iterator-modifier.
 static constexpr inline bool canHaveIterator(Clause C) {
@@ -96,12 +105,24 @@ static constexpr inline bool isDataSharingAttributeClause(Clause C,
   }
 }
 
+static constexpr inline bool isEndClause(Clause C) {
+  switch (C) {
+  case OMPC_copyprivate:
+  case OMPC_nowait:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static constexpr unsigned FallbackVersion = 52;
 LLVM_ABI ArrayRef<unsigned> getOpenMPVersions();
 
 /// Can directive D, under some circumstances, create a private copy
 /// of a variable in given OpenMP version?
-bool isPrivatizingConstruct(Directive D, unsigned Version);
+LLVM_ABI bool isPrivatizingConstruct(Directive D, unsigned Version);
+
+LLVM_ABI ArrayRef<StringRef> getReservedLocatorNames();
 
 /// Create a nicer version of a function name for humans to look at.
 LLVM_ABI std::string prettifyFunctionName(StringRef FunctionName);

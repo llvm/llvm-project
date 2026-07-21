@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -426,6 +427,63 @@ static Attribute convertNumericAttr(Attribute attr, Type expectedType) {
   }
 
   return attr;
+}
+
+/// Return whether `srcType` can be broadcast to `dstVectorType` under the
+/// semantics of the `vector.broadcast` op.
+BroadcastableToResult mlir::vector::isBroadcastableTo(
+    Type srcType, VectorType dstVectorType,
+    std::pair<VectorDim, VectorDim> *mismatchingDims) {
+  // Broadcast scalar to vector of the same element type.
+  if (isa<VectorElementTypeInterface>(srcType) && dstVectorType &&
+      srcType == getElementTypeOrSelf(dstVectorType))
+    return BroadcastableToResult::Success;
+  // From now on, only vectors broadcast.
+  VectorType srcVectorType = llvm::dyn_cast<VectorType>(srcType);
+  if (!srcVectorType)
+    return BroadcastableToResult::SourceTypeNotAVector;
+
+  int64_t srcRank = srcVectorType.getRank();
+  int64_t dstRank = dstVectorType.getRank();
+  if (srcRank > dstRank)
+    return BroadcastableToResult::SourceRankHigher;
+  // Source has an exact match or singleton value for all trailing dimensions
+  // (all leading dimensions are simply duplicated).
+  int64_t lead = dstRank - srcRank;
+  for (int64_t dimIdx = 0; dimIdx < srcRank; ++dimIdx) {
+    // Have mismatching dims (in the sense of vector.broadcast semantics) been
+    // encountered?
+    bool foundMismatchingDims = false;
+
+    // Check fixed-width dims.
+    int64_t srcDim = srcVectorType.getDimSize(dimIdx);
+    int64_t dstDim = dstVectorType.getDimSize(lead + dimIdx);
+    if (srcDim != 1 && srcDim != dstDim)
+      foundMismatchingDims = true;
+
+    // Check scalable flags.
+    bool srcDimScalableFlag = srcVectorType.getScalableDims()[dimIdx];
+    bool dstDimScalableFlag = dstVectorType.getScalableDims()[lead + dimIdx];
+    if ((srcDim == 1 && srcDimScalableFlag && dstDim != 1) ||
+        // 1 -> [N] is fine, everything else should be rejected when mixing
+        // fixed-width and scalable dims
+        (srcDimScalableFlag != dstDimScalableFlag &&
+         (srcDim != 1 || srcDimScalableFlag)))
+      foundMismatchingDims = true;
+
+    if (foundMismatchingDims) {
+      if (mismatchingDims != nullptr) {
+        mismatchingDims->first.dim = srcDim;
+        mismatchingDims->first.isScalable = srcDimScalableFlag;
+
+        mismatchingDims->second.dim = dstDim;
+        mismatchingDims->second.isScalable = dstDimScalableFlag;
+      }
+      return BroadcastableToResult::DimensionMismatch;
+    }
+  }
+
+  return BroadcastableToResult::Success;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3100,61 +3158,6 @@ Value BroadcastOp::createOrFoldBroadcastOp(
   return res;
 }
 
-BroadcastableToResult mlir::vector::isBroadcastableTo(
-    Type srcType, VectorType dstVectorType,
-    std::pair<VectorDim, VectorDim> *mismatchingDims) {
-  // Broadcast scalar to vector of the same element type.
-  if (isa<VectorElementTypeInterface>(srcType) && dstVectorType &&
-      srcType == getElementTypeOrSelf(dstVectorType))
-    return BroadcastableToResult::Success;
-  // From now on, only vectors broadcast.
-  VectorType srcVectorType = llvm::dyn_cast<VectorType>(srcType);
-  if (!srcVectorType)
-    return BroadcastableToResult::SourceTypeNotAVector;
-
-  int64_t srcRank = srcVectorType.getRank();
-  int64_t dstRank = dstVectorType.getRank();
-  if (srcRank > dstRank)
-    return BroadcastableToResult::SourceRankHigher;
-  // Source has an exact match or singleton value for all trailing dimensions
-  // (all leading dimensions are simply duplicated).
-  int64_t lead = dstRank - srcRank;
-  for (int64_t dimIdx = 0; dimIdx < srcRank; ++dimIdx) {
-    // Have mismatching dims (in the sense of vector.broadcast semantics) been
-    // encountered?
-    bool foundMismatchingDims = false;
-
-    // Check fixed-width dims.
-    int64_t srcDim = srcVectorType.getDimSize(dimIdx);
-    int64_t dstDim = dstVectorType.getDimSize(lead + dimIdx);
-    if (srcDim != 1 && srcDim != dstDim)
-      foundMismatchingDims = true;
-
-    // Check scalable flags.
-    bool srcDimScalableFlag = srcVectorType.getScalableDims()[dimIdx];
-    bool dstDimScalableFlag = dstVectorType.getScalableDims()[lead + dimIdx];
-    if ((srcDim == 1 && srcDimScalableFlag && dstDim != 1) ||
-        // 1 -> [N] is fine, everything else should be rejected when mixing
-        // fixed-width and scalable dims
-        (srcDimScalableFlag != dstDimScalableFlag &&
-         (srcDim != 1 || srcDimScalableFlag)))
-      foundMismatchingDims = true;
-
-    if (foundMismatchingDims) {
-      if (mismatchingDims != nullptr) {
-        mismatchingDims->first.dim = srcDim;
-        mismatchingDims->first.isScalable = srcDimScalableFlag;
-
-        mismatchingDims->second.dim = dstDim;
-        mismatchingDims->second.isScalable = dstDimScalableFlag;
-      }
-      return BroadcastableToResult::DimensionMismatch;
-    }
-  }
-
-  return BroadcastableToResult::Success;
-}
-
 LogicalResult BroadcastOp::verify() {
   std::pair<VectorDim, VectorDim> mismatchingDims;
   BroadcastableToResult res = isBroadcastableTo(
@@ -5035,6 +5038,7 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+/// If `padding` is null, a poison value is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
@@ -5044,46 +5048,45 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
   if (!padding)
     padding = ub::PoisonOp::create(builder, result.location, elemType);
+  // Delegate to the most general builder (see
+  // `mlir/Dialect/Vector/IR/VectorOps.cpp.inc`)
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         *padding, /*mask=*/Value(), inBoundsAttr);
 }
 
-/// 2. Builder that sets padding to zero an empty mask (variant without attrs).
+/// 2. Builder that sets padding to zero and an empty mask (variant without
+/// attrs).
+/// If `padding` is null, a poison value is used.
+/// If `permutationMap` is null, a minor identity map is used.
+/// If `inBounds` is null, an empty mask is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
                            AffineMap permutationMap,
                            std::optional<ArrayRef<bool>> inBounds) {
+  if (!permutationMap)
+    permutationMap = getTransferMinorIdentityMap(
+        llvm::cast<ShapedType>(source.getType()), vectorType);
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
                           : builder.getBoolArrayAttr(
                                 SmallVector<bool>(vectorType.getRank(), false));
-  Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  if (!padding)
-    padding = ub::PoisonOp::create(builder, result.location, elemType);
-  build(builder, result, vectorType, source, indices, *padding,
+  // Delegate to Builder 1
+  build(builder, result, vectorType, source, indices, padding,
         permutationMapAttr, inBoundsAttr);
 }
 
 /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+/// If `padding` is null, a poison value is used.
+/// If `inBounds` is null, an empty mask is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
                            std::optional<ArrayRef<bool>> inBounds) {
-  AffineMap permutationMap = getTransferMinorIdentityMap(
-      llvm::cast<ShapedType>(source.getType()), vectorType);
-  auto permutationMapAttr = AffineMapAttr::get(permutationMap);
-  auto inBoundsAttr = (inBounds && !inBounds.value().empty())
-                          ? builder.getBoolArrayAttr(inBounds.value())
-                          : builder.getBoolArrayAttr(
-                                SmallVector<bool>(vectorType.getRank(), false));
-  Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  if (!padding)
-    padding = ub::PoisonOp::create(builder, result.location, elemType);
-  build(builder, result, vectorType, source, indices, permutationMapAttr,
-        *padding,
-        /*mask=*/Value(), inBoundsAttr);
+  // Delegate to Builder 2
+  build(builder, result, vectorType, source, indices, padding,
+        /*permutationMap=*/AffineMap(), inBounds);
 }
 
 template <typename EmitFun>
@@ -5692,11 +5695,15 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
 }
 
 /// 3. Builder with type inference that sets an empty mask (variant without
-/// attrs)
+/// attrs). If `permutationMap` is null, a minor identity map is used.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
                             AffineMap permutationMap,
                             std::optional<ArrayRef<bool>> inBounds) {
+  if (!permutationMap)
+    permutationMap =
+        getTransferMinorIdentityMap(llvm::cast<ShapedType>(dest.getType()),
+                                    llvm::cast<VectorType>(vector.getType()));
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr =
       (inBounds && !inBounds.value().empty())
@@ -5712,10 +5719,8 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
                             std::optional<ArrayRef<bool>> inBounds) {
-  auto vectorType = llvm::cast<VectorType>(vector.getType());
-  AffineMap permutationMap = getTransferMinorIdentityMap(
-      llvm::cast<ShapedType>(dest.getType()), vectorType);
-  build(builder, result, vector, dest, indices, permutationMap, inBounds);
+  build(builder, result, vector, dest, indices, /*permutationMap=*/AffineMap(),
+        inBounds);
 }
 
 ParseResult TransferWriteOp::parse(OpAsmParser &parser,
@@ -6192,6 +6197,12 @@ LogicalResult vector::LoadOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, resVecTy, memRefTy)))
     return failure();
 
+  // Negative strides are not supported on vector.load. The lowering to LLVM
+  // emits arithmetic operations (e.g., GEP, mul) with nuw flags that assume
+  // non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memRefTy))
+    return emitOpError("memref strides must be non-negative");
+
   if (memRefTy.getRank() < resVecTy.getRank())
     return emitOpError(
         "destination memref has lower rank than the result vector");
@@ -6238,6 +6249,12 @@ LogicalResult vector::StoreOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, valueVecTy, memRefTy)))
     return failure();
 
+  // Negative strides are not supported on vector.store. The lowering to LLVM
+  // emits arithmetic operations (e.g., GEP, mul) with nuw flags that assume
+  // non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memRefTy))
+    return emitOpError("memref strides must be non-negative");
+
   if (memRefTy.getRank() < valueVecTy.getRank())
     return emitOpError("source memref has lower rank than the vector to store");
 
@@ -6281,6 +6298,12 @@ LogicalResult MaskedLoadOp::verify() {
   VectorType passVType = getPassThruVectorType();
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
+
+  // Negative strides are not supported on vector.maskedload. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
 
   if (failed(
           verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
@@ -6342,6 +6365,12 @@ LogicalResult MaskedStoreOp::verify() {
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
 
+  // Negative strides are not supported on vector.maskedstore. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
+
   if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
                                      "valueToStore")))
     return failure();
@@ -6402,6 +6431,13 @@ LogicalResult GatherOp::verify() {
 
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
+
+  // Negative strides are not supported on vector.gather.
+  // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
+  // flags that assume non-negative strides to avoid undefined behavior.
+  if (auto memRefType = dyn_cast<MemRefType>(baseType))
+    if (memref::hasNegativeStaticStride(memRefType))
+      return emitOpError("memref strides must be non-negative");
 
   if (failed(
           verifyElementTypesMatch(*this, baseType, resVType, "base", "result")))
@@ -6516,6 +6552,13 @@ LogicalResult ScatterOp::verify() {
 
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
+
+  // Negative strides are not supported on vector.scatter.
+  // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
+  // flags that assume non-negative strides to avoid undefined behavior.
+  if (auto memRefType = dyn_cast<MemRefType>(baseType))
+    if (memref::hasNegativeStaticStride(memRefType))
+      return emitOpError("memref strides must be non-negative");
 
   if (failed(verifyElementTypesMatch(*this, baseType, valueVType, "base",
                                      "valueToStore")))
@@ -6744,6 +6787,39 @@ LogicalResult ShapeCastOp::verify() {
                          << resultNScalableDims << ")";
 
   return success();
+}
+
+/// Check whether this ShapeCastOp is effectively a BroadcastOp.
+///
+/// The only case in which this method can return `true` is when the underlying
+/// op merely adds leading unit dimensions, e.g.:
+///   %res = vector.shape_cast %src : vector<8x4xi32> to vector<1x8x4xi32>
+///
+bool ShapeCastOp::isBroadcastLike() {
+  auto srcType = getSourceVectorType();
+  auto resType = getResultVectorType();
+
+  // Is srcType broadcastable to resType?
+  std::pair<VectorDim, VectorDim> mismatchingDims;
+  if (isBroadcastableTo(srcType, resType, &mismatchingDims) !=
+      BroadcastableToResult::Success)
+    return false;
+
+  // Do ranks mismatch?
+  //
+  // The only case where ranks match and this ShapeCastOp is also a broadcast,
+  // is when it's effectively a NOp, but that's an uninteresting edge case.
+  size_t rankDiff = resType.getRank() - srcType.getRank();
+  if (rankDiff == 0)
+    return false;
+
+  // Are all newly added leading dims unit?
+  if (!llvm::all_of(resType.getShape().take_front(rankDiff),
+                    [](int64_t dim) { return dim == 1; }))
+    return false;
+
+  // Do all trailing dims match?
+  return resType.getShape().take_back(srcType.getRank()) == srcType.getShape();
 }
 
 /// Return true if `transpose` does not permute a pair of non-unit dims.
@@ -8211,10 +8287,14 @@ void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     return;
   }
   unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
-  APInt zero(bitwidth, 0);
-  APInt high(bitwidth, resultType.getDimSize(0) - 1);
-  ConstantIntRanges result = {zero, high, zero, high};
-  setResultRanges(getResult(), result);
+  // The result holds the sequence [0, 1, ..., N-1], with each value truncated
+  // to the result element type.
+  uint64_t maxIndex = resultType.getDimSize(0) - 1;
+  APInt umin = APInt::getZero(bitwidth);
+  APInt umax = APInt::getMaxValue(bitwidth).ugt(maxIndex)
+                   ? APInt(bitwidth, maxIndex)
+                   : APInt::getMaxValue(bitwidth);
+  setResultRanges(getResult(), ConstantIntRanges::fromUnsigned(umin, umax));
 }
 
 namespace {

@@ -9,7 +9,7 @@
 
 // Test a simple try with no handlers and no throwing calls.
 cir.func @test_try_no_handlers() {
-  %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+  %0 = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
   cir.scope {
     cir.try {
       %1 = cir.const #cir.int<1> : !s32i
@@ -21,7 +21,7 @@ cir.func @test_try_no_handlers() {
 }
 
 // CHECK-LABEL: cir.func @test_try_no_handlers()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca !s32i
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!s32i>
 // CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
 // CHECK:       ^[[SCOPE]]:
 // CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
@@ -86,7 +86,7 @@ cir.func @test_try_catch_all() {
 // If the exception type doesn't match, control goes to the unwind handler
 // which resumes unwinding.
 cir.func @test_try_catch_typed_with_unwind() {
-  %0 = cir.alloca !cir.ptr<!rec_exception>, !cir.ptr<!cir.ptr<!rec_exception>>, ["e"] {alignment = 8 : i64}
+  %0 = cir.alloca "e" align(8) : !cir.ptr<!cir.ptr<!rec_exception>>
   cir.scope {
     cir.try {
       cir.call @mayThrow() : () -> ()
@@ -103,7 +103,7 @@ cir.func @test_try_catch_typed_with_unwind() {
 }
 
 // CHECK-LABEL: cir.func @test_try_catch_typed_with_unwind()
-// CHECK:         %[[E_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_std3A3Aexception>
+// CHECK:         %[[E_ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
 // CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
 //
 // CHECK:       ^[[SCOPE]]:
@@ -142,7 +142,7 @@ cir.func @test_try_catch_typed_with_unwind() {
 // are chained to the catch dispatch block of the enclosing try.
 cir.func @test_try_catch_with_cleanup() {
   cir.scope {
-    %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+    %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
     cir.try {
       cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
       cir.cleanup.scope {
@@ -163,7 +163,7 @@ cir.func @test_try_catch_with_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_try_catch_with_cleanup()
-// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[C:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
 //
 // CHECK:       ^[[TRY_BODY]]:
@@ -221,8 +221,8 @@ cir.func @test_try_catch_with_cleanup() {
 // by the try's handlers, the resume from the unwind handler should chain
 // to the outer cleanup's EH handler.
 cir.func @test_try_in_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
-  %1 = cir.alloca !cir.ptr<!rec_exception>, !cir.ptr<!cir.ptr<!rec_exception>>, ["e"] {alignment = 8 : i64}
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "e" align(8) : !cir.ptr<!cir.ptr<!rec_exception>>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.scope {
@@ -246,8 +246,8 @@ cir.func @test_try_in_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_try_in_cleanup()
-// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass
-// CHECK:         %[[E:.*]] = cir.alloca !cir.ptr<!rec_std3A3Aexception>
+// CHECK:         %[[C:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[E:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
 // CHECK:         cir.call @ctor(%[[C]])
 // CHECK:         cir.br ^[[OUTER_CLEANUP_BODY:bb[0-9]+]]
 //
@@ -473,7 +473,7 @@ cir.func @test_nested_try() {
 // scope inside a catch handler. This is the form of the catch handler that will
 // actually be generated. The representations above are all simplifications.
 cir.func @test_try_with_handlers_in_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.try {
@@ -498,7 +498,7 @@ cir.func @test_try_with_handlers_in_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_try_with_handlers_in_cleanup()
-// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[C:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[C]])
 // CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
 //
@@ -543,7 +543,7 @@ cir.func @test_try_with_handlers_in_cleanup() {
 // The inner try's unwind handler must execute the cleanup (dtor) before
 // the exception reaches the outer try's catch dispatch.
 cir.func @test_nested_try_with_cleanup() {
-  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.scope {
     cir.try {
       cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -574,7 +574,7 @@ cir.func @test_nested_try_with_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_nested_try_with_cleanup()
-// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[C:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
 //
 // CHECK:       ^[[SCOPE]]:

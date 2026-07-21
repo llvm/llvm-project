@@ -927,9 +927,9 @@ define i32 @smax_known_zero(i32 %x, i32 %y) {
 ; X86-LABEL: smax_known_zero:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    movl $-1, %ecx
-; X86-NEXT:    cmovnsl %eax, %ecx
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    bsfl %ecx, %ecx
 ; X86-NEXT:    movl $32, %eax
 ; X86-NEXT:    cmovnel %ecx, %eax
@@ -937,9 +937,9 @@ define i32 @smax_known_zero(i32 %x, i32 %y) {
 ;
 ; X64-LABEL: smax_known_zero:
 ; X64:       # %bb.0:
-; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    movl $-1, %ecx
-; X64-NEXT:    cmovnsl %edi, %ecx
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    sarl $31, %ecx
+; X64-NEXT:    orl %edi, %ecx
 ; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq

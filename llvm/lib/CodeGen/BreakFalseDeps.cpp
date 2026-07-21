@@ -49,6 +49,10 @@ private:
 
   ReachingDefInfo *RDI = nullptr;
 
+  /// True if the pass insert instructions or updates registers, false
+  /// otherwise.
+  bool Changed = false;
+
 public:
   BreakFalseDeps(ReachingDefInfo *RDI) : RDI(RDI) {}
 
@@ -89,7 +93,7 @@ public:
   BreakFalseDepsLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
+    AU.setPreservesCFG();
     AU.addRequired<ReachingDefInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -154,6 +158,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
     // We found a true dependency - replace the undef register with the true
     // dependency.
     MO.setReg(CurrMO.getReg());
+    Changed = true;
     return true;
   }
 
@@ -174,8 +179,10 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   }
 
   // Update the operand if we found a register with better clearance.
-  if (MaxClearanceReg != OriginalReg)
+  if (MaxClearanceReg != OriginalReg) {
     MO.setReg(MaxClearanceReg);
+    Changed = true;
+  }
 
   return false;
 }
@@ -232,8 +239,10 @@ void BreakFalseDeps::processDefs(MachineInstr *MI) {
       continue;
     // Check clearance before partial register updates.
     unsigned Pref = TII->getPartialRegUpdateClearance(*MI, i, TRI);
-    if (Pref && shouldBreakDependence(MI, i, Pref))
+    if (Pref && shouldBreakDependence(MI, i, Pref)) {
       TII->breakPartialRegDependency(*MI, i, TRI);
+      Changed = true;
+    }
   }
 }
 
@@ -260,8 +269,10 @@ void BreakFalseDeps::processUndefReads(MachineBasicBlock *MBB) {
     LiveRegSet.stepBackward(I);
 
     if (UndefMI == &I) {
-      if (!LiveRegSet.contains(UndefMI->getOperand(OpIdx).getReg()))
+      if (!LiveRegSet.contains(UndefMI->getOperand(OpIdx).getReg())) {
         TII->breakPartialRegDependency(*UndefMI, OpIdx, TRI);
+        Changed = true;
+      }
 
       UndefReads.pop_back();
       if (UndefReads.empty())
@@ -306,7 +317,7 @@ bool BreakFalseDeps::run(MachineFunction &CurMF) {
     if (Reachable.count(&MBB))
       processBasicBlock(&MBB);
 
-  return false;
+  return Changed;
 }
 
 bool BreakFalseDepsLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -323,10 +334,10 @@ BreakFalseDepsPass::run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
   ReachingDefInfo *RDI = &MFAM.getResult<ReachingDefAnalysis>(MF);
-  BreakFalseDeps(RDI).run(MF);
-  // TODO: breakPartialRegDependency() may insert instructions, propagate when
-  // the pass made a change and return PreservedAnalyses::all() otherwise.
-  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  if (BreakFalseDeps(RDI).run(MF)) {
+    PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+  return PreservedAnalyses::all();
 }

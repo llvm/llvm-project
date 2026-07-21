@@ -92,6 +92,39 @@ loop.outer.latch:
   br label %loop.outer
 }
 
+; Test LoopInfo is fixed up to remove the early-exit dispatch block from the
+; outer loop, even though the fully vectorized inner loop's countable exit
+; becomes an exit block without predecessors.
+define void @early_exit_dispatch_in_outer_loop(i1 %c) {
+; CHECK-LABEL: Loop info for function 'early_exit_dispatch_in_outer_loop':
+; CHECK: Loop at depth 1 containing: %outer.header<header>,%inner.header<exiting>,%inner.search<exiting>,%inner.latch,%outer.header.loopexit<latch>,%scalar.ph,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
+; CHECK:    Loop at depth 2 containing: %inner.header<header><exiting>,%inner.search<exiting>,%inner.latch<latch><exiting>
+; CHECK:    Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
+entry:
+  br label %outer.header
+
+outer.header:
+  br label %inner.header
+
+inner.header:
+  %iv = phi i64 [ %iv.next, %inner.latch ], [ 0, %outer.header ]
+  %iv.next = add i64 %iv, 1
+  br i1 %c, label %exit, label %inner.search
+
+inner.search:
+  %lo = icmp ult i64 %iv, 1
+  %hi = icmp ugt i64 %iv, 100
+  %early = or i1 %lo, %hi
+  br i1 %early, label %inner.latch, label %exit
+
+inner.latch:
+  %outer.cond = icmp ugt i64 %iv, 200
+  br i1 %outer.cond, label %outer.header, label %inner.header
+
+exit:
+  ret void
+}
+
 define i32 @early_exit_branch_to_outer_header() {
 ; CHECK-LABEL: Loop info for function 'early_exit_branch_to_outer_header':
 ; CHECK-NEXT:  Loop at depth 1 containing: %outer.header<header>,%outer.header.loopexit<latch>,%vector.ph,%vector.body,%vector.body.interim<exiting>,%vector.early.exit
@@ -122,7 +155,7 @@ exit:
 
 ; Tests when an early-exit inner loop has multiple exits and all exits
 ; leave the outer loop.
-define i32 @multi_early_exit_all_leave_outer_loop(i1 %c, ptr dereferenceable(1024) %src) {
+define i32 @multi_early_exit_all_leave_outer_loop(i1 %c, ptr dereferenceable(1024) %src) nofree {
 ; CHECK-LABEL: Loop info for function 'multi_early_exit_all_leave_outer_loop':
 ; CHECK-NEXT: Loop at depth 1 containing: %outer.header<header>,%outer.latch<latch><exiting>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
 ; CHECK-NEXT:     Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
@@ -159,7 +192,7 @@ early.exit.2:
 
 ; Tests when an inner loop has two early exits at different loop levels
 ; (one staying in the outer loop, one leaving all loops).
-define i32 @multi_early_exit_different_loop_levels(i1 %c, ptr dereferenceable(1024) %src) {
+define i32 @multi_early_exit_different_loop_levels(i1 %c, ptr dereferenceable(1024) %src) nofree {
 ; CHECK-LABEL: Loop info for function 'multi_early_exit_different_loop_levels':
 ; CHECK-NEXT: Loop at depth 1 containing: %outer.header<header>,%early.exit.outer,%outer.latch<latch>,%outer.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check<exiting>,%vector.early.exit.0
 ; CHECK-NEXT:     Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
@@ -196,7 +229,7 @@ early.exit.leave:
 
 ; Same as above, but the early exit order is reversed: the first early exit
 ; leaves all loops and the second stays in the outer loop.
-define i32 @multi_early_exit_different_loop_levels_reversed(i1 %c, ptr dereferenceable(1024) %src) {
+define i32 @multi_early_exit_different_loop_levels_reversed(i1 %c, ptr dereferenceable(1024) %src) nofree {
 ; CHECK-LABEL: Loop info for function 'multi_early_exit_different_loop_levels_reversed':
 ; CHECK-NEXT: Loop at depth 1 containing: %outer.header<header>,%early.exit.outer,%outer.latch<latch>,%outer.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check<exiting>,%vector.early.exit.1
 ; CHECK-NEXT:     Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
@@ -233,7 +266,7 @@ early.exit.leave:
 
 ; Tests when an inner loop has two early exits at different loop levels
 ; (one going to a middle loop, one going to the outer loop).
-define i32 @multi_early_exit_two_different_loops(i1 %c, ptr dereferenceable(1024) %src) {
+define i32 @multi_early_exit_two_different_loops(i1 %c, ptr dereferenceable(1024) %src) nofree {
 ; CHECK-LABEL: Loop info for function 'multi_early_exit_two_different_loops':
 ; CHECK-NEXT: Loop at depth 1 containing: %outer.header<header>,%middle.header,%early.exit.outer,%early.exit.middle,%middle.latch,%outer.latch<latch>,%middle.latch.loopexit,%outer.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check,%vector.early.exit.1,%vector.early.exit.0
 ; CHECK-NEXT:     Loop at depth 2 containing: %middle.header<header>,%early.exit.middle,%middle.latch<latch><exiting>,%middle.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check<exiting>,%vector.early.exit.0
@@ -277,7 +310,7 @@ early.exit.outer:
 
 ; Same as above, but the early exit order is reversed: the first early exit
 ; goes to the outer loop and the second goes to the middle loop.
-define i32 @multi_early_exit_two_different_loops_reversed(i1 %c, ptr dereferenceable(1024) %src) {
+define i32 @multi_early_exit_two_different_loops_reversed(i1 %c, ptr dereferenceable(1024) %src) nofree {
 ; CHECK-LABEL: Loop info for function 'multi_early_exit_two_different_loops_reversed':
 ; CHECK-NEXT: Loop at depth 1 containing: %outer.header<header>,%middle.header,%early.exit.middle,%middle.latch,%early.exit.outer,%outer.latch<latch>,%middle.latch.loopexit,%outer.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check,%vector.early.exit.1,%vector.early.exit.0
 ; CHECK-NEXT:     Loop at depth 2 containing: %middle.header<header>,%early.exit.middle,%middle.latch<latch><exiting>,%middle.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check<exiting>,%vector.early.exit.1
@@ -323,7 +356,7 @@ early.exit.outer:
 ; intermediate exit-routing blocks have multiple successors (i.e., the
 ; vector.early.exit.check block itself has >1 successor), and all exits leave
 ; all loops.
-define i32 @multi_early_exit_all_leave_with_multi_succ_exit_check(i1 %c.1, i1 %c.2, ptr dereferenceable(1024) %src) {
+define i32 @multi_early_exit_all_leave_with_multi_succ_exit_check(i1 %c.1, i1 %c.2, ptr dereferenceable(1024) %src) nofree {
 ; CHECK-LABEL: Loop info for function 'multi_early_exit_all_leave_with_multi_succ_exit_check':
 ; CHECK-NEXT: Loop at depth 1 containing: %outer.header<header>,%outer.latch<latch>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
 ; CHECK-NEXT:     Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
@@ -368,7 +401,7 @@ early.exit.3:
 ; has 3 early exits that ALL leave ALL loops. The exit routing blocks have
 ; multiple successors so connectToPredecessors places them in the vectorized
 ; loop. The fixup pass must move them all the way out (not just one level up).
-define i32 @multi_early_exit_all_leave_three_nested_loops(i1 %c.1, i1 %c.2, ptr dereferenceable(1024) %src) {
+define i32 @multi_early_exit_all_leave_three_nested_loops(i1 %c.1, i1 %c.2, ptr dereferenceable(1024) %src) nofree {
 ; CHECK-LABEL: Loop info for function 'multi_early_exit_all_leave_three_nested_loops':
 ; CHECK-NEXT: Loop at depth 1 containing: %outer.header<header>,%middle.header,%middle.latch,%outer.latch<latch>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
 ; CHECK-NEXT:     Loop at depth 2 containing: %middle.header<header>,%middle.latch<latch><exiting>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
@@ -419,7 +452,7 @@ early.exit.3:
 ; Tests that dispatch blocks are correctly placed in the outermost loop when
 ; the innermost loop has two uncountable early exits at different loop depths:
 ; one to the outer loop and one outside all loops.
-define i64 @multi_early_exit_to_outer_and_outside(ptr dereferenceable(1024) %p1, ptr dereferenceable(1024) %p2, i1 %c) {
+define i64 @multi_early_exit_to_outer_and_outside(ptr dereferenceable(1024) %p1, ptr dereferenceable(1024) %p2, i1 %c) nofree {
 ; CHECK-LABEL: Loop info for function 'multi_early_exit_to_outer_and_outside':
 ; CHECK-NEXT: Loop at depth 1 containing: %loop.outer<header>,%loop.middle,%loop.inner.end,%loop.middle.end,%loop.inner.found,%loop.outer.latch<latch><exiting>,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.0,%vector.early.exit.check<exiting>
 ; CHECK-NEXT:    Loop at depth 2 containing: %loop.middle<header>,%loop.inner.end<latch><exiting>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
@@ -476,7 +509,7 @@ exit:
 
 ; Same as above but with early exits reversed: the first early exit goes outside
 ; all loops and the second goes to the outer loop.
-define i64 @multi_early_exit_to_outside_and_outer(ptr dereferenceable(1024) %p1, ptr dereferenceable(1024) %p2, i1 %c) {
+define i64 @multi_early_exit_to_outside_and_outer(ptr dereferenceable(1024) %p1, ptr dereferenceable(1024) %p2, i1 %c) nofree {
 ; CHECK-LABEL: Loop info for function 'multi_early_exit_to_outside_and_outer':
 ; CHECK-NEXT: Loop at depth 1 containing: %loop.outer<header>,%loop.middle,%loop.inner.end,%loop.middle.end,%loop.inner.found,%loop.outer.latch<latch><exiting>,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.1,%vector.early.exit.check<exiting>
 ; CHECK-NEXT:    Loop at depth 2 containing: %loop.middle<header>,%loop.inner.end<latch><exiting>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block

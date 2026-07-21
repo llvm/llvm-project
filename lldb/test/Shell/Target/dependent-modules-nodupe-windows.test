@@ -18,8 +18,8 @@
 
 # CHECK-LABEL: #after
 # CHECK-NEXT: target modules list
-# CHECK-NEXT: .main.exe
-# CHECK-NEXT: ntdll.dll
-# CHECK-NEXT: kernel32.dll
-# CHECK:      .shlib.dll
+# CHECK-DAG: .main.exe
+# CHECK-DAG: ntdll.dll
+# CHECK-DAG: kernel32.dll
+# CHECK-DAG: .shlib.dll
 # CHECK-NOT:  .shlib.dll

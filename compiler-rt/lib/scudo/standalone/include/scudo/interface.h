@@ -97,6 +97,7 @@ enum scudo_error_type {
   BUFFER_UNDERFLOW,
 };
 
+const size_t ScudoTraceSize = 64;
 struct scudo_error_report {
   enum scudo_error_type error_type;
 
@@ -104,14 +105,15 @@ struct scudo_error_report {
   uintptr_t allocation_size;
 
   uint32_t allocation_tid;
-  uintptr_t allocation_trace[64];
+  uintptr_t allocation_trace[ScudoTraceSize];
 
   uint32_t deallocation_tid;
-  uintptr_t deallocation_trace[64];
+  uintptr_t deallocation_trace[ScudoTraceSize];
 };
 
+const size_t ScudoNumErrorReports = 3;
 struct scudo_error_info {
-  struct scudo_error_report reports[3];
+  struct scudo_error_report reports[ScudoNumErrorReports];
 };
 
 const char *__scudo_get_stack_depot_addr(void);

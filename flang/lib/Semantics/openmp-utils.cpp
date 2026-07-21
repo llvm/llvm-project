@@ -12,6 +12,8 @@
 
 #include "flang/Semantics/openmp-utils.h"
 
+#include "resolve-names-utils.h"
+
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
@@ -27,6 +29,7 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -35,6 +38,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 
@@ -121,21 +126,52 @@ std::string TryVersion(unsigned version) {
   return "try -fopenmp-version=" + std::to_string(version);
 }
 
+static const Symbol *GetFunctionReferenceSymbol(
+    const parser::FunctionReference &ref) {
+  auto &proc{std::get<parser::ProcedureDesignator>(ref.v.t)};
+  return common::visit(
+      common::visitors{
+          [](const parser::Name &x) { return x.symbol; },
+          [](const parser::ProcComponentRef &x) {
+            return parser::UnwrapRef<parser::StructureComponent>(x.v)
+                .Component()
+                .symbol;
+          },
+      },
+      proc.u);
+}
+
 const Symbol *GetObjectSymbol(const parser::OmpObject &object, bool ultimate) {
   // Some symbols may be missing if the resolution failed, e.g. when an
   // undeclared name is used with implicit none.
-  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
+  if (auto *name{GetCommonBlockFromObj(object)}) {
     if (ultimate) {
       return name->symbol ? &name->symbol->GetUltimate() : nullptr;
     } else {
       return name->symbol;
     }
-  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
+  } else if (auto *desg{GetDesignatorFromObj(object)}) {
     const parser::Name &last{GetLastName(*desg)};
     if (ultimate) {
       return last.symbol ? &last.symbol->GetUltimate() : nullptr;
     } else {
       return last.symbol;
+    }
+  } else if (auto *locator{GetLocatorFromObj(object)}) {
+    const Symbol *sym = common::visit( //
+        common::visitors{
+            [](const parser::OmpReservedIdentifier &x) -> const Symbol * {
+              return x.v.symbol;
+            },
+            [](const parser::FunctionReference &x) -> const Symbol * {
+              return GetFunctionReferenceSymbol(x);
+            },
+        },
+        locator->u);
+    if (sym && ultimate) {
+      return &sym->GetUltimate();
+    } else {
+      return sym;
     }
   }
   return nullptr;
@@ -143,10 +179,8 @@ const Symbol *GetObjectSymbol(const parser::OmpObject &object, bool ultimate) {
 
 const Symbol *GetArgumentSymbol(
     const parser::OmpArgument &argument, bool ultimate) {
-  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
-    if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-      return GetObjectSymbol(*object, ultimate);
-    }
+  if (auto *object{GetArgumentObject(argument)}) {
+    return GetObjectSymbol(*object, ultimate);
   }
   return nullptr;
 }
@@ -156,7 +190,8 @@ bool IsCommonBlock(const Symbol &sym) {
 }
 
 bool IsVariableListItem(const Symbol &sym) {
-  return evaluate::IsVariable(sym) || sym.attrs().test(Attr::POINTER);
+  return evaluate::IsVariable(sym) || IsCommonBlock(sym) ||
+      sym.attrs().test(Attr::POINTER);
 }
 
 bool IsExtendedListItem(const Symbol &sym) {
@@ -174,6 +209,14 @@ bool IsTypeParamInquiry(const Symbol &sym) {
           [&](auto &&) { return false; },
       },
       sym.details());
+}
+
+bool IsComplexPart(const Symbol &sym) {
+  if (auto *misc{sym.detailsIf<MiscDetails>()}) {
+    return misc->kind() == MiscDetails::Kind::ComplexPartRe ||
+        misc->kind() == MiscDetails::Kind::ComplexPartIm;
+  }
+  return false;
 }
 
 bool IsStructureComponent(const Symbol &sym) {
@@ -219,6 +262,61 @@ bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
   return false;
 }
 
+bool IsExtendedListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsVariableListItem(object, semaCtx)) {
+    return true;
+  }
+  if (!GetLocatorFromObj(object)) {
+    if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+      return IsProcedure(*sym);
+    }
+  }
+  return false;
+}
+
+bool IsLocatorListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsVariableListItem(object, semaCtx) || GetLocatorFromObj(object)) {
+    return true;
+  }
+  // A statement function call may look like an array element access.
+  if (auto *desg{GetDesignatorFromObj(object)}) {
+    evaluate::ExpressionAnalyzer ea(*semaCtx);
+    auto restorer{ea.GetContextualMessages().DiscardMessages()};
+    return IsVarOrFunctionRef(ea.Analyze(*desg));
+  }
+  return false;
+}
+
+bool IsVariableListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+    return IsVariableListItem(*sym);
+  }
+  return false;
+}
+
+bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (auto *desg{GetDesignatorFromObj(object)}) {
+    evaluate::ExpressionAnalyzer ea(*semaCtx);
+    auto restorer{ea.GetContextualMessages().DiscardMessages()};
+    if (MaybeExpr expr{ea.Analyze(*desg)}) {
+      return ExtractSubstring(*expr).has_value();
+    }
+  }
+  return false;
+}
+
+bool IsArrayElement(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+    return !IsTypeParamInquiry(*sym) &&
+        parser::Unwrap<parser::ArrayElement>(object);
+  }
+  return false;
+}
+
 const Symbol *GetHostSymbol(const Symbol &sym) {
   if (auto *details{sym.detailsIf<HostAssocDetails>()}) {
     return &details->symbol();
@@ -249,6 +347,29 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   default:
     return false;
   }
+}
+
+// This function aims to return true when a symbol is going to result
+// in a temporary stack descriptor being allocated for it in the
+// lowering that may pose an issue for data mapping if left on
+// device accidentally.
+bool HasTemporaryStackDescriptor(const Symbol &symbol) {
+  const Symbol &ultimate(symbol.GetUltimate());
+  bool isDummy = IsDummy(ultimate);
+
+  if (IsAllocatableOrPointer(ultimate)) {
+    return !isDummy;
+  }
+
+  if (!isDummy) {
+    return false;
+  }
+
+  if (const auto *obj = ultimate.detailsIf<ObjectEntityDetails>()) {
+    return obj->IsAssumedShape() || obj->IsAssumedRank();
+  }
+
+  return false;
 }
 
 static MaybeExpr GetEvaluateExprFromTyped(const parser::TypedExpr &typedExpr) {
@@ -326,7 +447,9 @@ std::optional<int64_t> GetIntValueFromExpr(
     return value;
   }
   if (semaCtx) {
-    if (auto expr{evaluate::ExpressionAnalyzer{*semaCtx}.Analyze(parserExpr)}) {
+    evaluate::ExpressionAnalyzer ea(*semaCtx);
+    auto restorer{ea.GetContextualMessages().DiscardMessages()};
+    if (auto expr{ea.Analyze(parserExpr)}) {
       return evaluate::ToInt64(expr);
     }
   }
@@ -378,9 +501,13 @@ std::optional<bool> IsContiguous(
           },
           [&](const parser::Designator &x) {
             evaluate::ExpressionAnalyzer ea{semaCtx};
+            auto restorer{ea.GetContextualMessages().DiscardMessages()};
             if (MaybeExpr maybeExpr{ea.Analyze(x)}) {
               return ContiguousHelper{semaCtx}.Visit(*maybeExpr);
             }
+            return std::optional<bool>{};
+          },
+          [&](const parser::OmpLocator &) { //
             return std::optional<bool>{};
           },
           [&](const parser::OmpObject::Invalid &) {
@@ -554,6 +681,188 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
           },
       },
       instance.u);
+}
+
+/// For clauses that take argument lists, return the type of the argument
+/// list item. For other clauses return std::nullopt.
+std::optional<ListItemKind> GetArgumentListItemKind(
+    llvm::omp::Clause clause, unsigned version) {
+  switch (clause) {
+  case llvm::omp::Clause::OMPC_absent:
+    if (version >= 51) {
+      return ListItemKind::DirectiveName;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_adjust_args:
+    if (version >= 61) {
+      return ListItemKind::ProcedureArgument;
+    }
+    if (version >= 51) {
+      return ListItemKind::Parameter;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_affinity:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_aligned:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_allocate:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_append_args:
+    if (version >= 51) {
+      return ListItemKind::Operation;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_apply:
+    if (version >= 60) {
+      return ListItemKind::DirectiveSpecification;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_contains:
+    if (version >= 51) {
+      return ListItemKind::DirectiveName;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_copyin:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_copyprivate:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_counts:
+    if (version >= 60) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_depend:
+    if (version >= 61) {
+      return ListItemKind::Depend;
+    }
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_enter:
+    if (version >= 52) {
+      return ListItemKind::Extended;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_exclusive:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_firstprivate:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_from:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_has_device_addr:
+    if (version >= 51) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_in_reduction:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_inclusive:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_induction:
+    if (version >= 60) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_interop:
+    if (version >= 60) {
+      return ListItemKind::Interop;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_is_device_ptr:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_lastprivate:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_linear:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_link:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_local:
+    if (version >= 60) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_map:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_nontemporal:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_num_threads:
+    if (version >= 60) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_permutation:
+    if (version >= 60) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_private:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_reduction:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_shared:
+    return ListItemKind::Variable;
+  // TODO 6.1
+  // case llvm::omp::Clause::OMPC_shift:
+  //   if (version >= 61) {
+  //     return ListItemKind::IntegerExpression;
+  //   }
+  //   break;
+  case llvm::omp::Clause::OMPC_sizes:
+    if (version >= 51) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_task_reduction:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_to:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Extended;
+  case llvm::omp::Clause::OMPC_uniform:
+    if (version >= 50) {
+      return ListItemKind::Parameter;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_use_device_addr:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_use_device_ptr:
+    return ListItemKind::Variable;
+  default:
+    break;
+  }
+  return std::nullopt;
 }
 
 bool IsLoopTransforming(llvm::omp::Directive dir) {
@@ -1984,4 +2293,475 @@ void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
   }
 }
 
+UnsupportedSelectorFeature FindUnsupportedSelectorFeature(
+    const parser::traits::OmpContextSelectorSpecification &ctxSel,
+    SemanticsContext &semaCtx) {
+  for (const parser::OmpTraitSetSelector &traitSet : ctxSel.v) {
+    using TSSName = parser::OmpTraitSetSelectorName;
+    auto setName{std::get<TSSName>(traitSet.t).v};
+    if (MapTraitSet(setName) == llvm::omp::TraitSet::target_device) {
+      return UnsupportedSelectorFeature::TargetDevice;
+    }
+
+    for (const parser::OmpTraitSelector &selector :
+        std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
+      const auto &props{
+          std::get<std::optional<parser::OmpTraitSelector::Properties>>(
+              selector.t)};
+      if (!props) {
+        continue;
+      }
+      for (const auto &prop :
+          std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
+        if (std::holds_alternative<common::Indirection<parser::OmpClause>>(
+                prop.u) ||
+            std::holds_alternative<parser::OmpTraitPropertyExtension>(prop.u)) {
+          return UnsupportedSelectorFeature::ClauseOrExtensionProperty;
+        }
+      }
+    }
+  }
+  return UnsupportedSelectorFeature::None;
+}
+
+// Add the construct trait properties implied by an OpenMP directive (e.g.
+// `target` adds `construct_target_target`, `target teams` adds both
+// `construct_target_target` and `construct_teams_teams`) to \p vmi. This
+// decomposes combined/composite construct selectors into their leaf traits.
+static void AppendConstructTraitsForDirective(
+    llvm::omp::Directive dir, llvm::omp::VariantMatchInfo &vmi) {
+  auto add = [&](llvm::omp::TraitProperty prop) {
+    vmi.addTrait(prop, llvm::omp::getOpenMPContextTraitPropertyName(prop, ""));
+  };
+  if (llvm::omp::allTargetSet.test(dir))
+    add(llvm::omp::TraitProperty::construct_target_target);
+  if (llvm::omp::allTeamsSet.test(dir))
+    add(llvm::omp::TraitProperty::construct_teams_teams);
+  if (llvm::omp::allParallelSet.test(dir))
+    add(llvm::omp::TraitProperty::construct_parallel_parallel);
+  if (llvm::omp::allDoSet.test(dir))
+    add(llvm::omp::TraitProperty::construct_for_for);
+  if (llvm::omp::allSimdSet.test(dir))
+    add(llvm::omp::TraitProperty::construct_simd_simd);
+  // dispatch is a standalone construct trait (not part of any combined
+  // directive set), so it is matched explicitly.
+  if (dir == llvm::omp::Directive::OMPD_dispatch)
+    add(llvm::omp::TraitProperty::construct_dispatch_dispatch);
+}
+
+static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
+    const parser::OmpTraitSelector &selector, llvm::omp::VariantMatchInfo &vmi,
+    SemanticsContext &semaCtx,
+    std::optional<DynamicUserCondition> &dynamicCond) {
+  const auto &traitName{std::get<parser::OmpTraitSelectorName>(selector.t)};
+  const auto &props{
+      std::get<std::optional<parser::OmpTraitSelector::Properties>>(
+          selector.t)};
+
+  std::optional<llvm::APInt> scoreStorage;
+  llvm::APInt *scorePtr{GetTraitScore(props, semaCtx, scoreStorage)};
+
+  // user={condition(...)}: constant-fold to user_condition_true/false. A
+  // non-constant expression is recorded as user_condition_unknown and the
+  // first such expression is captured for later runtime lowering.
+  llvm::omp::TraitSelector selectorKind{MapTraitSelector(traitName, set)};
+  if (selectorKind == llvm::omp::TraitSelector::user_condition) {
+    if (!props) {
+      return;
+    }
+    for (const auto &prop :
+        std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
+      const auto *scalarExpr{std::get_if<parser::ScalarExpr>(&prop.u)};
+      if (!scalarExpr) {
+        continue;
+      }
+      if (auto constValue{EvaluateUserCondition(semaCtx, *scalarExpr)}) {
+        vmi.addTrait(set,
+            *constValue ? llvm::omp::TraitProperty::user_condition_true
+                        : llvm::omp::TraitProperty::user_condition_false,
+            "<condition>", scorePtr);
+        continue;
+      }
+      if (!dynamicCond) {
+        dynamicCond = DynamicUserCondition{scalarExpr, prop.source};
+      }
+      vmi.addTrait(set, llvm::omp::TraitProperty::user_condition_unknown,
+          "<condition>", scorePtr);
+    }
+    return;
+  }
+
+  ProcessTraitProperties(vmi, set, selectorKind, props, scorePtr);
+
+  if (props || set != llvm::omp::TraitSet::construct) {
+    return;
+  }
+
+  // Construct trait selector with no properties (e.g. `construct={simd}`):
+  // the selector itself implies the property.
+  if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
+    AppendConstructTraitsForDirective(*dir, vmi);
+  }
+}
+
+std::optional<DynamicUserCondition> MakeVariantMatchInfo(
+    llvm::omp::VariantMatchInfo &vmi,
+    const parser::traits::OmpContextSelectorSpecification &ctxSel,
+    SemanticsContext &semaCtx) {
+  CHECK(FindUnsupportedSelectorFeature(ctxSel, semaCtx) ==
+      UnsupportedSelectorFeature::None);
+  std::optional<DynamicUserCondition> dynamicCond;
+  for (const parser::OmpTraitSetSelector &traitSet : ctxSel.v) {
+    using TSSName = parser::OmpTraitSetSelectorName;
+    auto setName{std::get<TSSName>(traitSet.t).v};
+    llvm::omp::TraitSet set{MapTraitSet(setName)};
+
+    for (const parser::OmpTraitSelector &selector :
+        std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
+      AddTraitPropertiesFromSelector(set, selector, vmi, semaCtx, dynamicCond);
+    }
+  }
+  return dynamicCond;
+}
+
+bool MayVariantBeSelected(
+    const parser::traits::OmpContextSelectorSpecification *selector,
+    SemanticsContext &context, OmpVariantMatchContext &matchContext) {
+  if (!selector ||
+      FindUnsupportedSelectorFeature(*selector, context) !=
+          UnsupportedSelectorFeature::None) {
+    return true;
+  }
+  llvm::omp::VariantMatchInfo vmi;
+  (void)MakeVariantMatchInfo(vmi, *selector, context);
+  const auto &required{vmi.RequiredTraits};
+  using TP = llvm::omp::TraitProperty;
+
+  enum class MatchKind { All, Any, None };
+  MatchKind matchKind{MatchKind::All};
+  if (required.test(unsigned(TP::implementation_extension_match_any))) {
+    matchKind = MatchKind::Any;
+  }
+  // Match-none takes precedence over match-any when both are present, matching
+  // isVariantApplicableInContextHelper.
+  if (required.test(unsigned(TP::implementation_extension_match_none))) {
+    matchKind = MatchKind::None;
+  }
+
+  bool userTrue{required.test(unsigned(TP::user_condition_true))};
+  bool userUnknown{required.test(unsigned(TP::user_condition_unknown))};
+  bool userFalse{required.test(unsigned(TP::user_condition_false))};
+  bool invalid{required.test(unsigned(TP::invalid))};
+
+  // The target-only LLVM matcher below skips user and construct traits while
+  // retaining the global match kind. Account for those skipped traits first;
+  // otherwise an empty filtered set incorrectly fails match-any and satisfies
+  // match-none.
+  switch (matchKind) {
+  case MatchKind::All:
+    if (userFalse || invalid) {
+      return false;
+    }
+    break;
+  case MatchKind::Any:
+    if (userTrue || userUnknown || !vmi.ConstructTraits.empty()) {
+      return true;
+    }
+    break;
+  case MatchKind::None:
+    if (userTrue) {
+      return false;
+    }
+    break;
+  }
+
+  // Without a target triple, do not reject device or implementation traits.
+  if (context.targetTriple().empty()) {
+    if (matchKind != MatchKind::Any) {
+      return true;
+    }
+    // No skipped trait can satisfy match-any here. Keep the selector
+    // conservatively selectable if it contains a device or implementation
+    // trait; otherwise no trait can satisfy match-any.
+    for (unsigned bit : required.set_bits()) {
+      TP property{static_cast<TP>(bit)};
+      llvm::omp::TraitSet set{
+          llvm::omp::getOpenMPContextTraitSetForProperty(property)};
+      if ((set == llvm::omp::TraitSet::device ||
+              set == llvm::omp::TraitSet::implementation) &&
+          llvm::omp::getOpenMPContextTraitSelectorForProperty(property) !=
+              llvm::omp::TraitSelector::implementation_extension) {
+        return true;
+      }
+    }
+    return false;
+  }
+  return llvm::omp::isVariantApplicableInContext(
+      vmi, matchContext, /*DeviceOrImplementationSetOnly=*/true);
+}
+
+OmpVariantMatchContext::OmpVariantMatchContext(bool isDeviceCompilation,
+    llvm::Triple targetTriple, llvm::Triple targetOffloadTriple,
+    std::string targetFeatures,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
+    // No specific device is selected during variant matching; use an unknown
+    // device number so OMPContext does not inadvertently describe the host
+    // device (which would cause target-device selectors to match incorrectly).
+    : llvm::omp::OMPContext(isDeviceCompilation, std::move(targetTriple),
+          std::move(targetOffloadTriple), /*DeviceNum=*/-1),
+      features_(std::move(targetFeatures)) {
+  for (llvm::omp::TraitProperty trait : constructTraits) {
+    addTrait(trait);
+  }
+}
+
+OmpVariantMatchContext::OmpVariantMatchContext(const SemanticsContext &context,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
+    : OmpVariantMatchContext(context.langOptions().OpenMPIsTargetDevice,
+          llvm::Triple(context.targetTriple()),
+          context.langOptions().OMPTargetTriples.empty()
+              ? llvm::Triple()
+              : context.langOptions().OMPTargetTriples.front(),
+          context.targetFeatures(), constructTraits) {}
+
+bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
+  // The target feature list is a comma-separated string such as
+  // "+sse,+avx2,-foo"; an ISA trait matches when its "+" form is present.
+  std::string want{("+" + rawString).str()};
+  llvm::SmallVector<llvm::StringRef> tokens;
+  llvm::StringRef(features_).split(
+      tokens, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  return llvm::is_contained(tokens, want);
+}
+
+// User-defined reduction resolution, shared between the OpenMP semantic checks
+// and lowering. The two public entry points (FindUserReductionSymbol and
+// FindOperatorUserReductionSymbol) return the resolved (non-ultimate) reduction
+// symbol; the caller reads its UserReductionDetails.
+
+// Compute the mangled reduction name to look up in a reduction's source module.
+// If the operator was renamed on import (e.g. USE m, ONLY: operator(.local.) =>
+// operator(.remote.)), the local mangled name will not match in the source
+// module; re-derive the lookup name from the source operator's ultimate name.
+// Only defined operators can be renamed (intrinsic operators and named
+// reductions cannot), so a detected rename always has a ".op." source name.
+// For non-renamed lookups the original mangled name is returned unchanged.
+static std::string SourceReductionName(const parser::CharBlock &mangledName,
+    const parser::CharBlock &localName, const parser::CharBlock &sourceName) {
+  if (sourceName != localName && sourceName.size() >= 3 &&
+      sourceName.front() == '.' && sourceName.back() == '.') {
+    return MangleDefinedOperator(sourceName);
+  }
+  return mangledName.ToString();
+}
+
+// Return the reduction details of `symbol` if it is a user reduction that
+// supports `type` (any type when `type` is null).
+static const UserReductionDetails *AcceptReduction(
+    const Symbol &symbol, const DeclTypeSpec *type) {
+  const auto *details{symbol.GetUltimate().detailsIf<UserReductionDetails>()};
+  if (details && (!type || details->SupportsType(*type))) {
+    return details;
+  }
+  return nullptr;
+}
+
+// A reduction symbol is locally declared (authoritative) when it is not reached
+// through any USE association, even via host association. Such a reduction
+// shadows reductions imported or reachable through its operator.
+static bool IsLocalReduction(const Symbol &symbol) {
+  const Symbol *s{&symbol};
+  while (const auto *host{s->detailsIf<HostAssocDetails>()}) {
+    s = &host->symbol();
+  }
+  return !s->detailsIf<UseDetails>();
+}
+
+// A reduction's canonical identity is its own (mangled) name together with the
+// name of the module that defines it. Pointer identity of the ultimate symbol
+// is not sufficient: a hermetic module file embeds a private copy of its
+// dependencies, so a reduction reached both through a direct USE of its module
+// and through a facade that embeds that module has two distinct ultimate
+// symbols living in two module scopes of the same name. Identifying them by
+// the module name and reduction name collapses the two.
+//
+// Known limitation: this cannot distinguish two genuinely different versions of
+// a same-named module (a stale hermetic embed of an old module vs. a rebuilt
+// one), because the module name and mangled reduction name are identical and
+// only the combiner body differs. Such an inconsistent build collapses to one
+// candidate and the reduction is resolved by USE order without a diagnostic,
+// matching the pre-existing behavior (Flang does not reject a same-named module
+// loaded at two different versions either). The module-file hash does not help:
+// a consistent hermetic embed and its directly used module are already distinct
+// module instances with different hashes, so hashing would wrongly report the
+// common, valid case as ambiguous.
+static parser::CharBlock DefiningModuleName(const Symbol &ultimate) {
+  const Scope &owner{ultimate.owner()};
+  return owner.symbol() ? owner.symbol()->name() : parser::CharBlock{};
+}
+
+// Add `reductionSym` to `matches` unless a reduction with the same canonical
+// identity (defining module name + reduction name) is already present. Using
+// this identity, rather than ultimate-symbol pointer, collapses one
+// reduction reached through several USE/rename/facade paths (a diamond, or a
+// hermetic facade that embeds the defining module) to a single entry, while
+// genuinely different reductions declared in different modules remain separate.
+static void AddDistinctReduction(llvm::SmallVectorImpl<const Symbol *> &matches,
+    const Symbol &reductionSym) {
+  const Symbol &ultimate{reductionSym.GetUltimate()};
+  parser::CharBlock reductionName{ultimate.name()};
+  parser::CharBlock moduleName{DefiningModuleName(ultimate)};
+  for (const Symbol *match : matches) {
+    const Symbol &matchUltimate{match->GetUltimate()};
+    if (matchUltimate.name() == reductionName &&
+        DefiningModuleName(matchUltimate) == moduleName) {
+      return;
+    }
+  }
+  matches.push_back(&reductionSym);
+}
+
+// Collect every distinct user reduction supporting `type` reachable by
+// following the operator/procedure symbol `opSym` through its USE associations
+// and merged generic sources. Each module the operator passes through is
+// checked for a (possibly renamed) reduction; `localName` is the operator name
+// written at the use site, used to detect renames. Unlike a first-match search,
+// every branch of a merged generic is explored and the results are unioned
+// (deduped by canonical identity), so an operator merged from two modules that
+// each declare a reduction for `type` is detected as ambiguous rather than
+// silently resolved by USE order. A locally declared reduction in a module is
+// authoritative: it settles that branch (it is collected if it supports the
+// type, otherwise it shadows reductions reachable further along that branch).
+static void CollectOperatorReductions(const Symbol &opSym,
+    const parser::CharBlock &mangledName, const parser::CharBlock &localName,
+    const DeclTypeSpec *type, llvm::SmallPtrSetImpl<const Symbol *> &visited,
+    llvm::SmallVectorImpl<const Symbol *> &matches) {
+  if (!visited.insert(&opSym).second) {
+    return;
+  }
+  const Scope &scope{opSym.owner()};
+  if (scope.kind() == Scope::Kind::Module) {
+    std::string lookupName{
+        SourceReductionName(mangledName, localName, opSym.name())};
+    auto it{scope.find(parser::CharBlock{lookupName})};
+    if (it != scope.end()) {
+      const Symbol &reductionSym{*it->second};
+      const Symbol &reductionUltimate{reductionSym.GetUltimate()};
+      if (!reductionUltimate.attrs().test(Attr::PRIVATE)) {
+        if (AcceptReduction(reductionUltimate, type)) {
+          AddDistinctReduction(matches, reductionSym);
+          return;
+        }
+        // A locally declared reduction here shadows reductions reachable
+        // further along this branch.
+        if (reductionUltimate.detailsIf<UserReductionDetails>() &&
+            IsLocalReduction(reductionSym)) {
+          return;
+        }
+      }
+    }
+  }
+  // Follow a USE-associated operator to the module it was imported from.
+  if (const auto *use{opSym.detailsIf<UseDetails>()}) {
+    CollectOperatorReductions(
+        use->symbol(), mangledName, localName, type, visited, matches);
+    return;
+  }
+  // Search every module merged into a generic operator (recursing through
+  // re-exporting facade modules). Every branch is explored, not just the first
+  // to match: two branches that reach distinct reductions make the merged
+  // operator ambiguous.
+  if (const auto *generic{opSym.detailsIf<GenericDetails>()}) {
+    for (const Symbol &useSym : generic->uses()) {
+      CollectOperatorReductions(
+          useSym, mangledName, localName, type, visited, matches);
+    }
+  }
+}
+
+// Find user reduction details for a mangled name, following USE associations
+// when the reduction is not directly visible in the scope. A type may be
+// supplied to disambiguate an operator that carries reductions for several
+// types (e.g. a generic merged from multiple modules); a candidate is accepted
+// only if it supports that type. A locally declared reduction is authoritative
+// for its operator in its scope and shadows USE-associated reductions. All
+// distinct matches are collected into `matches` (a merged/renamed operator can
+// reach several); FindUserReductionSymbol returns the front of this set.
+// Internal to this TU: FindUserReductionSymbol (and its ambiguity path) is the
+// only caller now that the eager guard is gone.
+static void FindUserReductionSymbols(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type,
+    llvm::SmallVectorImpl<const Symbol *> &matches) {
+  // Direct lookup: a reduction directly visible via bare USE or a local
+  // declaration.
+  const Symbol *directSymbol{scope.FindSymbol(mangledName)};
+  if (directSymbol) {
+    if (const auto *useError{directSymbol->detailsIf<UseErrorDetails>()}) {
+      // Several modules declare a reduction with the same mangled name (e.g.
+      // two modules each with `reduction(+:integer)`, or the same special
+      // function): the name collides into a USE error. Each colliding source
+      // that supports the type is a distinct candidate.
+      for (const auto &[occurrenceName, occurrenceSym] :
+          useError->occurrences()) {
+        if (occurrenceSym &&
+            AcceptReduction(occurrenceSym->GetUltimate(), type)) {
+          AddDistinctReduction(matches, *occurrenceSym);
+        }
+      }
+    } else if (AcceptReduction(*directSymbol, type)) {
+      AddDistinctReduction(matches, *directSymbol);
+      // A locally declared reduction is authoritative: it shadows any
+      // USE-associated reduction reachable through the operator, so stop here.
+      if (IsLocalReduction(*directSymbol)) {
+        return;
+      }
+      // A USE-associated direct match is only one candidate: continue through
+      // the operator to detect a second, distinct reduction merged under it.
+    } else if (directSymbol->GetUltimate().detailsIf<UserReductionDetails>() &&
+        IsLocalReduction(*directSymbol)) {
+      // A locally declared reduction that does not support the requested type
+      // is authoritative: it shadows USE-associated reductions
+      // (ProcessReduction- Specifier erases the latter), so do not resurrect
+      // them via the operator.
+      return;
+    }
+  }
+  // Trace the operator/procedure to the modules that declare its reduction.
+  std::string fortranName{GetReductionFortranId(mangledName)};
+  const Symbol *opSymbol{
+      fortranName.empty() ? nullptr : scope.FindSymbol(fortranName)};
+  if (opSymbol) {
+    llvm::SmallPtrSet<const Symbol *, 8> visited;
+    CollectOperatorReductions(
+        *opSymbol, mangledName, opSymbol->name(), type, visited, matches);
+  }
+}
+
+// Return the front of FindUserReductionSymbols' match set (the first
+// candidate), preserving the historical single-symbol interface. When
+// `ambiguous` is non-null it is set true if more than one distinct reduction
+// supports the type; the first match is still returned so that callers that do
+// not check ambiguity (lowering) are unchanged, since an ambiguous program is
+// rejected in semantics before lowering runs.
+const Symbol *FindUserReductionSymbol(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type,
+    bool *ambiguous) {
+  llvm::SmallVector<const Symbol *, 2> matches;
+  FindUserReductionSymbols(scope, mangledName, type, matches);
+  if (ambiguous) {
+    *ambiguous = matches.size() > 1;
+  }
+  return matches.empty() ? nullptr : matches.front();
+}
+
+const Symbol *FindOperatorUserReductionSymbol(
+    const Scope &scope, const Symbol &operatorSym, const DeclTypeSpec *type) {
+  return FindUserReductionSymbol(
+      scope, MangleDefinedOperator(operatorSym.name()), type);
+}
+
+parser::CharBlock MangledIntrinsicOperatorReductionName(
+    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context) {
+  return MakeNameFromOperator(op, context);
+}
 } // namespace Fortran::semantics::omp

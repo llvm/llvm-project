@@ -49,7 +49,6 @@
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include <deque>
 #include <sstream>
-#include <unordered_map>
 #include <vector>
 using namespace llvm;
 using namespace llvm::memprof;
@@ -1103,8 +1102,8 @@ private:
   // frames that we discover while building the graph.
   // It maps from the summary of the function making the tail call, to a map
   // of callee ValueInfo to corresponding synthesized callsite info.
-  std::unordered_map<FunctionSummary *,
-                     std::map<ValueInfo, std::unique_ptr<CallsiteInfo>>>
+  DenseMap<FunctionSummary *,
+           std::map<ValueInfo, std::unique_ptr<CallsiteInfo>>>
       FunctionCalleesToSynthesizedCallsiteInfos;
 };
 } // namespace
@@ -2525,7 +2524,11 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
   // by MemProfTopNImportant. Must be a std::map (not DenseMap) because keys
   // must be sorted.
   std::map<uint64_t, uint32_t> TotalSizeToContextIdTopNCold;
-  for (auto &I : Index) {
+  // Sort by GUID for deterministic graph construction order.
+  // TODO: This sort has a measurable cost on the thin link when memprof is
+  // enabled. Investigate gating it behind an option that is only enabled for
+  // tests that check internal state.
+  for (const auto &I : Index.sortedGlobalValueSummariesRange()) {
     auto VI = Index.getValueInfo(I);
     if (GUIDsToSkip.contains(VI.getGUID()))
       continue;
@@ -3377,7 +3380,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
         // This is only emitted if the context size info is not present.
         std::string Msg =
             "MemProf hinting: " + getAllocTypeString((uint8_t)TypeI->second) +
-            " is " + getAllocTypeString(Node->AllocTypes) + " after cloning";
+            " context is " + getAllocTypeString(Node->AllocTypes) +
+            " after cloning";
         if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
           Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                  " due to cold byte percent";
