@@ -2734,6 +2734,9 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
                                                   IK == InitKind::AllOnes ||
                                                   IK == InitKind::Largest),
                                                  Ty, ExprRange.getBegin()));
+    } else if (Ty->isNullPtrType()) {
+      Exprs.push_back(new (Context)
+                          CXXNullPtrLiteralExpr(Ty, ExprRange.getBegin()));
     } else {
       Exprs.push_back(IntegerLiteral::Create(
           Context, getInitIntValue(Context, IK, Ty), Ty, ExprRange.getBegin()));
