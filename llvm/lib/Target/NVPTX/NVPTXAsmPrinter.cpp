@@ -419,6 +419,21 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   O << ";\n";
 }
 
+void NVPTXAsmPrinter::emitJumpTable(const MachineJumpTableEntry &MJT,
+                                    unsigned MJTI, raw_ostream &O) const {
+  O << "$L_brx_" << MJTI << ":\n";
+
+  if (MJT.MBBs.empty())
+    return;
+
+  O << "\t.branchtargets\n\t\t";
+  interleave(
+      MJT.MBBs, O,
+      [&](const MachineBasicBlock *MBB) { MBB->getSymbol()->print(O, MAI); },
+      ",\n\t\t");
+  O << ";\n";
+}
+
 // Return true if MBB is the header of a loop marked with
 // llvm.loop.unroll.disable or llvm.loop.unroll.count=1.
 bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
@@ -522,16 +537,8 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
     emitCallPrototype(*CB, Id, O);
 
   if (const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo())
-    for (const auto &[Idx, JT] : enumerate(MJTI->getJumpTables())) {
-      O << "$L_brx_" << Idx << ":\n\t.branchtargets\n\t\t";
-      interleave(
-          JT.MBBs, O,
-          [&](const MachineBasicBlock *MBB) {
-            MBB->getSymbol()->print(O, MAI);
-          },
-          ",\n\t\t");
-      O << ";\n";
-    }
+    for (const auto &[Idx, JT] : enumerate(MJTI->getJumpTables()))
+      emitJumpTable(JT, Idx, O);
 
   OutStreamer->emitRawText(O.str());
 }
