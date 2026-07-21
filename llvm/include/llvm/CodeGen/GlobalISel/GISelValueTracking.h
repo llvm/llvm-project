@@ -96,7 +96,8 @@ public:
   ///
   /// \p DemandedElts selects the vector elements that must be proven nonzero.
   /// For scalar values this is a one-bit mask. The overload without
-  /// \p DemandedElts demands every fixed-vector element, or the scalar value.
+  /// \p DemandedElts demands every fixed-vector element, or the scalar value to
+  /// be non-zero.
   bool isKnownNeverZero(Register R, unsigned Depth = 0);
   bool isKnownNeverZero(Register R, const APInt &DemandedElts,
                         unsigned Depth = 0);
