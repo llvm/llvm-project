@@ -54,6 +54,7 @@
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
 
 namespace mlir {
@@ -100,9 +101,17 @@ public:
       if (Operation *existing = gpuSymTable.lookup(name.getValue())) {
         // A same-named symbol may already exist from an earlier pass (e.g.
         // CUDA Fortran can clone device globals before ACCImplicitDeclare
-        // marks the host copy with acc.declare). Reuse it when the op type
-        // matches; only a different op type is a real conflict.
-        if (existing->getName() != globalOp.getName()) {
+        // marks the host copy with acc.declare). Reuse when structurally
+        // equivalent ignoring locations and discardable attrs such as
+        // acc.declare. Only a different op type or a true definition
+        // mismatch is a conflict.
+        if (existing->getName() != globalOp.getName() ||
+            !OperationEquivalence::isEquivalentTo(
+                existing, &globalOp,
+                OperationEquivalence::ignoreValueEquivalence,
+                /*markEquivalent=*/nullptr,
+                OperationEquivalence::IgnoreLocations |
+                    OperationEquivalence::IgnoreDiscardableAttrs)) {
           accSupport.emitNYI(globalOp.getLoc(),
                              llvm::Twine("duplicate global symbol '") +
                                  name.getValue() + "' in gpu module");
