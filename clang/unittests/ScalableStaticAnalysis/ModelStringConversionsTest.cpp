@@ -27,6 +27,11 @@ TEST(BuildNamespaceKindStringTest, ToStringLinkUnit) {
             "LinkUnit");
 }
 
+TEST(BuildNamespaceKindStringTest, ToStringStaticLibrary) {
+  EXPECT_EQ(buildNamespaceKindToString(BuildNamespaceKind::StaticLibrary),
+            "StaticLibrary");
+}
+
 TEST(BuildNamespaceKindStringTest, FromStringCompilationUnit) {
   EXPECT_EQ(buildNamespaceKindFromString("CompilationUnit"),
             BuildNamespaceKind::CompilationUnit);
@@ -37,9 +42,15 @@ TEST(BuildNamespaceKindStringTest, FromStringLinkUnit) {
             BuildNamespaceKind::LinkUnit);
 }
 
+TEST(BuildNamespaceKindStringTest, FromStringStaticLibrary) {
+  EXPECT_EQ(buildNamespaceKindFromString("StaticLibrary"),
+            BuildNamespaceKind::StaticLibrary);
+}
+
 TEST(BuildNamespaceKindStringTest, FromStringUnknown) {
   EXPECT_EQ(buildNamespaceKindFromString("compilation_unit"), std::nullopt);
   EXPECT_EQ(buildNamespaceKindFromString("link_unit"), std::nullopt);
+  EXPECT_EQ(buildNamespaceKindFromString("static_library"), std::nullopt);
   EXPECT_EQ(buildNamespaceKindFromString(""), std::nullopt);
   EXPECT_EQ(buildNamespaceKindFromString("unknown"), std::nullopt);
 }
@@ -51,6 +62,9 @@ TEST(BuildNamespaceKindStringTest, RoundTrip) {
   EXPECT_EQ(buildNamespaceKindFromString(
                 buildNamespaceKindToString(BuildNamespaceKind::LinkUnit)),
             BuildNamespaceKind::LinkUnit);
+  EXPECT_EQ(buildNamespaceKindFromString(
+                buildNamespaceKindToString(BuildNamespaceKind::StaticLibrary)),
+            BuildNamespaceKind::StaticLibrary);
 }
 
 //===----------------------------------------------------------------------===//

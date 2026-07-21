@@ -1570,7 +1570,14 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
     if (Callee->size() == 1)
       return true;
     size_t BBSize = Caller->size() + Callee->size() - 1;
-    return BBSize <= InlineMaxBB;
+    if (BBSize > InlineMaxBB) {
+      LLVM_DEBUG(dbgs() << "AMDGPU inline max-BB rejected inlining "
+                        << Callee->getName() << " into " << Caller->getName()
+                        << ": caller BBs=" << Caller->size() << ", callee BBs="
+                        << Callee->size() << ", combined BBs=" << BBSize
+                        << ", max BBs=" << InlineMaxBB << '\n');
+      return false;
+    }
   }
 
   return true;
@@ -1757,7 +1764,7 @@ bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
 void GCNTTIImpl::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
-  SmallVector<unsigned> MaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
+  SmallVector<unsigned> MaxNumWorkgroups = AMDGPU::getMaxNumWorkGroups(F);
   LB.push_back({"amdgpu-max-num-workgroups[0]", MaxNumWorkgroups[0]});
   LB.push_back({"amdgpu-max-num-workgroups[1]", MaxNumWorkgroups[1]});
   LB.push_back({"amdgpu-max-num-workgroups[2]", MaxNumWorkgroups[2]});

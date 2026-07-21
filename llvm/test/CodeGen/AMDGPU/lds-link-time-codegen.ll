@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-enable-object-linking < %s | FileCheck -check-prefixes=ASM %s --implicit-check-not=.amdgpu_num_agpr
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-enable-object-linking -filetype=obj < %s | llvm-readobj -r --syms --sections - | FileCheck -check-prefixes=ELF %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking < %s | FileCheck -check-prefixes=ASM %s --implicit-check-not=.amdgpu_num_agpr
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking -filetype=obj < %s | llvm-readobj -r --syms --sections - | FileCheck -check-prefixes=ELF %s
 
 ; Test that with object linking enabled, external LDS declarations produce
 ; @abs32@lo relocations, SHN_AMDGPU_LDS symbols, .amdgpu_lds directives,

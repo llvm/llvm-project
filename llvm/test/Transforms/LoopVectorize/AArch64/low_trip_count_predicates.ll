@@ -377,7 +377,7 @@ define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[TC]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[TC]], 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP19]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 1028, [[TMP20]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i64 1028, [[TMP20]]
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[TC]], 1

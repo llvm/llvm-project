@@ -1409,7 +1409,8 @@ public:
 
   /// Register dynamic relocation at \p Address.
   void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
-                            uint64_t Addend, uint64_t Value = 0);
+                            uint64_t Addend, uint64_t Value = 0,
+                            bool IsRELR = false);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
   /// if there is no dynamic relocation at such address.
@@ -1444,6 +1445,11 @@ public:
 
   /// Populate some internal data structures with debug info.
   void preprocessDebugInfo();
+
+  /// Record DWARF lexical-scope range boundaries into the containing functions'
+  /// BinaryFunction::DebugScopeBoundaryOffsets. Relies on preprocessDebugInfo's
+  /// actions: populated ProcessedCUs and pre-extracted DIEs for split dwarf.
+  void collectDebugScopeBoundaries();
 
   /// Add a filename entry from SrcCUID to DestCUID.
   unsigned addDebugFilenameToUnit(const uint32_t DestCUID,
@@ -1511,16 +1517,6 @@ public:
   /// the function is 'hot'. Consider it hot if count is above the average exec
   /// count of profiled functions.
   uint64_t getHotThreshold() const;
-
-  /// Return true if instruction \p Inst requires an offset for further
-  /// processing (e.g. assigning a profile).
-  bool keepOffsetForInstruction(const MCInst &Inst) const {
-    if (MIB->isCall(Inst) || MIB->isBranch(Inst) || MIB->isReturn(Inst) ||
-        MIB->isPrefix(Inst) || MIB->isIndirectBranch(Inst)) {
-      return true;
-    }
-    return false;
-  }
 
   /// Return true if the function should be emitted to the output file.
   bool shouldEmit(const BinaryFunction &Function) const;

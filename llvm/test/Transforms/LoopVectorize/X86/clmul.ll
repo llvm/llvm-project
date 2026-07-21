@@ -10,13 +10,15 @@ define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n){
 ; WITH-PCLMUL-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; WITH-PCLMUL-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; WITH-PCLMUL-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
-; WITH-PCLMUL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; WITH-PCLMUL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 10
 ; WITH-PCLMUL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; WITH-PCLMUL:       [[VECTOR_MEMCHECK]]:
 ; WITH-PCLMUL-NEXT:    [[TMP0:%.*]] = sub i64 [[C1]], [[A2]]
-; WITH-PCLMUL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; WITH-PCLMUL-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP0]], 1
+; WITH-PCLMUL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP11]], 31
 ; WITH-PCLMUL-NEXT:    [[TMP1:%.*]] = sub i64 [[C1]], [[B3]]
-; WITH-PCLMUL-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; WITH-PCLMUL-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP1]], 1
+; WITH-PCLMUL-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP12]], 31
 ; WITH-PCLMUL-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; WITH-PCLMUL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; WITH-PCLMUL:       [[VECTOR_PH]]:

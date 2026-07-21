@@ -33,3 +33,14 @@ void storeEnum(BoolEnum *p, BoolEnum v) { *p = v; }
 // LLVM:         store i8 %{{.*}}, ptr %{{.*}}, align 1
 // LLVM:         load i8, ptr %{{.*}}, align 1
 // LLVM:         store i8 %{{.*}}, ptr %{{.*}}, align 1
+
+bool toBool(BoolEnum e) { return static_cast<bool>(e); }
+
+// CIR-LABEL: cir.func{{.*}} @_Z6toBool8BoolEnum(%arg0: !cir.bool
+// CIR-SAME:    -> (!cir.bool
+// CIR:         cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NOT:     cir.cast int_to_bool
+// CIR:         cir.return
+
+// LLVM-LABEL: define dso_local noundef {{(zeroext )?}}i1 @_Z6toBool8BoolEnum(i1 noundef {{(zeroext )?}}%{{.*}})
+// LLVM:         ret i1 %{{.*}}

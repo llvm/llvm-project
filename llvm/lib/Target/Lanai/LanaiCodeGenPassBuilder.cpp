@@ -68,7 +68,7 @@ void LanaiCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
 }
 
 void LanaiCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
-  addModulePass(LanaiAsmPrinterEndPass(), PMW);
+  addModulePass(LanaiAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 } // namespace

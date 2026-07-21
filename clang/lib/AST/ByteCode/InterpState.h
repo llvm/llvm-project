@@ -177,6 +177,7 @@ private:
   mutable std::optional<llvm::BumpPtrAllocator> Allocator;
 
 public:
+  CodePtr PC;
   /// Reference to the module containing all bytecode.
   Program &P;
   /// Temporary stack.

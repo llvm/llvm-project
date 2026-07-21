@@ -350,13 +350,13 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-NOTF:       vector.body:
 ; CHECK-NOTF-NOT:     %{{.*}} = phi <vscale x 4 x i1>
 ; CHECK-NOTF:         %[[LOAD:.*]] = load <vscale x 2 x double>, ptr
-; CHECK-NOTF:         %{{.*}} = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> %[[LOAD]])
+; CHECK-NOTF:         %{{.*}} = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> %{{.*}})
 
 ; CHECK-TF-NOREV-LABEL: @reverse(
 ; CHECK-TF-NOREV:       vector.body:
 ; CHECK-TF-NOREV-NOT:     %{{.*}} = phi <vscale x 4 x i1>
 ; CHECK-TF-NOREV:         %[[LOAD:.*]] = load <vscale x 2 x double>, ptr
-; CHECK-TF-NOREV:         %{{.*}} = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> %[[LOAD]])
+; CHECK-TF-NOREV:         %{{.*}} = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> %{{.*}})
 
 ; CHECK-TF-LABEL: @reverse(
 ; CHECK-TF:       vector.body:
@@ -381,12 +381,13 @@ entry:
 
 for.body:
   %indvars.iv = phi i64 [ 1023, %entry ], [ %indvars.iv.next, %for.body ]
+  %indvars.ptr = phi ptr [ %dst, %entry ], [ %indvars.ptr.next, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %src, i64 %indvars.iv
   %0 = load double, ptr %arrayidx, align 8
   %add = fadd double %0, 1.000000e+00
-  %arrayidx2 = getelementptr inbounds double, ptr %dst, i64 %indvars.iv
-  store double %add, ptr %arrayidx2, align 8
+  store double %add, ptr %indvars.ptr, align 8
   %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  %indvars.ptr.next = getelementptr inbounds double, ptr %indvars.ptr, i64 1
   %cmp.not = icmp eq i64 %indvars.iv, 0
   br i1 %cmp.not, label %for.end, label %for.body
 

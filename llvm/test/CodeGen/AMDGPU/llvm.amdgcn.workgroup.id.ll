@@ -1,8 +1,8 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor %s -o %t.bc
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tahiti < %t.bc | FileCheck -check-prefixes=ALL,MESA3D %s
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga < %t.bc | FileCheck -check-prefixes=ALL,MESA3D %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-attributor %s -o %t.bc
+; RUN: llc -mtriple=amdgpu6.00 < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
+; RUN: llc -mtriple=amdgpu8.02 < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
+; RUN: llc -mtriple=amdgpu6.00-unknown-mesa3d < %t.bc | FileCheck -check-prefixes=ALL,MESA3D %s
+; RUN: llc -mtriple=amdgpu8.02-unknown-mesa3d < %t.bc | FileCheck -check-prefixes=ALL,MESA3D %s
 
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0
