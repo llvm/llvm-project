@@ -8757,6 +8757,7 @@ LegalizerHelper::lowerFPTOINT_SAT(MachineInstr &MI) {
 }
 
 // Floating-point conversions using truncating and extending loads and stores.
+// For bf16 -> f32/f64, use a shift and bitcast.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPExtAndTruncMem(MachineInstr &MI) {
   assert((MI.getOpcode() == TargetOpcode::G_FPEXT ||
@@ -8764,6 +8765,28 @@ LegalizerHelper::lowerFPExtAndTruncMem(MachineInstr &MI) {
          "Only G_FPEXT and G_FPTRUNC are expected");
 
   auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+
+  // bf16 -> f32/f64 fpext.
+  if (MI.getOpcode() == TargetOpcode::G_FPEXT &&
+      SrcTy.getScalarType() == LLT::bfloat16()) {
+    LLT I16Ty = SrcTy.changeElementType(LLT::integer(16));
+    LLT I32Ty = SrcTy.changeElementType(LLT::integer(32));
+    LLT F32Ty = SrcTy.changeElementType(LLT::float32());
+
+    auto SrcI =
+        MIRBuilder.buildAnyExt(I32Ty, MIRBuilder.buildBitcast(I16Ty, SrcReg));
+    auto Shl =
+        MIRBuilder.buildShl(I32Ty, SrcI, MIRBuilder.buildConstant(I32Ty, 16));
+
+    if (DstTy.getScalarType().isFloat32())
+      MIRBuilder.buildBitcast(DstReg, Shl);
+    else
+      MIRBuilder.buildFPExt(DstReg, MIRBuilder.buildBitcast(F32Ty, Shl));
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
   MachinePointerInfo PtrInfo;
   unsigned StoreOpc;
   unsigned LoadOpc;

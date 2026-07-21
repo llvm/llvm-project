@@ -189,9 +189,6 @@ public:
   bool legalizeFSQRT(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B) const;
 
-  bool legalizeFPExt(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &B) const;
-
   bool legalizeRsqClampIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                                  MachineIRBuilder &B) const;
 
