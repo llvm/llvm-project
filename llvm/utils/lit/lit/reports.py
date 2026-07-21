@@ -302,3 +302,141 @@ class TimeTraceReport(Report):
             "dur": int(elapsed_time * 1000000.0),
             "name": test_name,
         }
+
+
+def _wtt_attr(text):
+    # Prepare text for a WTT XML attribute value: flatten newlines/tabs to
+    # spaces (raw newlines are illegal in XML attributes), drop invalid XML
+    # chars using the shared helper, then quote. quoteattr adds the quotes.
+    text = (
+        text.replace("\r\n", " ")
+        .replace("\n", " ")
+        .replace("\r", " ")
+        .replace("\t", " ")
+    )
+    return quo(remove_invalid_xml_chars(text))
+
+
+class WttReport(Report):
+
+    def write_results(self, tests, elapsed):
+        with open(self.output_file, "w", encoding="utf-16") as f:
+            self._write_results_to_file(tests, elapsed, f)
+
+    def _write_results_to_file(self, tests, elapsed, file):
+        machine = os.getenv("COMPUTERNAME", "")
+        pid = os.getpid()
+
+        starts = [t.result.start for t in tests if t.result and t.result.start]
+        base = min(starts) if starts else 0.0
+        base_dt = datetime.datetime.fromtimestamp(base)
+        base_time = "%d:%d:%d %d:%d:%d:%d" % (
+            base_dt.year, base_dt.month, base_dt.day,
+            base_dt.hour, base_dt.minute, base_dt.second,
+            base_dt.microsecond // 1000,
+        )
+
+        def times(test):
+            elapsed_time = test.result.elapsed or 0.0
+            start_time = test.result.start - base if test.result.start else 0.0
+            return int(start_time), int(start_time + elapsed_time)
+
+        root_ctx = 1
+        end_ticks = int(elapsed)
+
+        def rc(ref_ctx):
+            return '\t<rti id="" />\n\t<ctx id="%s" />\n' % ref_ctx
+
+        file.write('<?xml version="1.0" encoding="utf-16"?>\n')
+        file.write("<WTT-Logger>\n")
+
+        file.write(
+            '<RTI ID="" Machine="%s" ProcessName="lit" '
+            'ProcessID="%d" ThreadID="0" '
+            'BaseTime="%s" Frequency="1" />\n' % (machine, pid, base_time)
+        )
+        file.write('<CTX ID="%d" Current="WTTLOG" Parent="ROOT" />\n' % root_ctx)
+
+        passed = 0
+        failed = 0
+        unsupported = 0
+        excluded = 0
+        skipped = 0
+
+        for test in tests:
+            if test.result is None:
+                continue
+
+            code = test.result.code
+            name = test.getFullName()
+            ca, la = times(test)
+
+            # UNSUPPORTED: report as Pass (feature not applicable on this device).
+            if code == lit.Test.UNSUPPORTED:
+                file.write('<CTX ID="" Current=%s Parent="WTTLOG" />\n' % _wtt_attr(name))
+                file.write('<StartTest Title=%s TUID="" CA="%d" LA="%d">\n%s</StartTest>\n'
+                    % (_wtt_attr(name), ca, ca, rc("")))
+                file.write('<Msg UserText=%s CA="%d" LA="%d">\n%s</Msg>\n'
+                    % (_wtt_attr("UNSUPPORTED on this device; reported as Pass (not applicable)."), la, la, rc("")))
+                file.write('<EndTest Title=%s TUID="" Result="Pass" Repro="" CA="%d" LA="%d">\n%s</EndTest>\n'
+                    % (_wtt_attr(name), la, la, rc("")))
+                unsupported += 1
+                continue
+
+            # EXCLUDED / SKIPPED: omitted from the log and from pass/fail results.
+            if code == lit.Test.EXCLUDED:
+                excluded += 1
+                continue
+            if code == lit.Test.SKIPPED:
+                skipped += 1
+                continue
+
+            if code in (lit.Test.PASS, lit.Test.XFAIL):
+                result = "Pass"
+                passed += 1
+            else:
+                result = "Fail"
+                failed += 1
+
+            file.write('<CTX ID="" Current=%s Parent="WTTLOG" />\n' % _wtt_attr(name))
+            file.write('<StartTest Title=%s TUID="" CA="%d" LA="%d">\n%s</StartTest>\n'
+                % (_wtt_attr(name), ca, ca, rc("")))
+
+            # Write error output for failures (WTT uses <Error>, not <Err>).
+            if result == "Fail" and test.result.output:
+                file.write('<Error UserText=%s CA="%d" LA="%d">\n%s</Error>\n'
+                    % (_wtt_attr(test.result.output[:4096]), la, la, rc("")))
+
+            if result == "Pass" and test.result.output:
+                file.write('<Msg UserText=%s CA="%d" LA="%d">\n%s</Msg>\n'
+                    % (_wtt_attr(test.result.output[:1024]), la, la, rc("")))
+
+            file.write('<EndTest Title=%s TUID="" Result="%s" Repro="" CA="%d" LA="%d">\n%s</EndTest>\n'
+                % (_wtt_attr(name), result, la, la, rc("")))
+
+        # Tally of UNSUPPORTED tests reported as Pass.
+        if unsupported > 0:
+            file.write('<Msg UserText=%s CA="%d" LA="%d">\n%s</Msg>\n'
+                % (_wtt_attr(
+                    "%d test(s) were UNSUPPORTED on this device and reported as "
+                    "Pass (not applicable)." % unsupported), end_ticks, end_ticks, rc(root_ctx)))
+
+        # Tally of tests omitted from results.
+        not_run = excluded + skipped
+        if not_run > 0:
+            parts = []
+            if excluded:
+                parts.append("%d excluded" % excluded)
+            if skipped:
+                parts.append("%d skipped" % skipped)
+            file.write('<Msg UserText=%s CA="%d" LA="%d">\n%s</Msg>\n'
+                % (_wtt_attr(
+                    "%d test(s) were not run (%s) and are omitted from the "
+                    "pass/fail results." % (not_run, ", ".join(parts))), end_ticks, end_ticks, rc(root_ctx)))
+
+        total = passed + failed + unsupported
+        file.write(
+            '<PFRollup Total="%d" Passed="%d" Failed="%d" '
+            'Blocked="0" Warned="0" Skipped="0" CA="%d" LA="%d">\n%s</PFRollup>\n'
+            % (total, passed + unsupported, failed, end_ticks, end_ticks, rc(root_ctx)))
+        file.write("</WTT-Logger>\n")
