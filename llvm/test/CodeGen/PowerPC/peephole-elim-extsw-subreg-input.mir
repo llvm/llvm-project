@@ -40,9 +40,9 @@ body:             |
     ; CHECK: liveins: $x3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
-    ; CHECK-NEXT: [[LWZ8_:%[0-9]+]]:g8rc = LWZ8 0, [[COPY]] :: (load (s32))
-    ; CHECK-NEXT: [[EXTSW_32_64_:%[0-9]+]]:g8rc = EXTSW_32_64 [[LWZ8_]].sub_32
-    ; CHECK-NEXT: $x3 = COPY [[EXTSW_32_64_]]
+    ; CHECK-NEXT: [[LWA:%[0-9]+]]:g8rc = LWA 0, [[COPY]] :: (load (s32))
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: $x3 = COPY [[LWA]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %0:g8rc_and_g8rc_nox0 = COPY $x3
     %1:g8rc = LWZ8 0, %0 :: (load (s32))
@@ -63,9 +63,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:g8rc = COPY $x4
-    ; CHECK-NEXT: [[LWZX8_:%[0-9]+]]:g8rc = LWZX8 [[COPY]], [[COPY1]] :: (load (s32))
-    ; CHECK-NEXT: [[EXTSW_32_64_:%[0-9]+]]:g8rc = EXTSW_32_64 [[LWZX8_]].sub_32
-    ; CHECK-NEXT: $x3 = COPY [[EXTSW_32_64_]]
+    ; CHECK-NEXT: [[LWAX:%[0-9]+]]:g8rc = LWAX [[COPY]], [[COPY1]] :: (load (s32))
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: $x3 = COPY [[LWAX]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %0:g8rc_and_g8rc_nox0 = COPY $x3
     %3:g8rc = COPY $x4
@@ -86,10 +86,10 @@ body:             |
     ; CHECK: liveins: $x3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
-    ; CHECK-NEXT: [[LWZ8_:%[0-9]+]]:g8rc = LWZ8 0, [[COPY]] :: (load (s32))
-    ; CHECK-NEXT: [[EXTSW_32_:%[0-9]+]]:gprc = EXTSW_32 [[LWZ8_]].sub_32
+    ; CHECK-NEXT: [[LWA_32_:%[0-9]+]]:gprc = LWA_32 0, [[COPY]] :: (load (s32))
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], [[EXTSW_32_]], %subreg.sub_32
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF1]], [[LWA_32_]], %subreg.sub_32
     ; CHECK-NEXT: $x3 = COPY [[INSERT_SUBREG]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %0:g8rc_and_g8rc_nox0 = COPY $x3
@@ -113,10 +113,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:g8rc = COPY $x4
-    ; CHECK-NEXT: [[LWZX8_:%[0-9]+]]:g8rc = LWZX8 [[COPY]], [[COPY1]] :: (load (s32))
-    ; CHECK-NEXT: [[EXTSW_32_:%[0-9]+]]:gprc = EXTSW_32 [[LWZX8_]].sub_32
+    ; CHECK-NEXT: [[LWAX_32_:%[0-9]+]]:gprc = LWAX_32 [[COPY]], [[COPY1]] :: (load (s32))
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], [[EXTSW_32_]], %subreg.sub_32
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF1]], [[LWAX_32_]], %subreg.sub_32
     ; CHECK-NEXT: $x3 = COPY [[INSERT_SUBREG]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %0:g8rc_and_g8rc_nox0 = COPY $x3
