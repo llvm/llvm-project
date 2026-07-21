@@ -104,7 +104,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
     if constexpr (forward_range<_View>) {
-      return __outer_iterator < __simple_view<_View> && __simple_view < _Pattern >> {*this, ranges::begin(__base_)};
+      return __outer_iterator<__simple_view<_View> && __simple_view<_Pattern>>{*this, ranges::begin(__base_)};
     } else {
       __current_.__emplace(ranges::begin(__base_));
       return __outer_iterator<false>{*this};
@@ -120,7 +120,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires forward_range<_View> && common_range<_View>
   {
-    return __outer_iterator < __simple_view<_View> && __simple_view < _Pattern >> {*this, ranges::end(__base_)};
+    return __outer_iterator<__simple_view<_View> && __simple_view<_Pattern>>{*this, ranges::end(__base_)};
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const {
@@ -278,9 +278,9 @@ private:
   template <forward_range _Tp>
   struct __inner_iterator_category<_Tp> {
     using iterator_category =
-        _If< derived_from<typename iterator_traits<iterator_t<_Tp>>::iterator_category, forward_iterator_tag>,
-             forward_iterator_tag,
-             typename iterator_traits<iterator_t<_Tp>>::iterator_category >;
+        _If<derived_from<typename iterator_traits<iterator_t<_Tp>>::iterator_category, forward_iterator_tag>,
+            forward_iterator_tag,
+            typename iterator_traits<iterator_t<_Tp>>::iterator_category>;
   };
 
   template <bool _Const>
@@ -408,8 +408,8 @@ template <class _Range, class _Pattern>
 lazy_split_view(_Range&&, _Pattern&&) -> lazy_split_view<views::all_t<_Range>, views::all_t<_Pattern>>;
 
 template <input_range _Range>
-lazy_split_view(_Range&&,
-                range_value_t<_Range>) -> lazy_split_view<views::all_t<_Range>, single_view<range_value_t<_Range>>>;
+lazy_split_view(_Range&&, range_value_t<_Range>)
+    -> lazy_split_view<views::all_t<_Range>, single_view<range_value_t<_Range>>>;
 
 namespace views {
 namespace __lazy_split_view {

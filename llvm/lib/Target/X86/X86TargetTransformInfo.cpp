@@ -5682,48 +5682,48 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
   // and make it as the cost.
 
-  static const CostTblEntry SLMCostTbl[] = {
-    { ISD::FADD,  MVT::v2f64,   3 },
-    { ISD::ADD,   MVT::v2i64,   5 },
+  static const CostKindTblEntry SLMCostTbl[] = {
+    { ISD::FADD,  MVT::v2f64,   {3, 3, 3, 3} },
+    { ISD::ADD,   MVT::v2i64,   {5, 5, 5, 5} },
   };
 
-  static const CostTblEntry SSE2CostTbl[] = {
-    { ISD::FADD,  MVT::v2f64,   2 },
-    { ISD::FADD,  MVT::v2f32,   2 },
-    { ISD::FADD,  MVT::v4f32,   4 },
-    { ISD::ADD,   MVT::v2i64,   2 },      // The data reported by the IACA tool is "1.6".
-    { ISD::ADD,   MVT::v2i32,   2 }, // FIXME: chosen to be less than v4i32
-    { ISD::ADD,   MVT::v4i32,   3 },      // The data reported by the IACA tool is "3.3".
-    { ISD::ADD,   MVT::v2i16,   2 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v4i16,   3 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v8i16,   4 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v2i8,    2 },
-    { ISD::ADD,   MVT::v4i8,    2 },
-    { ISD::ADD,   MVT::v8i8,    2 },
-    { ISD::ADD,   MVT::v16i8,   3 },
+  static const CostKindTblEntry SSE2CostTbl[] = {
+    { ISD::FADD,  MVT::v2f64,   {2, 2, 2, 2} },
+    { ISD::FADD,  MVT::v2f32,   {2, 2, 2, 2} },
+    { ISD::FADD,  MVT::v4f32,   {4, 4, 4, 4} },
+    { ISD::ADD,   MVT::v2i64,   {2, 2, 2, 2} },      // The data reported by the IACA tool is "1.6".
+    { ISD::ADD,   MVT::v2i32,   {2, 2, 2, 2} }, // FIXME: chosen to be less than v4i32
+    { ISD::ADD,   MVT::v4i32,   {3, 3, 3, 3} },      // The data reported by the IACA tool is "3.3".
+    { ISD::ADD,   MVT::v2i16,   {2, 2, 2, 2} },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v4i16,   {3, 3, 3, 3} },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v8i16,   {4, 4, 4, 4} },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v2i8,    {2, 2, 2, 2} },
+    { ISD::ADD,   MVT::v4i8,    {2, 2, 2, 2} },
+    { ISD::ADD,   MVT::v8i8,    {2, 2, 2, 2} },
+    { ISD::ADD,   MVT::v16i8,   {3, 3, 3, 3} },
   };
 
-  static const CostTblEntry AVX1CostTbl[] = {
-    { ISD::FADD,  MVT::v4f64,   3 },
-    { ISD::FADD,  MVT::v4f32,   3 },
-    { ISD::FADD,  MVT::v8f32,   4 },
-    { ISD::ADD,   MVT::v2i64,   1 },      // The data reported by the IACA tool is "1.5".
-    { ISD::ADD,   MVT::v4i64,   3 },
-    { ISD::ADD,   MVT::v8i32,   5 },
-    { ISD::ADD,   MVT::v16i16,  5 },
-    { ISD::ADD,   MVT::v32i8,   4 },
+  static const CostKindTblEntry AVX1CostTbl[] = {
+    { ISD::FADD,  MVT::v4f64,   {3, 3, 3, 3} },
+    { ISD::FADD,  MVT::v4f32,   {3, 3, 3, 3} },
+    { ISD::FADD,  MVT::v8f32,   {4, 4, 4, 4} },
+    { ISD::ADD,   MVT::v2i64,   {1, 1, 1, 1} },      // The data reported by the IACA tool is "1.5".
+    { ISD::ADD,   MVT::v4i64,   {3, 3, 3, 3} },
+    { ISD::ADD,   MVT::v8i32,   {5, 5, 5, 5} },
+    { ISD::ADD,   MVT::v16i16,  {5, 5, 5, 5} },
+    { ISD::ADD,   MVT::v32i8,   {4, 4, 4, 4} },
   };
 
-  static const CostTblEntry AVX512FCostTbl[] = {
-    { ISD::FADD,  MVT::v8f64,   4 },
-    { ISD::FADD,  MVT::v16f32,  5 },
-    { ISD::ADD,   MVT::v8i64,   4 },
-    { ISD::ADD,   MVT::v16i32,  6 },
+  static const CostKindTblEntry AVX512FCostTbl[] = {
+    { ISD::FADD,  MVT::v8f64,   {4, 4, 4, 4} },
+    { ISD::FADD,  MVT::v16f32,  {5, 5, 5, 5} },
+    { ISD::ADD,   MVT::v8i64,   {4, 4, 4, 4} },
+    { ISD::ADD,   MVT::v16i32,  {6, 6, 6, 6} },
   };
 
-  static const CostTblEntry AVX512BWCostTbl[] = {
-    { ISD::ADD,   MVT::v32i16,  7 },
-    { ISD::ADD,   MVT::v64i8,   4 },
+  static const CostKindTblEntry AVX512BWCostTbl[] = {
+    { ISD::ADD,   MVT::v32i16,  {7, 7, 7, 7} },
+    { ISD::ADD,   MVT::v64i8,   {4, 4, 4, 4} },
   };
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -5737,23 +5737,28 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     MVT MTy = VT.getSimpleVT();
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasBWI())
       if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasAVX512())
       if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
   }
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
@@ -5784,60 +5789,63 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   // FIXME: These assume a naive kshift+binop lowering, which is probably
   // conservative in most cases.
-  static const CostTblEntry AVX512BoolReduction[] = {
-    { ISD::AND,  MVT::v2i1,   3 },
-    { ISD::AND,  MVT::v4i1,   5 },
-    { ISD::AND,  MVT::v8i1,   7 },
-    { ISD::AND,  MVT::v16i1,  9 },
-    { ISD::AND,  MVT::v32i1, 11 },
-    { ISD::AND,  MVT::v64i1, 13 },
-    { ISD::OR,   MVT::v2i1,   3 },
-    { ISD::OR,   MVT::v4i1,   5 },
-    { ISD::OR,   MVT::v8i1,   7 },
-    { ISD::OR,   MVT::v16i1,  9 },
-    { ISD::OR,   MVT::v32i1, 11 },
-    { ISD::OR,   MVT::v64i1, 13 },
+  static const CostKindTblEntry AVX512BoolReduction[] = {
+    { ISD::AND,  MVT::v2i1,   { 3, 3, 3, 3} },
+    { ISD::AND,  MVT::v4i1,   { 5, 5, 5, 5} },
+    { ISD::AND,  MVT::v8i1,   { 7, 7, 7, 7} },
+    { ISD::AND,  MVT::v16i1,  { 9, 9, 9, 9} },
+    { ISD::AND,  MVT::v32i1,  {11,11,11,11} },
+    { ISD::AND,  MVT::v64i1,  {13,13,13,13} },
+    { ISD::OR,   MVT::v2i1,   { 3, 3, 3, 3} },
+    { ISD::OR,   MVT::v4i1,   { 5, 5, 5, 5} },
+    { ISD::OR,   MVT::v8i1,   { 7, 7, 7, 7} },
+    { ISD::OR,   MVT::v16i1,  { 9, 9, 9, 9} },
+    { ISD::OR,   MVT::v32i1,  {11,11,11,11} },
+    { ISD::OR,   MVT::v64i1,  {13,13,13,13} },
   };
 
-  static const CostTblEntry AVX2BoolReduction[] = {
-    { ISD::AND,  MVT::v16i16,  2 }, // vpmovmskb + cmp
-    { ISD::AND,  MVT::v32i8,   2 }, // vpmovmskb + cmp
-    { ISD::OR,   MVT::v16i16,  2 }, // vpmovmskb + cmp
-    { ISD::OR,   MVT::v32i8,   2 }, // vpmovmskb + cmp
+  static const CostKindTblEntry AVX2BoolReduction[] = {
+    { ISD::AND,  MVT::v16i16, { 2, 2, 2, 2} }, // vpmovmskb + cmp
+    { ISD::AND,  MVT::v32i8,  { 2, 2, 2, 2} }, // vpmovmskb + cmp
+    { ISD::OR,   MVT::v16i16, { 2, 2, 2, 2} }, // vpmovmskb + cmp
+    { ISD::OR,   MVT::v32i8,  { 2, 2, 2, 2} }, // vpmovmskb + cmp
   };
 
-  static const CostTblEntry AVX1BoolReduction[] = {
-    { ISD::AND,  MVT::v4i64,   2 }, // vmovmskpd + cmp
-    { ISD::AND,  MVT::v8i32,   2 }, // vmovmskps + cmp
-    { ISD::AND,  MVT::v16i16,  4 }, // vextractf128 + vpand + vpmovmskb + cmp
-    { ISD::AND,  MVT::v32i8,   4 }, // vextractf128 + vpand + vpmovmskb + cmp
-    { ISD::OR,   MVT::v4i64,   2 }, // vmovmskpd + cmp
-    { ISD::OR,   MVT::v8i32,   2 }, // vmovmskps + cmp
-    { ISD::OR,   MVT::v16i16,  4 }, // vextractf128 + vpor + vpmovmskb + cmp
-    { ISD::OR,   MVT::v32i8,   4 }, // vextractf128 + vpor + vpmovmskb + cmp
+  static const CostKindTblEntry AVX1BoolReduction[] = {
+    { ISD::AND,  MVT::v4i64,  {2, 2, 2, 2} }, // vmovmskpd + cmp
+    { ISD::AND,  MVT::v8i32,  {2, 2, 2, 2} }, // vmovmskps + cmp
+    { ISD::AND,  MVT::v16i16, {4, 4, 4, 4} }, // vextractf128 + vpand + vpmovmskb + cmp
+    { ISD::AND,  MVT::v32i8,  {4, 4, 4, 4} }, // vextractf128 + vpand + vpmovmskb + cmp
+    { ISD::OR,   MVT::v4i64,  {2, 2, 2, 2} }, // vmovmskpd + cmp
+    { ISD::OR,   MVT::v8i32,  {2, 2, 2, 2} }, // vmovmskps + cmp
+    { ISD::OR,   MVT::v16i16, {4, 4, 4, 4} }, // vextractf128 + vpor + vpmovmskb + cmp
+    { ISD::OR,   MVT::v32i8,  {4, 4, 4, 4} }, // vextractf128 + vpor + vpmovmskb + cmp
   };
 
-  static const CostTblEntry SSE2BoolReduction[] = {
-    { ISD::AND,  MVT::v2i64,   2 }, // movmskpd + cmp
-    { ISD::AND,  MVT::v4i32,   2 }, // movmskps + cmp
-    { ISD::AND,  MVT::v8i16,   2 }, // pmovmskb + cmp
-    { ISD::AND,  MVT::v16i8,   2 }, // pmovmskb + cmp
-    { ISD::OR,   MVT::v2i64,   2 }, // movmskpd + cmp
-    { ISD::OR,   MVT::v4i32,   2 }, // movmskps + cmp
-    { ISD::OR,   MVT::v8i16,   2 }, // pmovmskb + cmp
-    { ISD::OR,   MVT::v16i8,   2 }, // pmovmskb + cmp
+  static const CostKindTblEntry SSE2BoolReduction[] = {
+    { ISD::AND,  MVT::v2i64,  {2, 2, 2, 2} }, // movmskpd + cmp
+    { ISD::AND,  MVT::v4i32,  {2, 2, 2, 2} }, // movmskps + cmp
+    { ISD::AND,  MVT::v8i16,  {2, 2, 2, 2} }, // pmovmskb + cmp
+    { ISD::AND,  MVT::v16i8,  {2, 2, 2, 2} }, // pmovmskb + cmp
+    { ISD::OR,   MVT::v2i64,  {2, 2, 2, 2} }, // movmskpd + cmp
+    { ISD::OR,   MVT::v4i32,  {2, 2, 2, 2} }, // movmskps + cmp
+    { ISD::OR,   MVT::v8i16,  {2, 2, 2, 2} }, // pmovmskb + cmp
+    { ISD::OR,   MVT::v16i8,  {2, 2, 2, 2} }, // pmovmskb + cmp
   };
 
   // Handle bool allof/anyof patterns.
@@ -5865,16 +5873,20 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
     if (ST->hasAVX512())
       if (const auto *Entry = CostTableLookup(AVX512BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
 
     return BaseT::getArithmeticReductionCost(Opcode, ValVTy, FMF, CostKind);
   }
