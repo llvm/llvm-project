@@ -498,8 +498,8 @@ static const char *getPreposition(const bounds::CheckResult &R) {
                            : (R.mayOverflow() ? "after the end of" : "within"));
 }
 
-static BugDescription describeInvalidAccess(bounds::CheckResult Res, StringRef RegName,
-                                            SizeUnit SU) {
+static BugDescription describeInvalidAccess(bounds::CheckResult Res,
+                                            StringRef RegName, SizeUnit SU) {
   std::optional<int64_t> OffsetN = getConcreteValue(Res.getOffset());
   std::optional<int64_t> ExtentN = getConcreteValue(Res.getExtentIfRelevant());
 
@@ -567,8 +567,9 @@ static BugDescription describeTaintBug(StringRef RegName,
 /// report \p BR. When the access wasn't ambiguous or the the assumption is
 /// irrelevant for \p BR, this returns the empty string (which signifies "do
 /// not emit a note tag" when returned by a note tag callback).
-static std::string getAssumptionNote(bounds::CheckResult Res, PathSensitiveBugReport &BR,
-                                    StringRef RegName, SizeUnit SU) {
+static std::string getAssumptionNote(bounds::CheckResult Res,
+                                     PathSensitiveBugReport &BR,
+                                     StringRef RegName, SizeUnit SU) {
   bool ShouldReportNonNegative = Res.mayUnderflow();
   if (!providesInformationAboutInteresting(Res.getOffset(), BR)) {
     std::optional<NonLoc> E = Res.getExtentIfRelevant();
@@ -711,8 +712,10 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   C.addTransition(Res.getValidState(), T);
 }
 
-bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
-                        std::optional<NonLoc> Extent, bounds::CheckFlags Flags) {
+bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
+                                        NonLoc Offset,
+                                        std::optional<NonLoc> Extent,
+                                        bounds::CheckFlags Flags) {
 
   bounds::CheckResult Res(Offset);
 
