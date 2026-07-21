@@ -8,4 +8,5 @@ module test {
   module test_allocator         { header "test_allocator.h" }
   module test_iterators         { header "test_iterators.h" }
   module type_algorithms        { header "type_algorithms.h" }
+  module test_text_encoding     { header "test_text_encoding.h" }
 }
