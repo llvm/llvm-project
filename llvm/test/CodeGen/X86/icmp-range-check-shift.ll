@@ -68,6 +68,19 @@ define i1 @top_i8_range(i64 %x) {
   ret i1 %in.range
 }
 
+define i1 @signed_min_add_offset(i64 %x) {
+; CHECK-LABEL: signed_min_add_offset:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    shrq $60, %rdi
+; CHECK-NEXT:    addl $-8, %edi
+; CHECK-NEXT:    cmpl $3, %edi
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    retq
+  %offset = add i64 %x, -9223372036854775808
+  %in.range = icmp ult i64 %offset, 3458764513820540928
+  ret i1 %in.range
+}
+
 ; The selected range wraps around the 8-bit boundary, so the offset cannot be
 ; moved after the shift without preserving that wrapping behavior.
 define i1 @wrapping_range(i64 %x) {
