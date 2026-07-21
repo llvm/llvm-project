@@ -457,7 +457,7 @@ public:
   void reportNoescapeViolationThroughCall(const ParmVarDecl *ParmWithNoescape,
                                           const Expr *EscapeCall) override {
     S.Diag(ParmWithNoescape->getBeginLoc(),
-           diag::warn_lifetime_safety_noescape_escapes)
+           diag::warn_lifetime_safety_noescape_escapes_through_call)
         << ParmWithNoescape->getSourceRange();
 
     S.Diag(EscapeCall->getBeginLoc(),

@@ -21,6 +21,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1082,6 +1083,12 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD)
     return;
+  // Check to see if we need to report for escape through function call.
+  // Used to gate generation of CallEscapeFact.
+  const bool EnableNoescapeCallEscapes =
+      !AC.getASTContext().getDiagnostics().isIgnored(
+          diag::warn_lifetime_safety_noescape_escapes_through_call,
+          Call->getBeginLoc());
   SourceManager &SM = AC.getASTContext().getSourceManager();
   // To avoid over-reporting, we assume the following are noescape:
   // - All parameters to functions declared in the system headers
@@ -1110,7 +1117,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   for (unsigned I = 0; I < Args.size(); ++I) {
     handleUse(Args[I]);
     OriginList *ArgList = getOriginsList(*Args[I]);
-    if (!IsArgNoEscape(I)) {
+    if (EnableNoescapeCallEscapes && !IsArgNoEscape(I)) {
       for (OriginList *L = ArgList; L; L = L->peelOuterOrigin()) {
         EscapesInCurrentBlock.push_back(FactMgr.createFact<CallEscapeFact>(
             L->getOuterOriginID(), Call, I, Args[I]));

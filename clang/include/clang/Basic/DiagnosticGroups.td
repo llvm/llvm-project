@@ -707,6 +707,17 @@ def LifetimeSafetyAnnotationPlacement
     : DiagGroup<"lifetime-safety-annotation-placement",
                 [LifetimeSafetyInapplicableLifetimebound,
                  LifetimeSafetyMisplacedLifetimebound]> {
+def LifetimeSafetyNoescapeStrict
+    : DiagGroup<"lifetime-safety-noescape-strict", [LifetimeSafetyNoescape]> {
+  code Documentation = [{
+Enables stricter detection of [[clang::noescape]] annotation misuse (for example, through function calls).
+  }];
+}
+
+def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
+                                          [LifetimeSafetyNoescape,
+                                           LifetimeSafetyLifetimeboundViolation,
+                                           LifetimeSafetyMisplacedLifetimebound]> {
   code Documentation = [{
 Validates that lifetime annotations are placed on appropriate types and in appropriate locations.
   }];
