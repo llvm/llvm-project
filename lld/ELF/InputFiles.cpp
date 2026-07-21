@@ -1746,7 +1746,7 @@ static uint16_t getBitcodeMachineKind(Ctx &ctx, StringRef path,
   case Triple::aarch64:
   case Triple::aarch64_be:
     return EM_AARCH64;
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::r600:
     return EM_AMDGPU;
   case Triple::arm:

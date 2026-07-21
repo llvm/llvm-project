@@ -1442,7 +1442,7 @@ public:
 
   template <RegKind VectorKind, unsigned NumRegs, unsigned NumElements,
             unsigned ElementWidth, unsigned RegClass>
-  DiagnosticPredicate isTypedVectorListMultiple() const {
+  DiagnosticPredicate isTypedVectorListInRegClass() const {
     bool Res =
         isTypedVectorList<VectorKind, NumRegs, NumElements, ElementWidth>();
     if (!Res)
@@ -6412,6 +6412,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "Invalid vector list, expected list with 4 consecutive "
                       "SVE vectors, where the first vector is a multiple of 4 "
                       "and with matching element types");
+  case Match_InvalidSVEVectorList3x0_3b:
+    return Error(Loc, "Invalid vector list, expected list with 3 consecutive "
+                      "SVE vectors starting at z0-z7");
   case Match_InvalidLookupTable:
     return Error(Loc, "Invalid lookup table, expected zt0");
   case Match_InvalidSVEVectorListStrided2x8:
@@ -7029,6 +7032,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEVectorList2x16Mul2_Hi:
   case Match_InvalidSVEVectorList2x32Mul2_Hi:
   case Match_InvalidSVEVectorList2x64Mul2_Hi:
+  case Match_InvalidSVEVectorList3x0_3b:
   case Match_InvalidSVEVectorListStrided2x8:
   case Match_InvalidSVEVectorListStrided2x16:
   case Match_InvalidSVEVectorListStrided2x32:

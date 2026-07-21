@@ -2882,7 +2882,6 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     const Function &Fn = MF->getFunction();
     Fn.getContext().diagnose(
         DiagnosticInfoUnsupportedTargetIntrinsic(Fn, ID, CI.getDebugLoc()));
-    return false;
   }
 
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
@@ -2902,7 +2901,6 @@ bool IRTranslator::translateIntrinsic(
     const Function &F = MF->getFunction();
     F.getContext().diagnose(
         DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
-    return false;
   }
 
   ArrayRef<Register> ResultRegs;

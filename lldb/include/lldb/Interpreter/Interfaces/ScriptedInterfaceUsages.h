@@ -32,7 +32,7 @@ public:
 
   enum class UsageKind { CommandInterpreter, API };
 
-  void Dump(Stream &s, UsageKind kind) const;
+  void Dump(Stream &s, UsageKind kind, bool use_color = false) const;
 
 private:
   std::vector<llvm::StringRef> m_command_interpreter_usages;

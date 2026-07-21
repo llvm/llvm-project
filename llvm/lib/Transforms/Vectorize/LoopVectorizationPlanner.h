@@ -406,7 +406,7 @@ public:
   /// induction with \p Start and \p Step values, using \p Start + \p Current *
   /// \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
-                                     FPMathOperator *FPBinOp, VPIRValue *Start,
+                                     FPMathOperator *FPBinOp, VPValue *Start,
                                      VPValue *Current, VPValue *Step) {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
@@ -435,14 +435,26 @@ public:
         new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
   }
 
-  /// Create a VScale VPInstruction.
-  VPInstruction *createVScale(Type *ResultTy,
-                              DebugLoc DL = DebugLoc::getUnknown()) {
-    return createNaryOp(VPInstruction::VScale, {}, ResultTy, {}, DL);
+  /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
+  /// result type \p ResultTy
+  VPInstruction *createScalarIntrinsic(Intrinsic::ID IntrinsicID,
+                                       ArrayRef<VPValue *> Operands,
+                                       Type *ResultTy, DebugLoc DL) {
+    VPlan &Plan = getPlan();
+    SmallVector<VPValue *, 2> Ops(Operands);
+    Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
+    return tryInsertInstruction(new VPInstructionWithType(
+        VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
   }
 
-  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  /// Create a scalar llvm.vscale call.
+  VPInstruction *createVScale(Type *ResultTy,
+                              DebugLoc DL = DebugLoc::getUnknown()) {
+    return createScalarIntrinsic(Intrinsic::vscale, {}, ResultTy, DL);
+  }
+
+  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -452,8 +464,8 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -515,8 +527,7 @@ public:
   /// with element type \p SourceElementTy.
   VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
                                                     Type *SourceElementTy,
-                                                    bool Reverse, bool FoldTail,
-                                                    DebugLoc DL);
+                                                    bool Reverse, DebugLoc DL);
 
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
@@ -953,6 +964,10 @@ public:
   /// based on its trip count.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
+
+  /// Returns true if \p Plan requires a scalar epilogue after the vector
+  /// loop. Asserts that the VPlan decision matches the legacy cost model.
+  bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

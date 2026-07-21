@@ -13,7 +13,6 @@ void* operator new[] (std::size_t, void* p) {return p;}
 consteval int ok() {
     int i;
     new (&i) int(0);
-    new (&i) int[1]{1};
     new (static_cast<void*>(&i)) int(0);
     return 0;
 }
@@ -35,10 +34,7 @@ consteval int indeterminate() {
 consteval int array1() {
     int i[2];
     new (&i) int[]{1,2};
-    new (&i) int[]{1};
-    new (&i) int(0);
     new (static_cast<void*>(&i)) int[]{1,2};
-    new (static_cast<void*>(&i)) int[]{1};
     return 0;
 }
 
@@ -47,6 +43,30 @@ consteval int array2() {
     new (&i) int[2];
     //expected-note@-1 {{placement new would change type of storage from 'int[1]' to 'int[2]'}}
     return 0;
+}
+
+consteval int array3() {
+  int i;
+  new (&i) int[1]{1}; // expected-note {{placement new would change type of storage from 'int' to 'int[1]'}}
+  return 0;
+}
+
+consteval int array4() {
+  int i[2];
+  new (&i) int[]{1}; // expected-note {{placement new would change type of storage from 'int[2]' to 'int[1]'}}
+  return 0;
+}
+
+consteval int array5() {
+  int i[2];
+  new (&i) int(0); // expected-note {{placement new would change type of storage from 'int[2]' to 'int'}}
+  return 0;
+}
+
+consteval int array6() {
+  int i[2];
+  new (static_cast<void*>(&i)) int[]{1}; // expected-note {{placement new would change type of storage from 'int[2]' to 'int[1]'}}
+  return 0;
 }
 
 struct S{
@@ -79,6 +99,15 @@ int c = indeterminate(); // expected-error {{call to consteval function 'indeter
 int d = array1();
 int e = array2(); // expected-error {{call to consteval function 'array2' is not a constant expression}} \
                   // expected-note {{in call to 'array2()'}}
+int f = array3(); // expected-error {{call to consteval function 'array3' is not a constant expression}} \
+                  // expected-note {{in call to 'array3()'}}
+int g = array4(); // expected-error {{call to consteval function 'array4' is not a constant expression}} \
+                  // expected-note {{in call to 'array4()'}}
+int h = array5(); // expected-error {{call to consteval function 'array5' is not a constant expression}} \
+                  // expected-note {{in call to 'array5()'}}
+int i = array6(); // expected-error {{call to consteval function 'array6' is not a constant expression}} \
+                  // expected-note {{in call to 'array6()'}}
+
 int alloc1 = (alloc(), 0);
 int alloc2 = (alloc_err(), 0); // expected-error {{call to consteval function 'alloc_err' is not a constant expression}}
                                // expected-note@#no-deallocation {{allocation performed here was not deallocated}}

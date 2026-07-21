@@ -345,8 +345,6 @@ public:
 
   bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
-  bool isTgSplitEnabled() const { return EnableTgSplit; }
-
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
 
@@ -642,10 +640,6 @@ public:
   /// instructions.
   bool hasVCvtPkIU16F32() const { return HasGFX11Insts; }
 
-  /// Return true if the target's EXP instruction has the COMPR flag, which
-  /// affects the meaning of the EN (enable) bits.
-  bool hasCompressedExport() const { return !HasGFX11Insts; }
-
   /// Return true if the target's EXP instruction supports the NULL export
   /// target.
   bool hasNullExportTarget() const { return !HasGFX11Insts; }
@@ -754,8 +748,6 @@ public:
   bool hasCondSubInsts() const { return HasGFX12Insts; }
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
-
-  bool hasFmaLegacy32Insts() const { return hasGFX10_3Insts(); }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1039,8 +1031,8 @@ public:
     return hasTrue16BitInsts() && EnableRealTrue16Insts;
   }
 
-  bool requiresWaitOnWorkgroupReleaseFence() const {
-    return getGeneration() >= GFX10 || isTgSplitEnabled();
+  bool requiresWaitOnWorkgroupReleaseFence(bool TgSplit) const {
+    return getGeneration() >= GFX10 || TgSplit;
   }
 };
 
