@@ -172,10 +172,8 @@ release page.
 
 ::
 
+  $ unzip artifact.zip
   $ gh auth login
-  $ unzip source-artifact.zip
-  $ for f in *.xz; do gh attestation verify --owner llvm $f && gpg -b $f; done
-  $ unzip documentation-artifact.zip
   $ for f in *.xz; do gh attestation verify --owner llvm $f && gpg -b $f; done
 
 Tarballs, release binaries,  or any other release artifacts must be uploaded to
