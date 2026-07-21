@@ -969,82 +969,49 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferDefaultDisabled) {
   // The RingBuffer is not initialized until tracking is enabled for the
   // first time.
   auto *Allocator = this->Allocator.get();
-  EXPECT_EQ(0u, Allocator->getRingBufferSize());
-  EXPECT_EQ(nullptr, Allocator->getRingBufferAddress());
+  EXPECT_FALSE(Allocator->getRingBufferEnabledTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferInitOnce) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto RingBufferSize = Allocator->getRingBufferSize();
-  ASSERT_GT(RingBufferSize, 0u);
-  auto *RingBufferAddress = Allocator->getRingBufferAddress();
+  EXPECT_TRUE(Allocator->getRingBufferEnabledTestOnly());
+  const void *RingBufferAddress = Allocator->getRingBufferAddressTestOnly();
   EXPECT_NE(nullptr, RingBufferAddress);
 
   // Enable tracking again to verify that the initialization only happens once.
   Allocator->setTrackAllocationStacks(true);
-  ASSERT_EQ(RingBufferSize, Allocator->getRingBufferSize());
-  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
+  EXPECT_TRUE(Allocator->getRingBufferEnabledTestOnly());
+  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddressTestOnly());
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferSize) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferEnabled) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto RingBufferSize = Allocator->getRingBufferSize();
-  ASSERT_GT(RingBufferSize, 0u);
-  EXPECT_EQ(Allocator->getRingBufferAddress()[RingBufferSize - 1], '\0');
-}
-
-SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
-  auto *Allocator = this->Allocator.get();
-  Allocator->setTrackAllocationStacks(true);
-
-  auto *RingBufferAddress = Allocator->getRingBufferAddress();
-  EXPECT_NE(RingBufferAddress, nullptr);
-  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
+  EXPECT_TRUE(Allocator->getRingBufferEnabledTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotDefaultDisabled) {
   // The StackDepot is not initialized until tracking is enabled for the
   // first time.
   auto *Allocator = this->Allocator.get();
-  EXPECT_EQ(0u, Allocator->getStackDepotSize());
-  EXPECT_EQ(nullptr, Allocator->getStackDepotAddress());
+  EXPECT_FALSE(Allocator->getStackDepotEnabledTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotInitOnce) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto StackDepotSize = Allocator->getStackDepotSize();
-  EXPECT_GT(StackDepotSize, 0u);
-  auto *StackDepotAddress = Allocator->getStackDepotAddress();
+  EXPECT_TRUE(Allocator->getStackDepotEnabledTestOnly());
+  const void *StackDepotAddress = Allocator->getStackDepotAddressTestOnly();
   EXPECT_NE(nullptr, StackDepotAddress);
 
   // Enable tracking again to verify that the initialization only happens once.
   Allocator->setTrackAllocationStacks(true);
-  EXPECT_EQ(StackDepotSize, Allocator->getStackDepotSize());
-  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
-}
-
-SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotSize) {
-  auto *Allocator = this->Allocator.get();
-  Allocator->setTrackAllocationStacks(true);
-
-  auto StackDepotSize = Allocator->getStackDepotSize();
-  EXPECT_GT(StackDepotSize, 0u);
-  EXPECT_EQ(Allocator->getStackDepotAddress()[StackDepotSize - 1], '\0');
-}
-
-SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotAddress) {
-  auto *Allocator = this->Allocator.get();
-  Allocator->setTrackAllocationStacks(true);
-
-  auto *StackDepotAddress = Allocator->getStackDepotAddress();
-  EXPECT_NE(StackDepotAddress, nullptr);
-  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
+  EXPECT_TRUE(Allocator->getStackDepotEnabledTestOnly());
+  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddressTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
