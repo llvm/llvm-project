@@ -2820,6 +2820,7 @@ bool RewriteMFMAFormStage::rewrite(
     // One AGPR→VGPR copy per dst register, shared by all same-block uses.
     Register SameBlockCopyReg;
     MachineInstr *EarliestSameBlockUse = nullptr;
+    DebugLoc SameBlockCopyDL;
     for (MachineOperand *RU : DstReachingUseCopies) {
       MachineBasicBlock *RUBlock = RU->getParent()->getParent();
       // Just keep track of the reaching use of this register by block. After we
@@ -2836,14 +2837,19 @@ bool RewriteMFMAFormStage::rewrite(
         SameBlockCopyReg = DAG.MRI.createVirtualRegister(VGPRRC);
       }
 
-      // Track the earliest use for copy insertion point.
+      // Track the earliest use for copy insertion point and merge debug
+      // locations from all uses the copy serves.
       MachineInstr *UseInst = RU->getParent();
       if (!EarliestSameBlockUse ||
           SlotIndex::isEarlierInstr(
               DAG.LIS->getInstructionIndex(*UseInst),
               DAG.LIS->getInstructionIndex(*EarliestSameBlockUse)))
         EarliestSameBlockUse = UseInst;
-
+      if (SameBlockCopyDL)
+        SameBlockCopyDL = DebugLoc::getMergedLocation(SameBlockCopyDL,
+                                                      UseInst->getDebugLoc());
+      else
+        SameBlockCopyDL = UseInst->getDebugLoc();
       RU->setReg(SameBlockCopyReg);
     }
 
@@ -2852,7 +2858,7 @@ bool RewriteMFMAFormStage::rewrite(
       MachineInstrBuilder VGPRCopy =
           BuildMI(*EarliestSameBlockUse->getParent(),
                   EarliestSameBlockUse->getIterator(),
-                  EarliestSameBlockUse->getDebugLoc(),
+                  SameBlockCopyDL,
                   TII->get(TargetOpcode::COPY), SameBlockCopyReg)
               .addUse(DstReg, {}, 0);
       DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);

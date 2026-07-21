@@ -15,7 +15,14 @@ declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half>, <8 x half>, <
 
 define amdgpu_kernel void @single_exit_copy(
 ; CHECK-LABEL: single_exit_copy:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:       .Lfunc_begin0:
+; CHECK-NEXT:    .file 1 "/tmp" "test"
+; CHECK-NEXT:    .loc 1 1 0 ; test:1:0
+; CHECK-NEXT:    .cfi_sections .debug_frame
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02 ; CFA is 0 in private_wave aspace
+; CHECK-NEXT:    .cfi_undefined 16
 ; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x0
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x20
 ; CHECK-NEXT:    s_mov_b32 s1, 0
@@ -279,6 +286,7 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a2, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a3, 0
+; CHECK-NEXT:    .loc 1 1 0 prologue_end ; test:1:0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_accvgpr_write_b32 a4, s8
 ; CHECK-NEXT:    v_accvgpr_write_b32 a5, s9
@@ -288,6 +296,8 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_accvgpr_write_b32 a9, s13
 ; CHECK-NEXT:    v_accvgpr_write_b32 a10, s14
 ; CHECK-NEXT:    v_accvgpr_write_b32 a11, s15
+; CHECK-NEXT:    .loc 1 0 0 is_stmt 0 ; :0:0
+; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    .p2align 5, , 4
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -429,6 +439,8 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[0:1]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
+; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:    .loc 1 10 1 is_stmt 1 ; test:10:1
 ; CHECK-NEXT:    v_accvgpr_write_b32 a4, s8
 ; CHECK-NEXT:    v_accvgpr_write_b32 a5, s9
 ; CHECK-NEXT:    v_accvgpr_write_b32 a6, s10
@@ -450,16 +462,19 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[244:247], s[0:1] offset:2016
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[248:251], s[0:1] offset:2000
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    .loc 1 0 0 is_stmt 0 ; test:0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v243, a3
 ; CHECK-NEXT:    v_accvgpr_read_b32 v242, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v241, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v240, a0
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[252:255], s[0:1] offset:1984
+; CHECK-NEXT:    .loc 1 20 1 is_stmt 1 ; test:20:1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[244:247], a[4:7], a[8:11], v[240:243]
 ; CHECK-NEXT:    s_nop 7
 ; CHECK-NEXT:    v_mov_b32_e32 v245, 0
 ; CHECK-NEXT:    global_store_dwordx4 v245, v[236:239], s[0:1] offset:1968
+; CHECK-NEXT:    .loc 1 30 1 ; test:30:1
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[236:239], a[8:11], a[4:7], v[240:243]
 ; CHECK-NEXT:    s_nop 7
@@ -526,12 +541,13 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    global_store_dwordx4 v245, v[4:7], s[0:1] offset:1040
 ; CHECK-NEXT:    global_store_dwordx4 v245, a[12:15], s[0:1] offset:1024
 ; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .Ltmp2:
 ; Loop body: MFMAs in AGPR form.
 ; Exit block: one MFMA consuming the loop result (AGPR form), then
 ; exactly 4 v_accvgpr_read (one 128-bit copy), shared by both vgprcd MFMAs.
 
     <8 x half> %a, <8 x half> %b, i32 %n, ptr addrspace(1) %out
-) #0 {
+) #0 !dbg !4 {
 entry:
   br label %loop
 
@@ -567,9 +583,9 @@ loop:
   br i1 %cmp, label %loop, label %exit
 
 exit:
-  %m3 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %a, <8 x half> %b, <4 x float> %m2, i32 0, i32 0, i32 0)
-  %out1 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %a, <8 x half> %b, <4 x float> %m3, i32 0, i32 0, i32 0)
-  %out2 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %b, <8 x half> %a, <4 x float> %m3, i32 0, i32 0, i32 0)
+  %m3 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %a, <8 x half> %b, <4 x float> %m2, i32 0, i32 0, i32 0), !dbg !7
+  %out1 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %a, <8 x half> %b, <4 x float> %m3, i32 0, i32 0, i32 0), !dbg !8
+  %out2 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %b, <8 x half> %a, <4 x float> %m3, i32 0, i32 0, i32 0), !dbg !9
 
   ; VGPR-requiring uses of the exit MFMAs to force accvgpr_read copies.
   %e0 = extractelement <4 x float> %out1, i32 0
@@ -601,3 +617,17 @@ exit:
 }
 
 attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!2, !3}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+!1 = !DIFile(filename: "test", directory: "/tmp")
+!2 = !{i32 7, !"Dwarf Version", i32 4}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = distinct !DISubprogram(name: "single_exit_copy", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, unit: !0)
+!5 = !DISubroutineType(types: !6)
+!6 = !{null}
+!7 = !DILocation(line: 10, column: 1, scope: !4)
+!8 = !DILocation(line: 20, column: 1, scope: !4)
+!9 = !DILocation(line: 30, column: 1, scope: !4)
