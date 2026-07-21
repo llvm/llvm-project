@@ -16,7 +16,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i32 = dense<32> : vector<2xi64>,
     %1 = llvm.alloca %0 x i32 {bindc_name = "x"} : (i64) -> !llvm.ptr
     llvm.intr.dbg.declare #var_x = %1 : !llvm.ptr loc(#loc2)
     %5 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "x"}
-    omp.target map_entries(%5 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%5 -> %arg0 : !llvm.ptr) {
       %6 = llvm.mlir.constant(1 : i32) : i32
       llvm.intr.dbg.declare #var_x1 = %arg0 : !llvm.ptr loc(#loc3)
       omp.parallel {

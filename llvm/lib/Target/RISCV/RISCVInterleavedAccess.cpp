@@ -239,7 +239,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
   if (!isLegalInterleavedAccessType(VTy, MaskFactor, Alignment, AS, DL))
     return false;
 
-  CallInst *SegLoad = nullptr;
+  Value *SegLoad = nullptr;
   if (MaskFactor < Factor && MaskFactor != 1) {
     // Lower to strided segmented load.
     unsigned ScalarSizeInBytes = DL.getTypeStoreSize(VTy->getElementType());

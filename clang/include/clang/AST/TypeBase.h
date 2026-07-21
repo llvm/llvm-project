@@ -2798,8 +2798,10 @@ public:
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
   bool isHLSLResourceRecordArray() const;
-  bool isHLSLIntangibleType()
-      const; // Any HLSL intangible type (builtin, array, class)
+  // Any HLSL intangible type (builtin, array, class)
+  bool isHLSLIntangibleType() const;
+  // User-defined HLSL records or arrays of such records in standard layout
+  bool isHLSLStandardLayoutRecordOrArrayOf() const;
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -6463,7 +6465,7 @@ class UnaryTransformType : public Type, public llvm::FoldingSetNode {
 public:
   enum UTTKind {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, _) Enum,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   };
 
 private:

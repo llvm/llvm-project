@@ -1,20 +1,17 @@
 ! Tests delayed privatization for `targets ... private(..)` for allocatables.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging \
-! RUN:   -o - %s 2>&1 | FileCheck %s --check-prefix=CPU
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s --check-prefix=CPU
 
-! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization-staging -o - %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=CPU
+! RUN: bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s --check-prefix=CPU
 
 ! RUN: %if amdgpu-registered-target %{ \
 ! RUN:   %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir  \
 ! RUN:     -fopenmp -fopenmp-is-target-device \
-! RUN:     -mmlir --enable-delayed-privatization-staging \
 ! RUN:     -o - %s 2>&1 | \
 ! RUN:   FileCheck %s --check-prefix=GPU  \
 ! RUN: %}
 
-! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization-staging \
+! RUN: bbc -emit-hlfir -fopenmp \
 ! RUN:    -fopenmp-is-target-device -fopenmp-is-gpu -o - %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=GPU
 
@@ -76,7 +73,7 @@ end subroutine target_allocatable
 ! CPU:  %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses({{.*}}to{{.*}}) capture(ByRef) members(%[[MEMBER]] : [0] : [[MEMBER_TYPE]]) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CPU:  %[[ATTACH:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE]], i32) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 
-! CPU:  omp.target map_entries(%[[MAP_VAR]] -> %arg0, %[[ATTACH]] -> %arg1, %[[MEMBER]] -> %arg2 : [[TYPE]], [[TYPE]], [[MEMBER_TYPE]]) private(
+! CPU:  omp.target kernel_type(generic) map_entries(%[[MAP_VAR]] -> %arg0, %[[ATTACH]] -> %arg1, %[[MEMBER]] -> %arg2 : [[TYPE]], [[TYPE]], [[MEMBER_TYPE]]) private(
 ! CPU-SAME: @[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %{{.*}} [map_idx=0] : [[TYPE]]) {
 
 ! GPU-LABEL: omp.private {type = private} {{.*}} init {

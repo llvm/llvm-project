@@ -769,20 +769,20 @@ enum class IRSplitMode {
 /// Parses the value of \p --module-split-mode.
 static std::optional<IRSplitMode> convertStringToSplitMode(StringRef S) {
   return StringSwitch<std::optional<IRSplitMode>>(S)
-      .Case("source", IRSplitMode::SPLIT_PER_TU)
+      .Case("translation_unit", IRSplitMode::SPLIT_PER_TU)
       .Case("kernel", IRSplitMode::SPLIT_PER_KERNEL)
-      .Case("none", IRSplitMode::SPLIT_NONE)
+      .Case("link_unit", IRSplitMode::SPLIT_NONE)
       .Default(std::nullopt);
 }
 
 static StringRef splitModeToString(IRSplitMode Mode) {
   switch (Mode) {
   case IRSplitMode::SPLIT_PER_TU:
-    return "source";
+    return "translation_unit";
   case IRSplitMode::SPLIT_PER_KERNEL:
     return "kernel";
   case IRSplitMode::SPLIT_NONE:
-    return "none";
+    return "link_unit";
   }
   llvm_unreachable("bad split mode");
 }

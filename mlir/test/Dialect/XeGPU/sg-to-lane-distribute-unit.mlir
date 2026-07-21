@@ -160,6 +160,91 @@ gpu.func @arith_constant() {
   gpu.return
 }
 
+// Non-splat constant: each lane extracts the element it owns from the full
+// constant and inserts its lane_data-sized block into the distributed vector.
+// CHECK-LABEL: gpu.func @arith_constant_non_splat
+// CHECK: %[[CST:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xindex>
+// CHECK: %[[LANE:.*]] = gpu.lane_id
+// CHECK: %[[ZERO:.*]] = arith.constant dense<0> : vector<1xindex>
+// CHECK: %[[ELEM:.*]] = vector.extract %[[CST]][%{{.*}}] : index from vector<16xindex>
+// CHECK: %[[BLK:.*]] = vector.from_elements %[[ELEM]] : vector<1xindex>
+// CHECK: %[[RES:.*]] = vector.insert_strided_slice %[[BLK]], %[[ZERO]] {offsets = [0], strides = [1]} : vector<1xindex> into vector<1xindex>
+// CHECK: gpu.return
+gpu.func @arith_constant_non_splat() {
+  %0 = arith.constant
+    {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}
+    dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xindex>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
+    }> : vector<16xindex>
+  gpu.return
+}
+
+// With lane_data > 1 each lane owns a lane_data-sized block, so multiple
+// elements are extracted, reassembled into the block, and placed with
+// insert_strided_slice.
+// CHECK-LABEL: gpu.func @arith_constant_non_splat_lane_data
+// CHECK: %[[CST:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]> : vector<32xindex>
+// CHECK: %[[LANE:.*]] = gpu.lane_id
+// CHECK: %[[ZERO:.*]] = arith.constant dense<0> : vector<2xindex>
+// CHECK: %[[ELEM0:.*]] = vector.extract %[[CST]][%{{.*}}] : index from vector<32xindex>
+// CHECK: %[[ELEM1:.*]] = vector.extract %[[CST]][%{{.*}}] : index from vector<32xindex>
+// CHECK: %[[BLK:.*]] = vector.from_elements %[[ELEM0]], %[[ELEM1]] : vector<2xindex>
+// CHECK: %[[RES:.*]] = vector.insert_strided_slice %[[BLK]], %[[ZERO]] {offsets = [0], strides = [1]} : vector<2xindex> into vector<2xindex>
+// CHECK: gpu.return
+gpu.func @arith_constant_non_splat_lane_data() {
+  %0 = arith.constant
+    {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, dims = [0]>}
+    dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]> : vector<32xindex>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, dims = [0]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, dims = [0]>
+    }> : vector<32xindex>
+  gpu.return
+}
+
+// 2D non-splat constant with vertical lane_data [2, 1]. The distributed type
+// is vector<4x2xindex>. Each [2, 1] block is correctly placed vertically in
+// the result (same column, adjacent rows).
+// CHECK-LABEL: gpu.func @arith_constant_non_splat_2d_vertical_lanedata
+// CHECK: %[[CST:.*]] = arith.constant dense<{{.*}}> : vector<4x32xindex>
+// CHECK: %[[LANE:.*]] = gpu.lane_id
+// CHECK: %[[ZERO:.*]] = arith.constant dense<0> : vector<4x2xindex>
+// CHECK: %[[E0:.*]] = vector.extract %[[CST]][%{{.*}}, %{{.*}}] : index from vector<4x32xindex>
+// CHECK: %[[E1:.*]] = vector.extract %[[CST]][%{{.*}}, %{{.*}}] : index from vector<4x32xindex>
+// CHECK: %[[B0:.*]] = vector.from_elements %[[E0]], %[[E1]] : vector<2x1xindex>
+// CHECK: %[[I0:.*]] = vector.insert_strided_slice %[[B0]], %[[ZERO]] {offsets = [0, 0], strides = [1, 1]} : vector<2x1xindex> into vector<4x2xindex>
+// CHECK: %[[E2:.*]] = vector.extract %[[CST]][%{{.*}}, %{{.*}}] : index from vector<4x32xindex>
+// CHECK: %[[E3:.*]] = vector.extract %[[CST]][%{{.*}}, %{{.*}}] : index from vector<4x32xindex>
+// CHECK: %[[B1:.*]] = vector.from_elements %[[E2]], %[[E3]] : vector<2x1xindex>
+// CHECK: %[[I1:.*]] = vector.insert_strided_slice %[[B1]], %[[I0]] {offsets = [0, 1], strides = [1, 1]} : vector<2x1xindex> into vector<4x2xindex>
+// CHECK: %[[E4:.*]] = vector.extract %[[CST]][%{{.*}}, %{{.*}}] : index from vector<4x32xindex>
+// CHECK: %[[E5:.*]] = vector.extract %[[CST]][%{{.*}}, %{{.*}}] : index from vector<4x32xindex>
+// CHECK: %[[B2:.*]] = vector.from_elements %[[E4]], %[[E5]] : vector<2x1xindex>
+// CHECK: %[[I2:.*]] = vector.insert_strided_slice %[[B2]], %[[I1]] {offsets = [2, 0], strides = [1, 1]} : vector<2x1xindex> into vector<4x2xindex>
+// CHECK: %[[E6:.*]] = vector.extract %[[CST]][%{{.*}}, %{{.*}}] : index from vector<4x32xindex>
+// CHECK: %[[E7:.*]] = vector.extract %[[CST]][%{{.*}}, %{{.*}}] : index from vector<4x32xindex>
+// CHECK: %[[B3:.*]] = vector.from_elements %[[E6]], %[[E7]] : vector<2x1xindex>
+// CHECK: %[[I3:.*]] = vector.insert_strided_slice %[[B3]], %[[I2]] {offsets = [2, 1], strides = [1, 1]} : vector<2x1xindex> into vector<4x2xindex>
+// CHECK: gpu.return
+gpu.func @arith_constant_non_splat_2d_vertical_lanedata() {
+  %0 = arith.constant
+    {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
+    dense<[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
+           [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63],
+           [64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95],
+           [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127]]> : vector<4x32xindex>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>
+    }> : vector<4x32xindex>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @prefetch_nd
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: xegpu.prefetch_nd %{{.*}}[%[[C0]], %[[C0]]] : !xegpu.tensor_desc<16x16xf16>
@@ -794,6 +879,61 @@ gpu.func @vector_extract_strided_slice_partial_offsets() {
   gpu.return
 }
 
+// A convert_layout that only repacks lane_data along the non-distributed outer
+// dimension (from [4, 1] to [1, 1] with order = [1, 0]), keeping lane_layout
+// unchanged, folds to its source when consumed by exactly 4 (== outer
+// lane_data) extract_strided_slice ops. After distribution both layouts yield
+// the same per-lane vector, so the convert is redundant and the slices operate
+// directly on the distributed source.
+// CHECK-LABEL: gpu.func @convert_layout_repack_lane_data
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         %[[SRC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : vector<32x16xi8> to vector<32x1xi8>
+// CHECK:         vector.extract_strided_slice %[[SRC]] {offsets = [0, 0], sizes = [8, 1], strides = [1, 1]} : vector<32x1xi8> to vector<8x1xi8>
+// CHECK:         vector.extract_strided_slice %[[SRC]] {offsets = [8, 0], sizes = [8, 1], strides = [1, 1]} : vector<32x1xi8> to vector<8x1xi8>
+// CHECK:         vector.extract_strided_slice %[[SRC]] {offsets = [16, 0], sizes = [8, 1], strides = [1, 1]} : vector<32x1xi8> to vector<8x1xi8>
+// CHECK:         vector.extract_strided_slice %[[SRC]] {offsets = [24, 0], sizes = [8, 1], strides = [1, 1]} : vector<32x1xi8> to vector<8x1xi8>
+gpu.func @convert_layout_repack_lane_data() {
+  %src = "some_op"() : () -> vector<32x16xi8>
+  %cvt = xegpu.convert_layout %src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>
+    }> : vector<32x16xi8>
+  %s0 = vector.extract_strided_slice %cvt
+    {offsets = [0, 0], sizes = [8, 16], strides = [1, 1]}
+    : vector<32x16xi8> to vector<8x16xi8>
+  %s1 = vector.extract_strided_slice %cvt
+    {offsets = [8, 0], sizes = [8, 16], strides = [1, 1]}
+    : vector<32x16xi8> to vector<8x16xi8>
+  %s2 = vector.extract_strided_slice %cvt
+    {offsets = [16, 0], sizes = [8, 16], strides = [1, 1]}
+    : vector<32x16xi8> to vector<8x16xi8>
+  %s3 = vector.extract_strided_slice %cvt
+    {offsets = [24, 0], sizes = [8, 16], strides = [1, 1]}
+    : vector<32x16xi8> to vector<8x16xi8>
+  %a0 = xegpu.convert_layout %s0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>
+    }> : vector<8x16xi8>
+  %a1 = xegpu.convert_layout %s1
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>
+    }> : vector<8x16xi8>
+  %a2 = xegpu.convert_layout %s2
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>
+    }> : vector<8x16xi8>
+  %a3 = xegpu.convert_layout %s3
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [1, 0]>
+    }> : vector<8x16xi8>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_distributed_dim_fully_inserted
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [24, 0], strides = [1, 1]} : vector<16x1xf32> into vector<64x1xf32>
 gpu.func @vector_insert_strided_slice_distributed_dim_fully_inserted() {
@@ -1244,6 +1384,7 @@ gpu.func @vector_multi_reduction_1d_to_scalar() {
     }> : f32
   gpu.return
 }
+
 }
 
 // -----

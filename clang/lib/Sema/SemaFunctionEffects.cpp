@@ -1255,14 +1255,22 @@ private:
     }
 
     bool VisitCXXDeleteExpr(CXXDeleteExpr *Delete) override {
-      // RecursiveASTVisitor does not visit the implicit call to operator
-      // delete.
-      if (FunctionDecl *FD = Delete->getOperatorDelete()) {
-        CallableInfo CI(*FD, SpecialFuncType::OperatorDelete);
-        followCall(CI, Delete->getBeginLoc());
+      FunctionDecl *OpDelete = Delete->getOperatorDelete();
+
+      // RecursiveASTVisitor does not visit the called destructor.
+      // But a destroying operator delete means that no destructor is called.
+      if (OpDelete == nullptr || !OpDelete->isDestroyingOperatorDelete()) {
+        if (QualType QT = Delete->getDestroyedType(); !QT.isNull()) {
+          followTypeDtor(QT, Delete->getBeginLoc());
+        }
       }
 
-      // It DOES however visit the called destructor
+      // RecursiveASTVisitor does not visit the implicit call to operator
+      // delete.
+      if (OpDelete != nullptr) {
+        CallableInfo CI(*OpDelete, SpecialFuncType::OperatorDelete);
+        followCall(CI, Delete->getBeginLoc());
+      }
 
       return true;
     }

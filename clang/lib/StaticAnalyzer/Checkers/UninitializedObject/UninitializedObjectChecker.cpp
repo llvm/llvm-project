@@ -17,14 +17,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "UninitializedObject.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace clang::ento;
@@ -492,25 +493,18 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
   if (!CurrRegion)
     return false;
 
-  const StackFrame *SF = Context.getStackFrame();
-  while ((SF = SF->getParent())) {
+  // Returns true if \p Ctor was called by another constructor whose region
+  // contains CurrRegion, so CurrRegion will be analyzed during that analysis.
+  return llvm::any_of(
+      Context.getStackFrame()->parents(), [&](const StackFrame &SF) {
+        const auto *OtherCtor = dyn_cast<CXXConstructorDecl>(SF.getDecl());
+        if (!OtherCtor)
+          return false;
 
-    // If \p Ctor was called by another constructor.
-    const auto *OtherCtor = dyn_cast<CXXConstructorDecl>(SF->getDecl());
-    if (!OtherCtor)
-      continue;
-
-    const SubRegion *OtherRegion = getConstructedSubRegion(OtherCtor, Context);
-    if (!OtherRegion)
-      continue;
-
-    // If the CurrRegion is a subregion of OtherRegion, it will be analyzed
-    // during the analysis of OtherRegion.
-    if (CurrRegion->isSubRegionOf(OtherRegion))
-      return true;
-  }
-
-  return false;
+        const SubRegion *OtherRegion =
+            getConstructedSubRegion(OtherCtor, Context);
+        return OtherRegion && CurrRegion->isSubRegionOf(OtherRegion);
+      });
 }
 
 static bool shouldIgnoreRecord(const RecordDecl *RD, StringRef Pattern) {

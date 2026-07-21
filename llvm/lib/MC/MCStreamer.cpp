@@ -300,8 +300,7 @@ void MCStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                     bool PrologueEnd, bool IsStmt,
                                     StringRef FileName, SMLoc Loc) {}
 
-bool MCStreamer::checkCVLocSection(unsigned FuncId, unsigned FileNo,
-                                   SMLoc Loc) {
+bool MCStreamer::checkCVLocSection(unsigned FuncId, SMLoc Loc) {
   CodeViewContext &CVC = getContext().getCVContext();
   MCCVFunctionInfo *FI = CVC.getCVFunctionInfo(FuncId);
   if (!FI) {
@@ -414,7 +413,7 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   Symbol->setFragment(&getCurrentSectionOnly()->getDummyFragment());
 
   if (LFIRewriter)
-    LFIRewriter->onLabel(Symbol);
+    LFIRewriter->onLabel(Symbol, *this);
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
@@ -955,6 +954,23 @@ static unsigned encodeSEHRegNum(MCContext &Ctx, MCRegister Reg) {
   return Ctx.getRegisterInfo()->getSEHRegNum(Reg);
 }
 
+// Unwind formats before v3 store the register operand of an unwind code in a
+// 4-bit field, so extended registers (r16-r31 / xmm16-xmm31, i.e. SEH register
+// numbers greater than 15) cannot be represented. Report an error rather than
+// silently truncating the register number to a different register. Returns true
+// if an error was reported.
+static bool checkUnwindV3ExtendedReg(MCContext &Ctx,
+                                     const WinEH::Instruction &Inst,
+                                     uint8_t Version, SMLoc Loc,
+                                     StringRef Directive) {
+  if (Version < 3 && Inst.Register > 15) {
+    Ctx.reportError(Loc, Directive +
+                             " with an extended register requires unwind v3");
+    return true;
+  }
+  return false;
+}
+
 void MCStreamer::emitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
@@ -970,6 +986,9 @@ void MCStreamer::emitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
           Loc, ".seh_pushreg inside epilog requires unwind v3");
     CurrentWinEpilog->Instructions.push_back(Inst);
   } else {
+    if (checkUnwindV3ExtendedReg(getContext(), Inst, CurFrame->Version, Loc,
+                                 ".seh_pushreg"))
+      return;
     CurFrame->Instructions.push_back(Inst);
   }
 }
@@ -1019,6 +1038,9 @@ void MCStreamer::emitWinCFISetFrame(MCRegister Register, unsigned Offset,
           Loc, ".seh_setframe inside epilog requires unwind v3");
     CurrentWinEpilog->Instructions.push_back(Inst);
   } else {
+    if (checkUnwindV3ExtendedReg(getContext(), Inst, CurFrame->Version, Loc,
+                                 ".seh_setframe"))
+      return;
     CurFrame->LastFrameInst = CurFrame->Instructions.size();
     CurFrame->Instructions.push_back(Inst);
   }
@@ -1068,6 +1090,9 @@ void MCStreamer::emitWinCFISaveReg(MCRegister Register, unsigned Offset,
           Loc, ".seh_savereg inside epilog requires unwind v3");
     CurrentWinEpilog->Instructions.push_back(Inst);
   } else {
+    if (checkUnwindV3ExtendedReg(getContext(), Inst, CurFrame->Version, Loc,
+                                 ".seh_savereg"))
+      return;
     CurFrame->Instructions.push_back(Inst);
   }
 }
@@ -1090,6 +1115,9 @@ void MCStreamer::emitWinCFISaveXMM(MCRegister Register, unsigned Offset,
           Loc, ".seh_savexmm inside epilog requires unwind v3");
     CurrentWinEpilog->Instructions.push_back(Inst);
   } else {
+    if (checkUnwindV3ExtendedReg(getContext(), Inst, CurFrame->Version, Loc,
+                                 ".seh_savexmm"))
+      return;
     CurFrame->Instructions.push_back(Inst);
   }
 }
@@ -1254,6 +1282,9 @@ void MCStreamer::finish(SMLoc EndLoc) {
     getContext().reportError(EndLoc, "Unfinished frame!");
     return;
   }
+
+  if (LFIRewriter)
+    LFIRewriter->finish(*this);
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
@@ -1495,7 +1526,7 @@ void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
 void MCStreamer::emitValueToAlignment(Align, int64_t, uint8_t, unsigned) {}
 void MCStreamer::emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
                                uint8_t Fill, const MCSubtargetInfo &STI) {}
-void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}

@@ -124,7 +124,16 @@ def ROCDL_Dialect : Dialect {
     static constexpr ::llvm::StringLiteral getUniformWorkGroupSizeAttrName() {
       return ::llvm::StringLiteral("rocdl.uniform_work_group_size");
     }
-
+    /// Get the LLVM module flag key for the AMDGPU buffer OOB mode.
+    static constexpr ::llvm::StringLiteral
+    getModuleFlagKeyBufferOOBModeName() {
+      return ::llvm::StringLiteral("amdgpu.buffer.oob.mode");
+    }
+    /// Get the LLVM module flag key for the AMDGPU tbuffer OOB mode.
+    static constexpr ::llvm::StringLiteral
+    getModuleFlagKeyTBufferOOBModeName() {
+      return ::llvm::StringLiteral("amdgpu.tbuffer.oob.mode");
+    }
     /// The address space value that represents global memory.
     static constexpr unsigned kGlobalMemoryAddressSpace = 1;
     /// The address space value that represents shared memory.

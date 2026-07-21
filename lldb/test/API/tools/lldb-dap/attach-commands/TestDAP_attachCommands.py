@@ -12,7 +12,6 @@ import time
 class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
-    @skipIfWindows  # Wait for module events fails.
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_commands(self):
         """
