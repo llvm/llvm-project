@@ -612,8 +612,16 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         return false;
       }
     } else {
-      listInput->ResetForNextNamelistItem(
-          useDescriptor->rank() > 0 ? &group : nullptr);
+      // Pass &group unconditionally (not just for arrays) so the
+      // IsNamelistNameOrSlash look-ahead in Edit{Integer,Real,Logical,
+      // Character}Input fires for scalar items too.  Each of those
+      // per-type value readers starts its list-directed arm with
+      //
+      //     if (IsNamelistNameOrSlash(io)) return false;   // no value
+      //
+      // With &group set, that empty-value probe works for scalars as well as
+      // sequences.
+      listInput->ResetForNextNamelistItem(&group);
       if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor) &&
           handler.InError()) {
         return false;
