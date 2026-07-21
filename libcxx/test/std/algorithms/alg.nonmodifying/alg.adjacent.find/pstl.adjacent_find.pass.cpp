@@ -24,22 +24,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "type_algorithms.h"
-
-// TODO: switch to the shared implementation once it's merged into main
-template <class Callable>
-void runway_sample(size_t size, Callable callable) {
-  constexpr size_t affix = 16;
-  // 0, 1, 2, ..., 15, 16, 50, 157, 493, 1548, ...
-  for (size_t i = 0; i < size; i = i < affix ? i + 1 : size_t(3.1415 * i)) {
-    callable(i);
-  }
-  if (size <= affix)
-    return;
-  // size - 16, size - 15, ..., size - 1
-  for (size_t i = size - affix; i < size; ++i) {
-    callable(i);
-  }
-}
+#include "runway_sample.h"
 
 // The type X is provided to test that the adjacent_find algorithm can be used with custom non-movable/non-copyable types.
 struct X {
