@@ -407,6 +407,30 @@ TEST_F(SelectionDAGNodeConstructionTest,
 }
 
 TEST_F(SelectionDAGNodeConstructionTest,
+       FoldConstantPartialReduceMLALegalizedType) {
+  SDLoc DL;
+  // v4i16 is a legal AArch64 vector type but i16 is not a legal scalar type, so
+  // after type legalization the folded constants must be created in the
+  // promoted (i32) type. Build the operands with their legalized scalar types
+  // before enabling the flag.
+  SDValue Acc = buildVector(MVT::v4i16, MVT::i32, DL, {100, -200, 300, -400});
+  SDValue LHS = buildVector(MVT::v8i8, MVT::i32, DL, {1, 2, 3, 4, 5, 6, 7, 8});
+  SDValue RHS =
+      buildVector(MVT::v8i8, MVT::i32, DL, {5, 6, 7, 8, 9, 10, 11, 12});
+
+  DAG->NewNodesMustHaveLegalTypes = true;
+  SDValue Result =
+      DAG->getNode(ISD::PARTIAL_REDUCE_SMLA, DL, MVT::v4i16, Acc, LHS, RHS);
+  ASSERT_EQ(Result.getOpcode(), ISD::BUILD_VECTOR);
+  // Signed lane values must survive promotion, so check the negative lanes too.
+  checkBuildVector(Result, {/*100 + 1*5 + 5*9=*/150, /*-200 + 2*6 + 6*10=*/-128,
+                            /*300 + 3*7 + 7*11=*/398,
+                            /*-400 + 4*8 + 8*12=*/-272});
+  for (SDValue Op : Result->op_values())
+    EXPECT_EQ(Op.getValueType(), MVT::i32);
+}
+
+TEST_F(SelectionDAGNodeConstructionTest,
        FoldConstantPartialReduceMLARHSPoison) {
   SDLoc DL;
   SDValue Acc = buildVector(MVT::v2i32, DL, {100, 200});

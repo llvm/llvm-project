@@ -7945,10 +7945,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         }))
       return SDValue();
 
-    const unsigned AccEltBits = VT.getScalarSizeInBits();
-    const unsigned InputEltBits = Ops[1].getScalarValueSizeInBits();
-    const unsigned NumAccElts = VT.getVectorNumElements();
-    const unsigned NumInputElts = Ops[1].getValueType().getVectorNumElements();
+    unsigned AccEltBits = VT.getScalarSizeInBits();
+    unsigned InputEltBits = Ops[1].getScalarValueSizeInBits();
+    unsigned NumAccElts = VT.getVectorNumElements();
+    unsigned NumInputElts = Ops[1].getValueType().getVectorNumElements();
     SmallVector<APInt, 8> Results(NumAccElts, APInt::getZero(AccEltBits));
     BitVector PoisonElts(NumAccElts);
 
@@ -7964,8 +7964,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       Results[I] = C->getAPIntValue().trunc(AccEltBits);
     }
 
-    const bool IsLHSSigned = Opcode != ISD::PARTIAL_REDUCE_UMLA;
-    const bool IsRHSSigned = Opcode == ISD::PARTIAL_REDUCE_SMLA;
+    bool IsLHSSigned = Opcode != ISD::PARTIAL_REDUCE_UMLA;
+    bool IsRHSSigned = Opcode == ISD::PARTIAL_REDUCE_SMLA;
     for (unsigned I = 0; I != NumInputElts; ++I) {
       const unsigned AccIdx = I % NumAccElts;
       SDValue LHSElt = Ops[1].getOperand(I);
@@ -7990,12 +7990,25 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       Results[AccIdx] += LHSVal * RHSVal;
     }
 
+    // After type legalization the vector element type may not be a legal
+    // scalar type (e.g. i16 on AArch64). Create the folded constants in the
+    // promoted legal scalar type instead, matching the generic per-lane path
+    // below. Bail out if legalization would narrow the type, since the lane
+    // value would not fit.
     EVT AccEltVT = VT.getVectorElementType();
+    EVT LegalSVT = AccEltVT;
+    if (NewNodesMustHaveLegalTypes && LegalSVT.isInteger()) {
+      LegalSVT = TLI->getTypeToTransformTo(*getContext(), LegalSVT);
+      if (LegalSVT.bitsLT(AccEltVT))
+        return SDValue();
+    }
+
     SmallVector<SDValue, 8> ResultOps;
     for (unsigned I = 0; I != NumAccElts; ++I)
-      ResultOps.push_back(PoisonElts[I]
-                              ? getPOISON(AccEltVT)
-                              : getConstant(Results[I], DL, AccEltVT));
+      ResultOps.push_back(
+          PoisonElts[I] ? getPOISON(LegalSVT)
+                        : getConstant(Results[I].sext(LegalSVT.getSizeInBits()),
+                                      DL, LegalSVT));
     return getBuildVector(VT, DL, ResultOps);
   }
 
