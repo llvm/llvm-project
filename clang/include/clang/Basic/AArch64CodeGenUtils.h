@@ -41,8 +41,9 @@ enum {
   Use64BitVectors = (1 << 7),
   Use128BitVectors = (1 << 8),
 
-  // Source operands are double-element-width of the result (e.g. vraddhn).
-  // ClangIR-only; classic code-gen derives this from the intrinsic's .td.
+  // LLVM intrinsic source operands use double-width elements relative to the
+  // result (e.g. vraddhn). ClangIR-only; classic code-gen derives this from
+  // the intrinsic's .td.
   WidenArgs = (1 << 9),
 
   Vectorize1ArgType = Add1ArgType | VectorizeArgTypes,

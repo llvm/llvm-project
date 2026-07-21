@@ -303,18 +303,22 @@ deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
   else if (vecArgTy && !(modifier & AddRetType))
     funcResTy = wrapAsVector(resultTy);
 
-  // LLVMExtendedType<0> preserves the result vector's lane count while
-  // widening its element type. Reconstruct that source type from the Clang
-  // builtin's scalar data type.
+  // AdvSIMD_2Arg_Scalar_Narrow_Intrinsic in IntrinsicsAArch64.td models
+  // operand 0 as LLVMExtendedType<0>: the result vector's lane count with
+  // double-width elements. Reconstruct that LLVM operand type from the Clang
+  // builtin's scalar argument type.
   if (modifier & WidenArgs) {
     auto resVecTy = mlir::dyn_cast<cir::VectorType>(funcResTy);
-    assert(resVecTy && "widened SISD arguments require a vector result");
+    assert(resVecTy &&
+           "SISD LLVM argument reconstruction requires a vector result");
     vecArgTy = cir::VectorType::get(arg0Ty, resVecTy.getSize());
   }
 
-  // Wrap every non-immediate data operand that has the same scalar type as
-  // arg0. Checking the ICE bitmap is required when a data operand and an
-  // immediate both have i32 type (e.g. vqshrns_n_s32).
+  // `vecArgTy` is populated by `VectorizeArgTypes` or `WidenArgs`. When set,
+  // wrap every non-immediate data operand that has the same scalar type as
+  // arg0. Checking the ICE bitmap prevents an i32 immediate from being
+  // vectorized when it has the same type as a data operand (e.g.
+  // vqshrns_n_s32).
   llvm::SmallVector<mlir::Type> argTypes;
   argTypes.reserve(ops.size());
   for (unsigned i = 0, e = ops.size(); i != e; ++i) {
@@ -340,10 +344,13 @@ static cir::VectorType deriveNeonBinaryArgType(CIRGenBuilderTy &builder,
   return vTy;
 }
 
-/// Vectorize value, usually for argument of a neon SISD intrinsic call.
+/// Create a vector from an input scalar argument, usually for a NEON SISD
+/// intrinsic call. Insert the argument into lane 0 of a poison vector.
 static void vecExtendIntValue(CIRGenFunction &cgf, cir::VectorType argVTy,
                               mlir::Value &arg, mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
+  // TODO: Support floating-point scalar arguments when a SISD intrinsic
+  // requires scalar-to-vector adaptation; current users are integer-only.
   cir::IntType eltTy = mlir::dyn_cast<cir::IntType>(argVTy.getElementType());
   assert(mlir::isa<cir::IntType>(arg.getType()) && eltTy);
   // Cast the scalar data operand to the vector element type before inserting
