@@ -1074,7 +1074,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 
   Value *LowerBound = StartValue;
-  bool UnsignedInBounds = true, SignedInBounds = true;
+  bool LowerBoundNUW = true, LowerBoundNSW = true;
   if (IncStep) {
     auto *StartC = dyn_cast<ConstantInt>(StartValue);
     if (!StartC)
@@ -1083,33 +1083,31 @@ void State::addInfoForInductions(BasicBlock &BB) {
     APInt Sum = StartC->getValue().uadd_ov(*StepOffset, UOverflow);
     (void)StartC->getValue().sadd_ov(*StepOffset, SOverflow);
     LowerBound = ConstantInt::get(StartValue->getType(), Sum);
-    UnsignedInBounds = !UOverflow;
-    SignedInBounds = !SOverflow;
+    LowerBoundNUW = !UOverflow;
+    LowerBoundNSW = !SOverflow;
   }
 
   // AR may wrap. Add PN >= StartValue conditional on LowerBound <= B, which
   // guarantees that the loop exits before wrapping in combination with the
   // restrictions on B and the step above.
-  if (!MonotonicallyIncreasingUnsigned && UnsignedInBounds)
+  ConditionTy StartBeforeBoundULE = {CmpInst::ICMP_ULE, LowerBound, B};
+  ConditionTy StartBeforeBoundSLE = {CmpInst::ICMP_SLE, LowerBound, B};
+  if (!MonotonicallyIncreasingUnsigned && LowerBoundNUW)
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGE, PN, StartValue,
-        ConditionTy(CmpInst::ICMP_ULE, LowerBound, B)));
-  if (!MonotonicallyIncreasingSigned && SignedInBounds)
+        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundULE));
+  if (!MonotonicallyIncreasingSigned && LowerBoundNSW)
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGE, PN, StartValue,
-        ConditionTy(CmpInst::ICMP_SLE, LowerBound, B)));
+        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSLE));
 
-  if (SignedInBounds)
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SLT, PN, B,
-        ConditionTy(CmpInst::ICMP_SLE, LowerBound, B)));
+  if (LowerBoundNSW)
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
+                                                     B, StartBeforeBoundSLE));
 
-  if (!UnsignedInBounds)
+  if (!LowerBoundNUW)
     return;
 
-  WorkList.push_back(FactOrCheck::getConditionFact(
-      DTN, CmpInst::ICMP_ULT, PN, B,
-      ConditionTy(CmpInst::ICMP_ULE, LowerBound, B)));
+  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_ULT, PN,
+                                                   B, StartBeforeBoundULE));
 
   // Try to add condition from header to the dedicated exit blocks. When exiting
   // either with EQ or NE in the header, we know that the induction value must
@@ -1117,14 +1115,13 @@ void State::addInfoForInductions(BasicBlock &BB) {
   assert(!StepOffset->isNegative() && "induction must be increasing");
   assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
          "unsupported predicate");
-  ConditionTy Precond = {CmpInst::ICMP_ULE, LowerBound, B};
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
     // Bail out on non-dedicated exits.
     if (DT.dominates(&BB, EB)) {
       WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
+          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, StartBeforeBoundULE));
     }
   }
 }
