@@ -12,21 +12,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/termios/cfsetispeed.h"
-
+#include "hdr/types/struct_termios.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/termios/linux/speed_utils.h"
-
-#include "hdr/types/struct_termios.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, cfsetispeed, (struct termios * t, speed_t speed)) {
-  constexpr speed_t NOT_SPEED_MASK = ~speed_t(CBAUD);
+LLVM_LIBC_FUNCTION(int, cfsetispeed, (termios * t, speed_t speed)) {
+  LIBC_CRASH_ON_NULLPTR(t);
+  constexpr speed_t NOT_SPEED_MASK = ~static_cast<speed_t>(CBAUD);
   speed_t encoded = encode_speed(speed);
   // A speed value is valid only if it is equal to one of the B<NN+> values.
-  if (t == nullptr || ((encoded & NOT_SPEED_MASK) != 0)) {
+  if ((encoded & NOT_SPEED_MASK) != 0) {
     libc_errno = EINVAL;
     return -1;
   }

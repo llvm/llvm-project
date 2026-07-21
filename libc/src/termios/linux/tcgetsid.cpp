@@ -13,7 +13,7 @@
 
 #include "src/termios/tcgetsid.h"
 
-#include "hdr/types/struct_termios.h"
+#include "hdr/types/pid_t.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/ioctl.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"

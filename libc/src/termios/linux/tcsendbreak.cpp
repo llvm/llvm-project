@@ -13,7 +13,6 @@
 
 #include "src/termios/tcsendbreak.h"
 
-#include "hdr/types/struct_termios.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/ioctl.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
@@ -23,7 +22,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(pid_t, tcsendbreak, (int fd, int /* unused duration */)) {
+LLVM_LIBC_FUNCTION(int, tcsendbreak, (int fd, int /* unused duration */)) {
   // POSIX leaves the behavior for non-zero duration implementation dependent.
   // Which means that the behavior can be the same as it is when duration is
   // zero. So, we just pass zero to the syscall.

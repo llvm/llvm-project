@@ -12,11 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/termios/tcgetattr.h"
+#include "hdr/termios_macros.h"
 #include "hdr/types/struct_termios.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/ioctl.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/termios/linux/kernel_termios.h"
 #include "src/termios/linux/speed_utils.h"
 
@@ -24,7 +26,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, tcgetattr, (int fd, struct termios *t)) {
+LLVM_LIBC_FUNCTION(int, tcgetattr, (int fd, termios *t)) {
+  LIBC_CRASH_ON_NULLPTR(t);
   LIBC_NAMESPACE::kernel_termios kt;
   auto ret = linux_syscalls::ioctl(fd, TCGETS, &kt);
   if (!ret.has_value()) {
@@ -35,10 +38,17 @@ LLVM_LIBC_FUNCTION(int, tcgetattr, (int fd, struct termios *t)) {
   t->c_oflag = kt.c_oflag;
   t->c_cflag = kt.c_cflag;
   t->c_lflag = kt.c_lflag;
-  t->c_ispeed = decode_speed(kt.c_cflag & CBAUD);
-  t->c_ospeed = decode_speed(kt.c_cflag & CBAUD);
+  t->c_line = kt.c_line;
 
-  size_t nccs = KERNEL_NCCS <= NCCS ? KERNEL_NCCS : NCCS;
+  speed_t ospeed_mask = kt.c_cflag & CBAUD;
+  speed_t ispeed_mask = (kt.c_cflag & CIBAUD) >> 16;
+  if (ispeed_mask == 0)
+    ispeed_mask = ospeed_mask;
+
+  t->c_ospeed = decode_speed(ospeed_mask);
+  t->c_ispeed = decode_speed(ispeed_mask);
+
+  size_t nccs = cpp::min(KERNEL_NCCS, static_cast<size_t>(NCCS));
   for (size_t i = 0; i < nccs; ++i)
     t->c_cc[i] = kt.c_cc[i];
   if (NCCS > nccs) {

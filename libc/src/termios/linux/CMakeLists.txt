@@ -22,6 +22,7 @@ add_entrypoint_object(
     libc.include.termios
     libc.hdr.types.speed_t
     libc.hdr.types.struct_termios
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -33,8 +34,10 @@ add_entrypoint_object(
   DEPENDS
     .speed_utils
     libc.include.termios
+    libc.hdr.types.speed_t
     libc.hdr.types.struct_termios
     libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -47,6 +50,7 @@ add_entrypoint_object(
     libc.include.termios
     libc.hdr.types.speed_t
     libc.hdr.types.struct_termios
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -58,8 +62,10 @@ add_entrypoint_object(
   DEPENDS
     .speed_utils
     libc.include.termios
+    libc.hdr.types.speed_t
     libc.hdr.types.struct_termios
     libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -70,7 +76,7 @@ add_entrypoint_object(
     ../tcgetsid.h
   DEPENDS
     libc.include.termios
-    libc.hdr.types.struct_termios
+    libc.hdr.types.pid_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
@@ -122,7 +128,6 @@ add_entrypoint_object(
     ../tcsendbreak.h
   DEPENDS
     libc.include.termios
-    libc.hdr.types.struct_termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
@@ -146,9 +151,11 @@ add_entrypoint_object(
     .kernel_termios
     .speed_utils
     libc.include.termios
+    libc.hdr.termios_macros
     libc.hdr.types.struct_termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -159,9 +166,11 @@ add_entrypoint_object(
     ../tcsetattr.h
   DEPENDS
     .kernel_termios
+    .speed_utils
     libc.include.termios
     libc.hdr.termios_macros
     libc.hdr.types.struct_termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )

@@ -177,7 +177,7 @@ LIBC_INLINE constexpr speed_t decode_speed(speed_t kernel_speed) {
   }
 }
 
-#endif // LIBC_FULL_BUILD
+#endif // (B50 == 1)
 
 } // namespace LIBC_NAMESPACE_DECL
 
