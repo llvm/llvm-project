@@ -44,3 +44,10 @@ void alloc_foo(void) {
   int *zero_alloc1 = my_malloc(0);
   int *zero_alloc2 = (int *)my_malloc(0);
 }
+
+void *my_malloc_wide(__int128) __attribute__((alloc_size(1)));
+
+void alloc_foo_wide(void) {
+  struct Foo *ptr = (struct Foo *)my_malloc_wide(sizeof(*ptr));
+  struct Foo *ptr_wrong = (struct Foo *)my_malloc_wide(4); // expected-warning {{allocation of insufficient size '4' for type 'struct Foo' with size '40'}}
+}

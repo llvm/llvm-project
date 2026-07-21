@@ -179,13 +179,14 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   const auto NotInEmptyMethodOfContainer = unless(
       forCallable(cxxMethodDecl(hasCanonicalDecl(equalsBoundNode("empty")))));
 
+  const auto ValidContainerExpr =
+      expr(anyOf(hasType(ValidContainer), hasType(pointsTo(ValidContainer)),
+                 hasType(references(ValidContainer))))
+          .bind("MemberCallObject");
+
   Finder->addMatcher(
       cxxMemberCallExpr(
-          argumentCountIs(0),
-          on(expr(anyOf(hasType(ValidContainer),
-                        hasType(pointsTo(ValidContainer)),
-                        hasType(references(ValidContainer))))
-                 .bind("MemberCallObject")),
+          argumentCountIs(0), on(ValidContainerExpr),
           callee(
               cxxMethodDecl(hasAnyName("size", "length")).bind("SizeMethod")),
           WrongUse, NotInEmptyMethodOfContainer)
@@ -193,18 +194,23 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      callExpr(
-          argumentCountIs(0),
-          has(mapAnyOf(memberExpr, cxxDependentScopeMemberExpr)
-                  .with(
-                      hasObjectExpression(
-                          expr(anyOf(hasType(ValidContainer),
-                                     hasType(pointsTo(ValidContainer)),
-                                     hasType(references(ValidContainer))))
-                              .bind("MemberCallObject")),
-                      anyOf(matchMemberName("size"), matchMemberName("length")))
-                  .bind("MemberExpr")),
-          WrongUse, NotInEmptyMethodOfContainer)
+      callExpr(argumentCountIs(0),
+               has(mapAnyOf(memberExpr, cxxDependentScopeMemberExpr)
+                       .with(hasObjectExpression(ValidContainerExpr),
+                             anyOf(matchMemberName("size"),
+                                   matchMemberName("length")))
+                       .bind("MemberExpr")),
+               WrongUse, NotInEmptyMethodOfContainer)
+          .bind("SizeCallExpr"),
+      this);
+
+  // Match non-member std::size(container) used in boolean context or compared
+  // with 0/1.
+  Finder->addMatcher(
+      callExpr(argumentCountIs(1),
+               callee(functionDecl(hasName("::std::size")).bind("SizeMethod")),
+               hasArgument(0, ValidContainerExpr), WrongUse,
+               NotInEmptyMethodOfContainer)
           .bind("SizeCallExpr"),
       this);
 
@@ -406,7 +412,7 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                               "for emptiness instead of %0");
     if (const auto *SizeMethod =
             Result.Nodes.getNodeAs<NamedDecl>("SizeMethod"))
-      Diag << SizeMethod;
+      Diag << SizeMethod->getDeclName();
     else if (const auto *DependentExpr =
                  Result.Nodes.getNodeAs<CXXDependentScopeMemberExpr>(
                      "MemberExpr"))

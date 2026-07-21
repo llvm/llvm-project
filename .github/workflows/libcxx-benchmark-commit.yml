@@ -1,0 +1,110 @@
+# This file defines a workflow that runs the libc++ benchmarks at the given commit.
+# This workflow is intended to be triggered manually or via the Github API. As such,
+# it requires several inputs that allow customizing its behavior.
+
+name: Benchmark libc++ commit
+
+permissions:
+  contents: read
+
+on:
+  # TODO: Support dispatching only to selected configurations.
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'The libc++ commit to benchmark'
+        required: true
+        type: string
+      benchmark-suite-version:
+        description: 'The version of the benchmark suite to use (a LLVM monorepo SHA)'
+        required: false
+        type: string
+        default: 0eefb2682bf8c04954c46e91916b5164d8424702
+      filter:
+        description: 'An optional filter to determine which benchmarks to run'
+        required: false
+        type: string
+      submit-lnt:
+        description: 'Whether to submit the results to LNT -- dry-run unless opted in'
+        required: false
+        type: boolean
+        default: false
+      lnt-url:
+        description: 'The URL of the LNT instance to submit to'
+        required: false
+        type: string
+        default: http://lnt.llvm.org
+
+jobs:
+  run-benchmarks:
+    strategy:
+      matrix:
+        include:
+          - lnt-machine: macos-26.5-arm64
+            runner: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
+            cxx: clang++
+            install-python: false
+            install-macos-dependencies: true
+          - lnt-machine: linux-x86_64
+            runner: llvm-premerge-libcxx-runners
+            cxx: clang++-22
+            install-python: true
+            install-macos-dependencies: false
+      fail-fast: false
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout the LLVM monorepo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          # We benchmark arbitrary historical commits, which requires the full history to be available.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install Python
+        if: ${{ matrix.install-python }}
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.14'
+
+      - name: Install Ninja and CMake
+        if: ${{ matrix.install-macos-dependencies }}
+        run: |
+          brew install ninja cmake
+
+      - name: Diagnose tools in use
+        run: |
+          cmake --version
+          ninja --version
+          ${{ matrix.cxx }} --version
+
+      - name: Run the benchmarks
+        env:
+          COMMIT: ${{ inputs.commit }}
+          BENCHMARK_SUITE_VERSION: ${{ inputs.benchmark-suite-version }}
+          FILTER: ${{ inputs.filter }}
+        run: |
+          filter_arg=()
+          if [ -n "${FILTER}" ]; then
+            filter_arg=(--filter "${FILTER}")
+          fi
+          libcxx/utils/ci/lnt/run-benchmarks                            \
+            --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
+            --machine ${{ matrix.lnt-machine }}                         \
+            --compiler ${{ matrix.cxx }}                                \
+            --benchmark-commit "${COMMIT}"                              \
+            "${filter_arg[@]}"                                          \
+            --output "${COMMIT}.json"
+
+          cat "${COMMIT}.json"
+
+      - name: Submit to LNT
+        if: ${{ inputs.submit-lnt }}
+        env:
+          COMMIT: ${{ inputs.commit }}
+          LNT_URL: ${{ inputs.lnt-url }}
+        run: |
+          libcxx/utils/ci/lnt/submit-benchmarks             \
+            --lnt-url "${LNT_URL}"                          \
+            --test-suite libcxx2                            \
+            "${COMMIT}.json"

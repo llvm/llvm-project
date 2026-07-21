@@ -29,8 +29,6 @@
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
-#include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include <variant>
 
@@ -68,27 +66,30 @@ DataSharingProcessor::DataSharingProcessor(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     const List<Clause> &clauses, lower::pft::Evaluation &eval,
     bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
-    lower::SymMap &symTable, bool isTargetPrivatization)
+    lower::SymMap &symTable, bool isTargetPrivatization,
+    llvm::ArrayRef<const semantics::Symbol *> symbolsCoveredByReductionElements)
     : converter(converter), semaCtx(semaCtx),
       firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
       shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
       useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
       isTargetPrivatization(isTargetPrivatization), visitor(semaCtx) {
+  this->symbolsCoveredByReductionElements.insert(
+      symbolsCoveredByReductionElements.begin(),
+      symbolsCoveredByReductionElements.end());
   eval.visit([&](const auto &functionParserNode) {
     parser::Walk(functionParserNode, visitor);
   });
 }
 
-DataSharingProcessor::DataSharingProcessor(lower::AbstractConverter &converter,
-                                           semantics::SemanticsContext &semaCtx,
-                                           lower::pft::Evaluation &eval,
-                                           bool useDelayedPrivatization,
-                                           lower::SymMap &symTable,
-                                           bool isTargetPrivatization)
-    : DataSharingProcessor(converter, semaCtx, {}, eval,
-                           /*shouldCollectPreDeterminedSymols=*/false,
-                           useDelayedPrivatization, symTable,
-                           isTargetPrivatization) {}
+DataSharingProcessor::DataSharingProcessor(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    lower::pft::Evaluation &eval, bool useDelayedPrivatization,
+    lower::SymMap &symTable, bool isTargetPrivatization,
+    llvm::ArrayRef<const semantics::Symbol *> symbolsCoveredByReductionElements)
+    : DataSharingProcessor(
+          converter, semaCtx, {}, eval,
+          /*shouldCollectPreDeterminedSymols=*/false, useDelayedPrivatization,
+          symTable, isTargetPrivatization, symbolsCoveredByReductionElements) {}
 
 void DataSharingProcessor::processStep1(
     mlir::omp::PrivateClauseOps *clauseOps,
@@ -237,11 +238,6 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   // Such cases are suggested to be clearly documented and explained
   // instead of being silently skipped
   auto isException = [&](const Fortran::semantics::Symbol *sym) -> bool {
-    // `OmpPreDetermined` symbols cannot be exceptions since
-    // their privatized symbols are heavily used in FIR.
-    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-      return false;
-
     // The handling of linear clause is deferred to the OpenMP
     // IRBuilder which is responsible for all its aspects,
     // including privatization. Privatizing linear variables at this point would
@@ -291,6 +287,20 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   for (auto *sym : explicitlyPrivatizedSymbols)
     if (!isException(sym))
       allPrivatizedSymbols.insert(sym);
+}
+
+bool DataSharingProcessor::isCoveredByReductionElement(
+    const semantics::Symbol *sym) const {
+  if (symbolsCoveredByReductionElements.contains(sym) ||
+      symbolsCoveredByReductionElements.contains(&sym->GetUltimate()))
+    return true;
+
+  if (const auto *hostAssoc = sym->detailsIf<semantics::HostAssocDetails>())
+    return symbolsCoveredByReductionElements.contains(&hostAssoc->symbol()) ||
+           symbolsCoveredByReductionElements.contains(
+               &hostAssoc->symbol().GetUltimate());
+
+  return false;
 }
 
 bool DataSharingProcessor::needBarrier() {
@@ -497,7 +507,23 @@ void DataSharingProcessor::collectPrivatizedSymbols(
   }
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
+    // Linear symbols are privatized by OpenMP IRBuilder, except when they are
+    // enclosed within TARGET.
+    mlir::Operation *currentOp =
+        firOpBuilder.getInsertionBlock()->getParentOp();
+    bool inTarget =
+        currentOp && (mlir::isa<mlir::omp::TargetOp>(currentOp) ||
+                      currentOp->getParentOfType<mlir::omp::TargetOp>());
+
+    if (sym->test(semantics::Symbol::Flag::OmpLinear) && !inTarget)
+      return false;
+
     if (collectImplicit) {
+      // If all uses of a privatisaed variable are covered by an expr in a
+      // reduction clause, these should be ignored.
+      if (isCoveredByReductionElement(sym))
+        return false;
+
       // If we're a combined construct with a target region, implicit
       // firstprivate captures, should only belong to the target region
       // and not be added/captured by later directives. Parallel regions
@@ -704,7 +730,8 @@ void DataSharingProcessor::privatizeSymbol(
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(
       converter, firOpBuilder, symTable, allPrivatizedSymbols,
-      mightHaveReadHostSym, symToPrivatize, clauseOps, dir);
+      mightHaveReadHostSym, symToPrivatize, clauseOps, dir,
+      forceHeapAllocationForPrivateDynamicArrays);
 }
 } // namespace omp
 } // namespace lower

@@ -103,6 +103,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     "utils"
     FILES "${LLDB_SOURCE_DIR}/examples/python/in_call_stack.py"
           "${LLDB_SOURCE_DIR}/examples/python/symbolication.py"
+          "${LLDB_SOURCE_DIR}/examples/python/delayed_enable.py"
   )
 
   create_python_package(
@@ -116,6 +117,9 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_platform.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/operating_system.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_thread_plan.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_breakpoint.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_hook.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_stackframe_recognizer.py"
     )
 
   if(APPLE)
@@ -157,6 +161,18 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}
                           ${lldb_python_target_dir}/native/ ${LIBLLDB_SYMLINK_OUTPUT_FILE})
 
+  # On Windows, DLLs must reside alongside the .pyd extension so the loader finds them.
+  # Without this, importing _lldb fails at runtime when vcpkg-provided DLLs are not on PATH.
+  if(WIN32 AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    file(GLOB _lldb_vcpkg_runtime_dlls
+      "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/*.dll")
+    if(_lldb_vcpkg_runtime_dlls)
+      add_custom_command(TARGET ${swig_target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          ${_lldb_vcpkg_runtime_dlls} "${lldb_python_target_dir}/native/"
+        COMMENT "Staging vcpkg runtime DLLs next to _lldb.pyd")
+    endif()
+  endif()
 
   if (NOT WIN32)
   add_dependencies(${swig_target} lldb-python-wrapper)
@@ -169,6 +185,9 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   endif()
 
   add_dependencies(${swig_target} swig_wrapper_python liblldb lldb-argdumper)
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+    add_dependencies(${swig_target} lldbPluginScriptInterpreterPython)
+  endif()
   set_target_properties(${swig_target} swig_wrapper_python PROPERTIES FOLDER "lldb misc")
 
   # Ensure we do the python post-build step when building lldb.

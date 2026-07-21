@@ -9,10 +9,10 @@
 // The initializer must use the struct field's function-pointer type (not the
 // FuncOp's no-prototype type) so CIR stays valid after the replacement.
 
-// CHECK: !{{[^ ]+}} = !cir.record<struct "S1" {!cir.ptr<!cir.func<()>>, !s32i, !s32i}>
-// CHECK: !{{[^ ]+}} = !cir.record<struct "S2" {!cir.ptr<!cir.func<(...)>>, !s32i, !s32i}>
-// CHECK: !{{[^ ]+}} = !cir.record<struct "S3" {!cir.ptr<!cir.func<(...)>>, !s32i, !s32i}>
-// CHECK: !{{[^ ]+}} = !cir.record<struct "S4" {!cir.ptr<!cir.func<(...)>>, !s32i, !s32i}>
+// CHECK: !{{[^ ]+}} = !cir.struct<"S1" {!cir.ptr<!cir.func<()>>, !s32i, !s32i}>
+// CHECK: !{{[^ ]+}} = !cir.struct<"S2" {!cir.ptr<!cir.func<(...)>>, !s32i, !s32i}>
+// CHECK: !{{[^ ]+}} = !cir.struct<"S3" {!cir.ptr<!cir.func<(...)>>, !s32i, !s32i}>
+// CHECK: !{{[^ ]+}} = !cir.struct<"S4" {!cir.ptr<!cir.func<(...)>>, !s32i, !s32i}>
 
 struct S1 {
   void (*fn_ptr)(void);

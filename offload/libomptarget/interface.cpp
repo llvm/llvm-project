@@ -67,7 +67,7 @@ bool checkDevice(int64_t &DeviceID, ident_t *Loc) {
     return true;
   }
 
-  if (DeviceID == omp_get_initial_device()) {
+  if (isInitialDevice(static_cast<int>(DeviceID))) {
     ODBG(ODT_Device) << "Device is host (" << DeviceID
                      << "), returning as if offload is disabled";
     return true;
@@ -646,6 +646,9 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
 
 EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
                                                              unsigned)) {
+  if (!PM)
+    return;
+
   for (auto &Plugin : PM->plugins())
     if (Plugin.is_initialized())
       Plugin.getRPCServer().registerCallback(Callback);

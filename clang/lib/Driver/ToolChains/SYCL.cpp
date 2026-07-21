@@ -147,8 +147,8 @@ SYCLToolChain::SYCLToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void SYCLToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
+  HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 
   // Link SYCL device libraries at compile time for SPIR/SPIRV targets.
   // We perform compile-time linking for SPIR/SPIRV targets.
@@ -156,7 +156,7 @@ void SYCLToolChain::addClangTargetOptions(
   if (getTriple().isSPIROrSPIRV()) {
     // Get the device libraries for this offloading kind.
     llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs =
-        getDeviceLibs(DriverArgs, DeviceOffloadingKind);
+        getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind);
 
     // Add each device library with the appropriate linking flag.
     for (const auto &BCFile : BCLibs) {
@@ -180,10 +180,9 @@ void SYCLToolChain::addClangTargetOptions(
 
 llvm::opt::DerivedArgList *
 SYCLToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             StringRef BoundArch,
+                             BoundArch BA,
                              Action::OffloadKind DeviceOffloadKind) const {
-  DerivedArgList *DAL =
-      HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+  DerivedArgList *DAL = HostTC.TranslateArgs(Args, BA, DeviceOffloadKind);
 
   bool IsNewDAL = false;
   if (!DAL) {
@@ -219,10 +218,10 @@ SYCLToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   }
 
   const OptTable &Opts = getDriver().getOpts();
-  if (!BoundArch.empty()) {
+  if (BA) {
     DAL->eraseArg(options::OPT_march_EQ);
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      BoundArch);
+                      BA.ArchName);
   }
   return DAL;
 }
@@ -253,7 +252,7 @@ void SYCLToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 SYCLToolChain::getDeviceLibs(
-    const llvm::opt::ArgList &DriverArgs,
+    const llvm::opt::ArgList &DriverArgs, BoundArch /*BA*/,
     const Action::OffloadKind /*DeviceOffloadingKind*/) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
 

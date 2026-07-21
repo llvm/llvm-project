@@ -2,7 +2,7 @@
 ! near/on device when utilised in USM mode.
 ! REQUIRES: clang, flang, amdgpu
 
-! RUN: %clang -c -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
+! RUN: %clang -c -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa \
 ! RUN:   %S/../../Inputs/target-use-dev-ptr.c -o target-use-dev-ptr_c.o
 ! RUN: %libomptarget-compile-fortran-generic target-use-dev-ptr_c.o
 ! RUN: env HSA_XNACK=1 \

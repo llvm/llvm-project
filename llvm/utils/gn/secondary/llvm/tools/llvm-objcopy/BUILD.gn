@@ -51,7 +51,7 @@ foreach(target, symlinks) {
   symlink_or_copy(target) {
     deps = [ ":llvm-objcopy" ]
     source = "llvm-objcopy"
-    output = "$root_out_dir/bin/$target"
+    output = "$llvm_current_bindir/$target"
   }
 }
 
@@ -66,10 +66,10 @@ group("symlinks") {
 driver_executable("llvm-objcopy") {
   deps = [
     ":BitcodeStripOpts",
+    ":ExtractBundleEntryOpts",
     ":InstallNameToolOpts",
     ":ObjcopyOpts",
     ":StripOpts",
-    ":ExtractBundleEntryOpts",
     "//llvm/lib/MC",
     "//llvm/lib/ObjCopy",
     "//llvm/lib/Object",

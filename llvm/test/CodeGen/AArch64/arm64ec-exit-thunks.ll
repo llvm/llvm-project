@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64ec-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -mtriple=arm64ec-pc-windows-msvc -verify-machineinstrs < %s | FileCheck %s
 
 declare void @no_op() nounwind;
 ; CHECK-LABEL:    .def    $iexit_thunk$cdecl$v$v;
@@ -93,10 +93,58 @@ declare i64 @simple_integers(i8, i16, i32, i64) nounwind;
 ; CHECK-NEXT:     .seh_endfunclet
 ; CHECK-NEXT:     .seh_endproc
 
-; NOTE: Only half, float, and double are supported.
-declare double @simple_floats(half, float, double) nounwind;
-; CHECK-LABEL:    .def    $iexit_thunk$cdecl$d$__llvm_h__fd;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$d$__llvm_h__fd
+; NOTE: Only half, bfloat16, float, double, and fp128 are supported.
+declare double @simple_floats(half, float, double, fp128) nounwind;
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$d$__llvm_h__fd__llvm_q__;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$d$__llvm_h__fd__llvm_q__
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     sub     sp, sp, #64
+; CHECK-NEXT:     .seh_stackalloc 64
+; CHECK-NEXT:     stp     x29, x30, [sp, #48]             // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  48
+; CHECK-NEXT:     add     x29, sp, #48
+; CHECK-NEXT:     .seh_add_fp     48
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_call_no_redirect
+; CHECK-NEXT:     sub     x3, x29, #16
+; CHECK-NEXT:     stur    q3, [x29, #-16]
+; CHECK-NEXT:     ldr     x16, [x8, :lo12:__os_arm64x_dispatch_call_no_redirect]
+; CHECK-NEXT:     blr     x16
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #48]             // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  48
+; CHECK-NEXT:     add     sp, sp, #64
+; CHECK-NEXT:     .seh_stackalloc 64
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     ret
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+; CHECK-LABEL:    .def    "#simple_floats$exit_thunk";
+; CHECK:          .section        .wowthk$aa,"xr",discard,"#simple_floats$exit_thunk"
+; CHECK:          .weak_anti_dep  simple_floats
+; CHECK:          .weak_anti_dep  "#simple_floats"
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     str     x30, [sp, #-16]!                // 8-byte Folded Spill
+; CHECK-NEXT:     .seh_save_reg_x x30, 16
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     adrp    x8, __os_arm64x_check_icall
+; CHECK-NEXT:     adrp    x11, simple_floats
+; CHECK-NEXT:     add     x11, x11, :lo12:simple_floats
+; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$d$__llvm_h__fd__llvm_q__
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$d$__llvm_h__fd__llvm_q__
+; CHECK-NEXT:     blr     x8
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
+; CHECK-NEXT:     .seh_save_reg_x x30, 16
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x11
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+
+declare bfloat @simple_bfloat(bfloat, bfloat) nounwind;
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     sub     sp, sp, #48
 ; CHECK-NEXT:     .seh_stackalloc 48
@@ -117,20 +165,114 @@ declare double @simple_floats(half, float, double) nounwind;
 ; CHECK-NEXT:     ret
 ; CHECK-NEXT:     .seh_endfunclet
 ; CHECK-NEXT:     .seh_endproc
-; CHECK-LABEL:    .def    "#simple_floats$exit_thunk";
-; CHECK:          .section        .wowthk$aa,"xr",discard,"#simple_floats$exit_thunk"
-; CHECK:          .weak_anti_dep  simple_floats
-; CHECK:          .weak_anti_dep  "#simple_floats"
+; CHECK-LABEL:    .def    "#simple_bfloat$exit_thunk";
+; CHECK:          .section        .wowthk$aa,"xr",discard,"#simple_bfloat$exit_thunk"
+; CHECK:          .weak_anti_dep  simple_bfloat
+; CHECK:          .weak_anti_dep  "#simple_bfloat"
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     str     x30, [sp, #-16]!                // 8-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_reg_x x30, 16
 ; CHECK-NEXT:     .seh_endprologue
 ; CHECK-NEXT:     adrp    x8, __os_arm64x_check_icall
-; CHECK-NEXT:     adrp    x11, simple_floats
-; CHECK-NEXT:     add     x11, x11, :lo12:simple_floats
+; CHECK-NEXT:     adrp    x11, simple_bfloat
+; CHECK-NEXT:     add     x11, x11, :lo12:simple_bfloat
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$d$__llvm_h__fd
-; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$d$__llvm_h__fd
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__
+; CHECK-NEXT:     blr     x8
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
+; CHECK-NEXT:     .seh_save_reg_x x30, 16
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x11
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+
+declare half @return_half() nounwind;
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$__llvm_h__$v;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$__llvm_h__$v
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     sub     sp, sp, #48
+; CHECK-NEXT:     .seh_stackalloc 48
+; CHECK-NEXT:     stp     x29, x30, [sp, #32]             // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  32
+; CHECK-NEXT:     add     x29, sp, #32
+; CHECK-NEXT:     .seh_add_fp     32
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_call_no_redirect
+; CHECK-NEXT:     ldr     x16, [x8, :lo12:__os_arm64x_dispatch_call_no_redirect]
+; CHECK-NEXT:     blr     x16
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #32]             // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  32
+; CHECK-NEXT:     add     sp, sp, #48
+; CHECK-NEXT:     .seh_stackalloc 48
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     ret
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+; CHECK-LABEL:    .def    "#return_half$exit_thunk";
+; CHECK:          .section        .wowthk$aa,"xr",discard,"#return_half$exit_thunk"
+; CHECK:          .weak_anti_dep  return_half
+; CHECK:          .weak_anti_dep  "#return_half"
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     str     x30, [sp, #-16]!                // 8-byte Folded Spill
+; CHECK-NEXT:     .seh_save_reg_x x30, 16
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     adrp    x8, __os_arm64x_check_icall
+; CHECK-NEXT:     adrp    x11, return_half
+; CHECK-NEXT:     add     x11, x11, :lo12:return_half
+; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$__llvm_h__$v
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$__llvm_h__$v
+; CHECK-NEXT:     blr     x8
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
+; CHECK-NEXT:     .seh_save_reg_x x30, 16
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x11
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+
+declare fp128 @return_fp128() nounwind;
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$__llvm_q__$v;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$__llvm_q__$v
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     sub     sp, sp, #64
+; CHECK-NEXT:     .seh_stackalloc 64
+; CHECK-NEXT:     stp     x29, x30, [sp, #48]             // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  48
+; CHECK-NEXT:     add     x29, sp, #48
+; CHECK-NEXT:     .seh_add_fp     48
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_call_no_redirect
+; CHECK-NEXT:     sub     x0, x29, #16
+; CHECK-NEXT:     ldr     x16, [x8, :lo12:__os_arm64x_dispatch_call_no_redirect]
+; CHECK-NEXT:     blr     x16
+; CHECK-NEXT:     ldur    q0, [x29, #-16]
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #48]             // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  48
+; CHECK-NEXT:     add     sp, sp, #64
+; CHECK-NEXT:     .seh_stackalloc 64
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     ret
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+; CHECK-LABEL:    .def    "#return_fp128$exit_thunk";
+; CHECK:          .section        .wowthk$aa,"xr",discard,"#return_fp128$exit_thunk"
+; CHECK:          .weak_anti_dep  return_fp128
+; CHECK:          .weak_anti_dep  "#return_fp128"
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     str     x30, [sp, #-16]!                // 8-byte Folded Spill
+; CHECK-NEXT:     .seh_save_reg_x x30, 16
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     adrp    x8, __os_arm64x_check_icall
+; CHECK-NEXT:     adrp    x11, return_fp128
+; CHECK-NEXT:     add     x11, x11, :lo12:return_fp128
+; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$__llvm_q__$v
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$__llvm_q__$v
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -167,11 +309,15 @@ declare void @has_varargs(...) nounwind;
 ; CHECK-NEXT:     bl      "#__chkstk_arm64ec"
 ; CHECK-NEXT:     sub     x0, sp, x15, lsl #4
 ; CHECK-NEXT:     mov     sp, x0
-; CHECK-NEXT:     sub     sp, sp, #32
 ; CHECK-NEXT:     mov     x1, x4
 ; CHECK-NEXT:     mov     x2, x5
 ; CHECK-NEXT:     bl      "#memcpy"
+; CHECK-NEXT:     sub     sp, sp, #32
+; CHECK-NEXT:     fmov    d0, x22
+; CHECK-NEXT:     fmov    d1, x21
 ; CHECK-NEXT:     mov     x9, x26
+; CHECK-NEXT:     fmov    d2, x20
+; CHECK-NEXT:     fmov    d3, x19
 ; CHECK-NEXT:     mov     x0, x22
 ; CHECK-NEXT:     mov     x1, x21
 ; CHECK-NEXT:     mov     x2, x20
@@ -245,11 +391,15 @@ declare [2 x i8] @has_varargs_small_struct(...) nounwind;
 ; CHECK-NEXT:     bl      "#__chkstk_arm64ec"
 ; CHECK-NEXT:     sub     x0, sp, x15, lsl #4
 ; CHECK-NEXT:     mov     sp, x0
-; CHECK-NEXT:     sub     sp, sp, #32
 ; CHECK-NEXT:     mov     x1, x4
 ; CHECK-NEXT:     mov     x2, x5
 ; CHECK-NEXT:     bl      "#memcpy"
+; CHECK-NEXT:     sub     sp, sp, #32
+; CHECK-NEXT:     fmov    d0, x22
+; CHECK-NEXT:     fmov    d1, x21
 ; CHECK-NEXT:     mov     x9, x26
+; CHECK-NEXT:     fmov    d2, x20
+; CHECK-NEXT:     fmov    d3, x19
 ; CHECK-NEXT:     mov     x0, x22
 ; CHECK-NEXT:     mov     x1, x21
 ; CHECK-NEXT:     mov     x2, x20
@@ -420,11 +570,15 @@ declare void @has_varargs_sret(ptr sret([100 x i8]), ...) nounwind;
 ; CHECK-NEXT:     bl      "#__chkstk_arm64ec"
 ; CHECK-NEXT:     sub     x0, sp, x15, lsl #4
 ; CHECK-NEXT:     mov     sp, x0
-; CHECK-NEXT:     sub     sp, sp, #32
 ; CHECK-NEXT:     mov     x1, x3
 ; CHECK-NEXT:     mov     x2, x4
 ; CHECK-NEXT:     bl      "#memcpy"
+; CHECK-NEXT:     sub     sp, sp, #32
+; CHECK-NEXT:     fmov    d0, x22
+; CHECK-NEXT:     fmov    d1, x21
 ; CHECK-NEXT:     mov     x9, x26
+; CHECK-NEXT:     fmov    d2, x20
+; CHECK-NEXT:     fmov    d3, x19
 ; CHECK-NEXT:     mov     x0, x22
 ; CHECK-NEXT:     mov     x1, x21
 ; CHECK-NEXT:     mov     x2, x20
@@ -469,37 +623,38 @@ declare void @has_varargs_sret(ptr sret([100 x i8]), ...) nounwind;
 ; CHECK-NEXT:     br      x11
 ; CHECK-NEXT:     .seh_endfunclet
 ; CHECK-NEXT:     .seh_endproc
-
-declare [2 x i8] @small_array([2 x i8], [2 x half], [2 x float]) nounwind;
-; CHECK-LABEL:    .def    $iexit_thunk$cdecl$m2$m2__llvm_H__4F8;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m2$m2__llvm_H__4F8
+declare [2 x i8] @small_array([2 x i8], [2 x half], [2 x fp128], [2 x float]) nounwind;
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32F8;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32F8
 ; CHECK:          // %bb.0:
-; CHECK-NEXT:     sub     sp, sp, #80
-; CHECK-NEXT:     .seh_stackalloc 80
-; CHECK-NEXT:     stp     x29, x30, [sp, #64]             // 16-byte Folded Spill
-; CHECK-NEXT:     .seh_save_fplr  64
-; CHECK-NEXT:     add     x29, sp, #64
-; CHECK-NEXT:     .seh_add_fp     64
+; CHECK-NEXT:     sub     sp, sp, #112
+; CHECK-NEXT:     .seh_stackalloc 112
+; CHECK-NEXT:     stp     x29, x30, [sp, #96]             // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  96
+; CHECK-NEXT:     add     x29, sp, #96
+; CHECK-NEXT:     .seh_add_fp     96
 ; CHECK-NEXT:     .seh_endprologue
 ; CHECK-NEXT:     sturb	w0, [x29, #-2]
 ; CHECK-NEXT:     adrp	x8, __os_arm64x_dispatch_call_no_redirect
+; CHECK-NEXT:     add	x2, sp, #48
 ; CHECK-NEXT:     sturb	w1, [x29, #-1]
 ; CHECK-NEXT:     ldr	x16, [x8, :lo12:__os_arm64x_dispatch_call_no_redirect]
 ; CHECK-NEXT:     stur	h0, [x29, #-6]
 ; CHECK-NEXT:     ldurh	w0, [x29, #-2]
 ; CHECK-NEXT:     stur	h1, [x29, #-4]
-; CHECK-NEXT:     stp	s2, s3, [x29, #-16]
+; CHECK-NEXT:     stp	s4, s5, [sp, #40]
 ; CHECK-NEXT:     ldur	w1, [x29, #-6]
-; CHECK-NEXT:     ldur	x2, [x29, #-16]
+; CHECK-NEXT:     ldr	x3, [sp, #40]
+; CHECK-NEXT:     stp	q2, q3, [sp, #48]
 ; CHECK-NEXT:     blr	x16
 ; CHECK-NEXT:     mov	w0, w8
-; CHECK-NEXT:     sturh	w8, [x29, #-18]
+; CHECK-NEXT:     strh	w8, [sp, #38]
 ; CHECK-NEXT:     ubfx	w1, w8, #8, #8
 ; CHECK-NEXT:     .seh_startepilogue
-; CHECK-NEXT:     ldp	x29, x30, [sp, #64]             // 16-byte Folded Reload
-; CHECK-NEXT:     .seh_save_fplr	64
-; CHECK-NEXT:     add	sp, sp, #80
-; CHECK-NEXT:     .seh_stackalloc	80
+; CHECK-NEXT:     ldp	x29, x30, [sp, #96]             // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr	96
+; CHECK-NEXT:     add	sp, sp, #112
+; CHECK-NEXT:     .seh_stackalloc	112
 ; CHECK-NEXT:     .seh_endepilogue
 ; CHECK-NEXT:     ret
 ; CHECK-NEXT:     .seh_endfunclet
@@ -516,8 +671,8 @@ declare [2 x i8] @small_array([2 x i8], [2 x half], [2 x float]) nounwind;
 ; CHECK-NEXT:     adrp    x11, small_array
 ; CHECK-NEXT:     add     x11, x11, :lo12:small_array
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$m2$m2__llvm_H__4F8
-; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$m2$m2__llvm_H__4F8
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32F8
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32F8
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -803,10 +958,28 @@ declare void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
 ; CHECK-NEXT:     .symidx simple_integers
 ; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx simple_floats
-; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$d$__llvm_h__fd
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$d$__llvm_h__fd__llvm_q__
 ; CHECK-NEXT:     .word   4
 ; CHECK-NEXT:     .symidx "#simple_floats$exit_thunk"
 ; CHECK-NEXT:     .symidx simple_floats
+; CHECK-NEXT:     .word   0
+; CHECK-NEXT:     .symidx simple_bfloat
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__
+; CHECK-NEXT:     .word   4
+; CHECK-NEXT:     .symidx "#simple_bfloat$exit_thunk"
+; CHECK-NEXT:     .symidx simple_bfloat
+; CHECK-NEXT:     .word   0
+; CHECK-NEXT:     .symidx return_half
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$__llvm_h__$v
+; CHECK-NEXT:     .word   4
+; CHECK-NEXT:     .symidx "#return_half$exit_thunk"
+; CHECK-NEXT:     .symidx return_half
+; CHECK-NEXT:     .word   0
+; CHECK-NEXT:     .symidx return_fp128
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$__llvm_q__$v
+; CHECK-NEXT:     .word   4
+; CHECK-NEXT:     .symidx "#return_fp128$exit_thunk"
+; CHECK-NEXT:     .symidx return_fp128
 ; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx has_varargs
 ; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$v$varargs
@@ -839,7 +1012,7 @@ declare void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
 ; CHECK-NEXT:     .symidx has_varargs_sret
 ; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx small_array
-; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$m2$m2__llvm_H__4F8
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$m2$m2__llvm_H__4__llvm_Q__32F8
 ; CHECK-NEXT:     .word   4
 ; CHECK-NEXT:     .symidx "#small_array$exit_thunk"
 ; CHECK-NEXT:     .symidx small_array
@@ -878,7 +1051,10 @@ declare void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
 define void @func_caller() nounwind {
   call void @no_op()
   call i64 @simple_integers(i8 0, i16 0, i32 0, i64 0)
-  call double @simple_floats(half 0.0, float 0.0, double 0.0)
+  call double @simple_floats(half 0.0, float 0.0, double 0.0, fp128 0.0)
+  call bfloat @simple_bfloat(bfloat 0xR0000, bfloat 0xR0000)
+  call half @return_half()
+  call fp128 @return_fp128()
   call void (...) @has_varargs()
   call [2 x i8] (...) @has_varargs_small_struct()
   %c = alloca i8
@@ -887,7 +1063,7 @@ define void @func_caller() nounwind {
   store %TSRet { i64 0, i64 0 }, ptr %aligned, align 32
   call void @has_aligned_sret(ptr align 32 sret(%TSRet) %aligned)
   call void (ptr, ...) @has_varargs_sret(ptr sret([100 x i8]) %c)
-  call [2 x i8] @small_array([2 x i8] [i8 0, i8 0], [2 x half] [half 0.0, half 0.0], [2 x float] [float 0.0, float 0.0])
+  call [2 x i8] @small_array([2 x i8] [i8 0, i8 0], [2 x half] [half 0.0, half 0.0], [2 x fp128] [fp128 0.0, fp128 0.0], [2 x float] [float 0.0, float 0.0])
   call [3 x i64] @large_array([3 x i64] [i64 0, i64 0, i64 0], [2 x double] [double 0.0, double 0.0], [2 x [2 x i64]] [[2 x i64] [i64 0, i64 0], [2 x i64] [i64 0, i64 0]])
   call %T2 @simple_struct(%T1 { i16 0 }, %T2 { i32 0, float 0.0 }, %T3 { i64 0, double 0.0 }, %T4 { i64 0, double 0.0, i8 0 })
   call <4 x i8> @small_vector(<4 x i8> <i8 0, i8 0, i8 0, i8 0>)

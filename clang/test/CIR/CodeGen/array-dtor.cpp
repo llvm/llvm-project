@@ -15,7 +15,7 @@ void test_cleanup_array() {
 }
 
 // CIR-BEFORE-LPP: cir.func{{.*}} @_Z18test_cleanup_arrayv()
-// CIR-BEFORE-LPP:   %[[S:.*]] = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s"]
+// CIR-BEFORE-LPP:   %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!cir.array<!rec_S x 42>>
 // CIR-BEFORE-LPP:   cir.array.dtor %[[S]] : !cir.ptr<!cir.array<!rec_S x 42>> {
 // CIR-BEFORE-LPP:   ^bb0(%arg0: !cir.ptr<!rec_S>
 // CIR-BEFORE-LPP:     cir.call @_ZN1SD1Ev(%arg0) nothrow : (!cir.ptr<!rec_S> {{.*}}) -> ()
@@ -23,11 +23,11 @@ void test_cleanup_array() {
 // CIR-BEFORE-LPP:   cir.return
 
 // CIR: cir.func{{.*}} @_Z18test_cleanup_arrayv()
-// CIR:   %[[S:.*]] = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s"]
+// CIR:   %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!cir.array<!rec_S x 42>>
 // CIR:   %[[CONST42:.*]] = cir.const #cir.int<42> : !u64i
 // CIR:   %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[S]] : !cir.ptr<!cir.array<!rec_S x 42>> -> !cir.ptr<!rec_S>
 // CIR:   %[[END_PTR:.*]] = cir.ptr_stride %[[DECAY]], %[[CONST42]] : (!cir.ptr<!rec_S>, !u64i) -> !cir.ptr<!rec_S>
-// CIR:   %[[ITER:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["__array_idx"]
+// CIR:   %[[ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   cir.store %[[END_PTR]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   cir.do {
 // CIR:     %[[CURRENT:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
@@ -82,12 +82,12 @@ void test_cleanup_zero_length_array() {
 }
 
 // CIR-BEFORE-LPP:     cir.func{{.*}} @_Z30test_cleanup_zero_length_arrayv()
-// CIR-BEFORE-LPP:       %[[S:.*]] = cir.alloca !cir.array<!rec_S x 0>, !cir.ptr<!cir.array<!rec_S x 0>>, ["s"]
+// CIR-BEFORE-LPP:       %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!cir.array<!rec_S x 0>>
 // CIR-BEFORE-LPP-NOT:   cir.array.dtor
 // CIR-BEFORE-LPP:       cir.return
 
 // CIR:     cir.func{{.*}} @_Z30test_cleanup_zero_length_arrayv()
-// CIR:       %[[S:.*]] = cir.alloca !cir.array<!rec_S x 0>, !cir.ptr<!cir.array<!rec_S x 0>>, ["s"]
+// CIR:       %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!cir.array<!rec_S x 0>>
 // CIR-NOT:   cir.do
 // CIR-NOT:   cir.call @_ZN1SD1Ev
 // CIR:       cir.return
@@ -107,7 +107,7 @@ void multi_dimensional() {
 }
 
 // CIR-BEFORE-LPP:     cir.func{{.*}} @_Z17multi_dimensionalv()
-// CIR-BEFORE-LPP:       %[[S:.*]] = cir.alloca !cir.array<!cir.array<!rec_S x 5> x 3>, !cir.ptr<!cir.array<!cir.array<!rec_S x 5> x 3>>, ["s"]
+// CIR-BEFORE-LPP:       %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!cir.array<!cir.array<!rec_S x 5> x 3>>
 // CIR-BEFORE-LPP:       %[[FLAT:.*]] = cir.cast bitcast %[[S]] : !cir.ptr<!cir.array<!cir.array<!rec_S x 5> x 3>> -> !cir.ptr<!cir.array<!rec_S x 15>>
 // CIR-BEFORE-LPP:       cir.array.dtor %[[FLAT]] : !cir.ptr<!cir.array<!rec_S x 15>> {
 // CIR-BEFORE-LPP:       ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_S>):
@@ -116,12 +116,12 @@ void multi_dimensional() {
 // CIR-BEFORE-LPP:       cir.return
 
 // CIR:     cir.func{{.*}} @_Z17multi_dimensionalv()
-// CIR:       %[[S:.*]] = cir.alloca !cir.array<!cir.array<!rec_S x 5> x 3>, !cir.ptr<!cir.array<!cir.array<!rec_S x 5> x 3>>, ["s"]
+// CIR:       %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!cir.array<!cir.array<!rec_S x 5> x 3>>
 // CIR:       %[[FLAT:.*]] = cir.cast bitcast %[[S]] : !cir.ptr<!cir.array<!cir.array<!rec_S x 5> x 3>> -> !cir.ptr<!cir.array<!rec_S x 15>>
 // CIR:       %[[CONST15:.*]] = cir.const #cir.int<15> : !u64i
 // CIR:       %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[FLAT]] : !cir.ptr<!cir.array<!rec_S x 15>> -> !cir.ptr<!rec_S>
 // CIR:       %[[END_PTR:.*]] = cir.ptr_stride %[[DECAY]], %[[CONST15]] : (!cir.ptr<!rec_S>, !u64i) -> !cir.ptr<!rec_S>
-// CIR:       %[[ITER:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["__array_idx"]
+// CIR:       %[[ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:       cir.store %[[END_PTR]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:       cir.do {
 // CIR:         %[[CUR:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>

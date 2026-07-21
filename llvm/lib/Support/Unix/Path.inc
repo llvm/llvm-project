@@ -944,6 +944,19 @@ void mapped_file_region::willNeedImpl() {
 #endif
 }
 
+void mapped_file_region::randomAccessImpl() {
+  assert(Mode == mapped_file_region::readonly);
+  if (!Mapping)
+    return;
+#if defined(__MVS__) || defined(_AIX)
+  // If we don't have madvise, or it isn't beneficial, treat this as a no-op.
+#elif defined(POSIX_MADV_RANDOM)
+  ::posix_madvise(Mapping, Size, POSIX_MADV_RANDOM);
+#else
+  ::madvise(Mapping, Size, MADV_RANDOM);
+#endif
+}
+
 int mapped_file_region::alignment() { return Process::getPageSizeEstimate(); }
 
 std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
@@ -1160,17 +1173,24 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
-      if (auto EC = llvm::enableAutoConversion(ResultFD))
-        return EC;
-      if (DoSetTag) {
-        if (auto EC = llvm::setzOSFileTag(ResultFD, CCSID_IBM_1047, true))
+      if ((Access & FA_Write) && (Disp != CD_OpenExisting)) {
+        int ccsid = CCSID_IBM_1047;
+        if (Stat.st_tag.ft_txtflag && Stat.st_tag.ft_ccsid != FT_UNTAGGED)
+          ccsid = Stat.st_tag.ft_ccsid;
+        if (auto EC = llvm::enableAutoConversion(ResultFD, ccsid))
           return EC;
-      }
+        if (DoSetTag) {
+          if (auto EC = llvm::setzOSFileTag(ResultFD, ccsid, /*IsText=*/true))
+            return EC;
+        }
+      } else if (auto EC = llvm::enableAutoConversion(ResultFD))
+        return EC;
     } else {
       if (auto EC = llvm::disableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
-        if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, false))
+        if (auto EC =
+                llvm::setzOSFileTag(ResultFD, FT_BINARY, /*IsText=*/false))
           return EC;
       }
     }

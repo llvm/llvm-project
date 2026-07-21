@@ -1,4 +1,4 @@
-name: Release Documentation
+name: Release Documentation and Man Pages
 
 permissions:
   contents: read
@@ -32,22 +32,88 @@ on:
       WWW_RELEASES_TOKEN:
         description: "Secret used to create a PR with the documentation changes."
         required: false
+      LLVM_TOKEN_GENERATOR_CLIENT_ID:
+        description: "Client ID for our GitHub App we use for generating access tokens."
+        required: true
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+        description: "Private key for our GitHub App we use for generating access tokens."
+        required: true
 
 jobs:
-  release-documentation:
-    name: Build and Upload Release Documentation
-    environment: release
+  # This job checks permissions and validates inputs to prevent potential
+  # malicious actions.  Since the release-documentation job has contents: write
+  # permissions we need to be extra careful about who can run the job and what
+  # inputs can be provided.
+  release-man-pages-validate-input:
+    name: Release Man Pages Validate Input
     runs-on: ubuntu-24.04
+    environment:
+      name: release
+      deployment: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/
+
+      - name: Check Permissions
+        uses: ./.github/workflows/require-team-membership
+        with:
+          team-slug: llvm-release-managers
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
+      - name: Validate Input
+        uses: ./.github/workflows/validate-release-version
+        with:
+          release-version: ${{ inputs.release-version }}
+
+  release-documentation:
+    name: Build and Upload Release Documentation and Man Pages
+    runs-on: ubuntu-24.04
+    needs:
+      - release-man-pages-validate-input
+    outputs:
+      man-page-digest: ${{ steps.man-page-digest.outputs.digest }}
+      man-page-artifact-id: ${{ steps.man-page-artifact-upload.outputs.artifact-id }}
+
+      man-page-release-version: ${{ steps.vars.outputs.man-page-release-version }}
+      man-page-tarball-name: ${{ steps.vars.outputs.man-page-tarball-name }}
+      man-page-upload: ${{ steps.vars.outputs.man-page-upload }}
+      man-page-attestation-name: ${{ steps.vars.outputs.man-page-attestation-name }}
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
+      - name: Collect Variables
+        id: vars
+        env:
+          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
+          UPLOAD_MAN_PAGES: ${{ inputs.upload }}
+        shell: bash
+        run: |
+          {
+            echo "man-page-release-version=$INPUTS_RELEASE_VERSION"
+            echo "man-page-tarball-name=llvm_man_pages-$INPUTS_RELEASE_VERSION.tar.xz"
+            echo "man-page-ref=llvmorg-$INPUTS_RELEASE_VERSION"
+            echo "man-page-upload=$UPLOAD_MAN_PAGES"
+            echo "man-page-attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-man-page-attestation"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
+      - name: Validate Input
+        uses: ./.github/workflows/validate-release-version
+        with:
+          release-version: ${{ inputs.release-version }}
+
       - name: Setup Python env
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           cache: 'pip'
           cache-dependency-path: './llvm/docs/requirements.txt'
@@ -60,13 +126,28 @@ jobs:
               python3-github \
               ninja-build \
               texlive-font-utils
-          pip3 install --user -r ./llvm/docs/requirements.txt
+          pip3 install --require-hashes --user -r ./llvm/docs/requirements.txt
 
       - name: Build Documentation
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-doxygen
+          ./llvm/utils/release/build-docs.sh -release "$INPUTS_RELEASE_VERSION" -no-doxygen
+
+      - name: Generate sha256 digest for man page tarball
+        id: man-page-digest
+        shell: bash
+        env:
+          TARBALL_NAME: ${{ steps.vars.outputs.man-page-tarball-name }}
+        run: |
+            echo "man-page-digest=$(cat "$TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+
+      - id: man-page-artifact-upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          path: |
+            ${{ steps.vars.outputs.man-page-tarball-name }}
 
       - name: Create Release Notes Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -76,7 +157,7 @@ jobs:
 
       - name: Clone www-releases
         if: env.upload
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: ${{ github.repository_owner }}/www-releases
           ref: main
@@ -89,14 +170,43 @@ jobs:
         env:
           PUSH_TOKEN: ${{ secrets.LLVMBOT_WWW_RELEASES_PUSH }}
           GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
+          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          mkdir -p www-releases/${{ inputs.release-version }}
-          mv ./docs-build/html-export/* www-releases/${{ inputs.release-version }}
+          mkdir -p www-releases/$INPUTS_RELEASE_VERSION
+          mv ./docs-build/html-export/* www-releases/$INPUTS_RELEASE_VERSION
           cd www-releases
-          git checkout -b ${{ inputs.release-version }}
-          git add ${{ inputs.release-version }}
+          git checkout -b $INPUTS_RELEASE_VERSION
+          git add $INPUTS_RELEASE_VERSION
           git config user.email "llvmbot@llvm.org"
           git config user.name "llvmbot"
-          git commit -a -m "Add ${{ inputs.release-version }} documentation"
-          git push --force  "https://$PUSH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
-          gh pr create -f -B main -H llvmbot:${{ inputs.release-version }}
+          git commit -a -m "Add $INPUTS_RELEASE_VERSION documentation"
+          git push --force  "https://$PUSH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/$INPUTS_RELEASE_VERSION
+          gh pr create -f -B main -H llvmbot:$INPUTS_RELEASE_VERSION
+
+  upload-man-pages:
+    name: "Upload Man Pages"
+    runs-on: ubuntu-24.04
+    environment:
+      deployment: false
+      name: release
+    needs:
+      - release-documentation
+    if: >-
+      github.event_name != 'pull_request'
+    permissions:
+      contents: write     # For man page uploads
+      id-token: write     # For artifact attestations
+      attestations: write # For artifact attestations
+
+    steps:
+     - name: Upload Man Page Artifacts
+       id: man-page-artifact-upload
+       uses: ./.github/workflows/upload-release-artifact
+       with:
+         release-version: ${{ needs.release-documentation.outputs.man-page-release-version }}
+         artifact-id: ${{ needs.release-documentation.outputs.man-page-artifact-id }}
+         attestation-name: ${{ needs.release-documentation.outputs.man-page-attestation-name }}
+         digest: ${{ needs.release-documentation.outputs.man-page-digest }}
+         upload: ${{ needs.release-documentation.outputs.man-page-upload }}
+         LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+         LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}

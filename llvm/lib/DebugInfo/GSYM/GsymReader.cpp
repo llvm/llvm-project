@@ -71,7 +71,9 @@ GsymReader::openFile(StringRef Filename) {
   auto Err = BuffOrErr.getError();
   if (Err)
     return llvm::errorCodeToError(Err);
-  return create(BuffOrErr.get());
+  auto &Buf = BuffOrErr.get();
+  Buf->randomAccessIfMmap();
+  return create(Buf);
 }
 
 llvm::Expected<std::unique_ptr<GsymReader>>

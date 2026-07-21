@@ -140,7 +140,7 @@ bool computeDependencies(
     dependencies::DependencyConsumer &Consumer,
     dependencies::DependencyActionController &Controller,
     DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
 class CompilerInstanceWithContext {
   // Context
@@ -179,7 +179,7 @@ class CompilerInstanceWithContext {
   bool initialize(dependencies::DependencyActionController &Controller,
                   std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
                       DiagEngineWithDiagOpts,
-                  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
+                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS);
 
 public:
   /// @brief Initialize the tool's compiler instance from the commandline.

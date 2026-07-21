@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf_core/printf_config.h"
 #include "src/stdio/sprintf.h"
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_WIDE
@@ -54,6 +55,44 @@ TEST(LlvmLibcSPrintfTest, Macros) {
   macro_test(PRIo8, 0xFF, "377");
   macro_test(PRIo64, 0123456712345671234567ll, "123456712345671234567");
 }
+
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+
+// Returns a non-negative float128 value:
+//
+// Result = (explicit_mantissa_bits_high << 64) | explicit_mantissa_bits_low) *
+//          2^(exponent - 112)
+//
+// This is a convenience so test values can be expressed with hex literals that
+// map directly to how they could appear as a combined native floating-point
+// literal. The high 15 bits of explicit_mantissa_bits_high should be zero.
+float128 make_f128(uint64_t explicit_mantissa_bits_high,
+                   uint64_t explicit_mantissa_bits_low, int exponent) {
+  if (explicit_mantissa_bits_high == 0 && explicit_mantissa_bits_low == 0)
+    return float128(0);
+
+  using BitsType = LIBC_NAMESPACE::fputil::FPBits<float128>;
+  UInt128 mantissa = (UInt128(explicit_mantissa_bits_high) << 64) |
+                     UInt128(explicit_mantissa_bits_low);
+  // exponent += LIBC_NAMESPACE::cpp::countl_zero(mantissa) -
+  //             (BitsType::STORAGE_LEN - BitsType::FRACTION_LEN);
+  int biased_exponent = exponent - 1 + BitsType::EXP_BIAS;
+  return BitsType::make_value(mantissa, biased_exponent).get_val();
+}
+
+TEST(LlvmLibcSPrintfTest, MakeF128Helper) {
+  EXPECT_TRUE(make_f128(0, 0, 0) == float128(0));
+  EXPECT_TRUE(make_f128(0, 1, 0) == float128(0x1p-112));
+  EXPECT_TRUE(make_f128(0x1'0000'0000'0000, 0, 0) == float128(1));
+  EXPECT_TRUE(make_f128(0x1'FF00'0000'0000, 0, 3) ==
+              float128((2.0 - 1.0 / 256)) * 8.0);
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
+  EXPECT_TRUE(make_f128(0x1'2345'6789'0abc, 0x0123'4567'89ab'cdef, -1234) ==
+              0x1.2345'6789'0abc'0123'4567'89ab'cdefp-1234L);
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
+}
+
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
 TEST(LlvmLibcSPrintfTest, SimpleNoConv) {
   char buff[64];
@@ -725,6 +764,10 @@ TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
 #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
   ASSERT_STREQ_LEN(written, buff, "0x1.999999999999999999999999999ap-4");
 #endif
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qa", float128(1) / float128(10));
+  ASSERT_STREQ_LEN(written, buff, "0x1.999999999999999999999999999ap-4");
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
   written = LIBC_NAMESPACE::sprintf(buff, "%La", 1.0e1000L);
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
@@ -734,6 +777,12 @@ TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
 #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
   ASSERT_STREQ_LEN(written, buff, "0x1.e71b63f3ba7b580af1a52d2a7379p+3321");
 #endif
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128) &&                          \
+    defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qa", 1.0e1000L);
+  ASSERT_STREQ_LEN(written, buff, "0x1.e71b63f3ba7b580af1a52d2a7379p+3321");
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128 &&
+       // LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
 
   written = LIBC_NAMESPACE::sprintf(buff, "%La", 1.0e-1000L);
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
@@ -743,6 +792,12 @@ TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
 #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
   ASSERT_STREQ_LEN(written, buff, "0x1.0d152311513c28ce202627c06ec2p-3322");
 #endif
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128) &&                          \
+    defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qa", 1.0e-1000L);
+  ASSERT_STREQ_LEN(written, buff, "0x1.0d152311513c28ce202627c06ec2p-3322");
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128 &&
+       // LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
 
   // Min Width Tests.
 
@@ -849,6 +904,10 @@ TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
 #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
   ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
 #endif
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  written = LIBC_NAMESPACE::sprintf(buff, "%.1Qa", float128(0.1));
+  ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
   written = LIBC_NAMESPACE::sprintf(buff, "%.1La", 0xf.fffffffffffffffp16380L);
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
@@ -858,6 +917,11 @@ TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
 #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
   ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
 #endif
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  written = LIBC_NAMESPACE::sprintf(buff, "%.1Qa",
+                                    float128(0xf.fffffffffffffffp16380L));
+  ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
   // Rounding Mode Tests.
 
@@ -1034,6 +1098,11 @@ TEST(LlvmLibcSPrintfTest, FloatDecimalConv) {
       LIBC_NAMESPACE::fputil::FPBits<long double>::inf().get_val();
   long double ld_nan =
       LIBC_NAMESPACE::fputil::FPBits<long double>::quiet_nan().get_val();
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  float128 f128_inf = LIBC_NAMESPACE::fputil::FPBits<float128>::inf().get_val();
+  float128 f128_nan =
+      LIBC_NAMESPACE::fputil::FPBits<float128>::quiet_nan().get_val();
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
   written = LIBC_NAMESPACE::sprintf(buff, "%f", 1.0);
   ASSERT_STREQ_LEN(written, buff, "1.000000");
@@ -1108,6 +1177,26 @@ TEST(LlvmLibcSPrintfTest, FloatDecimalConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%LF", -ld_nan);
   ASSERT_STREQ_LEN(written, buff, "-NAN");
 #endif
+
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qf", f128_inf);
+  ASSERT_STREQ_LEN(written, buff, "inf");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qf", -f128_inf);
+  ASSERT_STREQ_LEN(written, buff, "-inf");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%QF", f128_inf);
+  ASSERT_STREQ_LEN(written, buff, "INF");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%QF", -f128_inf);
+  ASSERT_STREQ_LEN(written, buff, "-INF");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qf", f128_nan);
+  ASSERT_STREQ_LEN(written, buff, "nan");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%QF", f128_nan);
+  ASSERT_STREQ_LEN(written, buff, "NAN");
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
   // Min Width Tests.
 
@@ -1986,6 +2075,145 @@ TEST(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
 }
 
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+TEST(LlvmLibcSPrintfTest, FloatDecimalFloat128Conv) {
+  char buff[1000];
+  int written;
+
+  ForceRoundingMode r(RoundingMode::Nearest);
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qf", float128(1.0L));
+  ASSERT_STREQ_LEN(written, buff, "1.000000");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%.Qf", float128(-2.5L));
+  ASSERT_STREQ_LEN(written, buff, "-2");
+
+  // Some exceptionally difficult cases for 39-digit precision. (That's the
+  // number of digits supported by the float320 algorithm, and should still be
+  // correct under other algorithms. So these are still enabled even under
+  // LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION.)
+  //
+  // These were found by number-theoretic search to be the worst cases in terms
+  // of being extremely close to the rounding boundary between two possible
+  // decimal outputs. For example, the first of these cases has a true value
+  // beginning with
+  //
+  // 2.245786964418815522831613614422112838795000000000000000000
+  //                                          0000000000000000010767969...
+  //
+  // so you need to compute a _long_ way past the 39th digit to find out
+  // whether to round the ...8795 up to 880 or not!
+  //
+  // The first half of these cases all rounded up; the second half all rounded
+  // down. You can see that in both sections the final decimal digit is
+  // sometimes odd and sometimes even, ruling out the possibility that we're
+  // getting these right by mistakenly assuming them to be _exactly_ on the
+  // boundary.
+
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'bde5'716b'ba8d, 0x7025'5b4b'e10e'0a0a, -3388));
+  ASSERT_STREQ_LEN(written, buff,
+                   "2.24578696441881552283161361442211283880e-1020");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'64b7'8def'c871, 0x2684'4909'80d8'0808, -3391));
+  ASSERT_STREQ_LEN(written, buff,
+                   "2.24578696441881552283161361442211283880e-1021");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'c0ee'd9d1'ea4b, 0x6f21'5acc'b15c'b42c, -4714));
+  ASSERT_STREQ_LEN(written, buff,
+                   "1.54362575487963943466308346767014523161e-1419");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'a393'eaaf'c3db, 0xabfc'd304'42ce'f525, -12600));
+  ASSERT_STREQ_LEN(written, buff,
+                   "1.72435694193924008931441874634575361189e-3793");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'b7a5'248b'af85, 0x133c'9b7b'f324'1f75, 11050));
+  ASSERT_STREQ_LEN(written, buff,
+                   "4.13346579244549095104252956440178208514e+3326");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'81bf'6d97'7f99, 0xff7b'd9de'bdd5'2815, 1359));
+  ASSERT_STREQ_LEN(written, buff,
+                   "1.89595297593127274811683259716608232064e+409");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'fcb9'cfd6'5f06, 0x8b75'8d30'ba19'a494, -4451));
+  ASSERT_STREQ_LEN(written, buff,
+                   "2.59258570015527007681686041122929728653e-1340");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'7d8b'5be0'c744, 0xe898'29e4'8b93'3b6f, -4448));
+  ASSERT_STREQ_LEN(written, buff,
+                   "1.55555142009316204609011624673757837192e-1339");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'dbb1'f01a'ef7b, 0x93c3'7ca0'0217'888c, -12205));
+  ASSERT_STREQ_LEN(written, buff,
+                   "1.57758077908296078543773740016012372216e-3674");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'fb03'7d72'fdf1, 0xa8aa'8bdf'c258'6fe3, 2580));
+  ASSERT_STREQ_LEN(written, buff,
+                   "8.99846610004600287527755301065037553046e+776");
+
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'9af8'fe5f'ebf7, 0x51a7'9529'2e30'335d, 2052));
+  ASSERT_STREQ_LEN(written, buff,
+                   "8.30087814106622071390265113980150545241e+617");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'48c7'31e6'565f, 0x7486'10ed'be8c'f5e4, 2049));
+  ASSERT_STREQ_LEN(written, buff,
+                   "8.30087814106622071390265113980150545241e+616");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'8e78'bc76'e989, 0x98b7'bbf6'c8f8'0f2a, -5671));
+  ASSERT_STREQ_LEN(written, buff,
+                   "1.12473970318904704063044350553302771341e-1707");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'59a8'32c1'6a77, 0x97ae'c701'96dd'f9db, -16181));
+  ASSERT_STREQ_LEN(written, buff,
+                   "1.45896738321434823250358135932839533040e-4871");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'1486'8f01'21f9, 0x4625'6c01'457e'617c, -16184));
+  ASSERT_STREQ_LEN(written, buff,
+                   "1.45896738321434823250358135932839533040e-4872");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'0ca8'c4b5'25b1, 0x1285'06cd'c668'df43, 11017));
+  ASSERT_STREQ_LEN(written, buff,
+                   "2.94051951004764266903705588743096762647e+3316");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'fcd4'0bb4'9b18, 0xaa19'd66a'3c55'72de, 5547));
+  ASSERT_STREQ_LEN(written, buff,
+                   "1.29335350323078956384272678475060580129e+1670");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'0e5e'5151'0a65, 0x3e74'4d6b'84ef'ed86, -13613));
+  ASSERT_STREQ_LEN(written, buff,
+                   "1.26585813611514592337442314391432904094e-4098");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'ff41'f8aa'97e6, 0x76e9'5b1a'6a77'51fa, 16366));
+  ASSERT_STREQ_LEN(written, buff,
+                   "9.06377119787295161934827646572467920486e+4926");
+  written = LIBC_NAMESPACE::sprintf(
+      buff, "%#.39Qg",
+      make_f128(0x1'4770'bf66'ccaf, 0xd7d8'0ac9'bb3d'ded7, -1843));
+  ASSERT_STREQ_LEN(written, buff,
+                   "2.03521509642091239545213340619368190283e-555");
+}
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
+
 TEST(LlvmLibcSPrintfTest, FloatExponentConv) {
   char buff[1000];
   int written;
@@ -2506,6 +2734,56 @@ TEST(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
 #endif // LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
 #endif
 }
+
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+TEST(LlvmLibcSPrintfTest, FloatExponentFloat128Conv) {
+  char buff[1000];
+  int written;
+
+  ForceRoundingMode r(RoundingMode::Nearest);
+
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%.9Qe", float128(1000000000500000000.1L));
+  ASSERT_STREQ_LEN(written, buff, "1.000000001e+18");
+
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%.9Qe", float128(1000000000500000000.0L));
+  ASSERT_STREQ_LEN(written, buff, "1.000000000e+18");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qe", float128(1e100L));
+  ASSERT_STREQ_LEN(written, buff, "1.000000e+100");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qe", float128(1.0L));
+  ASSERT_STREQ_LEN(written, buff, "1.000000e+00");
+
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE)
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qe",
+                                    float128(0xf.fffffffffffffffp+16380L));
+  ASSERT_STREQ_LEN(written, buff, "1.189731e+4932");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qe", float128(1e1000L));
+  ASSERT_STREQ_LEN(written, buff, "1.000000e+1000");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qe", float128(1e4900L));
+  ASSERT_STREQ_LEN(written, buff, "1.000000e+4900");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qe", float128(1.2345678e4900L));
+  ASSERT_STREQ_LEN(written, buff, "1.234568e+4900");
+
+#ifndef LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
+  // Minimum normal + epsilon
+  written = LIBC_NAMESPACE::sprintf(buff, "%.20Qe",
+                                    float128(3.36210314311209350663E-4932L));
+  ASSERT_STREQ_LEN(written, buff, "3.36210314311209350663e-4932");
+
+  // Minimum subnormal
+  written = LIBC_NAMESPACE::sprintf(buff, "%.20Qe",
+                                    float128(3.64519953188247460253E-4951L));
+  ASSERT_STREQ_LEN(written, buff, "3.64519953188247460253e-4951");
+#endif // LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE
+}
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
 TEST(LlvmLibcSPrintfTest, FloatAutoConv) {
   char buff[1000];
@@ -3039,6 +3317,33 @@ TEST(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
   written = LIBC_NAMESPACE::sprintf(big_buff, "%Lg", 1e4900L);
   ASSERT_STREQ_LEN(written, big_buff, "1e+4900");
 }
+
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+TEST(LlvmLibcSPrintfTest, FloatAutoFloat128Conv) {
+  char buff[1000];
+  int written;
+
+  ForceRoundingMode r(RoundingMode::Nearest);
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qg", float128(9.99999999999e-100L));
+  ASSERT_STREQ_LEN(written, buff, "1e-99");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qg", float128(1e100L));
+  ASSERT_STREQ_LEN(written, buff, "1e+100");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qg", float128(1.0L));
+  ASSERT_STREQ_LEN(written, buff, "1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qg", float128(0.1L));
+  ASSERT_STREQ_LEN(written, buff, "0.1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qg", float128(1e1000L));
+  ASSERT_STREQ_LEN(written, big_buff, "1e+1000");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Qg", float128(1e4900L));
+  ASSERT_STREQ_LEN(written, big_buff, "1e+4900");
+}
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 

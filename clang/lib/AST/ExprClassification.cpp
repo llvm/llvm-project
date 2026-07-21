@@ -218,6 +218,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:
   case Expr::CXXReflectExprClass:
+  case Expr::CXXExpansionSelectExprClass:
     return Cl::CL_PRValue;
 
   case Expr::EmbedExprClass:
@@ -617,11 +618,12 @@ static Cl::Kinds ClassifyBinaryOp(ASTContext &Ctx, const BinaryOperator *E) {
   assert(Ctx.getLangOpts().CPlusPlus &&
          "This is only relevant for C++.");
 
-  // For binary operators which are unknown due to type dependence, the
-  // convention is to classify them as a prvalue. This does not matter much, but
-  // it needs to agree with how they are created.
+  // For binary operators which are unknown due to type dependence, use the
+  // value kind assigned when the expression was created. Dependent assignment
+  // expressions can be either lvalues or prvalues depending on whether they
+  // might resolve to an overloaded operator.
   if (E->getType() == Ctx.DependentTy)
-    return Cl::CL_PRValue;
+    return ClassifyExprValueKind(Ctx.getLangOpts(), E, E->getValueKind());
 
   // C++ [expr.ass]p1: All [...] return an lvalue referring to the left operand.
   // Except we override this for writes to ObjC properties.
