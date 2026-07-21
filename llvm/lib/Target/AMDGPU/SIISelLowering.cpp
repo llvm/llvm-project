@@ -11188,7 +11188,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_class: {
     SDValue Src = Op.getOperand(1);
     EVT SrcVT = Src.getValueType();
-    if (SrcVT != MVT::f16 && SrcVT != MVT::f32 && SrcVT != MVT::f64) {
+    bool IsLegal = SrcVT == MVT::f32 || SrcVT == MVT::f64 ||
+                   (SrcVT == MVT::f16 && Subtarget->has16BitInsts());
+    if (!IsLegal) {
       DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
           "llvm.amdgcn.class only supports f16, f32, and f64",
