@@ -12,6 +12,7 @@
 #include "cc_t.h"
 #include "speed_t.h"
 #include "tcflag_t.h"
+#include "../llvm-libc-macros/termios-macros.h"
 
 struct termios {
   tcflag_t c_iflag; // Input mode flags

@@ -162,6 +162,9 @@ option(LIBC_CONFIG_PATH "The path to user provided folder that configures the bu
 
 if(LIBC_TARGET_OS_IS_LINUX)
   set(kernel_headers "/usr/include")
+  if(CMAKE_LIBRARY_ARCHITECTURE AND EXISTS "/usr/include/${CMAKE_LIBRARY_ARCHITECTURE}")
+    list(APPEND kernel_headers "/usr/include/${CMAKE_LIBRARY_ARCHITECTURE}")
+  endif()
 endif()
 set(LIBC_KERNEL_HEADERS "${kernel_headers}" CACHE STRING "Path to Linux kernel headers")
 
