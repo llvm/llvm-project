@@ -4556,6 +4556,7 @@ def CIR_AwaitOp : CIR_Op<"await",[
   ];
 
   let hasVerifier = 1;
+  let hasLLVMLowering = false;
 }
 //===----------------------------------------------------------------------===//
 // CoroBody
