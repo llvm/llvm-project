@@ -1292,15 +1292,22 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
         requirement.inactive |= !active;
         return success();
       };
+      auto hasThreadYPrivateStorage = [&](Value memref) {
+        acc::PrivatizeOp privatize = getPrivatizeForMemref(memref);
+        if (!privatize)
+          return false;
+        acc::GPUParallelDimsAttr parDims = privatize.getParDimsAttr();
+        return parDims && llvm::any_of(parDims.getArray(), [](auto parDim) {
+                 return parDim.isThreadY();
+               });
+      };
       auto applyCombineRequirement =
           [&](Operation *combineOp, Value src,
               ArrayRef<mlir::acc::GPUParallelDimAttr> combineParDims) {
             if (llvm::none_of(combineParDims,
                               [](auto parDim) { return parDim.isThreadY(); }))
               return success();
-            bool isWorkerPrivate =
-                getPrivateScopeForMemref(src) == PrivateMemScope::Worker;
-            return requireThreadY(combineOp, isWorkerPrivate);
+            return requireThreadY(combineOp, hasThreadYPrivateStorage(src));
           };
 
       for (Operation &nestedOp : predicateBlock) {
@@ -1334,9 +1341,8 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
           continue;
         }
         if (memref::StoreOp storeOp = dyn_cast<memref::StoreOp>(nestedOp)) {
-          bool threadYActive = getPrivateScopeForMemref(storeOp.getMemref()) ==
-                               PrivateMemScope::Worker;
-          if (failed(requireThreadY(storeOp, threadYActive)))
+          if (failed(requireThreadY(
+                  storeOp, hasThreadYPrivateStorage(storeOp.getMemref()))))
             return failure();
           continue;
         }
@@ -1350,6 +1356,15 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
           continue;
         }
         if (nestedOp.getNumRegions() != 0) {
+          bool hasOwnEffects = true;
+          if (auto effectOp = dyn_cast<MemoryEffectOpInterface>(&nestedOp)) {
+            hasOwnEffects = !effectOp.hasNoEffect();
+          } else if (nestedOp.hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
+            hasOwnEffects = false;
+          }
+          if (hasOwnEffects &&
+              failed(requireThreadY(&nestedOp, /*active=*/false)))
+            return failure();
           for (Region &region : nestedOp.getRegions()) {
             for (Block &nestedBlock : region) {
               FailureOr<ThreadYRequirement> nestedRequirement =
