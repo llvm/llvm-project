@@ -516,7 +516,7 @@ private:
   DenseMap<uint64_t, bool> IsJmpRelocation;
 
   /// Original dynamic relocation order.
-  SmallVector<uint64_t, 0> DynamicRelocationOrder;
+  std::vector<uint64_t> DynamicRelocationOrder;
 
   /// Index of specified symbol in the dynamic symbol table. NOTE Currently it
   /// is filled and used only with the relocations-related symbols.
