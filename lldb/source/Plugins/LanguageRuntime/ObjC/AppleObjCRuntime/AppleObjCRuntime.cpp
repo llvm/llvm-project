@@ -396,8 +396,10 @@ AppleObjCRuntime::GetObjCVersion(Process *process, ModuleSP &objc_module_sp) {
         return ObjCRuntimeVersions::eObjC_VersionUnknown;
       SectionSP v1_telltale_section_sp = sections->FindSectionByName("__OBJC");
       if (v1_telltale_section_sp) {
-        // The V1 runtime is no longer supported.
-        return ObjCRuntimeVersions::eObjC_VersionUnknown;
+        LLDB_LOG(GetLog(LLDBLog::Language),
+                 "GetObjCVersion returning eAppleObjC_V1, which is no longer "
+                 "supported");
+        return ObjCRuntimeVersions::eAppleObjC_V1;
       }
       return ObjCRuntimeVersions::eAppleObjC_V2;
     }
