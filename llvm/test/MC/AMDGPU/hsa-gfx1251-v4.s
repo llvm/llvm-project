@@ -70,42 +70,42 @@
 .p2align 8
 .type minimal,@function
 minimal:
-  global_wb scope:SCOPE_CU
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
   v_nop
   s_endpgm
 
 .p2align 8
 .type complete,@function
 complete:
-  global_wb scope:SCOPE_CU
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
   v_nop
   s_endpgm
 
 .p2align 8
 .type special_sgpr,@function
 special_sgpr:
-  global_wb scope:SCOPE_CU
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
   v_nop
   s_endpgm
 
 .p2align 8
 .type disabled_user_sgpr,@function
 disabled_user_sgpr:
-  global_wb scope:SCOPE_CU
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
   v_nop
   s_endpgm
 
 .p2align 8
 .type max_lds_size,@function
 max_lds_size:
-  global_wb scope:SCOPE_CU
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
   v_nop
   s_endpgm
 
 .p2align 8
 .type max_vgprs,@function
 max_vgprs:
-  global_wb scope:SCOPE_CU
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
   v_nop
   s_endpgm
 
@@ -276,9 +276,9 @@ max_vgprs:
 // ASM: .byte 1
 
 .byte .amdgcn.next_free_vgpr
-// ASM: .byte 0
+// ASM: .byte 1
 .byte .amdgcn.next_free_sgpr
-// ASM: .byte 0
+// ASM: .byte 2
 
 v_mov_b32_e32 v16, s3
 

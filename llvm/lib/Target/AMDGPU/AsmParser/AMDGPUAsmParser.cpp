@@ -1417,11 +1417,11 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   /// directive may appear either before or after the kernel's label (it is
   /// normally emitted after the function body, in .rodata), validation is
   /// deferred to onEndOfFile(). We record an order-independent timeline of
-  /// parsed labels and emitted instruction opcodes, plus the set of symbols
+  /// parsed labels and emitted instructions, plus the set of symbols
   /// named by .amdhsa_kernel directives, and match them up at end of file.
-  SmallVector<unsigned> OpcodeStream;
+  SmallVector<MCInst> InstStream;
   SmallVector<std::tuple<const MCSymbol *, SMLoc, unsigned>>
-      OpcodeStreamSymbols;
+      InstStreamSymbols;
   SmallPtrSet<const MCSymbol *, 8> AMDHSAKernelSymbols;
 
   /// Verify recorded kernel prologues.
@@ -5953,7 +5953,7 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     emitTargetDirective();
     Out.emitInstruction(Inst, getSTI());
     // Record for kernel prologue checking.
-    OpcodeStream.push_back(Inst.getOpcode());
+    InstStream.push_back(Inst);
     return false;
   }
 
@@ -7100,25 +7100,47 @@ void AMDGPUAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
   // Record every parsed label in the timeline so that, at end of file, the
   // instructions following a kernel's label can be located regardless of
   // whether the .amdhsa_kernel directive came before or after the label.
-  OpcodeStreamSymbols.emplace_back(Symbol, IDLoc, OpcodeStream.size());
+  InstStreamSymbols.emplace_back(Symbol, IDLoc, InstStream.size());
 }
 
 void AMDGPUAsmParser::checkKernelPrologues() {
   if (getFeatureBits()[AMDGPU::FeatureRequiresInitialUnclausedVmem]) {
-    static const unsigned Required[] = {GLOBAL_WB_gfx12, V_NOP_e32_gfx12};
-    for (auto [Sym, Loc, Offset] : OpcodeStreamSymbols) {
+    for (auto [Sym, Loc, Offset] : InstStreamSymbols) {
       if (!AMDHSAKernelSymbols.contains(Sym))
         continue;
-      ArrayRef<unsigned> Prologue = ArrayRef(OpcodeStream).drop_front(Offset);
-      if (Prologue.take_front(std::size(Required)) != ArrayRef(Required)) {
-        Warning(Loc, "kernel '" + Sym->getName() +
-                         "' does not begin with the required prologue "
-                         "sequence: GLOBAL_WB followed by V_NOP");
+      ArrayRef<MCInst> Prologue = ArrayRef(InstStream).drop_front(Offset);
+      bool Valid = false;
+      if (Prologue.size() >= 2) {
+        const MCInst &Prefetch = Prologue[0];
+        const MCInst &Nop = Prologue[1];
+        // The required prologue sequence is:
+        //   global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+        //   v_nop
+        if (Prefetch.getOpcode() == GLOBAL_PREFETCH_B8_SADDR_gfx1250 &&
+            Prefetch.getNumOperands() >= 4 &&
+            Prefetch.getOperand(0).isReg() &&
+            Prefetch.getOperand(0).getReg() == AMDGPU::SGPR0_SGPR1 &&
+            Prefetch.getOperand(1).isReg() &&
+            Prefetch.getOperand(1).getReg() == AMDGPU::VGPR0 &&
+            Prefetch.getOperand(2).isImm() &&
+            Prefetch.getOperand(2).getImm() == 0 &&
+            Prefetch.getOperand(3).isImm() &&
+            Prefetch.getOperand(3).getImm() == AMDGPU::CPol::SCOPE_SE &&
+            Nop.getOpcode() == V_NOP_e32_gfx12) {
+          Valid = true;
+        }
+      }
+      if (!Valid) {
+        Warning(Loc,
+                "kernel '" + Sym->getName() +
+                    "' does not begin with the required prologue sequence: "
+                    "GLOBAL_PREFETCH_B8 v0, s[0:1] scope:SCOPE_SE followed by "
+                    "V_NOP");
       }
     }
   }
-  OpcodeStream.clear();
-  OpcodeStreamSymbols.clear();
+  InstStream.clear();
+  InstStreamSymbols.clear();
   AMDHSAKernelSymbols.clear();
 }
 
