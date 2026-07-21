@@ -238,6 +238,7 @@ define void @single_constant_stride_ptr_iv(ptr %p) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[P]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
@@ -245,9 +246,12 @@ define void @single_constant_stride_ptr_iv(ptr %p) {
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 4 x i64> [[TMP16]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[VECTOR_GEP]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP6]], i64 8, <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = add <vscale x 4 x i32> [[TMP19]], splat (i32 1)
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP20]], <vscale x 4 x ptr> align 4 [[VECTOR_GEP]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP9]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP9]], 3
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP5]]

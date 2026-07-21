@@ -2600,19 +2600,7 @@ define <8 x i8> @test_pmulhsu_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV64-NEXT:    ppaire.h a0, a0, a3
 ; RV64-NEXT:    psrli.h a1, a1, 8
 ; RV64-NEXT:    psrli.h a0, a0, 8
-; RV64-NEXT:    srli a2, a1, 48
-; RV64-NEXT:    srli a3, a1, 32
-; RV64-NEXT:    ppaire.b a2, a3, a2
-; RV64-NEXT:    srli a3, a1, 16
-; RV64-NEXT:    ppaire.b a1, a1, a3
-; RV64-NEXT:    srli a3, a0, 48
-; RV64-NEXT:    srli a4, a0, 32
-; RV64-NEXT:    srli a5, a0, 16
-; RV64-NEXT:    ppaire.b a3, a4, a3
-; RV64-NEXT:    ppaire.b a0, a0, a5
-; RV64-NEXT:    ppaire.h a1, a1, a2
-; RV64-NEXT:    ppaire.h a0, a0, a3
-; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    unzip8p a0, a0, a1
 ; RV64-NEXT:    ret
   %a_ext = sext <8 x i8> %a to <8 x i16>
   %b_ext = zext <8 x i8> %b to <8 x i16>
@@ -2671,19 +2659,7 @@ define <8 x i8> @test_pmulhsu_b_commuted(<8 x i8> %a, <8 x i8> %b) {
 ; RV64-NEXT:    ppaire.h a0, a0, a3
 ; RV64-NEXT:    psrli.h a1, a1, 8
 ; RV64-NEXT:    psrli.h a0, a0, 8
-; RV64-NEXT:    srli a2, a1, 48
-; RV64-NEXT:    srli a3, a1, 32
-; RV64-NEXT:    ppaire.b a2, a3, a2
-; RV64-NEXT:    srli a3, a1, 16
-; RV64-NEXT:    ppaire.b a1, a1, a3
-; RV64-NEXT:    srli a3, a0, 48
-; RV64-NEXT:    srli a4, a0, 32
-; RV64-NEXT:    srli a5, a0, 16
-; RV64-NEXT:    ppaire.b a3, a4, a3
-; RV64-NEXT:    ppaire.b a0, a0, a5
-; RV64-NEXT:    ppaire.h a1, a1, a2
-; RV64-NEXT:    ppaire.h a0, a0, a3
-; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    unzip8p a0, a0, a1
 ; RV64-NEXT:    ret
   %a_ext = zext <8 x i8> %a to <8 x i16>
   %b_ext = sext <8 x i8> %b to <8 x i16>
@@ -5033,8 +5009,7 @@ define <2 x i16> @test_pnsrai_h(<2 x i32> %a) {
 ; RV64-LABEL: test_pnsrai_h:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    psrai.w a0, a0, 23
-; RV64-NEXT:    srli a1, a0, 32
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wh a0, a0
 ; RV64-NEXT:    ret
   %ashr = ashr <2 x i32> %a, splat(i32 23)
   %trunc = trunc <2 x i32> %ashr to <2 x i16>
@@ -5050,12 +5025,7 @@ define <4 x i8> @test_pnsrai_b(<4 x i16> %a) {
 ; RV64-LABEL: test_pnsrai_b:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    psrai.h a0, a0, 9
-; RV64-NEXT:    srli a1, a0, 48
-; RV64-NEXT:    srli a2, a0, 32
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    ppaire.b a0, a0, a3
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wb a0, a0
 ; RV64-NEXT:    ret
   %ashr = ashr <4 x i16> %a, splat(i16 9)
   %trunc = trunc <4 x i16> %ashr to <4 x i8>
@@ -5071,12 +5041,7 @@ define <4 x i8> @test_pnsrl_bs(<4 x i16> %a, i16 %shamt) {
 ; RV64-LABEL: test_pnsrl_bs:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    psrl.hs a0, a0, a1
-; RV64-NEXT:    srli a1, a0, 48
-; RV64-NEXT:    srli a2, a0, 32
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    ppaire.b a0, a0, a3
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wb a0, a0
 ; RV64-NEXT:    ret
   %insert = insertelement <4 x i16> poison, i16 %shamt, i32 0
   %b = shufflevector <4 x i16> %insert, <4 x i16> poison, <4 x i32> zeroinitializer
@@ -5097,12 +5062,7 @@ define <4 x i8> @test_pnsrl_bs_mask(<4 x i16> %a, i16 %shamt) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a1, a1, 15
 ; RV64-NEXT:    psrl.hs a0, a0, a1
-; RV64-NEXT:    srli a1, a0, 48
-; RV64-NEXT:    srli a2, a0, 32
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    ppaire.b a0, a0, a3
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wb a0, a0
 ; RV64-NEXT:    ret
   %masked = and i16 %shamt, 15
   %insert = insertelement <4 x i16> poison, i16 %masked, i32 0
@@ -5121,8 +5081,7 @@ define <2 x i16> @test_pnsrl_hs(<2 x i32> %a, i32 %shamt) {
 ; RV64-LABEL: test_pnsrl_hs:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    psrl.ws a0, a0, a1
-; RV64-NEXT:    srli a1, a0, 32
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wh a0, a0
 ; RV64-NEXT:    ret
   %insert = insertelement <2 x i32> poison, i32 %shamt, i32 0
   %b = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer
@@ -5140,8 +5099,7 @@ define <2 x i16> @test_pnsrl_hs_mask(<2 x i32> %a, i32 %shamt) {
 ; RV64-LABEL: test_pnsrl_hs_mask:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    psrl.ws a0, a0, a1
-; RV64-NEXT:    srli a1, a0, 32
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wh a0, a0
 ; RV64-NEXT:    ret
   %masked = and i32 %shamt, 31
   %insert = insertelement <2 x i32> poison, i32 %masked, i32 0
@@ -5160,12 +5118,7 @@ define <4 x i8> @test_pnsra_bs(<4 x i16> %a, i16 %shamt) {
 ; RV64-LABEL: test_pnsra_bs:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    psra.hs a0, a0, a1
-; RV64-NEXT:    srli a1, a0, 48
-; RV64-NEXT:    srli a2, a0, 32
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    ppaire.b a0, a0, a3
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wb a0, a0
 ; RV64-NEXT:    ret
   %insert = insertelement <4 x i16> poison, i16 %shamt, i32 0
   %b = shufflevector <4 x i16> %insert, <4 x i16> poison, <4 x i32> zeroinitializer
@@ -5186,12 +5139,7 @@ define <4 x i8> @test_pnsra_bs_mask(<4 x i16> %a, i16 %shamt) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a1, a1, 15
 ; RV64-NEXT:    psra.hs a0, a0, a1
-; RV64-NEXT:    srli a1, a0, 48
-; RV64-NEXT:    srli a2, a0, 32
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    ppaire.b a0, a0, a3
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wb a0, a0
 ; RV64-NEXT:    ret
   %masked = and i16 %shamt, 15
   %insert = insertelement <4 x i16> poison, i16 %masked, i32 0
@@ -5210,8 +5158,7 @@ define <2 x i16> @test_pnsra_hs(<2 x i32> %a, i32 %shamt) {
 ; RV64-LABEL: test_pnsra_hs:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    psra.ws a0, a0, a1
-; RV64-NEXT:    srli a1, a0, 32
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wh a0, a0
 ; RV64-NEXT:    ret
   %insert = insertelement <2 x i32> poison, i32 %shamt, i32 0
   %b = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer
@@ -5229,8 +5176,7 @@ define <2 x i16> @test_pnsra_hs_mask(<2 x i32> %a, i32 %shamt) {
 ; RV64-LABEL: test_pnsra_hs_mask:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    psra.ws a0, a0, a1
-; RV64-NEXT:    srli a1, a0, 32
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wh a0, a0
 ; RV64-NEXT:    ret
   %masked = and i32 %shamt, 31
   %insert = insertelement <2 x i32> poison, i32 %masked, i32 0
@@ -5982,4 +5928,39 @@ define <4 x i16> @test_psabs_v4i16(<4 x i16> %a) {
 ; RV64-NEXT:    ret
   %res = call <4 x i16> @llvm.riscv.psabs.v4i16(<4 x i16> %a)
   ret <4 x i16> %res
+}
+
+define <2 x i32> @test_return_zero() {
+; RV32-LABEL: test_return_zero:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_return_zero:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a0, 0
+; RV64-NEXT:    ret
+  ret <2 x i32> splat (i32 0)
+}
+
+define <8 x i8> @test_undef_v8i8() {
+; CHECK-LABEL: test_undef_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  ret <8 x i8> undef
+}
+
+define <4 x i16> @test_undef_v4i16() {
+; CHECK-LABEL: test_undef_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  ret <4 x i16> undef
+}
+
+define <2 x i32> @test_undef_v2i32() {
+; CHECK-LABEL: test_undef_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  ret <2 x i32> undef
 }

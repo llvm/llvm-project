@@ -84,7 +84,7 @@ std::string TypeFilterImpl::GetDescription() {
     sstr.Printf("    %s\n", GetExpressionPathAtIndex(i));
   }
 
-  sstr.Printf("}");
+  sstr.PutCString("}");
   return std::string(sstr.GetString());
 }
 
@@ -245,6 +245,16 @@ ConstString ScriptedSyntheticChildren::FrontEnd::GetSyntheticTypeName() {
     return ConstString();
 
   return m_interpreter->GetSyntheticTypeName(m_wrapper_sp);
+}
+
+void *ScriptedSyntheticChildren::FrontEnd::GetImplementation() {
+  if (!m_wrapper_sp || m_interpreter == nullptr)
+    return nullptr;
+
+  if (m_wrapper_sp->GetType() != eStructuredDataTypeGeneric)
+    return nullptr;
+
+  return m_wrapper_sp->GetAsGeneric()->GetValue();
 }
 
 std::string ScriptedSyntheticChildren::GetDescription() {

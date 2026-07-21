@@ -655,8 +655,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_ROTL:
   case TargetOpcode::G_ROTR: {
-    MachineInstr *AmtOpMI = MRI.getVRegDef(MI.getOperand(2).getReg());
-    auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
+    auto MaybeAmtOp =
+        isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
     if (!MaybeAmtOp)
       break;
 
@@ -675,8 +675,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_FSHL:
   case TargetOpcode::G_FSHR: {
-    MachineInstr *AmtOpMI = MRI.getVRegDef(MI.getOperand(3).getReg());
-    auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
+    auto MaybeAmtOp =
+        isConstantOrConstantSplatVector(MI.getOperand(3).getReg(), MRI);
     if (!MaybeAmtOp)
       break;
 
@@ -2637,10 +2637,12 @@ GISelValueTracking &GISelValueTrackingAnalysisLegacy::get(MachineFunction &MF) {
 
 AnalysisKey GISelValueTrackingAnalysis::Key;
 
-GISelValueTracking
+GISelValueTrackingAnalysis::Result
 GISelValueTrackingAnalysis::run(MachineFunction &MF,
                                 MachineFunctionAnalysisManager &MFAM) {
-  return Result(MF);
+  unsigned MaxDepth =
+      MF.getTarget().getOptLevel() == CodeGenOptLevel::None ? 2 : 6;
+  return Result(MF, MaxDepth);
 }
 
 PreservedAnalyses
