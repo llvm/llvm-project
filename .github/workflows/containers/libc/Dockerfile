@@ -42,7 +42,7 @@ RUN apt-get update && \
 
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
-    sudo ./llvm.sh 23 all && \
+    sudo ./llvm.sh 23 && \
     rm llvm.sh
 
 # Install the LLVM testing tools, which the llvm.sh script above does not
