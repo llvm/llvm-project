@@ -2,6 +2,7 @@
 ; trying to use ML-driven advisor.
 ; REQUIRES: !have_tf_aot
 ; REQUIRES: !have_tflite
+; REQUIRES: !have_mlir_mlgo
 ; REQUIRES: default_triple
 ; RUN: not llc -O2 -regalloc-enable-priority-advisor=development < %s 2>&1 | FileCheck %s
 ; RUN: not llc -O2 -regalloc-enable-priority-advisor=release < %s 2>&1 | FileCheck %s
