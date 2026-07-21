@@ -26,15 +26,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIAMDGPU
   MLIRAMDGPUTransforms
 )
 
-add_mlir_upstream_c_api_library(MLIRCAPIAMX
-  AMX.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRCAPIIR
-  MLIRAMXDialect
-)
-
 add_mlir_upstream_c_api_library(MLIRCAPIArith
   Arith.cpp
   ArithPasses.cpp
@@ -517,13 +508,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIWasmSSA
   MLIRWasmSSADialect
 )
 
-add_mlir_upstream_c_api_library(MLIRCAPIX86Vector
-  X86Vector.cpp
+add_mlir_upstream_c_api_library(MLIRCAPIX86
+  X86.cpp
 
   PARTIAL_SOURCES_INTENDED
   LINK_LIBS PUBLIC
   MLIRCAPIIR
-  MLIRX86VectorDialect
+  MLIRX86Dialect
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIXeGPU

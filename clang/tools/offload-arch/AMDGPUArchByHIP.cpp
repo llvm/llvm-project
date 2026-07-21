@@ -22,6 +22,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>
@@ -82,13 +83,40 @@ static cl::opt<HipApiVersion> HipApi(
     cl::init(HipApiVersion::Auto), cl::cat(AMDGPUArchByHIPCategory));
 
 #ifdef _WIN32
+// Return candidate bin/ directories by walking parent dirs of ExeDir.
+SmallVector<std::string, 8> getCandidateBinPaths(StringRef ExeDir) {
+  SmallVector<std::string, 8> Paths;
+  Paths.push_back(sys::path::convert_to_slash(ExeDir));
+  // Search parent/bin dirs: <root>/lib/llvm/bin needs depth 2,
+  // <root>/opt/rocm/lib/llvm/bin needs 3. Cap at 6.
+  constexpr int MaxParentLevels = 6;
+  SmallString<256> Parent(sys::path::parent_path(ExeDir));
+  for (int Depth = 0; Depth < MaxParentLevels && !Parent.empty(); ++Depth) {
+    if (sys::path::root_path(Parent) == StringRef(Parent))
+      break;
+    SmallString<256> Candidate(Parent);
+    sys::path::append(Candidate, "bin");
+    std::string CandStr = sys::path::convert_to_slash(Candidate);
+    auto IsDup = [&](const std::string &P) {
+      return StringRef(P).equals_insensitive(CandStr);
+    };
+    if (llvm::none_of(Paths, IsDup))
+      Paths.push_back(CandStr);
+    Parent = SmallString<256>(sys::path::parent_path(Parent));
+  }
+  return Paths;
+}
+
 static std::vector<std::string> getSearchPaths() {
   std::vector<std::string> Paths;
 
   // Get the directory of the current executable
   if (auto MainExe = sys::fs::getMainExecutable(nullptr, nullptr);
-      !MainExe.empty())
-    Paths.push_back(sys::path::parent_path(MainExe).str());
+      !MainExe.empty()) {
+    StringRef ExeDir = sys::path::parent_path(MainExe);
+    auto BinPaths = getCandidateBinPaths(ExeDir);
+    Paths.insert(Paths.end(), BinPaths.begin(), BinPaths.end());
+  }
 
   // Get the system directory
   wchar_t SystemDirectory[MAX_PATH];
@@ -129,7 +157,8 @@ static std::vector<std::string> getSearchPaths() {
 }
 
 // Custom comparison function for dll name
-static bool compareVersions(StringRef A, StringRef B) {
+// Returns true when A's version is greater than B's (descending order).
+bool compareVersions(StringRef A, StringRef B) {
   auto ParseVersion = [](StringRef S) -> VersionTuple {
     StringRef Filename = sys::path::filename(S);
     size_t Pos = Filename.find_last_of('_');
@@ -181,13 +210,37 @@ static std::pair<std::string, bool> findNewestHIPDLL() {
   if (DLLNames.empty())
     return {"amdhip64.dll", true};
 
-  llvm::sort(DLLNames, compareVersions);
+  // stable_sort preserves the insertion order from getSearchPaths() on
+  // version ties, so a colocated build DLL wins over a system copy.
+  llvm::stable_sort(DLLNames, compareVersions);
   return {DLLNames[0], false};
 #else
   // On Linux, fallback to default shared object
   return {"libamdhip64.so", true};
 #endif
 }
+
+#ifdef _WIN32
+// Pre-load DLL with LOAD_WITH_ALTERED_SEARCH_PATH so transitive deps
+// resolve from its directory. Pinned so getPermanentLibrary reuses it.
+static void primeLibraryLoad(StringRef Path) {
+  // One DLL primed per process; subsequent calls are no-ops.
+  // Not thread-safe, but offload-arch is single-threaded.
+  static HMODULE PinnedModule = nullptr;
+  if (PinnedModule || !sys::path::is_absolute(Path))
+    return;
+  SmallVector<UTF16, 256> WPath;
+  if (!convertUTF8ToUTF16String(Path, WPath))
+    return;
+  WPath.push_back(0);
+  PinnedModule = LoadLibraryExW(reinterpret_cast<LPCWSTR>(WPath.data()),
+                                nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+  DWORD Err = GetLastError();
+  if (!PinnedModule && Verbose)
+    WithColor::note() << "priming LoadLibraryExW failed for " << Path
+                      << " (error " << Err << ")\n";
+}
+#endif
 
 int printGPUsByHIP() {
   auto [DynamicHIPPath, IsFallback] = findNewestHIPDLL();
@@ -200,6 +253,11 @@ int printGPUsByHIP() {
   }
 
   std::string ErrMsg;
+#ifdef _WIN32
+  // Prime DLL load so transitive deps resolve from its directory.
+  if (!IsFallback)
+    primeLibraryLoad(DynamicHIPPath);
+#endif
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(DynamicHIPPath.c_str(),
                                                      &ErrMsg));
@@ -356,6 +414,7 @@ int printGPUsByHIP() {
       break;
     case HipApiVersion::Unversioned:
       OK = TryUnversioned(I);
+      break;
     }
 
     if (ArchName.empty()) {

@@ -190,7 +190,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   SetType &getOrCreate(unsigned Mode) { return Map[Mode]; }
 
   bool isValueTypeByHwMode(bool AllowEmpty) const;
-  ValueTypeByHwMode getValueTypeByHwMode() const;
+  ValueTypeByHwMode getValueTypeByHwMode(bool SkipEmpty = false) const;
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool isMachineValueType() const {
@@ -672,6 +672,9 @@ public:
 
   // Type accessors.
   unsigned getNumTypes() const { return Types.size(); }
+  ValueTypeByHwMode getType(unsigned ResNo) const {
+    return Types[ResNo].getValueTypeByHwMode(/*SkipEmpty=*/true);
+  }
   const std::vector<TypeSetByHwMode> &getExtTypes() const { return Types; }
   const TypeSetByHwMode &getExtType(unsigned ResNo) const {
     return Types[ResNo];
@@ -1123,7 +1126,7 @@ private:
   unsigned NumScopes = 0;
 
 public:
-  CodeGenDAGPatterns(const RecordKeeper &R);
+  CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode = true);
 
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }

@@ -68,3 +68,23 @@ func.func @test_f64_const() -> tensor<2xf64> {
   // FUNCBOUND: return %[[CONST]] : tensor<2xf32>
   return %0 : tensor<2xf64>
 }
+
+// -----
+
+// CHECK-LABEL: test_dense_ressource_f64
+func.func @test_dense_ressource_f64() -> tensor<1x2xf64> {
+  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xf32>}> : () -> tensor<1x2xf32>
+  %0 = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xf64>}> : () -> tensor<1x2xf64>
+  // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[CONST]] : (tensor<1x2xf32>) -> tensor<1x2xf64>
+  // DEFAULT: return %[[OUT_CAST]] : tensor<1x2xf64>
+  // FUNCBOUND: return %[[CONST]] : tensor<1x2xf32>
+  return %0 : tensor<1x2xf64>
+}
+{-#
+  dialect_resources: {
+    builtin: {
+      // COMMON: resource: "0x040000000000000000000000"
+      resource: "0x0800000000000000000000000000000000000000"
+    }
+  }
+#-}

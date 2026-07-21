@@ -539,9 +539,9 @@ static void implementPatch(Ctx &ctx, uint64_t adrpAddr, uint64_t patcheeOffset,
   // Case 1: R_AARCH64_JUMP26 branch relocation. We have already patched this
   // instance of the erratum on a previous patch and altered the relocation. We
   // have nothing more to do.
-  // Case 2: A TLS Relaxation R_RELAX_TLS_IE_TO_LE. In this case the ADRP that
-  // we read will be transformed into a MOVZ later so we actually don't match
-  // the sequence and have nothing more to do.
+  // Case 2: A TLS IE to LE optimization. In this case the ADRP that we read
+  // will be transformed into a MOVZ later so we actually don't match the
+  // sequence and have nothing more to do.
   // Case 3: A load/store register (unsigned immediate) class relocation. There
   // are two of these R_AARCH_LD64_ABS_LO12_NC and R_AARCH_LD64_GOT_LO12_NC and
   // they are both absolute. We need to add the same relocation to the patch,
@@ -551,8 +551,12 @@ static void implementPatch(Ctx &ctx, uint64_t adrpAddr, uint64_t patcheeOffset,
   auto relIt = llvm::find_if(isec->relocs(), [=](const Relocation &r) {
     return r.offset == patcheeOffset;
   });
+  // Detect and skip Case 1 and Case 2 above.
   if (relIt != isec->relocs().end() &&
-      (relIt->type == R_AARCH64_JUMP26 || relIt->expr == R_RELAX_TLS_IE_TO_LE))
+      (relIt->type == R_AARCH64_JUMP26 ||
+       ((relIt->type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
+         relIt->type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC) &&
+        relIt->expr == R_TPREL)))
     return;
 
   Log(ctx) << "detected cortex-a53-843419 erratum sequence starting at " <<

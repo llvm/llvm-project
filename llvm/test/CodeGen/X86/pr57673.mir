@@ -16,9 +16,11 @@
   }
 
   !0 = !DIFile(filename: "a", directory: "/proc/self/cwd")
-  !1 = distinct !DISubprogram(name: "c", scope: null, file: !0, line: 3)
+  !1 = distinct !DISubprogram(name: "c", scope: null, file: !0, line: 3, type: !5)
   !2 = !DILocalVariable(name: "r", scope: !1, file: !0, line: 4)
   !3 = !DILocation(line: 5, scope: !1)
+  !4 = !{null}
+  !5 = !DISubroutineType(types: !4)
 ...
 ---
 name: foo

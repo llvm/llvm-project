@@ -780,5 +780,3 @@ exit:
 }
 
 
-declare i64 @llvm.umin.i64(i64, i64)
-declare i16 @llvm.umin.i16(i16, i16)

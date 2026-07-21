@@ -309,7 +309,7 @@ public:
   // Leader functions
   Value *getLeader() const { return RepLeader.first; }
   void setLeader(std::pair<Value *, unsigned int> Leader) {
-    RepLeader = Leader;
+    RepLeader = std::move(Leader);
   }
   const std::pair<Value *, unsigned int> &getNextLeader() const {
     return NextLeader;
@@ -318,10 +318,10 @@ public:
   bool addPossibleLeader(std::pair<Value *, unsigned int> LeaderPair) {
     if (LeaderPair.second < RepLeader.second) {
       NextLeader = RepLeader;
-      RepLeader = LeaderPair;
+      RepLeader = std::move(LeaderPair);
       return true;
     } else if (LeaderPair.second < NextLeader.second) {
-      NextLeader = LeaderPair;
+      NextLeader = std::move(LeaderPair);
     }
     return false;
   }
@@ -442,18 +442,6 @@ struct ExactEqualsExpression {
 } // end anonymous namespace
 
 template <> struct llvm::DenseMapInfo<const Expression *> {
-  static const Expression *getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<const Expression *>::NumLowBitsAvailable;
-    return reinterpret_cast<const Expression *>(Val);
-  }
-
-  static const Expression *getTombstoneKey() {
-    auto Val = static_cast<uintptr_t>(~1U);
-    Val <<= PointerLikeTypeTraits<const Expression *>::NumLowBitsAvailable;
-    return reinterpret_cast<const Expression *>(Val);
-  }
-
   static unsigned getHashValue(const Expression *E) {
     return E->getComputedHash();
   }
@@ -463,17 +451,12 @@ template <> struct llvm::DenseMapInfo<const Expression *> {
   }
 
   static bool isEqual(const ExactEqualsExpression &LHS, const Expression *RHS) {
-    if (RHS == getTombstoneKey() || RHS == getEmptyKey())
-      return false;
     return LHS == *RHS;
   }
 
   static bool isEqual(const Expression *LHS, const Expression *RHS) {
     if (LHS == RHS)
       return true;
-    if (LHS == getTombstoneKey() || RHS == getTombstoneKey() ||
-        LHS == getEmptyKey() || RHS == getEmptyKey())
-      return false;
     // Compare hashes before equality.  This is *not* what the hashtable does,
     // since it is computing it modulo the number of buckets, whereas we are
     // using the full hash keyspace.  Since the hashes are precomputed, this
@@ -1213,7 +1196,7 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
       assert(E->getOperand(1)->getType() == I->getOperand(1)->getType() &&
              E->getOperand(2)->getType() == I->getOperand(2)->getType());
       Value *V = simplifySelectInst(E->getOperand(0), E->getOperand(1),
-                                    E->getOperand(2), Q);
+                                    E->getOperand(2), FastMathFlags(), Q);
       if (auto Simplified = checkExprResults(E, I, V))
         return Simplified;
     }
@@ -1804,7 +1787,7 @@ NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
   Value *AllSameValue = *(Filtered.begin());
   ++Filtered.begin();
   // Can't use std::equal here, sadly, because filter.begin moves.
-  if (llvm::all_of(Filtered, [&](Value *Arg) { return Arg == AllSameValue; })) {
+  if (llvm::all_of(Filtered, equal_to(AllSameValue))) {
     // Can't fold phi(undef, X) -> X unless X can't be poison (thus X is undef
     // in the worst case).
     if (HasUndef && !isGuaranteedNotToBePoison(AllSameValue, AC, nullptr, DT))
@@ -2098,7 +2081,8 @@ void NewGVN::addAdditionalUsers(ExprResult &Res, Instruction *User) const {
   if (Res.PredDep) {
     if (const auto *PBranch = dyn_cast<PredicateBranch>(Res.PredDep))
       PredicateToUsers[PBranch->Condition].insert(User);
-    else if (const auto *PAssume = dyn_cast<PredicateAssume>(Res.PredDep))
+    else if (const auto *PAssume =
+                 dyn_cast<PredicateConditionAssume>(Res.PredDep))
       PredicateToUsers[PAssume->Condition].insert(User);
   }
   Res.PredDep = nullptr;
@@ -3473,12 +3457,22 @@ bool NewGVN::runGVN() {
     RPOOrdering[Node] = ++Counter;
   }
   // Sort dominator tree children arrays into RPO.
+  // TODO: this code shouldn't rely on domtree internals. It also most probably
+  // shouldn't rely on the order of nodes in the tree...
   for (auto &B : RPOT) {
     auto *Node = DT->getNode(B);
-    if (Node->getNumChildren() > 1)
-      llvm::sort(*Node, [&](const DomTreeNode *A, const DomTreeNode *B) {
-        return RPOOrdering[A] < RPOOrdering[B];
-      });
+    if (Node->isLeaf())
+      continue;
+    SmallVector<DomTreeNode *> Children;
+    while (!Node->isLeaf()) {
+      Children.push_back(*Node->begin());
+      Node->removeChild(*Node->begin());
+    }
+    llvm::sort(Children, [&](const DomTreeNode *A, const DomTreeNode *B) {
+      return RPOOrdering[A] < RPOOrdering[B];
+    });
+    for (DomTreeNode *Child : Children)
+      Node->addChild(Child);
   }
 
   // Now a standard depth first ordering of the domtree is equivalent to RPO.

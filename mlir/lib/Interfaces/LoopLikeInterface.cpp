@@ -8,6 +8,7 @@
 
 #include "mlir/Interfaces/LoopLikeInterface.h"
 
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 
 using namespace mlir;
@@ -53,8 +54,6 @@ bool LoopLikeOpInterface::blockIsInLoop(Block *block) {
 }
 
 LogicalResult detail::verifyLoopLikeOpInterface(Operation *op) {
-  // Note: These invariants are also verified by the RegionBranchOpInterface,
-  // but the LoopLikeOpInterface provides better error messages.
   auto loopLikeOp = cast<LoopLikeOpInterface>(op);
 
   // Verify number of inits/iter_args/yielded values/loop results.
@@ -77,37 +76,37 @@ LogicalResult detail::verifyLoopLikeOpInterface(Operation *op) {
            << " != " << loopLikeOp.getRegionIterArgs().size();
 
   // Verify types of inits/iter_args/yielded values/loop results.
-  int64_t i = 0;
-  auto yieldedValues = loopLikeOp.getYieldedValues();
-  for (const auto [index, init, regionIterArg] :
-       llvm::enumerate(loopLikeOp.getInits(), loopLikeOp.getRegionIterArgs())) {
-    if (init.getType() != regionIterArg.getType())
-      return op->emitOpError(std::to_string(index))
-             << "-th init and " << index
-             << "-th region iter_arg have different type: " << init.getType()
-             << " != " << regionIterArg.getType();
-    if (!yieldedValues.empty()) {
-      if (regionIterArg.getType() != yieldedValues[index].getType())
+  // If the op also implements RegionBranchOpInterface, type compatibility is
+  // already verified by that interface's verifier (which also provides an
+  // overridable areTypesCompatible hook), so skip the check here.
+  if (!isa<RegionBranchOpInterface>(op)) {
+    auto yieldedValues = loopLikeOp.getYieldedValues();
+    for (const auto [index, init, regionIterArg] : llvm::enumerate(
+             loopLikeOp.getInits(), loopLikeOp.getRegionIterArgs())) {
+      if (init.getType() != regionIterArg.getType())
         return op->emitOpError(std::to_string(index))
-               << "-th region iter_arg and " << index
-               << "-th yielded value have different type: "
-               << regionIterArg.getType()
-               << " != " << yieldedValues[index].getType();
+               << "-th init and " << index
+               << "-th region iter_arg have different type: " << init.getType()
+               << " != " << regionIterArg.getType();
+      if (!yieldedValues.empty()) {
+        if (regionIterArg.getType() != yieldedValues[index].getType())
+          return op->emitOpError(std::to_string(index))
+                 << "-th region iter_arg and " << index
+                 << "-th yielded value have different type: "
+                 << regionIterArg.getType()
+                 << " != " << yieldedValues[index].getType();
+      }
     }
-    ++i;
-  }
-  i = 0;
-  if (loopLikeOp.getLoopResults()) {
-    for (const auto it : llvm::zip_equal(loopLikeOp.getRegionIterArgs(),
-                                         *loopLikeOp.getLoopResults())) {
-      if (std::get<0>(it).getType() != std::get<1>(it).getType())
-        return op->emitOpError(std::to_string(i))
-               << "-th region iter_arg and " << i
-               << "-th loop result have different type: "
-               << std::get<0>(it).getType()
-               << " != " << std::get<1>(it).getType();
+    if (loopLikeOp.getLoopResults()) {
+      for (const auto [index, regionIterArg, loopResult] : llvm::enumerate(
+               loopLikeOp.getRegionIterArgs(), *loopLikeOp.getLoopResults())) {
+        if (regionIterArg.getType() != loopResult.getType())
+          return op->emitOpError(std::to_string(index))
+                 << "-th region iter_arg and " << index
+                 << "-th loop result have different type: "
+                 << regionIterArg.getType() << " != " << loopResult.getType();
+      }
     }
-    ++i;
   }
 
   // Verify that all induction variables have valid types.

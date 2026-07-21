@@ -342,14 +342,14 @@ define void @store_i32_stride5_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vblendps {{.*#+}} xmm4 = xmm4[0,1],xmm0[2,3]
 ; AVX-NEXT:    vshufps {{.*#+}} xmm5 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm5 = xmm0[0,1,2],xmm5[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm5 = xmm3[1],zero,xmm5[2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm5 = xmm3[1,1],xmm5[2,3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm4, %ymm5, %ymm4
 ; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm5 = mem[0,1,0,1]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0],ymm5[1],ymm4[2,3,4,5],ymm5[6],ymm4[7]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm6 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm7 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX-NEXT:    vmovlhps {{.*#+}} xmm6 = xmm7[0],xmm6[0]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm7 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm7 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm7 = xmm7[0,1,2],xmm2[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm6
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm5[4,5,6,7]
@@ -695,7 +695,7 @@ define void @store_i32_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vmovaps 16(%rsi), %xmm6
 ; AVX-NEXT:    vmovaps (%rdi), %xmm7
 ; AVX-NEXT:    vmovaps 16(%rdi), %xmm8
-; AVX-NEXT:    vinsertps {{.*#+}} xmm4 = zero,xmm7[1],xmm5[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm4 = xmm7[1,1],xmm5[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm9 = xmm7[0],xmm5[0],xmm7[1],xmm5[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm4, %ymm9, %ymm4
 ; AVX-NEXT:    vmovaps (%rcx), %xmm9
@@ -718,7 +718,7 @@ define void @store_i32_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vblendps {{.*#+}} ymm5 = ymm5[0],ymm13[1],ymm5[2,3,4,5],ymm13[6],ymm5[7]
 ; AVX-NEXT:    vshufps {{.*#+}} xmm7 = xmm6[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm7 = xmm8[0,1,2],xmm7[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm6 = zero,xmm8[1],xmm6[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm6 = xmm8[1,1],xmm6[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm6
 ; AVX-NEXT:    vshufps {{.*#+}} ymm7 = ymm3[1,1],ymm1[1,1],ymm3[5,5],ymm1[5,5]
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm7 = ymm7[2,3,2,3]
@@ -1350,7 +1350,7 @@ define void @store_i32_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vblendps {{.*#+}} xmm15 = xmm13[0,1,2],xmm15[3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm13, %ymm15, %ymm15
 ; AVX-NEXT:    vblendps {{.*#+}} ymm10 = ymm10[0,1],ymm15[2,3],ymm10[4,5],ymm15[6,7]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm15 = zero,xmm13[1],xmm14[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm15 = xmm13[1,1],xmm14[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm13 = xmm13[0],xmm14[0],xmm13[1],xmm14[1]
 ; AVX-NEXT:    vmovaps 32(%rdi), %xmm14
 ; AVX-NEXT:    vinsertf128 $1, %xmm15, %ymm13, %ymm13
@@ -1370,7 +1370,7 @@ define void @store_i32_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vblendps {{.*#+}} xmm10 = xmm14[0,1,2],xmm10[3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm14, %ymm10, %ymm10
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm10[2,3],ymm0[4,5],ymm10[6,7]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm13 = zero,xmm14[1],xmm15[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm13 = xmm14[1,1],xmm15[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm14 = xmm14[0],xmm15[0],xmm14[1],xmm15[1]
 ; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm15 = mem[0,1,0,1]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm10 = ymm0[0],ymm15[1],ymm0[2,3,4,5],ymm15[6],ymm0[7]
@@ -1384,7 +1384,7 @@ define void @store_i32_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 48(%rsi), %xmm12
 ; AVX-NEXT:    vshufps {{.*#+}} xmm13 = xmm12[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm13 = xmm0[0,1,2],xmm13[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm12[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm12[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm13, %ymm0, %ymm0
 ; AVX-NEXT:    vshufps {{.*#+}} ymm12 = ymm3[1,1],ymm1[1,1],ymm3[5,5],ymm1[5,5]
 ; AVX-NEXT:    vmovaps %ymm1, %ymm6
@@ -1413,7 +1413,7 @@ define void @store_i32_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm8[3,4],ymm0[5,6,7]
 ; AVX-NEXT:    vshufps {{.*#+}} xmm8 = xmm9[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm8 = xmm15[0,1,2],xmm8[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm9 = zero,xmm15[1],xmm9[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm9 = xmm15[1,1],xmm9[1,1]
 ; AVX-NEXT:    vmovaps (%rdx), %ymm14
 ; AVX-NEXT:    vinsertf128 $1, %xmm8, %ymm9, %ymm8
 ; AVX-NEXT:    vmovaps (%rcx), %ymm9
@@ -2777,7 +2777,7 @@ define void @store_i32_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 32(%rsi), %xmm0
 ; AVX-NEXT:    vmovaps (%rdi), %xmm4
 ; AVX-NEXT:    vmovaps 32(%rdi), %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm4[1],xmm3[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm4[1,1],xmm3[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm5 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm5
 ; AVX-NEXT:    vmovaps (%rcx), %xmm6
@@ -2800,7 +2800,7 @@ define void @store_i32_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vblendps {{.*#+}} ymm3 = ymm5[0,1],ymm3[2,3],ymm5[4,5],ymm3[6,7]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0],ymm9[1],ymm3[2,3,4,5],ymm9[6],ymm3[7]
 ; AVX-NEXT:    vmovups %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    vinsertps {{.*#+}} xmm3 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm4 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm4 = xmm8[0],xmm2[0],xmm8[1],xmm2[1]
@@ -2821,7 +2821,7 @@ define void @store_i32_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovaps 64(%rsi), %xmm0
 ; AVX-NEXT:    vmovaps 64(%rdi), %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX-NEXT:    vmovaps 64(%rcx), %xmm3
@@ -2844,7 +2844,7 @@ define void @store_i32_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovaps 96(%rsi), %xmm0
 ; AVX-NEXT:    vmovaps 96(%rdi), %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX-NEXT:    vmovaps 96(%rcx), %xmm3
@@ -2870,7 +2870,7 @@ define void @store_i32_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm5[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm4[0,1,2],xmm0[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm4[1],xmm5[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm4[1,1],xmm5[1,1]
 ; AVX-NEXT:    vmovaps 16(%rdx), %xmm3
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; AVX-NEXT:    vshufps {{.*#+}} ymm2 = ymm13[1,1],ymm12[1,1],ymm13[5,5],ymm12[5,5]
@@ -2891,7 +2891,7 @@ define void @store_i32_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 48(%rsi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps 32(%rdx), %ymm1
 ; AVX-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2918,7 +2918,7 @@ define void @store_i32_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 80(%rsi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps 64(%rdx), %ymm9
 ; AVX-NEXT:    vmovaps 64(%rcx), %ymm8
@@ -2944,7 +2944,7 @@ define void @store_i32_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 112(%rsi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm6 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm6 = xmm0[0,1,2],xmm6[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm6, %ymm0, %ymm6
 ; AVX-NEXT:    vmovaps 96(%rdx), %ymm3
 ; AVX-NEXT:    vmovaps 96(%rcx), %ymm2
@@ -5569,7 +5569,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 32(%rsi), %xmm0
 ; AVX-NEXT:    vmovaps (%rdi), %xmm4
 ; AVX-NEXT:    vmovaps 32(%rdi), %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm4[1],xmm3[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm4[1,1],xmm3[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm5 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm5
 ; AVX-NEXT:    vmovaps (%rcx), %xmm6
@@ -5592,7 +5592,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vblendps {{.*#+}} ymm3 = ymm5[0,1],ymm3[2,3],ymm5[4,5],ymm3[6,7]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0],ymm9[1],ymm3[2,3,4,5],ymm9[6],ymm3[7]
 ; AVX-NEXT:    vmovups %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    vinsertps {{.*#+}} xmm3 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm4 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm4 = xmm8[0],xmm2[0],xmm8[1],xmm2[1]
@@ -5613,7 +5613,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovaps 64(%rsi), %xmm0
 ; AVX-NEXT:    vmovaps 64(%rdi), %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX-NEXT:    vmovaps 64(%rcx), %xmm3
@@ -5636,7 +5636,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovaps 96(%rsi), %xmm0
 ; AVX-NEXT:    vmovaps 96(%rdi), %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX-NEXT:    vmovaps 96(%rcx), %xmm3
@@ -5659,7 +5659,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovaps 128(%rsi), %xmm0
 ; AVX-NEXT:    vmovaps 128(%rdi), %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX-NEXT:    vmovaps 128(%rcx), %xmm3
@@ -5682,7 +5682,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovaps 160(%rsi), %xmm0
 ; AVX-NEXT:    vmovaps 160(%rdi), %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX-NEXT:    vmovaps 160(%rcx), %xmm3
@@ -5705,7 +5705,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovaps 192(%rsi), %xmm0
 ; AVX-NEXT:    vmovaps 192(%rdi), %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX-NEXT:    vmovaps 192(%rcx), %xmm3
@@ -5728,7 +5728,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovaps 224(%rsi), %xmm0
 ; AVX-NEXT:    vmovaps 224(%rdi), %xmm1
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX-NEXT:    vmovaps 224(%rcx), %xmm3
@@ -5753,7 +5753,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 16(%rdi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm1[0,1,2],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm1[1],xmm0[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[1,1],xmm0[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps (%rdx), %ymm1
 ; AVX-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -5780,7 +5780,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 48(%rsi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps 32(%rdx), %ymm1
 ; AVX-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -5810,7 +5810,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 80(%rsi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps 64(%rdx), %ymm1
 ; AVX-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -5840,7 +5840,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 112(%rsi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps 96(%rdx), %ymm1
 ; AVX-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -5870,7 +5870,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 144(%rsi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps 128(%rdx), %ymm2
 ; AVX-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -5899,7 +5899,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 176(%rsi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps 160(%rdx), %ymm1
 ; AVX-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -5928,7 +5928,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 208(%rsi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps 192(%rdx), %ymm10
 ; AVX-NEXT:    vmovaps 192(%rcx), %ymm9
@@ -5954,7 +5954,7 @@ define void @store_i32_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vmovaps 240(%rsi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[2,2,2,2]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0,1,2],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[1],xmm1[1],zero
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps 224(%rdx), %ymm4
 ; AVX-NEXT:    vmovaps 224(%rcx), %ymm3

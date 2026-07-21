@@ -29,6 +29,27 @@ module @named_module_acceptable {
 
 // -----
 
+// Dead function arguments are removed even if the enclosing module defines a
+// symbol (has a sym_name attribute). Fixes #98700.
+//
+// CHECK: func.func private @compute(%arg0: i32) -> i32
+// CHECK-NOT: %dead_arg
+module @named_module_with_dead_args {
+  func.func private @compute(%arg0: i32, %dead_arg: i32) -> i32 {
+    return %arg0 : i32
+  }
+  // CHECK: func.func @main() -> i32
+  func.func @main() -> i32 {
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    // CHECK: call @compute(%c1_i32) : (i32) -> i32
+    %result = call @compute(%c1, %c2) : (i32, i32) -> i32
+    return %result : i32
+  }
+}
+
+// -----
+
 // The IR contains both conditional and unconditional branches with a loop
 // in which the last cf.cond_br is referncing the first cf.br
 //
@@ -603,6 +624,33 @@ module @return_void_with_unused_argument {
 
 // -----
 
+// CHECK-LABEL: func.func private @keep_region_branch_operands_valid() {
+func.func private @keep_region_branch_operands_valid(%arg0: memref<f64>) {
+  %false = arith.constant false
+  %cst = arith.constant 2.000000e+00 : f64
+  %0 = memref.load %arg0[] {name = "caller"} : memref<f64>
+  memref.store %cst, %arg0[] {name = "callee"} : memref<f64>
+  // CHECK: %[[COND:.*]] = ub.poison : i1
+  // CHECK: scf.if %[[COND]]
+  // CHECK: %[[YIELD0:.*]] = ub.poison : memref<f64>
+  // CHECK: scf.yield %[[YIELD0]] : memref<f64>
+  // CHECK: %[[YIELD1:.*]] = ub.poison : memref<f64>
+  // CHECK: scf.yield %[[YIELD1]] : memref<f64>
+  %1 = scf.if %false -> (memref<f64>) {
+    scf.yield %arg0 : memref<f64>
+  } else {
+    %2 = bufferization.clone %arg0 : memref<f64> to memref<f64>
+    scf.yield %2 : memref<f64>
+  }
+  %true = arith.constant true
+  %base_buffer, %offset = memref.extract_strided_metadata %arg0 : memref<f64> -> memref<f64>, index
+  %base_buffer_0, %offset_1 = memref.extract_strided_metadata %1 : memref<f64> -> memref<f64>, index
+  bufferization.dealloc (%base_buffer, %base_buffer_0 : memref<f64>, memref<f64>) if (%false, %true)
+  return
+}
+
+// -----
+
 // CHECK-LABEL: module @dynamically_unreachable
 module @dynamically_unreachable {
   func.func @dynamically_unreachable() {
@@ -795,4 +843,55 @@ func.func @scf_while_dead_iter_args() -> i32 {
     scf.yield %x : i32
   }
   return %result#0 : i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @replace_dead_operation_results_with_poison
+func.func @replace_dead_operation_results_with_poison(%0: vector<1xindex>) -> vector<1xindex> {
+  %1 = scf.while (%arg0 = %0) : (vector<1xindex>) -> vector<1xindex> {
+    %cond = arith.constant true
+    scf.condition(%cond) %arg0 : vector<1xindex>
+  } do {
+    ^bb0(%arg0: vector<1xindex>):
+    scf.yield %arg0 : vector<1xindex>
+  }
+  %2 = scf.while (%arg0 = %1) : (vector<1xindex>) -> vector<1xindex> {
+    // Check that the binary value in condition is replaced with poison, and
+    // the condition itself is well-formed IR. This prevents a crash in the
+    // canonicalization phase which happens after the dead value removal phase.
+    // Also check that only used results of an erased op are replaced with ub.poison.
+    // CHECK-CANONICALIZE:      %[[COND:.*]] = ub.poison : i1
+    // CHECK-CANONICALIZE-NEXT: %[[NEXT:.*]] = ub.poison : vector<1xindex>
+    // CHECK-CANONICALIZE-NEXT: scf.condition(%[[COND]]) %[[NEXT]]
+    // CHECK-CANONICALIZE-NOT: ub.poison : i32
+    // CHECK-CANONICALIZE-NOT: "test.three"
+    %cond, %unused, %next = "test.three"(%1) : (vector<1xindex>) -> (i1, i32, vector<1xindex>)
+    scf.condition(%cond) %next : vector<1xindex>
+  } do {
+    ^bb0(%arg0: vector<1xindex>):
+    scf.yield %arg0 : vector<1xindex>
+  }
+  return %2 : vector<1xindex>
+}
+
+// -----
+
+// Verify that a referenced by a non-call op (spirv.EntryPoint),
+// while still having another usual call site is preserved as-is
+// since the pass cannot analyse non-call users.
+// CHECK-LABEL: module @func_with_non_call_users
+// CHECK-CANONICALIZE-LABEL: module @func_with_non_call_users
+module @func_with_non_call_users {
+// CHECK: func.func private @callee(%arg0: i32, %arg1: i32)
+// CHECK-CANONICALIZE: func.func private @callee(%arg0: i32, %arg1: i32)
+  func.func private @callee(%arg1 : i32, %arg2 : i32) {
+    func.return
+  }
+  func.func @main_func() {
+    %cst = llvm.mlir.constant(1 : i32) : i32
+    func.call @callee(%cst, %cst) : (i32, i32) -> ()
+    func.return
+  }
+  spirv.EntryPoint "GLCompute" @callee
 }

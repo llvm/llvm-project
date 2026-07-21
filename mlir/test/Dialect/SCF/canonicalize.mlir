@@ -661,6 +661,26 @@ func.func @remove_zero_iteration_loop() {
 
 // -----
 
+// CHECK-LABEL: @remove_while_zero_iteration_loop
+//  CHECK-NEXT:   %[[init:.*]] = "test.init"
+//  CHECK-NEXT:   %[[inner1:.*]] = "test.before"(%[[init]])
+//  CHECK-NEXT:   return %[[inner1]]
+func.func @remove_while_zero_iteration_loop() -> i64 {
+  %init = "test.init"() : () -> i32
+  %false = arith.constant false
+  %0 = scf.while (%arg0 = %init) : (i32) -> (i64) {
+    %inner1 = "test.before"(%arg0) : (i32) -> i64
+    scf.condition(%false) %inner1 : i64
+  } do {
+  ^bb0(%arg1: i64):
+    %inner2 = "test.before"(%arg1) : (i64) -> i32
+    scf.yield %inner2 : i32
+  }
+  return %0 : i64
+}
+
+// -----
+
 // CHECK-LABEL: @remove_zero_iteration_loop_vals
 func.func @remove_zero_iteration_loop_vals(%arg0: index) {
   %c2 = arith.constant 2 : index
@@ -925,6 +945,44 @@ func.func @cond_prop(%arg0 : i1) -> index {
 // CHECK-NEXT:    scf.yield %[[c4]] : index
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return %[[if]] : index
+// CHECK-NEXT:}
+
+// -----
+
+// Condition propagation: uses of the condition inside the then/else regions
+// are replaced with true/false respectively (regression test for
+// https://github.com/llvm/llvm-project/issues/159165).
+
+// CHECK-LABEL: @cond_prop_then
+func.func @cond_prop_then(%arg0 : i1) {
+  scf.if %arg0 {
+    "test.use"(%arg0) : (i1) -> ()
+  }
+  return
+}
+// CHECK-NEXT:  %[[true:.+]] = arith.constant true
+// CHECK-NEXT:  scf.if %arg0 {
+// CHECK-NEXT:    "test.use"(%[[true]]) : (i1) -> ()
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+// CHECK-NEXT:}
+
+// -----
+
+// CHECK-LABEL: @cond_prop_else
+func.func @cond_prop_else(%arg0 : i1) {
+  scf.if %arg0 {
+  } else {
+    "test.use"(%arg0) : (i1) -> ()
+  }
+  return
+}
+// CHECK-NEXT:  %[[false:.+]] = arith.constant false
+// CHECK-NEXT:  scf.if %arg0 {
+// CHECK-NEXT:  } else {
+// CHECK-NEXT:    "test.use"(%[[false]]) : (i1) -> ()
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
 // CHECK-NEXT:}
 
 // -----
@@ -2187,13 +2245,14 @@ func.func @index_switch_fold_no_res() {
 
 // -----
 
-// Step 0 is invalid, the loop is eliminated.
+// Step size 0: The loop has an infinite number of iterations.
 // CHECK-LABEL: func @scf_for_all_step_size_0()
-//       CHECK-NOT:   scf.forall
+//       CHECK:   scf.forall (%[[arg0:.*]]) = (0) to (1) step (0)
+//       CHECK:     vector.print %[[arg0]]
 func.func @scf_for_all_step_size_0()  {
   %x = arith.constant 0 : index
   scf.forall (%i, %j) = (0, 4) to (1, 5) step (%x, 8) {
-    vector.print %x : index
+    vector.print %i : index
     scf.forall.in_parallel {}
   }
   return
@@ -2262,4 +2321,42 @@ func.func @iter_args_cycles_non_cycle_start(%lb : index, %ub : index, %step : in
     scf.yield %1, %2, %1 : i32, i32, i32
   }
   return %res#0, %res#1, %res#2 : i32, i32, i32
+}
+
+// -----
+
+// Test that FoldTensorCastOfOutputIntoForallOp correctly handles the case
+// where parallel_insert_slice ops write to shared outputs in a non-sequential
+// order. The fix ensures that each yielding op's destination is matched to the
+// correct regionIterArg based on what it actually writes to, not positionally.
+// CHECK-LABEL: func @fold_tensor_cast_into_forall_non_sequential_writes
+//  CHECK-SAME:   (%[[ARG0:.*]]: tensor<8x32xf32>, %[[ARG1:.*]]: tensor<8x32xf32>)
+//       CHECK:   %[[FORALL:.*]]:2 = scf.forall
+//  CHECK-SAME:     shared_outs(%[[ITER0:.*]] = {{.*}}, %[[ITER1:.*]] = {{.*}}) -> (tensor<32x32xf32>, tensor<32x32xf32>)
+//       CHECK:     scf.forall.in_parallel {
+// CHECK-NEXT:        tensor.parallel_insert_slice %[[ARG0]] into %[[ITER1]]
+// CHECK-NEXT:        tensor.parallel_insert_slice %[[ARG1]] into %[[ITER0]]
+//       CHECK:     }
+//       CHECK:   %[[CAST0:.*]] = tensor.cast %[[FORALL]]#0 : tensor<32x32xf32> to tensor<?x32xf32>
+//       CHECK:   %[[CAST1:.*]] = tensor.cast %[[FORALL]]#1 : tensor<32x32xf32> to tensor<?x32xf32>
+//       CHECK:   return %[[CAST0]], %[[CAST1]]
+func.func @fold_tensor_cast_into_forall_non_sequential_writes(
+    %arg0: tensor<8x32xf32>, %arg1: tensor<8x32xf32>) -> (tensor<?x32xf32>, tensor<?x32xf32>) {
+  %c8 = arith.constant 8 : index
+  %c32 = arith.constant 32 : index
+  %init = tensor.empty(%c32) : tensor<?x32xf32>
+  %0:2 = scf.forall (%tidx) in (4) shared_outs(%arg2 = %init, %arg3 = %init)
+      -> (tensor<?x32xf32>, tensor<?x32xf32>) {
+    %pos = arith.muli %c8, %tidx : index
+    scf.forall.in_parallel {
+      // Write %arg0 to %arg3 (second shared output).
+      tensor.parallel_insert_slice %arg0 into %arg3[%pos, 0] [8, 32] [1, 1]
+          : tensor<8x32xf32> into tensor<?x32xf32>
+      // Write %arg1 to %arg2 (first shared output).
+      tensor.parallel_insert_slice %arg1 into %arg2[%pos, 0] [8, 32] [1, 1]
+          : tensor<8x32xf32> into tensor<?x32xf32>
+    }
+  }
+  // %0#0 contains %arg1 data; %0#1 contains %arg0 data.
+  return %0#0, %0#1 : tensor<?x32xf32>, tensor<?x32xf32>
 }

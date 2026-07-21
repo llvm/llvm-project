@@ -57,10 +57,17 @@ LIBC_INLINE int convert_write_int(Writer<write_mode> *writer,
     *reinterpret_cast<ptrdiff_t *>(to_conv.conv_val_ptr) = written;
     break;
   case LengthModifier::j:
+#ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
   case LengthModifier::w:
   case LengthModifier::wf:
+#endif // LIBC_COPT_PRINTF_DISABLE_BITINT
     *reinterpret_cast<uintmax_t *>(to_conv.conv_val_ptr) = written;
     break;
+#if defined(LIBC_TYPES_HAS_FLOAT128)
+  case (LengthModifier::Q): // 'Q' is not valid for integer format; this case
+                            // should not be reachable.
+    break;
+#endif // LIBC_TYPES_HAS_FLOAT128
   }
   return WRITE_OK;
 }

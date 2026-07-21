@@ -16,6 +16,7 @@
 
 using namespace llvm;
 using namespace llvm::cas;
+using namespace llvm::unittest::cas;
 
 TEST_F(OnDiskCASTest, UnifiedCASMaterializationCheckPreventsGarbageCollection) {
   unittest::TempDir Temp("on-disk-unified-cas", /*Unique=*/true);

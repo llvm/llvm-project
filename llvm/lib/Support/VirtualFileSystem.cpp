@@ -278,7 +278,7 @@ public:
     if (!LinkCWDToProcess) {
       SmallString<128> PWD, RealPWD;
       if (std::error_code EC = llvm::sys::fs::current_path(PWD))
-        WD = EC;
+        WD = std::move(EC);
       else if (llvm::sys::fs::real_path(PWD, RealPWD))
         WD = WorkingDirectory{PWD, PWD};
       else
@@ -1668,7 +1668,7 @@ class llvm::vfs::RedirectingFileSystemParser {
   // false on error
   bool parseScalarString(yaml::Node *N, StringRef &Result,
                          SmallVectorImpl<char> &Storage) {
-    const auto *S = dyn_cast<yaml::ScalarNode>(N);
+    const auto *S = dyn_cast_if_present<yaml::ScalarNode>(N);
 
     if (!S) {
       error(N, "expected string");
@@ -1913,7 +1913,7 @@ private:
           return nullptr;
         }
         ContentsField = CF_List;
-        auto *Contents = dyn_cast<yaml::SequenceNode>(I.getValue());
+        auto *Contents = dyn_cast_if_present<yaml::SequenceNode>(I.getValue());
         if (!Contents) {
           // FIXME: this is only for directories, what about files?
           error(I.getValue(), "expected array");
@@ -2115,7 +2115,7 @@ public:
         return false;
 
       if (Key == "roots") {
-        auto *Roots = dyn_cast<yaml::SequenceNode>(I.getValue());
+        auto *Roots = dyn_cast_if_present<yaml::SequenceNode>(I.getValue());
         if (!Roots) {
           error(I.getValue(), "expected array");
           return false;
@@ -2991,34 +2991,8 @@ recursive_directory_iterator::increment(std::error_code &EC) {
   return *this;
 }
 
-void TracingFileSystem::printImpl(raw_ostream &OS, PrintType Type,
-                                  unsigned IndentLevel) const {
-  printIndent(OS, IndentLevel);
-  OS << "TracingFileSystem\n";
-  if (Type == PrintType::Summary)
-    return;
-
-  printIndent(OS, IndentLevel);
-  OS << "NumStatusCalls=" << NumStatusCalls << "\n";
-  printIndent(OS, IndentLevel);
-  OS << "NumOpenFileForReadCalls=" << NumOpenFileForReadCalls << "\n";
-  printIndent(OS, IndentLevel);
-  OS << "NumDirBeginCalls=" << NumDirBeginCalls << "\n";
-  printIndent(OS, IndentLevel);
-  OS << "NumGetRealPathCalls=" << NumGetRealPathCalls << "\n";
-  printIndent(OS, IndentLevel);
-  OS << "NumExistsCalls=" << NumExistsCalls << "\n";
-  printIndent(OS, IndentLevel);
-  OS << "NumIsLocalCalls=" << NumIsLocalCalls << "\n";
-
-  if (Type == PrintType::Contents)
-    Type = PrintType::Summary;
-  getUnderlyingFS().print(OS, Type, IndentLevel + 1);
-}
-
 const char FileSystem::ID = 0;
 const char OverlayFileSystem::ID = 0;
 const char ProxyFileSystem::ID = 0;
 const char InMemoryFileSystem::ID = 0;
 const char RedirectingFileSystem::ID = 0;
-const char TracingFileSystem::ID = 0;

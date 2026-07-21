@@ -102,7 +102,7 @@ vcompress.vm v8, v16, v24
 # CHECK-NEXT: [2]   - VLEN512SiFive7PipeA:1
 # CHECK-NEXT: [3]   - VLEN512SiFive7PipeAB:2 VLEN512SiFive7PipeA, VLEN512SiFive7PipeB
 # CHECK-NEXT: [4]   - VLEN512SiFive7PipeB:1
-# CHECK-NEXT: [5]   - VLEN512SiFive7VA:1
+# CHECK-NEXT: [5]   - VLEN512SiFive7VA1:1
 # CHECK-NEXT: [6]   - VLEN512SiFive7VCQ:1
 # CHECK-NEXT: [7]   - VLEN512SiFive7VL:1
 # CHECK-NEXT: [8]   - VLEN512SiFive7VS:1
@@ -120,100 +120,100 @@ vcompress.vm v8, v16, v24
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      39    12.00                        39    VLEN512SiFive7VA[1,13],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    12.00                        39    VLEN512SiFive7VA[1,13],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      15    15.00                        15    VLEN512SiFive7VA[1,16],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      39    12.00                        39    VLEN512SiFive7VA1[1,13],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    12.00                        39    VLEN512SiFive7VA1[1,13],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      15    15.00                        15    VLEN512SiFive7VA1[1,16],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      39    20.00                        39    VLEN512SiFive7VA[1,21],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    20.00                        39    VLEN512SiFive7VA[1,21],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      23    23.00                        23    VLEN512SiFive7VA[1,24],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      39    20.00                        39    VLEN512SiFive7VA1[1,21],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    20.00                        39    VLEN512SiFive7VA1[1,21],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    23.00                        23    VLEN512SiFive7VA1[1,24],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      39    36.00                        39    VLEN512SiFive7VA[1,37],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    36.00                        39    VLEN512SiFive7VA[1,37],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    39.00                        39    VLEN512SiFive7VA[1,40],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      39    36.00                        39    VLEN512SiFive7VA1[1,37],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    36.00                        39    VLEN512SiFive7VA1[1,37],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    39.00                        39    VLEN512SiFive7VA1[1,40],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      39    68.00                        39    VLEN512SiFive7VA[1,69],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    68.00                        39    VLEN512SiFive7VA[1,69],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      71    71.00                        71    VLEN512SiFive7VA[1,72],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      39    68.00                        39    VLEN512SiFive7VA1[1,69],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    68.00                        39    VLEN512SiFive7VA1[1,69],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    71.00                        71    VLEN512SiFive7VA1[1,72],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      39    132.00                       39    VLEN512SiFive7VA[1,133],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    132.00                       39    VLEN512SiFive7VA[1,133],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      135   135.00                       135   VLEN512SiFive7VA[1,136],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      39    132.00                       39    VLEN512SiFive7VA1[1,133],VLEN512SiFive7VCQ VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    132.00                       39    VLEN512SiFive7VA1[1,133],VLEN512SiFive7VCQ VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   135.00                       135   VLEN512SiFive7VA1[1,136],VLEN512SiFive7VCQ VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      39    260.00                       39    VLEN512SiFive7VA[1,261],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    260.00                       39    VLEN512SiFive7VA[1,261],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      263   263.00                       263   VLEN512SiFive7VA[1,264],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      39    260.00                       39    VLEN512SiFive7VA1[1,261],VLEN512SiFive7VCQ VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    260.00                       39    VLEN512SiFive7VA1[1,261],VLEN512SiFive7VCQ VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      263   263.00                       263   VLEN512SiFive7VA1[1,264],VLEN512SiFive7VCQ VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      39    516.00                       39    VLEN512SiFive7VA[1,517],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    516.00                       39    VLEN512SiFive7VA[1,517],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      519   519.00                       519   VLEN512SiFive7VA[1,520],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      39    516.00                       39    VLEN512SiFive7VA1[1,517],VLEN512SiFive7VCQ VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    516.00                       39    VLEN512SiFive7VA1[1,517],VLEN512SiFive7VCQ VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      519   519.00                       519   VLEN512SiFive7VA1[1,520],VLEN512SiFive7VCQ VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      23    12.00                        23    VLEN512SiFive7VA[1,13],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      23    12.00                        23    VLEN512SiFive7VA[1,13],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      15    15.00                        15    VLEN512SiFive7VA[1,16],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      23    12.00                        23    VLEN512SiFive7VA1[1,13],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    12.00                        23    VLEN512SiFive7VA1[1,13],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      15    15.00                        15    VLEN512SiFive7VA1[1,16],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      23    20.00                        23    VLEN512SiFive7VA[1,21],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      23    20.00                        23    VLEN512SiFive7VA[1,21],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      23    23.00                        23    VLEN512SiFive7VA[1,24],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      23    20.00                        23    VLEN512SiFive7VA1[1,21],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    20.00                        23    VLEN512SiFive7VA1[1,21],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    23.00                        23    VLEN512SiFive7VA1[1,24],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      23    36.00                        23    VLEN512SiFive7VA[1,37],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      23    36.00                        23    VLEN512SiFive7VA[1,37],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    39.00                        39    VLEN512SiFive7VA[1,40],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      23    36.00                        23    VLEN512SiFive7VA1[1,37],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    36.00                        23    VLEN512SiFive7VA1[1,37],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    39.00                        39    VLEN512SiFive7VA1[1,40],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      23    68.00                        23    VLEN512SiFive7VA[1,69],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      23    68.00                        23    VLEN512SiFive7VA[1,69],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      71    71.00                        71    VLEN512SiFive7VA[1,72],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      23    68.00                        23    VLEN512SiFive7VA1[1,69],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    68.00                        23    VLEN512SiFive7VA1[1,69],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    71.00                        71    VLEN512SiFive7VA1[1,72],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      23    132.00                       23    VLEN512SiFive7VA[1,133],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      23    132.00                       23    VLEN512SiFive7VA[1,133],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      135   135.00                       135   VLEN512SiFive7VA[1,136],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      23    132.00                       23    VLEN512SiFive7VA1[1,133],VLEN512SiFive7VCQ VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    132.00                       23    VLEN512SiFive7VA1[1,133],VLEN512SiFive7VCQ VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   135.00                       135   VLEN512SiFive7VA1[1,136],VLEN512SiFive7VCQ VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      23    260.00                       23    VLEN512SiFive7VA[1,261],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      23    260.00                       23    VLEN512SiFive7VA[1,261],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      263   263.00                       263   VLEN512SiFive7VA[1,264],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      23    260.00                       23    VLEN512SiFive7VA1[1,261],VLEN512SiFive7VCQ VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    260.00                       23    VLEN512SiFive7VA1[1,261],VLEN512SiFive7VCQ VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      263   263.00                       263   VLEN512SiFive7VA1[1,264],VLEN512SiFive7VCQ VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      15    12.00                        15    VLEN512SiFive7VA[1,13],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      15    12.00                        15    VLEN512SiFive7VA[1,13],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      15    15.00                        15    VLEN512SiFive7VA[1,16],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      15    12.00                        15    VLEN512SiFive7VA1[1,13],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      15    12.00                        15    VLEN512SiFive7VA1[1,13],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      15    15.00                        15    VLEN512SiFive7VA1[1,16],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      15    20.00                        15    VLEN512SiFive7VA[1,21],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      15    20.00                        15    VLEN512SiFive7VA[1,21],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      23    23.00                        23    VLEN512SiFive7VA[1,24],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      15    20.00                        15    VLEN512SiFive7VA1[1,21],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      15    20.00                        15    VLEN512SiFive7VA1[1,21],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    23.00                        23    VLEN512SiFive7VA1[1,24],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      15    36.00                        15    VLEN512SiFive7VA[1,37],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      15    36.00                        15    VLEN512SiFive7VA[1,37],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    39.00                        39    VLEN512SiFive7VA[1,40],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      15    36.00                        15    VLEN512SiFive7VA1[1,37],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      15    36.00                        15    VLEN512SiFive7VA1[1,37],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    39.00                        39    VLEN512SiFive7VA1[1,40],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      15    68.00                        15    VLEN512SiFive7VA[1,69],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      15    68.00                        15    VLEN512SiFive7VA[1,69],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      71    71.00                        71    VLEN512SiFive7VA[1,72],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      15    68.00                        15    VLEN512SiFive7VA1[1,69],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      15    68.00                        15    VLEN512SiFive7VA1[1,69],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    71.00                        71    VLEN512SiFive7VA1[1,72],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      15    132.00                       15    VLEN512SiFive7VA[1,133],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      15    132.00                       15    VLEN512SiFive7VA[1,133],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      135   135.00                       135   VLEN512SiFive7VA[1,136],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      15    132.00                       15    VLEN512SiFive7VA1[1,133],VLEN512SiFive7VCQ VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      15    132.00                       15    VLEN512SiFive7VA1[1,133],VLEN512SiFive7VCQ VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   135.00                       135   VLEN512SiFive7VA1[1,136],VLEN512SiFive7VCQ VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      11    12.00                        11    VLEN512SiFive7VA[1,13],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      11    12.00                        11    VLEN512SiFive7VA[1,13],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      15    15.00                        15    VLEN512SiFive7VA[1,16],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      11    12.00                        11    VLEN512SiFive7VA1[1,13],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      11    12.00                        11    VLEN512SiFive7VA1[1,13],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      15    15.00                        15    VLEN512SiFive7VA1[1,16],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      11    20.00                        11    VLEN512SiFive7VA[1,21],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      11    20.00                        11    VLEN512SiFive7VA[1,21],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      23    23.00                        23    VLEN512SiFive7VA[1,24],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      11    20.00                        11    VLEN512SiFive7VA1[1,21],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      11    20.00                        11    VLEN512SiFive7VA1[1,21],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    23.00                        23    VLEN512SiFive7VA1[1,24],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      11    36.00                        11    VLEN512SiFive7VA[1,37],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      11    36.00                        11    VLEN512SiFive7VA[1,37],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      39    39.00                        39    VLEN512SiFive7VA[1,40],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      11    36.00                        11    VLEN512SiFive7VA1[1,37],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      11    36.00                        11    VLEN512SiFive7VA1[1,37],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    39.00                        39    VLEN512SiFive7VA1[1,40],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      11    68.00                        11    VLEN512SiFive7VA[1,69],VLEN512SiFive7VCQ   VRGATHER_VV                vrgather.vv	v8, v16, v24
-# CHECK-NEXT:  1      11    68.00                        11    VLEN512SiFive7VA[1,69],VLEN512SiFive7VCQ   VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
-# CHECK-NEXT:  1      71    71.00                        71    VLEN512SiFive7VA[1,72],VLEN512SiFive7VCQ   VCOMPRESS_VM               vcompress.vm	v8, v16, v24
+# CHECK-NEXT:  1      11    68.00                        11    VLEN512SiFive7VA1[1,69],VLEN512SiFive7VCQ  VRGATHER_VV                vrgather.vv	v8, v16, v24
+# CHECK-NEXT:  1      11    68.00                        11    VLEN512SiFive7VA1[1,69],VLEN512SiFive7VCQ  VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    71.00                        71    VLEN512SiFive7VA1[1,72],VLEN512SiFive7VCQ  VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - VLEN512SiFive7FDiv
 # CHECK-NEXT: [1]   - VLEN512SiFive7IDiv
 # CHECK-NEXT: [2]   - VLEN512SiFive7PipeA
 # CHECK-NEXT: [3]   - VLEN512SiFive7PipeB
-# CHECK-NEXT: [4]   - VLEN512SiFive7VA
+# CHECK-NEXT: [4]   - VLEN512SiFive7VA1
 # CHECK-NEXT: [5]   - VLEN512SiFive7VCQ
 # CHECK-NEXT: [6]   - VLEN512SiFive7VL
 # CHECK-NEXT: [7]   - VLEN512SiFive7VS

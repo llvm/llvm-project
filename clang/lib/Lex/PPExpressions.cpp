@@ -429,7 +429,7 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     } else {
       assert(Result.Val.getBitWidth() == Val.getBitWidth() &&
              "intmax_t smaller than char/wchar_t?");
-      Result.Val = Val;
+      Result.Val = std::move(Val);
     }
 
     // Consume the token.

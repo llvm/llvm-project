@@ -480,7 +480,7 @@ protected:
 
     // Function DI
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
+    DITypeArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *FuncType =
         DBuilder.createSubroutineType(ParamTypes);
     auto *CU = DBuilder.createCompileUnit(
@@ -780,11 +780,13 @@ TEST(CloneFunction, CloneFunctionWithSubprograms) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "my_operator", scope: !1, unit: !0, retainedNodes: !{!4})
+    !3 = distinct !DISubprogram(name: "my_operator", scope: !1, type: !8, unit: !0, retainedNodes: !{!4})
     !4 = !DILocalVariable(name: "awaitables", scope: !3)
-    !5 = distinct !DISubprogram(name: "test", scope: !3, unit: !0)
+    !5 = distinct !DISubprogram(name: "test", scope: !3, type: !8, unit: !0)
     !6 = !DILocation(line: 55, column: 15, scope: !3, inlinedAt: !7)
     !7 = distinct !DILocation(line: 73, column: 14, scope: !5)
+    !8 = !DISubroutineType(types: !9)
+    !9 = !{null}
   )";
 
   LLVMContext Context;
@@ -808,6 +810,154 @@ TEST(CloneFunction, CloneFunctionWithSubprograms) {
   EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
 }
 
+TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
+  StringRef ImplAssembly = R"(
+    declare void @llvm.dbg.declare(metadata, metadata, metadata)
+
+    define void @test() !dbg !3 {
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !5, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !25, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !28, metadata !DIExpression()), !dbg !8
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !30, metadata !DIExpression()), !dbg !8
+      ret void
+    }
+
+    declare void @cloned()
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2}
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, enums: !{!14})
+    !1 = !DIFile(filename: "test.cpp",  directory: "")
+    !2 = !{i32 1, !"Debug Info Version", i32 3}
+    !3 = distinct !DISubprogram(name: "test", scope: !1, type: !31, unit: !0, retainedNodes: !9)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !1, type: !31, unit: !0, retainedNodes: !{!5})
+    !5 = !DILocalVariable(name: "awaitables", scope: !4, type: !23)
+    !6 = distinct !DILexicalBlock(scope: !4, file: !1, line: 1)
+    !7 = !DILocation(line: 1, scope: !6, inlinedAt: !8)
+    !8 = !DILocation(line: 10, scope: !3)
+    !9 = !{!15, !17, !18, !23, !26, !28, !30, !33}
+    !14 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, scope: !0, file: !1, line: 13, size: 200, elements: !{})
+    !15 = !DILocalVariable(name: "a", scope: !3)
+    !16 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, scope: !3, file: !1, line: 13, size: 208, elements: !{})
+    !17 = !DIImportedEntity(tag: DW_TAG_imported_declaration, name: "imported_l", file: !1, line: 14, scope: !3, entity: !16)
+    !18 = !DILabel(scope: !3, name: "l", file: !1, line: 22)
+    !22 = !DIBasicType(name: "real", size: 32, align: 32, encoding: DW_ATE_float)
+    !23 = !DIDerivedType(name: "local_float", tag: DW_TAG_const_type, baseType: !22, scope: !3)
+    !float_type = !{!23}
+    !25 = !DILocalVariable(name: "inlined2", scope: !4, type: !23)
+    !inlined2 = !{!25}
+    !26 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, name: "mystruct", scope: !3, file: !1, line: 13, size: 208, elements: !{})
+    !27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !26, size: 64)
+    !28 = !DILocalVariable(name: "ptr", scope: !3, type: !27)
+    !29 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !27)
+    !30 = !DILocalVariable(name: "const_ptr", scope: !3, type: !29)
+    !31 = !DISubroutineType(types: !32)
+    !32 = !{null}
+    !33 = !DIGlobalVariableExpression(var: !34, expr: !DIExpression())
+    !34 = distinct !DIGlobalVariable(name: "global_var", scope: !3, file: !1, line: 5, type: !22, isLocal: true, isDefinition: true)
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+
+  auto ImplModule = parseAssemblyString(ImplAssembly, Error, Context);
+  EXPECT_TRUE(ImplModule != nullptr);
+  auto *Func = ImplModule->getFunction("test");
+  EXPECT_TRUE(Func != nullptr);
+  auto *ClonedFunc = ImplModule->getFunction("cloned");
+  EXPECT_TRUE(ClonedFunc != nullptr);
+
+  EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
+
+  ValueToValueMapTy VMap;
+  SmallVector<ReturnInst *, 8> Returns;
+  ClonedCodeInfo CCI;
+  CloneFunctionInto(ClonedFunc, Func, VMap,
+                    CloneFunctionChangeType::GlobalChanges, Returns, "", &CCI);
+
+  EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
+
+  // Check that retained and local types are copied.
+  DISubprogram *FuncSP = Func->getSubprogram();
+  DISubprogram *ClonedSP = ClonedFunc->getSubprogram();
+  EXPECT_NE(FuncSP, nullptr);
+  EXPECT_NE(ClonedSP, nullptr);
+  EXPECT_EQ(FuncSP->getRetainedNodes().size(), 8u);
+  // DIGlobalVariableExpressions should be excluded from retainedNodes of the
+  // cloned DISubprogram, as we don't clone them.
+  EXPECT_EQ(FuncSP->getRetainedNodes().size() - 1,
+            ClonedSP->getRetainedNodes().size());
+
+  // Ensure that Orig node is a clone of Copy by checking that they are
+  // different objects with the same name.
+  auto CheckNodeIsCloned = [](auto *Orig, auto *Copy) {
+    EXPECT_FALSE(Orig->getName().empty());
+    EXPECT_EQ(Orig->getName(), Copy->getName());
+
+    // Check that node was copied.
+    EXPECT_NE(Orig, Copy);
+  };
+
+  // Check that retained nodes are cloned.
+  unsigned I = 0;
+  auto CheckRetainedNode = [&](auto *Copy) {
+    // The order of retained nodes should be preserved.
+    auto *Node =
+        cast<std::decay_t<decltype(*Copy)>>(FuncSP->getRetainedNodes()[I]);
+
+    CheckNodeIsCloned(Node, Copy);
+
+    ++I;
+  };
+  ClonedSP->forEachRetainedNode(
+      CheckRetainedNode, CheckRetainedNode, CheckRetainedNode,
+      CheckRetainedNode, [](MDNode *_) {
+        FAIL() << "DIGlobalVariableExpression should not be cloned.";
+      });
+
+  auto ToDerived = [](const DIType *Ty) { return cast<DIDerivedType>(Ty); };
+
+  // Check that derived type (pointer type) referencing local type is remapped
+  // in the cloned function even though it doesn't have an explicit scope.
+  auto CheckPointerTypeIsCloned = [&](const DIType *PtrTy,
+                                      const DIType *PtrTyCopy) {
+    auto *PointerType = ToDerived(PtrTy);
+    auto *PointerTypeCopy = ToDerived(PtrTyCopy);
+    ASSERT_EQ(PointerType->getBaseType()->getName(), "mystruct");
+    ASSERT_EQ(PointerType->getScope(), nullptr);
+    CheckNodeIsCloned(PointerType->getBaseType(),
+                      PointerTypeCopy->getBaseType());
+  };
+  auto *PointerOrig = cast<DILocalVariable>(FuncSP->getRetainedNodes()[5]);
+  auto *PointerCopy = cast<DILocalVariable>(ClonedSP->getRetainedNodes()[5]);
+  ASSERT_EQ(PointerOrig->getName(), "ptr");
+  CheckPointerTypeIsCloned(PointerOrig->getType(), PointerCopy->getType());
+
+  // Check that scopeless derived type (const type) referencing scopeless
+  // derived type (pointer type) referencing local type gets cloned.
+  auto *ConstPointerOrig = cast<DILocalVariable>(FuncSP->getRetainedNodes()[6]);
+  auto *ConstPointerCopy =
+      cast<DILocalVariable>(ClonedSP->getRetainedNodes()[6]);
+  ASSERT_EQ(ConstPointerOrig->getName(), "const_ptr");
+  auto *ConstPointerTypeOrig = ToDerived(ConstPointerOrig->getType());
+  auto *ConstPointerTypeCopy = ToDerived(ConstPointerCopy->getType());
+  ASSERT_NE(ConstPointerOrig, ConstPointerCopy);
+  CheckPointerTypeIsCloned(ToDerived(ConstPointerTypeOrig)->getBaseType(),
+                           ToDerived(ConstPointerTypeCopy)->getBaseType());
+
+  auto *FloatType = dyn_cast<DIType>(
+      ImplModule->getNamedMetadata("float_type")->getOperand(0));
+  EXPECT_EQ(FloatType->getName(), "local_float");
+  EXPECT_TRUE(VMap.MD().contains(FloatType));
+  EXPECT_NE(FloatType, VMap.MD()[FloatType]);
+
+  auto *Inlined2 = dyn_cast<DILocalVariable>(
+      ImplModule->getNamedMetadata("inlined2")->getOperand(0));
+  EXPECT_EQ(Inlined2->getName(), "inlined2");
+  EXPECT_TRUE(VMap.MD().contains(Inlined2));
+  EXPECT_EQ(Inlined2, VMap.MD()[Inlined2]);
+}
+
 TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
   StringRef ImplAssembly = R"(
     declare void @llvm.dbg.declare(metadata, metadata, metadata)
@@ -824,12 +974,14 @@ TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5})
+    !3 = distinct !DISubprogram(name: "test", scope: !0, type: !9, unit: !0)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, type: !9, unit: !0, retainedNodes: !{!5})
     !5 = !DILocalVariable(name: "awaitables", scope: !4)
     !6 = distinct !DILexicalBlock(scope: !4, file: !1, line: 1)
     !7 = !DILocation(line: 1, scope: !6, inlinedAt: !8)
     !8 = !DILocation(line: 10, scope: !3)
+    !9 = !DISubroutineType(types: !10)
+    !10 = !{null}
   )";
 
   LLVMContext Context;
@@ -870,12 +1022,14 @@ TEST(CloneFunction, CloneFunctionToDifferentModule) {
     !llvm.module.flags = !{!0}
     !llvm.dbg.cu = !{!2, !6}
     !0 = !{i32 1, !"Debug Info Version", i32 3}
-    !1 = distinct !DISubprogram(unit: !2)
+    !1 = distinct !DISubprogram(type: !7, unit: !2)
     !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3)
     !3 = !DIFile(filename: "foo.c", directory: "/tmp")
-    !4 = distinct !DISubprogram(unit: !2)
+    !4 = distinct !DISubprogram(type: !7, unit: !2)
     !5 = !DILocation(line: 4, scope: !1)
     !6 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3)
+    !7 = !DISubroutineType(types: !8)
+    !8 = !{null}
   )";
   StringRef DeclAssembly = R"(
     declare void @foo()
@@ -973,7 +1127,7 @@ protected:
 
     // Create debug info
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
+    DITypeArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *DFuncType = DBuilder.createSubroutineType(ParamTypes);
     auto *CU = DBuilder.createCompileUnit(
         DISourceLanguageName(dwarf::DW_LANG_C99),
@@ -1048,6 +1202,15 @@ TEST_F(CloneModule, Subprogram) {
   EXPECT_EQ(SP->getName(), "f");
   EXPECT_EQ(SP->getFile()->getFilename(), "filename.c");
   EXPECT_EQ(SP->getLine(), (unsigned)4);
+
+  // Check static locals have the correct scope.
+  MDNodeArray LocalDeclsArray = SP->getRetainedNodes();
+  EXPECT_EQ(LocalDeclsArray.size(), 2U);
+  for (auto *Node : LocalDeclsArray) {
+    auto *GVExpr = cast<DIGlobalVariableExpression>(Node);
+    DIGlobalVariable *GV = GVExpr->getVariable();
+    EXPECT_EQ(GV->getScope(), SP);
+  }
 }
 
 TEST_F(CloneModule, FunctionDeclarationMetadata) {
@@ -1105,14 +1268,6 @@ TEST_F(CloneModule, CompileUnit) {
   DISubprogram *SP = NewM->getFunction("f")->getSubprogram();
   EXPECT_TRUE(SP != nullptr);
   EXPECT_EQ(SP->getUnit(), CU);
-
-  // Check globals listed in CU have the correct scope
-  DIGlobalVariableExpressionArray GlobalArray = CU->getGlobalVariables();
-  EXPECT_EQ(GlobalArray.size(), 2U);
-  for (DIGlobalVariableExpression *GVExpr : GlobalArray) {
-    DIGlobalVariable *GV = GVExpr->getVariable();
-    EXPECT_EQ(GV->getScope(), SP);
-  }
 }
 
 TEST_F(CloneModule, Comdat) {
@@ -1194,13 +1349,15 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0, keyInstructions: true)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5}, keyInstructions: true)
+    !3 = distinct !DISubprogram(name: "test", scope: !0, type: !10, unit: !0, keyInstructions: true)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, type: !10, unit: !0, retainedNodes: !{!5}, keyInstructions: true)
     !5 = !DILocalVariable(name: "awaitables", scope: !4)
     !6 = !DILocation(line: 1, scope: !4, inlinedAt: !8, atomGroup: 1, atomRank: 1)
     !7 = !DILocation(line: 2, scope: !3, atomGroup: 1, atomRank: 1)
     !8 = !DILocation(line: 3, scope: !3, atomGroup: 1, atomRank: 1)
     !9 = !DILocation(line: 4, scope: !3, atomGroup: 2, atomRank: 1)
+    !10 = !DISubroutineType(types: !11)
+    !11 = !{null}
   )");
 
   ASSERT_FALSE(verifyModule(*M, &errs()));

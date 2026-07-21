@@ -21,7 +21,7 @@ define i32 @foo(ptr addrspace(1) %p) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 1, [[N_VEC]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[N_VEC]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[N_VEC]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 6, [[TMP2]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -70,11 +70,11 @@ define i32 @foo(ptr addrspace(1) %p) {
 entry:
   br label %outer
 
-outer:                                            ; preds = %outer_latch, %entry
+outer:
   %iv = phi i64 [ 2, %entry ], [ %iv.next, %outer_latch ]
   br label %inner
 
-inner:                                            ; preds = %inner, %outer
+inner:
   %0 = phi i32 [ %2, %inner ], [ 0, %outer ]
   %a = phi i32 [ %3, %inner ], [ 1, %outer ]
   %b = phi i32 [ %1, %inner ], [ 6, %outer ]
@@ -85,12 +85,12 @@ inner:                                            ; preds = %inner, %outer
   %5 = icmp ugt i64 %iv, %4
   br i1 %5, label %inner, label %outer_latch
 
-outer_latch:                                      ; preds = %inner
+outer_latch:
   store atomic i32 %2, ptr addrspace(1) %p unordered, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %6 = icmp ugt i64 %iv, 63
   br i1 %6, label %exit, label %outer
 
-exit:                                             ; preds = %outer_latch
+exit:
   ret i32 0
 }

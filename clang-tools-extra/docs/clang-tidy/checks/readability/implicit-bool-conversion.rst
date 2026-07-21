@@ -123,6 +123,9 @@ Some additional accommodations are made for C:
 - ``bool`` (or ``_Bool``) operands in logical operators (``&&``, ``||``) are
   ignored.
 
+- ``bool`` (or ``_Bool``) conditions in conditional operators (``?:``) are
+  ignored.
+
 Occurrences of implicit conversions inside macros and template instantiations
 are deliberately ignored, as it is not clear how to deal with such cases.
 
@@ -138,6 +141,13 @@ Options
 
    When `true`, the check will allow conditional pointer conversions. Default
    is `false`.
+
+.. option::  AllowLogicalOperatorConversion
+
+   When `true`, the check will suppress warnings for implicit conversions of
+   logical operator results (``&&``, ``||``, ``!``) to ``bool``. These
+   operators always produce values equal to ``0`` or ``1``, so the conversion
+   is safe. Default is `false`.
 
 .. option::  UseUpperCaseLiteralSuffix
 

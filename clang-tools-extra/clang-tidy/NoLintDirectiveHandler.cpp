@@ -213,18 +213,19 @@ formNoLintBlocks(SmallVector<NoLintToken> NoLints, const SourceManager &SrcMgr,
   // inner-most block first, then the next level up, and so on. This is
   // essentially a last-in-first-out/stack system.
   for (NoLintToken &NoLint : NoLints) {
-    if (NoLint.Type == NoLintType::NoLintBegin)
+    if (NoLint.Type == NoLintType::NoLintBegin) {
       // A new block is being started. Add it to the stack.
       Stack.emplace_back(std::move(NoLint));
-    else if (NoLint.Type == NoLintType::NoLintEnd) {
+    } else if (NoLint.Type == NoLintType::NoLintEnd) {
       if (!Stack.empty() && Stack.back().checks() == NoLint.checks()) {
         // The previous block is being closed. Pop one element off the stack.
         CompletedBlocks.emplace_back(Stack.back().Pos, NoLint.Pos,
                                      std::move(Stack.back().ChecksGlob));
         Stack.pop_back();
-      } else
+      } else {
         // Trying to close the wrong block.
         NoLintErrors.emplace_back(makeNoLintError(SrcMgr, File, NoLint));
+      }
     }
   }
 

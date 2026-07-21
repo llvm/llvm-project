@@ -1,9 +1,6 @@
 #ifndef STD_LLDB_COMPRESSED_PAIR_H
 #define STD_LLDB_COMPRESSED_PAIR_H
 
-#include <type_traits>
-#include <utility> // for std::forward
-
 // COMPRESSED_PAIR_REV versions:
 // 0 -> Post-c88580c layout
 // 1 -> Post-27c83382d83dc layout
@@ -14,6 +11,37 @@
 
 namespace std {
 namespace __lldb {
+
+// Type-traits definitions without pulling in STL headers.
+
+using size_t = decltype(sizeof(0));
+
+// Stripped down version of std::integral_constant
+template <class _Tp, _Tp __v> struct integral_constant {
+  static inline constexpr const _Tp value = __v;
+};
+
+template <class _Tp>
+using remove_reference_t [[gnu::nodebug]] = __remove_reference_t(_Tp);
+
+template <class _Tp>
+constexpr _Tp &&forward(remove_reference_t<_Tp> &&__t) noexcept {
+  return static_cast<_Tp &&>(__t);
+}
+
+template <class _Tp>
+constexpr _Tp &&forward(remove_reference_t<_Tp> &__t) noexcept {
+  return static_cast<_Tp &&>(__t);
+}
+
+template <class _Tp>
+struct is_empty : integral_constant<bool, __is_empty(_Tp)> {};
+
+template <class _Tp>
+struct is_final : public integral_constant<bool, __is_final(_Tp)> {};
+
+template <typename T>
+struct is_reference : integral_constant<bool, __is_reference(T)> {};
 
 #if __has_cpp_attribute(msvc::no_unique_address)
 #define _LLDB_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
@@ -31,15 +59,11 @@ template <class _Tp>
 inline const size_t __datasizeof_v =
     __builtin_offsetof(_FirstPaddingByte<_Tp>, __first_padding_byte_);
 
-template <class _Tp>
-struct __lldb_is_final : public integral_constant<bool, __is_final(_Tp)> {};
-
 // The legacy layout has been patched, see
 // https://github.com/llvm/llvm-project/pull/142516.
 #if COMPRESSED_PAIR_REV == 1
 template <class _ToPad> class __compressed_pair_padding {
-  char __padding_[((is_empty<_ToPad>::value &&
-                    !__lldb_is_final<_ToPad>::value) ||
+  char __padding_[((is_empty<_ToPad>::value && !is_final<_ToPad>::value) ||
                    is_reference<_ToPad>::value)
                       ? 0
                       : sizeof(_ToPad) - __datasizeof_v<_ToPad>];
@@ -47,7 +71,7 @@ template <class _ToPad> class __compressed_pair_padding {
 #elif COMPRESSED_PAIR_REV > 1 && COMPRESSED_PAIR_REV < 4
 template <class _ToPad>
 inline const bool __is_reference_or_unpadded_object =
-    (std::is_empty<_ToPad>::value && !__lldb_is_final<_ToPad>::value) ||
+    (is_empty<_ToPad>::value && !is_final<_ToPad>::value) ||
     sizeof(_ToPad) == __datasizeof_v<_ToPad>;
 
 template <class _Tp>
@@ -69,8 +93,7 @@ struct __value_init_tag {};
 struct __default_init_tag {};
 
 template <class _Tp, int _Idx,
-          bool _CanBeEmptyBase =
-              std::is_empty<_Tp>::value && !std::is_final<_Tp>::value>
+          bool _CanBeEmptyBase = is_empty<_Tp>::value && !is_final<_Tp>::value>
 struct __compressed_pair_elem {
   explicit __compressed_pair_elem(__default_init_tag) {}
   explicit __compressed_pair_elem(__value_init_tag) : __value_() {}
@@ -105,7 +128,7 @@ public:
 
   template <class _U1, class _U2>
   explicit __compressed_pair(_U1 &&__t1, _U2 &&__t2)
-      : _Base1(std::forward<_U1>(__t1)), _Base2(std::forward<_U2>(__t2)) {}
+      : _Base1(forward<_U1>(__t1)), _Base2(forward<_U2>(__t2)) {}
 
   _T1 &first() { return static_cast<_Base1 &>(*this).__get(); }
 };

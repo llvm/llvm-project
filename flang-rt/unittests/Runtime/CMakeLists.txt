@@ -18,10 +18,12 @@ add_flangrt_unittest(RuntimeTests
   CrashHandlerFixture.cpp
   Derived.cpp
   Descriptor.cpp
+  Exceptions.cpp
   ExternalIOTest.cpp
   Format.cpp
   InputExtensions.cpp
   Inquiry.cpp
+  LeadingZeroTest.cpp
   ListInputTest.cpp
   LogicalFormatTest.cpp
   Matmul.cpp

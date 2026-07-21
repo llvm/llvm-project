@@ -64,10 +64,8 @@ static bool replaceConditionalBranchesOnConstant(Instruction *II,
                                   UnsimplifiedUsers.end());
 
   for (auto &VH : Worklist) {
-    BranchInst *BI = dyn_cast_or_null<BranchInst>(VH);
+    CondBrInst *BI = dyn_cast_or_null<CondBrInst>(VH);
     if (!BI)
-      continue;
-    if (BI->isUnconditional())
       continue;
 
     BasicBlock *Target, *Other;
@@ -85,7 +83,7 @@ static bool replaceConditionalBranchesOnConstant(Instruction *II,
       BasicBlock *Source = BI->getParent();
       Other->removePredecessor(Source);
 
-      Instruction *NewBI = BranchInst::Create(Target, Source);
+      Instruction *NewBI = UncondBrInst::Create(Target, Source);
       NewBI->setDebugLoc(BI->getDebugLoc());
       BI->eraseFromParent();
 

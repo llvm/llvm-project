@@ -1,4 +1,22 @@
-{"Version":"23.0", "CanonicalName": "driverkit23.0", "MaximumDeploymentTarget": "23.0.99",
- "SupportedTargets": {
-   "driverkit": {"Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "driverkit", "LLVMTargetTripleEnvironment": "", "SystemPrefix": "\/System\/DriverKit"}
-}}
+{
+  "CanonicalName": "driverkit23.0",
+  "Version": "23.0",
+  "IsBaseSDK": "YES",
+  "DisplayName": "DriverKit 23.0",
+  "MinimalDisplayName": "23.0",
+  "SupportedTargets": {
+    "driverkit": {
+      "PlatformFamilyName": "DriverKit",
+      "PlatformFamilyDisplayName": "DriverKit",
+      "Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "driverkit", "LLVMTargetTripleEnvironment": "",
+      "BuildVersionPlatformID": "10",
+      "SystemPrefix": "/System/DriverKit",
+      "DefaultDeploymentTarget": "23.0",
+      "RecommendedDeploymentTarget": "19.0",
+      "MinimumDeploymentTarget": "19.0", "MaximumDeploymentTarget": "23.0.99",
+      "ValidDeploymentTargets": ["19.0", "20.0", "20.1", "20.2", "20.3", "20.4", "21.0", "21.4", "21.6", "22.1", "22.2", "22.3", "22.4", "22.5", "23.0"]
+    }
+  },
+  "DefaultDeploymentTarget": "23.0",
+  "MaximumDeploymentTarget": "23.0.99"
+}

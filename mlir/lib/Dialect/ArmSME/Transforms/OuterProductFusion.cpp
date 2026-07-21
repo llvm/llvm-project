@@ -155,17 +155,17 @@ public:
     arm_sme::CombiningKind kind = op.getKind();
     if (kind == arm_sme::CombiningKind::Add) {
       TypeSwitch<Operation *>(extOp)
-          .Case<arith::ExtFOp>([&](auto) {
+          .Case([&](arith::ExtFOp) {
             rewriter.replaceOpWithNewOp<arm_sme::FMopa2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Case<arith::ExtSIOp>([&](auto) {
+          .Case([&](arith::ExtSIOp) {
             rewriter.replaceOpWithNewOp<arm_sme::SMopa2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Case<arith::ExtUIOp>([&](auto) {
+          .Case([&](arith::ExtUIOp) {
             rewriter.replaceOpWithNewOp<arm_sme::UMopa2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
@@ -173,17 +173,17 @@ public:
           .DefaultUnreachable("unexpected extend op!");
     } else if (kind == arm_sme::CombiningKind::Sub) {
       TypeSwitch<Operation *>(extOp)
-          .Case<arith::ExtFOp>([&](auto) {
+          .Case([&](arith::ExtFOp) {
             rewriter.replaceOpWithNewOp<arm_sme::FMops2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Case<arith::ExtSIOp>([&](auto) {
+          .Case([&](arith::ExtSIOp) {
             rewriter.replaceOpWithNewOp<arm_sme::SMops2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Case<arith::ExtUIOp>([&](auto) {
+          .Case([&](arith::ExtUIOp) {
             rewriter.replaceOpWithNewOp<arm_sme::UMops2WayOp>(
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());

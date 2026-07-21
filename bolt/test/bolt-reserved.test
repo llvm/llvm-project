@@ -1,0 +1,33 @@
+# Check that BOLT marks segment containing .bolt_reserved as executable
+
+# RUN: split-file %s %t
+# RUN: %clang %cflags %t/src.c -Wl,--script=%t/ld.script -Wl,-q -o %t.exe
+
+# Confirm the segment is not executable
+# RUN: llvm-readelf -We %t.exe | FileCheck %s --check-prefix=CHECK-SEG-BEFORE
+
+# Capture section VMA and offset
+# CHECK-SEG-BEFORE: Section Headers:
+# CHECK-SEG-BEFORE: .bolt.reserved PROGBITS [[#ADDR:]] [[#OFF:]]
+
+# Config segment flags
+# CHECK-SEG-BEFORE: Program Headers:
+# CHECK-SEG-BEFORE: LOAD 0x{{0*}}[[#OFF]] 0x{{0*}}[[#ADDR]] {{.*}} R 0x200000
+
+# RUN: llvm-bolt %t.exe -o %t.bolt
+# Confirm the segment is now marked as executable
+# RUN: llvm-readelf -We %t.bolt | FileCheck %s --check-prefix=CHECK-SEG-AFTER
+# CHECK-SEG-AFTER: .bolt.reserved PROGBITS [[#ADDR:]] [[#OFF:]]
+# CHECK-SEG-AFTER: LOAD 0x{{0*}}[[#OFF]] 0x{{0*}}[[#ADDR]] {{.*}} R E 0x200000
+
+#--- src.c
+int main() { return 0; }
+
+#--- ld.script
+SECTIONS {
+  .bolt.reserved : ALIGN(2M) {
+    __bolt_reserved_start = .;
+    . += 2M;
+    __bolt_reserved_end = .;
+  }
+} INSERT AFTER .text;

@@ -18,6 +18,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -25,10 +26,133 @@
 
 namespace llvm {
 
+class MCSubtargetInfo;
+
+namespace RISCVOp {
+enum OperandType : unsigned {
+  OPERAND_FIRST_RISCV_IMM = MCOI::OPERAND_FIRST_TARGET,
+  OPERAND_UIMM1 = OPERAND_FIRST_RISCV_IMM,
+  OPERAND_UIMM2,
+  OPERAND_UIMM2_LSB0,
+  OPERAND_UIMM3,
+  OPERAND_UIMM4,
+  OPERAND_UIMM4_PLUS1,
+  OPERAND_UIMM5,
+  OPERAND_UIMM5_NONZERO,
+  OPERAND_UIMM5_GT3,
+  OPERAND_UIMM5_PLUS1,
+  OPERAND_UIMM5_GE6_PLUS1,
+  OPERAND_UIMM5_LSB0,
+  OPERAND_UIMM5_SLIST,
+  OPERAND_UIMM6,
+  OPERAND_UIMM6_PLUS1,
+  OPERAND_UIMM6_LSB0,
+  OPERAND_UIMM7,
+  OPERAND_UIMM7_LSB00,
+  OPERAND_UIMM7_LSB000,
+  OPERAND_UIMM7_EQ_XLEN,
+  OPERAND_UIMM8_LSB00,
+  OPERAND_UIMM8,
+  OPERAND_UIMM8_LSB000,
+  OPERAND_UIMM8_GE32,
+  OPERAND_UIMM9,
+  OPERAND_UIMM9_LSB000,
+  OPERAND_UIMM9_YBNDSWI,
+  OPERAND_UIMM10,
+  OPERAND_UIMM10_LSB00_NONZERO,
+  OPERAND_UIMM11,
+  OPERAND_UIMM12,
+  OPERAND_UIMM14_LSB00,
+  OPERAND_UIMM16,
+  OPERAND_UIMM16_NONZERO,
+  OPERAND_UIMMLOG2XLEN,
+  OPERAND_UIMMLOG2XLEN_NONZERO,
+  OPERAND_UIMM32,
+  OPERAND_UIMM48,
+  OPERAND_UIMM64,
+  OPERAND_THREE,
+  OPERAND_FOUR,
+  OPERAND_IMM5_ZIBI,
+  OPERAND_SIMM5,
+  OPERAND_SIMM5_NONZERO,
+  OPERAND_SIMM5_PLUS1,
+  OPERAND_SIMM6,
+  OPERAND_SIMM6_NONZERO,
+  OPERAND_SIMM8,
+  OPERAND_SIMM10,
+  OPERAND_SIMM10_LSB0000_NONZERO,
+  OPERAND_SIMM10_UNSIGNED,
+  OPERAND_SIMM11,
+  OPERAND_SIMM12,
+  OPERAND_SIMM12_LSB00000,
+  OPERAND_SIMM16,
+  OPERAND_SIMM16_NONZERO,
+  OPERAND_SIMM20,
+  OPERAND_SIMM20_LI,
+  OPERAND_SIMM26,
+  OPERAND_CLUI_IMM,
+  OPERAND_VTYPEI10,
+  OPERAND_VTYPEI11,
+  OPERAND_RVKRNUM,
+  OPERAND_RVKRNUM_0_7,
+  OPERAND_RVKRNUM_1_10,
+  OPERAND_RVKRNUM_2_14,
+  OPERAND_RLIST,
+  OPERAND_RLIST_S0,
+  OPERAND_STACKADJ,
+  // Operand is a 3-bit rounding mode, '111' indicates FRM register.
+  // Represents 'frm' argument passing to floating-point operations.
+  OPERAND_FRMARG,
+  // Operand is a 3-bit rounding mode where only RTZ is valid.
+  OPERAND_RTZARG,
+  // Condition code used by select and short forward branch pseudos.
+  OPERAND_COND_CODE,
+  // Ordering for atomic pseudos.
+  OPERAND_ATOMIC_ORDERING,
+  // Vector policy operand.
+  OPERAND_VEC_POLICY,
+  // Vector SEW operand. Stores in log2(SEW).
+  OPERAND_SEW,
+  // Special SEW for mask only instructions. Always 0.
+  OPERAND_SEW_MASK,
+  // Vector rounding mode for VXRM or FRM.
+  OPERAND_VEC_RM,
+  // Vtype operand for XSfmm extension.
+  OPERAND_XSFMM_VTYPE,
+  // XSfmm twiden operand.
+  OPERAND_XSFMM_TWIDEN,
+  OPERAND_LAST_RISCV_IMM = OPERAND_XSFMM_TWIDEN,
+
+  OPERAND_UIMM20_LUI,
+  OPERAND_UIMM20_AUIPC,
+
+  // Simm12 or constant pool, global, basicblock, etc.
+  OPERAND_SIMM12_LO,
+
+  OPERAND_BARE_SIMM32,
+
+  // Operand is either a register or uimm5, this is used by V extension pseudo
+  // instructions to represent a value that be passed as AVL to either vsetvli
+  // or vsetivli.
+  OPERAND_AVL,
+
+  // Operand is either a register or imm, this is used by short forward branch
+  // (SFB) pseudos to enable SFB with branches on reg-reg and reg-imm compares.
+  OPERAND_SFB_RHS,
+
+  // Operand is a branch opcode, this too is used by SFB pseudos.
+  OPERAND_BCC_OPCODE,
+
+  OPERAND_VMASK,
+  OPERAND_SMTVType,
+  OPERAND_SMTI8,
+};
+} // namespace RISCVOp
+
 // RISCVII - This namespace holds all of the target specific flags that
 // instruction info tracks. All definitions must match RISCVInstrFormats.td.
 namespace RISCVII {
-enum {
+enum : uint64_t {
   InstFormatPseudo = 0,
   InstFormatR = 1,
   InstFormatR4 = 2,
@@ -62,13 +186,13 @@ enum {
   InstFormatMask = 31,
   InstFormatShift = 0,
 
-  ConstraintShift = InstFormatShift + 5,
-  VS2Constraint = 0b001 << ConstraintShift,
-  VS1Constraint = 0b010 << ConstraintShift,
-  VMConstraint = 0b100 << ConstraintShift,
-  ConstraintMask = 0b111 << ConstraintShift,
+  RVVConstraintShift = InstFormatShift + 5,
+  VS2Constraint = 0b001 << RVVConstraintShift,
+  VS1Constraint = 0b010 << RVVConstraintShift,
+  VMConstraint = 0b100 << RVVConstraintShift,
+  RVVConstraintMask = 0b111 << RVVConstraintShift,
 
-  VLMulShift = ConstraintShift + 3,
+  VLMulShift = RVVConstraintShift + 3,
   VLMulMask = 0b111 << VLMulShift,
 
   // Is this a _TIED vector pseudo instruction. For these instructions we
@@ -158,6 +282,9 @@ enum {
 
   HasTKOpShift = HasTMOpShift + 1,
   HasTKOpMask = 1ULL << HasTKOpShift,
+
+  SMTConstraintShift = HasTKOpShift + 1,
+  SMTConstraintMask = 1ULL << SMTConstraintShift,
 };
 
 // Helper functions to read TSFlags.
@@ -234,6 +361,11 @@ static inline bool hasTMOp(uint64_t TSFlags) { return TSFlags & HasTMOpMask; }
 
 static inline bool hasTKOp(uint64_t TSFlags) { return TSFlags & HasTKOpMask; }
 
+static inline unsigned getTWidenOpNum(const MCInstrDesc &Desc) {
+  assert(hasTWidenOp(Desc.TSFlags));
+  return Desc.getNumOperands() - 1;
+}
+
 static inline unsigned getTNOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   assert(hasTWidenOp(TSFlags) && hasVLOp(TSFlags));
@@ -300,15 +432,12 @@ static inline int getFRMOpNum(const MCInstrDesc &Desc) {
   if (!hasRoundModeOp(TSFlags) || usesVXRM(TSFlags))
     return -1;
 
-  if (hasTWidenOp(TSFlags) && hasTMOp(TSFlags))
-    return getTMOpNum(Desc) - 1;
+  int Idx = RISCV::getNamedOperandIdx(Desc.getOpcode(), RISCV::OpName::rm);
+  assert(Idx >= 0 && "No rm operand?");
+  assert(Desc.operands()[Idx].OperandType == RISCVOp::OPERAND_VEC_RM &&
+         "Operand has wrong type");
 
-  // The operand order
-  // --------------------------------------
-  // | n-1 (if any)   | n-2  | n-3 | n-4 |
-  // | policy         | sew  | vl  | frm |
-  // --------------------------------------
-  return getVLOpNum(Desc) - 1;
+  return Idx;
 }
 
 /// \returns  the index to the rounding mode immediate value if any, otherwise
@@ -317,12 +446,13 @@ static inline int getVXRMOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   if (!hasRoundModeOp(TSFlags) || !usesVXRM(TSFlags))
     return -1;
-  // The operand order
-  // --------------------------------------
-  // | n-1 (if any)   | n-2  | n-3 | n-4  |
-  // | policy         | sew  | vl  | vxrm |
-  // --------------------------------------
-  return getVLOpNum(Desc) - 1;
+
+  int Idx = RISCV::getNamedOperandIdx(Desc.getOpcode(), RISCV::OpName::rm);
+  assert(Idx >= 0 && "No rm operand?");
+  assert(Desc.operands()[Idx].OperandType == RISCVOp::OPERAND_VEC_RM &&
+         "Operand has wrong type");
+
+  return Idx;
 }
 
 // Is the first def operand tied to the first use operand. This is true for
@@ -352,6 +482,7 @@ enum {
   MO_TLSDESC_LOAD_LO = 14,
   MO_TLSDESC_ADD_LO = 15,
   MO_TLSDESC_CALL = 16,
+  MO_QC_ACCESS = 17,
 
   // Used to differentiate between target-specific "direct" flags and "bitmask"
   // flags. A machine operand can only have one "direct" flag, but can have
@@ -359,112 +490,6 @@ enum {
   MO_DIRECT_FLAG_MASK = 31
 };
 } // namespace RISCVII
-
-namespace RISCVOp {
-enum OperandType : unsigned {
-  OPERAND_FIRST_RISCV_IMM = MCOI::OPERAND_FIRST_TARGET,
-  OPERAND_UIMM1 = OPERAND_FIRST_RISCV_IMM,
-  OPERAND_UIMM2,
-  OPERAND_UIMM2_LSB0,
-  OPERAND_UIMM3,
-  OPERAND_UIMM4,
-  OPERAND_UIMM5,
-  OPERAND_UIMM5_NONZERO,
-  OPERAND_UIMM5_GT3,
-  OPERAND_UIMM5_PLUS1,
-  OPERAND_UIMM5_GE6_PLUS1,
-  OPERAND_UIMM5_LSB0,
-  OPERAND_UIMM5_SLIST,
-  OPERAND_UIMM6,
-  OPERAND_UIMM6_LSB0,
-  OPERAND_UIMM7,
-  OPERAND_UIMM7_LSB00,
-  OPERAND_UIMM7_LSB000,
-  OPERAND_UIMM8_LSB00,
-  OPERAND_UIMM8,
-  OPERAND_UIMM8_LSB000,
-  OPERAND_UIMM8_GE32,
-  OPERAND_UIMM9_LSB000,
-  OPERAND_UIMM9,
-  OPERAND_UIMM10,
-  OPERAND_UIMM10_LSB00_NONZERO,
-  OPERAND_UIMM11,
-  OPERAND_UIMM12,
-  OPERAND_UIMM14_LSB00,
-  OPERAND_UIMM16,
-  OPERAND_UIMM16_NONZERO,
-  OPERAND_UIMMLOG2XLEN,
-  OPERAND_UIMMLOG2XLEN_NONZERO,
-  OPERAND_UIMM32,
-  OPERAND_UIMM48,
-  OPERAND_UIMM64,
-  OPERAND_THREE,
-  OPERAND_FOUR,
-  OPERAND_IMM5_ZIBI,
-  OPERAND_SIMM5,
-  OPERAND_SIMM5_NONZERO,
-  OPERAND_SIMM5_PLUS1,
-  OPERAND_SIMM6,
-  OPERAND_SIMM6_NONZERO,
-  OPERAND_SIMM8_UNSIGNED,
-  OPERAND_SIMM10,
-  OPERAND_SIMM10_LSB0000_NONZERO,
-  OPERAND_SIMM10_UNSIGNED,
-  OPERAND_SIMM11,
-  OPERAND_SIMM12_LSB00000,
-  OPERAND_SIMM16,
-  OPERAND_SIMM16_NONZERO,
-  OPERAND_SIMM20_LI,
-  OPERAND_SIMM26,
-  OPERAND_CLUI_IMM,
-  OPERAND_VTYPEI10,
-  OPERAND_VTYPEI11,
-  OPERAND_RVKRNUM,
-  OPERAND_RVKRNUM_0_7,
-  OPERAND_RVKRNUM_1_10,
-  OPERAND_RVKRNUM_2_14,
-  OPERAND_RLIST,
-  OPERAND_RLIST_S0,
-  OPERAND_STACKADJ,
-  // Operand is a 3-bit rounding mode, '111' indicates FRM register.
-  // Represents 'frm' argument passing to floating-point operations.
-  OPERAND_FRMARG,
-  // Operand is a 3-bit rounding mode where only RTZ is valid.
-  OPERAND_RTZARG,
-  // Condition code used by select and short forward branch pseudos.
-  OPERAND_COND_CODE,
-  // Ordering for atomic pseudos.
-  OPERAND_ATOMIC_ORDERING,
-  // Vector policy operand.
-  OPERAND_VEC_POLICY,
-  // Vector SEW operand. Stores in log2(SEW).
-  OPERAND_SEW,
-  // Special SEW for mask only instructions. Always 0.
-  OPERAND_SEW_MASK,
-  // Vector rounding mode for VXRM or FRM.
-  OPERAND_VEC_RM,
-  // Vtype operand for XSfmm extension.
-  OPERAND_XSFMM_VTYPE,
-  // XSfmm twiden operand.
-  OPERAND_XSFMM_TWIDEN,
-  OPERAND_LAST_RISCV_IMM = OPERAND_XSFMM_TWIDEN,
-
-  OPERAND_UIMM20_LUI,
-  OPERAND_UIMM20_AUIPC,
-
-  // Simm12 or constant pool, global, basicblock, etc.
-  OPERAND_SIMM12_LO,
-
-  OPERAND_BARE_SIMM32,
-
-  // Operand is either a register or uimm5, this is used by V extension pseudo
-  // instructions to represent a value that be passed as AVL to either vsetvli
-  // or vsetivli.
-  OPERAND_AVL,
-
-  OPERAND_VMASK,
-};
-} // namespace RISCVOp
 
 // Describes the predecessor/successor bits used in the FENCE instruction.
 namespace RISCVFenceField {
@@ -532,6 +557,44 @@ inline static bool isValidRoundingMode(unsigned Mode) {
   }
 }
 } // namespace RISCVFPRndMode
+
+namespace XSMTVTypeMode {
+enum SMTVTypeMode {
+  // Define the different SMT VType modes here
+  SMT_I4 = 2,
+  SMT_I8 = 3,
+  Invalid
+};
+
+inline static StringRef SMTVTypeModeToString(SMTVTypeMode TypeMode) {
+  switch (TypeMode) {
+  default:
+    llvm_unreachable("Unknown VType mode of SpacemiT Integer Matrix");
+  case XSMTVTypeMode::SMT_I4:
+    return "i4";
+  case XSMTVTypeMode::SMT_I8:
+    return "i8";
+  }
+}
+
+inline static SMTVTypeMode stringToSMTVTypeMode(StringRef Str) {
+  return StringSwitch<SMTVTypeMode>(Str)
+      .Case("i4", XSMTVTypeMode::SMT_I4)
+      .Case("i8", XSMTVTypeMode::SMT_I8)
+      .Default(XSMTVTypeMode::Invalid);
+}
+
+inline static bool isValidSMTVTypeMode(unsigned Mode) {
+  switch (Mode) {
+  default:
+    return false;
+  case XSMTVTypeMode::SMT_I4:
+  case XSMTVTypeMode::SMT_I8:
+    return true;
+  }
+}
+
+} // namespace XSMTVTypeMode
 
 namespace RISCVVXRndMode {
 enum RoundingMode {
@@ -605,7 +668,7 @@ int getLoadFPImm(APFloat FPImm);
 
 namespace RISCVSysReg {
 struct SysReg {
-  const char Name[32];
+  StringTable::Offset Name;
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read, Write, Read-Only.
@@ -639,7 +702,7 @@ struct SysReg {
 
 namespace RISCVInsnOpcode {
 struct RISCVOpcode {
-  char Name[10];
+  StringTable::Offset Name;
   uint8_t Value;
 };
 
@@ -654,17 +717,24 @@ enum ABI {
   ABI_ILP32F,
   ABI_ILP32D,
   ABI_ILP32E,
+  ABI_IL32PC64,
+  ABI_IL32PC64F,
+  ABI_IL32PC64D,
+  ABI_IL32PC64E,
   ABI_LP64,
   ABI_LP64F,
   ABI_LP64D,
   ABI_LP64E,
+  ABI_L64PC128,
+  ABI_L64PC128F,
+  ABI_L64PC128D,
+  ABI_CHERIOT,
   ABI_Unknown
 };
 
 // Returns the target ABI, or else a StringError if the requested ABIName is
-// not supported for the given TT and FeatureBits combination.
-ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
-                     StringRef ABIName);
+// not supported for the subtargets triple and FeatureBits combination.
+ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
 
 ABI getTargetABI(StringRef ABIName);
 
@@ -683,7 +753,7 @@ namespace RISCVFeatures {
 void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
-parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
+parseFeatureBits(const MCSubtargetInfo &STI);
 
 } // namespace RISCVFeatures
 
@@ -770,12 +840,18 @@ namespace RISCVVInversePseudosTable {
 struct PseudoInfo {
   uint16_t Pseudo;
   uint16_t BaseInstr;
-  uint8_t VLMul;
-  uint8_t SEW;
+  uint16_t VLMul : 3;
+  uint16_t SEW : 8;
+  uint16_t IsAltFmt : 1;
 };
 
 #define GET_RISCVVInversePseudosTable_DECL
 #include "RISCVGenSearchableTables.inc"
+
+inline const PseudoInfo *getBaseInfo(unsigned BaseInstr, uint8_t VLMul,
+                                     uint8_t SEW, bool IsAltFmt = false) {
+  return getBaseInfoImpl(BaseInstr, VLMul, SEW, IsAltFmt);
+}
 } // namespace RISCVVInversePseudosTable
 
 namespace RISCV {
@@ -862,6 +938,12 @@ struct NDSVLNPseudo {
 #define GET_RISCVVSXTable_DECL
 #define GET_RISCVNDSVLNTable_DECL
 #include "RISCVGenSearchableTables.inc"
+
+inline bool isValidYBNDSWImm(int64_t Imm) {
+  return (Imm >= 1 && Imm <= 255) ||
+         (Imm >= 256 && Imm <= 504 && (Imm % 8) == 0) ||
+         (Imm >= 512 && Imm <= 4096 && (Imm % 16) == 0);
+}
 } // namespace RISCV
 
 } // namespace llvm

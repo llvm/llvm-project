@@ -6,12 +6,12 @@
 define float @test(float %a, float %b) {
 entry:
         %dum = fadd float %a, %b
-	%0 = tail call float @fabsf(float %dum) readnone
+	%0 = tail call float @llvm.fabs.f32(float %dum) readnone
         %dum1 = fadd float %0, %b
 	ret float %dum1
 }
 
-declare float @fabsf(float)
+declare float @llvm.fabs.f32(float)
 
 ; VFP2-LABEL: test:
 ; VFP2: 	vabs.f32	s

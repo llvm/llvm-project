@@ -45,7 +45,7 @@ std::optional<unsigned>
 getPositionInModule(const Instruction *I,
                     const DenseMap<Instruction *, unsigned> &LLVMInstNum) {
   assert(I && "Instruction is nullptr!");
-  DenseMap<Instruction *, unsigned>::const_iterator It = LLVMInstNum.find(I);
+  auto It = LLVMInstNum.find(I);
   if (It == LLVMInstNum.end())
     return std::nullopt;
   return It->second;
@@ -129,7 +129,7 @@ int main(int argc, const char *argv[]) {
   unsigned InstructionNumber = 1;
   for (Function &F : *ModuleToAnalyze)
     for (BasicBlock &BB : F)
-      for (Instruction &I : BB.instructionsWithoutDebug())
+      for (Instruction &I : BB)
         LLVMInstNum[&I]= InstructionNumber++;
 
   // The similarity identifier we will use to find the similar sections.

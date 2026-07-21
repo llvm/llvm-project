@@ -14,10 +14,12 @@
 #ifndef FORTRAN_DIALECT_CUF_CUF_OPS
 #define FORTRAN_DIALECT_CUF_CUF_OPS
 
+include "flang/Optimizer/Dialect/CUDAKernelOpInterface.td"
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
-include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
+include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.td"
+include "flang/Optimizer/Dialect/FIRTypes.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
@@ -175,9 +177,10 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
   }];
 
   let arguments = (ins Arg<AnyType, "", [MemRead]>:$src,
-                       Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
-                       Optional<AnyShapeOrShiftType>:$shape,
-                       cuf_DataTransferKindAttr:$transfer_kind);
+      Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
+      Optional<AnyShapeOrShiftType>:$shape,
+      cuf_DataTransferKindAttr:$transfer_kind,
+      UnitAttr:$hasManagedOrUnifedSymbols);
 
   let assemblyFormat = [{
     $src `to` $dst (`,` $shape^ `:` type($shape) )? attr-dict `:` type($src) `,` type($dst)
@@ -243,8 +246,10 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
   let hasVerifier = 1;
 }
 
-def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+def cuf_KernelOp
+    : cuf_Op<"kernel", [AttrSizedOperandSegments, CUDAKernelOpInterface,
+                        DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+                        DeclareOpInterfaceMethods<OperationMoveOpInterface>]> {
 
   let description = [{
     Represent the CUDA Fortran kernel directive. The operation is a loop like
@@ -326,6 +331,26 @@ def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
   let extraClassDeclaration = [{
     mlir::StringAttr getKernelName();
     mlir::StringAttr getKernelModuleName();
+  }];
+}
+
+def cuf_RegisterVariableStaticOp : cuf_Op<"register_variable_static", []> {
+  let summary = "Register a device or constant global as device-resident";
+
+  let description = [{
+    Emitted under -gpu=mem:unified for a module-scope device or constant global.
+    Registers the global with the runtime as device-resident so that a matching
+    host-side declaration of the same symbol is not treated as host memory.
+  }];
+
+  let arguments = (ins
+    SymbolRefAttr:$global,
+    StrAttr:$varName,
+    I64Attr:$size
+  );
+
+  let assemblyFormat = [{
+    $global `(` $varName `,` $size `)` attr-dict
   }];
 }
 

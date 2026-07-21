@@ -18,7 +18,7 @@ bool h();
 // CHECK: x:
 // CHECK:   store ptr @_ZL1a, ptr %__range1, align 8
 // CHECK:   store ptr @_ZL1a, ptr %__begin1, align 8
-// CHECK:   store ptr getelementptr inbounds (i32, ptr @_ZL1a, i64 10), ptr %__end1, align 8
+// CHECK:   store ptr getelementptr inbounds nuw (i8, ptr @_ZL1a, i64 40), ptr %__end1, align 8
 // CHECK:   br label %for.cond
 // CHECK: for.cond:
 // CHECK:   %0 = load ptr, ptr %__begin1, align 8
@@ -78,7 +78,7 @@ void f1() {
 // CHECK: l2:
 // CHECK:   store ptr @_ZL1a, ptr %__range2, align 8
 // CHECK:   store ptr @_ZL1a, ptr %__begin2, align 8
-// CHECK:   store ptr getelementptr inbounds (i32, ptr @_ZL1a, i64 10), ptr %__end2, align 8
+// CHECK:   store ptr getelementptr inbounds nuw (i8, ptr @_ZL1a, i64 40), ptr %__end2, align 8
 // CHECK:   br label %for.cond
 // CHECK: for.cond:
 // CHECK:   %0 = load ptr, ptr %__begin2, align 8

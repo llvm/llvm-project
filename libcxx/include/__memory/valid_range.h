@@ -54,7 +54,7 @@ __is_valid_range(const _Tp* __first, const _Tp* __last) {
 template <class _Iter, class _Sent>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __assume_valid_range([[__maybe_unused__]] _Iter&& __first, [[__maybe_unused__]] _Sent&& __last) {
-#if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2200 && !defined(_LIBCPP_CXX03_LANG)
+#if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2300 && !defined(_LIBCPP_CXX03_LANG)
   if constexpr (__libcpp_is_contiguous_iterator<__remove_cvref_t<_Iter>>::value &&
                 is_same<__remove_cvref_t<_Iter>, __remove_cvref_t<_Sent>>::value) {
     _LIBCPP_ASSERT_INTERNAL(std::__is_valid_range(std::__to_address(__first), std::__to_address(__last)),

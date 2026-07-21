@@ -49,7 +49,8 @@ class MipsFunctionInfo;
 class MipsSubtarget;
 class MipsTargetMachine;
 class TargetLibraryInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
   //===--------------------------------------------------------------------===//
   // TargetLowering Implementation
@@ -67,8 +68,10 @@ class TargetRegisterClass;
 
     /// createFastISel - This method returns a target specific FastISel object,
     /// or null if the target does not support "fast" ISel.
-    FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                             const TargetLibraryInfo *libInfo) const override;
+    FastISel *
+    createFastISel(FunctionLoweringInfo &funcInfo,
+                   const TargetLibraryInfo *libInfo,
+                   const LibcallLoweringInfo *libcallLowering) const override;
 
     MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
       return MVT::i32;
@@ -545,7 +548,8 @@ class TargetRegisterClass;
 namespace Mips {
 
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                         const TargetLibraryInfo *libInfo);
+                         const TargetLibraryInfo *libInfo,
+                         const LibcallLoweringInfo *libcallLowering);
 
 } // end namespace Mips
 

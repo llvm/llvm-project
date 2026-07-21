@@ -33,6 +33,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CapturedStmt.h"
@@ -736,6 +737,11 @@ enum class AssignConvertType {
   /// like address spaces.
   IncompatiblePointerDiscardsQualifiers,
 
+  /// IncompatiblePointerDiscardsOverflowBehavior - The assignment
+  /// discards overflow behavior annotations between otherwise compatible
+  /// pointer types.
+  IncompatiblePointerDiscardsOverflowBehavior,
+
   /// IncompatibleNestedPointerAddressSpaceMismatch - The assignment
   /// changes address spaces in nested pointer types which is not allowed.
   /// For instance, converting __private int ** to __generic int ** is
@@ -768,6 +774,13 @@ enum class AssignConvertType {
   /// IncompatibleObjCWeakRef - Assigning a weak-unavailable object to an
   /// object with __weak qualifier.
   IncompatibleObjCWeakRef,
+
+  /// IncompatibleOBTKinds - Assigning between incompatible OverflowBehaviorType
+  /// kinds, e.g., from __ob_trap to __ob_wrap or vice versa.
+  IncompatibleOBTKinds,
+
+  /// CompatibleOBTDiscards - Assignment discards overflow behavior
+  CompatibleOBTDiscards,
 
   /// Incompatible - We reject this conversion outright, it is invalid to
   /// represent it in the AST.
@@ -835,6 +848,7 @@ enum class CCEKind {
                            ///< message.
   StaticAssertMessageData, ///< Call to data() in a static assert
                            ///< message.
+  PackIndex ///< Index of a pack indexing expression or specifier.
 };
 
 /// Enums for the diagnostics of target, target_version and target_clones.
@@ -894,6 +908,7 @@ class Sema final : public SemaBase {
   // 33. Types (SemaType.cpp)
   // 34. FixIt Helpers (SemaFixItUtils.cpp)
   // 35. Function Effects (SemaFunctionEffects.cpp)
+  // 36. C++ Expansion Statements (SemaExpand.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -955,10 +970,18 @@ public:
   /// Load weak undeclared identifiers from the external source.
   void LoadExternalWeakUndeclaredIdentifiers();
 
+  /// Load #pragma redefine_extname'd undeclared identifiers from the external
+  /// source.
+  void LoadExternalExtnameUndeclaredIdentifiers();
+
   /// Determine if VD, which must be a variable or function, is an external
   /// symbol that nonetheless can't be referenced from outside this translation
   /// unit because its type has no linkage and it's not extern "C".
   bool isExternalWithNoLinkageType(const ValueDecl *VD) const;
+
+  /// Determines whether the given source location is in the main file
+  /// and we're in a context where we should warn about unused entities.
+  bool isMainFileLoc(SourceLocation Loc) const;
 
   /// Obtain a sorted list of functions that are undefined but ODR-used.
   void getUndefinedButUsed(
@@ -1256,6 +1279,10 @@ public:
                             bool ForceComplain = false,
                             bool (*IsPlausibleResult)(QualType) = nullptr);
 
+  // Adds implicit lifetime bound attribute for implicit this to its
+  // TypeSourceInfo.
+  void addLifetimeBoundToImplicitThis(CXXMethodDecl *MD);
+
   /// Figure out if an expression could be turned into a call.
   ///
   /// Use this when trying to recover from an error where the programmer may
@@ -1343,6 +1370,10 @@ public:
   /// whether the next info diagnostic should be immediate.
   bool IsLastErrorImmediate = true;
 
+  /// Track if we're currently analyzing overflow behavior types in assignment
+  /// context.
+  bool InOverflowBehaviorAssignmentContext = false;
+
   class DelayedDiagnostics;
 
   class DelayedDiagnosticsState {
@@ -1409,7 +1440,8 @@ public:
 
   /// Diagnostics that are emitted only if we discover that the given function
   /// must be codegen'ed.  Because handling these correctly adds overhead to
-  /// compilation, this is currently only enabled for CUDA compilations.
+  /// compilation, this is currently only used for offload languages like CUDA,
+  /// OpenMP, and SYCL.
   SemaDiagnosticBuilder::DeferredDiagnosticsType DeviceDeferredDiags;
 
   /// CurContext - This is the current declaration context of parsing.
@@ -2314,6 +2346,23 @@ public:
   ActOnPragmaMSFunction(SourceLocation Loc,
                         const llvm::SmallVectorImpl<StringRef> &NoBuiltins);
 
+  NamedDecl *lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
+                                             SourceLocation NameLoc,
+                                             Scope *curScope);
+
+  /// Information from a C++ #pragma export, for a symbol that we
+  /// haven't seen the declaration for yet.
+  struct PendingPragmaInfo {
+    SourceLocation NameLoc;
+    bool Used;
+  };
+
+  llvm::DenseMap<IdentifierInfo *, PendingPragmaInfo> PendingExportedNames;
+
+  /// ActonPragmaExport - called on well-formed '\#pragma export'.
+  void ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation ExportNameLoc,
+                         Scope *curScope);
+
   /// Only called on function definitions; if there is a pragma in scope
   /// with the effect of a range-based optnone, consider marking the function
   /// with attribute optnone.
@@ -2876,6 +2925,11 @@ public:
                                bool *ICContext = nullptr,
                                bool IsListInit = false);
 
+  /// Check for overflow behavior type related implicit conversion diagnostics.
+  /// Returns true if OBT-related diagnostic was issued, false otherwise.
+  bool CheckOverflowBehaviorTypeConversion(Expr *E, QualType T,
+                                           SourceLocation CC);
+
   bool
   BuiltinElementwiseTernaryMath(CallExpr *TheCall,
                                 EltwiseBuiltinArgTyRestriction ArgTyRestr =
@@ -2919,6 +2973,10 @@ private:
                                   CallExpr *TheCall);
 
   void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
+
+  /// Argument-value fortify checks for libc functions that are not builtins,
+  /// dispatched by name (e.g. umask). Diagnostics belong to -Wfortify-source.
+  void checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall);
 
   /// Check the arguments to '__builtin_va_start', '__builtin_ms_va_start',
   /// or '__builtin_c23_va_start' for validity. Emit an error and return true
@@ -3048,6 +3106,8 @@ private:
   void CheckMemaccessArguments(const CallExpr *Call, unsigned BId,
                                IdentifierInfo *FnName);
 
+  bool CheckSizeofMemaccessArgument(const Expr *SizeOfArg, const Expr *Dest,
+                                    IdentifierInfo *FnName);
   // Warn if the user has made the 'size' argument to strlcpy or strlcat
   // be the size of the source, instead of the destination.
   void CheckStrlcpycatArguments(const CallExpr *Call, IdentifierInfo *FnName);
@@ -3518,9 +3578,13 @@ public:
   /// correctly named definition after the renamed definition.
   llvm::SmallPtrSet<const NamedDecl *, 4> TypoCorrectedFunctionDefinitions;
 
-  /// A cache of the flags available in enumerations with the flag_bits
+  /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
   mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
+
+  /// A cache of enumerator values for enums checked by -Wassign-enum.
+  llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
+      AssignEnumCache;
 
   /// WeakUndeclaredIdentifiers - Identifiers contained in \#pragma weak before
   /// declared. Rare. May alias another identifier, declared or undeclared.
@@ -3541,11 +3605,17 @@ public:
   /// \#pragma redefine_extname before declared.  Used in Solaris system headers
   /// to define functions that occur in multiple standards to call the version
   /// in the currently selected standard.
-  llvm::DenseMap<IdentifierInfo *, AsmLabelAttr *> ExtnameUndeclaredIdentifiers;
+  llvm::MapVector<IdentifierInfo *, AsmLabelAttr *>
+      ExtnameUndeclaredIdentifiers;
 
   /// Set containing all typedefs that are likely unused.
-  llvm::SmallSetVector<const TypedefNameDecl *, 4>
+  llvm::SmallPtrSet<const TypedefNameDecl *, 4>
       UnusedLocalTypedefNameCandidates;
+
+  /// Store UnusedLocalTypedefNameCandidates in \p Sorted in a deterministic
+  /// order.
+  void getSortedUnusedLocalTypedefNameCandidates(
+      SmallVectorImpl<const TypedefNameDecl *> &Sorted) const;
 
   typedef LazyVector<const DeclaratorDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadUnusedFileScopedDecls, 2, 2>
@@ -3843,6 +3913,8 @@ public:
   void warnOnReservedIdentifier(const NamedDecl *D);
   void warnOnCTypeHiddenInCPlusPlus(const NamedDecl *D);
 
+  void ProcessPragmaExport(DeclaratorDecl *newDecl);
+
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
@@ -4104,7 +4176,7 @@ public:
   /// complete.
   void ActOnInitializerError(Decl *Dcl);
 
-  void ActOnCXXForRangeDecl(Decl *D);
+  void ActOnCXXForRangeDecl(Decl *D, bool InExpansionStmt);
   StmtResult ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
                                         IdentifierInfo *Ident,
                                         ParsedAttributes &Attrs);
@@ -4639,7 +4711,7 @@ public:
   /// Look for a locally scoped extern "C" declaration by the given name.
   NamedDecl *findLocallyScopedExternCDecl(DeclarationName Name);
 
-  void deduceOpenCLAddressSpace(ValueDecl *decl);
+  void deduceOpenCLAddressSpace(VarDecl *decl);
   void deduceHLSLAddressSpace(VarDecl *decl);
 
   /// Adjust the \c DeclContext for a function or variable that might be a
@@ -4806,7 +4878,16 @@ public:
 
     /// The availability attribute for a specific platform was inferred from
     /// an availability attribute for another platform.
-    AP_InferredFromOtherPlatform = 2
+    AP_InferredFromOtherPlatform = 2,
+
+    /// The availability attribute was inferred from an 'anyAppleOS'
+    /// availability attribute.
+    AP_InferredFromAnyAppleOS = 3,
+
+    /// The availability attribute was inferred from an 'anyAppleOS'
+    /// availability attribute that was applied using '#pragma clang attribute'.
+    /// This has the lowest priority.
+    AP_PragmaClangAttribute_InferredFromAnyAppleOS = 4
   };
 
   /// Describes the reason a calling convention specification was ignored, used
@@ -4926,13 +5007,25 @@ public:
                         VersionTuple Obsoleted, bool IsUnavailable,
                         StringRef Message, bool IsStrict, StringRef Replacement,
                         AvailabilityMergeKind AMK, int Priority,
-                        const IdentifierInfo *IIEnvironment);
+                        const IdentifierInfo *IIEnvironment,
+                        const IdentifierInfo *InferredPlatformII = nullptr);
+
+  AvailabilityAttr *mergeAndInferAvailabilityAttr(
+      NamedDecl *D, const AttributeCommonInfo &CI,
+      const IdentifierInfo *Platform, bool Implicit, VersionTuple Introduced,
+      VersionTuple Deprecated, VersionTuple Obsoleted, bool IsUnavailable,
+      StringRef Message, bool IsStrict, StringRef Replacement,
+      AvailabilityMergeKind AMK, int Priority,
+      const IdentifierInfo *IIEnvironment,
+      const IdentifierInfo *InferredPlatformII);
 
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
                           TypeVisibilityAttr::VisibilityType Vis);
   VisibilityAttr *mergeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
                                       VisibilityAttr::VisibilityType Vis);
+  void mergeVisibilityType(Decl *D, SourceLocation Loc,
+                           VisibilityAttr::VisibilityType Type);
   SectionAttr *mergeSectionAttr(Decl *D, const AttributeCommonInfo &CI,
                                 StringRef Name);
 
@@ -4969,6 +5062,9 @@ public:
                                             const IdentifierInfo *ModularImplFn,
                                             StringRef ImplName,
                                             MutableArrayRef<StringRef> Aspects);
+
+  PersonalityAttr *mergePersonalityAttr(Decl *D, FunctionDecl *Routine,
+                                        const AttributeCommonInfo &CI);
 
   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
   void AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
@@ -5015,11 +5111,13 @@ public:
   /// otherwise setting numParams to the appropriate value.
   bool CheckRegparmAttr(const ParsedAttr &attr, unsigned &value);
 
-  /// Create an CUDALaunchBoundsAttr attribute.
+  /// Create a CUDALaunchBoundsAttr attribute. By default, the function only
+  /// supports nvptx target architectures and skips MaxBlocks if it is previous
+  /// to sm_90. Use \p IgnoreArch to skip the architecture check.
   CUDALaunchBoundsAttr *CreateLaunchBoundsAttr(const AttributeCommonInfo &CI,
                                                Expr *MaxThreads,
-                                               Expr *MinBlocks,
-                                               Expr *MaxBlocks);
+                                               Expr *MinBlocks, Expr *MaxBlocks,
+                                               bool IgnoreArch = false);
 
   /// AddLaunchBoundsAttr - Adds a launch_bounds attribute to a particular
   /// declaration.
@@ -5156,8 +5254,9 @@ public:
       return false;
     }
 
-    unsigned IdxSource = IdxInt->getLimitedValue(UINT_MAX);
-    if (IdxSource < 1 ||
+    constexpr unsigned Limit = 1 << ParamIdx::IdxBitWidth;
+    unsigned IdxSource = IdxInt->getLimitedValue(Limit);
+    if (IdxSource < 1 || IdxSource == Limit ||
         ((!IV || !CanIndexVariadicArguments) && IdxSource > NumParams)) {
       Diag(getAttrLoc(AI), diag::err_attribute_argument_out_of_bounds)
           << &AI << AttrArgNum << IdxExpr->getSourceRange();
@@ -6951,6 +7050,9 @@ public:
   /// Increment when we find a reference; decrement when we find an ignored
   /// assignment.  Ultimately the value is 0 if every reference is an ignored
   /// assignment.
+  ///
+  /// Uses canonical VarDecl as key so in-class decls and out-of-class defs of
+  /// static data members get tracked as a single entry.
   llvm::DenseMap<const VarDecl *, int> RefsMinusAssignments;
 
   /// Used to control the generation of ExprWithCleanups.
@@ -7172,8 +7274,7 @@ public:
                                SourceLocation TemplateKWLoc, UnqualifiedId &Id,
                                bool HasTrailingLParen, bool IsAddressOfOperand,
                                CorrectionCandidateCallback *CCC = nullptr,
-                               bool IsInlineAsmIdentifier = false,
-                               Token *KeywordReplacement = nullptr);
+                               bool IsInlineAsmIdentifier = false);
 
   /// Decomposes the given name into a DeclarationNameInfo, its location, and
   /// possibly a list of template arguments.
@@ -7507,7 +7608,7 @@ public:
                            SourceLocation RBraceLoc);
 
   ExprResult BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
-                           SourceLocation RBraceLoc);
+                           SourceLocation RBraceLoc, bool IsExplicit);
 
   /// Binary Operators.  'Tok' is the token for the operator.
   ExprResult ActOnBinOp(Scope *S, SourceLocation TokLoc, tok::TokenKind Kind,
@@ -7549,25 +7650,15 @@ public:
   ExprResult ActOnStmtExprResult(ExprResult E);
   void ActOnStmtExprError();
 
-  // __builtin_offsetof(type, identifier(.identifier|[expr])*)
-  struct OffsetOfComponent {
-    SourceLocation LocStart, LocEnd;
-    bool isBrackets; // true if [expr], false if .ident
-    union {
-      IdentifierInfo *IdentInfo;
-      Expr *E;
-    } U;
-  };
-
   /// __builtin_offsetof(type, a.b[123][456].c)
   ExprResult BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
                                   TypeSourceInfo *TInfo,
-                                  ArrayRef<OffsetOfComponent> Components,
+                                  const Designation &Desig,
                                   SourceLocation RParenLoc);
   ExprResult ActOnBuiltinOffsetOf(Scope *S, SourceLocation BuiltinLoc,
                                   SourceLocation TypeLoc,
                                   ParsedType ParsedArgTy,
-                                  ArrayRef<OffsetOfComponent> Components,
+                                  const Designation &Desig,
                                   SourceLocation RParenLoc);
 
   // __builtin_choose_expr(constExpr, expr1, expr2)
@@ -8486,6 +8577,9 @@ public:
 
   /// ActOnCXXBoolLiteral - Parse {true,false} literals.
   ExprResult ActOnCXXBoolLiteral(SourceLocation OpLoc, tok::TokenKind Kind);
+
+  /// Build a boolean-typed literal expression.
+  ExprResult BuildBoolLiteral(SourceLocation Loc, bool Value);
 
   /// ActOnCXXNullPtrLiteral - Parse 'nullptr'.
   ExprResult ActOnCXXNullPtrLiteral(SourceLocation Loc);
@@ -9530,9 +9624,11 @@ public:
   /// LookupOrCreateLabel - Do a name lookup of a label with the specified name.
   /// If GnuLabelLoc is a valid source location, then this is a definition
   /// of an __label__ label name, otherwise it is a normal label definition
-  /// or use.
+  /// or use. If IsLabelStmt is true, then this is the label of a
+  /// labeled-statement.
   LabelDecl *LookupOrCreateLabel(IdentifierInfo *II, SourceLocation IdentLoc,
-                                 SourceLocation GnuLabelLoc = SourceLocation());
+                                 SourceLocation GnuLabelLoc = SourceLocation(),
+                                 bool IsLabelStmt = false);
 
   /// Perform a name lookup for a label with the specified name; this does not
   /// create a new label if the lookup fails.
@@ -9856,9 +9952,10 @@ public:
 
   /// Is the module scope we are an implementation unit?
   bool currentModuleIsImplementation() const {
-    return ModuleScopes.empty()
-               ? false
-               : ModuleScopes.back().Module->isModuleImplementation();
+    if (ModuleScopes.empty())
+      return false;
+    const Module *M = ModuleScopes.back().Module;
+    return M->isModuleImplementation() || M->isModulePartitionImplementation();
   }
 
   // When loading a non-modular PCH files, this is used to restore module
@@ -10140,6 +10237,18 @@ public:
   /// where the conversion between the underlying real types is a
   /// floating-point or integral promotion.
   bool IsComplexPromotion(QualType FromType, QualType ToType);
+
+  /// IsOverflowBehaviorTypePromotion - Determines whether the conversion from
+  /// FromType to ToType involves an OverflowBehaviorType FromType being
+  /// promoted to an OverflowBehaviorType ToType which has a larger bitwidth.
+  /// If so, returns true and sets FromType to ToType.
+  bool IsOverflowBehaviorTypePromotion(QualType FromType, QualType ToType);
+
+  /// IsOverflowBehaviorTypeConversion - Determines whether the conversion from
+  /// FromType to ToType necessarily involves both an OverflowBehaviorType and
+  /// a non-OverflowBehaviorType. If so, returns true and sets FromType to
+  /// ToType.
+  bool IsOverflowBehaviorTypeConversion(QualType FromType, QualType ToType);
 
   /// IsPointerConversion - Determines whether the conversion of the
   /// expression From, which has the (possibly adjusted) type FromType,
@@ -10815,6 +10924,12 @@ public:
                                         const UnresolvedSetImpl &Fns,
                                         bool PerformADL = true);
 
+  /// Perform lookup for an overloaded unary operator.
+  void LookupOverloadedUnaryOp(OverloadCandidateSet &CandidateSet,
+                               OverloadedOperatorKind Op,
+                               const UnresolvedSetImpl &Fns,
+                               ArrayRef<Expr *> Args, bool RequiresADL = true);
+
   /// Create a unary operation that may resolve to an overloaded
   /// operator.
   ///
@@ -11085,6 +11200,43 @@ public:
       BuildForRangeKind Kind,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
 
+  /// Set the type of a for-range declaration whose for-range or expansion
+  /// initialiser is dependent.
+  void ActOnDependentForRangeInitializer(VarDecl *LoopVar,
+                                         BuildForRangeKind BFRK);
+
+  /// Holds the 'begin' and 'end' variables of a range-based for loop or
+  /// expansion statement; begin-expr and end-expr are also provided; the
+  /// latter are used in some diagnostics.
+  struct ForRangeBeginEndInfo {
+    VarDecl *BeginVar = nullptr;
+    VarDecl *EndVar = nullptr;
+    Expr *BeginExpr = nullptr;
+    Expr *EndExpr = nullptr;
+    bool isValid() const { return BeginVar != nullptr && EndVar != nullptr; }
+  };
+
+  /// Determine begin-expr and end-expr and build variable declarations for
+  /// them as per [stmt.ranged].
+  ForRangeBeginEndInfo BuildCXXForRangeBeginEndVars(
+      Scope *S, VarDecl *RangeVar, SourceLocation ColonLoc,
+      SourceLocation CoawaitLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
+      BuildForRangeKind Kind, bool IsConstexpr,
+      StmtResult *RebuildResult = nullptr,
+      llvm::function_ref<StmtResult()> RebuildWithDereference = {},
+      IdentifierInfo *BeginName = nullptr, IdentifierInfo *EndName = nullptr);
+
+  /// Helper used by the expansion statements and for-range code to build
+  /// a variable declaration for e.g. 'begin' and 'end'.
+  VarDecl *BuildForRangeVarDecl(SourceLocation Loc, QualType Type,
+                                IdentifierInfo *Name, bool IsConstexpr);
+
+  /// Build the range variable of a range-based for loop or iterating
+  /// expansion statement and return its DeclStmt.
+  StmtResult BuildCXXForRangeRangeVar(Scope *S, Expr *Range, QualType Type,
+                                      bool IsConstexpr = false);
+
   /// FinishCXXForRangeStmt - Attach the body to a C++0x for-range statement.
   /// This is a separate step from ActOnCXXForRangeStmt because analysis of the
   /// body cannot be performed until after the type of the range variable is
@@ -11230,14 +11382,13 @@ public:
                                            SourceLocation Loc,
                                            unsigned NumParams);
 
+  void ApplyForRangeOrExpansionStatementLifetimeExtension(
+      VarDecl *RangeVar, ArrayRef<MaterializeTemporaryExpr *> Temporaries);
+
 private:
   /// Check whether the given statement can have musttail applied to it,
   /// issuing a diagnostic and returning false if not.
   bool checkMustTailAttr(const Stmt *St, const Attr &MTA);
-
-  /// Check if the given expression contains 'break' or 'continue'
-  /// statement that produces control flow different from GCC.
-  void CheckBreakContinueBinding(Expr *E);
 
   ///@}
 
@@ -11432,7 +11583,7 @@ public:
                                   ParsedType ObjectType, bool EnteringContext,
                                   TemplateTy &Template,
                                   bool &MemberOfUnknownSpecialization,
-                                  bool Disambiguation = false);
+                                  bool AllowTypoCorrection = true);
 
   /// Try to resolve an undeclared template name as a type template.
   ///
@@ -11666,7 +11817,7 @@ public:
       AccessSpecifier AS, SourceLocation ModulePrivateLoc,
       SourceLocation FriendLoc, unsigned NumOuterTemplateParamLists,
       TemplateParameterList **OuterTemplateParamLists,
-      SkipBodyInfo *SkipBody = nullptr);
+      bool IsMemberSpecialization, SkipBodyInfo *SkipBody = nullptr);
 
   /// Translates template arguments as provided by the parser
   /// into template arguments used by semantic analysis.
@@ -11770,10 +11921,11 @@ public:
     return Arg;
   }
 
-  ExprResult BuildSubstNonTypeTemplateParmExpr(
-      Decl *AssociatedDecl, const NonTypeTemplateParmDecl *NTTP,
-      SourceLocation loc, TemplateArgument Replacement,
-      UnsignedOrNone PackIndex, bool Final);
+  ExprResult
+  BuildSubstNonTypeTemplateParmExpr(Decl *AssociatedDecl, unsigned Index,
+                                    QualType ParamType, SourceLocation loc,
+                                    TemplateArgument Replacement,
+                                    UnsignedOrNone PackIndex, bool Final);
 
   /// Form a template name from a name that is syntactically required to name a
   /// template, either due to use of the 'template' keyword or because a name in
@@ -12129,8 +12281,7 @@ public:
   /// doesn't need to live too long. It would be useful if this function
   /// could return a temporary expression.
   ExprResult BuildExpressionFromDeclTemplateArgument(
-      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
-      NamedDecl *TemplateParam = nullptr);
+      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc);
   ExprResult
   BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
                                              SourceLocation Loc);
@@ -12542,10 +12693,9 @@ public:
   ///
   /// \param Loc The source location to use for the resulting template
   /// argument.
-  TemplateArgumentLoc
-  getTrivialTemplateArgumentLoc(const TemplateArgument &Arg, QualType NTTPType,
-                                SourceLocation Loc,
-                                NamedDecl *TemplateParam = nullptr);
+  TemplateArgumentLoc getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
+                                                    QualType NTTPType,
+                                                    SourceLocation Loc);
 
   /// Get a template argument mapping the given template parameter to itself,
   /// e.g. for X in \c template<int X>, this would return an expression template
@@ -12997,7 +13147,7 @@ public:
   void DeclareImplicitDeductionGuides(TemplateDecl *Template,
                                       SourceLocation Loc);
 
-  FunctionTemplateDecl *DeclareAggregateDeductionGuideFromInitList(
+  CXXDeductionGuideDecl *DeclareAggregateDeductionGuideFromInitList(
       TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
       SourceLocation Loc);
 
@@ -13172,9 +13322,6 @@ public:
       // We are substituting template arguments into a constraint expression.
       ConstraintSubstitution,
 
-      // We are normalizing a constraint expression.
-      ConstraintNormalization,
-
       // Instantiating a Requires Expression parameter clause.
       RequirementParameterInstantiation,
 
@@ -13209,6 +13356,17 @@ public:
 
       /// We are performing partial ordering for template template parameters.
       PartialOrderingTTP,
+
+      /// We are performing name lookup for a function template or variable
+      /// template named 'sycl_kernel_launch'.
+      SYCLKernelLaunchLookup,
+
+      /// We are performing overload resolution for a call to a function
+      /// template or variable template named 'sycl_kernel_launch'.
+      SYCLKernelLaunchOverloadResolution,
+
+      /// We are instantiating an expansion statement.
+      ExpansionStmtInstantiation,
     } Kind;
 
     /// Whether we're substituting into constraints.
@@ -13385,12 +13543,6 @@ public:
                           ConstraintSubstitution, NamedDecl *Template,
                           SourceRange InstantiationRange);
 
-    struct ConstraintNormalization {};
-    /// \brief Note that we are normalizing a constraint expression.
-    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
-                          ConstraintNormalization, NamedDecl *Template,
-                          SourceRange InstantiationRange);
-
     struct ParameterMappingSubstitution {};
     /// \brief Note that we are subtituting into the parameter mapping of an
     /// atomic constraint during constraint normalization.
@@ -13403,6 +13555,12 @@ public:
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           concepts::Requirement *Req,
                           SourceRange InstantiationRange = SourceRange());
+
+    /// \brief Note that we are substituting the body of an expansion statement.
+    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
+                          CXXExpansionStmtPattern *ExpansionStmt,
+                          ArrayRef<TemplateArgument> TArgs,
+                          SourceRange InstantiationRange);
 
     /// \brief Note that we are checking the satisfaction of the constraint
     /// expression inside of a nested requirement.
@@ -13472,7 +13630,7 @@ public:
   bool SubstTemplateArgumentsInParameterMapping(
       ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
       const MultiLevelTemplateArgumentList &TemplateArgs,
-      TemplateArgumentListInfo &Out, bool BuildPackExpansionTypes);
+      TemplateArgumentListInfo &Out);
 
   /// Retrieve the template argument list(s) that should be used to
   /// instantiate the definition of the given declaration.
@@ -13564,6 +13722,23 @@ public:
     operator=(const SynthesizedFunctionScope &) = delete;
   };
 
+  /// RAII object to ensure that a code synthesis context is popped on scope
+  /// exit.
+  class ScopedCodeSynthesisContext {
+    Sema &S;
+
+  public:
+    ScopedCodeSynthesisContext(Sema &S, const CodeSynthesisContext &Ctx)
+        : S(S) {
+      S.pushCodeSynthesisContext(Ctx);
+    }
+
+    ~ScopedCodeSynthesisContext() { S.popCodeSynthesisContext(); }
+    ScopedCodeSynthesisContext(const ScopedCodeSynthesisContext &) = delete;
+    ScopedCodeSynthesisContext &
+    operator=(const ScopedCodeSynthesisContext &) = delete;
+  };
+
   /// List of active code synthesis contexts.
   ///
   /// This vector is treated as a stack. As synthesis of one entity requires
@@ -13608,14 +13783,6 @@ public:
   /// when there are multiple errors or warnings in the same instantiation.
   // FIXME: Does this belong in Sema? It's tough to implement it anywhere else.
   unsigned LastEmittedCodeSynthesisContextDepth = 0;
-
-  /// The template instantiation callbacks to trace or track
-  /// instantiations (objects can be chained).
-  ///
-  /// This callbacks is used to print, trace or track template
-  /// instantiations as they are being constructed.
-  std::vector<std::unique_ptr<TemplateInstantiationCallback>>
-      TemplateInstCallbacks;
 
   /// The current index into pack expansion arguments that will be
   /// used for substitution of parameter packs.
@@ -13759,21 +13926,6 @@ public:
   /// act like a CXXIdExpression rather than an attempt to call.
   ExprResult SubstCXXIdExpr(Expr *E,
                             const MultiLevelTemplateArgumentList &TemplateArgs);
-
-  // A RAII type used by the TemplateDeclInstantiator and TemplateInstantiator
-  // to disable constraint evaluation, then restore the state.
-  template <typename InstTy> struct ConstraintEvalRAII {
-    InstTy &TI;
-    bool OldValue;
-
-    ConstraintEvalRAII(InstTy &TI)
-        : TI(TI), OldValue(TI.getEvaluateConstraints()) {
-      TI.setEvaluateConstraints(false);
-    }
-    ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
-    ConstraintEvalRAII(const ConstraintEvalRAII &) = delete;
-    ConstraintEvalRAII &operator=(const ConstraintEvalRAII &) = delete;
-  };
 
   // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult
@@ -14038,6 +14190,8 @@ public:
   public:
     FPFeaturesStateRAII(Sema &S);
     ~FPFeaturesStateRAII();
+    FPFeaturesStateRAII(const FPFeaturesStateRAII &) = delete;
+    FPFeaturesStateRAII &operator=(const FPFeaturesStateRAII &) = delete;
     FPOptionsOverride getOverrides() { return OldOverrides; }
 
   private:
@@ -14123,6 +14277,10 @@ public:
   };
   typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
 
+  /// Recheck instantiated thread-safety attributes that could not be validated
+  /// on the dependent pattern declaration.
+  bool checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A);
+
   void InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                         const Decl *Pattern, Decl *Inst,
                         LateInstantiatedAttrVec *LateAttrs = nullptr,
@@ -14142,11 +14300,8 @@ public:
                           LateInstantiatedAttrVec *LateAttrs = nullptr,
                           LocalInstantiationScope *OuterMostScope = nullptr);
 
-  /// In the MS ABI, we need to instantiate default arguments of dllexported
-  /// default constructors along with the constructor definition. This allows IR
-  /// gen to emit a constructor closure which calls the default constructor with
-  /// its default arguments.
-  void InstantiateDefaultCtorDefaultArgs(CXXConstructorDecl *Ctor);
+  bool BuildCtorClosureDefaultArgs(SourceLocation Loc, CXXConstructorDecl *Ctor,
+                                   bool IsCopy = false);
 
   bool InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                   ParmVarDecl *Param);
@@ -14809,6 +14964,12 @@ public:
   ///@{
 
 public:
+  ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, TypeSourceInfo *TSI);
+
+  ExprResult BuildCXXReflectExpr(SourceLocation OperatorLoc,
+                                 TypeSourceInfo *TSI);
+
+public:
   void PushSatisfactionStackEntry(const NamedDecl *D,
                                   const llvm::FoldingSetNodeID &ID) {
     const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
@@ -14887,16 +15048,6 @@ public:
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction,
       const ConceptReference *TopLevelConceptId = nullptr,
       Expr **ConvertedExpr = nullptr);
-
-  /// \brief Check whether the given non-dependent constraint expression is
-  /// satisfied. Returns false and updates Satisfaction with the satisfaction
-  /// verdict if successful, emits a diagnostic and returns true if an error
-  /// occurred and satisfaction could not be determined.
-  ///
-  /// \returns true if an error occurred, false otherwise.
-  bool
-  CheckConstraintSatisfaction(const ConceptSpecializationExpr *ConstraintExpr,
-                              ConstraintSatisfaction &Satisfaction);
 
   /// Check whether the given function decl's trailing requires clause is
   /// satisfied, if any. Returns false and updates Satisfaction with the
@@ -14995,6 +15146,13 @@ public:
   llvm::DenseMap<llvm::FoldingSetNodeID,
                  UnsubstitutedConstraintSatisfactionCacheResult>
       UnsubstitutedConstraintSatisfactionCache;
+
+  /// Cache the instantiation results of template parameter mappings within
+  /// concepts. Substituting into normalized concepts can be extremely expensive
+  /// due to the redundancy of template parameters. This cache is intended for
+  /// use by TemplateInstantiator to avoid redundant semantic checking.
+  llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+      *CurrentCachedTemplateArgs = nullptr;
 
 private:
   /// Caches pairs of template-like decls whose associated constraints were
@@ -15324,6 +15482,17 @@ public:
                                              bool AllowArrayTypes,
                                              bool OverrideExisting);
 
+  /// Check whether the given variable declaration has a size that fits within
+  /// the address space it is declared in. This issues a diagnostic if not.
+  ///
+  /// \param VD The variable declaration to check the size of.
+  ///
+  /// \param AS The address space to check the size of \p VD against.
+  ///
+  /// \returns true if the variable's size fits within the address space, false
+  /// otherwise.
+  bool CheckVarDeclSizeAddressSpace(const VarDecl *VD, LangAS AS);
+
   /// Get the type of expression E, triggering instantiation to complete the
   /// type if necessary -- that is, if the expression refers to a templated
   /// static data member of incomplete array type.
@@ -15540,6 +15709,7 @@ public:
   ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
 
   void ActOnCleanupAttr(Decl *D, const Attr *A);
+  void ActOnInitPriorityAttr(Decl *D, const Attr *A);
 
 private:
   /// The implementation of RequireCompleteType
@@ -15672,6 +15842,53 @@ public:
 
   void performFunctionEffectAnalysis(TranslationUnitDecl *TU);
 
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name Expansion Statements
+  /// Implementations are in SemaExpand.cpp
+  ///@{
+public:
+  CXXExpansionStmtDecl *ActOnCXXExpansionStmtDecl(unsigned TemplateDepth,
+                                                  SourceLocation TemplateKWLoc);
+
+  CXXExpansionStmtDecl *
+  BuildCXXExpansionStmtDecl(DeclContext *Ctx, SourceLocation TemplateKWLoc,
+                            NonTypeTemplateParmDecl *NTTP);
+
+  ExprResult ActOnCXXExpansionInitList(MultiExprArg SubExprs,
+                                       SourceLocation LBraceLoc,
+                                       SourceLocation RBraceLoc);
+
+  StmtResult ActOnCXXExpansionStmtPattern(
+      CXXExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
+      Expr *ExpansionInitializer, SourceLocation LParenLoc,
+      SourceLocation ColonLoc, SourceLocation RParenLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps);
+
+  StmtResult FinishCXXExpansionStmt(Stmt *Expansion, Stmt *Body);
+
+  StmtResult BuildCXXEnumeratingExpansionStmtPattern(Decl *ESD, Stmt *Init,
+                                                     Stmt *ExpansionVar,
+                                                     SourceLocation LParenLoc,
+                                                     SourceLocation ColonLoc,
+                                                     SourceLocation RParenLoc);
+
+  StmtResult BuildNonEnumeratingCXXExpansionStmtPattern(
+      CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
+      Expr *ExpansionInitializer, SourceLocation LParenLoc,
+      SourceLocation ColonLoc, SourceLocation RParenLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
+
+  ExprResult BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx);
+
+  std::optional<uint64_t>
+  ComputeExpansionSize(CXXExpansionStmtPattern *Expansion);
   ///@}
 };
 

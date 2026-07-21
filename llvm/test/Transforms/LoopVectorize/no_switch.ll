@@ -16,16 +16,15 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z11test_switchPii(ptr nocapture %A, i32 %Length) #0 !dbg !4 {
+define void @_Z11test_switchPii(ptr nocapture %A, i32 %Length) !dbg !4 {
 entry:
   %cmp18 = icmp sgt i32 %Length, 0, !dbg !10
   br i1 %cmp18, label %for.body.preheader, label %for.end, !dbg !10, !llvm.loop !12
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body, !dbg !14
 
-for.body:                                         ; preds = %for.body.preheader, %for.inc
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !14
   %0 = load i32, ptr %arrayidx, align 4, !dbg !14, !tbaa !16
@@ -34,17 +33,17 @@ for.body:                                         ; preds = %for.body.preheader,
     i32 1, label %sw.bb3
   ], !dbg !14
 
-sw.bb:                                            ; preds = %for.body
+sw.bb:
   %1 = trunc i64 %indvars.iv to i32, !dbg !20
   %mul = shl nsw i32 %1, 1, !dbg !20
   br label %for.inc, !dbg !22
 
-sw.bb3:                                           ; preds = %for.body
+sw.bb3:
   %2 = trunc i64 %indvars.iv to i32, !dbg !23
   store i32 %2, ptr %arrayidx, align 4, !dbg !23, !tbaa !16
   br label %for.inc, !dbg !23
 
-for.inc:                                          ; preds = %sw.bb3, %for.body, %sw.bb
+for.inc:
   %storemerge = phi i32 [ %mul, %sw.bb ], [ 0, %for.body ], [ 0, %sw.bb3 ]
   store i32 %storemerge, ptr %arrayidx, align 4, !dbg !20, !tbaa !16
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !10
@@ -52,18 +51,15 @@ for.inc:                                          ; preds = %sw.bb3, %for.body, 
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !10
   br i1 %exitcond, label %for.end.loopexit, label %for.body, !dbg !10, !llvm.loop !12
 
-for.end.loopexit:                                 ; preds = %for.inc
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void, !dbg !24
 }
 
-attributes #0 = { nounwind }
-
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
-!llvm.ident = !{!9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0", isOptimized: true, runtimeVersion: 6, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "source.cpp", directory: ".")
@@ -73,7 +69,6 @@ attributes #0 = { nounwind }
 !6 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 2}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
-!9 = !{!"clang version 3.5.0"}
 !10 = !DILocation(line: 3, column: 8, scope: !11)
 !11 = distinct !DILexicalBlock(line: 3, column: 3, file: !1, scope: !4)
 !12 = !{!12, !13, !13}

@@ -33,10 +33,10 @@ FormatTokenLexer::FormatTokenLexer(
       LangOpts(getFormattingLangOpts(Style)), SourceMgr(SourceMgr), ID(ID),
       Style(Style), IdentTable(IdentTable), Keywords(IdentTable),
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
-      FormattingDisabled(false), FormatOffRegex(Style.OneLineFormatOffRegex),
-      MacroBlockBeginRegex(Style.MacroBlockBegin),
-      MacroBlockEndRegex(Style.MacroBlockEnd) {
-  Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts));
+      FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
+      MacroBlockEndRegex(Style.MacroBlockEnd), VerilogProtectedBlock(false) {
+  Lex = std::make_unique<Lexer>(ID, SourceMgr.getBufferOrFake(ID), SourceMgr,
+                                LangOpts);
   Lex->SetKeepWhitespaceMode(true);
 
   for (const std::string &ForEachMacro : Style.ForEachMacros) {
@@ -87,12 +87,14 @@ FormatTokenLexer::FormatTokenLexer(
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
   assert(Tokens.empty());
   assert(FirstInLineIndex == 0);
+
   enum { FO_None, FO_CurrentLine, FO_NextLine } FormatOff = FO_None;
+  llvm::Regex FormatOffRegex(Style.OneLineFormatOffRegex);
   do {
     Tokens.push_back(getNextToken());
+
     auto &Tok = *Tokens.back();
-    const auto NewlinesBefore = Tok.NewlinesBefore;
-    switch (FormatOff) {
+    switch (const auto NewlinesBefore = Tok.NewlinesBefore; FormatOff) {
     case FO_NextLine:
       if (NewlinesBefore > 1) {
         FormatOff = FO_None;
@@ -124,13 +126,16 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
         }
       }
     }
+
     if (Style.isJavaScript()) {
       tryParseJSRegexLiteral();
       handleTemplateStrings();
     } else if (Style.isTextProto()) {
       tryParsePythonComment();
     }
+
     tryMergePreviousTokens();
+
     if (Style.isCSharp()) {
       // This needs to come after tokens have been merged so that C#
       // string literals are correctly identified.
@@ -139,9 +144,11 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       handleTableGenMultilineString();
       handleTableGenNumericLikeIdentifier();
     }
+
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
+
   if (Style.InsertNewlineAtEOF) {
     auto &TokEOF = *Tokens.back();
     if (TokEOF.NewlinesBefore == 0) {
@@ -149,6 +156,7 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       TokEOF.OriginalColumn = 0;
     }
   }
+
   return Tokens;
 }
 
@@ -162,8 +170,6 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   if (tryMergeGreaterGreater())
     return;
   if (tryMergeForEach())
-    return;
-  if (Style.isCpp() && tryTransformTryUsageForC())
     return;
 
   if ((Style.Language == FormatStyle::LK_Cpp ||
@@ -533,26 +539,6 @@ bool FormatTokenLexer::tryMergeForEach() {
   return true;
 }
 
-bool FormatTokenLexer::tryTransformTryUsageForC() {
-  if (Tokens.size() < 2)
-    return false;
-  auto &Try = *(Tokens.end() - 2);
-  if (Try->isNot(tok::kw_try))
-    return false;
-  auto &Next = *(Tokens.end() - 1);
-  if (Next->isOneOf(tok::l_brace, tok::colon, tok::hash, tok::comment))
-    return false;
-
-  if (Tokens.size() > 2) {
-    auto &At = *(Tokens.end() - 3);
-    if (At->is(tok::at))
-      return false;
-  }
-
-  Try->Tok.setKind(tok::identifier);
-  return true;
-}
-
 bool FormatTokenLexer::tryMergeLessLess() {
   // Merge X,less,less,Y into X,lessless,Y unless X or Y is less.
   if (Tokens.size() < 3)
@@ -718,14 +704,19 @@ void FormatTokenLexer::tryParseJavaTextBlock() {
   ++S; // Skip the `"""` that begins a text block.
 
   // Find the `"""` that ends the text block.
+  bool Escaped = false;
   for (int Count = 0; Count < 3 && S < End; ++S) {
+    if (Escaped) {
+      Escaped = false;
+      continue;
+    }
     switch (*S) {
-    case '\\':
-      Count = -1;
-      break;
     case '\"':
       ++Count;
       break;
+    case '\\':
+      Escaped = true;
+      [[fallthrough]];
     default:
       Count = 0;
     }
@@ -1408,8 +1399,22 @@ FormatToken *FormatTokenLexer::getNextToken() {
       FormatTok->Tok.setKind(tok::identifier);
     } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
       FormatTok->Tok.setKind(tok::identifier);
-    } else if (Style.isVerilog() && Keywords.isVerilogIdentifier(*FormatTok)) {
-      FormatTok->Tok.setKind(tok::identifier);
+    } else if (Style.isVerilog()) {
+      if (Keywords.isVerilogIdentifier(*FormatTok))
+        FormatTok->Tok.setKind(tok::identifier);
+      // Look for the protect line. The next lines needs to be lexed as a single
+      // token.
+      if (Tokens.size() - FirstInLineIndex >= 3u &&
+          Tokens[FirstInLineIndex]->is(tok::hash) &&
+          Tokens[FirstInLineIndex + 1u]->is(tok::pp_pragma) &&
+          Tokens[FirstInLineIndex + 2u]->is(Keywords.kw_protect) &&
+          FormatTok->isOneOf(
+              Keywords.kw_data_block, Keywords.kw_data_decrypt_key,
+              Keywords.kw_data_public_key, Keywords.kw_digest_block,
+              Keywords.kw_digest_decrypt_key, Keywords.kw_digest_public_key,
+              Keywords.kw_key_block, Keywords.kw_key_public_key)) {
+        VerilogProtectedBlock = true;
+      }
     }
   } else if (const bool Greater = FormatTok->is(tok::greatergreater);
              Greater || FormatTok->is(tok::lessless)) {
@@ -1486,7 +1491,42 @@ FormatToken *FormatTokenLexer::getNextToken() {
   return FormatTok;
 }
 
-bool FormatTokenLexer::readRawTokenVerilogSpecific(Token &Tok) {
+bool FormatTokenLexer::readVerilogProtected(FormatToken &Tok) {
+  // The block follows the pragma line.
+  if (!VerilogProtectedBlock || Tok.NewlinesBefore == 0)
+    return false;
+  VerilogProtectedBlock = false;
+
+  // The block can be empty. Then no token is necessary. A backtick on its own
+  // line is likely a uuencode line. A backtick followed by something is assumed
+  // to be the pragma line that ends the block.
+  const char *const Start = Lex->getBufferLocation();
+  size_t Len = Lex->getBuffer().end() - Start;
+  if (Len == 0 ||
+      (Len >= 2 && Start[0] == '`' && !isVerticalWhitespace(Start[1]))) {
+    return false;
+  }
+
+  // The block ends when the next pragma line starts.
+  static const llvm::Regex NextDirective("[\n\r][ \t]*`[^\n\r]");
+  SmallVector<StringRef, 1> Matches;
+  if (NextDirective.match(StringRef(Start, Len), &Matches)) {
+    assert(Matches.size() == 1);
+    Len = Matches[0].begin() - Start;
+  }
+
+  Tok.Tok.setKind(tok::string_literal);
+  Tok.Tok.setLength(Len);
+  Tok.Tok.setLocation(Lex->getSourceLocation(Start, Len));
+  Tok.setFinalizedType(TT_VerilogProtected);
+  Lex->seek(Lex->getCurrentBufferOffset() + Len,
+            /*IsAtStartOfLine=*/false);
+  return true;
+}
+
+bool FormatTokenLexer::readRawTokenVerilogSpecific(FormatToken &Tok) {
+  if (readVerilogProtected(Tok))
+    return true;
   const char *Start = Lex->getBufferLocation();
   size_t Len;
   switch (Start[0]) {
@@ -1536,10 +1576,10 @@ bool FormatTokenLexer::readRawTokenVerilogSpecific(Token &Tok) {
   // The kind has to be an identifier so we can match it against those defined
   // in Keywords. The kind has to be set before the length because the setLength
   // function checks that the kind is not an annotation.
-  Tok.setKind(tok::raw_identifier);
-  Tok.setLength(Len);
-  Tok.setLocation(Lex->getSourceLocation(Start, Len));
-  Tok.setRawIdentifierData(Start);
+  Tok.Tok.setKind(tok::raw_identifier);
+  Tok.Tok.setLength(Len);
+  Tok.Tok.setLocation(Lex->getSourceLocation(Start, Len));
+  Tok.Tok.setRawIdentifierData(Start);
   Lex->seek(Lex->getCurrentBufferOffset() + Len, /*IsAtStartofline=*/false);
   return true;
 }
@@ -1547,7 +1587,7 @@ bool FormatTokenLexer::readRawTokenVerilogSpecific(Token &Tok) {
 void FormatTokenLexer::readRawToken(FormatToken &Tok) {
   // For Verilog, first see if there is a special token, and fall back to the
   // normal lexer if there isn't one.
-  if (!Style.isVerilog() || !readRawTokenVerilogSpecific(Tok.Tok))
+  if (!Style.isVerilog() || !readRawTokenVerilogSpecific(Tok))
     Lex->LexFromRawLexer(Tok.Tok);
   Tok.TokenText = StringRef(SourceMgr.getCharacterData(Tok.Tok.getLocation()),
                             Tok.Tok.getLength());
@@ -1576,8 +1616,9 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {
   StringRef Buffer = SourceMgr.getBufferData(ID);
-  Lex.reset(new Lexer(SourceMgr.getLocForStartOfFile(ID), LangOpts,
-                      Buffer.begin(), Buffer.begin() + Offset, Buffer.end()));
+  Lex = std::make_unique<Lexer>(SourceMgr.getLocForStartOfFile(ID), LangOpts,
+                                Buffer.begin(), Buffer.begin() + Offset,
+                                Buffer.end());
   Lex->SetKeepWhitespaceMode(true);
   TrailingWhitespace = 0;
 }

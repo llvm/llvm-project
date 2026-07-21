@@ -28,13 +28,12 @@ func.func @transfer_read_write_1d(%A : memref<?xf32>, %base: index) -> vector<17
 //
 // 4. Create bound vector to compute in-bound mask:
 //    [ 0 .. vector_length - 1 ] < [ dim - offset .. dim - offset ]
-//       CHECK: %[[btrunc:.*]] = arith.index_cast %[[BOUND]] :
-//  CMP32-SAME: index to i32
-//  CMP64-SAME: index to i64
+//    Note: for 32-bit indices, the bound is first clamped via arith.minsi to
+//    prevent i32 overflow for large index values.
+//       CHECK: %[[btrunc:.*]] = arith.index_cast %{{.*}} : index to [[$IDX_TYPE]]
 //       CHECK: %[[boundVecInsert:.*]] = llvm.insertelement %[[btrunc]]
 //       CHECK: %[[boundVect:.*]] = llvm.shufflevector %[[boundVecInsert]]
 //       CHECK: %[[mask:.*]] = arith.cmpi sgt, %[[boundVect]], %[[linearIndex]] : vector<17x[[$IDX_TYPE]]>
-//  CMP64-SAME: : vector<17xi64>
 //
 // 5. Bitcast to vector form.
 //       CHECK: %[[gep:.*]] = llvm.getelementptr %{{.*}} :
@@ -51,8 +50,7 @@ func.func @transfer_read_write_1d(%A : memref<?xf32>, %base: index) -> vector<17
 //
 // 2. Create bound vector to compute in-bound mask:
 //    [ 0 .. vector_length - 1 ] < [ dim - offset .. dim - offset ]
-//       CHECK: %[[btrunc_b:.*]] = arith.index_cast %[[BOUND_b]]
-//  CMP32-SAME: index to i32
+//       CHECK: %[[btrunc_b:.*]] = arith.index_cast %{{.*}} : index to [[$IDX_TYPE]]
 //       CHECK: %[[boundVecInsert_b:.*]] = llvm.insertelement %[[btrunc_b]]
 //       CHECK: %[[boundVect_b:.*]] = llvm.shufflevector %[[boundVecInsert_b]]
 //       CHECK: %[[mask_b:.*]] = arith.cmpi sgt, %[[boundVect_b]],
@@ -93,7 +91,9 @@ func.func @transfer_read_write_1d_scalable(%A : memref<?xf32>, %base: index) -> 
 //
 // 4. Create bound vector to compute in-bound mask:
 //    [ 0 .. vector_length - 1 ] < [ dim - offset .. dim - offset ]
-//       CHECK: %[[btrunc:.*]] = arith.index_cast %[[BOUND]] : index to [[$IDX_TYPE]]
+//    Note: for 32-bit indices, the bound is first clamped via arith.minsi to
+//    prevent i32 overflow for large index values.
+//       CHECK: %[[btrunc:.*]] = arith.index_cast %{{.*}} : index to [[$IDX_TYPE]]
 //       CHECK: %[[boundVecInsert:.*]] = llvm.insertelement %[[btrunc]]
 //       CHECK: %[[boundVect:.*]] = llvm.shufflevector %[[boundVecInsert]]
 //       CHECK: %[[mask:.*]] = arith.cmpi slt, %[[linearIndex]], %[[boundVect]]
@@ -117,7 +117,7 @@ func.func @transfer_read_write_1d_scalable(%A : memref<?xf32>, %base: index) -> 
 //
 // 3. Create bound vector to compute in-bound mask:
 //    [ 0 .. vector_length - 1 ] < [ dim - offset .. dim - offset ]
-//       CHECK: %[[btrunc_b:.*]] = arith.index_cast %[[BOUND_b]] : index to [[$IDX_TYPE]]
+//       CHECK: %[[btrunc_b:.*]] = arith.index_cast %{{.*}} : index to [[$IDX_TYPE]]
 //       CHECK: %[[boundVecInsert_b:.*]] = llvm.insertelement %[[btrunc_b]]
 //       CHECK: %[[boundVect_b:.*]] = llvm.shufflevector %[[boundVecInsert_b]]
 //       CHECK: %[[mask_b:.*]] = arith.cmpi slt, %[[linearIndex_b]],
@@ -200,7 +200,8 @@ func.func @transfer_read_2d_to_1d(%A : memref<?x?xf32>, %base0: index, %base1: i
 //
 // Create bound vector to compute in-bound mask:
 //    [ 0 .. vector_length - 1 ] < [ dim - offset .. dim - offset ]
-//       CHECK: %[[btrunc:.*]] = arith.index_cast %[[BOUND]] : index to [[$IDX_TYPE]]
+//    Note: for 32-bit indices, the bound is first clamped via arith.minsi.
+//       CHECK: %[[btrunc:.*]] = arith.index_cast %{{.*}} : index to [[$IDX_TYPE]]
 //       CHECK: %[[boundVecInsert:.*]] = llvm.insertelement %[[btrunc]]
 //       CHECK: %[[boundVect:.*]] = llvm.shufflevector %[[boundVecInsert]]
 //       CHECK: %[[mask:.*]] = arith.cmpi sgt, %[[boundVect]], %[[linearIndex]]
@@ -225,7 +226,8 @@ func.func @transfer_read_2d_to_1d_scalable(%A : memref<?x?xf32>, %base0: index, 
 //
 // Create bound vector to compute in-bound mask:
 //    [ 0 .. vector_length - 1 ] < [ dim - offset .. dim - offset ]
-//       CHECK: %[[btrunc:.*]] = arith.index_cast %[[BOUND]] : index to [[$IDX_TYPE]]
+//    Note: for 32-bit indices, the bound is first clamped via arith.minsi.
+//       CHECK: %[[btrunc:.*]] = arith.index_cast %{{.*}} : index to [[$IDX_TYPE]]
 //       CHECK: %[[boundVecInsert:.*]] = llvm.insertelement %[[btrunc]]
 //       CHECK: %[[boundVect:.*]] = llvm.shufflevector %[[boundVecInsert]]
 //       CHECK: %[[mask:.*]] = arith.cmpi slt, %[[linearIndex]], %[[boundVect]]

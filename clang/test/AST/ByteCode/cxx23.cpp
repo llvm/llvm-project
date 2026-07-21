@@ -12,6 +12,8 @@ inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p;
 namespace std {
 template<typename T, typename... Args>
 constexpr T* construct_at(T* p, Args&&... args) { return ::new((void*)p) T(static_cast<Args&&>(args)...); }
+template<typename T>
+constexpr void destroy_at(T *p) { p->~T(); } // #destroy
 }
 
 constexpr int f(int n) {  // all20-error {{constexpr function never produces a constant expression}}
@@ -266,8 +268,11 @@ namespace ExplicitLambdaInstancePointer {
   };
   constexpr auto b = [](this K) { return 1; }; // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}} \
                                                // all-error {{unknown type name 'K'}}
-  constexpr int (*fp)(K) = b; // all-error {{unknown type name 'K'}}
-  static_assert(fp(1) == 1, ""); // expected-error {{not an integral constant expression}}
+  constexpr int (*fp)(K) = b; // all-error {{unknown type name 'K'}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{declared here}}
+  static_assert(fp(1) == 1, ""); // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{initializer of 'fp' is not a constant expression}}
 }
 
 namespace TwosComplementShifts {
@@ -315,7 +320,6 @@ namespace AnonUnionDtor {
   void bar() { foo(); }
 }
 
-/// FIXME: The two interpreters disagree about there to diagnose the non-constexpr destructor call.
 namespace NonLiteralDtorInParam {
   class NonLiteral { // all20-note {{is not an aggregate and has no constexpr constructors other than copy or move constructors}}
   public:
@@ -528,6 +532,37 @@ namespace InactiveLocalsInConditionalOp {
   static_assert(test2(true));
 
 }
+
+namespace PrimitiveArrayLifetimes {
+  consteval int test1() {
+    int a[3];
+    assert_active(a[0]);
+    assert_active(a[1]);
+    assert_active(a[2]);
+    std::destroy_at(&a[0]);
+    assert_inactive(a[0]);
+
+    std::construct_at(&a[0]);
+    assert_active(a[0]);
+    return a[0];
+  }
+  static_assert(test1() == 0);
+
+  consteval int test2() {
+    int a[3] = {1,2,3};
+    assert_active(a[0]);
+    assert_active(a[1]);
+    assert_active(a[2]);
+    std::destroy_at(&a[0]);
+    assert_inactive(a[0]);
+
+    std::construct_at(&a[0]);
+    assert_active(a[0]);
+    return a[0];
+  }
+  static_assert(test2() == 0);
+}
+
 #endif
 
 namespace UnknownParams {
@@ -546,3 +581,90 @@ namespace UnknownParams {
     return 1;
   }
 }
+
+namespace NonCompoundStmtBody {
+  /// The body of the constructor is NOT a CompoundStmt.
+  struct S {
+    constexpr S() try { x = 20; } catch(...) {}
+
+    int x = 0;
+  };
+
+  constexpr bool testS() {
+    S s;
+    return s.x == 20;
+  }
+  static_assert(testS());
+}
+
+namespace LValueConstant {
+  struct D {
+    unsigned y;
+  };
+
+  extern D d;
+  consteval D& c() { return d; }
+  long long f() { return c().y; }
+}
+
+#if __cplusplus >= 202302L
+namespace PointerIntInc {
+  constexpr const char *foo(const char *p, bool b) {
+    auto q = reinterpret_cast<__UINTPTR_TYPE__>(p);
+    if (b)
+      q++;
+    else
+      q--;
+    return p;
+  }
+  constexpr char p = 10;
+  auto bar = foo(&p, true);
+  auto bar2 = foo(&p, false);
+}
+#endif
+
+namespace VariadicOperator {
+  struct S {
+    constexpr int operator()(this S, ...) { return 42; } // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}}
+  };
+  constexpr S s;
+  static_assert(s() == 42);
+}
+
+namespace DynamicCast {
+
+  struct A {virtual ~A();};
+  struct B : A {};
+  void f(A& a) { // all20-note 2{{declared here}}
+    constexpr B* b = dynamic_cast<B*>(&a); // all-error {{must be initialized by a constant expression}} \
+                                           // all23-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
+                                           // all20-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    constexpr void* b2 = dynamic_cast<void*>(&a); // all-error {{must be initialized by a constant expression}} \
+                                                  // all23-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
+                                                  // all20-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+  }
+
+  struct S {};
+  constexpr S s;
+  constexpr int foo = (dynamic_cast<const S &>(s), 0);
+}
+
+#if __cplusplus >= 202302L
+namespace BrokenShuffleVector {
+  typedef float __m128 __attribute__((__vector_size__(16)));
+
+  static inline constexpr __m128 _mm_cvtps_pd(__m128 z) {
+    __builtin_convertvector(__builtin_shufflevector(z, z), __m128); // all-error {{first two arguments to '__builtin_shufflevector' must have the same type}} \
+                                                                    // all-warning {{expression result unused}}
+  }
+
+  constexpr __m128 kf1{1.0f, 2.0f, 3.0f, 4.0f};
+  constexpr __m128 v_mm_cvtps_pd = _mm_cvtps_pd(kf1); // all-error {{must be initialized by a constant expression}}
+}
+
+namespace BrokenExplicitInstanceParam {
+  auto b = [](this C) { return 1; }; // all-error {{unknown type name 'C'}}
+  static_assert( (&decltype(b)::operator())(1) == 1); // expected-error {{not an integral constant expression}}
+}
+
+#endif

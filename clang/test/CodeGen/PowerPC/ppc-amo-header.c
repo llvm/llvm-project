@@ -137,3 +137,111 @@ int64_t test_ldat_sswap(int64_t *ptr, int64_t val) {
   // CHECK: call i64 @llvm.ppc.amo.ldat(ptr %{{.*}}, i64 %{{.*}}, i32 8)
   return amo_ldat_sswap(ptr, val);
 }
+
+void test_stwat_add(uint32_t *ptr, uint32_t val) {
+  // CHECK-LABEL: @test_stwat_add
+  // CHECK: call void @llvm.ppc.amo.stwat(ptr %{{.*}}, i32 %{{.*}}, i32 0)
+  return amo_stwat_add(ptr, val);
+}
+
+void test_stwat_xor(uint32_t *ptr, uint32_t val) {
+  // CHECK-LABEL: @test_stwat_xor
+  // CHECK: call void @llvm.ppc.amo.stwat(ptr %{{.*}}, i32 %{{.*}}, i32 1)
+  return amo_stwat_xor(ptr, val);
+}
+
+void test_stwat_ior(uint32_t *ptr, uint32_t val) {
+  // CHECK-LABEL: @test_stwat_ior
+  // CHECK: call void @llvm.ppc.amo.stwat(ptr %{{.*}}, i32 %{{.*}}, i32 2)
+  return amo_stwat_ior(ptr, val);
+}
+
+void test_stwat_and(uint32_t *ptr, uint32_t val) {
+  // CHECK-LABEL: @test_stwat_and
+  // CHECK: call void @llvm.ppc.amo.stwat(ptr %{{.*}}, i32 %{{.*}}, i32 3)
+  return amo_stwat_and(ptr, val);
+}
+
+void test_stwat_umax(uint32_t *ptr, uint32_t val) {
+  // CHECK-LABEL: @test_stwat_umax
+  // CHECK: call void @llvm.ppc.amo.stwat(ptr %{{.*}}, i32 %{{.*}}, i32 4)
+  return amo_stwat_umax(ptr, val);
+}
+
+void test_stwat_umin(uint32_t *ptr, uint32_t val) {
+  // CHECK-LABEL: @test_stwat_umin
+  // CHECK: call void @llvm.ppc.amo.stwat(ptr %{{.*}}, i32 %{{.*}}, i32 6)
+  return amo_stwat_umin(ptr, val);
+}
+
+void test_stwat_sadd(int32_t *ptr, int32_t val) {
+  // CHECK-LABEL: @test_stwat_sadd
+  // CHECK: call void @llvm.ppc.amo.stwat(ptr %{{.*}}, i32 %{{.*}}, i32 0)
+  return amo_stwat_sadd(ptr, val);
+}
+
+void test_stwat_smax(int32_t *ptr, int32_t val) {
+  // CHECK-LABEL: @test_stwat_smax
+  // CHECK: call void @llvm.ppc.amo.stwat(ptr %{{.*}}, i32 %{{.*}}, i32 5)
+  return amo_stwat_smax(ptr, val);
+}
+
+void test_stwat_smin(int32_t *ptr, int32_t val) {
+  // CHECK-LABEL: @test_stwat_smin
+  // CHECK: call void @llvm.ppc.amo.stwat(ptr %{{.*}}, i32 %{{.*}}, i32 7)
+  return amo_stwat_smin(ptr, val);
+}
+
+void test_stdat_add(uint64_t *ptr, uint64_t val) {
+  // CHECK-LABEL: @test_stdat_add
+  // CHECK: call void @llvm.ppc.amo.stdat(ptr %{{.*}}, i64 %{{.*}}, i32 0)
+  return amo_stdat_add(ptr, val);
+}
+
+void test_stdat_xor(uint64_t *ptr, uint64_t val) {
+  // CHECK-LABEL: @test_stdat_xor
+  // CHECK: call void @llvm.ppc.amo.stdat(ptr %{{.*}}, i64 %{{.*}}, i32 1)
+  return amo_stdat_xor(ptr, val);
+}
+
+void test_stdat_ior(uint64_t *ptr, uint64_t val) {
+  // CHECK-LABEL: @test_stdat_ior
+  // CHECK: call void @llvm.ppc.amo.stdat(ptr %{{.*}}, i64 %{{.*}}, i32 2)
+  return amo_stdat_ior(ptr, val);
+}
+
+void test_stdat_and(uint64_t *ptr, uint64_t val) {
+  // CHECK-LABEL: @test_stdat_and
+  // CHECK: call void @llvm.ppc.amo.stdat(ptr %{{.*}}, i64 %{{.*}}, i32 3)
+  return amo_stdat_and(ptr, val);
+}
+
+void test_stdat_umax(uint64_t *ptr, uint64_t val) {
+  // CHECK-LABEL: @test_stdat_umax
+  // CHECK: call void @llvm.ppc.amo.stdat(ptr %{{.*}}, i64 %{{.*}}, i32 4)
+  return amo_stdat_umax(ptr, val);
+}
+
+void test_stdat_umin(uint64_t *ptr, uint64_t val) {
+  // CHECK-LABEL: @test_stdat_umin
+  // CHECK: call void @llvm.ppc.amo.stdat(ptr %{{.*}}, i64 %{{.*}}, i32 6)
+  return amo_stdat_umin(ptr, val);
+}
+
+void test_stdat_sadd(int64_t *ptr, int64_t val) {
+  // CHECK-LABEL: @test_stdat_sadd
+  // CHECK: call void @llvm.ppc.amo.stdat(ptr %{{.*}}, i64 %{{.*}}, i32 0)
+  return amo_stdat_sadd(ptr, val);
+}
+
+void test_stdat_smax(int64_t *ptr, int64_t val) {
+  // CHECK-LABEL: @test_stdat_smax
+  // CHECK: call void @llvm.ppc.amo.stdat(ptr %{{.*}}, i64 %{{.*}}, i32 5)
+  return amo_stdat_smax(ptr, val);
+}
+
+void test_stdat_smin(int64_t *ptr, int64_t val) {
+  // CHECK-LABEL: @test_stdat_smin
+  // CHECK: call void @llvm.ppc.amo.stdat(ptr %{{.*}}, i64 %{{.*}}, i32 7)
+  return amo_stdat_smin(ptr, val);
+}

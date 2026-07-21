@@ -458,6 +458,8 @@ enum NodeType {
   STRICT_FNEARBYINT,
   STRICT_FMAXNUM,
   STRICT_FMINNUM,
+  STRICT_PSEUDO_FMIN,
+  STRICT_PSEUDO_FMAX,
   STRICT_FCEIL,
   STRICT_FFLOOR,
   STRICT_FROUND,
@@ -648,11 +650,12 @@ enum NodeType {
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
 
-  /// VECTOR_SPLICE_LEFT(VEC1, VEC2, IMM) - Shifts CONCAT_VECTORS(VEC1, VEC2)
-  /// left by IMM elements and returns the lower half.
+  /// VECTOR_SPLICE_LEFT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
+  /// left by OFFSET elements and returns the lower half.
   VECTOR_SPLICE_LEFT,
-  /// VECTOR_SPLICE_RIGHT(VEC1, VEC2, IMM) - Shifts CONCAT_VECTORS(VEC1, VEC2)
-  /// right by IMM elements and returns the upper half.
+  /// VECTOR_SPLICE_RIGHT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1,
+  /// VEC2)
+  /// right by OFFSET elements and returns the upper half.
   VECTOR_SPLICE_RIGHT,
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
@@ -745,6 +748,10 @@ enum NodeType {
   /// is performed.
   ABS,
 
+  /// ABS with a poison result for INT_MIN. This corresponds to
+  /// llvm.abs(x, true) where the "int min is poison" flag is set.
+  ABS_MIN_POISON,
+
   /// Shift and rotation operations.  After legalization, the type of the
   /// shift amount is known to be TLI.getShiftAmountTy().  Before legalization
   /// the shift amount can be any type, but care must be taken to ensure it is
@@ -774,6 +781,10 @@ enum NodeType {
   CLMULR,
   CLMULH,
 
+  /// Parallel bit extract (compress) and parallel bit deposit (expand).
+  PEXT,
+  PDEP,
+
   /// Byte Swap and Counting operators.
   BSWAP,
   CTTZ,
@@ -782,9 +793,9 @@ enum NodeType {
   BITREVERSE,
   PARITY,
 
-  /// Bit counting operators with an undefined result for zero inputs.
-  CTTZ_ZERO_UNDEF,
-  CTLZ_ZERO_UNDEF,
+  /// Bit counting operators with a poisoned result for zero inputs.
+  CTTZ_ZERO_POISON,
+  CTLZ_ZERO_POISON,
 
   /// Count leading redundant sign bits. Equivalent to
   /// (sub (ctlz (x < 0 ? ~x : x)), 1).
@@ -1013,6 +1024,21 @@ enum NodeType {
   STRICT_BF16_TO_FP,
   STRICT_FP_TO_BF16,
 
+  /// CONVERT_FROM_ARBITRARY_FP - This operator converts from an arbitrary
+  /// floating-point represented as an integer to a native FP type.
+  /// The first operand is the integer containing the source FP bits.
+  /// The second operand is a constant indicating the source FP semantics.
+  CONVERT_FROM_ARBITRARY_FP,
+
+  /// CONVERT_TO_ARBITRARY_FP - Converts a native FP value to an arbitrary
+  /// floating-point format, returning the result as an integer.
+  /// The first operand is the source value.
+  /// The second operand is a constant indicating the destination FP semantics.
+  /// The third operand is a constant indication the rounding mode.
+  /// The last operand is a boolean constant indicating whether the result has
+  /// to be saturated.
+  CONVERT_TO_ARBITRARY_FP,
+
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into
   /// sizeof(int).
@@ -1102,6 +1128,15 @@ enum NodeType {
   /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
   FMINIMUMNUM,
   FMAXIMUMNUM,
+
+  /// PSEUDO_FMIN is strictly equivalent to op0 olt op1 ? op0 : op1.
+  /// PSEUDO_FMAX is strictly equivalent to op0 ogt op1 ? op0 : op1.
+  /// In particular, this implies that if both operands are zeros, the second
+  /// operand is returned (regardless of sign), and that if one operand is NaN,
+  /// the second operand is returned (exactly as-is, without any NaN changes).
+  /// The StrictFP variant assumes signaling fcmp (FSETCCS).
+  PSEUDO_FMIN,
+  PSEUDO_FMAX,
 
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
@@ -1404,6 +1439,8 @@ enum NodeType {
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_FMAXIMUM,
   ATOMIC_LOAD_FMINIMUM,
+  ATOMIC_LOAD_FMAXIMUMNUM,
+  ATOMIC_LOAD_FMINIMUMNUM,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
   ATOMIC_LOAD_USUB_COND,
@@ -1439,6 +1476,10 @@ enum NodeType {
   /// Its purpose is the extension of the operand's lifetime mainly for
   /// debugging purposes.
   FAKE_USE,
+
+  /// COND_LOOP is a conditional branch to self, used for implementing efficient
+  /// conditional traps.
+  COND_LOOP,
 
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
@@ -1566,6 +1607,13 @@ enum NodeType {
   /// Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
+  /// Returns the number of number of trailing (least significant) zero elements
+  /// in a vector. Has a single mask vector operand. The result is poison if the
+  /// return type isn't wide enough to hold the maximum number of elements in
+  /// the input vector.
+  CTTZ_ELTS,
+  CTTZ_ELTS_ZERO_POISON,
+
   /// Finds the index of the last active mask element
   /// Operands: Mask
   VECTOR_FIND_LAST_ACTIVE,
@@ -1598,6 +1646,14 @@ enum NodeType {
   LOOP_DEPENDENCE_WAR_MASK,
   LOOP_DEPENDENCE_RAW_MASK,
 
+  /// Masked vector arithmetic that returns poison on disabled lanes. Disabled
+  /// lanes do not have undefined behaviour on division by zero or overflow. The
+  /// first two operands are input vectors, the third operand is the mask.
+  MASKED_UDIV,
+  MASKED_SDIV,
+  MASKED_UREM,
+  MASKED_SREM,
+
   /// llvm.clear_cache intrinsic
   /// Operands: Input Chain, Start Addres, End Address
   /// Outputs: Output Chain
@@ -1617,13 +1673,28 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
 
+/// Whether this is an integer absolute-value opcode (ISD::ABS or
+/// ISD::ABS_MIN_POISON).
+inline bool isAbsOpcode(unsigned Opcode) {
+  return Opcode == ISD::ABS || Opcode == ISD::ABS_MIN_POISON;
+}
+
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
 
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns the
+/// corresponding opcode with the opposite signedness:
+/// ISD::SMIN <-> ISD::UMIN, ISD::SMAX <-> ISD::UMAX.
+LLVM_ABI NodeType getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc);
+
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
 LLVM_ABI NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
+
+/// Given a \p MaskedOpc of ISD::MASKED_(U|S)(DIV|REM), returns the unmasked
+/// ISD::(U|S)(DIV|REM).
+LLVM_ABI NodeType getUnmaskedBinOpOpcode(unsigned MaskedOpc);
 
 /// Whether this is a vector-predicated Opcode.
 LLVM_ABI bool isVPOpcode(unsigned Opcode);

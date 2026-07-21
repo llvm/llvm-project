@@ -8,6 +8,9 @@
 
 #include "LibCxx.h"
 
+#include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
+#include "Plugins/Language/CPlusPlus/Generic.h"
+#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
@@ -23,13 +26,9 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
-
-#include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
-#include "Plugins/Language/CPlusPlus/Generic.h"
-#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <optional>
 #include <tuple>
 
@@ -159,16 +158,14 @@ bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
     return false;
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::Lambda:
-    stream.Printf(
-        " Lambda in File %s at Line %u",
-        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
-        callable_info.callable_line_entry.line);
+    stream.Format(" Lambda in File {0} at Line {1}",
+                  callable_info.callable_line_entry.GetFile().GetFilename(),
+                  callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::CallableObject:
-    stream.Printf(
-        " Function in File %s at Line %u",
-        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
-        callable_info.callable_line_entry.line);
+    stream.Format(" Function in File {0} at Line {1}",
+                  callable_info.callable_line_entry.GetFile().GetFilename(),
+                  callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::FreeOrMemberFunction:
     stream.Printf(" Function = %s ",
@@ -247,6 +244,83 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   return true;
 }
 
+static std::optional<int64_t> LibcxxExtractOrderingValue(ValueObject &valobj) {
+  lldb::ValueObjectSP value_sp = valobj.GetChildMemberWithName("__value_");
+  if (!value_sp)
+    return std::nullopt;
+  bool success;
+  int64_t value = value_sp->GetValueAsSigned(0, &success);
+  if (!success)
+    return std::nullopt;
+  return value;
+}
+
+bool lldb_private::formatters::LibcxxPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  case -127:
+    stream << "unordered";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equal";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
 /*
  (lldb) fr var ibeg --raw --ptr-depth 1 -T
  (std::__1::__wrap_iter<int *>) ibeg = {
@@ -321,7 +395,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   if (!cast_ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
+  m_ptr_obj = cast_ptr_sp->Clone("pointer").get();
 
   lldb::ValueObjectSP cntrl_sp(valobj_sp->GetChildMemberWithName("__cntrl_"));
 
@@ -339,8 +413,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
   if (name == "object" || name == "$$dereference$$")
     return 1;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
@@ -416,18 +489,18 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   if (is_compressed_pair) {
     if (ValueObjectSP value_pointer_sp =
             GetFirstValueOfLibCXXCompressedPair(*ptr_sp))
-      m_value_ptr_sp = value_pointer_sp->Clone(ConstString("pointer"));
+      m_value_ptr_sp = value_pointer_sp->Clone("pointer");
 
     if (ValueObjectSP deleter_sp =
             GetSecondValueOfLibCXXCompressedPair(*ptr_sp))
-      m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+      m_deleter_sp = deleter_sp->Clone("deleter");
   } else {
-    m_value_ptr_sp = ptr_sp->Clone(ConstString("pointer"));
+    m_value_ptr_sp = ptr_sp->Clone("pointer");
 
     if (ValueObjectSP deleter_sp =
             valobj_sp->GetChildMemberWithName("__deleter_"))
       if (deleter_sp->GetNumChildrenIgnoringErrors() > 0)
-        m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+        m_deleter_sp = deleter_sp->Clone("deleter");
   }
 
   return lldb::ChildCacheState::eRefetch;
@@ -442,8 +515,7 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 /// The field layout in a libc++ string (cap, side, data or data, size, cap).
@@ -905,6 +977,39 @@ bool lldb_private::formatters::LibcxxChronoYearMonthDaySummaryProvider(
     year = -year;
   }
   stream.Printf("%04d-%02u-%02u", year, month, day);
+
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxSourceLocationSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__ptr_");
+  if (!ptr_sp)
+    return false;
+
+  ValueObjectSP file_sp = ptr_sp->GetChildMemberWithName("_M_file_name");
+  ValueObjectSP function_sp =
+      ptr_sp->GetChildMemberWithName("_M_function_name");
+  ValueObjectSP line_sp = ptr_sp->GetChildMemberWithName("_M_line");
+  ValueObjectSP column_sp = ptr_sp->GetChildMemberWithName("_M_column");
+
+  if (!file_sp || !function_sp || !line_sp || !column_sp)
+    return false;
+
+  bool success = false;
+  uint64_t line = line_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  uint64_t column = column_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  const char *file = file_sp->GetSummaryAsCString();
+  stream.Format("{0}:{1}:{2}", file ? file : "<unknown>", line, column);
+
+  if (const char *function = function_sp->GetSummaryAsCString())
+    stream.Printf(" (%s)", function);
 
   return true;
 }

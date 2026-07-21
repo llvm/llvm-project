@@ -38,6 +38,8 @@
 # CHECK-NEXT:       0x30 R_LARCH_SUB64 x 0x0
 # CHECK-NEXT:       0x38 R_LARCH_ADD32 {{.*}} 0x0
 # CHECK-NEXT:       0x38 R_LARCH_SUB32 y 0x0
+# CHECK-NEXT:       0x3C R_LARCH_32_PCREL - 0xBEEF
+# CHECK-NEXT:       0x40 R_LARCH_64_PCREL - 0xBEEF
 # CHECK-NEXT:     }
 # NORELAX-NEXT:   Section ({{.*}}) .rela.sy {
 # NORELAX-NEXT:     0x0 R_LARCH_CALL36 foo 0x0
@@ -69,6 +71,10 @@ la.pcrel $a0, z
 .4byte y-x
 .8byte .-x
 .4byte .-y
+1:
+.4byte 0xbeef-1b
+1:
+.8byte 0xbeef-1b
 
 .section .sy,"ax"
 call36 foo

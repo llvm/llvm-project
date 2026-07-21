@@ -443,10 +443,6 @@ module cxx03_std_fenv_h [system] {
   header "fenv.h"
   export *
 }
-module cxx03_std_float_h [system] {
-  header "float.h"
-  export *
-}
 module cxx03_std_inttypes_h [system] {
   header "inttypes.h"
   export *

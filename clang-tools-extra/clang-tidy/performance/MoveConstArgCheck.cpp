@@ -14,7 +14,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-static void replaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
+static void replaceCallWithArg(const CallExpr *Call,
+                               const DiagnosticBuilder &Diag,
                                const SourceManager &SM,
                                const LangOptions &LangOpts) {
   const Expr *Arg = Call->getArg(0);
@@ -136,7 +137,8 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
         return;
       // Don't warn when the type is not copyable.
       for (const auto *Ctor : R->ctors())
-        if (Ctor->isCopyConstructor() && Ctor->isDeleted())
+        if (Ctor->isCopyConstructor() &&
+            (Ctor->isDeleted() || Ctor->getAccess() != AS_public))
           return;
     }
 

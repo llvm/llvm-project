@@ -28,6 +28,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <type_traits>
 
@@ -119,7 +120,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::ReciprocalOp>(op) && isa<FloatType>(elementTy)) {
     auto one =
         arith::ConstantOp::create(rewriter, loc, FloatAttr::get(elementTy, 1));
-    return arith::DivFOp::create(rewriter, loc, resultTypes, one, args[0]);
+    return arith::DivFOp::create(rewriter, loc, one, args[0]);
   }
 
   // tosa::MulOp
@@ -139,8 +140,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                                           "Cannot have shift value for float");
         return nullptr;
       }
-      return arith::MulFOp::create(rewriter, loc, resultTypes, args[0],
-                                   args[1]);
+      return arith::MulFOp::create(rewriter, loc, args[0], args[1]);
     }
 
     if (isa<IntegerType>(elementTy)) {
@@ -537,8 +537,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         arith::ConstantOp::create(rewriter, loc, FloatAttr::get(elementTy, 1));
     auto negate = arith::NegFOp::create(rewriter, loc, resultTypes, args[0]);
     auto exp = mlir::math::ExpOp::create(rewriter, loc, resultTypes, negate);
-    auto added = arith::AddFOp::create(rewriter, loc, resultTypes, exp, one);
-    return arith::DivFOp::create(rewriter, loc, resultTypes, one, added);
+    auto added = arith::AddFOp::create(rewriter, loc, exp, one);
+    return arith::DivFOp::create(rewriter, loc, one, added);
   }
 
   // tosa::CastOp
@@ -1566,15 +1566,15 @@ public:
 
     if (isMultiplierConstant && isShiftConstant) {
       // explicit cast is required here
-      shiftValues = llvm::to_vector(llvm::map_range(
+      shiftValues = llvm::map_to_vector(
           shiftElems.getValues<IntegerAttr>(), [](IntegerAttr attr) -> int32_t {
             return static_cast<int32_t>(attr.getInt());
-          }));
-      multiplierValues = llvm::to_vector(
-          llvm::map_range(multiplierElems.getValues<IntegerAttr>(),
-                          [](IntegerAttr attr) -> int32_t {
-                            return static_cast<int32_t>(attr.getInt());
-                          }));
+          });
+      multiplierValues =
+          llvm::map_to_vector(multiplierElems.getValues<IntegerAttr>(),
+                              [](IntegerAttr attr) -> int32_t {
+                                return static_cast<int32_t>(attr.getInt());
+                              });
 
       // If we shift by more than the bitwidth, this just sets to 0.
       for (int i = 0, s = multiplierValues.size(); i < s; i++) {
@@ -2035,10 +2035,12 @@ public:
         val = arith::AddIOp::create(b, val, offset);
         index = arith::FloorDivSIOp::create(b, val, scaleN);
 
-        // rx = x % scale_n
-        // dx = rx / scale_n
-        Value r = arith::RemSIOp::create(b, val, scaleN);
+        // rx = x - ix * scale_n (x % scale_n, if values are positive)
+        Value scaledIndex = arith::MulIOp::create(b, index, scaleN);
+        Value r = arith::SubIOp::create(b, val, scaledIndex);
         Value rFp = arith::SIToFPOp::create(b, floatTy, r);
+
+        // dx = rx / scale_n
         Value scaleNfp = arith::UIToFPOp::create(b, floatTy, scaleN);
         delta = arith::DivFOp::create(b, rFp, scaleNfp);
       };
@@ -2057,7 +2059,7 @@ public:
         //  dx = x - ix * scale_n;
         Value val = arith::MulIOp::create(b, in, scaleD);
         val = arith::AddIOp::create(b, val, offset);
-        index = arith::DivSIOp::create(b, val, scaleN);
+        index = arith::FloorDivSIOp::create(b, val, scaleN);
         delta = arith::MulIOp::create(b, index, scaleN);
         delta = arith::SubIOp::create(b, val, delta);
       };

@@ -1,7 +1,6 @@
 // RUN: %libomptarget-compilexx-generic -fopenmp-version=51
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
-// XFAIL: intelgpu
 
 #include <assert.h>
 #include <iostream>

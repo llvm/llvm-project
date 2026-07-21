@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILValueEnumerator.h"
+#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Argument.h"
@@ -102,7 +103,7 @@ static void orderValue(const Value *V, OrderMap &OM) {
   OM.index(V);
 }
 
-static OrderMap orderModule(const Module &M) {
+static OrderMap orderModule(const Module &M, ValueEnumerator &VE) {
   // This needs to match the order used by ValueEnumerator::ValueEnumerator()
   // and ValueEnumerator::incorporateFunction().
   OrderMap OM;
@@ -137,11 +138,13 @@ static OrderMap orderModule(const Module &M) {
     if ((isa<Constant>(V) && !isa<GlobalValue>(V)) || isa<InlineAsm>(V))
       orderValue(V, OM);
   };
-  for (const Function &F : M) {
+  for (const Function &OrigF : M) {
+    const Function &F = VE.getDXILFunction(OrigF);
     if (F.isDeclaration())
       continue;
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &OrigI : BB) {
+        const Instruction &I = VE.getDXILInstruction(OrigI);
         for (const Value *V : I.operands()) {
           if (const auto *MAV = dyn_cast<MetadataAsValue>(V)) {
             if (const auto *VAM =
@@ -154,6 +157,8 @@ static OrderMap orderModule(const Module &M) {
             }
           }
         }
+      }
+    }
   }
   OM.LastGlobalConstantID = OM.size();
 
@@ -165,8 +170,10 @@ static OrderMap orderModule(const Module &M) {
   // Since GlobalValues never reference each other directly (just through
   // initializers), their relative IDs only matter for determining order of
   // uses in their initializers.
-  for (const Function &F : M)
+  for (const Function &OrigF : M) {
+    const Function &F = VE.getDXILFunction(OrigF);
     orderValue(&F, OM);
+  }
   for (const GlobalAlias &A : M.aliases())
     orderValue(&A, OM);
   for (const GlobalIFunc &I : M.ifuncs())
@@ -175,7 +182,8 @@ static OrderMap orderModule(const Module &M) {
     orderValue(&G, OM);
   OM.LastGlobalValueID = OM.size();
 
-  for (const Function &F : M) {
+  for (const Function &OrigF : M) {
+    const Function &F = VE.getDXILFunction(OrigF);
     if (F.isDeclaration())
       continue;
     // Here we need to match the union of ValueEnumerator::incorporateFunction()
@@ -186,7 +194,8 @@ static OrderMap orderModule(const Module &M) {
     for (const Argument &A : F.args())
       orderValue(&A, OM);
     for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB) {
+      for (const Instruction &OrigI : BB) {
+        const Instruction &I = VE.getDXILInstruction(OrigI);
         for (const Value *Op : I.operands())
           if ((isa<Constant>(*Op) && !isa<GlobalValue>(*Op)) ||
               isa<InlineAsm>(*Op))
@@ -198,9 +207,12 @@ static OrderMap orderModule(const Module &M) {
             orderValue(Case.getCaseValue(), OM);
         }
       }
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &OrigI : BB) {
+        const Instruction &I = VE.getDXILInstruction(OrigI);
         orderValue(&I, OM);
+      }
+    }
   }
   return OM;
 }
@@ -302,8 +314,8 @@ static void predictValueUseListOrder(const Value *V, const Function *F,
   }
 }
 
-static UseListOrderStack predictUseListOrder(const Module &M) {
-  OrderMap OM = orderModule(M);
+UseListOrderStack predictUseListOrder(const Module &M, ValueEnumerator &VE) {
+  OrderMap OM = orderModule(M, VE);
 
   // Use-list orders need to be serialized after all the users have been added
   // to a value, or else the shuffles will be incomplete.  Store them per
@@ -323,7 +335,8 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
     for (const Argument &A : F.args())
       predictValueUseListOrder(&A, &F, OM, Stack);
     for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB) {
+      for (const Instruction &OrigI : BB) {
+        const Instruction &I = VE.getDXILInstruction(OrigI);
         for (const Value *Op : I.operands())
           if (isa<Constant>(*Op) || isa<InlineAsm>(*Op)) // Visit GlobalValues.
             predictValueUseListOrder(Op, &F, OM, Stack);
@@ -331,17 +344,22 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
           predictValueUseListOrder(SVI->getShuffleMaskForBitcode(), &F, OM,
                                    Stack);
       }
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &OrigI : BB) {
+        const Instruction &I = VE.getDXILInstruction(OrigI);
         predictValueUseListOrder(&I, &F, OM, Stack);
+      }
+    }
   }
 
   // Visit globals last, since the module-level use-list block will be seen
   // before the function bodies are processed.
   for (const GlobalVariable &G : M.globals())
     predictValueUseListOrder(&G, nullptr, OM, Stack);
-  for (const Function &F : M)
+  for (const Function &OrigF : M) {
+    const Function &F = VE.getDXILFunction(OrigF);
     predictValueUseListOrder(&F, nullptr, OM, Stack);
+  }
   for (const GlobalAlias &A : M.aliases())
     predictValueUseListOrder(&A, nullptr, OM, Stack);
   for (const GlobalIFunc &I : M.ifuncs())
@@ -361,10 +379,12 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
   return Stack;
 }
 
-ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
+ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType,
+                                 const DXILDebugInfoMap &DebugInfo)
+    : DebugInfo(DebugInfo) {
   EnumerateType(PrefixType);
-  
-  UseListOrders = predictUseListOrder(M);
+
+  UseListOrders = predictUseListOrder(M, *this);
 
   // Enumerate the global variables.
   for (const GlobalVariable &GV : M.globals()) {
@@ -373,9 +393,10 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
   }
 
   // Enumerate the functions.
-  for (const Function &F : M) {
+  for (const Function &OrigF : M) {
+    const Function &F = getDXILFunction(OrigF);
     EnumerateValue(&F);
-    EnumerateType(F.getValueType());
+    EnumerateType(F.getFunctionType());
     EnumerateType(
         TypedPointerType::get(F.getFunctionType(), F.getAddressSpace()));
     EnumerateAttributes(F.getAttributes());
@@ -450,7 +471,8 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
       EnumerateMetadata(F.isDeclaration() ? nullptr : &F, I.second);
 
     for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB) {
+      for (const Instruction &OrigI : BB) {
+        const Instruction &I = getDXILInstruction(OrigI);
         for (const Use &Op : I.operands()) {
           auto *MD = dyn_cast<MetadataAsValue>(&Op);
           if (!MD) {
@@ -543,22 +565,26 @@ void ValueEnumerator::print(raw_ostream &OS, const ValueMapType &Map,
   for (const auto &I : Map) {
     const Value *V = I.first;
     if (V->hasName())
-      OS << "Value: " << V->getName();
+      OS << "Value: " << V->getName() << '\n';
     else
       OS << "Value: [null]\n";
-    V->print(errs());
-    errs() << '\n';
+    V->print(OS);
+    OS << '\n';
 
-    OS << " Uses(" << V->getNumUses() << "):";
-    for (const Use &U : V->uses()) {
-      if (&U != &*V->use_begin())
-        OS << ",";
-      if (U->hasName())
-        OS << " " << U->getName();
-      else
-        OS << " [null]";
+    if (V->hasUseList()) {
+      OS << " Uses(" << V->getNumUses() << "):";
+      for (const Use &U : V->uses()) {
+        if (&U != &*V->use_begin())
+          OS << ",";
+        if (U->hasName())
+          OS << " " << U->getName();
+        else
+          OS << " [null]";
+      }
+      OS << '\n';
     }
-    OS << "\n\n";
+
+    OS << '\n';
   }
 }
 
@@ -579,8 +605,10 @@ void ValueEnumerator::print(raw_ostream &OS, const MetadataMapType &Map,
 /// table into the values table.
 void ValueEnumerator::EnumerateValueSymbolTable(const ValueSymbolTable &VST) {
   for (ValueSymbolTable::const_iterator VI = VST.begin(), VE = VST.end();
-       VI != VE; ++VI)
-    EnumerateValue(VI->getValue());
+       VI != VE; ++VI) {
+    const Value *V = VI->getValue();
+    EnumerateValue(&getDXILValue(*V));
+  }
 }
 
 /// Insert all of the values referenced by named metadata in the specified
@@ -644,6 +672,8 @@ void ValueEnumerator::dropFunctionFromMetadata(
 }
 
 void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
+  MD = getDXILMetadata(MD);
+
   // It's vital for reader efficiency that uniqued subgraphs are done in
   // post-order; it's expensive when their operands have forward references.
   // If a distinct node is referenced from a uniqued node, it'll be delayed
@@ -665,7 +695,7 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
         Worklist.back().second, N->op_end(),
         [&](const Metadata *MD) { return enumerateMetadataImpl(F, MD); });
     if (I != N->op_end()) {
-      auto *Op = cast<MDNode>(*I);
+      auto *Op = cast<MDNode>(getDXILMetadata(*I));
       Worklist.back().second = ++I;
 
       // Delay traversing Op if it's a distinct node and N is uniqued.
@@ -674,6 +704,15 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
       else
         Worklist.push_back(std::make_pair(Op, Op->op_begin()));
       continue;
+    }
+
+    if (const Metadata *ExtraMD = DebugInfo.MDExtra.lookup(N)) {
+      if (enumerateMetadataImpl(F, ExtraMD)) {
+        if (const auto *ExtraN = dyn_cast<MDNode>(ExtraMD)) {
+          Worklist.push_back(std::make_pair(ExtraN, ExtraN->op_begin()));
+          continue;
+        }
+      }
     }
 
     // All the operands have been visited.  Now assign an ID.
@@ -693,6 +732,8 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
 
 const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F,
                                                      const Metadata *MD) {
+  MD = getDXILMetadata(MD);
+
   if (!MD)
     return nullptr;
 
@@ -863,6 +904,27 @@ void ValueEnumerator::organizeMetadata() {
   FunctionMDInfo[PrevF] = R;
 }
 
+const Function &ValueEnumerator::getDXILFunction(const Function &F) const {
+  return DebugInfo.getDXILFunction(F);
+}
+
+const Instruction &
+ValueEnumerator::getDXILInstruction(const Instruction &I) const {
+  return DebugInfo.getDXILInstruction(I);
+}
+
+const Metadata *ValueEnumerator::getDXILMetadata(const Metadata *M) const {
+  return DebugInfo.getDXILMetadata(M);
+}
+
+const Value &ValueEnumerator::getDXILValue(const Value &V) const {
+  if (auto *F = dyn_cast<Function>(&V))
+    return getDXILFunction(*F);
+  if (auto *I = dyn_cast<Instruction>(&V))
+    return getDXILInstruction(*I);
+  return V;
+}
+
 void ValueEnumerator::incorporateFunctionMetadata(const Function &F) {
   NumModuleMDs = MDs.size();
 
@@ -875,6 +937,7 @@ void ValueEnumerator::incorporateFunctionMetadata(const Function &F) {
 void ValueEnumerator::EnumerateValue(const Value *V) {
   assert(!V->getType()->isVoidTy() && "Can't insert void values!");
   assert(!isa<MetadataAsValue>(V) && "EnumerateValue doesn't handle Metadata!");
+  assert((V == &getDXILValue(*V)) && "Cannot enumerate replaced values!");
 
   // Check to see if it's already in!
   unsigned &ValueID = ValueMap[V];
@@ -1050,7 +1113,8 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
 
   // Add all function-level constants to the value table.
   for (const BasicBlock &BB : F) {
-    for (const Instruction &I : BB) {
+    for (const Instruction &OrigI : BB) {
+      const Instruction &I = getDXILInstruction(OrigI);
       for (const Use &OI : I.operands()) {
         if ((isa<Constant>(OI) && !isa<GlobalValue>(OI)) || isa<InlineAsm>(OI))
           EnumerateValue(OI);
@@ -1076,7 +1140,8 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   SmallVector<DIArgList *, 8> ArgListMDVector;
   // Add all of the instructions.
   for (const BasicBlock &BB : F) {
-    for (const Instruction &I : BB) {
+    for (const Instruction &OrigI : BB) {
+      const Instruction &I = getDXILInstruction(OrigI);
       for (const Use &OI : I.operands()) {
         if (auto *MD = dyn_cast<MetadataAsValue>(&OI)) {
           if (auto *Local = dyn_cast<LocalAsMetadata>(MD->getMetadata())) {

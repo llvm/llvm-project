@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -amdgpu-enable-lower-module-lds=0 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -amdgpu-enable-lower-module-lds=0 -filetype=obj < %s | llvm-readobj -r --syms - | FileCheck -check-prefixes=ELF %s
+; RUN: llc -mtriple=amdgpu9.00-mesa-mesa3d -amdgpu-enable-lower-module-lds=0 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgpu9.00-mesa-mesa3d -amdgpu-enable-lower-module-lds=0 -filetype=obj < %s | llvm-readobj -r --syms - | FileCheck -check-prefixes=ELF %s
 
 @lds.external = external unnamed_addr addrspace(3) global [0 x i32]
 @lds.defined = unnamed_addr addrspace(3) global [8 x i32] poison, align 8
@@ -32,7 +32,7 @@
 ; ELF-NEXT: }
 
 ; GCN-LABEL: {{^}}test_basic:
-; GCN: s_mov_b32 s0, lds.external@abs32@lo ; encoding: [0xff,0x00,0x80,0xbe,A,A,A,A]
+; GCN: v_mov_b32_e32 v1, lds.external@abs32@lo ; encoding: [0xff,0x02,0x02,0x7e,A,A,A,A]
 ; GCN-NEXT:              ; fixup A - offset: 4, value: lds.external@abs32@lo, kind: FK_Data_4{{$}}
 ;
 ; GCN: s_lshl2_add_u32 s0, s2, lds.defined@abs32@lo ; encoding: [0x02,0xff,0x80,0x97,A,A,A,A]

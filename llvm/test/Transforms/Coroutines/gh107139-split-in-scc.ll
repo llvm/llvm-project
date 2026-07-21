@@ -7,7 +7,7 @@ target triple = "x86_64-redhat-linux-gnu"
 define void @foo() presplitcoroutine personality ptr null {
 entry:
 
-  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr @foo, ptr null)
   %1 = call ptr @llvm.coro.begin(token %0, ptr null)
   %2 = call token @llvm.coro.save(ptr null)
   %3 = call i8 @llvm.coro.suspend(token none, i1 false)

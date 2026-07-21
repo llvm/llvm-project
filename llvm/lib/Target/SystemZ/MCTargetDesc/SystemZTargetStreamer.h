@@ -9,12 +9,15 @@
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZTARGETSTREAMER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZTARGETSTREAMER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/FormattedStream.h"
 #include <map>
 #include <utility>
@@ -57,26 +60,73 @@ public:
   void emitConstantPools() override;
 
   virtual void emitMachine(StringRef CPUOrCommand) {};
-
-  virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
-                                           const MCSymbol *Lo) {
-    return nullptr;
-  }
 };
 
-class SystemZTargetGOFFStreamer : public SystemZTargetStreamer {
+class SystemZTargetzOSStreamer : public SystemZTargetStreamer {
 public:
-  SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
+  /// Information about a single function needed to emit a PPA1 block.
+  struct PPA1Info {
+    StringRef Name;
+    MCSymbol *Fn = nullptr;          // Symbol marking function begin.
+    MCSymbol *FnEnd = nullptr;       // Symbol marking function end.
+    MCSymbol *PPA1 = nullptr;        // Symbol marking PPA1 begin.
+    MCSymbol *EPMarker = nullptr;    // Symbol marking entry point.
+    MCSymbol *EndOfProlog = nullptr; // Symbol marking the end of the prolog.
+    MCSymbol *StackUpdate = nullptr; // Symbol marking the stack updating instr.
+    int64_t OffsetFPR = 0;
+    int64_t OffsetVR = 0;
+    uint64_t CallFrameSize = 0;
+    uint64_t PersonalityADADisp = 0; // ADA displacement for personality func.
+    uint64_t GCCEHADADisp = 0;       // ADA displacement for GCCEH symbol.
+    unsigned SizeOfFnParams = 0;
+    uint32_t FrameAndFPROffset;
+    uint32_t FrameAndVROffset;
+    uint16_t SavedGPRMask = 0;
+    uint16_t SavedFPRMask = 0;
+    uint8_t SavedVRMask = 0;
+    uint8_t FrameReg = 0;
+    uint8_t AllocaReg = 0;
+    bool IsVarArg = false;
+    bool HasStackProtector = false;
+  };
+
+  SmallVector<PPA1Info, 0> DeferredPPA1;
+
+  MCSymbol *PPA2Sym = nullptr;
+
+  SystemZTargetzOSStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
+
+  void emitConstantPools() override;
+
+  void emitExternalName(MCSymbol *Sym, StringRef Name) {
+    static_cast<MCSymbolGOFF *>(Sym)->setExternalName(Name);
+  }
+  void emitExternalName(MCSection *Sec, StringRef Name) {
+    static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
+  }
+  void emitADA(MCSymbol *Sym, MCSection *Section) {
+    static_cast<MCSymbolGOFF *>(Sym)->setADA(
+        static_cast<MCSectionGOFF *>(Section));
+  }
+
+  void emitPPA1(PPA1Info &Info);
+  virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
+                                           const MCSymbol *Lo) = 0;
+};
+
+class SystemZTargetGOFFStreamer : public SystemZTargetzOSStreamer {
+public:
+  SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetzOSStreamer(S) {}
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
 };
 
-class SystemZTargetHLASMStreamer : public SystemZTargetStreamer {
+class SystemZTargetHLASMStreamer : public SystemZTargetzOSStreamer {
   formatted_raw_ostream &OS;
 
 public:
   SystemZTargetHLASMStreamer(MCStreamer &S, formatted_raw_ostream &OS)
-      : SystemZTargetStreamer(S), OS(OS) {}
+      : SystemZTargetzOSStreamer(S), OS(OS) {}
   SystemZHLASMAsmStreamer &getHLASMStreamer();
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;

@@ -9,6 +9,10 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 #define _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
 #include <__algorithm/inplace_merge.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/max.h>
@@ -48,6 +52,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
 
 namespace __libdispatch {
@@ -393,6 +398,7 @@ struct __fill<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_fill<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 } // namespace __pstl
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

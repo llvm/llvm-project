@@ -48,7 +48,7 @@ declare void @g(i32)
 ; CHECK-NEXT: Name:            Peeled
 ; CHECK-NEXT: Function:        binary_induction
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          ' peeled loop by '
+; CHECK-NEXT:   - String:          'peeled loop by '
 ; CHECK-NEXT:   - PeelCount:       '3'
 ; CHECK-NEXT:   - String:          ' iterations'
 ; CHECK-NEXT: ...
@@ -94,7 +94,7 @@ for.body:
 ; CHECK-NEXT: Name:            Peeled
 ; CHECK-NEXT: Function:        tsvc_s291
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          ' peeled loop by '
+; CHECK-NEXT:   - String:          'peeled loop by '
 ; CHECK-NEXT:   - PeelCount:       '1'
 ; CHECK-NEXT:   - String:          ' iterations'
 ; CHECK-NEXT: ...
@@ -132,7 +132,7 @@ exit:
 ; CHECK-NEXT: Name:            Peeled
 ; CHECK-NEXT: Function:        induction_undesirable_peel1
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          ' peeled loop by '
+; CHECK-NEXT:   - String:          'peeled loop by '
 ; CHECK-NEXT:   - PeelCount:       '1'
 ; CHECK-NEXT:   - String:          ' iterations'
 ; CHECK-NEXT: ...
@@ -169,7 +169,7 @@ exit:
 ; CHECK-NEXT: Name:            Peeled
 ; CHECK-NEXT: Function:        induction_undesirable_peel2
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          ' peeled loop by '
+; CHECK-NEXT:   - String:          'peeled loop by '
 ; CHECK-NEXT:   - PeelCount:       '1'
 ; CHECK-NEXT:   - String:          ' iterations'
 ; CHECK-NEXT: ...
@@ -224,7 +224,7 @@ exit:
 ; CHECK-NEXT: Name:            Peeled
 ; CHECK-NEXT: Function:        induction_undesirable_peel3
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          ' peeled loop by '
+; CHECK-NEXT:   - String:          'peeled loop by '
 ; CHECK-NEXT:   - PeelCount:       '1'
 ; CHECK-NEXT:   - String:          ' iterations'
 ; CHECK-NEXT: ...

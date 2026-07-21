@@ -694,6 +694,60 @@ define i32 @loadCombine_4consecutive_hasOneUse4(ptr %p) {
   ret i32 %o3
 }
 
+define i32 @fold_i32_multiple_uses(ptr %input, ptr %output) {
+; LE-LABEL: @fold_i32_multiple_uses(
+; LE-NEXT:    [[B0:%.*]] = load i32, ptr [[INPUT:%.*]], align 1
+; LE-NEXT:    store i32 [[B0]], ptr [[OUTPUT:%.*]], align 4
+; LE-NEXT:    ret i32 [[B0]]
+;
+; BE-LABEL: @fold_i32_multiple_uses(
+; BE-NEXT:    [[B0:%.*]] = load i8, ptr [[INPUT:%.*]], align 1
+; BE-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i8, ptr [[INPUT]], i64 1
+; BE-NEXT:    [[B1:%.*]] = load i8, ptr [[PTR1]], align 1
+; BE-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[INPUT]], i64 2
+; BE-NEXT:    [[B2:%.*]] = load i8, ptr [[PTR2]], align 1
+; BE-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i8, ptr [[INPUT]], i64 3
+; BE-NEXT:    [[B3:%.*]] = load i8, ptr [[PTR3]], align 1
+; BE-NEXT:    [[B0_32:%.*]] = zext i8 [[B0]] to i32
+; BE-NEXT:    [[B1_32:%.*]] = zext i8 [[B1]] to i32
+; BE-NEXT:    [[B1_SHIFT:%.*]] = shl i32 [[B1_32]], 8
+; BE-NEXT:    [[VAL01:%.*]] = or i32 [[B1_SHIFT]], [[B0_32]]
+; BE-NEXT:    [[B2_32:%.*]] = zext i8 [[B2]] to i32
+; BE-NEXT:    [[B2_SHIFT:%.*]] = shl i32 [[B2_32]], 16
+; BE-NEXT:    [[VAL012:%.*]] = or i32 [[VAL01]], [[B2_SHIFT]]
+; BE-NEXT:    [[B3_32:%.*]] = zext i8 [[B3]] to i32
+; BE-NEXT:    [[B3_SHIFT:%.*]] = shl i32 [[B3_32]], 24
+; BE-NEXT:    [[VAL:%.*]] = or i32 [[VAL012]], [[B3_SHIFT]]
+; BE-NEXT:    store i32 [[VAL]], ptr [[OUTPUT:%.*]], align 4
+; BE-NEXT:    ret i32 [[VAL]]
+;
+  %b0 = load i8, ptr %input, align 1
+  %ptr1 = getelementptr inbounds i8, ptr %input, i64 1
+  %b1 = load i8, ptr %ptr1, align 1
+  %ptr2 = getelementptr inbounds i8, ptr %input, i64 2
+  %b2 = load i8, ptr %ptr2, align 1
+  %ptr3 = getelementptr inbounds i8, ptr %input, i64 3
+  %b3 = load i8, ptr %ptr3, align 1
+
+  ; Assemble bytes to i32
+  %b0_32 = zext i8 %b0 to i32
+  %b1_32 = zext i8 %b1 to i32
+  %b1_shift = shl i32 %b1_32, 8
+  %val01 = or i32 %b1_shift, %b0_32
+
+  %b2_32 = zext i8 %b2 to i32
+  %b2_shift = shl i32 %b2_32, 16
+  %val012 = or i32 %val01, %b2_shift
+
+  %b3_32 = zext i8 %b3 to i32
+  %b3_shift = shl i32 %b3_32, 24
+  %val = or i32 %val012, %b3_shift
+
+  ; Multiple uses of the assembled value
+  store i32 %val, ptr %output, align 4
+  ret i32 %val
+}
+
 define i32 @loadCombine_parLoad1(ptr %p) {
 ; ALL-LABEL: @loadCombine_parLoad1(
 ; ALL-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1

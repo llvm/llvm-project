@@ -120,7 +120,7 @@ multiclass subvec_zero_lowering<string MoveStr,
                                 ValueType SrcTy, SubRegIndex SubIdx> {
   def : Pat<(DstTy (insert_subvector immAllZerosV,
                                      (SrcTy RC:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0),
+            (SUBREG_TO_REG
              (SrcTy (!cast<Instruction>("VMOV"#MoveStr#"rr") RC:$src)), SubIdx)>;
 }
 
@@ -388,7 +388,7 @@ let Predicates = [HasBWI] in {
 
 // movaps is shorter than movdqa. movaps is in SSE and movdqa is in SSE2.
 let Predicates = [NoAVX] in {
-def : Pat<(alignedstore (f128 VR128:$src), addr:$dst),
+def : Pat<(alignedstore128 (f128 VR128:$src), addr:$dst),
           (MOVAPSmr addr:$dst, VR128:$src)>;
 def : Pat<(store (f128 VR128:$src), addr:$dst),
           (MOVUPSmr addr:$dst, VR128:$src)>;
@@ -400,7 +400,7 @@ def : Pat<(loadf128 addr:$src),
 }
 
 let Predicates = [HasAVX, NoVLX] in {
-def : Pat<(alignedstore (f128 VR128:$src), addr:$dst),
+def : Pat<(alignedstore128 (f128 VR128:$src), addr:$dst),
           (VMOVAPSmr addr:$dst, VR128:$src)>;
 def : Pat<(store (f128 VR128:$src), addr:$dst),
           (VMOVUPSmr addr:$dst, VR128:$src)>;
@@ -412,7 +412,7 @@ def : Pat<(loadf128 addr:$src),
 }
 
 let Predicates = [HasVLX] in {
-def : Pat<(alignedstore (f128 VR128X:$src), addr:$dst),
+def : Pat<(alignedstore128 (f128 VR128X:$src), addr:$dst),
           (VMOVAPSZ128mr addr:$dst, VR128X:$src)>;
 def : Pat<(store (f128 VR128X:$src), addr:$dst),
           (VMOVUPSZ128mr addr:$dst, VR128X:$src)>;

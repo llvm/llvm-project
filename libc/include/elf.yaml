@@ -1,5 +1,4 @@
 header: elf.h
-header_template: elf.h.def
 standards:
   - svid
 macros:
@@ -267,6 +266,20 @@ macros:
     macro_value: '0x70000000'
   - macro_name: PT_HIPROC
     macro_value: '0x7fffffff'
+  - macro_name: PT_GNU_EH_FRAME
+    macro_value: '0x6474e550'
+    standards:
+      - gnu
+  - macro_name: PT_GNU_STACK
+    macro_value: '0x6474e551'
+    standards:
+      - gnu
+  - macro_name: PT_GNU_RELRO
+    macro_value: '0x6474e552'
+    standards:
+      - gnu
+  - macro_name: PT_GNU_PROPERTY
+    macro_value: '0x6474e553'
   - macro_name: PF_X
     macro_value: '0x1'
   - macro_name: PF_W
@@ -356,6 +369,42 @@ macros:
     macro_value: '0x70000000'
   - macro_name: DT_HIPROC
     macro_value: '0x7fffffff'
+  - macro_name: DT_ADDRRNGLO
+    macro_value: '0x6ffffe00'
+  - macro_name: DT_GNU_HASH
+    macro_value: '0x6ffffef5'
+    standards:
+      - gnu
+  - macro_name: DT_TLSDESC_PLT
+    macro_value: '0x6ffffef6'
+    standards:
+      - gnu
+  - macro_name: DT_TLSDESC_GOT
+    macro_value: '0x6ffffef7'
+    standards:
+      - gnu
+  - macro_name: DT_GNU_CONFLICT
+    macro_value: '0x6ffffef8'
+    standards:
+      - gnu
+  - macro_name: DT_GNU_LIBLIST
+    macro_value: '0x6ffffef9'
+    standards:
+      - gnu
+  - macro_name: DT_CONFIG
+    macro_value: '0x6ffffefa'
+  - macro_name: DT_DEPAUDIT
+    macro_value: '0x6ffffefb'
+  - macro_name: DT_AUDIT
+    macro_value: '0x6ffffefc'
+  - macro_name: DT_PLTPAD
+    macro_value: '0x6ffffefd'
+  - macro_name: DT_MOVETAB
+    macro_value: '0x6ffffefe'
+  - macro_name: DT_SYMINFO
+    macro_value: '0x6ffffeff'
+  - macro_name: DT_ADDRRNGHI
+    macro_value: '0x6ffffeff'
   - macro_name: DT_VERSYM
     macro_value: '0x6ffffff0'
   - macro_name: DT_RELACOUNT
@@ -381,18 +430,42 @@ macros:
   - macro_name: DF_STATIC_TLS
     macro_value: '0x10'
   # Notes used in ET_CORE.
+  - macro_name: NN_PRSTATUS
+    macro_value: '"CORE"'
   - macro_name: NT_PRSTATUS
     macro_value: 1
+  - macro_name: NN_PRFPREG
+    macro_value: '"CORE"'
   - macro_name: NT_PRFPREG
     macro_value: 2
+  - macro_name: NT_FPREGSET
+    macro_value: 2
+  - macro_name: NN_PRPSINFO
+    macro_value: '"CORE"'
   - macro_name: NT_PRPSINFO
     macro_value: 3
+  - macro_name: NN_TASKSTRUCT
+    macro_value: '"CORE"'
   - macro_name: NT_TASKSTRUCT
+    macro_value: 4
+  - macro_name: NT_PRXREG
     macro_value: 4
   - macro_name: NT_PLATFORM
     macro_value: 5
+  - macro_name: NN_AUXV
+    macro_value: '"CORE"'
   - macro_name: NT_AUXV
     macro_value: 6
+  - macro_name: NN_SIGINFO
+    macro_value: '"CORE"'
+  - macro_name: NT_SIGINFO
+    macro_value: '0x53494749'
+  - macro_name: NN_FILE
+    macro_value: '"CORE"'
+  - macro_name: NT_FILE
+    macro_value: '0x46494c45'
+  - macro_name: NT_PRFPXREG
+    macro_value: 20
   # Notes used by GNU toolchain.
   - macro_name: NT_GNU_ABI_TAG
     macro_value: 1
@@ -433,6 +506,116 @@ macros:
     macro_value: '0xff00'
   - macro_name: VER_NDX_ELIMINATE
     macro_value: '0xff01'
+  # Values used in the .note.gnu.property section.
+  - macro_name: GNU_PROPERTY_X86_FEATURE_1_AND
+    macro_value: '0xc0000002'
+  - macro_name: GNU_PROPERTY_X86_FEATURE_1_SHSTK
+    macro_value: '0x00000002'
+  # Architecture-specific IRELATIVE relocation types
+  - macro_name: R_AARCH64_IRELATIVE
+    macro_value: 1032
+  - macro_name: R_ARM_IRELATIVE
+    macro_value: 160
+  - macro_name: R_RISCV_IRELATIVE
+    macro_value: 58
+  - macro_name: R_X86_64_IRELATIVE
+    macro_value: 37
+  - macro_name: ELF32_ST_BIND
+    macro_header: elf-macros.h
+  - macro_name: ELF32_ST_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF32_ST_INFO
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_BIND
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_INFO
+    macro_header: elf-macros.h
+  - macro_name: ELF32_ST_VISIBILITY
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_VISIBILITY
+    macro_header: elf-macros.h
+  - macro_name: ELF32_R_SYM
+    macro_header: elf-macros.h
+  - macro_name: ELF32_R_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF32_R_INFO
+    macro_header: elf-macros.h
+  - macro_name: ELF64_R_SYM
+    macro_header: elf-macros.h
+  - macro_name: ELF64_R_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF64_R_INFO
+    macro_header: elf-macros.h
+  - macro_name: PT_AARCH64_MEMTAG_MTE
+    macro_value: '0x70000002'
+  - macro_name: PN_XNUM
+    macro_value: '0xffff'
+  - macro_name: ELFCLASSNUM
+    macro_value: 3
+  - macro_name: EV_NUM
+    macro_value: 2
+  - macro_name: AT_NULL
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_IGNORE
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_EXECFD
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_PHDR
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_PHENT
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_PHNUM
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_PAGESZ
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_BASE
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_FLAGS
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_ENTRY
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_NOTELF
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_UID
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_EUID
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_GID
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_EGID
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_PLATFORM
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_HWCAP
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_CLKTCK
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_SECURE
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_BASE_PLATFORM
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_RANDOM
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_HWCAP2
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_RSEQ_FEATURE_SIZE
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_RSEQ_ALIGN
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_HWCAP3
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_HWCAP4
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_EXECFN
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_SYSINFO
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_SYSINFO_EHDR
+    macro_header: sys-auxv-macros.h
+  - macro_name: AT_MINSIGSTKSZ
+    macro_header: sys-auxv-macros.h
 types:
   - type_name: Elf32_Addr
   - type_name: Elf32_Chdr
@@ -454,6 +637,8 @@ types:
   - type_name: Elf32_Verneed
   - type_name: Elf32_Versym
   - type_name: Elf32_Word
+  - type_name: Elf32_Xword
+  - type_name: Elf32_auxv_t
   - type_name: Elf64_Addr
   - type_name: Elf64_Chdr
   - type_name: Elf64_Dyn
@@ -476,6 +661,7 @@ types:
   - type_name: Elf64_Versym
   - type_name: Elf64_Word
   - type_name: Elf64_Xword
+  - type_name: Elf64_auxv_t
 enums: []
 objects: []
 functions: []

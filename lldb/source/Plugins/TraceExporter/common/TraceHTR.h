@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_TRACE_HTR_H
-#define LLDB_TARGET_TRACE_HTR_H
+#ifndef LLDB_SOURCE_PLUGINS_TRACEEXPORTER_COMMON_TRACEHTR_H
+#define LLDB_SOURCE_PLUGINS_TRACEEXPORTER_COMMON_TRACEHTR_H
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Trace.h"
@@ -19,7 +19,7 @@
 namespace lldb_private {
 
 /// Metadata associated with an HTR block
-/// See lldb/docs/htr.rst for comprehensive HTR documentation
+/// See lldb/docs/htr.md for comprehensive HTR documentation
 class HTRBlockMetadata {
 public:
   /// Constructor for a block's metadata.
@@ -87,7 +87,7 @@ private:
 
 /// Block structure representing a sequence of trace "units" (ie instructions).
 /// Sequences of blocks are merged to create a new, single block
-/// See lldb/docs/htr.rst for comprehensive HTR documentation
+/// See lldb/docs/htr.md for comprehensive HTR documentation
 class HTRBlock {
 public:
   /// Constructor for a block of an HTR layer.
@@ -134,7 +134,7 @@ private:
 };
 
 /// HTR layer interface
-/// See lldb/docs/htr.rst for comprehensive HTR documentation
+/// See lldb/docs/htr.md for comprehensive HTR documentation
 class IHTRLayer {
 public:
   /// Construct new HTR layer.
@@ -189,7 +189,7 @@ protected:
 };
 
 /// "Base" layer of HTR representing the dynamic instructions of the trace.
-/// See lldb/docs/htr.rst for comprehensive HTR documentation
+/// See lldb/docs/htr.md for comprehensive HTR documentation
 class HTRInstructionLayer : public IHTRLayer {
 public:
   /// Construct new instruction layer.
@@ -240,7 +240,7 @@ private:
 };
 
 /// HTR layer composed of blocks of the trace.
-/// See lldb/docs/htr.rst for comprehensive HTR documentation
+/// See lldb/docs/htr.md for comprehensive HTR documentation
 class HTRBlockLayer : public IHTRLayer {
 public:
   /// Construct new block layer.
@@ -301,7 +301,7 @@ typedef std::unique_ptr<lldb_private::HTRInstructionLayer>
     HTRInstructionLayerUP;
 
 /// Top-level HTR class
-/// See lldb/docs/htr.rst for comprehensive HTR documentation
+/// See lldb/docs/htr.md for comprehensive HTR documentation
 class TraceHTR {
 
 public:
@@ -394,7 +394,7 @@ llvm::json::Value toJSON(const HTRBlockMetadata &metadata);
 /// ends with the tail block and the next group begins with the
 /// following block.
 ///
-/// See lldb/docs/htr.rst for comprehensive HTR documentation
+/// See lldb/docs/htr.md for comprehensive HTR documentation
 ///
 /// \param[in] layer
 ///     The layer to execute the pass on.
@@ -406,4 +406,4 @@ HTRBlockLayerUP BasicSuperBlockMerge(IHTRLayer &layer);
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_TRACE_HTR_H
+#endif // LLDB_SOURCE_PLUGINS_TRACEEXPORTER_COMMON_TRACEHTR_H

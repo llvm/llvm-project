@@ -54,10 +54,10 @@ define void @_Z3foov() {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [1024 x i32], ptr @b, i64 0, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -125,10 +125,10 @@ define void @_Z3foo2v() {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [1024 x i32], ptr @b, i64 0, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4

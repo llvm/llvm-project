@@ -75,6 +75,27 @@ func.func @test_regions(%arg0: tensor<1x2xi32>, %arg1: tensor<1xi32>, %arg2: ten
 
 // -----
 
+// CHECK-LABEL: test_cond_if_i64_yield_with_call
+module {
+  func.func @m0() -> () {
+    return
+  }
+  func.func @test_cond_if_i64_yield_with_call(%arg0: tensor<1xi1>, %arg1: tensor<4xi64>, %arg2: tensor<4xi64>) -> () {
+    %0 = tosa.cond_if %arg0 (%arg3 = %arg1) : tensor<1xi1> (tensor<4xi64>) -> tensor<4xi64> {
+    ^bb0(%arg3: tensor<4xi64>):
+      tosa.yield %arg3 : tensor<4xi64>
+    } else {
+    ^bb0(%arg3: tensor<4xi64>):
+      tosa.yield %arg3 : tensor<4xi64>
+    }
+    // expected-error @+1 {{failed to legalize operation 'func.call'}}
+    call @m0() : () -> ()
+    return
+  }
+}
+
+// -----
+
 // CHECK-LABEL: test_concat
 func.func @test_concat(%arg0: tensor<13x21x3xi64>, %arg1: tensor<13x21x3xi64>) -> tensor<26x21x3xi64> {
   // COMMON: tosa.concat %{{.*}}, %{{.*}} {axis = 0 : i32} : (tensor<13x21x3xi32>, tensor<13x21x3xi32>) -> tensor<26x21x3xi32>
@@ -115,10 +136,10 @@ func.func @test_reverse(%arg0: tensor<13x21x3xi64>) -> tensor<13x21x3xi64> {
 
 // CHECK-LABEL: test_slice
 func.func @test_slice(%arg0: tensor<13x21x3xi64>) -> tensor<4x11x1xi64> {
-  %0 = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  %1 = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // COMMON: tosa.slice %{{.*}}, %{{.*}}, %{{.*}} : (tensor<13x21x3xi32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi32>
-  %2 = tosa.slice %arg0, %0, %1 : (tensor<13x21x3xi64>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi64>
+  %2 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xi64>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi64>
   return %2 : tensor<4x11x1xi64>
 }
 
@@ -199,3 +220,23 @@ func.func @test_clamp_min_outside_i32_range(%arg0: tensor<100xi64>) -> tensor<10
   %1 = tosa.clamp %arg0 {max_val = 2147483647 : i64, min_val = -2147483649 : i64} : (tensor<100xi64>) -> tensor<100xi64>
   return %1 : tensor<100xi64>
 }
+
+// -----
+
+// CHECK-LABEL: test_dense_ressource_i64
+func.func @test_dense_ressource_i64() -> tensor<1x2xi64> {
+  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi32>}> : () -> tensor<1x2xi32>
+  %1 = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi64>}> : () -> tensor<1x2xi64>
+  // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[CONST]] : (tensor<1x2xi32>) -> tensor<1x2xi64>
+  // DEFAULT: return %[[OUT_CAST]] : tensor<1x2xi64>
+  // FUNCBOUND: return %[[CONST]] : tensor<1x2xi32>
+  return %1 : tensor<1x2xi64>
+}
+{-#
+  dialect_resources: {
+    builtin: {
+      // COMMON: resource: "0x040000000000000000000000"
+      resource: "0x0800000000000000000000000000000000000000"
+    }
+  }
+#-}

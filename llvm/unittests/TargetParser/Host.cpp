@@ -330,6 +330,10 @@ CPU part	: 0x0a1
                                               "CPU part        : 0xd01"),
             "tsv110");
 
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x48\n"
+                                              "CPU part        : 0xd06"),
+            "hip12");
+
   // Verify A64FX.
   const std::string A64FXProcCpuInfo = R"(
 processor       : 0
@@ -365,6 +369,14 @@ CPU revision    : 0
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
                                               "CPU part        : 0x010"),
             "olympus");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
+                                              "CPU part        : 0x11"),
+            "rigel");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
+                                              "CPU part        : 0x011"),
+            "rigel");
 
   // Snapdragon mixed implementer quirk
   const std::string Snapdragon865ProcCPUInfo = R"(
@@ -604,6 +616,11 @@ TEST(HostTest, AIXTargetVersionDetect) {
   llvm::Triple ConfiguredTargetTriple(LLVM_DEFAULT_TARGET_TRIPLE);
   if (ConfiguredTargetTriple.getOSMajorVersion())
     GTEST_SKIP(); // The version was configured explicitly; skip.
+
+#ifdef LLVM_TARGET_TRIPLE_ENV
+  if (std::getenv(LLVM_TARGET_TRIPLE_ENV))
+    GTEST_SKIP(); // The target was configured by env; skip.
+#endif
 
   VersionTuple SystemVersion;
   getAIXSystemVersion(SystemVersion);

@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 
@@ -701,7 +697,7 @@ PythonObject PythonDictionary::GetItemForKey(const PythonObject &key) const {
 
 Expected<PythonObject>
 PythonDictionary::GetItem(const PythonObject &key) const {
-  if (!IsValid())
+  if (!IsValid() || !key.IsValid())
     return nullDeref();
   PyObject *o = PyDict_GetItemWithError(m_py_obj, key.get());
   if (PyErr_Occurred())
@@ -1488,4 +1484,3 @@ int lldb_private::python::RunSimpleString(const char *str) {
 
   return 0;
 }
-#endif

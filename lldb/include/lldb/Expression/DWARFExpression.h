@@ -53,7 +53,7 @@ public:
                              const lldb::offset_t data_offset,
                              const uint8_t op) const = 0;
     virtual bool
-    ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+    ParseVendorDWARFOpcode(uint8_t op, const llvm::DataExtractor &opcodes,
                            lldb::offset_t &offset, RegisterContext *reg_ctx,
                            lldb::RegisterKind reg_kind, Stack &stack) const = 0;
 
@@ -95,6 +95,12 @@ public:
                    uint8_t addr_byte_size);
 
   bool ContainsThreadLocalStorage(const Delegate *dwarf_cu) const;
+
+  /// Return true if this expression produces a DWARF implicit or
+  /// composite location description that LLDB cannot write a new
+  /// value back to. Scans the opcodes without evaluating the
+  /// expression.
+  bool IsImplicit(const Delegate *dwarf_cu) const;
 
   bool LinkThreadLocalStorage(
       const Delegate *dwarf_cu,

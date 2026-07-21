@@ -39,11 +39,11 @@ global_atomic_cmpswap_x2 v[0:1], v2, v[4:7], null
 // GFX10: :[[@LINE-1]]:46: error: invalid operand for instruction
 
 global_atomic_csub v0, v2, v4, null
-// GFX1010: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1010: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1010): global_atomic_csub
 // GFX1030: :[[@LINE-2]]:32: error: invalid operand for instruction
 
 global_atomic_csub v2, v4, null
-// GFX1010: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1010: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1010): global_atomic_csub
 // GFX1030: :[[@LINE-2]]:28: error: invalid operand for instruction
 
 global_atomic_dec v0, v2, v4, null

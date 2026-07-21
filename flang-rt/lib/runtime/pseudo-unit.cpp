@@ -15,9 +15,6 @@
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/tools.h"
 
-// NOTE: the header files above may define OpenMP declare target
-// variables, so they have to be included unconditionally
-// so that the offload entries are consistent between host and device.
 #if defined(RT_USE_PSEUDO_FILE_UNIT)
 #include <cstdio>
 
@@ -25,13 +22,13 @@ namespace Fortran::runtime::io {
 
 void FlushOutputOnCrash(const Terminator &) {}
 
-ExternalFileUnit *ExternalFileUnit::LookUp(int) {
-  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+ExternalFileUnit *ExternalFileUnit::LookUp(int, Terminator &terminator) {
+  terminator.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
-    int, const Terminator &, bool &) {
-  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+    int, const Terminator &terminator, bool &) {
+  terminator.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
@@ -44,20 +41,24 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
   return New<ExternalFileUnit>{handler}(unit).release();
 }
 
-ExternalFileUnit *ExternalFileUnit::LookUp(const char *, std::size_t) {
-  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+ExternalFileUnit *ExternalFileUnit::LookUp(
+    const char *, std::size_t, Terminator &terminator) {
+  terminator.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-ExternalFileUnit &ExternalFileUnit::CreateNew(int, const Terminator &) {
-  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+ExternalFileUnit &ExternalFileUnit::CreateNew(
+    int, const Terminator &terminator) {
+  terminator.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-ExternalFileUnit *ExternalFileUnit::LookUpForClose(int) {
-  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+ExternalFileUnit *ExternalFileUnit::LookUpForClose(
+    int, Terminator &terminator) {
+  terminator.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-ExternalFileUnit &ExternalFileUnit::NewUnit(const Terminator &, bool) {
-  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+ExternalFileUnit &ExternalFileUnit::NewUnit(
+    const Terminator &terminator, bool) {
+  terminator.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
 bool ExternalFileUnit::OpenUnit(common::optional<OpenStatus> status,
@@ -76,8 +77,8 @@ void ExternalFileUnit::CloseUnit(CloseStatus, IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-void ExternalFileUnit::DestroyClosed() {
-  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+void ExternalFileUnit::DestroyClosed(Terminator &terminator) {
+  terminator.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
 Iostat ExternalFileUnit::SetDirection(Direction direction) {

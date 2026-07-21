@@ -166,8 +166,7 @@ public:
   ///
   /// If an unexpected error occurs, the MainLoop will be terminated and a log
   /// message will include additional information about the termination reason.
-  virtual llvm::Expected<MainLoop::ReadHandleUP>
-  RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) = 0;
+  virtual llvm::Error RegisterMessageHandler(MessageHandler &handler) = 0;
 
 protected:
   template <typename... Ts> inline auto Logv(const char *Fmt, Ts &&...Vals) {
@@ -182,31 +181,27 @@ public:
   using Message = typename JSONTransport<Proto>::Message;
   using MessageHandler = typename JSONTransport<Proto>::MessageHandler;
 
-  IOTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
-      : m_in(in), m_out(out) {}
+  IOTransport(MainLoop &loop, lldb::IOObjectSP in, lldb::IOObjectSP out)
+      : m_loop(loop), m_in(in), m_out(out) {}
 
   llvm::Error Send(const typename Proto::Evt &evt) override {
     return Write(evt);
   }
+
   llvm::Error Send(const typename Proto::Req &req) override {
     return Write(req);
   }
+
   llvm::Error Send(const typename Proto::Resp &resp) override {
     return Write(resp);
   }
 
-  llvm::Expected<MainLoop::ReadHandleUP>
-  RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) override {
+  llvm::Error RegisterMessageHandler(MessageHandler &handler) override {
     Status status;
-    MainLoop::ReadHandleUP read_handle = loop.RegisterReadObject(
-        m_in,
-        std::bind(&IOTransport::OnRead, this, std::placeholders::_1,
-                  std::ref(handler)),
+    m_read_handle = m_loop.RegisterReadObject(
+        m_in, [this, &handler](MainLoopBase &base) { OnRead(base, handler); },
         status);
-    if (status.Fail()) {
-      return status.takeError();
-    }
-    return read_handle;
+    return status.takeError();
   }
 
   /// Public for testing purposes, otherwise this should be an implementation
@@ -264,12 +259,18 @@ private:
       if (!m_buffer.empty())
         handler.OnError(llvm::make_error<TransportUnhandledContentsError>(
             std::string(m_buffer.str())));
+      // Move the read handle to a local before notifying the handler. The
+      // handler may destroy this transport (e.g. by erasing it from a
+      // connection map), so accessing members after OnClosed() is unsafe.
+      auto read_handle = std::move(m_read_handle);
       handler.OnClosed();
     }
   }
 
+  MainLoop &m_loop;
   lldb::IOObjectSP m_in;
   lldb::IOObjectSP m_out;
+  MainLoop::ReadHandleUP m_read_handle;
 };
 
 /// A transport class for JSON with a HTTP header.
@@ -513,6 +514,14 @@ public:
   template <typename Result, typename Params, typename Fn, typename... Args>
   void Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args);
 
+  /// Bind an asynchronous handler for an incoming request. The handler receives
+  /// a Reply to invoke later instead of returning a result. This lets it defer
+  /// the response, e.g. until a request it forwarded elsewhere is answered.
+  /// Handler should be e.g. `void peek(const PeekParams&, Reply<PeekResult>);`
+  /// PeekParams must be JSON parsable and PeekResult must be serializable.
+  template <typename Result, typename Params, typename Fn, typename... Args>
+  void BindAsync(llvm::StringLiteral method, Fn &&fn, Args &&...args);
+
   /// Bind a handler for an incoming event.
   /// e.g. `bind("peek", &ThisModule::peek, this);`
   /// Handler should be e.g. `void peek(const PeekParams&);`
@@ -578,9 +587,31 @@ public:
   }
 
   void OnClosed() override {
+    // The disconnect handler may destroy this Binder -- e.g. the server
+    // removes the disconnected client, which owns the transport and, with it,
+    // this handler.  Move the handler out and release the lock before invoking
+    // it, so we neither run the teardown while holding m_mutex nor destroy a
+    // still-locked mutex.
+    Callback<void()> disconnect_handler;
+    {
+      std::scoped_lock<std::recursive_mutex> guard(m_mutex);
+      disconnect_handler = std::move(m_disconnect_handler);
+    }
+    if (disconnect_handler)
+      disconnect_handler();
+  }
+
+  /// Fails every in-flight outgoing request, invoking its reply with an error.
+  /// Call when the connection is going away, so pending replies are satisfied
+  /// rather than destroyed unanswered.
+  void FailPendingRequests(llvm::StringRef reason) {
     std::scoped_lock<std::recursive_mutex> guard(m_mutex);
-    if (m_disconnect_handler)
-      m_disconnect_handler();
+    std::map<Id, Callback<void(const Resp &)>> pending;
+    std::swap(pending, m_pending_responses);
+    for (auto &entry : pending) {
+      Req req = Proto::Make(entry.first, /*method=*/"", std::nullopt);
+      entry.second(Proto::Make(req, llvm::createStringError(reason)));
+    }
   }
 
 private:
@@ -866,6 +897,52 @@ llvm::Expected<T> Binder<Proto>::Parse(const llvm::json::Value &raw,
     return llvm::make_error<InvalidParams>(method.str(), context);
   }
   return std::move(result);
+}
+
+#if __cplusplus >= 202002L
+template <BindingBuilder Proto>
+#else
+template <typename Proto>
+#endif
+template <typename Result, typename Params, typename Fn, typename... Args>
+void Binder<Proto>::BindAsync(llvm::StringLiteral method, Fn &&fn,
+                              Args &&...args) {
+  assert(m_request_handlers.find(method) == m_request_handlers.end() &&
+         "request already bound");
+  // The handler is captured by value and may be invoked once per incoming
+  // request, so it is invoked as an lvalue (never forwarded) to avoid moving
+  // from it between calls.
+  if constexpr (std::is_void_v<Params>) {
+    m_request_handlers[method] =
+        [fn, args...](const Req &req,
+                      Callback<void(const Resp &)> reply) mutable {
+          Reply<Result> typed_reply =
+              [req, reply = std::move(reply)](
+                  llvm::Expected<Result> result) mutable {
+                if (!result)
+                  return reply(Proto::Make(req, result.takeError()));
+                reply(Proto::Make(req, toJSON(*result)));
+              };
+          std::invoke(fn, args..., std::move(typed_reply));
+        };
+  } else {
+    m_request_handlers[method] =
+        [method, fn, args...](const Req &req,
+                              Callback<void(const Resp &)> reply) mutable {
+          Reply<Result> typed_reply =
+              [req, reply = std::move(reply)](
+                  llvm::Expected<Result> result) mutable {
+                if (!result)
+                  return reply(Proto::Make(req, result.takeError()));
+                reply(Proto::Make(req, toJSON(*result)));
+              };
+          llvm::Expected<Params> params =
+              Parse<Params>(Proto::Extract(req), method);
+          if (!params)
+            return typed_reply(params.takeError());
+          std::invoke(fn, args..., *params, std::move(typed_reply));
+        };
+  }
 }
 
 } // namespace lldb_private::transport

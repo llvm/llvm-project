@@ -259,6 +259,11 @@ inline uptr loadTag(uptr Ptr) {
   return TaggedPtr;
 }
 
+inline uptr loadTagUnaligned(uptr Ptr) {
+  uptr AlignedPtr = Ptr & ~static_cast<uptr>(0xF);
+  return loadTag(AlignedPtr) | (Ptr & 0xF);
+}
+
 #else
 
 inline constexpr bool systemSupportsMemoryTagging() { return false; }
@@ -299,6 +304,11 @@ inline NORETURN void storeTag(uptr Ptr) {
 }
 
 inline NORETURN uptr loadTag(uptr Ptr) {
+  (void)Ptr;
+  UNREACHABLE("memory tagging not supported");
+}
+
+inline uptr loadTagUnaligned(uptr Ptr) {
   (void)Ptr;
   UNREACHABLE("memory tagging not supported");
 }

@@ -6,7 +6,6 @@
 # RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips5                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS5,32BITMODE %s
 # RUN: llvm-mc -filetype=obj -triple mips-unknown-linux                                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS32R1 %s
 # RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux                                                  %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R1 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux                                                  %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R1 %s
 # RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r2                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R2 %s
 # RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r3                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R3 %s
 # RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r5                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R5 %s

@@ -7,9 +7,9 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-LABEL: define void @sve_add(
 ; CHECK-CA510-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA510-NEXT:  [[ENTRY:.*:]]
-; CHECK-CA510-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-CA510-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-CA510-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-CA510-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-CA510-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-CA510-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-CA510-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA510-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA510:       [[FOR_BODY_PREHEADER]]:
@@ -17,9 +17,11 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-CA510:       [[VECTOR_MEMCHECK]]:
 ; CHECK-CA510-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[A2]]
-; CHECK-CA510-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-CA510-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-CA510-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 31
 ; CHECK-CA510-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[B3]]
-; CHECK-CA510-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-CA510-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-CA510-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP7]], 31
 ; CHECK-CA510-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-CA510-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA510:       [[VECTOR_PH]]:
@@ -71,9 +73,9 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-LABEL: define void @sve_add(
 ; CHECK-CA520-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA520-NEXT:  [[ENTRY:.*:]]
-; CHECK-CA520-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-CA520-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-CA520-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-CA520-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-CA520-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-CA520-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-CA520-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA520-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA520:       [[FOR_BODY_PREHEADER]]:
@@ -81,9 +83,11 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-CA520:       [[VECTOR_MEMCHECK]]:
 ; CHECK-CA520-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[A2]]
-; CHECK-CA520-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-CA520-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-CA520-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 31
 ; CHECK-CA520-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[B3]]
-; CHECK-CA520-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-CA520-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-CA520-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP7]], 31
 ; CHECK-CA520-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-CA520-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA520:       [[VECTOR_PH]]:
@@ -135,9 +139,9 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-LABEL: define void @sve_add(
 ; CHECK-CA320-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA320-NEXT:  [[ENTRY:.*:]]
-; CHECK-CA320-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-CA320-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-CA320-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-CA320-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-CA320-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-CA320-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-CA320-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA320-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA320:       [[FOR_BODY_PREHEADER]]:
@@ -145,9 +149,11 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-CA320:       [[VECTOR_MEMCHECK]]:
 ; CHECK-CA320-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[A2]]
-; CHECK-CA320-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-CA320-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-CA320-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP13]], 31
 ; CHECK-CA320-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[B3]]
-; CHECK-CA320-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-CA320-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-CA320-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP14]], 31
 ; CHECK-CA320-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-CA320-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA320:       [[VECTOR_PH]]:
@@ -199,7 +205,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 entry:
   %cmp9.not = icmp eq i64 %n, 0
   br i1 %cmp9.not, label %for.cond.cleanup, label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds nuw float, ptr %a, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -211,7 +217,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 ;.

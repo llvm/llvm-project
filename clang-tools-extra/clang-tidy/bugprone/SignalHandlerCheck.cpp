@@ -532,7 +532,7 @@ bool SignalHandlerCheck::isStandardFunctionAsyncSafe(
 }
 
 void SignalHandlerCheck::reportHandlerChain(
-    const llvm::df_iterator<const clang::CallGraphNode *> &Itr,
+    const llvm::df_iterator<const CallGraphNode *> &Itr,
     const DeclRefExpr *HandlerRef, bool SkipPathEnd) {
   int CallLevel = Itr.getPathLength() - 2;
   assert(CallLevel >= -1 && "Empty iterator?");

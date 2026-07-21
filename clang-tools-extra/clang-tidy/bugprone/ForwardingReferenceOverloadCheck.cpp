@@ -46,7 +46,7 @@ AST_MATCHER(QualType, isEnableIf) {
   return false;
 }
 AST_MATCHER_P(TemplateTypeParmDecl, hasDefaultArgument,
-              clang::ast_matchers::internal::Matcher<QualType>, TypeMatcher) {
+              ast_matchers::internal::Matcher<QualType>, TypeMatcher) {
   return Node.hasDefaultArgument() &&
          TypeMatcher.matches(
              Node.getDefaultArgument().getArgument().getAsType(), Finder,

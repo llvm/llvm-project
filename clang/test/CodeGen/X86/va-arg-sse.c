@@ -12,7 +12,7 @@ struct S a[5];
 // CHECK-NEXT:    [[Z_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[ARG:%.*]] = alloca [[STRUCT_S:%.*]], align 4
 // CHECK-NEXT:    [[P:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[AP:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+// CHECK-NEXT:    [[AP:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 // CHECK-NEXT:    [[J:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[K:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -20,11 +20,11 @@ struct S a[5];
 // CHECK-NEXT:    store i32 [[Z:%.*]], ptr [[Z_ADDR]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[J]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[K]], align 4
-// CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[AP]], i64 0, i64 0
+// CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x [[STRUCT___VA_LIST_TAG]]], ptr [[AP]], i64 0, i64 0
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[ARRAYDECAY]])
-// CHECK-NEXT:    store ptr getelementptr inbounds ([5 x %struct.S], ptr @a, i64 0, i64 2), ptr [[P]], align 8
-// CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[AP]], i64 0, i64 0
-// CHECK-NEXT:    [[FP_OFFSET_P:%.*]] = getelementptr inbounds nuw [[STRUCT___VA_LIST_TAG:%.*]], ptr [[ARRAYDECAY1]], i32 0, i32 1
+// CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @a, i64 24), ptr [[P]], align 8
+// CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [1 x [[STRUCT___VA_LIST_TAG]]], ptr [[AP]], i64 0, i64 0
+// CHECK-NEXT:    [[FP_OFFSET_P:%.*]] = getelementptr inbounds nuw [[STRUCT___VA_LIST_TAG]], ptr [[ARRAYDECAY1]], i32 0, i32 1
 // CHECK-NEXT:    [[FP_OFFSET:%.*]] = load i32, ptr [[FP_OFFSET_P]], align 4
 // CHECK-NEXT:    [[FITS_IN_FP:%.*]] = icmp ule i32 [[FP_OFFSET]], 144
 // CHECK-NEXT:    br i1 [[FITS_IN_FP]], label [[VAARG_IN_REG:%.*]], label [[VAARG_IN_MEM:%.*]]
@@ -51,7 +51,7 @@ struct S a[5];
 // CHECK:       vaarg.end:
 // CHECK-NEXT:    [[VAARG_ADDR:%.*]] = phi ptr [ [[TMP]], [[VAARG_IN_REG]] ], [ [[OVERFLOW_ARG_AREA]], [[VAARG_IN_MEM]] ]
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARG]], ptr align 4 [[VAARG_ADDR]], i64 12, i1 false)
-// CHECK-NEXT:    [[ARRAYDECAY2:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[AP]], i64 0, i64 0
+// CHECK-NEXT:    [[ARRAYDECAY2:%.*]] = getelementptr inbounds [1 x [[STRUCT___VA_LIST_TAG]]], ptr [[AP]], i64 0, i64 0
 // CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[ARRAYDECAY2]])
 // CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[TMP8]], null

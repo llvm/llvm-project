@@ -21,7 +21,7 @@
 
 namespace llvm::omp::target::plugin {
 /// Command submission mode.
-enum class CommandModeTy { Sync = 0, Async, AsyncOrdered };
+enum class CommandModeTy { Sync = 0, Async, AsyncOrdered, InOrder };
 
 /// Specialization constants used for a module compilation.
 class SpecConstantsTy {
@@ -63,8 +63,9 @@ public:
 /// L0 Plugin flags.
 struct L0OptionFlagsTy {
   uint64_t UseMemoryPool : 1;
-  uint64_t Reserved : 63;
-  L0OptionFlagsTy() : UseMemoryPool(1), Reserved(0) {}
+  uint64_t UseCopyOffloadHint : 1;
+  uint64_t Reserved : 62;
+  L0OptionFlagsTy() : UseMemoryPool(1), UseCopyOffloadHint(1), Reserved(0) {}
 };
 
 struct L0OptionsTy {
@@ -93,27 +94,6 @@ struct L0OptionsTy {
   /// Parameters for memory pools dedicated to reduction scratch space.
   std::array<int32_t, 3> ReductionPoolInfo{256, 8, 8192};
 
-  /// Oversubscription rate for normal kernels.
-  uint32_t SubscriptionRate = 4;
-
-  /// Loop kernels with known ND-range may be known to have
-  /// few iterations and they may not exploit the offload device
-  /// to the fullest extent.
-  /// Let's assume a device has N total HW threads available,
-  /// and the kernel requires M hardware threads with LWS set to L.
-  /// If (M < N * ThinThreadsThreshold), then we will try
-  /// to iteratively divide L by 2 to increase the number of HW
-  /// threads used for executing the kernel. Effectively, we will
-  /// end up with L less than the kernel's SIMD width, so the HW
-  /// threads will not use all their SIMD lanes. This (presumably) should
-  /// allow more parallelism, because the stalls in the SIMD lanes
-  /// will be distributed across more HW threads, and the probability
-  /// of having a stall (or a sequence of stalls) on a critical path
-  /// in the kernel should decrease.
-  /// Anyway, this is just a heuristics that seems to work well for some
-  /// kernels (which poorly expose parallelism in the first place).
-  double ThinThreadsThreshold = 0.1;
-
   // Compilation options for IGC.
   // OpenCL 2.0 builtins (like atomic_load_explicit and etc.) are used by
   // runtime, so we have to explicitly specify the "-cl-std=CL2.0" compilation
@@ -129,14 +109,7 @@ struct L0OptionsTy {
   SpecConstantsTy CommonSpecConstants;
 
   /// Command execution mode.
-  /// Whether the runtime uses asynchronous mode or not depends on the type of
-  /// devices and whether immediate command list is fully enabled.
-  CommandModeTy CommandMode = CommandModeTy::Async;
-
-  /// Controls if we need to reduce available HW threads. We need this
-  /// adjustment on XeHPG when Level Zero debug is enabled
-  /// (ZET_ENABLE_PROGRAM_DEBUGGING=1).
-  bool ZeDebugEnabled = false;
+  CommandModeTy CommandMode = CommandModeTy::InOrder;
 
   bool Init = false; // Have the options already been processed.
 

@@ -54,8 +54,7 @@ define i1 @mul_mask_pow2_ne0_use2(i8 %x) {
 
 define i1 @mul_mask_pow2_sgt0(i8 %x) {
 ; CHECK-LABEL: @mul_mask_pow2_sgt0(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i8 %x, 44
@@ -68,8 +67,7 @@ define i1 @mul_mask_pow2_sgt0(i8 %x) {
 
 define i1 @mul_mask_fakepow2_ne0(i8 %x) {
 ; CHECK-LABEL: @mul_mask_fakepow2_ne0(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i8 %x, 44
@@ -82,8 +80,7 @@ define i1 @mul_mask_fakepow2_ne0(i8 %x) {
 
 define i1 @mul_mask_pow2_eq4(i8 %x) {
 ; CHECK-LABEL: @mul_mask_pow2_eq4(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i8 %x, 44

@@ -166,8 +166,14 @@ def Tosa_MatMulOpQuantInfoBuilder : OpBuilder<
                                a, b);
   }]>;
 
+def Tosa_MatMulTOpQuantInfoBuilder
+    : OpBuilder<(ins "Type":$outputType, "Value":$a, "Value":$b), [{
+    buildMatMulTOpWithQuantInfo($_builder, $_state, outputType,
+                                a, b);
+  }]>;
+
 // Both the tosa.avg_pool2d and unary ops use the same
-// UnaruOpQuantizationAttr but the avg_pool operator has its own builder as it
+// UnaryOpQuantizationAttr but the avg_pool operator has its own builder as it
 // has additional parameters not part of the unary ops.
 def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilder<
   (ins "::mlir::Type":$outputType, "::mlir::Value":$input,
@@ -176,6 +182,17 @@ def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilder<
   [{
     buildAvgPool2dOpWithQuantInfo($_builder, $_state, outputType,
                                   input, kernel, stride, pad, acc_type);
+  }]>;
+
+def Tosa_AvgPool2dAdaptiveOpQuantInfoBuilder
+    : OpBuilder<(ins "::mlir::Type":$outputType, "::mlir::Value":$input,
+                    "::mlir::DenseI64ArrayAttr":$kernel,
+                    "::mlir::DenseI64ArrayAttr":$stride,
+                    "::mlir::DenseI64ArrayAttr":$pad,
+                    "::mlir::TypeAttr":$acc_type),
+                [{
+    buildAvgPool2dAdaptiveOpWithQuantInfo($_builder, $_state, outputType,
+                                          input, kernel, stride, pad, acc_type);
   }]>;
 
 // This builder is called on single-parameter negate operators that have a scale
@@ -240,8 +257,16 @@ class Tosa_I32EnumAttr<string name, string description, string mnemonic,
 // DOUBLEROUND  : Adds double rounding support to the RESCALE operator.
 // INEXACTROUND : Adds inexact rounding support to the RESCALE operator.
 // DYNAMIC      : Removes all Compile Time Constant state for CTC inputs.
-// MXFP         : Microscaling formats.
+// MXFP         : Microscaling formats. (Deprecated, this extension will be removed in the future.)
+// MXFP_CONV    : Microscaling format convolution. (Deprecated, this extension will be removed in the future.)
 // SHAPE        : Shape calcuation operators.
+// MX_COMMON    : Base for MXFP microscaling formats.
+// MX_FP4E2M1   : Microscaling format FP4E2M1.
+// MX_FP6E2M3   : Microscaling format FP6E2M3.
+// MX_FP6E3M2   : Microscaling format FP6E3M2.
+// MX_FP8E4M3   : Microscaling format FP8E4M3.
+// MX_FP8E5M2   : Microscaling format FP8E5M2.
+// MX_INT8      : Microscaling format INT8.
 //===----------------------------------------------------------------------===//
 
 def Tosa_NONE : I32EnumAttrCase<"none", 0>;
@@ -275,24 +300,37 @@ def Tosa_EXT_INEXACTROUND : I32EnumAttrCase<"inexactround", 10>;
 def Tosa_EXT_DYNAMIC      : I32EnumAttrCase<"dynamic", 11>;
 def Tosa_EXT_MXFP         : I32EnumAttrCase<"mxfp", 12>;
 def Tosa_EXT_INT64        : I32EnumAttrCase<"int64", 13>;
-def Tosa_EXT_SHAPE        : I32EnumAttrCase<"shape", 14>;
-
+def Tosa_EXT_MXFP_CONV    : I32EnumAttrCase<"mxfp_conv", 14>;
+def Tosa_EXT_SHAPE        : I32EnumAttrCase<"shape", 15>;
+def Tosa_EXT_MX_COMMON : I32EnumAttrCase<"mx_common", 16>;
+def Tosa_EXT_MX_FP4E2M1 : I32EnumAttrCase<"mx_fp4e2m1", 17>;
+def Tosa_EXT_MX_FP6E2M3 : I32EnumAttrCase<"mx_fp6e2m3", 18>;
+def Tosa_EXT_MX_FP6E3M2 : I32EnumAttrCase<"mx_fp6e3m2", 19>;
+def Tosa_EXT_MX_FP8E4M3 : I32EnumAttrCase<"mx_fp8e4m3", 20>;
+def Tosa_EXT_MX_FP8E5M2 : I32EnumAttrCase<"mx_fp8e5m2", 21>;
+def Tosa_EXT_MX_INT8 : I32EnumAttrCase<"mx_int8", 22>;
 
 def Tosa_ExtensionAttr
-    : Tosa_I32EnumAttr<"Extension", "supported TOSA extensions", "ext", [
-      Tosa_EXT_NONE, Tosa_EXT_INT16, Tosa_EXT_INT4, Tosa_EXT_BF16,
-      Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_FFT, Tosa_EXT_VARIABLE,
-      Tosa_EXT_CONTROLFLOW, Tosa_EXT_DOUBLEROUND, Tosa_EXT_INEXACTROUND,
-      Tosa_EXT_DYNAMIC, Tosa_EXT_MXFP, Tosa_EXT_INT64, Tosa_EXT_SHAPE,
-    ]> {
+    : Tosa_I32EnumAttr<
+          "Extension", "supported TOSA extensions", "ext",
+          [Tosa_EXT_NONE, Tosa_EXT_INT16, Tosa_EXT_INT4, Tosa_EXT_BF16,
+           Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_FFT, Tosa_EXT_VARIABLE,
+           Tosa_EXT_CONTROLFLOW, Tosa_EXT_DOUBLEROUND, Tosa_EXT_INEXACTROUND,
+           Tosa_EXT_DYNAMIC, Tosa_EXT_MXFP, Tosa_EXT_INT64, Tosa_EXT_MXFP_CONV,
+           Tosa_EXT_SHAPE, Tosa_EXT_MX_COMMON, Tosa_EXT_MX_FP4E2M1,
+           Tosa_EXT_MX_FP6E2M3, Tosa_EXT_MX_FP6E3M2, Tosa_EXT_MX_FP8E4M3,
+           Tosa_EXT_MX_FP8E5M2, Tosa_EXT_MX_INT8]> {
   let extraClassDeclaration = [{
-    static llvm::SmallVector<Extension, 13> getAllValues() {
+    static llvm::SmallVector<Extension, 22> getAllValues() {
       return {
         Extension::int16, Extension::int4, Extension::bf16,
         Extension::fp8e4m3, Extension::fp8e5m2, Extension::fft,
         Extension::variable, Extension::controlflow, Extension::doubleround,
         Extension::inexactround, Extension::dynamic, Extension::mxfp,
-        Extension::int64, Extension::shape
+        Extension::int64, Extension::mxfp_conv, Extension::shape,
+        Extension::mx_common, Extension::mx_fp4e2m1, Extension::mx_fp6e2m3,
+        Extension::mx_fp6e3m2, Extension::mx_fp8e4m3, Extension::mx_fp8e5m2,
+        Extension::mx_int8
       };
     }
   }];
@@ -471,11 +509,13 @@ def Tosa_RoundingModeAttr
     : Tosa_I32EnumAttr<"RoundingMode", "Supported rounding modes", "rounding_mode",
                     [Tosa_ROUNDING_SINGLE_ROUND, Tosa_ROUNDING_INEXACT_ROUND, Tosa_ROUNDING_DOUBLE_ROUND]>;
 
+// Block_size attr is deprecated and will be removed in the future
+def Tosa_BLOCK_SIZE_1 : I32EnumAttrCase<"BLOCK_SIZE_1", 1>;
 def Tosa_BLOCK_SIZE_32 : I32EnumAttrCase<"BLOCK_SIZE_32", 32>;
 
 def Tosa_BlockSizeAttr
-    : Tosa_I32EnumAttr<"BlockSize", "Block size for the block_scaled formats", "block_size",
-                    [Tosa_BLOCK_SIZE_32]> {
+    : Tosa_I32EnumAttr<"BlockSize", "Block size for the block_scaled formats",
+                       "block_size", [Tosa_BLOCK_SIZE_1, Tosa_BLOCK_SIZE_32]> {
   let extraClassDeclaration = [{
     static uint32_t getBlockSizeValue(BlockSize blockSize) {
       return static_cast<uint32_t>(blockSize);
@@ -483,6 +523,28 @@ def Tosa_BlockSizeAttr
   }];
 }
 
+def Tosa_BLOCK_SHAPE_32 : I32EnumAttrCase<"BLOCK_SHAPE_32", 32>;
+
+def Tosa_BlockShape
+    : Tosa_I32Enum<
+          "BlockShape",
+          "Block shape for the block_scaled formats."
+          "The names follow the convention of BLOCK_SHAPE_M where M "
+          "is the block size of the innermost dimension. Similarly, "
+          "BLOCK_SHAPE_MxN indicates block size of N in the innermost "
+          "dimension and block size of M in the next innermost dimension. "
+          "As of now, only 1 dimension (innermost) is supported for "
+          "block-scaling.",
+          [Tosa_BLOCK_SHAPE_32]>;
+
+def Tosa_BlockShapeAttr
+    : EnumAttr<Tosa_Dialect, Tosa_BlockShape, "block_shape"> {
+  let extraClassDeclaration = [{
+    static uint32_t getBlockShapeValue(BlockShape blockShape) {
+      return static_cast<uint32_t>(blockShape);
+    }
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // TOSA Interfaces.
@@ -547,7 +609,7 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
               ResultsBroadcastableShape,
               TosaElementwiseOperator,
               SameOperandsAndResultRank,
-              Pure])> {}
+              NoMemoryEffect])> {}
 
 class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
     Tosa_ElementwiseOp<mnemonic, !listconcat(traits, [
@@ -555,16 +617,16 @@ class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
               SameOperandsAndResultElementType])> {}
 
 class Tosa_InferTensorTypeOp<string mnemonic, list<Trait> traits = []>
-    : Tosa_Op<mnemonic, !listconcat(traits, [InferTensorTypeAdaptor, Pure])> {}
+    : Tosa_Op<mnemonic, !listconcat(traits, [InferTensorTypeAdaptor])> {}
 
 class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
-    : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor, Pure])> {}
+    : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor])> {}
 
 // The "SameVariadicOperandSize" trait allows us to pass optional arguments
 // for multiple zero points in convolution ops.
 class Tosa_ConvOp<string mnemonic, list<Trait> traits = []>
     : Tosa_InferShapedTypeOp<mnemonic, !listconcat(traits,
-      [SameVariadicOperandSize])> {
+      [SameVariadicOperandSize, NoMemoryEffect])> {
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
 }

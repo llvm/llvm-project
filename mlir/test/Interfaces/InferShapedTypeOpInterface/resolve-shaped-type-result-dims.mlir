@@ -178,3 +178,24 @@ func.func @test_unreifiable_dim_of_result_shape(%arg0 : tensor<?x?xf32>)
 //   CHECK-DAG:   %[[OP:.+]] = "test.unreifiable_dim_of_result_shape"(%[[ARG0]])
 //       CHECK:   %[[D1:.+]] = tensor.dim %[[OP]], %[[C1]]
 //       CHECK:   return %[[D0]], %[[D1]]
+
+// -----
+
+// Regression test: verify that when reifyResultShapes creates ops for dim 0
+// but signals dim 1 is not reifiable (empty OpFoldResult), those stray ops are
+// erased before failure is returned. Without the fix, the stray tensor.dim op
+// on %arg0 would remain in the IR (caught by MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS).
+func.func @test_unreifiable_result_shapes_no_stray_ops(%arg0 : tensor<?x?xf32>)
+    -> index {
+  %c1 = arith.constant 1 : index
+  %0 = "test.unreifiable_result_shapes"(%arg0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
+  %d1 = tensor.dim %0, %c1 : tensor<?x?xf32>
+  return %d1 : index
+}
+// CHECK-LABEL: func @test_unreifiable_result_shapes_no_stray_ops(
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?xf32>)
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : index
+//       CHECK:   %[[OP:.+]] = "test.unreifiable_result_shapes"(%[[ARG0]])
+// CHECK-NOT:     tensor.dim %[[ARG0]]  // key: no stray dim on the input arg
+//       CHECK:   %[[D1:.+]] = tensor.dim %[[OP]], %[[C1]]
+//       CHECK:   return %[[D1]]

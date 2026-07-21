@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
+@skipIfTargetDoesNotSupportThreads()
 class TestStopReasonAfterExpression(TestBase):
     @skipIfWindows
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48415")

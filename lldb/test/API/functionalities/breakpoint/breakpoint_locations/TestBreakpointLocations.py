@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class BreakpointLocationsTestCase(TestBase):
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    @expectedFailureWindowsAndNoLLDBServer(bugnumber="llvm.org/pr24528")
     def test_enable(self):
         """Test breakpoint enable/disable for a breakpoint ID with multiple locations."""
         self.build()

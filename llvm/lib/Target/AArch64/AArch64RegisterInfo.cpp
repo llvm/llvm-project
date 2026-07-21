@@ -419,7 +419,6 @@ BitVector
 AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   const AArch64FrameLowering *TFI = getFrameLowering(MF);
 
-  // FIXME: avoid re-calculating this every time.
   BitVector Reserved(getNumRegs());
   markSuperRegs(Reserved, AArch64::WSP);
   markSuperRegs(Reserved, AArch64::WZR);
@@ -500,22 +499,22 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   Reserved.set(AArch64::WZR_HI);
   static_assert(AArch64::W30_HI - AArch64::W0_HI == 30,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::W0_HI, AArch64::W30_HI);
+  Reserved.set(AArch64::W0_HI, AArch64::W30_HI + 1);
   static_assert(AArch64::B31_HI - AArch64::B0_HI == 31,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::B0_HI, AArch64::B31_HI);
+  Reserved.set(AArch64::B0_HI, AArch64::B31_HI + 1);
   static_assert(AArch64::H31_HI - AArch64::H0_HI == 31,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::H0_HI, AArch64::H31_HI);
+  Reserved.set(AArch64::H0_HI, AArch64::H31_HI + 1);
   static_assert(AArch64::S31_HI - AArch64::S0_HI == 31,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::S0_HI, AArch64::S31_HI);
+  Reserved.set(AArch64::S0_HI, AArch64::S31_HI + 1);
   static_assert(AArch64::D31_HI - AArch64::D0_HI == 31,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::D0_HI, AArch64::D31_HI);
+  Reserved.set(AArch64::D0_HI, AArch64::D31_HI + 1);
   static_assert(AArch64::Q31_HI - AArch64::Q0_HI == 31,
                 "Unexpected order of registers");
-  Reserved.set(AArch64::Q0_HI, AArch64::Q31_HI);
+  Reserved.set(AArch64::Q0_HI, AArch64::Q31_HI + 1);
 
   return Reserved;
 }
@@ -577,9 +576,11 @@ bool AArch64RegisterInfo::isStrictlyReservedReg(const MachineFunction &MF,
 }
 
 bool AArch64RegisterInfo::isAnyArgRegReserved(const MachineFunction &MF) const {
-  return llvm::any_of(*AArch64::GPR64argRegClass.MC, [this, &MF](MCPhysReg r) {
-    return isStrictlyReservedReg(MF, r);
-  });
+  for (size_t i = 0; i < AArch64::GPR64argRegClass.getNumRegs(); ++i) {
+    if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(i))
+      return true;
+  }
+  return false;
 }
 
 void AArch64RegisterInfo::emitReservedArgRegCallError(
@@ -1114,6 +1115,59 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   }
 }
 
+static bool HandleDestructivePredicateHint(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &Hints, const VirtRegMap *VRM,
+    const MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
+    const AArch64Subtarget &ST, const LiveRegMatrix *Matrix) {
+  const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
+  if (!ST.useDistinctPredicateDstReg() ||
+      !AArch64::PPRRegClass.hasSubClassEq(RegRC) || !MRI.hasOneDef(VirtReg) ||
+      Order.size() < 2)
+    return false;
+
+  const MachineInstr *DefInst = MRI.getOneDef(VirtReg)->getParent();
+  if ((TII.get(DefInst->getOpcode()).TSFlags &
+       AArch64::DestructiveInstTypeMask) != AArch64::DestructivePredicate)
+    return false;
+
+  Register Op1Reg = DefInst->getOperand(1).getReg();
+  if (Op1Reg.isVirtual())
+    Op1Reg = VRM->getPhys(Op1Reg);
+
+  // If no register is allocated for the general-predicate, it's not yet
+  // possible to choose a distinct register.
+  if (!Op1Reg.isValid())
+    return false;
+
+  // Move Op1Reg as the least preferred register.
+  //
+  // This might result in callee-save spills when the function takes/returns
+  // arguments in SVE registers (i.e. needs to preserve p4-p15) and can't reuse
+  // p0-p3. That's why we limit it to non-callee saved registers or to
+  // callee-saved registers that have already been allocated for other uses in
+  // the function.
+  DenseSet<unsigned> CSRs;
+  for (unsigned I = 0;; ++I) {
+    Register R = MRI.getCalleeSavedRegs()[I];
+    if (!R.isValid())
+      break;
+    if (AArch64::PPRRegClass.contains(R))
+      CSRs.insert(R);
+  }
+
+  Hints.append(Order.begin(), Order.end());
+  auto CanUseReg = [&](Register R) {
+    return !CSRs.contains(R) || !MRI.def_empty(R) || Matrix->isPhysRegUsed(R);
+  };
+  llvm::stable_sort(Hints, [&](Register A, Register B) {
+    bool PrefA = (A != Op1Reg) && CanUseReg(A);
+    bool PrefB = (B != Op1Reg) && CanUseReg(B);
+    return PrefA && !PrefB;
+  });
+  return true;
+}
+
 // We add regalloc hints for different cases:
 // * Choosing a better destination operand for predicated SVE instructions
 //   where the inactive lanes are undef, by choosing a register that is not
@@ -1122,7 +1176,7 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 // * Improve register allocation for SME multi-vector instructions where we can
 //   benefit from the strided- and contiguous register multi-vector tuples.
 //
-//   Here FORM_TRANSPOSED_REG_TUPLE nodes are created to improve register
+//   Here COPY_INTO_TRANSPOSED_TUPLE nodes are created to improve register
 //   allocation where a consecutive multi-vector tuple is constructed from the
 //   same indices of multiple strided loads. This may still result in
 //   unnecessary copies between the loads and the tuple. Here we try to return a
@@ -1143,14 +1197,14 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  bool ConsiderOnlyHints =
+      TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
+
   // For predicated SVE instructions where the inactive lanes are undef,
   // pick a destination register that is not unique to avoid introducing
   // a movprfx.
   const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
   if (AArch64::ZPRRegClass.hasSubClassEq(RegRC)) {
-    bool ConsiderOnlyHints = TargetRegisterInfo::getRegAllocationHints(
-        VirtReg, Order, Hints, MF, VRM);
-
     for (const MachineOperand &DefOp : MRI.def_operands(VirtReg)) {
       const MachineInstr &Def = *DefOp.getParent();
       if (DefOp.isImplicit() ||
@@ -1166,7 +1220,10 @@ bool AArch64RegisterInfo::getRegAllocationHints(
                                      const MachineOperand &MO) -> bool {
           // R is a suitable register hint if R can reuse one of the other
           // source operands.
-          if (VRM->getPhys(MO.getReg()) != R)
+          MCPhysReg PhysReg = VRM->getPhys(MO.getReg());
+          if (PhysReg && MO.getSubReg())
+            PhysReg = getSubReg(PhysReg, MO.getSubReg());
+          if (PhysReg != R)
             return false;
           Hints.push_back(R);
           return true;
@@ -1192,6 +1249,10 @@ bool AArch64RegisterInfo::getRegAllocationHints(
         case AArch64::DestructiveUnaryPassthru:
           AddHintIfSuitable(R, Def.getOperand(3));
           break;
+        case AArch64::DestructiveBinaryImmUnpred:
+        case AArch64::DestructiveBinaryShImmUnpred:
+          AddHintIfSuitable(R, Def.getOperand(1));
+          break;
         }
       }
     }
@@ -1199,6 +1260,10 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     if (Hints.size())
       return ConsiderOnlyHints;
   }
+
+  if (HandleDestructivePredicateHint(VirtReg, Order, Hints, VRM, MRI, *TII, ST,
+                                     Matrix))
+    return ConsiderOnlyHints;
 
   if (!ST.hasSME() || !ST.isStreaming())
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
@@ -1209,20 +1274,24 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   // callee-saved registers and so by default these will be pushed to the back
   // of the allocation order for the ZPRStridedOrContiguous classes.
   // If any of the instructions which define VirtReg are used by the
-  // FORM_TRANSPOSED_REG_TUPLE pseudo, we want to favour reducing copy
+  // COPY_INTO_TRANSPOSED_TUPLE pseudos, we want to favour reducing copy
   // instructions over reducing the number of clobbered callee-save registers,
   // so we add the strided registers as a hint.
   unsigned RegID = RegRC->getID();
   if (RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
       RegID == AArch64::ZPR4StridedOrContiguousRegClassID) {
 
-    // Look through uses of the register for FORM_TRANSPOSED_REG_TUPLE.
+    // Look through uses of the register for COPY_INTO_TRANSPOSED_TUPLE.
     for (const MachineInstr &Use : MRI.use_nodbg_instructions(VirtReg)) {
-      if (Use.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
-          Use.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)
+      if (Use.getOpcode() != AArch64::COPY_INTO_TRANSPOSED_TUPLE)
         continue;
 
-      unsigned UseOps = Use.getNumOperands() - 1;
+      const MachineOperand &Src = Use.getOperand(1);
+      const MachineOperand &Dst = Use.getOperand(0);
+
+      if (!Src.getSubReg() || !Dst.getSubReg())
+        continue;
+
       const TargetRegisterClass *StridedRC;
       switch (RegID) {
       case AArch64::ZPR2StridedOrContiguousRegClassID:
@@ -1240,17 +1309,19 @@ bool AArch64RegisterInfo::getRegAllocationHints(
         if (StridedRC->contains(Reg))
           StridedOrder.push_back(Reg);
 
-      int OpIdx = Use.findRegisterUseOperandIdx(VirtReg, this);
-      assert(OpIdx != -1 && "Expected operand index from register use.");
+      unsigned TupleSize = Use.getOperand(2).getImm();
+      unsigned TupIdx = Dst.getSubReg() - AArch64::zsub0;
 
-      unsigned TupleID = MRI.getRegClass(Use.getOperand(0).getReg())->getID();
+      unsigned TupleID = MRI.getRegClass(Dst.getReg())->getID();
       bool IsMulZPR = TupleID == AArch64::ZPR2Mul2RegClassID ||
                       TupleID == AArch64::ZPR4Mul4RegClassID;
 
-      const MachineOperand *AssignedRegOp = llvm::find_if(
-          make_range(Use.operands_begin() + 1, Use.operands_end()),
-          [&VRM](const MachineOperand &Op) {
-            return VRM->hasPhys(Op.getReg());
+      iterator_range Copies = MRI.def_instructions(Dst.getReg());
+      MachineRegisterInfo::def_instr_iterator CopyWithAssignedSrc =
+          llvm::find_if(Copies, [&](const MachineInstr &Def) {
+            auto &Src = Def.getOperand(1);
+            return Def.getOpcode() == Use.getOpcode() &&
+                   VRM->hasPhys(Src.getReg());
           });
 
       // Example:
@@ -1261,7 +1332,10 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       //  %v1:zpr2stridedorcontiguous = ld1 p0/z, [...]
       //  %v2:zpr2stridedorcontiguous = ld1 p0/z, [...]
       //  %v3:zpr2stridedorcontiguous = ld1 p0/z, [...]
-      //  %v4:zpr4mul4 = FORM_TRANSPOSED_X4 %v0:0, %v1:0, %v2:0, %v3:0
+      //  %v4.zsub0:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %v0:0
+      //  %v4.zsub1:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %v1:0
+      //  %v4.zsub2:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %v2:0
+      //  %v4.zsub3:zpr4mul4 = COPY_INTO_TRANSPOSED_TUPLE %v3:0
       //
       // One such suitable allocation would be:
       //
@@ -1269,58 +1343,65 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       //  { z1, z9 }  = ld1 p0/z, [...]
       //  { z2, z10 } = ld1 p0/z, [...]
       //  { z3, z11 } = ld1 p0/z, [...]
-      //  { z0, z1, z2, z3 } =
-      //     FORM_TRANSPOSED_X4 {z0, z8}:0, {z1, z9}:0, {z2, z10}:0, {z3, z11}:0
+      //  z0 = COPY_INTO_TRANSPOSED_TUPLE {z0, z8}:0
+      //  z1 = COPY_INTO_TRANSPOSED_TUPLE {z1, z9}:0
+      //  z2 = COPY_INTO_TRANSPOSED_TUPLE {z2, z10}:0
+      //  z3 = COPY_INTO_TRANSPOSED_TUPLE {z3, z11}:0
       //
       // Below we distinguish two cases when trying to find a register:
-      // * None of the registers used by FORM_TRANSPOSED_X4 have been assigned
-      //   yet. In this case the code muse ensure that there are at least UseOps
+      // * None of the sources of the copies have been assigned a register yet.
+      //   In this case the code must ensure that there are at least TupleSize
       //   free consecutive registers. If IsMulZPR is true, then the first of
-      //   registers must also be a multiple of UseOps, e.g. { z0, z1, z2, z3 }
-      //   is valid but { z1, z2, z3, z5 } is not.
-      // * One or more of the registers used by FORM_TRANSPOSED_X4 is already
-      //   assigned a physical register, which means only checking that a
-      //   consecutive range of free tuple registers exists which includes
-      //   the assigned register.
+      //   registers must also be a multiple of TupleSize, e.g.
+      //   { z0, z1, z2, z3 } is valid but { z1, z2, z3, z5 } is not.
+      // * One or more copies already have registers assigned to their sources,
+      //   which means only checking that a consecutive range of free tuple
+      //   registers exists which includes the assigned register.
       //   e.g. in the example above, if { z0, z8 } is already allocated for
       //   %v0, we just need to ensure that { z1, z9 }, { z2, z10 } and
       //   { z3, z11 } are also free. If so, we add { z2, z10 }.
 
-      if (AssignedRegOp == Use.operands_end()) {
+      if (CopyWithAssignedSrc == Copies.end()) {
         // There are no registers already assigned to any of the pseudo
         // operands. Look for a valid starting register for the group.
         for (unsigned I = 0; I < StridedOrder.size(); ++I) {
           MCPhysReg Reg = StridedOrder[I];
 
-          // If the FORM_TRANSPOSE nodes use the ZPRMul classes, the starting
-          // register of the first load should be a multiple of 2 or 4.
-          unsigned SubRegIdx = Use.getOperand(OpIdx).getSubReg();
-          if (IsMulZPR && (getSubReg(Reg, SubRegIdx) - AArch64::Z0) % UseOps !=
-                              ((unsigned)OpIdx - 1))
+          // If the COPY_INTO_TRANSPOSED_TUPLE nodes use the ZPRMul classes, the
+          // starting register of the first load should be a multiple of 2 or 4.
+          unsigned SubRegIdx = Src.getSubReg();
+          if (IsMulZPR &&
+              (getSubReg(Reg, SubRegIdx) - AArch64::Z0) % TupleSize != TupIdx)
             continue;
 
           // In the example above, if VirtReg is the third operand of the
           // tuple (%v2) and Reg == Z2_Z10, then we need to make sure that
           // Z0_Z8, Z1_Z9 and Z3_Z11 are also available.
-          auto IsFreeConsecutiveReg = [&](unsigned UseOp) {
-            unsigned R = Reg - (OpIdx - 1) + UseOp;
+          auto IsFreeConsecutiveReg = [&](unsigned I) {
+            unsigned R = Reg - TupIdx + I;
             return StridedRC->contains(R) &&
-                   (UseOp == 0 ||
+                   (I == 0 ||
                     ((getSubReg(R, AArch64::zsub0) - AArch64::Z0) ==
                      (getSubReg(R - 1, AArch64::zsub0) - AArch64::Z0) + 1)) &&
                    !Matrix->isPhysRegUsed(R);
           };
-          if (all_of(iota_range<unsigned>(0U, UseOps, /*Inclusive=*/false),
-                     IsFreeConsecutiveReg))
+          if (all_of(seq(0U, TupleSize), IsFreeConsecutiveReg))
             Hints.push_back(Reg);
         }
       } else {
-        // At least one operand already has a physical register assigned.
+        // At least copy already has a physical register assigned to its source.
         // Find the starting sub-register of this and use it to work out the
         // correct strided register to suggest based on the current op index.
+        MachineOperand &AssignedSrc = CopyWithAssignedSrc->getOperand(1);
+        MachineOperand &AssignedDst = CopyWithAssignedSrc->getOperand(0);
+
+        if (!AssignedSrc.getSubReg() || !AssignedDst.getSubReg())
+          continue;
+
+        unsigned AssignedTupIdx = AssignedDst.getSubReg() - AArch64::zsub0;
         MCPhysReg TargetStartReg =
-            getSubReg(VRM->getPhys(AssignedRegOp->getReg()), AArch64::zsub0) +
-            (OpIdx - AssignedRegOp->getOperandNo());
+            getSubReg(VRM->getPhys(AssignedSrc.getReg()), AArch64::zsub0) +
+            (TupIdx - AssignedTupIdx);
 
         for (unsigned I = 0; I < StridedOrder.size(); ++I)
           if (getSubReg(StridedOrder[I], AArch64::zsub0) == TargetStartReg)
@@ -1333,34 +1414,31 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     }
   }
 
-  for (MachineInstr &MI : MRI.def_instructions(VirtReg)) {
-    if (MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
-        MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)
-      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
-                                                       MF, VRM);
-
-    unsigned FirstOpSubReg = MI.getOperand(1).getSubReg();
-    switch (FirstOpSubReg) {
-    case AArch64::zsub0:
-    case AArch64::zsub1:
-    case AArch64::zsub2:
-    case AArch64::zsub3:
-      break;
-    default:
+  for (auto &Def : MRI.def_instructions(VirtReg)) {
+    if (Def.getOpcode() != AArch64::COPY_INTO_TRANSPOSED_TUPLE)
       continue;
+
+    MachineOperand &Src = Def.getOperand(1);
+    MachineOperand &Dst = Def.getOperand(0);
+
+    if (!Src.getSubReg() || !Dst.getSubReg())
+      continue;
+
+    // FIXME: This is fragile. If we allocate a register to the Dst before Src,
+    // our hints are won't have any effect... This is currently mitigated by
+    // by trying to schedule copies immediately before their uses. This gives
+    // them a short live range (so they're low priority to allocate).
+    if (!VRM->hasPhys(Src.getReg()))
+      continue;
+
+    // Find the ZPR register mapped to the source of the copy.
+    MCPhysReg SrcZPR = getSubReg(VRM->getPhys(Src.getReg()), Src.getSubReg());
+
+    // Try to pick a tuple register for Dst with Src as a member.
+    for (MCPhysReg R : Order) {
+      if (getSubReg(R, Dst.getSubReg()) == SrcZPR)
+        Hints.push_back(R);
     }
-
-    // Look up the physical register mapped to the first operand of the pseudo.
-    Register FirstOpVirtReg = MI.getOperand(1).getReg();
-    if (!VRM->hasPhys(FirstOpVirtReg))
-      continue;
-
-    MCRegister TupleStartReg =
-        getSubReg(VRM->getPhys(FirstOpVirtReg), FirstOpSubReg);
-    for (unsigned I = 0; I < Order.size(); ++I)
-      if (MCRegister R = getSubReg(Order[I], AArch64::zsub0))
-        if (R == TupleStartReg)
-          Hints.push_back(Order[I]);
   }
 
   return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
@@ -1385,9 +1463,8 @@ bool AArch64RegisterInfo::shouldCoalesce(
   MachineFunction &MF = *MI->getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  // Coalescing of SUBREG_TO_REG is broken when using subreg liveness tracking,
-  // we must disable it for now.
-  if (MI->isSubregToReg() && MRI.subRegLivenessEnabled())
+  if (MI->isSubregToReg() && MRI.subRegLivenessEnabled() &&
+      !MF.getSubtarget<AArch64Subtarget>().enableSRLTSubregToRegMitigation())
     return false;
 
   if (MI->isCopy() &&

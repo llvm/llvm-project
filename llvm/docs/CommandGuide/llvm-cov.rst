@@ -227,6 +227,12 @@ OPTIONS
  Show modified condition/decision coverage (MC/DC) for each applicable boolean
  expression.
 
+.. option:: -show-mcdc-non-executed-vectors
+
+ When showing MC/DC details, also list test vectors that were not executed (for
+ example in a ``Not executed`` section after the executed vectors). By default,
+ only executed test vectors are shown.
+
 .. option:: -show-line-counts
 
  Show the execution counts for each line. Defaults to true, unless another
@@ -288,6 +294,10 @@ OPTIONS
 .. option:: -ignore-filename-regex=<PATTERN>
 
  Skip source code files with file paths that match the given regular expression.
+
+.. option:: -include-filename-regex=<PATTERN>
+
+ Only include source code files with file paths that match the given regular expression.
 
 .. option:: -format=<FORMAT>
 
@@ -543,6 +553,12 @@ OPTIONS
 .. option:: -skip-functions
 
  Skip exporting per-function coverage data.
+
+.. option:: -show-mcdc-non-executed-vectors
+
+ When MC/DC data is present in the export, include test vectors that were not
+ executed (for JSON, these appear with ``"executed": false`` alongside executed
+ vectors). By default, only executed MC/DC test vectors are exported.
 
 .. option:: -num-threads=N, -j=N
 

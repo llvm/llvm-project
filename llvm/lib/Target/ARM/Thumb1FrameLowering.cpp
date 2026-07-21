@@ -867,7 +867,7 @@ static void pushRegsToStack(MachineBasicBlock &MBB,
   // Find the first register to save.
   // Registers must be processed in reverse order so that in case we need to use
   // multiple PUSH instructions, the order of the registers on the stack still
-  // matches the unwind info. They need to be swicthed back to ascending order
+  // matches the unwind info. They need to be switched back to ascending order
   // before adding to the PUSH instruction.
   auto HiRegToSave = getNextOrderedReg(OrderedHighRegs.rbegin(),
                                        OrderedHighRegs.rend(),
@@ -1176,7 +1176,7 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
       I.setRestored(false);
   }
 
-  // Determine intermidiate registers which can be used for popping high regs:
+  // Determine intermediate registers which can be used for popping high regs:
   // - Spilled low regs
   // - Unused return registers
   std::set<Register> CopyRegs;

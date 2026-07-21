@@ -13,6 +13,9 @@
 // RUN: %clang --target=aarch64 -c %s -### -mbranch-protection=standard                                2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=GCS-ON --check-prefix=WARN
 
+// RUN: %clang --target=aarch64-windows-msvc -c %s -### -mbranch-protection=standard                  2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-B --check-prefix=BTE-ON --check-prefix=GCS-ON --check-prefix=WARN
+
 // RUN: not %clang -target arm64-apple-darwin -c %s -### -mbranch-protection=standard -fptrauth-returns 2>&1 | \
 // RUN: FileCheck %s --check-prefixes=RA-INCOMPATIBLE-PTRAUTHRETURNS
 
@@ -92,6 +95,7 @@
 // RA-ALL: "-msign-return-address=all"
 
 // KEY-A: "-msign-return-address-key=a_key"
+// KEY-B: "-msign-return-address-key=b_key"
 // KEY-NOT: "-msign-return-address-key"
 
 // RA-INCOMPATIBLE-PTRAUTHRETURNS: the combination of '-mbranch-protection=standard' and '-fptrauth-returns' is incompatible

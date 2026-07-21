@@ -16,7 +16,6 @@
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Semantics/semantics.h"
-#include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -28,7 +27,6 @@
 
 #include <optional>
 #include <utility>
-#include <variant>
 
 using namespace Fortran;
 
@@ -42,9 +40,9 @@ struct ConstructDecomposition {
                          llvm::omp::Directive compound,
                          const List<Clause> &clauses)
       : semaCtx(semaCtx), mod(modOp), eval(ev) {
-    tomp::ConstructDecompositionT decompose(getOpenMPVersionAttribute(modOp),
-                                            *this, compound,
-                                            llvm::ArrayRef(clauses));
+    tomp::ConstructDecompositionT decompose(
+        mlir::omp::getOpenMPVersionAttribute(modOp), *this, compound,
+        llvm::ArrayRef(clauses));
     output = std::move(decompose.output);
   }
 

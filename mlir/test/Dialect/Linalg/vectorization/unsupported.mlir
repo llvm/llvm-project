@@ -112,6 +112,36 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+/// Dynamic spatial dims for non-depthwise conv is not supported. This is already
+/// being tested for named ops and the following lit test checks that the same is
+/// applicable to linalg.generic conv ops as well.
+func.func @generic_conv1d_ncw_fcw_dyn_spatial(%input: tensor<1x8x?xf16>, %filter: tensor<4x8x1xf16>, %output: tensor<1x4x?xf16>) -> tensor<1x4x?xf16> {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  %0 = linalg.generic
+    {indexing_maps = [affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d2 + d4)>,
+                      affine_map<(d0, d1, d2, d3, d4) -> (d1, d3, d4)>,
+                      affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>],
+     iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction"]}
+    ins(%input, %filter : tensor<1x8x?xf16>, tensor<4x8x1xf16>)
+    outs(%output : tensor<1x4x?xf16>) {
+  ^bb0(%in: f16, %filt: f16, %out: f16):
+    %mul = arith.mulf %in, %filt : f16
+    %add = arith.addf %out, %mul : f16
+    linalg.yield %add : f16
+  } -> tensor<1x4x?xf16>
+  return %0 : tensor<1x4x?xf16>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @conv2d_nchw_fchw(%input: tensor<1x5x8x8xf32>, %filter:  tensor<4x5x3x3xf32>, %output: tensor<1x4x6x6xf32>) {
   // expected-error @+1 {{Attempted to vectorize, but failed}}
   linalg.conv_2d_nchw_fchw {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>} ins(%input, %filter : tensor<1x5x8x8xf32>, tensor<4x5x3x3xf32>) outs(%output : tensor<1x4x6x6xf32>) -> tensor<1x4x6x6xf32>
@@ -319,6 +349,31 @@ func.func @tensor_pad_non_zero_low_pad(
       tensor.yield %cst : f32
     } : tensor<?x?xf32> to tensor<2x4xf32>
   return %1: tensor<2x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// This test verifies that vectorization correctly handles mixed static/dynamic
+// low padding.
+func.func @tensor_pad_non_zero_low_pad_mixed_dynamic_static(
+  %0 : tensor<1x?xf32>, %low : index, %high : index)
+    -> tensor<1x3xf32> {
+  // expected-error @+2 {{Attempted to vectorize, but failed}}
+  %cst = arith.constant 42.43 : f32
+  %1 = tensor.pad %0 low[0, %low] high[0, %high]  {
+    ^bb0(%i: index, %j: index):
+      tensor.yield %cst : f32
+    } : tensor<1x?xf32> to tensor<1x3xf32>
+  return %1: tensor<1x3xf32>
 }
 
 module attributes {transform.with_named_sequence} {

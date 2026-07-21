@@ -164,7 +164,7 @@ bool HexagonQFPOptimizer::optimizeQfp(MachineInstr *MI,
 bool HexagonQFPOptimizer::optimizeQfpOneOp(MachineInstr *MI,
                                            MachineBasicBlock *MBB) {
 
-  unsigned Op0F = 0;
+  RegState Op0F = {};
   auto It = QFPInstMap.find(MI->getOpcode());
   if (It == QFPInstMap.end())
     return false;
@@ -210,8 +210,8 @@ bool HexagonQFPOptimizer::optimizeQfpOneOp(MachineInstr *MI,
 bool HexagonQFPOptimizer::optimizeQfpTwoOp(MachineInstr *MI,
                                            MachineBasicBlock *MBB) {
 
-  unsigned Op0F = 0;
-  unsigned Op1F = 0;
+  RegState Op0F = {};
+  RegState Op1F = {};
   auto It = QFPInstMap.find(MI->getOpcode());
   if (It == QFPInstMap.end())
     return false;

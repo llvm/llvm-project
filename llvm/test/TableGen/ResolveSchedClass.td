@@ -80,7 +80,7 @@ def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
 
 // CHECK: unsigned resolveVariantSchedClass(unsigned SchedClass,
 // CHECK-NEXT:    const MCInst *MI, const MCInstrInfo *MCII,
-// CHECK-NEXT:    unsigned CPUID) const override {
+// CHECK-NEXT:    unsigned CPUID) const final {
 // CHECK-NEXT:   return TestTarget_MC::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);
 // CHECK-NEXT: }
 

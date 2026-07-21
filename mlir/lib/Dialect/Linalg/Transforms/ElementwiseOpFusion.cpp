@@ -26,6 +26,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 #include <utility>
 
@@ -670,10 +671,10 @@ getIndexingMapInExpandedOp(OpBuilder &builder, AffineMap indexingMap,
   SmallVector<AffineExpr> newExprs;
   for (AffineExpr expr : indexingMap.getResults()) {
     unsigned pos = cast<AffineDimExpr>(expr).getPosition();
-    SmallVector<AffineExpr, 4> expandedExprs = llvm::to_vector<4>(
-        llvm::map_range(expansionInfo.getExpandedDims(pos), [&](int64_t v) {
+    SmallVector<AffineExpr, 4> expandedExprs = llvm::map_to_vector<4>(
+        expansionInfo.getExpandedDims(pos), [&](int64_t v) {
           return builder.getAffineDimExpr(static_cast<unsigned>(v));
-        }));
+        });
     newExprs.append(expandedExprs.begin(), expandedExprs.end());
   }
   return AffineMap::get(expansionInfo.getExpandedOpNumDims(),
@@ -840,7 +841,7 @@ static Operation *createExpandedOp(PatternRewriter &rewriter, LinalgOp linalgOp,
                                    ExpansionInfo &expansionInfo) {
 
   return TypeSwitch<Operation *, Operation *>(linalgOp.getOperation())
-      .Case<TransposeOp>([&](TransposeOp transposeOp) {
+      .Case([&](TransposeOp transposeOp) {
         return createExpandedTransposeOp(rewriter, transposeOp,
                                          expandedOpOperands[0], outputs[0],
                                          expansionInfo);
@@ -899,10 +900,10 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
                                    rewriter)))
     return std::nullopt;
 
-  SmallVector<AffineMap, 4> expandedOpIndexingMaps = llvm::to_vector<4>(
-      llvm::map_range(linalgOp.getIndexingMapsArray(), [&](AffineMap m) {
+  SmallVector<AffineMap, 4> expandedOpIndexingMaps =
+      llvm::map_to_vector<4>(linalgOp.getIndexingMapsArray(), [&](AffineMap m) {
         return getIndexingMapInExpandedOp(rewriter, m, expansionInfo);
-      }));
+      });
 
   // Set insertion point to the generic op.
   OpBuilder::InsertionGuard g(rewriter);
@@ -1291,10 +1292,10 @@ getDomainReassociation(AffineMap indexingMap,
   assert(indexingMap.isProjectedPermutation() &&
          "expected projected permutation");
 
-  ReassociationIndices domainReassociation = llvm::to_vector<4>(
-      llvm::map_range(rangeReassociation, [&](int64_t pos) -> int64_t {
+  ReassociationIndices domainReassociation =
+      llvm::map_to_vector<4>(rangeReassociation, [&](int64_t pos) -> int64_t {
         return cast<AffineDimExpr>(indexingMap.getResults()[pos]).getPosition();
-      }));
+      });
   // The projected permutation semantics ensures that there is no repetition of
   // the domain indices.
   return domainReassociation;
@@ -1307,8 +1308,11 @@ bool mlir::linalg::isDimSequencePreserved(AffineMap indexingMap,
                                           ReassociationIndicesRef dimSequence) {
   assert(!dimSequence.empty() &&
          "expected non-empty list for dimension sequence");
-  assert(indexingMap.isProjectedPermutation() &&
-         "expected indexing map to be projected permutation");
+
+  // Dimension sequences can only be preserved in projected permutation maps.
+  if (!indexingMap.isProjectedPermutation()) {
+    return false;
+  }
 
   llvm::SmallDenseSet<unsigned, 4> sequenceElements;
   sequenceElements.insert_range(dimSequence);

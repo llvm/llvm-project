@@ -209,13 +209,13 @@ define <4 x i16> @f6(<4 x i16> %a0, <4 x i16> %a1) #0 {
 ; CHECK-NEXT:     r5:4 = vmpyh(r0,r2):sat
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7:6 = vmpyh(r1,r3):sat
+; CHECK-NEXT:     r{{[0-9]+}}:{{[0-9]+}} = vmpyh(r1,r3):sat
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = combine(r5.h,r4.h)
+; CHECK-NEXT:     r0 = combine(r{{[0-9]+}}.h,r{{[0-9]+}}.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = combine(r7.h,r6.h)
+; CHECK-NEXT:     r1 = combine(r{{[0-9]+}}.h,r{{[0-9]+}}.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31

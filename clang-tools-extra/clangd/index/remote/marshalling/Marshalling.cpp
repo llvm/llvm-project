@@ -59,14 +59,16 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
     : Strings(Arena) {
   llvm::StringRef PosixSeparator = get_separator(Style::posix);
   if (!RemoteIndexRoot.empty()) {
-    assert(is_absolute(RemoteIndexRoot));
+    assert(is_absolute(RemoteIndexRoot, Style::posix) ||
+           is_absolute(RemoteIndexRoot, Style::windows));
     this->RemoteIndexRoot = convert_to_slash(RemoteIndexRoot, Style::windows);
     llvm::StringRef Path(this->RemoteIndexRoot);
     if (!is_separator(this->RemoteIndexRoot.back(), Style::posix))
       this->RemoteIndexRoot += PosixSeparator;
   }
   if (!LocalIndexRoot.empty()) {
-    assert(is_absolute(LocalIndexRoot));
+    assert(is_absolute(LocalIndexRoot, Style::posix) ||
+           is_absolute(LocalIndexRoot, Style::windows));
     this->LocalIndexRoot = convert_to_slash(LocalIndexRoot, Style::windows);
     llvm::StringRef Path(this->LocalIndexRoot);
     if (!is_separator(this->LocalIndexRoot.back(), Style::posix))
@@ -395,7 +397,7 @@ llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
   llvm::StringRef Path(Result);
   // Check for Windows paths (URI=file:///X:/path => Body=/X:/path)
   if (is_absolute(Path.substr(1), Style::windows))
-    Result = Path.drop_front();
+    Result = Path.drop_front().str();
   if (!replace_path_prefix(Result, RemoteIndexRoot, ""))
     return error("File path '{0}' doesn't start with '{1}'.", Result.str(),
                  RemoteIndexRoot);

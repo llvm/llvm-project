@@ -37,3 +37,13 @@ func.func @test_validate_without_tosa(%arg0: f32) -> f32 {
   %0 = math.asin %arg0 : f32
   return %0 : f32
 }
+
+// -----
+
+// CHECK-LABEL: test_pad_large_input_rank
+func.func @test_pad_large_input_rank(%arg0: tensor<13x21x3x1x1x1xf32>) -> tensor<13x21x3x1x1x1xf32> {
+  %0 = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+  %padding = tosa.const_shape {values = dense<0> : tensor<12xindex>} : () -> !tosa.shape<12>
+  %1 = tosa.pad %arg0, %padding, %0 : (tensor<13x21x3x1x1x1xf32>, !tosa.shape<12>, tensor<1xf32>) -> tensor<13x21x3x1x1x1xf32>
+  return %1 : tensor<13x21x3x1x1x1xf32>
+}

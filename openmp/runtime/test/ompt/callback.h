@@ -138,6 +138,10 @@ static void format_task_type(int type, char *buffer) {
     progress += sprintf(progress, "ompt_task_target");
   if (type & ompt_task_taskwait)
     progress += sprintf(progress, "ompt_task_taskwait");
+  if (type & ompt_task_importing)
+    progress += sprintf(progress, "|ompt_task_importing");
+  if (type & ompt_task_exporting)
+    progress += sprintf(progress, "|ompt_task_exporting");
   if (type & ompt_task_undeferred)
     progress += sprintf(progress, "|ompt_task_undeferred");
   if (type & ompt_task_untied)
@@ -1055,7 +1059,9 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
                            ompt_callback_sync_region_t);
   register_ompt_callback_t(ompt_callback_reduction,
                            ompt_callback_sync_region_t);
+#ifndef _OMPT_DISABLE_CONTROL_TOOL
   register_ompt_callback(ompt_callback_control_tool);
+#endif
   register_ompt_callback(ompt_callback_flush);
   register_ompt_callback(ompt_callback_cancel);
   register_ompt_callback(ompt_callback_implicit_task);

@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -669,6 +670,7 @@ protected:
   };
 
   class InitListExprBitfields {
+    friend class ASTStmtReader;
     friend class InitListExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
@@ -678,6 +680,9 @@ protected:
     /// designator in it. This is a temporary marker used by CodeGen.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HadArrayRangeDesignator : 1;
+    // Whether this list is explicitly written in the source (with braces).
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsExplicit : 1;
   };
 
   class ParenListExprBitfields {
@@ -784,6 +789,11 @@ protected:
     /// value of OverloadedOperatorKind.
     LLVM_PREFERRED_TYPE(OverloadedOperatorKind)
     unsigned OperatorKind : 6;
+
+    /// Whether this is a C++20 rewritten reversed operator, where the
+    /// arguments are in reversed source order.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsReversed : 1;
   };
 
   class CXXRewrittenBinaryOperatorBitfields {
@@ -1271,6 +1281,14 @@ protected:
 
   //===--- Obj-C Expression bitfields classes ---===//
 
+  class ObjCObjectLiteralBitfields {
+    friend class ObjCObjectLiteral;
+
+    unsigned : NumExprBits;
+
+    unsigned IsExpressibleAsConstantInitializer : 1;
+  };
+
   class ObjCIndirectCopyRestoreExprBitfields {
     friend class ObjCIndirectCopyRestoreExpr;
 
@@ -1392,6 +1410,7 @@ protected:
     CoawaitExprBitfields CoawaitBits;
 
     // Obj-C Expressions
+    ObjCObjectLiteralBitfields ObjCObjectLiteralBits;
     ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
 
     // Clang Extensions
@@ -3311,6 +3330,16 @@ public:
 
   /// Assemble final IR asm string.
   std::string generateAsmString(const ASTContext &C) const;
+
+  using UnsupportedConstraintCallbackTy =
+      llvm::function_ref<void(const Stmt *, StringRef)>;
+  /// Look at AsmExpr and if it is a variable declared as using a particular
+  /// register add that as a constraint that will be used in this asm stmt.
+  std::string
+  addVariableConstraints(StringRef Constraint, const Expr &AsmExpr,
+                         const TargetInfo &Target, bool EarlyClobber,
+                         UnsupportedConstraintCallbackTy UnsupportedCB,
+                         std::string *GCCReg = nullptr) const;
 
   //===--- Output operands ---===//
 

@@ -104,3 +104,40 @@ define <4 x i32> @dot_wrong_shuffle(<8 x i16> %a, <8 x i16> %b) {
   %res = add <4 x i32> %shuffle1, %shuffle2
   ret <4 x i32> %res
 }
+
+define dso_local <4 x i32> @dot_with_bitcast_both(<4 x i32> %a, <4 x i32> %b) unnamed_addr {
+; CHECK-LABEL: dot_with_bitcast_both:
+; CHECK:         .functype dot_with_bitcast_both (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %start
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.dot_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+start:
+  %_4 = bitcast <4 x i32> %a to <8 x i16>
+  %_5 = bitcast <4 x i32> %b to <8 x i16>
+  %0 = sext <8 x i16> %_4 to <8 x i32>
+  %1 = sext <8 x i16> %_5 to <8 x i32>
+  %2 = mul nsw <8 x i32> %1, %0
+  %3 = shufflevector <8 x i32> %2, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %4 = shufflevector <8 x i32> %2, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %5 = add <4 x i32> %3, %4
+  ret <4 x i32> %5
+}
+
+define <4 x i32> @dot_with_bitcast_one(<4 x i32> %a) {
+; CHECK-LABEL: dot_with_bitcast_one:
+; CHECK:         .functype dot_with_bitcast_one (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %start
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.extadd_pairwise_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+start:
+  %a1 = bitcast <4 x i32> %a to <8 x i16>
+  %0 = shufflevector <8 x i16> %a1, <8 x i16> %a1, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %1 = shufflevector <8 x i16> %a1, <8 x i16> %a1, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %2 = sext <4 x i16> %0 to <4 x i32>
+  %3 = sext <4 x i16> %1 to <4 x i32>
+  %4 = add nsw <4 x i32> %2, %3
+  ret <4 x i32> %4
+}

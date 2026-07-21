@@ -18,6 +18,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
@@ -353,7 +355,8 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
 void DWARFFormValue::dumpAddress(raw_ostream &OS, uint8_t AddressSize,
                                  uint64_t Address) {
   uint8_t HexDigits = AddressSize * 2;
-  OS << format("0x%*.*" PRIx64, HexDigits, HexDigits, Address);
+  OS << formatv("0x{0:x-}",
+                fmt_align(Address, AlignStyle::Right, HexDigits, '0'));
 }
 
 void DWARFFormValue::dumpSectionedAddress(raw_ostream &OS,
@@ -376,7 +379,7 @@ void DWARFFormValue::dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
 
   // Print section index if name is not unique.
   if (!SecRef.IsNameUnique)
-    OS << format(" [%" PRIu64 "]", SectionIndex);
+    OS << formatv(" [{0}]", SectionIndex);
 }
 
 void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
@@ -406,9 +409,10 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
       if (Form == DW_FORM_LLVM_addrx_offset) {
         uint32_t Index = UValue >> 32;
         uint32_t Offset = UValue & 0xffffffff;
-        AddrOS << format("indexed (%8.8x) + 0x%x address = ", Index, Offset);
+        AddrOS << formatv("indexed ({0:x-8}) + {1:x+} address = ", Index,
+                          Offset);
       } else
-        AddrOS << format("indexed (%8.8x) address = ", (uint32_t)UValue);
+        AddrOS << formatv("indexed ({0:x-8}) address = ", (uint32_t)UValue);
     }
     if (A)
       dumpSectionedAddress(AddrOS, DumpOpts, *A);
@@ -421,19 +425,19 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   case DW_FORM_flag:
   case DW_FORM_data1:
-    OS << format("0x%02x", (uint8_t)UValue);
+    OS << formatv("{0:x+2}", (uint8_t)UValue);
     break;
   case DW_FORM_data2:
-    OS << format("0x%04x", (uint16_t)UValue);
+    OS << formatv("{0:x+4}", (uint16_t)UValue);
     break;
   case DW_FORM_data4:
-    OS << format("0x%08x", (uint32_t)UValue);
+    OS << formatv("{0:x+8}", (uint32_t)UValue);
     break;
   case DW_FORM_ref_sig8:
-    AddrOS << format("0x%016" PRIx64, UValue);
+    AddrOS << formatv("{0:x+16}", UValue);
     break;
   case DW_FORM_data8:
-    OS << format("0x%016" PRIx64, UValue);
+    OS << formatv("{0:x+16}", UValue);
     break;
   case DW_FORM_data16:
     OS << format_bytes(ArrayRef<uint8_t>(Value.data, 16), std::nullopt, 16, 16);
@@ -452,16 +456,16 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
       switch (Form) {
       case DW_FORM_exprloc:
       case DW_FORM_block:
-        AddrOS << format("<0x%" PRIx64 "> ", UValue);
+        AddrOS << formatv("<{0:x+}> ", UValue);
         break;
       case DW_FORM_block1:
-        AddrOS << format("<0x%2.2x> ", (uint8_t)UValue);
+        AddrOS << formatv("<{0:x+2}> ", (uint8_t)UValue);
         break;
       case DW_FORM_block2:
-        AddrOS << format("<0x%4.4x> ", (uint16_t)UValue);
+        AddrOS << formatv("<{0:x+4}> ", (uint16_t)UValue);
         break;
       case DW_FORM_block4:
-        AddrOS << format("<0x%8.8x> ", (uint32_t)UValue);
+        AddrOS << formatv("<{0:x+8}> ", (uint32_t)UValue);
         break;
       default:
         break;
@@ -472,7 +476,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
         // UValue contains size of block
         const uint8_t *EndDataPtr = DataPtr + UValue;
         while (DataPtr < EndDataPtr) {
-          AddrOS << format("%2.2x ", *DataPtr);
+          AddrOS << formatv("{0:x-2} ", *DataPtr);
           ++DataPtr;
         }
       } else
@@ -489,13 +493,14 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   case DW_FORM_strp:
     if (DumpOpts.Verbose)
-      OS << format(" .debug_str[0x%0*" PRIx64 "] = ", OffsetDumpWidth, UValue);
+      OS << formatv(" .debug_str[0x{0:x-}] = ",
+                    fmt_align(UValue, AlignStyle::Right, OffsetDumpWidth, '0'));
     dumpString(OS);
     break;
   case DW_FORM_line_strp:
     if (DumpOpts.Verbose)
-      OS << format(" .debug_line_str[0x%0*" PRIx64 "] = ", OffsetDumpWidth,
-                   UValue);
+      OS << formatv(" .debug_line_str[0x{0:x-}] = ",
+                    fmt_align(UValue, AlignStyle::Right, OffsetDumpWidth, '0'));
     dumpString(OS);
     break;
   case DW_FORM_strx:
@@ -505,44 +510,44 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   case DW_FORM_strx4:
   case DW_FORM_GNU_str_index:
     if (DumpOpts.Verbose)
-      OS << format("indexed (%8.8x) string = ", (uint32_t)UValue);
+      OS << formatv("indexed ({0:x-8}) string = ", (uint32_t)UValue);
     dumpString(OS);
     break;
   case DW_FORM_GNU_strp_alt:
     if (DumpOpts.Verbose)
-      OS << format("alt indirect string, offset: 0x%" PRIx64 "", UValue);
+      OS << formatv("alt indirect string, offset: {0:x+}", UValue);
     dumpString(OS);
     break;
   case DW_FORM_ref_addr:
-    AddrOS << format("0x%016" PRIx64, UValue);
+    AddrOS << formatv("{0:x+16}", UValue);
     break;
   case DW_FORM_ref1:
     CURelativeOffset = true;
     if (DumpOpts.Verbose)
-      AddrOS << format("cu + 0x%2.2x", (uint8_t)UValue);
+      AddrOS << formatv("cu + {0:x+2}", (uint8_t)UValue);
     break;
   case DW_FORM_ref2:
     CURelativeOffset = true;
     if (DumpOpts.Verbose)
-      AddrOS << format("cu + 0x%4.4x", (uint16_t)UValue);
+      AddrOS << formatv("cu + {0:x+4}", (uint16_t)UValue);
     break;
   case DW_FORM_ref4:
     CURelativeOffset = true;
     if (DumpOpts.Verbose)
-      AddrOS << format("cu + 0x%4.4x", (uint32_t)UValue);
+      AddrOS << formatv("cu + {0:x+4}", (uint32_t)UValue);
     break;
   case DW_FORM_ref8:
     CURelativeOffset = true;
     if (DumpOpts.Verbose)
-      AddrOS << format("cu + 0x%8.8" PRIx64, UValue);
+      AddrOS << formatv("cu + {0:x+8}", UValue);
     break;
   case DW_FORM_ref_udata:
     CURelativeOffset = true;
     if (DumpOpts.Verbose)
-      AddrOS << format("cu + 0x%" PRIx64, UValue);
+      AddrOS << formatv("cu + {0:x+}", UValue);
     break;
   case DW_FORM_GNU_ref_alt:
-    AddrOS << format("<alt 0x%" PRIx64 ">", UValue);
+    AddrOS << formatv("<alt {0:x+}>", UValue);
     break;
 
   // All DW_FORM_indirect attributes should be resolved prior to calling
@@ -552,19 +557,20 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
 
   case DW_FORM_rnglistx:
-    OS << format("indexed (0x%x) rangelist = ", (uint32_t)UValue);
+    OS << formatv("indexed ({0:x+}) rangelist = ", (uint32_t)UValue);
     break;
 
   case DW_FORM_loclistx:
-    OS << format("indexed (0x%x) loclist = ", (uint32_t)UValue);
+    OS << formatv("indexed ({0:x+}) loclist = ", (uint32_t)UValue);
     break;
 
   case DW_FORM_sec_offset:
-    AddrOS << format("0x%0*" PRIx64, OffsetDumpWidth, UValue);
+    AddrOS << formatv(
+        "0x{0:x-}", fmt_align(UValue, AlignStyle::Right, OffsetDumpWidth, '0'));
     break;
 
   default:
-    OS << format("DW_FORM(0x%4.4x)", Form);
+    OS << formatv("DW_FORM(0x{0:x-4})", Form);
     break;
   }
 
@@ -573,7 +579,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
       OS << " => {";
     if (DumpOpts.ShowAddresses)
       WithColor(OS, HighlightColor::Address).get()
-          << format("0x%8.8" PRIx64, UValue + (U ? U->getOffset() : 0));
+          << formatv("{0:x+8}", UValue + (U ? U->getOffset() : 0));
     if (DumpOpts.Verbose)
       OS << "}";
   }
@@ -623,10 +629,12 @@ Expected<const char *> DWARFFormValue::getAsCString() const {
     return Str;
   std::string Msg = FormEncodingString(Form).str();
   if (Index)
-    Msg += (" uses index " + Twine(*Index) + ", but the referenced string").str();
-  Msg += (" offset " + Twine(Offset) + " is beyond " +
-          (IsDebugLineString ? ".debug_line_str" : ".debug_str") + " bounds")
+    Msg += formatv(" uses index {0}, but the referenced string", *Index).str();
+
+  Msg += formatv(" offset {0} is beyond {1} bounds", Offset,
+                 (IsDebugLineString ? ".debug_line_str" : ".debug_str"))
              .str();
+
   return make_error<StringError>(Msg,
       inconvertibleErrorCode());
 }

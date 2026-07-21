@@ -12,8 +12,8 @@
 #include "rtsan/rtsan.h"
 
 #include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "sanitizer_common/sanitizer_placement_new.h"
 
-#include <new>
 #include <pthread.h>
 
 using namespace __sanitizer;
