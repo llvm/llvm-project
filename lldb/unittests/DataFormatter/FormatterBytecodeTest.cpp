@@ -314,8 +314,10 @@ TEST_F(FormatterBytecodeTest, EmptyBytecode) {
 }
 
 TEST_F(FormatterBytecodeTest, UnknownSelector) {
-  EXPECT_THAT_ERROR(InterpretFail({op_lit_selector, 0xff, op_call}),
-                    FailedWithMessage("{0} (opcode={1}, selector={2})"));
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_selector, 0xff, op_call}),
+      FailedWithMessage(
+          "selector not implemented (opcode=call, selector=@255)"));
 }
 
 TEST_F(FormatterBytecodeTest, UnknownOpcode) {
