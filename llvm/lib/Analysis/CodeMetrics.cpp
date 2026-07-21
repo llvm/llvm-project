@@ -165,7 +165,7 @@ void CodeMetrics::analyzeBasicBlock(
         // unrolling. The argument setup cost is still real, though.
         ++NumCalls;
         // When preparing for LTO, consider indirect calls as potential inline
-        // candidates since LTO may resolve them via devirtualization.
+        // candidates since they may be resolved during post-link LTO
         if (PrepareForLTO && !Call->isNoInline())
           ++NumInlineCandidates;
       }
