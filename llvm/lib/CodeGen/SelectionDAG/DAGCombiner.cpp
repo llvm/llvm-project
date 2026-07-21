@@ -6310,6 +6310,58 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
   return DAG.getZExtOrTrunc(Sat, SDLoc(N0), N3.getValueType());
 }
 
+// Fold a NaN-guard select of fp_to_sint/fp_to_uint into the saturating
+// variant, which returns 0 for NaN.
+static SDValue performNanGuardFpToSatCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Match an isnan-guarded select, requiring the compare to be single-use.
+  // The guarded value is fp_to_sint/fp_to_uint of X, optionally masked by an
+  // AND:
+  //   select (setcc X, 0.0, uno), 0, (fp_to_sint/uint X)
+  //   select (setcc X, 0.0, ord), (fp_to_sint/uint X), 0
+  //   select (setcc X, 0.0, uno), 0, (and (fp_to_sint/uint X), M)
+  //   select (setcc X, 0.0, ord), (and (fp_to_sint/uint X), M), 0
+  SDValue X, GuardedVal;
+  if (!sd_match(N,
+                m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
+                                              m_SpecificCondCode(ISD::SETUO))),
+                             m_Zero(), m_Value(GuardedVal))) &&
+      !sd_match(N,
+                m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
+                                              m_SpecificCondCode(ISD::SETO))),
+                             m_Value(GuardedVal), m_Zero())))
+    return SDValue();
+
+  // The guarded value must be fp_to_sint/fp_to_uint of the same X, optionally
+  // masked by a (commutative) AND.
+  SDValue Mask;
+  unsigned NewOpc;
+  if (sd_match(GuardedVal, m_FPToSI(m_Specific(X))) ||
+      sd_match(GuardedVal, m_And(m_FPToSI(m_Specific(X)), m_Value(Mask))))
+    NewOpc = ISD::FP_TO_SINT_SAT;
+  else if (sd_match(GuardedVal, m_FPToUI(m_Specific(X))) ||
+           sd_match(GuardedVal, m_And(m_FPToUI(m_Specific(X)), m_Value(Mask))))
+    NewOpc = ISD::FP_TO_UINT_SAT;
+  else
+    return SDValue();
+
+  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(NewOpc,
+                                                        X.getValueType(), VT))
+    return SDValue();
+
+  SDValue Sat =
+      DAG.getNode(NewOpc, DL, VT, X, DAG.getValueType(VT.getScalarType()));
+  if (Mask) {
+    // For NaN inputs the saturating conversion yields 0, so (and 0, Mask) must
+    // stay 0 to match the original select. A poison Mask would make it poison,
+    // so freeze Mask to guarantee a defined value.
+    Sat = DAG.getNode(ISD::AND, DL, VT, Sat, DAG.getFreeze(Mask));
+  }
+  return Sat;
+}
+
 SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -9600,7 +9652,8 @@ using SDByteProvider = ByteProvider<SDNode *>;
 static std::optional<SDByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                       std::optional<uint64_t> VectorIndex,
-                      unsigned StartingIndex = 0) {
+                      unsigned StartingIndex = 0,
+                      MutableArrayRef<uint8_t> ByteMask = {}) {
 
   // Typical i64 by i8 pattern requires recursion up to 8 calls depth
   if (Depth == 10)
@@ -9626,12 +9679,12 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
 
   switch (Op.getOpcode()) {
   case ISD::OR: {
-    auto LHS =
-        calculateByteProvider(Op->getOperand(0), Index, Depth + 1, VectorIndex);
+    auto LHS = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
+                                     VectorIndex, StartingIndex, ByteMask);
     if (!LHS)
       return std::nullopt;
-    auto RHS =
-        calculateByteProvider(Op->getOperand(1), Index, Depth + 1, VectorIndex);
+    auto RHS = calculateByteProvider(Op->getOperand(1), Index, Depth + 1,
+                                     VectorIndex, StartingIndex, ByteMask);
     if (!RHS)
       return std::nullopt;
 
@@ -9658,7 +9711,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     return Index < ByteShift
                ? SDByteProvider::getConstantZero()
                : calculateByteProvider(Op->getOperand(0), Index - ByteShift,
-                                       Depth + 1, VectorIndex, Index);
+                                       Depth + 1, VectorIndex, Index, ByteMask);
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -9675,11 +9728,38 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                        SDByteProvider::getConstantZero())
                  : std::nullopt;
     return calculateByteProvider(NarrowOp, Index, Depth + 1, VectorIndex,
-                                 StartingIndex);
+                                 StartingIndex, ByteMask);
   }
   case ISD::BSWAP:
     return calculateByteProvider(Op->getOperand(0), ByteWidth - Index - 1,
-                                 Depth + 1, VectorIndex, StartingIndex);
+                                 Depth + 1, VectorIndex, StartingIndex,
+                                 ByteMask);
+  case ISD::AND: {
+    // Constants are canonicalized to the RHS of AND, so only operand 1 needs
+    // to be checked.
+    auto *MaskOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    if (!MaskOp)
+      return std::nullopt;
+
+    uint8_t MaskByte =
+        MaskOp->getAPIntValue().extractBitsAsZExtValue(8, Index * 8);
+
+    if (MaskByte == 0x00)
+      return SDByteProvider::getConstantZero();
+
+    auto Result = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
+                                        VectorIndex, StartingIndex, ByteMask);
+    if (!Result)
+      return std::nullopt;
+
+    // Only record the mask if this byte is actually provided (not zero).
+    // A ConstantZero result may be discarded by the OR handler in favor of
+    // the other operand, so writing the mask here would corrupt ByteMask.
+    if (MaskByte != 0xFF && !ByteMask.empty() && !Result->isConstantZero())
+      ByteMask[StartingIndex] &= MaskByte;
+
+    return Result;
+  }
   case ISD::EXTRACT_VECTOR_ELT: {
     auto OffsetOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!OffsetOp)
@@ -9709,7 +9789,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
       return std::nullopt;
 
     return calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                 VectorIndex, StartingIndex);
+                                 VectorIndex, StartingIndex, ByteMask);
   }
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
@@ -10060,11 +10140,12 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // Check if all the bytes of the OR we are looking at are loaded from the same
   // base address. Collect bytes offsets from Base address in ByteOffsets.
   SmallVector<int64_t, 8> ByteOffsets(ByteWidth);
+  SmallVector<uint8_t, 8> ByteMasks(ByteWidth, 0xFF);
   unsigned ZeroExtendedBytes = 0;
   for (int i = ByteWidth - 1; i >= 0; --i) {
     auto P =
         calculateByteProvider(SDValue(N, 0), i, 0, /*VectorIndex*/ std::nullopt,
-                              /*StartingIndex*/ i);
+                              /*StartingIndex*/ i, ByteMasks);
     if (!P)
       return SDValue();
 
@@ -10200,15 +10281,36 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   for (LoadSDNode *L : Loads)
     DAG.makeEquivalentMemoryOrdering(L, NewLoad);
 
-  if (!NeedsBswap)
+  // Apply combined mask if any bytes were partially masked by AND operations.
+  bool HasPartialMask = false;
+  uint64_t CombinedMask = 0;
+  for (unsigned i = 0; i < ByteWidth; ++i) {
+    CombinedMask |= (uint64_t)ByteMasks[i] << (i * 8);
+    if (ByteMasks[i] != 0xFF)
+      HasPartialMask = true;
+  }
+
+  if (!NeedsBswap) {
+    if (HasPartialMask)
+      NewLoad = DAG.getNode(ISD::AND, SDLoc(N), VT, NewLoad,
+                            DAG.getConstant(CombinedMask, SDLoc(N), VT));
     return NewLoad;
+  }
 
   SDValue ShiftedLoad =
       NeedsZext ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
                               DAG.getShiftAmountConstant(ZeroExtendedBytes * 8,
                                                          VT, SDLoc(N)))
                 : NewLoad;
-  return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
+  SDValue Result = DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
+
+  // The mask is built in final-result byte order (ByteMasks[i] corresponds to
+  // byte i of the result), so it is correct to apply after the bswap.
+  if (HasPartialMask)
+    Result = DAG.getNode(ISD::AND, SDLoc(N), VT, Result,
+                         DAG.getConstant(CombinedMask, SDLoc(N), VT));
+
+  return Result;
 }
 
 // If the target has andn, bsl, or a similar bit-select instruction,
@@ -13397,6 +13499,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       }
     }
 
+    if (SDValue S = performNanGuardFpToSatCombine(N, DAG))
+      return S;
+
     if (TLI.isOperationLegal(ISD::SELECT_CC, VT) ||
         (!LegalOperations &&
          TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT))) {
@@ -14417,6 +14522,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     if (SDValue S = PerformMinMaxFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
       return S;
     if (SDValue S = PerformUMinFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
+      return S;
+    if (SDValue S = performNanGuardFpToSatCombine(N, DAG))
       return S;
 
     // If this select has a condition (setcc) with narrower operands than the
