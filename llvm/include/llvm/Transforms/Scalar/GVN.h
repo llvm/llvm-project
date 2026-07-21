@@ -26,6 +26,8 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Transforms/Scalar/GVNValueTable.h"
+
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -122,102 +124,15 @@ struct GVNOptions {
 /// this particular pass here.
 class GVNPass : public OptionalPassInfoMixin<GVNPass> {
 public:
-  struct Expression;
   struct AvailableValue;
   struct AvailableValueInBlock;
-  /// This class holds the mapping between values and value numbers.  It is used
-  /// as an efficient mechanism to determine the expression-wise equivalence of
-  /// two values.
-  class ValueTable {
-    DenseMap<Value *, uint32_t> ValueNumbering;
-    DenseMap<Expression, uint32_t> ExpressionNumbering;
+  struct ReachingMemVal;
+  struct DependencyBlockInfo;
 
-    // Expressions is the vector of Expression. ExprIdx is the mapping from
-    // value number to the index of Expression in Expressions. We use it
-    // instead of a DenseMap because filling such mapping is faster than
-    // filling a DenseMap and the compile time is a little better.
-    uint32_t NextExprNumber = 0;
-
-    std::vector<Expression> Expressions;
-    std::vector<uint32_t> ExprIdx;
-
-    // Value number to PHINode mapping. Used for phi-translate in scalarpre.
-    DenseMap<uint32_t, PHINode *> NumberingPhi;
-
-    // Value number to BasicBlock mapping. Used for phi-translate across
-    // MemoryPhis.
-    DenseMap<uint32_t, BasicBlock *> NumberingBB;
-
-    // Cache for phi-translate in scalarpre.
-    using PhiTranslateMap =
-        DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>;
-    PhiTranslateMap PhiTranslateTable;
-
-    AAResults *AA = nullptr;
-    MemoryDependenceResults *MD = nullptr;
-    bool IsMDEnabled = false;
-    MemorySSA *MSSA = nullptr;
-    bool IsMSSAEnabled = false;
-    DominatorTree *DT = nullptr;
-
-    uint32_t NextValueNumber = 1;
-
-    Expression createExpr(Instruction *I);
-    Expression createCmpExpr(unsigned Opcode, CmpInst::Predicate Predicate,
-                             Value *LHS, Value *RHS);
-    Expression createExtractvalueExpr(ExtractValueInst *EI);
-    Expression createGEPExpr(GetElementPtrInst *GEP);
-    uint32_t lookupOrAddCall(CallInst *C);
-    uint32_t computeLoadStoreVN(Instruction *I);
-    uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                              uint32_t Num, GVNPass &GVN);
-    bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
-                          const BasicBlock *PhiBlock, GVNPass &GVN);
-    std::pair<uint32_t, bool> assignExpNewValueNum(Expression &Exp);
-    bool areAllValsInBB(uint32_t Num, const BasicBlock *BB, GVNPass &GVN);
-    void addMemoryStateToExp(Instruction *I, Expression &Exp);
-
-  public:
-    LLVM_ABI ValueTable();
-    LLVM_ABI ValueTable(const ValueTable &Arg);
-    LLVM_ABI ValueTable(ValueTable &&Arg);
-    LLVM_ABI ~ValueTable();
-    LLVM_ABI ValueTable &operator=(const ValueTable &Arg);
-
-    LLVM_ABI void add(Value *V, uint32_t Num);
-    LLVM_ABI uint32_t lookupOrAdd(MemoryAccess *MA);
-    LLVM_ABI uint32_t lookupOrAdd(Value *V);
-    LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
-    LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
-                                     Value *LHS, Value *RHS);
-    LLVM_ABI uint32_t lookupPtrToInt(Value *Ptr, Type *Ty);
-    LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB,
-                                   const BasicBlock *PhiBlock, uint32_t Num,
-                                   GVNPass &GVN);
-    LLVM_ABI void eraseTranslateCacheEntry(uint32_t Num,
-                                           const BasicBlock &CurrBlock);
-    LLVM_ABI bool exists(Value *V) const;
-    LLVM_ABI void clear();
-    LLVM_ABI void erase(Value *V);
-    void setAliasAnalysis(AAResults *A) { AA = A; }
-    AAResults *getAliasAnalysis() const { return AA; }
-    void setMemDep(MemoryDependenceResults *M, bool MDEnabled = true) {
-      MD = M;
-      IsMDEnabled = MDEnabled;
-    }
-    void setMemorySSA(MemorySSA *M, bool MSSAEnabled = false) {
-      MSSA = M;
-      IsMSSAEnabled = MSSAEnabled;
-    }
-    void setDomTree(DominatorTree *D) { DT = D; }
-    uint32_t getNextUnusedValueNumber() { return NextValueNumber; }
-    LLVM_ABI void verifyRemoved(const Value *) const;
-  };
+  friend class GVNValueTable;
+  friend class GVNLegacyPass;
 
 private:
-  friend class GVNLegacyPass;
-  friend struct DenseMapInfo<Expression>;
-
   GVNOptions Options;
   MemoryDependenceResults *MD = nullptr;
   DominatorTree *DT = nullptr;
@@ -229,7 +144,7 @@ private:
   LoopInfo *LI = nullptr;
   AAResults *AA = nullptr;
   MemorySSAUpdater *MSSAU = nullptr;
-  ValueTable VN;
+  GVNValueTable VN;
 
   /// A mapping from value numbers to lists of Value*'s that
   /// have that value number.  Use findLeader to query it.
@@ -348,62 +263,6 @@ private:
   using LoadDepVect = SmallVector<NonLocalDepResult, 64>;
   using AvailValInBlkVect = SmallVector<AvailableValueInBlock, 64>;
   using UnavailBlkVect = SmallVector<BasicBlock *, 64>;
-
-  enum class DepKind {
-    Other = 0, // Unknown value.
-    Def,       // Exactly overlapping locations.
-    Clobber,   // Reaching value superset of needed bits.
-    Select,    // Reaching value is a select of two reaching addresses.
-  };
-
-  // Describe a memory location value, such that there exists a path to a point
-  // in the program, along which that memory location is not modified.
-  struct ReachingMemVal {
-    DepKind Kind;
-    BasicBlock *Block;
-    const Value *Addr;
-    Instruction *Inst;
-    int32_t Offset;
-    // For DepKind::Select only: the condition and the two addresses referenced
-    // by the "true" and "false" side of the select-dependent load.
-    const Value *SelCond = nullptr;
-    const Value *SelTrueAddr = nullptr;
-    const Value *SelFalseAddr = nullptr;
-
-    static ReachingMemVal getUnknown(BasicBlock *BB, const Value *Addr,
-                                     Instruction *Inst = nullptr) {
-      return {DepKind::Other, BB, Addr, Inst, -1};
-    }
-
-    static ReachingMemVal getDef(const Value *Addr, Instruction *Inst) {
-      return {DepKind::Def, Inst->getParent(), Addr, Inst, -1};
-    }
-
-    static ReachingMemVal getClobber(const Value *Addr, Instruction *Inst,
-                                     int32_t Offset = -1) {
-      return {DepKind::Clobber, Inst->getParent(), Addr, Inst, Offset};
-    }
-
-    static ReachingMemVal getSelect(BasicBlock *BB, const Value *Cond,
-                                    const Value *TrueAddr,
-                                    const Value *FalseAddr) {
-      return {DepKind::Select, BB,       nullptr, nullptr, -1, Cond,
-              TrueAddr,        FalseAddr};
-    }
-  };
-
-  struct DependencyBlockInfo {
-    DependencyBlockInfo() = delete;
-    DependencyBlockInfo(const PHITransAddr &Addr, MemoryAccess *ClobberMA)
-        : Addr(Addr), InitialClobberMA(ClobberMA), ClobberMA(ClobberMA),
-          ForceUnknown(false), Visited(false) {}
-    PHITransAddr Addr;
-    MemoryAccess *InitialClobberMA;
-    MemoryAccess *ClobberMA;
-    std::optional<ReachingMemVal> MemVal;
-    bool ForceUnknown : 1;
-    bool Visited : 1;
-  };
 
   using DependencyBlockSet = DenseMap<BasicBlock *, DependencyBlockInfo>;
 
@@ -538,20 +397,6 @@ private:
 /// Create a legacy GVN pass.
 LLVM_ABI FunctionPass *createGVNPass(bool ScalarPRE);
 LLVM_ABI FunctionPass *createGVNPass();
-
-/// A simple and fast domtree-based GVN pass to hoist common expressions
-/// from sibling branches.
-struct GVNHoistPass : OptionalPassInfoMixin<GVNHoistPass> {
-  /// Run the pass over the function.
-  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
-/// Uses an "inverted" value numbering to decide the similarity of
-/// expressions and sinks similar expressions into successors.
-struct GVNSinkPass : OptionalPassInfoMixin<GVNSinkPass> {
-  /// Run the pass over the function.
-  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
 
 } // end namespace llvm
 
