@@ -811,6 +811,49 @@ static mlir::Value emitX86MaskedLoad(CIRGenBuilderTy &builder,
   return builder.createMaskedLoad(loc, ty, ptr, alignment, maskVec, ops[1]);
 }
 
+static mlir::Value emitX86VPerm2f128(CIRGenBuilderTy &builder,
+                                     mlir::Location loc,
+                                     llvm::SmallVector<mlir::Value> ops) {
+  auto inputType = cast<cir::VectorType>(ops[0].getType());
+  assert(!inputType.getIsScalable() &&
+         "This is only intended for fixed-width vectors");
+
+  const uint8_t imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]);
+  mlir::Value zeroVec = builder.getZero(loc, inputType);
+
+  // If both lanes are zero, return a zero result.
+  if ((imm & 0x80) && (imm & 0x08))
+    return zeroVec;
+
+  mlir::Value lanes[2];
+  llvm::SmallVector<mlir::Attribute, 64> mask;
+
+  cir::IntType i32Ty = builder.getSInt32Ty();
+  const unsigned numElts = inputType.getSize();
+  // We must evaluated each lane(128 bits) separetely
+  for (auto lane : llvm::seq(0, 2)) {
+    bool isZeroBit = imm & (1 << ((lane * 4) + 3)),
+         isSourceB = imm & (1 << ((lane * 4) + 1)),
+         isUpperHalf = imm & (1 << (lane * 4));
+
+    //  Determine the source for this lane
+    if (isZeroBit)
+      lanes[lane] = zeroVec;
+    else
+      lanes[lane] = isSourceB ? ops[1] : ops[0];
+
+    // We need to built the shuffle mask selecting the right half
+    for (auto elt : llvm::seq(0u, numElts / 2u)) {
+      unsigned idx = (lane * numElts) + elt;
+      if (isUpperHalf)
+        idx += numElts / 2;
+      mask.push_back(cir::IntAttr::get(i32Ty, idx));
+    }
+  }
+
+  return builder.createVecShuffle(loc, lanes[0], lanes[1], mask);
+}
+
 static mlir::Value emitX86PackedByteShift(CIRGenBuilderTy &builder,
                                           unsigned builtinID,
                                           mlir::Location loc,
@@ -1855,10 +1898,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vperm2f128_ps256:
   case X86::BI__builtin_ia32_vperm2f128_si256:
   case X86::BI__builtin_ia32_permti256:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    return emitX86VPerm2f128(builder, getLoc(expr->getExprLoc()), ops);
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
   case X86::BI__builtin_ia32_pslldqi512_byteshift:

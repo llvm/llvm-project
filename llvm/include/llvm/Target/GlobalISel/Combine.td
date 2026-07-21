@@ -2434,6 +2434,22 @@ def ctls_combines : GICombineGroup<[
   ctlz_zero_poison_to_ctls,
 ]>;
 
+// Switch G_CTLZ / G_CTTZ to *_ZERO_POISON when the input is provably nonzero
+// and the target supports the variant. The zero-poison variants compute the
+// same result for nonzero inputs and can let targets skip zero-input fixups.
+class count_zero_to_zero_poison<Instruction opc> : GICombineRule<
+  (defs root:$root),
+  (match (opc $dst, $src):$root,
+         [{ return Helper.matchCountZeroToZeroPoison(*${root}); }]),
+  (apply [{ Helper.applyCountZeroToZeroPoison(*${root}); }])>;
+
+def ctlz_to_ctlz_zero_poison : count_zero_to_zero_poison<G_CTLZ>;
+def cttz_to_cttz_zero_poison : count_zero_to_zero_poison<G_CTTZ>;
+
+def count_zero_poison_combines : GICombineGroup<[
+  ctlz_to_ctlz_zero_poison, cttz_to_cttz_zero_poison
+]>;
+
 def narrow_binop_add : narrow_binop_opcode<G_ADD>;
 def narrow_binop_sub : narrow_binop_opcode<G_SUB>;
 def narrow_binop_mul : narrow_binop_opcode<G_MUL>;
@@ -2645,7 +2661,8 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     or_and_xor_combines, simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines,
-    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
+    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines,
+    count_zero_poison_combines, add_shift, sub_one_from_sub,
     binop_with_neg, sub_minus_one, sub_of_mul_const, max_min_combines,
     avgfloor_u_match, avgfloor_s_match,
     avgceil_u_match, avgceil_s_match, combine_or_of_and]>;

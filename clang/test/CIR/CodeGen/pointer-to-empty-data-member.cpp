@@ -87,7 +87,6 @@ struct hasNUA {
   [[no_unique_address]] EmptyBase eb6;
   int i;
 };
-// FIXME(cir): We should represent eb1-6 somehow
 // CIR-DAG: !rec_hasNUA = !cir.struct<"hasNUA" padded {!s32i, !cir.array<!u8i x 4>}>
 // LLVM-DAG: %struct.hasNUA = type { i32, [4 x i8] }
 
@@ -96,18 +95,49 @@ const hasNUA nua = {{},{},{},{},{},{}, 1};
 // LLVMCIR-DAG: @_ZL3nua = internal constant %struct.hasNUA { i32 1, [4 x i8] zeroinitializer }
 // OGCG-DAG:    @_ZL3nua = internal constant %struct.hasNUA { i32 1, [4 x i8] undef }
 
-// FIXME(cir): These are still an NYI, and we should enable tests here once we
-// figure out how to represent these in IR.
-//EmptyBase hasNUA::* eb1 = &hasNUA::eb1;
-//EmptyBase hasNUA::* eb2 = &hasNUA::eb2;
-//EmptyBase hasNUA::* eb3 = &hasNUA::eb3;
-//EmptyBase hasNUA::* eb4 = &hasNUA::eb4;
-//EmptyBase hasNUA::* eb5 = &hasNUA::eb5;
-//EmptyBase hasNUA::* eb6 = &hasNUA::eb6;
+// A pointer-to-data-member for a no_unique_address empty field has no CIR
+// field index (the field isn't laid out), so it is represented by its concrete
+// byte offset via #cir.data_member_offset.
+EmptyBase hasNUA::* eb1 = &hasNUA::eb1;
+// CIR-BEFORE-DAG: cir.global external @eb1 = #cir.data_member_offset<0> : !cir.data_member<!rec_EmptyBase in !rec_hasNUA>
+// CIR-AFTER-DAG: cir.global external @eb1 = #cir.int<0> : !s64i
+// LLVM-DAG: @eb1 = global i64 0
+EmptyBase hasNUA::* eb2 = &hasNUA::eb2;
+// CIR-BEFORE-DAG: cir.global external @eb2 = #cir.data_member_offset<1> : !cir.data_member<!rec_EmptyBase in !rec_hasNUA>
+// CIR-AFTER-DAG: cir.global external @eb2 = #cir.int<1> : !s64i
+// LLVM-DAG: @eb2 = global i64 1
+EmptyBase hasNUA::* eb3 = &hasNUA::eb3;
+// CIR-BEFORE-DAG: cir.global external @eb3 = #cir.data_member_offset<2> : !cir.data_member<!rec_EmptyBase in !rec_hasNUA>
+// CIR-AFTER-DAG: cir.global external @eb3 = #cir.int<2> : !s64i
+// LLVM-DAG: @eb3 = global i64 2
+EmptyBase hasNUA::* eb4 = &hasNUA::eb4;
+// CIR-BEFORE-DAG: cir.global external @eb4 = #cir.data_member_offset<3> : !cir.data_member<!rec_EmptyBase in !rec_hasNUA>
+// CIR-AFTER-DAG: cir.global external @eb4 = #cir.int<3> : !s64i
+// LLVM-DAG: @eb4 = global i64 3
+EmptyBase hasNUA::* eb5 = &hasNUA::eb5;
+// CIR-BEFORE-DAG: cir.global external @eb5 = #cir.data_member_offset<4> : !cir.data_member<!rec_EmptyBase in !rec_hasNUA>
+// CIR-AFTER-DAG: cir.global external @eb5 = #cir.int<4> : !s64i
+// LLVM-DAG: @eb5 = global i64 4
+EmptyBase hasNUA::* eb6 = &hasNUA::eb6;
+// CIR-BEFORE-DAG: cir.global external @eb6 = #cir.data_member_offset<5> : !cir.data_member<!rec_EmptyBase in !rec_hasNUA>
+// CIR-AFTER-DAG: cir.global external @eb6 = #cir.int<5> : !s64i
+// LLVM-DAG: @eb6 = global i64 5
 int hasNUA::* nua_i = &hasNUA::i;
 // CIR-BEFORE-DAG: cir.global external @nua_i = #cir.data_member<[0]> : !cir.data_member<!s32i in !rec_hasNUA>
 // CIR-AFTER-DAG: cir.global external @nua_i = #cir.int<0> : !s64i
 // LLVM-DAG: @nua_i = global i64 0
+
+struct FirstField { int a; };
+struct HoldsNUA { int b; [[no_unique_address]] EmptyBase e; [[no_unique_address]] EmptyBase e2; };
+struct DerivesNUA : FirstField, HoldsNUA {};
+EmptyBase DerivesNUA::* nua_in_base = &DerivesNUA::e;
+// CIR-BEFORE-DAG: cir.global external @nua_in_base = #cir.data_member_offset<4> : !cir.data_member<!rec_EmptyBase in !rec_DerivesNUA>
+// CIR-AFTER-DAG: cir.global external @nua_in_base = #cir.int<4> : !s64i
+// LLVM-DAG: @nua_in_base = global i64 4
+EmptyBase DerivesNUA::* nua_in_base2 = &DerivesNUA::e2;
+// CIR-BEFORE-DAG: cir.global external @nua_in_base2 = #cir.data_member_offset<8> : !cir.data_member<!rec_EmptyBase in !rec_DerivesNUA>
+// CIR-AFTER-DAG: cir.global external @nua_in_base2 = #cir.int<8> : !s64i
+// LLVM-DAG: @nua_in_base2 = global i64 8
 
 union U1 {
   EmptyBase eb;
@@ -205,9 +235,14 @@ int U6::* u6i = &U6::i;
 // CIR-AFTER-DAG: cir.global external @u6i = #cir.int<0> : !s64i
 // LLVM-DAG: @u6i = global i64 0
 
-// FIXME(cir): See above.
-//EmptyBase U6::* u6eb = &U6::eb;
-//EmptyBase U6::* u6eb2 = &U6::eb2;
+EmptyBase U6::* u6eb = &U6::eb;
+// CIR-BEFORE-DAG: cir.global external @u6eb = #cir.data_member_offset<0> : !cir.data_member<!rec_EmptyBase in !rec_U6>
+// CIR-AFTER-DAG: cir.global external @u6eb = #cir.int<0> : !s64i
+// LLVM-DAG: @u6eb = global i64 0
+EmptyBase U6::* u6eb2 = &U6::eb2;
+// CIR-BEFORE-DAG: cir.global external @u6eb2 = #cir.data_member_offset<0> : !cir.data_member<!rec_EmptyBase in !rec_U6>
+// CIR-AFTER-DAG: cir.global external @u6eb2 = #cir.int<0> : !s64i
+// LLVM-DAG: @u6eb2 = global i64 0
 
 union U7 {
   int i;
@@ -222,9 +257,14 @@ int U7::* u7i = &U7::i;
 // CIR-AFTER-DAG: cir.global external @u7i = #cir.int<0> : !s64i
 // LLVM-DAG: @u7i = global i64 0
 
-// FIXME(cir): See above.
-//EmptyBase U7::* u7eb = &U7::eb;
-//EmptyBase U7::* u7eb2 = &U7::eb2;
+EmptyBase U7::* u7eb = &U7::eb;
+// CIR-BEFORE-DAG: cir.global external @u7eb = #cir.data_member_offset<0> : !cir.data_member<!rec_EmptyBase in !rec_U7>
+// CIR-AFTER-DAG: cir.global external @u7eb = #cir.int<0> : !s64i
+// LLVM-DAG: @u7eb = global i64 0
+EmptyBase U7::* u7eb2 = &U7::eb2;
+// CIR-BEFORE-DAG: cir.global external @u7eb2 = #cir.data_member_offset<0> : !cir.data_member<!rec_EmptyBase in !rec_U7>
+// CIR-AFTER-DAG: cir.global external @u7eb2 = #cir.int<0> : !s64i
+// LLVM-DAG: @u7eb2 = global i64 0
 
 void uses() {
   auto x = &HasEmpty::s;

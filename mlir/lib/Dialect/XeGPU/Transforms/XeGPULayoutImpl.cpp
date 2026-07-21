@@ -1853,9 +1853,6 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   SmallVector<int64_t> consumerLaneData =
       consumerLayout.getEffectiveLaneDataAsInt();
 
-  // Pick lane_layout / lane_data: prefer consumer's, fall back to the
-  // scatter-store default (subgroupSize lanes on innermost dim, per-lane
-  // vector capped by maxChunkSize).
   SmallVector<int64_t> laneLayout;
   SmallVector<int64_t> laneData;
   assert(!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
@@ -1864,16 +1861,10 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   laneData.assign(consumerLaneData.begin(), consumerLaneData.end());
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
-    // Take consumer's inst_data as-is. If the consumer doesn't have one,
-    // fall back to lane_layout * lane_data per dim.
     SmallVector<int64_t> instData;
-    if (!consumerInstData.empty()) {
-      instData.assign(consumerInstData.begin(), consumerInstData.end());
-    } else {
-      instData.resize(resShape.size());
-      for (size_t i = 0; i < resShape.size(); ++i)
-        instData[i] = laneLayout[i] * laneData[i];
-    }
+    instData.resize(resShape.size());
+    for (size_t i = 0; i < resShape.size(); ++i)
+      instData[i] = laneLayout[i] * laneData[i];
     return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
   }
   if (layoutKind == xegpu::LayoutKind::Lane)

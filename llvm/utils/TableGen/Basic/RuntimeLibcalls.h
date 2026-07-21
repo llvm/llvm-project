@@ -18,12 +18,19 @@ namespace llvm {
 
 class AvailabilityPredicate {
   const Record *TheDef;
-  StringRef PredicateString;
+  std::string PredicateString;
 
 public:
   AvailabilityPredicate(const Record *Def) : TheDef(Def) {
-    if (TheDef)
-      PredicateString = TheDef->getValueAsString("Cond");
+    if (!TheDef)
+      return;
+    if (const RecordVal *RV = TheDef->getValue("CondDag")) {
+      if (const auto *Dag = dyn_cast_or_null<DagInit>(RV->getValue())) {
+        PredicateString = lowerCondDag(TheDef, Dag);
+        return;
+      }
+    }
+    PredicateString = TheDef->getValueAsString("Cond").str();
   }
 
   const Record *getDef() const { return TheDef; }
@@ -40,6 +47,12 @@ public:
     if (TheDef)
       OS << '_' << TheDef->getName();
   }
+
+private:
+  // Lower a (all_of/any_of/not <LibcallPredicate>...) dag to a C++ boolean
+  // expression.
+  static std::string lowerCondDag(const Record *Owner, const Init *Val,
+                                  bool ParenIfBinOp = false);
 };
 
 class RuntimeLibcalls;

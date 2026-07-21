@@ -43,6 +43,34 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: func.func @broadcast_rank0_tensor(
+// CHECK-SAME:                         %[[ARG0:.*]]: tensor<i32>,
+// CHECK-SAME:                         %[[ARG1:.*]]: tensor<32x2xi32>
+// CHECK-NEXT:    %[[FLATTENED:.*]] = tensor.collapse_shape %[[ARG1]] {{\[}}[0, 1]]
+// CHECK-NEXT:    %[[FLATTENED_RESULT:.*]] = linalg.generic {{.*}} ins(%[[ARG0]] : tensor<i32>) outs(%[[FLATTENED]] : tensor<64xi32>)
+// CHECK:         %[[RESULT:.*]] = tensor.expand_shape %[[FLATTENED_RESULT]] {{\[}}[0, 1]] output_shape [32, 2] : tensor<64xi32> into tensor<32x2xi32>
+#map0 = affine_map<(d0, d1) -> ()>
+#map1 = affine_map<(d0, d1) -> (d0, d1)>
+
+func.func @broadcast_rank0_tensor(%arg0: tensor<i32>, %arg1: tensor<32x2xi32>) -> tensor<32x2xi32> {
+  %0 = linalg.generic {indexing_maps = [#map0, #map1], iterator_types = ["parallel", "parallel"]} ins(%arg0 : tensor<i32>) outs(%arg1 : tensor<32x2xi32>) {
+    ^bb0(%in: i32, %out: i32):
+      linalg.yield %in : i32
+  } -> tensor<32x2xi32>
+  return %0 : tensor<32x2xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %flattened = transform.structured.flatten_elementwise %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func.func @map_memref(
 // CHECK-SAME:                 %[[ARG0:[a-zA-Z0-9_]*]]: memref<32x7xf32>
 // CHECK-SAME:                 %[[ARG1:[a-zA-Z0-9_]*]]: memref<32x7xf32>

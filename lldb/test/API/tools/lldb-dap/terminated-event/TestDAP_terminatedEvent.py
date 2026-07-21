@@ -2,17 +2,19 @@
 Test lldb-dap terminated event
 """
 
-import dap_server
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
-import re
 import json
+
+from lldbsuite.test.decorators import (
+    skipIfTargetDoesNotSupportSharedLibraries,
+    skipIfWindows,
+)
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()
-class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_terminatedEvent(DAPTestCaseBase):
     @skipIfWindows
     def test_terminated_event(self):
         """
@@ -28,31 +30,30 @@ class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
         breakpoints:
             recognize function breakpoint
             recognize source line breakpoint
-        It should contains the breakpoints info: function bp & source line bp
+        It should contain the breakpoints info: function bp & source line bp
         """
+        program = self.getBuildArtifact("a.out.stripped")
+        session = self.build_and_create_session()
+        source = self.getSourcePath("main.cpp")
+        main_bp_line = line_number(source, "// main breakpoint 1")
 
-        program_basename = "a.out.stripped"
-        program = self.getBuildArtifact(program_basename)
-        self.build_and_launch(program)
-        # Set breakpoints
-        functions = ["foo"]
-
-        # This breakpoint will be resolved only when the libfoo module is loaded
-        breakpoint_ids = self.set_function_breakpoints(
-            functions, wait_for_resolve=False
-        )
-        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
-        main_bp_line = line_number("main.cpp", "// main breakpoint 1")
-        breakpoint_ids.extend(
-            self.set_source_breakpoints(
-                "main.cpp", [main_bp_line], wait_for_resolve=False
+        with session.configure(LaunchArgs(program=program)) as ctx:
+            # This breakpoint will be resolved only when the libfoo module is loaded.
+            func_response = session.set_function_breakpoints(["foo"])
+            breakpoints = func_response.body.breakpoints
+            breakpoints.extend(
+                session.set_source_breakpoints(source, [main_bp_line]).body.breakpoints
             )
+        breakpoint_ids = session.breakpoints_to_ids(breakpoints)
+        self.assertEqual(len(breakpoint_ids), 2, "expect one breakpoint")
+        last_bp_event = session.wait_until_any_breakpoint_hit(
+            breakpoint_ids, after=ctx.process_event
         )
+        session.continue_to_exit()
 
-        self.continue_to_breakpoints(breakpoint_ids)
-        self.continue_to_exit()
+        terminated = session.wait_for_terminated_event(after=last_bp_event)
+        statistics = self.expect_not_none(terminated.body).lldb_statistics
 
-        statistics = self.dap_server.wait_for_terminated()["body"]["$__lldb_statistics"]
         self.assertGreater(statistics["totalDebugInfoByteSize"], 0)
         self.assertGreater(statistics["totalDebugInfoEnabled"], 0)
         self.assertGreater(statistics["totalModuleCountHasDebugInfo"], 0)
@@ -60,7 +61,7 @@ class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
         self.assertIsNotNone(statistics["memory"])
         self.assertNotIn("modules", statistics.keys())
 
-        # lldb-dap debugs one target at a time
+        # lldb-dap debugs one target at a time.
         target = json.loads(statistics["targets"])[0]
         self.assertGreater(target["totalBreakpointResolveTime"], 0)
 

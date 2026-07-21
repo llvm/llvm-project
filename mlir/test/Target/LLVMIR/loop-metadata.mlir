@@ -185,7 +185,7 @@ llvm.func @distributeOptions() {
 // CHECK-DAG: ![[NON_FORCED:[0-9]+]] = !{!"llvm.loop.disable_nonforced"}
 // CHECK-DAG: ![[FOLLOWUP:[0-9]+]] = distinct !{![[FOLLOWUP]], ![[NON_FORCED]]}
 // CHECK-DAG: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.enable", i1 false}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.disable"}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_coincident", ![[FOLLOWUP]]}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_sequential", ![[FOLLOWUP]]}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_fallback", ![[FOLLOWUP]]}

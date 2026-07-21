@@ -156,8 +156,8 @@ define <4 x float> @test_addsub_v4f32(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinsert4
 }
 
-define <8 x float> @test_v8f32(<8 x float> %A, <8 x float> %B) {
-; SSE2-LABEL: @test_v8f32(
+define <8 x float> @test_addsub_v8f32(<8 x float> %A, <8 x float> %B) {
+; SSE2-LABEL: @test_addsub_v8f32(
 ; SSE2-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
 ; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <8 x float> [[A]], [[B]]
@@ -165,13 +165,13 @@ define <8 x float> @test_v8f32(<8 x float> %A, <8 x float> %B) {
 ; SSE2-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP4]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; SSE2-NEXT:    ret <8 x float> [[TMP5]]
 ;
-; SSE4-LABEL: @test_v8f32(
+; SSE4-LABEL: @test_addsub_v8f32(
 ; SSE4-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
 ; SSE4-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[A]], [[B]]
 ; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
 ; SSE4-NEXT:    ret <8 x float> [[TMP3]]
 ;
-; AVX-LABEL: @test_v8f32(
+; AVX-LABEL: @test_addsub_v8f32(
 ; AVX-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
 ; AVX-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[A]], [[B]]
 ; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>

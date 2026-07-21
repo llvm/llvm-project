@@ -2307,11 +2307,19 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   const auto *mpt = e->getType()->castAs<MemberPointerType>();
   const auto *destClass = mpt->getMostRecentCXXRecordDecl();
 
-  if (fieldDecl->hasAttr<NoUniqueAddressAttr>()) {
-    assert(!cir::MissingFeatures::noUniqueAddressLayout());
-    errorNYI(e->getExprLoc(),
-             "emitMemberPointerConstant: no_unique_address field");
-    return {};
+  // Empty [[no_unique_address]] fields have no CIR field index; represent the
+  // pointer-to-data-member by its concrete byte offset within the class.
+  if (isEmptyFieldForMemberPointer(fieldDecl)) {
+    // This function should ONLY be accessed in reference to itself, I don't see
+    // any cases/couldn't find any cases where anything else could get here, and
+    // classic-codegen does the same.
+    assert(fieldDecl->getParent() == destClass &&
+           "scalar member pointer should be relative to the declaring class");
+    uint64_t offset =
+        astContext.toCharUnitsFromBits(astContext.getFieldOffset(fieldDecl))
+            .getQuantity();
+    return cir::ConstantOp::create(builder, loc,
+                                   cir::DataMemberOffsetAttr::get(ty, offset));
   }
 
   std::optional<llvm::SmallVector<int32_t>> path =
@@ -2325,8 +2333,6 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 std::optional<llvm::SmallVector<int32_t>>
 CIRGenModule::buildMemberPath(const CXXRecordDecl *destClass,
                               const FieldDecl *field) {
-  assert(!field->hasAttr<NoUniqueAddressAttr>());
-
   llvm::SmallVector<int32_t> path;
   if (!findFieldMemberPath(destClass, field, path))
     return std::nullopt;
@@ -2394,6 +2400,11 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
     path.pop_back();
   }
   return false;
+}
+
+bool CIRGenModule::isEmptyFieldForMemberPointer(const FieldDecl *field) {
+  return isEmptyFieldForLayout(astContext, field) &&
+         field->isPotentiallyOverlapping();
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {

@@ -1605,9 +1605,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                 : IC.Builder.CreateMinNum(Src0, Src1);
         break;
       case KnownIEEEMode::Off:
-        V = (ConstSrc2 && ConstSrc2->isNegInfinity())
-                ? IC.Builder.CreateMinimumNum(Src0, Src1)
-                : IC.Builder.CreateMaximumNum(Src0, Src1);
+        V = (ConstSrc2 && ConstSrc2->isPosInfinity())
+                ? IC.Builder.CreateMaximumNum(Src0, Src1)
+                : IC.Builder.CreateMinimumNum(Src0, Src1);
         break;
       case KnownIEEEMode::Unknown:
         break;

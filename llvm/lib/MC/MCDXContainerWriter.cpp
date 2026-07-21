@@ -22,10 +22,22 @@ cl::opt<bool> EmbedDebug("dx-embed-debug",
 cl::opt<bool>
     StripDebug("dx-strip-debug",
                cl::desc("Strip debug information from shader bytecode"));
+cl::opt<bool> SlimDebug("dx-slim-debug",
+                        cl::desc("Generate slim PDB without ILDB part"));
 
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
 MCDXContainerBaseWriter::~MCDXContainerBaseWriter() = default;
+
+bool MCDXContainerBaseWriter::shouldSkipSection(StringRef SectionName,
+                                                size_t SectionSize) {
+  // Skip empty and auxiliary sections.
+  if (SectionSize == 0 || SectionName == PdbFileNameSectionName ||
+      SectionName == ModuleHashSectionName)
+    return true;
+  // Slim debug omits ILDB from all DXContainer outputs.
+  return SlimDebug && SectionName == "ILDB";
+}
 
 void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
   ArrayRef<MCDXContainerPart> Parts = collectParts();

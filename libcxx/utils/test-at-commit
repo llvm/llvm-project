@@ -15,8 +15,6 @@ LIT_CONFIG_FILE = """
 # of libc++ installed at the given path.
 #
 
-lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
-
 config.substitutions.append(('%{{flags}}',
     '-pthread' + (' -isysroot {{}}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
 ))

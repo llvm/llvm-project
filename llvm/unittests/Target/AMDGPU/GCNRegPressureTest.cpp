@@ -22,7 +22,7 @@
 
 using namespace llvm;
 
-class GCNRegPressureTest : public llvm::CodeGenTestBase {
+class GCNRegPressureTest : public AMDGPUCodeGenTestBase {
 public:
   void SetUp() override { setUpImpl("amdgpu9.08--", "", ""); }
 };

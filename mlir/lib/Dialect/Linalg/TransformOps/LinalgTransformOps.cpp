@@ -4311,11 +4311,11 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
            << "only elementwise flattening is supported";
 
   if (!llvm::all_of(target.getIndexingMapsArray(), [](AffineMap m) {
-        return m.isProjectedPermutation(/*allowZeroInResults=*/false);
+        return m.isPermutation() || m.getNumResults() == 0;
       })) {
     results.push_back(target);
     return mlir::emitSilenceableFailure(target->getLoc())
-           << "operators with broadcasting semantics are not supported";
+           << "broadcasting of non scalar operands is not supported";
   }
 
   // If rank <= 1, do nothing

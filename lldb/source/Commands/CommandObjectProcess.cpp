@@ -1610,8 +1610,8 @@ public:
   Options *GetOptions() override { return &m_options; }
 
   void PrintSignalHeader(Stream &str) {
-    str.Printf("NAME         PASS   STOP   NOTIFY  DESCRIPTION\n");
-    str.Printf("===========  =====  =====  ======  ===================\n");
+    str.PutCString("NAME         PASS   STOP   NOTIFY  DESCRIPTION\n");
+    str.PutCString("===========  =====  =====  ======  ===================\n");
   }
 
   void PrintSignal(Stream &str, int32_t signo, llvm::StringRef sig_name,
@@ -1633,7 +1633,7 @@ public:
         str.PutCString(sig_description);
       }
     }
-    str.Printf("\n");
+    str.PutCString("\n");
   }
 
   void PrintSignalInformation(Stream &str, Args &signal_args,

@@ -209,7 +209,7 @@ entry:
   ret double %cvt
 }
 
-define float @strict_convert_signed(i32 %x) #0 {
+define float @strict_convert_signed(i32 %x) {
 ; CHECK-LABEL: strict_convert_signed:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    scvtf s0, w0
@@ -224,7 +224,7 @@ entry:
   ret float %cvt
 }
 
-define float @strict_convert_unsigned(i64 %x) #0 {
+define float @strict_convert_unsigned(i64 %x) {
 ; CHECK-LABEL: strict_convert_unsigned:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ucvtf s0, x0

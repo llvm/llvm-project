@@ -993,3 +993,91 @@ bb1:
   EXPECT_EQ(ReadyList.pop(), S0N);
   EXPECT_EQ(ReadyList.pop(), RetN);
 }
+
+TEST_F(SchedulerTest, SchedulingPoint) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v0) {
+  store i8 %v0, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check at each instruction.
+  for (auto &I : *BB) {
+    sandboxir::SchedulingPoint SP(I.getIterator());
+    // Check atBeforeBeginOrNull(), I can't be before begin.
+    EXPECT_EQ(SP.atBeforeBeginOrNull(), nullptr);
+    // Check atEndOrNull(), I can't be at end.
+    EXPECT_EQ(SP.atEndOrNull(), nullptr);
+
+    // Check atInstrOrNull().
+    EXPECT_EQ(SP.atInstrOrNull(), &I);
+    // Check cast to Instruction *.
+    EXPECT_EQ((sandboxir::Instruction *)SP, &I);
+    // Check getIterator().
+    EXPECT_EQ(SP.getIterator(), I.getIterator());
+    // Check getIterator() const.
+    EXPECT_EQ(((const sandboxir::SchedulingPoint &)SP).getIterator(),
+              I.getIterator());
+    // Check getNext().
+    EXPECT_EQ(SP.getNext().getIterator(), std::next(I.getIterator()));
+    // Check getPrev().
+    EXPECT_EQ(SP.getNext().getPrev().getIterator(), I.getIterator());
+    // Check operator==() and createAt().
+    EXPECT_EQ(sandboxir::SchedulingPoint::createAt(I.getIterator()), SP);
+  }
+  // Check createBefore().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(Ret->getIterator()),
+            sandboxir::SchedulingPoint::createAt(S0->getIterator()));
+  // Check createAfter().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAfter(S0->getIterator()),
+            sandboxir::SchedulingPoint::createAt(Ret->getIterator()));
+  // Check atBeforeBeginOrNull().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(BB->begin())
+                .atBeforeBeginOrNull(),
+            BB);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(S0->getIterator())
+                .atBeforeBeginOrNull(),
+            nullptr);
+  EXPECT_EQ(
+      sandboxir::SchedulingPoint::createAt(BB->end()).atBeforeBeginOrNull(),
+      nullptr);
+  // Check atEndOrNull().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(BB->end()).atEndOrNull(), BB);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(BB->end()).atEndOrNull(),
+            nullptr);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(BB->begin()).atEndOrNull(),
+            nullptr);
+  // Check atInstrOrNull().
+  EXPECT_EQ(
+      sandboxir::SchedulingPoint::createBefore(BB->begin()).atInstrOrNull(),
+      nullptr);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(BB->begin()).atInstrOrNull(),
+            &BB->front());
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(BB->end()).atInstrOrNull(),
+            nullptr);
+
+#ifndef NDEBUG
+  // Check assertion when trying to createAfter() at BB.end().
+  EXPECT_DEATH(sandboxir::SchedulingPoint::createAfter(BB->end()),
+               ".*at end.*");
+  // Check assertion when trying to get out of bounds getPrev().
+  sandboxir::SchedulingPoint BeforeBegin =
+      sandboxir::SchedulingPoint::createBefore(BB->begin());
+  EXPECT_DEATH(BeforeBegin.getPrev(), ".*Expected.*");
+  // Check assertion when trying to get out of bounds getNext().
+  sandboxir::SchedulingPoint AtEnd =
+      sandboxir::SchedulingPoint::createAt(BB->end());
+  EXPECT_DEATH(AtEnd.getNext(), ".*Expected.*");
+
+  // Check assertion before begin.
+  EXPECT_DEATH(BeforeBegin.getIterator(), ".*Expected.*");
+#endif
+}

@@ -599,6 +599,45 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DataMemberOffsetAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DataMemberOffsetAttr
+    : CIR_ValueLikeAttr<"DataMemberOffset", "data_member_offset"> {
+  let summary = "Constant pointer-to-data-member given by a byte offset";
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::DataMemberType">:$type,
+                        "uint64_t":$offset);
+  let description = [{
+    Like `#cir.data_member`, this is a literal attribute representing a constant
+    (non-null) pointer-to-data-member value.  It is used for members that are
+    not laid out in the CIR record and therefore have no field-index path -- in
+    particular `[[no_unique_address]]` empty fields.  The concrete byte offset
+    of the member within the class is stored directly.
+
+    Example:
+    ```
+    // Empty S::*p = &S::e  (e is a no_unique_address empty field at byte 1)
+    #cir.data_member_offset<1> : !cir.data_member<!rec_Empty in !rec_S>
+    ```
+  }];
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                       "uint64_t":$offset), [{
+      return $_get(type.getContext(), type, offset);
+    }]>,
+  ];
+
+  // This attribute gets lowered during CXXABILowering.
+  let hasAttrToValueLowering = 0;
+
+  let assemblyFormat = [{
+    `<` $offset `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // MethodAttr
 //===----------------------------------------------------------------------===//
 

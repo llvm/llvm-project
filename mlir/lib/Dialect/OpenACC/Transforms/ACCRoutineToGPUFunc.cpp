@@ -320,8 +320,6 @@ public:
       return signalPassFailure();
 
     cleanupHostModule(funcsToClone);
-    for (RoutineOp bindOp : bindAccRoutines)
-      bindOp.erase();
   }
 };
 

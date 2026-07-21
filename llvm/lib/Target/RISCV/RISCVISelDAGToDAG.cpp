@@ -1892,6 +1892,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
   case RISCVISD::WMULSU:
+  case RISCVISD::WADD:
+  case RISCVISD::WSUB:
   case RISCVISD::WADDU:
   case RISCVISD::WSUBU: {
     assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
@@ -1909,6 +1911,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
     case RISCVISD::WMULSU:
       Opc = RISCV::WMULSU;
+      break;
+    case RISCVISD::WADD:
+      Opc = RISCV::WADD;
+      break;
+    case RISCVISD::WSUB:
+      Opc = RISCV::WSUB;
       break;
     case RISCVISD::WADDU:
       Opc = RISCV::WADDU;

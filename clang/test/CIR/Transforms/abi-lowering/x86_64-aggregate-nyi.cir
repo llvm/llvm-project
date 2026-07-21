@@ -1,0 +1,92 @@
+// RUN: not cir-opt %s -cir-call-conv-lowering=target=x86_64 2>&1 | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+!rec_U = !cir.union<"U" {!s32i, !u32i}>
+!rec_P = !cir.struct<"P" packed {!s8i, !s32i}>
+!rec_Ov = !cir.struct<"Ov" padded {!s32i, !cir.array<!u8i x 12>}>
+!rec_E = !cir.struct<"E" padded {!u8i}>
+!rec_E0 = !cir.struct<"E0" {}>
+!rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
+!rec_RetFF = !cir.struct<"RetFF" {!cir.float, !cir.float}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<f32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
+} {
+
+  // A union is rejected: its register coercion needs a widen fixup.
+  cir.func @take_union(%arg0: !rec_U) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"U"
+
+  // A packed struct is rejected: it needs pad-aware classification.
+  cir.func @take_packed(%arg0: !rec_P) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"P" packed
+
+  // A padded (over-aligned) struct is rejected: it needs pad-aware
+  // classification.
+  cir.func @take_padded(%arg0: !rec_Ov) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"Ov" padded
+
+  // An empty C++ class is laid out as a single padded byte, so it is rejected
+  // by the padded check; its Ignore classification is deferred.
+  cir.func @take_empty(%arg0: !rec_E) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"E" padded
+
+  // A zero-field record (a C empty struct) also classifies as Ignore, which is
+  // deferred, so it is rejected rather than passed with the argument dropped.
+  cir.func @take_e0(%arg0: !rec_E0) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"E0"
+
+  // An all-float struct classifies to an SSE vector coerce this bridge does
+  // not represent, so it is reported NYI rather than passed unchanged.
+  cir.func @take_ff(%arg0: !rec_FF) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"FF"
+
+  // The same holds for an all-float array.
+  cir.func @take_farr(%arg0: !cir.array<!cir.float x 2>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for the ABI coercion of type '!cir.array<!cir.float x 2>
+
+  // A three-float struct coerces to a record with a vector field; the
+  // unmappable field propagates out as NYI too.
+  cir.func @take_f3(%arg0: !cir.struct<"F3" {!cir.float, !cir.float, !cir.float}>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"F3"
+
+  // The unmappable-coercion check also covers the return value.
+  cir.func @ret_ff() -> !rec_RetFF {
+    %0 = cir.alloca "r" align(4) : !cir.ptr<!rec_RetFF>
+    %1 = cir.load %0 : !cir.ptr<!rec_RetFF>, !rec_RetFF
+    cir.return %1 : !rec_RetFF
+  }
+
+  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"RetFF"
+}

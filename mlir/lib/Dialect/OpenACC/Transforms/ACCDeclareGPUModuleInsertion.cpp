@@ -99,20 +99,27 @@ public:
       StringAttr name = symOp.getNameAttr();
 
       if (Operation *existing = gpuSymTable.lookup(name.getValue())) {
-        // Reuse only when the existing GPU symbol is structurally equivalent to
-        // the global we would insert. Otherwise treat as a conflict (different
-        // op type or different definition).
+        // Reuse when structurally equivalent ignoring locations and discardable
+        // attrs such as `acc.declare` attributes. Only a different op type or a
+        // true definition mismatch is a conflict.
         if (existing->getName() != globalOp.getName() ||
             !OperationEquivalence::isEquivalentTo(
                 existing, &globalOp,
                 OperationEquivalence::ignoreValueEquivalence,
                 /*markEquivalent=*/nullptr,
-                OperationEquivalence::IgnoreLocations)) {
+                OperationEquivalence::IgnoreLocations |
+                    OperationEquivalence::IgnoreDiscardableAttrs)) {
           accSupport.emitNYI(globalOp.getLoc(),
                              llvm::Twine("duplicate global symbol '") +
                                  name.getValue() + "' in gpu module");
           return failure();
         }
+        // Propagate acc.declare onto the GPU copy if it was cloned before the
+        // host global was marked.
+        if (!existing->getAttr(acc::getDeclareAttrName()))
+          if (Attribute declareAttr =
+                  globalOp.getAttr(acc::getDeclareAttrName()))
+            existing->setAttr(acc::getDeclareAttrName(), declareAttr);
         continue;
       }
 

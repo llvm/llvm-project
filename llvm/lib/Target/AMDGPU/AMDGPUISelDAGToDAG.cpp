@@ -3688,15 +3688,14 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
         // bits of a scalar input into high 64 bits. Use VGPRs in this case.
         // TODO: This fact can be exploited but we need to set proper OPSEL for
         // codegen folding purposes. It will not affect a final instruction.
-        auto RC = (Lo->isDivergent() || !HasOpSel)
-                      ? TRI->getVGPRClassForBitWidth(VecSize)
-                      : TRI->getSGPRClassForBitWidth(VecSize);
+        auto RC = Lo->isDivergent() ? TRI->getVGPRClassForBitWidth(VecSize)
+                                    : TRI->getSGPRClassForBitWidth(VecSize);
         unsigned NumRegs = Lo.getValueSizeInBits() == 32 ? 1 : 2;
         const SDValue Ops[] = {
             CurDAG->getTargetConstant(RC->getID(), SL, MVT::i32), Lo,
             CurDAG->getTargetConstant(TRI->getSubRegFromChannel(0, NumRegs), SL,
                                       MVT::i32),
-            HasOpSel ? Undef : Hi,
+            (!HasOpSel && Lo->isDivergent()) ? Lo : Undef,
             CurDAG->getTargetConstant(
                 TRI->getSubRegFromChannel(NumRegs, NumRegs), SL, MVT::i32)};
 

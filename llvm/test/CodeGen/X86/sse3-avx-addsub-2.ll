@@ -6,13 +6,13 @@
 ; Verify that we correctly generate 'addsub' instructions from
 ; a sequence of vector extracts + float add/sub + vector inserts.
 
-define <4 x float> @test1(<4 x float> %A, <4 x float> %B) {
-; SSE-LABEL: test1:
+define <4 x float> @test_addsub_v4f32(<4 x float> %A, <4 x float> %B) {
+; SSE-LABEL: test_addsub_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test1:
+; AVX-LABEL: test_addsub_v4f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -35,13 +35,13 @@ define <4 x float> @test1(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinsert4
 }
 
-define <4 x float> @test2(<4 x float> %A, <4 x float> %B) {
-; SSE-LABEL: test2:
+define <4 x float> @test_addsub_v4f32_partial_23(<4 x float> %A, <4 x float> %B) {
+; SSE-LABEL: test_addsub_v4f32_partial_23:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test2:
+; AVX-LABEL: test_addsub_v4f32_partial_23:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -56,13 +56,13 @@ define <4 x float> @test2(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinsert2
 }
 
-define <4 x float> @test3(<4 x float> %A, <4 x float> %B) {
-; SSE-LABEL: test3:
+define <4 x float> @test_addsub_v4f32_partial_03(<4 x float> %A, <4 x float> %B) {
+; SSE-LABEL: test_addsub_v4f32_partial_03:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test3:
+; AVX-LABEL: test_addsub_v4f32_partial_03:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -77,13 +77,13 @@ define <4 x float> @test3(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinsert2
 }
 
-define <4 x float> @test4(<4 x float> %A, <4 x float> %B) {
-; SSE-LABEL: test4:
+define <4 x float> @test_addsub_v4f32_partial_12(<4 x float> %A, <4 x float> %B) {
+; SSE-LABEL: test_addsub_v4f32_partial_12:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test4:
+; AVX-LABEL: test_addsub_v4f32_partial_12:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -98,13 +98,13 @@ define <4 x float> @test4(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinsert2
 }
 
-define <4 x float> @test5(<4 x float> %A, <4 x float> %B) {
-; SSE-LABEL: test5:
+define <4 x float> @test_addsub_v4f32_partial_01(<4 x float> %A, <4 x float> %B) {
+; SSE-LABEL: test_addsub_v4f32_partial_01:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test5:
+; AVX-LABEL: test_addsub_v4f32_partial_01:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -119,13 +119,13 @@ define <4 x float> @test5(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinsert2
 }
 
-define <4 x float> @test6(<4 x float> %A, <4 x float> %B) {
-; SSE-LABEL: test6:
+define <4 x float> @test_addsub_v4f32_shuffle_1302(<4 x float> %A, <4 x float> %B) {
+; SSE-LABEL: test_addsub_v4f32_shuffle_1302:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test6:
+; AVX-LABEL: test_addsub_v4f32_shuffle_1302:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -148,14 +148,14 @@ define <4 x float> @test6(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinsert4
 }
 
-define <4 x double> @test7(<4 x double> %A, <4 x double> %B) {
-; SSE-LABEL: test7:
+define <4 x double> @test_addsub_v4f64(<4 x double> %A, <4 x double> %B) {
+; SSE-LABEL: test_addsub_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd %xmm2, %xmm0
 ; SSE-NEXT:    addsubpd %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test7:
+; AVX-LABEL: test_addsub_v4f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -178,13 +178,13 @@ define <4 x double> @test7(<4 x double> %A, <4 x double> %B) {
   ret <4 x double> %vecinsert4
 }
 
-define <2 x double> @test8(<2 x double> %A, <2 x double> %B) {
-; SSE-LABEL: test8:
+define <2 x double> @test_addsub_v2f64(<2 x double> %A, <2 x double> %B) {
+; SSE-LABEL: test_addsub_v2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test8:
+; AVX-LABEL: test_addsub_v2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -199,14 +199,14 @@ define <2 x double> @test8(<2 x double> %A, <2 x double> %B) {
   ret <2 x double> %vecinsert2
 }
 
-define <8 x float> @test9(<8 x float> %A, <8 x float> %B) {
-; SSE-LABEL: test9:
+define <8 x float> @test_addsub_v8f32(<8 x float> %A, <8 x float> %B) {
+; SSE-LABEL: test_addsub_v8f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm2, %xmm0
 ; SSE-NEXT:    addsubps %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test9:
+; AVX-LABEL: test_addsub_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -493,13 +493,13 @@ define <4 x float> @test16(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinsert4
 }
 
-define <2 x float> @test_v2f32(<2 x float> %v0, <2 x float> %v1) {
-; SSE-LABEL: test_v2f32:
+define <2 x float> @test_addsub_v2f32(<2 x float> %v0, <2 x float> %v1) {
+; SSE-LABEL: test_addsub_v2f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_v2f32:
+; AVX-LABEL: test_addsub_v2f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -514,8 +514,8 @@ define <2 x float> @test_v2f32(<2 x float> %v0, <2 x float> %v1) {
   ret <2 x float> %res1
 }
 
-define <16 x float> @test17(<16 x float> %A, <16 x float> %B) {
-; SSE-LABEL: test17:
+define <16 x float> @test_addsub_v16f32(<16 x float> %A, <16 x float> %B) {
+; SSE-LABEL: test_addsub_v16f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm4, %xmm0
 ; SSE-NEXT:    addsubps %xmm5, %xmm1
@@ -523,13 +523,13 @@ define <16 x float> @test17(<16 x float> %A, <16 x float> %B) {
 ; SSE-NEXT:    addsubps %xmm7, %xmm3
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: test17:
+; AVX1-LABEL: test_addsub_v16f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddsubps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vaddsubps %ymm3, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: test17:
+; AVX512-LABEL: test_addsub_v16f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vsubps %zmm1, %zmm0, %zmm2
 ; AVX512-NEXT:    movw $-21846, %ax # imm = 0xAAAA
@@ -604,8 +604,8 @@ define <16 x float> @test17(<16 x float> %A, <16 x float> %B) {
   ret <16 x float> %vecinsert16
 }
 
-define <8 x double> @test18(<8 x double> %A, <8 x double> %B) {
-; SSE-LABEL: test18:
+define <8 x double> @test_addsub_v8f64(<8 x double> %A, <8 x double> %B) {
+; SSE-LABEL: test_addsub_v8f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd %xmm4, %xmm0
 ; SSE-NEXT:    addsubpd %xmm5, %xmm1
@@ -613,13 +613,13 @@ define <8 x double> @test18(<8 x double> %A, <8 x double> %B) {
 ; SSE-NEXT:    addsubpd %xmm7, %xmm3
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: test18:
+; AVX1-LABEL: test_addsub_v8f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddsubpd %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vaddsubpd %ymm3, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: test18:
+; AVX512-LABEL: test_addsub_v8f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm2
 ; AVX512-NEXT:    vsubpd %zmm1, %zmm0, %zmm0

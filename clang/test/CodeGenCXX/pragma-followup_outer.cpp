@@ -19,7 +19,7 @@ extern "C" void followup_outer(int n, int *x) {
 
 // CHECK-DAG: ![[LOOP_3:[0-9]+]] = distinct !{![[LOOP_3:[0-9]+]], [[MP:![0-9]+]], ![[PARALLEL_ACCESSES_4:[0-9]+]], ![[DISTRIBUTE_5:[0-9]+]], ![[DISTRIBUTE_FOLLOWUP_6:[0-9]+]]}
 // CHECK-DAG: ![[PARALLEL_ACCESSES_4:[0-9]+]] = !{!"llvm.loop.parallel_accesses", ![[ACCESSGROUP_2]]}
-// CHECK-DAG: ![[DISTRIBUTE_5:[0-9]+]] = !{!"llvm.loop.distribute.enable", i1 true}
+// CHECK-DAG: ![[DISTRIBUTE_5:[0-9]+]] = !{!"llvm.loop.distribute.enable"}
 
 // CHECK-DAG: ![[DISTRIBUTE_FOLLOWUP_6:[0-9]+]] = !{!"llvm.loop.distribute.followup_all", [[MP]], ![[PARALLEL_ACCESSES_4:[0-9]+]], ![[VECTORIZE_8:[0-9]+]], ![[VECTORIZE_FOLLOWUP_9:[0-9]+]]}
 // CHECK-DAG: ![[VECTORIZE_8:[0-9]+]] = !{!"llvm.loop.vectorize.enable", i1 true}

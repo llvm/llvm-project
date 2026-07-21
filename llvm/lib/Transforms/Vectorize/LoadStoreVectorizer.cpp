@@ -1752,6 +1752,12 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
     if (!VectorType::isValidElementType(Ty->getScalarType()))
       continue;
 
+    // Pointer loads and stores with external state must retain their pointer
+    // memory type so the out-of-band state is transferred. Do not vectorize
+    // these pointers.
+    if (DL.hasExternalState(Ty))
+      continue;
+
     // Skip weird non-byte sizes. They probably aren't worth the effort of
     // handling correctly.
     unsigned TySize = DL.getTypeSizeInBits(Ty);

@@ -131,6 +131,6 @@ for.end:                                          ; preds = %for.body
 }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.distribute.enable", i1 true}
+!1 = !{!"llvm.loop.distribute.enable"}
 !2 = distinct !{!2, !3}
-!3 = !{!"llvm.loop.distribute.enable", i1 false}
+!3 = !{!"llvm.loop.distribute.disable"}
