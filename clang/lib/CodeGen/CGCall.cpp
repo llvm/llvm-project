@@ -6308,8 +6308,15 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       if (!CST.isNull()) {
         CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
         if (!CST->isFunctionProtoType() &&
-            CGM.getCodeGenOpts().CallGraphSection)
-          CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto);
+            CGM.getCodeGenOpts().CallGraphSection) {
+          llvm::Metadata *MD =
+              CGM.CreateMetadataIdentifierForCallGraphType(CST);
+          StringRef TypeStr;
+          if (auto *MDS = dyn_cast_or_null<llvm::MDString>(MD))
+            TypeStr = MDS->getString();
+          CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto)
+              << CST << TypeStr << !CallArgs.empty();
+        }
       }
     }
   }
