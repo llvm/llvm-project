@@ -9,7 +9,7 @@ fadd.d fa0, fa1, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the foll
 
 # Invalid instructions
 fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
-fmv.x.w s0, s1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+fmv.x.w s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # Invalid register names
 fadd.d a100, a2, a4 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
@@ -24,4 +24,4 @@ fmsub.d x10, x12, x14, x16, 0 # CHECK: :[[@LINE]]:29: error: operand must be a v
 fnmsub.d x10, x12, x14, x16, 0b111 # CHECK: :[[@LINE]]:30: error: operand must be a valid floating point rounding mode mnemonic
 
 # FP registers where integer regs are expected
-fcvt.wu.d ft2, a2 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+fcvt.wu.d ft2, a2 # CHECK: :[[@LINE]]:11: error: register must be a GPR

@@ -87,7 +87,7 @@ extern int32_t getNonRecordFormOpcode(uint32_t);
 // FIXME: A lot of code in PPCDispatchGroupSBHazardRecognizer is P7 specific.
 
 bool PPCDispatchGroupSBHazardRecognizer::mustComeFirst(const MCInstrDesc *MCID,
-                                                       unsigned &NSlots) {
+                                                       unsigned &NSlots) const {
   // FIXME: Indirectly, this information is contained in the itinerary, and
   // we should derive it from there instead of separately specifying it
   // here.
@@ -147,7 +147,7 @@ PPCDispatchGroupSBHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   return ScoreboardHazardRecognizer::getHazardType(SU, Stalls);
 }
 
-bool PPCDispatchGroupSBHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
+bool PPCDispatchGroupSBHazardRecognizer::ShouldPreferAnother(SUnit *SU) const {
   const MCInstrDesc *MCID = DAG->getInstrDesc(SU);
   unsigned NSlots;
   if (MCID && mustComeFirst(MCID, NSlots) && CurSlots)

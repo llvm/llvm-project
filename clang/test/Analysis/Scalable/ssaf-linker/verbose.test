@@ -1,9 +1,9 @@
-// Test the --verbose/-v flag of ssaf-linker.
+// Test the --verbose/-v flag of clang-ssaf-linker.
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 
-// RUN: ssaf-linker --verbose %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
+// RUN: clang-ssaf-linker --verbose %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
 // RUN:           | FileCheck %s --match-full-lines
 // CHECK:      note: - Linking started.
 // CHECK-NEXT: note:   - Validating input.

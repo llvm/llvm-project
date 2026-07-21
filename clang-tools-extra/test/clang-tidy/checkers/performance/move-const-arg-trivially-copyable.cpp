@@ -1,26 +1,8 @@
-// RUN: %check_clang_tidy %s performance-move-const-arg %t \
+// RUN: %check_clang_tidy %s performance-move-const-arg %t -- \
 // RUN: -config='{CheckOptions: \
 // RUN:  {performance-move-const-arg.CheckTriviallyCopyableMove: false}}'
 
-namespace std {
-
-template <typename> struct remove_reference;
-template <typename _Tp> struct remove_reference { typedef _Tp type; };
-template <typename _Tp> struct remove_reference<_Tp &> { typedef _Tp type; };
-template <typename _Tp> struct remove_reference<_Tp &&> { typedef _Tp type; };
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
-  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
-}
-
-template <typename _Tp>
-constexpr _Tp &&
-forward(typename remove_reference<_Tp>::type &__t) noexcept {
-  return static_cast<_Tp &&>(__t);
-}
-
-} // namespace std
+#include <utility>
 
 class NoMoveSemantics {
  public:

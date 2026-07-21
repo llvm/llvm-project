@@ -93,11 +93,6 @@ public:
   }
 
   static LocIdx MakeIllegalLoc() { return LocIdx(); }
-  static LocIdx MakeTombstoneLoc() {
-    LocIdx L = LocIdx();
-    --L.Location;
-    return L;
-  }
 
   bool isIllegal() const { return Location == UINT_MAX; }
 
@@ -206,7 +201,6 @@ public:
   }
 
   LLVM_ABI_FOR_TEST static ValueIDNum EmptyValue;
-  LLVM_ABI_FOR_TEST static ValueIDNum TombstoneValue;
 };
 
 } // End namespace LiveDebugValues
@@ -215,20 +209,12 @@ namespace llvm {
 using namespace LiveDebugValues;
 
 template <> struct DenseMapInfo<LocIdx> {
-  static inline LocIdx getEmptyKey() { return LocIdx::MakeIllegalLoc(); }
-  static inline LocIdx getTombstoneKey() { return LocIdx::MakeTombstoneLoc(); }
-
   static unsigned getHashValue(const LocIdx &Loc) { return Loc.asU64(); }
 
   static bool isEqual(const LocIdx &A, const LocIdx &B) { return A == B; }
 };
 
 template <> struct DenseMapInfo<ValueIDNum> {
-  static inline ValueIDNum getEmptyKey() { return ValueIDNum::EmptyValue; }
-  static inline ValueIDNum getTombstoneKey() {
-    return ValueIDNum::TombstoneValue;
-  }
-
   static unsigned getHashValue(const ValueIDNum &Val) {
     return hash_value(Val.asU64());
   }

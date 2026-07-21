@@ -48,6 +48,8 @@ cleanup:                                          ; preds = %_ZNK4llvm3opt7ArgLi
   %2 = phi i1 [ %call13, %cleanup ], [ %Default, %_ZNK4llvm3opt7ArgList17getLastArgNoClaimIJNS0_12OptSpecifierES3_EEEPNS0_3ArgEDpT_.exit ], [ %Default, %_ZNK4llvm3opt7ArgList17getLastArgNoClaimIJNS0_12OptSpecifierES3_EEEPNS0_3ArgEDpT_.exit.thread ]
   ret i1 %2, !dbg !9480
 }
+!9531 = !{null}
+!9532 = !DISubroutineType(types: !9531)
 !llvm.module.flags = !{!2, !6}
 !llvm.dbg.cu = !{!7}
 !2 = !{i32 2, !"Debug Info Version", i32 3}
@@ -55,12 +57,12 @@ cleanup:                                          ; preds = %_ZNK4llvm3opt7ArgLi
 !7 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !8, emissionKind: FullDebug, sdk: "MacOSX15.3.sdk")
 !8 = !DIFile(filename: "/Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project/llvm/lib/Option/ArgList.cpp", directory: "/Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project/build-instr-ref-stage2", checksumkind: CSK_MD5, checksum: "a3198e8ace679c7b1581a26b5583c658")
 !3116 = distinct !DICompositeType(tag: DW_TAG_class_type, size: 32)
-!9383 = distinct !DISubprogram(unit: !7, flags: DIFlagArtificial | DIFlagObjectPointer)
+!9383 = distinct !DISubprogram(type: !9532, unit: !7, flags: DIFlagArtificial | DIFlagObjectPointer)
 !9391 = distinct !DILexicalBlock(scope: !9383, line: 80, column: 12)
 !9393 = !DILocation(scope: !9391)
 !9440 = distinct !DILexicalBlock(scope: !9441, line: 269, column: 5)
 !9441 = distinct !DILexicalBlock(scope: !9442, line: 269, column: 5)
-!9442 = distinct !DISubprogram(unit: !7, retainedNodes: !9450)
+!9442 = distinct !DISubprogram(type: !9532, unit: !7, retainedNodes: !9450)
 !9450 = !{}
 !9452 = !DILocalVariable(scope: !9442, type: !3116)
 !9478 = distinct !DILocation(scope: !9391)

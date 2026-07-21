@@ -10,7 +10,6 @@
 #include "CFBasicHash.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
@@ -488,7 +487,7 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex(
                        process_sp->GetByteOrder(),
                        process_sp->GetAddressByteSize());
 
-    set_item.valobj_sp = CreateValueObjectFromData(
+    set_item.valobj_sp = CreateChildValueObjectFromData(
         idx_name.GetString(), data, m_exe_ctx_ref,
         m_backend.GetCompilerType().GetBasicTypeFromAST(
             lldb::eBasicTypeObjCID));
@@ -598,7 +597,7 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetChildAtIndex(
 
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
 
-    set_item.valobj_sp = CreateValueObjectFromData(
+    set_item.valobj_sp = CreateChildValueObjectFromData(
         idx_name.GetString(), data, m_exe_ctx_ref,
         m_backend.GetCompilerType().GetBasicTypeFromAST(
             lldb::eBasicTypeObjCID));
@@ -738,7 +737,7 @@ lldb_private::formatters::
                        process_sp->GetByteOrder(),
                        process_sp->GetAddressByteSize());
 
-    set_item.valobj_sp = CreateValueObjectFromData(
+    set_item.valobj_sp = CreateChildValueObjectFromData(
         idx_name.GetString(), data, m_exe_ctx_ref,
         m_backend.GetCompilerType().GetBasicTypeFromAST(
             lldb::eBasicTypeObjCID));

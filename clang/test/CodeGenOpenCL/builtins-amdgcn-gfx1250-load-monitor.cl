@@ -64,3 +64,30 @@ v4i test_amdgcn_flat_load_monitor_b128(v4i* inptr)
 {
   return __builtin_amdgcn_flat_load_monitor_b128(inptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_global_load_monitor_b32_wavefront(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1) [[INPTR:%.*]], i32 0, metadata [[META12:![0-9]+]])
+// CHECK-GFX1250-NEXT:    ret i32 [[TMP0]]
+//
+int test_amdgcn_global_load_monitor_b32_wavefront(global int* inptr)
+{
+  return __builtin_amdgcn_global_load_monitor_b32(inptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_WVFRNT);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_global_load_monitor_b32_single(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.global.load.monitor.b32.i32(ptr addrspace(1) [[INPTR:%.*]], i32 0, metadata [[META13:![0-9]+]])
+// CHECK-GFX1250-NEXT:    ret i32 [[TMP0]]
+//
+int test_amdgcn_global_load_monitor_b32_single(global int* inptr)
+{
+  return __builtin_amdgcn_global_load_monitor_b32(inptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
+}
+
+// CHECK-GFX1250: [[META8]] = !{!""}
+// CHECK-GFX1250: [[META9]] = !{!"agent"}
+// CHECK-GFX1250: [[META10]] = !{!"workgroup"}
+// CHECK-GFX1250: [[META11]] = !{!"cluster"}
+// CHECK-GFX1250: [[META12]] = !{!"wavefront"}
+// CHECK-GFX1250: [[META13]] = !{!"singlethread"}

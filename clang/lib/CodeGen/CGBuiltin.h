@@ -99,7 +99,8 @@ llvm::Value *EmitOverflowIntrinsic(clang::CodeGen::CodeGenFunction &CGF,
                                    llvm::Value *&Carry);
 
 llvm::Value *MakeAtomicCmpXchgValue(clang::CodeGen::CodeGenFunction &CGF,
-                                    const clang::CallExpr *E,
-                                    bool ReturnBool);
+                                    const clang::CallExpr *E, bool ReturnBool,
+                                    llvm::AtomicOrdering SuccessOrdering,
+                                    llvm::AtomicOrdering FailureOrdering);
 
 #endif

@@ -72,8 +72,9 @@ def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
     Option<"genericToNamed", "generic-to-named", "bool", /*default=*/"false",
            "convert linalg.generic to equivalent named ops">,
     Option<"genericToCategory", "generic-to-category", "bool", /*default=*/"false",
-           "convert linalg.generic to equivalent category ops"> ];
-    //  TODOs: `category-to-named`
+           "convert linalg.generic to equivalent category ops">,
+    Option<"categoryToNamed", "category-to-named", "bool", /*default=*/"false",
+           "convert category ops e.g. `linalg.elementwise` to equivalent named ops"> ];
 }
 
 def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops">,
@@ -169,14 +170,15 @@ def LinalgInlineScalarOperandsPass : Pass<"linalg-inline-scalar-operands"> {
 }
 
 def LinalgFoldIntoElementwisePass : Pass<"linalg-fold-into-elementwise"> {
-  let summary = "Fold transpose ops into elementwise";
+  let summary = "Fold transpose and broadcast ops into elementwise";
   let dependentDialects = ["linalg::LinalgDialect"];
 
   let description = [{
-    Fold transpose ops that feed `linalg.elementwise` into the elementwise op
-    by updating its indexing maps. `linalg.transpose` producers whose consumer
-    indexing map is the identity are absorbed, turning the permutation into
-    the elementwise map itself. Other operands remain untouched.
+    Fold transpose or broadcast op that feeds a `linalg.elementwise` into the
+    elementwise op. `linalg.transpose` and `linalg.broadcast` producers whose
+    consumer indexing map is a projected permutation can be absorbed into the
+    indexing map of the `linalg.elementwise` by composing the producer's map
+    into the elementwise op's indexing map. Other operands remain untouched.
   }];
 }
 

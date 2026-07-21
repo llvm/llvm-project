@@ -97,10 +97,20 @@ createInnerLoop(mlir::acc::LoopOp inputLoop, mlir::RewriterBase &rewriter,
     elementLoop.removeGangOperandsArgTypeAttr();
     elementLoop.removeGangOperandsSegmentsAttr();
     elementLoop.removeGangOperandsDeviceTypeAttr();
+    // Also drop the operand values themselves so that elementLoop does not
+    // end up with a non-empty gang operand list but no corresponding
+    // device-type/segment/arg-type attributes. Leaving stale operands behind
+    // makes elementLoop look like it still has gang operands to later
+    // queries (e.g. LoopOp::getGangValue), which then dereference the
+    // now-missing device-type attribute.
+    elementLoop.getGangOperandsMutable().clear();
   }
   if (inputLoop.hasVector() || inputLoop.getVectorValue()) {
     elementLoop.removeWorkerAttr();
     elementLoop.removeWorkerNumOperandsDeviceTypeAttr();
+    // As above for gang, also drop the worker operand values so elementLoop
+    // does not keep a dangling worker operand with no device-type attribute.
+    elementLoop.getWorkerNumOperandsMutable().clear();
   }
   rewriter.finalizeOpModification(elementLoop);
 
@@ -121,15 +131,32 @@ static void moveOpsAndReplaceIVs(mlir::acc::LoopOp sourceLoop,
                                  llvm::ArrayRef<mlir::Value> newIVs,
                                  llvm::ArrayRef<mlir::Value> origIVs,
                                  size_t nOps, mlir::RewriterBase &rewriter) {
-  // Move ops from source to target loop [begin, begin + nOps - 1)
+  // nOps includes the terminator; move all ops except the terminator:
+  // [begin, begin + nOps - 1)
   mlir::Block::iterator begin = sourceLoop.getBody().begin();
+  mlir::Block::iterator end = std::next(begin, nOps - 1);
+
+  // Notify the rewriter about all ops being moved (and their nested ops).
+  // Directly moved ops have their parent block changed (rewriter fingerprint
+  // tracking invalidated). Nested ops may have operands replaced by
+  // replaceAllUsesInRegionWith below.
+  llvm::SmallVector<mlir::Operation *> movedOps;
+  for (mlir::Block::iterator it = begin; it != end; ++it)
+    it->walk([&](mlir::Operation *op) {
+      movedOps.push_back(op);
+      rewriter.startOpModification(op);
+    });
+
   targetLoop.getBody().getOperations().splice(
       targetLoop.getBody().getOperations().begin(),
-      sourceLoop.getBody().getOperations(), begin, std::next(begin, nOps - 1));
+      sourceLoop.getBody().getOperations(), begin, end);
 
   // Replace uses of origIV with newIV
   for (auto [i, newIV] : llvm::enumerate(newIVs))
     mlir::replaceAllUsesInRegionWith(origIVs[i], newIV, targetLoop.getRegion());
+
+  for (mlir::Operation *op : movedOps)
+    rewriter.finalizeOpModification(op);
 }
 
 mlir::acc::LoopOp

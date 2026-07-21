@@ -1093,7 +1093,7 @@ hexadecimal_string_to_float(const CharType *__restrict src,
 }
 
 template <typename T, typename CharType>
-LIBC_INLINE typename fputil::FPBits<T>::StorageType
+LIBC_INLINE constexpr typename fputil::FPBits<T>::StorageType
 nan_mantissa_from_ncharseq(const CharType *str, size_t len) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
@@ -1129,7 +1129,9 @@ strtofloatingpoint(const CharType *__restrict src) {
 
   size_t index = first_non_whitespace(src);
   int sign = get_sign(src + index);
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   bool is_positive = (sign >= 0);
+#endif
   index += (sign != 0);
 
   if (sign < 0) {
@@ -1146,6 +1148,7 @@ strtofloatingpoint(const CharType *__restrict src) {
     }
 
     RoundDirection round_direction = RoundDirection::Nearest;
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     switch (fputil::quick_get_round()) {
     case FE_TONEAREST:
       round_direction = RoundDirection::Nearest;
@@ -1160,6 +1163,7 @@ strtofloatingpoint(const CharType *__restrict src) {
       round_direction = RoundDirection::Down;
       break;
     }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
     StrToNumResult<ExpandedFloat<T>> parse_result({0, 0});
     if (base == 16) {
@@ -1221,7 +1225,8 @@ strtofloatingpoint(const CharType *__restrict src) {
   return {result.get_val(), static_cast<ptrdiff_t>(index), error};
 }
 
-template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
+template <class T>
+LIBC_INLINE constexpr StrToNumResult<T> strtonan(const char *arg) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 

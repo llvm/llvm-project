@@ -69,6 +69,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 using detail::capture_errno;
 using detail::ErrorHandler;
@@ -904,6 +905,9 @@ uintmax_t remove_all_impl(int parent_directory, const path& p, error_code& ec) {
         break; // we're done iterating through the directory
       } else {
         count += remove_all_impl(fd, str, ec);
+        // If there's an error removing the child, return immediately to preserve the error code.
+        if (ec)
+          return count;
       }
     }
 
@@ -1077,4 +1081,5 @@ path __weakly_canonical(const path& p, error_code* ec) {
   return result.lexically_normal();
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM

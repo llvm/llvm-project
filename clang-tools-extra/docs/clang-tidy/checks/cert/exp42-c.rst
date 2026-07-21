@@ -1,5 +1,4 @@
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/suspicious-memory-comparison.html
+.. title:: clang-tidy - cert-exp42-c
 
 cert-exp42-c
 ============

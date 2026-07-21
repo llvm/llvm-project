@@ -113,21 +113,21 @@ namespace test3 {
 
   struct Derived1 : Base {
     using Base::foo;
-    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note {{invalid explicitly-specified argument for template parameter 'n'}}
+    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note {{template argument for non-type template parameter must be an expression for template parameter 'n'}}
   };
 
   struct Derived2 : Base {
-    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note {{invalid explicitly-specified argument for template parameter 'n'}}
+    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note {{template argument for non-type template parameter must be an expression for template parameter 'n'}}
     using Base::foo;
   };
 
   struct Derived3 : Base {
     using Base::foo;
-    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note {{invalid explicitly-specified argument for template parameter 'T'}}
+    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note {{template argument for template type parameter must be a type for template parameter 'T'}}
   };
 
   struct Derived4 : Base {
-    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note {{invalid explicitly-specified argument for template parameter 'T'}}
+    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note {{template argument for template type parameter must be a type for template parameter 'T'}}
     using Base::foo;
   };
 

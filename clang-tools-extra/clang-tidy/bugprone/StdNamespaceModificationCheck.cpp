@@ -19,9 +19,9 @@ AST_POLYMORPHIC_MATCHER_P(
     hasAnyTemplateArgumentIncludingPack,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
                                     TemplateSpecializationType, FunctionDecl),
-    clang::ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
+    ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
   const ArrayRef<TemplateArgument> Args =
-      clang::ast_matchers::internal::getTemplateSpecializationArgs(Node);
+      ast_matchers::internal::getTemplateSpecializationArgs(Node);
   for (const auto &Arg : Args) {
     if (Arg.getKind() != TemplateArgument::Pack)
       continue;
@@ -115,6 +115,10 @@ void clang::tidy::bugprone::StdNamespaceModificationCheck::check(
   const auto *D = Result.Nodes.getNodeAs<Decl>("decl");
   const auto *NS = Result.Nodes.getNodeAs<NamespaceDecl>("nmspc");
   if (!D || !NS)
+    return;
+
+  // Skip compiler-generated implicit declarations (e.g. std::align_val_t).
+  if (D->isImplicit())
     return;
 
   diag(D->getLocation(),

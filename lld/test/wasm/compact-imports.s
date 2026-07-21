@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld --experimental-pic --unresolved-symbols=import-dynamic %t.o -o %t.wasm
+# RUN: wasm-ld --unresolved-symbols=import-dynamic %t.o -o %t.wasm
 
 .functype foo () -> ()
 .functype bar () -> ()

@@ -114,8 +114,7 @@ subroutine check_exteremum()
 ! CHECK:    %[[VAL_38:.*]] = hlfir.designate %{{.*}} (%[[ARG0]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:    %[[VAL_39:.*]] = fir.load %[[VAL_37]] : !fir.ref<i32>
 ! CHECK:    %[[VAL_40:.*]] = fir.load %[[VAL_38]] : !fir.ref<i32>
-! CHECK:    %[[VAL_41:.*]] = arith.cmpi slt, %[[VAL_39]], %[[VAL_40]] : i32
-! CHECK:    %[[VAL_42:.*]] = arith.select %[[VAL_41]], %[[VAL_39]], %[[VAL_40]] : i32
+! CHECK:    %[[VAL_42:.*]] = arith.minsi %[[VAL_39]], %[[VAL_40]] : i32
 ! CHECK:    hlfir.yield_element %[[VAL_42]] : i32
 ! CHECK:  }
 ! CHECK:  %[[VAL_30:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32> {
@@ -157,11 +156,8 @@ subroutine check_logical_binary_ops()
 ! CHECK:    %[[VAL_38:.*]] = hlfir.designate %{{.*}} (%[[ARG0]])  : (!fir.ref<!fir.array<10x!fir.logical<8>>>, index) -> !fir.ref<!fir.logical<8>>
 ! CHECK:    %[[VAL_39:.*]] = fir.load %[[VAL_37]] : !fir.ref<!fir.logical<8>>
 ! CHECK:    %[[VAL_40:.*]] = fir.load %[[VAL_38]] : !fir.ref<!fir.logical<8>>
-! CHECK:    %[[VAL_41:.*]] = fir.convert %[[VAL_39]] : (!fir.logical<8>) -> i1
-! CHECK:    %[[VAL_42:.*]] = fir.convert %[[VAL_40]] : (!fir.logical<8>) -> i1
-! CHECK:    %[[VAL_43:.*]] = arith.cmpi eq, %[[VAL_41]], %[[VAL_42]] : i1
-! CHECK:    %[[VAL_44:.*]] = fir.convert %[[VAL_43]] : (i1) -> !fir.logical<8>
-! CHECK:    hlfir.yield_element %[[VAL_44]] : !fir.logical<8>
+! CHECK:    %[[VAL_41:.*]] = fir.eqv %[[VAL_39]], %[[VAL_40]] : !fir.logical<8>
+! CHECK:    hlfir.yield_element %[[VAL_41]] : !fir.logical<8>
 ! CHECK:  }
 ! CHECK:  %[[VAL_30:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32> {
 ! CHECK:  ^bb0(%[[ARG0:.*]]: index):

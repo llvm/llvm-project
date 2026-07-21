@@ -1,0 +1,173 @@
+# RUN: yaml2obj %s -o %t.exe
+# RUN: llvm-readobj --unwind %t.exe | FileCheck %s
+
+## T4: V3 with all WOD types — comprehensive WOD decode coverage.
+##
+## .xdata hex breakdown:
+## Byte 0: 0x03  (Version=3, Flags=0)
+## Byte 1: 0x30  (SizeOfProlog=48)
+## Byte 2: 0x17  (PayloadWords=23 words -> 46 bytes payload)
+## Byte 3: 0x0C  (NumberOfOps=12, NumberOfEpilogs=0)
+## Prolog IP offsets (12 bytes):
+##   +0:  30    IP[0]:  +0x30
+##   +1:  2C    IP[1]:  +0x2C
+##   +2:  2B    IP[2]:  +0x2B
+##   +3:  2A    IP[3]:  +0x2A
+##   +4:  28    IP[4]:  +0x28
+##   +5:  24    IP[5]:  +0x24
+##   +6:  20    IP[6]:  +0x20
+##   +7:  1C    IP[7]:  +0x1C
+##   +8:  18    IP[8]:  +0x18
+##   +9:  14    IP[9]:  +0x14
+##   +10: 10    IP[10]: +0x10
+##   +11: 00    IP[11]: +0x00
+## WOD pool (34 bytes):
+##   +12: 3C             WOD_PUSH RDI (reg=7: (7<<3)|4=0x3C)
+##   +13: 20 08          WOD_PUSH2 Reg1=RAX(0), Reg2=RCX(1)
+##   +15: 1F             WOD_PUSH_CONSECUTIVE_2 Reg=RBX(3): (3<<3)|7
+##   +16: 38             WOD_ALLOC_SMALL Size=(3+1)*8=32
+##   +17: 02 00 02       WOD_ALLOC_LARGE Size=0x200*8=4096
+##   +20: 01 45 23 01 00 WOD_ALLOC_HUGE Size=0x12345=74565
+##   +25: 00 35          WOD_SET_FPREG Reg=RBP(5), Offset=3*16=48
+##   +27: 66 08 00       WOD_SAVE_NONVOL Reg=R12(12), Disp=8*8=64
+##   +30: 6D 00 00 10 00 WOD_SAVE_NONVOL_FAR Reg=R13(13), Disp=0x100000
+##   +35: 4A 10 00       WOD_SAVE_XMM128 Reg=XMM4, Disp=16*16=256
+##   +38: 79 00 00 02 00 WOD_SAVE_XMM128_FAR Reg=XMM7, Disp=0x20000
+##   +43: 03 01          WOD_PUSH_CANONICAL_FRAME Type=1
+##   +45: 00             Padding
+
+# CHECK-LABEL:  UnwindInformation [
+# CHECK-NEXT:     RuntimeFunction {
+# CHECK:            UnwindInfo {
+# CHECK-NEXT:         Version: 3
+# CHECK-NEXT:         Flags [ (0x0)
+# CHECK-NEXT:         ]
+# CHECK-NEXT:         SizeOfProlog: 0x30
+# CHECK-NEXT:         PayloadWords: 23
+# CHECK-NEXT:         NumberOfOps: 12
+# CHECK-NEXT:         NumberOfEpilogs: 0
+# CHECK-NEXT:         Prolog [12 ops]:
+# CHECK-NEXT:           [0] IP +0x0030: PUSH Reg=RDI
+# CHECK-NEXT:           [1] IP +0x002C: PUSH2 Reg1=RAX, Reg2=RCX
+# CHECK-NEXT:           [2] IP +0x002B: PUSH_CONSECUTIVE_2 Reg=RBX (+RSP)
+# CHECK-NEXT:           [3] IP +0x002A: ALLOC_SMALL Size=0x20
+# CHECK-NEXT:           [4] IP +0x0028: ALLOC_LARGE Size=0x1000
+# CHECK-NEXT:           [5] IP +0x0024: ALLOC_HUGE Size=0x12345
+# CHECK-NEXT:           [6] IP +0x0020: SET_FPREG Reg=RBP, Offset=0x30
+# CHECK-NEXT:           [7] IP +0x001C: SAVE_NONVOL Reg=R12, Disp=0x40
+# CHECK-NEXT:           [8] IP +0x0018: SAVE_NONVOL_FAR Reg=R13, Disp=0x100000
+# CHECK-NEXT:           [9] IP +0x0014: SAVE_XMM128 Reg=XMM4, Disp=0x100
+# CHECK-NEXT:           [10] IP +0x0010: SAVE_XMM128_FAR Reg=XMM7, Disp=0x20000
+# CHECK-NEXT:           [11] IP +0x0000: PUSH_CANONICAL_FRAME Type=1
+# CHECK-NEXT:       }
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       0
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ExportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ImportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ResourceTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ExceptionTable:
+    RelativeVirtualAddress: 12288
+    Size:            12
+  CertificateTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BaseRelocationTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Debug:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Architecture:
+    RelativeVirtualAddress: 0
+    Size:            0
+  GlobalPtr:
+    RelativeVirtualAddress: 0
+    Size:            0
+  TlsTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  LoadConfigTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BoundImport:
+    RelativeVirtualAddress: 0
+    Size:            0
+  IAT:
+    RelativeVirtualAddress: 0
+    Size:            0
+  DelayImportDescriptor:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ClrRuntimeHeader:
+    RelativeVirtualAddress: 0
+    Size:            0
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     80
+    SectionData:     '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     50
+    SectionData:     '0330170C302C2B2A2824201C181410003C20081F38020002014523010000356608006D000010004A10007900000200030100'
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  12288
+    VirtualSize:     12
+    SectionData:     '001000005010000000200000'
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            func
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

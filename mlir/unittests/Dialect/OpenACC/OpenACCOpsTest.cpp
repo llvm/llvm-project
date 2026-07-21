@@ -562,6 +562,46 @@ TEST_F(OpenACCOpsTest, routineOpTest) {
   op->removeBindStrNameAttr();
 }
 
+TEST_F(OpenACCOpsTest, routineOpGetBindNameValueOnlyBindStrOrOnlyBindId) {
+  // getBindNameValue(DeviceType) must not dereference when only one of bind(id)
+  // or bind(name) is set (the other has no device-type array).
+  OwningOpRef<RoutineOp> op =
+      RoutineOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  auto dtypeNone = DeviceTypeAttr::get(&context, DeviceType::None);
+  auto dtypeNvidia = DeviceTypeAttr::get(&context, DeviceType::Nvidia);
+
+  // Only bind(name): no bindIdName/bindIdNameDeviceType. getBindNameValue
+  // must not crash when looking up by device type.
+  op->setBindStrNameDeviceTypeAttr(b.getArrayAttr({dtypeNvidia}));
+  op->setBindStrNameAttr(b.getArrayAttr({b.getStringAttr("only_str_bind")}));
+  EXPECT_TRUE(op->getBindNameValue(DeviceType::Nvidia).has_value());
+  EXPECT_EQ(std::visit(
+                [](const auto &attr) -> std::string {
+                  if constexpr (std::is_same_v<std::decay_t<decltype(attr)>,
+                                               mlir::StringAttr>) {
+                    return attr.str();
+                  } else {
+                    return attr.getLeafReference().str();
+                  }
+                },
+                op->getBindNameValue(DeviceType::Nvidia).value()),
+            "only_str_bind");
+  EXPECT_FALSE(op->getBindNameValue(DeviceType::Host).has_value());
+  op->removeBindStrNameDeviceTypeAttr();
+  op->removeBindStrNameAttr();
+
+  // Only bind(id): no bindStrName/bindStrNameDeviceType. getBindNameValue
+  // must not crash when looking up by device type.
+  op->setBindIdNameDeviceTypeAttr(b.getArrayAttr({dtypeNone}));
+  op->setBindIdNameAttr(
+      b.getArrayAttr({SymbolRefAttr::get(&context, "only_id_bind")}));
+  EXPECT_TRUE(op->getBindNameValue().has_value());
+  EXPECT_FALSE(op->getBindNameValue(DeviceType::Nvidia).has_value());
+  op->removeBindIdNameDeviceTypeAttr();
+  op->removeBindIdNameAttr();
+}
+
 template <typename Op>
 static void testShortDataEntryOpBuilders(OpBuilder &b, MLIRContext &context,
                                          Location loc, DataClause dataClause) {

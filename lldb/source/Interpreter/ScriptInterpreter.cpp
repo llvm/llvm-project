@@ -15,7 +15,9 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/ADT/StringSwitch.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #endif
@@ -47,6 +49,12 @@ void ScriptInterpreter::CollectDataForWatchpointCommandCallback(
 
 StructuredData::DictionarySP ScriptInterpreter::GetInterpreterInfo() {
   return nullptr;
+}
+
+llvm::Expected<FileSpec> ScriptInterpreter::GenerateExtensionTemplate(
+    const std::string &name, std::vector<ExtensionTemplateRequest> &extensions,
+    bool generate_non_abstract_methods, std::string output_file) {
+  return llvm::make_error<UnimplementedError>();
 }
 
 bool ScriptInterpreter::LoadScriptingModule(
@@ -163,6 +171,11 @@ lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
   return frame_list.m_opaque_sp;
 }
 
+lldb::TargetSP ScriptInterpreter::GetOpaqueTypeFromSBTarget(
+    const lldb::SBTarget &target) const {
+  return target.m_opaque_sp;
+}
+
 lldb::ValueObjectSP
 ScriptInterpreter::GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const {
   if (!value.m_opaque_sp)
@@ -181,6 +194,54 @@ ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageLua)))
     return eScriptLanguageLua;
   return eScriptLanguageUnknown;
+}
+
+llvm::StringLiteral
+ScriptInterpreter::ExtensionToString(lldb::ScriptedExtension extension) {
+  switch (extension) {
+  case eScriptedExtensionInvalid:
+    return "Invalid";
+  case eScriptedExtensionOperatingSystem:
+    return "OperatingSystem";
+  case eScriptedExtensionScriptedPlatform:
+    return "ScriptedPlatform";
+  case eScriptedExtensionScriptedProcess:
+    return "ScriptedProcess";
+  case eScriptedExtensionScriptedBreakpointResolver:
+    return "ScriptedBreakpointResolver";
+  case eScriptedExtensionScriptedThreadPlan:
+    return "ScriptedThreadPlan";
+  case eScriptedExtensionScriptedFrameProvider:
+    return "ScriptedFrameProvider";
+  case eScriptedExtensionScriptedHook:
+    return "ScriptedHook";
+  case eScriptedExtensionScriptedThread:
+    return "ScriptedThread";
+  case eScriptedExtensionScriptedFrame:
+    return "ScriptedFrame";
+  case eScriptedExtensionScriptedStackFrameRecognizer:
+    return "ScriptedStackFrameRecognizer";
+  }
+  llvm_unreachable("unhandled ScriptedExtension");
+}
+
+lldb::ScriptedExtension
+ScriptInterpreter::StringToExtension(llvm::StringRef string) {
+  return llvm::StringSwitch<lldb::ScriptedExtension>(string)
+      .CaseLower("OperatingSystem", eScriptedExtensionOperatingSystem)
+      .CaseLower("ScriptedPlatform", eScriptedExtensionScriptedPlatform)
+      .CaseLower("ScriptedProcess", eScriptedExtensionScriptedProcess)
+      .CaseLower("ScriptedBreakpointResolver",
+                 eScriptedExtensionScriptedBreakpointResolver)
+      .CaseLower("ScriptedThreadPlan", eScriptedExtensionScriptedThreadPlan)
+      .CaseLower("ScriptedFrameProvider",
+                 eScriptedExtensionScriptedFrameProvider)
+      .CaseLower("ScriptedHook", eScriptedExtensionScriptedHook)
+      .CaseLower("ScriptedThread", eScriptedExtensionScriptedThread)
+      .CaseLower("ScriptedFrame", eScriptedExtensionScriptedFrame)
+      .CaseLower("ScriptedStackFrameRecognizer",
+                 eScriptedExtensionScriptedStackFrameRecognizer)
+      .Default(eScriptedExtensionInvalid);
 }
 
 Status ScriptInterpreter::SetBreakpointCommandCallback(
@@ -214,6 +275,31 @@ ScriptInterpreter::AcquireInterpreterLock() {
   return std::make_unique<ScriptInterpreterLocker>();
 }
 
+ScriptInterpreter::SanitizedScriptingModuleName
+ScriptInterpreter::GetSanitizedScriptingModuleName(llvm::StringRef name) {
+  std::string sanitized_name(name);
+  std::string conflicting_keyword;
+
+  // FIXME: for Python, don't allow certain characters in imported module
+  // filenames. Theoretically, different scripting languages may have
+  // different sets of forbidden tokens in filenames, and that should
+  // be dealt with by each ScriptInterpreter. For now, just replace dots
+  // with underscores. In order to support anything other than Python
+  // this will need to be reworked.
+  llvm::replace(sanitized_name, '.', '_');
+  llvm::replace(sanitized_name, ' ', '_');
+  llvm::replace(sanitized_name, '-', '_');
+  llvm::replace(sanitized_name, '+', 'x');
+
+  if (IsReservedWord(sanitized_name.c_str())) {
+    conflicting_keyword = sanitized_name;
+    sanitized_name.insert(sanitized_name.begin(), '_');
+  }
+
+  return ScriptInterpreter::SanitizedScriptingModuleName(
+      name.str(), std::move(sanitized_name), std::move(conflicting_keyword));
+}
+
 static void ReadThreadBytesReceived(void *baton, const void *src,
                                     size_t src_len) {
   if (src && src_len) {
@@ -238,7 +324,7 @@ ScriptInterpreterIORedirect::Create(bool enable_io, Debugger &debugger,
   auto nullout = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
                                              File::eOpenOptionWriteOnly);
   if (!nullout)
-    return nullin.takeError();
+    return nullout.takeError();
 
   return std::unique_ptr<ScriptInterpreterIORedirect>(
       new ScriptInterpreterIORedirect(std::move(*nullin), std::move(*nullout)));

@@ -250,11 +250,19 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   lldb::addr_t vtable_address =
       process->ReadPointerFromMemory(member_f_pointer_value, status);
 
+  ABISP abi_sp = process->GetABI();
+  if (abi_sp)
+    vtable_address = abi_sp->FixCodeAddress(vtable_address);
+
   if (status.Fail())
     return optional_info;
 
   lldb::addr_t vtable_address_first_entry =
       process->ReadPointerFromMemory(vtable_address + address_size, status);
+
+  if (abi_sp)
+    vtable_address_first_entry =
+        abi_sp->FixCodeAddress(vtable_address_first_entry);
 
   if (status.Fail())
     return optional_info;
@@ -264,6 +272,10 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   // need it.
   lldb::addr_t possible_function_address =
       process->ReadPointerFromMemory(address_after_vtable, status);
+
+  if (abi_sp)
+    possible_function_address =
+        abi_sp->FixCodeAddress(possible_function_address);
 
   if (status.Fail())
     return optional_info;
@@ -458,6 +470,23 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   StackFrameSP frame = thread.GetStackFrameAtIndex(0);
 
   if (frame) {
+    Address func_start_address =
+        sc.function ? sc.function->GetAddress() : symbol->GetAddress();
+    lldb::addr_t func_start =
+        func_start_address.GetLoadAddress(target_sp.get());
+
+    if (func_start == LLDB_INVALID_ADDRESS)
+      return ret_plan_sp;
+
+    // Advance past the prologue if we stopped there.
+    uint32_t prologue_size = sc.function ? sc.function->GetPrologueByteSize()
+                                         : symbol->GetPrologueByteSize();
+    if (curr_pc < func_start + prologue_size) {
+      func_start_address.Slide(prologue_size);
+      return std::make_shared<ThreadPlanRunToAddress>(
+          thread, func_start_address, stop_others);
+    }
+
     ValueObjectSP value_sp = frame->FindVariable(g_this);
 
     CPPLanguageRuntime::LibCppStdFunctionCallableInfo callable_info =

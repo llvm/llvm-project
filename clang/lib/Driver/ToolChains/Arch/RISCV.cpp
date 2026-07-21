@@ -8,6 +8,7 @@
 
 #include "RISCV.h"
 #include "../Clang.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Options/Options.h"
@@ -168,6 +169,41 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   } else if (CPUFastVectorUnaligned || Triple.isAndroid()) {
     Features.push_back("+unaligned-vector-mem");
   }
+
+  if (Triple.isRISCV32()) {
+    // Handle `-mzilsd-word-align` and `-mzilsd-strict-align` on rv32. These
+    // interact with the scalar alignment options - if unaligned scalar memory
+    // is allowed then that takes precedence over this option, as zilsd accesses
+    // can be 1-byte aligned in this case. Otherwise, the option
+    // `-mzilsd-word-align` option allows zilsd accesses to be 4-byte aligned
+    // rather than the usual 8-byte aligned (`-mzilsd-strict-align`).
+    if (const Arg *A = Args.getLastArg(
+            options::OPT_mstrict_align, options::OPT_mscalar_strict_align,
+            options::OPT_mzilsd_word_align, options::OPT_mno_strict_align,
+            options::OPT_mno_scalar_strict_align,
+            options::OPT_mzilsd_strict_align)) {
+      if (A->getOption().matches(options::OPT_mno_strict_align) ||
+          A->getOption().matches(options::OPT_mno_scalar_strict_align) ||
+          A->getOption().matches(options::OPT_mzilsd_word_align)) {
+        Features.push_back("+zilsd-word-align");
+      } else {
+        Features.push_back("-zilsd-word-align");
+      }
+    }
+  } else {
+    // Zilsd is not available on RV64, so report an error for these options.
+    if (const Arg *A = Args.getLastArg(options::OPT_mzilsd_word_align,
+                                       options::OPT_mzilsd_strict_align)) {
+      D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.getTriple();
+    }
+  }
+
+  SmallVector<std::string, 4> TuneFeatures;
+  if (!riscv::getRISCVTuneCPU(D, Args, &TuneFeatures))
+    return;
+  for (const std::string &TF : TuneFeatures)
+    Features.push_back(Args.MakeArgString(TF));
 
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
@@ -359,4 +395,41 @@ std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,
     return CPU;
 
   return Triple.isRISCV64() ? "generic-rv64" : "generic-rv32";
+}
+
+std::optional<StringRef>
+riscv::getRISCVTuneCPU(const Driver &D, const llvm::opt::ArgList &Args,
+                       SmallVectorImpl<std::string> *TuneFeatures) {
+  const Arg *MTuneArg = Args.getLastArg(options::OPT_mtune_EQ);
+  if (!MTuneArg)
+    return "";
+
+  StringRef MTune = MTuneArg->getValue();
+  // Split the CPU name part from the tune features string.
+  auto [TuneCPU, TFString] = MTune.split(':');
+  if (!Args.hasFlag(options::OPT_mexperimental_mtune_syntax,
+                    options::OPT_mno_experimental_mtune_syntax, false)) {
+    if (!TFString.empty()) {
+      // Only print this diagnostics if it's used for retrieving tune features
+      // to avoid printing the same error message multiple times.
+      if (TuneFeatures)
+        D.Diag(diag::err_drv_invalid_riscv_mtune_string)
+            << 0 << MTune
+            << "require '-mexperimental-mtune-syntax' to use with tune feature "
+               "string";
+      return std::nullopt;
+    }
+    return MTune;
+  }
+
+  if (!TuneFeatures || TFString.empty())
+    return TuneCPU;
+  if (auto E = llvm::RISCV::parseTuneFeatureString(TuneCPU, TFString,
+                                                   *TuneFeatures)) {
+    D.Diag(diag::err_drv_invalid_riscv_mtune_string)
+        << 1 << TFString << llvm::toString(std::move(E));
+    return std::nullopt;
+  }
+
+  return TuneCPU;
 }

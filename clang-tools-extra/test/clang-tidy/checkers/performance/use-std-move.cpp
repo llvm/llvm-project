@@ -3,13 +3,7 @@
 // Definitions used in the tests
 // -----------------------------
 
-namespace std {
-template<class T> struct remove_reference { typedef T type; };
-template<class T> struct remove_reference<T&> { typedef T type; };
-template<class T> struct remove_reference<T&&> { typedef T type; };
-template< class T >
-constexpr typename remove_reference<T>::type&& move( T&& t ) noexcept;
-}
+#include <utility>
 
 struct NonTrivialMoveAssign {
   NonTrivialMoveAssign() = default;
@@ -294,6 +288,21 @@ void NonConvertibleNonTrivialMoveAssignInLoop(NonTrivialMoveAssign& target, NonT
   for(int i = 0; i < 10; ++i)
     target = source;
 }
+
+// Check moving incomplete definition
+// ----------------------------------
+
+struct fwd_cls;
+struct fwd_cls {
+  void ConvertibleNonTrivialMoveAssignReferecingForwardDecl(fwd_cls src) {
+    // CHECK-MESSAGES: [[@LINE+2]]:13: warning: 'src' could be moved here [performance-use-std-move]
+    // CHECK-FIXES: *this = std::move(src);
+    *this = src;
+  }
+  fwd_cls &operator=(const fwd_cls &C);
+  fwd_cls &operator=(fwd_cls &&);
+};
+
 
 // Check moving for invalid / non profitable type or operation
 // -----------------------------------------------------------

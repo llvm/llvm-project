@@ -164,8 +164,8 @@ define <4 x double> @constrained_vector_fdiv_v4f64() #0 {
 ; SZ13-NEXT:    vl %v1, 0(%r1), 3
 ; SZ13-NEXT:    vfddb %v26, %v1, %v0
 ; SZ13-NEXT:    larl %r1, .LCPI4_2
-; SZ13-NEXT:    vl %v1, 0(%r1), 3
-; SZ13-NEXT:    vfddb %v24, %v1, %v0
+; SZ13-NEXT:    vl %v2, 0(%r1), 3
+; SZ13-NEXT:    vfddb %v24, %v2, %v0
 ; SZ13-NEXT:    br %r14
 entry:
   %div = call <4 x double> @llvm.experimental.constrained.fdiv.v4f64(
@@ -628,13 +628,13 @@ define <3 x float> @constrained_vector_fmul_v3f32() #0 {
 ; SZ13-LABEL: constrained_vector_fmul_v3f32:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    vgmf %v0, 1, 8
-; SZ13-NEXT:    larl %r1, .LCPI12_0
 ; SZ13-NEXT:    vgmf %v2, 2, 8
+; SZ13-NEXT:    larl %r1, .LCPI12_0
+; SZ13-NEXT:    larl %r2, .LCPI12_1
 ; SZ13-NEXT:    vgmf %v1, 1, 8
 ; SZ13-NEXT:    meeb %f1, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI12_1
 ; SZ13-NEXT:    meebr %f2, %f0
-; SZ13-NEXT:    meeb %f0, 0(%r1)
+; SZ13-NEXT:    meeb %f0, 0(%r2)
 ; SZ13-NEXT:    vmrhf %v0, %v2, %v0
 ; SZ13-NEXT:    vrepf %v1, %v1, 0
 ; SZ13-NEXT:    vmrhg %v24, %v0, %v1
@@ -713,9 +713,9 @@ define <4 x double> @constrained_vector_fmul_v4f64() #0 {
 ; SZ13-NEXT:    larl %r1, .LCPI14_1
 ; SZ13-NEXT:    vl %v1, 0(%r1), 3
 ; SZ13-NEXT:    larl %r1, .LCPI14_2
+; SZ13-NEXT:    vl %v2, 0(%r1), 3
 ; SZ13-NEXT:    vfmdb %v26, %v1, %v0
-; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    vfmdb %v24, %v1, %v0
+; SZ13-NEXT:    vfmdb %v24, %v1, %v2
 ; SZ13-NEXT:    br %r14
 entry:
   %mul = call <4 x double> @llvm.experimental.constrained.fmul.v4f64(
@@ -883,9 +883,9 @@ define <4 x double> @constrained_vector_fadd_v4f64() #0 {
 ; SZ13-NEXT:    larl %r1, .LCPI19_1
 ; SZ13-NEXT:    vl %v1, 0(%r1), 3
 ; SZ13-NEXT:    larl %r1, .LCPI19_2
+; SZ13-NEXT:    vl %v2, 0(%r1), 3
 ; SZ13-NEXT:    vfadb %v26, %v1, %v0
-; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    vfadb %v24, %v1, %v0
+; SZ13-NEXT:    vfadb %v24, %v1, %v2
 ; SZ13-NEXT:    br %r14
 entry:
   %add = call <4 x double> @llvm.experimental.constrained.fadd.v4f64(
@@ -968,16 +968,16 @@ define <3 x float> @constrained_vector_fsub_v3f32() #0 {
 ;
 ; SZ13-LABEL: constrained_vector_fsub_v3f32:
 ; SZ13:       # %bb.0: # %entry
+; SZ13-NEXT:    vgbm %v0, 61440
 ; SZ13-NEXT:    vgbm %v2, 61440
+; SZ13-NEXT:    vgmf %v3, 1, 1
+; SZ13-NEXT:    vgbm %v4, 61440
+; SZ13-NEXT:    vgmf %v5, 2, 8
 ; SZ13-NEXT:    lzer %f1
 ; SZ13-NEXT:    sebr %f2, %f1
-; SZ13-NEXT:    vgmf %v1, 1, 1
-; SZ13-NEXT:    vgbm %v3, 61440
-; SZ13-NEXT:    vgbm %v0, 61440
-; SZ13-NEXT:    sebr %f3, %f1
-; SZ13-NEXT:    vgmf %v1, 2, 8
-; SZ13-NEXT:    sebr %f0, %f1
-; SZ13-NEXT:    vmrhf %v0, %v3, %v0
+; SZ13-NEXT:    sebr %f4, %f3
+; SZ13-NEXT:    sebr %f0, %f5
+; SZ13-NEXT:    vmrhf %v0, %v4, %v0
 ; SZ13-NEXT:    vrepf %v1, %v2, 0
 ; SZ13-NEXT:    vmrhg %v24, %v0, %v1
 ; SZ13-NEXT:    br %r14
@@ -1009,12 +1009,12 @@ define void @constrained_vector_fsub_v3f64(ptr %a) #0 {
 ; SZ13-LABEL: constrained_vector_fsub_v3f64:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    vl %v0, 0(%r2), 4
-; SZ13-NEXT:    vgmg %v2, 12, 10
-; SZ13-NEXT:    sdb %f2, 16(%r2)
 ; SZ13-NEXT:    vgmg %v1, 12, 10
-; SZ13-NEXT:    vfsdb %v0, %v1, %v0
+; SZ13-NEXT:    sdb %f1, 16(%r2)
+; SZ13-NEXT:    vgmg %v2, 12, 10
+; SZ13-NEXT:    vfsdb %v0, %v2, %v0
 ; SZ13-NEXT:    vst %v0, 0(%r2), 4
-; SZ13-NEXT:    std %f2, 16(%r2)
+; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
   %b = load <3 x double>, ptr %a
@@ -1050,11 +1050,11 @@ define <4 x double> @constrained_vector_fsub_v4f64() #0 {
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI24_0
 ; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    vgmg %v1, 12, 10
 ; SZ13-NEXT:    larl %r1, .LCPI24_1
+; SZ13-NEXT:    vl %v2, 0(%r1), 3
+; SZ13-NEXT:    vgmg %v1, 12, 10
 ; SZ13-NEXT:    vfsdb %v26, %v1, %v0
-; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    vfsdb %v24, %v1, %v0
+; SZ13-NEXT:    vfsdb %v24, %v1, %v2
 ; SZ13-NEXT:    br %r14
 entry:
   %sub = call <4 x double> @llvm.experimental.constrained.fsub.v4f64(
@@ -1126,11 +1126,11 @@ define <3 x float> @constrained_vector_sqrt_v3f32() #0 {
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI27_0
 ; SZ13-NEXT:    sqeb %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI27_1
+; SZ13-NEXT:    larl %r2, .LCPI27_1
+; SZ13-NEXT:    larl %r3, .LCPI27_2
+; SZ13-NEXT:    sqeb %f1, 0(%r2)
 ; SZ13-NEXT:    vrepf %v0, %v0, 0
-; SZ13-NEXT:    sqeb %f1, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI27_2
-; SZ13-NEXT:    sqeb %f2, 0(%r1)
+; SZ13-NEXT:    sqeb %f2, 0(%r3)
 ; SZ13-NEXT:    vmrhf %v1, %v1, %v2
 ; SZ13-NEXT:    vmrhg %v24, %v1, %v0
 ; SZ13-NEXT:    br %r14
@@ -1190,8 +1190,8 @@ define <4 x double> @constrained_vector_sqrt_v4f64() #0 {
 ; SZ13-NEXT:    vl %v0, 0(%r1), 3
 ; SZ13-NEXT:    vfsqdb %v26, %v0
 ; SZ13-NEXT:    larl %r1, .LCPI29_1
-; SZ13-NEXT:    vl %v0, 0(%r1), 3
-; SZ13-NEXT:    vfsqdb %v24, %v0
+; SZ13-NEXT:    vl %v1, 0(%r1), 3
+; SZ13-NEXT:    vfsqdb %v24, %v1
 ; SZ13-NEXT:    br %r14
  entry:
   %sqrt = call <4 x double> @llvm.experimental.constrained.sqrt.v4f64(
@@ -5385,16 +5385,16 @@ define <4 x float> @constrained_vector_fptrunc_v4f64() #0 {
 ; SZ13-NEXT:    ld %f0, 0(%r1)
 ; SZ13-NEXT:    larl %r1, .LCPI98_1
 ; SZ13-NEXT:    ld %f1, 0(%r1)
+; SZ13-NEXT:    larl %r1, .LCPI98_2
+; SZ13-NEXT:    ld %f2, 0(%r1)
+; SZ13-NEXT:    larl %r1, .LCPI98_3
+; SZ13-NEXT:    ld %f3, 0(%r1)
 ; SZ13-NEXT:    ledbra %f0, 0, %f0, 0
 ; SZ13-NEXT:    ledbra %f1, 0, %f1, 0
-; SZ13-NEXT:    larl %r1, .LCPI98_2
-; SZ13-NEXT:    vmrhf %v0, %v1, %v0
-; SZ13-NEXT:    ld %f1, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI98_3
-; SZ13-NEXT:    ld %f2, 0(%r1)
-; SZ13-NEXT:    ledbra %f1, 0, %f1, 0
 ; SZ13-NEXT:    ledbra %f2, 0, %f2, 0
-; SZ13-NEXT:    vmrhf %v1, %v2, %v1
+; SZ13-NEXT:    ledbra %f3, 0, %f3, 0
+; SZ13-NEXT:    vmrhf %v0, %v1, %v0
+; SZ13-NEXT:    vmrhf %v1, %v3, %v2
 ; SZ13-NEXT:    vmrhg %v24, %v1, %v0
 ; SZ13-NEXT:    br %r14
 entry:
@@ -5438,9 +5438,9 @@ define <2 x double> @constrained_vector_fpext_v2f32() #0 {
 ; SZ13-LABEL: constrained_vector_fpext_v2f32:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI100_0
+; SZ13-NEXT:    larl %r2, .LCPI100_1
 ; SZ13-NEXT:    ldeb %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI100_1
-; SZ13-NEXT:    ldeb %f1, 0(%r1)
+; SZ13-NEXT:    ldeb %f1, 0(%r2)
 ; SZ13-NEXT:    vmrhg %v24, %v1, %v0
 ; SZ13-NEXT:    br %r14
 entry:
@@ -5501,15 +5501,15 @@ define <4 x double> @constrained_vector_fpext_v4f32() #0 {
 ; SZ13-LABEL: constrained_vector_fpext_v4f32:
 ; SZ13:       # %bb.0: # %entry
 ; SZ13-NEXT:    larl %r1, .LCPI102_0
+; SZ13-NEXT:    larl %r2, .LCPI102_1
+; SZ13-NEXT:    larl %r3, .LCPI102_2
+; SZ13-NEXT:    larl %r4, .LCPI102_3
 ; SZ13-NEXT:    ldeb %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI102_1
-; SZ13-NEXT:    ldeb %f1, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI102_2
+; SZ13-NEXT:    ldeb %f1, 0(%r2)
+; SZ13-NEXT:    ldeb %f2, 0(%r3)
+; SZ13-NEXT:    ldeb %f3, 0(%r4)
 ; SZ13-NEXT:    vmrhg %v24, %v1, %v0
-; SZ13-NEXT:    ldeb %f0, 0(%r1)
-; SZ13-NEXT:    larl %r1, .LCPI102_3
-; SZ13-NEXT:    ldeb %f1, 0(%r1)
-; SZ13-NEXT:    vmrhg %v26, %v1, %v0
+; SZ13-NEXT:    vmrhg %v26, %v3, %v2
 ; SZ13-NEXT:    br %r14
 entry:
   %result = call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(

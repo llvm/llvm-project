@@ -47,6 +47,7 @@ public:
   /// dependency file contents otherwise.
   std::optional<std::string>
   getDependencyFile(ArrayRef<std::string> CommandLine, StringRef CWD,
+                    dependencies::LookupModuleOutputCallback LookupModuleOutput,
                     DiagnosticConsumer &DiagConsumer);
 
   /// Collect the module dependency in P1689 format for C++20 named modules.
@@ -109,9 +110,12 @@ public:
   llvm::Expected<dependencies::TranslationUnitDeps> getModuleDependencies(
       StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::LookupModuleOutputCallback LookupModuleOutput);
+      dependencies::DependencyActionController &Controller);
 
-  llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
+  /// Returns the worker tracing VFS, if it was requested via the service.
+  llvm::vfs::TracingFileSystem *getWorkerTracingVFS() const {
+    return Worker.getTracingVFS();
+  }
 
 private:
   dependencies::DependencyScanningWorker Worker;
@@ -136,7 +140,7 @@ bool computeDependencies(
     dependencies::DependencyConsumer &Consumer,
     dependencies::DependencyActionController &Controller,
     DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
 class CompilerInstanceWithContext {
   // Context
@@ -172,9 +176,10 @@ class CompilerInstanceWithContext {
                               const std::vector<std::string> &CMD)
       : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
 
-  bool initialize(std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
+  bool initialize(dependencies::DependencyActionController &Controller,
+                  std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
                       DiagEngineWithDiagOpts,
-                  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
+                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS);
 
 public:
   /// @brief Initialize the tool's compiler instance from the commandline.
@@ -187,10 +192,11 @@ public:
   ///        command.
   /// @param DC A diagnostics consumer to report error if the initialization
   ///        fails.
-  static std::optional<CompilerInstanceWithContext>
-  initializeFromCommandline(DependencyScanningTool &Tool, StringRef CWD,
-                            ArrayRef<std::string> CommandLine,
-                            DiagnosticConsumer &DC);
+  static std::optional<CompilerInstanceWithContext> initializeFromCommandline(
+      DependencyScanningTool &Tool, StringRef CWD,
+      ArrayRef<std::string> CommandLine,
+      dependencies::DependencyActionController &Controller,
+      DiagnosticConsumer &DC);
 
   /// @brief Initializing the context and the compiler instance.
   ///        This method must be called before calling
@@ -200,7 +206,8 @@ public:
   /// @return Error if the initializaiton fails.
   static llvm::Expected<CompilerInstanceWithContext>
   initializeOrError(DependencyScanningTool &Tool, StringRef CWD,
-                    ArrayRef<std::string> CommandLine);
+                    ArrayRef<std::string> CommandLine,
+                    dependencies::DependencyActionController &Controller);
 
   bool
   computeDependencies(StringRef ModuleName,
@@ -225,7 +232,17 @@ public:
   computeDependenciesByNameOrError(
       StringRef ModuleName,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::LookupModuleOutputCallback LookupModuleOutput);
+      dependencies::DependencyActionController &Controller);
+
+  // MaxNumOfQueries is the upper limit of the number of names the by-name
+  // scanning API (computeDependencies) can support after a
+  // CompilerInstanceWithContext is initialized. At the time of this commit, the
+  // estimated number of total unique importable names is around 3000 from
+  // Apple's SDKs. We usually import them in parallel, so it is unlikely that
+  // all names are all scanned by the same dependency scanning worker. Therefore
+  // the 64k (20x bigger than our estimate) size is sufficient to hold the
+  // unique source locations to report diagnostics per worker.
+  static const int32_t MaxNumOfQueries = 1 << 16;
 };
 
 } // end namespace tooling

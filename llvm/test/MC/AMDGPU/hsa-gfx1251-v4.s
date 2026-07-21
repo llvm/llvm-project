@@ -65,36 +65,48 @@
 .text
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1251"
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx1251"
+// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1251"
 
 .p2align 8
 .type minimal,@function
 minimal:
+  global_wb scope:SCOPE_CU
+  v_nop
   s_endpgm
 
 .p2align 8
 .type complete,@function
 complete:
+  global_wb scope:SCOPE_CU
+  v_nop
   s_endpgm
 
 .p2align 8
 .type special_sgpr,@function
 special_sgpr:
+  global_wb scope:SCOPE_CU
+  v_nop
   s_endpgm
 
 .p2align 8
 .type disabled_user_sgpr,@function
 disabled_user_sgpr:
+  global_wb scope:SCOPE_CU
+  v_nop
   s_endpgm
 
 .p2align 8
 .type max_lds_size,@function
 max_lds_size:
+  global_wb scope:SCOPE_CU
+  v_nop
   s_endpgm
 
 .p2align 8
 .type max_vgprs,@function
 max_vgprs:
+  global_wb scope:SCOPE_CU
+  v_nop
   s_endpgm
 
 .rodata

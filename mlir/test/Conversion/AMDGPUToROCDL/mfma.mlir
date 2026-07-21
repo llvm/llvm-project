@@ -61,8 +61,8 @@ func.func @mfma_to_rocdl(%arg0 : f32, %arg1 : vector<32xf32>,
   amdgpu.mfma 32x32x8 %arg10 * %arg10 + %arg2 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<4xbf16>, vector<4xbf16>, vector<16xf32>
   // CHECK: rocdl.mfma.f32.16x16x16bf16.1k{{.*}}: (vector<4xi16>, vector<4xi16>, vector<4xf32>) -> vector<4xf32>
   amdgpu.mfma 16x16x16 %arg10 * %arg10 + %arg3 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<4xbf16>, vector<4xbf16>, vector<4xf32>
-  // CHECK: rocdl.mfma.f64.16x16x4f64{{.*}}: (f64, f64, vector<4xf64>) -> vector<4xf64>
-  amdgpu.mfma 16x16x4 %arg11 * %arg11 + %arg12 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : f64, f64, vector<4xf64>
+  // CHECK: rocdl.mfma.f64.16x16x4f64{{.*}}, 0, 0, neg_a|neg_b : (f64, f64, vector<4xf64>) -> vector<4xf64>
+  amdgpu.mfma 16x16x4 %arg11 * %arg11 + %arg12 { abid = 0 : i32, cbsz = 0 : i32, negateA, negateB } blgp = none : f64, f64, vector<4xf64>
   // CHECK: rocdl.mfma.f64.4x4x4f64{{.*}}: (f64, f64, f64) -> f64
   amdgpu.mfma 4x4x4 %arg11 * %arg11 + %arg11 { abid = 0 : i32, cbsz = 0 : i32, blocks = 4 : i32 } blgp = none : f64, f64, f64
   // CHECK: %[[BITCAST_8xi8_i64:.+]] = llvm.bitcast {{.*}} : vector<8xi8> to i64

@@ -351,8 +351,7 @@ define i1 @and_trunc_nuw_implied(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[Y:%.*]], i8 0
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[SELECT]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[TRUNC]], [[ICMP]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[ICMP]]
 ;
   %trunc = trunc nuw i8 %x to i1
   %select = select i1 %trunc, i8 %y, i8 0
@@ -364,10 +363,7 @@ define i1 @and_trunc_nuw_implied(i8 %x, i8 %y) {
 define i1 @or_trunc_nuw_implied(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_trunc_nuw_implied(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[Y:%.*]], i8 0
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[SELECT]], 0
-; CHECK-NEXT:    [[AND:%.*]] = or i1 [[TRUNC]], [[ICMP]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[TRUNC]]
 ;
   %trunc = trunc nuw i8 %x to i1
   %select = select i1 %trunc, i8 %y, i8 0
@@ -378,11 +374,7 @@ define i1 @or_trunc_nuw_implied(i8 %x, i8 %y) {
 
 define i1 @or_trunc_nuw_implied_to_true(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_trunc_nuw_implied_to_true(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[Y:%.*]], i8 0
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[SELECT]], 0
-; CHECK-NEXT:    [[AND:%.*]] = or i1 [[TRUNC]], [[ICMP]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 true
 ;
   %trunc = trunc nuw i8 %x to i1
   %select = select i1 %trunc, i8 %y, i8 0

@@ -15,6 +15,8 @@ add_header_library(
     libc.hdr.types.char8_t
     libc.hdr.types.char32_t
     libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.CPP.type_traits
     libc.src.__support.error_or
     .mbstate
     .character_converter 
@@ -29,7 +31,10 @@ add_header_library(
     libc.hdr.types.char8_t
     libc.hdr.types.char32_t
     libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.CPP.type_traits
     libc.src.__support.error_or
+    libc.src.__support.macros.config
     libc.src.__support.math_extras
     .mbstate
 )
@@ -43,8 +48,9 @@ add_header_library(
     libc.hdr.types.char32_t
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
-    libc.src.__support.error_or
     libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_assert
     libc.src.__support.macros.null_check
     .character_converter
     .mbstate
@@ -94,8 +100,10 @@ add_header_library(
     libc.hdr.types.char32_t
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
-    libc.src.__support.error_or
     libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     .string_converter
     .character_converter
     .mbstate

@@ -4,9 +4,9 @@
 
 module {
   cir.func @foo() {
-    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
-    %1 = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init] {alignment = 4 : i64}
-    %2 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) init : !cir.ptr<!u32i>
+    %1 = cir.alloca "b" align(4) init : !cir.ptr<!u32i>
+    %2 = cir.alloca "x" align(4) init : !cir.ptr<!u32i>
     %3 = cir.const #cir.int<2> : !u32i    cir.store %3, %0 : !u32i, !cir.ptr<!u32i>
     %4 = cir.const #cir.int<1> : !u32i    cir.store %4, %1 : !u32i, !cir.ptr<!u32i>
     %5 = cir.load %0 : !cir.ptr<!u32i>, !u32i
@@ -44,6 +44,7 @@ module {
     %35 = cir.add sat %32, %33: !u32i
     %36 = cir.sub sat %32, %33: !u32i  
     %37 = cir.max %32, %33 : !u32i
+    %38 = cir.min %32, %33 : !u32i
     cir.return
   }
 }
@@ -59,6 +60,7 @@ module {
 // MLIR: = llvm.intr.uadd.sat{{.*}}(i32, i32) -> i32
 // MLIR: = llvm.intr.usub.sat{{.*}}(i32, i32) -> i32 
 // MLIR: = llvm.intr.umax
+// MLIR: = llvm.intr.umin
 
 // LLVM: = mul i32
 // LLVM: = udiv i32
@@ -71,3 +73,4 @@ module {
 // LLVM: = call i32 @llvm.uadd.sat.i32
 // LLVM: = call i32 @llvm.usub.sat.i32
 // LLVM: = call i32 @llvm.umax.i32
+// LLVM: = call i32 @llvm.umin.i32

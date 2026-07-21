@@ -7,8 +7,8 @@ define <2 x double> @fixed_length(<2 x double> %a, <2 x double> %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    # kill: def $v11 killed $v10
-; CHECK-NEXT:    # kill: def $v9 killed $v8
+; CHECK-NEXT:    # kill: def $v11 killed $v10 killed $vtype
+; CHECK-NEXT:    # kill: def $v9 killed $v8 killed $vtype
 ; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    vfadd.vv v9, v8, v10
 ; CHECK-NEXT:    # implicit-def: $v8
@@ -146,4 +146,40 @@ entry:
     <vscale x 1 x double> %b,
     i64 7, i64 %2)
   ret <vscale x 1 x double> %3
+}
+
+define <64 x i8> @coalesce_avl_move_crash(<16 x i8> %0) {
+; CHECK-LABEL: coalesce_avl_move_crash:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, tu, ma
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    # implicit-def: $v8m2
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    # implicit-def: $v12
+; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    # implicit-def: $v10m2
+; CHECK-NEXT:    vmv1r.v v10, v12
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vmv1r.v v11, v12
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 16
+; CHECK-NEXT:    # implicit-def: $v12m4
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    # implicit-def: $v16m2
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    # implicit-def: $v8m4
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
+; CHECK-NEXT:    vmv2r.v v8, v16
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
+; CHECK-NEXT:    vmv2r.v v14, v16
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
+; CHECK-NEXT:    vslideup.vx v8, v12, a0
+; CHECK-NEXT:    ret
+entry:
+  %1 = shufflevector <16 x i8> %0, <16 x i8> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %2 = shufflevector <32 x i8> zeroinitializer, <32 x i8> %1, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  ret <64 x i8> %2
 }

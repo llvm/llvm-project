@@ -17,40 +17,14 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
-#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::detail::createIntrinsicCall;
-
-// Create a call to ROCm-Device-Library function that returns an ID.
-// This is intended to specifically call device functions that fetch things like
-// block or grid dimensions, and so is limited to functions that take one
-// integer parameter.
-static llvm::Value *createDimGetterFunctionCall(llvm::IRBuilderBase &builder,
-                                                Operation *op, StringRef fnName,
-                                                int parameter) {
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::FunctionType *functionType = llvm::FunctionType::get(
-      llvm::Type::getInt64Ty(module->getContext()), // return type.
-      llvm::Type::getInt32Ty(module->getContext()), // parameter type.
-      false);                                       // no variadic arguments.
-  llvm::Function *fn = dyn_cast<llvm::Function>(
-      module->getOrInsertFunction(fnName, functionType).getCallee());
-  llvm::Value *fnOp0 = llvm::ConstantInt::get(
-      llvm::Type::getInt32Ty(module->getContext()), parameter);
-  auto *call = builder.CreateCall(fn, ArrayRef<llvm::Value *>(fnOp0));
-  if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
-    // Zero-extend to 64 bits because the GPU dialect uses 32-bit bounds but
-    // these ockl functions are defined to be 64-bits
-    call->addRangeRetAttr(llvm::ConstantRange(rangeAttr.getLower().zext(64),
-                                              rangeAttr.getUpper().zext(64)));
-  }
-  return call;
-}
 
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
@@ -201,14 +175,48 @@ public:
       if (!value)
         return op->emitOpError(Twine(attribute.getName()) +
                                " must be a dense i32 array attribute");
+      if (value.asArrayRef().size() != 3)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " must contain exactly three values");
+
+      uint64_t FlatWorkGroupSize = 1;
       SmallVector<llvm::Metadata *, 3> metadata;
       llvm::Type *i32 = llvm::IntegerType::get(llvmContext, 32);
       for (int32_t i : value.asArrayRef()) {
+        FlatWorkGroupSize *= static_cast<uint32_t>(i);
         llvm::Constant *constant = llvm::ConstantInt::get(i32, i);
         metadata.push_back(llvm::ConstantAsMetadata::get(constant));
       }
       llvm::Function *llvmFunc =
           moduleTranslation.lookupFunction(func.getName());
+      llvm::SmallString<16> expectedFlatWorkGroupSize;
+      llvm::raw_svector_ostream attrValueStream(expectedFlatWorkGroupSize);
+      attrValueStream << FlatWorkGroupSize << "," << FlatWorkGroupSize;
+
+      StringRef flatAttrName =
+          dialect->getFlatWorkGroupSizeAttrHelper().getName();
+      if (auto flatAttr =
+              dyn_cast_if_present<StringAttr>(op->getAttr(flatAttrName))) {
+        if (flatAttr.getValue() != expectedFlatWorkGroupSize)
+          return op->emitOpError(Twine(flatAttrName) +
+                                 " must match rocdl.reqd_work_group_size");
+      }
+
+      StringRef maxFlatAttrName =
+          dialect->getMaxFlatWorkGroupSizeAttrHelper().getName();
+      if (auto maxFlatAttr =
+              dyn_cast_if_present<IntegerAttr>(op->getAttr(maxFlatAttrName))) {
+        llvm::SmallString<16> expectedMaxFlatWorkGroupSize;
+        llvm::raw_svector_ostream maxAttrValueStream(
+            expectedMaxFlatWorkGroupSize);
+        maxAttrValueStream << "1," << maxFlatAttr.getInt();
+        if (expectedMaxFlatWorkGroupSize != expectedFlatWorkGroupSize)
+          return op->emitOpError(Twine(maxFlatAttrName) +
+                                 " must match rocdl.reqd_work_group_size");
+      }
+
+      llvmFunc->addFnAttr("amdgpu-flat-work-group-size",
+                          expectedFlatWorkGroupSize);
       llvm::MDNode *node = llvm::MDNode::get(llvmContext, metadata);
       llvmFunc->setMetadata("reqd_work_group_size", node);
     }

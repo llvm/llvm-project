@@ -201,14 +201,24 @@ func.func @test_optional_declare(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:  %[[VAL_1:.*]] = arith.constant 42 : index
 // CHECK:  %[[VAL_2:.*]] = fir.shift %[[VAL_1]] : (index) -> !fir.shift<1>
 // CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]](%[[VAL_2]]) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:  %[[VAL_4:.*]] = fir.is_present %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>) -> i1
-// CHECK:  %[[VAL_5:.*]] = fir.if %[[VAL_4]] -> (!fir.box<!fir.array<?xi32>>) {
-// CHECK:    %[[VAL_6:.*]] = fir.rebox %[[VAL_3]](%[[VAL_2]]) : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:    fir.result %[[VAL_6]] : !fir.box<!fir.array<?xi32>>
-// CHECK:  } else {
-// CHECK:    %[[VAL_7:.*]] = fir.absent !fir.box<!fir.array<?xi32>>
-// CHECK:    fir.result %[[VAL_7]] : !fir.box<!fir.array<?xi32>>
-// CHECK:  }
+// CHECK:  %[[VAL_4:.*]] = fir.rebox %[[VAL_3]](%[[VAL_2]]) optional : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xi32>>
+// CHECK-NOT:  fir.if
+// CHECK-NOT:  fir.is_present
+
+func.func @test_optional_declare_embox(%arg0: !fir.ref<!fir.array<?xi32>>) {
+  %c42 = arith.constant 42 : index
+  %0 = fir.shape %c42 : (index) -> !fir.shape<1>
+  %1:2 = hlfir.declare %arg0(%0) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "y"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
+  return
+}
+// CHECK-LABEL:   func.func @test_optional_declare_embox(
+// CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<!fir.array<?xi32>>) {
+// CHECK:  %[[VAL_1:.*]] = arith.constant 42 : index
+// CHECK:  %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
+// CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]](%[[VAL_2]]) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "y"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xi32>>
+// CHECK:  %[[VAL_4:.*]] = fir.embox %[[VAL_3]](%[[VAL_2]]) optional : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+// CHECK-NOT:  fir.if
+// CHECK-NOT:  fir.is_present
 
 func.func @dummy_scope(%arg0: !fir.ref<f32>) {
   %scope = fir.dummy_scope : !fir.dscope
@@ -228,6 +238,17 @@ func.func @assumed_rank_declare(%arg0: !fir.box<!fir.array<*:f32>>) {
 // CHECK-SAME: %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>>) {
 // CHECK:    %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
 // CHECK:    %[[VAL_2:.*]] = fir.rebox_assumed_rank %[[VAL_1]] lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+
+func.func @test_optional_assumed_rank_declare(%arg0: !fir.box<!fir.array<*:f32>>) {
+  %0:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "x"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+  return
+}
+// CHECK-LABEL:  func.func @test_optional_assumed_rank_declare(
+// CHECK-SAME: %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>>) {
+// CHECK:    %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "x"} : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+// CHECK:    %[[VAL_2:.*]] = fir.rebox_assumed_rank %[[VAL_1]] lbs ones optional : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+// CHECK-NOT:  fir.if
+// CHECK-NOT:  fir.is_present
 
 func.func @no_useless_rebox(%arg0: !fir.class<!fir.type<sometype{i:i32}>>) {
   %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.class<!fir.type<sometype{i:i32}>>) -> (!fir.class<!fir.type<sometype{i:i32}>>, !fir.class<!fir.type<sometype{i:i32}>>)

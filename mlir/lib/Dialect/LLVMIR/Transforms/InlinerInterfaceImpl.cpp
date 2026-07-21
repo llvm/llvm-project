@@ -14,7 +14,6 @@
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Analysis/SliceWalk.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -623,8 +622,18 @@ static Value handleByValArgumentInit(OpBuilder &builder, Location loc,
   Value copySize =
       LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
                                builder.getI64IntegerAttr(elementTypeSize));
+  // Preserve the alignment of the destination (alloca) in the memcpy's
+  // arg_attrs.
+  NamedAttribute dstAlignAttr =
+      builder.getNamedAttr(LLVM::LLVMDialect::getAlignAttrName(),
+                           builder.getI64IntegerAttr(targetAlignment));
+  ArrayAttr argAttrs =
+      builder.getArrayAttr({builder.getDictionaryAttr({dstAlignAttr})});
   LLVM::MemcpyOp::create(builder, loc, allocaOp, argument, copySize,
-                         /*isVolatile=*/false);
+                         /*isVolatile=*/false,
+                         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+                         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, argAttrs,
+                         /*res_attrs=*/nullptr);
   return allocaOp;
 }
 
@@ -848,12 +857,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
 void mlir::LLVM::registerInlinerInterface(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
-    dialect->addInterfaces<LLVMInlinerInterface>();
-  });
-}
-
-void mlir::NVVM::registerInlinerInterface(DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
     dialect->addInterfaces<LLVMInlinerInterface>();
   });
 }

@@ -23,7 +23,7 @@ public:
       : Check(Check), SM(SM) {}
   void PragmaDirective(SourceLocation Loc,
                        PragmaIntroducerKind Introducer) override {
-    auto Str = llvm::StringRef(SM.getCharacterData(Loc));
+    auto Str = StringRef(SM.getCharacterData(Loc));
     if (!Str.consume_front("#"))
       return;
     Str = Str.trim();

@@ -48,8 +48,8 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s64) = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:fpr(s32), [[UV1:%[0-9]+]]:fpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i64) = COPY [[COPY]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:fpr(s32), [[UV1:%[0-9]+]]:fpr(s32) = G_UNMERGE_VALUES [[COPY1]](i64)
     ; CHECK-NEXT: [[FCMP:%[0-9]+]]:gpr(s32) = G_FCMP floatpred(uno), [[UV]](s32), [[UV1]]
     ; CHECK-NEXT: $w0 = COPY [[FCMP]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -94,7 +94,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(s32) = COPY $w2
     ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[COPY1]](s32)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr(s32) = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr(i32) = COPY [[COPY2]](s32)
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(s32) = G_SELECT [[COPY2]](s32), [[COPY3]], [[SITOFP]]
     ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:fpr(s32) = G_FPTOSI [[SELECT]](s32)
     %0:_(s32) = COPY $w0
@@ -256,7 +256,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr(s32) = COPY %gpr_copy(s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr(i32) = COPY %gpr_copy(s32)
   ; CHECK-NEXT:   %select:fpr(s32) = G_SELECT %cond_wide(s32), %fpr_copy, [[COPY]]
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -302,7 +302,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr(s32) = COPY %fpr_copy(s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr(i32) = COPY %fpr_copy(s32)
   ; CHECK-NEXT:   %select:gpr(s32) = G_SELECT %cond_wide(s32), [[COPY]], %gpr_copy
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -349,8 +349,8 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr(s64) = COPY %unmerge_src(s64)
-  ; CHECK-NEXT:   %unmerge_1:fpr(s32), %unmerge_2:fpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr(i64) = COPY %unmerge_src(s64)
+  ; CHECK-NEXT:   %unmerge_1:fpr(s32), %unmerge_2:fpr(s32) = G_UNMERGE_VALUES [[COPY]](i64)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:

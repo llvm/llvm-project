@@ -855,6 +855,32 @@ void __ubsan::__ubsan_handle_pointer_overflow_abort(PointerOverflowData *Data,
   Die();
 }
 
+// Returns true if this is an artificial debug location created by the
+// LowerTypeTests pass (see createJumpTableDebugInfo in LLVM).
+static bool isArtificialStack(const SymbolizedStack *S) {
+  static constexpr char kSuffix[] = "ubsan_interface.h";
+  if (!S || !S->info.function || !S->info.file)
+    return false;
+  const char *File = S->info.file;
+  uptr FileLen = internal_strlen(File);
+  uptr SuffixLen = internal_strlen(kSuffix);
+  if (FileLen < SuffixLen)
+    return false;
+  return internal_strcmp(File + FileLen - SuffixLen, kSuffix) == 0;
+}
+
+// Stripping the file name from artificial frames forces the UBSan Diag
+// to fall back to module names. This preserves the original behavior
+// of showing the module, while still allowing the symbolizer
+// to include the helpful (.cfi_jt) function suffix.
+static SymbolizedStack *removeArtificialFiles(SymbolizedStack *FS) {
+  for (SymbolizedStack *S = FS; S; S = S->next) {
+    if (isArtificialStack(S))
+      S->info.file = nullptr;
+  }
+  return FS;
+}
+
 static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
                               ReportOptions Opts) {
   if (Data->CheckKind != CFITCK_ICall && Data->CheckKind != CFITCK_NVMFCall)
@@ -875,7 +901,9 @@ static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
        "control flow integrity check for type %0 failed during %1")
       << Data->Type << CheckKindStr;
 
-  SymbolizedStackHolder FLoc(getSymbolizedLocation(Function));
+  SymbolizedStackHolder FLoc(
+      removeArtificialFiles(getSymbolizedLocation(Function)));
+
   const char *FName = FLoc.get()->info.function;
   if (!FName)
     FName = "(unknown)";

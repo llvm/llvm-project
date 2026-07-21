@@ -89,6 +89,13 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
           RTLIB::impl_armpl_vcbrtq_f32, RTLIB::impl_armpl_vcbrtq_f64})
       setLibcallImplCallingConv(Impl, CallingConv::AArch64_VectorCall);
     break;
+  case VectorLibrary::AMDLIBM:
+    for (RTLIB::LibcallImpl Impl :
+         {RTLIB::impl_amd_vrd2_sincos, RTLIB::impl_amd_vrd4_sincos,
+          RTLIB::impl_amd_vrd8_sincos, RTLIB::impl_amd_vrs4_sincosf,
+          RTLIB::impl_amd_vrs8_sincosf, RTLIB::impl_amd_vrs16_sincosf})
+      setAvailable(Impl);
+    break;
   default:
     break;
   }
@@ -163,10 +170,10 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                    RTLIB::LibcallImpl LibcallImpl) const {
   // TODO: NoCallback probably unsafe in general
   static constexpr Attribute::AttrKind CommonFnAttrs[] = {
-      Attribute::MustProgress, Attribute::NoCallback, Attribute::NoFree,
-      Attribute::NoSync,       Attribute::NoUnwind,   Attribute::WillReturn};
+      Attribute::NoCallback, Attribute::NoFree, Attribute::NoSync,
+      Attribute::NoUnwind, Attribute::WillReturn};
   static constexpr Attribute::AttrKind MemoryFnAttrs[] = {
-      Attribute::MustProgress, Attribute::NoUnwind, Attribute::WillReturn};
+      Attribute::NoUnwind, Attribute::WillReturn};
   static constexpr Attribute::AttrKind CommonPtrArgAttrs[] = {
       Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
 

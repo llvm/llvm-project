@@ -20,6 +20,7 @@ include "mlir/IR/BuiltinTypes.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Dialect/OpenACC/OpenACCAttributes.td"
 include "mlir/Dialect/OpenACC/OpenACCBase.td"
 include "mlir/Dialect/OpenACC/OpenACCOpsTypes.td"
 include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td"
@@ -380,6 +381,15 @@ def DeclareActionAttr : OpenACC_Attr<"DeclareAction", "declare_action"> {
                         OptionalParameter<"SymbolRefAttr">:$postAlloc,
                         OptionalParameter<"SymbolRefAttr">:$preDealloc,
                         OptionalParameter<"SymbolRefAttr">:$postDealloc);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// Attribute to store locations for an optional OpenACC loop directive and one
+// or more loops
+def OpenACC_LoopLocAttr : OpenACC_Attr<"LoopLoc", "loop_loc"> {
+  let summary = "Stores the OpenACC loop directive and per-loop source locations";
+  let parameters = (ins OptionalParameter<"::mlir::LocationAttr">:$directive,
+                        ArrayRefParameter<"::mlir::LocationAttr">:$loops);
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -1444,11 +1454,13 @@ def OpenACC_PrivateRecipeOp
     /// and it must be a valid place for this operation to be inserted. The
     /// `recipeName` must be a unique name to prevent "redefinition of symbol"
     /// IR errors.
+    /// The `hostVar` is the original host variable from which the type and
+    /// language-specific metadata are derived.
     static std::optional<PrivateRecipeOp> createAndPopulate(
         ::mlir::OpBuilder &builder,
         ::mlir::Location loc,
         ::llvm::StringRef recipeName,
-        ::mlir::Type varType,
+        ::mlir::Value hostVar,
         ::llvm::StringRef varName = "",
         ::mlir::ValueRange bounds = {});
 
@@ -1569,11 +1581,13 @@ def OpenACC_FirstprivateRecipeOp
     /// and it must be a valid place for this operation to be inserted. The
     /// `recipeName` must be a unique name to prevent "redefinition of symbol"
     /// IR errors.
+    /// The `hostVar` is the original host variable from which the type and
+    /// language-specific metadata are derived.
     static std::optional<FirstprivateRecipeOp> createAndPopulate(
         ::mlir::OpBuilder &builder,
         ::mlir::Location loc,
         ::llvm::StringRef recipeName,
-        ::mlir::Type varType,
+        ::mlir::Value hostVar,
         ::llvm::StringRef varName = "",
         ::mlir::ValueRange bounds = {});
   }];
@@ -1823,6 +1837,13 @@ def OpenACC_ParallelOp
     /// present.
     mlir::Operation::operand_range
     getNumGangsValues(mlir::acc::DeviceType deviceType);
+
+    /// Return true if the op has any num_gangs, num_workers, or vector_length
+    /// clause for the given device_type.
+    bool hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType);
+
+    /// Check whether num_gangs, num_workers, and vector_length are all 1.
+    bool isEffectivelySerial();
 
     /// Return true if the op has the wait attribute for the
     /// mlir::acc::DeviceType::None device_type.
@@ -2151,6 +2172,13 @@ def OpenACC_KernelsOp
     mlir::Operation::operand_range
     getNumGangsValues(mlir::acc::DeviceType deviceType);
 
+    /// Return true if the op has any num_gangs, num_workers, or vector_length
+    /// clause for the given device_type.
+    bool hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType);
+
+    /// Check whether num_gangs, num_workers, and vector_length are all 1.
+    bool isEffectivelySerial();
+
     /// Return true if the op has the wait attribute for the
     /// mlir::acc::DeviceType::None device_type.
     bool hasWaitOnly();
@@ -2354,7 +2382,8 @@ def OpenACC_DataOp
 def OpenACC_TerminatorOp
     : OpenACC_Op<"terminator", [Pure, Terminator,
                                 DeclareOpInterfaceMethods<
-                                    RegionBranchTerminatorOpInterface>]> {
+                                    RegionBranchTerminatorOpInterface,
+                                    ["getMutableSuccessorOperands"]>]> {
   let summary = "Generic terminator for OpenACC regions";
 
   let description = [{
@@ -2801,6 +2830,10 @@ def OpenACC_LoopOp
     // Return whether this LoopOp has a gang, worker, or vector applying to the
     // 'default'/None device-type.
     bool hasDefaultGangWorkerVector();
+
+    // Return whether this LoopOp has a gang, worker, or vector for the given
+    // device-type.
+    bool hasAnyGangWorkerVector(DeviceType deviceType);
 
     // Used to obtain the parallelism mode for the requested device type.
     // This first checks if the mode is set for the device_type requested.
@@ -3693,6 +3726,33 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
     ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// acc_on_device runtime call
+//===----------------------------------------------------------------------===//
+
+def OpenACC_OnDeviceOp : OpenACC_Op<"on_device"> {
+  let summary = "acc_on_device intrinsic operation";
+
+  let description = [{
+    Represents a call to the OpenACC `acc_on_device` runtime function.
+    Returns whether the current thread is executing on the given device type.
+
+    Example:
+
+    ```mlir
+    %host = arith.constant 1 : i32
+    %on_host = acc.on_device %host : i32 -> i1
+    ```
+  }];
+
+  let arguments = (ins IntOrIndex:$deviceType);
+  let results = (outs I1:$result);
+
+  let assemblyFormat = [{
+    $deviceType attr-dict `:` type($deviceType) `->` type($result)
+  }];
 }
 
 include "mlir/Dialect/OpenACC/OpenACCCGAttributes.td"

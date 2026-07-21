@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 
 class GenericMultiMapDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def setUp(self):

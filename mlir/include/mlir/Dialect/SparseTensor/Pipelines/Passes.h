@@ -151,6 +151,13 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
       desc("Enables GPU acceleration by means of direct library calls (like "
            "cuSPARSE)")};
 
+  /// This option is used to specify the number of threads of GPU codegen.
+  PassOptions::Option<unsigned> gpuNumThreads{
+      *this, "gpu-num-threads",
+      desc("Number of threads for GPU codegen. Setting this to 0 enables "
+           "direct library calls instead."),
+      init(1024)};
+
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
     return SparsificationOptions(parallelization, emitStrategy,

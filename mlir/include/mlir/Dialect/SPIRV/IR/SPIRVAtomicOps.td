@@ -231,6 +231,95 @@ def SPIRV_AtomicCompareExchangeWeakOp : SPIRV_Op<"AtomicCompareExchangeWeak", [
 
 // -----
 
+def SPIRV_AtomicLoadOp : SPIRV_Op<"AtomicLoad", [
+  PointeeTypeMatchTrait<"pointer", "result">,
+]> {
+  let summary = "Atomically load through Pointer using the given Semantics.";
+
+  let description = [{
+    All subparts of the value that is loaded are read atomically with respect
+    to all other atomic accesses to it within Scope.
+
+    Result Type must be a scalar of integer type or floating-point type.
+
+    The type of the value pointed to by Pointer must be the same as Result
+    Type.
+
+    Memory is a memory Scope.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.AtomicLoad <Workgroup> <Acquire> %pointer :
+                          !spirv.ptr<i32, Workgroup>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$semantics
+  );
+
+  let results = (outs
+    SPIRV_Numerical:$result
+  );
+
+  let assemblyFormat = [{
+    $memory_scope $semantics operands attr-dict `:` type($pointer)
+  }];
+
+  let hasCustomAssemblyFormat = 0;
+  let hasVerifier = 0;
+}
+
+// -----
+
+def SPIRV_AtomicStoreOp : SPIRV_Op<"AtomicStore", [
+  PointeeTypeMatchTrait<"pointer", "value">,
+]> {
+  let summary = "Atomically store through Pointer using the given Semantics.";
+
+  let description = [{
+    All subparts of Value are written atomically with respect to all other
+    atomic accesses to it within Scope.
+
+    The type of the value pointed to by Pointer must be the same as the type
+    of Value, and must be a scalar of integer type or floating-point type.
+
+    Memory is a memory Scope.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    spirv.AtomicStore <Workgroup> <Release> %pointer, %value :
+                      !spirv.ptr<i32, Workgroup>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$semantics,
+    SPIRV_Numerical:$value
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $memory_scope $semantics operands attr-dict `:` type($pointer)
+  }];
+
+  let hasCustomAssemblyFormat = 0;
+  let hasVerifier = 0;
+}
+
+// -----
+
 def SPIRV_AtomicExchangeOp : SPIRV_Op<"AtomicExchange", [
   PointeeTypeMatchTrait<"pointer", "value">,
   PointeeTypeMatchTrait<"pointer", "result">,

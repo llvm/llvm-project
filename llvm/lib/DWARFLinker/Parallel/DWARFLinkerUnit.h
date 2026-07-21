@@ -17,6 +17,8 @@
 #include "llvm/DWARFLinker/StringPool.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/LEB128.h"
+#include <memory>
+#include <mutex>
 
 namespace llvm {
 namespace dwarf_linker {
@@ -95,9 +97,18 @@ public:
   /// Emit .debug_info section for unit DIEs.
   Error emitDebugInfo(const Triple &TargetTriple);
 
-  /// Emit .debug_line section.
-  Error emitDebugLine(const Triple &TargetTriple,
-                      const DWARFDebugLine::LineTable &OutLineTable);
+  /// Emit .debug_line section. When \p OrigRowIndices is non-empty it
+  /// must be the same length as \p OutLineTable.Rows and carry the input
+  /// row index each output row originated from (or an invalid-row
+  /// sentinel for manufactured end-of-range rows); if
+  /// \p RowIndexToSeqStartOffset is non-null, the emitter populates it
+  /// with an entry for each real row mapping input row index to the
+  /// byte offset of the DW_LNE_set_address that opens the output
+  /// sequence containing the row.
+  Error emitDebugLine(
+      const Triple &TargetTriple, const DWARFDebugLine::LineTable &OutLineTable,
+      ArrayRef<uint64_t> OrigRowIndices = {},
+      DenseMap<uint64_t, uint64_t> *RowIndexToSeqStartOffset = nullptr);
 
   /// Emit the .debug_str_offsets section for current unit.
   Error emitDebugStringOffsetSection();
@@ -130,6 +141,10 @@ public:
 
     /// Output offset of the DIE this entry describes.
     uint64_t OutOffset;
+
+    /// Output offset of the enclosing non-declaration DIE, used for the
+    /// DW_IDX_parent field of DWARF 5 name index entries.
+    std::optional<uint64_t> ParentOffset;
 
     /// Hash of the fully qualified name.
     uint32_t QualifiedNameHash = 0;
@@ -200,10 +215,17 @@ protected:
   /// Output unit DIE.
   DIE *OutUnitDIE = nullptr;
 
-  /// Cache for file names for this unit.
+  /// Cache for file names for this unit. Entries are heap-allocated so the
+  /// StringRefs handed out by getDirAndFilenameFromLineTable keep pointing at
+  /// valid storage when a later insertion rehashes the map.
   using FileNamesCache =
-      DenseMap<uint64_t, std::pair<std::string, std::string>>;
+      DenseMap<uint64_t, std::unique_ptr<std::pair<std::string, std::string>>>;
   FileNamesCache FileNames;
+
+  /// Guards FileNames. During the parallel type-name assignment phase a unit's
+  /// cache is filled both by its own worker and, through cross-unit type-name
+  /// references, by other units' workers, so access must be serialized.
+  std::mutex FileNamesMutex;
 
   /// Maps a string into the index inside .debug_str_offsets section.
   IndexedValuesMap<const StringEntry *> DebugStringIndexMap;

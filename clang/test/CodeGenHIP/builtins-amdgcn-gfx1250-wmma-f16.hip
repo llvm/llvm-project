@@ -246,7 +246,7 @@ __device__ void test_wmma_f16_16x16x128_bf8_bf8(v8h *out, v16i a, v16i b, v8h c)
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x half>, ptr [[A_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TMP1:%.*]] = load <16 x half>, ptr [[B_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x float>, ptr [[C_ADDR_ASCAST]], align 32
-// CHECK-NEXT:    [[TMP3:%.*]] = call contract <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1 false, <16 x half> [[TMP0]], i1 false, <16 x half> [[TMP1]], i16 0, <8 x float> [[TMP2]], i1 false, i1 true)
+// CHECK-NEXT:    [[TMP3:%.*]] = call contract <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(<16 x half> [[TMP0]], <16 x half> [[TMP1]], i16 0, <8 x float> [[TMP2]], i1 false, i1 true)
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store <8 x float> [[TMP3]], ptr [[TMP4]], align 32
 // CHECK-NEXT:    ret void
@@ -273,7 +273,7 @@ __device__ void test_wmma_f32_16x16x32_f16(v8f *out, v16h a, v16h b, v8f c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x half>, ptr [[A_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TMP1:%.*]] = load <16 x half>, ptr [[B_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x half>, ptr [[C_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP3:%.*]] = call contract <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1 false, <16 x half> [[TMP0]], i1 false, <16 x half> [[TMP1]], i16 0, <8 x half> [[TMP2]], i1 false, i1 true)
+// CHECK-NEXT:    [[TMP3:%.*]] = call contract <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(<16 x half> [[TMP0]], <16 x half> [[TMP1]], i16 0, <8 x half> [[TMP2]], i1 false, i1 true)
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store <8 x half> [[TMP3]], ptr [[TMP4]], align 16
 // CHECK-NEXT:    ret void

@@ -780,11 +780,13 @@ TEST(CloneFunction, CloneFunctionWithSubprograms) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "my_operator", scope: !1, unit: !0, retainedNodes: !{!4})
+    !3 = distinct !DISubprogram(name: "my_operator", scope: !1, type: !8, unit: !0, retainedNodes: !{!4})
     !4 = !DILocalVariable(name: "awaitables", scope: !3)
-    !5 = distinct !DISubprogram(name: "test", scope: !3, unit: !0)
+    !5 = distinct !DISubprogram(name: "test", scope: !3, type: !8, unit: !0)
     !6 = !DILocation(line: 55, column: 15, scope: !3, inlinedAt: !7)
     !7 = distinct !DILocation(line: 73, column: 14, scope: !5)
+    !8 = !DISubroutineType(types: !9)
+    !9 = !{null}
   )";
 
   LLVMContext Context;
@@ -827,13 +829,13 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, enums: !{!14})
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !1, unit: !0, retainedNodes: !9)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !1, unit: !0, retainedNodes: !{!5})
+    !3 = distinct !DISubprogram(name: "test", scope: !1, type: !31, unit: !0, retainedNodes: !9)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !1, type: !31, unit: !0, retainedNodes: !{!5})
     !5 = !DILocalVariable(name: "awaitables", scope: !4, type: !23)
     !6 = distinct !DILexicalBlock(scope: !4, file: !1, line: 1)
     !7 = !DILocation(line: 1, scope: !6, inlinedAt: !8)
     !8 = !DILocation(line: 10, scope: !3)
-    !9 = !{!15, !17, !18, !23, !26, !28, !30}
+    !9 = !{!15, !17, !18, !23, !26, !28, !30, !33}
     !14 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, scope: !0, file: !1, line: 13, size: 200, elements: !{})
     !15 = !DILocalVariable(name: "a", scope: !3)
     !16 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, scope: !3, file: !1, line: 13, size: 208, elements: !{})
@@ -849,6 +851,10 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
     !28 = !DILocalVariable(name: "ptr", scope: !3, type: !27)
     !29 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !27)
     !30 = !DILocalVariable(name: "const_ptr", scope: !3, type: !29)
+    !31 = !DISubroutineType(types: !32)
+    !32 = !{null}
+    !33 = !DIGlobalVariableExpression(var: !34, expr: !DIExpression())
+    !34 = distinct !DIGlobalVariable(name: "global_var", scope: !3, file: !1, line: 5, type: !22, isLocal: true, isDefinition: true)
   )";
 
   LLVMContext Context;
@@ -876,8 +882,10 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
   DISubprogram *ClonedSP = ClonedFunc->getSubprogram();
   EXPECT_NE(FuncSP, nullptr);
   EXPECT_NE(ClonedSP, nullptr);
-  EXPECT_EQ(FuncSP->getRetainedNodes().size(), 7u);
-  EXPECT_EQ(FuncSP->getRetainedNodes().size(),
+  EXPECT_EQ(FuncSP->getRetainedNodes().size(), 8u);
+  // DIGlobalVariableExpressions should be excluded from retainedNodes of the
+  // cloned DISubprogram, as we don't clone them.
+  EXPECT_EQ(FuncSP->getRetainedNodes().size() - 1,
             ClonedSP->getRetainedNodes().size());
 
   // Ensure that Orig node is a clone of Copy by checking that they are
@@ -892,17 +900,20 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
 
   // Check that retained nodes are cloned.
   unsigned I = 0;
-  auto CheckRetainedNode = [&](auto *Node) {
+  auto CheckRetainedNode = [&](auto *Copy) {
     // The order of retained nodes should be preserved.
-    auto *Copy =
-        cast<std::decay_t<decltype(*Node)>>(ClonedSP->getRetainedNodes()[I]);
+    auto *Node =
+        cast<std::decay_t<decltype(*Copy)>>(FuncSP->getRetainedNodes()[I]);
 
     CheckNodeIsCloned(Node, Copy);
 
     ++I;
   };
-  FuncSP->forEachRetainedNode(CheckRetainedNode, CheckRetainedNode,
-                              CheckRetainedNode, CheckRetainedNode);
+  ClonedSP->forEachRetainedNode(
+      CheckRetainedNode, CheckRetainedNode, CheckRetainedNode,
+      CheckRetainedNode, [](MDNode *_) {
+        FAIL() << "DIGlobalVariableExpression should not be cloned.";
+      });
 
   auto ToDerived = [](const DIType *Ty) { return cast<DIDerivedType>(Ty); };
 
@@ -963,12 +974,14 @@ TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5})
+    !3 = distinct !DISubprogram(name: "test", scope: !0, type: !9, unit: !0)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, type: !9, unit: !0, retainedNodes: !{!5})
     !5 = !DILocalVariable(name: "awaitables", scope: !4)
     !6 = distinct !DILexicalBlock(scope: !4, file: !1, line: 1)
     !7 = !DILocation(line: 1, scope: !6, inlinedAt: !8)
     !8 = !DILocation(line: 10, scope: !3)
+    !9 = !DISubroutineType(types: !10)
+    !10 = !{null}
   )";
 
   LLVMContext Context;
@@ -1009,12 +1022,14 @@ TEST(CloneFunction, CloneFunctionToDifferentModule) {
     !llvm.module.flags = !{!0}
     !llvm.dbg.cu = !{!2, !6}
     !0 = !{i32 1, !"Debug Info Version", i32 3}
-    !1 = distinct !DISubprogram(unit: !2)
+    !1 = distinct !DISubprogram(type: !7, unit: !2)
     !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3)
     !3 = !DIFile(filename: "foo.c", directory: "/tmp")
-    !4 = distinct !DISubprogram(unit: !2)
+    !4 = distinct !DISubprogram(type: !7, unit: !2)
     !5 = !DILocation(line: 4, scope: !1)
     !6 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3)
+    !7 = !DISubroutineType(types: !8)
+    !8 = !{null}
   )";
   StringRef DeclAssembly = R"(
     declare void @foo()
@@ -1187,6 +1202,15 @@ TEST_F(CloneModule, Subprogram) {
   EXPECT_EQ(SP->getName(), "f");
   EXPECT_EQ(SP->getFile()->getFilename(), "filename.c");
   EXPECT_EQ(SP->getLine(), (unsigned)4);
+
+  // Check static locals have the correct scope.
+  MDNodeArray LocalDeclsArray = SP->getRetainedNodes();
+  EXPECT_EQ(LocalDeclsArray.size(), 2U);
+  for (auto *Node : LocalDeclsArray) {
+    auto *GVExpr = cast<DIGlobalVariableExpression>(Node);
+    DIGlobalVariable *GV = GVExpr->getVariable();
+    EXPECT_EQ(GV->getScope(), SP);
+  }
 }
 
 TEST_F(CloneModule, FunctionDeclarationMetadata) {
@@ -1244,14 +1268,6 @@ TEST_F(CloneModule, CompileUnit) {
   DISubprogram *SP = NewM->getFunction("f")->getSubprogram();
   EXPECT_TRUE(SP != nullptr);
   EXPECT_EQ(SP->getUnit(), CU);
-
-  // Check globals listed in CU have the correct scope
-  DIGlobalVariableExpressionArray GlobalArray = CU->getGlobalVariables();
-  EXPECT_EQ(GlobalArray.size(), 2U);
-  for (DIGlobalVariableExpression *GVExpr : GlobalArray) {
-    DIGlobalVariable *GV = GVExpr->getVariable();
-    EXPECT_EQ(GV->getScope(), SP);
-  }
 }
 
 TEST_F(CloneModule, Comdat) {
@@ -1333,13 +1349,15 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0, keyInstructions: true)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5}, keyInstructions: true)
+    !3 = distinct !DISubprogram(name: "test", scope: !0, type: !10, unit: !0, keyInstructions: true)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, type: !10, unit: !0, retainedNodes: !{!5}, keyInstructions: true)
     !5 = !DILocalVariable(name: "awaitables", scope: !4)
     !6 = !DILocation(line: 1, scope: !4, inlinedAt: !8, atomGroup: 1, atomRank: 1)
     !7 = !DILocation(line: 2, scope: !3, atomGroup: 1, atomRank: 1)
     !8 = !DILocation(line: 3, scope: !3, atomGroup: 1, atomRank: 1)
     !9 = !DILocation(line: 4, scope: !3, atomGroup: 2, atomRank: 1)
+    !10 = !DISubroutineType(types: !11)
+    !11 = !{null}
   )");
 
   ASSERT_FALSE(verifyModule(*M, &errs()));

@@ -74,3 +74,22 @@ void f(int i) {
 
   char c10 = Foo<std::string>{}.bar(i);
 }
+
+template <typename T>
+struct Wrapper {
+  T value;
+};
+
+void g() {
+  // This used to be a false negative.
+  Wrapper<std::string>().value.data()[10];
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: accessing an element
+  // CHECK-FIXES: Wrapper<std::string>().value[10];
+}
+
+template <typename T>
+void dependent() {
+  T().data()[10];
+}
+
+template void dependent<std::string>();

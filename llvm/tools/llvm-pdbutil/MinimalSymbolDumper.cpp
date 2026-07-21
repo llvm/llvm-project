@@ -638,6 +638,20 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   return Error::success();
 }
 
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            DefRangeRegisterRelIndirSym &Def) {
+  AutoIndent Indent(P, 7);
+  P.formatLine("register = {0}, offset = {1}, offset in udt = {2}, offset in "
+               "parent = {3}, has "
+               "spilled udt = {4}",
+               formatRegisterId(Def.Hdr.Register, CompilationCPU),
+               int32_t(Def.Hdr.BasePointerOffset), int32_t(Def.Hdr.OffsetInUdt),
+               Def.offsetInParent(), Def.hasSpilledUDTMember());
+  P.formatLine("range = {0}, gaps = [{1}]", formatRange(Def.Range),
+               formatGaps(P.getIndentLevel() + 9, Def.Gaps));
+  return Error::success();
+}
+
 Error MinimalSymbolDumper::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterSym &DefRangeRegister) {
   AutoIndent Indent(P, 7);
@@ -917,6 +931,17 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   P.formatLine(
       "type = {0}, register = {1}, offset = {2}", typeIndex(RegRel.Type),
       formatRegisterId(RegRel.Register, CompilationCPU), RegRel.Offset);
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            RegRelativeIndirSym &RegRelIndir) {
+  P.format(" `{0}`", RegRelIndir.Name);
+  AutoIndent Indent(P, 7);
+  P.formatLine("type = {0}, register = {1}, offset = {2}, offset-in-udt = {3}",
+               typeIndex(RegRelIndir.Type),
+               formatRegisterId(RegRelIndir.Register, CompilationCPU),
+               RegRelIndir.Offset, RegRelIndir.OffsetInUdt);
   return Error::success();
 }
 

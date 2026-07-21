@@ -75,9 +75,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, LegalizeAction Action) {
   case NotFound:
     OS << "NotFound";
     break;
-  case UseLegacyRules:
-    OS << "UseLegacyRules";
-    break;
   }
   return OS;
 }
@@ -193,10 +190,6 @@ static bool mutationIsSane(const LegalizeRule &Rule,
 LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
   LLVM_DEBUG(dbgs() << "Applying legalizer ruleset to: "; Query.print(dbgs());
              dbgs() << "\n");
-  if (Rules.empty()) {
-    LLVM_DEBUG(dbgs() << ".. fallback to legacy rules (no rules defined)\n");
-    return {LegalizeAction::UseLegacyRules, 0, LLT{}};
-  }
   for (const LegalizeRule &Rule : Rules) {
     if (Rule.match(Query)) {
       LLVM_DEBUG(dbgs() << ".. match\n");
@@ -343,12 +336,7 @@ void LegalizerInfo::aliasActionDefinitions(unsigned OpcodeTo,
 
 LegalizeActionStep
 LegalizerInfo::getAction(const LegalityQuery &Query) const {
-  LegalizeActionStep Step = getActionDefinitions(Query.Opcode).apply(Query);
-  if (Step.Action != LegalizeAction::UseLegacyRules) {
-    return Step;
-  }
-
-  return getLegacyLegalizerInfo().getAction(Query);
+  return getActionDefinitions(Query.Opcode).apply(Query);
 }
 
 LegalizeActionStep

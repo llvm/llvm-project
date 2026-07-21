@@ -1,0 +1,64 @@
+# RUN: yaml2obj %s 2>&1 | obj2yaml 2>&1 | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        3600
+  PartCount:       8
+  PartOffsets:     [64, 80, 96, 112, 240, 1936, 1964, 2016]
+Parts:
+  - Name:            FKE0
+    Size:            8
+  - Name:            FKE1
+    Size:            8
+  - Name:            FKE2
+    Size:            8
+  - Name:            FKE3
+    Size:            120
+  - Name:            FKE4
+    Size:            1688
+  - Name:            FKE5
+    Size:            20
+  - Name:            ILDN
+    Size:            44
+    DebugName:
+      Flags:           0
+      NameLength:      36
+      DebugName:       0b40fc8650d90fa2e9fd5cadc8eaaace.pdb
+  - Name:            DXIL
+    Size:            28
+    Program:
+      MajorVersion:    6
+      MinorVersion:    5
+      ShaderKind:      5
+      Size:            7
+      DXILMajorVersion: 1
+      DXILMinorVersion: 5
+      DXILSize:        4
+      DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+...
+
+
+
+
+#CHECK:        - Name:            ILDN
+#CHECK-NEXT:     Size:            44
+#CHECK-NEXT:     DebugName:
+#CHECK-NEXT:       Flags:           0
+#CHECK-NEXT:       NameLength:      36
+#CHECK-NEXT:       DebugName:       0b40fc8650d90fa2e9fd5cadc8eaaace.pdb
+#CHECK-NEXT:   - Name:            DXIL
+#CHECK-NEXT:     Size:            28
+#CHECK-NEXT:     Program:
+#CHECK-NEXT:       MajorVersion:    6
+#CHECK-NEXT:       MinorVersion:    5
+#CHECK-NEXT:       ShaderKind:      5
+#CHECK-NEXT:       Size:            7
+#CHECK-NEXT:       DXILMajorVersion: 1
+#CHECK-NEXT:       DXILMinorVersion: 5
+#CHECK-NEXT:       DXILSize:        4
+#CHECK-NEXT:       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE

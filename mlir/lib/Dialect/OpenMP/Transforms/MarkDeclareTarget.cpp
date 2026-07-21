@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -42,28 +42,30 @@ class MarkDeclareTargetPass
 
   void processSymbolRef(SymbolRefAttr symRef, ParentInfo parentInfo,
                         llvm::SmallPtrSet<Operation *, 16> visited) {
-    if (auto currFOp = getOperation().lookupSymbol<func::FuncOp>(symRef)) {
-      auto current =
-          llvm::dyn_cast<omp::DeclareTargetInterface>(currFOp.getOperation());
+    Operation *symOp = getOperation().lookupSymbol(symRef);
+    if (!symOp)
+      return;
+    auto current = llvm::dyn_cast<omp::DeclareTargetInterface>(symOp);
+    if (!current)
+      return;
 
-      if (current.isDeclareTarget()) {
-        auto currentDt = current.getDeclareTargetDeviceType();
+    if (current.isDeclareTarget()) {
+      auto currentDt = current.getDeclareTargetDeviceType();
 
-        // Found the same function twice, with different device_types,
-        // mark as Any as it belongs to both
-        if (currentDt != parentInfo.devTy &&
-            currentDt != omp::DeclareTargetDeviceType::any) {
-          current.setDeclareTarget(omp::DeclareTargetDeviceType::any,
-                                   current.getDeclareTargetCaptureClause(),
-                                   current.getDeclareTargetAutomap());
-        }
-      } else {
-        current.setDeclareTarget(parentInfo.devTy, parentInfo.capClause,
-                                 parentInfo.automap);
+      // Found the same function twice, with different device_types,
+      // mark as Any as it belongs to both
+      if (currentDt != parentInfo.devTy &&
+          currentDt != omp::DeclareTargetDeviceType::any) {
+        current.setDeclareTarget(omp::DeclareTargetDeviceType::any,
+                                 current.getDeclareTargetCaptureClause(),
+                                 current.getDeclareTargetAutomap());
       }
-
-      markNestedFuncs(parentInfo, currFOp, visited);
+    } else {
+      current.setDeclareTarget(parentInfo.devTy, parentInfo.capClause,
+                               parentInfo.automap);
     }
+
+    markNestedFuncs(parentInfo, symOp, visited);
   }
 
   void processReductionRefs(std::optional<mlir::ArrayAttr> symRefs,
@@ -101,7 +103,7 @@ class MarkDeclareTargetPass
         .Case([&](omp::TaskgroupOp op) {
           processReductionRefs(op.getTaskReductionSyms(), parentInfo, visited);
         })
-        .Case([&](omp::TaskloopOp op) {
+        .Case([&](omp::TaskloopContextOp op) {
           processReductionRefs(op.getReductionSyms(), parentInfo, visited);
           processReductionRefs(op.getInReductionSyms(), parentInfo, visited);
         })
@@ -138,16 +140,16 @@ class MarkDeclareTargetPass
   // as implicitly declare target if they are called from within an explicitly
   // marked declare target function or a target region (TargetOp)
   void runOnOperation() override {
-    for (auto functionOp : getOperation().getOps<func::FuncOp>()) {
-      auto declareTargetOp = llvm::dyn_cast<omp::DeclareTargetInterface>(
-          functionOp.getOperation());
-      if (declareTargetOp.isDeclareTarget()) {
-        llvm::SmallPtrSet<Operation *, 16> visited;
-        ParentInfo parentInfo{declareTargetOp.getDeclareTargetDeviceType(),
-                              declareTargetOp.getDeclareTargetCaptureClause(),
-                              declareTargetOp.getDeclareTargetAutomap()};
-        markNestedFuncs(parentInfo, functionOp, visited);
-      }
+    for (auto funcOp : getOperation().getOps<FunctionOpInterface>()) {
+      auto declareTargetOp =
+          llvm::dyn_cast<omp::DeclareTargetInterface>(funcOp.getOperation());
+      if (!declareTargetOp || !declareTargetOp.isDeclareTarget())
+        continue;
+      llvm::SmallPtrSet<Operation *, 16> visited;
+      ParentInfo parentInfo{declareTargetOp.getDeclareTargetDeviceType(),
+                            declareTargetOp.getDeclareTargetCaptureClause(),
+                            declareTargetOp.getDeclareTargetAutomap()};
+      markNestedFuncs(parentInfo, funcOp, visited);
     }
 
     // TODO: Extend to work with reverse-offloading, this shouldn't

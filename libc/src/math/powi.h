@@ -17,4 +17,4 @@ double powi(double x, int y);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_POW_H
+#endif // LLVM_LIBC_SRC_MATH_POWI_H

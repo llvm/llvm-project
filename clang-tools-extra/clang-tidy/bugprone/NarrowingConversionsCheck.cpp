@@ -299,13 +299,13 @@ static bool isFloatExactlyRepresentable(const ASTContext &Context,
   return !Overflows && IsExact;
 }
 
-static llvm::SmallString<64> getValueAsString(const llvm::APSInt &Value,
-                                              uint64_t HexBits) {
-  llvm::SmallString<64> Str;
+static SmallString<64> getValueAsString(const llvm::APSInt &Value,
+                                        uint64_t HexBits) {
+  SmallString<64> Str;
   Value.toString(Str, 10);
   if (HexBits > 0) {
     Str.append(" (0x");
-    llvm::SmallString<32> HexValue;
+    SmallString<32> HexValue;
     Value.toStringUnsigned(HexValue, 16);
     for (size_t I = HexValue.size(); I < (HexBits / 4); ++I)
       Str.append("0");
@@ -550,7 +550,7 @@ void NarrowingConversionsCheck::handleBinaryOperator(const ASTContext &Context,
 
 bool NarrowingConversionsCheck::handleConditionalOperator(
     const ASTContext &Context, const Expr &Lhs, const Expr &Rhs) {
-  if (const auto *CO = llvm::dyn_cast<ConditionalOperator>(&Rhs)) {
+  if (const auto *CO = dyn_cast<ConditionalOperator>(&Rhs)) {
     // We have an expression like so: `output = cond ? lhs : rhs`
     // From the point of view of narrowing conversion we treat it as two
     // expressions `output = lhs` and `output = rhs`.
@@ -563,7 +563,7 @@ bool NarrowingConversionsCheck::handleConditionalOperator(
 
 void NarrowingConversionsCheck::handleConditionalOperatorArgument(
     const ASTContext &Context, const Expr &Lhs, const Expr *Arg) {
-  if (const auto *ICE = llvm::dyn_cast<ImplicitCastExpr>(Arg))
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(Arg))
     if (!Arg->getIntegerConstantExpr(Context))
       Arg = ICE->getSubExpr();
 
@@ -593,9 +593,17 @@ void NarrowingConversionsCheck::handleImplicitCast(
   case CK_IntegralToFloating:
     handleIntegralToFloating(Context, SourceLoc, Lhs, Rhs);
     return;
-  case CK_IntegralCast:
+  case CK_IntegralCast: {
+    const BuiltinType *ToType = getBuiltinType(Lhs);
+    const BuiltinType *FromType = getBuiltinType(Rhs);
+    if (ToType && FromType && FromType->getKind() == BuiltinType::Bool &&
+        ToType->isSignedInteger()) {
+      handleBooleanToSignedIntegral(Context, SourceLoc, Lhs, Rhs);
+      return;
+    }
     handleIntegralCast(Context, SourceLoc, Lhs, Rhs);
     return;
+  }
   case CK_FloatingToBoolean:
     handleFloatingToBoolean(Context, SourceLoc, Lhs, Rhs);
     return;

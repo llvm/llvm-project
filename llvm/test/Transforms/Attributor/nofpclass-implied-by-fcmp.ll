@@ -642,7 +642,7 @@ define float @fcmp_fabs_one_1_neg2_else_arg(float noundef %arg) {
 define float @clamp_olt_largest_denormal_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @clamp_olt_largest_denormal_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_OLT_LARGEST_DENORMAL:%.*]] = fcmp olt float [[ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_OLT_LARGEST_DENORMAL:%.*]] = fcmp olt float [[ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLT_LARGEST_DENORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -654,7 +654,7 @@ define float @clamp_olt_largest_denormal_0.0(float noundef %arg) {
 define float @clamp_ole_largest_denormal_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @clamp_ole_largest_denormal_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_OLE_LARGEST_DENORMAL:%.*]] = fcmp ole float [[ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_OLE_LARGEST_DENORMAL:%.*]] = fcmp ole float [[ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLE_LARGEST_DENORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -666,7 +666,7 @@ define float @clamp_ole_largest_denormal_0.0(float noundef %arg) {
 define float @clamp_ult_largest_denormal_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @clamp_ult_largest_denormal_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_ULT_LARGEST_DENORMAL:%.*]] = fcmp ult float [[ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_ULT_LARGEST_DENORMAL:%.*]] = fcmp ult float [[ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ULT_LARGEST_DENORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -678,7 +678,7 @@ define float @clamp_ult_largest_denormal_0.0(float noundef %arg) {
 define float @clamp_ule_largest_denormal_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @clamp_ule_largest_denormal_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_ULE_LARGEST_DENORMAL:%.*]] = fcmp ule float [[ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_ULE_LARGEST_DENORMAL:%.*]] = fcmp ule float [[ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ULE_LARGEST_DENORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -690,7 +690,7 @@ define float @clamp_ule_largest_denormal_0.0(float noundef %arg) {
 define float @clamp_ogt_largest_denormal_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @clamp_ogt_largest_denormal_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_OGT_LARGEST_DENORMAL:%.*]] = fcmp ogt float [[ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_OGT_LARGEST_DENORMAL:%.*]] = fcmp ogt float [[ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGT_LARGEST_DENORMAL]], float [[ARG]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -702,7 +702,7 @@ define float @clamp_ogt_largest_denormal_0.0(float noundef %arg) {
 define float @clamp_oge_largest_denormal_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @clamp_oge_largest_denormal_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_OGE_LARGEST_DENORMAL:%.*]] = fcmp oge float [[ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_OGE_LARGEST_DENORMAL:%.*]] = fcmp oge float [[ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGE_LARGEST_DENORMAL]], float [[ARG]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -714,7 +714,7 @@ define float @clamp_oge_largest_denormal_0.0(float noundef %arg) {
 define float @clamp_ugt_largest_denormal_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @clamp_ugt_largest_denormal_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_UGT_LARGEST_DENORMAL:%.*]] = fcmp ugt float [[ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_UGT_LARGEST_DENORMAL:%.*]] = fcmp ugt float [[ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGT_LARGEST_DENORMAL]], float [[ARG]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -726,7 +726,7 @@ define float @clamp_ugt_largest_denormal_0.0(float noundef %arg) {
 define float @clamp_uge_largest_denormal_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @clamp_uge_largest_denormal_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_UGE_LARGEST_DENORMAL:%.*]] = fcmp uge float [[ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_UGE_LARGEST_DENORMAL:%.*]] = fcmp uge float [[ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGE_LARGEST_DENORMAL]], float [[ARG]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -738,7 +738,7 @@ define float @clamp_uge_largest_denormal_0.0(float noundef %arg) {
 define float @fcmp_oeq_largest_denormal_arg_else_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan inf nzero nsub norm) float @fcmp_oeq_largest_denormal_arg_else_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_OEQ_LARGEST_DENORMAL:%.*]] = fcmp oeq float [[ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_OEQ_LARGEST_DENORMAL:%.*]] = fcmp oeq float [[ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OEQ_LARGEST_DENORMAL]], float [[ARG]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -751,7 +751,7 @@ define float @clamp_fabs_olt_largest_denormal_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nzero) float @clamp_fabs_olt_largest_denormal_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_FABS_OLT_LARGEST_DENORMAL:%.*]] = fcmp olt float [[FABS_ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_FABS_OLT_LARGEST_DENORMAL:%.*]] = fcmp olt float [[FABS_ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_FABS_OLT_LARGEST_DENORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -765,7 +765,7 @@ define float @clamp_fabs_ole_largest_denormal_0.0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nzero) float @clamp_fabs_ole_largest_denormal_0.0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_FABS_OLE_LARGEST_DENORMAL:%.*]] = fcmp ole float [[FABS_ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_FABS_OLE_LARGEST_DENORMAL:%.*]] = fcmp ole float [[FABS_ARG]], f0x007FFFFF
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_FABS_OLE_LARGEST_DENORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -923,8 +923,8 @@ define float @clamp_fabs_value_ule_1_to_1_copysign(float noundef %arg) {
 define float @clamp_is_ogt_largest_normal_to_largest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(pinf) float @clamp_is_ogt_largest_normal_to_largest_normal(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_OGT_LARGEST_NORMAL:%.*]] = fcmp ogt float [[ARG]], 0x47EFFFFFE0000000
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGT_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
+; CHECK-NEXT:    [[IS_OGT_LARGEST_NORMAL:%.*]] = fcmp ogt float [[ARG]], f0x7F7FFFFF
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGT_LARGEST_NORMAL]], float f0x7F7FFFFF, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.ogt.largest.normal = fcmp ogt float %arg, 0x47EFFFFFE0000000
@@ -936,8 +936,8 @@ define float @clamp_is_ogt_largest_normal_to_largest_normal(float noundef %arg) 
 define float @clamp_is_oge_largest_normal_to_largest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(pinf) float @clamp_is_oge_largest_normal_to_largest_normal(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_OGE_LARGEST_NORMAL:%.*]] = fcmp oge float [[ARG]], 0x47EFFFFFE0000000
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGE_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
+; CHECK-NEXT:    [[IS_OGE_LARGEST_NORMAL:%.*]] = fcmp oge float [[ARG]], f0x7F7FFFFF
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGE_LARGEST_NORMAL]], float f0x7F7FFFFF, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.oge.largest.normal = fcmp oge float %arg, 0x47EFFFFFE0000000
@@ -949,8 +949,8 @@ define float @clamp_is_oge_largest_normal_to_largest_normal(float noundef %arg) 
 define float @clamp_is_ugt_largest_normal_to_largest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan pinf) float @clamp_is_ugt_largest_normal_to_largest_normal(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_UGT_LARGEST_NORMAL:%.*]] = fcmp ugt float [[ARG]], 0x47EFFFFFE0000000
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGT_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
+; CHECK-NEXT:    [[IS_UGT_LARGEST_NORMAL:%.*]] = fcmp ugt float [[ARG]], f0x7F7FFFFF
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGT_LARGEST_NORMAL]], float f0x7F7FFFFF, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.ugt.largest.normal = fcmp ugt float %arg, 0x47EFFFFFE0000000
@@ -962,8 +962,8 @@ define float @clamp_is_ugt_largest_normal_to_largest_normal(float noundef %arg) 
 define float @clamp_is_uge_largest_normal_to_largest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan pinf) float @clamp_is_uge_largest_normal_to_largest_normal(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_UGE_LARGEST_NORMAL:%.*]] = fcmp uge float [[ARG]], 0x47EFFFFFE0000000
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGE_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
+; CHECK-NEXT:    [[IS_UGE_LARGEST_NORMAL:%.*]] = fcmp uge float [[ARG]], f0x7F7FFFFF
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGE_LARGEST_NORMAL]], float f0x7F7FFFFF, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.uge.largest.normal = fcmp uge float %arg, 0x47EFFFFFE0000000
@@ -976,8 +976,8 @@ define float @clamp_fabs_is_ogt_largest_normal_to_largest_normal(float noundef %
 ; CHECK-LABEL: define noundef nofpclass(inf) float @clamp_fabs_is_ogt_largest_normal_to_largest_normal(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_OGT_LARGEST_NORMAL:%.*]] = fcmp ogt float [[FABS_ARG]], 0x47EFFFFFE0000000
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGT_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
+; CHECK-NEXT:    [[IS_OGT_LARGEST_NORMAL:%.*]] = fcmp ogt float [[FABS_ARG]], f0x7F7FFFFF
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGT_LARGEST_NORMAL]], float f0x7F7FFFFF, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
@@ -991,8 +991,8 @@ define float @clamp_fabs_is_oge_largest_normal_to_largest_normal(float noundef %
 ; CHECK-LABEL: define noundef nofpclass(inf) float @clamp_fabs_is_oge_largest_normal_to_largest_normal(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_OGE_LARGEST_NORMAL:%.*]] = fcmp oge float [[FABS_ARG]], 0x47EFFFFFE0000000
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGE_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
+; CHECK-NEXT:    [[IS_OGE_LARGEST_NORMAL:%.*]] = fcmp oge float [[FABS_ARG]], f0x7F7FFFFF
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGE_LARGEST_NORMAL]], float f0x7F7FFFFF, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
@@ -1006,8 +1006,8 @@ define float @clamp_fabs_is_ugt_largest_normal_to_largest_normal(float noundef %
 ; CHECK-LABEL: define noundef nofpclass(nan inf) float @clamp_fabs_is_ugt_largest_normal_to_largest_normal(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_UGT_LARGEST_NORMAL:%.*]] = fcmp ugt float [[FABS_ARG]], 0x47EFFFFFE0000000
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGT_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
+; CHECK-NEXT:    [[IS_UGT_LARGEST_NORMAL:%.*]] = fcmp ugt float [[FABS_ARG]], f0x7F7FFFFF
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGT_LARGEST_NORMAL]], float f0x7F7FFFFF, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
@@ -1021,8 +1021,8 @@ define float @clamp_fabs_is_uge_largest_normal_to_largest_normal(float noundef %
 ; CHECK-LABEL: define noundef nofpclass(nan inf) float @clamp_fabs_is_uge_largest_normal_to_largest_normal(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_UGT_LARGEST_NORMAL:%.*]] = fcmp uge float [[FABS_ARG]], 0x47EFFFFFE0000000
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGT_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
+; CHECK-NEXT:    [[IS_UGT_LARGEST_NORMAL:%.*]] = fcmp uge float [[FABS_ARG]], f0x7F7FFFFF
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGT_LARGEST_NORMAL]], float f0x7F7FFFFF, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
@@ -1040,7 +1040,7 @@ define float @clamp_fabs_ogt_smallest_normal_to_zero(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(inf) float @clamp_fabs_ogt_smallest_normal_to_zero(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_OGT_SMALLEST_NORMAL:%.*]] = fcmp ogt float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_OGT_SMALLEST_NORMAL:%.*]] = fcmp ogt float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGT_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -1056,7 +1056,7 @@ define float @clamp_fabs_oge_smallest_normal_to_zero(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(inf norm) float @clamp_fabs_oge_smallest_normal_to_zero(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_OGE_SMALLEST_NORMAL:%.*]] = fcmp oge float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_OGE_SMALLEST_NORMAL:%.*]] = fcmp oge float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -1071,7 +1071,7 @@ define float @clamp_fabs_olt_smallest_normal_to_zero(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nzero sub) float @clamp_fabs_olt_smallest_normal_to_zero(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_OLT_SMALLEST_NORMAL:%.*]] = fcmp olt float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_OLT_SMALLEST_NORMAL:%.*]] = fcmp olt float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLT_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -1086,7 +1086,7 @@ define float @clamp_fabs_ole_smallest_normal_to_zero(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nzero sub) float @clamp_fabs_ole_smallest_normal_to_zero(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_OLE_SMALLEST_NORMAL:%.*]] = fcmp ole float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_OLE_SMALLEST_NORMAL:%.*]] = fcmp ole float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -1100,7 +1100,7 @@ define float @clamp_fabs_is_is_olt_smallest_normal_to_0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nzero sub) float @clamp_fabs_is_is_olt_smallest_normal_to_0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_OLT_SMALLEST_NORMAL:%.*]] = fcmp olt float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_OLT_SMALLEST_NORMAL:%.*]] = fcmp olt float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLT_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -1114,7 +1114,7 @@ define float @clamp_fabs_is_is_ole_smallest_normal_to_0(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nzero sub) float @clamp_fabs_is_is_ole_smallest_normal_to_0(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_OLE_SMALLEST_NORMAL:%.*]] = fcmp ole float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_OLE_SMALLEST_NORMAL:%.*]] = fcmp ole float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -1128,7 +1128,7 @@ define float @clamp_fabs_oeq_smallest_normal_to_zero(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @clamp_fabs_oeq_smallest_normal_to_zero(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OEQ_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -1142,7 +1142,7 @@ define float @clamp_fabs_one_smallest_normal_to_zero(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(inf nzero sub) float @clamp_fabs_one_smallest_normal_to_zero(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ONE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -1156,7 +1156,7 @@ define float @clamp_fabs_ueq_smallest_normal_to_zero(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan) float @clamp_fabs_ueq_smallest_normal_to_zero(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UEQ_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -1170,7 +1170,7 @@ define float @clamp_fabs_une_smallest_normal_to_zero(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub) float @clamp_fabs_une_smallest_normal_to_zero(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UNE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -2258,7 +2258,7 @@ define float @ret_assumed_uge_known_negative(float %arg, float %unknown) {
 define float @assume_oeq_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_oeq_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_OEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2270,7 +2270,7 @@ define float @assume_oeq_smallest_normal(float noundef %arg) {
 define float @assume_one_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_one_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ONE_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2282,7 +2282,7 @@ define float @assume_one_smallest_normal(float noundef %arg) {
 define float @assume_ueq_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_ueq_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2294,7 +2294,7 @@ define float @assume_ueq_smallest_normal(float noundef %arg) {
 define float @assume_une_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_une_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UNE_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2306,7 +2306,7 @@ define float @assume_une_smallest_normal(float noundef %arg) {
 define float @assume_ord_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_ord_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[IS_ORD_SMALLEST_NORMAL:%.*]] = fcmp ord float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_ORD_SMALLEST_NORMAL:%.*]] = fcmp ord float [[ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ORD_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2318,7 +2318,7 @@ define float @assume_ord_smallest_normal(float noundef %arg) {
 define float @assume_uno_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_uno_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[IS_UNO_SMALLEST_NORMAL:%.*]] = fcmp uno float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_UNO_SMALLEST_NORMAL:%.*]] = fcmp uno float [[ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UNO_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2331,7 +2331,7 @@ define float @assume_fabs_oeq_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_fabs_oeq_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_OEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2345,7 +2345,7 @@ define float @assume_fabs_one_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_fabs_one_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ONE_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2359,7 +2359,7 @@ define float @assume_fabs_ueq_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_fabs_ueq_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2373,7 +2373,7 @@ define float @assume_fabs_une_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_fabs_une_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UNE_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2387,7 +2387,7 @@ define float @assume_fabs_ord_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_fabs_ord_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_ORD_SMALLEST_NORMAL:%.*]] = fcmp ord float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_ORD_SMALLEST_NORMAL:%.*]] = fcmp ord float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ORD_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2401,7 +2401,7 @@ define float @assume_fabs_uno_smallest_normal(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_fabs_uno_smallest_normal(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[IS_UNO_SMALLEST_NORMAL:%.*]] = fcmp uno float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_UNO_SMALLEST_NORMAL:%.*]] = fcmp uno float [[FABS_ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UNO_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2414,7 +2414,7 @@ define float @assume_fabs_uno_smallest_normal(float noundef %arg) {
 define float @assume_oeq_smallest_normal_known_pos(float nofpclass(ninf nsub nnorm nzero) %arg) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_oeq_smallest_normal_known_pos(
 ; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[ARG]], f0x00800000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_OEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2430,7 +2430,7 @@ define float @assume_oeq_smallest_normal_known_pos(float nofpclass(ninf nsub nno
 define float @assume_ole_pinf(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_ole_pinf(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ole float [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ole float [[ARG]], +inf
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2442,7 +2442,7 @@ define float @assume_ole_pinf(float noundef %arg) {
 define float @assume_ole_ninf(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_ole_ninf(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ole float [[ARG]], 0xFFF0000000000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ole float [[ARG]], -inf
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2454,7 +2454,7 @@ define float @assume_ole_ninf(float noundef %arg) {
 define float @assume_ugt_pinf(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_ugt_pinf(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ugt float [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ugt float [[ARG]], +inf
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2466,7 +2466,7 @@ define float @assume_ugt_pinf(float noundef %arg) {
 define float @assume_ugt_ninf(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_ugt_ninf(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ugt float [[ARG]], 0xFFF0000000000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ugt float [[ARG]], -inf
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2479,7 +2479,7 @@ define float @assume_fabs_ole_pinf(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_fabs_ole_pinf(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ole float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ole float [[FABS]], +inf
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -2505,7 +2505,7 @@ define float @assume_fabs_ugt_pinf(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @assume_fabs_ugt_pinf(
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float noundef [[ARG]]) #[[ATTR4]]
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ugt float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ugt float [[FABS]], +inf
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;

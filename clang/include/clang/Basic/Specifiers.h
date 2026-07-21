@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_SPECIFIERS_H
 #define LLVM_CLANG_BASIC_SPECIFIERS_H
 
+#include "clang/Basic/OptionalUnsigned.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -88,7 +89,7 @@ namespace clang {
     TST_typeof_unqualExpr, // C23 typeof_unqual(expression)
     TST_decltype,          // C++11 decltype
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     TST_auto,            // C++11 auto
     TST_decltype_auto,   // C++1y decltype(auto)
     TST_auto_type,       // __auto_type extension
@@ -361,6 +362,8 @@ namespace clang {
     // parameters are assumed to only get null on error.
     NullableResult,
   };
+  using NullabilityKindOrNone = OptionalUnsigned<NullabilityKind>;
+
   /// Prints human-readable debug representation.
   llvm::raw_ostream &operator<<(llvm::raw_ostream&, NullabilityKind);
 

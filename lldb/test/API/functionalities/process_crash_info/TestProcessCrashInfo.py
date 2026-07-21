@@ -26,6 +26,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
         for error in [
             "pointer being freed was not allocated",
             "not an allocated block",
+            "MTE tag mismatch",
         ]:
             if error in output:
                 return True

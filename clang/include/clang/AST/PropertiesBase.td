@@ -77,6 +77,7 @@ def APValueKind : EnumPropertyType<"APValue::ValueKind">;
 def ArraySizeModifier : EnumPropertyType<"ArraySizeModifier">;
 def AttrKind : EnumPropertyType<"attr::Kind">;
 def Attr : PropertyType<"const Attr *">;
+def DeducedKind : EnumPropertyType;
 def AutoTypeKeyword : EnumPropertyType;
 def Bool : PropertyType<"bool">;
 def BuiltinTypeKind : EnumPropertyType<"BuiltinType::Kind">;
@@ -415,6 +416,10 @@ let Class = PropertyTypeCase<APValue, "Struct"> in {
     unsigned numFields = node.getStructNumFields();
     for (unsigned i = 0; i < numFields; ++i)
       structFields.push_back(node.getStructField(i));
+    SmallVector<APValue, 4> structVirtualBases;
+    unsigned numVirtualBases = node.getStructNumVirtualBases();
+    for (unsigned i = 0; i < numVirtualBases; ++i)
+      structVirtualBases.push_back(node.getStructVirtualBase(i));
   }]>;
   def : Property<"bases", Array<APValue>> {
     let Read = [{ structBases }];
@@ -422,13 +427,18 @@ let Class = PropertyTypeCase<APValue, "Struct"> in {
   def : Property<"fields", Array<APValue>> {
     let Read = [{ structFields }];
   }
+  def : Property<"vbases", Array<APValue>> {
+    let Read = [{ structVirtualBases }];
+  }
   def : Creator<[{
     APValue result;
-    result.MakeStruct(bases.size(), fields.size());
+    result.MakeStruct(bases.size(), fields.size(), vbases.size());
     for (unsigned i = 0; i < bases.size(); ++i)
       result.getStructBase(i) = bases[i];
     for (unsigned i = 0; i < fields.size(); ++i)
       result.getStructField(i) = fields[i];
+    for (unsigned i = 0; i < vbases.size(); ++i)
+      result.getStructVirtualBase(i) = vbases[i];
     return result;
   }]>;
 }

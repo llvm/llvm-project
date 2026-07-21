@@ -7,14 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "Hexagon.h"
+#include "HexagonAggressiveRDFCopy.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "RDFCopy.h"
 #include "RDFDeadCode.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -39,13 +42,16 @@ using namespace llvm;
 using namespace rdf;
 
 static unsigned RDFCount = 0;
+extern cl::opt<unsigned> RDFFuncBlockLimit;
 
 static cl::opt<unsigned>
     RDFLimit("hexagon-rdf-limit",
              cl::init(std::numeric_limits<unsigned>::max()));
-
-extern cl::opt<unsigned> RDFFuncBlockLimit;
-
+static cl::opt<bool> EnableAggressiveRDFCopy(
+    "hexagon-aggressive-rdf-copy",
+    cl::desc("Enable aggressive RDF copy propagation with super-register "
+             "support"),
+    cl::init(false), cl::Hidden);
 static cl::opt<bool> RDFDump("hexagon-rdf-dump", cl::Hidden);
 static cl::opt<bool> RDFTrackReserved("hexagon-rdf-track-reserved", cl::Hidden);
 
@@ -85,6 +91,12 @@ struct HexagonCP : public CopyPropagation {
   bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) override;
 };
 
+struct HexagonAggressiveCP : public AggressiveCopyPropagation {
+  HexagonAggressiveCP(DataFlowGraph &G) : AggressiveCopyPropagation(G) {}
+
+  bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) override;
+};
+
 struct HexagonDCE : public DeadCodeElimination {
   HexagonDCE(DataFlowGraph &G, MachineRegisterInfo &MRI)
     : DeadCodeElimination(G, MRI) {}
@@ -114,11 +126,57 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
   DataFlowGraph &DFG = getDFG();
   unsigned Opc = MI->getOpcode();
   switch (Opc) {
+  case Hexagon::A2_combinew: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &HiOp = MI->getOperand(1);
+    const MachineOperand &LoOp = MI->getOperand(2);
+    assert(DstOp.getSubReg() == 0 && "Unexpected subregister");
+    mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_hi),
+            DFG.makeRegRef(HiOp.getReg(), HiOp.getSubReg()));
+    mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_lo),
+            DFG.makeRegRef(LoOp.getReg(), LoOp.getSubReg()));
+    return true;
+  }
+  case Hexagon::A2_addi: {
+    const MachineOperand &A = MI->getOperand(2);
+    if (!A.isImm() || A.getImm() != 0)
+      return false;
+    [[fallthrough]];
+  }
+  case Hexagon::A2_tfr: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    mapRegs(DFG.makeRegRef(DstOp.getReg(), DstOp.getSubReg()),
+            DFG.makeRegRef(SrcOp.getReg(), SrcOp.getSubReg()));
+    return true;
+  }
+  }
+
+  return CopyPropagation::interpretAsCopy(MI, EM);
+}
+
+bool HexagonAggressiveCP::interpretAsCopy(const MachineInstr *MI,
+                                          EqualityMap &EM) {
+  auto mapRegs = [&EM](RegisterRef DstR, RegisterRef SrcR) -> void {
+    EM.insert(std::make_pair(DstR, SrcR));
+  };
+
+  DataFlowGraph &DFG = getDFG();
+  const TargetRegisterInfo &TRI = DFG.getTRI();
+  unsigned Opc = MI->getOpcode();
+  switch (Opc) {
     case Hexagon::A2_combinew: {
+      // Combine instruction is equivalent to double reg copy.
+      // Add double reg copy to map.
       const MachineOperand &DstOp = MI->getOperand(0);
       const MachineOperand &HiOp = MI->getOperand(1);
       const MachineOperand &LoOp = MI->getOperand(2);
       assert(DstOp.getSubReg() == 0 && "Unexpected subregister");
+      unsigned DoubleRegDest = TRI.getMatchingSuperReg(
+          LoOp.getReg(), Hexagon::isub_lo, &Hexagon::DoubleRegsRegClass);
+      if (DoubleRegDest != 0 &&
+          TRI.isSuperRegister(HiOp.getReg(), DoubleRegDest))
+        mapRegs(DFG.makeRegRef(DstOp), DFG.makeRegRef(DoubleRegDest, 0));
       mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_hi),
               DFG.makeRegRef(HiOp.getReg(),  HiOp.getSubReg()));
       mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_lo),
@@ -140,7 +198,7 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
     }
   }
 
-  return CopyPropagation::interpretAsCopy(MI, EM);
+  return AggressiveCopyPropagation::interpretAsCopy(MI, EM);
 }
 
 bool HexagonDCE::run() {
@@ -314,12 +372,22 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
                     : BuildOptions::KeepDeadPhis | BuildOptions::OmitReserved;
   G.build(Cfg);
 
-  if (RDFDump)
-    dbgs() << "Starting copy propagation on: " << MF.getName() << '\n'
-           << PrintNode<FuncNode*>(G.getFunc(), G) << '\n';
-  HexagonCP CP(G);
-  CP.trace(RDFDump);
-  Changed = CP.run();
+  if (EnableAggressiveRDFCopy) {
+    if (RDFDump)
+      dbgs() << "Starting aggressive copy propagation on: " << MF.getName()
+             << '\n'
+             << PrintNode<FuncNode *>(G.getFunc(), G) << '\n';
+    HexagonAggressiveCP CP(G);
+    CP.trace(RDFDump);
+    Changed = CP.run();
+  } else {
+    if (RDFDump)
+      dbgs() << "Starting copy propagation on: " << MF.getName() << '\n'
+             << PrintNode<FuncNode *>(G.getFunc(), G) << '\n';
+    HexagonCP CP(G);
+    CP.trace(RDFDump);
+    Changed = CP.run();
+  }
 
   if (RDFDump)
     dbgs() << "Starting dead code elimination on: " << MF.getName() << '\n'
@@ -336,7 +404,51 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
     Liveness LV(*MRI, G);
     LV.trace(RDFDump);
     LV.computeLiveIns();
-    LV.resetLiveIns();
+
+    // Set entry-block live-ins from the RDF LiveMap: calling-convention
+    // registers may not have direct uses and cannot be recovered by a
+    // backward walk.
+    MachineBasicBlock &EntryMBB = MF.front();
+    {
+      std::vector<MCRegister> Old;
+      for (const MachineBasicBlock::RegisterMaskPair &LI : EntryMBB.liveins())
+        Old.push_back(LI.PhysReg);
+      for (MCRegister R : Old)
+        EntryMBB.removeLiveIn(R);
+      for (RegisterRef R : LV.getLiveMap()[&EntryMBB].refs())
+        EntryMBB.addLiveIn({R.asMCReg(), R.Mask});
+      EntryMBB.sortUniqueLiveIns();
+    }
+
+    // The RDF-based live-in recomputation can leave stale (over-approximate)
+    // physical register live-ins on some blocks, which later confuses passes
+    // like IfConversion into inserting incorrect implicit-use operands. Run a
+    // conventional backward liveness recomputation to correct the live-in
+    // lists. Skip:
+    //   - the entry block: handled above from the RDF LiveMap;
+    //   - EH pads: exception pointer/selector are runtime-established.
+    //
+    // Recompute live-ins one block at a time, visiting successors before
+    // predecessors (post-order). This way each block already has fresh
+    // live-in info from its successors when it is processed.
+    SmallVector<MachineBasicBlock *, 16> Candidates;
+    for (MachineBasicBlock *MBB : post_order(&MF))
+      if (!MBB->isEntryBlock() && !MBB->isEHPad())
+        Candidates.push_back(MBB);
+
+    // One pass is usually enough. If any block's live-ins changed, repeat
+    // because its predecessors may need updating too. Stop after
+    // MaxLiveInSweeps passes to keep compile time bounded.
+    constexpr unsigned MaxLiveInSweeps = 8;
+    for (unsigned Sweep = 0; Sweep != MaxLiveInSweeps; ++Sweep) {
+      bool AnyChanged = false;
+      for (MachineBasicBlock *MBB : Candidates)
+        AnyChanged |= recomputeLiveIns(*MBB);
+      if (!AnyChanged)
+        break;
+    }
+
+    // Recompute kill flags against the updated live-in lists.
     LV.resetKills();
   }
 
