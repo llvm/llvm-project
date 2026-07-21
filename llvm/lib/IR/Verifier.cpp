@@ -1008,6 +1008,14 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             CurrentMD);
     }
 
+    // Enforce the single-operand form of llvm.loop.distribute metadata.
+    if (CurrentMD->getNumOperands() > 0 &&
+        (CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
+         CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.disable")))
+      Check(CurrentMD->getNumOperands() == 1,
+            "Expected one operand for llvm.loop.distribute metadata",
+            CurrentMD);
+
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
           CurrentMD);

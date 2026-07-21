@@ -816,7 +816,7 @@ bool isTensorStore(unsigned Opc) {
 }
 
 unsigned getTemporalHintType(const MCInstrDesc TID) {
-  if (TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet))
+  if (SIInstrFlags::isAtomic(TID))
     return CPol::TH_TYPE_ATOMIC;
   unsigned Opc = TID.getOpcode();
   // Async and Tensor store should have the temporal hint type of TH_TYPE_STORE
@@ -914,7 +914,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
   HasSrc2Acc = TiedIdx != -1;
   Opcode = OpDesc.getOpcode();
 
-  IsVOP3 = VOP3Layout || (OpDesc.TSFlags & SIInstrFlags::VOP3);
+  IsVOP3 = VOP3Layout || SIInstrFlags::isVOP3(OpDesc);
   SrcOperandsNum = AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2)   ? 3
                    : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::imm)  ? 3
                    : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1) ? 2
@@ -937,7 +937,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
       --NumVOPD3Mods;
   }
 
-  if (OpDesc.TSFlags & SIInstrFlags::VOP3)
+  if (SIInstrFlags::isVOP3(OpDesc))
     return;
 
   auto OperandsNum = OpDesc.getNumOperands();
@@ -1072,7 +1072,7 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   auto [OpX, OpY] = getVOPDComponents(VOPDOpcode);
   const auto &OpXDesc = InstrInfo->get(OpX);
   const auto &OpYDesc = InstrInfo->get(OpY);
-  bool VOPD3 = InstrInfo->get(VOPDOpcode).TSFlags & SIInstrFlags::VOPD3;
+  bool VOPD3 = SIInstrFlags::isVOPD3(*InstrInfo, VOPDOpcode);
   VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X, VOPD3);
   VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo, VOPD3);
   return VOPD::InstInfo(OpXInfo, OpYInfo);
@@ -3614,11 +3614,9 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
       AMDGPU::OpName::src0Y, AMDGPU::OpName::NUM_OPERAND_NAMES,
       AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vdstY};
 
-  unsigned TSFlags = Desc.TSFlags;
-
-  if (TSFlags &
-      (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
-       SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
+  if (SIInstrFlags::isVOP1(Desc) || SIInstrFlags::isVOP2(Desc) ||
+      SIInstrFlags::isVOP3Like(Desc) || SIInstrFlags::isVOPC(Desc) ||
+      SIInstrFlags::isDPP(Desc)) {
     switch (Desc.getOpcode()) {
     // LD_SCALE operands ignore MSB.
     case AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32:
@@ -3642,16 +3640,16 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
     return {VOPOps, nullptr};
   }
 
-  if (TSFlags & SIInstrFlags::DS)
+  if (SIInstrFlags::isDS(Desc))
     return {VDSOps, nullptr};
 
-  if (TSFlags & SIInstrFlags::FLAT)
+  if (SIInstrFlags::isFLAT(Desc))
     return {FLATOps, nullptr};
 
-  if (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))
+  if (SIInstrFlags::isBuffer(Desc))
     return {BUFOps, nullptr};
 
-  if (TSFlags & SIInstrFlags::VIMAGE)
+  if (SIInstrFlags::isVIMAGE(Desc))
     return {VIMGOps, nullptr};
 
   if (AMDGPU::isVOPD(Desc.getOpcode())) {
@@ -3660,9 +3658,9 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
             (OpY == AMDGPU::V_FMAMK_F32) ? VOPDFMAMKOpsY : VOPDOpsY};
   }
 
-  assert(!(TSFlags & SIInstrFlags::MIMG));
+  assert(!SIInstrFlags::isMIMG(Desc));
 
-  if (TSFlags & (SIInstrFlags::VSAMPLE | SIInstrFlags::EXP))
+  if (SIInstrFlags::isVSAMPLE(Desc) || SIInstrFlags::isEXP(Desc))
     llvm_unreachable("Sample and export VGPR lowering is not implemented and"
                      " these instructions are not expected on gfx1250");
 
@@ -3671,15 +3669,13 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   const MCInstrDesc &Desc = MII.get(Opcode);
-  uint64_t TSFlags = Desc.TSFlags;
-
-  if (TSFlags & SIInstrFlags::SMRD)
+  if (SIInstrFlags::isSMRD(Desc))
     return Desc.mayLoad() && !Desc.mayStore() && !getSMEMIsBuffer(Opcode);
-  if (!(TSFlags & SIInstrFlags::FLAT))
+  if (!SIInstrFlags::isFLAT(Desc))
     return false;
 
   // Only SV and SVS modes are supported.
-  if (TSFlags & SIInstrFlags::FlatScratch)
+  if (SIInstrFlags::isFlatScratch(MII, Opcode))
     return hasNamedOperand(Opcode, OpName::vaddr);
 
   // Only GVS mode is supported.
