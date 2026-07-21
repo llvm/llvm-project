@@ -646,7 +646,7 @@ bool lldb_private::formatters::swift::Decimal_SummaryProvider(
   if (isNegative)
     d = -d;
 
-  stream.Printf("%lf\n", d);
+  stream.Printf("%lf", d);
   return true;
 }
 class URLComponentsSyntheticChildrenFrontEnd
