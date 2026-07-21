@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
@@ -41,6 +42,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <map>
 #include <memory>
 #include <optional>
@@ -181,13 +183,93 @@ private:
 };
 
 /// Map from global value GUID to corresponding summary structures. Use a
-/// std::map rather than a DenseMap so that pointers to the map's value_type
-/// (which are used by ValueInfo) are not invalidated by insertion. Also it will
-/// likely incur less overhead, as the value type is not very small and the size
-/// of the map is unknown, resulting in inefficiencies due to repeated
-/// insertions and resizing.
-using GlobalValueSummaryMapTy =
-    std::map<GlobalValue::GUID, GlobalValueSummaryInfo>;
+/// DenseMap for O(1) lookup and a std::deque for storage. std::deque
+/// guarantees that pointers to elements are not invalidated by push_back,
+/// which is required because ValueInfo stores a raw pointer to elements of
+/// this container.
+class GlobalValueSummaryMap {
+public:
+  using key_type = GlobalValue::GUID;
+  using mapped_type = GlobalValueSummaryInfo;
+  using value_type = std::pair<key_type, mapped_type>;
+  using iterator = std::deque<value_type>::iterator;
+  using const_iterator = std::deque<value_type>::const_iterator;
+  using size_type = std::deque<value_type>::size_type;
+
+private:
+  /// Vector of pointers into Storage, used for key-sorted iteration.
+  using SortedEntriesVec = SmallVector<const value_type *, 0>;
+
+  DenseMap<key_type, unsigned> Map;
+  std::deque<value_type> Storage;
+
+public:
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(key_type Key, Ts &&...Args) {
+    auto Res = Map.try_emplace(Key, Storage.size());
+    if (Res.second) {
+      Storage.emplace_back(std::piecewise_construct, std::forward_as_tuple(Key),
+                           std::forward_as_tuple(std::forward<Ts>(Args)...));
+      return {std::prev(Storage.end()), true};
+    }
+    return {Storage.begin() + Res.first->second, false};
+  }
+
+  iterator find(key_type Key) {
+    auto It = Map.find(Key);
+    return It == Map.end() ? Storage.end() : Storage.begin() + It->second;
+  }
+
+  const_iterator find(key_type Key) const {
+    auto It = Map.find(Key);
+    return It == Map.end() ? Storage.end() : Storage.begin() + It->second;
+  }
+
+  iterator begin() { return Storage.begin(); }
+  const_iterator begin() const { return Storage.begin(); }
+  iterator end() { return Storage.end(); }
+  const_iterator end() const { return Storage.end(); }
+  size_type size() const { return Storage.size(); }
+  bool empty() const { return Storage.empty(); }
+
+  /// An owning range over the entries sorted by key, yielding each entry by
+  /// reference.
+  class SortedEntriesRange {
+    SortedEntriesVec Entries;
+
+  public:
+    using iterator = pointee_iterator<SortedEntriesVec::const_iterator>;
+
+    explicit SortedEntriesRange(SortedEntriesVec Entries)
+        : Entries(std::move(Entries)) {}
+
+    iterator begin() const { return iterator(Entries.begin()); }
+    iterator end() const { return iterator(Entries.end()); }
+    size_t size() const { return Entries.size(); }
+    bool empty() const { return Entries.empty(); }
+  };
+
+  /// Return an owning range over the entries sorted by key. Storage is in
+  /// insertion order; some serialization paths and tests rely on key-sorted
+  /// iteration.
+  SortedEntriesRange sortedRange() const {
+    return SortedEntriesRange(getSortedEntries());
+  }
+
+private:
+  SortedEntriesVec getSortedEntries() const {
+    SortedEntriesVec Sorted;
+    Sorted.reserve(Storage.size());
+    for (const auto &E : Storage)
+      Sorted.push_back(&E);
+    llvm::sort(Sorted, [](const auto *A, const auto *B) {
+      return A->first < B->first;
+    });
+    return Sorted;
+  }
+};
+
+using GlobalValueSummaryMapTy = GlobalValueSummaryMap;
 
 /// Struct that holds a reference to a particular GUID in a global value
 /// summary.
@@ -1544,7 +1626,7 @@ private:
 
   GlobalValueSummaryMapTy::value_type *
   getOrInsertValuePtr(GlobalValue::GUID GUID) {
-    return &*GlobalValueMap.emplace(GUID, GlobalValueSummaryInfo(HaveGVs))
+    return &*GlobalValueMap.try_emplace(GUID, GlobalValueSummaryInfo(HaveGVs))
                  .first;
   }
 
@@ -1582,6 +1664,11 @@ public:
   gvsummary_iterator end() { return GlobalValueMap.end(); }
   const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
   size_t size() const { return GlobalValueMap.size(); }
+
+  GlobalValueSummaryMapTy::SortedEntriesRange
+  sortedGlobalValueSummariesRange() const {
+    return GlobalValueMap.sortedRange();
+  }
 
   const std::vector<uint64_t> &stackIds() const { return StackIds; }
 
@@ -1750,12 +1837,19 @@ public:
     return ValueInfo(HaveGVs, VP);
   }
 
-  /// Return a ValueInfo for \p GV and mark it as belonging to GV.
-  ValueInfo getOrInsertValueInfo(const GlobalValue *GV) {
+  /// Return a ValueInfo for \p GV with GUID \p GUID and mark it as belonging to
+  /// GV.
+  ValueInfo getOrInsertValueInfo(const GlobalValue *GV,
+                                 GlobalValue::GUID GUID) {
     assert(HaveGVs);
-    auto VP = getOrInsertValuePtr(GV->getGUID());
+    auto VP = getOrInsertValuePtr(GUID);
     VP->second.U.GV = GV;
     return ValueInfo(HaveGVs, VP);
+  }
+
+  /// Return a ValueInfo for \p GV and mark it as belonging to GV.
+  ValueInfo getOrInsertValueInfo(const GlobalValue *GV) {
+    return getOrInsertValueInfo(GV, GV->getGUID());
   }
 
   /// Return the GUID for \p OriginalId in the OidGuidMap.

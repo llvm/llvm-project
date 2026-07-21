@@ -74,15 +74,14 @@ DecodeGPR64x8ClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
   return Success;
 }
 
-template <unsigned Min, unsigned Max>
-static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder) {
-  unsigned Reg = (RegNo * 2) + Min;
-  if (Reg < Min || Reg > Max || (Reg & 1))
+template <unsigned RegClassID, unsigned Multiple, unsigned Min, unsigned Max>
+static DecodeStatus
+DecodeMulMinMaxRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder) {
+  unsigned Reg = (RegNo * Multiple) + Min;
+  if (Reg < Min || Reg > Max || (Reg % Multiple))
     return Fail;
-  MCRegister Register =
-      getAArch64MCRegisterClass(AArch64::ZPRRegClassID).getRegister(Reg);
+  MCRegister Register = getAArch64MCRegisterClass(RegClassID).getRegister(Reg);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -1465,6 +1464,16 @@ static DecodeStatus DecodeImm8OptLsl(MCInst &Inst, unsigned Imm, uint64_t Addr,
     return Fail;
   Inst.addOperand(MCOperand::createImm(Val));
   Inst.addOperand(MCOperand::createImm(Shift));
+  return Success;
+}
+
+static DecodeStatus DecodeHinteUImm16(MCInst &Inst, unsigned Imm, uint64_t Addr,
+                                      const MCDisassembler *Decoder) {
+  if (Imm > 65535 ||
+      (Imm >= 12319 && Imm <= 16383 && ((Imm - 12319) % 32) == 0))
+    return Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
   return Success;
 }
 

@@ -862,12 +862,13 @@ bool xegpu::matchSplitDimExpansion(
 //===----------------------------------------------------------------------===//
 
 // Pre-computes distributed VectorType mappings for every value carried through
-// an SCF loop (scf.while, scf.for): block args (iter_args /
-// before-/after-args), loop results, and the terminator operands feeding them.
+// an SCF region-branch op (scf.while, scf.for, scf.if): block args (iter_args /
+// before-/after-args), op results, and the terminator operands feeding them.
 // These positions share one logical value and must convert identically, so each
 // is derived from a single source -- the layout of the feeding value (loop
-// init, or `scf.condition` operand) -- via `getDistributeLayoutAttr(Value)`,
-// and keyed by `Value`. Keying by Value is required because the SCF converters
+// init, `scf.condition` operand, or `scf.if` result) -- via
+// `getDistributeLayoutAttr(Value)`, and keyed by `Value`. Keying by Value is
+// required because the SCF converters
 // detach/replace the loop body mid-conversion (scf.while detaches before/after
 // blocks -> a detached-arg layout query trips an ilist assertion; scf.for
 // rebuilds the op, which loses the temporary `layout_operand_N` attrs -> the
@@ -922,6 +923,19 @@ xegpu::precomputeLoopBlockArgTypes(Operation *topLevelOp,
            llvm::zip(forOp.getInitArgs(), forOp.getRegionIterArgs(),
                      forOp.getResults(), yieldOp.getOperands()))
         recordTypes(init, {arg, res, yieldVal});
+      return;
+    }
+    if (auto ifOp = dyn_cast<scf::IfOp>(op)) {
+      // Each result and its then/else yield operands share one position and
+      // must convert identically; derive all from the result's layout.
+      scf::YieldOp thenYield = ifOp.thenYield();
+      scf::YieldOp elseYield = ifOp.elseBlock() ? ifOp.elseYield() : nullptr;
+      for (auto [idx, res] : llvm::enumerate(ifOp.getResults())) {
+        SmallVector<Value> dests{res, thenYield.getOperand(idx)};
+        if (elseYield)
+          dests.push_back(elseYield.getOperand(idx));
+        recordTypes(res, dests);
+      }
       return;
     }
   });

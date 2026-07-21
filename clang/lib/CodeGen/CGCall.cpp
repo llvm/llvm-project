@@ -988,11 +988,16 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
       CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
     if (!CoercedType)
       CoercedType = getTypes().ConvertType(Type);
+    // A transparent union is passed as its first field, so the extend keys off
+    // that field's integral type, matching the classifier's
+    // useFirstFieldIfTransparentUnion.  Passing the union type to
+    // ABIArgInfo::getSignExtend would trip its integral-type assert.
+    QualType ExtendType = useFirstFieldIfTransparentUnion(Type);
     if (AbiInfo.isSignExt())
-      return ABIArgInfo::getSignExtend(Type, CoercedType);
+      return ABIArgInfo::getSignExtend(ExtendType, CoercedType);
     if (AbiInfo.isZeroExt())
-      return ABIArgInfo::getZeroExtend(Type, CoercedType);
-    return ABIArgInfo::getExtend(Type, CoercedType);
+      return ABIArgInfo::getZeroExtend(ExtendType, CoercedType);
+    return ABIArgInfo::getExtend(ExtendType, CoercedType);
   }
   case llvm::abi::ArgInfo::Indirect: {
     CharUnits Alignment =
@@ -1056,7 +1061,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
-  } else if (CGM.shouldUseLLVMABILowering()) {
+  } else if (CGM.shouldUseLLVMABILowering(CC)) {
     CGM.computeABIInfoUsingLib(*FI);
   } else {
     CGM.getABIInfo().computeInfo(*FI);
@@ -3171,15 +3176,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // but not if clang decides it must emit a packed struct, or the
       // user specifies increased alignment requirements.)
       //
-      // This is different from indirect *not* byval, where the object
-      // exists already, and the align attribute is purely
-      // informative.
+      // This is different from indirect *not* byval, where an aligned copy is
+      // already created by the caller, and the align attribute is purely
+      // informative. However, this can still be useful information for
+      // optimizations, such as giving us one necessary condition for checking
+      // if a load to this pointer can be speculatively executed.
       assert(!Align.isZero());
-
-      // For now, only add this when we have a byval argument.
-      // TODO: be less lazy about updating test cases.
-      if (AI.getIndirectByVal())
-        Attrs.addAlignmentAttr(Align.getQuantity());
+      Attrs.addAlignmentAttr(Align.getQuantity());
 
       // byval disables readnone and readonly.
       AddPotentialArgAccess();
@@ -6700,13 +6703,17 @@ CGCallee CGCallee::prepareConcreteCallee(CodeGenFunction &CGF) const {
 
 RValue CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
                                   AggValueSlot Slot) {
-  VAListAddr = VE->isMicrosoftABI() ? EmitMSVAListRef(VE->getSubExpr())
-                                    : EmitVAListRef(VE->getSubExpr());
+  VAListAddr = VE->isMicrosoftABI()
+                   ? EmitMSVAListRef(VE->getSubExpr())
+                   : (VE->isZOSABI() ? EmitZOSVAListRef(VE->getSubExpr())
+                                     : EmitVAListRef(VE->getSubExpr()));
   QualType Ty = VE->getType();
   if (Ty->isVariablyModifiedType())
     EmitVariablyModifiedType(Ty);
   if (VE->isMicrosoftABI())
     return CGM.getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty, Slot);
+  if (VE->isZOSABI())
+    return CGM.getABIInfo().EmitZOSVAArg(*this, VAListAddr, Ty, Slot);
   return CGM.getABIInfo().EmitVAArg(*this, VAListAddr, Ty, Slot);
 }
 

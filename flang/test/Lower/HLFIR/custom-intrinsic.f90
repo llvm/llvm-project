@@ -705,7 +705,7 @@ end subroutine
 ! CHECK:           %[[VAL_24:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_25:.*]] = arith.cmpi sgt, %[[VAL_17]], %[[VAL_24]] : index
 ! CHECK:           %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_17]], %[[VAL_24]] : index
-! CHECK:           %[[VAL_27:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEa.alloc"}
+! CHECK:           %[[VAL_27:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFallocatables_testEa.alloc"}
 ! CHECK:           %[[VAL_28:.*]] = fir.shape %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_29:.*]] = fir.embox %[[VAL_27]](%[[VAL_28]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
 ! CHECK:           fir.store %[[VAL_29]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
@@ -724,7 +724,7 @@ end subroutine
 ! CHECK:           %[[VAL_42:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_43:.*]] = arith.cmpi sgt, %[[VAL_35]], %[[VAL_42]] : index
 ! CHECK:           %[[VAL_44:.*]] = arith.select %[[VAL_43]], %[[VAL_35]], %[[VAL_42]] : index
-! CHECK:           %[[VAL_45:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEb.alloc"}
+! CHECK:           %[[VAL_45:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFallocatables_testEb.alloc"}
 ! CHECK:           %[[VAL_46:.*]] = fir.shape %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_47:.*]] = fir.embox %[[VAL_45]](%[[VAL_46]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
 ! CHECK:           fir.store %[[VAL_47]] to %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
@@ -743,7 +743,7 @@ end subroutine
 ! CHECK:           %[[VAL_60:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_61:.*]] = arith.cmpi sgt, %[[VAL_53]], %[[VAL_60]] : index
 ! CHECK:           %[[VAL_62:.*]] = arith.select %[[VAL_61]], %[[VAL_53]], %[[VAL_60]] : index
-! CHECK:           %[[VAL_63:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEc.alloc"}
+! CHECK:           %[[VAL_63:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFallocatables_testEc.alloc"}
 ! CHECK:           %[[VAL_64:.*]] = fir.shape %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_65:.*]] = fir.embox %[[VAL_63]](%[[VAL_64]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
 ! CHECK:           fir.store %[[VAL_65]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>

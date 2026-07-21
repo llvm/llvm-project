@@ -399,6 +399,17 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
     killAndFlowOrigin(*UO, *SubExpr);
     return;
   }
+  case UO_Plus: {
+    // Unary plus on a pointer is the identity (`+p == p`), so the prvalue
+    // result carries the operand's loans. Flow the operand's rvalue origins
+    // (peeling storage only when the operand is itself a glvalue).
+    if (!UO->getType()->isPointerType())
+      return;
+    const Expr *SubExpr = UO->getSubExpr();
+    flow(getOriginsList(*UO),
+         getRValueOrigins(SubExpr, getOriginsList(*SubExpr)), /*Kill=*/true);
+    return;
+  }
   case UO_PreInc:
   case UO_PostInc:
   case UO_PreDec:
@@ -845,9 +856,12 @@ void FactsGenerator::handleFullExprCleanup(
 }
 
 void FactsGenerator::handleExitBlock() {
+  bool IsDestructor = isa_and_nonnull<CXXDestructorDecl>(AC.getDecl());
   for (const Origin &O : FactMgr.getOriginMgr().getOrigins())
-    if (auto *FD = dyn_cast_if_present<FieldDecl>(O.getDecl()))
-      // Create FieldEscapeFacts for all field origins that remain live at exit.
+    // Create FieldEscapeFacts for all field origins that remain live at exit.
+    // Fields in destructors do not escape since the object is being destroyed.
+    if (auto *FD = dyn_cast_if_present<FieldDecl>(O.getDecl());
+        FD && !IsDestructor)
       EscapesInCurrentBlock.push_back(
           FactMgr.createFact<FieldEscapeFact>(O.ID, FD));
     else if (auto *VD = dyn_cast_if_present<VarDecl>(O.getDecl())) {

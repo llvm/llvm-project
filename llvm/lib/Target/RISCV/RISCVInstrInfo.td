@@ -349,6 +349,8 @@ def uimm32 : RISCVUImmOp<32>;
 def uimm48 : RISCVUImmOp<48>;
 def uimm64 : RISCVUImmOp<64>;
 
+def simm12 : RISCVSImmLeafOp<12>;
+
 def simm12_lo : RISCVSImmLeafOp<12> {
   let ParserMatchClass = SImmAsmOperand<12, "LO">;
   let MCOperandPredicate = [{

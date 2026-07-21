@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Compiler.h"
@@ -34,24 +35,27 @@ class MCInst;
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetFeatureKV {
-private:
-  const char *Key;                      ///< K-V key string
-  const char *Desc;                     ///< Help descriptor
-
-public:
+  uint16_t KeyStrOff;
+  uint16_t DescStrOff;
   unsigned Value;                       ///< K-V integer value
   FeatureBitArray Implies;              ///< K-V bit mask
 
-  constexpr SubtargetFeatureKV(const char *Key, const char *Desc,
+  constexpr SubtargetFeatureKV(uint16_t KeyStrOff, uint16_t DescStrOff,
                                unsigned Value, FeatureBitArray Implies)
-      : Key(Key), Desc(Desc), Value(Value), Implies(Implies) {}
+      : KeyStrOff(KeyStrOff), DescStrOff(DescStrOff), Value(Value),
+        Implies(Implies) {}
 
   // Because of relative string offsets, this type is not copyable.
   SubtargetFeatureKV(const SubtargetFeatureKV &) = delete;
   SubtargetFeatureKV &operator=(const SubtargetFeatureKV &) = delete;
 
-  const char *key() const { return Key; }
-  const char *desc() const { return Desc; }
+  const char *key() const {
+    return reinterpret_cast<const char *>(this) + KeyStrOff;
+  }
+
+  const char *desc() const {
+    return reinterpret_cast<const char *>(this) + DescStrOff;
+  }
 
   /// Compare routine for std::lower_bound
   bool operator<(StringRef S) const { return StringRef(key()) < S; }
@@ -62,30 +66,34 @@ public:
   }
 };
 
+template <size_t NumFeatures, size_t FeatureStrTabSize>
+struct SubtargetFeatureKVStorage {
+  SubtargetFeatureKV Features[NumFeatures];
+  char Strings[FeatureStrTabSize];
+};
+
 //===----------------------------------------------------------------------===//
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetSubTypeKV {
-private:
-  const char *Key; ///< K-V key string
-  const MCSchedModel *SchedModel;
-
-public:
+  uint16_t KeyStrOff;
+  unsigned SchedModelIdx;
   FeatureBitArray Implies;              ///< K-V bit mask
   FeatureBitArray TuneImplies;          ///< K-V bit mask
 
-  constexpr SubtargetSubTypeKV(const char *Key, FeatureBitArray Implies,
+  constexpr SubtargetSubTypeKV(uint16_t KeyStrOff, FeatureBitArray Implies,
                                FeatureBitArray TuneImplies,
-                               const MCSchedModel *SchedModel)
-      : Key(Key), SchedModel(SchedModel), Implies(Implies),
+                               unsigned SchedModelIdx)
+      : KeyStrOff(KeyStrOff), SchedModelIdx(SchedModelIdx), Implies(Implies),
         TuneImplies(TuneImplies) {}
 
   // Because of relative string offsets, this type is not copyable.
   SubtargetSubTypeKV(const SubtargetSubTypeKV &) = delete;
   SubtargetSubTypeKV &operator=(const SubtargetSubTypeKV &) = delete;
 
-  const char *key() const { return Key; }
-  const MCSchedModel *schedModel() const { return SchedModel; }
+  const char *key() const {
+    return reinterpret_cast<const char *>(this) + KeyStrOff;
+  }
 
   /// Compare routine for std::lower_bound
   bool operator<(StringRef S) const { return StringRef(key()) < S; }
@@ -96,6 +104,12 @@ public:
   }
 };
 
+template <size_t NumSubTypes, size_t SubTypeStrTabSize>
+struct SubtargetSubTypeKVStorage {
+  SubtargetSubTypeKV SubTypes[NumSubTypes];
+  char Strings[SubTypeStrTabSize];
+};
+
 //===----------------------------------------------------------------------===//
 ///
 /// Generic base class for all target subtargets.
@@ -104,9 +118,10 @@ class LLVM_ABI MCSubtargetInfo {
   Triple TargetTriple;
   std::string CPU; // CPU being targeted.
   std::string TuneCPU; // CPU being tuned for.
-  ArrayRef<StringRef> ProcNames; // Processor list, including aliases
+  StringTable ProcNames; // Processor list, including aliases
   ArrayRef<SubtargetFeatureKV> ProcFeatures;  // Processor feature list
   ArrayRef<SubtargetSubTypeKV> ProcDesc;  // Processor descriptions
+  const MCSchedModel *ProcSchedModels;    ///< Processor scheduling models.
 
   // Scheduler machine model
   const MCWriteProcResEntry *WriteProcResTable;
@@ -123,9 +138,8 @@ class LLVM_ABI MCSubtargetInfo {
 public:
   MCSubtargetInfo(const MCSubtargetInfo &) = default;
   MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                  StringRef FS, ArrayRef<StringRef> PN,
-                  ArrayRef<SubtargetFeatureKV> PF,
-                  ArrayRef<SubtargetSubTypeKV> PD,
+                  StringRef FS, StringTable PN, ArrayRef<SubtargetFeatureKV> PF,
+                  ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
                   const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
                   const MCReadAdvanceEntry *RA, const InstrStage *IS,
                   const unsigned *OC, const unsigned *FP);

@@ -37,7 +37,7 @@ static Value castBuffer(OpBuilder &b, Value buffer, Type type,
   if (buffer.getType() == type)
     return buffer;
 
-  return *options.createCast(b, buffer.getLoc(), type, buffer);
+  return *options.castFn(b, buffer.getLoc(), type, buffer);
 }
 
 /// Helper function for loop bufferization. Return "true" if the given value
