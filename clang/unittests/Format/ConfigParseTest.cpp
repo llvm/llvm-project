@@ -188,7 +188,8 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(CompactNamespaces);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
-  CHECK_PARSE_BOOL(DisableFormat);
+  CHECK_PARSE_NESTED_BOOL(DisableFormat, DisableSortIncludes);
+  CHECK_PARSE_NESTED_BOOL(DisableFormat, DisablePostPreprocessorFormatting);
   CHECK_PARSE_BOOL(IndentAccessModifiers);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentCaseLabels);
