@@ -3592,14 +3592,11 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
 
     VPlan &CurrentPlan = getPlanFor(NextVF.Width);
     ElementCount EffectiveVF = GetEffectiveVF(CurrentPlan, NextVF.Width);
-    // Skip candidate VFs with widths >= the (estimated) runtime VF (scalable
-    // vectors) or > the VF of the main loop (fixed vectors).
+    // Skip fixed vector VFs > than the estimated runtime VF, or any VF > than
+    // the VF of the main loop.
     if ((!EffectiveVF.isScalable() && MainLoopVF.isScalable() &&
-         ElementCount::isKnownGE(EffectiveVF, EstimatedRuntimeVF)) ||
-        (EffectiveVF.isScalable() &&
-         ElementCount::isKnownGE(EffectiveVF, MainLoopVF)) ||
-        (!EffectiveVF.isScalable() && !MainLoopVF.isScalable() &&
-         ElementCount::isKnownGT(EffectiveVF, MainLoopVF)))
+         ElementCount::isKnownGT(EffectiveVF, EstimatedRuntimeVF)) ||
+        ElementCount::isKnownGT(EffectiveVF, MainLoopVF))
       continue;
 
     // If EffectiveVF is greater than the number of remaining iterations, the
@@ -3620,7 +3617,8 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     }
 
     if (Result.Width.isScalar() ||
-        isMoreProfitable(NextVF, Result, MaxTripCount, !hasTailFolded(MainPlan),
+        isMoreProfitable(NextVF, Result, MaxTripCount,
+                         !MainPlan.hasTailFolded(),
                          /*IsEpilogue*/ true)) {
       Result = NextVF;
       BestPlan = &CurrentPlan;
@@ -5672,7 +5670,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     // TODO: Remove this code after stepping away from the legacy cost model and
     // adding code to simplify VPlans before calculating their costs.
     auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-    if (TC == VF && !hasTailFolded(Plan))
+    if (TC == VF && !Plan.hasTailFolded())
       addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                            CostCtx.SkipCostComputation);
 
@@ -5969,7 +5967,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   RUN_VPLAN_PASS(VPlanTransforms::convertEVLExitCond, BestVPlan);
   // Regions are dissolved after optimizing for VF and UF, which completely
   // removes unneeded loop regions first.
-  const bool HasTailFolded = hasTailFolded(BestVPlan);
+  const bool HasTailFolded = BestVPlan.hasTailFolded();
   RUN_VPLAN_PASS(VPlanTransforms::dissolveLoopRegions, BestVPlan);
   // Expand BranchOnTwoConds after dissolution, when latch has direct access to
   // its successors.
@@ -5984,7 +5982,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   std::optional<uint64_t> MaxRuntimeStep;
   if (auto MaxVScale = getMaxVScale(*CM.TheFunction, CM.TTI))
     MaxRuntimeStep = uint64_t(*MaxVScale) * BestVF.getKnownMinValue() * BestUF;
-  assert((OrigLoop->getUniqueLatchExitBlock() || RequiresScalarEpilogue) &&
+  assert((LI->getUniqueLatchExitBlock(*OrigLoop) || RequiresScalarEpilogue) &&
          "loops not exiting via the latch without required epilogue?");
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, HasTailFolded, RequiresScalarEpilogue,
@@ -6636,7 +6634,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
     for (ElementCount VF : Range)
       Plan->addVF(VF);
     if (!RUN_VPLAN_PASS(VPlanTransforms::tryToConvertVPInstructionsToVPRecipes,
-                        *Plan, *TLI))
+                        *Plan, *TLI, PSE, OrigLoop))
       return nullptr;
     RUN_VPLAN_PASS(VPlanTransforms::optimizeInductionLiveOutUsers, *Plan, PSE);
     return Plan;
@@ -7124,13 +7122,6 @@ bool LoopVectorizationPlanner::requiresScalarEpilogue(VPlan &Plan,
   return Result;
 }
 
-bool LoopVectorizationPlanner::hasTailFolded(const VPlan &Plan) const {
-  bool Result = Plan.hasTailFolded();
-  assert(CM.foldTailByMasking() == Result &&
-         "CM.foldTailByMasking and the VPlan-based check must agree");
-  return Result;
-}
-
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount) const {
@@ -7140,7 +7131,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
           : nullptr;
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan, VF, UF,
                  MinProfitableTripCount, requiresScalarEpilogue(Plan, VF),
-                 hasTailFolded(Plan), OrigLoop, BranchWeights,
+                 Plan.hasTailFolded(), OrigLoop, BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                  PSE, Plan.getEntry());
 }

@@ -881,15 +881,9 @@ void AMDGPUToolChain::addClangTargetOptions(
       if (DriverArgs.hasArgNoClaim(options::OPT_hipstdpar))
         CC1Args.append({"-mllvm", "-amdgpu-enable-hipstdpar"});
     }
-
-    // FIXME: This should not depend on HIP
-    StringRef MaxThreadsPerBlock =
-        DriverArgs.getLastArgValue(options::OPT_gpu_max_threads_per_block_EQ);
-    if (!MaxThreadsPerBlock.empty()) {
-      CC1Args.push_back(DriverArgs.MakeArgString(
-          Twine("--gpu-max-threads-per-block=") + MaxThreadsPerBlock));
-    }
   }
+
+  DriverArgs.AddLastArg(CC1Args, options::OPT_gpu_max_threads_per_block_EQ);
 
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.

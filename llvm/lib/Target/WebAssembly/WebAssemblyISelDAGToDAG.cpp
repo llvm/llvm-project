@@ -24,6 +24,7 @@
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -658,7 +659,13 @@ bool WebAssemblyDAGToDAGISel::SelectAtomicAddrOperands64(SDNode *Op, SDValue N,
 
 /// This pass converts a legalized DAG into a WebAssembly-specific DAG, ready
 /// for instruction scheduling.
-FunctionPass *llvm::createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
-                                             CodeGenOptLevel OptLevel) {
+WebAssemblyISelDAGToDAGPass::WebAssemblyISelDAGToDAGPass(
+    WebAssemblyTargetMachine &TM, CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(
+          std::make_unique<WebAssemblyDAGToDAGISel>(TM, OptLevel)) {}
+
+FunctionPass *
+llvm::createWebAssemblyISelDagLegacyPass(WebAssemblyTargetMachine &TM,
+                                         CodeGenOptLevel OptLevel) {
   return new WebAssemblyDAGToDAGISelLegacy(TM, OptLevel);
 }

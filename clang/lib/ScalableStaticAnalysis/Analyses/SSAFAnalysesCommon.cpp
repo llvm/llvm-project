@@ -12,9 +12,12 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "llvm/ADT/SetVector.h"
 
 using namespace clang;
+using namespace ssaf;
 
 std::string ssaf::describeJSONValue(const llvm::json::Value &V) {
   return llvm::formatv("{0:2}", V).str();
@@ -33,37 +36,70 @@ namespace {
 class ContributorFinder : public DynamicRecursiveASTVisitor {
 public:
   llvm::SetVector<const NamedDecl *> Contributors;
+  const SSAFOptions &Opts;
 
-  ContributorFinder() {
+  ContributorFinder(ASTContext &Ctx, const SSAFOptions &Opts,
+                    bool ExtractFromSystemHeaders)
+      : Opts(Opts), Ctx(Ctx),
+        ExtractFromSystemHeaders(ExtractFromSystemHeaders) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false;
   }
 
   bool VisitFunctionDecl(FunctionDecl *D) override {
-    Contributors.insert(D);
+    if (!skipForSystemHeader(D))
+      Contributors.insert(D);
     return true;
   }
 
   bool VisitRecordDecl(RecordDecl *D) override {
+    if (skipForSystemHeader(D))
+      return true;
     Contributors.insert(D);
     return true;
   }
 
   bool VisitVarDecl(VarDecl *D) override {
+    if (skipForSystemHeader(D))
+      return true;
     DeclContext *DC = D->getDeclContext();
 
     // Collects Decl for global variables or static data members:
-    if (DC->isFileContext() || D->isStaticDataMember())
+    if (DC->isFileContext() || D->isStaticDataMember()) {
+      Contributors.insert(D);
+      return true;
+    }
+
+    // Optionally include block-scope (function-local) variables. Parameters
+    // are intentionally skipped: they are exposed via their parent function's
+    // USR + a parameter-index suffix in getEntityName, so registering them as
+    // independent contributors would be redundant.
+    //
+    // FIXME: clang::index::generateUSRForDecl can produce non-unique or empty
+    // USRs for some local declaration shapes (e.g., locals of certain template
+    // instantiations). The current addEntity path returns std::nullopt when
+    // that happens and downstream extractors skip gracefully, so this is
+    // tolerated for now.
+    if (Opts.IncludeLocalEntities && !D->isImplicit() && !isa<ParmVarDecl>(D) &&
+        DC->isFunctionOrMethod())
       Contributors.insert(D);
     return true;
   }
 
   bool VisitLambdaExpr(LambdaExpr *L) override {
-    // TraverseLambdaExpr directly visits the body stmt, skipping the
-    // CXXMethodDecl, which is a contributor that needs to be collected.
-    VisitFunctionDecl(L->getCallOperator());
-    return true;
+    return VisitFunctionDecl(L->getCallOperator());
   }
+
+private:
+  bool skipForSystemHeader(const Decl *D) const {
+    if (ExtractFromSystemHeaders)
+      return false;
+    SourceLocation Loc = D->getLocation();
+    return Loc.isValid() && Ctx.getSourceManager().isInSystemHeader(Loc);
+  }
+
+  ASTContext &Ctx;
+  bool ExtractFromSystemHeaders;
 };
 
 /// An AST visitor that skips the root node's strict-descendants that are
@@ -125,10 +161,11 @@ public:
 } // namespace
 
 void ssaf::findContributors(
-    ASTContext &Ctx,
+    ASTContext &Ctx, const SSAFOptions &Options,
     llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
-        &Contributors) {
-  ContributorFinder Finder;
+        &Contributors,
+    bool ExtractFromSystemHeaders) {
+  ContributorFinder Finder{Ctx, Options, ExtractFromSystemHeaders};
   Finder.TraverseAST(Ctx);
   for (const NamedDecl *C : Finder.Contributors)
     Contributors[cast<NamedDecl>(C->getCanonicalDecl())].push_back(C);

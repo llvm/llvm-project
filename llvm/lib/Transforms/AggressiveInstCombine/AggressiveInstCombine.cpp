@@ -1206,24 +1206,34 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
   if (Cost > TargetTransformInfo::TCC_Basic)
     return false;
 
-  Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
-
   Constant *InputBitsM1 = ConstantInt::get(XType, InputBits - 1);
-  Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
 
-  // The table won't produce a sensible result for 0.
-  Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
-  Value *Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
+  Value *Result;
+  if (ZeroTableElem->getZExtValue() == InputBits - 1) {
+    Value *Ctlz =
+        B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, B.getFalse()});
+    Result = B.CreateAnd(B.CreateNot(Ctlz), InputBitsM1);
+  } else {
+    Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
+    Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
 
-  // The true branch of select handles the log2(0) case, which is rare.
-  if (!ProfcheckDisableMetadataFixes) {
-    if (Instruction *SelectI = dyn_cast<Instruction>(Select))
-      SelectI->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+    // The table won't produce a sensible result for 0.
+    Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
+    Value *Select =
+        B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
+
+    // The true branch of select handles the log2(0) case, which is rare.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+        SelectI->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+    }
+
+    Result = Select;
   }
 
-  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
+  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Result, AccessType);
 
   LI->replaceAllUsesWith(ZExtOrTrunc);
 
@@ -1411,6 +1421,12 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if ((ShAmt2 - ShAmt1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
     return false;
 
+  // Reject if the combined size of the loads exceeds the target type size.
+  // This avoids attempting to emit an invalid ZExt (from wider to narrower
+  // type) when out-of-bounds shifts lead to matching too many loads.
+  if (LoadSize1 + LoadSize2 > X->getType()->getScalarSizeInBits())
+    return false;
+
   // Update LOps
   AAMDNodes AATags1 = LOps.AATags;
   AAMDNodes AATags2 = LI2->getAAMetadata();
@@ -1478,9 +1494,8 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     NewLoad->setAAMetadata(LOps.AATags);
 
   Value *NewOp = NewLoad;
-  // Check if zero extend needed.
-  if (LOps.ZextType)
-    NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
+  // Zero extend if needed.
+  NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
 
   // Check if shift needed. We need to shift with the amount of load1
   // shift if not zero.

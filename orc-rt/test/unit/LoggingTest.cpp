@@ -14,6 +14,9 @@
 
 #include "gtest/gtest.h"
 
+#include <string>
+#include <unordered_set>
+
 namespace {
 
 // Every level and category must compile and be usable as a plain statement,
@@ -23,15 +26,20 @@ TEST(LoggingTest, CompilesAtEveryLevel) {
   ORC_RT_LOG(Warning, General, "one arg: %d", 42);
   ORC_RT_LOG(Info, General, "two args: %s = %d", "answer", 42);
   ORC_RT_LOG(Debug, General, "wide arg: %llu", (unsigned long long)1 << 40);
+
+  // ORC_RT_LOG_PUB_S must concatenate into the literal format and type-check as
+  // a "%s" conversion against a runtime string on every backend.
+  const char *RuntimeStr = "runtime";
+  ORC_RT_LOG(Info, General, "public string: " ORC_RT_LOG_PUB_S, RuntimeStr);
   SUCCEED();
 }
 
 TEST(LoggingTest, LevelGetName) {
-  EXPECT_STREQ("debug", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_DEBUG));
-  EXPECT_STREQ("info", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_INFO));
-  EXPECT_STREQ("warning", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_WARNING));
-  EXPECT_STREQ("error", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_ERROR));
-  EXPECT_STREQ("off", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_OFF));
+  EXPECT_STREQ("DEBUG", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_DEBUG));
+  EXPECT_STREQ("INFO", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_INFO));
+  EXPECT_STREQ("WARNING", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_WARNING));
+  EXPECT_STREQ("ERROR", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_ERROR));
+  EXPECT_STREQ("OFF", orc_rt_log_Level_getName(ORC_RT_LOG_LEVEL_OFF));
 
   // Out-of-range levels have no name.
   EXPECT_EQ(nullptr, orc_rt_log_Level_getName(-1));
@@ -68,10 +76,20 @@ TEST(LoggingTest, LevelParseGetNameRoundTrip) {
   }
 }
 
-TEST(LoggingTest, CategoryGetName) {
-  EXPECT_STREQ("General",
-               orc_rt_log_Category_getName(orc_rt_log_Category_General));
+TEST(LoggingTest, CategoryNamesAreUniqueAndNonNull) {
+  // Check that every category has a unique, non-null name.
+  std::unordered_set<std::string> Seen;
+  for (int C = orc_rt_log_Category_General; C != orc_rt_log_Category_Count;
+       ++C) {
+    const char *Name =
+        orc_rt_log_Category_getName(static_cast<orc_rt_log_Category>(C));
+    ASSERT_NE(Name, nullptr) << "category " << C << " has no name";
+    EXPECT_TRUE(Seen.insert(Name).second)
+        << "category " << C << " has a duplicate name: " << Name;
+  }
+}
 
+TEST(LoggingTest, OutOfRangeCategoryNamesAreNull) {
   // The Count sentinel is not a real category, and out-of-range values have no
   // name.
   EXPECT_EQ(nullptr, orc_rt_log_Category_getName(orc_rt_log_Category_Count));

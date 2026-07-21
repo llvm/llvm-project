@@ -20,13 +20,16 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/omp-declare-variant.h"
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
+#include <algorithm>
 #include <list>
 #include <map>
 #include <optional>
@@ -44,7 +47,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
   OmpVerifyModifiers(
       x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
   // Record this WHEN clause's context selector so the variant directive it
-  // controls can be paired with it for static-applicability matching.
+  // controls can be paired with it for static-applicability matching. A
+  // well-formed WHEN clause has exactly one modifier, its context selector;
+  // pair it only in that case, which also makes front() safe. Any other count
+  // is malformed and already diagnosed by OmpVerifyModifiers above.
   if (const auto &modifiers{std::get<0>(x.v.t)};
       modifiers && modifiers->size() == 1) {
     currentWhenSelector_ =
@@ -602,46 +608,10 @@ void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
-  metadirectiveLoopVariants_.clear();
 }
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
   ExitDirectiveNest(MetadirectiveNest);
-}
-
-// Return true if the variant guarded by `selector` might be selected, so its
-// associated loop must still be checked. Skip it only when it is provably
-// unselectable.
-static bool mayVariantBeSelected(
-    const parser::traits::OmpContextSelectorSpecification *selector,
-    SemanticsContext &context, OmpVariantMatchContext &matchContext) {
-  if (!selector ||
-      FindUnsupportedSelectorFeature(*selector, context) !=
-          UnsupportedSelectorFeature::None) {
-    return true;
-  }
-  llvm::omp::VariantMatchInfo vmi;
-  (void)MakeVariantMatchInfo(vmi, *selector, context);
-  const auto &required{vmi.RequiredTraits};
-  using TP = llvm::omp::TraitProperty;
-  // In the default "match all" mode, a required trait that can never match
-  // (e.g. a compile-time-false condition or an invalid device/implementation
-  // property) makes the variant unselectable. match_any and match_none tolerate
-  // such traits, so only reject variants in the default mode.
-  bool matchAll{
-      !required.test(unsigned(TP::implementation_extension_match_any)) &&
-      !required.test(unsigned(TP::implementation_extension_match_none))};
-  if (matchAll &&
-      (required.test(unsigned(TP::user_condition_false)) ||
-          required.test(unsigned(TP::invalid)))) {
-    return false;
-  }
-  // Matching a device or implementation selector requires a known target.
-  if (context.targetTriple().empty()) {
-    return true;
-  }
-  return llvm::omp::isVariantApplicableInContext(
-      vmi, matchContext, /*DeviceOrImplementationSetOnly=*/true);
 }
 
 // Check a loop-associated metadirective's variants against the loop nest they
@@ -709,7 +679,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
     const parser::OmpDirectiveSpecification *spec{variant.spec};
     // Skip variants that can never be selected on this compilation target so
     // that their associated loop is not diagnosed.
-    if (!mayVariantBeSelected(variant.selector, context_, matchContext)) {
+    if (!MayVariantBeSelected(variant.selector, context_, matchContext)) {
       continue;
     }
     auto assoc{llvm::omp::getDirectiveAssociation(spec->DirId())};
@@ -747,16 +717,24 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
 // loop nest, either because the metadirective is the last construct in the
 // execution part or because a non-loop construct follows it. Variants that
 // cannot be selected on this target are skipped.
-void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop() {
+void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop(
+    std::size_t firstVariant) {
+  CHECK(firstVariant <= metadirectiveLoopVariants_.size());
   std::vector<MetadirectiveLoopVariant> variants;
-  variants.swap(metadirectiveLoopVariants_);
+  if (firstVariant == 0) {
+    variants.swap(metadirectiveLoopVariants_);
+  } else {
+    auto first{metadirectiveLoopVariants_.begin() + firstVariant};
+    variants.assign(first, metadirectiveLoopVariants_.end());
+    metadirectiveLoopVariants_.erase(first, metadirectiveLoopVariants_.end());
+  }
 
   OmpVariantMatchContext matchContext{context_};
   const auto MsgShouldContainDoOr{
       "This construct should contain a DO-loop or a loop-%s-generating construct"_err_en_US};
 
   for (const MetadirectiveLoopVariant &variant : variants) {
-    if (!mayVariantBeSelected(variant.selector, context_, matchContext)) {
+    if (!MayVariantBeSelected(variant.selector, context_, matchContext)) {
       continue;
     }
     auto assoc{llvm::omp::getDirectiveAssociation(variant.spec->DirId())};
@@ -824,6 +802,10 @@ void OmpStructureChecker::CheckDeclareVariantUserConditions(
   }
 }
 
+static bool IsProcedureOrFunction(const Symbol &symbol) {
+  return IsProcedure(symbol) || IsFunction(symbol);
+}
+
 // OpenMP 6.0, 9.6 (declare_variant), Fortran restriction: "The characteristic
 // of the function variant must be compatible with the characteristic of the
 // base function after the implementation defined transformation for its OpenMP
@@ -847,6 +829,104 @@ static void CheckDeclareVariantInterface(SemanticsContext &context,
     context.Say(source,
         "The variant procedure '%s' is not compatible with the base procedure '%s': %s"_err_en_US,
         variant.name(), base.name(), whyNot);
+  }
+}
+
+// A declare-variant call is rewritten to the variant at every reference to the
+// base, so the variant must be accessible at each of those references. The name
+// of an internal procedure is only visible within its host, so it may only be a
+// variant of a procedure that is internal to the same host; otherwise a
+// reference to the base from elsewhere could not name the variant. OpenMP does
+// not clearly specify this; Flang restricts it to avoid resolving a call to an
+// internal procedure that is not accessible there. Returns true if the pairing
+// is allowed.
+static bool CheckVariantAccessibility(SemanticsContext &context,
+    const Symbol &base, const Symbol &variant, parser::CharBlock source) {
+  if (ClassifyProcedure(variant) != ProcedureDefinitionClass::Internal) {
+    return true;
+  }
+  if (ClassifyProcedure(base) == ProcedureDefinitionClass::Internal &&
+      &base.owner() == &variant.owner()) {
+    return true;
+  }
+  context.Say(source,
+      "The variant procedure '%s' is an internal procedure and is not accessible at every reference to the base procedure '%s'"_err_en_US,
+      variant.name(), base.name());
+  return false;
+}
+
+// Normalize the text spanned by `source` for structural comparison: drop
+// whitespace and fold to lower case (Fortran is case-insensitive). This lets
+// e.g. `simdlen(4)` and `SIMDLEN( 4 )` compare equal while `simdlen(4)` and
+// `simdlen(8)` do not.
+static std::string NormalizeSelectorText(parser::CharBlock source) {
+  std::string text{source.ToString()};
+  llvm::erase_if(text, parser::IsWhiteSpace);
+  return parser::ToLowerCaseLetters(text);
+}
+
+// Render the properties of a trait selector into a canonical string (in a
+// construct selector set only `simd` currently carries properties, e.g.
+// simdlen, inbranch/notinbranch). The property list is unordered, so the
+// individual properties are sorted; two selectors have the same properties iff
+// these strings are equal.
+static std::string CanonicalizeTraitProperties(
+    const parser::OmpTraitSelector &trait) {
+  const auto &maybeProperties{
+      std::get<std::optional<parser::OmpTraitSelector::Properties>>(trait.t)};
+  if (!maybeProperties) {
+    return {};
+  }
+  llvm::SmallVector<std::string> items;
+  for (const parser::OmpTraitProperty &property :
+      std::get<std::list<parser::OmpTraitProperty>>(maybeProperties->t)) {
+    items.push_back(NormalizeSelectorText(property.source));
+  }
+  std::sort(items.begin(), items.end());
+  std::string result;
+  for (const std::string &item : items) {
+    result += item;
+    result += ';';
+  }
+  return result;
+}
+
+// Collect the construct selector set of `sel` into `constructs` as an ordered
+// list of elements: a leaf construct directive plus a normalized rendering of
+// any properties it carries. Combined and composite constructs are decomposed
+// into their leaves (e.g. `target teams` -> target, teams). The properties
+// are included so that e.g. `simd(simdlen(4))` and `simd(simdlen(8))` are
+// treated as different construct selector sets. Two match selectors have the
+// same construct selector set iff the collected lists are equal; an absent
+// construct selector yields an empty list.
+static void CollectConstructSelectorSet(
+    const parser::traits::OmpContextSelectorSpecification &sel,
+    llvm::SmallVectorImpl<std::pair<llvm::omp::Directive, std::string>>
+        &constructs) {
+  using SetName = parser::OmpTraitSetSelectorName;
+  using TraitName = parser::OmpTraitSelectorName;
+  for (const parser::OmpTraitSetSelector &traitSet : sel.v) {
+    if (std::get<SetName>(traitSet.t).v != SetName::Value::Construct) {
+      continue;
+    }
+    for (const parser::OmpTraitSelector &trait :
+        std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
+      const auto &traitName{std::get<TraitName>(trait.t)};
+      if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
+        for (llvm::omp::Directive leaf :
+            llvm::omp::getLeafConstructsOrSelf(*dir)) {
+          constructs.emplace_back(leaf, std::string{});
+        }
+      } else if (const auto *value{std::get_if<TraitName::Value>(&traitName.u)};
+          value && *value == TraitName::Value::Simd) {
+        // In a construct selector, `simd` is represented as Value::Simd (it can
+        // carry simd-specific properties), not as a Directive; treat it as
+        // OMPD_simd and fold in its properties so they participate in the
+        // comparison.
+        constructs.emplace_back(llvm::omp::Directive::OMPD_simd,
+            CanonicalizeTraitProperties(trait));
+      }
+    }
   }
 }
 
@@ -881,7 +961,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
 
   auto CheckProcedureSymbol{[&](const Symbol *sym, parser::CharBlock source) {
     if (sym) {
-      if (!IsProcedure(*sym) && !IsFunction(*sym)) {
+      if (!IsProcedureOrFunction(*sym)) {
         auto &msg{context_.Say(source,
             "The name '%s' should refer to a procedure"_err_en_US,
             sym->name())};
@@ -919,30 +999,85 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
       },
       arg.u);
 
-  if (base && variant) {
-    base = &base->GetUltimate();
-    variant = &variant->GetUltimate();
-    if (base == variant) {
-      context_.Say(arg.source,
-          "The variant procedure must differ from the base procedure"_err_en_US);
-    } else if (!declareVariantPairs_.emplace(base, variant).second) {
-      context_.Say(arg.source,
-          "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
-          variant->name(), base->name());
-    } else if (!hasArgModifiers) {
-      // adjust_args/append_args perform the "transformation for its OpenMP
-      // context", so the variant interface intentionally differs from the
-      // base; skip the same-interface check until they are supported.
-      CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
-    }
-  }
-
   const parser::traits::OmpContextSelectorSpecification *matchSelector{
       getMatchClauseContextSelector(spec)};
   if (!matchSelector) {
     context_.Say(x.source,
         "DECLARE_VARIANT directive requires a MATCH clause"_err_en_US);
     return;
+  }
+
+  // Only validate and record the pairing when both names resolve to procedures.
+  // Otherwise a diagnostic was already issued (see CheckProcedureSymbol), and
+  // proceeding would emit spurious follow-on errors.
+  if (base && variant && IsProcedureOrFunction(*base) &&
+      IsProcedureOrFunction(*variant)) {
+    base = &base->GetUltimate();
+    variant = &variant->GetUltimate();
+    if (base == variant) {
+      context_.Say(arg.source,
+          "The variant procedure must differ from the base procedure"_err_en_US);
+    } else {
+      // OpenMP 5.2 [7.5] / 6.0 [9.6]: a procedure determined to be a function
+      // variant may not be a base function in another DECLARE VARIANT
+      // directive, and vice versa. A variant is recorded as a key in
+      // declareVariantConstructSets_ below, so that map serves as the set of
+      // procedures that appear as a variant.
+      if (declareVariantConstructSets_.find(base) !=
+          declareVariantConstructSets_.end()) {
+        context_.Say(arg.source,
+            "The base procedure '%s' is also specified as a variant procedure in another DECLARE VARIANT directive"_err_en_US,
+            base->name());
+      }
+      if (declareVariantBases_.find(variant) != declareVariantBases_.end()) {
+        context_.Say(arg.source,
+            "The variant procedure '%s' is also specified as a base procedure in another DECLARE VARIANT directive"_err_en_US,
+            variant->name());
+      }
+      declareVariantBases_.insert(base);
+
+      if (!declareVariantPairs_.emplace(base, variant).second) {
+        context_.Say(arg.source,
+            "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
+            variant->name(), base->name());
+      } else {
+        // OpenMP 5.2 [7.5] / 6.0 [9.6]: if a procedure is determined to be a
+        // function variant through more than one DECLARE VARIANT directive, the
+        // construct selector set of their context selectors must be the same.
+        llvm::SmallVector<std::pair<llvm::omp::Directive, std::string>, 4>
+            constructs;
+        CollectConstructSelectorSet(*matchSelector, constructs);
+        auto it{declareVariantConstructSets_.find(variant)};
+        if (it == declareVariantConstructSets_.end()) {
+          declareVariantConstructSets_.emplace(
+              variant, std::make_pair(std::move(constructs), arg.source));
+        } else if (it->second.first != constructs) {
+          context_
+              .Say(arg.source,
+                  "Variant procedure '%s' must have the same 'construct' selector set in all DECLARE VARIANT directives"_err_en_US,
+                  variant->name())
+              .Attach(it->second.second,
+                  "Previous DECLARE VARIANT directive for '%s'"_en_US,
+                  variant->name());
+        }
+
+        if (CheckVariantAccessibility(context_, *base, *variant, arg.source)) {
+          if (!hasArgModifiers) {
+            // adjust_args/append_args perform the "transformation for its
+            // OpenMP context", so the variant interface intentionally differs
+            // from the base; skip the same-interface check until they are
+            // supported.
+            CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+          }
+          // Record the variant on its base procedure.
+          if (base->has<SubprogramDetails>()) {
+            auto &details{const_cast<Symbol &>(*base).get<SubprogramDetails>()};
+            details.addOmpDeclareVariant(
+                OmpDeclareVariantEntry{*variant, matchSelector});
+          }
+        }
+      }
+    }
   }
 
   EnterDirectiveNest(ContextSelectorNest);

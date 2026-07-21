@@ -115,7 +115,7 @@ bool Token::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
   case tok::kw__Fract:
   case tok::kw__Sat:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   case tok::kw___auto_type:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
@@ -1809,11 +1809,13 @@ static void maybeDiagnoseUTF8Homoglyph(DiagnosticsEngine &Diags, uint32_t C,
   }
 }
 
-static void diagnoseInvalidUnicodeCodepointInIdentifier(
-    DiagnosticsEngine &Diags, const LangOptions &LangOpts, uint32_t CodePoint,
-    CharSourceRange Range, bool IsFirst) {
+static bool CheckCodepointValidInIdentifier(const Preprocessor *PP,
+                                            const LangOptions &LangOpts,
+                                            uint32_t CodePoint,
+                                            CharSourceRange Range, bool IsFirst,
+                                            bool Diagnose) {
   if (isASCII(CodePoint))
-    return;
+    return true;
 
   bool IsExtension;
   bool IsIDStart = isAllowedInitiallyIDChar(CodePoint, LangOpts, IsExtension);
@@ -1821,19 +1823,23 @@ static void diagnoseInvalidUnicodeCodepointInIdentifier(
       IsIDStart || isAllowedIDChar(CodePoint, LangOpts, IsExtension);
 
   if ((IsFirst && IsIDStart) || (!IsFirst && IsIDContinue))
-    return;
+    return true;
+
+  if (!Diagnose)
+    return false;
 
   bool InvalidOnlyAtStart = IsFirst && !IsIDStart && IsIDContinue;
 
   if (!IsFirst || InvalidOnlyAtStart) {
-    Diags.Report(Range.getBegin(), diag::err_character_not_allowed_identifier)
+    PP->Diag(Range.getBegin(), diag::err_character_not_allowed_identifier)
         << Range << codepointAsHexString(CodePoint) << int(InvalidOnlyAtStart)
         << FixItHint::CreateRemoval(Range);
   } else {
-    Diags.Report(Range.getBegin(), diag::err_character_not_allowed)
+    PP->Diag(Range.getBegin(), diag::err_character_not_allowed)
         << Range << codepointAsHexString(CodePoint)
         << FixItHint::CreateRemoval(Range);
   }
+  return false;
 }
 
 bool Lexer::tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
@@ -1847,13 +1853,15 @@ bool Lexer::tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
   if (!isAllowedIDChar(CodePoint, LangOpts, IsExtension)) {
     if (isASCII(CodePoint) || isUnicodeWhitespace(CodePoint))
       return false;
-    if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
-        !PP->isPreprocessedOutput())
-      diagnoseInvalidUnicodeCodepointInIdentifier(
-          PP->getDiagnostics(), LangOpts, CodePoint,
-          makeCharRange(*this, CurPtr, UCNPtr),
-          /*IsFirst=*/false);
 
+    bool DiagnoseAndContinue = !isLexingRawMode() &&
+                               !ParsingPreprocessorDirective &&
+                               !PP->isPreprocessedOutput();
+    if (!CheckCodepointValidInIdentifier(
+            PP, LangOpts, CodePoint, makeCharRange(*this, CurPtr, UCNPtr),
+            /*IsFirst=*/false, DiagnoseAndContinue) &&
+        !DiagnoseAndContinue)
+      return false;
     // We got a unicode codepoint that is neither a space nor a
     // a valid identifier part.
     // Carry on as if the codepoint was valid for recovery purposes.
@@ -1900,11 +1908,16 @@ bool Lexer::tryConsumeIdentifierUTF8Char(const char *&CurPtr, Token &Result) {
     if (isASCII(CodePoint) || isUnicodeWhitespace(CodePoint))
       return false;
 
-    if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
-        !PP->isPreprocessedOutput())
-      diagnoseInvalidUnicodeCodepointInIdentifier(
-          PP->getDiagnostics(), LangOpts, CodePoint,
-          makeCharRange(*this, CharStart, UnicodePtr), /*IsFirst=*/false);
+    bool DiagnoseAndContinue = !isLexingRawMode() &&
+                               !ParsingPreprocessorDirective &&
+                               !PP->isPreprocessedOutput();
+
+    if (!CheckCodepointValidInIdentifier(
+            PP, LangOpts, CodePoint,
+            makeCharRange(*this, CharStart, UnicodePtr), /*IsFirst=*/false,
+            DiagnoseAndContinue) &&
+        !DiagnoseAndContinue)
+      return false;
     // We got a unicode codepoint that is neither a space nor a
     // a valid identifier part. Carry on as if the codepoint was
     // valid for recovery purposes.
@@ -1960,9 +1973,9 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
     // loophole in the mapping of Unicode characters to basic character set
     // characters that allows us to map these particular characters to, say,
     // whitespace.
-    diagnoseInvalidUnicodeCodepointInIdentifier(
-        PP->getDiagnostics(), LangOpts, C,
-        makeCharRange(*this, BufferPtr, CurPtr), /*IsStart*/ true);
+    CheckCodepointValidInIdentifier(PP, LangOpts, C,
+                                    makeCharRange(*this, BufferPtr, CurPtr),
+                                    /*IsStart=*/true, /*Diagnose=*/true);
     BufferPtr = CurPtr;
     return false;
   }
@@ -3765,7 +3778,8 @@ bool Lexer::CheckUnicodeWhitespace(Token &Result, uint32_t C,
   if (!isLexingRawMode() && !PP->isPreprocessedOutput() &&
       isUnicodeWhitespace(C)) {
     Diag(BufferPtr, diag::ext_unicode_whitespace)
-      << makeCharRange(*this, BufferPtr, CurPtr);
+        << EscapeSingleCodepointForDiagnostic(C)
+        << makeCharRange(*this, BufferPtr, CurPtr);
 
     Result.setFlag(Token::LeadingSpace);
     return true;

@@ -24,7 +24,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
-#include <map>
 using namespace llvm;
 
 static cl::extrahelp FileCheckOptsEnv(
@@ -426,64 +425,86 @@ static std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
   llvm_unreachable("unknown FileCheckType");
 }
 
+template <> struct llvm::DenseMapInfo<SMLoc> {
+  static unsigned getHashValue(const SMLoc &Loc) {
+    return DenseMapInfo<const char *>::getHashValue(Loc.getPointer());
+  }
+  static bool isEqual(const SMLoc &LHS, SMLoc &RHS) { return LHS == RHS; }
+};
+
 namespace {
-/// Stores all information needed to generate \c InputAnnotation labels for a
-/// particular check pattern.  Multiple labelers might be constructed for the
-/// same pattern if the pattern has more than one \c MatchResultDiag (e.g., for
-/// a \c CHECK-COUNT-<N> directive or implicit pattern).
+/// Stores all information needed to generate \c InputAnnotation labels.
 class InputAnnotationLabeler {
 private:
-  unsigned *LabelWidthGlobal;
-  unsigned *LabelIndexPerPattern;
-  std::string LabelPrefix;
+  const SourceMgr &SM;
+  const unsigned CheckFileBufferID;
+  const std::pair<unsigned, unsigned> ImpPatBufferIDRange;
+
+  /// How many unique input annotation labels does each check pattern need?
+  /// Each check pattern can have multiple \c MatchResultDiag's, each followed
+  /// by a series of zero or more \c MatchNoteDiag's.  Each such
+  /// \c MatchResultDiag and its \c MatchNoteDiag series can require multiple
+  /// labels.
+  DenseMap<SMLoc, unsigned> LabelCountPerPattern;
+  /// For each check pattern, how many labels have we generated so far?
+  DenseMap<SMLoc, unsigned> LabelIndexPerPattern;
+  /// For each check pattern, what is the common prefix for all its labels?
+  DenseMap<SMLoc, std::string> LabelPrefixPerPattern;
+  /// How many total labels have we generated so far over all check patterns?
+  unsigned LabelIndexGlobal;
+  /// The widest label generated so far over all check patterns.
+  unsigned LabelWidthGlobal;
 
 public:
-  /// Make an invalid labeler to be overwritten by a valid one before calling
-  /// \c generateLabel.
-  InputAnnotationLabeler()
-      : LabelWidthGlobal(nullptr), LabelIndexPerPattern(nullptr) {}
   /// - \p CheckFileBufferID is the buffer ID for the check file.
   /// - \p ImpPatBufferIDRange is the buffer ID range for all implicit patterns.
-  /// - \p LabelWidthGlobal is the widest label generated so far over all
-  ///   patterns.  It will be updated by each call to \c generateLabel.
-  /// - \p CheckTy and \p CheckLoc identify the pattern that produced all
-  ///   diagnostics for which this labeler will generate labels.
-  /// - \p LabelIndexPerPattern is either \c nullptr if only one label is
-  ///   required for the pattern for which this labeler will generate labels, or
-  ///   it points to the per-pattern index of the next label to be generated for
-  ///   that pattern.  In the latter case, the index will be incremented by each
-  ///   call to \c generateLabel.
   InputAnnotationLabeler(const SourceMgr &SM, unsigned CheckFileBufferID,
-                         std::pair<unsigned, unsigned> ImpPatBufferIDRange,
-                         unsigned &LabelWidthGlobal,
-                         Check::FileCheckType CheckTy, SMLoc CheckLoc,
-                         unsigned *LabelIndexPerPattern)
-      : LabelWidthGlobal(&LabelWidthGlobal),
-        LabelIndexPerPattern(LabelIndexPerPattern) {
-    llvm::raw_string_ostream LabelStrm(LabelPrefix);
-    LabelStrm << GetCheckTypeAbbreviation(CheckTy) << ":";
-    unsigned CheckBufferID = SM.FindBufferContainingLoc(CheckLoc);
-    if (CheckBufferID == CheckFileBufferID)
-      LabelStrm << SM.getLineAndColumn(CheckLoc, CheckBufferID).first;
-    else if (ImpPatBufferIDRange.first <= CheckBufferID &&
-             CheckBufferID < ImpPatBufferIDRange.second)
-      LabelStrm << "imp" << (CheckBufferID - ImpPatBufferIDRange.first + 1);
-    else
-      llvm_unreachable("expected check location to be either in the check file "
-                       "or for an implicit pattern");
+                         std::pair<unsigned, unsigned> ImpPatBufferIDRange)
+      : SM(SM), CheckFileBufferID(CheckFileBufferID),
+        ImpPatBufferIDRange(ImpPatBufferIDRange), LabelIndexGlobal(0),
+        LabelWidthGlobal(0) {}
+  /// Add \c C to the number of expected \c makeLabel calls for \c Diag.
+  /// \c expect must not be called after the first \c makeLabel call.
+  void expect(const FileCheckDiag &Diag, unsigned C) {
+    LabelCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()] += C;
   }
-  /// Write a globally unique label into \p Label.
-  void generateLabel(std::string &Label) {
-    assert(!LabelPrefix.empty() &&
-           "unexpected generateLabel call on invalid labeler");
+  /// Write a new globally unique label for \c Diag into \p Label, and write its
+  /// globally unique index into LabelIndexGlobal.  All \c makeLabel calls must
+  /// have already been predicted by \c expect calls.
+  void makeLabel(const FileCheckDiag &Diag, std::string &Label,
+                 unsigned &LabelIndexGlobal) {
+    const MatchResultDiag &MRD = Diag.getMatchResultDiag();
+    SMLoc CheckLoc = MRD.getCheckLoc();
+    std::string &LabelPrefix = LabelPrefixPerPattern[CheckLoc];
+    if (LabelPrefix.empty()) {
+      llvm::raw_string_ostream LabelStrm(LabelPrefix);
+      LabelStrm << GetCheckTypeAbbreviation(MRD.getCheckTy()) << ":";
+      unsigned CheckBufferID = SM.FindBufferContainingLoc(CheckLoc);
+      if (CheckBufferID == CheckFileBufferID)
+        LabelStrm << SM.getLineAndColumn(CheckLoc, CheckBufferID).first;
+      else if (ImpPatBufferIDRange.first <= CheckBufferID &&
+               CheckBufferID < ImpPatBufferIDRange.second)
+        LabelStrm << "imp" << (CheckBufferID - ImpPatBufferIDRange.first + 1);
+      else
+        llvm_unreachable(
+            "expected check location to be either in the check file or for an "
+            "implicit pattern");
+    }
     assert(Label.empty() && "expected empty string for writing label");
     llvm::raw_string_ostream LabelStrm(Label);
     LabelStrm << LabelPrefix;
-    if (LabelIndexPerPattern)
-      LabelStrm << "'" << (*LabelIndexPerPattern)++;
-    *LabelWidthGlobal =
-        std::max((std::string::size_type)*LabelWidthGlobal, Label.size());
+    unsigned LabelCount = LabelCountPerPattern[CheckLoc];
+    unsigned LabelIndex = LabelIndexPerPattern[CheckLoc]++;
+    assert(LabelIndex < LabelCount &&
+           "expected all makeLabel calls to be predicted by expect calls");
+    if (LabelCount > 1)
+      LabelStrm << "'" << LabelIndex;
+    LabelWidthGlobal =
+        std::max((std::string::size_type)LabelWidthGlobal, Label.size());
+    LabelIndexGlobal = this->LabelIndexGlobal++;
   }
+  /// Get the widest label generated.
+  unsigned getLabelWidthGlobal() const { return LabelWidthGlobal; }
 };
 
 /// A range specifying where annotation markers are physically \a drawn in the
@@ -594,17 +615,13 @@ public:
 class SearchRangeAnnotator {
 private:
   const SourceMgr &SM;
-  /// Where to append search range annotations.
+  InputAnnotationLabeler &Labeler;
   std::vector<InputAnnotation> &Annotations;
-  /// A globally unique index for this annotation.
-  unsigned &LabelIndexGlobal;
+
   /// The most recent \c MatchResultDiag, or \c nullptr if all search range
   /// annotations have been added already for the most recent
   /// \c MatchResultDiag.
   const MatchResultDiag *MRD;
-  /// The labeler for \c MRD.  Stored by value as the original labeler might be
-  /// destroyed by the time we call \c endDiags here.
-  InputAnnotationLabeler Labeler;
   /// Would a \c SearchRangeAnnotator make any search range annotations for
   /// \p MRD?
   static bool makesAnnotationsFor(const MatchResultDiag &MRD) {
@@ -623,8 +640,7 @@ private:
   /// Make the next annotation for the current \c MatchResultDiag.
   void makeAnnotation(bool Start) {
     InputAnnotation &A = Annotations.emplace_back();
-    A.LabelIndexGlobal = LabelIndexGlobal++;
-    Labeler.generateLabel(A.Label);
+    Labeler.makeLabel(*MRD, A.Label, A.LabelIndexGlobal);
     A.IsFirstLine = true;
     A.FoundAndExpectedMatch = false;
     MarkerRange SearchRange;
@@ -655,14 +671,13 @@ private:
   }
 
 public:
-  /// How many search range annotations would a \c SearchRangeAnnotator generate
-  /// for \c MRD?
-  static unsigned countAnnotationsFor(const SourceMgr &SM,
-                                      const MatchResultDiag &MRD) {
+  /// Tell the labeler how many times this will call
+  /// \c InputAnnotationLabeler::makeLabel for \c MRD.
+  void predictLabelsFor(const MatchResultDiag &MRD) {
     if (!makesAnnotationsFor(MRD))
-      return 0;
+      return;
     MarkerRange SearchRange;
-    return makesOneLinerFor(SM, MRD, SearchRange) ? 1 : 2;
+    Labeler.expect(MRD, makesOneLinerFor(SM, MRD, SearchRange) ? 1 : 2);
   }
   /// Are the search range annotations generated by a \c SearchRangeAnnotator
   /// sufficient for \p MRD?  Otherwise, \p MRD needs to be rendered as a
@@ -671,27 +686,20 @@ public:
     return makesAnnotationsFor(MRD) && getMarker(MRD).Note.empty();
   }
   /// \p Annotations is where this annotator should append search range
-  /// annotations.  \p LabelIndexGlobal is the globally unique index of the next
-  /// annotation label to be generated.  This annotator will increment it when
-  /// generating a new label for a search range annotation.
-  SearchRangeAnnotator(const SourceMgr &SM,
-                       std::vector<InputAnnotation> &Annotations,
-                       unsigned &LabelIndexGlobal)
-      : SM(SM), Annotations(Annotations), LabelIndexGlobal(LabelIndexGlobal),
-        MRD(nullptr) {}
+  /// annotations.
+  SearchRangeAnnotator(const SourceMgr &SM, InputAnnotationLabeler &Labeler,
+                       std::vector<InputAnnotation> &Annotations)
+      : SM(SM), Labeler(Labeler), Annotations(Annotations), MRD(nullptr) {}
   /// Emit any search range start annotation or one-line search range annotation
-  /// for \p MRDNew using its labeler \p LabelerNew.  This annotator will emit
-  /// any search range end annotation at the next call to \c newMatchResultDiag
-  /// or \c endDiags.
-  void newMatchResultDiag(const MatchResultDiag &MRDNew,
-                          InputAnnotationLabeler LabelerNew) {
+  /// for \p MRDNew.  Emit any search range end annotation for \p MRDNew at the
+  /// next call to \c newMatchResultDiag or \c endDiags.
+  void newMatchResultDiag(const MatchResultDiag &MRDNew) {
     if (MRD) {
       makeAnnotation(/*Start=*/false);
       MRD = nullptr;
     }
     if (makesAnnotationsFor(MRDNew)) {
       MRD = &MRDNew;
-      Labeler = LabelerNew;
       makeAnnotation(/*Start=*/true);
     }
   }
@@ -710,46 +718,20 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       const FileCheckDiagList &Diags,
                       std::vector<InputAnnotation> &Annotations,
                       unsigned &LabelWidthGlobal) {
-  struct CompareSMLoc {
-    bool operator()(SMLoc LHS, SMLoc RHS) const {
-      return LHS.getPointer() < RHS.getPointer();
-    }
-  };
-
-  // How many unique input annotation labels does each check pattern need?  Each
-  // check pattern can have multiple MatchResultDiag's, each followed by a
-  // series of zero or more MatchNoteDiag's.  Each such MatchResultDiag and its
-  // MatchNoteDiag series can require multiple labels.
-  std::map<SMLoc, unsigned, CompareSMLoc> LabelCountPerPattern;
+  InputAnnotationLabeler Labeler(SM, CheckFileBufferID, ImpPatBufferIDRange);
+  SearchRangeAnnotator TheSearchRangeAnnotator(SM, Labeler, Annotations);
   for (const FileCheckDiag &Diag : Diags) {
-    unsigned &C = LabelCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()];
     if (const MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(&Diag)) {
-      C += SearchRangeAnnotator::countAnnotationsFor(SM, *MRD);
+      TheSearchRangeAnnotator.predictLabelsFor(*MRD);
       if (!SearchRangeAnnotator::sufficesFor(*MRD))
-        ++C;
+        Labeler.expect(*MRD, 1);
     } else {
-      ++C;
+      Labeler.expect(Diag, 1);
     }
   }
-  // How many labels have we generated so far per check pattern?
-  std::map<SMLoc, unsigned, CompareSMLoc> LabelIndexPerPattern;
-  // How many total labels have we generated so far?
-  unsigned LabelIndexGlobal = 0;
-  SearchRangeAnnotator TheSearchRangeAnnotator(SM, Annotations,
-                                               LabelIndexGlobal);
-  // What's the widest label we've generated so far?
-  LabelWidthGlobal = 0;
-  // The labeler for the current MatchResultDiag and its MatchNoteDiag series.
-  InputAnnotationLabeler CurLabeler;
   for (const FileCheckDiag &Diag : Diags) {
     if (const MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(&Diag)) {
-      CurLabeler = InputAnnotationLabeler(
-          SM, CheckFileBufferID, ImpPatBufferIDRange, LabelWidthGlobal,
-          MRD->getCheckTy(), MRD->getCheckLoc(),
-          LabelCountPerPattern[MRD->getCheckLoc()] > 1
-              ? &LabelIndexPerPattern[MRD->getCheckLoc()]
-              : nullptr);
-      TheSearchRangeAnnotator.newMatchResultDiag(*MRD, CurLabeler);
+      TheSearchRangeAnnotator.newMatchResultDiag(*MRD);
       if (SearchRangeAnnotator::sufficesFor(*MRD))
         continue;
     }
@@ -757,8 +739,7 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
     // Build label that is unique for this input annotation before it is
     // potentially broken across multiple lines.
     InputAnnotation A;
-    A.LabelIndexGlobal = LabelIndexGlobal++;
-    CurLabeler.generateLabel(A.Label);
+    Labeler.makeLabel(Diag, A.Label, A.LabelIndexGlobal);
 
     // Build the input marker.
     A.Marker = getMarker(Diag);
@@ -817,6 +798,7 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
     }
   }
   TheSearchRangeAnnotator.endDiags();
+  LabelWidthGlobal = Labeler.getLabelWidthGlobal();
 }
 
 static unsigned FindInputLineInFilter(
