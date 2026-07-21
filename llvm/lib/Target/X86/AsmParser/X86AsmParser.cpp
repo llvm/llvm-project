@@ -832,8 +832,8 @@ private:
       default:
         State = IES_ERROR;
         break;
-      case IES_MINUS:
       case IES_PLUS:
+      case IES_MINUS:
       case IES_LBRAC:
         State = IES_REGISTER;
         TmpReg = Reg;
