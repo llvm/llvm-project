@@ -424,8 +424,8 @@ public:
   }
 
 #if _LIBCPP_STD_VER <= 17
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool
-  operator!=(const __bit_iterator& __x, const __bit_iterator& __y) {
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool operator!=(const __bit_iterator& __x, const __bit_iterator& __y) {
     return !(__x == __y);
   }
 
@@ -573,12 +573,13 @@ struct __specialized_algorithm<_Algorithm::__fill_n, __single_iterator<__bit_ite
   template <class _Size, class _Tp>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static __bit_iterator<_Cp, false>
   operator()(__bit_iterator<_Cp, false> __first, _Size __n, const _Tp& __value) {
-    if (__n > 0) {
-      if (__value)
-        __impl<true>(__first, __n);
-      else
-        __impl<false>(__first, __n);
-    }
+    if (__n <= 0)
+      return __first;
+
+    if (__value)
+      __impl<true>(__first, __n);
+    else
+      __impl<false>(__first, __n);
     return __first + __n;
   }
 };

@@ -69,7 +69,6 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
 #include "clang/Sema/TemplateDeduction.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1192,11 +1191,26 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   return Complete;
 }
 
+void Sema::getSortedUnusedLocalTypedefNameCandidates(
+    SmallVectorImpl<const TypedefNameDecl *> &Sorted) const {
+  // The candidates are collected while iterating a Scope's SmallPtrSet, so sort
+  // by source location for a deterministic order.
+  Sorted.assign(UnusedLocalTypedefNameCandidates.begin(),
+                UnusedLocalTypedefNameCandidates.end());
+  llvm::sort(Sorted,
+             [](const TypedefNameDecl *LHS, const TypedefNameDecl *RHS) {
+               return LHS->getLocation().getRawEncoding() <
+                      RHS->getLocation().getRawEncoding();
+             });
+}
+
 void Sema::emitAndClearUnusedLocalTypedefWarnings() {
   if (ExternalSource)
     ExternalSource->ReadUnusedLocalTypedefNameCandidates(
         UnusedLocalTypedefNameCandidates);
-  for (const TypedefNameDecl *TD : UnusedLocalTypedefNameCandidates) {
+  SmallVector<const TypedefNameDecl *, 4> Sorted;
+  getSortedUnusedLocalTypedefNameCandidates(Sorted);
+  for (const TypedefNameDecl *TD : Sorted) {
     if (TD->isReferenced())
       continue;
     Diag(TD->getLocation(), diag::warn_unused_local_typedef)

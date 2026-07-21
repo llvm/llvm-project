@@ -443,6 +443,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
   PP.UseEnumerators = false;
+  PP.PrettyEnums = false;
 
   // Apply -fdebug-prefix-map.
   PP.Callbacks = &PrintCB;

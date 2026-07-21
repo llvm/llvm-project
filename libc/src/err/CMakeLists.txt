@@ -14,8 +14,8 @@ add_object_library(
     libc.src.__support.libc_errno
     libc.src.__support.OSUtil.osutil
     libc.src.__support.StringUtil.error_to_string
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
     libc.src.__support.CPP.string_view
     libc.src.__support.macros.config
 )

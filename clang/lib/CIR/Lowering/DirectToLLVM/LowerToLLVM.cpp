@@ -76,6 +76,32 @@ mlir::Type elementTypeIfVector(mlir::Type type) {
 }
 } // namespace
 
+/// In-memory storage width in bits for a _BitInt(N): N rounded up to the type's
+/// ABI alignment.  This equals sizeof(_BitInt(N)) * 8 on the default target
+/// (e.g. _BitInt(6) -> 8, _BitInt(17) -> 32, _BitInt(128) -> 128).
+static unsigned getBitIntMemoryStorageBits(cir::IntType ty,
+                                           const mlir::DataLayout &dataLayout) {
+  uint64_t alignBits = ty.getABIAlignment(dataLayout, {}) * 8;
+  return llvm::alignTo(ty.getWidth(), alignBits);
+}
+
+/// A _BitInt(N) whose padded storage integer iM has a larger alloc size than
+/// its M/8 store size is laid out by clang as a byte array, not a plain integer
+/// (e.g. _BitInt(129) -> i192 with alloc size 32 != store size 24).  That
+/// "split" storage form is not yet implemented; lowerings must detect it and
+/// report errorNYI rather than emit the wrong-sized integer.
+static bool isSplitStorageBitInt(cir::IntType ty,
+                                 const mlir::DataLayout &dataLayout) {
+  if (!ty.isBitInt())
+    return false;
+  unsigned storageBits = getBitIntMemoryStorageBits(ty, dataLayout);
+  auto storageTy = mlir::IntegerType::get(ty.getContext(), storageBits);
+  uint64_t storeSize = storageBits / 8;
+  uint64_t allocSize =
+      llvm::alignTo(storeSize, dataLayout.getTypeABIAlignment(storageTy));
+  return allocSize != storeSize;
+}
+
 /// Given a type convertor and a data layout, convert the given type to a type
 /// that is suitable for memory operations. For example, this can be used to
 /// lower cir.bool accesses to i8.
@@ -89,7 +115,31 @@ static mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
                                   dataLayout.getTypeSizeInBits(type));
   }
 
+  // _BitInt(N) keeps its literal width as a value but is stored in a padded
+  // integer iM in memory, the same way bool is i1 as a value and i8 in memory.
+  // The byte-array storage form for wide split widths is not implemented; a
+  // null return signals that, and op lowerings turn it into errorNYI.
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(type);
+      intTy && intTy.isBitInt()) {
+    if (isSplitStorageBitInt(intTy, dataLayout))
+      return {};
+    return mlir::IntegerType::get(
+        type.getContext(), getBitIntMemoryStorageBits(intTy, dataLayout));
+  }
+
   return converter.convertType(type);
+}
+
+/// Alignment to use for a memory access whose op carries no explicit alignment.
+/// For _BitInt the storage integer iM's ABI alignment (e.g. i128's 16)
+/// over-aligns the value, so use the CIR _BitInt ABI alignment (e.g. 8).
+static uint64_t getMemoryFallbackAlignment(mlir::Type cirType,
+                                           mlir::Type llvmMemType,
+                                           const mlir::DataLayout &dataLayout) {
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
+      intTy && intTy.isBitInt())
+    return intTy.getABIAlignment(dataLayout, {});
+  return dataLayout.getTypeABIAlignment(llvmMemType);
 }
 
 static mlir::Value createIntCast(mlir::OpBuilder &bld, mlir::Value src,
@@ -109,6 +159,23 @@ static mlir::Value createIntCast(mlir::OpBuilder &bld, mlir::Value src,
   if (dstWidth < srcWidth)
     return mlir::LLVM::TruncOp::create(bld, loc, dstTy, src);
   return mlir::LLVM::BitcastOp::create(bld, loc, dstTy, src);
+}
+
+/// Cast a _BitInt(N) value between its literal width iN and its padded
+/// in-memory storage iM (sign/zero-extend to memory per signedness so the
+/// padding bits are well-defined, truncate back on load; matches classic
+/// CodeGen).  Callers must first rule out the unsupported byte-array storage
+/// form (isSplitStorageBitInt / a null convertTypeForMemory result).
+static mlir::Value
+castBitIntMemoryStorage(mlir::ConversionPatternRewriter &rewriter,
+                        const mlir::DataLayout &dataLayout, cir::IntType intTy,
+                        mlir::Value value, bool toMemory) {
+  unsigned storageBits = getBitIntMemoryStorageBits(intTy, dataLayout);
+  if (storageBits == intTy.getWidth())
+    return value;
+  unsigned dstBits = toMemory ? storageBits : intTy.getWidth();
+  return createIntCast(rewriter, value, rewriter.getIntegerType(dstBits),
+                       /*isSigned=*/toMemory && intTy.isSigned());
 }
 
 static mlir::LLVM::Visibility
@@ -137,6 +204,12 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
     return createIntCast(rewriter, value, rewriter.getI1Type());
   }
 
+  // Truncate the padded storage integer back to the _BitInt's literal width.
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(op.getType());
+      intTy && intTy.isBitInt())
+    return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
+                                   /*toMemory=*/false);
+
   return value;
 }
 
@@ -154,6 +227,12 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
         rewriter.getIntegerType(dataLayout.getTypeSizeInBits(boolTy));
     return createIntCast(rewriter, value, memType);
   }
+
+  // Sign/zero-extend the _BitInt value to its padded storage integer.
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(origType);
+      intTy && intTy.isBitInt())
+    return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
+                                   /*toMemory=*/true);
 
   return value;
 }
@@ -443,9 +522,14 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BoolAttr boolAttr) {
 /// IntAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::IntAttr intAttr) {
   mlir::Location loc = parentOp->getLoc();
-  return mlir::LLVM::ConstantOp::create(
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+  // Materialize the value at its literal width, then widen to the in-memory
+  // storage type (a no-op except for _BitInt) so aggregate members built here
+  // match the iM struct/array fields produced by convertTypeForMemory.
+  mlir::Value val = mlir::LLVM::ConstantOp::create(
       rewriter, loc, converter->convertType(intAttr.getType()),
       intAttr.getValue());
+  return emitToMemory(rewriter, layout, intAttr.getType(), val);
 }
 
 /// FPAttr visitor.
@@ -570,84 +654,11 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   return result;
 }
 
-// Figure out if we want mark the new struct 'packed' if it isn't already. IF
-// it is already, we have to keep that behavior. We pack it with logic similar
-// to classic codegen, though will end up missing cases, since we don't want to
-// change the type other than the FAM.
-// We can do so if:
-// 1- Packing it won't change any of the field offsets.
-// 2- the non-padded struct would add padding beyond the
-// flexible array member.  We don't pack if the flexible array member manages
-// to not cause trailing padding.
-static bool shouldPackFAMStruct(const mlir::DataLayout &dataLayout,
-                                llvm::ArrayRef<mlir::Type> members) {
-  uint64_t maxAlign = 1;
-  uint64_t totalSize = 0;
-  for (mlir::Type member : members) {
-    uint64_t align = dataLayout.getTypeABIAlignment(member);
-    maxAlign = std::max(maxAlign, align);
-    uint64_t size = dataLayout.getTypeSize(member).getFixedValue();
-
-    if (llvm::alignTo(totalSize, align) != totalSize)
-      return false;
-
-    totalSize += size;
-  }
-  return llvm::alignTo(totalSize, maxAlign) != totalSize;
-}
-
-// CIR supports flexible-array-members in its struct types. That is, a
-// zero-length array as the last element, which can be initialized with an
-// arbitrary number of elements. A ConstRecordAttr can be created with one of
-// these, and our verifier allows it.  However, the LLVM implementation does NOT
-// permit this. So we have to replace this type in LLVM with special struct for
-// this value.
-// This function is used to adjust  any place we could run into a
-// ConstRecordAttr (that is, a global?) that is initialized. It'll return the
-// type value unchanged if this isn't a flexible array member case.
-static mlir::Type
-adjustGlobalTypeForFlexibleArrayInit(mlir::Type llvmType, mlir::Attribute init,
-                                     const mlir::TypeConverter &converter,
-                                     const mlir::DataLayout &dataLayout) {
-  // This only applies to ConstRecordAttr initialization.
-  auto constRecord = mlir::dyn_cast_if_present<cir::ConstRecordAttr>(init);
-  if (!constRecord)
-    return llvmType;
-
-  // If this isn't of struct-type, or doesn't have any members, there is nothing
-  // to do.
-  auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(llvmType);
-  if (!structTy || structTy.getBody().empty())
-    return llvmType;
-
-  // If this isn't a zero-sized array, it isn't a flexible array member.
-  auto fam = dyn_cast<mlir::LLVM::LLVMArrayType>(structTy.getBody().back());
-  if (!fam || fam.getNumElements() != 0)
-    return llvmType;
-
-  llvm::ArrayRef<mlir::Attribute> initMembers =
-      constRecord.getMembers().getValue();
-  mlir::Type lastInitType = cast<mlir::TypedAttr>(initMembers.back()).getType();
-
-  // Don't touch it if we don't need to do non-zero elements.
-  if (cast<cir::ArrayType>(lastInitType).getSize() == 0)
-    return llvmType;
-
-  llvm::SmallVector<mlir::Type> newBody{structTy.getBody()};
-  newBody[newBody.size() - 1] = converter.convertType(lastInitType);
-
-  bool packed = structTy.isPacked() || shouldPackFAMStruct(dataLayout, newBody);
-
-  return mlir::LLVM::LLVMStructType::getLiteral(structTy.getContext(), newBody,
-                                                packed);
-}
-
 /// ConstRecord visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
   mlir::Type llvmTy = converter->convertType(constRecord.getType());
   mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
-  llvmTy = adjustGlobalTypeForFlexibleArrayInit(llvmTy, constRecord, *converter,
-                                                dataLayout);
+  llvmTy = adjustGlobalTypeForInit(llvmTy, constRecord, *converter, dataLayout);
   const mlir::Location loc = parentOp->getLoc();
   mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
 
@@ -804,15 +815,19 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::TypeInfoAttr typeInfoAttr) {
 /// UndefAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::UndefAttr undefAttr) {
   mlir::Location loc = parentOp->getLoc();
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
   return mlir::LLVM::UndefOp::create(
-      rewriter, loc, converter->convertType(undefAttr.getType()));
+      rewriter, loc,
+      convertTypeForMemory(*converter, layout, undefAttr.getType()));
 }
 
 /// PoisonAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::PoisonAttr poisonAttr) {
   mlir::Location loc = parentOp->getLoc();
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
   return mlir::LLVM::PoisonOp::create(
-      rewriter, loc, converter->convertType(poisonAttr.getType()));
+      rewriter, loc,
+      convertTypeForMemory(*converter, layout, poisonAttr.getType()));
 }
 
 // VTableAttr visitor.
@@ -833,8 +848,9 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::VTableAttr vtableArr) {
 /// ZeroAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ZeroAttr attr) {
   mlir::Location loc = parentOp->getLoc();
-  return mlir::LLVM::ZeroOp::create(rewriter, loc,
-                                    converter->convertType(attr.getType()));
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+  return mlir::LLVM::ZeroOp::create(
+      rewriter, loc, convertTypeForMemory(*converter, layout, attr.getType()));
 }
 
 // This class handles rewriting initializer attributes for types that do not
@@ -853,7 +869,17 @@ public:
   }
 
   mlir::Attribute visitCirAttr(cir::IntAttr attr) {
-    return rewriter.getIntegerAttr(llvmType, attr.getValue());
+    // A _BitInt(N) global stores its value in a padded integer iM; sign/zero-
+    // extend the APInt to that width (a no-op for plain integers, whose value
+    // width already matches llvmType) so the IntegerAttr is well-typed.
+    llvm::APInt val = attr.getValue();
+    auto destTy = mlir::cast<mlir::IntegerType>(llvmType);
+    if (val.getBitWidth() != destTy.getWidth()) {
+      auto cirIntTy = mlir::cast<cir::IntType>(attr.getType());
+      val = cirIntTy.isSigned() ? val.sext(destTy.getWidth())
+                                : val.zext(destTy.getWidth());
+    }
+    return rewriter.getIntegerAttr(llvmType, val);
   }
 
   mlir::Attribute visitCirAttr(cir::FPAttr attr) {
@@ -1805,6 +1831,9 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
                 typeConverter->convertType(rewriter.getIndexType()), 1);
   mlir::Type elementTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getAllocaType());
+  if (!elementTy)
+    return op.emitError()
+           << "NYI: lowering alloca of a type with no memory representation";
   mlir::Type resultTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
 
@@ -2011,10 +2040,13 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type llvmTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
+  if (!llvmTy)
+    return op.emitError()
+           << "NYI: lowering load of a type with no memory representation";
   mlir::LLVM::AtomicOrdering ordering = getLLVMMemOrder(op.getMemOrder());
   std::optional<size_t> opAlign = op.getAlignment();
-  unsigned alignment =
-      (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmTy));
+  unsigned alignment = (unsigned)opAlign.value_or(
+      getMemoryFallbackAlignment(op.getType(), llvmTy, dataLayout));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -2026,6 +2058,8 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
       op.getIsVolatile(), /*isNonTemporal=*/op.getIsNontemporal(),
       /*isInvariant=*/op.getInvariant(), /*isInvariantGroup=*/false, ordering,
       llvmSyncScope.value_or(std::string()));
+  if (mlir::Attribute domain = op->getAttr("cir.riscv_nontemporal_domain"))
+    newLoad->setAttr("cir.riscv_nontemporal_domain", domain);
 
   // Convert adapted result to its original type if needed.
   mlir::Value result =
@@ -2041,6 +2075,10 @@ cir::direct::CIRToLLVMVecMaskedLoadOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type llvmResTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
+  if (!llvmResTy)
+    return op.emitError()
+           << "NYI: lowering masked load of a type with no memory "
+              "representation";
 
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment =
@@ -2060,11 +2098,15 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
     cir::StoreOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::LLVM::AtomicOrdering memorder = getLLVMMemOrder(op.getMemOrder());
+  mlir::Type valueType = op.getValue().getType();
   const mlir::Type llvmTy =
-      getTypeConverter()->convertType(op.getValue().getType());
+      convertTypeForMemory(*getTypeConverter(), dataLayout, valueType);
+  if (!llvmTy)
+    return op.emitError()
+           << "NYI: lowering store of a type with no memory representation";
   std::optional<size_t> opAlign = op.getAlignment();
-  unsigned alignment =
-      (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmTy));
+  unsigned alignment = (unsigned)opAlign.value_or(
+      getMemoryFallbackAlignment(valueType, llvmTy, dataLayout));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -2081,6 +2123,8 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
       op.getIsVolatile(),
       /*isNonTemporal=*/op.getIsNontemporal(), /*isInvariantGroup=*/false,
       memorder, llvmSyncScope.value_or(std::string()));
+  if (mlir::Attribute domain = op->getAttr("cir.riscv_nontemporal_domain"))
+    storeOp->setAttr("cir.riscv_nontemporal_domain", domain);
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
@@ -2534,8 +2578,8 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   // Keep the global's type in sync with the value built by CIRAttrToValue: a
   // flexible array member initializer requires an oversized anonymous struct.
   if (std::optional<mlir::Attribute> init = op.getInitialValue())
-    llvmType = adjustGlobalTypeForFlexibleArrayInit(
-        llvmType, *init, *getTypeConverter(), dataLayout);
+    llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
+                                       dataLayout);
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops. This duplicates code
@@ -2606,13 +2650,16 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // This is the LLVM dialect type.
   mlir::Type llvmType =
       convertTypeForMemory(*getTypeConverter(), dataLayout, cirSymType);
+  if (!llvmType)
+    return op.emitError()
+           << "NYI: lowering global of a type with no memory representation";
 
   // A flexible array member initializer makes the constant larger than the
   // record's declared type, so the global must use an oversized anonymous
   // struct instead.
   if (init.has_value())
-    llvmType = adjustGlobalTypeForFlexibleArrayInit(
-        llvmType, *init, *getTypeConverter(), dataLayout);
+    llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
+                                       dataLayout);
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
@@ -3396,9 +3443,19 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
     mlir::Type ty =
         convertTypeForMemory(converter, dataLayout, type.getElementType());
+    // A null element type means an unsupported member (e.g. a _BitInt with
+    // byte-array storage); propagate the conversion failure.
+    if (!ty)
+      return {};
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
   });
   converter.addConversion([&](cir::VectorType type) -> mlir::Type {
+    // Vector-of-_BitInt memory layout is not modeled here (the element would
+    // stay at its literal width); report a conversion failure rather than emit
+    // an unvalidated vector.
+    if (auto intTy = mlir::dyn_cast<cir::IntType>(type.getElementType());
+        intTy && intTy.isBitInt())
+      return {};
     const mlir::Type ty = converter.convertType(type.getElementType());
     return mlir::VectorType::get(type.getSize(), ty, {type.getIsScalable()});
   });
@@ -3450,8 +3507,15 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::StructType type) -> mlir::Type {
     llvm::SmallVector<mlir::Type> llvmMembers;
-    for (mlir::Type ty : type.getMembers())
-      llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, ty));
+    for (mlir::Type ty : type.getMembers()) {
+      mlir::Type memberTy = convertTypeForMemory(converter, dataLayout, ty);
+      // A null member means an unsupported type (e.g. a _BitInt with byte-array
+      // storage); propagate the conversion failure instead of building an
+      // invalid struct body.
+      if (!memberTy)
+        return {};
+      llvmMembers.push_back(memberTy);
+    }
 
     mlir::LLVM::LLVMStructType llvmStruct;
     if (type.getName()) {
@@ -3469,11 +3533,19 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   converter.addConversion([&](cir::UnionType type) -> mlir::Type {
     llvm::SmallVector<mlir::Type> llvmMembers;
     if (!type.getMembers().empty())
-      if (auto storage = type.getUnionStorageType(dataLayout))
-        llvmMembers.push_back(
-            convertTypeForMemory(converter, dataLayout, storage));
-    if (mlir::Type pad = type.getPadding())
-      llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, pad));
+      if (auto storage = type.getUnionStorageType(dataLayout)) {
+        mlir::Type storageTy =
+            convertTypeForMemory(converter, dataLayout, storage);
+        if (!storageTy)
+          return {};
+        llvmMembers.push_back(storageTy);
+      }
+    if (mlir::Type pad = type.getPadding()) {
+      mlir::Type padTy = convertTypeForMemory(converter, dataLayout, pad);
+      if (!padTy)
+        return {};
+      llvmMembers.push_back(padTy);
+    }
 
     mlir::LLVM::LLVMStructType llvmStruct;
     if (type.getName()) {

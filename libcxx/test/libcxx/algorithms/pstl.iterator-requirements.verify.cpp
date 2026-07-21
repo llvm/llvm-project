@@ -211,4 +211,15 @@ void f(non_forward_iterator non_fwd,
     (void)std::transform_reduce(
         pol, non_fwd, non_fwd, val, func, func); // expected-error@*:* {{static assertion failed: transform_reduce}}
   }
+
+  {
+    (void)std::adjacent_difference(
+        pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: adjacent_difference}}
+    (void)std::adjacent_difference(
+        pol, it, it, non_fwd, func); // expected-error@*:* {{static assertion failed: adjacent_difference}}
+    (void)std::adjacent_difference(
+        pol, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: adjacent_difference}}
+    (void)std::adjacent_difference(
+        pol, non_fwd, non_fwd, it, func); // expected-error@*:* {{static assertion failed: adjacent_difference}}
+  }
 }

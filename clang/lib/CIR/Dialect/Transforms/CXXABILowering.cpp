@@ -67,7 +67,8 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
     return true;
 
   // Data Member and method are ALWAYS illegal.
-  if (isa<cir::DataMemberAttr, cir::MethodAttr>(attr))
+  if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
+          attr))
     return false;
 
   return llvm::TypeSwitch<mlir::Attribute, bool>(attr)
@@ -394,6 +395,12 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
                                          mlir::Type ty,
                                          mlir::Attribute initVal) {
   if (mlir::isa<cir::DataMemberType>(ty)) {
+    // Members without a CIR field index (e.g. no_unique_address empty fields)
+    // are represented by an explicit byte offset instead of a field path.
+    if (auto offsetVal =
+            mlir::dyn_cast_if_present<cir::DataMemberOffsetAttr>(initVal))
+      return lowerModule->getCXXABI().lowerDataMemberOffsetConstant(offsetVal,
+                                                                    layout, tc);
     auto dataMemberVal = mlir::cast_if_present<cir::DataMemberAttr>(initVal);
     return lowerModule->getCXXABI().lowerDataMemberConstant(dataMemberVal,
                                                             layout, tc);

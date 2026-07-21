@@ -99,17 +99,17 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyFixFunctionBitcastsLegacyPass(PR);
   initializeWebAssemblyOptimizeReturnedLegacyPass(PR);
   initializeWebAssemblyRefTypeMem2LocalLegacyPass(PR);
-  initializeWebAssemblyArgumentMovePass(PR);
+  initializeWebAssemblyArgumentMoveLegacyPass(PR);
   initializeWebAssemblyAsmPrinterPass(PR);
-  initializeWebAssemblySetP2AlignOperandsPass(PR);
-  initializeWebAssemblyReplacePhysRegsPass(PR);
+  initializeWebAssemblySetP2AlignOperandsLegacyPass(PR);
+  initializeWebAssemblyReplacePhysRegsLegacyPass(PR);
   initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
   initializeWebAssemblyMemIntrinsicResultsPass(PR);
   initializeWebAssemblyRegStackifyPass(PR);
   initializeWebAssemblyRegColoringPass(PR);
   initializeWebAssemblyNullifyDebugValueListsLegacyPass(PR);
-  initializeWebAssemblyFixIrreducibleControlFlowPass(PR);
-  initializeWebAssemblyLateEHPreparePass(PR);
+  initializeWebAssemblyFixIrreducibleControlFlowLegacyPass(PR);
+  initializeWebAssemblyLateEHPrepareLegacyPass(PR);
   initializeWebAssemblyExceptionInfoPass(PR);
   initializeWebAssemblyCFGSortPass(PR);
   initializeWebAssemblyCFGStackifyPass(PR);
@@ -119,7 +119,7 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
   initializeWebAssemblyMCLowerPrePassPass(PR);
-  initializeWebAssemblyFixBrTableDefaultsPass(PR);
+  initializeWebAssemblyFixBrTableDefaultsLegacyPass(PR);
   initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
 }
 
@@ -383,18 +383,18 @@ bool WebAssemblyPassConfig::addInstSelector() {
   // Run the argument-move pass immediately after the ScheduleDAG scheduler
   // so that we can fix up the ARGUMENT instructions before anything else
   // sees them in the wrong place.
-  addPass(createWebAssemblyArgumentMove());
+  addPass(createWebAssemblyArgumentMoveLegacyPass());
   // Set the p2align operands. This information is present during ISel, however
   // it's inconvenient to collect. Collect it now, and update the immediate
   // operands.
-  addPass(createWebAssemblySetP2AlignOperands());
+  addPass(createWebAssemblySetP2AlignOperandsLegacyPass());
 
   // Eliminate range checks and add default targets to br_table instructions.
-  addPass(createWebAssemblyFixBrTableDefaults());
+  addPass(createWebAssemblyFixBrTableDefaultsLegacyPass());
 
   // unreachable is terminator, non-terminator instruction after it is not
   // allowed.
-  addPass(createWebAssemblyCleanCodeAfterTrap());
+  addPass(createWebAssemblyCleanCodeAfterTrapLegacyPass());
 
   return false;
 }
@@ -446,17 +446,17 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(&UnreachableMachineBlockElimID);
 
   // Eliminate multiple-entry loops.
-  addPass(createWebAssemblyFixIrreducibleControlFlow());
+  addPass(createWebAssemblyFixIrreducibleControlFlowLegacyPass());
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
   if (TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    addPass(createWebAssemblyLateEHPrepare());
+    addPass(createWebAssemblyLateEHPrepareLegacyPass());
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,
   // colored, and numbered with the rest of the registers.
-  addPass(createWebAssemblyReplacePhysRegs());
+  addPass(createWebAssemblyReplacePhysRegsLegacyPass());
 
   // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOptLevel::None) {
@@ -546,10 +546,10 @@ bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
 
   // We insert only if ISelDAG won't insert these at a later point.
   if (isGlobalISelAbortEnabled()) {
-    addPass(createWebAssemblyArgumentMove());
-    addPass(createWebAssemblySetP2AlignOperands());
-    addPass(createWebAssemblyFixBrTableDefaults());
-    addPass(createWebAssemblyCleanCodeAfterTrap());
+    addPass(createWebAssemblyArgumentMoveLegacyPass());
+    addPass(createWebAssemblySetP2AlignOperandsLegacyPass());
+    addPass(createWebAssemblyFixBrTableDefaultsLegacyPass());
+    addPass(createWebAssemblyCleanCodeAfterTrapLegacyPass());
   }
 
   return false;

@@ -150,19 +150,19 @@ Error WebAssemblyCodeGenPassBuilder::addInstSelector(
   // Run the argument-move pass immediately after the ScheduleDAG scheduler
   // so that we can fix up the ARGUMENT instructions before anything else
   // sees them in the wrong place.
-  // TODO(boomanaiden154): WebAssemblyArgumentMove
+  addMachineFunctionPass(WebAssemblyArgumentMovePass(), PMW);
 
   // Set the p2align operands. This information is present during ISel, however
   // it's inconvenient to collect. Collect it now, and update the immediate
   // operands.
-  // TODO(boomanaiden154): WebAssemblySetP2AlignOperands
+  addMachineFunctionPass(WebAssemblySetP2AlignOperandsPass(), PMW);
 
   // Eliminate range checks and add default targets to br_table instructions.
-  // TODO(boomanaiden154): WebAssemblyFixBrTableDefaults
+  addMachineFunctionPass(WebAssemblyFixBrTableDefaultsPass(), PMW);
 
   // unreachable is terminator, non-terminator instruction after it is not
   // allowed.
-  // TODO(boomanaiden154): WebAssemblyCleanCodeAfterTrap
+  addMachineFunctionPass(WebAssemblyCleanCodeAfterTrapPass(), PMW);
 
   return Error::success();
 }
@@ -179,18 +179,17 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
   addMachineFunctionPass(UnreachableMachineBlockElimPass(), PMW);
 
   // Eliminate multiple-entry loops.
-  // TODO(boomanaiden154): WebAssemblyFixIrreducibleControlFlow
+  addMachineFunctionPass(WebAssemblyFixIrreducibleControlFlowPass(), PMW);
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
-  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm) {
-    // TODO(boomanaiden154): WebAssemblyLateEHPrepare
-  }
+  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm)
+    addMachineFunctionPass(WebAssemblyLateEHPreparePass(), PMW);
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,
   // colored, and numbered with the rest of the registers.
-  // TODO(boomanaiden154): WebAssemblyReplacePhysRegs
+  addMachineFunctionPass(WebAssemblyReplacePhysRegsPass(), PMW);
 
   // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOptLevel::None) {
