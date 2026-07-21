@@ -7,15 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Object/GOFF.h"
 #include "llvm/Object/GOFFObjectFile.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/Support/ConvertEBCDIC.h"
-#include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 
 using namespace llvm;
 
@@ -49,7 +44,7 @@ public:
 GOFFDumper::GOFFDumper(const object::GOFFObjectFile &Obj) : Obj(Obj) {}
 
 Error GOFFDumper::dumpHeader(ArrayRef<uint8_t> Data) {
-  DataExtractor DE(Data, false, 0);
+  DataExtractor DE(Data, false);
   DataExtractor::Cursor C(0);
 
   // Flattened data contains: PTV header (bytes 0-2) + bytes 3-60 (prefix) +

@@ -16,17 +16,14 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
-#include <utility>
 
 namespace llvm {
 
