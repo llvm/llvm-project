@@ -717,14 +717,6 @@ namespace cwg242 { // cwg242: 3.0
     A -> I2 -> struct cwg242::D}}*/
   }
 
-  struct V {};
-  struct B : virtual V {};
-
-  B *virt_downcast(V *p) {
-    return (B *)(p);
-    // expected-error@-1 {{cannot cast 'cwg242::V *' to 'B *' via virtual base 'cwg242::V'}}
-  }
-
   A &ref_upcast(D &r) {
     return (A &)(r);
     /* expected-error@-1
@@ -763,6 +755,14 @@ namespace cwg242 { // cwg242: 3.0
     {{ambiguous conversion from pointer to member of base class 'A' to pointer to member of derived class 'D':
     struct cwg242::D -> I1 -> A
     struct cwg242::D -> I2 -> A}}*/
+  }
+
+  struct V {};
+  struct DV : virtual V {};
+
+  DV *virt_downcast(V *p) {
+    return (DV *)(p);
+    // expected-error@-1 {{cannot cast 'cwg242::V *' to 'DV *' via virtual base 'cwg242::V'}}
   }
 } // namespace cwg242
 
