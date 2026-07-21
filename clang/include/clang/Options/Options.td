@@ -9923,6 +9923,9 @@ def dxc_gis : DXCFlag<"Gis">,
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;
+def dxc_Qpdb_in_private : DXCFlag<"Qpdb_in_private">,
+                          Flags<[HelpHidden]>,
+                          HelpText<"Store PDB in private user data">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
 def metal : DXCFlag<"metal">, HelpText<"Generate Metal library">;
