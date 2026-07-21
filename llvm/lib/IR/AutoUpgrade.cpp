@@ -1451,14 +1451,12 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     if (Name == "coro.end" &&
         (F->arg_size() == 2 || F->getReturnType()->isIntegerTy(1)))
       CoroEndID = Intrinsic::coro_end;
-    else if (Name == "coro.end.async" &&
-             F->getReturnType()->isIntegerTy(1))
+    else if (Name == "coro.end.async" && F->getReturnType()->isIntegerTy(1))
       CoroEndID = Intrinsic::coro_end_async;
 
     if (CoroEndID != Intrinsic::not_intrinsic) {
       rename(F);
-      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                                CoroEndID);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), CoroEndID);
       return true;
     }
 
