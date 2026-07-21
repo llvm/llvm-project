@@ -284,6 +284,8 @@ namespace std {
 #  include <__utility/in_place.h>
 #  include <__utility/move.h>
 
+#  include <initializer_list>
+
 // standard-mandated includes
 // [optional.syn]
 #  include <compare>
