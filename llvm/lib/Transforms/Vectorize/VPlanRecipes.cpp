@@ -2423,7 +2423,7 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
 
   // If this is a subtract, we want to invert the increment amount and use
   // the histogram_add intrinsic.
-  if (shouldNegateIncrement())
+  if (mustNegateIncrement())
     IncAmt = Builder.CreateNeg(IncAmt);
 
   Instruction *HistogramInst = State.Builder.CreateIntrinsicWithoutFolding(
@@ -2476,37 +2476,9 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
                               Type::getVoidTy(Ctx.LLVMCtx),
                               {PtrTy, IncTy, MaskTy});
 
-  // Compute the cost of the update operation.
-  InstructionCost UpdateCost;
-  switch (UpdateKind) {
-  case HistogramUpdateKind::Add:
-    UpdateCost =
-        Ctx.TTI.getArithmeticInstrCost(Instruction::Add, VTy, Ctx.CostKind);
-    break;
-  case HistogramUpdateKind::Sub:
-    UpdateCost =
-        Ctx.TTI.getArithmeticInstrCost(Instruction::Sub, VTy, Ctx.CostKind);
-    break;
-  case HistogramUpdateKind::UAddSat: {
-    IntrinsicCostAttributes UpdateICA(Intrinsic::uadd_sat, VTy, {VTy, VTy});
-    UpdateCost = Ctx.TTI.getIntrinsicInstrCost(UpdateICA, Ctx.CostKind);
-    break;
-  }
-  case HistogramUpdateKind::UMax: {
-    IntrinsicCostAttributes UpdateICA(Intrinsic::umax, VTy, {VTy, VTy});
-    UpdateCost = Ctx.TTI.getIntrinsicInstrCost(UpdateICA, Ctx.CostKind);
-    break;
-  }
-  case HistogramUpdateKind::UMin: {
-    IntrinsicCostAttributes UpdateICA(Intrinsic::umin, VTy, {VTy, VTy});
-    UpdateCost = Ctx.TTI.getIntrinsicInstrCost(UpdateICA, Ctx.CostKind);
-    break;
-  }
-  }
-
-  // Add the costs together with the update operation.
-  return Ctx.TTI.getIntrinsicInstrCost(ICA, Ctx.CostKind) + MulCost +
-         UpdateCost;
+  // The histogram intrinsic's TTI cost already includes the update operation
+  // (load + update + store), so no separate UpdateCost is needed.
+  return Ctx.TTI.getIntrinsicInstrCost(ICA, Ctx.CostKind) + MulCost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

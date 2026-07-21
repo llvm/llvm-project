@@ -5332,9 +5332,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     return TTI.getCastInstrCost(Opcode, VectorTy, SrcVecTy, CCH,
                                 Config.CostKind, I);
   }
-  case Instruction::Call: {
+  case Instruction::Call:
     return getVectorCallCost(cast<CallInst>(I), VF);
-  }
   case Instruction::ExtractValue:
     return TTI.getInstructionCost(I, Config.CostKind);
   case Instruction::Alloca:
@@ -6359,35 +6358,25 @@ VPRecipeWithIRFlags *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   };
 }
 
-/// Return the HistogramUpdateKind for the given update instruction. The
-/// instruction must be one of the supported histogram update operations;
-/// callers are expected to have validated this via
-/// LoopVectorizationLegality::getHistogramInfo before invoking this helper.
+/// Return the HistogramUpdateKind for the given update opcode (instruction
+/// opcode or intrinsic ID), as stored in HistogramInfo during legality.
 static VPHistogramRecipe::HistogramUpdateKind
-getHistogramUpdateKind(Instruction *I) {
+getHistogramUpdateKind(unsigned Opcode) {
   using HistogramUpdateKind = VPHistogramRecipe::HistogramUpdateKind;
-  if (auto *BO = dyn_cast<BinaryOperator>(I)) {
-    switch (BO->getOpcode()) {
-    case Instruction::Add:
-      return HistogramUpdateKind::Add;
-    case Instruction::Sub:
-      return HistogramUpdateKind::Sub;
-    default:
-      break;
-    }
-  } else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::uadd_sat:
-      return HistogramUpdateKind::UAddSat;
-    case Intrinsic::umax:
-      return HistogramUpdateKind::UMax;
-    case Intrinsic::umin:
-      return HistogramUpdateKind::UMin;
-    default:
-      break;
-    }
+  switch (Opcode) {
+  case Instruction::Add:
+    return HistogramUpdateKind::Add;
+  case Instruction::Sub:
+    return HistogramUpdateKind::Sub;
+  case Intrinsic::uadd_sat:
+    return HistogramUpdateKind::UAddSat;
+  case Intrinsic::umax:
+    return HistogramUpdateKind::UMax;
+  case Intrinsic::umin:
+    return HistogramUpdateKind::UMin;
+  default:
+    llvm_unreachable("Unsupported histogram update operation");
   }
-  llvm_unreachable("Unsupported histogram update operation");
 }
 
 VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
@@ -6401,7 +6390,7 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
 
   const HistogramInfo *HI = *HistInfo;
   VPHistogramRecipe::HistogramUpdateKind UpdateKind =
-      getHistogramUpdateKind(HI->Update);
+      getHistogramUpdateKind(HI->UpdateOpcode);
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.

@@ -2199,14 +2199,12 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  HistogramUpdateKind getUpdateKind() const { return UpdateKind; }
-
   /// Return the histogram intrinsic ID for this recipe's update kind.
   Intrinsic::ID getHistogramIntrinsicID() const;
 
   /// Return true if the increment should be negated before passing to the
   /// histogram intrinsic (only for Sub).
-  bool shouldNegateIncrement() const {
+  bool mustNegateIncrement() const {
     return UpdateKind == HistogramUpdateKind::Sub;
   }
 

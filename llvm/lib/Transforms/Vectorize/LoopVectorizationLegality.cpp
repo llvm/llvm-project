@@ -1147,8 +1147,15 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
 
   LLVM_DEBUG(dbgs() << "LV: Found histogram for: " << *HSt << "\n");
 
+  // Determine the update opcode.
+  unsigned UpdateOpcode;
+  if (auto *BO = dyn_cast<BinaryOperator>(HUpdateOp))
+    UpdateOpcode = BO->getOpcode();
+  else
+    UpdateOpcode = cast<IntrinsicInst>(HUpdateOp)->getIntrinsicID();
+
   // Store the operations that make up the histogram.
-  Histograms.emplace_back(IndexedLoad, HUpdateOp, HSt);
+  Histograms.emplace_back(IndexedLoad, HUpdateOp, HSt, UpdateOpcode);
   return true;
 }
 

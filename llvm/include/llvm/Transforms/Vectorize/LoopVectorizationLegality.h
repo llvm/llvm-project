@@ -242,9 +242,13 @@ struct HistogramInfo {
   LoadInst *Load;
   Instruction *Update;
   StoreInst *Store;
+  /// The opcode (for BinaryOperator) or intrinsic ID (for IntrinsicInst) of
+  /// the update operation.
+  unsigned UpdateOpcode;
 
-  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store)
-      : Load(Load), Update(Update), Store(Store) {}
+  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store,
+                unsigned UpdateOpcode)
+      : Load(Load), Update(Update), Store(Store), UpdateOpcode(UpdateOpcode) {}
 };
 
 /// Indicates the characteristics of a loop with an uncountable exit.
