@@ -18,8 +18,6 @@
 #include "src/__support/macros/null_check.h"
 #include "src/__support/threads/thread.h"
 
-#include <pthread.h>
-
 namespace LIBC_NAMESPACE_DECL {
 
 static_assert(sizeof(pthread_t) == sizeof(LIBC_NAMESPACE::Thread),
