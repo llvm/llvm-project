@@ -1334,17 +1334,8 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
           continue;
         }
         if (memref::StoreOp storeOp = dyn_cast<memref::StoreOp>(nestedOp)) {
-          bool threadYActive = false;
-          if (acc::PrivateLocalOp privateLocal =
-                  storeOp.getMemref().getDefiningOp<acc::PrivateLocalOp>()) {
-            if (acc::GPUParallelDimsAttr parDims =
-                    getPrivatizeOp(privateLocal, computeRegion)
-                        .getParDimsAttr()) {
-              threadYActive = llvm::any_of(parDims.getArray(), [](auto parDim) {
-                return parDim.isThreadY();
-              });
-            }
-          }
+          bool threadYActive = getPrivateScopeForMemref(storeOp.getMemref()) ==
+                               PrivateMemScope::Worker;
           if (failed(requireThreadY(storeOp, threadYActive)))
             return failure();
           continue;
@@ -1356,6 +1347,25 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
                            [](auto parDim) { return parDim.isThreadY(); });
           if (failed(requireThreadY(accumulateArrayOp, threadYActive)))
             return failure();
+          continue;
+        }
+        if (nestedOp.getNumRegions() != 0) {
+          for (Region &region : nestedOp.getRegions()) {
+            for (Block &nestedBlock : region) {
+              FailureOr<ThreadYRequirement> nestedRequirement =
+                  self(self, nestedBlock);
+              if (failed(nestedRequirement))
+                return failure();
+              // Other region-bearing operations do not introduce independent
+              // ACC predication, so both requirements apply to this region.
+              if (nestedRequirement->active &&
+                  failed(requireThreadY(&nestedOp, /*active=*/true)))
+                return failure();
+              if (nestedRequirement->inactive &&
+                  failed(requireThreadY(&nestedOp, /*active=*/false)))
+                return failure();
+            }
+          }
           continue;
         }
         if (!isMemoryEffectFree(&nestedOp) &&
