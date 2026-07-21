@@ -249,7 +249,7 @@ void MemCmpExpansion::optimiseLoadSequence(
     // Remove the last two sequences and replace with the combined sequence
     LoadSequence.pop_back();
     LoadSequence.pop_back();
-    LoadSequence.emplace_back(PreLast.Offset, LoadSize);
+    LoadSequence.emplace_back(LoadSize, PreLast.Offset);
   }
 }
 
