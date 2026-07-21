@@ -263,6 +263,12 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   resetBenignCodeGenOptions(frontend::GenerateModule, CI.getLangOpts(),
                             CI.getCodeGenOpts());
 
+  // Erase the command-line arguments. These don't make it into the final set of
+  // compilation arguments and will be re-populated during compilation itself.
+  // Keeping them around would make copies of the invocation expensive.
+  CI.getCodeGenOpts().Argv0 = nullptr;
+  CI.getCodeGenOpts().CommandLineArgs.clear();
+
   // Map output paths that affect behaviour to "-" so their existence is in the
   // context hash. The final path will be computed in addOutputPaths.
   if (!CI.getDiagnosticOpts().DiagnosticSerializationFile.empty())
@@ -465,9 +471,9 @@ static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
   // command line inputs use relative paths.
   bool AnyRelative = false;
   CI.visitPaths([&](StringRef Path) {
-    assert(!AnyRelative && "Continuing path visitation despite returning true");
+    assert(!AnyRelative && "Continuing path visitation despite relative path");
     AnyRelative |= !Path.empty() && !llvm::sys::path::is_absolute(Path);
-    return AnyRelative;
+    return CowCompilerInvocation::VisitConstResult{/*Terminate=*/AnyRelative};
   });
   return !AnyRelative;
 }

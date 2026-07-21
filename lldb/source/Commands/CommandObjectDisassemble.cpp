@@ -256,7 +256,7 @@ CommandObjectDisassemble::CheckRangeSize(std::vector<AddressRange> ranges,
   StreamString msg;
   msg << "not disassembling " << what << " because it is very large ";
   for (const AddressRange &r : ranges)
-    r.Dump(&msg, &GetTarget(), Address::DumpStyleLoadAddress,
+    r.Dump(&msg, GetTarget(), Address::DumpStyleLoadAddress,
            Address::DumpStyleFileAddress);
   msg << ". To disassemble specify an instruction count limit, start/stop "
          "addresses or use the --force option";
@@ -282,15 +282,16 @@ CommandObjectDisassemble::GetContainingAddressRanges() {
     }
   };
 
-  Target &target = GetTarget();
-  if (target.HasLoadedSections()) {
+  Target *target = GetTarget();
+  assert(target && "target guaranteed by eCommandRequiresTarget");
+  if (target->HasLoadedSections()) {
     Address symbol_containing_address;
-    if (target.ResolveLoadAddress(m_options.symbol_containing_addr,
-                                  symbol_containing_address)) {
+    if (target->ResolveLoadAddress(m_options.symbol_containing_addr,
+                                   symbol_containing_address)) {
       get_ranges(symbol_containing_address);
     }
   } else {
-    for (lldb::ModuleSP module_sp : target.GetImages().Modules()) {
+    for (lldb::ModuleSP module_sp : target->GetImages().Modules()) {
       Address file_address;
       if (module_sp->ResolveFileAddress(m_options.symbol_containing_addr,
                                         file_address)) {
@@ -374,8 +375,8 @@ CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
 
   // Find functions matching the given name.
   SymbolContextList sc_list;
-  GetTarget().GetImages().FindFunctions(name, eFunctionNameTypeAuto,
-                                        function_options, sc_list);
+  GetTarget()->GetImages().FindFunctions(name, eFunctionNameTypeAuto,
+                                         function_options, sc_list);
 
   std::vector<AddressRange> ranges;
   llvm::Error range_errs = llvm::Error::success();
@@ -466,10 +467,10 @@ CommandObjectDisassemble::GetRangesForSelectedMode(
 
 void CommandObjectDisassemble::DoExecute(Args &command,
                                          CommandReturnObject &result) {
-  Target &target = GetTarget();
-
+  Target *target = GetTarget();
+  assert(target && "target guaranteed by eCommandRequiresTarget");
   if (!m_options.arch.IsValid())
-    m_options.arch = target.GetArchitecture();
+    m_options.arch = target->GetArchitecture();
 
   if (!m_options.arch.IsValid()) {
     result.AppendError(
@@ -569,7 +570,7 @@ void CommandObjectDisassemble::DoExecute(Args &command,
       } else {
         result.AppendErrorWithFormat(
             "Failed to disassemble memory at 0x%8.8" PRIx64,
-            cur_range.GetBaseAddress().GetLoadAddress(&target));
+            cur_range.GetBaseAddress().GetLoadAddress(target));
       }
     }
     if (print_sc_header)

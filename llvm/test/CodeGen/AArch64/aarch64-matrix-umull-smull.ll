@@ -208,7 +208,7 @@ define void @matrix_mul_double_shuffle(i32 %N, ptr nocapture %C, ptr nocapture r
 ; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    add w0, w0, #8
 ; CHECK-GI-NEXT:    lsl x9, x9, #2
-; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b, v3.16b }, v1.16b
+; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b }, v1.16b
 ; CHECK-GI-NEXT:    mul v2.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    str q2, [x1, x9]
 ; CHECK-GI-NEXT:    b.ne .LBB2_1
@@ -1766,6 +1766,46 @@ entry:
   %1 = bitcast <4 x i32> %vqdmlal_v3.i to <8 x i16>
   %shuffle.i35 = shufflevector <8 x i16> %0, <8 x i16> %1, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   ret <8 x i16> %shuffle.i35
+}
+
+define <2 x i64> @mul_mask33(i64 %x, i64 %y, <2 x i32> %z) {
+; CHECK-SD-LABEL: mul_mask33:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-SD-NEXT:    and x9, x0, #0x1ffffffff
+; CHECK-SD-NEXT:    fmov x10, d0
+; CHECK-SD-NEXT:    mov x8, v0.d[1]
+; CHECK-SD-NEXT:    mul x9, x9, x10
+; CHECK-SD-NEXT:    and x10, x1, #0x1ffffffff
+; CHECK-SD-NEXT:    mul x8, x10, x8
+; CHECK-SD-NEXT:    fmov d0, x9
+; CHECK-SD-NEXT:    mov v0.d[1], x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mul_mask33:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    and x8, x0, #0x1ffffffff
+; CHECK-GI-NEXT:    and x9, x1, #0x1ffffffff
+; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fmov x11, d0
+; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    mov x9, v0.d[1]
+; CHECK-GI-NEXT:    fmov x10, d1
+; CHECK-GI-NEXT:    mov x8, v1.d[1]
+; CHECK-GI-NEXT:    mul x10, x10, x11
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    fmov d0, x10
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    ret
+entry:
+  %ax = and i64 %x, 8589934591 ; 0x1ffffffff
+  %ay = and i64 %y, 8589934591 ; 0x1ffffffff
+  %v0 = insertelement <2 x i64> poison, i64 %ax, i32 0
+  %v = insertelement <2 x i64> %v0, i64 %ay, i32 1
+  %e = zext <2 x i32> %z to <2 x i64>
+  %m = mul <2 x i64> %v, %e
+  ret <2 x i64> %m
 }
 
 

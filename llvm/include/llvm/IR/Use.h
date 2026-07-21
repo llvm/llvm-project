@@ -118,6 +118,21 @@ template <> struct simplify_type<const Use> {
   static SimpleType getSimplifiedValue(const Use &Val) { return Val.get(); }
 };
 
+template <> struct simplify_type<Use *> {
+  using SimpleType = Value *;
+
+  static SimpleType getSimplifiedValue(Use *Val) {
+    return Val ? Val->get() : nullptr;
+  }
+};
+template <> struct simplify_type<const Use *> {
+  using SimpleType = /*const*/ Value *;
+
+  static SimpleType getSimplifiedValue(const Use *Val) {
+    return Val ? Val->get() : nullptr;
+  }
+};
+
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Use, LLVMUseRef)
 

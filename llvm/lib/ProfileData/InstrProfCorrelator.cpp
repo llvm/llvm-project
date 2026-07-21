@@ -129,7 +129,8 @@ llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
 InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
                          const object::BuildIDFetcher *BIDFetcher,
                          const ArrayRef<object::BuildID> BIs) {
-  std::optional<std::string> Path;
+  // Might be overwritten from BuildIDFetcher.
+  std::string EffectiveFilename = Filename.str();
   if (BIDFetcher) {
     if (BIs.empty())
       return make_error<InstrProfError>(
@@ -142,18 +143,21 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
           "unsupported profile binary correlation when there are multiple "
           "build IDs in a profile");
 
-    Path = BIDFetcher->fetch(BIs.front());
-    if (!Path)
+    Expected<std::string> Path = BIDFetcher->fetch(BIs.front());
+    if (!Path) {
+      // Propagate as InstrProf specific error type.
+      consumeError(Path.takeError());
       return make_error<InstrProfError>(
           instrprof_error::unable_to_correlate_profile,
           "Missing build ID: " + llvm::toHex(BIs.front(),
                                              /*LowerCase=*/true));
-    Filename = *Path;
+    }
+    EffectiveFilename = *Path;
   }
 
   if (FileKind == DEBUG_INFO) {
     auto DsymObjectsOrErr =
-        object::MachOObjectFile::findDsymObjectMembers(Filename);
+        object::MachOObjectFile::findDsymObjectMembers(EffectiveFilename);
     if (auto Err = DsymObjectsOrErr.takeError())
       return std::move(Err);
     if (!DsymObjectsOrErr->empty()) {
@@ -163,16 +167,18 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
         return make_error<InstrProfError>(
             instrprof_error::unable_to_correlate_profile,
             "using multiple objects is not yet supported");
-      Filename = *DsymObjectsOrErr->begin();
+      EffectiveFilename = *DsymObjectsOrErr->begin();
     }
-    auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
+    auto BufferOrErr =
+        errorOrToExpected(MemoryBuffer::getFile(EffectiveFilename));
     if (auto Err = BufferOrErr.takeError())
       return std::move(Err);
 
     return get(std::move(*BufferOrErr), FileKind);
   }
   if (FileKind == BINARY) {
-    auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
+    auto BufferOrErr =
+        errorOrToExpected(MemoryBuffer::getFile(EffectiveFilename));
     if (auto Err = BufferOrErr.takeError())
       return std::move(Err);
 
@@ -331,12 +337,14 @@ void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(
       // In this mode, CounterPtr actually stores the section relative address
       // of the counter.
       maybeSwap<IntPtrT>(CounterOffset),
+      /*UniformCounterPtr=*/maybeSwap<IntPtrT>(0),
       maybeSwap<IntPtrT>(BitmapOffset),
       maybeSwap<IntPtrT>(FunctionPtr),
       // TODO: Value profiling is not yet supported.
       /*ValuesPtr=*/maybeSwap<IntPtrT>(0),
       maybeSwap<uint32_t>(NumCounters),
       /*NumValueSites=*/{maybeSwap<uint16_t>(0), maybeSwap<uint16_t>(0)},
+      /*OffloadDeviceWaveSize=*/maybeSwap<uint16_t>(0),
       maybeSwap<uint32_t>(NumBitmapBytes),
   });
 }
@@ -352,7 +360,7 @@ DwarfInstrProfCorrelator<IntPtrT>::getLocation(const DWARFDie &Die) const {
   auto &DU = *Die.getDwarfUnit();
   auto AddressSize = DU.getAddressByteSize();
   for (auto &Location : *Locations) {
-    DataExtractor Data(Location.Expr, DICtx->isLittleEndian(), AddressSize);
+    DataExtractor Data(Location.Expr, DICtx->isLittleEndian());
     DWARFExpression Expr(Data, AddressSize);
     for (auto &Op : Expr) {
       if (Op.getCode() == dwarf::DW_OP_addr)
@@ -632,15 +640,30 @@ void BinaryInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     uint64_t CounterPtr = this->template maybeSwap<IntPtrT>(I->CounterPtr);
     uint64_t CountersStart = this->Ctx->CountersSectionStart;
     uint64_t CountersEnd = this->Ctx->CountersSectionEnd;
+
+    uint64_t BitmapPtr = this->template maybeSwap<IntPtrT>(I->BitmapPtr);
+    uint64_t BitmapStart = this->Ctx->BitmapSectionStart;
+    uint64_t BitmapEnd = this->Ctx->BitmapSectionEnd;
+    if (!BitmapStart && !BitmapEnd && I->NumBitmapBytes) {
+      auto E = make_error<InstrProfError>(
+          instrprof_error::unable_to_correlate_profile,
+          "could not find profile bitmap section in correlated file");
+      return;
+    }
     if (!this->Ctx->MachOFixups.empty()) {
-      uint64_t Offset = (uint64_t)&I->CounterPtr - (uint64_t)DataStart;
-      auto It = this->Ctx->MachOFixups.find(Offset);
-      if (It != this->Ctx->MachOFixups.end()) {
-        CounterPtr = It->second;
-      } else if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
-        WithColor::warning() << format(
-            "Mach-O fixup not found for covdata offset 0x%llx\n", Offset);
-      }
+      auto GetPtrByOffset = [&](uint64_t Offset, uint64_t &Ptr) {
+        auto It = this->Ctx->MachOFixups.find(Offset);
+        if (It != this->Ctx->MachOFixups.end()) {
+          Ptr = It->second;
+        } else if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
+          WithColor::warning() << format(
+              "Mach-O fixup not found for covdata offset 0x%llx\n", Offset);
+        }
+      };
+      uint64_t CounterOffset = (uint64_t)&I->CounterPtr - (uint64_t)DataStart;
+      uint64_t BitmapOffset = (uint64_t)&I->BitmapPtr - (uint64_t)DataStart;
+      GetPtrByOffset(CounterOffset, CounterPtr);
+      GetPtrByOffset(BitmapOffset, BitmapPtr);
     }
     if (CounterPtr < CountersStart || CounterPtr >= CountersEnd) {
       if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
@@ -650,15 +673,6 @@ void BinaryInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
                       CounterPtr, CountersStart, CountersEnd,
                       (I - DataStart) * sizeof(RawProfData));
       }
-    }
-    uint64_t BitmapPtr = this->template maybeSwap<IntPtrT>(I->BitmapPtr);
-    uint64_t BitmapStart = this->Ctx->BitmapSectionStart;
-    uint64_t BitmapEnd = this->Ctx->BitmapSectionEnd;
-    if (!BitmapStart && !BitmapEnd && I->NumBitmapBytes) {
-      auto E = make_error<InstrProfError>(
-          instrprof_error::unable_to_correlate_profile,
-          "could not find profile bitmap section in correlated file");
-      return;
     }
     if (I->NumBitmapBytes &&
         (BitmapPtr < BitmapStart || BitmapPtr >= BitmapEnd)) {

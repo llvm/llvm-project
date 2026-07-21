@@ -279,22 +279,22 @@ void RawBufferStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 void RawBufferAtomicFaddOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicFaddOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicFaddOp>>(context);
 }
 
 void RawBufferAtomicFmaxOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicFmaxOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicFmaxOp>>(context);
 }
 
 void RawBufferAtomicSmaxOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicSmaxOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicSmaxOp>>(context);
 }
 
 void RawBufferAtomicUminOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicUminOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicUminOp>>(context);
 }
 
 void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
@@ -563,7 +563,7 @@ LogicalResult MFMAOp::verify() {
                        " result values for this operation but got " +
                        Twine(destLen));
 
-  if (destElem.isF64() && getBlgp() != MFMAPermB::none)
+  if (destElem.isF64() && getBlgp() != ROCDL::MFMAPermB::none)
     return emitOpError(
         "double-precision ops do not support permuting lanes of B");
   if (destElem.isF64() && getCbsz() != 0)
@@ -1081,23 +1081,30 @@ LogicalResult TransposeLoadOp::verify() {
   size_t elementTypeSize =
       transferType.getElementType().getIntOrFloatBitWidth();
 
-  // ElementSize -> NumElements
-  const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
-      {4, 16},
-      {6, 16},
-      {8, 8},
-      {16, 4},
-  };
-
-  auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
-  if (validNumElems == kValidLoadSizeMap.end())
-    return emitOpError("Unsupported element type size for transpose load: ")
-           << elementTypeSize << " bits";
-
-  if (numElements != validNumElems->second)
+  auto emitNumElementsError = [&](StringRef expected) {
     return emitOpError(
                "Transferring type size mismatch: expected num of elements: ")
-           << validNumElems->second;
+           << expected;
+  };
+
+  switch (elementTypeSize) {
+  case 4:
+  case 6:
+    if (numElements != 16)
+      return emitNumElementsError("16");
+    break;
+  case 8:
+    if (numElements != 8)
+      return emitNumElementsError("8");
+    break;
+  case 16:
+    if (numElements != 4 && numElements != 8)
+      return emitNumElementsError("4 or 8");
+    break;
+  default:
+    return emitOpError("Unsupported element type size for transpose load: ")
+           << elementTypeSize << " bits";
+  }
 
   return success();
 }

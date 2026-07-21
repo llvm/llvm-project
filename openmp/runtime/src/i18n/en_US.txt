@@ -482,6 +482,8 @@ AffHWSubsetIgnoringAttr      "KMP_HW_SUBSET: ignoring %1$s attribute. This machi
 TargetMemNotAvailable        "Target memory not available, will use default allocator."
 AffIgnoringNonHybrid         "%1$s ignored: This machine is not a hybrid architecutre. Using \"%2$s\" instead."
 AffIgnoringNotAvailable      "%1$s ignored: %2$s is not available. Using \"%3$s\" instead."
+SetNumTeamsInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
+SetTeamsThreadLimitInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-

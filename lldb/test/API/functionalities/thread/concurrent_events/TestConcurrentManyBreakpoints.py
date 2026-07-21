@@ -5,6 +5,7 @@ from lldbsuite.test.lldbtest import TestBase
 
 @skipIfTargetDoesNotSupportThreads()
 @skipIfWindows
+@skipIf  # See llvm/llvm-project/#205297
 class ConcurrentManyBreakpoints(ConcurrentEventsBase):
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple="^mips")

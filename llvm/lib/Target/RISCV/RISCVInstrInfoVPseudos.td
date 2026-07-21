@@ -1384,9 +1384,9 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
   let IncludeInInversePseudoTable = 0;
 }
 
-class VPseudoTernaryMaskPolicy<VReg RetClass,
-                               RegisterClass Op1Class,
-                               DAGOperand Op2Class> :
+class VPseudoReductionMaskPolicy<VReg RetClass,
+                                 VReg Op1Class,
+                                 DAGOperand Op2Class> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         Op1Class:$rs2, Op2Class:$rs1,
@@ -1401,9 +1401,9 @@ class VPseudoTernaryMaskPolicy<VReg RetClass,
   let IncludeInInversePseudoTable = 0;
 }
 
-class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
-                                           RegisterClass Op1Class,
-                                           DAGOperand Op2Class> :
+class VPseudoReductionMaskPolicyRoundingMode<VReg RetClass,
+                                             VReg Op1Class,
+                                             DAGOperand Op2Class> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         Op1Class:$rs2, Op2Class:$rs1,
@@ -3149,32 +3149,31 @@ multiclass VPseudoVNSHT_WV_WX_WI {
   }
 }
 
-multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
-                                          RegisterClass Op1Class,
+multiclass VPseudoReductionWithTailPolicy<VReg RetClass,
+                                          VReg Op1Class,
                                           DAGOperand Op2Class,
                                           LMULInfo MInfo,
                                           int sew> {
   let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class>;
-    def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class>,
+    def "_" # mx # "_E" # sew # "_MASK" : VPseudoReductionMaskPolicy<RetClass, Op1Class, Op2Class>,
                                           RISCVMaskedPseudo<MaskIdx=3>;
   }
 }
 
-multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
-                                                    RegisterClass Op1Class,
-                                                    DAGOperand Op2Class,
-                                                    LMULInfo MInfo,
-                                                    int sew> {
+multiclass VPseudoReductionWithTailPolicyRoundingMode<VReg RetClass,
+                                                      VReg Op1Class,
+                                                      DAGOperand Op2Class,
+                                                      LMULInfo MInfo,
+                                                      int sew> {
   let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew
         : VPseudoTernaryNoMaskWithPolicyRoundingMode<RetClass, Op1Class,
                                                      Op2Class>;
     def "_" # mx # "_E" # sew # "_MASK"
-        : VPseudoTernaryMaskPolicyRoundingMode<RetClass, Op1Class,
-                                               Op2Class>,
+        : VPseudoReductionMaskPolicyRoundingMode<RetClass, Op1Class, Op2Class>,
           RISCVMaskedPseudo<MaskIdx=3>;
   }
 }
@@ -3443,7 +3442,7 @@ multiclass VPseudoVRED_VS {
   foreach m = MxList in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVIRedV_From", "ReadVIRedV", mx, e>;
     }
   }
@@ -3453,7 +3452,7 @@ multiclass VPseudoVREDMINMAX_VS {
   foreach m = MxList in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVIRedMinMaxV_From", "ReadVIRedV", mx, e>;
     }
   }
@@ -3463,7 +3462,7 @@ multiclass VPseudoVWRED_VS {
   foreach m = MxListWRed in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isWidening=1>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVIWRedV_From", "ReadVIWRedV", mx, e>;
     }
   }
@@ -3474,7 +3473,7 @@ multiclass VPseudoVFRED_VS_RM {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1>.val in {
       defm _VS
-          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+          : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFRedV_From", "ReadVFRedV", mx, e>;
     }
@@ -3485,7 +3484,7 @@ multiclass VPseudoVFREDMINMAX_VS {
   foreach m = MxListF in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVFRedMinMaxV_From", "ReadVFRedV", mx, e>;
     }
   }
@@ -3495,7 +3494,7 @@ multiclass VPseudoVFREDO_VS_RM {
   foreach m = MxListF in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+      defm _VS : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                           V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVFRedOV_From", "ReadVFRedOV", mx, e>;
     }
@@ -3507,7 +3506,7 @@ multiclass VPseudoVFWRED_VS_RM {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
       defm _VS
-          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+          : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFWRedV_From", "ReadVFWRedV", mx, e>;
     }
@@ -3519,7 +3518,7 @@ multiclass VPseudoVFWREDO_VS_RM {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
       defm _VS
-          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+          : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFWRedOV_From", "ReadVFWRedV", mx, e>;
     }

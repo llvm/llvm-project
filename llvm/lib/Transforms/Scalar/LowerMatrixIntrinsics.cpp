@@ -902,9 +902,10 @@ public:
     // it conditionally instead.
     auto S = ShapeMap.find(&Old);
     if (S != ShapeMap.end()) {
+      ShapeInfo Shape = S->second;
       ShapeMap.erase(S);
       if (supportsShapeInfo(New))
-        ShapeMap.insert({New, S->second});
+        ShapeMap.insert({New, Shape});
     }
     Old.replaceAllUsesWith(New);
   }
@@ -1720,7 +1721,15 @@ public:
       Value *Arg;
       if (match(Op, m_Intrinsic<Intrinsic::matrix_column_major_load>(
                         m_Value(Arg)))) {
-        auto *NewLoad = Builder.CreateLoad(Op->getType(), Arg);
+        auto *MatLoad = cast<IntrinsicInst>(Op);
+        bool IsVolatile = cast<ConstantInt>(MatLoad->getArgOperand(2))->isOne();
+        // Preserve the volatile flag and alignment of the original load.
+        Align Alignment = getAlignForIndex(
+            0, MatLoad->getArgOperand(1),
+            cast<FixedVectorType>(Op->getType())->getElementType(),
+            MatLoad->getParamAlign(0));
+        auto *NewLoad = Builder.CreateAlignedLoad(Op->getType(), Arg, Alignment,
+                                                  IsVolatile);
         Op->replaceAllUsesWith(NewLoad);
         eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(Op));
         return;

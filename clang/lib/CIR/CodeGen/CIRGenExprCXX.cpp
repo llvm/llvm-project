@@ -19,6 +19,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -967,7 +968,13 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
     typedef mlir::Value ValueTy;
     typedef mlir::Value RValueTy;
     static RValue get(CIRGenFunction &cgf, ValueTy v) {
-      auto alloca = v.getDefiningOp<cir::AllocaOp>();
+      while (cir::CastOp castOp = v.getDefiningOp<cir::CastOp>()) {
+        if (castOp.getKind() != cir::CastKind::address_space &&
+            castOp.getKind() != cir::CastKind::bitcast)
+          break;
+        v = castOp.getSrc();
+      }
+      cir::AllocaOp alloca = v.getDefiningOp<cir::AllocaOp>();
       return RValue::get(cgf.getBuilder().createAlignedLoad(
           alloca.getLoc(), alloca.getAllocaType(), alloca,
           llvm::MaybeAlign(alloca.getAlignment())));
@@ -1035,7 +1042,7 @@ void CIRGenFunction::emitNewArrayInitializer(
   const Expr *init = e->getInitializer();
   Address endOfInit = Address::invalid();
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
-  assert(!cir::MissingFeatures::cleanupDeactivationScope());
+  CleanupDeactivationScope deactivation(*this);
 
   // Attempt to perform zero-initialization using memset.
   auto tryMemsetInitialization = [&]() -> bool {
@@ -1061,10 +1068,10 @@ void CIRGenFunction::emitNewArrayInitializer(
       remainingSize = builder.createSub(loc, remainingSize, initSizeOp);
     }
 
-    // Create the memset.
-    mlir::Value castOp =
-        builder.createPtrBitcast(curPtr.getPointer(), cgm.voidTy);
-    builder.createMemSet(loc, castOp, builder.getConstInt(loc, cgm.uInt8Ty, 0),
+    // Create the memset.  Use the Address overload so the destination
+    // alignment from curPtr is carried onto the memset.
+    Address voidPtr = curPtr.withElementType(builder, cgm.voidTy);
+    builder.createMemSet(loc, voidPtr, builder.getConstInt(loc, cgm.uInt8Ty, 0),
                          remainingSize);
     return true;
   };
@@ -1149,30 +1156,33 @@ void CIRGenFunction::emitNewArrayInitializer(
     }
 
     // Enter a partial-destruction Cleanup if necessary.
+    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
     if (dtorKind) {
-      cgm.errorNYI(ile->getSourceRange(),
-                   "emitNewArrayInitializer: init requires dtor");
-      return;
+      mlir::Location loc = cgm.getLoc(init->getSourceRange());
+      endOfInit = createTempAlloca(beginPtr.getType(), getPointerAlign(), loc,
+                                   "arrayinit.endOfInit");
+      pushIrregularPartialArrayCleanup(
+          beginPtr.getPointer(), endOfInit, elementType,
+          beginPtr.getAlignment().alignmentOfArrayElement(elementSize),
+          getDestroyer(dtorKind));
     }
 
-    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
     CharUnits startAlign = curPtr.getAlignment();
     unsigned i = 0;
     for (const Expr *ie : initExprs) {
+      mlir::Location loc = getLoc(ie->getExprLoc());
+
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
-      if (endOfInit.isValid()) {
-        cgm.errorNYI(ie->getSourceRange(),
-                     "emitNewArrayInitializer: update dtor cleanup ptr");
-        return;
-      }
+      if (endOfInit.isValid())
+        builder.createStore(loc, curPtr.getPointer(), endOfInit);
+
       // FIXME: If the last initializer is an incomplete initializer list for
       // an array, and we have an array filler, we can fold together the two
       // initialization loops.
       storeAnyExprIntoOneUnit(*this, ie, ie->getType(), curPtr,
                               AggValueSlot::DoesNotOverlap);
-      mlir::Location loc = getLoc(ie->getExprLoc());
       mlir::Value castOp = builder.createPtrBitcast(
           curPtr.getPointer(), convertTypeForMem(allocType));
       mlir::Value offsetOp = builder.getSignedInt(loc, 1, /*width=*/32);
@@ -1218,12 +1228,11 @@ void CIRGenFunction::emitNewArrayInitializer(
     if (ctor->isTrivial()) {
       // If new expression did not specify value-initialization, then there
       // is no initialization.
-      if (!cce->requiresZeroInitialization())
+      if (!cce->requiresZeroInitialization() || ctor->getParent()->isEmpty())
         return;
 
-      cgm.errorNYI(cce->getSourceRange(),
-                   "emitNewArrayInitializer: trivial ctor zero-init");
-      return;
+      if (tryMemsetInitialization())
+        return;
     }
 
     // Store the new Cleanup position for irregular Cleanups.
@@ -1266,7 +1275,7 @@ void CIRGenFunction::emitNewArrayInitializer(
     curPtr = curPtr.withElementType(builder, initType);
     emitCXXAggrConstructorCall(ctor, numElements, curPtr, cce,
                                /*newPointerIsChecked=*/true,
-                               cce->requiresZeroInitialization());
+                               cce->requiresZeroInitialization(), endOfInit);
     if (getContext().getTargetInfo().emitVectorDeletingDtors(
             getContext().getLangOpts())) {
       cgm.errorNYI(e->getSourceRange(),
@@ -1907,9 +1916,8 @@ mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
                                          destCirTy, isRefCast, thisAddr);
 }
 
-static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
-                                           mlir::Type typeInfoPtrTy,
-                                           bool hasNullCheck) {
+static Address emitCXXTypeidOperand(CIRGenFunction &cgf, const Expr *e,
+                                    bool hasNullCheck) {
   Address thisPtr = cgf.emitLValue(e).getAddress();
   QualType srcType = e->getType();
 
@@ -1931,7 +1939,7 @@ static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
         });
   }
 
-  return cgf.cgm.getCXXABI().emitTypeid(cgf, srcType, thisPtr, typeInfoPtrTy);
+  return thisPtr;
 }
 
 mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
@@ -1949,11 +1957,13 @@ mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
   //   polymorphic class type, the result refers to a std::type_info object
   //   representing the type of the most derived object (that is, the dynamic
   //   type) to which the glvalue refers.
-  // If the operand is already most derived object, no need to look up vtable.
-  if (!e->isTypeOperand() && e->isPotentiallyEvaluated() &&
-      !e->isMostDerived(getContext()))
-    return emitCXXTypeidFromVTable(*this, e->getExprOperand(), resultType,
-                                   e->hasNullCheck());
+  if (!e->isTypeOperand() && e->isPotentiallyEvaluated()) {
+    Address thisPtr =
+        emitCXXTypeidOperand(*this, e->getExprOperand(), e->hasNullCheck());
+    if (!e->isMostDerived(getContext()))
+      return cgm.getCXXABI().emitTypeid(*this, ty, thisPtr, resultType);
+    // If the operand is already most derived object, no need to look up vtable.
+  }
 
   auto typeInfo =
       cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(loc, ty));

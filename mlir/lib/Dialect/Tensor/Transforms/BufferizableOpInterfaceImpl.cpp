@@ -610,7 +610,7 @@ struct GenerateOpInterface
     auto type = generateOp.getResult().getType();
 
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpaceFn(type) != Attribute())
+    if (options.defaultMemorySpaceFn(cast<TensorLikeType>(type)) != Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Allocate memory.
@@ -724,7 +724,7 @@ struct InsertSliceOpInterface
         getBuffer(rewriter, insertSliceOp.getSource(), options, state);
     if (failed(srcMemref))
       return failure();
-    if (failed(options.createMemCpy(rewriter, loc, *srcMemref, subView)))
+    if (failed(options.memCpyFn(rewriter, loc, *srcMemref, subView)))
       return failure();
 
     replaceOpWithBufferizedValues(rewriter, op, *dstMemref);
@@ -1002,8 +1002,8 @@ struct ParallelInsertSliceOpInterface
         parallelInsertSliceOp.getMixedStrides());
 
     // This memcpy will fold away if everything bufferizes in-place.
-    if (failed(options.createMemCpy(rewriter, parallelInsertSliceOp.getLoc(),
-                                    *srcBuffer, subview)))
+    if (failed(options.memCpyFn(rewriter, parallelInsertSliceOp.getLoc(),
+                                *srcBuffer, subview)))
       return failure();
 
     // In case the source was allocated in the same block, make sure that the
@@ -1062,7 +1062,8 @@ struct SplatOpInterface
     auto tensorType = cast<RankedTensorType>(tensorAlloc->getType());
 
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpaceFn(tensorType) != Attribute())
+    if (options.defaultMemorySpaceFn(cast<TensorLikeType>(tensorType)) !=
+        Attribute())
       return op->emitError("memory space not implemented yet");
 
     auto linalgOp = linalg::MapOp::create(rewriter, loc, tensorType,
@@ -1120,7 +1121,8 @@ struct ConcatOpInterface
     auto tensorType = cast<RankedTensorType>(tensorAlloc->getType());
 
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpaceFn(tensorType) != Attribute())
+    if (options.defaultMemorySpaceFn(cast<TensorLikeType>(tensorType)) !=
+        Attribute())
       return op->emitError("memory space not implemented yet");
 
     MemRefLayoutAttrInterface layout;
@@ -1173,7 +1175,7 @@ struct ConcatOpInterface
           rewriter, loc, subviewMemRefType, dstBuffer, offsets, sizes, strides);
 
       // Copy the source buffer into the destination subview.
-      if (failed(options.createMemCpy(rewriter, loc, *srcBuffer, subview)))
+      if (failed(options.memCpyFn(rewriter, loc, *srcBuffer, subview)))
         return failure();
 
       concatDimOffset = sum(concatDimOffset, concatDimSize);

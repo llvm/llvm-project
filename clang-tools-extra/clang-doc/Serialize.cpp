@@ -26,7 +26,6 @@ namespace clang {
 namespace doc {
 namespace serialize {
 
-namespace {
 static StringRef exprToString(const clang::Expr *E) {
   clang::LangOptions Opts;
   clang::PrintingPolicy Policy(Opts);
@@ -35,7 +34,6 @@ static StringRef exprToString(const clang::Expr *E) {
   E->printPretty(OS, nullptr, Policy);
   return internString(Result);
 }
-} // namespace
 
 SymbolID hashUSR(llvm::StringRef USR) {
   return llvm::SHA1::hash(arrayRefFromStringRef(USR));
@@ -203,7 +201,7 @@ StringRef Serializer::getInfoRelativePath(const Decl *D) {
 class ClangDocCommentVisitor
     : public ConstCommentVisitor<ClangDocCommentVisitor> {
 public:
-  ClangDocCommentVisitor(CommentInfo &CI) : CurrentCI(CI) {}
+  explicit ClangDocCommentVisitor(CommentInfo &CI) : CurrentCI(CI) {}
 
   void parseComment(const comments::Comment *C);
 
@@ -232,7 +230,7 @@ void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
   unsigned NumChildren = C->child_count();
   if (NumChildren > 0) {
     CommentInfo *ChildrenArray =
-        TransientArena.Allocate<CommentInfo>(NumChildren);
+        getTransientArena().Allocate<CommentInfo>(NumChildren);
     unsigned Idx = 0;
     for (comments::Comment *Child :
          llvm::make_range(C->child_begin(), C->child_end())) {
@@ -260,7 +258,7 @@ void ClangDocCommentVisitor::visitInlineCommandComment(
   for (unsigned I = 0, E = C->getNumArgs(); I != E; ++I)
     Args.push_back(internString(C->getArgText(I).trim()));
   if (!Args.empty()) {
-    CurrentCI.Args = allocateArray(Args, TransientArena);
+    CurrentCI.Args = allocateArray(Args, getTransientArena());
   }
 }
 
@@ -276,10 +274,10 @@ void ClangDocCommentVisitor::visitHTMLStartTagComment(
     AttrValues.push_back(internString(Attr.Value));
   }
   if (!AttrKeys.empty()) {
-    CurrentCI.AttrKeys = allocateArray(AttrKeys, TransientArena);
+    CurrentCI.AttrKeys = allocateArray(AttrKeys, getTransientArena());
   }
   if (!AttrValues.empty()) {
-    CurrentCI.AttrValues = allocateArray(AttrValues, TransientArena);
+    CurrentCI.AttrValues = allocateArray(AttrValues, getTransientArena());
   }
 }
 
@@ -296,7 +294,7 @@ void ClangDocCommentVisitor::visitBlockCommandComment(
   for (unsigned I = 0, E = C->getNumArgs(); I < E; ++I)
     Args.push_back(internString(C->getArgText(I).trim()));
   if (!Args.empty()) {
-    CurrentCI.Args = allocateArray(Args, TransientArena);
+    CurrentCI.Args = allocateArray(Args, getTransientArena());
   }
 }
 
@@ -354,7 +352,7 @@ StringRef Serializer::getSourceCode(const Decl *D, const SourceRange &R) {
 }
 
 template <typename T>
-static std::string serialize(T &I, DiagnosticsEngine &Diags) {
+static std::string serialize(const T &I, DiagnosticsEngine &Diags) {
   SmallString<2048> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
   ClangDocBitcodeWriter Writer(Stream, Diags);
@@ -362,20 +360,20 @@ static std::string serialize(T &I, DiagnosticsEngine &Diags) {
   return Buffer.str().str();
 }
 
-std::string serialize(OwnedPtr<Info> &I, DiagnosticsEngine &Diags) {
-  switch (I->IT) {
+std::string serialize(const Info &I, DiagnosticsEngine &Diags) {
+  switch (I.IT) {
   case InfoType::IT_namespace:
-    return serialize(*static_cast<NamespaceInfo *>(getPtr(I)), Diags);
+    return serialize(cast<NamespaceInfo>(I), Diags);
   case InfoType::IT_record:
-    return serialize(*static_cast<RecordInfo *>(getPtr(I)), Diags);
+    return serialize(cast<RecordInfo>(I), Diags);
   case InfoType::IT_enum:
-    return serialize(*static_cast<EnumInfo *>(getPtr(I)), Diags);
+    return serialize(cast<EnumInfo>(I), Diags);
   case InfoType::IT_function:
-    return serialize(*static_cast<FunctionInfo *>(getPtr(I)), Diags);
+    return serialize(cast<FunctionInfo>(I), Diags);
   case InfoType::IT_concept:
-    return serialize(*static_cast<ConceptInfo *>(getPtr(I)), Diags);
+    return serialize(cast<ConceptInfo>(I), Diags);
   case InfoType::IT_variable:
-    return serialize(*static_cast<VarInfo *>(getPtr(I)), Diags);
+    return serialize(cast<VarInfo>(I), Diags);
   case InfoType::IT_friend:
   case InfoType::IT_typedef:
   case InfoType::IT_default:
@@ -506,23 +504,23 @@ void Serializer::InsertChild(ScopeChildren &Scope, VarInfo &Info) {
 // parameter. Since each variant is used once, it's not worth having a more
 // elaborate system to automatically deduce this information.
 template <typename ChildType>
-OwnedPtr<Info> Serializer::makeAndInsertIntoParent(ChildType &Child) {
+Info *Serializer::makeAndInsertIntoParent(ChildType &Child) {
   if (Child.Namespace.empty()) {
     // Insert into unnamed parent namespace.
-    auto ParentNS = allocatePtr<NamespaceInfo>();
+    auto *ParentNS = allocateTransient<NamespaceInfo>();
     InsertChild(ParentNS->Children, Child);
     return ParentNS;
   }
 
   switch (Child.Namespace[0].RefType) {
   case InfoType::IT_namespace: {
-    auto ParentNS = allocatePtr<NamespaceInfo>();
+    auto *ParentNS = allocateTransient<NamespaceInfo>();
     ParentNS->USR = Child.Namespace[0].USR;
     InsertChild(ParentNS->Children, Child);
     return ParentNS;
   }
   case InfoType::IT_record: {
-    auto ParentRec = allocatePtr<RecordInfo>();
+    auto *ParentRec = allocateTransient<RecordInfo>();
     ParentRec->USR = Child.Namespace[0].USR;
     InsertChild(ParentRec->Children, Child);
     return ParentRec;
@@ -581,7 +579,7 @@ void Serializer::parseFields(RecordInfo &I, const RecordDecl *D,
   const auto *CxxRD = dyn_cast<CXXRecordDecl>(D);
   if (!CxxRD) {
     if (!Members.empty())
-      I.Members = allocateArray<MemberTypeInfo>(Members, TransientArena);
+      I.Members = allocateArray<MemberTypeInfo>(Members, getTransientArena());
     return;
   }
   for (Decl *CxxDecl : CxxRD->decls()) {
@@ -594,7 +592,7 @@ void Serializer::parseFields(RecordInfo &I, const RecordDecl *D,
       populateMemberTypeInfo(Members, Access, VD, /*IsStatic=*/true);
   }
   if (!Members.empty())
-    I.Members = allocateArray<MemberTypeInfo>(Members, TransientArena);
+    I.Members = allocateArray<MemberTypeInfo>(Members, getTransientArena());
 }
 
 void Serializer::parseEnumerators(EnumInfo &I, const EnumDecl *D) {
@@ -608,8 +606,7 @@ void Serializer::parseEnumerators(EnumInfo &I, const EnumDecl *D) {
     EnumValueInfo &Member = LocalMembers.emplace_back(
         E->getNameAsString(), ValueStr.str(), ValueExpr);
     ASTContext &Context = E->getASTContext();
-    if (RawComment *Comment =
-            E->getASTContext().getRawCommentForDeclNoCache(E)) {
+    if (RawComment *Comment = E->getASTContext().getRawCommentNoCache(E)) {
       Comment->setAttached();
       if (comments::FullComment *Fc = Comment->parse(Context, nullptr, E)) {
         auto *NewCI = allocateListNodeTransient<CommentInfo>();
@@ -619,7 +616,7 @@ void Serializer::parseEnumerators(EnumInfo &I, const EnumDecl *D) {
     }
   }
   if (!LocalMembers.empty())
-    I.Members = allocateArray<EnumValueInfo>(LocalMembers, TransientArena);
+    I.Members = allocateArray<EnumValueInfo>(LocalMembers, getTransientArena());
 }
 
 void Serializer::parseParameters(FunctionInfo &I, const FunctionDecl *D) {
@@ -633,7 +630,7 @@ void Serializer::parseParameters(FunctionInfo &I, const FunctionDecl *D) {
       FieldInfo.DefaultValue = *DefaultValue;
   }
   if (!LocalParams.empty())
-    I.Params = allocateArray<FieldTypeInfo>(LocalParams, TransientArena);
+    I.Params = allocateArray<FieldTypeInfo>(LocalParams, getTransientArena());
 }
 
 // TODO: Remove the serialization of Parents and VirtualParents, this
@@ -659,7 +656,7 @@ void Serializer::parseBases(RecordInfo &I, const CXXRecordDecl *D) {
       LocalParents.emplace_back(SymbolID(), B.getType().getAsString());
   }
   if (!LocalParents.empty())
-    I.Parents = allocateArray<Reference>(LocalParents, TransientArena);
+    I.Parents = allocateArray<Reference>(LocalParents, getTransientArena());
 
   llvm::SmallVector<Reference, 4> LocalVirtualParents;
   for (const CXXBaseSpecifier &B : D->vbases()) {
@@ -672,7 +669,7 @@ void Serializer::parseBases(RecordInfo &I, const CXXRecordDecl *D) {
   }
   if (!LocalVirtualParents.empty())
     I.VirtualParents =
-        allocateArray<Reference>(LocalVirtualParents, TransientArena);
+        allocateArray<Reference>(LocalVirtualParents, getTransientArena());
 }
 
 template <typename T>
@@ -726,7 +723,7 @@ void Serializer::populateTemplateParameters(
     }
     if (!LocalParams.empty())
       TemplateInfo->Params =
-          allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
+          allocateArray<TemplateParamInfo>(LocalParams, getTransientArena());
   }
 }
 
@@ -792,7 +789,8 @@ void Serializer::populateInfo(Info &I, const T *D, const FullComment *C,
   llvm::SmallVector<Reference, 4> LocalNamespaces;
   populateParentNamespaces(LocalNamespaces, D, IsInAnonymousNamespace);
   if (!LocalNamespaces.empty())
-    I.Namespace = allocateArray<Reference>(LocalNamespaces, TransientArena);
+    I.Namespace =
+        allocateArray<Reference>(LocalNamespaces, getTransientArena());
   if (C) {
 
     auto *NewCI = allocateListNodeTransient<CommentInfo>();
@@ -876,7 +874,7 @@ void Serializer::populateConstraints(TemplateInfo &I, const TemplateDecl *D) {
   }
   if (!LocalConstraints.empty())
     I.Constraints =
-        allocateArray<ConstraintInfo>(LocalConstraints, TransientArena);
+        allocateArray<ConstraintInfo>(LocalConstraints, getTransientArena());
 }
 
 void Serializer::populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
@@ -911,7 +909,7 @@ void Serializer::populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
       }
       if (!LocalParams.empty())
         Specialization.Params =
-            allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
+            allocateArray<TemplateParamInfo>(LocalParams, getTransientArena());
     }
   }
 }
@@ -925,7 +923,7 @@ void Serializer::populateMemberTypeInfo(T &I, const Decl *D) {
   ASTContext &Context = D->getASTContext();
   // TODO investigate whether we can use ASTContext::getCommentForDecl instead
   // of this logic. See also similar code in Mapper.cpp.
-  RawComment *Comment = Context.getRawCommentForDeclNoCache(D);
+  RawComment *Comment = Context.getRawCommentNoCache(D);
   if (!Comment)
     return;
 
@@ -991,9 +989,8 @@ void Serializer::parseBases(llvm::SmallVectorImpl<BaseRecordInfo> &Bases,
                                  IsInAnonymousNamespace);
             FI.Access =
                 getFinalAccessSpecifier(BI.Access, MD->getAccessUnsafe());
-            FunctionInfo *FIPtr = allocatePtr<FunctionInfo>(std::move(FI));
             BI.Children.Functions.push_back(
-                *allocatePtr<InfoNode<FunctionInfo>>(FIPtr));
+                *allocateListNodeTransient<FunctionInfo>(std::move(FI)));
           }
         Bases.emplace_back(std::move(BI));
         // Call this function recursively to get the inherited classes of
@@ -1006,10 +1003,10 @@ void Serializer::parseBases(llvm::SmallVectorImpl<BaseRecordInfo> &Bases,
   }
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const NamespaceDecl *D, const FullComment *FC,
-                     Location Loc, bool PublicOnly) {
-  auto NSI = allocatePtr<NamespaceInfo>();
+std::pair<Info *, Info *> Serializer::emitInfo(const NamespaceDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
+  auto *NSI = allocateTransient<NamespaceInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*NSI, D, FC, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
@@ -1018,7 +1015,7 @@ Serializer::emitInfo(const NamespaceDecl *D, const FullComment *FC,
   NSI->Name = D->isAnonymousNamespace() ? "@nonymous_namespace" : NSI->Name;
   NSI->Path = getInfoRelativePath(NSI->Namespace);
   if (NSI->Namespace.empty() && NSI->USR == SymbolID())
-    return {OwnedPtr<Info>{std::move(NSI)}, nullptr};
+    return {NSI, nullptr};
 
   // Namespaces are inserted into the parent by reference, so we need to return
   // both the parent and the record itself.
@@ -1057,14 +1054,15 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
         LocalParams.emplace_back(getSourceCode(Param, Param->getSourceRange()));
       if (!LocalParams.empty())
         F.Template->Params =
-            allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
+            allocateArray<TemplateParamInfo>(LocalParams, getTransientArena());
       ActualDecl = ActualTD->getTemplatedDecl();
     }
 
     if (auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(ActualDecl)) {
       FunctionInfo TempInfo;
       parseParameters(TempInfo, FuncDecl);
-      F.Params = allocateArray<FieldTypeInfo>(TempInfo.Params, TransientArena);
+      F.Params =
+          allocateArray<FieldTypeInfo>(TempInfo.Params, getTransientArena());
       F.ReturnType = getTypeInfoForType(FuncDecl->getReturnType(),
                                         FuncDecl->getLangOpts());
     }
@@ -1078,14 +1076,14 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
     LocalFriends.push_back(std::move(F));
   }
   if (!LocalFriends.empty())
-    RI.Friends = allocateArray<FriendInfo>(LocalFriends, TransientArena);
+    RI.Friends = allocateArray<FriendInfo>(LocalFriends, getTransientArena());
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
-                     bool PublicOnly) {
+std::pair<Info *, Info *> Serializer::emitInfo(const RecordDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
 
-  auto RI = allocatePtr<RecordInfo>();
+  auto *RI = allocateTransient<RecordInfo>();
   bool IsInAnonymousNamespace = false;
 
   populateSymbolInfo(*RI, D, FC, Loc, IsInAnonymousNamespace);
@@ -1106,7 +1104,8 @@ Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
     parseBases(LocalBases, C, /*IsFileInRootDir=*/true, PublicOnly,
                /*IsParent=*/true);
     if (!LocalBases.empty())
-      RI->Bases = allocateArray<BaseRecordInfo>(LocalBases, TransientArena);
+      RI->Bases =
+          allocateArray<BaseRecordInfo>(LocalBases, getTransientArena());
     parseFriends(*RI, C);
   }
   RI->Path = internString(getInfoRelativePath(RI->Namespace));
@@ -1145,8 +1144,8 @@ Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
               getSourceCode(D, (*AsWritten)[Idx].getSourceRange()));
         }
         if (!LocalParams.empty())
-          Specialization.Params =
-              allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
+          Specialization.Params = allocateArray<TemplateParamInfo>(
+              LocalParams, getTransientArena());
       }
     } else {
       llvm::SmallVector<TemplateParamInfo, 4> LocalParams;
@@ -1155,20 +1154,20 @@ Serializer::emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
       }
       if (!LocalParams.empty())
         Specialization.Params =
-            allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
+            allocateArray<TemplateParamInfo>(LocalParams, getTransientArena());
     }
   }
 
   // Records are inserted into the parent by reference, so we need to return
   // both the parent and the record itself.
-  auto Parent = makeAndInsertIntoParent<const RecordInfo &>(*RI);
+  auto *Parent = makeAndInsertIntoParent<const RecordInfo &>(*RI);
   return {std::move(RI), std::move(Parent)};
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
-                     bool PublicOnly) {
-  FunctionInfo *Func = allocatePtr<FunctionInfo>();
+std::pair<Info *, Info *> Serializer::emitInfo(const FunctionDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
+  FunctionInfo *Func = allocateTransient<FunctionInfo>();
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(*Func, D, FC, Loc, IsInAnonymousNamespace);
   Func->Access = clang::AccessSpecifier::AS_none;
@@ -1179,10 +1178,10 @@ Serializer::emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
   return {nullptr, makeAndInsertIntoParent(*Func)};
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const CXXMethodDecl *D, const FullComment *FC,
-                     Location Loc, bool PublicOnly) {
-  FunctionInfo *Func = allocatePtr<FunctionInfo>();
+std::pair<Info *, Info *> Serializer::emitInfo(const CXXMethodDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
+  FunctionInfo *Func = allocateTransient<FunctionInfo>();
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(*Func, D, FC, Loc, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
@@ -1211,7 +1210,7 @@ Serializer::emitInfo(const CXXMethodDecl *D, const FullComment *FC,
 void Serializer::extractCommentFromDecl(const Decl *D, TypedefInfo &Info) {
   assert(D && "Invalid Decl when extracting comment");
   ASTContext &Context = D->getASTContext();
-  RawComment *Comment = Context.getRawCommentForDeclNoCache(D);
+  RawComment *Comment = Context.getRawCommentNoCache(D);
   if (!Comment)
     return;
 
@@ -1223,10 +1222,10 @@ void Serializer::extractCommentFromDecl(const Decl *D, TypedefInfo &Info) {
   }
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
-                     bool PublicOnly) {
-  TypedefInfo *Info = allocatePtr<TypedefInfo>();
+std::pair<Info *, Info *> Serializer::emitInfo(const TypedefDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
+  TypedefInfo *Info = allocateTransient<TypedefInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*Info, D, FC, IsInAnonymousNamespace);
 
@@ -1255,10 +1254,10 @@ Serializer::emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
 
 // A type alias is a C++ "using" declaration for a type. It gets mapped to a
 // TypedefInfo with the IsUsing flag set.
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const TypeAliasDecl *D, const FullComment *FC,
-                     Location Loc, bool PublicOnly) {
-  TypedefInfo *Info = allocatePtr<TypedefInfo>();
+std::pair<Info *, Info *> Serializer::emitInfo(const TypeAliasDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
+  TypedefInfo *Info = allocateTransient<TypedefInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*Info, D, FC, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
@@ -1279,10 +1278,10 @@ Serializer::emitInfo(const TypeAliasDecl *D, const FullComment *FC,
   return {nullptr, makeAndInsertIntoParent(*Info)};
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
-                     bool PublicOnly) {
-  EnumInfo *Enum = allocatePtr<EnumInfo>();
+std::pair<Info *, Info *> Serializer::emitInfo(const EnumDecl *D,
+                                               const FullComment *FC,
+                                               Location Loc, bool PublicOnly) {
+  EnumInfo *Enum = allocateTransient<EnumInfo>();
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(*Enum, D, FC, Loc, IsInAnonymousNamespace);
 
@@ -1300,10 +1299,11 @@ Serializer::emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
   return {nullptr, makeAndInsertIntoParent(*Enum)};
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const ConceptDecl *D, const FullComment *FC,
-                     const Location &Loc, bool PublicOnly) {
-  ConceptInfo *Concept = allocatePtr<ConceptInfo>();
+std::pair<Info *, Info *> Serializer::emitInfo(const ConceptDecl *D,
+                                               const FullComment *FC,
+                                               const Location &Loc,
+                                               bool PublicOnly) {
+  ConceptInfo *Concept = allocateTransient<ConceptInfo>();
 
   bool IsInAnonymousNamespace = false;
   populateInfo(*Concept, D, FC, IsInAnonymousNamespace);
@@ -1318,7 +1318,7 @@ Serializer::emitInfo(const ConceptDecl *D, const FullComment *FC,
     }
     if (!LocalParams.empty())
       Concept->Template.Params =
-          allocateArray<TemplateParamInfo>(LocalParams, TransientArena);
+          allocateArray<TemplateParamInfo>(LocalParams, getTransientArena());
   }
 
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
@@ -1327,10 +1327,11 @@ Serializer::emitInfo(const ConceptDecl *D, const FullComment *FC,
   return {nullptr, makeAndInsertIntoParent(*Concept)};
 }
 
-std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-Serializer::emitInfo(const VarDecl *D, const FullComment *FC,
-                     const Location &Loc, bool PublicOnly) {
-  VarInfo *Var = allocatePtr<VarInfo>();
+std::pair<Info *, Info *> Serializer::emitInfo(const VarDecl *D,
+                                               const FullComment *FC,
+                                               const Location &Loc,
+                                               bool PublicOnly) {
+  VarInfo *Var = allocateTransient<VarInfo>();
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(*Var, D, FC, Loc, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))

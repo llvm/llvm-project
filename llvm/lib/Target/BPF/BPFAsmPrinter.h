@@ -12,6 +12,10 @@
 #include "BPFTargetMachine.h"
 #include "BTFDebug.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
@@ -43,6 +47,24 @@ private:
   bool SawTrapCall = false;
 
   const BPFTargetMachine &getBTM() const;
+};
+
+class BPFAsmPrinterBeginPass
+    : public RequiredPassInfoMixin<BPFAsmPrinterBeginPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class BPFAsmPrinterPass : public RequiredPassInfoMixin<BPFAsmPrinterPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class BPFAsmPrinterEndPass
+    : public RequiredPassInfoMixin<BPFAsmPrinterEndPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace llvm

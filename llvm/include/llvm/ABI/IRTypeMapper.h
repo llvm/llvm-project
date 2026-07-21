@@ -32,7 +32,7 @@ class IRTypeMapper {
 public:
   IRTypeMapper(LLVMContext &Ctx, const DataLayout &DL) : Context(Ctx), DL(DL) {}
 
-  llvm::Type *convertType(const abi::Type *ABIType);
+  LLVM_ABI llvm::Type *convertType(const abi::Type *ABIType);
 
   void clearCache() { TypeCache.clear(); }
 

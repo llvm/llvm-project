@@ -308,9 +308,8 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[SRC2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP8]], <vscale x 4 x i1> [[TMP7]], i32 [[TMP17]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 2)
-; CHECK-NEXT:    [[TMP10:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP9]]
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP10]], <vscale x 4 x i1> [[VEC_PHI]]
-; CHECK-NEXT:    [[PREDPHI]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[PREDPHI1]], <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP17]])
+; CHECK-NEXT:    [[TMP5:%.*]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> [[TMP5]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP17]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP17]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP21]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP21]]

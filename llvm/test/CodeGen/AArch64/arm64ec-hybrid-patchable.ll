@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=arm64ec-pc-windows-msvc < %s | FileCheck %s
-; RUN: llc -mtriple=arm64ec-pc-windows-msvc -filetype=obj -o %t.o < %s
+; RUN: llc -mtriple=arm64ec-pc-windows-msvc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=arm64ec-pc-windows-msvc -verify-machineinstrs -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -t %t.o | FileCheck --check-prefix=SYM %s
 
 define dso_local ptr @func() hybrid_patchable nounwind {

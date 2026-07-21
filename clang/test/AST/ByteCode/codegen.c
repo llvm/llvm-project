@@ -9,6 +9,9 @@ const intptr_t Z1 = (intptr_t)(((char*)-1LL) + 1);
 const intptr_t Z2 = (intptr_t)(((char*)1LL) - 1);
 // CHECK: @Z2 = constant i64 0
 
+const int Shift = 2 >> 32;
+// CHECK: @Shift = constant i32 0
+
 struct A {
   char num_fields;
 };

@@ -27,6 +27,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
+#include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
@@ -336,7 +337,7 @@ bool ProcessElfCore::GetMainExecutableModuleSpec(ModuleSpec &exe_spec) {
       GetNTFileEntryForExecutableELFHeader();
   if (exe_header) {
     exe_spec.GetFileSpec() = CreateFileSpecFromPath(exe_header->path);
-    exe_spec.GetUUID() = FindModuleUUID(exe_header->path);
+    exe_spec.SetLoadAddress(exe_header->start);
   }
 
   // If we failed to find the executable program in the NT_FILE list with the
@@ -363,7 +364,6 @@ bool ProcessElfCore::GetMainExecutableModuleSpec(ModuleSpec &exe_spec) {
       } else {
         // We don't have an executable file spec yet, lets set it.
         exe_spec.GetFileSpec() = execfn_spec;
-        exe_spec.GetUUID() = FindModuleUUID(execfn_str);
       }
     }
   }
@@ -376,24 +376,57 @@ bool ProcessElfCore::GetMainExecutableModuleSpec(ModuleSpec &exe_spec) {
   if (!exe_spec.GetFileSpec() && !m_executable_name.empty())
     exe_spec.GetFileSpec() = CreateFileSpecFromPath(m_executable_name);
 
+  // Try and find the UUID after the module spec was filled in.
+  FindModuleUUID(exe_spec);
+
   // We succeeded if we got a path.
   return (bool)exe_spec.GetFileSpec();
 }
 
-UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
+bool ProcessElfCore::FindModuleUUID(ModuleSpec &spec) {
+  if (spec.GetUUID().IsValid())
+    return true;
   // Lookup the UUID for the given path in the map.
   // Note that this could be called by multiple threads so make sure
   // we access the map in a thread safe way (i.e. don't use operator[]).
-  auto it = m_uuids.find(std::string(path));
-  if (it != m_uuids.end())
-    return it->second;
-  return UUID();
+  std::string path;
+  // Sometimes the path to a file or shared library from the dynamic loader,
+  // one of the main clients of this function, is a symlink. The information
+  // in the NT_FILE note contains resolved paths and might not match. The
+  // best way for us to find a module is by load address, so use this trick
+  // if the load address is set in the module specification.
+  if (std::optional<lldb::addr_t> load_addr = spec.GetLoadAddress()) {
+    if (std::optional<NT_FILE_Entry> nt =
+            GetNTFileEntryContainingAddress(*load_addr))
+      path = nt->path;
+  }
+  // If we didn't find a file spec from the load address, fall back to using
+  // the file spec.
+  if (path.empty())
+    path = spec.GetFileSpec().GetPath();
+
+  auto it = m_uuids.find(path);
+  if (it != m_uuids.end()) {
+    Log *log = GetLog(LLDBLog::Process);
+    spec.GetUUID() = it->second;
+    LLDB_LOGF(log, "ProcessElfCore::FindModuleUUID() found UUID for %s: %s",
+              spec.GetFileSpec().GetPath().c_str(),
+              it->second.GetAsString().c_str());
+  }
+  return spec.GetUUID().IsValid();
 }
 
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic()));
+  if (!m_dyld_up) {
+    llvm::StringRef dyld_name;
+    if (GetTarget().GetArchitecture().GetMachine() == llvm::Triple::riscv32 &&
+        GetTarget().GetArchitecture().GetTriple().getOS() ==
+            llvm::Triple::UnknownOS)
+      dyld_name = DynamicLoaderStatic::GetPluginNameStatic();
+    else
+      dyld_name = DynamicLoaderPOSIXDYLD::GetPluginNameStatic();
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, dyld_name));
+  }
   return m_dyld_up.get();
 }
 
@@ -1083,8 +1116,14 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
   case llvm::Triple::OpenBSD:
     return parseOpenBSDNotes(*notes_or_error);
   default:
-    return llvm::createStringError(
-        "Don't know how to parse core file. Unsupported OS.");
+    // Treat bare-metal 32-bit RISC-V like Linux.
+    if (GetTarget().GetArchitecture().GetMachine() == llvm::Triple::riscv32 &&
+        GetTarget().GetArchitecture().GetTriple().getOS() ==
+            llvm::Triple::UnknownOS)
+      return parseLinuxNotes(*notes_or_error);
+    else
+      return llvm::createStringError(
+          "don't know how to parse core file: unsupported OS");
   }
 }
 

@@ -1331,6 +1331,25 @@ TEST_F(QualifierFixerTest, WithCpp11Attribute) {
                "[[maybe_unused]] constexpr static int A", Style);
 }
 
+TEST_F(QualifierFixerTest, WithPointerQualifierKeywords) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"type", "const", "volatile"};
+
+  verifyFormat("T const *_Nullable const a;", Style);
+  verifyFormat("T const *_Nonnull const b;", Style);
+  verifyFormat("T const *_Null_unspecified const c;", Style);
+  verifyFormat("T const *__ptr32 const d;", Style);
+  verifyFormat("T const *__ptr64 const e;", Style);
+  verifyFormat("T const *__funcref const f;", Style);
+  verifyFormat("T const *_Nullable const a = x;", Style);
+
+  verifyFormat("T *_Nullable const a;", "T *const _Nullable a;", Style);
+  verifyFormat("T const *_Nullable const volatile g;", Style);
+  verifyFormat("T const *_Nullable const volatile g;",
+               "T const *_Nullable volatile const g;", Style);
+}
+
 TEST_F(QualifierFixerTest, WithQualifiedTypeName) {
   auto Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Custom;

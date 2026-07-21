@@ -665,8 +665,7 @@ Error opts::symbols::findVariables(lldb_private::Module &Module) {
     CompUnitSP CU;
     for (size_t Ind = 0; !CU && Ind < Module.GetNumCompileUnits(); ++Ind) {
       CompUnitSP Candidate = Module.GetCompileUnitAtIndex(Ind);
-      if (!Candidate ||
-          Candidate->GetPrimaryFile().GetFilename().GetStringRef() != File)
+      if (!Candidate || Candidate->GetPrimaryFile().GetFilename() != File)
         continue;
       if (CU)
         return make_string_error("Multiple compile units for file `{0}` found.",
@@ -1006,7 +1005,7 @@ static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool 
     AutoIndent Indent(Printer, 2);
     Printer.formatLine("Index: {0}", I);
     Printer.formatLine("ID: {0:x}", S->GetID());
-    Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
+    Printer.formatLine("Name: {0}", S->GetName());
     Printer.formatLine("Type: {0}", S->GetTypeAsCString());
     Printer.formatLine("Permissions: {0}", GetPermissionsAsCString(S->GetPermissions()));
     Printer.formatLine("Thread specific: {0:y}", S->IsThreadSpecific());
@@ -1269,7 +1268,10 @@ int main(int argc, const char *argv[]) {
       /*add_to_history*/ eLazyBoolNo, Result);
 
   if (!opts::Log.empty())
-    Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, 0, eLogHandlerStream, errs());
+    if (llvm::Error e =
+            Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, 0, eLogHandlerStream))
+      WithColor::error() << "failed to enable logs: " << toString(std::move(e))
+                         << '\n';
 
   if (opts::BreakpointSubcommand)
     return opts::breakpoint::evaluateBreakpoints(*Dbg);

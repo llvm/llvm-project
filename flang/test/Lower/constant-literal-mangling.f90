@@ -78,24 +78,24 @@ end type emptyType2
   print *, [emptyType2()]
 end
 
-! CHECK: fir.global internal @_QQro.1x_QFTsometype.10 constant : !fir.array<1x!fir.type<_QFTsometype{i:i32}>> {
+! CHECK: fir.global internal @_QQro.1x_QFTsometype.10 {alignment = 64 : i64} constant : !fir.array<1x!fir.type<_QFTsometype{i:i32}>> {
 ! CHECK:   %{{.*}} = arith.constant 11 : i32
 ! CHECK: }
 
-! CHECK: fir.global internal @_QQro.1x_QFTsometype.11 constant : !fir.array<1x!fir.type<_QFTsometype{i:i32}>> {
+! CHECK: fir.global internal @_QQro.1x_QFTsometype.11 {alignment = 64 : i64} constant : !fir.array<1x!fir.type<_QFTsometype{i:i32}>> {
 ! CHECK:   %{{.*}} = arith.constant 42 : i32
 ! CHECK: }
 
-! CHECK: fir.global internal @_QQro.0x4xc1.null.12 constant : !fir.array<0x!fir.char<1,4>> {
+! CHECK: fir.global internal @_QQro.0x4xc1.null.12 {alignment = 64 : i64} constant : !fir.array<0x!fir.char<1,4>> {
 ! CHECK:   %[[T1:.*]] = fir.undefined !fir.array<0x!fir.char<1,4>>
 ! CHECK:   fir.has_value %[[T1]] : !fir.array<0x!fir.char<1,4>>
 ! CHECK: }
 
-! CHECK: fir.global internal @_QQro.0x2xc1.null.13 constant : !fir.array<0x!fir.char<1,2>> {
+! CHECK: fir.global internal @_QQro.0x2xc1.null.13 {alignment = 64 : i64} constant : !fir.array<0x!fir.char<1,2>> {
 ! CHECK:   %[[T2:.*]] = fir.undefined !fir.array<0x!fir.char<1,2>>
 ! CHECK:   fir.has_value %[[T2]] : !fir.array<0x!fir.char<1,2>>
 ! CHECK: }
 
-! CHECK: fir.global internal @_QQro.1x_QFTothertype.14 constant : !fir.array<1x!fir.type<_QFTothertype{i:i32}>> {
+! CHECK: fir.global internal @_QQro.1x_QFTothertype.14 {alignment = 64 : i64} constant : !fir.array<1x!fir.type<_QFTothertype{i:i32}>> {
 ! CHECK:   %{{.*}} = arith.constant 42 : i32
 ! CHECK: }

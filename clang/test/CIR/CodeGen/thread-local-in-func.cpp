@@ -39,8 +39,8 @@ void test_int(int param) {
   thread_local int init = param + local + get_i();
 
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z8test_inti(
-// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["param", init]
-// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["local"]
+// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH: %[[GET_CONST_TLS:.*]] = cir.get_global thread_local @_ZZ8test_intiE10const_init : !cir.ptr<!s32i>
 // CIR-BOTH: %[[GET_TLS:.*]] = cir.get_global thread_local static_local @_ZZ8test_intiE4init : !cir.ptr<!s32i>
 //
@@ -103,8 +103,8 @@ void test_ctor(int param) {
   thread_local Ctor const_init = 5;
   thread_local Ctor init = param + local + get_i();
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z9test_ctori(
-// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["param", init]
-// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["local"]
+// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH: %[[GET_CONST_TLS:.*]] = cir.get_global thread_local static_local @_ZZ9test_ctoriE10const_init : !cir.ptr<!rec_Ctor>
 //
 // CIR-BEFORE-LPP: cir.local_init thread_local @_ZZ9test_ctoriE10const_init ctor {
@@ -193,8 +193,8 @@ void test_dtor(int param) {
   int local;
   thread_local Dtor const_init;
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z9test_dtori(
-// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["param", init]
-// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["local"]
+// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH: %[[GET_TLS:.*]] = cir.get_global thread_local static_local @_ZZ9test_dtoriE10const_init : !cir.ptr<!rec_Dtor>
 //
 // CIR-BEFORE-LPP: cir.local_init thread_local @_ZZ9test_dtoriE10const_init dtor {
@@ -214,7 +214,7 @@ void test_dtor(int param) {
 // CIR:   %[[DEL_FUNC_DECAY:.*]] = cir.cast bitcast %[[GET_DEL_FUNC]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_Dtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[TLS_DECAY:.*]] = cir.cast bitcast %[[GET_TLS_DEL]] : !cir.ptr<!rec_Dtor> -> !cir.ptr<!void>
 // CIR:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
 // CIR:   cir.store %[[ONE]], %[[GUARD]] : !s8i, !cir.ptr<!s8i>
 // CIR: }
@@ -229,7 +229,7 @@ void test_dtor(int param) {
 // LLVM-BOTH: br i1 %[[IS_UNINIT]]
 //
 // LLVM: %[[GET_TLS_DEL:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @_ZZ9test_dtoriE10const_init)
-// LLVM: call void @__cxa_thread_atexit(ptr @_ZN4DtorD1Ev, ptr %[[GET_TLS_DEL]], ptr @__dso_handle)
+// LLVM: call i32 @__cxa_thread_atexit(ptr @_ZN4DtorD1Ev, ptr %[[GET_TLS_DEL]], ptr @__dso_handle)
 // OGCG: call i32 @__cxa_thread_atexit(ptr @_ZN4DtorD1Ev, ptr @_ZZ9test_dtoriE10const_init, ptr @__dso_handle)
 // LLVM: store i8 1, ptr %[[GUARD_ADDR]]
 // OGCG:store i8 1, ptr @_ZGVZ9test_dtoriE10const_init
@@ -246,8 +246,8 @@ void test_ctordtor(int param) {
   thread_local CtorDtor const_init = 5;
   thread_local CtorDtor init = param + local + get_i();
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z13test_ctordtori(
-// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["param", init]
-// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["local"]
+// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH: %[[GET_CONST_TLS:.*]] = cir.get_global thread_local static_local @_ZZ13test_ctordtoriE10const_init : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LLP: cir.local_init thread_local @_ZZ13test_ctordtoriE10const_init ctor {
 // CIR-BEFORE-LPP:   %[[GET_CONST_TLS_INIT:.*]] = cir.get_global thread_local static_local @_ZZ13test_ctordtoriE10const_init : !cir.ptr<!rec_CtorDtor>
@@ -273,7 +273,7 @@ void test_ctordtor(int param) {
 // CIR:   %[[DEL_FUNC_DECAY:.*]] = cir.cast bitcast %[[GET_DEL_FUNC]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[TLS_DECAY:.*]] = cir.cast bitcast %[[GET_CONST_TLS_DEL]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
 // CIR:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
 // CIR:   cir.store %[[ONE]], %[[GUARD]] : !s8i, !cir.ptr<!s8i>
 // CIR: }
@@ -311,7 +311,7 @@ void test_ctordtor(int param) {
 // CIR:   %[[DEL_FUNC_DECAY:.*]] = cir.cast bitcast %[[GET_DEL_FUNC]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[TLS_DECAY:.*]] = cir.cast bitcast %[[GET_TLS_DEL]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
 // CIR:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:   cir.call @__cxa_thread_atexit(%[[DEL_FUNC_DECAY]], %[[TLS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
 // CIR:   cir.store %[[ONE]], %[[GUARD]] : !s8i, !cir.ptr<!s8i>
 // CIR: }
@@ -329,7 +329,7 @@ void test_ctordtor(int param) {
 // LLVM: call void @_ZN8CtorDtorC1Ei(ptr {{.*}}%[[GET_TLS_INIT]], i32 noundef 5)
 // OGCG: call void @_ZN8CtorDtorC1Ei(ptr {{.*}}@_ZZ13test_ctordtoriE10const_init, i32 noundef 5)
 // LLVM: %[[GET_TLS_DEL:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @_ZZ13test_ctordtoriE10const_init)
-// LLVM: call void @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_TLS_DEL]], ptr @__dso_handle)
+// LLVM: call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_TLS_DEL]], ptr @__dso_handle)
 // OGCG: call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr @_ZZ13test_ctordtoriE10const_init, ptr @__dso_handle)
 // LLVM: store i8 1, ptr %[[GUARD_ADDR]]
 // OGCG: store i8 1, ptr @_ZGVZ13test_ctordtoriE10const_init
@@ -351,7 +351,7 @@ void test_ctordtor(int param) {
 // OGCG: call void @_ZN8CtorDtorC1Ei(ptr {{.*}}@_ZZ13test_ctordtoriE4init, i32 noundef %[[ADD2]])
 //
 // LLVM: %[[GET_TLS_DEL:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @_ZZ13test_ctordtoriE4init)
-// LLVM: call void @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_TLS_DEL]], ptr @__dso_handle)
+// LLVM: call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_TLS_DEL]], ptr @__dso_handle)
 // OGCG: call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr @_ZZ13test_ctordtoriE4init, ptr @__dso_handle)
 // LLVM: store i8 1, ptr %[[GUARD_ADDR]]
 // OGCG: store i8 1, ptr @_ZGVZ13test_ctordtoriE4init

@@ -1,242 +1,205 @@
-.. If you want to modify sections/contents permanently, you should modify both
-   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+---
+myst:
+  enable_extensions:
+    - attrs_block
+    - substitution
+---
 
-===========================================
-Clang |release| |ReleaseNotesTitle|
-===========================================
+% If you want to modify sections/contents permanently, you should modify both
+% ReleaseNotes.md and ReleaseNotesTemplate.txt.
 
-.. contents::
-   :local:
-   :depth: 2
+{#clang-release-releasenotestitle}
+# Clang {{ (('(In-Progress) ' if env.app.tags.has('PreRelease') else '') ~ 'Release Notes') if env.config.project == 'Clang' else '|ReleaseNotesTitle|' }}
 
-Written by the `LLVM Team <https://llvm.org/>`_
+```{contents}
+:depth: 2
+:local:
+```
 
-.. only:: PreRelease
+Written by the [LLVM Team](https://llvm.org/)
 
-  .. warning::
-     These are in-progress notes for the upcoming Clang |version| release.
-     Release notes for previous releases can be found on
-     `the Releases Page <https://llvm.org/releases/>`_.
+````{only} PreRelease
 
-Introduction
-============
+```{warning}
+These are in-progress notes for the upcoming Clang {{env.config.version}} release.
+Release notes for previous releases can be found on
+[the Releases Page](https://llvm.org/releases/).
+```
+````
+
+## Introduction
 
 This document contains the release notes for the Clang C/C++/Objective-C
-frontend, part of the LLVM Compiler Infrastructure, release |release|. Here we
+frontend, part of the LLVM Compiler Infrastructure, release {{env.config.release}}. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
-general LLVM release notes, see `the LLVM
-documentation <https://llvm.org/docs/ReleaseNotes.html>`_. For the libc++ release notes,
-see `this page <https://libcxx.llvm.org/ReleaseNotes.html>`_. All LLVM releases
-may be downloaded from the `LLVM releases web site <https://llvm.org/releases/>`_.
+general LLVM release notes, see [the LLVM
+documentation](https://llvm.org/docs/ReleaseNotes.html). For the libc++ release notes,
+see [this page](https://libcxx.llvm.org/ReleaseNotes.html). All LLVM releases
+may be downloaded from the [LLVM releases web site](https://llvm.org/releases/).
 
 For more information about Clang or LLVM, including information about the
-latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
-`LLVM Web Site <https://llvm.org>`_.
+latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
+[LLVM Web Site](https://llvm.org).
 
-Potentially Breaking Changes
-============================
+## Potentially Breaking Changes
 
-C/C++ Language Potentially Breaking Changes
--------------------------------------------
+### C/C++ Language Potentially Breaking Changes
 
-C++ Specific Potentially Breaking Changes
------------------------------------------
+### C++ Specific Potentially Breaking Changes
 
-ABI Changes in This Version
----------------------------
+### ABI Changes in This Version
 
-AST Dumping Potentially Breaking Changes
-----------------------------------------
+### AST Dumping Potentially Breaking Changes
 
-Clang Frontend Potentially Breaking Changes
--------------------------------------------
+### Clang Frontend Potentially Breaking Changes
 
-Clang Python Bindings Potentially Breaking Changes
---------------------------------------------------
+### Clang Python Bindings Potentially Breaking Changes
 
-What's New in Clang |release|?
-==============================
+### OpenCL Potentially Breaking Changes
 
-C++ Language Changes
---------------------
+## What's New in Clang {{env.config.release}}?
 
-C++2c Feature Support
-^^^^^^^^^^^^^^^^^^^^^
+### C++ Language Changes
 
-C++23 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
+#### C++2d Feature Support
 
-C++20 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
+#### C++2c Feature Support
 
-C++17 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
+#### C++23 Feature Support
 
-Resolutions to C++ Defect Reports
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### C++20 Feature Support
 
-C Language Changes
-------------------
+#### C++17 Feature Support
 
-C2y Feature Support
-^^^^^^^^^^^^^^^^^^^
+#### Resolutions to C++ Defect Reports
 
-C23 Feature Support
-^^^^^^^^^^^^^^^^^^^
+### C Language Changes
 
-Non-comprehensive list of changes in this release
--------------------------------------------------
+#### C2y Feature Support
 
-New Compiler Flags
-------------------
+#### C23 Feature Support
 
-Deprecated Compiler Flags
--------------------------
+### Objective-C Language Changes
 
-Modified Compiler Flags
------------------------
+### Non-comprehensive list of changes in this release
 
-Removed Compiler Flags
-----------------------
+### New Compiler Flags
 
-Attribute Changes in Clang
---------------------------
+### Deprecated Compiler Flags
 
-Improvements to Clang's diagnostics
------------------------------------
+### Modified Compiler Flags
 
-Improvements to Clang's time-trace
-----------------------------------
+### Removed Compiler Flags
 
-Improvements to Coverage Mapping
---------------------------------
+### Attribute Changes in Clang
 
-Bug Fixes in This Version
--------------------------
+### Improvements to Clang's diagnostics
 
-Bug Fixes to Compiler Builtins
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+### Improvements to Clang's time-trace
 
-Bug Fixes to Attribute Support
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+### Improvements to Coverage Mapping
 
-Bug Fixes to C++ Support
-^^^^^^^^^^^^^^^^^^^^^^^^
+### Bug Fixes in This Version
 
-Bug Fixes to AST Handling
-^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Bug Fixes to Compiler Builtins
 
-Miscellaneous Bug Fixes
-^^^^^^^^^^^^^^^^^^^^^^^
+#### Bug Fixes to Attribute Support
 
-Miscellaneous Clang Crashes Fixed
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Bug Fixes to C++ Support
 
-OpenACC Specific Changes
-------------------------
+#### Bug Fixes to AST Handling
 
-Target Specific Changes
------------------------
+#### Miscellaneous Bug Fixes
 
-AMDGPU Support
-^^^^^^^^^^^^^^
+#### Miscellaneous Clang Crashes Fixed
 
-NVPTX Support
-^^^^^^^^^^^^^^
+### OpenACC Specific Changes
 
-X86 Support
-^^^^^^^^^^^
+### OpenCL Specific Changes
 
-Arm and AArch64 Support
-^^^^^^^^^^^^^^^^^^^^^^^
+### Target Specific Changes
 
-Android Support
-^^^^^^^^^^^^^^^
+#### AMDGPU Support
 
-Windows Support
-^^^^^^^^^^^^^^^
+#### NVPTX Support
 
-LoongArch Support
-^^^^^^^^^^^^^^^^^
+#### X86 Support
 
-RISC-V Support
-^^^^^^^^^^^^^^
+#### Arm and AArch64 Support
 
-CUDA/HIP Language Changes
-^^^^^^^^^^^^^^^^^^^^^^^^^
+#### Android Support
 
-CUDA Support
-^^^^^^^^^^^^
+#### Windows Support
 
-AIX Support
-^^^^^^^^^^^
+#### LoongArch Support
 
-NetBSD Support
-^^^^^^^^^^^^^^
+#### RISC-V Support
 
-WebAssembly Support
-^^^^^^^^^^^^^^^^^^^
+#### CUDA/HIP Language Changes
 
-AVR Support
-^^^^^^^^^^^
+#### CUDA Support
 
-DWARF Support in Clang
-----------------------
+#### AIX Support
 
-Floating Point Support in Clang
--------------------------------
+#### NetBSD Support
 
-Fixed Point Support in Clang
-----------------------------
+#### WebAssembly Support
 
-AST Matchers
-------------
+#### AVR Support
 
-clang-format
-------------
+#### SystemZ Support
 
-libclang
---------
+### DWARF Support in Clang
 
-Code Completion
----------------
+### Floating Point Support in Clang
 
-Static Analyzer
----------------
+### Fixed Point Support in Clang
 
-.. comment:
-  This is for the Static Analyzer.
-  Using the caret `^^^` underlining for subsections:
-    - Crash and bug fixes
-    - New checkers and features
-    - Improvements
-    - Moved checkers
+### AST Matchers
 
-.. _release-notes-sanitizers:
+### clang-format
 
-Sanitizers
-----------
+### libclang
 
-Python Binding Changes
-----------------------
+### Code Completion
 
-OpenMP Support
---------------
+### Static Analyzer
 
-Improvements
-^^^^^^^^^^^^
+#### Crash and bug fixes
 
-Additional Information
-======================
+% comment:
+% This is for the Static Analyzer.
+% Use `####` headings for subsections:
+%   - Crash and bug fixes
+%   - New checkers and features
+%   - Improvements
+%   - Moved checkers
 
-A wide variety of additional information is available on the `Clang web
-page <https://clang.llvm.org/>`_. The web page contains versions of the
+#### Improvements
+
+#### Moved checkers
+
+(release-notes-sanitizers)=
+
+### Sanitizers
+
+### Python Binding Changes
+
+### OpenMP Support
+
+### SYCL Support
+
+#### Improvements
+
+## Additional Information
+
+A wide variety of additional information is available on the [Clang web
+page](https://clang.llvm.org/). The web page contains versions of the
 API documentation which are up-to-date with the Git version of
 the source code. You can access versions of these documents specific to
-this release by going into the "``clang/docs/``" directory in the Clang
+this release by going into the "`clang/docs/`" directory in the Clang
 tree.
 
 If you have any questions or comments about Clang, please feel free to
-contact us on the `Discourse forums (Clang Frontend category)
-<https://discourse.llvm.org/c/clang/6>`_.
+contact us on the [Discourse forums (Clang Frontend category)](https://discourse.llvm.org/c/clang/6).

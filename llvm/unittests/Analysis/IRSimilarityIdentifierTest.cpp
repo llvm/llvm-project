@@ -1318,12 +1318,13 @@ TEST(IRInstructionMapper, DebugInfoInvisible) {
                           define i32 @f(i32 %a, i32 %b) {
                           then:
                             %0 = add i32 %a, %b
-                              #dbg_value(i32 0, !0, !0, !0)
+                              #dbg_value(i32 0, !0, !0, !1)
                             %1 = add i32 %a, %b
                             ret i32 0
                           }
 
-                          !0 = distinct !{!"test\00", i32 10})";
+                          !0 = distinct !{!"test\00", i32 10}
+                          !1 = !DILocation(line: 1, column: 1, scope: !{}))";
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
 
@@ -1925,12 +1926,12 @@ TEST(IRSimilarityCandidate, IdenticalWithDebug) {
                           define i32 @f(i32 %a, i32 %b) {
                           bb0:
                              %0 = add i32 %a, %b
-                               #dbg_value(i32 0, !0, !0, !0)
+                               #dbg_value(i32 0, !0, !0, !2)
                              %1 = add i32 %b, %a
                              ret i32 0
                           bb1:
                              %2 = add i32 %a, %b
-                               #dbg_value(i32 1, !1, !1, !1)
+                               #dbg_value(i32 1, !1, !1, !2)
                              %3 = add i32 %b, %a
                              ret i32 0
                           bb2:
@@ -1940,7 +1941,8 @@ TEST(IRSimilarityCandidate, IdenticalWithDebug) {
                           }
 
                           !0 = distinct !{!"test\00", i32 10}
-                          !1 = distinct !{!"test\00", i32 11})";
+                          !1 = distinct !{!"test\00", i32 11}
+                          !2 = !DILocation(line: 1, column: 1, scope: !{}))";
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
 

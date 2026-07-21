@@ -51,8 +51,7 @@ CompileUnit::CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit,
   if (!CUDie)
     return;
 
-  if (std::optional<DWARFFormValue> Val = CUDie.find(dwarf::DW_AT_language))
-    Language = dwarf::toUnsigned(Val, 0);
+  Language = CUDie.getLanguage();
 
   if (!GlobalData.getOptions().NoODR && Language.has_value() &&
       isODRLanguage(*Language))
@@ -518,8 +517,7 @@ void CompileUnit::emitLocations(DebugSectionKind LocationSectionKind) {
               CurExpression.Range->HighPC + Patch.AddrAdjustmentValue};
         }
 
-        DataExtractor Data(CurExpression.Expr, OrigUnit.isLittleEndian(),
-                           OrigUnit.getAddressByteSize());
+        DataExtractor Data(CurExpression.Expr, OrigUnit.isLittleEndian());
 
         DWARFExpression InputExpression(Data, OrigUnit.getAddressByteSize(),
                                         OrigUnit.getFormParams().Format);
@@ -1841,10 +1839,11 @@ CompileUnit::getDirAndFilenameFromLineTable(
 
 std::optional<std::pair<StringRef, StringRef>>
 CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
+  std::lock_guard<std::mutex> Guard(FileNamesMutex);
   FileNamesCache::iterator FileData = FileNames.find(FileIdx);
   if (FileData != FileNames.end())
-    return std::make_pair(StringRef(FileData->second.first),
-                          StringRef(FileData->second.second));
+    return {{StringRef(FileData->second->first),
+             StringRef(FileData->second->second)}};
 
   if (const DWARFDebugLine::LineTable *LineTable =
           getOrigUnit().getContext().getLineTableForUnit(&getOrigUnit())) {
@@ -1863,12 +1862,12 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
       if (isPathAbsoluteOnWindowsOrPosix(FileName)) {
         FileNamesCache::iterator FileData =
             FileNames
-                .insert(std::make_pair(
-                    FileIdx,
-                    std::make_pair(std::string(""), std::move(FileName))))
+                .insert({FileIdx,
+                         std::make_unique<std::pair<std::string, std::string>>(
+                             std::string(""), std::move(FileName))})
                 .first;
-        return std::make_pair(StringRef(FileData->second.first),
-                              StringRef(FileData->second.second));
+        return {{StringRef(FileData->second->first),
+                 StringRef(FileData->second->second)}};
       }
 
       SmallString<256> FilePath;
@@ -1914,12 +1913,12 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
 
       FileNamesCache::iterator FileData =
           FileNames
-              .insert(
-                  std::make_pair(FileIdx, std::make_pair(std::string(FilePath),
-                                                         std::move(FileName))))
+              .insert({FileIdx,
+                       std::make_unique<std::pair<std::string, std::string>>(
+                           std::string(FilePath), std::move(FileName))})
               .first;
-      return std::make_pair(StringRef(FileData->second.first),
-                            StringRef(FileData->second.second));
+      return {{StringRef(FileData->second->first),
+               StringRef(FileData->second->second)}};
     }
   }
 

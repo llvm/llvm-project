@@ -11,7 +11,7 @@ if (llvm_install_binutils_symlinks) {
   symlink_or_copy("strings") {
     deps = [ ":llvm-strings" ]
     source = "llvm-strings"
-    output = "$root_out_dir/bin/strings"
+    output = "$llvm_current_bindir/strings"
   }
 }
 

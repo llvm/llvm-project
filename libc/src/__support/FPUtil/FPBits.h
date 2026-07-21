@@ -813,6 +813,8 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
 #endif
   else if constexpr (cpp::is_same_v<UnqualT, bfloat16>)
     return FPType::BFloat16;
+  else if constexpr (cpp::is_same_v<UnqualT, Float128>)
+    return FPType::IEEE754_Binary128;
   else
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }
@@ -835,21 +837,22 @@ struct FPBits final : public internal::FPRepImpl<get_fp_type<T>(), FPBits<T>> {
   // Constructors.
   LIBC_INLINE constexpr FPBits() = default;
 
-  template <typename XType> LIBC_INLINE constexpr explicit FPBits(XType x) {
-    using Unqual = typename cpp::remove_cv_t<XType>;
-    if constexpr (cpp::is_same_v<Unqual, T>) {
-      UP::bits = cpp::bit_cast<StorageType>(x);
-    } else if constexpr (cpp::is_same_v<Unqual, StorageType>) {
-      UP::bits = x;
-    } else {
-      // We don't want accidental type promotions/conversions, so we require
-      // exact type match.
-      static_assert(cpp::always_false<XType>);
-    }
+  template <
+      typename XType,
+      cpp::enable_if_t<cpp::is_same_v<cpp::remove_cv_t<XType>, T>, int> = 0>
+  LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR explicit FPBits(XType x) {
+    UP::bits = cpp::bit_cast<StorageType>(x);
   }
 
+  template <typename XType,
+            cpp::enable_if_t<
+                cpp::is_same_v<cpp::remove_cv_t<XType>, StorageType>, int> = 0>
+  LIBC_INLINE constexpr explicit FPBits(XType x) : UP(x) {}
+
   // Floating-point conversions.
-  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(UP::bits); }
+  LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR T get_val() const {
+    return cpp::bit_cast<T>(UP::bits);
+  }
 };
 
 } // namespace fputil

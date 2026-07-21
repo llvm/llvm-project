@@ -109,8 +109,7 @@ define { <2 x float>, <2 x i32> } @frexp_zero_vector() {
 
 define { <vscale x 2 x float>, <vscale x 2 x i32> } @frexp_zero_scalable_vector() {
 ; CHECK-LABEL: define { <vscale x 2 x float>, <vscale x 2 x i32> } @frexp_zero_scalable_vector() {
-; CHECK-NEXT:    [[RET:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float> zeroinitializer)
-; CHECK-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x i32> } [[RET]]
+; CHECK-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x i32> } zeroinitializer
 ;
   %ret = call { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float> zeroinitializer)
   ret { <vscale x 2 x float>, <vscale x 2 x i32> } %ret
@@ -292,4 +291,22 @@ define { <2 x float>, <2 x i32> } @frexp_splat_undef_inf() {
 ;
   %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float undef, float 0x7FF0000000000000>)
   ret { <2 x float>, <2 x i32> } %ret
+}
+
+; The inner and outer frexp use different exponent integer types. The fold still
+; applies; the result is rebuilt with the outer's struct type rather than
+; reusing the inner result struct (which would be a type-mismatched insertvalue).
+define { double, i32 } @frexp_frexp_different_exp_type(double %x) {
+; CHECK-LABEL: define { double, i32 } @frexp_frexp_different_exp_type(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[FREXP0:%.*]] = call { double, i64 } @llvm.frexp.f64.i64(double [[X]])
+; CHECK-NEXT:    [[FREXP0_0:%.*]] = extractvalue { double, i64 } [[FREXP0]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { double, i32 } poison, double [[FREXP0_0]], 0
+; CHECK-NEXT:    [[FREXP1:%.*]] = insertvalue { double, i32 } [[TMP1]], i32 0, 1
+; CHECK-NEXT:    ret { double, i32 } [[FREXP1]]
+;
+  %frexp0 = call { double, i64 } @llvm.frexp.f64.i64(double %x)
+  %frexp0.0 = extractvalue { double, i64 } %frexp0, 0
+  %frexp1 = call { double, i32 } @llvm.frexp.f64.i32(double %frexp0.0)
+  ret { double, i32 } %frexp1
 }

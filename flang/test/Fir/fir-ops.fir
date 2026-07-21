@@ -805,6 +805,14 @@ func.func @llvm_ptr_load_store_coordinate(%arg0: !fir.ref<tuple<!fir.ref<!fir.bo
   return %1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 }
 
+// CHECK-LABEL: func @load_invariant(
+// CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<i32>)
+func.func @load_invariant(%arg0: !fir.ref<i32>) -> i32 {
+  // CHECK-NEXT: %[[VAL:.*]] = fir.load %[[ARG0]] {invariant} : !fir.ref<i32>
+  %0 = fir.load %arg0 {invariant} : !fir.ref<i32>
+  return %0 : i32
+}
+
 func.func @array_access_ops(%a : !fir.ref<!fir.array<?x?xf32>>) {
   %c1 = arith.constant 1 : index
   %n = arith.constant 0 : index
@@ -1128,6 +1136,27 @@ func.func @test_logical_ops(%l1: !fir.logical<4>, %l2: !fir.logical<4>, %i1: i32
   %6 = fir.eqv %i1, %i2 : i32
 // CHECK: %{{.*}} = fir.neqv %[[I1]], %[[I2]] : i32
   %7 = fir.neqv %i1, %i2 : i32
+  return
+}
+
+// CHECK-LABEL: @test_create_box(
+func.func @test_create_box(%arg0: !fir.heap<!fir.array<?xcomplex<f32>>>, %lb: index, %ext: index, %sm: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}) extents(%{{.*}}) strides(%{{.*}}) : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  return
+}
+
+// CHECK-LABEL: @test_create_box_pointer(
+func.func @test_create_box_pointer(%arg0: !fir.ptr<!fir.array<?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}) extents(%{{.*}}) strides(%{{.*}}) : (!fir.ptr<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ptr<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  return
+}
+
+// CHECK-LABEL: @test_create_box_2d(
+func.func @test_create_box_2d(%arg0: !fir.ref<!fir.array<?x?xf32>>, %lb0: index, %ext0: index, %sm0: index, %lb1: index, %ext1: index, %sm1: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}, %{{.*}}) extents(%{{.*}}, %{{.*}}) strides(%{{.*}}, %{{.*}}) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  %0 = fir.create_box %arg0 lbs(%lb0, %lb1) extents(%ext0, %ext1) strides(%sm0, %sm1) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
   return
 }
 

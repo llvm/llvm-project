@@ -32,7 +32,7 @@ program test_default_implicit_firstprivate
 !CHECK:           %[[VAL_13:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !fir.ref<!fir.array<10x10x10xi32>>, !fir.array<10x10x10xi32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{.*}}) -> !fir.ref<!fir.array<10x10x10xi32>> {name = "arr"}
 !CHECK:           %[[VAL_14:.*]] = omp.map.info var_ptr(%[[VAL_6]] : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
 !CHECK:           %[[VAL_15:.*]] = omp.map.info var_ptr(%[[VAL_5]] : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
-!CHECK:           omp.target host_eval({{.*}}) map_entries(%[[VAL_7]] -> %{{.*}}, %[[VAL_8]] -> %{{.*}}, %[[VAL_9]] -> %{{.*}}, %[[VAL_12]] -> %{{.*}}, %[[VAL_13]] -> %{{.*}}, %[[VAL_14]] -> %{{.*}}, %[[VAL_15]] -> %{{.*}}, %[[VAL_11]] -> %{{.*}} : {{.*}}) private(@[[SYM_XFPVX]] %[[VAL_6]] -> %{{.*}} [map_idx=5], @[[SYM_XDGFX]] %[[VAL_5]] -> %{{.*}} [map_idx=6] : {{.*}}) {
+!CHECK:           omp.target kernel_type(spmd) host_eval({{.*}}) map_entries(%[[VAL_7]] -> %{{.*}}, %[[VAL_8]] -> %{{.*}}, %[[VAL_9]] -> %{{.*}}, %[[VAL_12]] -> %{{.*}}, %[[VAL_13]] -> %{{.*}}, %[[VAL_14]] -> %{{.*}}, %[[VAL_15]] -> %{{.*}}, %[[VAL_11]] -> %{{.*}} : {{.*}}) private(@[[SYM_XFPVX]] %[[VAL_6]] -> %{{.*}} [map_idx=5], @[[SYM_XDGFX]] %[[VAL_5]] -> %{{.*}} [map_idx=6] : {{.*}}) {
 !CHECK              omp.parallel private(@[[SYM_XFPVX]] %{{.*}} -> %{{.*}}, @[[SYM_XDGFX]] %{{.*}} -> %{{.*}}, @[[SYM_I]] %{{.*}} -> %{{.*}}, @[[SYM_J]] %{{.*}} -> %{{.*}}, @[[SYM_K]] %{{.*}} -> %{{.*}} : {{.*}}) {
   !$omp target teams distribute parallel do collapse(3) firstprivate(xfpvx)
     do i = 1, 10

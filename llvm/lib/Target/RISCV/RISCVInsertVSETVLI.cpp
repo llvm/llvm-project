@@ -376,6 +376,12 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
     return;
   }
 
+  // SETTM/TK will modify VTYPE, but it only affects the TM/TK bits.
+  // It is safe for other RVV operations.
+  // The TM/TK value will be maintained in insertVSETMTK.
+  if (RISCVInstrInfo::isXSfmmVectorConfigTMTKInstr(MI))
+    return;
+
   if (RISCVInstrInfo::isFaultOnlyFirstLoad(MI)) {
     // Update AVL to vl-output of the fault first load.
     assert(MI.getOperand(1).getReg().isVirtual());
@@ -1088,9 +1094,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     insertReadVL(MBB);
 
-  for (MachineBasicBlock &MBB : MF) {
-    insertVSETMTK(MBB, VSETTM);
-    insertVSETMTK(MBB, VSETTK);
+  if (ST->hasVendorXSfmmbase()) {
+    for (MachineBasicBlock &MBB : MF) {
+      insertVSETMTK(MBB, VSETTM);
+      insertVSETMTK(MBB, VSETTK);
+    }
   }
 
   BlockInfo.clear();

@@ -16,7 +16,8 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 ;; Module-level assembly
 module asm "beep boop"
-; CHECK: module asm "beep boop"
+; CHECK: module asm
+; CHECK-NEXT: "beep boop"
 
 ;; Comdats
 $comdat.any = comdat any
@@ -865,6 +866,8 @@ define void @atomics(ptr %word) {
   ; CHECK: %atomicrmw_no_align.xchg = atomicrmw xchg ptr %word, i32 12 monotonic
   %atomicrmw_no_align.add = atomicrmw add ptr %word, i32 13 monotonic
   ; CHECK: %atomicrmw_no_align.add = atomicrmw add ptr %word, i32 13 monotonic
+  %atomicrmw_no_align.vector.add = atomicrmw add ptr %word, <2 x i16> <i16 13, i16 14> monotonic
+  ; CHECK: %atomicrmw_no_align.vector.add = atomicrmw add ptr %word, <2 x i16> <i16 13, i16 14> monotonic
   %atomicrmw_no_align.sub = atomicrmw sub ptr %word, i32 14 monotonic
   ; CHECK: %atomicrmw_no_align.sub = atomicrmw sub ptr %word, i32 14 monotonic
   %atomicrmw_no_align.and = atomicrmw and ptr %word, i32 15 monotonic
@@ -1032,6 +1035,12 @@ define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) 
 
 ; CHECK: %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
   %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+
+; CHECK: %load.elementwise = load atomic elementwise <4 x i32>, ptr %word monotonic, align 4
+  %load.elementwise = load atomic elementwise <4 x i32>, ptr %word monotonic, align 4
+
+; CHECK: %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word seq_cst, align 4
+  %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word seq_cst, align 4
 
   ret void
 }
@@ -1277,6 +1286,48 @@ define void @fastmathflags_fptrunc(float %op1) {
   ; CHECK: %f.reassoc = fptrunc reassoc float %op1 to half
   %f.fast = fptrunc fast float %op1 to half
   ; CHECK: %f.fast = fptrunc fast float %op1 to half
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_uitofp(
+define void @fastmathflags_uitofp(i32 %op1) {
+  %f.nnan = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.nnan = uitofp nnan i32 %op1 to float
+  %f.ninf = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.ninf = uitofp nnan i32 %op1 to float
+  %f.nsz = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.nsz = uitofp nnan i32 %op1 to float
+  %f.arcp = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.arcp = uitofp nnan i32 %op1 to float
+  %f.contract = uitofp contract i32 %op1 to float
+  ; CHECK: %f.contract = uitofp contract i32 %op1 to float
+  %f.afn = uitofp afn i32 %op1 to float
+  ; CHECK: %f.afn = uitofp afn i32 %op1 to float
+  %f.reassoc = uitofp reassoc i32 %op1 to float
+  ; CHECK: %f.reassoc = uitofp reassoc i32 %op1 to float
+  %f.fast = uitofp fast i32 %op1 to float
+  ; CHECK: %f.fast = uitofp fast i32 %op1 to float
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_sitofp(
+define void @fastmathflags_sitofp(i32 %op1) {
+  %f.nnan = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.nnan = sitofp nnan i32 %op1 to float
+  %f.ninf = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.ninf = sitofp nnan i32 %op1 to float
+  %f.nsz = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.nsz = sitofp nnan i32 %op1 to float
+  %f.arcp = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.arcp = sitofp nnan i32 %op1 to float
+  %f.contract = sitofp contract i32 %op1 to float
+  ; CHECK: %f.contract = sitofp contract i32 %op1 to float
+  %f.afn = sitofp afn i32 %op1 to float
+  ; CHECK: %f.afn = sitofp afn i32 %op1 to float
+  %f.reassoc = sitofp reassoc i32 %op1 to float
+  ; CHECK: %f.reassoc = sitofp reassoc i32 %op1 to float
+  %f.fast = sitofp fast i32 %op1 to float
+  ; CHECK: %f.fast = sitofp fast i32 %op1 to float
   ret void
 }
 
@@ -1625,6 +1676,10 @@ define void @instructions.aggregateops({ i8, i32 } %up, <{ i8, i32 }> %p,
 !7 = !{i32 1}
 !8 = !{}
 !9 = !{i64 4}
+!10 = !{i32 0, !11}
+!11 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_prefetch_size", i32 128}
+!12 = !{i32 1, !13}
+!13 = !{!"nvvm.l1_eviction", !"last"}
 define void @instructions.memops(ptr %base) {
   alloca i32, i8 4, align 4
   ; CHECK: alloca i32, i8 4, align 4
@@ -1635,11 +1690,15 @@ define void @instructions.memops(ptr %base) {
   ; CHECK: load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
+  load ptr, ptr %base, align 8, !mem.cache_hint !10
+  ; CHECK: load ptr, ptr %base, align 8, !mem.cache_hint !10
 
   store ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store ptr null, ptr %base, align 4, !nontemporal !8
   store volatile ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store volatile ptr null, ptr %base, align 4, !nontemporal !8
+  store ptr null, ptr %base, align 4, !mem.cache_hint !12
+  ; CHECK: store ptr null, ptr %base, align 4, !mem.cache_hint !12
 
   ret void
 }
@@ -1894,21 +1953,21 @@ declare i64 @llvm.readcyclecounter()
 declare void @llvm.clear_cache(ptr, ptr)
 declare void @llvm.instrprof_increment(ptr, i64, i32, i32)
 
-!10 = !{!"rax"}
+!14 = !{!"rax"}
 define void @intrinsics.codegen() {
   call ptr @llvm.returnaddress(i32 1)
   ; CHECK: call ptr @llvm.returnaddress.p0(i32 1)
   call ptr @llvm.frameaddress(i32 1)
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
-  call i32 @llvm.read_register.i32(metadata !10)
-  ; CHECK: call i32 @llvm.read_register.i32(metadata !10)
-  call i64 @llvm.read_register.i64(metadata !10)
-  ; CHECK: call i64 @llvm.read_register.i64(metadata !10)
-  call void @llvm.write_register.i32(metadata !10, i32 0)
-  ; CHECK: call void @llvm.write_register.i32(metadata !10, i32 0)
-  call void @llvm.write_register.i64(metadata !10, i64 0)
-  ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
+  call i32 @llvm.read_register.i32(metadata !14)
+  ; CHECK: call i32 @llvm.read_register.i32(metadata !14)
+  call i64 @llvm.read_register.i64(metadata !14)
+  ; CHECK: call i64 @llvm.read_register.i64(metadata !14)
+  call void @llvm.write_register.i32(metadata !14, i32 0)
+  ; CHECK: call void @llvm.write_register.i32(metadata !14, i32 0)
+  call void @llvm.write_register.i64(metadata !14, i64 0)
+  ; CHECK: call void @llvm.write_register.i64(metadata !14, i64 0)
 
   %stack = call ptr @llvm.stacksave()
   ; CHECK: %stack = call ptr @llvm.stacksave.p0()
@@ -1954,10 +2013,10 @@ define void @intrinsics.localrecover() {
 
 ; We need this function to provide `uses' for some metadata tests.
 define void @misc.metadata() {
-  call void @f1(), !srcloc !11
-  call void @f1(), !srcloc !12
-  call void @f1(), !srcloc !13
-  call void @f1(), !srcloc !14
+  call void @f1(), !srcloc !15
+  call void @f1(), !srcloc !16
+  call void @f1(), !srcloc !17
+  call void @f1(), !srcloc !18
   ret void
 }
 
@@ -2578,11 +2637,11 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
 ; CHECK: !6 = !{i32 6, !"mod6", !0}
 
 ; Metadata -- Check `distinct'
-!11 = distinct !{}
-; CHECK: !11 = distinct !{}
-!12 = distinct !{}
-; CHECK: !12 = distinct !{}
-!13 = !{!11}
-; CHECK: !13 = !{!11}
-!14 = !{!12}
-; CHECK: !14 = !{!12}
+!15 = distinct !{}
+; CHECK: !15 = distinct !{}
+!16 = distinct !{}
+; CHECK: !16 = distinct !{}
+!17 = !{!15}
+; CHECK: !17 = !{!15}
+!18 = !{!16}
+; CHECK: !18 = !{!16}

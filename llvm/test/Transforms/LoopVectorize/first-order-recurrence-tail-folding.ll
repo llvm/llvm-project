@@ -28,7 +28,7 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP4]]
 ; VF2IC1-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[TMP3]], ptr align 4 [[TMP20]], <2 x i1> [[TMP2]])
 ; VF2IC1-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP4]], 2
-; VF2IC1-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; VF2IC1-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2IC1-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2IC1-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2IC1:       [[MIDDLE_BLOCK]]:
@@ -72,7 +72,7 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[TMP6]], ptr align 4 [[TMP67]], <2 x i1> [[TMP4]])
 ; VF2IC2-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[TMP8]], ptr align 4 [[TMP9]], <2 x i1> [[TMP5]])
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP7]], 4
-; VF2IC2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
+; VF2IC2-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; VF2IC2-NEXT:    [[TMP48:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2IC2-NEXT:    br i1 [[TMP48]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
@@ -107,8 +107,8 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
 ; VF1IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 33, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_STORE_CONTINUE5]] ]
-; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[VEC_IV:%.*]] = add i64 [[TMP0]], 0
+; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[VEC_IV1]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
@@ -205,7 +205,7 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP4]]
 ; VF2IC1-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[TMP3]], ptr align 4 [[TMP20]], <2 x i1> [[TMP2]])
 ; VF2IC1-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP4]], 2
-; VF2IC1-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; VF2IC1-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2IC1-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2IC1-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2IC1:       [[MIDDLE_BLOCK]]:
@@ -249,7 +249,7 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[TMP6]], ptr align 4 [[TMP63]], <2 x i1> [[TMP4]])
 ; VF2IC2-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[TMP8]], ptr align 4 [[TMP9]], <2 x i1> [[TMP5]])
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP7]], 4
-; VF2IC2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
+; VF2IC2-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; VF2IC2-NEXT:    [[TMP48:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2IC2-NEXT:    br i1 [[TMP48]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
@@ -284,8 +284,8 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
 ; VF1IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 33, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_STORE_CONTINUE5]] ]
-; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[VEC_IV:%.*]] = add i64 [[TMP0]], 0
+; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[VEC_IV1]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
@@ -382,7 +382,7 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP4]]
 ; VF2IC1-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[TMP3]], ptr align 4 [[TMP20]], <2 x i1> [[TMP2]])
 ; VF2IC1-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP4]], 2
-; VF2IC1-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; VF2IC1-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2IC1-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2IC1-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2IC1:       [[MIDDLE_BLOCK]]:
@@ -428,7 +428,7 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[TMP6]], ptr align 4 [[TMP72]], <2 x i1> [[TMP4]])
 ; VF2IC2-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[TMP8]], ptr align 4 [[TMP9]], <2 x i1> [[TMP5]])
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP7]], 4
-; VF2IC2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
+; VF2IC2-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; VF2IC2-NEXT:    [[TMP48:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF2IC2-NEXT:    br i1 [[TMP48]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
@@ -469,8 +469,8 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
 ; VF1IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 33, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_STORE_CONTINUE5]] ]
-; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[VEC_IV:%.*]] = add i64 [[TMP0]], 0
+; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[VEC_IV1]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]

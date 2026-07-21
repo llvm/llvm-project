@@ -69,6 +69,7 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.__support.freelist_heap
       libc.src.string.memcmp
       libc.src.string.memcpy
+      libc.src.string.memory_utils.inline_memset
   )
 endif()
 
@@ -313,3 +314,6 @@ add_subdirectory(time)
 add_subdirectory(threads)
 add_subdirectory(wchar)
 add_subdirectory(wctype)
+if(LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(regex)
+endif()

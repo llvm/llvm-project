@@ -21,6 +21,10 @@ endif()
 # (docs/offload-distribution.md) for setup, prerequisites, and run
 # instructions.
 if (HLSL_ENABLE_OFFLOAD_DISTRIBUTION)
+  # Cache scripts run before the project's cmake_minimum_required takes
+  # effect, so CMP0057 still defaults to OLD here and IN_LIST would be
+  # parsed as a literal token. Opt in explicitly so the check below works.
+  cmake_policy(SET CMP0057 NEW)
   if (NOT "OffloadTest" IN_LIST LLVM_EXTERNAL_PROJECTS)
     message(FATAL_ERROR
       "HLSL_ENABLE_OFFLOAD_DISTRIBUTION requires OffloadTest to be enabled "

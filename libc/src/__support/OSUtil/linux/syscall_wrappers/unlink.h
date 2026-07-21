@@ -20,10 +20,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> unlink(const char *path) {
-#ifdef SYS_unlink
-  int ret = syscall_impl<int>(SYS_unlink, path);
-#elif defined(SYS_unlinkat)
+#ifdef SYS_unlinkat
   int ret = syscall_impl<int>(SYS_unlinkat, AT_FDCWD, path, 0);
+#elif defined(SYS_unlink)
+  int ret = syscall_impl<int>(SYS_unlink, path);
 #else
 #error "unlink and unlinkat syscalls not available."
 #endif
