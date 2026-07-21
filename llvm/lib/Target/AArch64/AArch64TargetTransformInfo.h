@@ -297,7 +297,7 @@ public:
     if (Ty->isPointerTy())
       return true;
 
-    if (Ty->isBFloatTy() && ST->hasBF16())
+    if (Ty->isBFloatTy())
       return true;
 
     if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())

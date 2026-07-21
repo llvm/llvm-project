@@ -18,11 +18,15 @@ define void @fixed() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:16 SizeLat:10 for: %v2f16 = call <2 x half> @llvm.masked.load.v2f16.p0(ptr align 8 undef, <2 x i1> undef, <2 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:15 Lat:34 SizeLat:22 for: %v4f16 = call <4 x half> @llvm.masked.load.v4f16.p0(ptr align 8 undef, <4 x i1> undef, <4 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:31 Lat:70 SizeLat:46 for: %v8f16 = call <8 x half> @llvm.masked.load.v8f16.p0(ptr align 8 undef, <8 x i1> undef, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:16 SizeLat:10 for: %v2bf16 = call <2 x bfloat> @llvm.masked.load.v2bf16.p0(ptr align 8 undef, <2 x i1> undef, <2 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:15 Lat:34 SizeLat:22 for: %v4bf16 = call <4 x bfloat> @llvm.masked.load.v4bf16.p0(ptr align 8 undef, <4 x i1> undef, <4 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:31 Lat:70 SizeLat:46 for: %v8bf16 = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr align 8 undef, <8 x i1> undef, <8 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:16 SizeLat:10 for: %v2f32 = call <2 x float> @llvm.masked.load.v2f32.p0(ptr align 8 undef, <2 x i1> undef, <2 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:15 Lat:34 SizeLat:22 for: %v4f32 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 8 undef, <4 x i1> undef, <4 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:16 SizeLat:10 for: %v2f64 = call <2 x double> @llvm.masked.load.v2f64.p0(ptr align 8 undef, <2 x i1> undef, <2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:36 SizeLat:24 for: %v4i64 = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 undef, <4 x i1> undef, <4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:124 Lat:280 SizeLat:184 for: %v32f16 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr align 8 undef, <32 x i1> undef, <32 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:124 Lat:280 SizeLat:184 for: %v32bf16 = call <32 x bfloat> @llvm.masked.load.v32bf16.p0(ptr align 8 undef, <32 x i1> undef, <32 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:
@@ -42,6 +46,9 @@ entry:
   %v2f16 = call <2 x half> @llvm.masked.load.v2f16.p0(ptr undef, i32 8, <2 x i1> undef, <2 x half> undef)
   %v4f16 = call <4 x half> @llvm.masked.load.v4f16.p0(ptr undef, i32 8, <4 x i1> undef, <4 x half> undef)
   %v8f16 = call <8 x half> @llvm.masked.load.v8f16.p0(ptr undef, i32 8, <8 x i1> undef, <8 x half> undef)
+  %v2bf16 = call <2 x bfloat> @llvm.masked.load.v2bf16.p0(ptr undef, i32 8, <2 x i1> undef, <2 x bfloat> undef)
+  %v4bf16 = call <4 x bfloat> @llvm.masked.load.v4bf16.p0(ptr undef, i32 8, <4 x i1> undef, <4 x bfloat> undef)
+  %v8bf16 = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr undef, i32 8, <8 x i1> undef, <8 x bfloat> undef)
   %v2f32 = call <2 x float> @llvm.masked.load.v2f32.p0(ptr undef, i32 8, <2 x i1> undef, <2 x float> undef)
   %v4f32 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr undef, i32 8, <4 x i1> undef, <4 x float> undef)
   %v2f64 = call <2 x double> @llvm.masked.load.v2f64.p0(ptr undef, i32 8, <2 x i1> undef, <2 x double> undef)
@@ -49,6 +56,7 @@ entry:
   ; A couple of examples of illegal fixed-width types
   %v4i64 = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i64> undef)
   %v32f16 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr undef, i32 8, <32 x i1> undef, <32 x half> undef)
+  %v32bf16 = call <32 x bfloat> @llvm.masked.load.v32bf16.p0(ptr undef, i32 8, <32 x i1> undef, <32 x bfloat> undef)
 
   ret void
 }
@@ -69,12 +77,16 @@ define void @scalable() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2f16 = call <vscale x 2 x half> @llvm.masked.load.nxv2f16.p0(ptr align 8 undef, <vscale x 2 x i1> undef, <vscale x 2 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4f16 = call <vscale x 4 x half> @llvm.masked.load.nxv4f16.p0(ptr align 8 undef, <vscale x 4 x i1> undef, <vscale x 4 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8f16 = call <vscale x 8 x half> @llvm.masked.load.nxv8f16.p0(ptr align 8 undef, <vscale x 8 x i1> undef, <vscale x 8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2bf16 = call <vscale x 2 x bfloat> @llvm.masked.load.nxv2bf16.p0(ptr align 8 undef, <vscale x 2 x i1> undef, <vscale x 2 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4bf16 = call <vscale x 4 x bfloat> @llvm.masked.load.nxv4bf16.p0(ptr align 8 undef, <vscale x 4 x i1> undef, <vscale x 4 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8bf16 = call <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16.p0(ptr align 8 undef, <vscale x 8 x i1> undef, <vscale x 8 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2f32 = call <vscale x 2 x float> @llvm.masked.load.nxv2f32.p0(ptr align 8 undef, <vscale x 2 x i1> undef, <vscale x 2 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4f32 = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 8 undef, <vscale x 4 x i1> undef, <vscale x 4 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2f64 = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 undef, <vscale x 2 x i1> undef, <vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr align 8 undef, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0(ptr align 8 undef, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0(ptr align 8 undef, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %nxv32bf16 = call <vscale x 32 x bfloat> @llvm.masked.load.nxv32bf16.p0(ptr align 8 undef, <vscale x 32 x i1> undef, <vscale x 32 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv4i1 = call <vscale x 4 x i1> @llvm.masked.load.nxv4i1.p0(ptr align 16 undef, <vscale x 4 x i1> undef, <vscale x 4 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -95,6 +107,9 @@ entry:
   %nxv2f16 = call <vscale x 2 x half> @llvm.masked.load.nxv2f16.p0(ptr undef, i32 8, <vscale x 2 x i1> undef, <vscale x 2 x half> undef)
   %nxv4f16 = call <vscale x 4 x half> @llvm.masked.load.nxv4f16.p0(ptr undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x half> undef)
   %nxv8f16 = call <vscale x 8 x half> @llvm.masked.load.nxv8f16.p0(ptr undef, i32 8, <vscale x 8 x i1> undef, <vscale x 8 x half> undef)
+  %nxv2bf16 = call <vscale x 2 x bfloat> @llvm.masked.load.nxv2bf16.p0(ptr undef, i32 8, <vscale x 2 x i1> undef, <vscale x 2 x bfloat> undef)
+  %nxv4bf16 = call <vscale x 4 x bfloat> @llvm.masked.load.nxv4bf16.p0(ptr undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x bfloat> undef)
+  %nxv8bf16 = call <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16.p0(ptr undef, i32 8, <vscale x 8 x i1> undef, <vscale x 8 x bfloat> undef)
   %nxv2f32 = call <vscale x 2 x float> @llvm.masked.load.nxv2f32.p0(ptr undef, i32 8, <vscale x 2 x i1> undef, <vscale x 2 x float> undef)
   %nxv4f32 = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x float> undef)
   %nxv2f64 = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr undef, i32 8, <vscale x 2 x i1> undef, <vscale x 2 x double> undef)
@@ -103,6 +118,7 @@ entry:
   %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr undef, i32 8, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
   %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0(ptr undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
   %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0(ptr undef, i32 8, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
+  %nxv32bf16 = call <vscale x 32 x bfloat> @llvm.masked.load.nxv32bf16.p0(ptr undef, i32 8, <vscale x 32 x i1> undef, <vscale x 32 x bfloat> undef)
 
   ; Types that are legal, but for which we have no masked load/store lowering
   %nxv4i1 = call <vscale x 4 x i1> @llvm.masked.load.nxv4i1.p0(ptr undef, i32 16, <vscale x 4 x i1> undef, <vscale x 4 x i1> undef)
