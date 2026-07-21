@@ -128,15 +128,10 @@ public:
 
   void updateModuleTimestamp(StringRef Filename) override {
     // Note: This essentially replaces FS contention with mutex contention.
-    ModuleCacheEntry &Entry = getOrCreateEntry(Filename);
-    std::lock_guard<std::mutex> Lock(Entry.Mutex);
+    auto &Timestamp = getOrCreateEntry(Filename).Timestamp;
 
-    // A shared module may be validated by several workers at once; only the
-    // first records its timestamp (0 means "not recorded yet").
-    if (Entry.Timestamp)
-      return;
-    Entry.Timestamp = llvm::sys::toTimeT(std::chrono::system_clock::now());
     Logger.log() << "timestamp_write: " << Filename;
+    Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
   }
 
   void maybePrune(StringRef Path, time_t PruneInterval,
