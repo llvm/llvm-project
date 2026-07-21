@@ -167,10 +167,21 @@ static cl::opt<bool> ForceMemsetPatternIntrinsic(
     cl::desc("Use memset.pattern intrinsic whenever possible"), cl::init(false),
     cl::Hidden);
 
-static cl::opt<bool> ForceCRCClmul(
-    "loop-idiom-force-crc-clmul",
-    cl::desc("Use the clmul-based CRC loop optimization whenever possible"),
-    cl::init(false), cl::Hidden);
+enum class CRCStrategyKind {
+  Auto,
+  Table,
+  Clmul,
+};
+static cl::opt<CRCStrategyKind> CRCStrategy(
+    DEBUG_TYPE "-crc-strategy",
+    cl::desc("Preferred strategy for optimizing CRC loops"),
+    cl::init(CRCStrategyKind::Auto), cl::Hidden,
+    cl::values(clEnumValN(CRCStrategyKind::Auto, "auto",
+                          "Use costing to determine strategy"),
+               clEnumValN(CRCStrategyKind::Table, "table",
+                          "Use a Sarwate table when possible"),
+               clEnumValN(CRCStrategyKind::Clmul, "clmul",
+                          "Use carry-less multiplication when possible")));
 
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
@@ -1593,21 +1604,29 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
-  // The force-crc-clmul flag should cause the clmul optimization to run
-  // unconditionally.
-  if (ForceCRCClmul) {
+  // The Sarwate lookup table optimization requires a byte-multiple trip count,
+  // and should not be applied if optimizing for size.
+  bool TableStrategyPossible =
+      Info.TripCount % 8 == 0 && !ApplyCodeSizeHeuristics;
+
+  switch (CRCStrategy) {
+  default:
+    break;
+  case CRCStrategyKind::Table: {
+    if (TableStrategyPossible) {
+      optimizeCRCLoopUsingTableLookup(Info);
+      return true;
+    }
+    return false;
+  }
+  case CRCStrategyKind::Clmul:
     optimizeCRCLoopUsingClmul(Info);
     return true;
   }
 
-  // FIXME: Once intrinsic cost modeling is more reliable for clmul, that should
-  // be used to determine which optimization to use. Until then, only apply the
-  // clmul optimization when optimizing for size, since a lookup table is not
-  // viable in that case.
-  if (!ApplyCodeSizeHeuristics && Info.TripCount % 8 == 0) {
-    optimizeCRCLoopUsingTableLookup(Info);
-    return true;
-  }
+  LLVMContext &Ctx = Info.LHS->getContext();
+  Type *CRCTy = Info.LHS->getType();
+  unsigned CRCBW = CRCTy->getIntegerBitWidth();
 
   // The clmul optimization should be applied if it is fast and likely to lower
   // in a way that keeps code small.
@@ -1618,11 +1637,73 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
       Info.LHS->getType()->getIntegerBitWidth() + Info.TripCount;
   IntegerType *WidestClmulTy =
       IntegerType::get(Info.LHS->getContext(), std::max(ClmulMuBW, ClmulGPBW));
-  if (TTI->haveFastClmul(WidestClmulTy)) {
+  if (ApplyCodeSizeHeuristics && TTI->haveFastClmul(WidestClmulTy)) {
     optimizeCRCLoopUsingClmul(Info);
     return true;
   }
 
+  TargetTransformInfo::TargetCostKind CostKind =
+      TargetTransformInfo::TCK_Latency;
+
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRC: BW=" << CRCBW
+                    << " TC=" << Info.TripCount);
+
+  InstructionCost XorCost =
+      TTI->getArithmeticInstrCost(Instruction::Xor, CRCTy, CostKind);
+  InstructionCost ShiftCost =
+      TTI->getArithmeticInstrCost(Instruction::LShr, CRCTy, CostKind);
+  InstructionCost AndCost =
+      TTI->getArithmeticInstrCost(Instruction::And, CRCTy, CostKind);
+  InstructionCost SelectCost =
+      TTI->getCmpSelInstrCost(Instruction::Select, CRCTy, Type::getInt1Ty(Ctx),
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  auto ClmulCost = [&](unsigned BW) {
+    auto *Ty = IntegerType::get(Ctx, BW);
+    IntrinsicCostAttributes Attrs(Intrinsic::clmul, Ty, {Ty, Ty});
+    return TTI->getIntrinsicInstrCost(Attrs, CostKind);
+  };
+
+  // Determine the cost of the alternative approach to clmul.
+  InstructionCost OldCost;
+  if (TableStrategyPossible) {
+    // If the lookup table strategy is possible, it will be faster than the
+    // original loop, so compute the cost of that strategy.
+    InstructionCost CostPerTrip =
+        TTI->getMemoryOpCost(Instruction::Load, CRCTy,
+                             DL->getABITypeAlign(CRCTy),
+                             DL->getDefaultGlobalsAddressSpace(), CostKind) +
+        XorCost + 2 * ShiftCost;
+
+    // The trip count will be reduced by a factor of 8.
+    OldCost = CostPerTrip * (Info.TripCount / 8);
+    LLVM_DEBUG(dbgs() << " OldCost(table)=" << OldCost);
+  } else {
+    // Estimate the cost of the original loop.
+    InstructionCost CostPerTrip =
+        2 * ShiftCost + 2 * XorCost + AndCost + SelectCost;
+
+    OldCost = CostPerTrip * Info.TripCount;
+    LLVM_DEBUG(dbgs() << " OldCost(original)=" << OldCost);
+  }
+
+  // Approximate the cost of the clmul optimization as two clmuls plus a decent
+  // estimate of the other operations used.
+  InstructionCost NewCost = ClmulCost(2 * Info.TripCount) +
+                            ClmulCost(CRCBW + Info.TripCount) + XorCost +
+                            2 * ShiftCost + 2 * AndCost;
+  LLVM_DEBUG(dbgs() << " NewCost(clmul)=" << NewCost);
+
+  if (NewCost.isValid() && OldCost.isValid() && NewCost < OldCost) {
+    LLVM_DEBUG(dbgs() << " => clmul\n");
+    optimizeCRCLoopUsingClmul(Info);
+    return true;
+  }
+  if (TableStrategyPossible) {
+    LLVM_DEBUG(dbgs() << " => table\n");
+    optimizeCRCLoopUsingTableLookup(Info);
+    return true;
+  }
+  LLVM_DEBUG(dbgs() << " => original\n");
   return false;
 }
 
@@ -1630,6 +1711,8 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
 // Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
 // Using PCLMULQDQ Instruction" white paper (December 2009).
 void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
+  // TODO: If clmul exists on the target but not for the required width, it
+  // might be possible to split into multiple iterations of reduction.
   Type *CRCTy = Info.LHS->getType();
   LLVMContext &Ctx = CRCTy->getContext();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();

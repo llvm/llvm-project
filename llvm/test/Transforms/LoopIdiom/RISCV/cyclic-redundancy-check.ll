@@ -485,47 +485,27 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) optsize {
 ; NOZBC-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
 ; NOZBC-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
-; ZBC32-LABEL: define i32 @crc32.le.tc8.data32(
-; ZBC32-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
-; ZBC32-NEXT:  [[ENTRY:.*]]:
-; ZBC32-NEXT:    br label %[[LOOP:.*]]
-; ZBC32:       [[LOOP]]:
-; ZBC32-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
-; ZBC32-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
-; ZBC32-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
-; ZBC32-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
-; ZBC32-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
-; ZBC32-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
-; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ZBC32-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
-; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
-; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; ZBC32:       [[EXIT]]:
-; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
-; ZBC32-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
-;
-; ZBC64-LABEL: define i32 @crc32.le.tc8.data32(
-; ZBC64-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
-; ZBC64-NEXT:  [[ENTRY:.*:]]
-; ZBC64-NEXT:    [[CRC_CAST:%.*]] = trunc i32 [[CHECKSUM]] to i8
-; ZBC64-NEXT:    [[DATA_CAST:%.*]] = trunc i32 [[MSG]] to i8
-; ZBC64-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i8 [[CRC_CAST]], [[DATA_CAST]]
-; ZBC64-NEXT:    [[CLMUL_MU:%.*]] = call i8 @llvm.clmul.i8(i8 [[XOR_CRC_DATA1]], i8 17)
-; ZBC64-NEXT:    [[QUOT_CAST:%.*]] = zext i8 [[CLMUL_MU]] to i40
-; ZBC64-NEXT:    [[CLMUL_GP:%.*]] = call i40 @llvm.clmul.i40(i40 [[QUOT_CAST]], i40 67601)
-; ZBC64-NEXT:    [[CRC_RECAST:%.*]] = zext i32 [[CHECKSUM]] to i40
-; ZBC64-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i40 [[CRC_RECAST]], [[CLMUL_GP]]
-; ZBC64-NEXT:    [[CRC_LSHR2:%.*]] = lshr i40 [[XOR_CRC_MULT]], 8
-; ZBC64-NEXT:    [[CRC_NEXT3:%.*]] = trunc i40 [[CRC_LSHR2]] to i32
-; ZBC64-NEXT:    br label %[[LOOP:.*]]
-; ZBC64:       [[LOOP]]:
-; ZBC64-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
-; ZBC64:       [[EXIT]]:
-; ZBC64-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT3]], %[[LOOP]] ]
-; ZBC64-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+; ZBC-LABEL: define i32 @crc32.le.tc8.data32(
+; ZBC-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
+; ZBC-NEXT:  [[ENTRY:.*:]]
+; ZBC-NEXT:    [[CRC_CAST:%.*]] = trunc i32 [[CHECKSUM]] to i8
+; ZBC-NEXT:    [[DATA_CAST:%.*]] = trunc i32 [[MSG]] to i8
+; ZBC-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i8 [[CRC_CAST]], [[DATA_CAST]]
+; ZBC-NEXT:    [[TCBITS_CAST:%.*]] = zext i8 [[XOR_CRC_DATA1]] to i16
+; ZBC-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[TCBITS_CAST]], i16 273)
+; ZBC-NEXT:    [[QUOT_MASK:%.*]] = and i16 [[CLMUL_MU]], 255
+; ZBC-NEXT:    [[QUOT_CAST:%.*]] = zext i16 [[QUOT_MASK]] to i40
+; ZBC-NEXT:    [[CLMUL_GP:%.*]] = call i40 @llvm.clmul.i40(i40 [[QUOT_CAST]], i40 67601)
+; ZBC-NEXT:    [[CRC_RECAST:%.*]] = zext i32 [[CHECKSUM]] to i40
+; ZBC-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i40 [[CRC_RECAST]], [[CLMUL_GP]]
+; ZBC-NEXT:    [[CRC_LSHR2:%.*]] = lshr i40 [[XOR_CRC_MULT]], 8
+; ZBC-NEXT:    [[CRC_NEXT3:%.*]] = trunc i40 [[CRC_LSHR2]] to i32
+; ZBC-NEXT:    br label %[[LOOP:.*]]
+; ZBC:       [[LOOP]]:
+; ZBC-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC:       [[EXIT]]:
+; ZBC-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; ZBC-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
 entry:
   br label %loop
@@ -638,45 +618,24 @@ define i32 @crc32.le.tc32(i32 %checksum, i32 %msg) optsize {
 ; NOZBC-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
 ; NOZBC-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
-; ZBC32-LABEL: define i32 @crc32.le.tc32(
-; ZBC32-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
-; ZBC32-NEXT:  [[ENTRY:.*]]:
-; ZBC32-NEXT:    br label %[[LOOP:.*]]
-; ZBC32:       [[LOOP]]:
-; ZBC32-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
-; ZBC32-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
-; ZBC32-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
-; ZBC32-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
-; ZBC32-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
-; ZBC32-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
-; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ZBC32-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
-; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 31
-; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; ZBC32:       [[EXIT]]:
-; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
-; ZBC32-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
-;
-; ZBC64-LABEL: define i32 @crc32.le.tc32(
-; ZBC64-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
-; ZBC64-NEXT:  [[ENTRY:.*:]]
-; ZBC64-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CHECKSUM]], [[MSG]]
-; ZBC64-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[XOR_CRC_DATA1]], i32 475535633)
-; ZBC64-NEXT:    [[QUOT_CAST:%.*]] = zext i32 [[CLMUL_MU]] to i64
-; ZBC64-NEXT:    [[CLMUL_GP:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_CAST]], i64 67601)
-; ZBC64-NEXT:    [[CRC_RECAST:%.*]] = zext i32 [[CHECKSUM]] to i64
-; ZBC64-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i64 [[CRC_RECAST]], [[CLMUL_GP]]
-; ZBC64-NEXT:    [[CRC_LSHR2:%.*]] = lshr i64 [[XOR_CRC_MULT]], 32
-; ZBC64-NEXT:    [[CRC_NEXT3:%.*]] = trunc i64 [[CRC_LSHR2]] to i32
-; ZBC64-NEXT:    br label %[[LOOP:.*]]
-; ZBC64:       [[LOOP]]:
-; ZBC64-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
-; ZBC64:       [[EXIT]]:
-; ZBC64-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT3]], %[[LOOP]] ]
-; ZBC64-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+; ZBC-LABEL: define i32 @crc32.le.tc32(
+; ZBC-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
+; ZBC-NEXT:  [[ENTRY:.*:]]
+; ZBC-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CHECKSUM]], [[MSG]]
+; ZBC-NEXT:    [[TCBITS_CAST:%.*]] = zext i32 [[XOR_CRC_DATA1]] to i64
+; ZBC-NEXT:    [[CLMUL_MU:%.*]] = call i64 @llvm.clmul.i64(i64 [[TCBITS_CAST]], i64 4770502929)
+; ZBC-NEXT:    [[QUOT_MASK:%.*]] = and i64 [[CLMUL_MU]], 4294967295
+; ZBC-NEXT:    [[CLMUL_GP:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_MASK]], i64 67601)
+; ZBC-NEXT:    [[CRC_RECAST:%.*]] = zext i32 [[CHECKSUM]] to i64
+; ZBC-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i64 [[CRC_RECAST]], [[CLMUL_GP]]
+; ZBC-NEXT:    [[CRC_LSHR2:%.*]] = lshr i64 [[XOR_CRC_MULT]], 32
+; ZBC-NEXT:    [[CRC_NEXT3:%.*]] = trunc i64 [[CRC_LSHR2]] to i32
+; ZBC-NEXT:    br label %[[LOOP:.*]]
+; ZBC:       [[LOOP]]:
+; ZBC-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC:       [[EXIT]]:
+; ZBC-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; ZBC-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
 entry:
   br label %loop
@@ -701,27 +660,46 @@ exit:                                              ; preds = %loop
 }
 
 define i64 @crc64.le.tc64(i64 %checksum, i64 %msg) optsize {
-; ALL-LABEL: define i64 @crc64.le.tc64(
-; ALL-SAME: i64 [[CHECKSUM:%.*]], i64 [[MSG:%.*]]) #[[ATTR0:[0-9]+]] {
-; ALL-NEXT:  [[ENTRY:.*]]:
-; ALL-NEXT:    br label %[[LOOP:.*]]
-; ALL:       [[LOOP]]:
-; ALL-NEXT:    [[CRC:%.*]] = phi i64 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[DATA:%.*]] = phi i64 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i64 [[CRC]], [[DATA]]
-; ALL-NEXT:    [[SB_CRC_DATA:%.*]] = and i64 [[XOR_CRC_DATA]], 1
-; ALL-NEXT:    [[CHECK_SB:%.*]] = icmp eq i64 [[SB_CRC_DATA]], 0
-; ALL-NEXT:    [[CRC_LSHR:%.*]] = lshr i64 [[CRC]], 1
-; ALL-NEXT:    [[CRC_XOR:%.*]] = xor i64 [[CRC_LSHR]], 33800
-; ALL-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i64 [[CRC_LSHR]], i64 [[CRC_XOR]]
-; ALL-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ALL-NEXT:    [[DATA_NEXT]] = lshr i64 [[DATA]], 1
-; ALL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 63
-; ALL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; ALL:       [[EXIT]]:
-; ALL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i64 [ [[CRC_NEXT]], %[[LOOP]] ]
-; ALL-NEXT:    ret i64 [[CRC_NEXT_LCSSA]]
+; NOZBC-LABEL: define i64 @crc64.le.tc64(
+; NOZBC-SAME: i64 [[CHECKSUM:%.*]], i64 [[MSG:%.*]]) #[[ATTR0]] {
+; NOZBC-NEXT:  [[ENTRY:.*]]:
+; NOZBC-NEXT:    br label %[[LOOP:.*]]
+; NOZBC:       [[LOOP]]:
+; NOZBC-NEXT:    [[CRC:%.*]] = phi i64 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; NOZBC-NEXT:    [[DATA:%.*]] = phi i64 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; NOZBC-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NOZBC-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i64 [[CRC]], [[DATA]]
+; NOZBC-NEXT:    [[SB_CRC_DATA:%.*]] = and i64 [[XOR_CRC_DATA]], 1
+; NOZBC-NEXT:    [[CHECK_SB:%.*]] = icmp eq i64 [[SB_CRC_DATA]], 0
+; NOZBC-NEXT:    [[CRC_LSHR:%.*]] = lshr i64 [[CRC]], 1
+; NOZBC-NEXT:    [[CRC_XOR:%.*]] = xor i64 [[CRC_LSHR]], 33800
+; NOZBC-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i64 [[CRC_LSHR]], i64 [[CRC_XOR]]
+; NOZBC-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; NOZBC-NEXT:    [[DATA_NEXT]] = lshr i64 [[DATA]], 1
+; NOZBC-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 63
+; NOZBC-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; NOZBC:       [[EXIT]]:
+; NOZBC-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i64 [ [[CRC_NEXT]], %[[LOOP]] ]
+; NOZBC-NEXT:    ret i64 [[CRC_NEXT_LCSSA]]
+;
+; ZBC-LABEL: define i64 @crc64.le.tc64(
+; ZBC-SAME: i64 [[CHECKSUM:%.*]], i64 [[MSG:%.*]]) #[[ATTR0]] {
+; ZBC-NEXT:  [[ENTRY:.*:]]
+; ZBC-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i64 [[CHECKSUM]], [[MSG]]
+; ZBC-NEXT:    [[TCBITS_CAST:%.*]] = zext i64 [[XOR_CRC_DATA1]] to i128
+; ZBC-NEXT:    [[CLMUL_MU:%.*]] = call i128 @llvm.clmul.i128(i128 [[TCBITS_CAST]], i128 28074037147910805777)
+; ZBC-NEXT:    [[QUOT_MASK:%.*]] = and i128 [[CLMUL_MU]], 18446744073709551615
+; ZBC-NEXT:    [[CLMUL_GP:%.*]] = call i128 @llvm.clmul.i128(i128 [[QUOT_MASK]], i128 67601)
+; ZBC-NEXT:    [[CRC_RECAST:%.*]] = zext i64 [[CHECKSUM]] to i128
+; ZBC-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i128 [[CRC_RECAST]], [[CLMUL_GP]]
+; ZBC-NEXT:    [[CRC_LSHR2:%.*]] = lshr i128 [[XOR_CRC_MULT]], 64
+; ZBC-NEXT:    [[CRC_NEXT3:%.*]] = trunc i128 [[CRC_LSHR2]] to i64
+; ZBC-NEXT:    br label %[[LOOP:.*]]
+; ZBC:       [[LOOP]]:
+; ZBC-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC:       [[EXIT]]:
+; ZBC-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i64 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; ZBC-NEXT:    ret i64 [[CRC_NEXT_LCSSA]]
 ;
 entry:
   br label %loop
@@ -756,5 +734,8 @@ exit:                                              ; preds = %loop
 ; ZBC64: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; ALL: {{.*}}
 ; NOZBC32: {{.*}}
 ; NOZBC64: {{.*}}
+; ZBC32: {{.*}}
+; ZBC64: {{.*}}
