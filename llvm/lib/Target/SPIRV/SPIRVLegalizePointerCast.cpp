@@ -99,8 +99,10 @@ class SPIRVLegalizePointerCastImpl {
   // type.
   // Returns the loaded value.
   Value *loadVectorFromVector(IRBuilder<> &B, FixedVectorType *SourceType,
-                              FixedVectorType *TargetType, Value *Source) {
+                              FixedVectorType *TargetType, Value *Source,
+                              Align OriginalAlign) {
     LoadInst *NewLoad = B.CreateLoad(SourceType, Source);
+    NewLoad->setAlignment(OriginalAlign);
     buildAssignType(B, SourceType, NewLoad);
     Value *AssignValue = NewLoad;
     if (TargetType->getElementType() != SourceType->getElementType()) {
@@ -226,11 +228,11 @@ class SPIRVLegalizePointerCastImpl {
       return LI;
     }
     if (SVT && DVT)
-      return loadVectorFromVector(B, SVT, DVT, GEP);
+      return loadVectorFromVector(B, SVT, DVT, GEP, BadLoad->getAlign());
     if (SAT && DVT && SAT->getElementType() == DVT->getElementType())
-      return loadVectorFromArray(B, DVT, GEP);
+      return loadVectorFromArray(B, DVT, GEP, BadLoad->getAlign());
     if (MAT && DVT && MAT->getElementType() == DVT->getElementType())
-      return loadVectorFromMatrixArray(B, DVT, GEP, MAT);
+      return loadVectorFromMatrixArray(B, DVT, GEP, MAT, BadLoad->getAlign());
 
     llvm_unreachable("Failed to load from aggregate.");
   }
@@ -266,10 +268,12 @@ class SPIRVLegalizePointerCastImpl {
   // Loads elements from a matrix with an array of vector memory layout and
   // constructs a vector.
   Value *loadVectorFromMatrixArray(IRBuilder<> &B, FixedVectorType *TargetType,
-                                   Value *Source,
-                                   FixedVectorType *ArrElemVecTy) {
+                                   Value *Source, FixedVectorType *ArrElemVecTy,
+                                   Align OriginalAlign) {
     Type *TargetElemTy = TargetType->getElementType();
     unsigned ScalarsPerArrayElement = ArrElemVecTy->getNumElements();
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    uint64_t ArrElemVecSize = DL.getTypeAllocSize(ArrElemVecTy);
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
     std::array<Type *, 2> Types = {Source->getType(), Source->getType()};
@@ -282,7 +286,9 @@ class SPIRVLegalizePointerCastImpl {
           ConstantInt::get(B.getInt32Ty(), ArrayIndex)};
       auto *ElementPtr = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
       GR->buildAssignPtr(B, ArrElemVecTy, ElementPtr);
-      Value *LoadVec = B.CreateLoad(ArrElemVecTy, ElementPtr);
+      LoadInst *LoadVec = B.CreateLoad(ArrElemVecTy, ElementPtr);
+      LoadVec->setAlignment(
+          commonAlignment(OriginalAlign, ArrayIndex * ArrElemVecSize));
       buildAssignType(B, ArrElemVecTy, LoadVec);
       LoadedElements.push_back(makeExtractElement(B, TargetElemTy, LoadVec,
                                                   ElementIndexInArrayElem));
@@ -291,10 +297,12 @@ class SPIRVLegalizePointerCastImpl {
   }
   // Loads elements from an array and constructs a vector.
   Value *loadVectorFromArray(IRBuilder<> &B, FixedVectorType *TargetType,
-                             Value *Source) {
+                             Value *Source, Align OriginalAlign) {
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
     std::array<Type *, 2> Types = {Source->getType(), Source->getType()};
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    uint64_t ElemSize = DL.getTypeAllocSize(TargetType->getElementType());
     for (unsigned I = 0, E = TargetType->getNumElements(); I < E; ++I) {
       // Create a GEP to access the i-th element of the array.
       std::array<Value *, 4> Args = {B.getInt1(/*Inbounds=*/false), Source,
@@ -304,7 +312,8 @@ class SPIRVLegalizePointerCastImpl {
       GR->buildAssignPtr(B, TargetType->getElementType(), ElementPtr);
 
       // Load the value from the element pointer.
-      Value *Load = B.CreateLoad(TargetType->getElementType(), ElementPtr);
+      LoadInst *Load = B.CreateLoad(TargetType->getElementType(), ElementPtr);
+      Load->setAlignment(commonAlignment(OriginalAlign, I * ElemSize));
       buildAssignType(B, TargetType->getElementType(), Load);
       LoadedElements.push_back(Load);
     }
@@ -326,6 +335,8 @@ class SPIRVLegalizePointerCastImpl {
 
     std::array<Type *, 2> Types = {DstArrayPtr->getType(),
                                    DstArrayPtr->getType()};
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    uint64_t ArrElemVecSize = DL.getTypeAllocSize(ArrElemVecTy);
 
     for (unsigned I = 0; I < SrcNumElements; I += ScalarsPerArrayElement) {
       unsigned ArrayIndex = I / ScalarsPerArrayElement;
@@ -344,7 +355,7 @@ class SPIRVLegalizePointerCastImpl {
       // Build a vector from the extracted elements and store it.
       Value *Vec = buildVectorFromLoadedElements(B, ArrElemVecTy, Elements);
       StoreInst *SI = B.CreateStore(Vec, ElementPtr);
-      SI->setAlignment(Alignment);
+      SI->setAlignment(commonAlignment(Alignment, ArrayIndex * ArrElemVecSize));
     }
   }
 
@@ -360,6 +371,8 @@ class SPIRVLegalizePointerCastImpl {
            "Element types of array and vector must be the same.");
     std::array<Type *, 2> Types = {DstArrayPtr->getType(),
                                    DstArrayPtr->getType()};
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    uint64_t ElemSize = DL.getTypeAllocSize(ElemTy);
 
     for (unsigned I = 0, E = VecTy->getNumElements(); I < E; ++I) {
       // Create a GEP to access the i-th element of the array.
@@ -373,7 +386,7 @@ class SPIRVLegalizePointerCastImpl {
       Value *Element =
           E == 1 ? SrcVector : makeExtractElement(B, ElemTy, SrcVector, I);
       StoreInst *SI = B.CreateStore(Element, ElementPtr);
-      SI->setAlignment(Alignment);
+      SI->setAlignment(commonAlignment(Alignment, I * ElemSize));
     }
   }
 

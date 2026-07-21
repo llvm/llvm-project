@@ -619,7 +619,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   switch (Triple.getArch()) {
   case Triple::nvptx:
   case Triple::nvptx64:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::x86:
   case Triple::x86_64:
   case Triple::aarch64:
@@ -1398,16 +1398,28 @@ getDeviceInput(const ArgList &Args) {
     }
   }
 
+  // Handle the most specific target-ids first so a generic input merges last.
+  llvm::stable_sort(ObjectFilesToExtract,
+                    [](const OffloadFile &A, const OffloadFile &B) {
+                      return A.getBinary()->getArch().count(':') >
+                             B.getBinary()->getArch().count(':');
+                    });
+
   // Link all standard input files and update the list of symbols.
   MapVector<OffloadFile::TargetID, SmallVector<OffloadFile, 0>> InputFiles;
   for (OffloadFile &Binary : ObjectFilesToExtract) {
     if (!Binary.getBinary())
       continue;
 
-    SmallVector<OffloadFile::TargetID> CompatibleTargets = {Binary};
+    OffloadFile::TargetID Target = Binary;
+    SmallVector<OffloadFile::TargetID> CompatibleTargets;
     for (const auto &[ID, Input] : InputFiles)
-      if (object::areTargetsCompatible(Binary, ID))
+      if (object::areTargetsEquivalent(Target, ID))
         CompatibleTargets.emplace_back(ID);
+
+    // Seed a new image when no existing target can provide for this input.
+    if (CompatibleTargets.empty())
+      CompatibleTargets.emplace_back(Target);
 
     for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
       // If another target needs this binary it must be copied instead.
@@ -1431,7 +1443,8 @@ getDeviceInput(const ArgList &Args) {
 
     SmallVector<OffloadFile::TargetID> CompatibleTargets = {Binary};
     for (const auto &[ID, Input] : InputFiles)
-      if (object::areTargetsCompatible(Binary, ID))
+      if (OffloadFile::TargetID(Binary) != ID &&
+          object::areTargetsCompatible(Binary, ID))
         CompatibleTargets.emplace_back(ID);
 
     for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {

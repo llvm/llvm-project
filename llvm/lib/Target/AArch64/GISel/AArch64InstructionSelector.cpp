@@ -5149,25 +5149,55 @@ bool AArch64InstructionSelector::selectShuffleVector(
   Register Src1Reg = I.getOperand(1).getReg();
   Register Src2Reg = I.getOperand(2).getReg();
   ArrayRef<int> Mask = I.getOperand(3).getShuffleMask();
+  assert(DstTy == MRI.getType(Src1Reg) &&
+         "Expected equal shuffle types during selection");
 
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   LLVMContext &Ctx = MF.getFunction().getContext();
 
   unsigned BytesPerElt = DstTy.getElementType().getSizeInBits() / 8;
+  int NumElts = DstTy.getNumElements();
 
-  SmallVector<Constant *, 64> CstIdxs;
-  for (int Val : Mask) {
-    // For now, any undef indexes we'll just assume to be 0. This should be
-    // optimized in future, e.g. to select DUP etc.
-    Val = Val < 0 ? 0 : Val;
+  SmallVector<int> NewMask;
+  bool FirstUsed = false;
+  bool SecondUsed = false;
+  for (int M : Mask) {
+    // Map any undef or zero lanes to 255.
+    if (M < 0 || VT->getKnownBits(M < NumElts ? Src1Reg : Src2Reg,
+                                  APInt::getOneBitSet(NumElts, M % NumElts))
+                     .isZero()) {
+      for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte)
+        NewMask.push_back(255);
+      continue;
+    }
+
+    FirstUsed |= M < NumElts;
+    SecondUsed |= M >= NumElts;
     for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte) {
-      unsigned Offset = Byte + Val * BytesPerElt;
-      CstIdxs.emplace_back(ConstantInt::get(Type::getInt8Ty(Ctx), Offset));
+      unsigned Offset = Byte + M * BytesPerElt;
+      NewMask.push_back(Offset);
     }
   }
 
+  // If the first is unused or all zeros, use the second src in a tbl1.
+  if (!FirstUsed) {
+    int ByteLanes = DstTy.getSizeInBits() == 128 ? 16 : 8;
+    for (int &M : NewMask) {
+      if (M != 255) {
+        assert(M >= ByteLanes && M < 2 * ByteLanes);
+        M -= ByteLanes;
+      }
+    }
+    std::swap(Src1Reg, Src2Reg);
+    std::swap(FirstUsed, SecondUsed);
+  }
+
   // Use a constant pool to load the index vector for TBL.
+  SmallVector<Constant *> CstIdxs;
+  transform(NewMask, std::back_inserter(CstIdxs), [&Ctx](int M) {
+    return ConstantInt::get(Type::getInt8Ty(Ctx), M);
+  });
   Constant *CPVal = ConstantVector::get(CstIdxs);
   MachineInstr *IndexLoad = emitLoadFromConstantPool(CPVal, MIB);
   if (!IndexLoad) {
@@ -5198,6 +5228,14 @@ bool AArch64InstructionSelector::selectShuffleVector(
         MIB.buildInstr(TargetOpcode::COPY, {I.getOperand(0).getReg()}, {})
             .addReg(TBL1.getReg(0), {}, AArch64::dsub);
     RBI.constrainGenericRegister(Copy.getReg(0), AArch64::FPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
+  }
+
+  if (!SecondUsed) {
+    auto TBL1 = MIB.buildInstr(AArch64::TBLv16i8One, {I.getOperand(0)},
+                               {Src1Reg, IndexLoad->getOperand(0)});
+    constrainSelectedInstRegOperands(*TBL1, TII, TRI, RBI);
     I.eraseFromParent();
     return true;
   }
@@ -6705,6 +6743,42 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         .constrainAllUses(TII, TRI, RBI);
     MIB.buildCopy({DstReg}, Register(AArch64::X16));
 
+    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::ptrauth_auth_with_pc_and_resign: {
+    Register DstReg = I.getOperand(0).getReg();
+    Register ValReg = I.getOperand(2).getReg();
+    uint64_t AUTKey = I.getOperand(3).getImm();
+    Register AUTDisc = I.getOperand(4).getReg();
+    Register AUTPC = I.getOperand(5).getReg();
+    uint64_t PACKey = I.getOperand(6).getImm();
+    Register PACDisc = I.getOperand(7).getReg();
+
+    assert((AUTKey == AArch64PACKey::IA || AUTKey == AArch64PACKey::IB) &&
+           "auth_with_pc_and_resign only supports IA and IB keys");
+
+    uint16_t PACConstDiscC = 0;
+    Register PACAddrDisc;
+    std::tie(PACConstDiscC, PACAddrDisc) =
+        extractPtrauthBlendDiscriminators(PACDisc, MRI);
+
+    if (PACAddrDisc == AArch64::NoRegister)
+      PACAddrDisc = AArch64::XZR;
+
+    MIB.buildCopy({AArch64::X17}, {ValReg});
+    MIB.buildCopy({AArch64::X16}, {AUTDisc});
+    MIB.buildCopy({AArch64::X15}, {AUTPC});
+
+    MIB.buildInstr(AArch64::AUTPCPAC)
+        .addImm(AUTKey)
+        .addImm(PACKey)
+        .addImm(PACConstDiscC)
+        .addUse(PACAddrDisc)
+        .constrainAllUses(TII, TRI, RBI);
+
+    MIB.buildCopy({DstReg}, Register(AArch64::X17));
     RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
     I.eraseFromParent();
     return true;

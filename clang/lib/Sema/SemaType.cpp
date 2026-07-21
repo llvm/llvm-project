@@ -41,7 +41,6 @@
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -888,7 +887,7 @@ TSTToUnaryTransformType(DeclSpec::TST SwitchTST) {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   case TST_##Trait:                                                            \
     return UnaryTransformType::Enum;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   default:
     llvm_unreachable("attempted to parse a non-unary transform builtin");
   }
@@ -1182,7 +1181,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       if (!S.getOpenCLOptions().isSupported("cl_khr_fp64", S.getLangOpts()))
         S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
             << 0 << Result
-            << (S.getLangOpts().getOpenCLCompatibleVersion() == 300
+            << (S.getLangOpts().getOpenCLCompatibleVersion() >= 300
                     ? "cl_khr_fp64 and __opencl_c_fp64"
                     : "cl_khr_fp64");
       else if (!S.getOpenCLOptions().isAvailableOption("cl_khr_fp64", S.getLangOpts()))
@@ -1308,7 +1307,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     Result = S.GetTypeFromParser(DS.getRepAsType());
     assert(!Result.isNull() && "Didn't get a type for the transformation?");
     Result = S.BuildUnaryTransformType(
@@ -1407,7 +1406,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   if (S.getLangOpts().OpenCL) {
     const auto &OpenCLOptions = S.getOpenCLOptions();
     bool IsOpenCLC30Compatible =
-        S.getLangOpts().getOpenCLCompatibleVersion() == 300;
+        S.getLangOpts().getOpenCLCompatibleVersion() >= 300;
     // OpenCL C v3.0 s6.3.3 - OpenCL image types require __opencl_c_images
     // support.
     // OpenCL C v3.0 s6.2.1 - OpenCL 3d image write types requires support
@@ -1651,9 +1650,7 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
       Qs.removeRestrict();
     } else {
       if (T->isArrayType())
-        Diag(Loc, getLangOpts().C23
-                      ? diag::warn_c23_compat_restrict_on_array_of_pointers
-                      : diag::ext_restrict_on_array_of_pointers_c23);
+        DiagCompat(Loc, diag_compat::restrict_on_array_of_pointers);
     }
   }
 
@@ -4890,7 +4887,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // If there already was an problem with the scope, don’t issue another
         // error about the explicit object parameter.
         return SS.isInvalid() ||
-               isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
+               isa_and_present<CXXRecordDecl>(
+                   S.computeDeclContext(SS, /*EnteringContext=*/true));
       };
 
       // C++23 [dcl.fct]p6:
@@ -9721,16 +9719,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         diagnoseMissingImport(Loc, Suggested, MissingImportKind::Definition,
                               /*Recover*/ TreatAsComplete);
       return !TreatAsComplete;
-    } else if (Def && !TemplateInstCallbacks.empty()) {
-      CodeSynthesisContext TempInst;
-      TempInst.Kind = CodeSynthesisContext::Memoization;
-      TempInst.Template = Def;
-      TempInst.Entity = Def;
-      TempInst.PointOfInstantiation = Loc;
-      atTemplateBegin(TemplateInstCallbacks, *this, TempInst);
-      atTemplateEnd(TemplateInstCallbacks, *this, TempInst);
     }
-
     return false;
   }
 
@@ -9897,7 +9886,7 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
   // cannot have any constexpr constructors or a trivial default constructor,
   // so is non-literal. This is better to diagnose than the resulting absence
   // of constexpr constructors.
-  if (RD->getNumVBases()) {
+  if (!getLangOpts().CPlusPlus26 && RD->getNumVBases()) {
     Diag(RD->getLocation(), diag::note_non_literal_virtual_base)
       << getLiteralDiagFromTagKind(RD->getTagKind()) << RD->getNumVBases();
     for (const auto &I : RD->vbases())

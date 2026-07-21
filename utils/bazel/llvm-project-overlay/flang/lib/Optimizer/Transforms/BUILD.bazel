@@ -77,7 +77,6 @@ cc_library(
         "//mlir:MemRefDialect",
         "//mlir:NVVMDialect",
         "//mlir:OpenACCDialect",
-        "//mlir:OpenACCToLLVMIRTranslation",
         "//mlir:OpenMPDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",

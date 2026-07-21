@@ -10,6 +10,7 @@ import io
 import json
 import os
 import re
+import shutil
 import socket
 import sys
 import subprocess
@@ -57,6 +58,113 @@ def mkdir_p(path):
             raise
     if not os.path.isdir(path):
         raise OSError(errno.ENOTDIR, "%s is not a directory" % path)
+
+
+def get_extended_windows_path(path):
+    r"""Return ``path`` in the Windows extended-length ``\\?\`` form so it can be
+    handed to the Win32 API (and therefore to ``os``/``shutil``) even when it is
+    longer than MAX_PATH (260 characters). On non-Windows platforms ``path`` is
+    returned unchanged.
+
+    The ``\\?\`` prefix disables all path normalization normally performed by
+    Win32, so the path must be fully qualified, use backslash separators and
+    contain no ``.``/``..`` components. ``os.path.abspath`` guarantees all three.
+    """
+    if sys.platform != "win32":
+        return path
+    if path.startswith("\\\\?\\"):
+        return path
+    assert os.path.isabs(path), (
+        "cannot form a \\\\?\\ extended-length path from relative path: %s" % path
+    )
+    abs_path = os.path.abspath(path)
+    # UNC shares (\\server\share) use the \\?\UNC\ spelling.
+    if abs_path.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + abs_path[2:]
+    return "\\\\?\\" + abs_path
+
+
+def remove_tree(path):
+    """Recursively delete the directory tree rooted at ``path``.
+
+    On Windows this drives the shell ``SHFileOperationW`` API directly rather
+    than ``shutil.rmtree``. It deletes the whole tree in a single native call,
+    which also clears read-only files.
+
+    This mirrors lit's builtin ``rm`` (see
+    ``llvm/utils/lit/lit/InprocBuiltins.py``).
+
+    On non-Windows platforms this is ``shutil.rmtree`` with a handler that
+    tolerates entries vanishing mid-walk (``FileNotFoundError``). clang's
+    implicit-module ``*.pcm.lock`` files, whose lifetime is tied to a concurrent
+    or just-exited clang process.
+    """
+    if sys.platform != "win32":
+
+        def _ignore_missing(func, failed_path, exc):
+            # `shutil.rmtree` passes the error as an instance on the `onexc` API
+            # (3.12+) or a `sys.exc_info()` tuple on the legacy `onerror` API.
+            if isinstance(exc, tuple):
+                exc = exc[1]
+            if isinstance(exc, FileNotFoundError):
+                return
+            raise exc
+
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(path, onexc=_ignore_missing)
+        else:
+            shutil.rmtree(path, onerror=_ignore_missing)
+        return
+
+    # NOTE: use ctypes to access `SHFileOperationW` on Windows so we can delete
+    # trees using the wide-character Win32 API, which reaches long file paths
+    # that cannot be removed otherwise.
+    from ctypes import (
+        POINTER,
+        Structure,
+        WinError,
+        addressof,
+        byref,
+        c_void_p,
+        create_unicode_buffer,
+        windll,
+    )
+    from ctypes.wintypes import BOOL, HWND, LPCWSTR, UINT, WORD
+
+    class SHFILEOPSTRUCTW(Structure):
+        _fields_ = [
+            ("hWnd", HWND),
+            ("wFunc", UINT),
+            ("pFrom", LPCWSTR),
+            ("pTo", LPCWSTR),
+            ("fFlags", WORD),
+            ("fAnyOperationsAborted", BOOL),
+            ("hNameMappings", c_void_p),
+            ("lpszProgressTitle", LPCWSTR),
+        ]
+
+    FO_DELETE = 3
+
+    FOF_SILENT = 4
+    FOF_NOCONFIRMATION = 16
+    FOF_NOCONFIRMMKDIR = 512
+    FOF_NOERRORUI = 1024
+    FOF_NO_UI = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR
+
+    SHFileOperationW = windll.shell32.SHFileOperationW
+    SHFileOperationW.argtypes = [POINTER(SHFILEOPSTRUCTW)]
+
+    path = os.path.abspath(path)
+    pFrom = create_unicode_buffer(path, len(path) + 2)
+    pFrom[len(path)] = pFrom[len(path) + 1] = "\0"
+    operation = SHFILEOPSTRUCTW(
+        wFunc=UINT(FO_DELETE),
+        pFrom=LPCWSTR(addressof(pFrom)),
+        fFlags=FOF_NO_UI,
+    )
+    result = SHFileOperationW(byref(operation))
+    if result:
+        raise WinError(result)
 
 
 # ============================
@@ -1824,6 +1932,7 @@ def get_latest_apple_simulator(platform_name, log=None):
 
 
 def launch_exe_in_apple_simulator(
+    test,
     device_uuid,
     exe_path,
     exe_args=[],
@@ -1831,17 +1940,20 @@ def launch_exe_in_apple_simulator(
     log=None,
 ):
     exe_path = os.path.realpath(exe_path)
-    cmd = [
-        "xcrun",
-        "simctl",
+    # Resolve the path to simctl so we can launch it directly via spawnSubprocess.
+    simctl_path = (
+        subprocess.check_output(["xcrun", "-f", "simctl"]).decode("utf-8").strip()
+    )
+    args = [
         "spawn",
         "-s",
         device_uuid,
         exe_path,
     ] + exe_args
     if log:
-        log(" ".join(cmd))
-    sim_launcher = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+        log(simctl_path + " " + " ".join(args))
+    # simctl itself gets terminated when the test finishes.
+    sim_launcher = test.spawnSubprocess(simctl_path, args, stderr=subprocess.PIPE)
 
     # Read stderr to try to find matches.
     # Each pattern will return the value of group[1] of the first match in the stderr.

@@ -35,10 +35,10 @@ static const unsigned TCEOpenCLAddrSpaceMap[] = {
     3, // opencl_local
     2, // opencl_constant
     0, // opencl_private
-    1, // opencl_global_device
-    1, // opencl_global_host
     // FIXME: generic has to be added to the target
     0, // opencl_generic
+    1, // opencl_global_device
+    1, // opencl_global_host
     0, // cuda_device
     0, // cuda_constant
     0, // cuda_shared
@@ -57,9 +57,7 @@ static const unsigned TCEOpenCLAddrSpaceMap[] = {
     0, // hlsl_input
     0, // hlsl_output
     0, // hlsl_push_constant
-    // Wasm address space values for this target are dummy values,
-    // as it is only enabled for Wasm targets.
-    20, // wasm_funcref
+    0, // wasm_funcref
 };
 
 class LLVM_LIBRARY_VISIBILITY TCETargetInfo : public TargetInfo {

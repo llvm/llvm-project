@@ -81,9 +81,11 @@
 #include <utility>
 
 using namespace llvm;
-using namespace llvm::gvn;
 using namespace llvm::VNCoercion;
 using namespace PatternMatch;
+
+using AvailableValue = GVNPass::AvailableValue;
+using AvailableValueInBlock = GVNPass::AvailableValueInBlock;
 
 #define DEBUG_TYPE "gvn"
 
@@ -193,7 +195,7 @@ template <> struct llvm::DenseMapInfo<GVNPass::Expression> {
 /// Materialization of an AvailableValue never fails.  An AvailableValue is
 /// implicitly associated with a rematerialization point which is the
 /// location of the instruction from which it was formed.
-struct llvm::gvn::AvailableValue {
+struct llvm::GVNPass::AvailableValue {
   enum class ValType {
     SimpleVal, // A simple offsetted value that is accessed.
     LoadVal,   // A value produced by a load.
@@ -289,7 +291,7 @@ struct llvm::gvn::AvailableValue {
 
 /// Represents an AvailableValue which can be rematerialized at the end of
 /// the associated BasicBlock.
-struct llvm::gvn::AvailableValueInBlock {
+struct llvm::GVNPass::AvailableValueInBlock {
   /// BB - The basic block in question.
   BasicBlock *BB = nullptr;
 
@@ -748,6 +750,14 @@ uint32_t GVNPass::ValueTable::lookupOrAddCmp(unsigned Opcode,
                                              Value *LHS, Value *RHS) {
   Expression Exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
   return assignExpNewValueNum(Exp).first;
+}
+
+/// Returns the value number of ptrtoint \p Ptr to \Ty.
+uint32_t GVNPass::ValueTable::lookupPtrToInt(Value *Ptr, Type *Ty) {
+  Expression Exp(Instruction::PtrToInt);
+  Exp.Ty = Ty;
+  Exp.VarArgs.push_back(lookupOrAdd(Ptr));
+  return ExpressionNumbering.lookup(Exp);
 }
 
 /// Remove all entries from the ValueTable.
@@ -1619,10 +1629,10 @@ void GVNPass::eliminatePartiallyRedundantLoad(
     BasicBlock *UnavailableBlock = AvailableLoad.first;
     Value *LoadPtr = AvailableLoad.second;
 
-    auto *NewLoad = new LoadInst(
-        Load->getType(), LoadPtr, Load->getName() + ".pre", Load->isVolatile(),
-        Load->getAlign(), Load->getOrdering(), Load->getSyncScopeID(),
-        UnavailableBlock->getTerminator()->getIterator());
+    auto *NewLoad =
+        new LoadInst(Load->getType(), LoadPtr, Load->getName() + ".pre",
+                     Load->getProperties(),
+                     UnavailableBlock->getTerminator()->getIterator());
     NewLoad->setDebugLoc(Load->getDebugLoc());
     if (MSSAU) {
       auto *NewAccess = MSSAU->createMemoryAccessInBB(
@@ -3400,6 +3410,23 @@ bool GVNPass::processInstruction(Instruction *I) {
     return false;
   }
 
+  // A ptrtoaddr and a ptrtoint of the same pointer compute the same value when
+  // the address width equals the pointer representation width.
+  if (auto *PTA = dyn_cast<PtrToAddrInst>(I)) {
+    const DataLayout &DL = I->getDataLayout();
+    unsigned AS = PTA->getPointerAddressSpace();
+    if (DL.getAddressSizeInBits(AS) == DL.getPointerSizeInBits(AS) &&
+        !DL.hasUnstableRepresentation(AS)) {
+      uint32_t PTINum =
+          VN.lookupPtrToInt(PTA->getPointerOperand(), PTA->getType());
+      if (Value *PTI = findLeader(I->getParent(), PTINum)) {
+        patchAndReplaceAllUsesWith(I, PTI);
+        salvageAndRemoveInstruction(I);
+        return true;
+      }
+    }
+  }
+
   // If the number we were assigned was a brand new VN, then we don't
   // need to do a lookup to see if the number already exists
   // somewhere in the domtree: it can't!
@@ -3971,7 +3998,7 @@ void GVNPass::assignValNumForDeadCode() {
   }
 }
 
-class llvm::gvn::GVNLegacyPass : public FunctionPass {
+class llvm::GVNLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
 

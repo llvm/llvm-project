@@ -89,7 +89,7 @@ public:
       support::endian::write<T>(OS, Val, E);
   }
 
-  LLVM_ABI void updateDataAt(uint64_t Pos, void *Data, size_t Size);
+  LLVM_ABI void updateDataAt(uint64_t Pos, const void *Data, size_t Size);
 };
 
 } // end namespace yaml

@@ -83,6 +83,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  err
+  ../libc/include/err.yaml
+  err.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   features
   ../libc/include/features.yaml
   features.h
@@ -201,6 +209,16 @@ add_header_macro(
   sysexits.h
   DEPENDS
     .llvm-libc-macros.sysexits_macros
+)
+
+add_header_macro(
+  alloca
+  ../libc/include/alloca.yaml
+  alloca.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.alloca_macros
+    .llvm-libc-types.size_t
 )
 
 add_header_macro(
