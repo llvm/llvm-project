@@ -99,12 +99,9 @@ public:
       StringAttr name = symOp.getNameAttr();
 
       if (Operation *existing = gpuSymTable.lookup(name.getValue())) {
-        // A same-named symbol may already exist from an earlier pass (e.g.
-        // CUDA Fortran can clone device globals before ACCImplicitDeclare
-        // marks the host copy with acc.declare). Reuse when structurally
-        // equivalent ignoring locations and discardable attrs such as
-        // acc.declare. Only a different op type or a true definition
-        // mismatch is a conflict.
+        // Reuse when structurally equivalent ignoring locations and discardable
+        // attrs such as `acc.declare` attributes. Only a different op type or a
+        // true definition mismatch is a conflict.
         if (existing->getName() != globalOp.getName() ||
             !OperationEquivalence::isEquivalentTo(
                 existing, &globalOp,
