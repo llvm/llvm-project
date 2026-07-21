@@ -210,9 +210,9 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
             return None
 
         if self.platformIsDarwin():
-            if platform == "macosx":
-                server_exe = lldbgdbserverutils.get_debugserver_exe()
-            return None
+            if platform != "macosx":
+                return None
+            server_exe = lldbgdbserverutils.get_debugserver_exe()
         else:
             server_exe = lldbgdbserverutils.get_lldb_server_exe()
 
