@@ -272,6 +272,12 @@ public:
     Options.KeepFunctionForStatic = KeepFunctionForStatic;
   }
 
+  /// Set whether to drop DW_TAG_subprogram DIEs whose debug-map size is
+  /// strictly smaller than the DIE's compile-time high_pc - low_pc.
+  void setDropIcfShrunkSubprograms(bool DropIcfShrunkSubprograms) override {
+    Options.DropIcfShrunkSubprograms = DropIcfShrunkSubprograms;
+  }
+
   /// Use specified number of threads for parallel files linking.
   void setNumThreads(unsigned NumThreads) override {
     Options.Threads = NumThreads;
@@ -818,6 +824,11 @@ private:
     /// Whether we want a static variable to force us to keep its enclosing
     /// function.
     bool KeepFunctionForStatic = false;
+
+    /// Drop DW_TAG_subprogram DIEs whose debug-map size is strictly
+    /// smaller than the DIE's compile-time high_pc - low_pc. Guards the
+    /// ICF-shrunk-subprogram drop in shouldKeepSubprogramDIE.
+    bool DropIcfShrunkSubprograms = false;
 
     /// Number of threads.
     unsigned Threads = 1;

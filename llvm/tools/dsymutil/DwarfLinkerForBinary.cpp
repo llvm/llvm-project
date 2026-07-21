@@ -743,6 +743,8 @@ bool DwarfLinkerForBinary::linkImpl(
   GeneralLinker->setNumThreads(Options.Threads);
   GeneralLinker->setPrependPath(Options.PrependPath);
   GeneralLinker->setKeepFunctionForStatic(Options.KeepFunctionForStatic);
+  GeneralLinker->setDropIcfShrunkSubprograms(
+      Options.DropIcfShrunkSubprograms);
   GeneralLinker->setThreadPool(ThreadPool);
   GeneralLinker->setInputVerificationHandler(
       [&](const DWARFFile &File, llvm::StringRef Output) {
@@ -1258,6 +1260,8 @@ DwarfLinkerForBinary::AddressManager::getSubprogramRelocAdjustment(
   case dwarf::DW_FORM_addrx3:
   case dwarf::DW_FORM_addrx4: {
     std::optional<DWARFFormValue> AddrValue = DIE.find(dwarf::DW_AT_low_pc);
+    if (!AddrValue)
+      return std::nullopt;
     if (std::optional<uint64_t> AddressOffset =
             DIE.getDwarfUnit()->getIndexedAddressOffset(
                 AddrValue->getRawUValue()))
@@ -1266,6 +1270,63 @@ DwarfLinkerForBinary::AddressManager::getSubprogramRelocAdjustment(
           *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize(), Verbose);
 
     Linker.reportWarning("no base offset for address table", SrcFileName);
+    return std::nullopt;
+  }
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<uint64_t>
+DwarfLinkerForBinary::AddressManager::getSubprogramBinarySize(
+    const DWARFDie &DIE) {
+  const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
+  std::optional<uint32_t> LowPcIdx =
+      Abbrev->findAttributeIndex(dwarf::DW_AT_low_pc);
+  if (!LowPcIdx)
+    return std::nullopt;
+
+  // Locate the ValidReloc that anchors this DIE's low_pc (same lookup as in
+  // getSubprogramRelocAdjustment above), then read the debug-map's Size for
+  // the associated symbol.
+  auto SizeFromRelocs = [&](const std::vector<ValidReloc> &Relocs,
+                            uint64_t StartOffset,
+                            uint64_t EndOffset) -> std::optional<uint64_t> {
+    std::vector<ValidReloc> Found =
+        getRelocations(Relocs, StartOffset, EndOffset);
+    if (Found.empty())
+      return std::nullopt;
+    return Found[0].SymbolMapping.Size;
+  };
+
+  dwarf::Form Form = Abbrev->getFormByIndex(*LowPcIdx);
+  switch (Form) {
+  case dwarf::DW_FORM_addr: {
+    uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
+    uint64_t LowPcOffset, LowPcEndOffset;
+    std::tie(LowPcOffset, LowPcEndOffset) =
+        getAttributeOffsets(Abbrev, *LowPcIdx, Offset, *DIE.getDwarfUnit());
+    // Note: for DW_TAG_subprogram, the low_pc relocation's addend is 0 in
+    // practice (subprogram symbols are always addressed at their start), so
+    // SymbolMapping.Size -- which is the whole-symbol size from the debug
+    // map -- is what we want without any addend adjustment. Do NOT rewrite
+    // this to `Size - Addend` without also handling non-subprogram callers.
+    return SizeFromRelocs(ValidDebugInfoRelocs, LowPcOffset, LowPcEndOffset);
+  }
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_addrx1:
+  case dwarf::DW_FORM_addrx2:
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_addrx4: {
+    std::optional<DWARFFormValue> AddrValue = DIE.find(dwarf::DW_AT_low_pc);
+    if (!AddrValue)
+      return std::nullopt;
+    if (std::optional<uint64_t> AddressOffset =
+            DIE.getDwarfUnit()->getIndexedAddressOffset(
+                AddrValue->getRawUValue()))
+      return SizeFromRelocs(
+          ValidDebugAddrRelocs, *AddressOffset,
+          *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize());
     return std::nullopt;
   }
   default:

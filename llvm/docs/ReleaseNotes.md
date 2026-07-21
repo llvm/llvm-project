@@ -104,6 +104,14 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* `dsymutil` gained a `--drop-icf-shrunk-subprograms` flag that drops
+  `DW_TAG_subprogram` DIEs whose debug-map size is strictly smaller than the
+  DIE's compile-time `high_pc - low_pc`. This is intended for linkers that
+  perform aggressive ICF that folds a function body into a smaller
+  branch-only stub, where keeping the DIE at its original size would trigger
+  the DWARF verifier's "DIEs have overlapping address ranges" check.
+  Currently supported only with `--linker classic`.
+
 ### Changes to LLDB
 
 #### Windows

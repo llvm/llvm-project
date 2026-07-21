@@ -1,0 +1,109 @@
+# Behavior WITHOUT --drop-icf-shrunk-subprograms (default): DIE is kept, even
+# when the debug-map size (0x0c) is smaller than the DIE's compile-time size
+# (0x10). Preserves pre-existing dsymutil behavior.
+# RUN: dsymutil --linker classic -no-output -verbose \
+# RUN:     -oso-prepend-path=%p/../Inputs -y %s \
+# RUN:   | FileCheck %s --check-prefix=DEFAULT
+#
+# Behavior WITH --drop-icf-shrunk-subprograms: DIE is dropped.
+# RUN: dsymutil --linker classic --drop-icf-shrunk-subprograms -no-output \
+# RUN:     -verbose -oso-prepend-path=%p/../Inputs -y %s \
+# RUN:   | FileCheck %s --check-prefix=DROP \
+# RUN:       --implicit-check-not="Keeping subprogram DIE:"
+#
+# Boundary: debug-map size == compile-time DIE size. Not shrunk -> must NOT drop.
+# RUN: sed 's/size: 0x0000000C/size: 0x00000010/' %s > %t-equal.yaml
+# RUN: dsymutil --linker classic --drop-icf-shrunk-subprograms -no-output \
+# RUN:     -verbose -oso-prepend-path=%p/../Inputs -y %t-equal.yaml \
+# RUN:   | FileCheck %s --check-prefix=NOSHRUNK \
+# RUN:       --implicit-check-not="Dropping ICF-shrunk subprogram DIE"
+#
+# Boundary: debug-map size > compile-time DIE size (grown symbol; shouldn't
+# happen in practice but must NOT drop).
+# RUN: sed 's/size: 0x0000000C/size: 0x00000020/' %s > %t-grown.yaml
+# RUN: dsymutil --linker classic --drop-icf-shrunk-subprograms -no-output \
+# RUN:     -verbose -oso-prepend-path=%p/../Inputs -y %t-grown.yaml \
+# RUN:   | FileCheck %s --check-prefix=NOSHRUNK \
+# RUN:       --implicit-check-not="Dropping ICF-shrunk subprogram DIE"
+#
+# Boundary: debug-map size == 0 (no meaningful size info; guarded by
+# `*BinSize > 0` in shouldKeepSubprogramDIE). Must NOT drop.
+# RUN: sed 's/size: 0x0000000C/size: 0x00000000/' %s > %t-zero.yaml
+# RUN: dsymutil --linker classic --drop-icf-shrunk-subprograms -no-output \
+# RUN:     -verbose -oso-prepend-path=%p/../Inputs -y %t-zero.yaml \
+# RUN:   | FileCheck %s --check-prefix=NOSHRUNK \
+# RUN:       --implicit-check-not="Dropping ICF-shrunk subprogram DIE"
+#
+# End-to-end: with the flag, dsymutil produces a real dSYM file, its
+# built-in DWARF verifier passes, and the standalone llvm-dwarfdump --verify
+# on the resulting dSYM also passes. Dumping the dSYM confirms the shrunk
+# subprogram DIE is absent while other DIEs (the compile unit, base types)
+# are preserved.
+# RUN: rm -rf %t.dSYM
+# RUN: dsymutil --linker classic --drop-icf-shrunk-subprograms -verify \
+# RUN:     -oso-prepend-path=%p/../Inputs -y %s -o %t.dSYM 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=VERIFY --allow-empty
+# RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=DWARFDUMP-VERIFY
+# RUN: llvm-dwarfdump -a %t.dSYM \
+# RUN:   | FileCheck %s --check-prefix=DUMP
+#
+# Regression test: when a subprogram's final-binary size (from the debug map)
+# is strictly smaller than the DIE's compile-time `high_pc - low_pc` (as
+# happens when an aggressive linker ICF mode folds an arm64 function body
+# into a 12-byte adrp+add+br stub), keeping the subprogram DIE would produce
+# "DIEs have overlapping address ranges" from the DWARF verifier because
+# dsymutil's additive PC shift preserves the original compile-time size,
+# causing the emitted DIE to overlap the next symbol's stub.
+#
+# With --drop-icf-shrunk-subprograms, DWARFLinker drops the whole subprogram
+# DIE tree in this situation. The debug-map lookup itself still succeeds --
+# the symbol table entry is preserved for stack symbolication. Only the
+# compile-time debug tree is dropped, since it no longer describes real code.
+#
+# The `_foo` symbol in Inputs/discriminator.arm64.o has a compile-time DIE
+# size of 0x10 (high_pc - low_pc) and its low_pc uses DW_FORM_addrx (DWARF 5),
+# exercising the addrx branch of `getSubprogramBinarySize`. The YAML debug
+# map below claims a post-link size of 0x0c to simulate ICF shrinkage.
+#
+# DEFAULT: Found valid debug map entry: _foo
+# DEFAULT: Keeping subprogram DIE:
+# DEFAULT-NEXT: DW_TAG_subprogram
+# DEFAULT-NEXT: DW_AT_low_pc
+# DEFAULT-NEXT: DW_AT_high_pc
+# DEFAULT-NOT: Dropping ICF-shrunk subprogram DIE
+#
+# DROP: Found valid debug map entry: _foo
+# DROP: Dropping ICF-shrunk subprogram DIE (compile-time size 0x10, debug-map size 0xc):
+# DROP-NEXT: DW_TAG_subprogram
+# DROP-NEXT: DW_AT_low_pc
+# DROP-NEXT: DW_AT_high_pc
+#
+# NOSHRUNK: Found valid debug map entry: _foo
+# NOSHRUNK: Keeping subprogram DIE:
+# NOSHRUNK-NEXT: DW_TAG_subprogram
+#
+# The dsymutil -verify pass must not report any output-verification failure,
+# and dsymutil must exit 0 (the RUN would fail otherwise -- it isn't wrapped
+# in `not`).
+# VERIFY-NOT: error: output verification failed
+#
+# The independent llvm-dwarfdump --verify pass on the resulting dSYM must
+# also succeed (no verification errors).
+# DWARFDUMP-VERIFY: Verifying {{.*}}subprogram-die-icf-shrunk
+# DWARFDUMP-VERIFY: No errors.
+#
+# The resulting dSYM contains the compile unit but not the dropped _foo
+# subprogram DIE.
+# DUMP: file format Mach-O arm64
+# DUMP: DW_TAG_compile_unit
+# DUMP-NOT: DW_TAG_subprogram
+# DUMP-NOT: DW_AT_name{{.*}}"foo"
+
+---
+triple:          'arm64-apple-darwin'
+objects:
+  - filename: discriminator.arm64.o
+    symbols:
+      - { sym: _foo, objAddr: 0x0, binAddr: 0x0000000100000EA0, size: 0x0000000C }
+...

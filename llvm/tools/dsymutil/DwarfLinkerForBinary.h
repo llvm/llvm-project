@@ -221,6 +221,9 @@ private:
     std::optional<int64_t> getSubprogramRelocAdjustment(const DWARFDie &DIE,
                                                         bool Verbose) override;
 
+    std::optional<uint64_t>
+    getSubprogramBinarySize(const DWARFDie &DIE) override;
+
     std::optional<StringRef> getLibraryInstallName() override;
 
     bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,

@@ -57,6 +57,17 @@ OPTIONS
  N_OSO entries. If `--oso-prepend-path` is specified, the path prefix applies,
  i.e. paths in the file should exact match that of N_OSO entries.
 
+.. option:: --drop-icf-shrunk-subprograms
+
+ Drop ``DW_TAG_subprogram`` DIEs whose debug-map size is strictly smaller
+ than the DIE's compile-time ``high_pc - low_pc``. Intended for use with
+ linkers that perform aggressive ICF that folds a function body into a
+ smaller branch-only stub (for example lld's ``--icf=fbsafe_thunks``), where
+ keeping the DIE at its original size would trigger the DWARF verifier's
+ "DIEs have overlapping address ranges" check. The dropped DIE's aranges /
+ ``.debug_frame`` entries are still emitted at the smaller (actual) size.
+ Currently supported only with ``--linker classic``.
+
 .. option:: --dump-debug-map
 
  Dump the *executable*'s debug-map (the list of the object files containing the

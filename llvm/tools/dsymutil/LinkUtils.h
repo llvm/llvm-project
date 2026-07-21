@@ -64,6 +64,10 @@ struct LinkOptions {
   /// function.
   bool KeepFunctionForStatic = false;
 
+  /// Drop DW_TAG_subprogram DIEs whose debug-map size is strictly smaller
+  /// than the DIE's compile-time `high_pc - low_pc`.
+  bool DropIcfShrunkSubprograms = false;
+
   /// Type of DWARFLinker to use.
   DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Parallel;
 

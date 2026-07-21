@@ -55,6 +55,31 @@ public:
   virtual std::optional<int64_t>
   getSubprogramRelocAdjustment(const DWARFDie &DIE, bool Verbose) = 0;
 
+  /// Returns the size of the subprogram \p DIE's symbol in the final linked
+  /// binary as reported by the debug map / symbol table, or std::nullopt if
+  /// no such information is available.
+  ///
+  /// Used by DWARFLinker to detect post-link symbol shrinkage: when a linker
+  /// pass (for example, an aggressive ICF mode that replaces the body of an
+  /// identical function with a small branch-only stub) makes the final
+  /// symbol strictly smaller than what the DIE's compile-time
+  /// `high_pc - low_pc` says, keeping the DIE would produce two failures:
+  ///
+  ///   1. "DIEs have overlapping address ranges" -- dsymutil's additive PC
+  ///      shift preserves the original compile-time size, so the emitted DIE
+  ///      claims a range that overlaps the next symbol's stub in the binary.
+  ///   2. "DIE address ranges are not contained in its parent's ranges" --
+  ///      if we tried to clamp the parent's high_pc, its inlined-subroutine
+  ///      children (which still describe instructions in the pre-fold body)
+  ///      would fall outside the clamped range.
+  ///
+  /// Default returns std::nullopt for AddressesMap implementations that do
+  /// not carry per-symbol size information; in that case DWARFLinker keeps
+  /// its pre-existing behavior of trusting the DIE's compile-time size.
+  virtual std::optional<uint64_t> getSubprogramBinarySize(const DWARFDie &DIE) {
+    return std::nullopt;
+  }
+
   // Returns the library install name associated to the AddessesMap.
   virtual std::optional<StringRef> getLibraryInstallName() = 0;
 
