@@ -78,7 +78,12 @@ struct BranchBody {
   Status St = Status::Unknown;
 };
 
-std::vector<BranchBody> collectBranchBodies(Function &F) {
+/// Cloning and re-running ScalarEvolution is only worthwhile for the
+/// pattern this pass targets: a branch inside a loop whose condition SCEV
+/// can reason about. Everything else is seeded ProvenReachable so that
+/// functions without such branches are never cloned at all. Straight-line
+/// provably-dead branches are left to SCCP/SimplifyCFG.
+std::vector<BranchBody> collectBranchBodies(Function &F, LoopInfo &LI) {
   std::vector<BranchBody> Bodies;
   for (BasicBlock &BB : F) {
     auto *BI = dyn_cast<CondBrInst>(BB.getTerminator());
@@ -86,10 +91,25 @@ std::vector<BranchBody> collectBranchBodies(Function &F) {
       continue;
     if (BI->getSuccessor(0) == BI->getSuccessor(1))
       continue;
-    Bodies.push_back({&BB, 0});
-    Bodies.push_back({&BB, 1});
+    Value *Cond = BI->getCondition();
+    Status St = Status::Unknown;
+    if (!LI.getLoopFor(&BB) || !isa<ICmpInst>(Cond))
+      St = Status::ProvenReachable;
+    Bodies.push_back({&BB, 0, St});
+    Bodies.push_back({&BB, 1, St});
   }
   return Bodies;
+}
+
+/// Cheap prescan deciding whether collectBranchBodies can find any Unknown
+/// candidate, before paying for a DominatorTree and LoopInfo.
+bool hasCandidateShapedBranch(Function &F) {
+  for (BasicBlock &BB : F)
+    if (auto *BI = dyn_cast<CondBrInst>(BB.getTerminator()))
+      if (BI->getSuccessor(0) != BI->getSuccessor(1) &&
+          isa<ICmpInst>(BI->getCondition()))
+        return true;
+  return false;
 }
 
 /// Does the clone prove that this branch edge is never taken? The bodies of
@@ -223,7 +243,12 @@ bool foldDeadBranches(Function &F, ArrayRef<BranchBody> Dead) {
 }
 
 bool runOnFunction(Function &F) {
-  std::vector<BranchBody> Bodies = collectBranchBodies(F);
+  if (!hasCandidateShapedBranch(F))
+    return false;
+
+  DominatorTree DT(F);
+  LoopInfo LI(DT);
+  std::vector<BranchBody> Bodies = collectBranchBodies(F, LI);
   if (Bodies.empty())
     return false;
 
