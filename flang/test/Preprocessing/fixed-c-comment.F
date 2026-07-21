@@ -79,4 +79,8 @@ C comment */
 ! ERROR: error: Character in fixed-form label field must be a digit
 /* Not-terminated C comment
 #endif
+
+! CHECK: i = 10* 2
+      i = 10
+     /* 2
       end
