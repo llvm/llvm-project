@@ -32,7 +32,7 @@ func.func @mixed_scope_worker_reduction_combine(
               {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
           // expected-error@+1 {{operations in the same predicate region require incompatible ThreadY predication}}
           acc.reduction_combine %other_arg into %result_arg <add> : memref<i32>
-              {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
+              {acc.par_dims = #acc<par_dims[block_y, thread_x]>}
         }
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}
@@ -59,15 +59,17 @@ func.func @worker_combine_with_single_store(%result: memref<i32>) {
       %c0 = arith.constant 0 : index
       %c1_inner = arith.constant 1 : index
       %c7_i32 = arith.constant 7 : i32
+      %false = arith.constant false
       scf.parallel (%block_iv) = (%c0) to (%by) step (%c1_inner) {
         %local = acc.private_local %private_arg
             : (!acc.private_type<memref<i32>>) -> memref<i32>
+        %selected = arith.select %false, %local, %result_arg : memref<i32>
         scf.parallel (%worker_iv) = (%c0) to (%ty) step (%c1_inner) {
           memref.store %c7_i32, %local[] : memref<i32>
           scf.reduce
         } {acc.par_dims = #acc<par_dims[thread_y]>}
         acc.predicate_region {
-          memref.store %c7_i32, %result_arg[] : memref<i32>
+          memref.store %c7_i32, %selected[] : memref<i32>
           // expected-error@+1 {{operations in the same predicate region require incompatible ThreadY predication}}
           acc.reduction_combine %local into %result_arg <add> : memref<i32>
               {acc.par_dims = #acc<par_dims[block_y, thread_y]>}

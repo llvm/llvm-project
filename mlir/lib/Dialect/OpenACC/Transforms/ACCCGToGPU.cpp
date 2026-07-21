@@ -1301,14 +1301,9 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
                  return parDim.isThreadY();
                });
       };
-      auto applyCombineRequirement =
-          [&](Operation *combineOp, Value src,
-              ArrayRef<mlir::acc::GPUParallelDimAttr> combineParDims) {
-            if (llvm::none_of(combineParDims,
-                              [](auto parDim) { return parDim.isThreadY(); }))
-              return success();
-            return requireThreadY(combineOp, hasThreadYPrivateStorage(src));
-          };
+      auto applyCombineRequirement = [&](Operation *combineOp, Value src) {
+        return requireThreadY(combineOp, hasThreadYPrivateStorage(src));
+      };
 
       for (Operation &nestedOp : predicateBlock) {
         if (acc::PredicateRegionOp nestedPredicate =
@@ -1326,17 +1321,15 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
         }
         if (acc::ReductionCombineOp combineOp =
                 dyn_cast<acc::ReductionCombineOp>(nestedOp)) {
-          if (failed(applyCombineRequirement(
-                  combineOp, combineOp.getSrcMemref(),
-                  getReductionCombineParDims(combineOp))))
+          if (failed(
+                  applyCombineRequirement(combineOp, combineOp.getSrcMemref())))
             return failure();
           continue;
         }
         if (acc::ReductionCombineRegionOp combineRegionOp =
                 dyn_cast<acc::ReductionCombineRegionOp>(nestedOp)) {
-          if (failed(applyCombineRequirement(
-                  combineRegionOp, combineRegionOp.getSrcVar(),
-                  getReductionCombineParDims(combineRegionOp))))
+          if (failed(applyCombineRequirement(combineRegionOp,
+                                             combineRegionOp.getSrcVar())))
             return failure();
           continue;
         }
@@ -1929,18 +1922,22 @@ ACCCGToGPULowering::getPrivateMemScope(acc::PrivatizeOp privatizeOp) {
 
 /// Walks back from a memref use to its defining `acc.private_local`, if any.
 static acc::PrivateLocalOp getPrivateLocalForMemref(Value memref) {
-  llvm::SmallVector<Value, 8> worklist{memref};
-  llvm::SmallPtrSet<Value, 8> seen;
-  while (!worklist.empty()) {
-    Value v = worklist.pop_back_val();
-    if (!seen.insert(v).second)
-      continue;
-    Operation *def = v.getDefiningOp();
-    if (!def)
-      continue;
+  Value current = memref;
+  while (Operation *def = current.getDefiningOp()) {
     if (acc::PrivateLocalOp privateLocal = dyn_cast<acc::PrivateLocalOp>(def))
       return privateLocal;
-    worklist.append(def->getOperands().begin(), def->getOperands().end());
+    if (ViewLikeOpInterface viewLike = dyn_cast<ViewLikeOpInterface>(def)) {
+      current = viewLike.getViewSource();
+      continue;
+    }
+    if (acc::PartialEntityAccessOpInterface partialAccess =
+            dyn_cast<acc::PartialEntityAccessOpInterface>(def)) {
+      current = partialAccess.getBaseEntity();
+      continue;
+    }
+    // Do not follow arbitrary operands: multi-source operations such as
+    // arith.select do not prove that their result aliases private storage.
+    return nullptr;
   }
   return nullptr;
 }
