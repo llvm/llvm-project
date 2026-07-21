@@ -75,8 +75,8 @@ define amdgpu_ps i64 @test2(i1 %cond, ptr addrspace(3) %p, i64 %val) {
   ; CHECK-NEXT:   successors: %bb.9(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_READ_B64_gfx9 [[COPY3]], 8, 0, implicit $exec :: (load (s64) from %ir.gep2, addrspace 3)
-  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[DS_READ_B64_gfx9_]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[DS_READ_B64_gfx9_]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32 = SI_IF [[V_CMP_NE_U32_e64_]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.9
   ; CHECK-NEXT: {{  $}}

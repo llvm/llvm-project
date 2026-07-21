@@ -52,9 +52,7 @@ define amdgpu_ps i32 @test9(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addr
   ; CHECK-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY10]], %subreg.sub0, [[COPY9]], %subreg.sub1
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_LSHL_OR_B32_e64_2]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[COPY11]], %stack.2, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
-  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE2]], %stack.3, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.3, align 4, addrspace 5)
-  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE1]], %stack.4, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.4, align 4, addrspace 5)
-  ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE1]], %stack.3, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.3, align 4, addrspace 5)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop1.header:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -81,11 +79,10 @@ define amdgpu_ps i32 @test9(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addr
   ; CHECK-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 24, [[V_ADD_U32_e64_]], implicit $exec
   ; CHECK-NEXT:   [[V_LSHRREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 8, [[V_ADD_U32_e64_]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.3, align 4, addrspace 5)
-  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[SI_SPILL_V64_RESTORE]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec :: (store (s8) into %ir.p4, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_BYTE_D16_HI [[SI_SPILL_V64_RESTORE]], [[V_ADD_U32_e64_]], 2, 0, implicit $exec :: (store (s8) into %ir.p4 + 2, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[SI_SPILL_V64_RESTORE]], [[V_LSHRREV_B32_e64_]], 3, 0, implicit $exec :: (store (s8) into %ir.p4 + 3, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[SI_SPILL_V64_RESTORE]], [[V_LSHRREV_B32_e64_1]], 1, 0, implicit $exec :: (store (s8) into %ir.p4 + 1, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[REG_SEQUENCE2]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec :: (store (s8) into %ir.p4, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_BYTE_D16_HI [[REG_SEQUENCE2]], [[V_ADD_U32_e64_]], 2, 0, implicit $exec :: (store (s8) into %ir.p4 + 2, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[REG_SEQUENCE2]], [[V_LSHRREV_B32_e64_]], 3, 0, implicit $exec :: (store (s8) into %ir.p4 + 3, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[REG_SEQUENCE2]], [[V_LSHRREV_B32_e64_1]], 1, 0, implicit $exec :: (store (s8) into %ir.p4 + 1, addrspace 1)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.loop3:
   ; CHECK-NEXT:   successors: %bb.4(0x04000000), %bb.3(0x7c000000)
@@ -106,11 +103,11 @@ define amdgpu_ps i32 @test9(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addr
   ; CHECK-NEXT:   [[V_LSHRREV_B32_e64_2:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 24, [[V_ADD_U32_e64_1]], implicit $exec
   ; CHECK-NEXT:   [[V_LSHRREV_B32_e64_3:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 8, [[V_ADD_U32_e64_1]], implicit $exec
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]], implicit $exec
-  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE1:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.4, align 4, addrspace 5)
-  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[SI_SPILL_V64_RESTORE1]], [[V_ADD_U32_e64_1]], 0, 0, implicit $exec :: (store (s8) into %ir.p5, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_BYTE_D16_HI [[SI_SPILL_V64_RESTORE1]], [[V_ADD_U32_e64_1]], 2, 0, implicit $exec :: (store (s8) into %ir.p5 + 2, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[SI_SPILL_V64_RESTORE1]], [[V_LSHRREV_B32_e64_2]], 3, 0, implicit $exec :: (store (s8) into %ir.p5 + 3, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[SI_SPILL_V64_RESTORE1]], [[V_LSHRREV_B32_e64_3]], 1, 0, implicit $exec :: (store (s8) into %ir.p5 + 1, addrspace 1)
+  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.3, align 4, addrspace 5)
+  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[SI_SPILL_V64_RESTORE]], [[V_ADD_U32_e64_1]], 0, 0, implicit $exec :: (store (s8) into %ir.p5, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_BYTE_D16_HI [[SI_SPILL_V64_RESTORE]], [[V_ADD_U32_e64_1]], 2, 0, implicit $exec :: (store (s8) into %ir.p5 + 2, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[SI_SPILL_V64_RESTORE]], [[V_LSHRREV_B32_e64_2]], 3, 0, implicit $exec :: (store (s8) into %ir.p5 + 3, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_BYTE [[SI_SPILL_V64_RESTORE]], [[V_LSHRREV_B32_e64_3]], 1, 0, implicit $exec :: (store (s8) into %ir.p5 + 1, addrspace 1)
   ; CHECK-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
@@ -120,6 +117,7 @@ define amdgpu_ps i32 @test9(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addr
   ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LSHL_OR_B32_e64_8]], [[COPY12]], 0, implicit $exec
   ; CHECK-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[PHI4]], 2, implicit-def dead $scc
+  ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
   ; CHECK-NEXT:   [[V_CMP_GE_U32_e64_1:%[0-9]+]]:sreg_32 = V_CMP_GE_U32_e64 [[S_ADD_I32_1]], [[SI_SPILL_V32_RESTORE]], implicit $exec
   ; CHECK-NEXT:   [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 [[PHI2]], [[V_ADD_U32_e64_2]], implicit $exec
   ; CHECK-NEXT:   [[SI_IF_BREAK1:%[0-9]+]]:sreg_32 = SI_IF_BREAK [[V_CMP_GE_U32_e64_1]], [[PHI3]], implicit-def dead $scc

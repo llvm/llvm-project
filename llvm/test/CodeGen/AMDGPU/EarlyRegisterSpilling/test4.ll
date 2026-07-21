@@ -67,8 +67,8 @@ define amdgpu_ps void @test4(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr add
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE1:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.3, align 4, addrspace 5)
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD [[SI_SPILL_V64_RESTORE1]], [[V_MUL_LO_U32_e64_1]], 0, 0, implicit $exec :: (store (s32) into %ir.p4, addrspace 1)
-  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_LSHL_OR_B32_e64_2]], %stack.10, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.10, addrspace 5)
   ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE5:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.8, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.8, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_LSHL_OR_B32_e64_2]], %stack.10, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.10, addrspace 5)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop:
   ; CHECK-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)

@@ -174,7 +174,7 @@ define amdgpu_ps i32 @test3(ptr addrspace(1) %p1, ptr addrspace(3) %p2, i1 %cond
   ; CHECK-NEXT: bb.12.bb7:
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[V_LSHL_OR_B32_e64_2]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = nnan ninf nsz arcp contract afn reassoc V_CVT_F32_U32_e64 [[V_LSHL_OR_B32_e64_2]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_RCP_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RCP_F32_e64 0, [[V_CVT_F32_U32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nnan ninf nsz arcp contract afn reassoc nofpexcept V_MUL_F32_e64 0, 1333788670, 0, [[V_RCP_F32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_SUB_U32_e64_:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 0, [[V_LSHL_OR_B32_e64_2]], 0, implicit $exec

@@ -61,8 +61,8 @@ define amdgpu_ps i32 @test13(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr add
   ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.5, align 4, addrspace 5)
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD [[SI_SPILL_V64_RESTORE]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec :: (store (s32) into %ir.p4, addrspace 1)
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_ADD_U32_e64_]], %stack.6, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.6, addrspace 5)
-  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE2]], %stack.8, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.8, align 4, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_LSHL_OR_B32_e64_3]], %stack.7, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.7, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE2]], %stack.8, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.8, align 4, addrspace 5)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop1:
   ; CHECK-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
