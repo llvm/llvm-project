@@ -223,8 +223,8 @@ static bool isDereferenceableAndAlignedPointer(
     if (SQ.DL.isNoopAddrSpaceCast(ASC->getSrcAddressSpace(),
                                   ASC->getDestAddressSpace()))
       return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
-                                                Size, SQ, IgnoreFree,
-                                                Visited, MaxDepth);
+                                                Size, SQ, IgnoreFree, Visited,
+                                                MaxDepth);
     return false;
   }
 
