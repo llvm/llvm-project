@@ -106,7 +106,7 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
     if (ExitBlocks.empty())
       continue;
 
-    SmallVector<Instruction *, 4> LifetimeMarkers;
+    SmallVector<Instruction *> LifetimeMarkers;
     bool DropLifetimeMarkers = false;
     for (Use &U : make_early_inc_range(I->uses())) {
       Instruction *User = cast<Instruction>(U.getUser());
@@ -139,6 +139,7 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
     }
 
     if (DropLifetimeMarkers) {
+      // Use-list order is arbitrary, so wait until all markers are collected.
       for (Instruction *Marker : LifetimeMarkers)
         Marker->eraseFromParent();
       Changed = true;
