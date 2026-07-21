@@ -18,12 +18,12 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <16 x float>, ptr getelementptr ([16000 x i8], ptr @GLOB, i64 0, i64 1272), align 16
 ; CHECK-NEXT:    [[TMP11:%.*]] = load <2 x float>, ptr getelementptr ([16000 x i8], ptr @GLOB, i64 0, i64 1620), align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <16 x float> [[TMP9]], <16 x float> [[TMP7]], <16 x i32> <i32 poison, i32 0, i32 20, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <16 x float> [[TMP19]], <16 x float> [[TMP10]], <16 x i32> <i32 1, i32 1, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 19, i32 19, i32 19, i32 19, i32 18>
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <16 x float> [[TMP7]], <16 x float> [[TMP14]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 18>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <16 x float> [[TMP9]], <16 x float> [[TMP7]], <16 x i32> <i32 poison, i32 0, i32 1, i32 30, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <16 x float> [[TMP12]], <16 x float> [[TMP10]], <16 x i32> <i32 1, i32 1, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 18, i32 18, i32 18, i32 19>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <16 x float> [[TMP7]], <16 x float> [[TMP14]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 15, i32 28>
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul reassoc ninf nsz arcp contract afn <16 x float> [[TMP14]], [[TMP17]]
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <16 x float> [[TMP18]], <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 15, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <16 x float> [[TMP18]], <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 15, i32 14>
 ; CHECK-NEXT:    store <16 x float> [[TMP15]], ptr getelementptr ([16000 x i8], ptr @GLOB, i64 0, i64 2992), align 16
 ; CHECK-NEXT:    ret void
 ;
