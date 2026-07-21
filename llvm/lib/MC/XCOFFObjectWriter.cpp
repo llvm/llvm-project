@@ -580,7 +580,7 @@ static uint64_t NormalizeCallOffset(MCFixupKindInfo Info, uint64_t Offset) {
   if (Info.TargetSize != 24)
     report_fatal_error("Unexepected call fixup kind for XCOFF");
 
-  return llvm::SignExtend64<26>(Offset & 0x3ffffff);
+  return llvm::SignExtend64<26>(Offset);
 }
 
 void XCOFFWriter::executePostLayoutBinding() {
