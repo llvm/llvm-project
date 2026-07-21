@@ -267,8 +267,8 @@ public:
   const Expr *getCall() const { return Call; };
   unsigned getArgumentIndex() const { return ArgumentIndex; };
   const Expr *getArgument() const { return Argument; };
-  void dump(llvm::raw_ostream &OS, const LoanManager &,
-            const OriginManager &OM) const override;
+  void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
+            const LoanPropagationAnalysis *LPA = nullptr) const override;
 };
 
 class UseFact : public Fact {

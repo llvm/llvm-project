@@ -99,7 +99,8 @@ void GlobalEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
 }
 
 void CallEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                          const OriginManager &OM) const {
+                          const OriginManager &OM,
+                          const LoanPropagationAnalysis *) const {
   OS << "CallEscapes (";
   OM.dump(getEscapedOriginID(), OS);
   OS << ", via Call)\n";

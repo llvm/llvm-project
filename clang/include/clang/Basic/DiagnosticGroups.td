@@ -703,10 +703,6 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
   }];
 }
 
-def LifetimeSafetyAnnotationPlacement
-    : DiagGroup<"lifetime-safety-annotation-placement",
-                [LifetimeSafetyInapplicableLifetimebound,
-                 LifetimeSafetyMisplacedLifetimebound]> {
 def LifetimeSafetyNoescapeStrict
     : DiagGroup<"lifetime-safety-noescape-strict", [LifetimeSafetyNoescape]> {
   code Documentation = [{
@@ -714,10 +710,10 @@ Enables stricter detection of [[clang::noescape]] annotation misuse (for example
   }];
 }
 
-def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
-                                          [LifetimeSafetyNoescape,
-                                           LifetimeSafetyLifetimeboundViolation,
-                                           LifetimeSafetyMisplacedLifetimebound]> {
+def LifetimeSafetyAnnotationPlacement
+    : DiagGroup<"lifetime-safety-annotation-placement",
+                [LifetimeSafetyInapplicableLifetimebound,
+                 LifetimeSafetyMisplacedLifetimebound]> {
   code Documentation = [{
 Validates that lifetime annotations are placed on appropriate types and in appropriate locations.
   }];
