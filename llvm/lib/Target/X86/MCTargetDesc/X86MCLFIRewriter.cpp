@@ -35,6 +35,32 @@ static bool isSyscall(const MCInst &Inst) {
   return Inst.getOpcode() == X86::SYSCALL;
 }
 
+static bool isDirectCall(const MCInst &Inst) {
+  switch (Inst.getOpcode()) {
+  case X86::CALLpcrel32:
+  case X86::CALL64pcrel32:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isSupportedIndirectBranch(const MCInst &Inst) {
+  switch (Inst.getOpcode()) {
+  case X86::JMP64r:
+  case X86::JMP64r_NT:
+  case X86::JMP64m:
+  case X86::JMP64m_NT:
+  case X86::CALL64r:
+  case X86::CALL64r_NT:
+  case X86::CALL64m:
+  case X86::CALL64m_NT:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Find the index of the memory operand if it has an %fs segment override.
 // Returns -1 if there is no memory operand or no %fs override.
 static int findFSMemOperand(const MCInst &Inst, const MCInstrInfo &InstInfo) {
@@ -92,7 +118,7 @@ void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
   Lea.addOperand(MCOperand::createReg(X86::NoRegister));
   Out.emitInstruction(Lea, STI);
 
-  // jmpq *(%r14)
+  // jmpq *-8(%r14)
   MCInst Jmp;
   Jmp.setOpcode(X86::JMP64m);
   Jmp.addOperand(MCOperand::createReg(LFIBaseReg));
@@ -104,6 +130,111 @@ void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
 
   Out.emitLabel(Symbol);
   Out.emitBundleUnlock(STI);
+}
+
+// andl $-LFIBundleSize, %eX
+// addq %r14, %rX
+void X86::X86MCLFIRewriter::emitSandboxBranchReg(MCRegister Reg,
+                                                 MCStreamer &Out,
+                                                 const MCSubtargetInfo &STI) {
+  MCRegister Reg32 = getX86SubSuperRegister(Reg, 32);
+
+  MCInst And;
+  And.setOpcode(X86::AND32ri8);
+  And.addOperand(MCOperand::createReg(Reg32));
+  And.addOperand(MCOperand::createReg(Reg32));
+  And.addOperand(MCOperand::createImm(-static_cast<int64_t>(LFIBundleSize)));
+  Out.emitInstruction(And, STI);
+
+  MCInst Add;
+  Add.setOpcode(X86::ADD64rr);
+  Add.addOperand(MCOperand::createReg(Reg));
+  Add.addOperand(MCOperand::createReg(Reg));
+  Add.addOperand(MCOperand::createReg(LFIBaseReg));
+  Out.emitInstruction(Add, STI);
+}
+
+// Rewrite an indirect jump or call so that it can only target a bundle
+// boundary inside the sandbox.
+//
+// jmpq *%rX
+// ->
+// andl $-32, %eX
+// addq %r14, %rX
+// jmpq *%rX
+//
+// A branch through memory loads its target into the scratch register first,
+// and then dispatches through it.
+//
+// jmpq *(%rdi)
+// ->
+// movq (%rdi), %r11
+// andl $-32, %r11d
+// addq %r14, %r11
+// jmpq *%r11
+void X86::X86MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
+                                                  MCStreamer &Out,
+                                                  const MCSubtargetInfo &STI) {
+  MCRegister Target;
+  int MemIdx = X86II::getMemoryOperandIdx(InstInfo->get(Inst.getOpcode()));
+  if (MemIdx >= 0) {
+    Target = LFIScratchReg;
+
+    // Construct the load and then apply the rewriter to it.
+    MCInst Mov;
+    Mov.setOpcode(X86::MOV64rm);
+    Mov.addOperand(MCOperand::createReg(Target));
+    for (unsigned I = 0; I < X86::AddrNumOperands; ++I)
+      Mov.addOperand(Inst.getOperand(MemIdx + I));
+    doRewriteInst(Mov, Out, STI);
+  } else {
+    Target = Inst.getOperand(0).getReg();
+
+    if (Target == LFIBaseReg || Target == LFITPReg || Target == X86::RSP)
+      return error(Inst, "indirect branch through reserved register");
+  }
+
+  emitSandboxBranchReg(Target, Out, STI);
+
+  MCInst Branch;
+  Branch.setOpcode(isCall(Inst) ? X86::CALL64r : X86::JMP64r);
+  Branch.addOperand(MCOperand::createReg(Target));
+  Out.emitInstruction(Branch, STI);
+}
+
+// ret
+// ->
+// popq %r11
+// andl $-32, %r11d
+// addq %r14, %r11
+// jmpq *%r11
+void X86::X86MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
+                                          const MCSubtargetInfo &STI) {
+  if (Inst.getOpcode() != X86::RET64 && Inst.getOpcode() != X86::RETI64)
+    return error(Inst, "unsupported return instruction");
+
+  MCInst Pop;
+  Pop.setOpcode(X86::POP64r);
+  Pop.addOperand(MCOperand::createReg(LFIScratchReg));
+  Out.emitInstruction(Pop, STI);
+
+  if (Inst.getOpcode() == X86::RETI64) {
+    // Return with an immediate is rewritten recursively so that the stack
+    // pointer modification goes through the rewriter.
+    MCInst Add;
+    Add.setOpcode(X86::ADD64ri32);
+    Add.addOperand(MCOperand::createReg(X86::RSP));
+    Add.addOperand(MCOperand::createReg(X86::RSP));
+    Add.addOperand(Inst.getOperand(0));
+    doRewriteInst(Add, Out, STI);
+  }
+
+  emitSandboxBranchReg(LFIScratchReg, Out, STI);
+
+  MCInst Jmp;
+  Jmp.setOpcode(X86::JMP64r);
+  Jmp.addOperand(MCOperand::createReg(LFIScratchReg));
+  Out.emitInstruction(Jmp, STI);
 }
 
 // Emit: movq TPOffset(%r15), %Reg
@@ -229,10 +360,18 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   if (isSyscall(Inst))
     return rewriteSyscall(Inst, Out, STI);
 
+  if (isReturn(Inst))
+    return rewriteReturn(Inst, Out, STI);
+
+  if ((isIndirectBranch(Inst) || isCall(Inst)) && !isDirectCall(Inst)) {
+    if (!isSupportedIndirectBranch(Inst))
+      return error(Inst, "unsupported indirect branch");
+    return rewriteIndirectBranch(Inst, Out, STI);
+  }
+
   if (isFSAccess(Inst))
     return rewriteFSAccess(Inst, Out, STI);
 
-  // Pass through all other instructions unchanged.
   Out.emitInstruction(Inst, STI);
 }
 

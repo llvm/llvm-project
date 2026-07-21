@@ -639,10 +639,101 @@ In the following assembly rewrites, some shorthand is used.
 
 - `%rN` or `%eN`: refers to any general-purpose non-reserved register.
 - `{a,b,c}`: matches any of `a`, `b`, or `c`.
+- `N(...)`: refers to any memory addressing mode.
+
+#### Bundles
+
+The X86-64 target divides the code region into 32-byte aligned *bundles*.
+Indirect branch targets are masked so that they are always bundle-aligned,
+which restricts the set of reachable instructions to bundle boundaries. For
+this to be sound, two additional properties are required:
+
+- A rewrite sequence must never be split across a bundle boundary, otherwise
+  control could be transferred into the middle of the sequence, skipping the
+  mask.
+- The return address pushed by a call must be bundle-aligned, otherwise a
+  masked `ret` would not return to the instruction following the call.
+
+Both properties are enforced by instruction bundling in the assembler.
+
+**Note**: instruction bundling has not been implemented yet, so the rewrites
+below are currently emitted without it. Until bundling is added, the emitted
+code is not yet a complete sandbox.
+
+To make sure that valid indirect branch targets remain reachable after masking,
+the compiler aligns function entry points, address-taken basic blocks, jump
+table targets, and exception handling landing pads to a bundle boundary.
+
+The targets of direct branches do not need to be aligned, since they are
+resolved at build time. The hidden `-x86-lfi-align-direct-branches` option
+aligns every basic block anyway, so that every branch target in the program is
+bundle-aligned, which can simplify verification.
 
 #### Control flow
 
-**Note**: these rewrites have not been implemented.
+Indirect jumps are rewritten to first apply a mask that zeroes the top 32 bits
+and bottom 5 bits of the target. An `addq` instruction is then used to fill
+in the top 32 bits with the sandbox base, producing an address that is both
+inside the sandbox and bundle-aligned.
+
+Indirect branches through memory first load the branch target into the scratch
+register (`%r11`), and then dispatch through it.
+
+Returns are rewritten to pop the return address into the scratch register,
+followed by a sandboxed indirect jump.
+
+Direct jumps and direct calls do not need to be rewritten, since their targets
+are resolved at link time. Direct calls are placed at the end of a bundle.
+
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    jmpq *%rX
+    ```
+  - ```gas
+    andl $-32, %eX
+    addq %r14, %rX
+    jmpq *%rX
+    ```
+* - ```gas
+    jmpq *N(...)
+    ```
+  - ```gas
+    movq N(...), %r11
+    andl $-32, %r11d
+    addq %r14, %r11
+    jmpq *%r11
+    ```
+* - ```gas
+    callq *%rX
+    ```
+  - ```gas
+    andl $-32, %eX
+    addq %r14, %rX
+    callq *%rX
+    ```
+* - ```gas
+    callq *N(...)
+    ```
+  - ```gas
+    movq N(...), %r11
+    andl $-32, %r11d
+    addq %r14, %r11
+    callq *%r11
+    ```
+* - ```gas
+    ret
+    ```
+  - ```gas
+    popq %r11
+    andl $-32, %r11d
+    addq %r14, %r11
+    jmpq *%r11
+    ```
+:::
 
 #### Memory accesses
 

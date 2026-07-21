@@ -198,6 +198,9 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   }
   addMachineFunctionPass(X86CompressEVEXPass(), PMW);
   addMachineFunctionPass(X86InsertX87WaitPass(), PMW);
+
+  if (TM.getTargetTriple().isLFI())
+    addMachineFunctionPass(X86LFIRewritePass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
