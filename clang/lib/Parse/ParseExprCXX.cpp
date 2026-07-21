@@ -375,7 +375,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
     switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
       if (!NextToken().is(tok::l_paren)) {
         Tok.setKind(tok::identifier);
         Diag(Tok, diag::ext_keyword_as_ident)
@@ -1908,9 +1908,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
                                   : diag::ext_init_statement)
           << (CK == Sema::ConditionKind::Switch);
     else
-      Diag(Tok.getLocation(), getLangOpts().C2y
-                                  ? diag::warn_c2y_compat_decl_statement
-                                  : diag::ext_c2y_decl_statement)
+      DiagCompat(Tok.getLocation(), diag_compat::decl_statement)
           << (CK == Sema::ConditionKind::Switch);
   };
 
@@ -2883,7 +2881,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
 
   switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     if (!NextToken().is(tok::l_paren)) {
       Tok.setKind(tok::identifier);
       Diag(Tok, diag::ext_keyword_as_ident)
@@ -3466,7 +3464,7 @@ case tok::kw_ ## Spelling: return BTT_ ## Name;
 #include "clang/Basic/TokenKinds.def"
 #define TYPE_TRAIT_N(Spelling, Name, Key) \
   case tok::kw_ ## Spelling: return TT_ ## Name;
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 
@@ -3477,7 +3475,7 @@ static ArrayTypeTrait ArrayTypeTraitFromTokKind(tok::TokenKind kind) {
 #define ARRAY_TYPE_TRAIT(Spelling, Name, Key)                                  \
   case tok::kw_##Spelling:                                                     \
     return ATT_##Name;
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 
@@ -3488,7 +3486,7 @@ static ExpressionTrait ExpressionTraitFromTokKind(tok::TokenKind kind) {
 #define EXPRESSION_TRAIT(Spelling, Name, Key)                                  \
   case tok::kw_##Spelling:                                                     \
     return ET_##Name;
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 
