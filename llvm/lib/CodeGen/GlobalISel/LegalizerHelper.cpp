@@ -5834,7 +5834,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
       return UnableToLegalize;
 
     // If DstTy's size is not a multiple of NarrowTy's, then cannot legalize
-    if (DstTy.getSizeInBits() % NarrowTy.getSizeInBits() != 0)
+    if (DstTy.getNumElements() % NarrowTy.getNumElements() != 0)
       return UnableToLegalize;
 
     auto Unmerge = MIRBuilder.buildUnmerge(NarrowTy, SrcReg);
