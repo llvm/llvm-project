@@ -31,7 +31,7 @@ class VectorType;
 namespace llvm::slpvectorizer {
 
 /// Returns the cost of the shuffle instructions with the given \p Kind, vector
-/// type \p Tp and optional \p Mask. Adds SLP-specifc cost estimation for insert
+/// type \p Tp and optional \p Mask. Adds SLP-specific cost estimation for insert
 /// subvector pattern.
 InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TargetTransformInfo::ShuffleKind Kind,
