@@ -1829,3 +1829,132 @@ bool hlfir::isInsideHlfirWhereMaskedExpression(mlir::Region &region) {
   // all other expressions nested under the where must be evaluated masked.
   return !whereOp.getMaskRegion().isAncestor(&region);
 }
+
+static bool isElementalScalarEqualityMask(mlir::Value mask,
+                                          hlfir::ElementalOp &elementalOut,
+                                          mlir::Value &targetVal,
+                                          mlir::Value &arraySide) {
+  if (!mask)
+    return false;
+
+  mlir::Value currentMask = mask;
+  while (auto def = currentMask.getDefiningOp()) {
+    if (!mlir::isa<hlfir::AsExprOp, fir::ConvertOp, hlfir::DeclareOp,
+                   hlfir::CopyInOp>(def))
+      break;
+    currentMask = def->getOperand(0);
+  }
+  // The mask must be produced by an hlfir.elemental.
+  auto elemental = currentMask.getDefiningOp<hlfir::ElementalOp>();
+  if (!elemental)
+    return false;
+
+  mlir::Block &body = elemental.getRegion().front();
+  auto yieldOp = mlir::cast<hlfir::YieldElementOp>(body.getTerminator());
+  mlir::Value val = yieldOp.getElementValue();
+  while (auto conv = val.getDefiningOp<fir::ConvertOp>())
+    val = conv.getOperand();
+
+  // Optimizing only integer equality (arith.cmpi eq).
+  auto cmpOp = val.getDefiningOp<mlir::arith::CmpIOp>();
+  if (!cmpOp || cmpOp.getPredicate() != mlir::arith::CmpIPredicate::eq)
+    return false;
+
+  // Loop-invariance check for structures inside the elemental body.
+  std::function<bool(mlir::Value)> isInvariant = [&](mlir::Value v) -> bool {
+    if (auto arg = mlir::dyn_cast<mlir::BlockArgument>(v))
+      return arg.getOwner()->getParent() != &elemental.getRegion();
+    mlir::Operation *def = v.getDefiningOp();
+    if (!def)
+      return true;
+    if (!elemental.getRegion().isAncestor(def->getParentRegion()))
+      return true;
+    if (!mlir::isa<hlfir::DesignateOp, hlfir::DeclareOp, hlfir::ApplyOp,
+                   fir::LoadOp, fir::ConvertOp, hlfir::AsExprOp>(def))
+      return false;
+    return llvm::all_of(def->getOperands(), isInvariant);
+  };
+
+  mlir::Value lhs = cmpOp.getLhs(), rhs = cmpOp.getRhs();
+  bool lhsInv = isInvariant(lhs), rhsInv = isInvariant(rhs);
+  // The optimization is valid only if exactly one side is invariant (the
+  // target) and the other side is variant (the array element).
+  if (lhsInv == rhsInv)
+    return false;
+
+  elementalOut = elemental;
+  targetVal = lhsInv ? lhs : rhs;
+  arraySide = lhsInv ? rhs : lhs;
+  return true;
+}
+
+std::optional<mlir::Value>
+hlfir::getEqualityMaskTarget(mlir::Value mask, mlir::Value searchArray) {
+  hlfir::ElementalOp elemental;
+  mlir::Value targetVal, arraySide;
+  if (!isElementalScalarEqualityMask(mask, elemental, targetVal, arraySide))
+    return std::nullopt;
+
+  // Find the DesignateOp or ApplyOp that element-accesses the array.
+  mlir::Operation *accessOp = nullptr;
+  mlir::Value v = arraySide;
+  while (v) {
+    mlir::Operation *def = v.getDefiningOp();
+    if (!def)
+      break;
+    if (mlir::isa<hlfir::DesignateOp, hlfir::ApplyOp>(def)) {
+      accessOp = def;
+      break;
+    }
+    if (auto decl = mlir::dyn_cast<hlfir::DeclareOp>(def))
+      v = decl.getMemref();
+    else if (mlir::isa<fir::ConvertOp, hlfir::AsExprOp>(def))
+      v = def->getOperand(0);
+    else if (auto load = mlir::dyn_cast<fir::LoadOp>(def))
+      v = load.getMemref();
+    else
+      break;
+  }
+  if (!accessOp)
+    return std::nullopt;
+
+  mlir::Value accessedArray;
+  mlir::ValueRange accessIndices;
+  if (auto desig = mlir::dyn_cast<hlfir::DesignateOp>(accessOp)) {
+    for (bool isTriplet : desig.getIsTriplet())
+      if (isTriplet)
+        return std::nullopt;
+    accessedArray = desig.getMemref();
+    accessIndices = desig.getIndices();
+  } else {
+    auto apply = mlir::cast<hlfir::ApplyOp>(accessOp);
+    accessedArray = apply.getExpr();
+    accessIndices = apply.getIndices();
+  }
+
+  mlir::Value canonSearch = searchArray;
+  while (canonSearch) {
+    mlir::Operation *def = canonSearch.getDefiningOp();
+    if (!def)
+      break;
+    if (auto decl = mlir::dyn_cast<hlfir::DeclareOp>(def))
+      canonSearch = decl.getMemref();
+    else if (mlir::isa<fir::ConvertOp, hlfir::AsExprOp>(def))
+      canonSearch = def->getOperand(0);
+    else
+      break;
+  }
+
+  if (accessedArray != canonSearch)
+    return std::nullopt;
+
+  // Check the access indices map 1:1 to the elemental loop indices.
+  mlir::Block::BlockArgListType bodyArgs = elemental.getIndices();
+  if (accessIndices.size() != bodyArgs.size())
+    return std::nullopt;
+  for (auto [idx, arg] : llvm::zip(accessIndices, bodyArgs))
+    if (idx != arg)
+      return std::nullopt;
+
+  return targetVal;
+}
