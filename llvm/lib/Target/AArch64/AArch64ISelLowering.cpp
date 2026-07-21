@@ -5095,7 +5095,7 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
         DAG.getNode(ISD::FP_EXTEND, DL, NewVT, Op.getOperand(0)));
   }
 
-  if (SDValue Res = tryLowerFPToIntToSVE(Op, DAG))
+  if (SDValue Res = LowerFPToIntToSVE(Op, DAG))
     return Res;
 
   uint64_t VTSize = VT.getFixedSizeInBits();
@@ -5201,13 +5201,12 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
       SrcElementVT != MVT::f16 && SrcElementVT != MVT::bf16)
     return SDValue();
 
-  if (SDValue Res = tryLowerFPToIntToSVE(Op, DAG))
+  if (SDValue Res = LowerFPToIntToSVE(Op, DAG))
     return Res;
 
   // Returns true if the operation can be matched by an isel pattern directly.
   auto CanHandleNatively = [&DstVT, &SatWidth](EVT SrcVT) -> bool {
-    return SrcVT != MVT::nxv2f32 &&
-           SrcVT.getScalarSizeInBits() == DstVT.getScalarSizeInBits() &&
+    return SrcVT.getScalarSizeInBits() == DstVT.getScalarSizeInBits() &&
            SrcVT.getScalarSizeInBits() == SatWidth;
   };
 
@@ -5248,7 +5247,7 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   if (PromVT && !Expand(*PromVT)) {
     // When promoting the input type, SatWidth stays unchanged.
     SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, *PromVT, SrcVal);
-    if (*PromVT != MVT::v8f32)
+    if (*PromVT != MVT::v8f32 || isTypeLegal(MVT::v8f32))
       return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal, Op.getOperand(1));
 
     // If we are extending to a wider type (e.g. v8f16 -> v8f32) due to lack
@@ -34744,8 +34743,8 @@ static unsigned getSVEOpcodeForFPToInt(unsigned Opc) {
   }
 }
 
-SDValue AArch64TargetLowering::tryLowerFPToIntToSVE(SDValue Op,
-                                                    SelectionDAG &DAG) const {
+SDValue AArch64TargetLowering::LowerFPToIntToSVE(SDValue Op,
+                                                 SelectionDAG &DAG) const {
   // Strict FP_TO_INT is not yet implemented.
   if (Op->isStrictFPOpcode())
     return SDValue();
@@ -34785,11 +34784,6 @@ SDValue AArch64TargetLowering::tryLowerFPToIntToSVE(SDValue Op,
                        Op->getFlags());
   }
 
-  // FIXME: LowerFixedLengthFPToIntToSVE doesn't properly implement
-  // saturation yet.
-  if (VT.getScalarSizeInBits() < InVT.getScalarSizeInBits())
-    return SDValue();
-
   bool UseSVE = !Subtarget->isNeonAvailable();
   if (useSVEForFixedLengthVectorVT(VT, UseSVE) ||
       useSVEForFixedLengthVectorVT(InVT, UseSVE))
@@ -34802,16 +34796,26 @@ SDValue
 AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(SDValue Op,
                                                     SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
+  unsigned Opc = Op.getOpcode();
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
   assert(!Op->isStrictFPOpcode() && "Strict FP_TO_INT not yet supported");
   unsigned Opcode = getSVEOpcodeForFPToInt(Op.getOpcode());
 
-  SDLoc DL(Op);
+  bool IsSaturating = Opc == ISD::FP_TO_UINT_SAT || Opc == ISD::FP_TO_SINT_SAT;
+  assert((!IsSaturating || (VT.getVectorElementType() ==
+                            cast<VTSDNode>(Op.getOperand(1))->getVT())) &&
+         "Can't handle saturation to a different type than the destination VT");
+
   SDValue Val = Op.getOperand(0);
   EVT SrcVT = Val.getValueType();
-  EVT ContainerDstVT = getContainerForFixedLengthVector(DAG, VT);
-  EVT ContainerSrcVT = getContainerForFixedLengthVector(DAG, SrcVT);
 
+  // FIXME: Saturating to smaller type isn't properly supported yet.
+  if (VT.bitsLT(SrcVT) && IsSaturating)
+    return SDValue();
+
+  SDLoc DL(Op);
+  EVT ContainerSrcVT = getContainerForFixedLengthVector(DAG, SrcVT);
+  EVT ContainerDstVT = getContainerForFixedLengthVector(DAG, VT);
   if (VT.bitsGT(SrcVT)) {
     EVT CvtVT = ContainerDstVT.changeVectorElementType(
         *DAG.getContext(), ContainerSrcVT.getVectorElementType());

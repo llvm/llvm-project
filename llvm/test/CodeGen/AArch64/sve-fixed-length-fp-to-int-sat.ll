@@ -197,3 +197,72 @@ define void @test_signed_v16f16_v16i32(ptr %p) {
   store <16 x i32> %cvt, ptr %p
   ret void
 }
+
+; bfloat
+
+define void @test_signed_v16bf16_v16i16(ptr %p) {
+; CHECK-LABEL: test_signed_v16bf16_v16i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    mov z2.s, #32767 // =0x7fff
+; CHECK-NEXT:    mov z3.s, #-32768 // =0xffffffffffff8000
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    lsl z1.s, z1.s, #16
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    fcvtzs z1.s, p0/m, z1.s
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-NEXT:    smin z1.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    smax z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z3.s
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ret
+  %ld = load <16 x bfloat>, ptr %p
+  %cvt = call <16 x i16> @llvm.fptosi.sat(<16 x bfloat> %ld)
+  store <16 x i16> %cvt, ptr %p
+  ret void
+}
+
+define void @test_signed_v8bf16_v8i32(ptr %p) {
+; CHECK-LABEL: test_signed_v8bf16_v8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %ld = load <8 x bfloat>, ptr %p
+  %cvt = call <8 x i32> @llvm.fptosi.sat(<8 x bfloat> %ld)
+  store <8 x i32> %cvt, ptr %p
+  ret void
+}
+
+define void @test_signed_v16bf16_v16i32(ptr %p) {
+; CHECK-LABEL: test_signed_v16bf16_v16i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    mov x8, #8 // =0x8
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    lsl z1.s, z1.s, #16
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-NEXT:    fcvtzs z1.s, p0/m, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %ld = load <16 x bfloat>, ptr %p
+  %cvt = call <16 x i32> @llvm.fptosi.sat(<16 x bfloat> %ld)
+  store <16 x i32> %cvt, ptr %p
+  ret void
+}
