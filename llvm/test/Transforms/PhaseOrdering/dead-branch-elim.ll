@@ -10,6 +10,11 @@
 ;     a++; b++;
 ;   }
 ;   return b;   // == 100
+;
+; The input is the frontend's alloca form (clang -O0 without optnone): the
+; early SimplifyCFG cannot speculate stores, SROA then promotes the allocas,
+; and dead-branch-elim must catch the branch before the GlobalCleanup
+; SimplifyCFG turns it into a data dependency.
 
 ; CHECK-LABEL: define {{.*}}i32 @run()
 ; CHECK-NEXT: entry:
@@ -19,29 +24,42 @@
 ; DISABLED: icmp eq
 define i32 @run() {
 entry:
-  br label %header
+  %a = alloca i32
+  %b = alloca i32
+  %limit = alloca i32
+  store i32 0, ptr %a
+  store i32 0, ptr %b
+  store i32 100, ptr %limit
+  br label %while.cond
 
-header:
-  %limit = phi i32 [ 100, %entry ], [ %limit.next, %latch ]
-  %b = phi i32 [ 0, %entry ], [ %b.next, %latch ]
-  %a = phi i32 [ 0, %entry ], [ %a.next, %latch ]
-  %guard = icmp slt i32 %a, %limit
-  br i1 %guard, label %body, label %exit
+while.cond:
+  %a.val = load i32, ptr %a
+  %limit.val = load i32, ptr %limit
+  %guard = icmp slt i32 %a.val, %limit.val
+  br i1 %guard, label %while.body, label %while.end
 
-body:
-  %cmp.inner = icmp eq i32 %b, %limit
-  br i1 %cmp.inner, label %if.then, label %latch
+while.body:
+  %b.val = load i32, ptr %b
+  %limit.val2 = load i32, ptr %limit
+  %cmp = icmp eq i32 %b.val, %limit.val2
+  br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  %limit.inc = add nsw i32 %limit, 1
-  br label %latch
+  %limit.val3 = load i32, ptr %limit
+  %inc = add nsw i32 %limit.val3, 1
+  store i32 %inc, ptr %limit
+  br label %if.end
 
-latch:
-  %limit.next = phi i32 [ %limit.inc, %if.then ], [ %limit, %body ]
-  %a.next = add nsw i32 %a, 1
-  %b.next = add nsw i32 %b, 1
-  br label %header
+if.end:
+  %a.val2 = load i32, ptr %a
+  %a.inc = add nsw i32 %a.val2, 1
+  store i32 %a.inc, ptr %a
+  %b.val2 = load i32, ptr %b
+  %b.inc = add nsw i32 %b.val2, 1
+  store i32 %b.inc, ptr %b
+  br label %while.cond
 
-exit:
-  ret i32 %b
+while.end:
+  %ret = load i32, ptr %b
+  ret i32 %ret
 }
