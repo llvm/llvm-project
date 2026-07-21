@@ -325,3 +325,35 @@ func.func @dynamic_rank_two_array_reduction_thread_yz(%m: index, %n: index) {
   }
   return
 }
+
+// CHECK-LABEL: func.func @rank_two_partial_bounds_strided_layout
+// CHECK: %[[LB:.*]] = arith.constant 5 : index
+// CHECK: %[[STEP:.*]] = arith.constant 2 : index
+// CHECK: %[[EXTENT:.*]] = arith.constant 3 : index
+// CHECK: %[[LAYOUT_ALLOCA:.*]] = memref.alloca() : memref<3x4xi32, strided<[8, 2]>>
+// CHECK: %[[SPAN:.*]] = arith.muli %[[EXTENT]], %[[STEP]] : index
+// CHECK: %[[UB:.*]] = arith.addi %[[LB]], %[[SPAN]] : index
+// CHECK: scf.for %[[LINEAR:.*]] = %[[LB]] to %[[UB]] step %[[STEP]]
+// CHECK: %[[COL:.*]] = arith.remui %[[LINEAR]], %{{.*}} : index
+// CHECK: %[[ROW_LINEAR:.*]] = arith.divui %[[LINEAR]], %{{.*}} : index
+// CHECK: %[[ROW:.*]] = arith.remui %[[ROW_LINEAR]], %{{.*}} : index
+// CHECK: memref.load %[[LAYOUT_ALLOCA]][%[[ROW]], %[[COL]]] : memref<3x4xi32, strided<[8, 2]>>
+func.func @rank_two_partial_bounds_strided_layout() {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx) {
+    %lb = arith.constant 5 : index
+    %step = arith.constant 2 : index
+    %extent = arith.constant 3 : index
+    %local = memref.alloca() : memref<3x4xi32, strided<[8, 2]>>
+    %bounds = acc.bounds lowerbound(%lb : index) extent(%extent : index)
+        stride(%step : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        : memref<3x4xi32, strided<[8, 2]>>
+        {par_dims = #acc<par_dims[block_x, thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
