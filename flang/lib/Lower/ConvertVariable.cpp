@@ -31,6 +31,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -1225,6 +1226,54 @@ getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
   return attrs.empty() ? mlir::ArrayAttr{} : builder.getArrayAttr(attrs);
 }
 
+// Helper class to encapsulate utilities related to emission of implicit
+// assignments. `Implicit` here implies the assignment does not
+// exist in the Fortran source, but is implicit through definition
+// of one or more flagsets (like -finit-* family of flags).
+// General purpose usage of these utilities outside the
+// scope detailed here is discouraged, and is probably wrong.
+class ImplicitAssignmentGenerator {
+private:
+  bool isInitLocalZeroFlagDefined;
+
+public:
+  ImplicitAssignmentGenerator(bool isInitLocalZeroFlagDefined)
+      : isInitLocalZeroFlagDefined(isInitLocalZeroFlagDefined) {}
+
+  void emitAssignment(Fortran::lower::AbstractConverter &converter,
+                      mlir::Location loc, const Fortran::semantics::Symbol &sym,
+                      Fortran::lower::SymMap &symMap) {
+    if (isInitLocalZeroFlagDefined) {
+      mlir::Type eleTy = hlfir::getFortranElementType(converter.genType(sym));
+      auto *builder = &converter.getFirOpBuilder();
+
+      if (mlir::isa<fir::CharacterType>(eleTy)) {
+        fir::factory::CharacterExprHelper helper{*builder, loc};
+        fir::CharacterType::KindTy kind =
+            helper.getCharacterType(eleTy).getFKind();
+        mlir::Value zeroCode =
+            builder->createIntegerConstant(loc, builder->getI32Type(), 0);
+        mlir::Value zero = helper.createSingletonFromCode(zeroCode, kind);
+        hlfir::Entity lhs{symMap.lookupSymbol(sym).getAddr()};
+        lhs = hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
+        mlir::Value rhsTmp = builder->createTemporary(loc, zero.getType());
+        builder->create<fir::StoreOp>(loc, zero, rhsTmp);
+        builder->create<hlfir::AssignOp>(loc, rhsTmp, lhs);
+      }
+
+      else if (fir::isa_integer(eleTy) || fir::isa_real(eleTy) ||
+               fir::isa_complex(eleTy) || mlir::isa<fir::LogicalType>(eleTy)) {
+        mlir::Value zero = fir::factory::createZeroValue(*builder, loc, eleTy);
+        hlfir::Entity lhs{symMap.lookupSymbol(sym).getAddr()};
+        lhs = hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
+        mlir::Value rhsTmp = builder->createTemporary(loc, zero.getType());
+        builder->create<fir::StoreOp>(loc, zero, rhsTmp);
+        builder->create<hlfir::AssignOp>(loc, rhsTmp, lhs);
+      }
+    }
+  }
+};
+
 /// Instantiate a local variable. Precondition: Each variable will be visited
 /// such that if its properties depend on other variables, the variables upon
 /// which its properties depend will already have been visited.
@@ -1316,6 +1365,48 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     converter.getFctCtx().attachCleanup([converterPtr, loc, varDef, sym]() {
       Fortran::lower::genUnpackArray(*converterPtr, loc, *varDef, *sym);
     });
+  }
+
+  /// These options do not initialize:
+  ///   1) Any variable already initialized
+  ///   2) objects with the POINTER attribute
+  ///   3) allocatable arrays
+  ///   4) variables that appear in an EQUIVALENCE statement
+
+  auto isEligibleForImplicitAssignment = [&var]() -> bool {
+    if (!var.hasSymbol())
+      return false;
+
+    const Fortran::semantics::Symbol &sym = var.getSymbol();
+    if (const auto *details =
+            sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+      if (details->init())
+        return false;
+    }
+
+    if (sym.attrs().test(Fortran::semantics::Attr::POINTER))
+      return false;
+
+    if (sym.Rank() > 0 &&
+        sym.attrs().test(Fortran::semantics::Attr::ALLOCATABLE))
+      return false;
+
+    if (Fortran::lower::pft::getDependentVariableList(sym).size() > 1)
+      return false;
+
+    return true;
+  };
+
+  if (isEligibleForImplicitAssignment()) {
+    // Internal state of this class holds only the -finit-* flagsets. Hence
+    // can be reused for different symbols. Also minimizes the number of
+    // calls to `getLoweringOptions()`.
+    static ImplicitAssignmentGenerator implicitAssignmentGenerator{
+        /*isInitLocalZeroFlagDefined=*/converter.getLoweringOptions()
+            .getInitLocalZeroDef() == 1};
+
+    implicitAssignmentGenerator.emitAssignment(
+        converter, converter.getCurrentLocation(), var.getSymbol(), symMap);
   }
 }
 
