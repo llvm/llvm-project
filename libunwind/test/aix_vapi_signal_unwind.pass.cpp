@@ -89,7 +89,6 @@ void my_atexit_handler(void) {
     fprintf(stderr,
             "libunwind: VAPI: executing return glue VAPI_NOT_ENABLED\n");
   unw_resume(&cursor);
-  __builtin_unreachable();
   // DEBUG: libunwind: VAPI: executing return glue
 }
 
