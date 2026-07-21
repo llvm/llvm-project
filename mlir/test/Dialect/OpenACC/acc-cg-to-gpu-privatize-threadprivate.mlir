@@ -23,3 +23,32 @@ func.func @threadprivate(%host: memref<i32>) {
   } {origin = "acc.parallel"}
   return
 }
+
+// Dynamic thread-private storage is allocated in the launch body. A
+// grid-wide backing allocation would scale with the logical block count.
+//
+// CHECK-LABEL: func.func @dynamic_threadprivate
+// CHECK:       acc.privatize(%{{.*}}) [#acc<par_dims[thread_x]>] : (index) -> !acc.private_type<memref<?xi32>>
+// CHECK:       gpu.launch
+// CHECK:         memref.alloca(%{{.*}}) : memref<?xi32>
+// CHECK-NOT:     acc.unwrap_private
+
+func.func @dynamic_threadprivate(%n: index) {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  %private = acc.privatize(%n) [#acc<par_dims[thread_x]>]
+      : (index) -> !acc.private_type<memref<?xi32>>
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx)
+      ins(%arg = %private, %extent = %n)
+      : (!acc.private_type<memref<?xi32>>, index) {
+    %c0 = arith.constant 0 : index
+    %c0_i32 = arith.constant 0 : i32
+    %local = acc.private_local %arg
+        : (!acc.private_type<memref<?xi32>>) -> memref<?xi32>
+    memref.store %c0_i32, %local[%c0] : memref<?xi32>
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}

@@ -736,8 +736,8 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
 static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
                                     MemRefType baseTy,
                                     arith::AtomicRMWKind kind) {
-  assert(baseTy.getRank() > 0 && baseTy.hasStaticShape() &&
-         "per-thread array reduction accumulator must be static ranked");
+  assert(baseTy.getRank() > 0 &&
+         "per-thread array reduction accumulator must have positive rank");
   Value ident = createIdentityValue(b, loc, baseTy.getElementType(), kind,
                                     /*useOnlyFiniteValue=*/true);
   Value lb = arith::ConstantIndexOp::create(b, loc, 0);
@@ -749,7 +749,11 @@ static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
       return;
     }
 
-    Value ub = arith::ConstantIndexOp::create(b, loc, baseTy.getShape()[dim]);
+    Value ub =
+        baseTy.isDynamicDim(dim)
+            ? memref::DimOp::create(b, loc, alloca, dim).getResult()
+            : arith::ConstantIndexOp::create(b, loc, baseTy.getDimSize(dim))
+                  .getResult();
     auto forOp = scf::ForOp::create(b, loc, lb, ub, step);
     OpBuilder::InsertionGuard g(b);
     b.setInsertionPoint(forOp.getBody()->getTerminator());
@@ -2494,9 +2498,15 @@ void ACCCGToGPULowering::processPrivateLocal(
     // the accumulate can reduce each element across threads.
     acc::ReductionAccumulateArrayOp arrayAccum =
         perThreadArrayReductionAccum(privateLocal.getResult());
-    if ((isThreadXPrivatize(privatizeOp) || arrayAccum) &&
-        canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
-      Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
+    bool isThreadPrivate = isThreadXPrivatize(privatizeOp);
+    bool canUseDynamicAlloca =
+        isThreadPrivate && baseTy.getRank() > 0 && !baseTy.hasStaticShape() &&
+        baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
+    if ((isThreadPrivate || arrayAccum) &&
+        (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
+         canUseDynamicAlloca)) {
+      Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy,
+                                              privatizeOp.getDynamicSizes());
       if (arrayAccum) {
         FailureOr<arith::AtomicRMWKind> kind = getReductionKind(
             arrayAccum.getReductionOperator(), baseTy.getElementType(), loc);
@@ -2583,9 +2593,15 @@ void ACCCGToGPULowering::processPrivateLocal(
   acc::ReductionAccumulateArrayOp arrayAccum =
       perThreadArrayReductionAccum(privateLocal.getResult());
   for (mlir::acc::GPUParallelDimAttr parDim : parDimsPair.first) {
+    bool canUseDynamicAlloca =
+        parDim.isThreadX() && baseTy.getRank() > 0 &&
+        !baseTy.hasStaticShape() &&
+        baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
     if ((parDim.isThreadX() || arrayAccum) &&
-        canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
-      Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
+        (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
+         canUseDynamicAlloca)) {
+      Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy,
+                                              privatizeOp.getDynamicSizes());
       if (arrayAccum) {
         FailureOr<arith::AtomicRMWKind> kind = getReductionKind(
             arrayAccum.getReductionOperator(), baseTy.getElementType(), loc);
@@ -3263,12 +3279,6 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     (void)accSupport.emitNYI(loc, "reduction: rank-zero accumulate array");
     return;
   }
-  if (memrefTy.getRank() > 1 && !memrefTy.hasStaticShape()) {
-    (void)accSupport.emitNYI(loc,
-                             "reduction: dynamic multi-rank accumulate array");
-    return;
-  }
-
   FailureOr<arith::AtomicRMWKind> kindOr = getReductionKind(
       op.getReductionOperator(), memrefTy.getElementType(), loc);
   if (failed(kindOr))
@@ -3377,13 +3387,15 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     Value iv = forOp.getInductionVar();
     SmallVector<Value> indices{iv};
     if (memrefTy.getRank() > 1) {
-      assert(memrefTy.hasStaticShape() &&
-             "multi-rank array reduction accumulator must be static");
       indices.resize(memrefTy.getRank());
       Value linearIndex = iv;
       for (int64_t dim = memrefTy.getRank() - 1; dim >= 0; --dim) {
-        Value dimSize = arith::ConstantIndexOp::create(
-            rewriter, loc, memrefTy.getDimSize(dim));
+        Value dimSize =
+            memrefTy.isDynamicDim(dim)
+                ? memref::DimOp::create(rewriter, loc, memref, dim).getResult()
+                : arith::ConstantIndexOp::create(rewriter, loc,
+                                                 memrefTy.getDimSize(dim))
+                      .getResult();
         indices[dim] =
             arith::RemUIOp::create(rewriter, loc, linearIndex, dimSize);
         if (dim != 0)

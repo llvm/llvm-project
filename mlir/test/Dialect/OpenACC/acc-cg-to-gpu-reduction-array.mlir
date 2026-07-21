@@ -192,25 +192,46 @@ func.func @rank_three_array_reduction() {
   return
 }
 
-// Unsupported dynamic multi-rank and rank-zero accumulators must not generate
-// invalid indexing operations.
 // CHECK-LABEL: func.func @dynamic_rank_two_array_reduction
 // CHECK: gpu.launch
-// CHECK-NOT: memref.load
-// CHECK: gpu.terminator
-func.func @dynamic_rank_two_array_reduction(%local: memref<?x?xi32>, %extent: index) {
+// CHECK-NOT: acc.unwrap_private
+// CHECK: %[[DYN_ALLOCA:.*]] = memref.alloca(%{{.*}}, %{{.*}}) : memref<?x?xi32>
+// CHECK: scf.for %[[DYN_I:.*]] =
+// CHECK:   scf.for %[[DYN_J:.*]] =
+// CHECK:     memref.store %{{.*}}, %[[DYN_ALLOCA]][%[[DYN_I]], %[[DYN_J]]] : memref<?x?xi32>
+// CHECK: scf.for %[[DYN_LINEAR:.*]] =
+// CHECK: memref.dim %[[DYN_ALLOCA]]
+// CHECK: arith.remui %[[DYN_LINEAR]]
+// CHECK: arith.divui %[[DYN_LINEAR]]
+// CHECK: memref.dim %[[DYN_ALLOCA]]
+// CHECK: memref.load %[[DYN_ALLOCA]][%{{.*}}, %{{.*}}] : memref<?x?xi32>
+// CHECK: gpu.all_reduce add
+func.func @dynamic_rank_two_array_reduction(%m: index, %n: index) {
   %c1 = arith.constant 1 : index
   %c128 = arith.constant 128 : index
+  %extent = arith.muli %m, %n : index
   %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
   %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
-  acc.compute_region launch(%kbx = %bx, %ktx = %tx) ins(%arg0 = %local, %ext = %extent) : (memref<?x?xi32>, index) {
-    %bounds = acc.bounds extent(%ext : index)
-    acc.reduction_accumulate_array %arg0 bounds(%bounds) <add> : memref<?x?xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
-    acc.yield
-  } {origin = "acc.parallel"}
+  %private = acc.privatize(%m, %n) [#acc<par_dims[block_x, thread_x]>]
+      : (index, index) -> !acc.private_type<memref<?x?xi32>>
+  acc.kernel_environment {
+    acc.compute_region launch(%kbx = %bx, %ktx = %tx)
+        ins(%arg = %private, %ext = %extent)
+        : (!acc.private_type<memref<?x?xi32>>, index) {
+      %local = acc.private_local %arg
+          {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
+          : (!acc.private_type<memref<?x?xi32>>) -> memref<?x?xi32>
+      %bounds = acc.bounds extent(%ext : index)
+      acc.reduction_accumulate_array %local bounds(%bounds) <add>
+          : memref<?x?xi32>
+          {par_dims = #acc<par_dims[block_x, thread_x]>}
+      acc.yield
+    } {origin = "acc.parallel"}
+  }
   return
 }
 
+// Rank-zero accumulators must not generate invalid indexing operations.
 // CHECK-LABEL: func.func @rank_zero_array_reduction
 // CHECK: gpu.launch
 // CHECK-NOT: memref.load
