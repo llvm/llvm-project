@@ -317,6 +317,17 @@ static bool getPassThroughResults(Operation *userOp, Value trackedOperand,
     return false;
   }
 
+  if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(userOp)) {
+    if (castOp->getNumOperands() == 1 && castOp->getNumResults() == 1 &&
+        castOp->getOperand(0) == trackedOperand &&
+        isa<MemRefType>(castOp->getOperand(0).getType()) &&
+        isa<MemRefType>(castOp->getResult(0).getType())) {
+      passThroughResults.push_back(castOp->getResult(0));
+      return true;
+    }
+    return false;
+  }
+
   // Partial-entity accesses (e.g. array element or field access) forward the
   // base entity through to their results, so treat them as pass-through when
   // the base entity is the value being tracked.
@@ -340,6 +351,14 @@ static Value unwrapMemRefConversion(Value v) {
         v = viewLike.getViewSource();
         continue;
       }
+    }
+    if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op);
+        castOp && castOp->getNumOperands() == 1 &&
+        castOp->getNumResults() == 1 &&
+        isa<MemRefType>(castOp->getOperand(0).getType()) &&
+        isa<MemRefType>(castOp->getResult(0).getType())) {
+      v = castOp->getOperand(0);
+      continue;
     }
     break;
   }
@@ -728,6 +747,13 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
     }
   }
   return nullptr;
+}
+
+static bool
+canUseDynamicReductionAlloca(MemRefType baseTy, acc::PrivatizeOp privatizeOp,
+                             acc::ReductionAccumulateArrayOp arrayAccum) {
+  return arrayAccum && !baseTy.hasStaticShape() &&
+         baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
 }
 
 /// Store the reduction identity to every element of a freshly allocated
@@ -2500,8 +2526,7 @@ void ACCCGToGPULowering::processPrivateLocal(
         perThreadArrayReductionAccum(privateLocal.getResult());
     bool isThreadPrivate = isThreadXPrivatize(privatizeOp);
     bool canUseDynamicAlloca =
-        isThreadPrivate && baseTy.getRank() > 0 && !baseTy.hasStaticShape() &&
-        baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
+        canUseDynamicReductionAlloca(baseTy, privatizeOp, arrayAccum);
     if ((isThreadPrivate || arrayAccum) &&
         (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
          canUseDynamicAlloca)) {
@@ -2594,9 +2619,7 @@ void ACCCGToGPULowering::processPrivateLocal(
       perThreadArrayReductionAccum(privateLocal.getResult());
   for (mlir::acc::GPUParallelDimAttr parDim : parDimsPair.first) {
     bool canUseDynamicAlloca =
-        parDim.isThreadX() && baseTy.getRank() > 0 &&
-        !baseTy.hasStaticShape() &&
-        baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
+        canUseDynamicReductionAlloca(baseTy, privatizeOp, arrayAccum);
     if ((parDim.isThreadX() || arrayAccum) &&
         (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
          canUseDynamicAlloca)) {
@@ -3318,28 +3341,10 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
   }
 
   // Per-element gpu.all_reduce is only correct when each thread owns its own
-  // accumulator copy. For a statically-shaped accumulator, classify from the
-  // operand: an explicit shared allocation is block-shared regardless of size,
-  // and anything else (a per-thread stack alloca, or a view over one) is
-  // per-thread when it fits the per-thread stack budget and block-shared when
-  // it is too large. For a dynamically-shaped accumulator the type conveys no
-  // size, so classify from par_dims (which the producer sets to the reduction's
-  // actual parallel scope): a thread dimension means per-thread storage.
+  // accumulator copy. Classify the operand from its underlying allocation
+  // rather than its shape or par_dims: only memref.alloca is thread-private.
   Operation *rootOp = unwrapMemRefConversion(memref).getDefiningOp();
-  bool isExplicitlyShared =
-      isa_and_nonnull<memref::AllocOp, acc::GPUSharedMemoryOp>(rootOp);
-  bool isPerThreadPrivate;
-  if (memrefTy.hasStaticShape()) {
-    isPerThreadPrivate =
-        !isExplicitlyShared &&
-        canUseStackAlloca(memrefTy, loc, options.maxThreadPrivateStack);
-  } else {
-    isPerThreadPrivate = !isExplicitlyShared &&
-                         llvm::any_of(op.getParDims().getArray(),
-                                      [](mlir::acc::GPUParallelDimAttr d) {
-                                        return d.isThreadX();
-                                      });
-  }
+  bool isPerThreadPrivate = isa_and_nonnull<memref::AllocaOp>(rootOp);
   if (!isPerThreadPrivate) {
     // Block-shared accumulator: no-op only when the accumulate spans a block
     // dim (threads distribute distinct elements, so the block partial is in
@@ -3367,7 +3372,19 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
   Value lb =
       boundsOp.getLowerbound() ? toIndex(boundsOp.getLowerbound()) : zero;
-  Value step = boundsOp.getStride() ? toIndex(boundsOp.getStride()) : one;
+  Value step = one;
+  if (Value stride = boundsOp.getStride()) {
+    step = toIndex(stride);
+    if (boundsOp.getStrideInBytes()) {
+      int64_t elementSize =
+          getElementSizeInBytes(loc, memrefTy.getElementType());
+      if (elementSize == 0)
+        return;
+      Value elementSizeValue =
+          arith::ConstantIndexOp::create(rewriter, loc, elementSize);
+      step = arith::DivUIOp::create(rewriter, loc, step, elementSizeValue);
+    }
+  }
   // Exclusive upper bound. `extent` counts elements, so the span is
   // `extent * step` (for the common unit-stride case step is 1); fall back to
   // the inclusive upperbound when no extent is given.
