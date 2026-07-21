@@ -310,6 +310,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Bug Fixes to Compiler Builtins
 
+- Fixed a crash when classifying a call to a builtin with dependent arguments,
+  such as when the call is used as an `auto` non-type template argument.
+
 #### Bug Fixes to Attribute Support
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
