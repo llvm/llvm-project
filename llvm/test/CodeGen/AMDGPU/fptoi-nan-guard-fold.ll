@@ -112,29 +112,6 @@ define i32 @nan_guard_fptosi_f64(double %x) {
   ret i32 %sel
 }
 
-define <4 x i32> @nan_guard_fptosi_v4f32(<4 x float> %x) {
-; CHECK-LABEL: nan_guard_fptosi_v4f32:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cvt_i32_f32_e32 v5, v0
-; CHECK-NEXT:    v_cvt_i32_f32_e32 v7, v1
-; CHECK-NEXT:    v_cvt_i32_f32_e32 v6, v2
-; CHECK-NEXT:    v_cvt_i32_f32_e32 v4, v3
-; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v5, vcc
-; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0, v7, vcc
-; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v2, v2
-; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v6, vcc
-; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v3, v3
-; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v4, vcc
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = fcmp uno <4 x float> %x, zeroinitializer
-  %conv = fptosi <4 x float> %x to <4 x i32>
-  %sel = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %conv
-  ret <4 x i32> %sel
-}
-
 ;; Negative tests
 
 define i32 @nan_guard_nonzero_constant(float %x) {
@@ -178,4 +155,58 @@ define i32 @nan_guard_wrong_predicate(float %x) {
   %conv = fptosi float %x to i32
   %sel = select i1 %cmp, i32 0, i32 %conv
   ret i32 %sel
+}
+
+; The vector cases below do not fold: AMDGPU lowers vector fp_to_sint_sat /
+; fp_to_uint_sat via Expand, so shouldConvertFpToSat is false and the guard is
+; preserved. (On targets with a native vector op, e.g. AArch64, they fold.)
+define <4 x i32> @nan_guard_fptosi_v4f32(<4 x float> %x) {
+; CHECK-LABEL: nan_guard_fptosi_v4f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v5, v0
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v7, v1
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v6, v2
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v4, v3
+; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v5, vcc
+; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0, v7, vcc
+; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v2, v2
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v6, vcc
+; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v3, v3
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v4, vcc
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp uno <4 x float> %x, zeroinitializer
+  %conv = fptosi <4 x float> %x to <4 x i32>
+  %sel = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %conv
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @nan_guard_fptosi_v4f32_and_mask(<4 x float> %x, <4 x i32> %m) {
+; CHECK-LABEL: nan_guard_fptosi_v4f32_and_mask:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v11, v0
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v10, v1
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v9, v2
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v8, v3
+; CHECK-NEXT:    v_and_b32_e32 v4, v11, v4
+; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; CHECK-NEXT:    v_and_b32_e32 v5, v10, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
+; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
+; CHECK-NEXT:    v_and_b32_e32 v6, v9, v6
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0, v5, vcc
+; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v2, v2
+; CHECK-NEXT:    v_and_b32_e32 v7, v8, v7
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v6, vcc
+; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v3, v3
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v7, vcc
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp uno <4 x float> %x, zeroinitializer
+  %conv = fptosi <4 x float> %x to <4 x i32>
+  %and = and <4 x i32> %conv, %m
+  %sel = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %and
+  ret <4 x i32> %sel
 }

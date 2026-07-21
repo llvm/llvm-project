@@ -114,6 +114,20 @@ define <4 x i32> @nan_guard_fptosi_v4f32(<4 x float> %x) {
   ret <4 x i32> %sel
 }
 
+; Vector case with a non-constant AND mask.
+define <4 x i32> @nan_guard_fptosi_v4f32_and_mask(<4 x float> %x, <4 x i32> %m) {
+; CHECK-LABEL: nan_guard_fptosi_v4f32_and_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %cmp = fcmp uno <4 x float> %x, zeroinitializer
+  %conv = fptosi <4 x float> %x to <4 x i32>
+  %and = and <4 x i32> %conv, %m
+  %sel = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %and
+  ret <4 x i32> %sel
+}
+
 ;; Negative tests
 
 define i32 @nan_guard_nonzero_constant(float %x) {
