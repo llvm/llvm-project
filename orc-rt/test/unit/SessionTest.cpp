@@ -268,10 +268,9 @@ private:
   OnConnectFn OnConnect;
 };
 
-class CallViaMockControllerAccess {
+class CallFromController {
 public:
-  CallViaMockControllerAccess(MockControllerAccess &CA,
-                              orc_rt_WrapperFunction Fn)
+  CallFromController(MockControllerAccess &CA, orc_rt_WrapperFunction Fn)
       : CA(CA), Fn(Fn) {}
   void operator()(Session::OnControllerCallReturnFn OnComplete,
                   WrapperFunctionBuffer ArgBytes) {
@@ -612,7 +611,8 @@ TEST(ControllerAccessTest, ValidCallToController) {
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.controllerCaller(
+          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
@@ -627,7 +627,8 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.controllerCaller(
+          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -647,7 +648,8 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.controllerCaller(
+          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -667,7 +669,7 @@ TEST(ControllerAccessTest, CallFromController) {
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaMockControllerAccess(*CA, add_sps_wrapper),
+      CallFromController(*CA, add_sps_wrapper),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
@@ -705,7 +707,7 @@ TEST(ControllerAccessTest, WrapperCallTokenReleasedWhenFnReturns) {
 
   bool GotResult = false;
   SPSWrapperFunction<void(SPSExecutorAddr)>::call(
-      CallViaMockControllerAccess(*CA, deferred_wrapper),
+      CallFromController(*CA, deferred_wrapper),
       [&](Error Err) {
         cantFail(std::move(Err));
         GotResult = true;
@@ -781,7 +783,8 @@ TEST(ControllerAccessTest, TryAttachSuccess) {
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.controllerCaller(
+          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
@@ -800,7 +803,8 @@ TEST(ControllerAccessTest, TryAttachFailure) {
   // would before any attach.
   Error CallErr = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.controllerCaller(
+          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(CallErr);
         CallErr = R.takeError();
