@@ -21,33 +21,33 @@ define i64 @straight(ptr nocapture noundef readonly %p, i32 noundef %st) {
 ; CHECK-NEXT:    [[ADD_PTR_4:%.*]] = getelementptr inbounds i16, ptr [[ADD_PTR_3]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[ADD_PTR_5:%.*]] = getelementptr inbounds i16, ptr [[ADD_PTR_4]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[ADD_PTR_6:%.*]] = getelementptr inbounds i16, ptr [[ADD_PTR_5]], i64 [[IDX_EXT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P]], align 2
-; CHECK-NEXT:    [[TMP10:%.*]] = load <8 x i16>, ptr [[ADD_PTR]], align 2
-; CHECK-NEXT:    [[TMP19:%.*]] = load <8 x i16>, ptr [[ADD_PTR_1]], align 2
-; CHECK-NEXT:    [[TMP28:%.*]] = load <8 x i16>, ptr [[ADD_PTR_2]], align 2
-; CHECK-NEXT:    [[TMP37:%.*]] = load <8 x i16>, ptr [[ADD_PTR_3]], align 2
-; CHECK-NEXT:    [[TMP46:%.*]] = load <8 x i16>, ptr [[ADD_PTR_4]], align 2
-; CHECK-NEXT:    [[TMP55:%.*]] = load <8 x i16>, ptr [[ADD_PTR_5]], align 2
-; CHECK-NEXT:    [[TMP64:%.*]] = load <8 x i16>, ptr [[ADD_PTR_6]], align 2
-; CHECK-NEXT:    [[TMP72:%.*]] = shufflevector <8 x i16> [[TMP64]], <8 x i16> poison, <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP73:%.*]] = shufflevector <8 x i16> [[TMP55]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP74:%.*]] = shufflevector <8 x i16> [[TMP64]], <8 x i16> [[TMP55]], <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP75:%.*]] = shufflevector <8 x i16> [[TMP46]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP76:%.*]] = shufflevector <64 x i16> [[TMP74]], <64 x i16> [[TMP75]], <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[TMP77:%.*]] = shufflevector <8 x i16> [[TMP37]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP78:%.*]] = shufflevector <64 x i16> [[TMP76]], <64 x i16> [[TMP77]], <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[TMP79:%.*]] = shufflevector <8 x i16> [[TMP28]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP80:%.*]] = shufflevector <64 x i16> [[TMP78]], <64 x i16> [[TMP79]], <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[TMP81:%.*]] = shufflevector <8 x i16> [[TMP19]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP82:%.*]] = shufflevector <64 x i16> [[TMP80]], <64 x i16> [[TMP81]], <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[TMP83:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP84:%.*]] = shufflevector <64 x i16> [[TMP82]], <64 x i16> [[TMP83]], <64 x i32> <i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[TMP85:%.*]] = shufflevector <8 x i16> [[TMP10]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP86:%.*]] = shufflevector <64 x i16> [[TMP84]], <64 x i16> [[TMP85]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[TMP87:%.*]] = zext <64 x i16> [[TMP86]] to <64 x i32>
-; CHECK-NEXT:    [[ADD_7_7:%.*]] = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> [[TMP87]])
-; CHECK-NEXT:    [[TMP88:%.*]] = mul nuw nsw <64 x i32> [[TMP87]], [[TMP87]]
-; CHECK-NEXT:    [[ADD11_7_7:%.*]] = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> [[TMP88]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[ADD_PTR]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[ADD_PTR_1]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr [[ADD_PTR_2]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr [[ADD_PTR_3]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i16>, ptr [[ADD_PTR_4]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = load <8 x i16>, ptr [[ADD_PTR_5]], align 2
+; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x i16>, ptr [[ADD_PTR_6]], align 2
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i16> [[TMP7]], <8 x i16> poison, <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i16> [[TMP6]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i16> [[TMP7]], <8 x i16> [[TMP6]], <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i16> [[TMP5]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <64 x i16> [[TMP10]], <64 x i16> [[TMP11]], <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i16> [[TMP4]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <64 x i16> [[TMP12]], <64 x i16> [[TMP13]], <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <64 x i16> [[TMP14]], <64 x i16> [[TMP15]], <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <64 x i16> [[TMP16]], <64 x i16> [[TMP17]], <64 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <64 x i16> [[TMP18]], <64 x i16> [[TMP19]], <64 x i32> <i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <64 x i16> [[TMP20]], <64 x i16> [[TMP21]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; CHECK-NEXT:    [[TMP23:%.*]] = zext <64 x i16> [[TMP22]] to <64 x i32>
+; CHECK-NEXT:    [[ADD_7_7:%.*]] = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> [[TMP23]])
+; CHECK-NEXT:    [[TMP25:%.*]] = mul nuw nsw <64 x i32> [[TMP23]], [[TMP23]]
+; CHECK-NEXT:    [[ADD11_7_7:%.*]] = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> [[TMP25]])
 ; CHECK-NEXT:    [[CONV15:%.*]] = zext i32 [[ADD_7_7]] to i64
 ; CHECK-NEXT:    [[CONV16:%.*]] = zext i32 [[ADD11_7_7]] to i64
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 [[CONV16]], 32
@@ -443,3 +443,150 @@ entry:
   %add17 = or i64 %shl, %conv15
   ret i64 %add17
 }
+
+define i64 @looped(ptr nocapture noundef readonly %p, i32 noundef %st) {
+; CHECK-LABEL: @looped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[ST:%.*]] to i64
+; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
+; CHECK:       for.cond1.preheader:
+; CHECK-NEXT:    [[Y_038:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC13:%.*]], [[FOR_COND1_PREHEADER]] ]
+; CHECK-NEXT:    [[SQ_037:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[OP_RDX:%.*]], [[FOR_COND1_PREHEADER]] ]
+; CHECK-NEXT:    [[SM_036:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[OP_RDX1:%.*]], [[FOR_COND1_PREHEADER]] ]
+; CHECK-NEXT:    [[P_ADDR_035:%.*]] = phi ptr [ [[P:%.*]], [[ENTRY]] ], [ [[ADD_PTR:%.*]], [[FOR_COND1_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i16>, ptr [[P_ADDR_035]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <16 x i16> [[TMP0]] to <16 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i16> [[TMP0]] to <16 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw <16 x i32> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP2]])
+; CHECK-NEXT:    [[OP_RDX1]] = add i32 [[TMP4]], [[SM_036]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP3]])
+; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP5]], [[SQ_037]]
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i16, ptr [[P_ADDR_035]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[INC13]] = add nuw nsw i32 [[Y_038]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC13]], 16
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[CONV15:%.*]] = zext i32 [[OP_RDX1]] to i64
+; CHECK-NEXT:    [[CONV16:%.*]] = zext i32 [[OP_RDX]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 [[CONV16]], 32
+; CHECK-NEXT:    [[ADD17:%.*]] = or i64 [[SHL]], [[CONV15]]
+; CHECK-NEXT:    ret i64 [[ADD17]]
+;
+entry:
+  %idx.ext = sext i32 %st to i64
+  br label %for.cond1.preheader
+
+for.cond1.preheader:                              ; preds = %entry, %for.cond1.preheader
+  %y.038 = phi i32 [ 0, %entry ], [ %inc13, %for.cond1.preheader ]
+  %sq.037 = phi i32 [ 0, %entry ], [ %add11.15, %for.cond1.preheader ]
+  %sm.036 = phi i32 [ 0, %entry ], [ %add.15, %for.cond1.preheader ]
+  %p.addr.035 = phi ptr [ %p, %entry ], [ %add.ptr, %for.cond1.preheader ]
+  %0 = load i16, ptr %p.addr.035, align 2
+  %conv = zext i16 %0 to i32
+  %add = add i32 %sm.036, %conv
+  %mul = mul nuw nsw i32 %conv, %conv
+  %add11 = add i32 %mul, %sq.037
+  %arrayidx.1 = getelementptr inbounds i16, ptr %p.addr.035, i64 1
+  %1 = load i16, ptr %arrayidx.1, align 2
+  %conv.1 = zext i16 %1 to i32
+  %add.1 = add i32 %add, %conv.1
+  %mul.1 = mul nuw nsw i32 %conv.1, %conv.1
+  %add11.1 = add i32 %mul.1, %add11
+  %arrayidx.2 = getelementptr inbounds i16, ptr %p.addr.035, i64 2
+  %2 = load i16, ptr %arrayidx.2, align 2
+  %conv.2 = zext i16 %2 to i32
+  %add.2 = add i32 %add.1, %conv.2
+  %mul.2 = mul nuw nsw i32 %conv.2, %conv.2
+  %add11.2 = add i32 %mul.2, %add11.1
+  %arrayidx.3 = getelementptr inbounds i16, ptr %p.addr.035, i64 3
+  %3 = load i16, ptr %arrayidx.3, align 2
+  %conv.3 = zext i16 %3 to i32
+  %add.3 = add i32 %add.2, %conv.3
+  %mul.3 = mul nuw nsw i32 %conv.3, %conv.3
+  %add11.3 = add i32 %mul.3, %add11.2
+  %arrayidx.4 = getelementptr inbounds i16, ptr %p.addr.035, i64 4
+  %4 = load i16, ptr %arrayidx.4, align 2
+  %conv.4 = zext i16 %4 to i32
+  %add.4 = add i32 %add.3, %conv.4
+  %mul.4 = mul nuw nsw i32 %conv.4, %conv.4
+  %add11.4 = add i32 %mul.4, %add11.3
+  %arrayidx.5 = getelementptr inbounds i16, ptr %p.addr.035, i64 5
+  %5 = load i16, ptr %arrayidx.5, align 2
+  %conv.5 = zext i16 %5 to i32
+  %add.5 = add i32 %add.4, %conv.5
+  %mul.5 = mul nuw nsw i32 %conv.5, %conv.5
+  %add11.5 = add i32 %mul.5, %add11.4
+  %arrayidx.6 = getelementptr inbounds i16, ptr %p.addr.035, i64 6
+  %6 = load i16, ptr %arrayidx.6, align 2
+  %conv.6 = zext i16 %6 to i32
+  %add.6 = add i32 %add.5, %conv.6
+  %mul.6 = mul nuw nsw i32 %conv.6, %conv.6
+  %add11.6 = add i32 %mul.6, %add11.5
+  %arrayidx.7 = getelementptr inbounds i16, ptr %p.addr.035, i64 7
+  %7 = load i16, ptr %arrayidx.7, align 2
+  %conv.7 = zext i16 %7 to i32
+  %add.7 = add i32 %add.6, %conv.7
+  %mul.7 = mul nuw nsw i32 %conv.7, %conv.7
+  %add11.7 = add i32 %mul.7, %add11.6
+  %arrayidx.8 = getelementptr inbounds i16, ptr %p.addr.035, i64 8
+  %8 = load i16, ptr %arrayidx.8, align 2
+  %conv.8 = zext i16 %8 to i32
+  %add.8 = add i32 %add.7, %conv.8
+  %mul.8 = mul nuw nsw i32 %conv.8, %conv.8
+  %add11.8 = add i32 %mul.8, %add11.7
+  %arrayidx.9 = getelementptr inbounds i16, ptr %p.addr.035, i64 9
+  %9 = load i16, ptr %arrayidx.9, align 2
+  %conv.9 = zext i16 %9 to i32
+  %add.9 = add i32 %add.8, %conv.9
+  %mul.9 = mul nuw nsw i32 %conv.9, %conv.9
+  %add11.9 = add i32 %mul.9, %add11.8
+  %arrayidx.10 = getelementptr inbounds i16, ptr %p.addr.035, i64 10
+  %10 = load i16, ptr %arrayidx.10, align 2
+  %conv.10 = zext i16 %10 to i32
+  %add.10 = add i32 %add.9, %conv.10
+  %mul.10 = mul nuw nsw i32 %conv.10, %conv.10
+  %add11.10 = add i32 %mul.10, %add11.9
+  %arrayidx.11 = getelementptr inbounds i16, ptr %p.addr.035, i64 11
+  %11 = load i16, ptr %arrayidx.11, align 2
+  %conv.11 = zext i16 %11 to i32
+  %add.11 = add i32 %add.10, %conv.11
+  %mul.11 = mul nuw nsw i32 %conv.11, %conv.11
+  %add11.11 = add i32 %mul.11, %add11.10
+  %arrayidx.12 = getelementptr inbounds i16, ptr %p.addr.035, i64 12
+  %12 = load i16, ptr %arrayidx.12, align 2
+  %conv.12 = zext i16 %12 to i32
+  %add.12 = add i32 %add.11, %conv.12
+  %mul.12 = mul nuw nsw i32 %conv.12, %conv.12
+  %add11.12 = add i32 %mul.12, %add11.11
+  %arrayidx.13 = getelementptr inbounds i16, ptr %p.addr.035, i64 13
+  %13 = load i16, ptr %arrayidx.13, align 2
+  %conv.13 = zext i16 %13 to i32
+  %add.13 = add i32 %add.12, %conv.13
+  %mul.13 = mul nuw nsw i32 %conv.13, %conv.13
+  %add11.13 = add i32 %mul.13, %add11.12
+  %arrayidx.14 = getelementptr inbounds i16, ptr %p.addr.035, i64 14
+  %14 = load i16, ptr %arrayidx.14, align 2
+  %conv.14 = zext i16 %14 to i32
+  %add.14 = add i32 %add.13, %conv.14
+  %mul.14 = mul nuw nsw i32 %conv.14, %conv.14
+  %add11.14 = add i32 %mul.14, %add11.13
+  %arrayidx.15 = getelementptr inbounds i16, ptr %p.addr.035, i64 15
+  %15 = load i16, ptr %arrayidx.15, align 2
+  %conv.15 = zext i16 %15 to i32
+  %add.15 = add i32 %add.14, %conv.15
+  %mul.15 = mul nuw nsw i32 %conv.15, %conv.15
+  %add11.15 = add i32 %mul.15, %add11.14
+  %add.ptr = getelementptr inbounds i16, ptr %p.addr.035, i64 %idx.ext
+  %inc13 = add nuw nsw i32 %y.038, 1
+  %exitcond.not = icmp eq i32 %inc13, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.cond1.preheader
+
+for.cond.cleanup:                                 ; preds = %for.cond1.preheader
+  %conv15 = zext i32 %add.15 to i64
+  %conv16 = zext i32 %add11.15 to i64
+  %shl = shl nuw i64 %conv16, 32
+  %add17 = or i64 %shl, %conv15
+  ret i64 %add17
+}
+
