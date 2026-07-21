@@ -23,6 +23,7 @@ add_llvm_component_library(LLVMVectorize
   SandboxVectorizer/Scheduler.cpp
   SandboxVectorizer/SeedCollector.cpp
   SandboxVectorizer/VecUtils.cpp
+  SLPVectorizer/SLPCostAnalysis.cpp
   SLPVectorizer/SLPUtils.cpp
   SLPVectorizer.cpp
   Vectorize.cpp
@@ -31,6 +32,7 @@ add_llvm_component_library(LLVMVectorize
   VPlanAnalysis.cpp
   VPlanConstruction.cpp
   VPlanEVLTailFolding.cpp
+  VPlanLowering.cpp
   VPlanPredicator.cpp
   VPlanRecipes.cpp
   VPlanTransforms.cpp

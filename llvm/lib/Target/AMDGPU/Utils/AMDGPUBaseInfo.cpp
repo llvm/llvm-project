@@ -1081,7 +1081,7 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
 TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
                               StringRef FeatureString) {
   TargetID TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
-                    STI.getFeatureBits().test(FeatureSupportsXNACK)
+                    STI.getFeatureBits().test(FeatureXNACKOnOffModes)
                         ? TargetIDSetting::Any
                         : TargetIDSetting::Unsupported,
                     STI.getFeatureBits().test(FeatureSupportsSRAMECC)
@@ -1107,7 +1107,8 @@ TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
   }
 
   // Only allow changing xnack setting if the target supports on/off modes.
-  // Targets without on/off mode support keep their initial setting (Any).
+  // Targets without on/off mode support keep their initial setting
+  // (Unsupported).
 
   bool XnackSupported = STI.getFeatureBits().test(FeatureXNACKOnOffModes);
   bool SramEccSupported = TargetID.isSramEccSupported();
