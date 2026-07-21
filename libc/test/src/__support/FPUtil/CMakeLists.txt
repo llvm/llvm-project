@@ -46,7 +46,7 @@ add_fp_unittest(
   SRCS
     float128_test.cpp
   DEPENDS
-    libc.src.__support.CPP.limits
+    libc.hdr.limits_macros
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.float128
 )
