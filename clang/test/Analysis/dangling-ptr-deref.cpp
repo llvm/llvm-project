@@ -84,3 +84,44 @@ void test_case_seven() {
   // expected-warning@-1 {{Use of 'i' after its lifetime ended}}
   // expected-note@-2    {{Use of 'i' after its lifetime ended}}
 }
+
+struct MyBuffer {
+  char buffer[8];
+};
+
+void member_subregion_dangling_deref() {
+  const char *p = nullptr;
+  {
+    struct MyBuffer tmp_buffer = {};
+    p = tmp_buffer.buffer;
+  }
+  // expected-note@-1 {{'tmp_buffer' is destroyed here}}
+  char c = *p;
+  // expected-warning@-1 {{Use of 'tmp_buffer' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'tmp_buffer' after its lifetime ended}}
+  (void)c;
+}
+
+void opaque(const char *);
+
+void passing_dangling_to_call() {
+  const char *p = nullptr;
+  {
+    struct MyBuffer tmp_buffer = {};
+    p = tmp_buffer.buffer;
+  }
+  // expected-note@-1 {{'tmp_buffer' is destroyed here}}
+  opaque(p);
+  // expected-warning@-1 {{Use of 'tmp_buffer' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'tmp_buffer' after its lifetime ended}}
+}
+
+void member_subregion_alive_deref() {
+  {
+    struct MyBuffer tmp_buffer = {};
+    const char *p = tmp_buffer.buffer;
+    opaque(p); //   no-warning
+    char c = *p; // no-warning
+    (void)c;
+  }
+}

@@ -3,16 +3,18 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
 using namespace clang;
 using namespace ento;
 
 namespace {
-class DanglingPtrDeref : public Checker<check::Location> {
+class DanglingPtrDeref : public Checker<check::Location, check::PreCall> {
 public:
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N,
                            CheckerContext &C) const;
   const BugType BugMsg{this, "ReportDanglingPtrDeref", "LifetimeBound"};
@@ -48,12 +50,24 @@ void DanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   }
 }
 
+void DanglingPtrDeref::checkPreCall(const CallEvent &Call,
+                                    CheckerContext &C) const {
+
+  ProgramStateRef State = C.getState();
+  for (unsigned I = 0; I < Call.getNumArgs(); I++) {
+    if (const MemRegion *ArgRegion = Call.getArgSVal(I).getAsRegion())
+      if (lifetime_modeling::isDeallocated(State, ArgRegion))
+        if (ExplodedNode *N = C.generateNonFatalErrorNode())
+          reportUseAfterScope(ArgRegion, N, C);
+  }
+}
+
 void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
                                            ExplodedNode *N,
                                            CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
-      (llvm::Twine("Use of '") + Region->getString() +
+      (llvm::Twine("Use of '") + Region->getBaseRegion()->getString() +
        "' after its lifetime ended."),
       N);
   BR->addVisitor<DanglingPtrDerefBRVisitor>(Region);
@@ -81,7 +95,8 @@ DanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
       S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(
       Pos,
-      (llvm::Twine("'") + SourceRegion->getString() + "' is destroyed here")
+      (llvm::Twine("'") + SourceRegion->getBaseRegion()->getString() +
+       "' is destroyed here")
           .str(),
       true);
 }

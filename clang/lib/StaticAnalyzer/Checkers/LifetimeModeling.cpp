@@ -73,7 +73,14 @@ std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
 
 bool lifetime_modeling::isDeallocated(ProgramStateRef State,
                                       const MemRegion *Region) {
-  return State->contains<DeallocatedSourceSet>(Region);
+  if (State->contains<DeallocatedSourceSet>(Region))
+    return true;
+
+  if (const MemRegion *Base = Region->getBaseRegion();
+      Base != Region && State->contains<DeallocatedSourceSet>(Base))
+    return true;
+
+  return false;
 }
 
 static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
