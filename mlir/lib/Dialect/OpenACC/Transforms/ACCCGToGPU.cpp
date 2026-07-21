@@ -1270,130 +1270,112 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
   mlir::acc::GPUParallelDimAttr lowestParDim =
       mlir::acc::GPUParallelDimAttr::threadXDim(ctx);
   if (block) {
-    struct ThreadYRequirement {
-      bool active = false;
-      bool inactive = false;
+    struct ThreadYBroadeningInfo {
+      bool hasActiveWorkerCombine = false;
+      bool hasExplicitInactiveCombine = false;
+      bool hasBroadeningConflict = false;
+      Operation *diagnosticOp = nullptr;
     };
-    auto analyzeThreadYRequirements =
-        [&](auto &&self,
-            Block &predicateBlock) -> FailureOr<ThreadYRequirement> {
-      ThreadYRequirement requirement;
-      auto requireThreadY = [&](Operation *op, bool active) {
-        if ((active && requirement.inactive) ||
-            (!active && requirement.active)) {
-          (void)accSupport.emitNYI(
-              op->getLoc(),
-              "operations in the same predicate region require incompatible "
-              "ThreadY predication");
-          hasFailed = true;
-          return failure();
+    auto mergeBroadeningInfo = [](ThreadYBroadeningInfo &dst,
+                                  const ThreadYBroadeningInfo &src) {
+      dst.hasActiveWorkerCombine |= src.hasActiveWorkerCombine;
+      dst.hasExplicitInactiveCombine |= src.hasExplicitInactiveCombine;
+      dst.hasBroadeningConflict |= src.hasBroadeningConflict;
+      if (!dst.diagnosticOp)
+        dst.diagnosticOp = src.diagnosticOp;
+    };
+    auto isProvenWorkerPrivate = [&](Value memref) {
+      Value current = memref;
+      while (Operation *def = current.getDefiningOp()) {
+        if (acc::PrivateLocalOp privateLocal =
+                dyn_cast<acc::PrivateLocalOp>(def)) {
+          return getPrivateMemScope(getPrivatizeOp(
+                     privateLocal, computeRegion)) == PrivateMemScope::Worker;
         }
-        requirement.active |= active;
-        requirement.inactive |= !active;
-        return success();
-      };
-      auto hasThreadYPrivateStorage = [&](Value memref) {
-        acc::PrivatizeOp privatize = getPrivatizeForMemref(memref);
-        if (!privatize)
-          return false;
-        acc::GPUParallelDimsAttr parDims = privatize.getParDimsAttr();
-        return parDims && llvm::any_of(parDims.getArray(), [](auto parDim) {
-                 return parDim.isThreadY();
-               });
-      };
-      auto applyCombineRequirement = [&](Operation *combineOp, Value src) {
-        return requireThreadY(combineOp, hasThreadYPrivateStorage(src));
+        if (ViewLikeOpInterface viewLike = dyn_cast<ViewLikeOpInterface>(def)) {
+          current = viewLike.getViewSource();
+          continue;
+        }
+        break;
+      }
+      return false;
+    };
+    auto hasUnsafeOwnEffects = [](Operation *op) {
+      if (auto effectOp = dyn_cast<MemoryEffectOpInterface>(op)) {
+        SmallVector<MemoryEffects::EffectInstance> effects;
+        effectOp.getEffects(effects);
+        return llvm::any_of(effects, [](const auto &effect) {
+          return !isa<MemoryEffects::Read>(effect.getEffect());
+        });
+      }
+      return !op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+    };
+    auto analyzeThreadYBroadening =
+        [&](auto &&self, Block &predicateBlock) -> ThreadYBroadeningInfo {
+      ThreadYBroadeningInfo info;
+      auto classifyCombine = [&](Operation *combineOp, Value src,
+                                 ArrayRef<GPUParallelDimAttr> parDims) {
+        bool hasThreadY = llvm::any_of(
+            parDims, [](auto parDim) { return parDim.isThreadY(); });
+        if (hasThreadY && isProvenWorkerPrivate(src)) {
+          info.hasActiveWorkerCombine = true;
+        } else {
+          info.hasExplicitInactiveCombine = true;
+          if (!info.diagnosticOp)
+            info.diagnosticOp = combineOp;
+        }
       };
 
       for (Operation &nestedOp : predicateBlock) {
         if (acc::PredicateRegionOp nestedPredicate =
                 dyn_cast<acc::PredicateRegionOp>(nestedOp)) {
-          FailureOr<ThreadYRequirement> nestedRequirement =
+          ThreadYBroadeningInfo nestedInfo =
               self(self, nestedPredicate.getRegion().front());
-          if (failed(nestedRequirement))
-            return failure();
-          // An active descendant must not be excluded by this region's
-          // predicate. Inactive descendants apply their own predicate.
-          if (nestedRequirement->active &&
-              failed(requireThreadY(&nestedOp, /*active=*/true)))
-            return failure();
+          // A worker-active descendant must reach its own predicate. Other
+          // requirements are enforced within the nested predicate region.
+          info.hasActiveWorkerCombine |= nestedInfo.hasActiveWorkerCombine;
           continue;
         }
         if (acc::ReductionCombineOp combineOp =
                 dyn_cast<acc::ReductionCombineOp>(nestedOp)) {
-          if (failed(
-                  applyCombineRequirement(combineOp, combineOp.getSrcMemref())))
-            return failure();
+          classifyCombine(combineOp, combineOp.getSrcMemref(),
+                          getReductionCombineParDims(combineOp));
           continue;
         }
         if (acc::ReductionCombineRegionOp combineRegionOp =
                 dyn_cast<acc::ReductionCombineRegionOp>(nestedOp)) {
-          if (failed(applyCombineRequirement(combineRegionOp,
-                                             combineRegionOp.getSrcVar())))
-            return failure();
-          continue;
-        }
-        if (memref::StoreOp storeOp = dyn_cast<memref::StoreOp>(nestedOp)) {
-          if (failed(requireThreadY(
-                  storeOp, hasThreadYPrivateStorage(storeOp.getMemref()))))
-            return failure();
-          continue;
-        }
-        if (acc::ReductionAccumulateArrayOp accumulateArrayOp =
-                dyn_cast<acc::ReductionAccumulateArrayOp>(nestedOp)) {
-          bool threadYActive =
-              llvm::any_of(accumulateArrayOp.getParDims().getArray(),
-                           [](auto parDim) { return parDim.isThreadY(); });
-          if (failed(requireThreadY(accumulateArrayOp, threadYActive)))
-            return failure();
+          classifyCombine(combineRegionOp, combineRegionOp.getSrcVar(),
+                          getReductionCombineParDims(combineRegionOp));
           continue;
         }
         if (nestedOp.getNumRegions() != 0) {
-          bool hasOwnEffects = true;
-          if (auto effectOp = dyn_cast<MemoryEffectOpInterface>(&nestedOp)) {
-            hasOwnEffects = !effectOp.hasNoEffect();
-          } else if (nestedOp.hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
-            hasOwnEffects = false;
+          if (hasUnsafeOwnEffects(&nestedOp)) {
+            info.hasBroadeningConflict = true;
+            if (!info.diagnosticOp)
+              info.diagnosticOp = &nestedOp;
           }
-          if (hasOwnEffects &&
-              failed(requireThreadY(&nestedOp, /*active=*/false)))
-            return failure();
           for (Region &region : nestedOp.getRegions()) {
-            for (Block &nestedBlock : region) {
-              FailureOr<ThreadYRequirement> nestedRequirement =
-                  self(self, nestedBlock);
-              if (failed(nestedRequirement))
-                return failure();
-              // Other region-bearing operations do not introduce independent
-              // ACC predication, so both requirements apply to this region.
-              if (nestedRequirement->active &&
-                  failed(requireThreadY(&nestedOp, /*active=*/true)))
-                return failure();
-              if (nestedRequirement->inactive &&
-                  failed(requireThreadY(&nestedOp, /*active=*/false)))
-                return failure();
-            }
+            for (Block &nestedBlock : region)
+              mergeBroadeningInfo(info, self(self, nestedBlock));
           }
           continue;
         }
-        if (!isMemoryEffectFree(&nestedOp) &&
-            failed(requireThreadY(&nestedOp, /*active=*/false)))
-          return failure();
+        if (hasUnsafeOwnEffects(&nestedOp)) {
+          info.hasBroadeningConflict = true;
+          if (!info.diagnosticOp)
+            info.diagnosticOp = &nestedOp;
+        }
       }
-      return requirement;
+      return info;
     };
 
-    FailureOr<ThreadYRequirement> threadYRequirement =
-        analyzeThreadYRequirements(analyzeThreadYRequirements, *block);
-    if (failed(threadYRequirement))
-      return {};
+    ThreadYBroadeningInfo threadYInfo =
+        analyzeThreadYBroadening(analyzeThreadYBroadening, *block);
 
     auto applyCombineParDims =
         [&](ArrayRef<mlir::acc::GPUParallelDimAttr> combineParDims) {
-          for (mlir::acc::GPUParallelDimAttr parDim : combineParDims) {
-            if (!parDim.isThreadY())
-              mlir::acc::removeParDim(ancestorParDims, parDim);
-          }
+          for (mlir::acc::GPUParallelDimAttr parDim : combineParDims)
+            mlir::acc::removeParDim(ancestorParDims, parDim);
           return success();
         };
     block->walk([&](Operation *op) -> WalkResult {
@@ -1459,13 +1441,22 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
       }
       return WalkResult::advance();
     });
-    if (threadYRequirement->active || threadYRequirement->inactive) {
-      mlir::acc::GPUParallelDimAttr threadY =
-          mlir::acc::GPUParallelDimAttr::threadYDim(ctx);
-      if (threadYRequirement->active)
-        mlir::acc::insertParDim(ancestorParDims, threadY);
-      else
-        mlir::acc::removeParDim(ancestorParDims, threadY);
+    mlir::acc::GPUParallelDimAttr threadY =
+        mlir::acc::GPUParallelDimAttr::threadYDim(ctx);
+    bool baselineThreadYActive = llvm::is_contained(ancestorParDims, threadY);
+    if (threadYInfo.hasActiveWorkerCombine && !baselineThreadYActive) {
+      if (threadYInfo.hasExplicitInactiveCombine ||
+          threadYInfo.hasBroadeningConflict) {
+        Operation *diagnosticOp =
+            threadYInfo.diagnosticOp ? threadYInfo.diagnosticOp : op;
+        (void)accSupport.emitNYI(
+            diagnosticOp->getLoc(),
+            "operations in the same predicate region require incompatible "
+            "ThreadY predication");
+        hasFailed = true;
+        return {};
+      }
+      mlir::acc::insertParDim(ancestorParDims, threadY);
     }
   }
 
@@ -1922,22 +1913,18 @@ ACCCGToGPULowering::getPrivateMemScope(acc::PrivatizeOp privatizeOp) {
 
 /// Walks back from a memref use to its defining `acc.private_local`, if any.
 static acc::PrivateLocalOp getPrivateLocalForMemref(Value memref) {
-  Value current = memref;
-  while (Operation *def = current.getDefiningOp()) {
+  llvm::SmallVector<Value, 8> worklist{memref};
+  llvm::SmallPtrSet<Value, 8> seen;
+  while (!worklist.empty()) {
+    Value v = worklist.pop_back_val();
+    if (!seen.insert(v).second)
+      continue;
+    Operation *def = v.getDefiningOp();
+    if (!def)
+      continue;
     if (acc::PrivateLocalOp privateLocal = dyn_cast<acc::PrivateLocalOp>(def))
       return privateLocal;
-    if (ViewLikeOpInterface viewLike = dyn_cast<ViewLikeOpInterface>(def)) {
-      current = viewLike.getViewSource();
-      continue;
-    }
-    if (acc::PartialEntityAccessOpInterface partialAccess =
-            dyn_cast<acc::PartialEntityAccessOpInterface>(def)) {
-      current = partialAccess.getBaseEntity();
-      continue;
-    }
-    // Do not follow arbitrary operands: multi-source operations such as
-    // arith.select do not prove that their result aliases private storage.
-    return nullptr;
+    worklist.append(def->getOperands().begin(), def->getOperands().end());
   }
   return nullptr;
 }
