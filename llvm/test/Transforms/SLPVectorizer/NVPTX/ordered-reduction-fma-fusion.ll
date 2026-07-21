@@ -9,10 +9,14 @@
 
 define float @dot_contract(float %x) {
 ; CHECK-LABEL: @dot_contract(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[X:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract <4 x float> <float 7.000000e+00, float 3.000000e+00, float 5.000000e+00, float 9.000000e+00>, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call contract float @llvm.vector.reduce.fadd.v4f32(float [[X]], <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract float 7.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[A0:%.*]] = fadd contract float [[M0]], [[X]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract float 3.000000e+00, [[X]]
+; CHECK-NEXT:    [[A1:%.*]] = fadd contract float [[M1]], [[A0]]
+; CHECK-NEXT:    [[M2:%.*]] = fmul contract float 5.000000e+00, [[X]]
+; CHECK-NEXT:    [[A2:%.*]] = fadd contract float [[M2]], [[A1]]
+; CHECK-NEXT:    [[M3:%.*]] = fmul contract float 9.000000e+00, [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd contract float [[M3]], [[A2]]
 ; CHECK-NEXT:    ret float [[TMP4]]
 ;
   %m0 = fmul contract float 7.000000e+00, %x
