@@ -383,14 +383,6 @@ static bool isThreadXPrivatize(PrivatizeOp privatize) {
   return false;
 }
 
-/// True when \p privatize has any thread-level parallelism.
-static bool isThreadPrivatize(PrivatizeOp privatize) {
-  if (GPUParallelDimsAttr parDimsAttr = privatize.getParDimsAttr())
-    return llvm::any_of(parDimsAttr.getArray(),
-                        [](GPUParallelDimAttr d) { return d.isAnyThread(); });
-  return false;
-}
-
 /// Emits a workgroup-wide GPU barrier.
 static void emitGPUBarrierWorkgroup(OpBuilder &builder, Location loc) {
   gpu::BarrierOp::create(builder, loc);
@@ -709,7 +701,7 @@ static bool reductionHasBlockContext(acc::ReductionAccumulateArrayOp accArr) {
 }
 
 /// Returns the array reduction accumulate (through cast/view ops) that \p v
-/// feeds if it needs per-thread storage: its par_dims include a thread dim
+/// feeds if it needs per-thread storage: its par_dims include thread_x
 /// and it has block context so the cross-thread all_reduce is well defined.
 static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
   SmallVector<Value> worklist{v};
@@ -721,10 +713,10 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
     for (Operation *user : cur.getUsers()) {
       if (acc::ReductionAccumulateArrayOp accArr =
               dyn_cast<acc::ReductionAccumulateArrayOp>(user)) {
-        bool hasThread = false;
+        bool hasThreadX = false;
         for (auto pd : accArr.getParDims().getArray())
-          hasThread |= pd.isAnyThread();
-        if (hasThread && reductionHasBlockContext(accArr))
+          hasThreadX |= pd.isThreadX();
+        if (hasThreadX && reductionHasBlockContext(accArr))
           return accArr;
         continue;
       }
@@ -735,7 +727,6 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
         worklist.append(user->result_begin(), user->result_end());
     }
   }
-
   return nullptr;
 }
 
@@ -2509,13 +2500,11 @@ void ACCCGToGPULowering::processPrivateLocal(
         perThreadArrayReductionAccum(privateLocal.getResult());
     bool isThreadPrivate = isThreadXPrivatize(privatizeOp);
     bool canUseDynamicAlloca =
-        isThreadPrivatize(privatizeOp) && baseTy.getRank() > 0 &&
-        !baseTy.hasStaticShape() &&
+        isThreadPrivate && baseTy.getRank() > 0 && !baseTy.hasStaticShape() &&
         baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
-    bool canUseStaticAlloca =
-        (isThreadPrivate || arrayAccum) &&
-        canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack);
-    if (canUseStaticAlloca || canUseDynamicAlloca) {
+    if ((isThreadPrivate || arrayAccum) &&
+        (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
+         canUseDynamicAlloca)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy,
                                               privatizeOp.getDynamicSizes());
       if (arrayAccum) {
@@ -2605,13 +2594,12 @@ void ACCCGToGPULowering::processPrivateLocal(
       perThreadArrayReductionAccum(privateLocal.getResult());
   for (mlir::acc::GPUParallelDimAttr parDim : parDimsPair.first) {
     bool canUseDynamicAlloca =
-        isThreadPrivatize(privatizeOp) && baseTy.getRank() > 0 &&
+        parDim.isThreadX() && baseTy.getRank() > 0 &&
         !baseTy.hasStaticShape() &&
         baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
-    bool canUseStaticAlloca =
-        (parDim.isThreadX() || arrayAccum) &&
-        canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack);
-    if (canUseStaticAlloca || canUseDynamicAlloca) {
+    if ((parDim.isThreadX() || arrayAccum) &&
+        (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
+         canUseDynamicAlloca)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy,
                                               privatizeOp.getDynamicSizes());
       if (arrayAccum) {
@@ -3337,16 +3325,20 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
   // it is too large. For a dynamically-shaped accumulator the type conveys no
   // size, so classify from par_dims (which the producer sets to the reduction's
   // actual parallel scope): a thread dimension means per-thread storage.
+  Operation *rootOp = unwrapMemRefConversion(memref).getDefiningOp();
+  bool isExplicitlyShared =
+      isa_and_nonnull<memref::AllocOp, acc::GPUSharedMemoryOp>(rootOp);
   bool isPerThreadPrivate;
   if (memrefTy.hasStaticShape()) {
-    Operation *rootOp = unwrapMemRefConversion(memref).getDefiningOp();
     isPerThreadPrivate =
-        !isa_and_nonnull<memref::AllocOp>(rootOp) &&
+        !isExplicitlyShared &&
         canUseStackAlloca(memrefTy, loc, options.maxThreadPrivateStack);
   } else {
-    isPerThreadPrivate = llvm::any_of(
-        op.getParDims().getArray(),
-        [](mlir::acc::GPUParallelDimAttr d) { return d.isAnyThread(); });
+    isPerThreadPrivate = !isExplicitlyShared &&
+                         llvm::any_of(op.getParDims().getArray(),
+                                      [](mlir::acc::GPUParallelDimAttr d) {
+                                        return d.isThreadX();
+                                      });
   }
   if (!isPerThreadPrivate) {
     // Block-shared accumulator: no-op only when the accumulate spans a block

@@ -84,6 +84,27 @@ func.func @array_reduction_small_shared() {
   return
 }
 
+// CHECK-LABEL: func.func @array_reduction_dynamic_shared
+// CHECK: acc.gpu_shared_memory
+// CHECK-NOT: gpu.all_reduce
+func.func @array_reduction_dynamic_shared(%n: index) {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx) ins(%ext = %n) : (index) {
+    %shared = acc.gpu_shared_memory(%ext)
+        {num_copies = 1 : i64, static_upper_bound_bytes = 4096 : i64}
+        : (index) -> memref<?xi32, #gpu.address_space<workgroup>>
+    %bounds = acc.bounds extent(%ext : index)
+    acc.reduction_accumulate_array %shared bounds(%bounds) <add>
+        : memref<?xi32, #gpu.address_space<workgroup>>
+        {par_dims = #acc<par_dims[block_x, thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
 // CHECK-LABEL: func.func @array_reduction_strided_extent
 // CHECK: gpu.launch
 // CHECK: %[[LB:.*]] = arith.constant 1 : index
@@ -162,6 +183,33 @@ func.func @rank_two_array_reduction() {
   return
 }
 
+// CHECK-LABEL: func.func @rank_two_array_reduction_thread_y
+// CHECK: gpu.launch
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: gpu.all_reduce
+// CHECK: gpu.terminator
+func.func @rank_two_array_reduction_thread_y() {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %ty = acc.par_width %c128 {par_dim = #acc.par_dim<thread_y>}
+  %private = acc.privatize [#acc<par_dims[block_x, thread_y]>]
+      : () -> !acc.private_type<memref<2x3xi32>>
+  acc.compute_region launch(%kbx = %bx, %kty = %ty)
+      ins(%arg = %private) : (!acc.private_type<memref<2x3xi32>>) {
+    %c6 = arith.constant 6 : index
+    %local = acc.private_local %arg
+        {acc.par_dims = #acc<par_dims[block_x, thread_y]>}
+        : (!acc.private_type<memref<2x3xi32>>) -> memref<2x3xi32>
+    %bounds = acc.bounds extent(%c6 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        : memref<2x3xi32>
+        {par_dims = #acc<par_dims[block_x, thread_y]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
 // CHECK-LABEL: func.func @rank_three_array_reduction
 // CHECK: %[[R3_ALLOCA:.*]] = memref.alloca() : memref<2x2x2xi32>
 // CHECK: scf.for %[[R3_I:.*]] =
@@ -211,6 +259,38 @@ func.func @dynamic_rank_two_array_reduction(%m: index, %n: index) {
   %c128 = arith.constant 128 : index
   %extent = arith.muli %m, %n : index
   %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  %private = acc.privatize(%m, %n) [#acc<par_dims[block_x, thread_x]>]
+      : (index, index) -> !acc.private_type<memref<?x?xi32>>
+  acc.kernel_environment {
+    acc.compute_region launch(%kbx = %bx, %ktx = %tx)
+        ins(%arg = %private, %ext = %extent)
+        : (!acc.private_type<memref<?x?xi32>>, index) {
+      %local = acc.private_local %arg
+          {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
+          : (!acc.private_type<memref<?x?xi32>>) -> memref<?x?xi32>
+      %bounds = acc.bounds extent(%ext : index)
+      acc.reduction_accumulate_array %local bounds(%bounds) <add>
+          : memref<?x?xi32>
+          {par_dims = #acc<par_dims[block_x, thread_x]>}
+      acc.yield
+    } {origin = "acc.parallel"}
+  }
+  return
+}
+
+// Dynamic worker-level storage must remain indexed by thread_y instead of
+// becoming one stack allocation per physical CUDA thread.
+// CHECK-LABEL: func.func @dynamic_rank_two_array_reduction_thread_y
+// CHECK: gpu.launch
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: gpu.all_reduce
+// CHECK: gpu.terminator
+func.func @dynamic_rank_two_array_reduction_thread_y(%m: index, %n: index) {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %extent = arith.muli %m, %n : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
   %ty = acc.par_width %c128 {par_dim = #acc.par_dim<thread_y>}
   %private = acc.privatize(%m, %n) [#acc<par_dims[block_x, thread_y]>]
       : (index, index) -> !acc.private_type<memref<?x?xi32>>
@@ -223,63 +303,6 @@ func.func @dynamic_rank_two_array_reduction(%m: index, %n: index) {
           : (!acc.private_type<memref<?x?xi32>>) -> memref<?x?xi32>
       %bounds = acc.bounds extent(%ext : index)
       acc.reduction_accumulate_array %local bounds(%bounds) <add>
-          : memref<?x?xi32>
-          {par_dims = #acc<par_dims[block_x, thread_y]>}
-      acc.yield
-    } {origin = "acc.parallel"}
-  }
-  return
-}
-
-// CHECK-LABEL: func.func @descriptor_indirect_dynamic_thread_y
-// CHECK: gpu.launch
-// CHECK-NOT: acc.unwrap_private
-// CHECK: %[[INDIRECT_ALLOCA:.*]] = memref.alloca(%{{.*}}, %{{.*}}) : memref<?x?xi32>
-// CHECK: scf.for %[[INDIRECT_I:.*]] =
-// CHECK:   scf.for %[[INDIRECT_J:.*]] =
-// CHECK:     memref.store %{{.*}}, %[[INDIRECT_ALLOCA]][%[[INDIRECT_I]], %[[INDIRECT_J]]] : memref<?x?xi32>
-// CHECK: gpu.all_reduce add
-func.func @descriptor_indirect_dynamic_thread_y(%m: index, %n: index) {
-  %c1 = arith.constant 1 : index
-  %c128 = arith.constant 128 : index
-  %extent = arith.muli %m, %n : index
-  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
-  %ty = acc.par_width %c128 {par_dim = #acc.par_dim<thread_y>}
-  %private_data = acc.privatize(%m, %n)
-      [#acc<par_dims[block_x, thread_y]>]
-      : (index, index) -> !acc.private_type<memref<?x?xi32>>
-  %private_descriptor = acc.privatize [#acc<par_dims[block_x, thread_y]>]
-      : () -> !acc.private_type<memref<1xindex>>
-  acc.kernel_environment {
-    acc.compute_region launch(%kbx = %bx, %kty = %ty)
-        ins(%arg_data = %private_data, %arg_descriptor = %private_descriptor,
-            %ext = %extent)
-        : (!acc.private_type<memref<?x?xi32>>,
-           !acc.private_type<memref<1xindex>>, index) {
-      %c0 = arith.constant 0 : index
-      %c1_k = arith.constant 1 : index
-      %c0_i32 = arith.constant 0 : i32
-      %local_data = acc.private_local %arg_data
-          {acc.par_dims = #acc<par_dims[block_x, thread_y]>}
-          : (!acc.private_type<memref<?x?xi32>>) -> memref<?x?xi32>
-      %local_descriptor = acc.private_local %arg_descriptor
-          {acc.par_dims = #acc<par_dims[block_x, thread_y]>}
-          : (!acc.private_type<memref<1xindex>>) -> memref<1xindex>
-      %m_dim = memref.dim %local_data, %c0 : memref<?x?xi32>
-      %n_dim = memref.dim %local_data, %c1_k : memref<?x?xi32>
-      scf.for %i = %c0 to %m_dim step %c1_k {
-        scf.for %j = %c0 to %n_dim step %c1_k {
-          memref.store %c0_i32, %local_data[%i, %j] : memref<?x?xi32>
-        }
-      }
-      %descriptor = builtin.unrealized_conversion_cast %local_data
-          : memref<?x?xi32> to index
-      memref.store %descriptor, %local_descriptor[%c0] : memref<1xindex>
-      %loaded_descriptor = memref.load %local_descriptor[%c0] : memref<1xindex>
-      %descriptor_value = builtin.unrealized_conversion_cast %loaded_descriptor
-          : index to memref<?x?xi32>
-      %bounds = acc.bounds extent(%ext : index)
-      acc.reduction_accumulate_array %descriptor_value bounds(%bounds) <add>
           : memref<?x?xi32>
           {par_dims = #acc<par_dims[block_x, thread_y]>}
       acc.yield
