@@ -341,8 +341,9 @@ define <4 x i32> @gep013_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceab
 
 define <4 x i32> @load_insert_large_offset(ptr align 16 dereferenceable(17179869188) %p) {
 ; CHECK-LABEL: @load_insert_large_offset(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 17179869184
+; CHECK-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %gep = getelementptr inbounds i8, ptr %p, i64 17179869184
