@@ -3528,10 +3528,9 @@ Sema::NamedReturnInfo Sema::getNamedReturnInfo(const VarDecl *VD) {
 
   QualType VDType = VD->getType();
 
-  if (const AutoType *AT =
-        VDType.getCanonicalType()->getContainedAutoType())
-  if (!AT->isDeduced())
-    return NamedReturnInfo();
+  if (const AutoType *AT = VDType.getCanonicalType()->getContainedAutoType())
+    if (!AT->isDeduced())
+      return NamedReturnInfo();
 
   if (VDType->isObjectType()) {
     // C++17 [class.copy.elision]p3:
