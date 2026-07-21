@@ -474,6 +474,8 @@ add_entrypoint_object(
   HDRS
     ../tgammabf16.h
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.__support.math.tgammabf16
 )
 
