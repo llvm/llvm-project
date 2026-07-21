@@ -1066,7 +1066,7 @@ private:
             IndexReg = TmpReg;
             TmpReg = MCRegister::NoRegister;
             if (TmpScale.has_value() && checkScale(TmpScale.value(), ErrMsg)) {
-                return true;
+              return true;
             }
             Scale = TmpScale.value_or(0);
           } else {
