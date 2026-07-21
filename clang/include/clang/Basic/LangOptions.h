@@ -546,6 +546,10 @@ public:
   /// A list of all -fno-builtin-* function names (e.g., memset).
   std::vector<std::string> NoBuiltinFuncs;
 
+  /// List of mangled variable names to preserve as loadtime comment
+  /// variables.
+  std::vector<std::string> LoadTimeCommentVars;
+
   /// A prefix map for __FILE__, __BASE_FILE__ and __builtin_FILE().
   std::map<std::string, std::string, std::greater<std::string>> MacroPrefixMap;
 

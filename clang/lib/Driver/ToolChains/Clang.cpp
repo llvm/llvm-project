@@ -6410,7 +6410,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   else if (UnwindTables)
      CmdArgs.push_back("-funwind-tables=1");
 
-  // Forward loadtime-comment vars option to cc1 only on AIX targets.
+  // Forward the loadtime-comment vars option to cc1 only on targets that
+  // support it.
   if (Arg *A = Args.getLastArg(options::OPT_mloadtime_comment_vars_EQ)) {
     if (Triple.isOSAIX())
       A->render(Args, CmdArgs);

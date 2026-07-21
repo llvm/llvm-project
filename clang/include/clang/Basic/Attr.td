@@ -4953,6 +4953,16 @@ def LoaderUninitialized : Attr {
   let SimpleHandler = 1;
 }
 
+def LoadTimeCommentVar : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly,
+  // for variables named in '-mloadtime-comment-vars=' that Sema has
+  // validated for preservation as loadtime identifying strings.
+  let Spellings = [];
+  let Subjects = SubjectList<[GlobalVar]>;
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def ObjCExternallyRetained : InheritableAttr {
   let LangOpts = [ObjCAutoRefCount];
   let Spellings = [Clang<"objc_externally_retained">];

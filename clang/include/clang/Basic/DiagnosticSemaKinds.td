@@ -3850,6 +3850,12 @@ def warn_not_xl_compatible
       InGroup<AIXCompat>;
 def note_misaligned_member_used_here : Note<
     "passing byval argument %0 with potentially incompatible alignment here">;
+def warn_loadtime_comment_var_not_preserved
+    : Warning<"%0 named in '-mloadtime-comment-vars=' %select{is "
+              "volatile-qualified|does not have static storage duration|is "
+              "not constant-initialized|is not initialized with a string "
+              "literal}1 and will not be preserved">,
+      InGroup<LoadtimeCommentVar>;
 def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
   "%q0 redeclared without %1 attribute: previous %1 ignored">,
   InGroup<MicrosoftInconsistentDllImport>;

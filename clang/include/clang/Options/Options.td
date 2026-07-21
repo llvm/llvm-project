@@ -4925,7 +4925,7 @@ def mloadtime_comment_vars_EQ
       Visibility<[ClangOption, CC1Option]>,
       HelpText<"Comma-separated list of mangled variable names to preserve as "
                "loadtime identifying strings">,
-      MarshallingInfoStringVector<CodeGenOpts<"LoadTimeCommentVars">>;
+      MarshallingInfoStringVector<LangOpts<"LoadTimeCommentVars">>;
 def mdefault_visibility_export_mapping_EQ : Joined<["-"], "mdefault-visibility-export-mapping=">,
   Values<"none,explicit,all">,
   NormalizedValuesScope<"LangOptions::DefaultVisiblityExportMapping">,
