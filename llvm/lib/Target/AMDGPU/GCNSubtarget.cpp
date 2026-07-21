@@ -232,8 +232,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                   /*TransAl=*/Align(4)) {
 
   // clang-format on
-  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
-  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
+  MaxWavesPerEU = AMDGPU::getMaxWavesPerEU(getTargetID().getGPUKind());
+  EUsPerCU = AMDGPU::getEUsPerCU(getTargetID().getGPUKind(), isCuModeEnabled());
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 

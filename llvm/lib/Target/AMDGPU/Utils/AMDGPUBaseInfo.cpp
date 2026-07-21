@@ -1193,32 +1193,14 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
   return 32768;
 }
 
-unsigned getEUsPerCU(const MCSubtargetInfo &STI) {
-  // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share".
-
-  // GFX12.5 only supports CU mode, which contains four SIMDs.
-  if (isGFX1250(STI)) {
-    assert(STI.getFeatureBits().test(FeatureCuMode));
-    return 4;
-  }
-
-  // For gfx10 in CU mode the functional block is the CU, which contains
-  // two SIMDs.
-  if (isGFX10Plus(STI) && STI.getFeatureBits().test(FeatureCuMode))
-    return 2;
-
-  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
-  // contains two CUs, so a total of four SIMDs.
-  return 4;
-}
-
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
                                unsigned FlatWorkGroupSize) {
   assert(FlatWorkGroupSize != 0);
   if (!STI.getTargetTriple().isAMDGCN())
     return 8;
-  unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool CuMode = STI.getFeatureBits().test(FeatureCuMode);
+  unsigned MaxWaves = getMaxWavesPerEU(Kind) * getEUsPerCU(Kind, CuMode);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
   if (N == 1) {
     // Single-wave workgroups don't consume barrier resources.
@@ -1234,19 +1216,12 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
 
 unsigned getMinWavesPerEU(const MCSubtargetInfo &STI) { return 1; }
 
-unsigned getMaxWavesPerEU(const MCSubtargetInfo &STI) {
-  // FIXME: Need to take scratch memory into account.
-  if (isGFX90A(STI))
-    return 8;
-  if (!isGFX10Plus(STI))
-    return 10;
-  return hasGFX10_3Insts(STI) ? 16 : 20;
-}
-
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                                    unsigned FlatWorkGroupSize) {
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool CuMode = STI.getFeatureBits().test(FeatureCuMode);
   return divideCeil(getWavesPerWorkGroup(STI, FlatWorkGroupSize),
-                    getEUsPerCU(STI));
+                    getEUsPerCU(Kind, CuMode));
 }
 
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI) { return 1; }
@@ -1284,10 +1259,10 @@ unsigned getMinNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU) {
   if (Version.Major >= 10)
     return 0;
 
-  if (WavesPerEU >= getMaxWavesPerEU(STI))
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  if (WavesPerEU >= getMaxWavesPerEU(Kind))
     return 0;
 
-  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   unsigned MinNumSGPRs =
       getSGPRBudgetPerWave(getTotalNumSGPRs(Kind), WavesPerEU + 1,
                            getSGPRTrapHandlerReserve(STI),
@@ -1361,28 +1336,6 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo &STI, unsigned NumSGPRs) {
          1;
 }
 
-unsigned getVGPRAllocGranule(const MCSubtargetInfo &STI,
-                             unsigned DynamicVGPRBlockSize,
-                             std::optional<bool> EnableWavefrontSize32) {
-  if (STI.getFeatureBits().test(FeatureGFX90AInsts))
-    return 8;
-
-  if (DynamicVGPRBlockSize != 0)
-    return DynamicVGPRBlockSize;
-
-  bool IsWave32 = EnableWavefrontSize32
-                      ? *EnableWavefrontSize32
-                      : STI.getFeatureBits().test(FeatureWavefrontSize32);
-
-  if (STI.getFeatureBits().test(Feature1536VGPRs))
-    return IsWave32 ? 24 : 12;
-
-  if (hasGFX10_3Insts(STI))
-    return IsWave32 ? 16 : 8;
-
-  return IsWave32 ? 8 : 4;
-}
-
 unsigned getVGPREncodingGranule(const MCSubtargetInfo &STI,
                                 std::optional<bool> EnableWavefrontSize32) {
   if (STI.getFeatureBits().test(FeatureGFX90AInsts))
@@ -1400,44 +1353,14 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo &STI,
 
 unsigned getArchVGPRAllocGranule() { return 4; }
 
-unsigned getTotalNumVGPRs(const MCSubtargetInfo &STI) {
-  if (STI.getFeatureBits().test(FeatureGFX90AInsts))
-    return 512;
-  if (!isGFX10Plus(STI))
-    return 256;
-  bool IsWave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
-  if (STI.getFeatureBits().test(Feature1536VGPRs))
-    return IsWave32 ? 1536 : 768;
-  return IsWave32 ? 1024 : 512;
-}
-
-unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI) {
-  const auto &Features = STI.getFeatureBits();
-  if (Features.test(Feature1024AddressableVGPRs))
-    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
-  return 256;
-}
-
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo &STI,
-                                unsigned DynamicVGPRBlockSize) {
-  const auto &Features = STI.getFeatureBits();
-  if (Features.test(FeatureGFX90AInsts))
-    return 512;
-
-  if (DynamicVGPRBlockSize != 0) {
-    // On GFX12 we can allocate at most MaxDynamicVGPRBlocks blocks of VGPRs.
-    return MaxDynamicVGPRBlocks *
-           getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
-  }
-  return getAddressableNumArchVGPRs(STI);
-}
-
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo &STI,
                                       unsigned NumVGPRs,
                                       unsigned DynamicVGPRBlockSize) {
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool Wave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
   return getNumWavesPerEUWithNumVGPRs(
-      NumVGPRs, getVGPRAllocGranule(STI, DynamicVGPRBlockSize),
-      getMaxWavesPerEU(STI), getTotalNumVGPRs(STI));
+      NumVGPRs, getVGPRAllocGranule(Kind, DynamicVGPRBlockSize, Wave32),
+      getMaxWavesPerEU(Kind), getTotalNumVGPRs(Kind, Wave32));
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
@@ -1460,12 +1383,12 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
 }
 
 unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs) {
-  unsigned MaxWaves = getMaxWavesPerEU(STI);
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  unsigned MaxWaves = getMaxWavesPerEU(Kind);
 
   if (!isSGPROccupancyLimited(STI))
     return MaxWaves;
 
-  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   return getOccupancyWithNumSGPRs(SGPRs, MaxWaves, getTotalNumSGPRs(Kind),
                                   getSGPRAllocGranule(Kind),
                                   getSGPRTrapHandlerReserve(STI));
@@ -1483,14 +1406,16 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
   if (DynamicVGPREnabled)
     return 0;
 
-  unsigned MaxWavesPerEU = getMaxWavesPerEU(STI);
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool Wave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
+  unsigned MaxWavesPerEU = getMaxWavesPerEU(Kind);
   if (WavesPerEU >= MaxWavesPerEU)
     return 0;
 
-  unsigned TotNumVGPRs = getTotalNumVGPRs(STI);
+  unsigned TotNumVGPRs = getTotalNumVGPRs(Kind, Wave32);
   unsigned AddrsableNumVGPRs =
-      getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
-  unsigned Granule = getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
+      getAddressableNumVGPRs(Kind, DynamicVGPRBlockSize, Wave32);
+  unsigned Granule = getVGPRAllocGranule(Kind, DynamicVGPRBlockSize, Wave32);
   unsigned MaxNumVGPRs = alignDown(TotNumVGPRs / WavesPerEU, Granule);
 
   if (MaxNumVGPRs == alignDown(TotNumVGPRs / MaxWavesPerEU, Granule))
@@ -1512,13 +1437,15 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
 
   // In dynamic VGPR mode, WavesPerEU does not imply a VGPR limit.
   bool DynamicVGPREnabled = (DynamicVGPRBlockSize != 0);
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool Wave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
   unsigned MaxNumVGPRs =
       DynamicVGPREnabled
-          ? getTotalNumVGPRs(STI)
-          : alignDown(getTotalNumVGPRs(STI) / WavesPerEU,
-                      getVGPRAllocGranule(STI, DynamicVGPRBlockSize));
+          ? getTotalNumVGPRs(Kind, Wave32)
+          : alignDown(getTotalNumVGPRs(Kind, Wave32) / WavesPerEU,
+                      getVGPRAllocGranule(Kind, DynamicVGPRBlockSize, Wave32));
   unsigned AddressableNumVGPRs =
-      getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
+      getAddressableNumVGPRs(Kind, DynamicVGPRBlockSize, Wave32);
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
@@ -1533,9 +1460,12 @@ unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo &STI,
                                    unsigned NumVGPRs,
                                    unsigned DynamicVGPRBlockSize,
                                    std::optional<bool> EnableWavefrontSize32) {
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool Wave32 = EnableWavefrontSize32
+                    ? *EnableWavefrontSize32
+                    : STI.getFeatureBits().test(FeatureWavefrontSize32);
   return getGranulatedNumRegisterBlocks(
-      NumVGPRs,
-      getVGPRAllocGranule(STI, DynamicVGPRBlockSize, EnableWavefrontSize32));
+      NumVGPRs, getVGPRAllocGranule(Kind, DynamicVGPRBlockSize, Wave32));
 }
 } // end namespace IsaInfo
 
