@@ -23,8 +23,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator<_Tp*> rbegin(_Tp (&__array)[_Np]) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator<_Tp*>
+rbegin(_Tp (&__array)[_Np]) noexcept {
   return reverse_iterator<_Tp*>(__array + _Np);
 }
 
