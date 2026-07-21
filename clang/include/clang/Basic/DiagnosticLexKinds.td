@@ -137,7 +137,7 @@ def err_character_not_allowed : Error<
 def err_character_not_allowed_identifier : Error<
   "character <U+%0> not allowed %select{in|at the start of}1 an identifier">;
 def ext_unicode_whitespace : ExtWarn<
-  "treating character <U+%0> as whitespace">,
+  "treating character %0 as whitespace">,
   InGroup<DiagGroup<"unicode-whitespace">>, DefaultError;
 def warn_utf8_symbol_homoglyph : Warning<
   "treating Unicode character <U+%0> as an identifier character rather than "
