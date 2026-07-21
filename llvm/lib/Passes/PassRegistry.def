@@ -643,7 +643,7 @@ FUNCTION_PASS_WITH_PARAMS(
     parseLoopUnrollOptions,
     "O0;O1;O2;O3;full-unroll-max=N;no-partial;partial;no-peeling;peeling;"
     "no-profile-peeling;profile-peeling;no-runtime;runtime;no-upperbound;"
-    "upperbound")
+    "upperbound;prepare-for-lto")
 FUNCTION_PASS_WITH_PARAMS(
     "loop-vectorize", "LoopVectorizePass",
     [](LoopVectorizeOptions Opts) { return LoopVectorizePass(Opts); },
