@@ -5423,8 +5423,8 @@ static ComplexComparePattern detectComplexCompareEq(Block &block) {
 }
 
 /// Emit an IEEE-754-correct `cmpxchg` for a complex (struct-typed) atomic
-/// compare with `fcmp oeq`. The old value of X is returned (as the complex struct
-/// type) in \p oldComplex and the success flag (i1) in \p cmpOk.
+/// compare with `fcmp oeq`. The old value of X is returned (as the complex
+/// struct type) in \p oldComplex and the success flag (i1) in \p cmpOk.
 static void emitComplexAtomicCmpXchg(llvm::IRBuilderBase &builder,
                                      llvm::Value *llvmX, llvm::Type *complexTy,
                                      llvm::Value *eVal, llvm::Value *dVal,
