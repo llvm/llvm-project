@@ -81,8 +81,8 @@ struct BranchBody {
 std::vector<BranchBody> collectBranchBodies(Function &F) {
   std::vector<BranchBody> Bodies;
   for (BasicBlock &BB : F) {
-    auto *BI = dyn_cast<BranchInst>(BB.getTerminator());
-    if (!BI || !BI->isConditional())
+    auto *BI = dyn_cast<CondBrInst>(BB.getTerminator());
+    if (!BI)
       continue;
     if (BI->getSuccessor(0) == BI->getSuccessor(1))
       continue;
@@ -95,7 +95,7 @@ std::vector<BranchBody> collectBranchBodies(Function &F) {
 /// Does the clone prove that this branch edge is never taken? The bodies of
 /// all Unknown branches have already been replaced with 'unreachable', so
 /// the condition is evaluated on the cleaned-up code.
-bool isEdgeProvenDead(ScalarEvolution &SE, BranchInst *BI, unsigned SuccIdx) {
+bool isEdgeProvenDead(ScalarEvolution &SE, CondBrInst *BI, unsigned SuccIdx) {
   Value *Cond = BI->getCondition();
   if (auto *CI = dyn_cast<ConstantInt>(Cond))
     return CI->isOne() ? SuccIdx == 1 : SuccIdx == 0;
@@ -144,7 +144,7 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
     if (B.St != Status::Unknown)
       continue;
     auto *BB = cast<BasicBlock>(VMap[B.BranchBB]);
-    auto *BI = cast<BranchInst>(BB->getTerminator());
+    auto *BI = cast<CondBrInst>(BB->getTerminator());
     if (!TrapBB) {
       TrapBB = BasicBlock::Create(Ctx, "dbe.unreachable", Clone);
       new UnreachableInst(Ctx, TrapBB);
@@ -181,8 +181,8 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
     FunctionAnalysisManager FAM = makePrivateFAM();
     auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(*Clone);
     for (auto &[B, BB] : ToCheck) {
-      auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-      if (!BI || !BI->isConditional()) {
+      auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+      if (!BI) {
         // Something rewrote the branch under test; assume reachable.
         B->St = Status::ProvenReachable;
         Changed = true;
@@ -204,8 +204,8 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
 bool foldDeadBranches(Function &F, ArrayRef<BranchBody> Dead) {
   bool Changed = false;
   for (const BranchBody &B : Dead) {
-    auto *BI = dyn_cast<BranchInst>(B.BranchBB->getTerminator());
-    if (!BI || !BI->isConditional())
+    auto *BI = dyn_cast<CondBrInst>(B.BranchBB->getTerminator());
+    if (!BI)
       continue; // Already folded together with a parent body.
     LLVM_DEBUG(dbgs() << "DBE: folding dead edge " << B.BranchBB->getName()
                       << " -> "
