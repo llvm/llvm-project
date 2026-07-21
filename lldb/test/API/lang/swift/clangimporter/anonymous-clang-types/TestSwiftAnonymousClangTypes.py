@@ -6,7 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftAnonymousClangTypes(lldbtest.TestBase):
     @swiftTest
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows
     def test(self):
         self.build()
 

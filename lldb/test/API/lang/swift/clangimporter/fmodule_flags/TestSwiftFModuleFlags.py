@@ -9,7 +9,7 @@ class TestSwiftFModuleFlags(TestBase):
     @skipIfDarwinEmbedded
     @swiftTest
     @skipEmbeddedSwiftOnLinux # Failed to load SwiftCore.so
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows # module 'Swift' cannot be imported in embedded mode
     def test(self):
         """Test that -fmodule flags get stripped out"""
         self.build()
