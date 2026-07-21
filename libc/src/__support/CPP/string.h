@@ -12,10 +12,8 @@
 #include "hdr/func/free.h"
 #include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"
-#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
-#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -78,7 +76,7 @@ private:
     capacity_ = new_capacity;
   }
 
-  // Returns the capacity this string should have after growing to fit new_size.
+  // Returns the capacity this string should grow to for a given size.
   LIBC_INLINE size_t capacity_needed_for_size(size_t new_size) {
     size_t new_capacity = new_size + 1; // +1 for the terminating '\0'
     if (new_capacity <= capacity_)
@@ -92,17 +90,21 @@ private:
     return new_capacity;
   }
 
-  // Replaces the current buffer with a larger one.
-  // The first `keep_size` bytes of the current buffer will be copied over,
-  // after which `new_data` will be appended.
-  LIBC_INLINE void grow_and_replace(size_t keep_size,
+  /**
+   * Replaces the current buffer with a new larger one.
+   *
+   * @param keep_prefix_size Prefix length from the current buffer to keep.
+   * @param new_data Data to append after the kept prefix.
+   */
+  LIBC_INLINE void grow_and_replace(size_t keep_prefix_size,
                                     cpp::string_view new_data) {
-    size_t new_size = keep_size + new_data.size();
+    size_t new_size = keep_prefix_size + new_data.size();
     size_t new_capacity = capacity_needed_for_size(new_size);
     char *new_buffer = malloc_or_die(new_capacity);
 
-    inline_memcpy(new_buffer, buffer_, keep_size);
-    inline_memcpy(new_buffer + keep_size, new_data.data(), new_data.size());
+    inline_memcpy(new_buffer, buffer_, keep_prefix_size);
+    inline_memcpy(new_buffer + keep_prefix_size, new_data.data(),
+                  new_data.size());
 
     move_assign_from_buffer(new_buffer, new_capacity, new_size);
     set_size_and_add_null_character(new_size);
@@ -136,7 +138,7 @@ public:
     }
 
     if (capacity_ <= view.size()) {
-      grow_and_replace(0, view);
+      grow_and_replace(/* keep_prefix_size= */ 0, view);
       return *this;
     }
 
@@ -199,13 +201,12 @@ public:
     if (new_capacity <= capacity_)
       return;
 
-    bool is_empty_string = buffer_ == get_empty_string();
-    buffer_ = realloc_or_die(is_empty_string ? nullptr : buffer_, new_capacity);
+    buffer_ = realloc_or_die(buffer_ == get_empty_string() ? nullptr : buffer_,
+                             new_capacity);
     capacity_ = new_capacity;
 
-    // Add null character if case we reallocated out of the empty buffer.
-    if (is_empty_string)
-      set_size_and_add_null_character(0);
+    // Add null character in case we reallocated out of the empty buffer.
+    set_size_and_add_null_character(size_);
   }
 
   LIBC_INLINE void resize(size_t size) {
@@ -245,7 +246,7 @@ public:
       return *this;
 
     if (capacity_ - size_ <= view.size()) {
-      grow_and_replace(size_, view);
+      grow_and_replace(/* keep_prefix_size= */ size_, view);
       return *this;
     }
 

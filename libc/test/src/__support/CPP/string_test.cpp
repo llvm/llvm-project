@@ -261,24 +261,33 @@ TEST(LlvmLibcStringTest, ToString) {
 }
 
 TEST(LlvmLibcStringTest, SelfAssignTest) {
-  string s("abcdefg");
+  string_view alphabet("abcdefghijklmnopqrstuvwxyz");
+
+  // Test with a string long enough to where memcpy'ing bytes internal
+  // to the string may fail.
+  string complicated_string;
+  for (size_t i = 0; i < 100; i++)
+    complicated_string += alphabet[i % alphabet.size()];
+
+  string s(complicated_string);
+
   s = string_view(s).substr(1);
-  ASSERT_STREQ(s.c_str(), "bcdefg");
+  ASSERT_EQ(string_view(s), string_view(complicated_string).substr(1));
 }
 
 TEST(LlvmLibcStringTest, SelfAssignAtCapacityTest) {
   string s("aaa");
 
   // Append until the string is at its capacity
-  // to exercise self-appending past capacity.
+  // to exercise self-assigning past capacity.
   while (s.size() + 1 < s.capacity())
     s += 'a';
   ASSERT_EQ(s.capacity(), s.size() + 1);
 
+  // Force a resize by assigning to a longer string.
   string longer_string(s.size() + 1, 'b');
-
-  // Force a resize,
   s = string_view(longer_string);
+
   ASSERT_EQ(s, longer_string);
 }
 
