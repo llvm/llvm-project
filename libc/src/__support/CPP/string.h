@@ -19,6 +19,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/memory_utils/inline_memmove.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h" // string_length
 
@@ -34,6 +35,8 @@ char *realloc_or_die(char *ptr, size_t size) {
   LIBC_CRASH_ON_NULLPTR(new_ptr);
   return reinterpret_cast<char *>(new_ptr);
 }
+
+char *malloc_or_die(size_t size) { return realloc_or_die(nullptr, size); }
 
 } // namespace
 
@@ -63,13 +66,46 @@ private:
       buffer_[size_] = NULL_CHARACTER;
   }
 
-  // Whether ptr lies within this string's buffer.
-  LIBC_INLINE bool addr_in_string_bounds(const char *ptr) {
-    uintptr_t addr = reinterpret_cast<uintptr_t>(ptr);
-    uintptr_t start = reinterpret_cast<uintptr_t>(data());
-    uintptr_t end = start + capacity_;
+  // Assigns the new buffer, capacity, and size to this string,
+  // freeing the current internal buffer.
+  void move_assign_from_buffer(char *new_buffer, size_t new_capacity,
+                               size_t new_size) {
+    if (buffer_ != get_empty_string())
+      ::free(buffer_);
 
-    return start <= addr && addr < end;
+    buffer_ = new_buffer;
+    size_ = new_size;
+    capacity_ = new_capacity;
+  }
+
+  // Returns the capacity this string should have after growing to fit new_size.
+  LIBC_INLINE size_t capacity_needed_for_size(size_t new_size) {
+    size_t new_capacity = new_size + 1; // +1 for the terminating '\0'
+    if (new_capacity <= capacity_)
+      return capacity_;
+
+    // We extend the capacity to amortize buffer_ reallocations.
+    // We choose to augment the value by 11 / 8, this is about +40% and division
+    // by 8 is cheap. We guard the extension so the operation doesn't overflow.
+    if (new_capacity < SIZE_MAX / 11)
+      new_capacity = new_capacity * 11 / 8;
+    return new_capacity;
+  }
+
+  // Replaces the current buffer with a larger one.
+  // The first `keep_size` bytes of the current buffer will be copied over,
+  // after which `new_data` will be appended.
+  LIBC_INLINE void grow_and_replace(size_t keep_size,
+                                    cpp::string_view new_data) {
+    size_t new_size = keep_size + new_data.size();
+    size_t new_capacity = capacity_needed_for_size(new_size);
+    char *new_buffer = malloc_or_die(new_capacity);
+
+    inline_memcpy(new_buffer, buffer_, keep_size);
+    inline_memcpy(new_buffer + keep_size, new_data.data(), new_data.size());
+
+    move_assign_from_buffer(new_buffer, new_capacity, new_size);
+    set_size_and_add_null_character(new_size);
   }
 
 public:
@@ -93,30 +129,34 @@ public:
     inline_memset((void *)buffer_, static_cast<uint8_t>(value), size_);
   }
 
-  LIBC_INLINE string &operator=(const string &other) {
-    return (*this) = string_view(other);
-  }
+  LIBC_INLINE string &assign(cpp::string_view view) {
+    if (view.empty()) {
+      set_size_and_add_null_character(0);
+      return *this;
+    }
 
-  LIBC_INLINE string &operator=(char other) {
-    return (*this) = string_view(&other, 1);
-  }
+    if (capacity_ <= view.size()) {
+      grow_and_replace(0, view);
+      return *this;
+    }
 
-  LIBC_INLINE string &operator=(string &&other) {
-    if (buffer_ != get_empty_string())
-      ::free(buffer_);
-
-    buffer_ = other.buffer_;
-    size_ = other.size_;
-    capacity_ = other.capacity_;
-    other.reset_no_deallocate();
+    inline_memmove(buffer_, view.data(), view.size());
+    set_size_and_add_null_character(view.size());
     return *this;
   }
 
-  LIBC_INLINE string &operator=(string_view view) {
-    LIBC_ASSERT(!addr_in_string_bounds(view.data()));
+  LIBC_INLINE string &operator=(const string &other) { return assign(other); }
 
-    resize(0);
-    return (*this) += view;
+  LIBC_INLINE string &operator=(char other) {
+    return assign(string_view(&other, 1));
+  }
+
+  LIBC_INLINE string &operator=(string_view view) { return assign(view); }
+
+  LIBC_INLINE string &operator=(string &&other) {
+    move_assign_from_buffer(other.buffer_, other.capacity_, other.size_);
+    other.reset_no_deallocate();
+    return *this;
   }
 
   LIBC_INLINE ~string() {
@@ -154,19 +194,18 @@ public:
     return string_view(buffer_, size_);
   }
 
-  LIBC_INLINE void reserve(size_t new_capacity) {
-    ++new_capacity; // Accounting for the terminating '\0'
+  LIBC_INLINE void reserve(size_t new_size) {
+    size_t new_capacity = capacity_needed_for_size(new_size);
     if (new_capacity <= capacity_)
       return;
-    // We extend the capacity to amortize buffer_ reallocations.
-    // We choose to augment the value by 11 / 8, this is about +40% and division
-    // by 8 is cheap. We guard the extension so the operation doesn't overflow.
-    if (new_capacity < SIZE_MAX / 11)
-      new_capacity = new_capacity * 11 / 8;
 
-    buffer_ = realloc_or_die(buffer_ == get_empty_string() ? nullptr : buffer_,
-                             new_capacity);
+    bool is_empty_string = buffer_ == get_empty_string();
+    buffer_ = realloc_or_die(is_empty_string ? nullptr : buffer_, new_capacity);
     capacity_ = new_capacity;
+
+    // Add null character if case we reallocated out of the empty buffer.
+    if (is_empty_string)
+      set_size_and_add_null_character(0);
   }
 
   LIBC_INLINE void resize(size_t size) {
@@ -191,7 +230,7 @@ public:
     if (buffer_ == get_empty_string()) {
       // Ensure the buffer is heap allocated,
       // so that it may later be passed to `free`.
-      char *res = realloc_or_die(nullptr, 1);
+      char *res = malloc_or_die(1);
       res[0] = '\0';
       return res;
     }
@@ -201,18 +240,25 @@ public:
     return res;
   }
 
-  LIBC_INLINE string &operator+=(string_view rhs) {
-    LIBC_ASSERT(!addr_in_string_bounds(rhs.data()));
+  LIBC_INLINE string &append(cpp::string_view view) {
+    if (view.empty())
+      return *this;
 
-    const size_t new_size = size_ + rhs.size();
-    reserve(new_size);
-    inline_memcpy(buffer_ + size_, rhs.data(), rhs.size());
+    if (capacity_ - size_ <= view.size()) {
+      grow_and_replace(size_, view);
+      return *this;
+    }
+
+    size_t new_size = size_ + view.size();
+    inline_memcpy(buffer_ + size_, view.data(), view.size());
     set_size_and_add_null_character(new_size);
     return *this;
   }
 
+  LIBC_INLINE string &operator+=(string_view rhs) { return append(rhs); }
+
   LIBC_INLINE string &operator+=(const char c) {
-    return *this += string_view(&c, 1);
+    return append(string_view(&c, 1));
   }
 };
 

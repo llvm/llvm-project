@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/func/free.h"
-#include "hdr/signal_macros.h"
 #include "src/__support/CPP/string.h"
 #include "test/UnitTest/Test.h"
 
@@ -261,14 +260,42 @@ TEST(LlvmLibcStringTest, ToString) {
   }
 }
 
-#if !defined(NDEBUG) && defined(ENABLE_SUBPROCESS_TESTS)
-TEST(LlvmLibcStringTest, SelfAssignDebugDeathTest) {
-  string s("abc");
-  ASSERT_DEATH([&]() { s = string_view(s).substr(2); }, WITH_SIGNAL(SIGABRT));
+TEST(LlvmLibcStringTest, SelfAssignTest) {
+  string s("abcdefg");
+  s = string_view(s).substr(1);
+  ASSERT_STREQ(s.c_str(), "bcdefg");
 }
 
-TEST(LlvmLibcStringTest, SelfAppendDebugDeathTest) {
-  string s("abc");
-  ASSERT_DEATH([&]() { s += string_view(s).substr(2); }, WITH_SIGNAL(SIGABRT));
+TEST(LlvmLibcStringTest, SelfAssignAtCapacityTest) {
+  string s("aaa");
+
+  // Append until the string is at its capacity
+  // to exercise self-appending past capacity.
+  while (s.size() + 1 < s.capacity())
+    s += 'a';
+  ASSERT_EQ(s.capacity(), s.size() + 1);
+
+  string longer_string(s.size() + 1, 'b');
+
+  // Force a resize,
+  s = string_view(longer_string);
+  ASSERT_EQ(s, longer_string);
 }
-#endif
+
+TEST(LlvmLibcStringTest, SelfAppendAtCapacityTest) {
+  string s("aaa");
+
+  // Append until the string is at its capacity
+  // to exercise self-appending past capacity.
+  while (s.size() + 1 < s.capacity())
+    s += 'a';
+  ASSERT_EQ(s.capacity(), s.size() + 1);
+
+  string_view view = string_view(s).substr(0, 3);
+  size_t expected_size = s.size() + view.size();
+
+  s += view;
+
+  string expected(expected_size, 'a');
+  ASSERT_EQ(s, expected);
+}
