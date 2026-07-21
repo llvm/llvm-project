@@ -86,9 +86,9 @@ protected:
   // We group the uses based on dominance. Uses that are dominated by one use
   // are all in the same group.
   std::vector<DomGroup> GroupsOfUses;
-  int64_t RestoreCost = 0;
+  int64_t SpillRestoreCost = 0;
   NextUseDistance Dist;
-  int64_t NormalizedRestoreCost = 0;
+  int64_t NormalizedSpillRestoreCost = 0;
   int64_t NormalizedCost = 0;
   CodeGenPlan Plan;
   const SIRegisterInfo *TRI;
@@ -129,14 +129,19 @@ public:
   LaneBitmask getMask() const { return Mask; }
   void addGroup(DomGroup DG) { GroupsOfUses.push_back(DG); }
   auto groups() { return make_range(GroupsOfUses.begin(), GroupsOfUses.end()); }
-  int64_t getRestoreCost() const { return RestoreCost; }
+  int64_t getSpillRestoreCost() const { return SpillRestoreCost; }
+  void setSpillRestoreCost(int64_t NRC) { SpillRestoreCost = NRC; }
   void setNextUseDistance(NextUseDistance NUD) { Dist = NUD; }
   NextUseDistance getNextUseDistance() const { return Dist; }
-  void setNormalizedRestoreCost(int64_t NRC) { NormalizedRestoreCost = NRC; }
-  int64_t getNormalizedRestoreCost() const { return NormalizedRestoreCost; }
+  void setNormalizedSpillRestoreCost(int64_t NRC) {
+    NormalizedSpillRestoreCost = NRC;
+  }
+  int64_t getNormalizedSpillRestoreCost() const {
+    return NormalizedSpillRestoreCost;
+  }
   void setNormalizedCost(int64_t NC) { NormalizedCost = NC; }
   int64_t getNormalizedCost() const { return NormalizedCost; }
-  void calculateRestoreCost();
+  void calculateSpillRestoreCost();
   virtual void generateSpillRestoreInstrs(
       MachineInstr *CurMI,
       DenseMap<Register, DomGroup> &RestoreRegToDomGroup) = 0;
@@ -182,16 +187,16 @@ public:
       DenseMap<Register, DomGroup> &RestoreRegToDomGroup) override;
 };
 
-void SpillOrRestoreCandidate::calculateRestoreCost() {
-  RestoreCost = 0;
+void SpillOrRestoreCandidate::calculateSpillRestoreCost() {
+  SpillRestoreCost = 0;
   for (auto &G : GroupsOfUses) {
     MachineBasicBlock *RestoreBlock = G.getRestoreBlock();
     MachineLoop *RestoreLoop = MLI->getLoopFor(RestoreBlock);
 
     if (RestoreLoop) {
-      RestoreCost += loopWeight(RestoreLoop->getLoopDepth());
+      SpillRestoreCost += loopWeight(RestoreLoop->getLoopDepth());
     } else {
-      RestoreCost += 1;
+      SpillRestoreCost += 1;
     }
   }
 }
@@ -1144,21 +1149,23 @@ static void normalizeCosts(
   if (AllCandidates.empty())
     return;
 
-  int64_t MinRestoreCost = AllCandidates[0]->getRestoreCost();
-  int64_t MaxRestoreCost = AllCandidates[0]->getRestoreCost();
+  int64_t MinSpillRestoreCost = AllCandidates[0]->getSpillRestoreCost();
+  int64_t MaxSpillRestoreCost = AllCandidates[0]->getSpillRestoreCost();
   NextUseDistance MinNextUseDist = AllCandidates[0]->getNextUseDistance();
   NextUseDistance MaxNextUseDist = AllCandidates[0]->getNextUseDistance();
 
   for (const auto &C : AllCandidates) {
-    MinRestoreCost = std::min(MinRestoreCost, C->getRestoreCost());
-    MaxRestoreCost = std::max(MaxRestoreCost, C->getRestoreCost());
+    MinSpillRestoreCost =
+        std::min(MinSpillRestoreCost, C->getSpillRestoreCost());
+    MaxSpillRestoreCost =
+        std::max(MaxSpillRestoreCost, C->getSpillRestoreCost());
     MinNextUseDist = llvm::min(MinNextUseDist, C->getNextUseDistance());
     MaxNextUseDist = llvm::max(MaxNextUseDist, C->getNextUseDistance());
   }
 
   LLVM_DEBUG(dbgs() << "------------------------------------------------\n");
-  LLVM_DEBUG(dbgs() << "RestoreCost (min=" << MinRestoreCost
-                    << ", max=" << MaxRestoreCost << ")\n");
+  LLVM_DEBUG(dbgs() << "SpillRestoreCost (min=" << MinSpillRestoreCost
+                    << ", max=" << MaxSpillRestoreCost << ")\n");
   LLVM_DEBUG({
     dbgs() << "NextUseDist (min=";
     MinNextUseDist.print(dbgs());
@@ -1170,7 +1177,8 @@ static void normalizeCosts(
   // Log-scale normalization.
   static constexpr int64_t Limit = 100;
   double LogMaxNextUseDist = MaxNextUseDist.logSpanFrom(MinNextUseDist);
-  double LogMaxRestoreCost = std::log(MaxRestoreCost - MinRestoreCost + 1);
+  double LogMaxSpillRestoreCost =
+      std::log(MaxSpillRestoreCost - MinSpillRestoreCost + 1);
 
   for (auto &C : AllCandidates) {
     // Log-scale normalization for NextUseDistance.
@@ -1180,29 +1188,33 @@ static void normalizeCosts(
             ? static_cast<int64_t>((LogNextUseDist * Limit) / LogMaxNextUseDist)
             : 0;
 
-    // Log-scale normalization for RestoreCost.
-    double LogRestoreCost = std::log(C->getRestoreCost() - MinRestoreCost + 1);
-    int64_t NormalizedRestoreCost =
-        (LogMaxRestoreCost > 0)
-            ? static_cast<int64_t>((LogRestoreCost * Limit) / LogMaxRestoreCost)
+    // Log-scale normalization for SpillRestoreCost.
+    double LogSpillRestoreCost =
+        std::log(C->getSpillRestoreCost() - MinSpillRestoreCost + 1);
+    int64_t NormalizedSpillRestoreCost =
+        (LogMaxSpillRestoreCost > 0)
+            ? static_cast<int64_t>((LogSpillRestoreCost * Limit) /
+                                   LogMaxSpillRestoreCost)
             : 0;
 
-    // // Outlier penalty for RestoreCost (higher cost is worse for spilling).
-    // bool IsRestoreCostOutlier =
-    //     C->getRestoreCost() > MeanRestoreCost + 2 * StdDevRestoreCost;
-    // if (IsRestoreCostOutlier)
-    //   NormalizedRestoreCost += OutlierBonus;
+    // // Outlier penalty for SpillRestoreCost (higher cost is worse for
+    // spilling). bool IsSpillRestoreCostOutlier =
+    //     C->getSpillRestoreCost() > MeanSpillRestoreCost + 2 *
+    //     StdDevSpillRestoreCost;
+    // if (IsSpillRestoreCostOutlier)
+    //   NormalizedSpillRestoreCost += OutlierBonus;
 
-    C->setNormalizedRestoreCost(NormalizedRestoreCost);
+    C->setNormalizedSpillRestoreCost(NormalizedSpillRestoreCost);
 
     // Combined cost: prefer high next-use distance, low restore cost.
     int64_t NormalizedCost =
-        NormalizedNextUseDist * 0.8 - NormalizedRestoreCost * 0.2;
+        NormalizedNextUseDist * 0.8 - NormalizedSpillRestoreCost * 0.2;
     C->setNormalizedCost(NormalizedCost);
 
     LLVM_DEBUG(dbgs() << "Register " << printReg(C->getCandidateRegister(), TRI)
                       << " with NormalizedCost = " << NormalizedCost
-                      << " , NormalizedRestoreCost = " << NormalizedRestoreCost
+                      << " , NormalizedSpillRestoreCost = "
+                      << NormalizedSpillRestoreCost
                       << " , NormalizedNextUseDist = " << NormalizedNextUseDist
                       << "\n");
   }
@@ -1285,11 +1297,11 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
         Candidate->addGroup(DG);
 
         // Calculate the restore cost.
-        Candidate->calculateRestoreCost();
+        Candidate->calculateSpillRestoreCost();
         Candidate->setNextUseDistance(NextUseDist);
         LLVM_DEBUG(dbgs() << "Restore cost for register = "
                           << printReg(CandidateReg, TRI) << " = "
-                          << Candidate->getRestoreCost() << "\n");
+                          << Candidate->getSpillRestoreCost() << "\n");
         FinalCandidates.push_back(std::move(Candidate));
       } else {
         SetVectorType UsesDominatedByCurMI;
@@ -1318,11 +1330,11 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
           Candidate->addGroup(G);
 
         // Calculate the restore cost.
-        Candidate->calculateRestoreCost();
+        Candidate->calculateSpillRestoreCost();
         Candidate->setNextUseDistance(NextUseDist);
         LLVM_DEBUG(dbgs() << "Restore cost for register = "
                           << printReg(CandidateReg, TRI) << " = "
-                          << Candidate->getRestoreCost() << "\n");
+                          << Candidate->getSpillRestoreCost() << "\n");
         FinalCandidates.push_back(std::move(Candidate));
       }
     } else {
@@ -1421,11 +1433,11 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
         Candidate->addGroup(G);
 
       // Calculate the restore cost.
-      Candidate->calculateRestoreCost();
+      Candidate->calculateSpillRestoreCost();
       Candidate->setNextUseDistance(NextUseDist);
       LLVM_DEBUG(dbgs() << "Restore cost for register = "
                         << printReg(CandidateReg, TRI) << " = "
-                        << Candidate->getRestoreCost() << "\n");
+                        << Candidate->getSpillRestoreCost() << "\n");
       FinalCandidates.push_back(std::move(Candidate));
     }
   }
@@ -1437,8 +1449,8 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
     int64_t Cost1 = Candidate1->getNormalizedCost();
     int64_t Cost2 = Candidate2->getNormalizedCost();
     if (Cost1 == Cost2)
-      return Candidate1->getNormalizedRestoreCost() <
-             Candidate2->getNormalizedRestoreCost();
+      return Candidate1->getNormalizedSpillRestoreCost() <
+             Candidate2->getNormalizedSpillRestoreCost();
     return Cost1 > Cost2;
   });
 
