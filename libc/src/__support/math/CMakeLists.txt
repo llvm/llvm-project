@@ -5555,8 +5555,8 @@ add_header_library(
   HDRS
     tgamma.h
   DEPENDS
-    libc.src.__support.FPUtil.FEnvImpl
-    libc.src.__support.FPUtil.FPBits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )

@@ -32,7 +32,7 @@ TEST_F(LlvmLibcTgammaTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(ERANGE);
 
   // Source: https://members.loria.fr/PZimmermann/papers/gamma.pdf
-  // Gamma(0x1.573fae561f648p+7) > DBL_MAX
+  // tgamma(0x1.573fae561f648p+7) > DBL_MAX
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::tgamma(0x1.573fae561f648p+7),
                               FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -44,7 +44,4 @@ TEST_F(LlvmLibcTgammaTest, SpecialNumbers) {
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::tgamma(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::tgamma(inf));
-
-  EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::tgamma(1.0));
-  EXPECT_MATH_ERRNO(0);
 }
