@@ -562,6 +562,7 @@ static const std::array<Intrinsic::ID, 2> HandleIntrins = {
 static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
   SmallVector<Value *> Worklist = {Ptr};
   SmallVector<IntrinsicInst *> Handles;
+  SmallSetVector<Value *, 4> VisitedPhis;
 
   while (!Worklist.empty()) {
     Value *X = Worklist.pop_back_val();
@@ -569,10 +570,12 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
     if (!X->getType()->isPointerTy() && !X->getType()->isTargetExtTy())
       return {}; // Early exit on store/load into non-resource
 
-    if (auto *Phi = dyn_cast<PHINode>(X))
+    if (auto *Phi = dyn_cast<PHINode>(X)) {
+      if (!VisitedPhis.insert(X))
+        continue;
       for (Use &V : Phi->incoming_values())
         Worklist.push_back(V.get());
-    else if (auto *Select = dyn_cast<SelectInst>(X))
+    } else if (auto *Select = dyn_cast<SelectInst>(X))
       for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
         Worklist.push_back(V);
     else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
