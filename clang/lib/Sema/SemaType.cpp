@@ -8349,6 +8349,19 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     return true;
 
   const FunctionType *fn = unwrapped.get();
+
+  // On amdgcnspirv, __cdecl on an abstract function type has no device-side
+  // equivalent, so normalize it to the device default CC to match an
+  // unadorned function type. Skip named decls and variadic types.
+  if (CC == CC_C && S.getLangOpts().CUDAIsDevice &&
+      S.Context.getTargetInfo().getTriple().isSPIRV() &&
+      state.getDeclarator().mayOmitIdentifier()) {
+    const auto *FnP = dyn_cast<FunctionProtoType>(fn);
+    if (!FnP || !FnP->isVariadic())
+      CC = S.Context.getDefaultCallingConvention(/*IsVariadic=*/false,
+                                                 /*IsCXXMethod=*/false);
+  }
+
   CallingConv CCOld = fn->getCallConv();
   Attr *CCAttr = getCCTypeAttr(S.Context, attr);
 
