@@ -2940,7 +2940,11 @@ struct FormatStyle {
 
   /// Disables formatting completely.
   /// \version 3.7
-  bool DisableFormat;
+  enum struct DisableFormatOptions {
+    DF_Disabled,
+    DF_SortIncludesOnly,
+    DF_Enabled
+  } DisableFormat;
 
   /// Different styles for empty line after access modifiers.
   /// ``EmptyLineBeforeAccessModifier`` configuration handles the number of
