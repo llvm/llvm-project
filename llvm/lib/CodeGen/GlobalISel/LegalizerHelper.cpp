@@ -4942,9 +4942,6 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     if (SrcTy.getScalarType() != DstTy.getScalarType())
       return UnableToLegalize;
 
-    if (SrcTy.getNumElements() < DstTy.getNumElements())
-      return UnableToLegalize;
-
     // extract_subvector = build_vector(extract_element, extract_element, ...)
     SmallVector<Register> ExtractedElements;
     for (uint64_t i = 0; i < DstTy.getNumElements(); i++) {
