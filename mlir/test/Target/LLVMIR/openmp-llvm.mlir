@@ -2619,14 +2619,19 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel1 : f32)
   }
 
-  // Complex equality  →  bitcasted integer cmpxchg with consistent alignment
-  // CHECK: %[[EALLOCA:.*]] = alloca { float, float }, align [[ALIGN:[0-9]+]]
-  // CHECK: %[[DALLOCA:.*]] = alloca { float, float }, align [[ALIGN]]
-  // CHECK: store { float, float } %[[EC]], ptr %[[EALLOCA]], align [[ALIGN]]
-  // CHECK: %[[EINT:.*]] = load i64, ptr %[[EALLOCA]], align [[ALIGN]]
+  // Complex equality  →  component-wise IEEE-754 fcmp, then a cmpxchg that
+  // swaps using x's loaded bit-pattern as the comparand (so -0.0/+0.0 and NaN
+  // follow the scalar float semantics rather than a raw bitwise compare).
+  // CHECK: %[[DALLOCA:.*]] = alloca { float, float }, align [[ALIGN:[0-9]+]]
   // CHECK: store { float, float } %[[DC]], ptr %[[DALLOCA]], align [[ALIGN]]
   // CHECK: %[[DINT:.*]] = load i64, ptr %[[DALLOCA]], align [[ALIGN]]
-  // CHECK: cmpxchg ptr %[[XC]], i64 %[[EINT]], i64 %[[DINT]] monotonic monotonic, align [[ALIGN]]
+  // CHECK: %[[XLOAD:.*]] = load atomic i64, ptr %[[XC]] monotonic, align [[ALIGN]]
+  // CHECK: %[[REEQ:.*]] = fcmp oeq float %[[REX:.*]], %[[REE:.*]]
+  // CHECK: %[[IMEQ:.*]] = fcmp oeq float %[[IMX:.*]], %[[IME:.*]]
+  // CHECK: %[[CEQ:.*]] = and i1 %[[REEQ]], %[[IMEQ]]
+  // CHECK: br i1 %[[CEQ]], label %[[CSWAP:[^,]+]], label %{{.*}}
+  // CHECK: [[CSWAP]]:
+  // CHECK: cmpxchg ptr %[[XC]], i64 %[[XLOAD]], i64 %[[DINT]] monotonic monotonic, align [[ALIGN]]
   omp.atomic.compare %xc : !llvm.ptr {
   ^bb0(%xval : !llvm.struct<(f32, f32)>):
     %re_x = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>

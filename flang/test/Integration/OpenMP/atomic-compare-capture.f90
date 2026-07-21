@@ -102,6 +102,8 @@ end
 ! FIR:           fir.cmpc "oeq"
 ! FIR:         }
 ! LLVM-LABEL: define void @cc_complex_(
+! LLVM:         %[[REEQ:.*]] = fcmp oeq float %[[REX:.*]], %[[REE:.*]]
+! LLVM:         %[[IMEQ:.*]] = fcmp oeq float %[[IMX:.*]], %[[IME:.*]]
 ! LLVM:         cmpxchg ptr %{{.*}}, i64
 ! LLVM:         store { float, float } %{{.*}}, ptr
 subroutine cc_complex(x, e, d, v)
@@ -379,6 +381,8 @@ end
 ! FIR-LABEL: func.func @_QPcc_complex_prefix(
 ! FIR:           omp.atomic.read %{{.*}} : !fir.ref<complex<f32>>, !fir.ref<complex<f32>>, complex<f32>
 ! LLVM-LABEL: define void @cc_complex_prefix_(
+! LLVM:         %[[REEQ:.*]] = fcmp oeq float %[[REX:.*]], %[[REE:.*]]
+! LLVM:         %[[IMEQ:.*]] = fcmp oeq float %[[IMX:.*]], %[[IME:.*]]
 ! LLVM:         %[[RES:.*]] = cmpxchg ptr %{{.*}}, i64
 ! LLVM:         store { float, float } %{{.*}}, ptr
 subroutine cc_complex_prefix(x, e, d, v)
@@ -396,8 +400,10 @@ end
 ! FIR-LABEL: func.func @_QPcc_complex_failonly(
 ! FIR:         } {fail_only}
 ! LLVM-LABEL: define void @cc_complex_failonly_(
-! LLVM:         %[[RES:.*]] = cmpxchg ptr %{{.*}}, i64
-! LLVM:         %[[OK:.*]] = extractvalue { i64, i1 } %[[RES]], 1
+! LLVM:         %[[REEQ:.*]] = fcmp oeq float %[[REX:.*]], %[[REE:.*]]
+! LLVM:         %[[IMEQ:.*]] = fcmp oeq float %[[IMX:.*]], %[[IME:.*]]
+! LLVM:         cmpxchg ptr %{{.*}}, i64
+! LLVM:         %[[OK:.*]] = phi i1
 ! LLVM:         %[[FAILED:.*]] = xor i1 %[[OK]], true
 ! LLVM:         br i1 %[[FAILED]], label %{{.*}}, label %{{.*}}
 ! LLVM:         store { float, float } %{{.*}}, ptr

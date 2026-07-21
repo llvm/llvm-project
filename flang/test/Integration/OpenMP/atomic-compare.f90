@@ -150,32 +150,45 @@ subroutine atomic_compare_real(x, e, d)
   if (x == e) x = d
 end
 
-! Complex(4) equality → type-punned i64 cmpxchg with consistent alignment
+! Complex(4) equality -> component-wise IEEE-754 fcmp, then a cmpxchg that swaps
+! using X's loaded bit-pattern as the comparand (so -0.0/+0.0 and NaN follow the
+! scalar float semantics rather than a raw bitwise compare).
 !CHECK-LABEL: define void @atomic_compare_complex4_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
-!CHECK: %[[EALLOCA:.*]] = alloca { float, float }, align [[ALIGN:[0-9]+]]
-!CHECK: %[[DALLOCA:.*]] = alloca { float, float }, align [[ALIGN]]
-!CHECK: store { float, float } %{{.*}}, ptr %[[EALLOCA]], align [[ALIGN]]
-!CHECK: %[[EINT:.*]] = load i64, ptr %[[EALLOCA]], align [[ALIGN]]
-!CHECK: store { float, float } %{{.*}}, ptr %[[DALLOCA]], align [[ALIGN]]
+!CHECK: %[[EVAL:.*]] = load { float, float }, ptr %[[E]], align 4
+!CHECK: %[[DVAL:.*]] = load { float, float }, ptr %[[D]], align 4
+!CHECK: %[[DALLOCA:.*]] = alloca { float, float }, align [[ALIGN:[0-9]+]]
+!CHECK: store { float, float } %[[DVAL]], ptr %[[DALLOCA]], align [[ALIGN]]
 !CHECK: %[[DINT:.*]] = load i64, ptr %[[DALLOCA]], align [[ALIGN]]
-!CHECK: cmpxchg ptr %[[X]], i64 %[[EINT]], i64 %[[DINT]] monotonic monotonic, align [[ALIGN]]
+!CHECK: %[[XLOAD:.*]] = load atomic i64, ptr %[[X]] monotonic, align [[ALIGN]]
+!CHECK: %[[REEQ:.*]] = fcmp oeq float %[[REX:.*]], %[[REE:.*]]
+!CHECK: %[[IMEQ:.*]] = fcmp oeq float %[[IMX:.*]], %[[IME:.*]]
+!CHECK: %[[EQ:.*]] = and i1 %[[REEQ]], %[[IMEQ]]
+!CHECK: br i1 %[[EQ]], label %[[SWAP:[^,]+]], label %{{.*}}
+!CHECK: [[SWAP]]:
+!CHECK: cmpxchg ptr %[[X]], i64 %[[XLOAD]], i64 %[[DINT]] monotonic monotonic, align [[ALIGN]]
 subroutine atomic_compare_complex4(x, e, d)
   complex :: x, e, d
   !$omp atomic compare
   if (x == e) x = d
 end
 
-! Complex(8) equality → type-punned i128 cmpxchg with consistent alignment
+! Complex(8) equality -> component-wise IEEE-754 fcmp, then an i128 cmpxchg using
+! X's loaded bit-pattern as the comparand.
 !CHECK-LABEL: define void @atomic_compare_complex8_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
-!CHECK: %[[EALLOCA:.*]] = alloca { double, double }, align [[ALIGN:[0-9]+]]
-!CHECK: %[[DALLOCA:.*]] = alloca { double, double }, align [[ALIGN]]
-!CHECK: store { double, double } %{{.*}}, ptr %[[EALLOCA]], align [[ALIGN]]
-!CHECK: %[[EINT:.*]] = load i128, ptr %[[EALLOCA]], align [[ALIGN]]
-!CHECK: store { double, double } %{{.*}}, ptr %[[DALLOCA]], align [[ALIGN]]
+!CHECK: %[[EVAL:.*]] = load { double, double }, ptr %[[E]], align 8
+!CHECK: %[[DVAL:.*]] = load { double, double }, ptr %[[D]], align 8
+!CHECK: %[[DALLOCA:.*]] = alloca { double, double }, align [[ALIGN:[0-9]+]]
+!CHECK: store { double, double } %[[DVAL]], ptr %[[DALLOCA]], align [[ALIGN]]
 !CHECK: %[[DINT:.*]] = load i128, ptr %[[DALLOCA]], align [[ALIGN]]
-!CHECK: cmpxchg ptr %[[X]], i128 %[[EINT]], i128 %[[DINT]] monotonic monotonic, align [[ALIGN]]
+!CHECK: %[[XLOAD:.*]] = load atomic i128, ptr %[[X]] monotonic, align [[ALIGN]]
+!CHECK: %[[REEQ:.*]] = fcmp oeq double %[[REX:.*]], %[[REE:.*]]
+!CHECK: %[[IMEQ:.*]] = fcmp oeq double %[[IMX:.*]], %[[IME:.*]]
+!CHECK: %[[EQ:.*]] = and i1 %[[REEQ]], %[[IMEQ]]
+!CHECK: br i1 %[[EQ]], label %[[SWAP:[^,]+]], label %{{.*}}
+!CHECK: [[SWAP]]:
+!CHECK: cmpxchg ptr %[[X]], i128 %[[XLOAD]], i128 %[[DINT]] monotonic monotonic, align [[ALIGN]]
 subroutine atomic_compare_complex8(x, e, d)
   complex(8) :: x, e, d
   !$omp atomic compare

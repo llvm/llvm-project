@@ -5422,16 +5422,15 @@ static ComplexComparePattern detectComplexCompareEq(Block &block) {
   return result;
 }
 
-/// Emit a bitcast-to-integer `cmpxchg` for a complex (struct-typed) atomic
-/// compare. The expected/desired complex values are spilled to allocas and
-/// reloaded as an integer of the same width, then compared and swapped. Returns
-/// the cmpxchg (result type `{iN, i1}`); `maxAlign` receives the alignment used
-/// so callers can reinterpret the captured old value through memory.
-static llvm::AtomicCmpXchgInst *
-emitComplexAtomicCmpXchg(llvm::IRBuilderBase &builder, llvm::Value *llvmX,
-                         llvm::Type *complexTy, llvm::Value *eVal,
-                         llvm::Value *dVal, llvm::AtomicOrdering atomicOrdering,
-                         bool isWeak, llvm::Align &maxAlign) {
+/// Emit an IEEE-754-correct `cmpxchg` for a complex (struct-typed) atomic
+/// compare with `fcmp oeq`. The old value of X is returned (as the complex struct
+/// type) in \p oldComplex and the success flag (i1) in \p cmpOk.
+static void emitComplexAtomicCmpXchg(llvm::IRBuilderBase &builder,
+                                     llvm::Value *llvmX, llvm::Type *complexTy,
+                                     llvm::Value *eVal, llvm::Value *dVal,
+                                     llvm::AtomicOrdering atomicOrdering,
+                                     bool isWeak, llvm::Value *&oldComplex,
+                                     llvm::Value *&cmpOk) {
   const llvm::DataLayout &DL =
       builder.GetInsertBlock()->getModule()->getDataLayout();
   unsigned totalBits = DL.getTypeStoreSizeInBits(complexTy).getFixedValue();
@@ -5439,28 +5438,76 @@ emitComplexAtomicCmpXchg(llvm::IRBuilderBase &builder, llvm::Value *llvmX,
       llvm::IntegerType::get(builder.getContext(), totalBits);
   llvm::Align complexAlign = DL.getABITypeAlign(complexTy);
   llvm::Align intAlign = DL.getABITypeAlign(intTy);
-  maxAlign = std::max(complexAlign, intAlign);
+  llvm::Align maxAlign = std::max(complexAlign, intAlign);
 
-  llvm::AllocaInst *eAlloca =
-      builder.CreateAlloca(complexTy, nullptr, "cmplx.e");
-  eAlloca->setAlignment(maxAlign);
+  // Spill D to obtain its integer bit pattern for the swap value.
   llvm::AllocaInst *dAlloca =
       builder.CreateAlloca(complexTy, nullptr, "cmplx.d");
   dAlloca->setAlignment(maxAlign);
-
-  builder.CreateAlignedStore(eVal, eAlloca, maxAlign);
-  llvm::Value *eInt =
-      builder.CreateAlignedLoad(intTy, eAlloca, maxAlign, "cmplx.e.int");
   builder.CreateAlignedStore(dVal, dAlloca, maxAlign);
   llvm::Value *dInt =
       builder.CreateAlignedLoad(intTy, dAlloca, maxAlign, "cmplx.d.int");
 
+  // Load the current value of X atomically and reinterpret it as complex.
+  llvm::LoadInst *xCurr =
+      builder.CreateAlignedLoad(intTy, llvmX, maxAlign, "cmplx.x.load");
+  xCurr->setAtomic(llvm::AtomicOrdering::Monotonic);
+  llvm::AllocaInst *xAlloca =
+      builder.CreateAlloca(complexTy, nullptr, "cmplx.x");
+  xAlloca->setAlignment(maxAlign);
+  builder.CreateAlignedStore(xCurr, xAlloca, maxAlign);
+  llvm::Value *xStruct =
+      builder.CreateAlignedLoad(complexTy, xAlloca, maxAlign, "cmplx.x.val");
+
+  // Component-wise IEEE-754 equality: `fcmp oeq` yields false for NaN (so a
+  // NaN component correctly makes the compare fail) and true for +0.0 vs -0.0
+  // (so a zero-sign difference does not spuriously fail the compare).
+  llvm::Value *reX = builder.CreateExtractValue(xStruct, 0);
+  llvm::Value *imX = builder.CreateExtractValue(xStruct, 1);
+  llvm::Value *reE = builder.CreateExtractValue(eVal, 0);
+  llvm::Value *imE = builder.CreateExtractValue(eVal, 1);
+  llvm::Value *reEq = builder.CreateFCmpOEQ(reX, reE, "cmplx.re.eq");
+  llvm::Value *imEq = builder.CreateFCmpOEQ(imX, imE, "cmplx.im.eq");
+  llvm::Value *fpEqual = builder.CreateAnd(reEq, imEq, "cmplx.eq");
+
+  // When the components compare equal, attempt the swap using X's own loaded
+  // bit pattern as the comparand; otherwise the compare fails and X is left
+  // unchanged (the captured old value is the value just loaded).
+  llvm::BasicBlock *curBB = builder.GetInsertBlock();
+  llvm::Function *fn = curBB->getParent();
+  llvm::BasicBlock *swapBB =
+      llvm::BasicBlock::Create(builder.getContext(), "cmplx.atomic.swap", fn);
+  llvm::BasicBlock *exitBB =
+      llvm::BasicBlock::Create(builder.getContext(), "cmplx.atomic.exit", fn);
+  builder.CreateCondBr(fpEqual, swapBB, exitBB);
+
+  builder.SetInsertPoint(swapBB);
   llvm::AtomicOrdering failOrdering =
       llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
-  auto *cmpXchg = builder.CreateAtomicCmpXchg(llvmX, eInt, dInt, maxAlign,
-                                              atomicOrdering, failOrdering);
+  llvm::AtomicCmpXchgInst *cmpXchg = builder.CreateAtomicCmpXchg(
+      llvmX, xCurr, dInt, maxAlign, atomicOrdering, failOrdering);
   cmpXchg->setWeak(isWeak);
-  return cmpXchg;
+  llvm::Value *oldSwap = builder.CreateExtractValue(cmpXchg, 0);
+  llvm::Value *okSwap = builder.CreateExtractValue(cmpXchg, 1);
+  builder.CreateBr(exitBB);
+
+  // Merge the swap and no-swap paths.
+  builder.SetInsertPoint(exitBB);
+  llvm::PHINode *oldIntPHI = builder.CreatePHI(intTy, 2, "cmplx.old.int");
+  oldIntPHI->addIncoming(oldSwap, swapBB);
+  oldIntPHI->addIncoming(xCurr, curBB);
+  llvm::PHINode *okPHI = builder.CreatePHI(builder.getInt1Ty(), 2, "cmplx.ok");
+  okPHI->addIncoming(okSwap, swapBB);
+  okPHI->addIncoming(builder.getFalse(), curBB);
+
+  // Reinterpret the old integer value as the complex struct via memory.
+  llvm::AllocaInst *oldAlloca =
+      builder.CreateAlloca(complexTy, nullptr, "cmplx.old");
+  oldAlloca->setAlignment(maxAlign);
+  builder.CreateAlignedStore(oldIntPHI, oldAlloca, maxAlign);
+  oldComplex = builder.CreateAlignedLoad(complexTy, oldAlloca, maxAlign,
+                                         "cmplx.old.val");
+  cmpOk = okPHI;
 }
 
 /// Holds the extracted comparison pattern information from an atomic compare
@@ -5687,25 +5734,17 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     bool isFailOnly = atomicCaptureOp.getFailOnly();
 
     // Complex equality capture: x is struct-typed, which the OMPIRBuilder
-    // cannot handle, so emit a bitcast-to-integer cmpxchg (as in the
-    // non-capture complex path) and reconstruct the captured value from its
-    // result through memory. Complex only supports the == comparison.
+    // cannot handle, so emit an IEEE-754-correct cmpxchg (as in the non-capture
+    // complex path) and reconstruct the captured value from its result. The
+    // helper compares components with `fcmp oeq` so `-0.0 == +0.0` and `NaN`
+    // are handled as in the scalar float path. Complex only supports the ==
+    // comparison.
     if (llvmXElementType->isStructTy()) {
-      llvm::Align maxAlign;
-      llvm::AtomicCmpXchgInst *cmpXchg = emitComplexAtomicCmpXchg(
-          builder, llvmX, llvmXElementType, eVal, dVal, atomicOrdering,
-          atomicCompareOp.getWeak(), maxAlign);
-
-      llvm::Value *oldInt = builder.CreateExtractValue(cmpXchg, 0);
-      llvm::Value *cmpOk = builder.CreateExtractValue(cmpXchg, 1);
-
-      // Reinterpret the old integer value as the complex struct via memory.
-      llvm::AllocaInst *oldAlloca =
-          builder.CreateAlloca(llvmXElementType, nullptr, "cmplx.old");
-      oldAlloca->setAlignment(maxAlign);
-      builder.CreateAlignedStore(oldInt, oldAlloca, maxAlign);
-      llvm::Value *oldComplex = builder.CreateAlignedLoad(
-          llvmXElementType, oldAlloca, maxAlign, "cmplx.old.val");
+      llvm::Value *oldComplex = nullptr;
+      llvm::Value *cmpOk = nullptr;
+      emitComplexAtomicCmpXchg(builder, llvmX, llvmXElementType, eVal, dVal,
+                               atomicOrdering, atomicCompareOp.getWeak(),
+                               oldComplex, cmpOk);
 
       if (isFailOnly) {
         // v is written only when the compare fails (cmpOk == false).
@@ -6161,10 +6200,13 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
       dVal = materializeValue(yieldOp.getResults()[0]);
     }
 
-    llvm::Align maxAlign;
+    llvm::Value *oldComplex = nullptr;
+    llvm::Value *cmpOk = nullptr;
     emitComplexAtomicCmpXchg(builder, llvmX, llvmXElementType, eVal, dVal,
                              atomicOrdering, atomicCompareOp.getWeak(),
-                             maxAlign);
+                             oldComplex, cmpOk);
+    (void)oldComplex;
+    (void)cmpOk;
 
     // Emit flush after atomic compare if needed (for release, acq_rel,
     // seq_cst orderings).
