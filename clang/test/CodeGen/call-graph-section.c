@@ -7,7 +7,10 @@
 // RUN: -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,MS %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -fexperimental-call-graph-section \
-// RUN: -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefixes=WARN_NO_PROTOTYPE %s
+// RUN: -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefixes=WARN_NO_PROTOTYPE_ITANIUM %s
+
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fexperimental-call-graph-section \
+// RUN: -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefixes=WARN_NO_PROTOTYPE_MS %s
 
 // CHECK-LABEL: define {{(dso_local)?}} void @foo(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID:![0-9]+]]
@@ -20,7 +23,8 @@ void bar() {
   void (*fp)() = foo;
   // ITANIUM: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
   // MS: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
-  // WARN_NO_PROTOTYPE: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'void ()', type string: _ZTSFvE) [-Wcall-graph-section-no-prototype]
+  // WARN_NO_PROTOTYPE_ITANIUM: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'void ()', type string: _ZTSFvE) [-Wcall-graph-section-no-prototype]
+  // WARN_NO_PROTOTYPE_MS: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'void ()', type string: ?6AX@Z) [-Wcall-graph-section-no-prototype]
   fp();
 }
 
@@ -92,7 +96,8 @@ void test_struct_ptr_return() {
   struct my_struct *(*fp)() = create_my_struct;
   // ITANIUM: call {{.*}}, !callee_type [[F_TMY_STRUCT_CT:![0-9]+]]
   // MS: call {{.*}}, !callee_type [[F_TMY_STRUCT_CT:![0-9]+]]
-  // WARN_NO_PROTOTYPE: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'struct my_struct *()', type string: _ZTSFP9my_structE) [-Wcall-graph-section-no-prototype]
+  // WARN_NO_PROTOTYPE_ITANIUM: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'struct my_struct *()', type string: _ZTSFP9my_structE) [-Wcall-graph-section-no-prototype]
+  // WARN_NO_PROTOTYPE_MS: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'struct my_struct *()', type string: ?6APEAUmy_struct@@@Z) [-Wcall-graph-section-no-prototype]
   fp();
 }
 
@@ -102,7 +107,8 @@ void test_no_proto_with_args() {
   void (*fp)() = foo;
   // ITANIUM: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
   // MS: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
-  // WARN_NO_PROTOTYPE: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'void ()', type string: _ZTSFvE) even though arguments are passed at this call site [-Wcall-graph-section-no-prototype]
+  // WARN_NO_PROTOTYPE_ITANIUM: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'void ()', type string: _ZTSFvE) even though arguments are passed at this call site [-Wcall-graph-section-no-prototype]
+  // WARN_NO_PROTOTYPE_MS: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'void ()', type string: ?6AX@Z) even though arguments are passed at this call site [-Wcall-graph-section-no-prototype]
   fp(1);
 }
 
