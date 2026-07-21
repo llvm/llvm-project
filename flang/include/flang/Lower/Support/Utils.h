@@ -28,9 +28,6 @@ class ArrayRef;
 
 namespace Fortran::lower {
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
-using ExplicitSpaceArrayBases =
-    std::variant<const semantics::Symbol *, const evaluate::Component *,
-                 const evaluate::ArrayRef *>;
 // FIXME: needed for privatizeSymbol that does not belong to this header.
 class AbstractConverter;
 class SymMap;
@@ -102,13 +99,10 @@ A flatZip(const A &container1, const A &container2) {
 
 namespace Fortran::lower {
 unsigned getHashValue(const Fortran::lower::SomeExpr *x);
-unsigned getHashValue(const Fortran::lower::ExplicitSpaceArrayBases &x);
 unsigned getHashValue(const Fortran::evaluate::Component *x);
 
 bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y);
-bool isEqual(const Fortran::lower::ExplicitSpaceArrayBases &x,
-             const Fortran::lower::ExplicitSpaceArrayBases &y);
 bool isEqual(const Fortran::evaluate::Component *x,
              const Fortran::evaluate::Component *y);
 
