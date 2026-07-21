@@ -2,24 +2,25 @@
 Test lldb-dap terminated event
 """
 
-import dap_server
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
 import json
-import re
 
-import lldbdap_testcase
-from lldbsuite.test import lldbutil
+from lldbsuite.test.decorators import (
+    skipIfRemote,
+    skipIfTargetDoesNotSupportSharedLibraries,
+    skipIfWindows,
+)
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import InitializedEvent, LaunchArgs
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()
-class TestDAP_eventStatistic(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_eventStatistic(DAPTestCaseBase):
     """
 
     Test case that captures both initialized and terminated events.
 
-    META-ONLY: Intended to succeed TestDAP_terminatedEvent.py, but upstream keeps updating that file, so both that and this file will probably exist for a while.
-
+    META-ONLY: Intended to succeed TestDAP_terminatedEvent.py,
+    but upstream keeps updating that file, so both that and this file will probably exist for a while.
     """
 
     def check_statistics_summary(self, statistics):
@@ -30,7 +31,7 @@ class TestDAP_eventStatistic(lldbdap_testcase.DAPTestCaseBase):
         self.assertNotIn("modules", statistics.keys())
 
     def check_target_summary(self, statistics):
-        # lldb-dap debugs one target at a time
+        # lldb-dap debugs one target at a time.
         target = json.loads(statistics["targets"])[0]
         self.assertIn("totalSharedLibraryEventHitCount", target)
 
@@ -40,7 +41,7 @@ class TestDAP_eventStatistic(lldbdap_testcase.DAPTestCaseBase):
         """
         Terminated Event
         Now contains the statistics of a debug session:
-        metatdata:
+        metadata:
             totalDebugInfoByteSize > 0
             totalDebugInfoEnabled > 0
             totalModuleCountHasDebugInfo > 0
@@ -49,10 +50,13 @@ class TestDAP_eventStatistic(lldbdap_testcase.DAPTestCaseBase):
 
         program_basename = "a.out.stripped"
         program = self.getBuildArtifact(program_basename)
-        self.build_and_launch(program)
-        self.continue_to_exit()
+        session = self.build_and_create_session()
+        process_event = session.launch(LaunchArgs(program))
+        session.verify_process_exited()
 
-        statistics = self.dap_server.wait_for_terminated()["body"]["$__lldb_statistics"]
+        terminated_event = session.wait_for_terminated_event(after=process_event)
+        terminated_body = self.expect_not_none(terminated_event.body)
+        statistics = terminated_body.lldb_statistics
         self.check_statistics_summary(statistics)
         self.check_target_summary(statistics)
 
@@ -70,8 +74,14 @@ class TestDAP_eventStatistic(lldbdap_testcase.DAPTestCaseBase):
 
         program_basename = "a.out"
         program = self.getBuildArtifact(program_basename)
-        self.build_and_launch(program)
-        self.dap_server.wait_for_event("initialized")
-        statistics = self.dap_server.initialized_event["body"]["$__lldb_statistics"]
+        session = self.build_and_create_session()
+        pending_launch = session.initialize_and_launch(LaunchArgs(program))
+
+        init_event = session.wait_for_earliest_event(InitializedEvent)
+        init_body = self.expect_not_none(init_event.body)
+        statistics = init_body.lldb_statistics
         self.check_statistics_summary(statistics)
-        self.continue_to_exit()
+
+        session.verify_configuration_done()
+        launch_response = pending_launch.result()
+        session.verify_process_exited(after=launch_response)

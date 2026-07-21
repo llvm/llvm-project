@@ -5792,6 +5792,16 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       if (auto KindCost = Entry->Cost[CostKind])
         return ArithmeticCost + *KindCost;
 
+  if (ST->hasBWI())
+    if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasAVX512())
+    if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])

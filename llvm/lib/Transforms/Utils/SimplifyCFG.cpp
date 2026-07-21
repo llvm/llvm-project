@@ -7857,6 +7857,44 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   return true;
 }
 
+static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
+                                        const DataLayout &DL,
+                                        AssumptionCache *AC) {
+  assert(SI);
+  if (SI->defaultDestUnreachable())
+    return false;
+
+  // If it can be proved that the switch condition takes some concrete value
+  // in the default block, we can make some nice simplifications to the
+  // switch.
+  BasicBlock *Default = SI->getDefaultDest();
+  const Instruction *CxtI = &*Default->getFirstNonPHIIt();
+  const KnownBits Known = computeKnownBits(
+      SI->getCondition(),
+      SimplifyQuery(DL, /*DT=*/nullptr, AC, CxtI).allowEphemerals(true));
+  if (!Known.isConstant())
+    return false;
+
+  // At this point, we know that only one value can be mapped to the
+  // default block. So, if a case doesn't exist for it already, we
+  // can create one pointing to the default block.
+  ConstantInt *CaseVal =
+      ConstantInt::get(SI->getContext(), Known.getConstant());
+  const llvm::SwitchInst::CaseIt CaseIt = SI->findCaseValue(CaseVal);
+  if (CaseIt == SI->case_default()) {
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
+    SIW.setSuccessorWeight(0, 0);
+  }
+  createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
+
+  assert(SI->getNumCases() > 0 && "Switch should have at least one case");
+  assert(SI->findCaseValue(CaseVal) != SI->case_default() &&
+         "Proven value should have a dedicated case");
+  assert(SI->defaultDestUnreachable());
+  return true;
+}
+
 /// Tries to transform switch of powers of two to reduce switch range.
 /// For example, switch like:
 /// switch (C) { case 1: case 2: case 64: case 128: }
@@ -8395,6 +8433,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     return requestResimplify();
 
   if (simplifySwitchWhenUMin(SI, DTU))
+    return requestResimplify();
+
+  if (simplifySwitchDefaultBranch(SI, DTU, DL, Options.AC))
     return requestResimplify();
 
   return false;
