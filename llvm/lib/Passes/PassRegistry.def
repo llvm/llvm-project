@@ -74,6 +74,7 @@ MODULE_PASS("ctx-prof-flatten",
 MODULE_PASS("ctx-prof-flatten-prethinlink",
             PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true))
 MODULE_PASS("noinline-nonprevailing", NoinlineNonPrevailing())
+MODULE_PASS("dead-branch-elim", DeadBranchEliminationPass())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("debugify", NewPMDebugifyPass())
 MODULE_PASS("declare-runtime-libcalls", DeclareRuntimeLibcallsPass())
