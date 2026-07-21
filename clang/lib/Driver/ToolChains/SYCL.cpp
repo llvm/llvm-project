@@ -82,25 +82,6 @@ void SYCLInstallationDetector::addSYCLIncludeArgs(
   CC1Args.push_back(DriverArgs.MakeArgString(IncludePath));
 }
 
-void SYCLInstallationDetector::getSYCLDeviceLibPath(
-    SmallVectorImpl<SmallString<128>> &LibPaths) const {
-  // Device libraries can be located in:
-  // 1. Sysroot lib/ directory (for testing with --sysroot)
-  // 2. Driver lib/ directory (for normal installation)
-
-  // If a sysroot is specified, check there first
-  if (!D.SysRoot.empty()) {
-    SmallString<128> SysRootLibPath(D.SysRoot);
-    llvm::sys::path::append(SysRootLibPath, "lib");
-    LibPaths.push_back(SysRootLibPath);
-  }
-
-  // Also check relative to the driver directory
-  SmallString<128> DriverLibPath(D.Dir);
-  llvm::sys::path::append(DriverLibPath, "..", "lib");
-  LibPaths.push_back(DriverLibPath);
-}
-
 // Unsupported options for SYCL device compilation.
 static ArrayRef<options::ID> getUnsupportedOpts() {
   static constexpr options::ID UnsupportedOpts[] = {
@@ -254,41 +235,11 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 SYCLToolChain::getDeviceLibs(
     const llvm::opt::ArgList &DriverArgs, BoundArch /*BA*/,
     const Action::OffloadKind /*DeviceOffloadingKind*/) const {
-  llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
-
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
-    return BCLibs;
+    return {};
 
-  // Get candidate paths where device libraries may be located.
-  SmallVector<SmallString<128>, 4> LibraryPaths;
-  SYCLInstallation.getSYCLDeviceLibPath(LibraryPaths);
-
-  // Resolve a library name to its full path and append it to BCLibs.
-  // Emits an error if the library is not found in any candidate path.
-  // Default internalization to 'true' for these libraries, as they are
-  // expected to link with -mlink-builtin-bitcode.
-  auto addLib = [&](StringRef LibName, bool Internalize = true) {
-    for (const auto &LibraryPath : LibraryPaths) {
-      SmallString<128> FullLibName(LibraryPath);
-      llvm::sys::path::append(FullLibName, LibName);
-      if (llvm::sys::fs::exists(FullLibName)) {
-        BCLibs.emplace_back(FullLibName.str(), Internalize);
-        return;
-      }
-    }
-    // If a device library is not found, emit an error with a helpful message.
-    // The user can pass '--no-offloadlib' to build without device libraries.
-    getDriver().Diag(diag::err_drv_no_sycl_device_lib) << LibName;
-  };
-
-  // For SPIR/SPIRV targets, add SYCL device libraries.
-  if (getTriple().isSPIROrSPIRV()) {
-    // TODO: Update this list when SYCL device libraries are added to
-    // compiler-rt/libc. This placeholder demonstrates the infrastructure for
-    // linking device libraries at compile time.
-    addLib("libsycl-crt.bc");
-  }
-
-  return BCLibs;
+  // TODO: Link libclang_rt.builtins for spirv64 once the mechanism for
+  // consuming the compiler-rt static archive at compile time is settled.
+  return {};
 }
