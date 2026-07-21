@@ -2993,6 +2993,11 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
 
 void DiagnoseHLSLAvailability::RunOnTranslationUnit(
     const TranslationUnitDecl *TU) {
+  const TargetInfo &TargetInfo = SemaRef.getASTContext().getTargetInfo();
+  std::string &EntryName = TargetInfo.getTargetOpts().HLSLEntry;
+  bool IsLibraryShader = TargetInfo.getTriple().getEnvironment() ==
+                         llvm::Triple::EnvironmentType::Library;
+  SourceLocation EntryLoc{};
 
   // Iterate over all shader entry functions and library exports, and for those
   // that have a body (definiton), run diag scan on each, setting appropriate
@@ -3023,6 +3028,17 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
 
       // shader entry point
       if (HLSLShaderAttr *ShaderAttr = FD->getAttr<HLSLShaderAttr>()) {
+        if (!IsLibraryShader && FD->getName() == EntryName) {
+          if (EntryLoc.isValid()) {
+            SemaRef.Diag(FD->getLocation(),
+                         diag::err_hlsl_ambiguous_entry_point)
+                << EntryName;
+            SemaRef.Diag(EntryLoc, diag::note_previous_declaration_as)
+                << EntryName;
+            return;
+          }
+          EntryLoc = FD->getLocation();
+        }
         SetShaderStageContext(ShaderAttr->getType());
         RunOnFunction(FD);
         continue;
@@ -3045,6 +3061,12 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
         continue;
       }
     }
+  }
+
+  if (!IsLibraryShader && EntryLoc.isInvalid()) {
+    SemaRef.Diag(TU->getLocation(), diag::err_hlsl_missing_entry_point)
+        << EntryName;
+    return;
   }
 }
 
@@ -3380,7 +3402,7 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
+           << ArgOrdinal << /* scalar, vector, or matrix */ 6 << /* no int */ 0
            << /* half or float */ 2 << PassedType;
   return false;
 }
@@ -3471,8 +3493,8 @@ static bool CheckUnsignedIntRepresentation(Sema *S, SourceLocation Loc,
                                            clang::QualType PassedType) {
   if (!PassedType->hasUnsignedIntegerRepresentation())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar or vector of */ 5 << /* unsigned int */ 3
-           << /* no fp */ 0 << PassedType;
+           << ArgOrdinal << /* scalar, vector, or matrix */ 6
+           << /* unsigned int */ 3 << /* no fp */ 0 << PassedType;
   return false;
 }
 
@@ -4303,8 +4325,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
              ->hasFloatingRepresentation()) // half or float or double
       return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                           diag::err_builtin_invalid_arg_type)
-             << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
-             << /* fp */ 1 << TheCall->getArg(0)->getType();
+             << /* ordinal */ 1 << /* scalar, vector, or matrix */ 6
+             << /* no int */ 0 << /* fp */ 1 << TheCall->getArg(0)->getType();
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     break;

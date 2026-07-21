@@ -291,6 +291,8 @@ template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MatMulTOp op) {
   addValue(op.getA());
   addValue(op.getB());
+  addValue(op.getAZp());
+  addValue(op.getBZp());
   addValue(op.getOutput());
   return success();
 }

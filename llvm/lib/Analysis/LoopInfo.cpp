@@ -453,10 +453,10 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
 static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
                                const DominatorTree &DT, bool IgnoreTokens) {
   for (const Instruction &I : BB) {
-    // Tokens can't be used in PHI nodes and live-out tokens prevent loop
-    // optimizations, so for the purposes of considered LCSSA form, we
-    // can ignore them.
-    if (IgnoreTokens && I.getType()->isTokenTy())
+    // Token-like values can't be used in PHI nodes and live-out token-like
+    // values prevent loop optimizations, so for the purposes of considered
+    // LCSSA form, we can ignore them.
+    if (IgnoreTokens && I.getType()->isTokenLikeTy())
       continue;
 
     for (const Use &U : I.uses()) {
@@ -969,9 +969,9 @@ void LoopInfo::erase(Loop *Unloop) {
 
 bool LoopInfo::wouldBeOutOfLoopUseRequiringLCSSA(
     const Value *V, const BasicBlock *ExitBB) const {
-  if (V->getType()->isTokenTy())
-    // We can't form PHIs of token type, so the definition of LCSSA excludes
-    // values of that type.
+  if (V->getType()->isTokenLikeTy())
+    // We can't form PHIs of token-like type, so the definition of LCSSA
+    // excludes values of that type.
     return false;
 
   const Instruction *I = dyn_cast<Instruction>(V);
