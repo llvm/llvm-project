@@ -260,20 +260,6 @@ define <2 x half> @v_constained_fsub_v2f16_fpexcept_strict(<2 x half> %x, <2 x h
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_pk_add_f16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-; GFX10PLUS-SDAG-LABEL: v_constained_fsub_v2f16_fpexcept_strict:
-; GFX10PLUS-SDAG:       ; %bb.0:
-; GFX10PLUS-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v2, v3, v2
-; GFX10PLUS-SDAG-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX10PLUS-SDAG-NEXT:    s_setpc_b64 s[30:31]
-; GFX10PLUS-GISEL-LABEL: v_constained_fsub_v2f16_fpexcept_strict:
-; GFX10PLUS-GISEL:       ; %bb.0:
-; GFX10PLUS-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-GISEL-NEXT:    v_pk_add_f16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
-; GFX10PLUS-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x half> @llvm.experimental.constrained.fsub.v2f16(<2 x half> %x, <2 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x half> %val
 }
@@ -370,20 +356,6 @@ define <2 x half> @v_constained_fsub_v2f16_fpexcept_ignore(<2 x half> %x, <2 x h
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_pk_add_f16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-; GFX10PLUS-SDAG-LABEL: v_constained_fsub_v2f16_fpexcept_ignore:
-; GFX10PLUS-SDAG:       ; %bb.0:
-; GFX10PLUS-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v2, v3, v2
-; GFX10PLUS-SDAG-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX10PLUS-SDAG-NEXT:    s_setpc_b64 s[30:31]
-; GFX10PLUS-GISEL-LABEL: v_constained_fsub_v2f16_fpexcept_ignore:
-; GFX10PLUS-GISEL:       ; %bb.0:
-; GFX10PLUS-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-GISEL-NEXT:    v_pk_add_f16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
-; GFX10PLUS-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x half> @llvm.experimental.constrained.fsub.v2f16(<2 x half> %x, <2 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret <2 x half> %val
 }
@@ -480,20 +452,6 @@ define <2 x half> @v_constained_fsub_v2f16_fpexcept_maytrap(<2 x half> %x, <2 x 
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_pk_add_f16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-; GFX10PLUS-SDAG-LABEL: v_constained_fsub_v2f16_fpexcept_maytrap:
-; GFX10PLUS-SDAG:       ; %bb.0:
-; GFX10PLUS-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v1
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v2, v3, v2
-; GFX10PLUS-SDAG-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX10PLUS-SDAG-NEXT:    s_setpc_b64 s[30:31]
-; GFX10PLUS-GISEL-LABEL: v_constained_fsub_v2f16_fpexcept_maytrap:
-; GFX10PLUS-GISEL:       ; %bb.0:
-; GFX10PLUS-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-GISEL-NEXT:    v_pk_add_f16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
-; GFX10PLUS-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x half> @llvm.experimental.constrained.fsub.v2f16(<2 x half> %x, <2 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret <2 x half> %val
 }
@@ -614,27 +572,6 @@ define <3 x half> @v_constained_fsub_v3f16_fpexcept_strict(<3 x half> %x, <3 x h
 ; GFX12-GISEL-NEXT:    v_pk_add_f16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX12-GISEL-NEXT:    v_sub_f16_e32 v1.l, v1.l, v3.l
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-; GFX10PLUS-SDAG-LABEL: v_constained_fsub_v3f16_fpexcept_strict:
-; GFX10PLUS-SDAG:       ; %bb.0:
-; GFX10PLUS-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v2
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v1, v1, v3
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v2, v5, v4
-; GFX10PLUS-SDAG-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX10PLUS-SDAG-NEXT:    s_setpc_b64 s[30:31]
-; GFX10PLUS-GISEL-LABEL: v_constained_fsub_v3f16_fpexcept_strict:
-; GFX10PLUS-GISEL:       ; %bb.0:
-; GFX10PLUS-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX10PLUS-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; GFX10PLUS-GISEL-NEXT:    v_sub_f16_e32 v0, v0, v2
-; GFX10PLUS-GISEL-NEXT:    v_sub_f16_e32 v1, v1, v3
-; GFX10PLUS-GISEL-NEXT:    v_sub_f16_e32 v2, v4, v5
-; GFX10PLUS-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10PLUS-GISEL-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
-; GFX10PLUS-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fsub.v3f16(<3 x half> %x, <3 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x half> %val
 }
@@ -759,36 +696,6 @@ define <4 x half> @v_constained_fsub_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX12-GISEL-NEXT:    v_pk_add_f16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX12-GISEL-NEXT:    v_pk_add_f16 v1, v1, v3 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-; GFX10PLUS-SDAG-LABEL: v_constained_fsub_v4f16_fpexcept_strict:
-; GFX10PLUS-SDAG:       ; %bb.0:
-; GFX10PLUS-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX10PLUS-SDAG-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v1, v1, v3
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v0, v0, v2
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v2, v6, v5
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e32 v3, v7, v4
-; GFX10PLUS-SDAG-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX10PLUS-SDAG-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
-; GFX10PLUS-SDAG-NEXT:    s_setpc_b64 s[30:31]
-; GFX10PLUS-GISEL-LABEL: v_constained_fsub_v4f16_fpexcept_strict:
-; GFX10PLUS-GISEL:       ; %bb.0:
-; GFX10PLUS-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX10PLUS-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX10PLUS-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
-; GFX10PLUS-GISEL-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
-; GFX10PLUS-GISEL-NEXT:    v_sub_f16_e32 v0, v0, v2
-; GFX10PLUS-GISEL-NEXT:    v_sub_f16_e32 v1, v1, v3
-; GFX10PLUS-GISEL-NEXT:    v_sub_f16_e32 v2, v4, v6
-; GFX10PLUS-GISEL-NEXT:    v_sub_f16_e32 v3, v5, v7
-; GFX10PLUS-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10PLUS-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX10PLUS-GISEL-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
-; GFX10PLUS-GISEL-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
-; GFX10PLUS-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %val = call <4 x half> @llvm.experimental.constrained.fsub.v4f16(<4 x half> %x, <4 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <4 x half> %val
 }
@@ -947,19 +854,6 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
-; GFX10PLUS-SDAG-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
-; GFX10PLUS-SDAG:       ; %bb.0:
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e64 v0, s2, s3
-; GFX10PLUS-SDAG-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX10PLUS-SDAG-NEXT:    s_lshr_b32 s1, s2, 16
-; GFX10PLUS-SDAG-NEXT:    v_sub_f16_e64 v1, s1, s0
-; GFX10PLUS-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10PLUS-SDAG-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX10PLUS-SDAG-NEXT:    ; return to shader part epilog
-; GFX10PLUS-GISEL-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
-; GFX10PLUS-GISEL:       ; %bb.0:
-; GFX10PLUS-GISEL-NEXT:    v_pk_add_f16 v0, s2, s3 neg_lo:[0,1] neg_hi:[0,1]
-; GFX10PLUS-GISEL-NEXT:    ; return to shader part epilog
   %val = call <2 x half> @llvm.experimental.constrained.fsub.v2f16(<2 x half> %x, <2 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x half> %val
 }
