@@ -27011,7 +27011,8 @@ static SDValue combineConcatVectorOfShuffleAndItsOperands(
 // -> shuffle(loadAB, poison, concat(mask0, mask1))
 // only if loadA and loadB can be proven consecutive.
 static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
-                                             const TargetLowering &TLI) {
+                                             const TargetLowering &TLI,
+                                             bool LegalOperations) {
   SDValue A, B;
   ArrayRef<int> M0, M1;
   if (!sd_match(N,
@@ -27054,16 +27055,6 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
       !Fast)
     return SDValue();
 
-  // Create a wide load of twice the size of the original load.
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineMemOperand *WideMMO = MF.getMachineMemOperand(
-      Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
-  SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
-                                 Base->getBasePtr(), WideMMO);
-  // Redirect old chain users to the new chain.
-  DAG.makeEquivalentMemoryOrdering(LoadA, WideLoad);
-  DAG.makeEquivalentMemoryOrdering(LoadB, WideLoad);
-
   // Create a shuffle of the wide load.
   SmallVector<int, 32> Mask;
   if (Base == LoadA) {
@@ -27076,6 +27067,24 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
     llvm::append_range(Mask, C0);
     llvm::append_range(Mask, C1);
   }
+
+  // Check if the wide load, new shuffle and it's mask is legal.
+  if (LegalOperations &&
+      (!TLI.isOperationLegal(ISD::LOAD, WideVT) ||
+       !TLI.isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, WideVT) ||
+       !TLI.isShuffleMaskLegal(Mask, WideVT)))
+    return SDValue();
+
+  // Create a wide load of twice the size of the original load.
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *WideMMO = MF.getMachineMemOperand(
+      Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
+  SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
+                                 Base->getBasePtr(), WideMMO);
+  // Redirect old chain users to the new chain.
+  DAG.makeEquivalentMemoryOrdering(LoadA, WideLoad);
+  DAG.makeEquivalentMemoryOrdering(LoadB, WideLoad);
+
   // Create a new shuffle with the new mask.
   return DAG.getVectorShuffle(WideVT, SDLoc(N), WideLoad, DAG.getPOISON(WideVT),
                               Mask);
@@ -27254,7 +27263,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
           N, DAG, TLI, LegalTypes, LegalOperations))
     return V;
 
-  if (SDValue V = combineConcatVectorOfShuffles(N, DAG, TLI))
+  if (SDValue V = combineConcatVectorOfShuffles(N, DAG, TLI, LegalOperations))
     return V;
 
   // Type legalization of vectors and DAG canonicalization of SHUFFLE_VECTOR
