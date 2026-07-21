@@ -2382,17 +2382,10 @@ bool RAGreedy::shouldAvoidCSRForRemat(const LiveInterval &VirtReg,
 
   // This logic is intentionally narrow: handle a single concrete value
   // whose def can be cheaply rematerialized at every use.
-  const VNInfo *OnlyVNI = nullptr;
-  for (const VNInfo *VNI : VirtReg.vnis()) {
-    if (!VNI || VNI->isUnused())
-      continue;
-    if (VNI->isPHIDef())
-      return false;
-    if (OnlyVNI)
-      return false;
-    OnlyVNI = VNI;
-  }
-  if (!OnlyVNI)
+  if (!VirtReg.containsOneValue())
+    return false;
+  const VNInfo *OnlyVNI = VirtReg.getValNumInfo(0);
+  if (OnlyVNI->isUnused() || OnlyVNI->isPHIDef())
     return false;
 
   MachineInstr *DefMI = LIS->getInstructionFromIndex(OnlyVNI->def);
@@ -2406,17 +2399,12 @@ bool RAGreedy::shouldAvoidCSRForRemat(const LiveInterval &VirtReg,
   if (!Matrix->checkRegMaskInterference(VirtReg))
     return false;
 
-  SmallPtrSet<MachineInstr *, 8> VisitedUses;
   unsigned NumUses = 0;
-  for (MachineOperand &MO : MRI->use_nodbg_operands(VirtReg.reg())) {
-    if (MO.isUndef())
+  for (MachineInstr &UseMI : MRI->use_nodbg_instructions(VirtReg.reg())) {
+    if (!UseMI.readsVirtualRegister(VirtReg.reg()))
       continue;
 
-    MachineInstr *UseMI = MO.getParent();
-    if (!VisitedUses.insert(UseMI).second)
-      continue;
-
-    SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI).getRegSlot(true);
+    SlotIndex UseIdx = LIS->getInstructionIndex(UseMI).getRegSlot(true);
     if (!VirtRegAuxInfo::allUsesAvailableAt(DefMI, UseIdx, *LIS, *MRI, *TII))
       return false;
 
