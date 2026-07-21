@@ -12,10 +12,13 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include <functional>
 
 namespace fir {
 #define GEN_PASS_DEF_CUFDEVICEGLOBAL
@@ -114,6 +117,101 @@ processPotentialTypeDescriptor(mlir::Type candidateType,
     processTypeDescriptor(recTy, symbolTable, candidates);
 }
 
+/// NVPTX cannot emit global initializers that form a reference cycle (see
+/// VisitGlobalVariableForEmission). Fortran type-info globals often do
+/// (mutually recursive derived types). Replace addr_of edges within each
+/// strongly connected component with zero so the GPU copies are acyclic.
+static void breakCircularGlobalAddrOfDeps(mlir::gpu::GPUModuleOp gpuMod) {
+  llvm::DenseMap<llvm::StringRef, fir::GlobalOp> byName;
+  llvm::SmallVector<fir::GlobalOp, 16> globals;
+  for (auto global : gpuMod.getOps<fir::GlobalOp>()) {
+    byName[global.getSymName()] = global;
+    globals.push_back(global);
+  }
+  if (globals.empty())
+    return;
+
+  // Adjacency: global -> targets referenced via fir.address_of in its body.
+  llvm::DenseMap<fir::GlobalOp, llvm::SmallVector<fir::GlobalOp, 4>> adj;
+  llvm::DenseMap<fir::GlobalOp,
+                 llvm::SmallVector<std::pair<fir::AddrOfOp, fir::GlobalOp>, 4>>
+      edgeOps;
+  for (fir::GlobalOp global : globals) {
+    global.walk([&](fir::AddrOfOp addrOf) {
+      fir::GlobalOp target =
+          byName.lookup(addrOf.getSymbol().getRootReference().getValue());
+      if (!target)
+        return;
+      adj[global].push_back(target);
+      edgeOps[global].push_back({addrOf, target});
+    });
+  }
+
+  // Tarjan SCC.
+  const int n = globals.size();
+  llvm::DenseMap<fir::GlobalOp, int> indexOf;
+  for (int i = 0; i < n; ++i)
+    indexOf[globals[i]] = i;
+
+  llvm::SmallVector<int, 16> index(n, -1), lowlink(n, -1), stack;
+  llvm::SmallVector<bool, 16> onStack(n, false);
+  llvm::SmallVector<llvm::SmallVector<fir::GlobalOp, 4>, 8> sccs;
+  int dfsNum = 0;
+
+  std::function<void(int)> strongConnect = [&](int v) {
+    index[v] = lowlink[v] = dfsNum++;
+    stack.push_back(v);
+    onStack[v] = true;
+    for (fir::GlobalOp wGlobal : adj.lookup(globals[v])) {
+      int w = indexOf[wGlobal];
+      if (index[w] < 0) {
+        strongConnect(w);
+        lowlink[v] = std::min(lowlink[v], lowlink[w]);
+      } else if (onStack[w]) {
+        lowlink[v] = std::min(lowlink[v], index[w]);
+      }
+    }
+    if (lowlink[v] == index[v]) {
+      llvm::SmallVector<fir::GlobalOp, 4> scc;
+      int w;
+      do {
+        w = stack.pop_back_val();
+        onStack[w] = false;
+        scc.push_back(globals[w]);
+      } while (w != v);
+      bool selfLoop = false;
+      if (scc.size() == 1)
+        for (fir::GlobalOp t : adj.lookup(scc[0]))
+          if (t == scc[0]) {
+            selfLoop = true;
+            break;
+          }
+      if (scc.size() > 1 || selfLoop)
+        sccs.push_back(std::move(scc));
+    }
+  };
+
+  for (int v = 0; v < n; ++v)
+    if (index[v] < 0)
+      strongConnect(v);
+
+  mlir::OpBuilder builder(gpuMod.getContext());
+  for (const auto &scc : sccs) {
+    llvm::DenseSet<fir::GlobalOp> inScc(scc.begin(), scc.end());
+    for (fir::GlobalOp global : scc) {
+      for (auto &[addrOf, target] : edgeOps.lookup(global)) {
+        if (!inScc.contains(target))
+          continue;
+        builder.setInsertionPoint(addrOf);
+        auto zero =
+            fir::ZeroOp::create(builder, addrOf.getLoc(), addrOf.getType());
+        addrOf.replaceAllUsesWith(zero.getResult());
+        addrOf.erase();
+      }
+    }
+  }
+}
+
 class CUFDeviceGlobal : public fir::impl::CUFDeviceGlobalBase<CUFDeviceGlobal> {
 public:
   using CUFDeviceGlobalBase::CUFDeviceGlobalBase;
@@ -190,6 +288,9 @@ public:
         clonedGlobal.removeLinkNameAttr();
       gpuSymTable.insert(cloned);
     }
+    // Type-info globals for mutually recursive derived types form initializer
+    // cycles; NVPTX rejects those. Break addr_of edges within each cycle.
+    breakCircularGlobalAddrOfDeps(gpuMod);
   }
 };
 } // namespace

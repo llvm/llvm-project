@@ -1,7 +1,8 @@
 // RUN: fir-opt --cuf-device-global %s | FileCheck %s
 
 // Mutually referencing type-descriptor globals must not cause infinite
-// recursion in processAddrOfOp when recurseInGlobal is true.
+// recursion, and GPU copies must not retain addr_of cycles (NVPTX rejects
+// circular global initializers).
 module attributes {gpu.container_module} {
   fir.global linkonce @_QMmE.dt.t1 constant : i64 {
     %0 = fir.address_of(@_QMmE.dt.t2) : !fir.ref<i64>
@@ -20,6 +21,16 @@ module attributes {gpu.container_module} {
   }
 }
 
+// Host copies keep the cycle.
+// CHECK: fir.global linkonce @_QMmE.dt.t1
+// CHECK: fir.address_of(@_QMmE.dt.t2)
+// CHECK: fir.global linkonce @_QMmE.dt.t2
+// CHECK: fir.address_of(@_QMmE.dt.t1)
+
 // CHECK-LABEL: gpu.module @cuda_device_mod
-// CHECK-DAG: fir.global linkonce @_QMmE.dt.t1
-// CHECK-DAG: fir.global linkonce @_QMmE.dt.t2
+// CHECK: fir.global linkonce @_QMmE.dt.t1
+// CHECK-NOT: fir.address_of
+// CHECK: fir.zero_bits !fir.ref<i64>
+// CHECK: fir.global linkonce @_QMmE.dt.t2
+// CHECK-NOT: fir.address_of
+// CHECK: fir.zero_bits !fir.ref<i64>
