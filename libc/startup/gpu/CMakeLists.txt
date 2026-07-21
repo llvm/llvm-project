@@ -29,21 +29,11 @@ function(add_startup_object name)
 
   # Make a relocatable bitcode object for clang if needed.
   if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-    if(CMAKE_HOST_WIN32)
-      llvm_link_bitcode(${fq_target_name}.exe
-        OUTPUT ${LIBC_LIBRARY_DIR}/${name}.o
-        INPUTS $<TARGET_OBJECTS:${fq_target_name}>
-        DEPENDS ${fq_target_name}
-      )
-    else()
-      add_executable(${fq_target_name}.exe $<TARGET_OBJECTS:${fq_target_name}>)
-      set_target_properties(${fq_target_name}.exe PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR}
-        RUNTIME_OUTPUT_NAME ${name}.o)
-      target_link_options(${fq_target_name}.exe PRIVATE
-                          ${LIBC_COMPILE_OPTIONS_DEFAULT}
-                          "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
-    endif()
+    llvm_link_bitcode(${fq_target_name}.exe
+      OUTPUT ${LIBC_LIBRARY_DIR}/${name}.o
+      INPUTS $<TARGET_OBJECTS:${fq_target_name}>
+      DEPENDS ${fq_target_name}
+    )
   endif()
 endfunction()
 
