@@ -9569,7 +9569,7 @@ void AMDGPUAsmParser::onBeginOfFile() {
 
   if (!getTargetStreamer().getTargetID())
     getTargetStreamer().initializeTargetID(getSTI(),
-                                           getSTI().getFeatureString());
+                                           /*ApplyFeatureString=*/true);
 }
 
 void AMDGPUAsmParser::emitTargetDirective() {
