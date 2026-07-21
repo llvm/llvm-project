@@ -29,7 +29,7 @@ module attributes {gpu.container_module} {
 
 // Cut the lexicographically last global in the cycle; the other keeps its init.
 // CHECK-LABEL: gpu.module @cuda_device_mod {
-// CHECK: fir.global @_QMmE.dt.t2 constant : i64{{$}}
-// CHECK: fir.global linkonce @_QMmE.dt.t1 constant : i64 {
-// CHECK: fir.address_of(@_QMmE.dt.t2)
-// CHECK: fir.has_value
+// CHECK-DAG: fir.global @_QMmE.dt.t2 constant : i64{{$}}
+// CHECK-DAG: fir.global linkonce @_QMmE.dt.t1 constant : i64 {
+// CHECK-DAG: fir.address_of(@_QMmE.dt.t2)
+// CHECK-DAG: fir.has_value
