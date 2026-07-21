@@ -2700,6 +2700,19 @@ void CheckHelper::CheckPassArg(
   }
 }
 
+static bool OverrideDummyNamesMatch(
+    const Procedure &binding, const Procedure &overridden) {
+  if (binding.dummyArguments.size() != overridden.dummyArguments.size()) {
+    return false;
+  }
+  for (std::size_t j{0}; j < binding.dummyArguments.size(); ++j) {
+    if (binding.dummyArguments[j].name != overridden.dummyArguments[j].name) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void CheckHelper::CheckProcBinding(
     const Symbol &symbol, const ProcBindingDetails &binding) {
   const Scope &dtScope{symbol.owner()};
@@ -2783,6 +2796,13 @@ void CheckHelper::CheckProcBinding(
               if (*passIndex != *overriddenPassIndex) {
                 SayWithDeclaration(*overridden,
                     "A type-bound procedure and its override must use the same PASS argument"_err_en_US);
+              } else if (!OverrideDummyNamesMatch(
+                             *bindingChars, *overriddenChars)) {
+                SayWithDeclaration(*overridden,
+                    "Passed-object dummy arguments of type-bound procedure "
+                    "'%s' "
+                    "and its override must correspond by name and position"_err_en_US,
+                    symbol.name());
               } else if (!bindingChars->CanOverride(
                              *overriddenChars, passIndex)) {
                 SayWithDeclaration(*overridden,
