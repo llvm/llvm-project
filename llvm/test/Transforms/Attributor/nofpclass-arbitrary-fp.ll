@@ -51,6 +51,16 @@ define <2 x float> @ret_arbitrary_fp_vector_sub(<2 x i8> %bits) {
   ret <2 x float> %fp
 }
 
+define float @ret_arbitrary_fp_inf_zero(i8 %bits) {
+; TODO-CHECK-LABEL: define nofpclass(inf zero) float @ret_arbitrary_fp_inf_zero
+; TODO-CHECK-SAME: (i8 [[BITS:%.*]]) #[[ATTR0:[0-9]+]] {
+; TODO-CHECK-NEXT:    %fp = call nofpclass(inf zero) float @llvm.convert.from.arbitrary.fp.f32.i8(i8 [[BITS]], metadata !"Float8E8M0FNU") #[[ATTR2:[0-9]+]]
+; TODO-CHECK-NEXT:    ret float %fp
+;
+  %fp = call float @llvm.convert.from.arbitrary.fp.f32.i8(i8 %bits, metadata !"Float8E8M0FNU")
+  ret float %fp
+}
+
 declare float @llvm.convert.from.arbitrary.fp.f32.i4(i4, metadata)
 declare float @llvm.convert.from.arbitrary.fp.f32.i8(i8, metadata)
 declare <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i4(<4 x i4>, metadata)

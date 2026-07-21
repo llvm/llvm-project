@@ -5744,10 +5744,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcNan);
 
       // fcInf can only be cleared if the source format has no Inf encoding
-      // (IEEE754) AND every finite src value fits correctly in the dest
-      // finite range, so inf is not possible
+      // (IEEE754) AND the dst max exp can accomodate src max exp.
       if (!APFloat::semanticsHasInf(SrcSemantics) &&
-          APFloat::isRepresentableBy(SrcSemantics, DstSemantics))
+          APFloat::semanticsMaxExponent(SrcSemantics) <=
+              APFloat::semanticsMaxExponent(DstSemantics))
         Known.knownNot(fcInf);
 
       // Check and clear for FNUZ formats which lacks negative zero
