@@ -705,11 +705,15 @@ bool AMDGPUEarlyRegisterSpilling::shouldEmitRestoreInCommonDominator(
   return true;
 }
 
-static bool shouldGroupUses(MachineLoop *CurLoop, MachineLoop *Head1Loop,
-                            MachineLoop *Head2Loop,
-                            MachineBasicBlock *RestoreBlock1,
-                            MachineBasicBlock *RestoreBlock2) {
+static bool shouldGroupUses(MachineLoop *CurLoop, DomGroup &G1, DomGroup &G2,
+                            const MachineLoopInfo *MLI) {
 
+  MachineInstr *Head1 = G1.getHead();
+  MachineInstr *Head2 = G2.getHead();
+  MachineBasicBlock *RestoreBlock1 = G1.getRestoreBlock();
+  MachineBasicBlock *RestoreBlock2 = G2.getRestoreBlock();
+  MachineLoop *Head1Loop = MLI->getLoopFor(Head1->getParent());
+  MachineLoop *Head2Loop = MLI->getLoopFor(Head2->getParent());
   MachineLoop *OutermostLoopOfCurLoop = nullptr;
   if (CurLoop)
     OutermostLoopOfCurLoop = CurLoop->getOutermostLoop();
@@ -719,15 +723,9 @@ static bool shouldGroupUses(MachineLoop *CurLoop, MachineLoop *Head1Loop,
     return false;
 
   // Do not group the restores if the loops are independent.
-  if (!CurLoop && Head1Loop && Head2Loop && (RestoreBlock1 != RestoreBlock2) &&
-      !Head1Loop->contains(Head2Loop) && !Head2Loop->contains(Head1Loop))
-    return false;
-
-  // Do not group the restores if all the loops are independent.
-  if (CurLoop && Head1Loop && Head2Loop && (RestoreBlock1 != RestoreBlock2) &&
-      !OutermostLoopOfCurLoop->contains(Head1Loop) &&
-      !OutermostLoopOfCurLoop->contains(Head2Loop) &&
-      !Head1Loop->contains(Head2Loop) && !Head2Loop->contains(Head1Loop))
+  if ((G1.getWhereToRestore() == DomGroup::RestorePlacement::LoopPreheader) &&
+      (G2.getWhereToRestore() == DomGroup::RestorePlacement::LoopPreheader) &&
+      (RestoreBlock1 != RestoreBlock2))
     return false;
 
   // Do not group the restores if one use is in the loop nest of the CurLoop and
@@ -879,13 +877,10 @@ void AMDGPUEarlyRegisterSpilling::groupUses(
       MachineInstr *Head2 = G2.getHead();
       MachineBasicBlock *RestoreBlock1 = G1.getRestoreBlock();
       MachineBasicBlock *RestoreBlock2 = G2.getRestoreBlock();
-      MachineLoop *Head1Loop = MLI->getLoopFor(Head1->getParent());
-      MachineLoop *Head2Loop = MLI->getLoopFor(Head2->getParent());
       // Disable the grouping of the restore instructions for the following loop
       // scenarios.
       // TODO: Change this if it creates performance degradation.
-      if (!shouldGroupUses(CurLoop, Head1Loop, Head2Loop, RestoreBlock1,
-                           RestoreBlock2))
+      if (!shouldGroupUses(CurLoop, G1, G2, MLI))
         continue;
       SmallVector<MachineBasicBlock *> UseBlocks;
       for (auto *Block : G1.getUseBlocks())
