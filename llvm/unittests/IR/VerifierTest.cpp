@@ -58,7 +58,7 @@ TEST(VerifierTest, Freeze) {
   IntegerType *ITy = IntegerType::get(C, 32);
   ConstantInt *CI = ConstantInt::get(ITy, 0);
 
-  // Valid type : freeze(<2 x i32>)
+  // Valid type: freeze(<2 x i32>).
   Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(2), CI);
   FreezeInst *FI_vec = new FreezeInst(CV);
   FI_vec->insertBefore(RI->getIterator());
@@ -67,7 +67,7 @@ TEST(VerifierTest, Freeze) {
 
   FI_vec->eraseFromParent();
 
-  // Valid type : freeze(float)
+  // Valid type: freeze(float).
   Constant *CFP = ConstantFP::get(Type::getDoubleTy(C), 0.0);
   FreezeInst *FI_dbl = new FreezeInst(CFP);
   FI_dbl->insertBefore(RI->getIterator());
@@ -76,7 +76,7 @@ TEST(VerifierTest, Freeze) {
 
   FI_dbl->eraseFromParent();
 
-  // Valid type : freeze(ptr)
+  // Valid type: freeze(ptr).
   PointerType *PT = PointerType::get(C, 0);
   ConstantPointerNull *CPN = ConstantPointerNull::get(PT);
   FreezeInst *FI_ptr = new FreezeInst(CPN);
@@ -86,7 +86,7 @@ TEST(VerifierTest, Freeze) {
 
   FI_ptr->eraseFromParent();
 
-  // Valid type : freeze(int)
+  // Valid type: freeze(int).
   FreezeInst *FI = new FreezeInst(CI);
   FI->insertBefore(RI->getIterator());
 
@@ -389,7 +389,7 @@ TEST(VerifierTest, AtomicRMW) {
   Type *FPTy = Type::getFloatTy(C);
   Constant *CF = ConstantFP::getZero(FPTy);
 
-  // Invalid scalable type : atomicrmw (<vscale x 2 x float>)
+  // Invalid scalable type: atomicrmw (<vscale x 2 x float>).
   Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CF);
   new AtomicRMWInst(AtomicRMWInst::FAdd, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
@@ -515,7 +515,7 @@ TEST(VerifierTest, AtomicRMWIntVector) {
   Type *IntTy = Type::getInt16Ty(C);
   Constant *CI = ConstantInt::get(IntTy, 0);
 
-  // Invalid scalable type : atomicrmw (<vscale x 2 x i16>)
+  // Invalid scalable type: atomicrmw (<vscale x 2 x i16>).
   Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CI);
   new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
@@ -541,7 +541,7 @@ TEST(VerifierTest, AtomicRMWXchgVector) {
   Type *FPTy = Type::getHalfTy(C);
   Constant *CF = ConstantFP::getZero(FPTy);
 
-  // Invalid scalable type : atomicrmw xchg (<vscale x 2 x half>)
+  // Invalid scalable type: atomicrmw xchg (<vscale x 2 x half>).
   Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CF);
   new AtomicRMWInst(AtomicRMWInst::Xchg, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
