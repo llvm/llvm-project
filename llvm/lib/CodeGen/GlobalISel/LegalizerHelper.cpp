@@ -5845,7 +5845,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
       MIRBuilder.buildCopy(DstReg, Unmerge.getReg(RequiredSubvectorIndex));
     else
       MIRBuilder.buildExtractSubvector(
-          DstTy, Unmerge.getReg(RequiredSubvectorIndex),
+          DstReg, Unmerge.getReg(RequiredSubvectorIndex),
           InsertionPointImm % NarrowTy.getNumElements());
 
     MI.eraseFromParent();
