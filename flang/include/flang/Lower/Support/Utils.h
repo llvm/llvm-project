@@ -23,7 +23,6 @@
 
 namespace Fortran::evaluate {
 class Component;
-class ArrayRef;
 } // namespace Fortran::evaluate
 
 namespace Fortran::lower {
@@ -82,19 +81,6 @@ ignoreEvConvert(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
                     Fortran::common::TypeCategory::Integer, 8>> &x) {
   return Fortran::common::visit(
       [](const auto &v) { return ignoreEvConvert(v); }, x.u);
-}
-
-/// Zip two containers of the same size together and flatten the pairs. `flatZip
-/// [1;2] [3;4]` yields `[1;3;2;4]`.
-template <typename A>
-A flatZip(const A &container1, const A &container2) {
-  assert(container1.size() == container2.size());
-  A result;
-  for (auto [e1, e2] : llvm::zip(container1, container2)) {
-    result.emplace_back(e1);
-    result.emplace_back(e2);
-  }
-  return result;
 }
 
 namespace Fortran::lower {
