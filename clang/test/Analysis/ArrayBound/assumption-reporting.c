@@ -74,11 +74,7 @@ int assumingLowerOnlyUseIndex(int arg) {
     return 0;
 
   int a = ((int*)TwoAndHalfInts)[arg];
-  // expected-note@-1 {{Assuming byte offset is non-negative and less than 10, the extent of 'TwoAndHalfInts'}}
-  // FIXME: This assumption note should say
-  //   {{Assuming index is non-negative{{$}}}}
-  // but the comparison logic is not smart enough to deduce that if arg < 2,
-  // then 4*arg < 10.
+  // expected-note@-1 {{Assuming index is non-negative{{$}}}}
 
   int b = TenElements[arg + 10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
