@@ -10,7 +10,7 @@ define void @SAXPY(ptr noalias nocapture %x, ptr noalias nocapture %y, i32 %a, i
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 [[I:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[Y:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw <4 x i32> [[TMP4]], [[SHUFFLE]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4

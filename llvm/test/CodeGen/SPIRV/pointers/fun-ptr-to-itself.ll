@@ -1,8 +1,5 @@
 ; RUN: llc -mtriple=spirv32-unknown-unknown -O0 %s -o - --spirv-ext=+SPV_INTEL_function_pointers | FileCheck %s
-; Fails with:
-;   `Expected input to have storage class Workgroup, CrossWorkgroup or Function: PtrCastToGeneric`
-; Seem like a spirv-val limitation.
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - --spirv-ext=+SPV_INTEL_function_pointers -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - --spirv-ext=+SPV_INTEL_function_pointers -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability FunctionPointersINTEL
 ; CHECK-DAG: OpExtension "SPV_INTEL_function_pointers"

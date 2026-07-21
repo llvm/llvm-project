@@ -175,7 +175,7 @@
 "`P1957R2 <https://wg21.link/P1957R2>`__","Converting from ``T*``\  to bool should be considered narrowing (re: US 212)","2020-02 (Prague)","|Complete|","18","`#104205 <https://github.com/llvm/llvm-project/issues/104205>`__",""
 "`P1963R0 <https://wg21.link/P1963R0>`__","P1963R0: Fixing US 313","2020-02 (Prague)","|Nothing To Do|","","`#100039 <https://github.com/llvm/llvm-project/issues/100039>`__",""
 "`P1964R2 <https://wg21.link/P1964R2>`__","Wording for boolean-testable","2020-02 (Prague)","|Complete|","13","`#104206 <https://github.com/llvm/llvm-project/issues/104206>`__",""
-"`P1970R2 <https://wg21.link/P1970R2>`__","Consistency for size() functions: Add ranges::ssize","2020-02 (Prague)","|Complete|","15","`#104207 <https://github.com/llvm/llvm-project/issues/104207>`__",""
+"`P1970R2 <https://wg21.link/P1970R2>`__","Consistency for size() functions: Add ranges::ssize","2020-02 (Prague)","|Complete|","13","`#104207 <https://github.com/llvm/llvm-project/issues/104207>`__",""
 "`P1973R1 <https://wg21.link/P1973R1>`__","Rename ""_default_init"" Functions, Rev1","2020-02 (Prague)","|Complete|","16","`#104208 <https://github.com/llvm/llvm-project/issues/104208>`__","The feature-test macro was not set until LLVM 20."
 "`P1976R2 <https://wg21.link/P1976R2>`__","Fixed-size span construction from dynamic range","2020-02 (Prague)","|Complete|","11","`#104209 <https://github.com/llvm/llvm-project/issues/104209>`__",""
 "`P1981R0 <https://wg21.link/P1981R0>`__","Rename leap to leap_second","2020-02 (Prague)","|Complete|","19","`#104210 <https://github.com/llvm/llvm-project/issues/104210>`__",""

@@ -303,9 +303,6 @@ def FeatureXS : Extension<"xs", "XS", "FEAT_XS",
 def FeatureWFxT : ExtensionWithMArch<"wfxt", "WFxT", "FEAT_WFxT",
   "Enable Armv8.7-A WFET and WFIT instruction">;
 
-def FeatureHCX : Extension<"hcx", "HCX", "FEAT_HCX",
-  "Enable Armv8.7-A HCRX_EL2 system register">;
-
 def FeatureLS64 : ExtensionWithMArch<"ls64", "LS64",
   "FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA",
   "Enable Armv8.7-A LD64B/ST64B Accelerator Extension">;
@@ -1010,6 +1007,11 @@ def FeatureFixedLoadLatency4 : SubtargetFeature<
     "fixed-load-latency-4", "FixedLoadLatency", "4",
     "Use a fixed latency of 4 for loads instead of querying the scheduling model">;
 
+def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
+    "has-limited-64bit-vector-mul-bandwidth", "HasLimited64bitVectorMulBandwidth", "true",
+    "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
+    [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -1060,7 +1062,7 @@ def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
-  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
+  [HasV8_6aOps, FeatureXS, FeatureWFxT],
   !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT, FeatureSPE_EEF])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
