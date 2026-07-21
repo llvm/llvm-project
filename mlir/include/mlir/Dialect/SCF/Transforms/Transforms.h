@@ -106,6 +106,9 @@ LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
 LogicalResult peelForLoopFirstIteration(RewriterBase &rewriter, ForOp forOp,
                                         scf::ForOp &partialIteration);
 
+/// Marker attribute name for loops that have already been peeled.
+static constexpr StringLiteral kPeeledLoopLabel = "__peeled_loop__";
+
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
 ///                                             step (%arg4, %arg5)
