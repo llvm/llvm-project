@@ -915,18 +915,9 @@ struct ConditionalOpConversion
 
       mlir::Value exprVal{mapper.lookupOrDefault(yieldedEntity)};
       bool createdAsExpr = false;
-      // If the yielded value is not an hlfir.expr, wrap it in hlfir.as_expr.
+      // Yielded variables are not hlfir.expr: wrap in a non-move as_expr
       if (!mlir::isa<hlfir::ExprType>(exprVal.getType())) {
-        if (yield.getCleanup().empty())
-          // A present mustFree operand selects the move path in
-          // AsExprOpConversion, while its boolean value controls whether
-          // later destruction frees the forwarded storage. With no cleanup
-          // region, this branch does not invalidate exprVal, so we forward
-          // the existing variable without transferring ownership.
-          exprVal = hlfir::AsExprOp::create(builder, loc, exprVal,
-                                            builder.createBool(loc, false));
-        else
-          exprVal = hlfir::AsExprOp::create(builder, loc, exprVal);
+        exprVal = hlfir::AsExprOp::create(builder, loc, exprVal);
         createdAsExpr = true;
       }
 
@@ -936,8 +927,8 @@ struct ConditionalOpConversion
           builder, loc, exprVal, ".tmp.cond", /*shape=*/mlir::Value{},
           /*typeparams=*/mlir::ValueRange{}, fir::FortranVariableFlagsAttr{});
 
-      // Replay cleanup ops after the associate so that buffer forwarding
-      // is safe (only destroy and associate use the expr).
+      // Replay the yield cleanup after the as_expr/associate so the copy
+      // reads the yielded storage before that storage is destroyed.
       if (!yield.getCleanup().empty())
         for (auto &op : yield.getCleanup().front().without_terminator())
           builder.clone(op, mapper);

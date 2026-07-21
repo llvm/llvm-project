@@ -2,7 +2,8 @@
 // RUN: fir-opt --bufferize-hlfir %s | FileCheck %s
 
 // --- Test 1: Scalar non-polymorphic derived type ---
-// Both branches yield !fir.ref<!fir.type<T>>. No cast needed.
+// Both branches yield a !fir.ref<!fir.type<T>> variable. A non-move as_expr
+// copies each into a stack temp (mustFree=false); no cast needed.
 func.func @test_scalar_derived(%cond: i1, %a: !fir.ref<!fir.type<_Tt{x:i32}>>, %b: !fir.ref<!fir.type<_Tt{x:i32}>>) {
   %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<!fir.type<_Tt{x:i32}>> {
     hlfir.yield %a : !fir.ref<!fir.type<_Tt{x:i32}>>
@@ -15,17 +16,21 @@ func.func @test_scalar_derived(%cond: i1, %a: !fir.ref<!fir.type<_Tt{x:i32}>>, %
 // CHECK-LABEL: func.func @test_scalar_derived(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.ref<!fir.type<_Tt{x:i32}>>, %[[B:.*]]: !fir.ref<!fir.type<_Tt{x:i32}>>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.ref<!fir.type<_Tt{x:i32}>>, i1) {
+// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
 // CHECK:         %[[FALSE1:.*]] = arith.constant false
-// CHECK:         fir.result %[[A]], %[[FALSE1]] : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
+// CHECK:         fir.result %[[T1]]#0, %[[FALSE1]] : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       } else {
+// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
 // CHECK:         %[[FALSE2:.*]] = arith.constant false
-// CHECK:         fir.result %[[B]], %[[FALSE2]] : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
+// CHECK:         fir.result %[[T2]]#0, %[[FALSE2]] : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       }
 
 // --- Test 2: Scalar polymorphic (class) ---
-// Both branches yield !fir.class<!fir.type<T>>. ConditionalOp wraps the yield
-// in hlfir.as_expr move %false: the present mustFree operand selects the move
-// path, while false records that the forwarded storage remains borrowed.
+// Both branches yield a !fir.class<!fir.type<T>> variable. A non-move as_expr
+// allocates a polymorphic temp via the runtime, copies into it, and returns
+// mustFree=true.
 func.func @test_scalar_polymorphic(%cond: i1, %a: !fir.class<!fir.type<_Tt{x:i32}>>, %b: !fir.class<!fir.type<_Tt{x:i32}>>) {
   %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<!fir.type<_Tt{x:i32}>?> {
     hlfir.yield %a : !fir.class<!fir.type<_Tt{x:i32}>>
@@ -38,11 +43,19 @@ func.func @test_scalar_polymorphic(%cond: i1, %a: !fir.class<!fir.type<_Tt{x:i32
 // CHECK-LABEL: func.func @test_scalar_polymorphic(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.class<!fir.type<_Tt{x:i32}>>, %[[B:.*]]: !fir.class<!fir.type<_Tt{x:i32}>>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.class<!fir.type<_Tt{x:i32}>>, i1) {
-// CHECK:         %[[FALSE1:.*]] = arith.constant false
-// CHECK:         fir.result %[[A]], %[[FALSE1]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
+// CHECK:         fir.embox %{{.*}} source_box %[[A]]
+// CHECK:         fir.call @_FortranAAllocatableAllocate
+// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
+// CHECK:         %[[TRUE1:.*]] = arith.constant true
+// CHECK:         fir.result %[[T1]]#0, %[[TRUE1]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       } else {
-// CHECK:         %[[FALSE2:.*]] = arith.constant false
-// CHECK:         fir.result %[[B]], %[[FALSE2]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
+// CHECK:         fir.embox %{{.*}} source_box %[[B]]
+// CHECK:         fir.call @_FortranAAllocatableAllocate
+// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
+// CHECK:         %[[TRUE2:.*]] = arith.constant true
+// CHECK:         fir.result %[[T2]]#0, %[[TRUE2]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       }
 
 // --- Test 3: Polymorphic function results with cleanup region ---
@@ -109,9 +122,9 @@ func.func @test_poly_func_result_cleanup(%cond: i1) {
 
 // --- Test 4: Array with static extents ---
 // ExprType is !hlfir.expr<?xi32>, mold has static shape (10xi32).
-// The yielded variable is forwarded as borrowed storage (mustFree=false);
-// castTempToResultType converts the static-extent ref to a dynamic-extent box
-// via fir.convert + fir.embox.
+// A non-move as_expr allocates a heap temp and copies into it (mustFree=true);
+// castTempToResultType then converts the static-extent ref to a dynamic-extent
+// box via fir.convert + fir.embox.
 func.func @test_array_static(%cond: i1, %a: !fir.ref<!fir.array<10xi32>>, %b: !fir.ref<!fir.array<10xi32>>) {
   %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<?xi32> {
     hlfir.yield %a : !fir.ref<!fir.array<10xi32>>
@@ -124,21 +137,28 @@ func.func @test_array_static(%cond: i1, %a: !fir.ref<!fir.array<10xi32>>, %b: !f
 // CHECK-LABEL: func.func @test_array_static(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.ref<!fir.array<10xi32>>, %[[B:.*]]: !fir.ref<!fir.array<10xi32>>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.box<!fir.array<?xi32>>, i1) {
-// Variable forwarded; castTempToResultType emboxes to match box result type:
-// CHECK:         %[[FALSE1:.*]] = arith.constant false
-// CHECK:         %[[CVT1:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xi32>>
+// Copy into a heap temp, then embox to match the box result type:
+// CHECK:         %[[MEM1:.*]] = fir.allocmem !fir.array<10xi32>
+// CHECK:         %[[DECL1:.*]]:2 = hlfir.declare %[[MEM1]]
+// CHECK:         hlfir.assign %[[A]] to %[[DECL1]]#0 temporary_lhs
+// CHECK:         %[[TRUE1:.*]] = arith.constant true
+// CHECK:         %[[CVT1:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xi32>>
 // CHECK:         %[[BOX1:.*]] = fir.embox %[[CVT1]](%{{.*}}) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:         fir.result %[[BOX1]], %[[FALSE1]] : !fir.box<!fir.array<?xi32>>, i1
+// CHECK:         fir.result %[[BOX1]], %[[TRUE1]] : !fir.box<!fir.array<?xi32>>, i1
 // CHECK:       } else {
-// CHECK:         %[[FALSE2:.*]] = arith.constant false
-// CHECK:         %[[CVT2:.*]] = fir.convert %[[B]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xi32>>
+// CHECK:         %[[MEM2:.*]] = fir.allocmem !fir.array<10xi32>
+// CHECK:         %[[DECL2:.*]]:2 = hlfir.declare %[[MEM2]]
+// CHECK:         hlfir.assign %[[B]] to %[[DECL2]]#0 temporary_lhs
+// CHECK:         %[[TRUE2:.*]] = arith.constant true
+// CHECK:         %[[CVT2:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xi32>>
 // CHECK:         %[[BOX2:.*]] = fir.embox %[[CVT2]](%{{.*}}) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:         fir.result %[[BOX2]], %[[FALSE2]] : !fir.box<!fir.array<?xi32>>, i1
+// CHECK:         fir.result %[[BOX2]], %[[TRUE2]] : !fir.box<!fir.array<?xi32>>, i1
 // CHECK:       }
 
 // --- Test 5: Scalar character (static length) ---
 // For static-length characters, tempBaseType is !fir.ref<!fir.char<1,N>>.
-// The yielded variable is forwarded as borrowed storage, with no cast needed.
+// A non-move as_expr copies the yielded variable into a stack temp
+// (mustFree=false).
 func.func @test_scalar_char(%cond: i1, %a: !fir.ref<!fir.char<1,20>>, %b: !fir.ref<!fir.char<1,20>>) {
   %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<!fir.char<1,20>> {
     hlfir.yield %a : !fir.ref<!fir.char<1,20>>
@@ -151,12 +171,15 @@ func.func @test_scalar_char(%cond: i1, %a: !fir.ref<!fir.char<1,20>>, %b: !fir.r
 // CHECK-LABEL: func.func @test_scalar_char(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.ref<!fir.char<1,20>>, %[[B:.*]]: !fir.ref<!fir.char<1,20>>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.ref<!fir.char<1,20>>, i1) {
-// Variable forwarded directly:
+// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
 // CHECK:         %[[FALSE1:.*]] = arith.constant false
-// CHECK:         fir.result %[[A]], %[[FALSE1]] : !fir.ref<!fir.char<1,20>>, i1
+// CHECK:         fir.result %[[T1]]#0, %[[FALSE1]] : !fir.ref<!fir.char<1,20>>, i1
 // CHECK:       } else {
+// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
 // CHECK:         %[[FALSE2:.*]] = arith.constant false
-// CHECK:         fir.result %[[B]], %[[FALSE2]] : !fir.ref<!fir.char<1,20>>, i1
+// CHECK:         fir.result %[[T2]]#0, %[[FALSE2]] : !fir.ref<!fir.char<1,20>>, i1
 // CHECK:       }
 
 // --- Test 6: Forwarding (as_expr with move, type matches, inside region) ---
@@ -198,9 +221,9 @@ func.func @test_forwarding(%cond: i1) {
 // CHECK:       }
 
 // --- Test 7: Character array with static length ---
-// tempBaseType is !fir.box<!fir.array<?x!fir.char<1,15>>>.
-// The yielded variable is forwarded as borrowed storage; castTempToResultType
-// converts + emboxes.
+// tempBaseType is !fir.box<!fir.array<?x!fir.char<1,15>>>. A non-move as_expr
+// allocates a heap temp and copies into it (mustFree=true); castTempToResultType
+// then converts + emboxes.
 func.func @test_char_array_static_len(%cond: i1, %a: !fir.ref<!fir.array<3x!fir.char<1,15>>>, %b: !fir.ref<!fir.array<3x!fir.char<1,15>>>) {
   %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<?x!fir.char<1,15>> {
     hlfir.yield %a : !fir.ref<!fir.array<3x!fir.char<1,15>>>
@@ -213,21 +236,27 @@ func.func @test_char_array_static_len(%cond: i1, %a: !fir.ref<!fir.array<3x!fir.
 // CHECK-LABEL: func.func @test_char_array_static_len(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.ref<!fir.array<3x!fir.char<1,15>>>, %[[B:.*]]: !fir.ref<!fir.array<3x!fir.char<1,15>>>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.box<!fir.array<?x!fir.char<1,15>>>, i1) {
-// Variable forwarded; castTempToResultType converts + emboxes:
-// CHECK:         %[[FALSE1:.*]] = arith.constant false
-// CHECK:         %[[CVT1:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.array<3x!fir.char<1,15>>>) -> !fir.ref<!fir.array<?x!fir.char<1,15>>>
+// Copy into a heap temp, then convert + embox:
+// CHECK:         %[[MEM1:.*]] = fir.allocmem !fir.array<3x!fir.char<1,15>>
+// CHECK:         %[[DECL1:.*]]:2 = hlfir.declare %[[MEM1]]
+// CHECK:         hlfir.assign %[[A]] to %[[DECL1]]#0 temporary_lhs
+// CHECK:         %[[TRUE1:.*]] = arith.constant true
+// CHECK:         %[[CVT1:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.array<3x!fir.char<1,15>>>) -> !fir.ref<!fir.array<?x!fir.char<1,15>>>
 // CHECK:         %[[BOX1:.*]] = fir.embox %[[CVT1]](%{{.*}}) : (!fir.ref<!fir.array<?x!fir.char<1,15>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,15>>>
-// CHECK:         fir.result %[[BOX1]], %[[FALSE1]] : !fir.box<!fir.array<?x!fir.char<1,15>>>, i1
+// CHECK:         fir.result %[[BOX1]], %[[TRUE1]] : !fir.box<!fir.array<?x!fir.char<1,15>>>, i1
 // CHECK:       } else {
-// CHECK:         %[[FALSE2:.*]] = arith.constant false
-// CHECK:         %[[CVT2:.*]] = fir.convert %[[B]] : (!fir.ref<!fir.array<3x!fir.char<1,15>>>) -> !fir.ref<!fir.array<?x!fir.char<1,15>>>
+// CHECK:         %[[MEM2:.*]] = fir.allocmem !fir.array<3x!fir.char<1,15>>
+// CHECK:         %[[DECL2:.*]]:2 = hlfir.declare %[[MEM2]]
+// CHECK:         hlfir.assign %[[B]] to %[[DECL2]]#0 temporary_lhs
+// CHECK:         %[[TRUE2:.*]] = arith.constant true
+// CHECK:         %[[CVT2:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.array<3x!fir.char<1,15>>>) -> !fir.ref<!fir.array<?x!fir.char<1,15>>>
 // CHECK:         %[[BOX2:.*]] = fir.embox %[[CVT2]](%{{.*}}) : (!fir.ref<!fir.array<?x!fir.char<1,15>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,15>>>
-// CHECK:         fir.result %[[BOX2]], %[[FALSE2]] : !fir.box<!fir.array<?x!fir.char<1,15>>>, i1
+// CHECK:         fir.result %[[BOX2]], %[[TRUE2]] : !fir.box<!fir.array<?x!fir.char<1,15>>>, i1
 // CHECK:       }
 
 // --- Test 8: Scalar character (dynamic length) ---
-// tempBaseType is !fir.boxchar<1>. The yielded variable is forwarded as
-// borrowed storage, with no cast needed since boxchar matches the result type.
+// tempBaseType is !fir.boxchar<1>. A non-move as_expr copies the yielded
+// variable into a stack temp (mustFree=false).
 func.func @test_scalar_char_dynamic(%cond: i1, %a: !fir.boxchar<1>, %b: !fir.boxchar<1>) {
   %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<!fir.char<1,?>> {
     hlfir.yield %a : !fir.boxchar<1>
@@ -240,18 +269,22 @@ func.func @test_scalar_char_dynamic(%cond: i1, %a: !fir.boxchar<1>, %b: !fir.box
 // CHECK-LABEL: func.func @test_scalar_char_dynamic(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.boxchar<1>, %[[B:.*]]: !fir.boxchar<1>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.boxchar<1>, i1) {
-// Boxchar variable forwarded directly:
+// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
 // CHECK:         %[[FALSE1:.*]] = arith.constant false
-// CHECK:         fir.result %[[A]], %[[FALSE1]] : !fir.boxchar<1>, i1
+// CHECK:         fir.result %[[T1]]#0, %[[FALSE1]] : !fir.boxchar<1>, i1
 // CHECK:       } else {
+// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
 // CHECK:         %[[FALSE2:.*]] = arith.constant false
-// CHECK:         fir.result %[[B]], %[[FALSE2]] : !fir.boxchar<1>, i1
+// CHECK:         fir.result %[[T2]]#0, %[[FALSE2]] : !fir.boxchar<1>, i1
 // CHECK:       }
 
 // --- Test 9: Asymmetric branches (non-polymorphic + polymorphic) ---
 // One branch yields !fir.ref (non-polymorphic), the other !fir.class
 // (polymorphic). ExprType is polymorphic, so tempBaseType is !fir.class.
-// The non-poly branch needs fir.embox to cast the forwarded ref → class.
+// Each branch copies its variable into a temp; the non-poly branch then emboxes
+// its ref temp to class.
 func.func @test_asymmetric_poly(%cond: i1, %a: !fir.ref<!fir.type<_Tt{x:i32}>>, %b: !fir.class<!fir.type<_Tt{x:i32}>>) {
   %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<!fir.type<_Tt{x:i32}>?> {
     hlfir.yield %a : !fir.ref<!fir.type<_Tt{x:i32}>>
@@ -264,14 +297,19 @@ func.func @test_asymmetric_poly(%cond: i1, %a: !fir.ref<!fir.type<_Tt{x:i32}>>, 
 // CHECK-LABEL: func.func @test_asymmetric_poly(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.ref<!fir.type<_Tt{x:i32}>>, %[[B:.*]]: !fir.class<!fir.type<_Tt{x:i32}>>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.class<!fir.type<_Tt{x:i32}>>, i1) {
-// Non-poly branch: castTempToResultType emboxes ref → class:
+// Non-poly branch: copy into a stack temp, then embox ref → class:
+// CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
 // CHECK:         %[[FALSE:.*]] = arith.constant false
-// CHECK:         %[[BOX:.*]] = fir.embox %[[A]] : (!fir.ref<!fir.type<_Tt{x:i32}>>) -> !fir.class<!fir.type<_Tt{x:i32}>>
+// CHECK:         %[[BOX:.*]] = fir.embox %[[T1]]#0 : (!fir.ref<!fir.type<_Tt{x:i32}>>) -> !fir.class<!fir.type<_Tt{x:i32}>>
 // CHECK:         fir.result %[[BOX]], %[[FALSE]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       } else {
-// Poly branch: class variable forwarded as borrowed storage:
-// CHECK:         %[[FALSE2:.*]] = arith.constant false
-// CHECK:         fir.result %[[B]], %[[FALSE2]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
+// Poly branch: runtime-allocate a polymorphic temp and copy into it:
+// CHECK:         fir.call @_FortranAAllocatableAllocate
+// CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
+// CHECK:         %[[TRUE:.*]] = arith.constant true
+// CHECK:         fir.result %[[T2]]#0, %[[TRUE]] : !fir.class<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       }
 
 // Helper declarations for test 3.
@@ -325,9 +363,11 @@ func.func private @_QPfunc_alloc_char(!fir.boxchar<1>) -> !fir.box<!fir.heap<!fi
 // CHECK:         fir.freemem %[[HEAP]]
 // CHECK:         fir.result %[[BOXCHAR]], %[[TRUE]] : !fir.boxchar<1>, i1
 // CHECK:       } else {
-// Non-forwarding: boxchar variable forwarded directly:
+// Non-forwarding: variable copied into a stack temp (mustFree=false):
+// CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[ARG]] to %[[T]]#0 temporary_lhs
 // CHECK:         %[[FALSE:.*]] = arith.constant false
-// CHECK:         fir.result %[[ARG]], %[[FALSE]] : !fir.boxchar<1>, i1
+// CHECK:         fir.result %[[T]]#0, %[[FALSE]] : !fir.boxchar<1>, i1
 // CHECK:       }
 
 // --- Test 11: Array expr from hlfir.elemental (buffer forwarding) ---
@@ -361,11 +401,14 @@ func.func @test_elemental_forwarding(%cond: i1, %n: index, %a: !fir.ref<!fir.arr
 // Buffer forwarded directly (no extra copy after loop):
 // CHECK:         fir.result %[[ELEM_DECL]]#0, %[[TRUE1]] : !fir.box<!fir.array<?xi32>>, i1
 // CHECK:       } else {
-// Variable yield: forwarded via convert + embox to match box result type:
-// CHECK:         %[[FALSE:.*]] = arith.constant false
-// CHECK:         %[[CVT:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xi32>>
+// Variable yield: copied into a heap temp (mustFree=true), then converted + emboxed:
+// CHECK:         %[[MEM:.*]] = fir.allocmem !fir.array<10xi32>
+// CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[MEM]]
+// CHECK:         hlfir.assign %[[A]] to %[[DECL]]#0 temporary_lhs
+// CHECK:         %[[TRUE2:.*]] = arith.constant true
+// CHECK:         %[[CVT:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xi32>>
 // CHECK:         %[[BOX:.*]] = fir.embox %[[CVT]](%{{.*}}) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:         fir.result %[[BOX]], %[[FALSE]] : !fir.box<!fir.array<?xi32>>, i1
+// CHECK:         fir.result %[[BOX]], %[[TRUE2]] : !fir.box<!fir.array<?xi32>>, i1
 // CHECK:       }
 
 // --- Test 12: Nested conditional (exercises setHasBoundedRewriteRecursion) ---
@@ -392,12 +435,18 @@ func.func @test_nested(%cond1: i1, %cond2: i1, %a: !fir.ref<!fir.type<_Tt{x:i32}
 // CHECK:       %[[OUTER:.*]]:2 = fir.if %[[COND1]] -> (!fir.ref<!fir.type<_Tt{x:i32}>>, i1) {
 // Inner fir.if (nested — proves bounded rewrite recursion works):
 // CHECK:         %[[INNER:.*]]:2 = fir.if %[[COND2]] -> (!fir.ref<!fir.type<_Tt{x:i32}>>, i1) {
-// CHECK:           fir.result %[[A]], %{{.*}} : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
+// CHECK:           %[[IT:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:           hlfir.assign %[[A]] to %[[IT]]#0 temporary_lhs
+// CHECK:           fir.result %[[IT]]#0, %{{.*}} : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:         } else {
-// CHECK:           fir.result %[[B]], %{{.*}} : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
+// CHECK:           %[[IE:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:           hlfir.assign %[[B]] to %[[IE]]#0 temporary_lhs
+// CHECK:           fir.result %[[IE]]#0, %{{.*}} : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:         }
 // Inner results forwarded to outer fir.result:
 // CHECK:         fir.result %[[INNER]]#0, %[[INNER]]#1 : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       } else {
-// CHECK:         fir.result %[[C]], %{{.*}} : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
+// CHECK:         %[[OE:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+// CHECK:         hlfir.assign %[[C]] to %[[OE]]#0 temporary_lhs
+// CHECK:         fir.result %[[OE]]#0, %{{.*}} : !fir.ref<!fir.type<_Tt{x:i32}>>, i1
 // CHECK:       }
