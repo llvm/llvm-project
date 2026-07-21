@@ -355,3 +355,23 @@ define <2 x i10> @extract_v2i10_v4i10_high(<4 x i10> %a) {
   %vector = call <2 x i10> @llvm.vector.extract.subvector.v2i10.v4i10(<4 x i10> %a, i64 2)
   ret <2 x i10> %vector
 }
+
+define <1 x i64> @extract_v1i64_v2i64_1(<2 x i64> %a) {
+; CHECK-LABEL: extract_v1i64_v2i64_1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <1 x i64> @llvm.vector.extract.subvector.v1i64.v2i64(<2 x i64> %a, i64 1)
+  ret <1 x i64> %vector
+}
+
+define <1 x i64> @extract_v1i64_v4i64_4(<4 x i64> %a) {
+; CHECK-LABEL: extract_v1i64_v4i64_4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d0, v1.d[1]
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <1 x i64> @llvm.vector.extract.subvector.v1i64.v4i64(<4 x i64> %a, i64 3)
+  ret <1 x i64> %vector
+}
