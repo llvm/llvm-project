@@ -1,0 +1,17 @@
+// Test that input can't be redirected from unreadable A.swift
+// See RedirectInputUnreadablePOSIX.test for the POSIX version
+// REQUIRES: swift
+// REQUIRES: system-windows
+
+// RUN: mkdir -p %t
+// RUN: cp %S/Inputs/A.swift %t/A.swift
+// icalcs is Windows' CLI to modify file permissions.
+// RUN: icacls %t/A.swift /deny "*S-1-1-0:(R)"
+// RUN: cd %t
+// RUN: %lldb --repl < %s 2>&1 | FileCheck %s --check-prefix=LLDB
+
+< A.swift
+// LLDB: could not create buffer for file at path 'A.swift'
+
+// RUN: icacls %t/A.swift /reset
+// RUN: rm -f %t/A.swift

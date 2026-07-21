@@ -1,5 +1,7 @@
 // Test that input can't be redirected from unreadable A.swift
+// See RedirectInputUnreadableWindows.test for the Windows version
 // REQUIRES: swift
+// UNSUPPORTED: system-windows
 
 // RUN: mkdir -p %t
 // RUN: cp %S/Inputs/A.swift %t/A.swift
