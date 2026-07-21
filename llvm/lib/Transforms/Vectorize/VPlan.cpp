@@ -1313,13 +1313,6 @@ VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
   return VPIRBB;
 }
 
-bool VPlan::isCompatibleWithTF(bool TF) {
-  auto *VLR = getVectorLoopRegion();
-  assert(VLR && "Vector loop region got eliminated\n");
-  bool HasHeaderMask = (VLR->getHeaderMask() != nullptr);
-  return HasHeaderMask == TF;
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
@@ -1652,27 +1645,17 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
   return PredicateAtRangeStart;
 }
 
-VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF, bool TF) const {
+VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
   assert(count_if(VPlans,
-                  [VF, TF](const VPlanPtr &Plan) {
-                    LLVM_DEBUG(dbgs() << "LV: given VF: " << VF << " and TF: "
-                                      << TF << " equivalent vplan: ";
-                               Plan->dump());
-                    return Plan->hasVF(VF) && Plan->isCompatibleWithTF(TF);
-                  }) == 1 &&
+                  [VF](const VPlanPtr &Plan) { return Plan->hasVF(VF); }) ==
+             1 &&
          "Multiple VPlans for VF.");
 
   for (const VPlanPtr &Plan : VPlans) {
-    if (Plan->hasVF(VF) && Plan->isCompatibleWithTF(TF))
+    if (Plan->hasVF(VF))
       return *Plan.get();
   }
   llvm_unreachable("No plan found!");
-}
-
-bool LoopVectorizationPlanner::hasPlanWithVF(ElementCount VF, bool TF) const {
-  return any_of(VPlans, [VF, TF](const VPlanPtr &Plan) {
-    return Plan->hasVF(VF) && Plan->isCompatibleWithTF(TF);
-  });
 }
 
 static void addRuntimeUnrollDisableMetaData(Loop *L) {
