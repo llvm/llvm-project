@@ -62,3 +62,75 @@ func.func @array_reduction(%arg0: memref<2xi32>) {
   acc.copyout accPtr(%0 : memref<2xi32>) to varPtr(%arg0 : memref<2xi32>) {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "r"}
   return
 }
+
+// CHECK-LABEL: func.func @array_reduction_small_shared
+// CHECK: memref.alloc() : memref<2xi32>
+// CHECK-NOT: gpu.all_reduce
+// CHECK-NOT: acc.reduction_accumulate_array
+func.func @array_reduction_small_shared() {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx) {
+    %c2 = arith.constant 2 : index
+    %shared = memref.alloc() : memref<2xi32>
+    %bounds = acc.bounds extent(%c2 : index)
+    acc.reduction_accumulate_array %shared bounds(%bounds) <add>
+        : memref<2xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+    memref.dealloc %shared : memref<2xi32>
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// CHECK-LABEL: func.func @array_reduction_strided_extent
+// CHECK: gpu.launch
+// CHECK: %[[LB:.*]] = arith.constant 1 : index
+// CHECK: %[[STEP:.*]] = arith.constant 2 : index
+// CHECK: %[[EXTENT:.*]] = arith.constant 3 : index
+// CHECK: %[[SPAN:.*]] = arith.muli %[[EXTENT]], %[[STEP]] : index
+// CHECK: %[[UB:.*]] = arith.addi %[[LB]], %[[SPAN]] : index
+// CHECK: scf.for %{{.*}} = %[[LB]] to %[[UB]] step %[[STEP]]
+func.func @array_reduction_strided_extent() {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx) {
+    %c1_b = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %c3 = arith.constant 3 : index
+    %local = memref.alloca() : memref<8xi32>
+    %bounds = acc.bounds lowerbound(%c1_b : index) extent(%c3 : index)
+        stride(%c2 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        : memref<8xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// A dynamically-shaped accumulator (a strided view whose type conveys no size)
+// is classified per-thread from par_dims: a thread dimension means per-thread
+// storage, so lowering emits the per-element gpu.all_reduce.
+//
+// CHECK-LABEL: func.func @array_reduction_dynamic_par_dims
+// CHECK: scf.for
+// CHECK: gpu.all_reduce add
+func.func @array_reduction_dynamic_par_dims(%buf: memref<?xi32>, %n: index) {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx) ins(%arg0 = %buf, %ext = %n) : (memref<?xi32>, index) {
+    %view = memref.reinterpret_cast %arg0 to offset: [0], sizes: [%ext], strides: [1]
+        : memref<?xi32> to memref<?xi32, strided<[1]>>
+    %bounds = acc.bounds extent(%ext : index)
+    acc.reduction_accumulate_array %view bounds(%bounds) <add>
+        : memref<?xi32, strided<[1]>>
+        {par_dims = #acc<par_dims[block_x, thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}

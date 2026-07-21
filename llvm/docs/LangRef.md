@@ -4061,11 +4061,16 @@ Given that definition, R{sub}`byte` is defined as follows:
 -  Otherwise, if R{sub}`byte` may see exactly one write,
    R{sub}`byte` returns the value written by that write.
 -  Otherwise, if R is atomic, and all the writes R{sub}`byte` may
-   see are atomic, it chooses one of the values written. See the {ref}`Atomic
+   see are atomic, and R and the writes all access the exact same set of
+   bytes, it chooses one of the values written. See the {ref}`Atomic
    Memory Ordering Constraints <ordering>` section for additional
    constraints on how the choice is made. Targets may impose additional
    requirements on R and the writes it may see based on their `syncscope`.
 -  Otherwise R{sub}`byte` returns `undef`.
+
+Atomic accesses cannot tear: If a byte subaccess R{sub}`byte1` of an
+atomic read R reads from an atomic write W, then all other byte
+subaccesses R{sub}`byte2` of R that may see W must also read from W.
 
 R returns the value composed of the series of bytes it read. This
 implies that some bytes within the value may be `undef` **without**
@@ -4099,6 +4104,12 @@ address. See that instruction's documentation for details.
 For a simpler introduction to the ordering constraints, see the
 {doc}`Atomics`.
 
+For the following, we call two or more accesses *perfectly overlapping*
+if they all access the exact same set of bytes, i.e., they access the
+same address and have the same access size. By the constraints of the
+previous section, overlapping atomic accesses that are not ordered by
+happens-before must be perfectly overlapping to act atomically.
+
 `unordered`
 :   The set of values that can be read is governed by the happens-before
     partial order. A value cannot be read unless some operation wrote
@@ -4108,22 +4119,24 @@ For a simpler introduction to the ordering constraints, see the
     to make them atomic in any interesting way.
 
 `monotonic`
-:   In addition to the guarantees of `unordered`, there is a single
-    total order for modifications by `monotonic` operations on each
-    address. All modification orders must be compatible with the
+:   In addition to the guarantees of `unordered`, there is a total order
+    of modifications for each set of perfectly overlapping `monotonic`
+    operations.
+    All modification orders must be compatible with the
     happens-before order. There is no guarantee that the modification
     orders can be combined to a global total order for the whole program
     (and this often will not be possible). If the read in an atomic
     read-modify-write operation M ({ref}`cmpxchg <i_cmpxchg>` and
-    {ref}`atomicrmw <i_atomicrmw>`) reads from a `monotonic` (or
-    stronger) write W, W must be immediately before M in the address's
-    modification order. If one atomic read happens before another atomic
-    read of the same address and both are at least `monotonic`, the
-    later read must not see an earlier value in the address's
-    modification order. This disallows reordering of `monotonic` (or
-    stronger) operations on the same address. If an address is written
-    `monotonic`-ally by one thread, and other threads `monotonic`-ally
-    read that address repeatedly, the other threads must eventually see
+    {ref}`atomicrmw <i_atomicrmw>`) reads from a perfectly overlapping
+    `monotonic` (or stronger) write W, W must be immediately before M in
+    the relevant modification order. If one atomic read happens before
+    another perfectly overlapping atomic read and both are at least
+    `monotonic`, the later read must not see an earlier value in the
+    address's modification order. This disallows reordering of perfectly
+    overlapping `monotonic` (or stronger) operations. If an address is
+    written `monotonic`-ally by one thread, and other threads
+    `monotonic`-ally read that address repeatedly with perfectly
+    overlapping accesses, the other threads must eventually see
     the write. This corresponds to the C/C++ `memory_order_relaxed`.
 
 `acquire`
@@ -4133,10 +4146,11 @@ For a simpler introduction to the ordering constraints, see the
 
 `release`
 :   In addition to the guarantees of `monotonic`, if this operation
-    writes a value which is subsequently read by an `acquire`
-    operation, it *synchronizes-with* that operation. Furthermore,
-    this occurs even if the value written by a `release` operation
-    has been modified by a read-modify-write operation before being
+    writes a value which is subsequently read by a perfectly overlapping
+    `acquire` operation, it *synchronizes-with* that operation.
+    Furthermore, this occurs even if the value written by a `release`
+    operation has been modified by a perfectly overlapping
+    read-modify-write operation before being
     read. (Such a set of operations comprises a *release
     sequence*). This corresponds to the C/C++
     `memory_order_release`.
@@ -4150,7 +4164,8 @@ For a simpler introduction to the ordering constraints, see the
     operation that only reads, `release` for an operation that only
     writes), there is a global total order on all
     sequentially-consistent operations on all addresses. If an address
-    is only accessed through sequentially-consistent operations, each
+    is only accessed through perfectly overlapping
+    sequentially-consistent operations, each
     sequentially-consistent read of that address sees the last preceding
     write to the same address in this global order. This corresponds to
     the C/C++ `memory_order_seq_cst` and Java `volatile`.
@@ -8279,13 +8294,11 @@ memory dependencies.  The transformation will attempt to isolate the unsafe
 dependencies into their own loop.
 
 This metadata can be used to selectively enable or disable distribution of the
-loop.  The first operand is the string `llvm.loop.distribute.enable` and the
-second operand is a bit. If the bit operand value is 1 distribution is
-enabled. A value of 0 disables distribution:
+loop.  Each node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.distribute.enable", i1 0}
-!1 = !{!"llvm.loop.distribute.enable", i1 1}
+!0 = !{!"llvm.loop.distribute.enable"}
+!1 = !{!"llvm.loop.distribute.disable"}
 ```
 
 This metadata should be used in conjunction with `llvm.loop` loop
@@ -11961,7 +11974,8 @@ defines what *synchronizes-with* edges they add. They can only be given
 A fence A which has (at least) `release` ordering semantics
 *synchronizes with* a fence B with (at least) `acquire` ordering
 semantics if and only if there exist atomic operations X and Y, both
-operating on some atomic object M, such that A is sequenced before X, X
+operating on some atomic object M with the same address and access size,
+such that A is sequenced before X, X
 modifies M (either directly or through some side effect of a sequence
 headed by X), Y is sequenced before B, and Y observes M. This provides a
 *happens-before* dependency between A and B. Rather than an explicit
@@ -14993,6 +15007,28 @@ If the source pointer is poison, the instruction returns poison.
 The resulting pointer belongs to the same address space as `source`.
 This instruction does not dereference the pointer.
 
+##### Aliasing rules:
+
+Common {ref}`aliasing rules <pointeraliasing>` apply to pointers returned
+by this intrinsic, as well as the following additional rules:
+
+The pointer returned by `@llvm.structured.gep` can only be used to access
+memory that is part of the indexed subobject, otherwise the behavior is
+undefined.
+
+```llvm
+   %S = { i32, i32 } ; assuming these are laid out next to each other
+                     ; and sizeof(i32) < sizeof(64).
+
+   %ptr0 = call ptr @llvm.structured.gep(ptr elementtype(%S) %src, i32 0)
+   %field0 = load i64, ptr %ptr0 ; undefined behavior, because the access
+                                 ; crosses into the second field.
+```
+
+This implies that two `llvm.structured.gep` calls with the same pointer
+and element type do not alias unless the index sequence of one if a prefix
+of the other.
+
 ##### Example:
 
 **Simple case: logical access of a struct field**
@@ -15969,9 +16005,9 @@ support all bit widths however.
 
 ```
 declare void @llvm.memcpy.p0.p0.i32(ptr <dest>, ptr <src>,
-                                    i32 <len>, i1 <isvolatile>)
+                                    i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memcpy.p0.p0.i64(ptr <dest>, ptr <src>,
-                                    i64 <len>, i1 <isvolatile>)
+                                    i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16023,9 +16059,9 @@ support all bit widths however.
 
 ```
 declare void @llvm.memcpy.inline.p0.p0.i32(ptr <dest>, ptr <src>,
-                                           i32 <len>, i1 <isvolatile>)
+                                           i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memcpy.inline.p0.p0.i64(ptr <dest>, ptr <src>,
-                                           i64 <len>, i1 <isvolatile>)
+                                           i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16075,9 +16111,9 @@ bit widths however.
 
 ```
 declare void @llvm.memmove.p0.p0.i32(ptr <dest>, ptr <src>,
-                                     i32 <len>, i1 <isvolatile>)
+                                     i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memmove.p0.p0.i64(ptr <dest>, ptr <src>,
-                                     i64 <len>, i1 <isvolatile>)
+                                     i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16131,9 +16167,9 @@ support all bit widths.
 
 ```
 declare void @llvm.memset.p0.i32(ptr <dest>, i8 <val>,
-                                 i32 <len>, i1 <isvolatile>)
+                                 i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memset.p0.i64(ptr <dest>, i8 <val>,
-                                 i64 <len>, i1 <isvolatile>)
+                                 i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:
@@ -16184,9 +16220,9 @@ support all bit widths however.
 
 ```
 declare void @llvm.memset.inline.p0.i32(ptr <dest>, i8 <val>,
-                                        i32 <len>, i1 <isvolatile>)
+                                        i32 <len>, i1 immarg <isvolatile>)
 declare void @llvm.memset.inline.p0.i64(ptr <dest>, i8 <val>,
-                                        i64 <len>, i1 <isvolatile>)
+                                        i64 <len>, i1 immarg <isvolatile>)
 ```
 
 ##### Overview:

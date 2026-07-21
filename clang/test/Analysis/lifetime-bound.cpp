@@ -217,3 +217,35 @@ int *one_dangling_source_ptr(int *a [[clang::lifetimebound]]) {
   return multi_param_test_ptr(a, x_ptr); // expected-warning {{Returning value bound to 'x' that will go out of scope}}
 }
 
+struct S {
+    int x;
+    int* get() [[clang::lifetimebound]] { return &x; }
+    S() = default;
+    S(S&& other) { (void)other.get(); }
+    ~S() { get(); }
+};
+
+S make() { return S(); }
+
+S passThrough(S param) { return param; }
+
+void outer() {
+    auto f = passThrough(make());
+    (void)f; // no-warning
+}
+
+int *danglingLocal() {
+  S s;
+  return s.get();
+  // expected-warning@-1 {{Returning value bound to 's' that will go out of scope}}
+  // expected-warning@-2 {{Address of stack memory associated with local variable 's' returned}}
+  // expected-warning@-3 {{address of stack memory associated with local variable 's' returned}}
+}
+
+int *danglingParam(S param) {
+  return param.get();
+  // expected-warning@-1 {{Returning value bound to 'param' that will go out of scope}}
+  // expected-warning@-2 {{Address of stack memory associated with local variable 'param' returned}}
+  // expected-warning@-3 {{address of stack memory associated with parameter 'param' returned}}
+}
+
