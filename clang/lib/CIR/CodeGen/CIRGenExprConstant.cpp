@@ -1098,7 +1098,7 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
                                     : layout.getBaseSubobjectCIRType());
   auto recordTy = mlir::cast<cir::RecordType>(ty);
 
-  unsigned numElements = recordTy.getNumElements();
+  unsigned numElements = rd->isUnion() ? 1 : recordTy.getNumElements();
   SmallVector<mlir::Attribute> elements(numElements);
 
   auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
@@ -1309,9 +1309,10 @@ mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
     cgm.errorNYI("emitForMemory: zero-extend HLSL bool vectors");
   }
 
-  if (destType->isBitIntType()) {
-    cgm.errorNYI("emitForMemory: _BitInt type");
-  }
+  // CIR represents source types as literally as possible.  Some types, such as
+  // bool and _BitInt(N), are kept at their literal width here and expanded to
+  // their wider "in memory" types during lowering to the LLVM dialect, so the
+  // constant is already in the right form and needs no adjustment.
 
   return c;
 }
@@ -1469,11 +1470,17 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
     const auto *mpt = destType->castAs<MemberPointerType>();
     const auto *destClass = mpt->getMostRecentCXXRecordDecl();
-    if (fieldDecl->hasAttr<NoUniqueAddressAttr>()) {
-      assert(!cir::MissingFeatures::noUniqueAddressLayout());
-      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate: no_unique_address field");
-      return {};
+
+    // Empty [[no_unique_address]] fields have no CIR field index; represent the
+    // pointer-to-data-member by its concrete byte offset.
+    if (cgm.isEmptyFieldForMemberPointer(fieldDecl)) {
+      const ASTContext &astContext = cgm.getASTContext();
+      CharUnits offset =
+          astContext.getMemberPointerPathAdjustment(value) +
+          astContext.toCharUnitsFromBits(astContext.getFieldOffset(fieldDecl));
+      return cir::DataMemberOffsetAttr::get(cirTy, offset.getQuantity());
     }
+
     std::optional<llvm::SmallVector<int32_t>> path =
         cgm.buildMemberPath(destClass, fieldDecl);
     if (!path)
