@@ -1691,7 +1691,7 @@ public:
   private:
     llvm::StringRef GetScriptClassName() const;
 
-    lldb::ScriptedStopHookInterfaceSP m_interface_sp;
+    lldb::ScriptedHookInterfaceSP m_interface_sp;
 
     /// Use CreateStopHook to make a new empty stop hook. Use SetScriptCallback
     /// to set the script to execute, and SetSpecifier to set the specifier

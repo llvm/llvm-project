@@ -835,7 +835,7 @@ def ProcessorFeatures {
                                    FeatureRAS, FeatureSEL2, FeatureTRACEV8_4,
                                    FeatureAltFPCmp, FeatureFRInt3264,
                                    FeatureMTE, FeatureFineGrainedTraps,
-                                   FeatureHCX, FeatureRCPC3, FeatureETE,
+                                   FeatureRCPC3, FeatureETE,
                                    FeatureSVEBitPerm, FeatureSVE2, FeatureTRBE,
                                    FeatureSME, FeatureSME2];
   list<SubtargetFeature> A65  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
@@ -917,7 +917,7 @@ def ProcessorFeatures {
                                   FeatureAM, FeatureRAS, FeatureSEL2,
                                   FeatureTRACEV8_4, FeatureAltFPCmp,
                                   FeatureFRInt3264, FeatureMTE,
-                                  FeatureFineGrainedTraps, FeatureHCX,
+                                  FeatureFineGrainedTraps,
                                   FeatureSPE_EEF, FeatureRCPC3, FeatureETE,
                                   FeatureSVEBitPerm, FeatureSVE2, FeatureTRBE,
                                   FeatureSME, FeatureSME2];
@@ -992,7 +992,7 @@ def ProcessorFeatures {
                                       FeatureRAS, FeatureSEL2, FeatureTRACEV8_4,
                                       FeatureAltFPCmp, FeatureFRInt3264,
                                       FeatureMTE, FeatureFineGrainedTraps,
-                                      FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                      FeatureSPE_EEF, FeatureRCPC3,
                                       FeatureETE, FeatureSVEBitPerm,
                                       FeatureSVE2, FeatureTRBE, FeatureSME,
                                       FeatureSME2];
@@ -1007,7 +1007,7 @@ def ProcessorFeatures {
                                     FeatureSEL2, FeatureTRACEV8_4,
                                     FeatureAltFPCmp, FeatureFRInt3264,
                                     FeatureMTE, FeatureFineGrainedTraps,
-                                    FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                    FeatureSPE_EEF, FeatureRCPC3,
                                     FeatureETE, FeatureSVEBitPerm, FeatureSVE2,
                                     FeatureTRBE, FeatureSME, FeatureSME2];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
@@ -1069,7 +1069,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA16 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX,
                                      FeatureComplxNum, FeatureCRC, FeatureJS,
                                      FeatureLSE, FeaturePAuth, FeatureFPAC,
                                      FeatureRAS, FeatureRCPC, FeatureRDM,
@@ -1077,7 +1076,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA17 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX,
                                      FeatureComplxNum, FeatureCRC, FeatureJS,
                                      FeatureLSE, FeaturePAuth, FeatureFPAC,
                                      FeatureRAS, FeatureRCPC, FeatureRDM,

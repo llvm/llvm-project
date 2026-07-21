@@ -35,6 +35,9 @@ namespace clang::ssaf {
 ///     pointer to the memory block to deallocate (or a null pointer).
 ///  -# The second parameter of `operator delete(void*, void*)` representing
 ///     the placement pointer matching the corresponding placement `new`.
+///
+/// From the `main` function:
+///  -# Pointer-typed parameters of `main`.
 struct TypeConstrainedPointersEntitySummary final : public EntitySummary {
   static constexpr llvm::StringLiteral Name = "TypeConstrainedPointers";
 

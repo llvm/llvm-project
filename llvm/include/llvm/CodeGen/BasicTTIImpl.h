@@ -682,6 +682,21 @@ public:
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
   }
 
+  bool haveFastClmul(IntegerType *Ty) const override {
+    // FIXME: clmul should really be Promote for any bitwidth under the largest
+    // legal bitwidth for clmul. Using IndexTy instead of Ty is a hack to get
+    // around that shortcoming.
+    const DataLayout &DL = thisT()->DL;
+    IntegerType *IndexTy =
+        DL.getIndexType(Ty->getContext(), DL.getAllocaAddrSpace());
+    if (Ty->getBitWidth() > IndexTy->getBitWidth())
+      return false;
+
+    const TargetLoweringBase *TLI = getTLI();
+    EVT VT = TLI->getValueType(DL, IndexTy);
+    return TLI->isOperationLegalOrCustom(ISD::CLMUL, VT);
+  }
+
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }
 
   InstructionCost getFPOpCost(Type *Ty) const override {
@@ -843,6 +858,10 @@ public:
     return BaseT::simplifyDemandedVectorEltsIntrinsic(
         IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
         SimplifyAndSetOp);
+  }
+
+  InstructionCost getBranchMispredictPenalty() const override {
+    return getST()->getMispredictionPenalty();
   }
 
   std::optional<unsigned>

@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -21,8 +23,17 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-optimize-returned"
 
 namespace {
-class OptimizeReturned final : public FunctionPass,
-                               public InstVisitor<OptimizeReturned> {
+class WebAssemblyOptimizeReturnedImpl
+    : public InstVisitor<WebAssemblyOptimizeReturnedImpl> {
+  DominatorTree *DT = nullptr;
+
+public:
+  WebAssemblyOptimizeReturnedImpl(DominatorTree *DT) : DT(DT) {}
+  bool runOnFunction(Function &F);
+  void visitCallBase(CallBase &CB);
+};
+
+class WebAssemblyOptimizeReturnedLegacy final : public FunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Optimize Returned";
   }
@@ -36,26 +47,24 @@ class OptimizeReturned final : public FunctionPass,
 
   bool runOnFunction(Function &F) override;
 
-  DominatorTree *DT = nullptr;
-
 public:
   static char ID;
-  OptimizeReturned() : FunctionPass(ID) {}
+  WebAssemblyOptimizeReturnedLegacy() : FunctionPass(ID) {}
 
   void visitCallBase(CallBase &CB);
 };
 } // End anonymous namespace
 
-char OptimizeReturned::ID = 0;
-INITIALIZE_PASS(OptimizeReturned, DEBUG_TYPE,
+char WebAssemblyOptimizeReturnedLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyOptimizeReturnedLegacy, DEBUG_TYPE,
                 "Optimize calls with \"returned\" attributes for WebAssembly",
                 false, false)
 
-FunctionPass *llvm::createWebAssemblyOptimizeReturned() {
-  return new OptimizeReturned();
+FunctionPass *llvm::createWebAssemblyOptimizeReturnedLegacyPass() {
+  return new WebAssemblyOptimizeReturnedLegacy();
 }
 
-void OptimizeReturned::visitCallBase(CallBase &CB) {
+void WebAssemblyOptimizeReturnedImpl::visitCallBase(CallBase &CB) {
   for (unsigned I = 0, E = CB.arg_size(); I < E; ++I)
     if (CB.paramHasAttr(I, Attribute::Returned)) {
       Value *Arg = CB.getArgOperand(I);
@@ -70,12 +79,27 @@ void OptimizeReturned::visitCallBase(CallBase &CB) {
     }
 }
 
-bool OptimizeReturned::runOnFunction(Function &F) {
+bool WebAssemblyOptimizeReturnedImpl::runOnFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "********** Optimize returned Attributes **********\n"
                        "********** Function: "
                     << F.getName() << '\n');
 
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   visit(F);
   return true;
+}
+
+bool WebAssemblyOptimizeReturnedLegacy::runOnFunction(Function &F) {
+  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  WebAssemblyOptimizeReturnedImpl Impl(DT);
+  return Impl.runOnFunction(F);
+}
+
+PreservedAnalyses
+WebAssemblyOptimizeReturnedPass::run(Function &F,
+                                     FunctionAnalysisManager &FAM) {
+  DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+  WebAssemblyOptimizeReturnedImpl Impl(DT);
+  return Impl.runOnFunction(F)
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

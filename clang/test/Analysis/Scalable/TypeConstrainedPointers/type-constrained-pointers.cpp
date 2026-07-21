@@ -32,6 +32,10 @@ void operator delete(void *ptr) noexcept {}
 void operator delete(void *ptr, void *placement) noexcept;
 void operator delete(void *ptr, void *placement) noexcept {}
 
+// main: argv (suffix "2") is extracted; argc (suffix "1") is not a pointer.
+int main(int argc, char **argv);
+int main(int argc, char **argv) { return 0; }
+
 // Plain new: return entity (suffix "0").
 // CHECK-DAG: "id": [[NEW_RET_ID:[0-9]+]],{{([^]]|[[:space:]])+\],[[:space:]]+"suffix": "0",[[:space:]]+"usr": }}"c:@F@operator new#{{.*}}#"
 
@@ -46,6 +50,9 @@ void operator delete(void *ptr, void *placement) noexcept {}
 // CHECK-DAG: "id": [[DEL_PLACE_PTR_ID:[0-9]+]],{{([^]]|[[:space:]])+\],[[:space:]]+"suffix": "1",[[:space:]]+"usr": }}"c:@F@operator delete#*v#S0_#"
 // CHECK-DAG: "id": [[DEL_PLACE_PARAM_ID:[0-9]+]],{{([^]]|[[:space:]])+\],[[:space:]]+"suffix": "2",[[:space:]]+"usr": }}"c:@F@operator delete#*v#S0_#"
 
+// main: argv (suffix "2", 0-based param index 1).
+// CHECK-DAG: "id": [[MAIN_ARGV_ID:[0-9]+]],{{([^]]|[[:space:]])+\],[[:space:]]+"suffix": "2",[[:space:]]+"usr": }}"c:@F@main{{.*}}"
+
 // CHECK: "analysis_name": "TypeConstrainedPointersAnalysisResult"
 
 // CHECK-DAG: "@": [[NEW_RET_ID]]
@@ -54,5 +61,6 @@ void operator delete(void *ptr, void *placement) noexcept {}
 // CHECK-DAG: "@": [[DEL_PTR_ID]]
 // CHECK-DAG: "@": [[DEL_PLACE_PTR_ID]]
 // CHECK-DAG: "@": [[DEL_PLACE_PARAM_ID]]
+// CHECK-DAG: "@": [[MAIN_ARGV_ID]]
 
 // CHECK: "type": "WPASuite"
