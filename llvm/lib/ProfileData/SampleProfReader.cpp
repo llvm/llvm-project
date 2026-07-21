@@ -1293,8 +1293,12 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   }
   if (!ProfileIsCS)
     MD5SampleContextStart = MD5SampleContextTable.data();
-  NameTable =
-      std::make_unique<EagerSampleProfileNameTable>(std::move(TableVec));
+  if (UseMD5)
+    NameTable =
+        std::make_unique<EagerMD5SampleProfileNameTable>(std::move(TableVec));
+  else
+    NameTable = std::make_unique<EagerStringSampleProfileNameTable>(
+        std::move(TableVec));
   return sampleprof_error::success;
 }
 
@@ -1326,7 +1330,7 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
         TableVec.emplace_back(FunctionId(FID));
       }
       NameTable =
-          std::make_unique<EagerSampleProfileNameTable>(std::move(TableVec));
+          std::make_unique<EagerMD5SampleProfileNameTable>(std::move(TableVec));
     }
     if (!ProfileIsCS)
       MD5SampleContextStart = reinterpret_cast<const uint64_t *>(Data);
@@ -1355,7 +1359,7 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
     if (!ProfileIsCS)
       MD5SampleContextStart = MD5SampleContextTable.data();
     NameTable =
-        std::make_unique<EagerSampleProfileNameTable>(std::move(TableVec));
+        std::make_unique<EagerMD5SampleProfileNameTable>(std::move(TableVec));
     return sampleprof_error::success;
   }
 

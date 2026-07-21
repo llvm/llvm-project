@@ -416,13 +416,30 @@ public:
   }
 };
 
-class EagerSampleProfileNameTable final : public SampleProfileNameTable {
+class EagerStringSampleProfileNameTable final : public SampleProfileNameTable {
   std::vector<FunctionId> Vec;
 
 public:
-  explicit EagerSampleProfileNameTable(std::vector<FunctionId> &&Vec)
+  explicit EagerStringSampleProfileNameTable(std::vector<FunctionId> &&Vec)
       : Vec(std::move(Vec)) {}
-  explicit EagerSampleProfileNameTable(const std::vector<FunctionId> &Vec)
+  explicit EagerStringSampleProfileNameTable(const std::vector<FunctionId> &Vec)
+      : Vec(Vec) {}
+
+  size_t size() const override { return Vec.size(); }
+
+  FunctionId operator[](size_t Idx) const override {
+    assert(Idx < Vec.size() && "Index out of bounds");
+    return Vec[Idx];
+  }
+};
+
+class EagerMD5SampleProfileNameTable final : public SampleProfileNameTable {
+  std::vector<FunctionId> Vec;
+
+public:
+  explicit EagerMD5SampleProfileNameTable(std::vector<FunctionId> &&Vec)
+      : Vec(std::move(Vec)) {}
+  explicit EagerMD5SampleProfileNameTable(const std::vector<FunctionId> &Vec)
       : Vec(Vec) {}
 
   size_t size() const override { return Vec.size(); }
