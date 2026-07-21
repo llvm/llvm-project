@@ -35,11 +35,12 @@ void TemplateVirtualMemberFunctionCheck::check(
   const auto *MethodDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
 
   diag(MethodDecl->getLocation(),
-       "unspecified virtual member function instantiation; the virtual "
-       "member function is not instantiated but it might be with a "
-       "different compiler");
+       "it is unspecified whether or not an implementation implicitly "
+       "instantiates a virtual member function of a class template if the "
+       "virtual member function would not otherwise be instantiated; consider "
+       "using or removing the virtual member function for better portability");
   diag(ImplicitSpecialization->getPointOfInstantiation(),
-       "template instantiated here", DiagnosticIDs::Note);
+       "class template instantiated here", DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::portability

@@ -94,6 +94,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :doc:`portability-template-virtual-member-function
+  <clang-tidy/checks/portability/template-virtual-member-function>` check to
+  make it easier to understand what the issue is and how to fix it.
+
 New checks
 ^^^^^^^^^^
 
