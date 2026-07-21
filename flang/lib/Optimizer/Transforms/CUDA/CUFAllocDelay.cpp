@@ -28,12 +28,10 @@ namespace fir {
 
 namespace {
 
-/// Return the op before which the cuf.alloc group should be placed: the
-/// earliest use of the descriptor. Every use counts, including a store of the
-/// descriptor into a host-association tuple slot (fir.store to fir.llvm_ptr) -
-/// that store reads its own fir.coordinate_of slot, so the group is only sunk
-/// to *before* it and the store itself is never moved. Sinking strictly before
-/// any use keeps dominance valid.
+/// Find the earliest use of the descriptor and return the op before which the
+/// cuf.alloc group should be placed. Uses in nested regions (fir.if,
+/// fir.do_loop, ...) resolve to the enclosing entry-block op; uses confined to
+/// a single successor block resolve to that block.
 static mlir::Operation *findDelayTarget(fir::DeclareOp declareOp,
                                         mlir::Block *entryBlock) {
   mlir::Operation *earliest = nullptr;

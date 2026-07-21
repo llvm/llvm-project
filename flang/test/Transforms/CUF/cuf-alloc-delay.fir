@@ -399,8 +399,7 @@ func.func private @_QFPgo(!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<
 
 // Test 12: A shared tuple whose slots fill in order, so the descriptor's own
 // slot (index 1) is defined after an earlier coordinate_of of the same tuple
-// (index 0). The group must sink to before its host-association store, not
-// before its own slot.
+// (index 0). The group must sink to before its host-association store.
 func.func @_QPhost_assoc_late_slot() {
   %tuple = fir.alloca tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
