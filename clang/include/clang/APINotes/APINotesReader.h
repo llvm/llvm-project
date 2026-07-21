@@ -170,10 +170,15 @@ public:
   lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
                   llvm::ArrayRef<std::string> Parameters);
 
-  /// Collect exact parameter selectors stored for the given C++ method.
-  bool collectCXXMethodParameterSelectors(
-      ContextID CtxID, llvm::StringRef Name,
-      llvm::SmallVectorImpl<llvm::SmallVector<std::string, 4>> &Selectors);
+  /// Build the selector key for the given C++ method.
+  std::optional<APINotesFunctionSelectorKey>
+  getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name);
+
+  /// Build the selector key for the given C++ method with an exact parameter
+  /// selector.
+  std::optional<APINotesFunctionSelectorKey>
+  getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name,
+                          llvm::ArrayRef<std::string> Parameters);
 
   /// Look for information regarding the given global variable.
   ///
@@ -201,11 +206,21 @@ public:
                        llvm::ArrayRef<std::string> Parameters,
                        std::optional<Context> Ctx = std::nullopt);
 
-  /// Collect exact parameter selectors stored for the given global function.
-  bool collectGlobalFunctionParameterSelectors(
-      llvm::StringRef Name,
-      llvm::SmallVectorImpl<llvm::SmallVector<std::string, 4>> &Selectors,
-      std::optional<Context> Ctx = std::nullopt);
+  /// Build the selector key for the given global function.
+  std::optional<APINotesFunctionSelectorKey>
+  getGlobalFunctionSelectorKey(llvm::StringRef Name,
+                               std::optional<Context> Ctx = std::nullopt);
+
+  /// Build the selector key for the given global function with an exact
+  /// parameter selector.
+  std::optional<APINotesFunctionSelectorKey>
+  getGlobalFunctionSelectorKey(llvm::StringRef Name,
+                               llvm::ArrayRef<std::string> Parameters,
+                               std::optional<Context> Ctx = std::nullopt);
+
+  /// Collect exact parameter selector keys stored by this reader.
+  bool collectExactFunctionParameterSelectors(
+      llvm::SmallVectorImpl<APINotesFunctionSelector> &Selectors);
 
   /// Look for information regarding the given enumerator.
   ///

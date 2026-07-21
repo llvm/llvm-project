@@ -11,6 +11,9 @@
 
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <climits>
 #include <optional>
@@ -28,6 +31,43 @@ std::string
 formatAPINotesParameterSelector(llvm::ArrayRef<llvm::StringRef> Parameters);
 std::string
 formatAPINotesParameterSelector(llvm::ArrayRef<std::string> Parameters);
+
+/// Stable reader-facing identity for an API notes function selector entry.
+///
+/// This mirrors the serialized function table key closely enough for Sema-side
+/// diagnostics to use it as a DenseMap key, without exposing the reader's
+/// private FunctionTableKey implementation type.
+struct APINotesFunctionSelectorKey {
+  bool IsCXXMethod = false;
+  uint32_t ParentContextID = 0;
+  uint32_t NameID = 0;
+  std::optional<llvm::SmallVector<uint32_t, 2>> ParameterTypeIDs;
+
+  llvm::hash_code hashValue() const {
+    auto Hash = llvm::hash_combine(IsCXXMethod, ParentContextID, NameID,
+                                   static_cast<bool>(ParameterTypeIDs));
+    if (ParameterTypeIDs) {
+      Hash = llvm::hash_combine(Hash, ParameterTypeIDs->size());
+      for (uint32_t TypeID : *ParameterTypeIDs)
+        Hash = llvm::hash_combine(Hash, TypeID);
+    }
+    return Hash;
+  }
+};
+
+inline bool operator==(const APINotesFunctionSelectorKey &LHS,
+                       const APINotesFunctionSelectorKey &RHS) {
+  return LHS.IsCXXMethod == RHS.IsCXXMethod &&
+         LHS.ParentContextID == RHS.ParentContextID &&
+         LHS.NameID == RHS.NameID &&
+         LHS.ParameterTypeIDs == RHS.ParameterTypeIDs;
+}
+
+/// Exact function selector key plus parameter spelling used for diagnostics.
+struct APINotesFunctionSelector {
+  APINotesFunctionSelectorKey Key;
+  llvm::SmallVector<std::string, 4> Parameters;
+};
 
 enum class RetainCountConventionKind {
   None,
@@ -1007,5 +1047,32 @@ struct ObjCSelectorRef {
 };
 } // namespace api_notes
 } // namespace clang
+
+namespace llvm {
+template <> struct DenseMapInfo<clang::api_notes::APINotesFunctionSelectorKey> {
+  static clang::api_notes::APINotesFunctionSelectorKey getEmptyKey() {
+    clang::api_notes::APINotesFunctionSelectorKey Key;
+    Key.NameID = ~uint32_t(0);
+    return Key;
+  }
+
+  static clang::api_notes::APINotesFunctionSelectorKey getTombstoneKey() {
+    clang::api_notes::APINotesFunctionSelectorKey Key;
+    Key.NameID = ~uint32_t(0) - 1;
+    return Key;
+  }
+
+  static unsigned
+  getHashValue(const clang::api_notes::APINotesFunctionSelectorKey &Key) {
+    return Key.hashValue();
+  }
+
+  static bool
+  isEqual(const clang::api_notes::APINotesFunctionSelectorKey &LHS,
+          const clang::api_notes::APINotesFunctionSelectorKey &RHS) {
+    return LHS == RHS;
+  }
+};
+} // namespace llvm
 
 #endif

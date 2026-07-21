@@ -18,12 +18,16 @@
 #include "clang/APINotes/Types.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -789,20 +793,19 @@ bool clang::api_notes::parseAndDumpAPINotes(StringRef YI,
 namespace {
 using namespace api_notes;
 
-struct KnownFunctionSelector {
-  llvm::StringRef Name;
-  llvm::ArrayRef<llvm::StringRef> Parameters;
-};
+static std::string
+getFunctionSelectorKey(llvm::StringRef Name,
+                       llvm::ArrayRef<llvm::StringRef> Parameters) {
+  llvm::SmallString<64> Key;
+  llvm::raw_svector_ostream OS(Key);
+  auto AppendKeyPart = [&OS](llvm::StringRef Part) {
+    OS << Part.size() << ':' << Part;
+  };
 
-static bool
-hasFunctionSelector(llvm::ArrayRef<KnownFunctionSelector> KnownSelectors,
-                    llvm::StringRef Name,
-                    llvm::ArrayRef<llvm::StringRef> Parameters) {
-  for (const KnownFunctionSelector &Known : KnownSelectors)
-    if (Known.Name == Name && Known.Parameters == Parameters)
-      return true;
-
-  return false;
+  AppendKeyPart(Name);
+  OS << ';';
+  llvm::interleave(Parameters, OS, AppendKeyPart, "");
+  return Key.str().str();
 }
 
 class YAMLConverter {
@@ -1179,22 +1182,22 @@ public:
       Writer.addField(TagCtxID, Field.Name, FI, SwiftVersion);
     }
 
-    llvm::SmallVector<KnownFunctionSelector, 4> KnownMethodSelectors;
+    llvm::StringSet<> KnownMethodSelectors;
     for (const auto &CXXMethod : T.Methods) {
       auto WhereParameters = getWhereParameters(CXXMethod);
       if (!WhereParameters.first)
         continue;
 
       if (WhereParameters.second) {
-        if (hasFunctionSelector(KnownMethodSelectors, CXXMethod.Name,
-                                *WhereParameters.second)) {
+        if (!KnownMethodSelectors
+                 .insert(getFunctionSelectorKey(CXXMethod.Name,
+                                                *WhereParameters.second))
+                 .second) {
           emitError(llvm::Twine("duplicate definition of C++ method '") +
                     CXXMethod.Name + "' with Where.Parameters " +
                     formatAPINotesParameterSelector(*WhereParameters.second));
           continue;
         }
-        KnownMethodSelectors.push_back(
-            {CXXMethod.Name, *WhereParameters.second});
       }
 
       CXXMethodInfo MI;
@@ -1273,22 +1276,22 @@ public:
 
     // Write all global functions.
     llvm::StringSet<> KnownNameOnlyFunctions;
-    llvm::SmallVector<KnownFunctionSelector, 4> KnownFunctionSelectors;
+    llvm::StringSet<> KnownFunctionSelectors;
     for (const auto &Function : TLItems.Functions) {
       auto WhereParameters = getWhereParameters(Function);
       if (!WhereParameters.first)
         continue;
 
       if (WhereParameters.second) {
-        if (hasFunctionSelector(KnownFunctionSelectors, Function.Name,
-                                *WhereParameters.second)) {
+        if (!KnownFunctionSelectors
+                 .insert(getFunctionSelectorKey(Function.Name,
+                                                *WhereParameters.second))
+                 .second) {
           emitError(llvm::Twine("duplicate definition of global function '") +
                     Function.Name + "' with Where.Parameters " +
                     formatAPINotesParameterSelector(*WhereParameters.second));
           continue;
         }
-        KnownFunctionSelectors.push_back(
-            {Function.Name, *WhereParameters.second});
       }
 
       // Check for duplicate name-only global functions.

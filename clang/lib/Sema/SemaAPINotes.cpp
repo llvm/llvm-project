@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SemaAPINotesInternal.h"
 #include "TypeLocBuilder.h"
 #include "clang/APINotes/APINotesReader.h"
 #include "clang/APINotes/Types.h"
@@ -1017,44 +1018,6 @@ struct APINotesParameterSelectorCandidates {
   std::optional<APINotesParameterSelector> Desugared;
 };
 
-struct APINotesParameterSelectorSet {
-  SmallVector<APINotesParameterSelector, 4> Selectors;
-
-  void add(const APINotesParameterSelector &Selector) {
-    Selectors.push_back(Selector);
-  }
-
-  void add(ArrayRef<std::string> Parameters) {
-    APINotesParameterSelector Selector;
-    Selector.Parameters.append(Parameters.begin(), Parameters.end());
-    add(Selector);
-  }
-
-  void add(const APINotesParameterSelectorCandidates &Candidates) {
-    add(Candidates.Source);
-    if (Candidates.Desugared)
-      add(*Candidates.Desugared);
-  }
-
-  void add(ArrayRef<SmallVector<std::string, 4>> ParameterSelectors) {
-    for (const auto &Selector : ParameterSelectors)
-      add(ArrayRef<std::string>(Selector));
-  }
-
-  bool contains(ArrayRef<std::string> Parameters) const {
-    for (const APINotesParameterSelector &Selector : Selectors)
-      if (ArrayRef<std::string>(Selector.Parameters) == Parameters)
-        return true;
-
-    return false;
-  }
-
-  bool empty() const { return Selectors.empty(); }
-
-  auto begin() const { return Selectors.begin(); }
-  auto end() const { return Selectors.end(); }
-};
-
 static PrintingPolicy
 getAPINotesParameterSelectorPrintingPolicy(const ASTContext &Context) {
   PrintingPolicy Policy(Context.getLangOpts());
@@ -1110,53 +1073,66 @@ getAPINotesParameterSelectorCandidates(const Sema &S, const FunctionDecl *FD) {
   return Candidates;
 }
 
-static void collectOverloadParameterSelectors(const Sema &S, FunctionDecl *FD,
-                                              APINotesParameterSelectorSet &Set,
-                                              bool &IsRepresentative) {
-  IsRepresentative = false;
-  bool FoundRepresentative = false;
-
-  auto AddCandidate = [&](const FunctionDecl *Candidate) {
-    if (!FoundRepresentative) {
-      IsRepresentative =
-          Candidate->getCanonicalDecl() == FD->getCanonicalDecl();
-      FoundRepresentative = true;
-    }
-
-    if (auto Candidates = getAPINotesParameterSelectorCandidates(S, Candidate))
-      Set.add(*Candidates);
-  };
-
-  for (Decl *D : FD->getDeclContext()->noload_decls()) {
-    auto *ND = dyn_cast<NamedDecl>(D);
-    if (!ND || ND->getDeclName() != FD->getDeclName())
-      continue;
-
-    if (auto *Candidate = dyn_cast<FunctionDecl>(ND))
-      AddCandidate(Candidate);
-  }
-
-  if (!FoundRepresentative)
-    AddCandidate(FD);
+static api_notes::APINotesFunctionSelectorKey
+getBroadAPINotesSelectorKey(api_notes::APINotesFunctionSelectorKey Key) {
+  Key.ParameterTypeIDs = std::nullopt;
+  return Key;
 }
 
-static void diagnoseUnmatchedParameterSelectors(
-    Sema &S, SourceLocation Loc, StringRef Name,
-    const APINotesParameterSelectorSet &APINotesSelectors,
-    const APINotesParameterSelectorSet &DeclarationSelectors) {
-  if (DeclarationSelectors.empty())
-    return;
+static APINotesSelectorDiagnosticReaderState &
+getAPINotesSelectorDiagnosticState(Sema &S, api_notes::APINotesReader *Reader) {
+  if (!S.APINotesSelectorDiagnostics)
+    S.APINotesSelectorDiagnostics =
+        std::make_unique<APINotesSelectorDiagnosticState>();
+  auto &State = S.APINotesSelectorDiagnostics->Readers[Reader];
+  if (State.Initialized)
+    return State;
 
-  for (const APINotesParameterSelector &APINotesSelector : APINotesSelectors) {
-    if (DeclarationSelectors.contains(APINotesSelector.Parameters))
-      continue;
+  State.Initialized = true;
+  SmallVector<api_notes::APINotesFunctionSelector, 4> Selectors;
+  if (!Reader->collectExactFunctionParameterSelectors(Selectors))
+    return State;
 
-    S.Diag(Loc, diag::warn_apinotes_message)
-        << (llvm::Twine("API notes entry for '") + Name +
-            "' has unmatched Where.Parameters " +
-            api_notes::formatAPINotesParameterSelector(
-                APINotesSelector.Parameters))
-               .str();
+  State.Selectors.reserve(Selectors.size());
+  State.SelectorIndices.reserve(Selectors.size());
+  State.SeenNames.reserve(Selectors.size());
+  for (auto &Selector : Selectors) {
+    unsigned Index = State.Selectors.size();
+    APINotesSelectorDiagnosticEntry Entry;
+    Entry.BroadKey = getBroadAPINotesSelectorKey(Selector.Key);
+    Entry.Parameters = std::move(Selector.Parameters);
+    State.Selectors.push_back(std::move(Entry));
+    State.SelectorIndices.insert({Selector.Key, Index});
+  }
+  return State;
+}
+
+static void noteSeenAPINotesSelectorName(
+    APINotesSelectorDiagnosticReaderState &State,
+    const api_notes::APINotesFunctionSelectorKey &BroadKey, StringRef Name,
+    SourceLocation Loc) {
+  State.SeenNames.insert({BroadKey, {Loc, Name.str()}});
+}
+
+static void
+markAPINotesSelectorUsed(APINotesSelectorDiagnosticReaderState &State,
+                         const api_notes::APINotesFunctionSelectorKey &Key) {
+  auto KnownSelector = State.SelectorIndices.find(Key);
+  if (KnownSelector != State.SelectorIndices.end())
+    State.Selectors[KnownSelector->second].Used = true;
+}
+
+static void markAPINotesSelectorCandidatesUsed(
+    APINotesSelectorDiagnosticReaderState &State,
+    llvm::function_ref<std::optional<api_notes::APINotesFunctionSelectorKey>(
+        ArrayRef<std::string>)>
+        GetSelectorKey,
+    const APINotesParameterSelectorCandidates &Candidates) {
+  if (auto Key = GetSelectorKey(Candidates.Source.Parameters))
+    markAPINotesSelectorUsed(State, *Key);
+  if (Candidates.Desugared) {
+    if (auto Key = GetSelectorKey(Candidates.Desugared->Parameters))
+      markAPINotesSelectorUsed(State, *Key);
   }
 }
 
@@ -1220,11 +1196,6 @@ void Sema::ProcessAPINotes(Decl *D) {
         auto ParameterSelectorCandidates =
             getAPINotesParameterSelectorCandidates(*this, FD);
 
-        APINotesParameterSelectorSet DeclarationSelectors;
-        bool DiagnoseUnmatchedSelectors = false;
-        collectOverloadParameterSelectors(*this, FD, DeclarationSelectors,
-                                          DiagnoseUnmatchedSelectors);
-
         for (auto Reader : Readers) {
           auto Info =
               Reader->lookupGlobalFunction(FD->getName(), APINotesContext);
@@ -1238,16 +1209,22 @@ void Sema::ProcessAPINotes(Decl *D) {
                                                       APINotesContext);
                 });
 
-          if (DiagnoseUnmatchedSelectors && !DeclarationSelectors.empty()) {
-            SmallVector<SmallVector<std::string, 4>, 4> RawAPINotesSelectors;
-            if (Reader->collectGlobalFunctionParameterSelectors(
-                    FD->getName(), RawAPINotesSelectors, APINotesContext)) {
-              APINotesParameterSelectorSet APINotesSelectors;
-              APINotesSelectors.add(RawAPINotesSelectors);
-              diagnoseUnmatchedParameterSelectors(
-                  *this, FD->getLocation(), FD->getName(), APINotesSelectors,
-                  DeclarationSelectors);
-            }
+          if (ParameterSelectorCandidates &&
+              !Diags.isIgnored(diag::warn_apinotes_message,
+                               FD->getLocation())) {
+            auto &DiagnosticState =
+                getAPINotesSelectorDiagnosticState(*this, Reader);
+            if (auto BroadKey = Reader->getGlobalFunctionSelectorKey(
+                    FD->getName(), APINotesContext))
+              noteSeenAPINotesSelectorName(DiagnosticState, *BroadKey,
+                                           FD->getName(), FD->getLocation());
+            markAPINotesSelectorCandidatesUsed(
+                DiagnosticState,
+                [&](ArrayRef<std::string> Parameters) {
+                  return Reader->getGlobalFunctionSelectorKey(
+                      FD->getName(), Parameters, APINotesContext);
+                },
+                *ParameterSelectorCandidates);
           }
         }
       }
@@ -1455,21 +1432,23 @@ void Sema::ProcessAPINotes(Decl *D) {
                                                    Parameters);
                   });
 
-            APINotesParameterSelectorSet DeclarationSelectors;
-            bool DiagnoseUnmatchedSelectors = false;
-            collectOverloadParameterSelectors(*this, CXXMethod,
-                                              DeclarationSelectors,
-                                              DiagnoseUnmatchedSelectors);
-            if (DiagnoseUnmatchedSelectors && !DeclarationSelectors.empty()) {
-              SmallVector<SmallVector<std::string, 4>, 4> RawAPINotesSelectors;
-              if (Reader->collectCXXMethodParameterSelectors(
-                      Context->id, MethodName, RawAPINotesSelectors)) {
-                APINotesParameterSelectorSet APINotesSelectors;
-                APINotesSelectors.add(RawAPINotesSelectors);
-                diagnoseUnmatchedParameterSelectors(
-                    *this, CXXMethod->getLocation(), MethodName,
-                    APINotesSelectors, DeclarationSelectors);
-              }
+            if (ParameterSelectorCandidates &&
+                !Diags.isIgnored(diag::warn_apinotes_message,
+                                 CXXMethod->getLocation())) {
+              auto &DiagnosticState =
+                  getAPINotesSelectorDiagnosticState(*this, Reader);
+              if (auto BroadKey =
+                      Reader->getCXXMethodSelectorKey(Context->id, MethodName))
+                noteSeenAPINotesSelectorName(DiagnosticState, *BroadKey,
+                                             MethodName,
+                                             CXXMethod->getLocation());
+              markAPINotesSelectorCandidatesUsed(
+                  DiagnosticState,
+                  [&](ArrayRef<std::string> Parameters) {
+                    return Reader->getCXXMethodSelectorKey(
+                        Context->id, MethodName, Parameters);
+                  },
+                  *ParameterSelectorCandidates);
             }
           }
         }
@@ -1496,4 +1475,29 @@ void Sema::ProcessAPINotes(Decl *D) {
       }
     }
   }
+}
+
+void Sema::DiagnoseUnusedAPINotesSelectors() {
+  if (!APINotesSelectorDiagnostics)
+    return;
+
+  for (auto &ReaderSelectors : APINotesSelectorDiagnostics->Readers) {
+    auto &State = ReaderSelectors.second;
+    for (const auto &Selector : State.Selectors) {
+      if (Selector.Used)
+        continue;
+
+      auto SeenName = State.SeenNames.find(Selector.BroadKey);
+      if (SeenName == State.SeenNames.end())
+        continue;
+
+      Diag(SeenName->second.Loc, diag::warn_apinotes_message)
+          << (llvm::Twine("API notes entry for '") + SeenName->second.Name +
+              "' has unmatched Where.Parameters " +
+              api_notes::formatAPINotesParameterSelector(Selector.Parameters))
+                 .str();
+    }
+  }
+
+  APINotesSelectorDiagnostics.reset();
 }
