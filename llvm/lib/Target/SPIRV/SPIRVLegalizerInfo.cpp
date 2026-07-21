@@ -408,8 +408,14 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                        SplitWideVectorToDivisor);
 
   // Lower G_SEXT_INREG to the canonical shl/ashr pair, which map to
-  // OpShiftLeftLogical + OpShiftRightArithmetic.
-  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+  // OpShiftLeftLogical + OpShiftRightArithmetic. Split wide vectors the same
+  // GCD-divisor way as G_TRUNC/G_ZEXT/G_SEXT above (rather than falling back
+  // to the generic pow2/MaxVectorSize padding split) so sign-extension of a
+  // wide non-power-of-two vector doesn't needlessly pad with undef lanes.
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       SplitWideVectorToDivisor)
+      .lower();
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor(allPtrsScalarsAndVectors)
@@ -818,7 +824,8 @@ static bool legalizeShuffleVector(LegalizerHelper &Helper, MachineInstr &MI) {
   unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
   unsigned DstN = DstTy.getNumElements();
   unsigned SrcN = SrcTy.getNumElements();
-  unsigned VectorSplitWidth = getVectorSplitWidth(DstN, MaxVectorSize, ST.isShader());
+  unsigned VectorSplitWidth =
+      getVectorSplitWidth(DstN, MaxVectorSize, ST.isShader());
 
   LLT ChunkTy = LLT::fixed_vector(VectorSplitWidth, EltTy);
   unsigned NumSrcChunks = SrcN / VectorSplitWidth; // per source operand
@@ -830,7 +837,8 @@ static bool legalizeShuffleVector(LegalizerHelper &Helper, MachineInstr &MI) {
   // are Src2. A source lane L lives in chunk L / W at lane L % W.
   SmallVector<Register> SrcChunks;
   auto UnmergeInto = [&](Register SrcReg) {
-    assert (NumSrcChunks >= 2 && "ShuffleChunkable should have handled this case");
+    assert(NumSrcChunks >= 2 &&
+           "ShuffleChunkable should have handled this case");
     SmallVector<Register> Regs;
     for (unsigned I = 0; I < NumSrcChunks; ++I)
       Regs.push_back(MRI.createGenericVirtualRegister(ChunkTy));

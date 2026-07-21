@@ -14,19 +14,13 @@
 @out9  = internal addrspace(10) global [9 x i32] poison
 
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#Bool:]] = OpTypeBool
 ; CHECK-DAG: %[[#V4Int:]] = OpTypeVector %[[#Int]] 4
 ; CHECK-DAG: %[[#V3Int:]] = OpTypeVector %[[#Int]] 3
-; CHECK-DAG: %[[#V4Bool:]] = OpTypeVector %[[#Bool]] 4
-; CHECK-DAG: %[[#V3Bool:]] = OpTypeVector %[[#Bool]] 3
 
 ; No vector wider than 4 components may ever be produced for shader targets.
 ; CHECK-NOT: OpTypeVector %[[#Int]] 12
 ; CHECK-NOT: OpTypeVector %[[#Int]] 9
 ; CHECK-NOT: OpTypeVector %[[#Int]] 8
-; CHECK-NOT: OpTypeVector %[[#Bool]] 12
-; CHECK-NOT: OpTypeVector %[[#Bool]] 9
-; CHECK-NOT: OpTypeVector %[[#Bool]] 8
 
 ;===----------------------------------------------------------------------===;
 ; Pure load + store (no extend) of the flattened matrix.
@@ -107,15 +101,21 @@ define internal void @trunc_zext_4x3() {
 
 ;===----------------------------------------------------------------------===;
 ; Truncation to i1 then sign-extend back to i32.
-; sext(trunc(x)->i1) lowers to (x & 1) != 0 ? -1 : 0, i.e. BitwiseAnd +
-; INotEqual + Select. Both widths stay vectorized: the 12-lane case as three
-; <4 x> chunks, the 9-lane case as three <3 x> chunks.
+; sext(trunc(x)->i1) canonicalizes to G_SEXT_INREG, which this target lowers
+; to the canonical shl/ashr pair (shift left then arithmetic shift right by
+; the bit-width minus one), so no boolean type is ever materialized. Both
+; widths split the same GCD-divisor way as trunc_zext above: the 12-lane case
+; as three <4 x i32> chunks, the 9-lane case as three <3 x i32> chunks.
 ;===----------------------------------------------------------------------===;
 
 ; CHECK-LABEL: ; -- Begin function trunc_sext_3x4
-; CHECK-COUNT-3: OpINotEqual %[[#V4Bool]]
-; CHECK-NOT: OpINotEqual %[[#V4Bool]]
-; CHECK-COUNT-3: OpSelect %[[#V4Int]]
+; CHECK: OpShiftLeftLogical %[[#V4Int]]
+; CHECK-NEXT: OpShiftRightArithmetic %[[#V4Int]]
+; CHECK: OpShiftLeftLogical %[[#V4Int]]
+; CHECK-NEXT: OpShiftRightArithmetic %[[#V4Int]]
+; CHECK: OpShiftLeftLogical %[[#V4Int]]
+; CHECK-NEXT: OpShiftRightArithmetic %[[#V4Int]]
+; CHECK-NOT: OpShiftLeftLogical %[[#V4Int]]
 define internal void @trunc_sext_3x4() {
   %v = load <12 x i32>, ptr addrspace(10) @in12
   %b = trunc <12 x i32> %v to <12 x i1>
@@ -124,10 +124,16 @@ define internal void @trunc_sext_3x4() {
   ret void
 }
 
+; The 9-lane width shares divisor 3 with the max vector size, so it splits
+; into three <3 x i32> chunks (not scalarized), same as trunc_zext_3x3.
 ; CHECK-LABEL: ; -- Begin function trunc_sext_3x3
-; CHECK-COUNT-3: OpINotEqual %[[#V3Bool]]
-; CHECK-NOT: OpINotEqual %[[#V3Bool]]
-; CHECK-COUNT-3: OpSelect %[[#V3Int]]
+; CHECK: OpShiftLeftLogical %[[#V3Int]]
+; CHECK-NEXT: OpShiftRightArithmetic %[[#V3Int]]
+; CHECK: OpShiftLeftLogical %[[#V3Int]]
+; CHECK-NEXT: OpShiftRightArithmetic %[[#V3Int]]
+; CHECK: OpShiftLeftLogical %[[#V3Int]]
+; CHECK-NEXT: OpShiftRightArithmetic %[[#V3Int]]
+; CHECK-NOT: OpShiftLeftLogical %[[#V3Int]]
 define internal void @trunc_sext_3x3() {
   %v = load <9 x i32>, ptr addrspace(10) @in9
   %b = trunc <9 x i32> %v to <9 x i1>
@@ -138,9 +144,13 @@ define internal void @trunc_sext_3x3() {
 
 ; A 4x3 matrix is 12 elements, so it stays vectorized as three <4 x> chunks.
 ; CHECK-LABEL: ; -- Begin function trunc_sext_4x3
-; CHECK-COUNT-3: OpINotEqual %[[#V4Bool]]
-; CHECK-NOT: OpINotEqual %[[#V4Bool]]
-; CHECK-COUNT-3: OpSelect %[[#V4Int]]
+; CHECK: OpShiftLeftLogical %[[#V4Int]]
+; CHECK-NEXT: OpShiftRightArithmetic %[[#V4Int]]
+; CHECK: OpShiftLeftLogical %[[#V4Int]]
+; CHECK-NEXT: OpShiftRightArithmetic %[[#V4Int]]
+; CHECK: OpShiftLeftLogical %[[#V4Int]]
+; CHECK-NEXT: OpShiftRightArithmetic %[[#V4Int]]
+; CHECK-NOT: OpShiftLeftLogical %[[#V4Int]]
 define internal void @trunc_sext_4x3() {
   %v = load <12 x i32>, ptr addrspace(10) @in12
   %b = trunc <12 x i32> %v to <12 x i1>
