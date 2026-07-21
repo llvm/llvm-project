@@ -328,8 +328,8 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleRef C) {
       ++X.IdxBegin;
       ++X.IdxEnd;
     }
-    // Insert shifts every appended entry list.
-    if (X.EntrySize)
+    // An entry list sits either at IdxBegin or past the tour; both shift.
+    if (X.EntryBegin >= Pos)
       ++X.EntryBegin;
   }
   addToBlockMap(Block, C);
@@ -370,6 +370,9 @@ void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<CycleBuild> Build,
     CycleT &Flat = Info.Cycles[ID];
     Flat.Parent = Parent;
     Flat.Depth = Parent ? Info.deref(Parent).Depth + 1 : 1;
+    // Initialize as one-element entry list (just the header).
+    Flat.EntryBegin = Cursor;
+    Flat.EntrySize = 1;
     Cursor += Build[C].OwnCount;
     Flat.IdxBegin = Cursor;
     Stack.push_back({ID, Build[C].ChildHead});
@@ -461,7 +464,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
     auto [H, R] = Reentries[I];
     CycleT &Cyc = Info.deref(Info.BlockMap[H]);
     if (H != PrevH) {
-      BlockT *Header = Info.BlockLayout[Cyc.IdxBegin];
+      BlockT *Header = Info.BlockLayout[Cyc.EntryBegin];
       Cyc.EntryBegin = Info.BlockLayout.size();
       Info.BlockLayout.push_back(Header);
       PrevH = H;

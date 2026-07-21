@@ -104,9 +104,9 @@ private:
     /// [this, this + 1 + NumDescendants) of Cycles.
     unsigned NumDescendants = 0;
 
-    /// A reducible cycle (only entry is its header at IdxBegin) has EntrySize
-    /// 0. Otherwise its full entry list (header first) is appended past the
-    /// Euler tour at [EntryBegin, EntryBegin+EntrySize).
+    /// The entry blocks (header first) are BlockLayout[EntryBegin,
+    /// EntryBegin+EntrySize). A reducible cycle has a single entry at IdxBegin.
+    /// An irreducible one appends its list past the Euler tour.
     unsigned EntryBegin = 0, EntrySize = 0;
 
     /// Whether this cycle has a parent, i.e. is not top-level.
@@ -216,12 +216,9 @@ public:
   }
 
   BlockT *getHeader(CycleRef C) const {
-    // Usually IdxBegin, but setSingleEntry() can install a header elsewhere.
-    const CycleT &Cyc = deref(C);
-    return BlockLayout[Cyc.EntrySize ? Cyc.EntryBegin : Cyc.IdxBegin];
+    return BlockLayout[deref(C).EntryBegin];
   }
-  // Whether there is a single entry: header only (0) or setSingleEntry (1).
-  bool isReducible(CycleRef C) const { return deref(C).EntrySize <= 1; }
+  bool isReducible(CycleRef C) const { return deref(C).EntrySize == 1; }
   CycleRef getParentCycle(CycleRef C) const { return deref(C).Parent; }
   unsigned getDepth(CycleRef C) const { return deref(C).Depth; }
   size_t getNumBlocks(CycleRef C) const {
@@ -231,16 +228,13 @@ public:
 
   ArrayRef<BlockT *> getEntries(CycleRef C) const {
     const CycleT &Cyc = deref(C);
-    if (Cyc.EntrySize)
-      return ArrayRef(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
-    return ArrayRef(BlockLayout).slice(Cyc.IdxBegin, 1);
+    return ArrayRef(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
   }
   bool isEntry(CycleRef C, const BlockT *Block) const {
     return is_contained(getEntries(C), Block);
   }
-  // Append Block as a one-element entry list (along with irreducible cycles).
-  // getHeader/getEntries read it there, leaving BlockLayout's block order
-  // untouched.
+  // Append a one-element entry list past the Euler tour; storing Block at
+  // IdxBegin instead would disturb the block order.
   void setSingleEntry(CycleRef C, BlockT *Block) {
     CycleT &Cyc = deref(C);
     Cyc.EntryBegin = BlockLayout.size();
