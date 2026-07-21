@@ -84,6 +84,58 @@ func.func @array_reduction_small_shared() {
   return
 }
 
+// Dynamic allocation metadata must not be mistaken for storage provenance.
+// CHECK-LABEL: func.func @array_reduction_heap_alloca_extent
+// CHECK: memref.alloca() : memref<index>
+// CHECK: %[[EXTENT:.*]] = memref.load
+// CHECK: memref.alloc(%[[EXTENT]]) : memref<?xi32>
+// CHECK-NOT: gpu.all_reduce
+// CHECK: gpu.terminator
+func.func @array_reduction_heap_alloca_extent(%n: index) {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx) ins(%extent = %n) : (index) {
+    %slot = memref.alloca() : memref<index>
+    memref.store %extent, %slot[] : memref<index>
+    %loaded_extent = memref.load %slot[] : memref<index>
+    %heap = memref.alloc(%loaded_extent) : memref<?xi32>
+    %bounds = acc.bounds extent(%loaded_extent : index)
+    acc.reduction_accumulate_array %heap bounds(%bounds) <add>
+        : memref<?xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+    memref.dealloc %heap : memref<?xi32>
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// Non-storage operands of pure operations must not affect classification.
+// CHECK-LABEL: func.func @array_reduction_shared_select
+// CHECK: arith.select
+// CHECK-NOT: gpu.all_reduce
+// CHECK: gpu.terminator
+func.func @array_reduction_shared_select(%n: index) {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx) ins(%extent = %n) : (index) {
+    %true = arith.constant true
+    %condition_slot = memref.alloca() : memref<i1>
+    memref.store %true, %condition_slot[] : memref<i1>
+    %condition = memref.load %condition_slot[] : memref<i1>
+    %heap = memref.alloc(%extent) : memref<?xi32>
+    %selected = arith.select %condition, %heap, %heap : memref<?xi32>
+    %bounds = acc.bounds extent(%extent : index)
+    acc.reduction_accumulate_array %selected bounds(%bounds) <add>
+        : memref<?xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+    memref.dealloc %heap : memref<?xi32>
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
 // A reduction private that exceeds the per-thread stack budget uses indexed
 // backing storage shared by thread_x lanes. It must not be reduced again.
 // CHECK-LABEL: func.func @array_reduction_large_indexed_private

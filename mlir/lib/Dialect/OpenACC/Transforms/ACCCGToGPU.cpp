@@ -306,53 +306,29 @@ static bool sameEffectiveValue(Value x, int64_t y) {
   return *conX == y;
 }
 
-/// Continues tracking a memref through view-like and partial-access ops.
+/// Returns the operand that preserves the storage represented by \p op.
+static Value getStorageSource(Operation *op) {
+  if (ViewLikeOpInterface viewLike = dyn_cast<ViewLikeOpInterface>(op))
+    return viewLike.getViewSource();
+  if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op);
+      castOp && castOp->getNumOperands() == 1 && castOp->getNumResults() == 1)
+    return castOp->getOperand(0);
+  if (acc::PartialEntityAccessOpInterface partialAccess =
+          dyn_cast<acc::PartialEntityAccessOpInterface>(op))
+    return partialAccess.getBaseEntity();
+  if (acc::UnderlyingStorageOpInterface storage =
+          dyn_cast<acc::UnderlyingStorageOpInterface>(op))
+    return storage.getStorageSource();
+  return {};
+}
+
+/// Continues tracking a storage value through preserving operations.
 static bool getPassThroughResults(Operation *userOp, Value trackedOperand,
                                   SmallVectorImpl<Value> &passThroughResults) {
-  if (ViewLikeOpInterface viewLikeOp = dyn_cast<ViewLikeOpInterface>(userOp)) {
-    if (viewLikeOp.getViewSource() == trackedOperand) {
-      passThroughResults.push_back(viewLikeOp.getViewDest());
-      return true;
-    }
+  if (getStorageSource(userOp) != trackedOperand)
     return false;
-  }
-
-  if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(userOp)) {
-    if (castOp->getNumOperands() == 1 && castOp->getNumResults() == 1 &&
-        castOp->getOperand(0) == trackedOperand &&
-        isa<MemRefType>(castOp->getOperand(0).getType()) &&
-        isa<MemRefType>(castOp->getResult(0).getType())) {
-      passThroughResults.push_back(castOp->getResult(0));
-      return true;
-    }
-    return false;
-  }
-
-  // Partial-entity accesses (e.g. array element or field access) forward the
-  // base entity through to their results, so treat them as pass-through when
-  // the base entity is the value being tracked.
-  if (acc::PartialEntityAccessOpInterface partialAccess =
-          dyn_cast<acc::PartialEntityAccessOpInterface>(userOp)) {
-    if (partialAccess.getBaseEntity() == trackedOperand) {
-      passThroughResults.append(userOp->result_begin(), userOp->result_end());
-      return true;
-    }
-    return false;
-  }
-
-  bool hasMemoryEffects = false;
-  if (auto effects = dyn_cast<MemoryEffectOpInterface>(userOp)) {
-    SmallVector<MemoryEffects::EffectInstance> instances;
-    effects.getEffects(instances);
-    hasMemoryEffects = !instances.empty();
-  }
-  if (userOp->getNumResults() == 1 &&
-      llvm::is_contained(userOp->getOperands(), trackedOperand) &&
-      !hasMemoryEffects) {
-    passThroughResults.push_back(userOp->getResult(0));
-    return true;
-  }
-  return false;
+  passThroughResults.append(userOp->result_begin(), userOp->result_end());
+  return true;
 }
 
 template <typename Effect>
@@ -385,8 +361,39 @@ static Value getReadAddress(Operation *op) {
   return address;
 }
 
+static bool hasAllocaRoot(Value value) {
+  DenseSet<Value> seen;
+  Value current = value;
+  while (current && seen.insert(current).second) {
+    Operation *def = current.getDefiningOp();
+    if (!def)
+      return false;
+    if (isa<memref::AllocaOp>(def))
+      return true;
+    current = getStorageSource(def);
+  }
+  return false;
+}
+
 /// Returns the unique pointer-like value stored to \p address before \p before.
 static Value getUniqueStoredPointerValue(Value address, Operation *before) {
+  Operation *scope = before->getParentOfType<acc::ComputeRegionOp>();
+  DominanceInfo dominance(scope ? scope : before->getParentOp());
+  auto safelyPrecedes = [&](Operation *store) {
+    if (dominance.dominates(store, before))
+      return true;
+    auto predicate = store->getParentOfType<acc::PredicateRegionOp>();
+    auto privateLocal = address.getDefiningOp<acc::PrivateLocalOp>();
+    GPUParallelDimsAttr parDims;
+    if (privateLocal)
+      parDims = mlir::acc::getParDimsAttr(privateLocal);
+    bool isThreadPrivate =
+        parDims && llvm::any_of(parDims.getArray(),
+                                [](auto dim) { return dim.isAnyThread(); });
+    return predicate && store->getParentOp() == predicate.getOperation() &&
+           dominance.dominates(predicate, before) &&
+           (isThreadPrivate || hasAllocaRoot(address));
+  };
   Operation *storedBy = nullptr;
   Value stored;
   SmallVector<Value> worklist{address};
@@ -397,8 +404,7 @@ static Value getUniqueStoredPointerValue(Value address, Operation *before) {
       continue;
     for (Operation *user : alias.getUsers()) {
       if (hasEffectOnValue<MemoryEffects::Write>(user, alias)) {
-        if (storedBy || user->getBlock() != before->getBlock() ||
-            !user->isBeforeInBlock(before))
+        if (storedBy || !safelyPrecedes(user))
           return {};
         Value candidate;
         for (Value operand : user->getOperands()) {
@@ -417,6 +423,8 @@ static Value getUniqueStoredPointerValue(Value address, Operation *before) {
       SmallVector<Value> through;
       if (getPassThroughResults(user, alias, through))
         worklist.append(through.begin(), through.end());
+      else if (!hasEffectOnValue<MemoryEffects::Read>(user, alias))
+        return {};
     }
   }
   return stored;
@@ -857,8 +865,6 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
         worklist.append(through.begin(), through.end());
       else if (getMemoryPassThroughResults(user, cur, through))
         worklist.append(through.begin(), through.end());
-      else if (isa<ViewLikeOpInterface>(user))
-        worklist.append(user->result_begin(), user->result_end());
     }
   }
   return nullptr;
@@ -908,14 +914,11 @@ static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
 /// True when \p memref resolves to storage owned by the current thread.
 static bool isPerThreadArrayReductionStorage(Value memref) {
   DenseSet<Value> seen;
-  SmallVector<Value> worklist{memref};
-  while (!worklist.empty()) {
-    Value current = worklist.pop_back_val();
-    if (!current || !seen.insert(current).second)
-      continue;
+  Value current = memref;
+  while (current && seen.insert(current).second) {
     Operation *def = current.getDefiningOp();
     if (!def)
-      continue;
+      return false;
     if (isa<memref::AllocaOp>(def))
       return true;
     if (isa<acc::UnwrapPrivateOp, acc::GPUSharedMemoryOp>(def))
@@ -925,7 +928,7 @@ static bool isPerThreadArrayReductionStorage(Value memref) {
       Value stored = getUniqueStoredPointerValue(address, def);
       if (!stored)
         return false;
-      worklist.push_back(stored);
+      current = stored;
       continue;
     }
 
@@ -935,7 +938,7 @@ static bool isPerThreadArrayReductionStorage(Value memref) {
                           [](auto dim) { return dim.isThreadX(); });
     }
 
-    worklist.append(def->getOperands().begin(), def->getOperands().end());
+    current = getStorageSource(def);
   }
   return false;
 }
