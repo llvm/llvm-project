@@ -5744,7 +5744,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcNan);
 
       // fcInf can only be cleared if the source format has no Inf encoding
-      // (IEEE754) AND the dst max exp can accomodate src max exp.
+      // (IEEE-754) AND the dst max exp can accommodate src max exp.
       if (!APFloat::semanticsHasInf(SrcSemantics) &&
           APFloat::semanticsMaxExponent(SrcSemantics) <=
               APFloat::semanticsMaxExponent(DstSemantics))
@@ -5754,11 +5754,16 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (SrcSemantics.nanEncoding == fltNanEncoding::NegativeZero)
         Known.knownNot(fcNegZero);
 
+      // Check and clear all neg flags for formats that do not have signed
+      // representation.
+      if (!APFloat::semanticsHasSignedRepr(SrcSemantics))
+        Known.knownNot(fcNegative);
+
       // Check if format has no zero at all, Float8E8M0FNU
       if (!APFloat::semanticsHasZero(SrcSemantics))
         Known.knownNot(fcZero);
 
-      // If src lands normaly in dest, result can never be subnormal.
+      // If src lands normally in dest, the result can never be subnormal.
       if (APFloat::isRepresentableAsNormalIn(SrcSemantics, DstSemantics))
         Known.knownNot(fcSubnormal);
       break;
