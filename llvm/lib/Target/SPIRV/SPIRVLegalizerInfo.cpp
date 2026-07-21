@@ -775,6 +775,112 @@ static bool legalizeStore(LegalizerHelper &Helper, MachineInstr &MI,
   return true;
 }
 
+// Returns true if a G_UNMERGE_VALUES use scalarizes DstReg without ever
+// feeding a G_BUILD_VECTOR (directly or through its scalar defs). Such an
+// unmerge is just scattering DstReg's lanes out to individual scalars.
+static bool unmergeOnlyScatters(MachineRegisterInfo &MRI,
+                                const MachineInstr &Unmerge) {
+  if (!MRI.getType(Unmerge.getOperand(0).getReg()).isScalar())
+    return false;
+  for (const MachineOperand &Def : Unmerge.defs())
+    for (MachineInstr &U : MRI.use_nodbg_instructions(Def.getReg()))
+      if (U.getOpcode() == TargetOpcode::G_BUILD_VECTOR ||
+          U.getOpcode() == TargetOpcode::G_BUILD_VECTOR_TRUNC)
+        return false;
+  return true;
+}
+
+// Returns true if every use of DstReg just scatters it out (feeds a G_STORE,
+// or a G_UNMERGE_VALUES that doesn't feed a G_BUILD_VECTOR). In that case
+// chunk-vectorizing the shuffle only adds overhead, so the caller should fall
+// back to the generic scalarizing lowering instead.
+static bool allUsesAreShuffleScatter(MachineRegisterInfo &MRI,
+                                     Register DstReg) {
+  if (MRI.use_nodbg_empty(DstReg))
+    return false;
+  auto IsScatterUse = [&](MachineInstr &Use) {
+    if (Use.getOpcode() == TargetOpcode::G_STORE)
+      return true;
+    return Use.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
+           unmergeOnlyScatters(MRI, Use);
+  };
+  for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg))
+    if (!IsScatterUse(Use))
+      return false;
+  return true;
+}
+
+// Splits SrcReg into NumChunks separate ChunkTy-typed registers.
+static SmallVector<Register> unmergeIntoChunks(MachineIRBuilder &MIRBuilder,
+                                               MachineRegisterInfo &MRI,
+                                               Register SrcReg,
+                                               unsigned NumChunks,
+                                               LLT ChunkTy) {
+  assert(NumChunks >= 2 && "ShuffleChunkable should have handled this case");
+  SmallVector<Register> Regs;
+  for (unsigned I = 0; I < NumChunks; ++I)
+    Regs.push_back(MRI.createGenericVirtualRegister(ChunkTy));
+  MIRBuilder.buildUnmerge(Regs, SrcReg);
+  return Regs;
+}
+
+// Builds one legal-width dst chunk of a chunked shuffle. ChunkMask indexes
+// lanes of the logical concatenation and chains legal-width OpVectorShuffles
+// folding in one contributing source chunk's lanes at each step.
+static Register buildShuffleChunk(MachineIRBuilder &MIRBuilder,
+                                  MachineRegisterInfo &MRI, LLT ChunkTy,
+                                  unsigned VectorSplitWidth,
+                                  ArrayRef<int> ChunkMask,
+                                  ArrayRef<Register> SrcChunks) {
+  SmallVector<int> LaneSrcChunk(VectorSplitWidth, -1);
+  SmallVector<int> LaneInChunk(VectorSplitWidth, -1);
+  SmallVector<unsigned> UsedChunks;
+  for (unsigned J = 0; J < VectorSplitWidth; ++J) {
+    int ChunkElementMask = ChunkMask[J];
+    if (ChunkElementMask < 0)
+      continue;
+    unsigned SrcChunk = ChunkElementMask / VectorSplitWidth;
+    LaneSrcChunk[J] = SrcChunk;
+    LaneInChunk[J] = ChunkElementMask % VectorSplitWidth;
+    if (!is_contained(UsedChunks, SrcChunk))
+      UsedChunks.push_back(SrcChunk);
+  }
+
+  if (UsedChunks.empty()) {
+    Register Undef = MRI.createGenericVirtualRegister(ChunkTy);
+    MIRBuilder.buildUndef(Undef);
+    return Undef;
+  }
+
+  Register Partial;
+  SmallVector<bool> Resolved(VectorSplitWidth, false);
+  for (unsigned Step = 0; Step < UsedChunks.size(); ++Step) {
+    unsigned SC = UsedChunks[Step];
+    Register SrcChunk = SrcChunks[SC];
+    SmallVector<int> ShufMask(VectorSplitWidth, -1);
+    Register Res = MRI.createGenericVirtualRegister(ChunkTy);
+    if (Step == 0) {
+      for (unsigned J = 0; J < VectorSplitWidth; ++J)
+        if (LaneSrcChunk[J] == static_cast<int>(SC))
+          ShufMask[J] = LaneInChunk[J];
+      MIRBuilder.buildShuffleVector(Res, SrcChunk, SrcChunk, ShufMask);
+    } else {
+      for (unsigned J = 0; J < VectorSplitWidth; ++J) {
+        if (LaneSrcChunk[J] == static_cast<int>(SC))
+          ShufMask[J] = static_cast<int>(VectorSplitWidth) + LaneInChunk[J];
+        else if (Resolved[J])
+          ShufMask[J] = static_cast<int>(J);
+      }
+      MIRBuilder.buildShuffleVector(Res, Partial, SrcChunk, ShufMask);
+    }
+    for (unsigned J = 0; J < VectorSplitWidth; ++J)
+      if (LaneSrcChunk[J] == static_cast<int>(SC))
+        Resolved[J] = true;
+    Partial = Res;
+  }
+  return Partial;
+}
+
 // Lowers wide G_SHUFFLE_VECTORs into legal-width chunked OpVectorShuffles
 // instead of scalarizing. Unmerge/concat artifacts fold away naturally.
 // Requires shader targets and matching chunk widths (see shuffleChunkable).
@@ -783,34 +889,8 @@ static bool legalizeShuffleVector(LegalizerHelper &Helper, MachineInstr &MI) {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   Register DstReg = MI.getOperand(0).getReg();
 
-  // Chunk-vectorize wide shuffles unless feeding a G_STORE or scalar
-  // G_UNMERGE_VALUES. Exception: Keep vectorizing if the unmerge directly
-  // feeds a G_BUILD_VECTOR.
-  if (!MRI.use_nodbg_empty(DstReg)) {
-    auto IsScatterUse = [&](MachineInstr &Use) {
-      if (Use.getOpcode() == TargetOpcode::G_STORE)
-        return true;
-      if (Use.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
-          MRI.getType(Use.getOperand(0).getReg()).isScalar()) {
-        for (const MachineOperand &Def : Use.defs())
-          for (MachineInstr &U : MRI.use_nodbg_instructions(Def.getReg()))
-            if (U.getOpcode() == TargetOpcode::G_BUILD_VECTOR ||
-                U.getOpcode() == TargetOpcode::G_BUILD_VECTOR_TRUNC)
-              return false;
-        return true;
-      }
-      return false;
-    };
-    bool AllScatter = true;
-    for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg)) {
-      if (!IsScatterUse(Use)) {
-        AllScatter = false;
-        break;
-      }
-    }
-    if (AllScatter)
-      return Helper.lower(MI, 0, LLT()) == LegalizerHelper::Legalized;
-  }
+  if (allUsesAreShuffleScatter(MRI, DstReg))
+    return Helper.lower(MI, 0, LLT()) == LegalizerHelper::Legalized;
 
   Register Src1Reg = MI.getOperand(1).getReg();
   Register Src2Reg = MI.getOperand(2).getReg();
@@ -822,83 +902,26 @@ static bool legalizeShuffleVector(LegalizerHelper &Helper, MachineInstr &MI) {
 
   const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
   unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
-  unsigned DstN = DstTy.getNumElements();
-  unsigned SrcN = SrcTy.getNumElements();
-  unsigned VectorSplitWidth =
-      getVectorSplitWidth(DstN, MaxVectorSize, ST.isShader());
-
+  unsigned VectorSplitWidth = getVectorSplitWidth(
+      DstTy.getNumElements(), MaxVectorSize, ST.isShader());
   LLT ChunkTy = LLT::fixed_vector(VectorSplitWidth, EltTy);
-  unsigned NumSrcChunks = SrcN / VectorSplitWidth; // per source operand
-  unsigned NumDstChunks = DstN / VectorSplitWidth;
+  unsigned NumSrcChunks = SrcTy.getNumElements() / VectorSplitWidth;
+  unsigned NumDstChunks = DstTy.getNumElements() / VectorSplitWidth;
 
-  // Split both sources into W-wide chunks. The G_SHUFFLE_VECTOR mask indexes a
-  // logical concatenation of the two sources, so lay the chunks out the same
-  // way: global chunk indices [0, NumSrcChunks) are Src1, the next NumSrcChunks
-  // are Src2. A source lane L lives in chunk L / W at lane L % W.
-  SmallVector<Register> SrcChunks;
-  auto UnmergeInto = [&](Register SrcReg) {
-    assert(NumSrcChunks >= 2 &&
-           "ShuffleChunkable should have handled this case");
-    SmallVector<Register> Regs;
-    for (unsigned I = 0; I < NumSrcChunks; ++I)
-      Regs.push_back(MRI.createGenericVirtualRegister(ChunkTy));
-    MIRBuilder.buildUnmerge(Regs, SrcReg);
-    SrcChunks.append(Regs.begin(), Regs.end());
-  };
-  UnmergeInto(Src1Reg);
-  UnmergeInto(Src2Reg);
+  // The G_SHUFFLE_VECTOR mask indexes a logical concatenation of the two
+  // sources, so lay the chunks out the same way: global chunk indices
+  // [0, NumSrcChunks) are Src1, the next NumSrcChunks are Src2.
+  SmallVector<Register> SrcChunks =
+      unmergeIntoChunks(MIRBuilder, MRI, Src1Reg, NumSrcChunks, ChunkTy);
+  SmallVector<Register> Src2Chunks =
+      unmergeIntoChunks(MIRBuilder, MRI, Src2Reg, NumSrcChunks, ChunkTy);
+  SrcChunks.append(Src2Chunks.begin(), Src2Chunks.end());
 
   SmallVector<Register> DstChunks;
-  for (unsigned D = 0; D < NumDstChunks; ++D) {
-    SmallVector<int> LaneSrcChunk(VectorSplitWidth, -1);
-    SmallVector<int> LaneInChunk(VectorSplitWidth, -1);
-    SmallVector<unsigned> UsedChunks;
-    for (unsigned J = 0; J < VectorSplitWidth; ++J) {
-      int ChunkElementMask = Mask[D * VectorSplitWidth + J];
-      if (ChunkElementMask < 0)
-        continue;
-      int SrcChunk = ChunkElementMask / VectorSplitWidth;
-      LaneSrcChunk[J] = SrcChunk;
-      LaneInChunk[J] = ChunkElementMask % VectorSplitWidth;
-      if (!is_contained(UsedChunks, SrcChunk))
-        UsedChunks.push_back(SrcChunk);
-    }
-
-    Register Partial;
-    if (UsedChunks.empty()) {
-      Partial = MRI.createGenericVirtualRegister(ChunkTy);
-      MIRBuilder.buildUndef(Partial);
-    } else {
-      // Build the chunk by chaining legal-width shuffles to accumulate
-      // lanes from each source chunk.
-      SmallVector<bool> Resolved(VectorSplitWidth, false);
-      for (unsigned Step = 0; Step < UsedChunks.size(); ++Step) {
-        unsigned SC = UsedChunks[Step];
-        Register SrcChunk = SrcChunks[SC];
-        SmallVector<int> ShufMask(VectorSplitWidth, -1);
-        Register Res = MRI.createGenericVirtualRegister(ChunkTy);
-        if (Step == 0) {
-          for (unsigned J = 0; J < VectorSplitWidth; ++J)
-            if (LaneSrcChunk[J] == static_cast<int>(SC))
-              ShufMask[J] = LaneInChunk[J];
-          MIRBuilder.buildShuffleVector(Res, SrcChunk, SrcChunk, ShufMask);
-        } else {
-          for (unsigned J = 0; J < VectorSplitWidth; ++J) {
-            if (LaneSrcChunk[J] == static_cast<int>(SC))
-              ShufMask[J] = static_cast<int>(VectorSplitWidth) + LaneInChunk[J];
-            else if (Resolved[J])
-              ShufMask[J] = static_cast<int>(J);
-          }
-          MIRBuilder.buildShuffleVector(Res, Partial, SrcChunk, ShufMask);
-        }
-        for (unsigned J = 0; J < VectorSplitWidth; ++J)
-          if (LaneSrcChunk[J] == static_cast<int>(SC))
-            Resolved[J] = true;
-        Partial = Res;
-      }
-    }
-    DstChunks.push_back(Partial);
-  }
+  for (unsigned D = 0; D < NumDstChunks; ++D)
+    DstChunks.push_back(buildShuffleChunk(
+        MIRBuilder, MRI, ChunkTy, VectorSplitWidth,
+        Mask.slice(D * VectorSplitWidth, VectorSplitWidth), SrcChunks));
 
   // A single-chunk result is already the final legal-width value.
   if (DstChunks.size() == 1)
