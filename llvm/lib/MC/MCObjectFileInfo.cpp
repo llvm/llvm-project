@@ -324,10 +324,9 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   // Emit the pseudoprobe sections in the __LLVM segment. Current ld ignores the
   // __LLVM and __DWARF segment, so the probe metadata is dropped from the final
   // linked image on every toolchain.
-  PseudoProbeSection =
-      Ctx->getMachOSection("__LLVM", "__probes",
-                           MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
-                           SectionKind::getMetadata());
+  PseudoProbeSection = Ctx->getMachOSection(
+      "__LLVM", "__probes", MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
+      SectionKind::getMetadata());
   PseudoProbeDescSection =
       Ctx->getMachOSection("__LLVM", "__probe_descs",
                            MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
