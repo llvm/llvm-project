@@ -85,20 +85,33 @@ private:
   // used for tracking cache validity and ReadAll/WriteAllRegister data. Will
   // be used for much more in future.
   enum class RegisterSetType : uint32_t {
-    GPR = 1 << 0, // General purpose registers.
-    FPR = 1 << 1, // When there is no SVE, or SVE in FPSIMD mode, or streaming
-                  // only SVE that is in non-streaming mode.
-    SVE = 1 << 2, // Used for SVE registers in streaming or non-streaming mode.
-    SVE_HEADER = 1 << 3, // Only the ptrace header for SVE.
-    PAC = 1 << 4,        // Pointer authentication mask registers.
-    MTE = 1 << 5,        // Memory tagging control registers.
-    TLS = 1 << 6,        // Thread local storage registers.
-    ZA = 1 << 7,         // ZA only, because SVCR and SVG are pseudo registers.
-    ZA_HEADER = 1 << 8,  // Only the ptrace header for ZA.
-    ZT = 1 << 9,         // ZT only.
-    FPMR = 1 << 10,      // Floating point mode control registers.
-    GCS = 1 << 11,       // Guarded Control Stack registers.
-    POE = 1 << 12,       // Permission Overlay registers.
+    // General purpose registers.
+    GPR = 1 << 0,
+    // When there is no SVE, or SVE in FPSIMD mode, or streaming only SVE that
+    // is in non-streaming mode.
+    FPR = 1 << 1,
+    // Used for SVE registers in streaming or non-streaming mode.
+    SVE = 1 << 2,
+    // Only the ptrace header for SVE.
+    SVE_HEADER = 1 << 3,
+    // Pointer authentication mask registers.
+    PAC = 1 << 4,
+    // Memory tagging control registers.
+    MTE = 1 << 5,
+    // Thread local storage registers.
+    TLS = 1 << 6,
+    // ZA only, because SVCR and SVG are pseudo registers.
+    ZA = 1 << 7,
+    // Only the ptrace header for ZA.
+    ZA_HEADER = 1 << 8,
+    // ZT only.
+    ZT = 1 << 9,
+    // Floating point mode control registers.
+    FPMR = 1 << 10,
+    // Guarded Control Stack registers.
+    GCS = 1 << 11,
+    // Permission Overlay registers.
+    POE = 1 << 12,
     LLVM_MARK_AS_BITMASK_ENUM(POE),
   };
 
