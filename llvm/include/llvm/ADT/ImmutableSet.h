@@ -404,6 +404,7 @@ class ImutAVLFactory
   friend class ImutAVLTree<ImutInfo, Canonicalize>;
 
   using TreeTy = ImutAVLTree<ImutInfo, Canonicalize>;
+  using value_type = typename TreeTy::value_type;
   using value_type_ref = typename TreeTy::value_type_ref;
   using key_type_ref = typename TreeTy::key_type_ref;
 
@@ -438,6 +439,39 @@ public:
     T = add_internal(V,T);
     recoverNodes(T);
     return T;
+  }
+
+  /// Merges \p A and \p B in a single traversal, sharing every subtree that the
+  /// two operands do not overlap. \p Combine(AElem, BElem) produces the element
+  /// stored for a key present in both; \p KeepUnmatched governs keys unique to
+  /// one side (see merge_internal). For merging |B| entries into |A|
+  /// (|B| <= |A|) this costs O(|B| * log(|A|/|B| + 1)) and copies each spine
+  /// node at most once, versus O(|B| * log|A|) repeated \ref add descents.
+  /// \p A and \p B must be immutable. This does not short-circuit equal or
+  /// empty operands (merge_internal handles them correctly but not specially);
+  /// callers that want those fast paths, or size-driven operand ordering,
+  /// should apply them first (see ImmutableSet::Factory::unionSets).
+  template <typename CombineFn>
+  TreeTy *mergeTrees(TreeTy *A, TreeTy *B, CombineFn Combine,
+                     bool KeepUnmatched, bool SkipShared = false) {
+    TreeTy *T = merge_internal(A, B, Combine, KeepUnmatched, SkipShared);
+    recoverNodes(T);
+    return T;
+  }
+
+  /// Returns the set union of \p A and \p B (keeping \p A's element on matching
+  /// keys). Shorthand for the fully sharing \ref mergeTrees.
+  TreeTy *unionTrees(TreeTy *A, TreeTy *B) {
+    // With KeepUnmatched=true, unmatched elements are shared as-is and Combine
+    // is invoked only for keys present in both, where it keeps A's element.
+    auto KeepFirst = [](const value_type *L,
+                        const value_type *R) -> const value_type & {
+      return L ? *L : *R;
+    };
+    // Set union is idempotent, so identical (pointer-equal) subtrees -- common
+    // once one operand is derived from the other -- can be shared in O(1).
+    return mergeTrees(A, B, KeepFirst, /*KeepUnmatched=*/true,
+                      /*SkipShared=*/true);
   }
 
   TreeTy* remove(TreeTy* T, key_type_ref V) {
@@ -559,6 +593,115 @@ protected:
     }
 
     return createNode(L,V,R);
+  }
+
+  /// Combines \p L and \p R with the value \p V (every key in \p L less than
+  /// \p V, every key in \p R greater) into one balanced tree. Unlike
+  /// balanceTree this tolerates an arbitrary height difference between \p L and
+  /// \p R: it descends the taller side's spine and rebalances on the way back
+  /// up, exactly as an insertion would.
+  TreeTy *joinTrees(TreeTy *L, value_type_ref V, TreeTy *R) {
+    if (getHeight(L) > getHeight(R) + 2)
+      return balanceTree(getLeft(L), getValue(L), joinTrees(getRight(L), V, R));
+    if (getHeight(R) > getHeight(L) + 2)
+      return balanceTree(joinTrees(L, V, getLeft(R)), getValue(R), getRight(R));
+    return createNode(L, V, R);
+  }
+
+  /// Splits \p T into \p L (all keys less than \p K) and \p R (all keys greater
+  /// than \p K). If \p K is present in \p T, \p Match is set to point at its
+  /// element (which is dropped from \p L and \p R); otherwise \p Match is null.
+  void splitLookup(TreeTy *T, key_type_ref K, TreeTy *&L,
+                   const value_type *&Match, TreeTy *&R) {
+    if (isEmpty(T)) {
+      L = R = getEmptyTree();
+      Match = nullptr;
+      return;
+    }
+    key_type_ref KCurrent = ImutInfo::KeyOfValue(getValue(T));
+    if (ImutInfo::isEqual(K, KCurrent)) {
+      L = getLeft(T);
+      R = getRight(T);
+      // Use the tree accessor, which returns a reference to the stored element
+      // (the factory's getValue returns value_type_ref, which is by value for
+      // pointer-like element types).
+      Match = &T->getValue();
+    } else if (ImutInfo::isLess(K, KCurrent)) {
+      TreeTy *LR;
+      splitLookup(getLeft(T), K, L, Match, LR);
+      R = joinTrees(LR, getValue(T), getRight(T));
+    } else {
+      TreeTy *RL;
+      splitLookup(getRight(T), K, RL, Match, R);
+      L = joinTrees(getLeft(T), getValue(T), RL);
+    }
+  }
+
+  /// Rebuilds \p T with the same shape but each element replaced by
+  /// \p Combine applied to it. \p FromB selects which side of \p Combine the
+  /// element is passed on (it is the sole non-null argument).
+  template <typename CombineFn>
+  TreeTy *transformTree(TreeTy *T, CombineFn &Combine, bool FromB) {
+    if (isEmpty(T))
+      return T;
+    TreeTy *L = transformTree(getLeft(T), Combine, FromB);
+    TreeTy *R = transformTree(getRight(T), Combine, FromB);
+    const value_type &E = getValue(T);
+    return createNode(L, FromB ? Combine(nullptr, &E) : Combine(&E, nullptr),
+                      R);
+  }
+
+  /// Merges \p A and \p B by recursing over \p A's structure and splitting \p B
+  /// at each of \p A's keys. For a key in both, the stored element is
+  /// Combine(AElem, BElem). \p KeepUnmatched controls keys unique to one side:
+  /// when true, such elements (and whole non-overlapping subtrees) are taken
+  /// unchanged and shared, and \p Combine is invoked only on keys present in
+  /// both (valid when \p Combine is an identity for a missing side, e.g. a set
+  /// union or a lattice join with an identity element); when false every key is
+  /// passed through \p Combine with the absent side null (needed for a join
+  /// that transforms unmatched keys, e.g. liveness downgrading Must to Maybe).
+  template <typename CombineFn>
+  TreeTy *merge_internal(TreeTy *A, TreeTy *B, CombineFn &Combine,
+                         bool KeepUnmatched, bool SkipShared) {
+    // When A and B are the same tree (which happens all the time once B is
+    // derived from A by a small edit, since the untouched side is shared by
+    // pointer), an idempotent merge returns it unchanged in O(1). Only valid
+    // when merge(x, x) == x, so the caller opts in via SkipShared.
+    if (SkipShared && A == B)
+      return A;
+    if (isEmpty(A))
+      return KeepUnmatched ? B : transformTree(B, Combine, /*FromB=*/true);
+    if (isEmpty(B))
+      return KeepUnmatched ? A : transformTree(A, Combine, /*FromB=*/false);
+
+    const value_type &AElem = getValue(A);
+    TreeTy *BL, *BR;
+    const value_type *BMatch;
+    splitLookup(B, ImutInfo::KeyOfValue(AElem), BL, BMatch, BR);
+
+    TreeTy *NewL =
+        merge_internal(getLeft(A), BL, Combine, KeepUnmatched, SkipShared);
+    TreeTy *NewR =
+        merge_internal(getRight(A), BR, Combine, KeepUnmatched, SkipShared);
+
+    if (!BMatch) {
+      // Key present only in A.
+      if (KeepUnmatched) {
+        if (NewL == getLeft(A) && NewR == getRight(A))
+          return A;
+        return joinTrees(NewL, AElem, NewR);
+      }
+      return joinTrees(NewL, Combine(&AElem, nullptr), NewR);
+    }
+    // Key present in both: combine the two elements. Preserve sharing when the
+    // combined value is unchanged and neither subtree moved, so that a join
+    // that only touches a few keys does not rebuild the whole spine.
+    auto NewElem = Combine(&AElem, BMatch);
+    if (NewL == getLeft(A) && NewR == getRight(A) &&
+        ImutInfo::isDataEqual(ImutInfo::DataOfValue(NewElem),
+                              ImutInfo::DataOfValue(AElem)))
+      return A;
+    return joinTrees(NewL, NewElem, NewR);
   }
 
   /// add_internal - Creates a new tree that includes the specified
@@ -992,6 +1135,30 @@ public:
         return ImmutableSet(F.getCanonicalTree(NewT));
       else
         return ImmutableSet(NewT);
+    }
+
+    /// Returns the union of \p A and \p B, computed in a single traversal that
+    /// shares subtrees of both operands wherever possible (see
+    /// ImutAVLFactory::unionTrees). This is more efficient than repeatedly
+    /// adding \p B's elements to \p A when \p B is large.
+    [[nodiscard]] ImmutableSet unionSets(ImmutableSet A, ImmutableSet B) {
+      if (A.Root.get() == B.Root.get() || B.isEmpty())
+        return A;
+      if (A.isEmpty())
+        return B;
+      // Drive the recursion with the taller tree so the shorter one is the one
+      // being split.
+      if (A.getHeight() < B.getHeight())
+        std::swap(A, B);
+      if constexpr (Canonicalize) {
+        // The bulk path does not canonicalize the nodes it creates, so fall
+        // back to per-element insertion for canonicalizing factories.
+        for (value_type_ref V : B)
+          A = add(A, V);
+        return A;
+      } else {
+        return ImmutableSet(F.unionTrees(A.Root.get(), B.Root.get()));
+      }
     }
 
     /// Creates a new immutable set that contains all of the values

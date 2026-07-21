@@ -44,7 +44,7 @@ if (SPIRV_DIS)
   add_custom_target(spirv-dis
     COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${SPIRV_DIS}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-dis${CMAKE_EXECUTABLE_SUFFIX}")
 else ()
-  add_custom_target(spirv-dis${CMAKE_EXECUTABLE_SUFFIX}
+  add_custom_target(spirv-dis
     COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${BINARY_DIR}/tools/spirv-dis${CMAKE_EXECUTABLE_SUFFIX}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-dis${CMAKE_EXECUTABLE_SUFFIX}"
     DEPENDS SPIRVTools
     )

@@ -39,38 +39,38 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::Add, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_sub_gen_i:
   case NVPTX::BI__nvvm_atom_sub_gen_l:
   case NVPTX::BI__nvvm_atom_sub_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::Sub, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_and_gen_i:
   case NVPTX::BI__nvvm_atom_and_gen_l:
   case NVPTX::BI__nvvm_atom_and_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::And, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_or_gen_i:
   case NVPTX::BI__nvvm_atom_or_gen_l:
   case NVPTX::BI__nvvm_atom_or_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::Or, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_xor_gen_i:
   case NVPTX::BI__nvvm_atom_xor_gen_l:
   case NVPTX::BI__nvvm_atom_xor_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::Xor, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_xchg_gen_i:
   case NVPTX::BI__nvvm_atom_xchg_gen_l:
   case NVPTX::BI__nvvm_atom_xchg_gen_ll:
@@ -81,31 +81,31 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_max_gen_i:
   case NVPTX::BI__nvvm_atom_max_gen_l:
   case NVPTX::BI__nvvm_atom_max_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::Max, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_max_gen_ui:
   case NVPTX::BI__nvvm_atom_max_gen_ul:
   case NVPTX::BI__nvvm_atom_max_gen_ull:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::Max, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_min_gen_i:
   case NVPTX::BI__nvvm_atom_min_gen_l:
   case NVPTX::BI__nvvm_atom_min_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::Min, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_min_gen_ui:
   case NVPTX::BI__nvvm_atom_min_gen_ul:
   case NVPTX::BI__nvvm_atom_min_gen_ull:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::Min, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_cas_gen_us:
   case NVPTX::BI__nvvm_atom_cas_gen_i:
   case NVPTX::BI__nvvm_atom_cas_gen_l:
@@ -122,15 +122,15 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   case NVPTX::BI__nvvm_atom_inc_gen_ui:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::UIncWrap, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_dec_gen_ui:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::UDecWrap, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_ldg_c:
   case NVPTX::BI__nvvm_ldg_sc:
   case NVPTX::BI__nvvm_ldg_c2:
