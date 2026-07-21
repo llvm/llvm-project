@@ -1,13 +1,19 @@
 ; REQUIRES: asserts
 ; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail\
-; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s
+; RUN: -pass-remarks-analysis=loop-vectorize -force-vector-width=16 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s
+
+; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -force-vector-width=16 \
+; RUN:  -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-MAIN-VF
+
+; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -epilogue-vectorization-force-VF=8  \
+; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-EPILOGUE-VF
 
 ; RUN: opt -S -p loop-vectorize -debug -enable-epilogue-vectorization=false \
-; RUN: --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -pass-remarks-analysis=loop-vectorize < %s 2>&1 \
-; RUN: | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
+; RUN: --disable-output -force-vector-width=16 -epilogue-vectorization-force-VF=8 -epilogue-tail-folding-policy=prefer-fold-tail \
+; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
 
 define void @test_epilogue_tf(ptr %A, i64 %n) {
-; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf'
+; CHECK-LABEL: Checking a loop in 'test_epilogue_tf'
 ; CHECK: LV: epilogue tail-folding is enabled
 ;
 entry:
@@ -25,8 +31,30 @@ exit:
   ret void
 }
 
+define void @test_epilogue_tf_no_fv(ptr %A, i64 %n) {
+; CHECK-NO-FORCED-MAIN-VF-LABEL: Checking a loop in 'test_epilogue_tf_no_fv'
+; CHECK-NO-FORCED-MAIN-VF: remark: <unknown>:0:0: For now, Epilogue tail-folding can't be applied without forced epilogue/main loop VF
+
+; CHECK-NO-FORCED-EPILOGUE-VF-LABEL: Checking a loop in 'test_epilogue_tf_no_fv'
+; CHECK-NO-FORCED-EPILOGUE-VF: remark: <unknown>:0:0: For now, Epilogue tail-folding can't be applied without forced epilogue/main loop VF
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %iv
+  store i8 1, ptr %arrayidx, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp ne i64 %iv.next, %n
+  br i1 %exitcond, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
 define void @epilogue_is_disabled(ptr %a, i64 %n) {
-; CHECK-DISABLED-EPILOG-LABEL: LV: Checking a loop in 'epilogue_is_disabled'
+; CHECK-DISABLED-EPILOG-LABEL: Checking a loop in 'epilogue_is_disabled'
 ; CHECK-DISABLED-EPILOG: remark: <unknown>:0:0: Options conflict, epilogue vectorization is disallowed while epilogue tail-folding allowed!
 ;
 entry:
@@ -45,7 +73,7 @@ for.end:
 }
 
 define i16 @require_scalar_epilogue(ptr %dst, i64 %x) {
-; CHECK-LABEL: LV: Checking a loop in 'require_scalar_epilogue'
+; CHECK-LABEL: Checking a loop in 'require_scalar_epilogue'
 ; CHECK: LV: Epilogue tail-folding can't be applied because scalar epilogue is required
 ; CHECK-NEXT: LV: Fall back to a normal epilogue
 ;
@@ -74,7 +102,7 @@ exit.2:
 }
 
 define i32 @opt_for_size(ptr %p, i32 %n) optsize {
-; CHECK-LABEL: LV: Checking a loop in 'opt_for_size'
+; CHECK-LABEL: Checking a loop in 'opt_for_size'
 ; CHECK: LV: No epilogue to apply tail-folding for.
 ; CHECK-NEXT: LV: Fall back to a normal epilogue
 ;
