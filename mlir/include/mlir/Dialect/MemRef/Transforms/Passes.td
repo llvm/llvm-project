@@ -340,4 +340,14 @@ def FlattenMemrefsPass : Pass<"flatten-memref"> {
   ];
 }
 
+def ElevateAllocsToGlobalsPass : Pass<"elevate-allocs-to-globals", "ModuleOp"> {
+  let summary = "Elevate allocs to globals";
+  let description = [{
+
+  }];
+  let dependentDialects = [
+      "memref::MemRefDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES

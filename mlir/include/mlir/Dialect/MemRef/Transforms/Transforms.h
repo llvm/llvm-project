@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_MEMREF_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_MEMREF_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 
@@ -164,6 +165,8 @@ void populateExtractAddressComputationsPatterns(RewritePatternSet &patterns);
 /// Patterns for flattening all supported multi-dimensional memref operations
 /// into one-dimensional memref operations.
 void populateFlattenMemrefsPatterns(RewritePatternSet &patterns);
+
+void populateElevateAllocsToGlobalsPatterns(RewritePatternSet &patterns);
 
 /// Build a new memref::AllocaOp whose dynamic sizes are independent of all
 /// given independencies. If the op is already independent of all
