@@ -2913,8 +2913,8 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
 
   // A feature the processor does not support is rejected: gfx600 has neither
   // xnack nor sramecc.
-  EXPECT_FALSE(TargetID::parseTargetIDString(
-      "amdgcn-amd-amdhsa-unknown-gfx600:xnack+"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx600:xnack+"));
   EXPECT_FALSE(TargetID::parseTargetIDString(
       "amdgcn-amd-amdhsa-unknown-gfx900:sramecc+"));
 
@@ -2927,8 +2927,8 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
       "amdgcn-amd-amdhsa-unknown-gfx1250:xnack-"));
 
   // A feature modifier with no "+"/"-" sign is rejected.
-  EXPECT_FALSE(TargetID::parseTargetIDString(
-      "amdgcn-amd-amdhsa-unknown-gfx908:xnack"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx908:xnack"));
 
   // An unknown feature name is rejected, even alongside a valid one.
   EXPECT_FALSE(TargetID::parseTargetIDString(
@@ -3019,8 +3019,8 @@ TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {
       TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx902")));
 
   EXPECT_TRUE(TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "")));
-  EXPECT_TRUE(TargetID(AMDHSAMajor9, "")
-                  .providesFor(TargetID(AMDHSA, "gfx9-generic")));
+  EXPECT_TRUE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx9-generic")));
   EXPECT_TRUE(
       TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "generic")));
   EXPECT_TRUE(TargetID(AMDHSAMajor9, "gfx9-generic")
@@ -3074,10 +3074,10 @@ TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {
                    .providesFor(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+")));
 
   // The legacy "amdgcn" and canonical "amdgpu" triple spellings are unified.
-  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
-                  .providesFor(TargetID(AMDHSACanon, "gfx90a")));
-  EXPECT_TRUE(TargetID(AMDHSACanon, "gfx90a")
-                  .providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_TRUE(
+      TargetID(AMDHSA, "gfx90a").providesFor(TargetID(AMDHSACanon, "gfx90a")));
+  EXPECT_TRUE(
+      TargetID(AMDHSACanon, "gfx90a").providesFor(TargetID(AMDHSA, "gfx90a")));
 }
 
 TEST(TargetParserTest, testAMDGPUTargetIDEquivalent) {
@@ -3102,20 +3102,20 @@ TEST(TargetParserTest, testAMDGPUTargetIDEquivalent) {
 
   // A specific processor and a member of its generic family are distinct and
   // not equivalent (this is the over-merge that produced duplicate symbols).
-  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx900"),
-                          TargetID(AMDHSA, "gfx9-generic")));
+  EXPECT_FALSE(
+      Equivalent(TargetID(AMDHSA, "gfx900"), TargetID(AMDHSA, "gfx9-generic")));
 
   // Legacy "amdgcn" and canonical "amdgpu" spellings are equivalent.
-  EXPECT_TRUE(Equivalent(TargetID(AMDHSA, "gfx90a"),
-                         TargetID(AMDHSACanon, "gfx90a")));
+  EXPECT_TRUE(
+      Equivalent(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSACanon, "gfx90a")));
 
   // The same processor spelled via the triple subarch (with no processor
   // name) and via the processor name (with a major-family subarch triple) are
   // equivalent, e.g. amdgpu9-amd-amdhsa + "gfx900" and amdgpu9.00-amd-amdhsa.
   Triple AMDHSAMajor9("amdgpu9-amd-amdhsa");
   Triple AMDHSASub900("amdgpu9.00-amd-amdhsa");
-  EXPECT_TRUE(Equivalent(TargetID(AMDHSAMajor9, "gfx900"),
-                         TargetID(AMDHSASub900, "")));
+  EXPECT_TRUE(
+      Equivalent(TargetID(AMDHSAMajor9, "gfx900"), TargetID(AMDHSASub900, "")));
   EXPECT_TRUE(
       Equivalent(TargetID(AMDHSASub900, ""), TargetID(AMDHSA, "gfx900")));
   EXPECT_TRUE(Equivalent(TargetID(AMDHSAMajor9, "gfx9-generic"),
