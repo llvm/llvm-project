@@ -20,7 +20,7 @@ float2 test_too_many_arg(float2 p0) {
 
 int test_int_scalar_inputs(int p0) {
   return __builtin_spirv_faceforward(p0, p0, p0);
-  //  expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int')}}
+  //  expected-error@-1 {{1st argument must be a scalar, vector, or matrix of floating-point types (was 'int')}}
 }
 
 float test_int_scalar_inputs2(float p0, int p1) {

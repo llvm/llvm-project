@@ -13,10 +13,10 @@ float too_many_args(float val) {
 
 float test_integer_scalar_input(int val) {
   return __builtin_hlsl_elementwise_ddx_coarse(val);
-  // expected-error@-1 {{1st argument must be a scalar or vector of 16 or 32 bit floating-point types (was 'int')}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of 16 or 32 bit floating-point types (was 'int')}}
 }
 
 double test_double_scalar_input(double val) {
   return __builtin_hlsl_elementwise_ddx_coarse(val);
-  // expected-error@-1 {{1st argument must be a scalar or vector of 16 or 32 bit floating-point types (was 'double')}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of 16 or 32 bit floating-point types (was 'double')}}
 }

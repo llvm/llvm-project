@@ -1602,13 +1602,6 @@ static bool isUnicodeWhitespace(uint32_t Codepoint) {
   return UnicodeWhitespaceChars.contains(Codepoint);
 }
 
-static llvm::SmallString<5> codepointAsHexString(uint32_t C) {
-  llvm::SmallString<5> CharBuf;
-  llvm::raw_svector_ostream CharOS(CharBuf);
-  llvm::write_hex(CharOS, C, llvm::HexPrintStyle::Upper, 4);
-  return CharBuf;
-}
-
 // To mitigate https://github.com/llvm/llvm-project/issues/54732,
 // we allow "Mathematical Notation Characters" in identifiers.
 // This is a proposed profile that extends the XID_Start/XID_continue
@@ -1696,7 +1689,7 @@ static void diagnoseExtensionInIdentifier(DiagnosticsEngine &Diags, uint32_t C,
   assert((MathStartChars.contains(C) || MathContinueChars.contains(C)) &&
          "Unexpected mathematical notation codepoint");
   Diags.Report(Range.getBegin(), diag::ext_mathematical_notation)
-      << codepointAsHexString(C) << Range;
+      << EscapeSingleCodepointForDiagnostic(C) << Range;
 }
 
 static inline CharSourceRange makeCharRange(Lexer &L, const char *Begin,
@@ -1801,10 +1794,10 @@ static void maybeDiagnoseUTF8Homoglyph(DiagnosticsEngine &Diags, uint32_t C,
     if (Homoglyph->LooksLike) {
       const char LooksLikeStr[] = {Homoglyph->LooksLike, 0};
       Diags.Report(Range.getBegin(), diag::warn_utf8_symbol_homoglyph)
-          << Range << codepointAsHexString(C) << LooksLikeStr;
+          << Range << EscapeSingleCodepointForDiagnostic(C) << LooksLikeStr;
     } else {
       Diags.Report(Range.getBegin(), diag::warn_utf8_symbol_zero_width)
-          << Range << codepointAsHexString(C);
+          << Range << EscapeSingleCodepointForDiagnostic(C);
     }
   }
 }
@@ -1832,11 +1825,11 @@ static bool CheckCodepointValidInIdentifier(const Preprocessor *PP,
 
   if (!IsFirst || InvalidOnlyAtStart) {
     PP->Diag(Range.getBegin(), diag::err_character_not_allowed_identifier)
-        << Range << codepointAsHexString(CodePoint) << int(InvalidOnlyAtStart)
-        << FixItHint::CreateRemoval(Range);
+        << Range << EscapeSingleCodepointForDiagnostic(CodePoint)
+        << int(InvalidOnlyAtStart) << FixItHint::CreateRemoval(Range);
   } else {
     PP->Diag(Range.getBegin(), diag::err_character_not_allowed)
-        << Range << codepointAsHexString(CodePoint)
+        << Range << EscapeSingleCodepointForDiagnostic(CodePoint)
         << FixItHint::CreateRemoval(Range);
   }
   return false;
@@ -3778,7 +3771,8 @@ bool Lexer::CheckUnicodeWhitespace(Token &Result, uint32_t C,
   if (!isLexingRawMode() && !PP->isPreprocessedOutput() &&
       isUnicodeWhitespace(C)) {
     Diag(BufferPtr, diag::ext_unicode_whitespace)
-      << makeCharRange(*this, BufferPtr, CurPtr);
+        << EscapeSingleCodepointForDiagnostic(C)
+        << makeCharRange(*this, BufferPtr, CurPtr);
 
     Result.setFlag(Token::LeadingSpace);
     return true;
