@@ -7869,10 +7869,9 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
   // switch.
   BasicBlock *Default = SI->getDefaultDest();
   const Instruction *CxtI = &*Default->getFirstNonPHIIt();
-  DominatorTree *DT = DTU ? &DTU->getDomTree() : nullptr;
-  const KnownBits Known =
-      computeKnownBits(SI->getCondition(),
-                       SimplifyQuery(DL, DT, AC, CxtI).allowEphemerals(true));
+  const KnownBits Known = computeKnownBits(
+      SI->getCondition(),
+      SimplifyQuery(DL, /*DT=*/nullptr, AC, CxtI).allowEphemerals(true));
   if (!Known.isConstant())
     return false;
 
