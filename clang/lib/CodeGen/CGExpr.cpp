@@ -3632,30 +3632,18 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
 
   const auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
 
-  // Check if the original variable (what DD decomposes) has been mapped.
-  // If so, use the original variable instead of DD to avoid capturing DD.
-  const VarDecl *TargetDecl = DD;
-  if (const auto *DecompDecl = dyn_cast<DecompositionDecl>(DD)) {
-    if (const VarDecl *OrigVar = DecompDecl->getOriginalVar().Var) {
-      auto It = LocalDeclMap.find(OrigVar->getCanonicalDecl());
-      if (It != LocalDeclMap.end())
-        // Original variable is mapped, use it instead.
-        TargetDecl = OrigVar;
-    }
-  }
-
   // Use getNonReferenceType() because we need the actual object type, not the
   // reference type. DeclRefExpr with VK_LValue requires a non-reference type
   // (AST invariant). EmitDeclRefLValue will load any reference for us.
-  QualType DREType = TargetDecl->getType().getNonReferenceType();
-  DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(TargetDecl),
+  QualType DREType = DD->getType().getNonReferenceType();
+  DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(DD),
                   /*RefersToEnclosingVariableOrCapture=*/true, DREType,
                   VK_LValue, SourceLocation());
   LValue BaseLVal = EmitDeclRefLValue(&DRE);
 
   // Ensure the Address has the correct element type for DD's type.
   // EmitDeclRefLValue might return an address with a different element type
-  // if TargetDecl != DD or if reference unwrapping occurred.
+  // if reference unwrapping occurred.
   Address BaseAddr = BaseLVal.getAddress();
   QualType DDType = DD->getType();
   llvm::Type *ExpectedTy = CGM.getTypes().ConvertTypeForMem(DDType);

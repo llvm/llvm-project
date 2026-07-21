@@ -387,6 +387,14 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
                                          const OMPExecutableDirective &S,
                                          const RegionCodeGenTy &CodeGen);
 
+Address CodeGenFunction::EmitOMPBindingOriginalAddr(const BindingDecl *BD,
+                                                    SourceLocation Loc) {
+  DeclRefExpr DRE(getContext(), const_cast<BindingDecl *>(BD),
+                  /*RefersToEnclosingVariableOrCapture=*/true, BD->getType(),
+                  VK_LValue, Loc);
+  return EmitLValue(&DRE).getAddress();
+}
+
 LValue CodeGenFunction::EmitOMPSharedLValue(const Expr *E) {
   if (const auto *OrigDRE = dyn_cast<DeclRefExpr>(E)) {
     if (const auto *OrigVD = dyn_cast<VarDecl>(OrigDRE->getDecl())) {
@@ -1186,11 +1194,8 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
             Lastprivates.count(BD->getCanonicalDecl()) > 0;
         const auto *VDInit =
             cast<VarDecl>(cast<DeclRefExpr>(*InitsRef)->getDecl());
-        DeclRefExpr DRE(getContext(), const_cast<BindingDecl *>(BD),
-                        /*RefersToEnclosingVariableOrCapture=*/true,
-                        BD->getType(), VK_LValue, (*IRef)->getExprLoc());
-        LValue OriginalLVal = EmitLValue(&DRE);
-        Address OriginalAddr = OriginalLVal.getAddress();
+        Address OriginalAddr =
+            EmitOMPBindingOriginalAddr(BD, (*IRef)->getExprLoc());
         // Emit private VarDecl with copy init. Remap VDInit to point to the
         // original binding so EmitDecl properly initializes VD.
         setAddrOfLocalVar(VDInit, OriginalAddr);
@@ -1455,10 +1460,8 @@ bool CodeGenFunction::EmitOMPLastprivateClauseInit(
           const auto *DestVD =
               cast<VarDecl>(cast<DeclRefExpr>(*IDestRef)->getDecl());
           // Get the original binding address.
-          DeclRefExpr DRE(getContext(), const_cast<BindingDecl *>(BD),
-                          /*RefersToEnclosingVariableOrCapture=*/true,
-                          BD->getType(), VK_LValue, (*IRef)->getExprLoc());
-          PrivateScope.addPrivate(DestVD, EmitLValue(&DRE).getAddress());
+          PrivateScope.addPrivate(
+              DestVD, EmitOMPBindingOriginalAddr(BD, (*IRef)->getExprLoc()));
 
           if (IInit) {
             const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
@@ -1576,11 +1579,8 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
           Address PrivateAddr = It->second;
 
           // Get the original binding address.
-          DeclRefExpr BindingDRE(getContext(), const_cast<BindingDecl *>(BD),
-                                 /*RefersToEnclosingVariableOrCapture=*/true,
-                                 BD->getType(), VK_LValue,
-                                 (*IRef)->getExprLoc());
-          Address OriginalAddr = EmitLValue(&BindingDRE).getAddress();
+          Address OriginalAddr =
+              EmitOMPBindingOriginalAddr(BD, (*IRef)->getExprLoc());
 
           const auto *SrcVD =
               cast<VarDecl>(cast<DeclRefExpr>(*ISrcRef)->getDecl());
@@ -1687,11 +1687,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
       // - The reduction operation writes from RHSVD back to LHSVD
       // - This achieves the same writeback that RedCG provides for VarDecls
       // Get the original BindingDecl address.
-      DeclRefExpr BindingDRE(getContext(), const_cast<BindingDecl *>(BD),
-                             /*RefersToEnclosingVariableOrCapture=*/true,
-                             BD->getType(), VK_LValue, IRef->getExprLoc());
-      LValue OriginalLVal = EmitLValue(&BindingDRE);
-      Address OriginalAddr = OriginalLVal.getAddress();
+      Address OriginalAddr = EmitOMPBindingOriginalAddr(BD, IRef->getExprLoc());
 
       // Emit the private VarDecl with reduction initialization.
       EmitDecl(*PrivateVD);
