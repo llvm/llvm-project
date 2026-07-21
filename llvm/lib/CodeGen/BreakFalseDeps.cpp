@@ -39,7 +39,7 @@ private:
   MachineFunction *MF = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
-  RegisterClassInfo *RegClassInfo = nullptr;
+  RegisterClassInfo RegClassInfo;
 
   /// List of undefined register reads in this block in forward order.
   std::vector<std::pair<MachineInstr *, unsigned>> UndefReads;
@@ -54,8 +54,7 @@ private:
   bool Changed = false;
 
 public:
-  BreakFalseDeps(RegisterClassInfo *RegClassInfo, ReachingDefInfo *RDI)
-      : RegClassInfo(RegClassInfo), RDI(RDI) {}
+  BreakFalseDeps(ReachingDefInfo *RDI) : RDI(RDI) {}
 
   bool run(MachineFunction &CurMF);
 
@@ -95,7 +94,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<ReachingDefInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -114,7 +112,6 @@ public:
 char BreakFalseDepsLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(BreakFalseDepsLegacy, DEBUG_TYPE, "BreakFalseDeps", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(BreakFalseDepsLegacy, DEBUG_TYPE, "BreakFalseDeps", false,
                     false)
@@ -169,7 +166,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   // max clearance or clearance higher than Pref.
   unsigned MaxClearance = 0;
   unsigned MaxClearanceReg = OriginalReg;
-  ArrayRef<MCPhysReg> Order = RegClassInfo->getOrder(OpRC);
+  ArrayRef<MCPhysReg> Order = RegClassInfo.getOrder(OpRC);
   for (MCPhysReg Reg : Order) {
     unsigned Clearance = RDI->getClearance(MI, Reg);
     if (Clearance <= MaxClearance)
@@ -304,6 +301,7 @@ bool BreakFalseDeps::run(MachineFunction &CurMF) {
   MF = &CurMF;
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
+  RegClassInfo.runOnMachineFunction(CurMF, /*Rev=*/true);
 
   LLVM_DEBUG(dbgs() << "********** BREAK FALSE DEPENDENCIES **********\n");
 
@@ -325,10 +323,8 @@ bool BreakFalseDepsLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  RegisterClassInfo *RCI =
-      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   ReachingDefInfo *RDI = &getAnalysis<ReachingDefInfoWrapperPass>().getRDI();
-  BreakFalseDeps Impl(RCI, RDI);
+  BreakFalseDeps Impl(RDI);
   return Impl.run(MF);
 }
 
@@ -336,9 +332,8 @@ PreservedAnalyses
 BreakFalseDepsPass::run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
-  RegisterClassInfo *RCI = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   ReachingDefInfo *RDI = &MFAM.getResult<ReachingDefAnalysis>(MF);
-  if (BreakFalseDeps(RCI, RDI).run(MF)) {
+  if (BreakFalseDeps(RDI).run(MF)) {
     PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
     PA.preserveSet<CFGAnalyses>();
     return PA;

@@ -163,7 +163,6 @@
 ; CHECK-NEXT:      ARM load / store optimization pass
 ; CHECK-NEXT:      Reaching Definitions Analysis
 ; CHECK-NEXT:      ARM Execution Domain Fix
-; CHECK-NEXT:      Machine Register Class Info Analysis
 ; CHECK-NEXT:      BreakFalseDeps
 ; CHECK-NEXT:      ARM pseudo instruction expansion pass
 ; CHECK-NEXT:      Insert KCFI indirect call checks
