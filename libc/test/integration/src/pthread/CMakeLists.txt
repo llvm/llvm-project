@@ -299,12 +299,13 @@ add_integration_test(
   SRCS
     pthread_setschedparam_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.sched_macros
-    libc.include.pthread
-    libc.src.errno.errno
+    libc.hdr.types.struct_sched_param
+    libc.include.llvm-libc-types.pthread_t
     libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_self
     libc.src.pthread.pthread_setschedparam
-    libc.src.pthread.pthread_getschedparam
 )
