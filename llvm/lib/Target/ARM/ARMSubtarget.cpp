@@ -197,6 +197,68 @@ void ARMSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
         Info.setLibcallImpl(LC.Op, LC.Impl);
     }
   }
+
+  static const struct {
+    const RTLIB::Libcall Op;
+    const RTLIB::LibcallImpl Impl;
+  } AEABISelected[] = {
+      // Double-precision arithmetic.
+      {RTLIB::ADD_F64, RTLIB::impl___aeabi_dadd},
+      {RTLIB::DIV_F64, RTLIB::impl___aeabi_ddiv},
+      {RTLIB::MUL_F64, RTLIB::impl___aeabi_dmul},
+      {RTLIB::SUB_F64, RTLIB::impl___aeabi_dsub},
+      // Double-precision comparisons.
+      {RTLIB::OEQ_F64, RTLIB::impl___aeabi_dcmpeq},
+      {RTLIB::OLT_F64, RTLIB::impl___aeabi_dcmplt},
+      {RTLIB::OLE_F64, RTLIB::impl___aeabi_dcmple},
+      {RTLIB::OGE_F64, RTLIB::impl___aeabi_dcmpge},
+      {RTLIB::OGT_F64, RTLIB::impl___aeabi_dcmpgt},
+      {RTLIB::UO_F64, RTLIB::impl___aeabi_dcmpun},
+      // Single-precision arithmetic.
+      {RTLIB::ADD_F32, RTLIB::impl___aeabi_fadd},
+      {RTLIB::DIV_F32, RTLIB::impl___aeabi_fdiv},
+      {RTLIB::MUL_F32, RTLIB::impl___aeabi_fmul},
+      {RTLIB::SUB_F32, RTLIB::impl___aeabi_fsub},
+      // Single-precision comparisons.
+      {RTLIB::OEQ_F32, RTLIB::impl___aeabi_fcmpeq},
+      {RTLIB::OLT_F32, RTLIB::impl___aeabi_fcmplt},
+      {RTLIB::OLE_F32, RTLIB::impl___aeabi_fcmple},
+      {RTLIB::OGE_F32, RTLIB::impl___aeabi_fcmpge},
+      {RTLIB::OGT_F32, RTLIB::impl___aeabi_fcmpgt},
+      {RTLIB::UO_F32, RTLIB::impl___aeabi_fcmpun},
+      // Floating-point to integer conversions.
+      {RTLIB::FPTOSINT_F64_I32, RTLIB::impl___aeabi_d2iz},
+      {RTLIB::FPTOUINT_F64_I32, RTLIB::impl___aeabi_d2uiz},
+      {RTLIB::FPTOSINT_F64_I64, RTLIB::impl___aeabi_d2lz},
+      {RTLIB::FPTOUINT_F64_I64, RTLIB::impl___aeabi_d2ulz},
+      {RTLIB::FPTOSINT_F32_I32, RTLIB::impl___aeabi_f2iz},
+      {RTLIB::FPTOUINT_F32_I32, RTLIB::impl___aeabi_f2uiz},
+      {RTLIB::FPTOSINT_F32_I64, RTLIB::impl___aeabi_f2lz},
+      {RTLIB::FPTOUINT_F32_I64, RTLIB::impl___aeabi_f2ulz},
+      // Integer to floating-point conversions.
+      {RTLIB::SINTTOFP_I32_F64, RTLIB::impl___aeabi_i2d},
+      {RTLIB::UINTTOFP_I32_F64, RTLIB::impl___aeabi_ui2d},
+      {RTLIB::SINTTOFP_I64_F64, RTLIB::impl___aeabi_l2d},
+      {RTLIB::UINTTOFP_I64_F64, RTLIB::impl___aeabi_ul2d},
+      {RTLIB::SINTTOFP_I32_F32, RTLIB::impl___aeabi_i2f},
+      {RTLIB::UINTTOFP_I32_F32, RTLIB::impl___aeabi_ui2f},
+      {RTLIB::SINTTOFP_I64_F32, RTLIB::impl___aeabi_l2f},
+      {RTLIB::UINTTOFP_I64_F32, RTLIB::impl___aeabi_ul2f},
+      // Long long helpers.
+      {RTLIB::MUL_I64, RTLIB::impl___aeabi_lmul},
+      {RTLIB::SHL_I64, RTLIB::impl___aeabi_llsl},
+      {RTLIB::SRL_I64, RTLIB::impl___aeabi_llsr},
+      {RTLIB::SRA_I64, RTLIB::impl___aeabi_lasr},
+      // Integer division.
+      {RTLIB::SDIV_I32, RTLIB::impl___aeabi_idiv},
+      {RTLIB::UDIV_I32, RTLIB::impl___aeabi_uidiv},
+  };
+
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = Info.getRuntimeLibcallsInfo();
+  for (const auto &LC : AEABISelected) {
+    if (RTLCI.isAvailable(LC.Impl))
+      Info.setLibcallImpl(LC.Op, LC.Impl);
+  }
 }
 
 bool ARMSubtarget::isXRaySupported() const {
