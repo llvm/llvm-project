@@ -25,7 +25,7 @@ void noCrash(void) {
   if (((global_var & 137) == 2) &&
       ((global_var & 137) & 8)) {
     // This branch is actually dead, but the analyzer does not realize that yet.
-    clang_analyzer_warnIfReached();
+    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
     pthread_mutex_lock(&mtx1); // no-warning
   }
 }
@@ -35,7 +35,7 @@ void noCrashTryLock(void) {
   if (((global_var & 137) == 2) &&
       ((global_var & 137) & 8)) {
     // This branch is actually dead, but the analyzer does not realize that yet.
-    clang_analyzer_warnIfReached();
+    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
     pthread_mutex_trylock(&mtx1); // no-warning
   }
 }
