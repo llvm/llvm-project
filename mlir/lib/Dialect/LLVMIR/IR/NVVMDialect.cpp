@@ -3733,12 +3733,14 @@ AsyncStoreOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
     } else if (scope == AsyncStoreScope::GPU) {
       return {llvm::Intrinsic::nvvm_st_async_gpu, {addr, value, isMultimem}};
     }
+    llvm_unreachable("unsupported async store scope for global address space");
   case NVVMMemorySpace::SharedCluster:
     return {llvm::Intrinsic::nvvm_st_async, {addr, value, mbarrier}};
   default:
     llvm_unreachable("unsupported address space");
-    return {llvm::Intrinsic::not_intrinsic, {}};
   }
+
+  return {llvm::Intrinsic::not_intrinsic, {}};
 }
 
 mlir::NVVM::IDArgPair
