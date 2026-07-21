@@ -154,6 +154,10 @@ features cannot lower the translation-unit ABI level;
 - Clang now falls back to alignment-aware allocation functions for
   non-overaligned types, implementing [CWG2282](https://wg21.link/cwg2282).
 
+- Clang now converts floating-point values to boolean first when converting
+  them to an enumeration type with a fixed `bool` underlying type. This
+  resolves [CWG1094](https://wg21.link/cwg1094).
+
 ### C Language Changes
 
 #### C2y Feature Support

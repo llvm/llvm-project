@@ -1489,16 +1489,26 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       SrcExpr = ExprError();
       return TC_Failed;
     }
+    // [expr.static.cast]p8
+    //   If the enumeration type has a fixed underlying type, the value is
+    //   first converted to that type by integral promotion ([conv.prom]) or
+    //   integral conversion ([conv.integral]), if necessary, and then to the
+    //   enumeration type.
+    const auto *ED = DestType->castAsEnumDecl();
+    bool DestIsFixedBoolean =
+        ED->isFixed() && ED->getIntegerType()->isBooleanType();
     if (SrcType->isIntegralOrEnumerationType()) {
-      // [expr.static.cast]p10 If the enumeration type has a fixed underlying
-      // type, the value is first converted to that type by integral conversion
-      const auto *ED = DestType->castAsEnumDecl();
-      Kind = ED->isFixed() && ED->getIntegerType()->isBooleanType()
-                 ? CK_IntegralToBoolean
-                 : CK_IntegralCast;
+      Kind = DestIsFixedBoolean ? CK_IntegralToBoolean : CK_IntegralCast;
       return TC_Success;
     } else if (SrcType->isRealFloatingType())   {
-      Kind = CK_FloatingToIntegral;
+      // [expr.static.cast]p8
+      //   A value of floating-point type can also be explicitly converted
+      //   to ... the underlying type of the enumeration ([conv.fpint]), and
+      //   subsequently to the enumeration type.
+      //
+      // [conv.fpint] forwards to [conv.bool] for conversion to bool, so
+      // handle that case with CK_FloatingToBoolean.
+      Kind = DestIsFixedBoolean ? CK_FloatingToBoolean : CK_FloatingToIntegral;
       return TC_Success;
     }
   }
