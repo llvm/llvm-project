@@ -756,8 +756,7 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
     for (VPUser *U : Cur->users()) {
       auto *VPI = dyn_cast<VPInstruction>(U);
       if (VPI && VPI->getMask() == Cur &&
-          none_of(VPI->operandsWithoutMask(),
-                  [Cur](VPValue *Op) { return Op == Cur; }))
+          none_of(VPI->operandsWithoutMask(), equal_to(Cur)))
         continue;
       if (match(U, m_VPInstruction<Instruction::Load>()))
         continue;
