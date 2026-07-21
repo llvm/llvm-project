@@ -353,6 +353,18 @@ entry:
   ret <8 x i16> %res
 }
 
+define <2 x i64> @unbounded_input_shl_v2i64(<2 x i64> %x, <2 x i64> %amt) {
+; CHECK-LABEL: unbounded_input_shl_v2i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushl v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %ok = icmp ult <2 x i64> %amt, splat (i64 64)
+  %v = select <2 x i1> %ok, <2 x i64> %x, <2 x i64> zeroinitializer
+  %res = shl <2 x i64> %v, %amt
+  ret <2 x i64> %res
+}
+
 define <4 x i32> @unbounded_input_sra_v4i32(<4 x i32> %x, <4 x i32> %amt) {
 ; CHECK-LABEL: unbounded_input_sra_v4i32:
 ; CHECK:       // %bb.0: // %entry
