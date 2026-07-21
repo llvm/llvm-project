@@ -19,7 +19,6 @@ add_entrypoint_object(
   HDRS
     ../cfgetispeed.h
   DEPENDS
-    libc.include.termios
     libc.hdr.types.speed_t
     libc.hdr.types.struct_termios
     libc.src.__support.macros.null_check
@@ -33,7 +32,6 @@ add_entrypoint_object(
     ../cfsetispeed.h
   DEPENDS
     .speed_utils
-    libc.include.termios
     libc.hdr.types.speed_t
     libc.hdr.types.struct_termios
     libc.src.errno.errno
@@ -47,7 +45,6 @@ add_entrypoint_object(
   HDRS
     ../cfgetospeed.h
   DEPENDS
-    libc.include.termios
     libc.hdr.types.speed_t
     libc.hdr.types.struct_termios
     libc.src.__support.macros.null_check
@@ -61,7 +58,6 @@ add_entrypoint_object(
     ../cfsetospeed.h
   DEPENDS
     .speed_utils
-    libc.include.termios
     libc.hdr.types.speed_t
     libc.hdr.types.struct_termios
     libc.src.errno.errno
@@ -75,7 +71,6 @@ add_entrypoint_object(
   HDRS
     ../tcgetsid.h
   DEPENDS
-    libc.include.termios
     libc.hdr.types.pid_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
@@ -88,8 +83,6 @@ add_entrypoint_object(
   HDRS
     ../tcdrain.h
   DEPENDS
-    libc.include.termios
-    libc.hdr.types.struct_termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
@@ -101,7 +94,6 @@ add_entrypoint_object(
   HDRS
     ../tcflush.h
   DEPENDS
-    libc.include.termios
     libc.hdr.termios_macros
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
@@ -114,7 +106,6 @@ add_entrypoint_object(
   HDRS
     ../tcflow.h
   DEPENDS
-    libc.include.termios
     libc.hdr.termios_macros
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
@@ -127,7 +118,6 @@ add_entrypoint_object(
   HDRS
     ../tcsendbreak.h
   DEPENDS
-    libc.include.termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
@@ -150,7 +140,6 @@ add_entrypoint_object(
   DEPENDS
     .kernel_termios
     .speed_utils
-    libc.include.termios
     libc.hdr.termios_macros
     libc.hdr.types.struct_termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
@@ -167,7 +156,6 @@ add_entrypoint_object(
   DEPENDS
     .kernel_termios
     .speed_utils
-    libc.include.termios
     libc.hdr.termios_macros
     libc.hdr.types.struct_termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
