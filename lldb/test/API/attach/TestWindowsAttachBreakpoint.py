@@ -121,6 +121,8 @@ class WindowsAttachLoaderBreakpointTestCase(TestBase):
 
         self.addTearDownHook(cleanup)
 
+        self.dbg.SetAsync(False)
+
         # Attach while the process is suspended and still being initialized.
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
