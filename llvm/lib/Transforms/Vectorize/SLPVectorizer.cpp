@@ -1088,9 +1088,12 @@ public:
       }
       return false;
     };
+    // getMatchingMainOpOrAltOp() may legitimately return nullptr, e.g. for a
+    // split node, whose Scalars combine two unrelated operations (main/alt
+    // ops of the split state), so V is not required to match either of them.
     Instruction *MainOp = getMatchingMainOpOrAltOp(ExpandingOp);
-    assert(MainOp &&
-           "The instruction should be compatible with either main or alt op.");
+    if (!MainOp)
+      return false;
     return CheckForTransformedOpcode(MainOp, ExpandingOp);
   }
 
