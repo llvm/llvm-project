@@ -782,23 +782,6 @@ function(add_libc_hermetic test_name)
       libc.src.strings.bzero
   )
 
-  # Syscalls used by death tests. See also libc/test/UnitTest/CMakeLists.txt.
-  if(${LIBC_TARGET_OS} STREQUAL "linux" OR ${LIBC_TARGET_OS} STREQUAL "darwin")
-    list(APPEND fq_deps_list
-        libc.src.poll.poll
-        libc.src.signal.kill
-        libc.src.stdio.fflush
-        libc.src.stdio.stderr
-        libc.src.stdio.stdout
-        libc.src.stdlib.exit
-        libc.src.string.strsignal
-        libc.src.sys.wait.waitpid
-        libc.src.unistd.close
-        libc.src.unistd.fork
-        libc.src.unistd.pipe
-    )
-  endif()
-
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     # __stack_chk_fail should always be included if supported to allow building
     # libc with the stack protector enabled.
@@ -1026,7 +1009,6 @@ function(add_libc_test test_name)
       ${test_name}.__hermetic__
       LINK_LIBRARIES
         LibcTest.hermetic
-        LibcDeathTestExecutors.hermetic
       ${LIBC_TEST_UNPARSED_ARGUMENTS}
     )
     get_fq_target_name(${test_name} fq_test_name)
