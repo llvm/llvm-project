@@ -17,7 +17,8 @@ TEST_F(LlvmLibcTgammaTest, SpecialNumbers) {
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::tgamma(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::tgamma(neg_inf), FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::tgamma(neg_inf),
+                              FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::tgamma(-1.0), FE_INVALID);
@@ -26,12 +27,14 @@ TEST_F(LlvmLibcTgammaTest, SpecialNumbers) {
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::tgamma(zero), FE_DIVBYZERO);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::tgamma(neg_zero), FE_DIVBYZERO);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::tgamma(neg_zero),
+                              FE_DIVBYZERO);
   EXPECT_MATH_ERRNO(ERANGE);
-  
+
   // Source: https://members.loria.fr/PZimmermann/papers/gamma.pdf
   // Gamma(0x1.573fae561f648p+7) > DBL_MAX
-  EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::tgamma(0x1.573fae561f648p+7), FE_OVERFLOW);
+  EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::tgamma(0x1.573fae561f648p+7),
+                              FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   // One ULP below 0x1.573fae561f648p+7
