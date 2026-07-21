@@ -88,6 +88,11 @@ static cl::opt<bool> UseDefaultMaxThreads(
     "openmp-ir-builder-use-default-max-threads", cl::Hidden,
     cl::desc("Use a default max threads if none is provided."), cl::init(true));
 
+static cl::opt<bool> DeviceAlwaysInlineOutlined(
+    "openmp-ir-builder-device-always-inline-outlined", cl::Hidden,
+    cl::desc("Mark OpenMP outlined regions alwaysinline on target devices."),
+    cl::init(true));
+
 #ifndef NDEBUG
 /// Return whether IP1 and IP2 are ambiguous, i.e. that inserting instructions
 /// at position IP1 may change the meaning of IP2 or vice-versa. This is because
@@ -949,6 +954,13 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     auto TargetFeaturesAttr = OuterFn->getFnAttribute("target-features");
     if (TargetFeaturesAttr.isStringAttribute())
       OutlinedFn->addFnAttr(TargetFeaturesAttr);
+
+    // On device, keep the outlined region in the kernel: left standalone it is
+    // register allocated without the kernel's occupancy target. The function is
+    // still emitted for entry points that take its address (generic mode).
+    if (DeviceAlwaysInlineOutlined && Config.isTargetDevice() &&
+        !OutlinedFn->hasFnAttribute(Attribute::NoInline))
+      OutlinedFn->addFnAttr(Attribute::AlwaysInline);
 
     LLVM_DEBUG(dbgs() << "After      outlining: " << *OuterFn << "\n");
     LLVM_DEBUG(dbgs() << "   Outlined function: " << *OutlinedFn << "\n");
