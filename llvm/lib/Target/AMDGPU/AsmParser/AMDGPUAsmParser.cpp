@@ -5956,10 +5956,12 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
     emitTargetDirective();
     Out.emitInstruction(Inst, getSTI());
-    // Record for kernel prologue checking (only first 2 instructions per
-    // label).
-    if (!LabelPrologues.empty() && LabelPrologues.back().Count < 2)
-      LabelPrologues.back().Insts[LabelPrologues.back().Count++] = Inst;
+    // Record first 2 instructions per label for kernel prologue checking.
+    if (!LabelPrologues.empty()) {
+      auto &LP = LabelPrologues.back();
+      if (LP.Count < 2)
+        LP.Insts[LP.Count++] = Inst;
+    }
     return false;
   }
 
