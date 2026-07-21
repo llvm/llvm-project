@@ -13431,6 +13431,10 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
   return SDValue();
 }
 
+// Return the number of active elements in a mask of the form
+// <true..., false/undef...>. Undef lanes are refined to false. Optionally
+// require the active prefix length to be a power of two so it can be replaced
+// by an exact-width unmasked operation.
 static std::optional<unsigned> getLowPrefixMaskNumElts(SDValue Mask,
                                                        bool RequirePowerOf2) {
   auto *BV = dyn_cast<BuildVectorSDNode>(Mask);
@@ -13465,6 +13469,9 @@ static std::optional<unsigned> getLowPrefixMaskNumElts(SDValue Mask,
   return PrefixElts;
 }
 
+// Return a legal fixed-length vector type that exactly covers the active
+// prefix. This type is used when the mask can be removed without widening the
+// memory access.
 static EVT getNarrowLowPrefixVT(EVT VT, unsigned PrefixElts,
                                 SelectionDAG &DAG) {
   if (!VT.isVector() || VT.isScalableVector() ||
@@ -13478,6 +13485,9 @@ static EVT getNarrowLowPrefixVT(EVT VT, unsigned PrefixElts,
   return NarrowVT;
 }
 
+// Return a legal power-of-two lane container for the active prefix when it is
+// strictly narrower than VT. Lanes above the prefix remain masked off, so the
+// container can be narrowed without widening the memory access.
 static EVT getLowPrefixMaskedContainerVT(EVT VT, unsigned PrefixElts,
                                          SelectionDAG &DAG) {
   if (!VT.isVector() || VT.isScalableVector() ||
@@ -13504,6 +13514,8 @@ static SDValue getLowPrefixMask(EVT MaskVT, unsigned PrefixElts,
   return DAG.getBuildVector(MaskVT, DL, Ops);
 }
 
+// Clone MMO with the narrowed access size while preserving its pointer,
+// alignment, aliasing, range, flag, and ordering information.
 static MachineMemOperand *getNarrowLowPrefixMemOperand(MachineMemOperand *MMO,
                                                        EVT NarrowMemVT,
                                                        SelectionDAG &DAG) {
@@ -13514,6 +13526,9 @@ static MachineMemOperand *getNarrowLowPrefixMemOperand(MachineMemOperand *MMO,
       MMO->getFailureOrdering());
 }
 
+// A power-of-two low prefix can use an exact-width unmasked load. Inserting the
+// result into the original passthru value preserves lanes outside the prefix;
+// the narrowed MMO prevents additional memory from being accessed.
 SDValue DAGCombiner::reduceMaskedLoadToLowPrefixLoad(MaskedLoadSDNode *MLD) {
   if (!MLD->isSimple() || !MLD->isUnindexed() || MLD->isExpandingLoad() ||
       MLD->getExtensionType() != ISD::NON_EXTLOAD)
@@ -13544,6 +13559,10 @@ SDValue DAGCombiner::reduceMaskedLoadToLowPrefixLoad(MaskedLoadSDNode *MLD) {
   return CombineTo(MLD, Insert, Load.getValue(1), true);
 }
 
+// If an exact-width unmasked load is unavailable, retain the mask while using
+// a narrower power-of-two lane container. An undef passthru permits lanes
+// omitted by the narrower container to remain undef, while its inactive lanes
+// remain non-accessing.
 SDValue
 DAGCombiner::reduceMaskedLoadToLowPrefixMaskedLoad(MaskedLoadSDNode *MLD) {
   if (!MLD->isSimple() || !MLD->isUnindexed() || MLD->isExpandingLoad() ||
@@ -13586,6 +13605,9 @@ DAGCombiner::reduceMaskedLoadToLowPrefixMaskedLoad(MaskedLoadSDNode *MLD) {
   return CombineTo(MLD, Insert, Load.getValue(1), true);
 }
 
+// A power-of-two low prefix can use an exact-width unmasked store. The
+// extracted low subvector and narrowed MMO preserve the original access
+// extent.
 SDValue DAGCombiner::reduceMaskedStoreToLowPrefixStore(MaskedStoreSDNode *MST) {
   if (!MST->isSimple() || !MST->isUnindexed() || MST->isCompressingStore() ||
       MST->isTruncatingStore())
@@ -13613,6 +13635,9 @@ SDValue DAGCombiner::reduceMaskedStoreToLowPrefixStore(MaskedStoreSDNode *MST) {
   return DAG.getStore(MST->getChain(), DL, Value, MST->getBasePtr(), MMO);
 }
 
+// If an exact-width unmasked store is unavailable, retain the mask while using
+// a narrower power-of-two lane container. Padding lanes remain masked off and
+// therefore cannot extend the memory access.
 SDValue
 DAGCombiner::reduceMaskedStoreToLowPrefixMaskedStore(MaskedStoreSDNode *MST) {
   if (!MST->isSimple() || !MST->isUnindexed() || MST->isCompressingStore() ||
