@@ -213,6 +213,27 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const CallEvent &call,
                           call.getStackFrame(), type, visitCount);
 }
 
+DefinedOrUnknownSVal SValBuilder::conjureInvalidationArtifactVal(
+    const void *symbolTag, ConstCFGElementRef elem, const StackFrame *SF,
+    QualType type, unsigned count, const InvalidationCause *Cause,
+    SymbolRef PreviousSym) {
+  assert(Cause);
+
+  if (type->isNullPtrType())
+    return makeZeroVal(type);
+
+  if (!SymbolManager::canSymbolicate(type))
+    return UnknownVal();
+
+  SymbolRef sym = SymMgr.conjureInvalidationArtifact(
+      elem, SF, type, count, symbolTag, Cause, PreviousSym);
+
+  if (Loc::isLocType(type))
+    return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
+
+  return nonloc::SymbolVal(sym);
+}
+
 DefinedSVal SValBuilder::getConjuredHeapSymbolVal(ConstCFGElementRef elem,
                                                   const StackFrame *SF,
                                                   QualType type,

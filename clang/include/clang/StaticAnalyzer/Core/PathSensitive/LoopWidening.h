@@ -15,17 +15,22 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_LOOPWIDENING_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_LOOPWIDENING_H
 
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 
 namespace clang {
+class StackFrame;
 namespace ento {
 
 /// Get the states that result from widening the loop.
 ///
 /// Widen the loop by invalidating anything that might be modified
 /// by the loop body in any iteration.
-ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
+/// statement of the widened loop (if available); when non-null it is
+/// attached to the resulting invalidation symbols as a LoopWidening cause.
+ProgramStateRef getWidenedLoopState(const Stmt *LoopStmt,
+                                    ProgramStateRef PrevState,
                                     const StackFrame *SF, unsigned BlockCount,
                                     ConstCFGElementRef Elem);
 

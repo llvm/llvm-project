@@ -18,6 +18,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationHistoryIterator.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -152,6 +153,11 @@ public:
   const llvm::APSInt *getAsInteger() const;
 
   const MemRegion *getAsRegion() const;
+
+  /// If this \c SVal is an \c SymbolInvalidationArtifact, it will enumerate the
+  /// history of this symbol through the chains of invalidations.
+  /// This enumeration starts with the current symbol (if any).
+  llvm::iterator_range<InvalidationHistoryIterator> invalidationHistory() const;
 
   /// printJson - Pretty-prints in JSON format.
   void printJson(raw_ostream &Out, bool AddQuotes) const;

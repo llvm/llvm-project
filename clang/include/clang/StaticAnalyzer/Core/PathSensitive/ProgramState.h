@@ -38,6 +38,7 @@ namespace ento {
 class AnalysisManager;
 class CallEvent;
 class CallEventManager;
+class InvalidationCause;
 
 typedef std::unique_ptr<ConstraintManager>(*ConstraintManagerCreator)(
     ProgramStateManager &, ExprEngine *);
@@ -327,16 +328,22 @@ public:
   ///        the call and should be considered directly invalidated.
   /// \param ITraits information about special handling for particular regions
   ///        or symbols.
+  /// \param Cause if non-null, identifies the reason for the invalidation;
+  ///        regions invalidated under such a cause receive a
+  ///        SymbolInvalidationArtifact symbol carrying the cause instead of a
+  ///        plain SymbolConjured.
   [[nodiscard]] ProgramStateRef invalidateRegions(
       ArrayRef<const MemRegion *> Regions, ConstCFGElementRef Elem,
       unsigned BlockCount, const StackFrame *SF, bool CausesPointerEscape,
-      InvalidatedSymbols *IS = nullptr, const CallEvent *Call = nullptr,
+      const InvalidationCause *Cause, InvalidatedSymbols *IS = nullptr,
+      const CallEvent *Call = nullptr,
       RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   [[nodiscard]] ProgramStateRef
   invalidateRegions(ArrayRef<SVal> Values, ConstCFGElementRef Elem,
                     unsigned BlockCount, const StackFrame *SF,
-                    bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
+                    bool CausesPointerEscape, const InvalidationCause *Cause,
+                    InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 

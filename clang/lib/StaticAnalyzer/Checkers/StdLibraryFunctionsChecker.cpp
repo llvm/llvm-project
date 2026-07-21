@@ -614,8 +614,7 @@ class StdLibraryFunctionsChecker
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
                           const Summary &Summary,
                           CheckerContext &C) const override {
-      return errno_modeling::setErrnoStdMustBeChecked(State, C,
-                                                      Call.getCFGElementRef());
+      return errno_modeling::setErrnoStdMustBeChecked(State, C, Call);
     }
 
     std::string describe(CheckerContext &C) const override {

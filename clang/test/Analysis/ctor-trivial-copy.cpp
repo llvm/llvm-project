@@ -57,13 +57,13 @@ void _01_empty_structs() {
   clang_analyzer_printState();
   // CHECK:       "store": { "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:    { "cluster": "GlobalInternalSpaceRegion", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "conj_$
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "inv_$
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "GlobalSystemSpaceRegion", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "conj_$
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "inv_$
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "Empty", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ:conj_\$[0-9]+{int, LC[0-9]+, S[0-9]+, #[0-9]+}]]" }
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ:inv_\$[0-9]+{int, LC[0-9]+, partial-call, S[0-9]+, #[0-9]+}]]" }
   // CHECK-NEXT:    ]}
   // CHECK-NEXT:  ]},
 
@@ -86,13 +86,13 @@ void _02_structs_with_members() {
   clang_analyzer_printState();
   // CHECK:       "store": { "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:    { "cluster": "GlobalInternalSpaceRegion", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "conj_$
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "inv_$
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "GlobalSystemSpaceRegion", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "conj_$
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "inv_$
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "Aggr", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[AGGR_CONJ:conj_\$[0-9]+{int, LC[0-9]+, S[0-9]+, #[0-9]+}]]" }
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[AGGR_CONJ:inv_\$[0-9]+{int, LC[0-9]+, partial-call, S[0-9]+, #[0-9]+}]]" }
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "Aggr2", "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:      { "kind": "Direct", "offset": 0, "value": "derived_${{[0-9]+}}{[[AGGR_CONJ]],Aggr.x}" },

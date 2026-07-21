@@ -126,6 +126,13 @@ const MemRegion *SVal::getAsRegion() const {
   return nullptr;
 }
 
+llvm::iterator_range<InvalidationHistoryIterator>
+SVal::invalidationHistory() const {
+  if (const auto *Sym = getAsSymbol())
+    return Sym->invalidationHistory();
+  return {{}, {}};
+}
+
 namespace {
 class TypeRetrievingVisitor
     : public FullSValVisitor<TypeRetrievingVisitor, QualType> {

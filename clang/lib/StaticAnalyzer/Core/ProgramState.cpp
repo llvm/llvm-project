@@ -145,19 +145,21 @@ typedef ArrayRef<SVal> ValueList;
 
 ProgramStateRef ProgramState::invalidateRegions(
     RegionList Regions, ConstCFGElementRef Elem, unsigned Count,
-    const StackFrame *SF, bool CausedByPointerEscape, InvalidatedSymbols *IS,
+    const StackFrame *SF, bool CausedByPointerEscape,
+    const InvalidationCause *Cause, InvalidatedSymbols *IS,
     const CallEvent *Call, RegionAndSymbolInvalidationTraits *ITraits) const {
   SmallVector<SVal, 8> Values;
   for (const MemRegion *Reg : Regions)
     Values.push_back(loc::MemRegionVal(Reg));
 
-  return invalidateRegions(Values, Elem, Count, SF, CausedByPointerEscape, IS,
-                           Call, ITraits);
+  return invalidateRegions(Values, Elem, Count, SF, CausedByPointerEscape,
+                           Cause, IS, Call, ITraits);
 }
 
 ProgramStateRef ProgramState::invalidateRegions(
     ValueList Values, ConstCFGElementRef Elem, unsigned Count,
-    const StackFrame *SF, bool CausedByPointerEscape, InvalidatedSymbols *IS,
+    const StackFrame *SF, bool CausedByPointerEscape,
+    const InvalidationCause *Cause, InvalidatedSymbols *IS,
     const CallEvent *Call, RegionAndSymbolInvalidationTraits *ITraits) const {
 
   ProgramStateManager &Mgr = getStateManager();
@@ -175,7 +177,7 @@ ProgramStateRef ProgramState::invalidateRegions(
   StoreManager::InvalidatedRegions Invalidated;
   const StoreRef &NewStore = Mgr.StoreMgr->invalidateRegions(
       getStore(), Values, Elem, Count, SF, Call, *IS, *ITraits,
-      &TopLevelInvalidated, &Invalidated);
+      &TopLevelInvalidated, &Invalidated, Cause);
 
   ProgramStateRef NewState = makeWithStore(NewStore);
 

@@ -17,6 +17,7 @@
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
@@ -36,6 +37,7 @@ StringRef SymbolDerived::getKindStr() const { return "derived_$"; }
 StringRef SymbolExtent::getKindStr() const { return "extent_$"; }
 StringRef SymbolMetadata::getKindStr() const { return "meta_$"; }
 StringRef SymbolRegionValue::getKindStr() const { return "reg_$"; }
+StringRef SymbolInvalidationArtifact::getKindStr() const { return "inv_$"; }
 
 LLVM_DUMP_METHOD void SymExpr::dump() const { dumpToStream(llvm::errs()); }
 
@@ -74,6 +76,18 @@ void UnarySymExpr::dumpToStream(raw_ostream &os) const {
   Operand->dumpToStream(os);
   if (Binary)
     os << ')';
+}
+
+InvalidationHistoryIterator &InvalidationHistoryIterator::operator++() {
+  assert(Curr && "Cannot dereference end iterator!");
+  const auto *Artifact = dyn_cast<SymbolInvalidationArtifact>(Curr);
+  Curr = Artifact ? Artifact->getPreviousSymbol() : nullptr;
+  return *this;
+}
+
+llvm::iterator_range<InvalidationHistoryIterator>
+SymExpr::invalidationHistory() const {
+  return {InvalidationHistoryIterator{this}, {}};
 }
 
 const Stmt *SymbolConjured::getStmt() const {
@@ -130,6 +144,28 @@ void SymbolConjured::dumpToStream(raw_ostream &os) const {
   os << ", #" << Count << '}';
 }
 
+void SymbolInvalidationArtifact::dumpToStream(raw_ostream &os) const {
+  os << getKindStr() << getSymbolID() << '{' << T << ", LC" << SF->getID()
+     << ", " << *Cause;
+
+  if (const auto *Call = dyn_cast_or_null<UnmodeledCall>(Cause)) {
+    if (const auto *CE = Call->getCallExpr())
+      os << ", S" << CE->getID(SF->getDecl()->getASTContext());
+  } else if (const auto *US = dyn_cast_or_null<UnmodeledStmt>(Cause)) {
+    os << ", S" << US->getStmt()->getID(SF->getDecl()->getASTContext());
+  }
+
+  if (PreviousSym) {
+    // Avoid recursively printing the whole prev-chain.
+    if (const auto *Data = dyn_cast<SymbolInvalidationArtifact>(PreviousSym))
+      os << ", prev=" << Data->getKindStr() << Data->getSymbolID();
+    else
+      os << ", prev=" << PreviousSym;
+  }
+
+  os << ", #" << Count << '}';
+}
+
 void SymbolDerived::dumpToStream(raw_ostream &os) const {
   os << getKindStr() << getSymbolID() << '{' << getParentSymbol() << ','
      << getRegion() << '}';
@@ -181,6 +217,7 @@ void SymExpr::symbol_iterator::expand() {
     case SymExpr::SymbolDerivedKind:
     case SymExpr::SymbolExtentKind:
     case SymExpr::SymbolMetadataKind:
+    case SymExpr::SymbolInvalidationArtifactKind:
       return;
     case SymExpr::SymbolCastKind:
       itr.push_back(cast<SymbolCast>(SE)->getOperand());
@@ -207,6 +244,8 @@ void SymExpr::symbol_iterator::expand() {
 QualType SymbolConjured::getType() const {
   return T;
 }
+
+QualType SymbolInvalidationArtifact::getType() const { return T; }
 
 QualType SymbolDerived::getType() const {
   return R->getValueType();
@@ -348,6 +387,7 @@ bool SymbolReaper::isLive(SymbolRef sym) {
     KnownLive = isReadableRegion(cast<SymbolRegionValue>(sym)->getRegion());
     break;
   case SymExpr::SymbolConjuredKind:
+  case SymExpr::SymbolInvalidationArtifactKind:
     KnownLive = false;
     break;
   case SymExpr::SymbolDerivedKind:

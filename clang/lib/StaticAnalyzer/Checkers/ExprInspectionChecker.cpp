@@ -49,6 +49,8 @@ class ExprInspectionChecker
   void analyzerGetExtent(const CallExpr *CE, CheckerContext &C) const;
   void analyzerDumpExtent(const CallExpr *CE, CheckerContext &C) const;
   void analyzerDumpElementCount(const CallExpr *CE, CheckerContext &C) const;
+  void analyzerDumpInvalidationHistory(const CallExpr *CE,
+                                       CheckerContext &C) const;
   void analyzerHashDump(const CallExpr *CE, CheckerContext &C) const;
   void analyzerDenote(const CallExpr *CE, CheckerContext &C) const;
   void analyzerExpress(const CallExpr *CE, CheckerContext &C) const;
@@ -102,6 +104,8 @@ bool ExprInspectionChecker::evalCall(const CallEvent &Call,
                 &ExprInspectionChecker::analyzerDumpExtent)
           .Case("clang_analyzer_dumpElementCount",
                 &ExprInspectionChecker::analyzerDumpElementCount)
+          .Case("clang_analyzer_dumpInvalidationHistory",
+                &ExprInspectionChecker::analyzerDumpInvalidationHistory)
           .Case("clang_analyzer_value", &ExprInspectionChecker::analyzerValue)
           .StartsWith("clang_analyzer_dumpSvalType",
                       &ExprInspectionChecker::analyzerDumpSValType)
@@ -362,6 +366,18 @@ void ExprInspectionChecker::analyzerDumpElementCount(const CallExpr *CE,
   DefinedOrUnknownSVal ElementCount = getDynamicElementCountWithOffset(
       C.getState(), C.getSVal(getArgExpr(CE, C)), ElementTy);
   printAndReport(C, ElementCount);
+}
+
+void ExprInspectionChecker::analyzerDumpInvalidationHistory(
+    const CallExpr *CE, CheckerContext &C) const {
+  SVal ArgVal = C.getSVal(CE->getArg(0));
+  std::string Msg;
+  llvm::raw_string_ostream OS{Msg};
+  llvm::interleave(ArgVal.invalidationHistory(), OS,
+                   /*separator=*/" -> ");
+  if (Msg.empty())
+    Msg = "<empty>";
+  reportBug(Msg, C);
 }
 
 void ExprInspectionChecker::analyzerPrintState(const CallExpr *CE,

@@ -50,6 +50,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -421,9 +422,11 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
       break;
     case SubobjectAdjustment::MemberPointerAdjustment:
       // FIXME: Unimplemented.
-      State = State->invalidateRegions(Reg, getCFGElementRef(),
-                                       getNumVisitedCurrent(), SF, true,
-                                       nullptr, nullptr, nullptr);
+      State = State->invalidateRegions(
+          Reg, getCFGElementRef(), getNumVisitedCurrent(), SF,
+          /*CausesPointerEscape=*/true,
+          getStateManager().getSymbolManager().acquireCause<UnmodeledExpr>(
+              InitWithAdjustments));
       return State;
     }
   }
@@ -2436,7 +2439,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // block, but the terminator cannot be referred as a CFG element.
     // Here we just pass the the first CFG element in the block.
     ProgramStateRef WidenedState = getWidenedLoopState(
-        Pred->getState(), SF, BlockCount, *getCurrBlock()->ref_begin());
+        Term, Pred->getState(), SF, BlockCount, *getCurrBlock()->ref_begin());
     Builder.generateNode(BE, WidenedState, Pred);
     return;
   }
@@ -3444,10 +3447,10 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
       ValuesToInvalidate.push_back(SubExprVal);
     }
 
-    State = State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
-                                     getNumVisitedCurrent(), SF,
-                                     /*CausedByPointerEscape*/ true,
-                                     /*Symbols=*/nullptr);
+    State = State->invalidateRegions(
+        ValuesToInvalidate, getCFGElementRef(), getNumVisitedCurrent(), SF,
+        /*CausedByPointerEscape*/ true,
+        getStateManager().getSymbolManager().acquireCause<UnmodeledExpr>(AE));
 
     AfterInvalidateSet.insert(
         Engine.makeNodeWithBinding(I, AE, UnknownVal(), State));
@@ -3776,15 +3779,18 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
 
   ProgramStateRef state = Pred->getState();
 
+  const InvalidationCause *AsmCause =
+      getStateManager().getSymbolManager().acquireCause<UnmodeledExpr>(A);
+
   for (const Expr *O : A->outputs()) {
     SVal X = state->getSVal(O, Pred->getStackFrame());
     assert(!isa<NonLoc>(X)); // Should be an Lval, or unknown, undef.
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->invalidateRegions(*LV, getCFGElementRef(),
-                                       getNumVisitedCurrent(),
-                                       Pred->getStackFrame(),
-                                       /*CausedByPointerEscape=*/true);
+      state = state->invalidateRegions(
+          *LV, getCFGElementRef(), getNumVisitedCurrent(),
+          Pred->getStackFrame(),
+          /*CausedByPointerEscape=*/true, AsmCause);
   }
 
   // Do not reason about locations passed inside inline assembly.
@@ -3792,10 +3798,10 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
     SVal X = state->getSVal(I, Pred->getStackFrame());
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->invalidateRegions(*LV, getCFGElementRef(),
-                                       getNumVisitedCurrent(),
-                                       Pred->getStackFrame(),
-                                       /*CausedByPointerEscape=*/true);
+      state = state->invalidateRegions(
+          *LV, getCFGElementRef(), getNumVisitedCurrent(),
+          Pred->getStackFrame(),
+          /*CausedByPointerEscape=*/true, AsmCause);
   }
 
   Dst.insert(Engine.makePostStmtNode(A, state, Pred));
