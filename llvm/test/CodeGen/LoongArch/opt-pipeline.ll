@@ -157,7 +157,6 @@
 ; LAXX-NEXT:       Post-RA pseudo instruction expansion pass
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Machine Natural Loop Construction
-; LAXX-NEXT:       Machine Register Class Info Analysis
 ; LAXX-NEXT:       Post RA top-down list latency scheduler
 ; LAXX-NEXT:       Analyze Machine Code For Garbage Collection
 ; LAXX-NEXT:       Machine Block Frequency Analysis

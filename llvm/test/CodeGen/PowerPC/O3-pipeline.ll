@@ -149,7 +149,6 @@
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
-; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Modulo Software Pipelining
 ; CHECK-NEXT:       Detect Dead Lanes
 ; CHECK-NEXT:       Init Undef Pass
@@ -190,7 +189,6 @@
 ; CHECK-NEXT:       MachinePostDominator Tree Construction
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
-; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Shrink Wrapping analysis
 ; CHECK-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
 ; CHECK-NEXT:       Machine Late Instructions Cleanup Pass

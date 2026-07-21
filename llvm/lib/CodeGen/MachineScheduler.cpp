@@ -302,6 +302,9 @@ void ScheduleDAGMutation::anchor() {}
 // Machine Instruction Scheduling Pass and Registry
 //===----------------------------------------------------------------------===//
 
+MachineSchedContext::MachineSchedContext() = default;
+MachineSchedContext::~MachineSchedContext() = default;
+
 namespace llvm {
 namespace impl_detail {
 

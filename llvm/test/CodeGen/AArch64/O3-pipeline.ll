@@ -169,7 +169,6 @@
 ; CHECK-NEXT:       Machine Common Subexpression Elimination
 ; CHECK-NEXT:       MachinePostDominator Tree Construction
 ; CHECK-NEXT:       Machine Cycle Info Analysis
-; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Machine code sinking
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
@@ -206,7 +205,6 @@
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       AArch64 Redundant Copy Elimination
-; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       A57 FP Anti-dependency breaker
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved

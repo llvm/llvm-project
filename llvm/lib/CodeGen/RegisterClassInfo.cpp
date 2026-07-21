@@ -237,7 +237,8 @@ unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
   return RegPressureSetLimit - TRI->getRegClassWeight(RC).RegWeight * NReserved;
 }
 
-INITIALIZE_PASS(MachineRegisterClassInfoWrapperPass, "machine-reg-class-info",
+INITIALIZE_PASS(MachineRegisterClassInfoWrapperPass,
+                "machine-register-class-info",
                 "Machine Register Class Info Analysis", true, true)
 
 MachineRegisterClassAnalysis::Result
