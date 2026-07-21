@@ -350,14 +350,15 @@ public:
 
   template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
   event parallel_for(nd_range<Dims> executionRange, Rest &&...rest) {
-    return parallel_for<KernelName, Dims, Rest...>(executionRange, {},
-                                                   std::forward<Rest>(rest)...);
+    return parallel_for<KernelName, Dims, Rest...>(
+        executionRange, std::vector<event>{}, std::forward<Rest>(rest)...);
   }
 
   template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
   event parallel_for(nd_range<Dims> executionRange, event depEvent,
                      Rest &&...rest) {
-    return parallel_for<KernelName, Dims, Rest...>(executionRange, {depEvent},
+    return parallel_for<KernelName, Dims, Rest...>(executionRange,
+                                                   std::vector<event>{depEvent},
                                                    std::forward<Rest>(rest)...);
   }
 

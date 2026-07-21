@@ -7,8 +7,8 @@
 
 // This file contains Unicode characters; please do not "fix" them!
 
-extern int x; // expected-warning {{treating Unicode character as whitespace}}
-extern int　x; // expected-warning {{treating Unicode character as whitespace}}
+extern int x; // expected-error {{treating character ' ' U+00A0 as whitespace}}
+extern int　x; // expected-error {{treating character '　' U+3000 as whitespace}}
 
 // CHECK: extern int {{x}}
 // CHECK: extern int　{{x}}

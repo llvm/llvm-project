@@ -1948,13 +1948,11 @@ static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
   // Insert sincos right after the argument definition.
   IRBuilderBase::InsertPointGuard Guard(B);
   if (auto *ArgInst = dyn_cast<Instruction>(Arg)) {
-    BasicBlock *ArgBB = ArgInst->getParent();
-    // Need skip whole PHIs if Arg is PHI to prevent insert in the middle
-    // of PHIs.
-    if (isa<PHINode>(ArgInst))
-      B.SetInsertPoint(ArgBB, ArgBB->getFirstInsertionPt());
-    else
-      B.SetInsertPoint(ArgBB, std::next(ArgInst->getIterator()));
+    std::optional<BasicBlock::iterator> InsertPt =
+        ArgInst->getInsertionPointAfterDef();
+    if (!InsertPt)
+      return nullptr;
+    B.SetInsertPoint(*InsertPt);
   } else {
     BasicBlock &EntryBB = II->getFunction()->getEntryBlock();
     B.SetInsertPoint(&EntryBB, EntryBB.begin());
@@ -2670,7 +2668,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // fshl(0, X, C) --> lshr X, (BW-C)
       // fshl(undef, X, C) --> lshr X, (BW-C)
-      if (match(Op0, m_ZeroInt()) || match(Op0, m_Undef()))
+      // Similar to fshr -> fshl fold above, this is only valid if C is not zero
+      if ((match(Op0, m_ZeroInt()) || match(Op0, m_Undef())) &&
+          isKnownNonZero(ShAmtC, SQ.getWithInstruction(II)))
         return BinaryOperator::CreateLShr(Op1,
                                           ConstantExpr::getSub(WidthC, ShAmtC));
 
