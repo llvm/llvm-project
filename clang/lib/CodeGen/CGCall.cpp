@@ -6368,7 +6368,17 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           StringRef TypeStr;
           if (auto *MDS = dyn_cast_or_null<llvm::MDString>(MD))
             TypeStr = MDS->getString();
-          CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto) << CST << TypeStr;
+
+          QualType AssumedType = CST;
+          if (auto *FNPT = CST->getAs<FunctionNoProtoType>()) {
+            FunctionProtoType::ExtProtoInfo EPI;
+            EPI.Variadic = true;
+            AssumedType = CGM.getContext().getFunctionType(
+                FNPT->getReturnType(), {}, EPI);
+          }
+
+          CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto)
+              << CST << AssumedType << TypeStr;
         }
       }
     }
