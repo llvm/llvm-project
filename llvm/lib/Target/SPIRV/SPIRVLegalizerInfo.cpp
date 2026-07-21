@@ -811,11 +811,9 @@ static bool allUsesAreShuffleScatter(MachineRegisterInfo &MRI,
 }
 
 // Splits SrcReg into NumChunks separate ChunkTy-typed registers.
-static SmallVector<Register> unmergeIntoChunks(MachineIRBuilder &MIRBuilder,
-                                               MachineRegisterInfo &MRI,
-                                               Register SrcReg,
-                                               unsigned NumChunks,
-                                               LLT ChunkTy) {
+static SmallVector<Register>
+unmergeIntoChunks(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                  Register SrcReg, unsigned NumChunks, LLT ChunkTy) {
   assert(NumChunks >= 2 && "ShuffleChunkable should have handled this case");
   SmallVector<Register> Regs;
   for (unsigned I = 0; I < NumChunks; ++I)
@@ -902,8 +900,8 @@ static bool legalizeShuffleVector(LegalizerHelper &Helper, MachineInstr &MI) {
 
   const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
   unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
-  unsigned VectorSplitWidth = getVectorSplitWidth(
-      DstTy.getNumElements(), MaxVectorSize, ST.isShader());
+  unsigned VectorSplitWidth =
+      getVectorSplitWidth(DstTy.getNumElements(), MaxVectorSize, ST.isShader());
   LLT ChunkTy = LLT::fixed_vector(VectorSplitWidth, EltTy);
   unsigned NumSrcChunks = SrcTy.getNumElements() / VectorSplitWidth;
   unsigned NumDstChunks = DstTy.getNumElements() / VectorSplitWidth;
