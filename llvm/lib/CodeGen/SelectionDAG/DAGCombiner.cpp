@@ -1372,18 +1372,14 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
   // op(vecreduce(op(a, c)), op(b, d)), to combine the reductions into a
   // single node.
   SDValue A, B, C, D, RedA, RedB;
-  if (sd_match(N0, m_OneUse(m_c_BinOp(
-                       Opc,
-                       m_AllOf(m_OneUse(m_UnaryOp(RedOpc, m_Value(A))),
-                               m_Value(RedA)),
-                       m_Value(B)))) &&
-      sd_match(N1, m_OneUse(m_c_BinOp(
-                       Opc,
-                       m_AllOf(m_OneUse(m_UnaryOp(RedOpc, m_Value(C))),
-                               m_Value(RedB)),
-                       m_Value(D)))) &&
-      !sd_match(B, m_UnaryOp(RedOpc, m_Value())) &&
-      !sd_match(D, m_UnaryOp(RedOpc, m_Value())) &&
+  if (sd_match(N0,
+               m_OneUse(m_c_BinOp(
+                   Opc, m_Value(RedA, m_OneUse(m_UnaryOp(RedOpc, m_Value(A)))),
+                   m_Value(B, m_Unless(m_UnaryOp(RedOpc, m_Value())))))) &&
+      sd_match(N1,
+               m_OneUse(m_c_BinOp(
+                   Opc, m_Value(RedB, m_OneUse(m_UnaryOp(RedOpc, m_Value(C)))),
+                   m_Value(D, m_Unless(m_UnaryOp(RedOpc, m_Value())))))) &&
       A.getValueType() == C.getValueType() &&
       hasOperation(Opc, A.getValueType()) &&
       TLI.shouldReassociateReduction(RedOpc, VT)) {
@@ -1401,6 +1397,42 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
     SDValue Op2 = DAG.getNode(Opc, DL, VT, B, D);
     return DAG.getNode(Opc, DL, VT, Red, Op2);
   }
+
+  // Reassociate a reduction chain so two reductions become adjacent and the
+  // folds above can merge them:
+  //   op(vecreduce(X), op(vecreduce(Y), Z))
+  //     -> op(vecreduce(op(X, Y)), Z)
+  // Applied to fixpoint by the combiner worklist, this collapses an
+  // arbitrarily long chain of reductions (such as the left-leaning chain SLP
+  // emits) into a single reduction.
+  auto FoldReductionChain = [&](SDValue Red0, SDValue Chain) -> SDValue {
+    SDValue X, Y, Z, RedY;
+    if (!sd_match(Red0, m_OneUse(m_UnaryOp(RedOpc, m_Value(X)))) ||
+        !sd_match(
+            Chain,
+            m_OneUse(m_c_BinOp(
+                Opc, m_Value(RedY, m_OneUse(m_UnaryOp(RedOpc, m_Value(Y)))),
+                m_Value(Z, m_Unless(m_UnaryOp(RedOpc, m_Value())))))) ||
+        X.getValueType() != Y.getValueType() ||
+        !hasOperation(Opc, X.getValueType()) ||
+        !TLI.shouldReassociateReduction(RedOpc, VT))
+      return SDValue();
+    if ((Opc == ISD::FADD || Opc == ISD::FMUL) &&
+        (!Chain->getFlags().hasAllowReassociation() ||
+         !Red0->getFlags().hasAllowReassociation() ||
+         !RedY->getFlags().hasAllowReassociation()))
+      return SDValue();
+    SelectionDAG::FlagInserter FlagsInserter(
+        DAG, Flags & Chain->getFlags() & Red0->getFlags() & RedY->getFlags());
+    SDValue Op = DAG.getNode(Opc, DL, X.getValueType(), X, Y);
+    SDValue Red = DAG.getNode(RedOpc, DL, VT, Op);
+    return DAG.getNode(Opc, DL, VT, Red, Z);
+  };
+  if (SDValue V = FoldReductionChain(N0, N1))
+    return V;
+  if (SDValue V = FoldReductionChain(N1, N0))
+    return V;
+
   return SDValue();
 }
 
@@ -4331,7 +4363,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     // Note that these two are applicable to both signed and unsigned min/max.
     SDValue X;
     SDValue S0;
-    auto NegPat = m_AllOf(m_Neg(m_Deferred(X)), m_Value(S0));
+    auto NegPat = m_Value(S0, m_Neg(m_Deferred(X)));
     if (sd_match(N1, m_OneUse(m_AnyOf(m_SMax(m_Value(X), NegPat),
                                       m_UMax(m_Value(X), NegPat),
                                       m_SMin(m_Value(X), NegPat),
@@ -4528,8 +4560,10 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       // fold (sub Sym+c1, Sym+c2) -> c1-c2
       if (GlobalAddressSDNode *GB = dyn_cast<GlobalAddressSDNode>(N1))
         if (GA->getGlobal() == GB->getGlobal())
-          return DAG.getConstant((uint64_t)GA->getOffset() - GB->getOffset(),
-                                 DL, VT);
+          return DAG.getConstant(
+              APInt(VT.getScalarSizeInBits(), GA->getOffset() - GB->getOffset(),
+                    /*isSigned=*/false, /*implicitTrunc=*/true),
+              DL, VT);
     }
 
   // sub X, (sextinreg Y i1) -> add X, (and Y 1)
@@ -5802,11 +5836,9 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
       (Opcode == ISD::AVGFLOORS && hasOperation(ISD::AVGCEILS, VT))) {
     SDValue Add;
     if (sd_match(N,
-                 m_c_BinOp(Opcode,
-                           m_AllOf(m_Value(Add), m_Add(m_Value(X), m_Value(Y))),
+                 m_c_BinOp(Opcode, m_Value(Add, m_Add(m_Value(X), m_Value(Y))),
                            m_One())) ||
-        sd_match(N, m_c_BinOp(Opcode,
-                              m_AllOf(m_Value(Add), m_Add(m_Value(X), m_One())),
+        sd_match(N, m_c_BinOp(Opcode, m_Value(Add, m_Add(m_Value(X), m_One())),
                               m_Value(Y)))) {
 
       if (IsSigned && Add->getFlags().hasNoSignedWrap())
@@ -6306,6 +6338,40 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   // reassociate minmax
   if (SDValue RMINMAX = reassociateOps(Opcode, DL, N0, N1, N->getFlags()))
     return RMINMAX;
+
+  // Fold sign-extension masks using arithmetic shift:
+  //   smax(X, -1) -> or(X,  ashr(X, BW-1))
+  //   smin(X,  0) -> and(X, ashr(X, BW-1))
+  // ashr(X, BW-1) sign-extends the sign bit: 0 for X>=0, -1 for X<0.
+  // OR with X yields X (non-negative) or -1 (negative) = smax(X,-1).
+  // AND with X yields 0 (non-negative) or X (negative)  = smin(X, 0).
+  // Both reduce to two instructions vs. a compare+cmov on x86-64.
+  // Only fold when the target has no native SMAX/SMIN instruction for this
+  // type (isOperationExpand), the type is legal (not needing splitting),
+  // the operand is not a min/max chain (preserving target combine patterns
+  // that fold smax(smin(x,C),D) into a single saturation instruction), and
+  // for smax(X,-1) the operand is not a sign extension (doubling its use
+  // count can cause the target to lower the extension less efficiently).
+  APInt C;
+  if (TLI.isTypeLegal(VT) &&
+      !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1) &&
+      sd_match(N1, m_ConstInt(C))) {
+    if (Opcode == ISD::SMAX && TLI.isOperationExpand(ISD::SMAX, VT) &&
+        N0.getOpcode() != ISD::SMIN && N0.getOpcode() != ISD::SIGN_EXTEND &&
+        C.isAllOnes()) {
+      SDValue ShiftAmt =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
+      return DAG.getNode(ISD::OR, DL, VT, N0, Shift);
+    }
+    if (Opcode == ISD::SMIN && TLI.isOperationExpand(ISD::SMIN, VT) &&
+        N0.getOpcode() != ISD::SMAX && C.isZero()) {
+      SDValue ShiftAmt =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
+      return DAG.getNode(ISD::AND, DL, VT, N0, Shift);
+    }
+  }
 
   // If both operands are known to have the same sign (both non-negative or both
   // negative), flip between UMIN/UMAX and SMIN/SMAX.
@@ -13054,6 +13120,118 @@ SDValue DAGCombiner::foldSelectToUMin(SDValue LHS, SDValue RHS, SDValue True,
   return SDValue();
 }
 
+// Combine x olt y ? x : y to pseudo_fmin and x ogt y ? x : y to pseudo_fmax.
+// Op0/Op1 are the setcc operands, LHS/RHS are the select operands, Flags are
+// from the select.
+// The return value is the opcode and its operands.
+static std::tuple<unsigned, SDValue, SDValue> combineSelectCCToPseudoMinMax(
+    SelectionDAG &DAG, const SDLoc &DL, ISD::CondCode CC, SDValue Op0,
+    SDValue Op1, SDValue LHS, SDValue RHS, SDNodeFlags Flags, bool IsStrict) {
+  std::tuple<unsigned, SDValue, SDValue> Invalid(0, {}, {});
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = LHS.getValueType();
+  if (!VT.isFloatingPoint())
+    return Invalid;
+
+  // Check for x CC y ? x : y.
+  if (!DAG.isEqualTo(LHS, Op0) || !DAG.isEqualTo(RHS, Op1)) {
+    if (!DAG.isEqualTo(LHS, Op1) || !DAG.isEqualTo(RHS, Op0))
+      return Invalid;
+
+    // Convert x CC y ? y : x to x inv(CC) y ? x : y.
+    CC = ISD::getSetCCInverse(CC, VT);
+    std::swap(LHS, RHS);
+  }
+
+  // Convert x CC y ? x : y to y swap(inv(CC)) x ? y : x
+  // to convert an unordered into an ordered comparison.
+  if (ISD::getUnorderedFlavor(CC) == 1) {
+    CC = ISD::getSetCCSwappedOperands(ISD::getSetCCInverse(CC, VT));
+    std::swap(LHS, RHS);
+  }
+
+  unsigned Opcode = 0;
+  switch (CC) {
+  default:
+    break;
+  case ISD::SETOLE:
+    // Converting this to a min would handle comparisons between positive
+    // and negative zero incorrectly.
+    if (!Flags.hasNoSignedZeros() && !DAG.isKnownNeverLogicalZero(LHS) &&
+        !DAG.isKnownNeverLogicalZero(RHS))
+      break;
+    Opcode = ISD::PSEUDO_FMIN;
+    break;
+  case ISD::SETLE:
+    // Convert setle to setlt via inv+swap.
+    std::swap(LHS, RHS);
+    [[fallthrough]];
+  case ISD::SETOLT:
+  case ISD::SETLT:
+    Opcode = ISD::PSEUDO_FMIN;
+    break;
+
+  case ISD::SETOGE:
+    // Converting this to a max would handle comparisons between positive
+    // and negative zero incorrectly.
+    if (!Flags.hasNoSignedZeros() && !DAG.isKnownNeverLogicalZero(LHS) &&
+        !DAG.isKnownNeverLogicalZero(RHS))
+      break;
+    Opcode = ISD::PSEUDO_FMAX;
+    break;
+  case ISD::SETGE:
+    // Convert setge to setgt via inv+swap.
+    std::swap(LHS, RHS);
+    [[fallthrough]];
+  case ISD::SETOGT:
+  case ISD::SETGT:
+    Opcode = ISD::PSEUDO_FMAX;
+    break;
+  }
+
+  if (!Opcode)
+    return Invalid;
+
+  if (IsStrict)
+    Opcode = Opcode == ISD::PSEUDO_FMIN ? ISD::STRICT_PSEUDO_FMIN
+                                        : ISD::STRICT_PSEUDO_FMAX;
+  if (!TLI.isOperationLegalOrCustom(Opcode, VT))
+    return Invalid;
+
+  return {Opcode, LHS, RHS};
+}
+
+static SDValue combineSelectToPseudoMinMax(SelectionDAG &DAG, SDNode *N) {
+  SDLoc DL(N);
+  SDValue Cond = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+  EVT VT = LHS.getValueType();
+  if ((Cond.getOpcode() != ISD::SETCC &&
+       Cond.getOpcode() != ISD::STRICT_FSETCCS))
+    return SDValue();
+
+  bool IsStrict = Cond->isStrictFPOpcode();
+  ISD::CondCode CC =
+      cast<CondCodeSDNode>(Cond.getOperand(IsStrict ? 3 : 2))->get();
+  SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
+  SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
+  auto [Opcode, NewLHS, NewRHS] = combineSelectCCToPseudoMinMax(
+      DAG, DL, CC, Op0, Op1, LHS, RHS, N->getFlags(), IsStrict);
+  if (!Opcode)
+    return SDValue();
+
+  // Propagate fast-math-flags.
+  SelectionDAG::FlagInserter FlagsInserter(DAG, N->getFlags());
+  if (IsStrict) {
+    SDValue Ret = DAG.getNode(Opcode, DL, {VT, MVT::Other},
+                              {Cond.getOperand(0), NewLHS, NewRHS});
+    DAG.ReplaceAllUsesOfValueWith(Cond.getValue(1), Ret.getValue(1));
+    return Ret;
+  }
+  return DAG.getNode(Opcode, DL, VT, NewLHS, NewRHS);
+}
+
 SDValue DAGCombiner::visitSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -13245,6 +13423,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       return BinOp;
 
   if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
+    return R;
+
+  if (SDValue R = combineSelectToPseudoMinMax(DAG, N))
     return R;
 
   return SDValue();
@@ -14443,6 +14624,9 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   if (SDValue V = combineVSelectWithAllOnesOrZeros(N0, N1, N2, TLI, DAG, DL))
     return V;
 
+  if (SDValue R = combineSelectToPseudoMinMax(DAG, N))
+    return R;
+
   return SDValue();
 }
 
@@ -14490,6 +14674,12 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
   // If we can fold this based on the true/false value, do so.
   if (SimplifySelectOps(N, N2, N3))
     return SDValue(N, 0); // Don't revisit N.
+
+  auto [Opcode, NewLHS, NewRHS] = combineSelectCCToPseudoMinMax(
+      DAG, DL, CC, N0, N1, N2, N3, N->getFlags(), /*IsStrict=*/false);
+  if (Opcode)
+    return DAG.getNode(Opcode, DL, N->getValueType(0), NewLHS, NewRHS,
+                       N->getFlags());
 
   // fold select_cc into other things, such as min/max/abs
   return SimplifySelectCC(DL, N0, N1, N2, N3, CC);
@@ -27007,6 +27197,89 @@ static SDValue combineConcatVectorOfShuffleAndItsOperands(
   return DAG.getVectorShuffle(VT, dl, ShufOps[0], ShufOps[1], Mask);
 }
 
+// concat(shuffle(loadA, loadB, mask0), shuffle(loadA, loadB, mask1))
+// -> shuffle(loadAB, poison, concat(mask0, mask1))
+// only if loadA and loadB can be proven consecutive.
+static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
+                                             const TargetLowering &TLI,
+                                             bool LegalOperations) {
+  SDValue A, B;
+  ArrayRef<int> M0, M1;
+  if (!sd_match(N,
+                m_Node(ISD::CONCAT_VECTORS,
+                       m_OneUse(m_Shuffle(m_NUses<2>(m_Value(A)),
+                                          m_NUses<2>(m_Value(B)), m_Mask(M0))),
+                       m_OneUse(m_Shuffle(m_Deferred(A), m_Deferred(B),
+                                          m_Mask(M1))))))
+    return SDValue();
+  auto *LoadA = dyn_cast<LoadSDNode>(A.getNode());
+  auto *LoadB = dyn_cast<LoadSDNode>(B.getNode());
+  if (!LoadA || !LoadB || !ISD::isNON_EXTLoad(LoadA) ||
+      !ISD::isNON_EXTLoad(LoadB))
+    return SDValue();
+
+  // Check if the address spaces of both loads are the same.
+  if (LoadA->getAddressSpace() != LoadB->getAddressSpace())
+    return SDValue();
+
+  // Check if the loads are consecutive.
+  LoadSDNode *Base = nullptr;
+  if (DAG.areNonVolatileConsecutiveLoads(
+          LoadB, LoadA, LoadB->getMemoryVT().getStoreSize(), /*Dist=*/1)) {
+    Base = LoadA;
+  } else if (DAG.areNonVolatileConsecutiveLoads(
+                 LoadA, LoadB, LoadA->getMemoryVT().getStoreSize(),
+                 /*Dist=*/1)) {
+    Base = LoadB;
+  } else {
+    return SDValue(); // not adjacent
+  }
+
+  unsigned Fast = 0;
+  Align NewAlign = Base->getAlign();
+  EVT WideVT =
+      LoadA->getMemoryVT().getDoubleNumVectorElementsVT(*DAG.getContext());
+  if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), WideVT,
+                              Base->getAddressSpace(), NewAlign,
+                              Base->getMemOperand()->getFlags(), &Fast) ||
+      !Fast)
+    return SDValue();
+
+  // Create a shuffle of the wide load.
+  SmallVector<int, 32> Mask;
+  if (Base == LoadA) {
+    llvm::append_range(Mask, M0);
+    llvm::append_range(Mask, M1);
+  } else {
+    SmallVector<int, 16> C0(M0), C1(M1);
+    ShuffleVectorSDNode::commuteMask(C0);
+    ShuffleVectorSDNode::commuteMask(C1);
+    llvm::append_range(Mask, C0);
+    llvm::append_range(Mask, C1);
+  }
+
+  // Check if the wide load, new shuffle and it's mask is legal.
+  if (LegalOperations &&
+      (!TLI.isOperationLegal(ISD::LOAD, WideVT) ||
+       !TLI.isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, WideVT) ||
+       !TLI.isShuffleMaskLegal(Mask, WideVT)))
+    return SDValue();
+
+  // Create a wide load of twice the size of the original load.
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *WideMMO = MF.getMachineMemOperand(
+      Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
+  SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
+                                 Base->getBasePtr(), WideMMO);
+  // Redirect old chain users to the new chain.
+  DAG.makeEquivalentMemoryOrdering(LoadA, WideLoad);
+  DAG.makeEquivalentMemoryOrdering(LoadB, WideLoad);
+
+  // Create a new shuffle with the new mask.
+  return DAG.getVectorShuffle(WideVT, SDLoc(N), WideLoad, DAG.getPOISON(WideVT),
+                              Mask);
+}
+
 static SDValue combineConcatVectorOfSplats(SDNode *N, SelectionDAG &DAG,
                                            const TargetLowering &TLI,
                                            bool LegalTypes,
@@ -27178,6 +27451,9 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
 
   if (SDValue V = combineConcatVectorOfShuffleAndItsOperands(
           N, DAG, TLI, LegalTypes, LegalOperations))
+    return V;
+
+  if (SDValue V = combineConcatVectorOfShuffles(N, DAG, TLI, LegalOperations))
     return V;
 
   // Type legalization of vectors and DAG canonicalization of SHUFFLE_VECTOR
@@ -27703,6 +27979,15 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
         V.hasOneUse())
       if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
         return DAG.getSplatVector(NVT, DL, V.getOperand(0));
+
+  // ty1 extract_vector(ty2 get_active_lane_mask(X, Y), 0) --> ty1
+  // get_active_lane_mask(X, Y)
+  if (ExtIdx == 0 && V.getOpcode() == ISD::GET_ACTIVE_LANE_MASK &&
+      V.hasOneUse() &&
+      (!LegalOperations ||
+       TLI.isOperationLegal(ISD::GET_ACTIVE_LANE_MASK, NVT)))
+    return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, NVT, V.getOperand(0),
+                       V.getOperand(1));
 
   // extract_subvector(insert_subvector(x,y,c1),c2)
   //  --> extract_subvector(y,c2-c1)
@@ -30341,10 +30626,12 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
            SDNode::hasPredecessorHelper(RLD, Visited, Worklist)))
         return false;
 
-      Addr = DAG.getSelect(SDLoc(TheSelect),
-                           LLD->getBasePtr().getValueType(),
-                           TheSelect->getOperand(0), LLD->getBasePtr(),
-                           RLD->getBasePtr());
+      // If the condition is poison, originally this would result in a poison
+      // result. After the transform, this would result in a load of poison,
+      // which is UB. Freeze the condition to prevent this.
+      Addr = DAG.getSelect(SDLoc(TheSelect), LLD->getBasePtr().getValueType(),
+                           DAG.getFreeze(TheSelect->getOperand(0)),
+                           LLD->getBasePtr(), RLD->getBasePtr());
     } else {  // Otherwise SELECT_CC
       // We cannot do this optimization if any pair of {RLD, LLD} is a
       // predecessor to {RLD, LLD, CondLHS, CondRHS}. As we've already compared
@@ -30363,10 +30650,10 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
            SDNode::hasPredecessorHelper(RLD, Visited, Worklist)))
         return false;
 
+      SDValue FrozenOp0 = DAG.getFreeze(TheSelect->getOperand(0));
+      SDValue FrozenOp1 = DAG.getFreeze(TheSelect->getOperand(1));
       Addr = DAG.getNode(ISD::SELECT_CC, SDLoc(TheSelect),
-                         LLD->getBasePtr().getValueType(),
-                         TheSelect->getOperand(0),
-                         TheSelect->getOperand(1),
+                         LLD->getBasePtr().getValueType(), FrozenOp0, FrozenOp1,
                          LLD->getBasePtr(), RLD->getBasePtr(),
                          TheSelect->getOperand(4));
     }

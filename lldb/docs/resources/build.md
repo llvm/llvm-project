@@ -54,6 +54,7 @@ CMake configuration error.
 | Libxml2  | XML                                                        | `LLDB_ENABLE_LIBXML2` |
 | Python   | Python scripting. 3.8 or later (3.11 or later on Windows). | `LLDB_ENABLE_PYTHON`  |
 | Lua      | Lua scripting. Lua 5.3 and 5.4 are supported.              | `LLDB_ENABLE_LUA`     |
+| SWIG     | Required for Python or LUA support. Version 4 or later.    | N/A                   |
 
 Depending on your platform and package manager, one might run any of the
 commands below.
@@ -65,13 +66,6 @@ $ pkg install swig python libxml2
 $ pkgin install swig python38 cmake ninja-build
 $ brew install swig cmake ninja
 ```
-
-:::{note}
-There is an [incompatibility](https://github.com/swig/swig/issues/1321) between Python version 3.7 and later
-and swig versions older than 4.0.0 which makes builds of LLDB using debug
-versions of python unusable. This primarily affects Windows, as debug builds of
-LLDB must use debug python as well.
-:::
 
 :::{note}
 Installing multiple versions of Curses, particularly when only one is built with
@@ -288,15 +282,15 @@ are commonly used on Windows.
   crash, rather than having to reproduce a failure or use a crash dump.
 - `PYTHON_HOME` (Required): Path to the folder where the Python distribution
   is installed. For example, `C:\Python35`.
-- `LLDB_EMBED_PYTHON_HOME` (Default=1 on Windows): When this is 1, LLDB will bind
-  statically to the location specified in the `PYTHON_HOME` CMake variable,
-  ignoring any value of `PYTHONHOME` set in the environment. This is most
-  useful for developers who simply want to run LLDB after they build it. If you
-  wish to move a build of LLDB to a different machine where Python will be in a
-  different location, setting `LLDB_EMBED_PYTHON_HOME` to 0 will cause
-  Python to use its default mechanism for finding the python installation at
-  runtime (looking for installed Pythons, or using the `PYTHONHOME`
-  environment variable if it is specified).
+- `LLDB_EMBED_PYTHON_HOME` (Default=1 on Windows in the Debug configuration):
+  When this is 1, LLDB will bind statically to the location specified in the
+  `PYTHON_HOME` CMake variable, ignoring any value of `PYTHONHOME` set in the
+  environment. This is most useful for developers who simply want to run LLDB
+  after they build it. If you wish to move a build of LLDB to a different
+  machine where Python will be in a different location, setting 
+  `LLDB_EMBED_PYTHON_HOME` to 0 will cause Python to use its default mechanism
+  for finding the python installation at runtime (looking for installed 
+  Pythons, or using the `PYTHONHOME` environment variable if it is specified).
 
 Sample command line:
 

@@ -87,7 +87,7 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 ///  -Ofast
 ///  -O4
 ///  -O3
-/// For all other cases, loop versioning is is disabled.
+/// For all other cases, loop versioning is disabled.
 ///
 /// The gfortran compiler automatically enables the option for -O3 or -Ofast.
 ///
@@ -240,6 +240,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
+  Args.addOptInFlag(CmdArgs, options::OPT_freal_sum_reassociation,
+                    options::OPT_fno_real_sum_reassociation);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
@@ -605,9 +607,8 @@ void Flang::addTargetOptions(const ArgList &Args, ArgStringList &CmdArgs,
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddAArch64TargetArgs(Args, CmdArgs);
     break;
-
+  case llvm::Triple::amdgpu:
   case llvm::Triple::r600:
-  case llvm::Triple::amdgcn:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddAMDGPUTargetArgs(Args, CmdArgs, BA, DeviceOffloadKind);
     break;
@@ -739,6 +740,19 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     }
   }
 
+  // When in OpenMP offloading mode, forward assumptions information about
+  // thread and team counts in the target device. The host needs to know about
+  // this to prevent the SPMD to SPMD-no-loop promotion being done differently
+  // for host and device on the same target region.
+  if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
+                   options::OPT_fno_openmp_assume_teams_oversubscription,
+                   /*Default=*/false))
+    CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
+  if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
+                   options::OPT_fno_openmp_assume_threads_oversubscription,
+                   /*Default=*/false))
+    CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
+
   if (IsOpenMPDevice) {
     // -fopenmp-is-target-device is passed along to tell the frontend that it is
     // generating code for a device, so that only the relevant code is emitted.
@@ -749,17 +763,6 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     if (Args.hasFlag(options::OPT_fopenmp_target_debug,
                      options::OPT_fno_openmp_target_debug, /*Default=*/false))
       CmdArgs.push_back("-fopenmp-target-debug");
-
-    // When in OpenMP offloading mode, forward assumptions information about
-    // thread and team counts in the device.
-    if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
-                     options::OPT_fno_openmp_assume_teams_oversubscription,
-                     /*Default=*/false))
-      CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
-    if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
-                     options::OPT_fno_openmp_assume_threads_oversubscription,
-                     /*Default=*/false))
-      CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))

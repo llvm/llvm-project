@@ -43,6 +43,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
              N->dump(&DAG));
   SDValue R = SDValue();
 
+  // See if the target wants to custom expand this node.
+  if (CustomLowerNode(N, N->getValueType(ResNo), true))
+    return;
+
   switch (N->getOpcode()) {
   default:
 #ifndef NDEBUG
@@ -859,6 +863,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   LLVM_DEBUG(dbgs() << "Scalarize node operand " << OpNo << ": ";
              N->dump(&DAG));
   SDValue Res = SDValue();
+
+  // See if the target wants to custom scalarize this node.
+  if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false))
+    return false;
 
   switch (N->getOpcode()) {
   default:
@@ -7489,19 +7497,16 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   // We cannot just use the widened operands directly: since they might be
   // individually widened, using them directly will result in de-interleaving
   // the "padded" lanes that sit in the middle of the vector. Instead, we should
-  // not just concat but also "re-pack" these operands before extracting new
+  // not concat the widened operands but the original ones to effectively
+  // generate a "packed" concated and widened vector, before extracting new
   // operand vectors with the widened type.
   EVT PackedWidenVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                                        WidenEC.multiplyCoefficientBy(Factor));
-  SDValue PackedWidenVec = DAG.getUNDEF(PackedWidenVT);
-  for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
-    const SDValue Op = N->getOperand(Idx);
-    // Note that we insert these widened operands with offsets derived from
-    // the original vector length.
-    PackedWidenVec = DAG.getInsertSubvector(
-        DL, PackedWidenVec, GetWidenedVector(Op),
-        OrigEC.multiplyCoefficientBy(Idx).getKnownMinValue());
-  }
+  EVT ConcatVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                                  OrigEC.multiplyCoefficientBy(Factor));
+  SDValue ConcatOp = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, N->ops());
+  SDValue PackedWidenVec = DAG.getInsertSubvector(
+      DL, DAG.getUNDEF(PackedWidenVT), ConcatOp, /*Idx=*/0U);
 
   // Extract the new widened operand vectors.
   SmallVector<SDValue, 8> NewOps(Factor, SDValue());

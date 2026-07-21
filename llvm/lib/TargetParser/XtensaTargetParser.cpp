@@ -28,13 +28,13 @@ constexpr EnumStringDef<uint64_t> FeatureNameDefs[] = {
 #define XTENSA_FEATURE(ID, NAME) {{NAME}, ID},
 #include "llvm/TargetParser/XtensaTargetParser.def"
 };
-static constexpr auto FeatureNames = BUILD_ENUM_STRINGS(FeatureNameDefs);
+constexpr auto FeatureNames = BUILD_ENUM_STRINGS(FeatureNameDefs);
 
 constexpr EnumStringDef<CPUInfo> CPUInfoDefs[] = {
 #define XTENSA_CPU(ENUM, NAME, FEATURES) {{NAME}, {CK_##ENUM, FEATURES}},
 #include "llvm/TargetParser/XtensaTargetParser.def"
 };
-static constexpr auto CPUInfos = BUILD_ENUM_STRINGS(CPUInfoDefs);
+constexpr auto CPUInfos = BUILD_ENUM_STRINGS(CPUInfoDefs);
 
 StringRef getBaseName(StringRef CPU) {
   return llvm::StringSwitch<StringRef>(CPU)

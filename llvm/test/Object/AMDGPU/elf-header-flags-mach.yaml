@@ -366,7 +366,7 @@
 
 
 # ELF-AMDGCN-ALL:       Format: elf64-amdgpu
-# ELF-AMDGCN-ALL:       Arch: amdgcn
+# ELF-AMDGCN-ALL:       Arch: amdgpu
 # ELF-AMDGCN-ALL:       AddressSize: 64bit
 # ELF-AMDGCN-ALL:       Flags [
 
