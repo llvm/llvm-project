@@ -515,9 +515,10 @@ protected:
   void addRegAllocPass(PassManagerWrapper &PMW, bool Optimized) const;
 
   /// Add core register allocator passes which do the actual register assignment
-  /// and rewriting.
+  /// and rewriting. addRegAssignAndRewriteOptimized should return true if any
+  /// passes were added.
   Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) const;
-  Error addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) const;
+  Expected<bool> addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) const;
 
   /// Allow the target to disable a specific pass by default.
   /// Backend can declare unwanted passes in constructor.
@@ -1191,8 +1192,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignAndRewriteFast(
 }
 
 template <typename Derived, typename TargetMachineT>
-Error CodeGenPassBuilder<Derived, TargetMachineT>::
-    addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) const {
+Expected<bool>
+CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignAndRewriteOptimized(
+    PassManagerWrapper &PMW) const {
   // Add the selected register allocation pass.
   addRegAllocPass(PMW, true);
 
@@ -1202,7 +1204,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::
   // Finally rewrite virtual registers.
   addMachineFunctionPass(VirtRegRewriterPass(), PMW);
 
-  return Error::success();
+  return true;
 }
 
 /// Add the minimum set of target-independent passes that are required for
@@ -1262,8 +1264,11 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   // PreRA instruction scheduling.
   addMachineFunctionPass(MachineSchedulerPass(&TM), PMW);
 
-  if (auto E = derived().addRegAssignAndRewriteOptimized(PMW))
-    return std::move(E);
+  Expected<bool> AddedPasses = derived().addRegAssignAndRewriteOptimized(PMW);
+  if (!AddedPasses)
+    return AddedPasses.takeError();
+  if (!AddedPasses.get())
+    return Error::success();
 
   addMachineFunctionPass(StackSlotColoringPass(), PMW);
 

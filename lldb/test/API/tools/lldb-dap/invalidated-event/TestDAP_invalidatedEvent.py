@@ -4,18 +4,12 @@ stack, variables, threads has changes but the client does not
 know about it.
 """
 
-import lldbdap_testcase
 from lldbsuite.test.lldbtest import line_number
-from dap_server import Event
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
-class TestDAP_invalidatedEvent(lldbdap_testcase.DAPTestCaseBase):
-    def verify_top_frame_name(self, frame_name: str):
-        all_frames = self.get_stackFrames()
-        self.assertGreaterEqual(len(all_frames), 1, "Expected at least one frame.")
-        top_frame_name = all_frames[0]["name"]
-        self.assertRegex(top_frame_name, f"{frame_name}.*")
-
+class TestDAP_invalidatedEvent(DAPTestCaseBase):
     def test_invalidated_stack_area_event(self):
         """
         Test an invalidated event for the stack area.
@@ -23,33 +17,36 @@ class TestDAP_invalidatedEvent(lldbdap_testcase.DAPTestCaseBase):
         """
         other_source = "other.h"
         return_bp_line = line_number(other_source, "// thread return breakpoint")
-
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        self.set_source_breakpoints(other_source, [return_bp_line])
-        self.continue_to_next_stop()
+        session = self.build_and_create_session()
+        with session.configure(LaunchArgs(program)) as ctx:
+            session.resolve_source_breakpoints(other_source, [return_bp_line])
 
-        self.verify_top_frame_name("add")
-        thread_id = self.dap_server.get_thread_id()
-        self.assertIsNotNone(thread_id, "Exepected a thread id.")
+        stopped_event = session.verify_stopped_on_breakpoint(after=ctx.process_event)
 
-        # run thread return
-        thread_command = "thread return 20"
-        eval_resp = self.dap_server.request_evaluate(thread_command, context="repl")
-        self.assertTrue(eval_resp["success"], f"Failed to evaluate `{thread_command}`.")
+        thread_ctx = session.thread_context_from(stopped_event)
+        top_frame = thread_ctx.top_frame()
+        self.assertRegex(top_frame.name, "add.*")
 
-        # wait for the invalidated stack event.
-        stack_event = self.dap_server.wait_for_event(["invalidated"])
-        self.assertIsNotNone(stack_event, "Expected an invalidated event.")
-        event_body: Event = stack_event["body"]
-        self.assertIn("stacks", event_body["areas"])
-        self.assertIn("threadId", event_body.keys())
+        last_event = session.last_event()
+        # Run thread return.
+        session.evaluate("thread return 20", context="repl")
+
+        # Wait for the invalidated stack event.
+        invalid_event = session.wait_for_invalidated_event(after=last_event)
+        self.assertIsNotNone(invalid_event, "Expected an invalidated event.")
+        event_body = invalid_event.body
+        self.assertIsNotNone(event_body.areas)
+        self.assertIn("stacks", event_body.areas or [])
+        self.assertIsNotNone(event_body.threadId)
         self.assertEqual(
-            thread_id,
-            event_body["threadId"],
-            f"Expected the event from thread {thread_id}.",
+            thread_ctx.thread_id,
+            event_body.threadId,
+            f"Expected the event from thread {thread_ctx.thread_id}.",
         )
 
-        # confirm we are back at the main frame.
-        self.verify_top_frame_name("main")
-        self.continue_to_exit()
+        # Confirm we are back at the main frame.
+        top_frame = session.top_frame_from(invalid_event)
+        self.assertRegex(top_frame.name, "main.*")
+
+        session.continue_to_exit()

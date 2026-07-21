@@ -103,6 +103,11 @@ public:
 
   const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
 
+  /// Iterates over the current stack frame and all of its ancestors.
+  llvm::iterator_range<StackFrame::parent_iterator> stackframes() const {
+    return getStackFrame()->parentsIncludingSelf();
+  }
+
   /// Return true if the current StackFrame has no caller context.
   bool inTopFrame() const { return getStackFrame()->inTopFrame(); }
 
