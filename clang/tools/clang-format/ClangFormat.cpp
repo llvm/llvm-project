@@ -484,7 +484,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
 
   // To format JSON insert a variable to trick the code into thinking its
   // JavaScript.
-  if (IsJson && !FormatStyle->DisableFormat) {
+  if (IsJson && !FormatStyle->DisableFormat.DisablePostPreprocessorFormatting) {
     auto Err =
         Replaces.add(tooling::Replacement(AssumedFileName, 0, 0, "x = "));
     if (Err)
