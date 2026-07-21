@@ -2391,10 +2391,7 @@ define i32 @signum_i32_or_wrong_ext(i32 %x) {
 
 define i32 @signum_i32_lshr(i32 %x) {
 ; CHECK-LABEL: @signum_i32_lshr(
-; CHECK-NEXT:    [[SIGN:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[NEG]], 31
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[SIGN]], [[LSHR]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X:%.*]], i32 0)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sign = ashr i32 %x, 31
@@ -2406,10 +2403,7 @@ define i32 @signum_i32_lshr(i32 %x) {
 
 define i32 @signum_i32_lshr_commuted(i32 %x) {
 ; CHECK-LABEL: @signum_i32_lshr_commuted(
-; CHECK-NEXT:    [[SIGN:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[NEG]], 31
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[LSHR]], [[SIGN]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X:%.*]], i32 0)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sign = ashr i32 %x, 31
