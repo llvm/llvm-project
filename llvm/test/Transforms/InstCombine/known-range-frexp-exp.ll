@@ -160,9 +160,9 @@ define i32 @frexp_f32_clamp_min_no_nan_inf(float nofpclass(nan inf) %x) {
 
 ;Fold icmp on frexp's exponent result into an fcmp against fabs(x).
 ; Float exponent signed less-than comparison.
-define i1 @frexp_slt_float(float %x) {
+define i1 @frexp_slt_float(float nofpclass(nan inf) %x) {
 ; CHECK-LABEL: define i1 @frexp_slt_float(
-; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-SAME: float nofpclass(nan inf) [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    [[V2:%.*]] = fcmp olt float [[TMP1]], f0x4B000000
 ; CHECK-NEXT:    ret i1 [[V2]]
@@ -174,9 +174,9 @@ define i1 @frexp_slt_float(float %x) {
 }
 
 ; Double exponent signed less-than comparison.
-define i1 @frexp_slt_double(double %x) {
+define i1 @frexp_slt_double(double nofpclass(nan inf) %x) {
 ; CHECK-LABEL: define i1 @frexp_slt_double(
-; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-SAME: double nofpclass(nan inf) [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[X]])
 ; CHECK-NEXT:    [[V2:%.*]] = fcmp olt double [[TMP1]], 5.120000e+02
 ; CHECK-NEXT:    ret i1 [[V2]]
@@ -185,13 +185,12 @@ define i1 @frexp_slt_double(double %x) {
   %v1 = extractvalue { double, i32 } %v0, 1
   %v2 = icmp slt i32 %v1, 10
   ret i1 %v2
-
 }
 
 ; Float exponent signed greater-than comparison.
-define i1 @frexp_sgt_float(float %x) {
+define i1 @frexp_sgt_float(float nofpclass(nan inf) %x) {
 ; CHECK-LABEL: define i1 @frexp_sgt_float(
-; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-SAME: float nofpclass(nan inf) [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    [[V2:%.*]] = fcmp oge float [[TMP1]], 1.310720e+05
 ; CHECK-NEXT:    ret i1 [[V2]]
@@ -200,13 +199,12 @@ define i1 @frexp_sgt_float(float %x) {
   %v1 = extractvalue { float, i32 } %v0, 1
   %v2 = icmp sgt i32 %v1, 17
   ret i1 %v2
-
 }
 
 ; Splat vector test.
-define <2 x i1> @frexp_slt_splat(<2 x float> %x) {
+define <2 x i1> @frexp_slt_splat(<2 x float> nofpclass(nan inf) %x) {
 ; CHECK-LABEL: define <2 x i1> @frexp_slt_splat(
-; CHECK-SAME: <2 x float> [[X:%.*]]) {
+; CHECK-SAME: <2 x float> nofpclass(nan inf) [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; CHECK-NEXT:    [[V2:%.*]] = fcmp olt <2 x float> [[TMP1]], splat (float 1.600000e+01)
 ; CHECK-NEXT:    ret <2 x i1> [[V2]]
@@ -217,39 +215,25 @@ define <2 x i1> @frexp_slt_splat(<2 x float> %x) {
   ret <2 x i1> %v2
 }
 
-; Float exponent slt: boundary case, Exp == MaxExp+1 (C=129), saturates to +Inf.
-define i1 @frexp_slt_boundary_inf(float %x) {
-; CHECK-LABEL: define i1 @frexp_slt_boundary_inf(
-; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[V2:%.*]] = fcmp one float [[TMP1]], +inf
-; CHECK-NEXT:    ret i1 [[V2]]
-;
-  %v0 = call { float, i32 } @llvm.frexp.f32.i32(float %x)
-  %v1 = extractvalue { float, i32 } %v0, 1
-  %v2 = icmp slt i32 %v1, 129
-  ret i1 %v2
-}
-
-; Negative test-Float exponent slt: one past the boundary (C=130).
-define i1 @frexp_slt_no_fold_past_boundary(float %x) {
-; CHECK-LABEL: define i1 @frexp_slt_no_fold_past_boundary(
+; Negative test - exponent may come from a NaN or Inf input.
+define i1 @frexp_slt_no_fold_maybe_nan_inf(float %x) {
+; CHECK-LABEL: define i1 @frexp_slt_no_fold_maybe_nan_inf(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[V0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[V1:%.*]] = extractvalue { float, i32 } [[V0]], 1
-; CHECK-NEXT:    [[V2:%.*]] = icmp slt i32 [[V1]], 130
+; CHECK-NEXT:    [[V2:%.*]] = icmp slt i32 [[V1]], 24
 ; CHECK-NEXT:    ret i1 [[V2]]
 ;
   %v0 = call { float, i32 } @llvm.frexp.f32.i32(float %x)
   %v1 = extractvalue { float, i32 } %v0, 1
-  %v2 = icmp slt i32 %v1, 130
+  %v2 = icmp slt i32 %v1, 24
   ret i1 %v2
 }
 
 ; Negative test - Negative exponent.
-define i1 @frexp_slt_no_fold_negative_exp(float %x) {
+define i1 @frexp_slt_no_fold_negative_exp(float nofpclass(nan inf) %x) {
 ; CHECK-LABEL: define i1 @frexp_slt_no_fold_negative_exp(
-; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-SAME: float nofpclass(nan inf) [[X:%.*]]) {
 ; CHECK-NEXT:    [[V0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[V1:%.*]] = extractvalue { float, i32 } [[V0]], 1
 ; CHECK-NEXT:    [[V2:%.*]] = icmp slt i32 [[V1]], 0
@@ -262,9 +246,9 @@ define i1 @frexp_slt_no_fold_negative_exp(float %x) {
 }
 
 ; Negative test-  extractvalue has an additional use.
-define i1 @frexp_slt_no_fold_exp_multi_use(float %x) {
+define i1 @frexp_slt_no_fold_exp_multi_use(float nofpclass(nan inf) %x) {
 ; CHECK-LABEL: define i1 @frexp_slt_no_fold_exp_multi_use(
-; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-SAME: float nofpclass(nan inf) [[X:%.*]]) {
 ; CHECK-NEXT:    [[V0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[V1:%.*]] = extractvalue { float, i32 } [[V0]], 1
 ; CHECK-NEXT:    call void @use.i32(i32 [[V1]])
@@ -279,9 +263,9 @@ define i1 @frexp_slt_no_fold_exp_multi_use(float %x) {
 }
 
 ;Negative test- frexp result has multiple use .
-define { float, i1 } @frexp_slt_no_fold_mantissa_use(float %x) {
+define { float, i1 } @frexp_slt_no_fold_mantissa_use(float nofpclass(nan inf) %x) {
 ; CHECK-LABEL: define { float, i1 } @frexp_slt_no_fold_mantissa_use(
-; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-SAME: float nofpclass(nan inf) [[X:%.*]]) {
 ; CHECK-NEXT:    [[V0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[MANT:%.*]] = extractvalue { float, i32 } [[V0]], 0
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[V0]], 1
