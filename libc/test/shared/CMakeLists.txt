@@ -347,6 +347,7 @@ add_fp_unittest(
     libc.src.__support.math.ldexpf
     libc.src.__support.math.ldexpf128
     libc.src.__support.math.ldexpf16
+    libc.src.__support.math.lgammaf16
     libc.src.__support.math.llogbf
     libc.src.__support.math.llogbf128
     libc.src.__support.math.llogbf16
@@ -831,8 +832,10 @@ add_fp_unittest(
     libc.src.__support.builtins.addsf3
     libc.src.__support.builtins.addtf3
     libc.src.__support.builtins.divdf3
+    libc.src.__support.builtins.divsf3
     libc.src.__support.builtins.divtf3
     libc.src.__support.builtins.muldf3
+    libc.src.__support.builtins.mulsf3
     libc.src.__support.builtins.multf3
     libc.src.__support.builtins.subdf3
     libc.src.__support.builtins.subsf3

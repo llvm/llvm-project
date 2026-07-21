@@ -51,6 +51,7 @@ namespace llvm {
 
 template <class N, class M> class LoopInfoBase;
 template <class N, class M> class LoopBase;
+template <class N, class M> class PopulateLoopsDFS;
 
 //===----------------------------------------------------------------------===//
 /// Instances of this class are used to represent loops that are detected in the
@@ -144,9 +145,8 @@ public:
     assert(!isInvalid() && "Loop not in a valid state!");
     // A block from another function is never contained, and its number would
     // otherwise index this function's map.
-    if constexpr (GraphHasNodeNumbers<const BlockT *>)
-      if (BB->getParent() != LI->ParentPtr)
-        return false;
+    if (BB->getParent() != LI->ParentPtr)
+      return false;
     return contains(LI->lookupLoopFor(BB));
   }
 
@@ -157,10 +157,6 @@ public:
 
   /// Return the loops contained entirely within this loop.
   const std::vector<LoopT *> &getSubLoops() const {
-    assert(!isInvalid() && "Loop not in a valid state!");
-    return SubLoops;
-  }
-  std::vector<LoopT *> &getSubLoopsVector() {
     assert(!isInvalid() && "Loop not in a valid state!");
     return SubLoops;
   }
@@ -203,12 +199,6 @@ public:
     return Blocks.size();
   }
 
-  /// Return a direct, mutable handle to the blocks vector so that we can
-  /// mutate it efficiently with techniques like `std::remove`.
-  std::vector<BlockT *> &getBlocksVector() {
-    assert(!isInvalid() && "Loop not in a valid state!");
-    return Blocks;
-  }
   /// Return true if this loop is no longer valid.  The only valid use of this
   /// helper is "assert(L.isInvalid())" or equivalent, since IsInvalid is set to
   /// true by the destructor.  In other words, if this accessor returns true,
@@ -294,19 +284,6 @@ public:
   /// If getUniqueExitBlocks would return exactly one block, return that block.
   /// Otherwise return null.
   BlockT *getUniqueExitBlock() const;
-
-  /// Return the unique exit block for the latch, or null if there are multiple
-  /// different exit blocks or the latch is not exiting.
-  BlockT *getUniqueLatchExitBlock() const;
-
-  /// Return true if this loop does not have any exit blocks.
-  bool hasNoExitBlocks() const;
-
-  /// Edge type.
-  using Edge = std::pair<BlockT *, BlockT *>;
-
-  /// Return all pairs of (_inside_block_,_outside_block_).
-  void getExitEdges(SmallVectorImpl<Edge> &ExitEdges) const;
 
   /// If there is a preheader for this loop, return it. A loop has a preheader
   /// if there is only one edge to the header of the loop from outside of the
@@ -434,6 +411,16 @@ public:
     Blocks.reserve(size);
   }
 
+  /// interface to do reserve() for SubLoops
+  void reserveSubLoops(unsigned Size) {
+    assert(!isInvalid() && "Loop not in a valid state!");
+    SubLoops.reserve(Size);
+  }
+
+  /// Capacity of the block list; input to an enclosing loop's reserveBlocks()
+  /// during construction, when this loop's list is not yet fully populated.
+  unsigned getBlocksCapacity() const { return Blocks.capacity(); }
+
   /// This method is used to move BB (which must be part of this loop) to be the
   /// loop header of the loop (the block that dominates all others).
   void moveToHeader(BlockT *BB) {
@@ -478,6 +465,7 @@ public:
 
 protected:
   friend class LoopInfoBase<BlockT, LoopT>;
+  friend class PopulateLoopsDFS<BlockT, LoopT>;
 
   /// This creates an empty loop.
   LoopBase() : ParentLoop(nullptr) {}
@@ -520,10 +508,13 @@ raw_ostream &operator<<(raw_ostream &OS, const LoopBase<BlockT, LoopT> &Loop) {
 ///
 
 template <class BlockT, class LoopT> class LoopInfoBase {
-  // BBMap - Mapping of basic blocks to the inner most loop they occur in
-  std::conditional_t<GraphHasNodeNumbers<const BlockT *>, SmallVector<LoopT *>,
-                     DenseMap<const BlockT *, LoopT *>>
-      BBMap;
+  static_assert(GraphHasNodeNumbers<const BlockT *>,
+                "LoopInfo requires GraphTraits<BlockT *>::getNumber (see "
+                "GraphHasNodeNumbers)");
+
+  // Mapping of each block, indexed by its number, to the innermost loop it
+  // occurs in (or null).
+  SmallVector<LoopT *> BBMap;
 
   using ParentT = decltype(std::declval<const BlockT *>()->getParent());
   ParentT ParentPtr = nullptr;
@@ -627,31 +618,25 @@ private:
 
   /// Verify that used block numbers are still valid.
   void verifyBlockNumberEpoch(ParentT BBParent) const {
-    if constexpr (GraphHasNodeNumbers<BlockT *>) {
-      assert(ParentPtr == BBParent &&
-             "loop info queried with block of other function");
-      assert(BlockNumberEpoch ==
-                 GraphTraits<ParentT>::getNumberEpoch(ParentPtr) &&
-             "loop info used with outdated block numbers");
-    }
+    assert(ParentPtr == BBParent &&
+           "loop info queried with block of other function");
+    assert(BlockNumberEpoch ==
+               GraphTraits<ParentT>::getNumberEpoch(ParentPtr) &&
+           "loop info used with outdated block numbers");
   }
 
   // Look up BB's innermost loop in the block-to-loop map; BB must belong to
   // this function.
   LoopT *lookupLoopFor(const BlockT *BB) const {
-    if constexpr (GraphHasNodeNumbers<const BlockT *>) {
-      unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
-      return Number < BBMap.size() ? BBMap[Number] : nullptr;
-    } else
-      return BBMap.lookup(BB);
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
+    return Number < BBMap.size() ? BBMap[Number] : nullptr;
   }
 
 public:
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
   LoopT *getLoopFor(const BlockT *BB) const {
-    if constexpr (GraphHasNodeNumbers<const BlockT *>)
-      verifyBlockNumberEpoch(BB->getParent());
+    verifyBlockNumberEpoch(BB->getParent());
     return lookupLoopFor(BB);
   }
 
@@ -663,6 +648,54 @@ public:
   unsigned getLoopDepth(const BlockT *BB) const {
     const LoopT *L = getLoopFor(BB);
     return L ? L->getLoopDepth() : 0;
+  }
+
+  /// Edge type.
+  using Edge = std::pair<BlockT *, BlockT *>;
+
+  /// Return true if \p L does not have any exit blocks.
+  bool hasNoExitBlocks(const LoopT &L) const;
+
+  /// Return all pairs of (_inside_block_,_outside_block_).
+  void getExitEdges(const LoopT &L, SmallVectorImpl<Edge> &ExitEdges) const;
+
+  /// Return the unique exit block for the latch of \p L, or null if there are
+  /// multiple different exit blocks or the latch is not exiting.
+  BlockT *getUniqueLatchExitBlock(const LoopT &L) const;
+
+  /// Remove every block satisfying \p Pred from \p L's block list, preserving
+  /// the order of the remaining blocks. Only \p L itself is updated, not its
+  /// ancestors or descendants, and not the block-to-loop mapping.
+  template <typename PredicateT>
+  void removeBlocksIf(LoopT &L, PredicateT Pred) {
+    llvm::erase_if(L.Blocks, Pred);
+  }
+
+  /// Remove every block satisfying \p Pred from \p Start and each of its
+  /// ancestors up to but not including \p Stop, which must be null or an
+  /// ancestor of \p Start; a null \p Stop walks to the top level.
+  template <typename PredicateT>
+  void removeBlocksFromLoopAndAncestors(LoopT *Start, LoopT *Stop,
+                                        PredicateT Pred) {
+    for (LoopT *Cur = Start; Cur != Stop; Cur = Cur->getParentLoop())
+      removeBlocksIf(*Cur, Pred);
+  }
+
+  /// Detach and return the children of \p Parent (the top-level loops if
+  /// \p Parent is null) that satisfy \p Pred, clearing their parent pointers.
+  /// Both the remaining and the returned children keep their relative order.
+  template <typename PredicateT>
+  SmallVector<LoopT *, 4> takeChildrenIf(LoopT *Parent, PredicateT Pred) {
+    std::vector<LoopT *> &List = Parent ? Parent->SubLoops : TopLevelLoops;
+    SmallVector<LoopT *, 4> Taken;
+    llvm::erase_if(List, [&](LoopT *Child) {
+      if (!Pred(Child))
+        return false;
+      Child->ParentLoop = nullptr;
+      Taken.push_back(Child);
+      return true;
+    });
+    return Taken;
   }
 
   /// \brief Find the innermost loop containing both given loops.
@@ -685,9 +718,6 @@ public:
   /// Return the top-level loops.
   const std::vector<LoopT *> &getTopLevelLoops() const { return TopLevelLoops; }
 
-  /// Return the top-level loops.
-  std::vector<LoopT *> &getTopLevelLoopsVector() { return TopLevelLoops; }
-
   /// This removes the specified top-level loop from this loop info object.
   /// The loop is not deleted, as it will presumably be inserted into
   /// another loop.
@@ -703,22 +733,15 @@ public:
   /// This should be used by transformations that restructure the loop hierarchy
   /// tree.
   void changeLoopFor(const BlockT *BB, LoopT *L) {
-    if constexpr (GraphHasNodeNumbers<const BlockT *>) {
-      verifyBlockNumberEpoch(BB->getParent());
-      unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
-      if (Number >= BBMap.size()) {
-        unsigned Max = GraphTraits<decltype(BB->getParent())>::getMaxNumber(
-            BB->getParent());
-        BBMap.resize(Number >= Max ? Number + 1 : Max);
-      }
-      BBMap[Number] = L;
-    } else {
-      if (!L) {
-        BBMap.erase(BB);
-        return;
-      }
-      BBMap[BB] = L;
+    verifyBlockNumberEpoch(BB->getParent());
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
+    if (Number >= BBMap.size()) {
+      unsigned Max =
+          GraphTraits<decltype(BB->getParent())>::getMaxNumber(BB->getParent());
+      assert(Number < Max);
+      BBMap.resize(Max);
     }
+    BBMap[Number] = L;
   }
 
   /// Replace the specified loop in the top-level loops list with the indicated
@@ -741,24 +764,14 @@ public:
   /// including all of the Loop objects it is nested in and our mapping from
   /// BasicBlocks to loops.
   void removeBlock(BlockT *BB) {
-    if constexpr (GraphHasNodeNumbers<BlockT *>) {
-      verifyBlockNumberEpoch(BB->getParent());
-      unsigned Number = GraphTraits<BlockT *>::getNumber(BB);
-      if (Number >= BBMap.size())
-        return;
+    verifyBlockNumberEpoch(BB->getParent());
+    unsigned Number = GraphTraits<BlockT *>::getNumber(BB);
+    if (Number >= BBMap.size())
+      return;
 
-      for (LoopT *L = BBMap[Number]; L; L = L->getParentLoop())
-        L->removeBlockFromLoop(BB);
-      BBMap[Number] = nullptr;
-    } else {
-      auto I = BBMap.find(BB);
-      if (I != BBMap.end()) {
-        for (LoopT *L = I->second; L; L = L->getParentLoop())
-          L->removeBlockFromLoop(BB);
-
-        BBMap.erase(I);
-      }
-    }
+    for (LoopT *L = BBMap[Number]; L; L = L->getParentLoop())
+      L->removeBlockFromLoop(BB);
+    BBMap[Number] = nullptr;
   }
 
   // Internals

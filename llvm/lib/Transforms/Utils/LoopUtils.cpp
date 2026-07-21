@@ -441,6 +441,9 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasDistributeTransformation(const Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.distribute.disable"))
+    return TM_SuppressedByUser;
+
   if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
     return TM_ForcedByUser;
 
@@ -598,7 +601,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Remove the old branch.
     Preheader->getTerminator()->eraseFromParent();
   } else {
-    assert(L->hasNoExitBlocks() &&
+    assert((!LI || LI->hasNoExitBlocks(*L)) &&
            "Loop should have either zero or one exit blocks.");
 
     Builder.SetInsertPoint(OldTerm);
@@ -1180,6 +1183,8 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
     return Instruction::ICmp;
   case Intrinsic::vector_reduce_fmax:
   case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fminimum:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unexpected ID");
@@ -1275,6 +1280,10 @@ RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
     return RecurKind::FMax;
   case Intrinsic::vector_reduce_fmin:
     return RecurKind::FMin;
+  case Intrinsic::vector_reduce_fmaximum:
+    return RecurKind::FMaximum;
+  case Intrinsic::vector_reduce_fminimum:
+    return RecurKind::FMinimum;
   default:
     return RecurKind::None;
   }

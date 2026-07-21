@@ -1,14 +1,14 @@
 ; UNSUPPORTED: expensive_checks
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -O0 -mtriple=amdgpu7.00--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
-; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -O1 -mtriple=amdgpu7.00--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1 %s
-; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -amdgpu-scalar-ir-passes -amdgpu-sdwa-peephole \
+; RUN: llc -O1 -mtriple=amdgpu7.00--amdhsa -disable-verify -amdgpu-scalar-ir-passes -amdgpu-sdwa-peephole \
 ; RUN:   -amdgpu-load-store-vectorizer -amdgpu-enable-pre-ra-optimizations -amdgpu-loop-prefetch -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1-OPTS %s
-; RUN: llc -O2 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -O2 -mtriple=amdgpu7.00--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O2 %s
-; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -O3 -mtriple=amdgpu7.00--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
 
 ; REQUIRES: asserts

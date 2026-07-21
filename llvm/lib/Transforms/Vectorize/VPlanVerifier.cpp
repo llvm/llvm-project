@@ -172,15 +172,15 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
     return false;
   }
 
-  const VPlan &Plan = *LastActiveLane.getParent()->getPlan();
   // All operands must be prefix-mask. This means an icmp ult/ule LHS, RHS where
   // the LHS is monotonically increasing and RHS is uniform across VFs and UF.
   for (VPValue *Op : LastActiveLane.operands()) {
     VPValue *Mask = Op;
     VPValue *HeaderMask;
 
-    // Look through any `and`s with a loop_dependence_war_mask, which is always
-    // a prefix mask. TODO: Verify the full loop.dependence.mask chain.
+    // Look through any `and`s with the incoming alias mask or a
+    // loop_dependence_war_mask, which are always prefix masks.
+    // TODO: Verify the full loop.dependence.mask chain.
     if (match(Op,
               m_c_BinaryAnd(
                   m_VPValue(HeaderMask),
@@ -188,10 +188,15 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
                       m_c_BinaryAnd(
                           m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
                           m_VPValue()),
-                      m_Intrinsic<Intrinsic::loop_dependence_war_mask>()))))
+                      m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
+                      m_VPInstruction<VPInstruction::IncomingAliasMask>()))))
       Mask = HeaderMask;
 
-    if (vputils::isHeaderMask(Mask, Plan))
+    // The header mask is a prefix mask. Before being materialized it is the
+    // loop region's abstract header mask; afterwards it is an active lane mask
+    // (an intrinsic or a phi), or the icmp checked below.
+    if (match(Mask, m_HeaderMask()) || isa<VPActiveLaneMaskPHIRecipe>(Mask) ||
+        match(Mask, m_VPInstruction<VPInstruction::ActiveLaneMask>()))
       continue;
 
     if (match(Mask, m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue())))
@@ -208,7 +213,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
 
     errs() << "LastActiveLane operand ";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    VPSlotTracker Tracker(&Plan);
+    VPSlotTracker Tracker(LastActiveLane.getParent()->getPlan());
     Op->printAsOperand(errs(), Tracker);
 #endif
     errs() << " must be prefix mask (a header mask or an "
@@ -327,6 +332,13 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         break;
       default:
         break;
+      }
+    }
+    if (const auto *DIV = dyn_cast<VPDerivedIVRecipe>(&R)) {
+      if (!DIV->getStartValue()->isDefinedOutsideLoopRegions()) {
+        errs() << "VPDerivedIVRecipe must have start value defined outside "
+                  "loop regions\n";
+        return false;
       }
     }
     if (const auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {

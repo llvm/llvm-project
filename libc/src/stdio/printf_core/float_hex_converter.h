@@ -137,9 +137,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     // Round to nearest, if it's exactly halfway then round to even.
     if (truncated_bits > halfway_const)
-      ++mantissa;
+      ++properties.mantissa;
     else if (truncated_bits == halfway_const)
-      mantissa = mantissa + (mantissa & 1);
+      properties.mantissa = properties.mantissa + (properties.mantissa & 1);
 #else
     switch (fputil::quick_get_round()) {
     case FE_TONEAREST:

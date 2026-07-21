@@ -8,14 +8,9 @@
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Runtime/CUDA/common.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
@@ -50,11 +45,14 @@ static void processAddrOfOp(fir::AddrOfOp addrOfOp,
           addrOfOp.getSymbol().getRootReference().getValue())) {
     // TO DO: limit candidates to non-scalars. Scalars appear to have been
     // folded in already.
+    // Insert before recursing so cycles among globals (e.g. mutually
+    // referencing type descriptors) do not cause infinite recursion.
+    if (!candidates.insert(globalOp).second)
+      return;
     if (recurseInGlobal)
       globalOp.walk([&](fir::AddrOfOp op) {
         processAddrOfOp(op, symbolTable, candidates, recurseInGlobal);
       });
-    candidates.insert(globalOp);
   }
 }
 
@@ -63,13 +61,13 @@ static void processTypeDescriptor(fir::RecordType recTy,
                                   llvm::DenseSet<fir::GlobalOp> &candidates) {
   if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
           fir::NameUniquer::getTypeDescriptorName(recTy.getName()))) {
-    if (!candidates.contains(globalOp)) {
-      globalOp.walk([&](fir::AddrOfOp op) {
-        processAddrOfOp(op, symbolTable, candidates,
-                        /*recurseInGlobal=*/true);
-      });
-      candidates.insert(globalOp);
-    }
+    // Insert before walking so cyclic addr_of chains terminate.
+    if (!candidates.insert(globalOp).second)
+      return;
+    globalOp.walk([&](fir::AddrOfOp op) {
+      processAddrOfOp(op, symbolTable, candidates,
+                      /*recurseInGlobal=*/true);
+    });
   }
 }
 

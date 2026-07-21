@@ -188,6 +188,15 @@ TEST(LlvmLibcStringTest, ResizeCapacityAndNullTermination) {
     ASSERT_EQ(a[i], '\0');
 }
 
+TEST(LlvmLibcStringTest, ResizeWithCapacityPlus1) {
+  string a;
+  a.resize(32);
+
+  size_t previous_capacity = a.capacity();
+  a.resize(previous_capacity);
+  ASSERT_GT(a.capacity(), previous_capacity);
+}
+
 TEST(LlvmLibcStringTest, ConcatWithCString) {
   ASSERT_STREQ((string("a") + string("b")).c_str(), "ab");
   ASSERT_STREQ((string("a") + "b").c_str(), "ab");

@@ -7,8 +7,8 @@
 // RUN: not llvm-mc -triple amdgcn-amd-amdpal -mcpu=gfx803 %s -filetype=null 2>&1 | FileCheck --check-prefix=OSABI-PAL-ERR %s
 
 // OSABI-PAL: .amd_amdgpu_isa "amdgcn-amd-amdpal-unknown-gfx802"
-// OSABI-UNK-ERR: error: .amd_amdgpu_isa directive's target id amdgcn-amd-amdpal-unknown-gfx802 does not match the specified target id amdgcn-amd-unknown-unknown-gfx802
-// OSABI-HSA-ERR: error: .amdgcn_target directive's target id amdgcn-amd-amdpal-unknown-gfx802 does not match the specified target id amdgcn-amd-amdhsa-unknown-gfx802
-// OSABI-PAL-ERR: error: .amd_amdgpu_isa directive's target id amdgcn-amd-amdpal-unknown-gfx802 does not match the specified target id amdgcn-amd-amdpal-unknown-gfx803
+// OSABI-UNK-ERR: error: .amd_amdgpu_isa amdgcn-amd-amdpal-unknown-gfx802 is incompatible with amdgcn-amd-unknown-unknown-gfx802
+// OSABI-HSA-ERR: error: .amdgcn_target amdgcn-amd-amdpal-unknown-gfx802 is incompatible with amdgcn-amd-amdhsa-unknown-gfx802
+// OSABI-PAL-ERR: error: .amd_amdgpu_isa directive processor gfx802 does not match the specified processor gfx803
 .amd_amdgpu_isa "amdgcn-amd-amdpal--gfx802"
 .amdgcn_target "amdgcn-amd-amdpal--gfx802"
