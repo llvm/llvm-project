@@ -727,6 +727,29 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
         worklist.append(user->result_begin(), user->result_end());
     }
   }
+
+  // Descriptor construction may obscure the forward use chain. Fall back to
+  // tracing each accumulate operand back to this private local.
+  acc::PrivateLocalOp privateLocal = v.getDefiningOp<acc::PrivateLocalOp>();
+  if (!privateLocal)
+    return nullptr;
+  acc::ComputeRegionOp computeRegion =
+      privateLocal->getParentOfType<acc::ComputeRegionOp>();
+  if (!computeRegion)
+    return nullptr;
+  acc::ReductionAccumulateArrayOp result;
+  computeRegion.walk([&](acc::ReductionAccumulateArrayOp accArr) {
+    if (getPrivateLocalForMemref(accArr.getMemref()) != privateLocal)
+      return WalkResult::advance();
+    bool hasThread = llvm::any_of(accArr.getParDims().getArray(),
+                                  [](auto pd) { return pd.isAnyThread(); });
+    if (!hasThread || !reductionHasBlockContext(accArr))
+      return WalkResult::advance();
+    result = accArr;
+    return WalkResult::interrupt();
+  });
+  if (result)
+    return result;
   return nullptr;
 }
 

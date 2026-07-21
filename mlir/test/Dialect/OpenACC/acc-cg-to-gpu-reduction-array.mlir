@@ -230,3 +230,38 @@ func.func @dynamic_rank_two_array_reduction(%m: index, %n: index) {
   }
   return
 }
+
+// CHECK-LABEL: func.func @descriptor_indirect_dynamic_thread_y
+// CHECK: gpu.launch
+// CHECK-NOT: acc.unwrap_private
+// CHECK: %[[INDIRECT_ALLOCA:.*]] = memref.alloca(%{{.*}}, %{{.*}}) : memref<?x?xi32>
+// CHECK: scf.for %[[INDIRECT_I:.*]] =
+// CHECK:   scf.for %[[INDIRECT_J:.*]] =
+// CHECK:     memref.store %{{.*}}, %[[INDIRECT_ALLOCA]][%[[INDIRECT_I]], %[[INDIRECT_J]]] : memref<?x?xi32>
+// CHECK: gpu.all_reduce add
+func.func @descriptor_indirect_dynamic_thread_y(%m: index, %n: index) {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %extent = arith.muli %m, %n : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %ty = acc.par_width %c128 {par_dim = #acc.par_dim<thread_y>}
+  %private = acc.privatize(%m, %n) [#acc<par_dims[block_x, thread_y]>]
+      : (index, index) -> !acc.private_type<memref<?x?xi32>>
+  acc.kernel_environment {
+    acc.compute_region launch(%kbx = %bx, %kty = %ty)
+        ins(%arg = %private, %ext = %extent)
+        : (!acc.private_type<memref<?x?xi32>>, index) {
+      %local = acc.private_local %arg
+          {acc.par_dims = #acc<par_dims[block_x, thread_y]>}
+          : (!acc.private_type<memref<?x?xi32>>) -> memref<?x?xi32>
+      %descriptor_value = builtin.unrealized_conversion_cast %local
+          : memref<?x?xi32> to memref<?x?xi32>
+      %bounds = acc.bounds extent(%ext : index)
+      acc.reduction_accumulate_array %descriptor_value bounds(%bounds) <add>
+          : memref<?x?xi32>
+          {par_dims = #acc<par_dims[block_x, thread_y]>}
+      acc.yield
+    } {origin = "acc.parallel"}
+  }
+  return
+}
