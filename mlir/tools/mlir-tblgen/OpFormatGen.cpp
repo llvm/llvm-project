@@ -1313,6 +1313,38 @@ if (!dict) {
 (void)ctx;
 )decl";
 
+  // `operandSegmentSizes`/`resultSegmentSizes` are trait-injected properties
+  // not enumerated by `op.getProperties()`, so they need to be special-cased
+  // here, mirroring the handling in `setPropertiesFromAttr` in
+  // OpDefinitionsGen.cpp.
+  //
+  // {0}: segment sizes property name
+  // {1}: isRequired
+  const char *segmentSizesFromAttrFmt = R"decl(
+auto {0}AttrName = ::mlir::StringAttr::get(ctx, "{0}");
+usedKeys.insert({0}AttrName);
+auto attr = dict.get({0}AttrName);
+if (!attr && {1}) {{
+  emitError() << "expected key entry for {0} in DictionaryAttr to set "
+             "Properties.";
+  return ::mlir::failure();
+}
+if (attr && ::mlir::failed(::mlir::convertFromAttribute(prop.{0}, attr, [&]() {{
+      return emitError() << "for `{0}`: ";
+    })))
+  return ::mlir::failure();
+)decl";
+  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
+    body << formatv(segmentSizesFromAttrFmt, "operandSegmentSizes",
+                    fmt.allOperands);
+  }
+  if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
+    body << formatv(segmentSizesFromAttrFmt, "resultSegmentSizes",
+                    fmt.allResultTypes);
+  }
+
   // {0}: fromAttribute call
   // {1}: property name
   // {2}: isRequired
