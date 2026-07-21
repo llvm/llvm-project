@@ -139,14 +139,16 @@ struct MCAsmMacro {
   std::vector<std::string> Locals;
   bool IsFunction = false;
   unsigned Count = 0;
+  SMLoc Loc;
 
 public:
-  MCAsmMacro(StringRef N, StringRef B, MCAsmMacroParameters P)
-      : Name(N), Body(B), Parameters(std::move(P)) {}
   MCAsmMacro(StringRef N, StringRef B, MCAsmMacroParameters P,
-             std::vector<std::string> L, bool F)
+             SMLoc Loc = SMLoc())
+      : Name(N), Body(B), Parameters(std::move(P)), Loc(Loc) {}
+  MCAsmMacro(StringRef N, StringRef B, MCAsmMacroParameters P,
+             std::vector<std::string> L, bool F, SMLoc Loc = SMLoc())
       : Name(N), Body(B), Parameters(std::move(P)), Locals(std::move(L)),
-        IsFunction(F) {}
+        IsFunction(F), Loc(Loc) {}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { dump(dbgs()); }

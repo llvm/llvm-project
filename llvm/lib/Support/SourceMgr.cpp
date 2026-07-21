@@ -201,7 +201,7 @@ SourceMgr::SrcBuffer::getPointerForLineNumber(unsigned LineNo) const {
 
 SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
     : Buffer(std::move(Other.Buffer)), OffsetCache(Other.OffsetCache),
-      IncludeLoc(Other.IncludeLoc) {
+      IncludeLoc(Other.IncludeLoc), MacroDefLoc(Other.MacroDefLoc) {
   Other.OffsetCache = nullptr;
 }
 
@@ -296,6 +296,29 @@ void SourceMgr::PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const {
 
   OS << "Included from " << getBufferInfo(CurBuf).Buffer->getBufferIdentifier()
      << ":" << FindLineNumber(IncludeLoc, CurBuf) << ":\n";
+}
+
+void SourceMgr::printIncludeStackForDiagnostic(SMLoc Loc,
+                                               raw_ostream &OS) const {
+  if (!Loc.isValid())
+    return;
+  unsigned DiagCurBuffer = FindBufferContainingLoc(Loc);
+  if (DiagCurBuffer && DiagCurBuffer != getMainFileID()) {
+    SMLoc ParentIncludeLoc = getParentIncludeLoc(DiagCurBuffer);
+    // Ignore macro instantiation buffers to avoid redundant include stacks.
+    if (!getMacroParentBuf(DiagCurBuffer))
+      PrintIncludeStack(ParentIncludeLoc, OS);
+  }
+}
+
+SMLoc SourceMgr::getMacroInstantiationLoc(SMLoc Loc) const {
+  while (true) {
+    unsigned BufID = FindBufferContainingLoc(Loc);
+    if (!BufID || !getMacroDefLoc(BufID).isValid())
+      break;
+    Loc = getMacroDefLoc(BufID);
+  }
+  return Loc;
 }
 
 SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
