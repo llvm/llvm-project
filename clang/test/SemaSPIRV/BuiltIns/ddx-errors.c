@@ -15,7 +15,7 @@ float test_too_many_arg(float p0) {
 
 float test_int_scalar_inputs(int p0) {
   return __builtin_spirv_ddx(p0);
-  //  expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int')}}
+  //  expected-error@-1 {{1st argument must be a scalar, vector, or matrix of floating-point types (was 'int')}}
 }
 
 float test_mismatched_return(float2 p0) {

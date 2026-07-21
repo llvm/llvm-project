@@ -169,8 +169,6 @@ protected:
 
     lldb_private::ArchSpec GetArchitecture() const;
 
-    const Segment *FindSegment(lldb_private::ConstString name) const;
-
     void PutToLog(lldb_private::Log *log) const;
 
     typedef std::vector<ImageInfo> collection;

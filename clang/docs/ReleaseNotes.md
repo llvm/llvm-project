@@ -46,6 +46,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### C/C++ Language Potentially Breaking Changes
 
+- `-Wunicode-whitespace` now defaults to an error.
+The previous behavior can be restored with `-Wno-error=unicode-whitespace`.
+Clang will stop accepting non-ascii whitespaces as token separators
+in a future version of Clang.
+
 ### C++ Specific Potentially Breaking Changes
 
 ### ABI Changes in This Version
@@ -60,6 +65,8 @@ features cannot lower the translation-unit ABI level;
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
+
+- Templight support has been removed.
 
 ### Clang Python Bindings Potentially Breaking Changes
 
@@ -120,6 +127,9 @@ features cannot lower the translation-unit ABI level;
 
 ### New Compiler Flags
 
+- New option `-fdefined-pointer-subtraction` added to preserve stable semantics
+  when subtracting pointers to unrelated objects.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -128,7 +138,11 @@ features cannot lower the translation-unit ABI level;
 
 ### Attribute Changes in Clang
 
+- Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
+
 ### Improvements to Clang's diagnostics
+
+- More consistent rendering of Unicode characters in diagnostic messages.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
@@ -295,6 +309,9 @@ features cannot lower the translation-unit ABI level;
   against or converted to a null pointer, the same as a bare function name.
   (#GH46362)
 
+- Clang now attempts to print enumerator names rather than C-style cast expressions
+  in more diagnostics.
+
 
 ### Improvements to Clang's time-trace
 
@@ -307,6 +324,9 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to Compiler Builtins
 
+- Fixed a crash when classifying a call to a builtin with dependent arguments,
+  such as when the call is used as an `auto` non-type template argument.
+
 #### Bug Fixes to Attribute Support
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
@@ -318,10 +338,15 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
--Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
+- Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
+
+- Fixed a crash when a lambda parameter pack was given a default argument that
+  is a pack expansion referencing an enclosing function's parameter pack (e.g.
+  `[](Types... = args...) {}`). Clang now diagnoses the illegal default
+  argument instead of asserting. (#GH210714)
 
 #### Bug Fixes to AST Handling
 
@@ -431,6 +456,9 @@ features cannot lower the translation-unit ABI level;
 ### Python Binding Changes
 
 ### OpenMP Support
+
+- Added parsing and semantic support for `dims` modifier in `num_teams` and
+  `thread_limit` clauses for OpenMP 6.1 or later.
 
 ### SYCL Support
 

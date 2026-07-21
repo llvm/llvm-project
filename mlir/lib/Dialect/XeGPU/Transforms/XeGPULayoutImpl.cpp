@@ -234,6 +234,50 @@ static void propagateRegionResultsToYieldOperands(
   }
 }
 
+/// Assign a layout to a region op's results (e.g. scf.for) using the layout of
+/// the terminator operands that the region forwards to them. For each operand a
+/// terminator (e.g. scf.yield) forwards to a successor input, if that input is
+/// a region op result, the operand's layout is written onto the result.
+/// clang-format off
+/// Example: scf.for ... iter_args(...) -> (out types) {
+///   ...
+///   scf.yield ... : (yield types)
+/// }
+/// clang-format on
+/// Having a layout on the region op result lets a later step attach a
+/// convert_layout as a use to resolve the region op's no-use case.
+/// Block-argument successors are left untouched.
+LogicalResult xegpu::propagateYieldOperandsToRegionResults(
+    mlir::RegionBranchTerminatorOpInterface terminator,
+    xegpu::GetLayoutFnTy getLayoutOfValue) {
+  // Only process if the terminator is inside a region branch op.
+  auto branchOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!branchOp)
+    return success();
+
+  RegionBranchSuccessorMapping mapping;
+  branchOp.getSuccessorOperandInputMapping(mapping,
+                                           RegionBranchPoint(terminator));
+  for (const auto &[successorOperand, successorInputs] : mapping) {
+    for (Value successorInput : successorInputs) {
+      Type inputType = successorInput.getType();
+      // We only need to operate on vector types.
+      if (!isa<VectorType>(inputType))
+        continue;
+      xegpu::DistributeLayoutAttr successorOperandLayout =
+          getLayoutOfValue(successorOperand->get());
+
+      // The forwarded operand must carry a layout to propagate.
+      if (!successorOperandLayout)
+        return failure();
+      // Assign the yield operand's layout to the region op result it feeds.
+      if (auto result = dyn_cast<OpResult>(successorInput))
+        xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
+    }
+  }
+  return success();
+}
+
 // Propagate layout from region arguments to region op's init operands. This
 // sets the temporary layout for region arguments and init operands.
 LogicalResult
@@ -832,6 +876,129 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
     }
     return srcLayout;
   }
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// Forward layout inference (source layout -> result layout)
+//===----------------------------------------------------------------------===//
+
+/// Infers the result layout attribute for a transpose operation given the
+/// source layout attribute and permutation.
+///
+/// vector.transpose semantics is `result[i] = source[permutation[i]]`, so
+/// `result_layout[i] = source_layout[permutation[i]]`, which is exactly
+/// `srcLayout.transposeDims(permutation)`. This is the inverse of
+/// inferTransposeSourceLayout (which applies the inverse permutation).
+xegpu::DistributeLayoutAttr
+xegpu::inferTransposeResultLayout(xegpu::DistributeLayoutAttr srcLayout,
+                                  ArrayRef<int64_t> permutation) {
+  return srcLayout.transposeDims(permutation);
+}
+
+/// Infers the result layout attribute for a shape cast operation given the
+/// source layout attribute, source shape, and result shape. This is the
+/// inverse of inferShapeCastSourceLayout: a dim-split (src -> res) is undone by
+/// collapsing the split groups, and a dim-collapse (src -> res) is undone by
+/// expanding the collapsed groups. The unit-dim-expansion case is not inverted
+/// here because recovering which result dims are the expanded unit dims would
+/// require the SliceAttr the backward direction produces; such patterns return
+/// nullptr (leaving the result un-laid-out).
+xegpu::DistributeLayoutAttr
+xegpu::inferShapeCastResultLayout(xegpu::DistributeLayoutAttr srcLayout,
+                                  ArrayRef<int64_t> srcShape,
+                                  ArrayRef<int64_t> resShape) {
+  // Case: source dims were split into result dims (forward of use case 2 in
+  // inferShapeCastSourceLayout). Undo by expanding each source dim into its
+  // group of result dims.
+  SmallVector<SmallVector<int64_t>> splitDimGroups;
+  if (xegpu::matchSplitDimExpansion(srcShape, resShape, splitDimGroups)) {
+    auto resLayout = srcLayout;
+    // Process source dims from innermost to outermost so that expanding a dim
+    // does not shift the indices of dims not yet processed.
+    for (int64_t srcIdx = static_cast<int64_t>(splitDimGroups.size()) - 1;
+         srcIdx >= 0; --srcIdx) {
+      ArrayRef<int64_t> resDims = splitDimGroups[srcIdx];
+      if (resDims.size() <= 1)
+        continue;
+      SmallVector<int64_t> targetShape;
+      targetShape.reserve(resDims.size());
+      for (int64_t d : resDims)
+        targetShape.push_back(resShape[d]);
+      resLayout = resLayout.expandDim(srcIdx, targetShape);
+    }
+    return resLayout;
+  }
+
+  // Case: source dims were collapsed into result dims (forward of use case 3).
+  // Undo by collapsing each group of source dims into its single result dim.
+  SmallVector<SmallVector<int64_t>> collapseDims;
+  if (xegpu::matchDimCollapse(srcShape, resShape, collapseDims)) {
+    auto resLayout = srcLayout;
+    // Process result dims from innermost to outermost so that collapsing a
+    // group does not shift the indices of groups not yet processed.
+    for (int64_t dstIdx = static_cast<int64_t>(collapseDims.size()) - 1;
+         dstIdx >= 0; --dstIdx) {
+      ArrayRef<int64_t> srcDims = collapseDims[dstIdx];
+      // A result dim with no backing source dims is a trailing/leading unit
+      // dim; its forward inference is ambiguous, so bail out.
+      if (srcDims.empty())
+        return nullptr;
+      if (srcDims.size() == 1)
+        continue;
+      resLayout = resLayout.collapseDims(llvm::to_vector(srcDims));
+    }
+    return resLayout;
+  }
+
+  return nullptr;
+}
+
+/// Infers the result layout attribute for a non-anchor operation from the
+/// layouts of its source operands. Forward counterpart of
+/// inferSourceLayoutFromResultForNonAnchorOp.
+xegpu::DistributeLayoutAttr xegpu::inferResultLayoutFromSourceForNonAnchorOp(
+    Operation *op, ArrayRef<xegpu::DistributeLayoutAttr> operandLayouts) {
+  if (op->getNumResults() != 1)
+    return nullptr;
+
+  // For vector::TransposeOp, infer the result layout from the source layout.
+  if (auto transpose = dyn_cast<vector::TransposeOp>(op)) {
+    if (!operandLayouts[0])
+      return nullptr;
+    return xegpu::inferTransposeResultLayout(operandLayouts[0],
+                                             transpose.getPermutation());
+  }
+
+  // For vector::ShapeCastOp, infer the result layout from the source layout.
+  if (auto shapeCast = dyn_cast<vector::ShapeCastOp>(op)) {
+    if (!operandLayouts[0])
+      return nullptr;
+    return xegpu::inferShapeCastResultLayout(
+        operandLayouts[0], shapeCast.getSourceVectorType().getShape(),
+        shapeCast.getResultVectorType().getShape());
+  }
+
+  // For elementwise operations, all operands and the result share the same
+  // layout. Use the first operand that carries a layout.
+  if (OpTrait::hasElementwiseMappableTraits(op)) {
+    for (xegpu::DistributeLayoutAttr layout : operandLayouts)
+      if (layout)
+        return layout;
+    return nullptr;
+  }
+
+  // TODO: add forward inference rules for the remaining ops; their result is
+  // left un-laid-out until then.
+  //  - vector::BroadcastOp: the forward direction is under-determined. The
+  //    backward rule (inferBroadcastSourceLayout) either sets broadcast dims to
+  //    unit data (losing the original data on those dims) or wraps the result
+  //    in a SliceAttr; neither is generally invertible from the source layout
+  //    alone, so a forward rule must decide how to distribute the new/stretched
+  //    dims.
+  //  - vector::BitCastOp, vector::MultiDimReductionOp / vector::ReductionOp,
+  //    vector::InterleaveOp / vector::DeinterleaveOp, and the insert / extract
+  //    / strided-slice family.
   return nullptr;
 }
 
@@ -1686,9 +1853,6 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   SmallVector<int64_t> consumerLaneData =
       consumerLayout.getEffectiveLaneDataAsInt();
 
-  // Pick lane_layout / lane_data: prefer consumer's, fall back to the
-  // scatter-store default (subgroupSize lanes on innermost dim, per-lane
-  // vector capped by maxChunkSize).
   SmallVector<int64_t> laneLayout;
   SmallVector<int64_t> laneData;
   assert(!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
@@ -1697,16 +1861,10 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   laneData.assign(consumerLaneData.begin(), consumerLaneData.end());
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
-    // Take consumer's inst_data as-is. If the consumer doesn't have one,
-    // fall back to lane_layout * lane_data per dim.
     SmallVector<int64_t> instData;
-    if (!consumerInstData.empty()) {
-      instData.assign(consumerInstData.begin(), consumerInstData.end());
-    } else {
-      instData.resize(resShape.size());
-      for (size_t i = 0; i < resShape.size(); ++i)
-        instData[i] = laneLayout[i] * laneData[i];
-    }
+    instData.resize(resShape.size());
+    for (size_t i = 0; i < resShape.size(); ++i)
+      instData[i] = laneLayout[i] * laneData[i];
     return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
   }
   if (layoutKind == xegpu::LayoutKind::Lane)

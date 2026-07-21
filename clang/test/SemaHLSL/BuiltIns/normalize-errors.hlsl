@@ -15,17 +15,17 @@ void test_too_many_arg(float2 p0)
 bool builtin_bool_to_float_type_promotion(bool p1)
 {
   return __builtin_hlsl_normalize(p1);
-  // expected-error@-1 {{1st argument must be a scalar or vector of 16 or 32 bit floating-point types (was 'bool')}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of 16 or 32 bit floating-point types (was 'bool')}}
 }
 
 bool builtin_normalize_int_to_float_promotion(int p1)
 {
   return __builtin_hlsl_normalize(p1);
-  // expected-error@-1 {{1st argument must be a scalar or vector of 16 or 32 bit floating-point types (was 'int')}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of 16 or 32 bit floating-point types (was 'int')}}
 }
 
 bool2 builtin_normalize_int2_to_float2_promotion(int2 p1)
 {
   return __builtin_hlsl_normalize(p1);
-  // expected-error@-1 {{1st argument must be a scalar or vector of 16 or 32 bit floating-point types (was 'int2' (aka 'vector<int, 2>'))}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of 16 or 32 bit floating-point types (was 'int2' (aka 'vector<int, 2>'))}}
 }
