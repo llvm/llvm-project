@@ -1173,6 +1173,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // SimplifyCFG.
     EarlyFPM.addPass(LowerExpectIntrinsicPass());
     EarlyFPM.addPass(SimplifyCFGPass());
+    // Canonicalize aggregate load/store pairs before SROA can split them into
+    // individual scalar accesses.
+    EarlyFPM.addPass(MemCpyOptPass());
     EarlyFPM.addPass(SROAPass(SROAOptions::ModifyCFG));
     EarlyFPM.addPass(EarlyCSEPass());
     if (Level == OptimizationLevel::O3)
