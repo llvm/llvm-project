@@ -2108,6 +2108,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          (Subtarget->hasSME2() && Subtarget->isStreaming()))) {
 
       for (unsigned Opcode : {ISD::LOAD, ISD::STORE}) {
+        // FIXME: Remove this guard on SME2 once new register classes and
+        // pseudos for multi-vector stores have been added.
         if (Opcode == ISD::STORE && Subtarget->hasSME2() &&
             Subtarget->isStreaming() && !EnableSME2MultiVectorStoreLowering)
           continue;
