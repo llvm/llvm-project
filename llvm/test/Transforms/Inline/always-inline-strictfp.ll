@@ -2,7 +2,7 @@
 
 declare void @foo() strictfp
 
-define internal void @callee() alwaysinline strictfp {
+define void @callee() alwaysinline strictfp {
 entry:
   call void @foo()
   ret void
