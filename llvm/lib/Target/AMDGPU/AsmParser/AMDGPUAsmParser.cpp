@@ -1419,9 +1419,8 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   /// deferred to onEndOfFile(). We record an order-independent timeline of
   /// parsed labels and emitted instructions, plus the set of symbols
   /// named by .amdhsa_kernel directives, and match them up at end of file.
-  SmallVector<MCInst> InstStream;
-  SmallVector<std::tuple<const MCSymbol *, SMLoc, unsigned>>
-      InstStreamSymbols;
+  SmallVector<const MCInst *> InstStream;
+  SmallVector<std::tuple<const MCSymbol *, SMLoc, unsigned>> InstStreamSymbols;
   SmallPtrSet<const MCSymbol *, 8> AMDHSAKernelSymbols;
 
   /// Verify recorded kernel prologues.
@@ -5953,7 +5952,7 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     emitTargetDirective();
     Out.emitInstruction(Inst, getSTI());
     // Record for kernel prologue checking.
-    InstStream.push_back(Inst);
+    InstStream.push_back(&Inst);
     return false;
   }
 
@@ -7108,25 +7107,26 @@ void AMDGPUAsmParser::checkKernelPrologues() {
     for (auto [Sym, Loc, Offset] : InstStreamSymbols) {
       if (!AMDHSAKernelSymbols.contains(Sym))
         continue;
-      ArrayRef<MCInst> Prologue = ArrayRef(InstStream).drop_front(Offset);
+      ArrayRef<const MCInst *> Prologue =
+          ArrayRef(InstStream).drop_front(Offset);
       bool Valid = false;
       if (Prologue.size() >= 2) {
-        const MCInst &Prefetch = Prologue[0];
-        const MCInst &Nop = Prologue[1];
+        const MCInst *Prefetch = Prologue[0];
+        const MCInst *Nop = Prologue[1];
         // The required prologue sequence is:
         //   global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
         //   v_nop
-        if (Prefetch.getOpcode() == GLOBAL_PREFETCH_B8_SADDR_gfx1250 &&
-            Prefetch.getNumOperands() >= 4 &&
-            Prefetch.getOperand(0).isReg() &&
-            Prefetch.getOperand(0).getReg() == AMDGPU::SGPR0_SGPR1 &&
-            Prefetch.getOperand(1).isReg() &&
-            Prefetch.getOperand(1).getReg() == AMDGPU::VGPR0 &&
-            Prefetch.getOperand(2).isImm() &&
-            Prefetch.getOperand(2).getImm() == 0 &&
-            Prefetch.getOperand(3).isImm() &&
-            Prefetch.getOperand(3).getImm() == AMDGPU::CPol::SCOPE_SE &&
-            Nop.getOpcode() == V_NOP_e32_gfx12) {
+        if (Prefetch->getOpcode() == GLOBAL_PREFETCH_B8_SADDR_gfx1250 &&
+            Prefetch->getNumOperands() >= 4 &&
+            Prefetch->getOperand(0).isReg() &&
+            Prefetch->getOperand(0).getReg() == AMDGPU::SGPR0_SGPR1 &&
+            Prefetch->getOperand(1).isReg() &&
+            Prefetch->getOperand(1).getReg() == AMDGPU::VGPR0 &&
+            Prefetch->getOperand(2).isImm() &&
+            Prefetch->getOperand(2).getImm() == 0 &&
+            Prefetch->getOperand(3).isImm() &&
+            Prefetch->getOperand(3).getImm() == AMDGPU::CPol::SCOPE_SE &&
+            Nop->getOpcode() == V_NOP_e32_gfx12) {
           Valid = true;
         }
       }
