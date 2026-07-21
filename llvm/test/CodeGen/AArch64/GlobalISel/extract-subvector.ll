@@ -356,6 +356,18 @@ define <2 x i10> @extract_v2i10_v4i10_high(<4 x i10> %a) {
   ret <2 x i10> %vector
 }
 
+define <2 x i32> @extract_v2i32_v10i32_2(<10 x i32> %a) {
+; CHECK-LABEL: extract_v2i32_v10i32_2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w2
+; CHECK-NEXT:    mov v0.s[1], w3
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <2 x i32> @llvm.vector.extract.subvector.v2i32.v10i32(<10 x i32> %a, i64 2)
+  ret <2 x i32> %vector
+}
+
 define <1 x i64> @extract_v1i64_v2i64_1(<2 x i64> %a) {
 ; CHECK-LABEL: extract_v1i64_v2i64_1:
 ; CHECK:       // %bb.0: // %entry
