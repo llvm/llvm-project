@@ -1,4 +1,4 @@
-//===- EmitCRegAllocEvictModel.cpp - EmitC regalloc model wrapper ---------===//
+//===- MLIRRegAllocEvictModel.cpp - MLIR regalloc model wrapper ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// This file implements the wrapper around the EmitC-translated MLGO
+/// This file implements the wrapper around the MLIR-translated MLGO
 /// regalloc eviction model.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/EmitCRegAllocEvictModel.h"
+#include "llvm/CodeGen/MLIRRegAllocEvictModel.h"
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -20,22 +20,25 @@
 #include <stdint.h>
 #include <type_traits>
 
-namespace llvm::emitc_regalloc_evict_model {
+namespace llvm::mlir_regalloc_evict_model {
+// Mock models generated for tests use `main` as entry point, while
+// pretrained models lowered use `action`. Rename
+// locally so the wrapper can always dispatch through one symbol without
+// rewriting the generated `.inc` file.
 #define main action
-#include "llvm/CodeGen/EmitCRegAllocEvictModel.inc"
+#include "llvm/CodeGen/MLIRRegAllocEvictModel.inc"
 #undef main
-} // namespace llvm::emitc_regalloc_evict_model
+} // namespace llvm::mlir_regalloc_evict_model
 
 using namespace llvm;
 
 namespace {
 template <typename T> inline constexpr bool AlwaysFalse = false;
-constexpr std::size_t EmitCRegAllocInterferenceCount = 33;
-using F32TensorPtr = float (*)[EmitCRegAllocInterferenceCount];
-using I64TensorPtr = int64_t (*)[EmitCRegAllocInterferenceCount];
+constexpr std::size_t MLIRRegAllocInterferenceCount = 33;
+using F32TensorPtr = float (*)[MLIRRegAllocInterferenceCount];
+using I64TensorPtr = int64_t (*)[MLIRRegAllocInterferenceCount];
 using F32ScalarPtr = float *;
 using I32ScalarPtr = int32_t *;
-using I64ScalarPtr = int64_t *;
 
 using RegAllocProductionActionTy = int64_t (*)(
     F32TensorPtr, F32TensorPtr, I64TensorPtr, F32TensorPtr, F32TensorPtr,
@@ -43,7 +46,8 @@ using RegAllocProductionActionTy = int64_t (*)(
     I64TensorPtr, I64TensorPtr, F32TensorPtr, F32TensorPtr, I32ScalarPtr,
     F32TensorPtr, I64TensorPtr, F32TensorPtr, I64TensorPtr, F32TensorPtr,
     F32ScalarPtr, F32TensorPtr, I64TensorPtr, F32ScalarPtr);
-using RegAllocMaskOnlyActionTy = int64_t (*)(I64ScalarPtr);
+using RegAllocMaskOnlyActionTy = int64_t (*)(I64TensorPtr);
+using RegAllocFlatMaskActionTy = int64_t (*)(int64_t *);
 
 struct RegAllocRunInputs {
   F32TensorPtr liverangeSize;
@@ -70,30 +74,33 @@ struct RegAllocRunInputs {
   F32TensorPtr weighedIndvarsByMax;
   I64TensorPtr minStage;
   F32ScalarPtr dummyReward;
-  I64ScalarPtr maskFlat;
 };
 
+// The MLIR flow currently supports both the production regalloc models API
+// and the simplified mock-model API used by tests. Keep that API
+// variance local to the wrapper so the rest of LLVM only sees one
+// ReleaseModeModelRunner-compatible object.
 template <typename ActionTy>
-int64_t runEmitCRegAllocAction(const RegAllocRunInputs &I) {
+int64_t runMLIRRegAllocAction(const RegAllocRunInputs &I) {
   if constexpr (std::is_same_v<ActionTy, RegAllocProductionActionTy>) {
-    return static_cast<ActionTy>(emitc_regalloc_evict_model::action)(
+    return static_cast<ActionTy>(mlir_regalloc_evict_model::action)(
         I.liverangeSize, I.hintWeightsByMax, I.isFree, I.weighedReadsByMax,
         I.weighedReadWritesByMax, I.nrBrokenHints, I.progress,
         I.hottestBBFreqByMax, I.useDefDensity, I.startBBFreqByMax, I.maxStage,
         I.isHint, I.nrRematerializable, I.weighedWritesByMax, I.dummyStepType,
         I.nrUrgent, I.mask, I.nrDefsAndUses, I.isLocal, I.endBBFreqByMax,
         I.dummyDiscount, I.weighedIndvarsByMax, I.minStage, I.dummyReward);
-  } else if constexpr (std::is_same_v<ActionTy, RegAllocMaskOnlyActionTy>) {
-    return static_cast<ActionTy>(emitc_regalloc_evict_model::action)(
-        I.maskFlat);
+  } else if constexpr (std::is_same_v<ActionTy, RegAllocFlatMaskActionTy>) {
+    return static_cast<ActionTy>(mlir_regalloc_evict_model::action)(
+        &(*I.mask)[0]);
   } else {
     static_assert(AlwaysFalse<ActionTy>,
-                  "Unsupported EmitC regalloc eviction model signature");
+                  "Unsupported MLIR regalloc eviction model signature");
   }
 }
 } // namespace
 
-int EmitCRegAllocEvictModel::LookupArgIndex(const std::string &Name) {
+int MLIRRegAllocEvictModel::LookupArgIndex(const std::string &Name) {
   return StringSwitch<int>(Name)
       .Case("feed_mask", Mask)
       .Case("feed_is_free", IsFree)
@@ -119,11 +126,11 @@ int EmitCRegAllocEvictModel::LookupArgIndex(const std::string &Name) {
       .Default(-1);
 }
 
-int EmitCRegAllocEvictModel::LookupResultIndex(const std::string &Name) {
+int MLIRRegAllocEvictModel::LookupResultIndex(const std::string &Name) {
   return Name == "fetch_index_to_evict" ? 0 : -1;
 }
 
-void *EmitCRegAllocEvictModel::arg_data(int Index) {
+void *MLIRRegAllocEvictModel::arg_data(int Index) {
   switch (Index) {
   case Mask:
     return MaskInput;
@@ -168,17 +175,19 @@ void *EmitCRegAllocEvictModel::arg_data(int Index) {
   case Progress:
     return ProgressInput;
   }
-  llvm_unreachable("invalid EmitC regalloc eviction input index");
+  llvm_unreachable("invalid MLIR regalloc eviction input index");
 }
 
-void *EmitCRegAllocEvictModel::result_data(int Index) {
+void *MLIRRegAllocEvictModel::result_data(int Index) {
   if (Index != 0)
-    llvm_unreachable("invalid EmitC regalloc eviction result index");
+    llvm_unreachable("invalid MLIR regalloc eviction result index");
   return Result;
 }
 
-void EmitCRegAllocEvictModel::Run() {
-  using ActionTy = decltype(&emitc_regalloc_evict_model::action);
+void MLIRRegAllocEvictModel::Run() {
+  using ActionTy = decltype(&mlir_regalloc_evict_model::action);
+  // Gather the stored named tensors once, then dispatch through the adapter
+  // selected from the generated `action` signature.
   RegAllocRunInputs I{};
   I.liverangeSize = LiverangeSizeInput;
   I.hintWeightsByMax = HintWeightsByMaxInput;
@@ -204,6 +213,5 @@ void EmitCRegAllocEvictModel::Run() {
   I.weighedIndvarsByMax = WeighedIndvarsByMaxInput;
   I.minStage = MinStageInput;
   I.dummyReward = DummyReward;
-  I.maskFlat = MaskInput[0];
-  Result[0] = runEmitCRegAllocAction<ActionTy>(I);
+  Result[0] = runMLIRRegAllocAction<ActionTy>(I);
 }

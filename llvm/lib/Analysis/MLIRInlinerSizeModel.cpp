@@ -1,4 +1,4 @@
-//===- EmitCInlinerSizeModel.cpp - EmitC inliner model wrapper ------------===//
+//===- MLIRInlinerSizeModel.cpp - MLIR inliner model wrapper ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// This file implements the wrapper around the EmitC-translated MLGO inliner
+/// This file implements the wrapper around the MLIR-translated MLGO inliner
 /// model.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/EmitCInlinerSizeModel.h"
+#include "llvm/Analysis/MLIRInlinerSizeModel.h"
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -28,11 +28,15 @@
 #pragma clang diagnostic ignored "-Wmissing-braces"
 #endif
 
-namespace llvm::emitc_inliner_model {
+namespace llvm::mlir_inliner_model {
+// Mock models generated for tests use `main` as entry point, while
+// pretrained models lowered use `action`. Rename
+// locally so the wrapper can always dispatch through one symbol without
+// rewriting the generated `.inc` file.
 #define main action
-#include "llvm/Analysis/EmitCInlinerSizeModel.inc"
+#include "llvm/Analysis/MLIRInlinerSizeModel.inc"
 #undef main
-} // namespace llvm::emitc_inliner_model
+} // namespace llvm::mlir_inliner_model
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
@@ -103,10 +107,14 @@ struct InlinerRunInputs {
   I64Ptr dummyInliningDefault;
 };
 
+// The MLIR flow currently supports both the production inlining models API
+// and the simplified mock-model API used by tests. Keep that API
+// variance local to the wrapper so the rest of LLVM only sees one
+// ReleaseModeModelRunner-compatible object.
 template <typename ActionTy>
-int64_t runEmitCInlinerAction(const InlinerRunInputs &I) {
+int64_t runMLIRInlinerAction(const InlinerRunInputs &I) {
   if constexpr (std::is_same_v<ActionTy, InlinerProductionActionTy>) {
-    return static_cast<ActionTy>(emitc_inliner_model::action)(
+    return static_cast<ActionTy>(mlir_inliner_model::action)(
         I.callsiteCost, I.isMultipleBlocks, I.callerConditionallyExecutedBlocks,
         I.dummyInliningDefault, I.coldCCPenalty,
         I.calleeConditionallyExecutedBlocks, I.calleeUsers,
@@ -121,7 +129,7 @@ int64_t runEmitCInlinerAction(const InlinerRunInputs &I) {
         I.constantOffsetPtrArgs, I.switchPenalty, I.dummyDiscount,
         I.callerUsers, I.dummyReward);
   } else if constexpr (std::is_same_v<ActionTy, InlinerMockActionTy>) {
-    return static_cast<ActionTy>(emitc_inliner_model::action)(
+    return static_cast<ActionTy>(mlir_inliner_model::action)(
         I.callerBasicBlockCount, I.callerConditionallyExecutedBlocks,
         I.callerUsers, I.calleeBasicBlockCount,
         I.calleeConditionallyExecutedBlocks, I.calleeUsers, I.nrCtantParams,
@@ -137,12 +145,12 @@ int64_t runEmitCInlinerAction(const InlinerRunInputs &I) {
         I.dummyDiscount, I.callerUsers, I.dummyReward);
   } else {
     static_assert(AlwaysFalse<ActionTy>,
-                  "Unsupported EmitC inliner model signature");
+                  "Unsupported MLIR inliner model signature");
   }
 }
 } // namespace
 
-int EmitCInlinerSizeModel::LookupArgIndex(const std::string &Name) {
+int MLIRInlinerSizeModel::LookupArgIndex(const std::string &Name) {
   return StringSwitch<int>(Name)
       .Case("feed_dead_blocks", DeadBlocks)
       .Case("feed_case_cluster_penalty", CaseClusterPenalty)
@@ -185,24 +193,26 @@ int EmitCInlinerSizeModel::LookupArgIndex(const std::string &Name) {
       .Default(-1);
 }
 
-int EmitCInlinerSizeModel::LookupResultIndex(const std::string &Name) {
+int MLIRInlinerSizeModel::LookupResultIndex(const std::string &Name) {
   return Name == "fetch_inlining_decision" ? 0 : -1;
 }
 
-void *EmitCInlinerSizeModel::arg_data(int Index) {
+void *MLIRInlinerSizeModel::arg_data(int Index) {
   if (Index < 0 || Index >= NumArgs)
-    llvm_unreachable("invalid EmitC inliner input index");
+    llvm_unreachable("invalid MLIR inliner input index");
   return Inputs[Index].data();
 }
 
-void *EmitCInlinerSizeModel::result_data(int Index) {
+void *MLIRInlinerSizeModel::result_data(int Index) {
   if (Index != 0)
-    llvm_unreachable("invalid EmitC inliner result index");
+    llvm_unreachable("invalid MLIR inliner result index");
   return Result.data();
 }
 
-void EmitCInlinerSizeModel::Run() {
-  using ActionTy = decltype(&emitc_inliner_model::action);
+void MLIRInlinerSizeModel::Run() {
+  using ActionTy = decltype(&mlir_inliner_model::action);
+  // Gather the stored named tensors once, then dispatch through the adapter
+  // selected from the generated `action` signature.
   InlinerRunInputs I{};
   I.deadBlocks = Inputs[DeadBlocks].data();
   I.caseClusterPenalty = Inputs[CaseClusterPenalty].data();
@@ -246,5 +256,5 @@ void EmitCInlinerSizeModel::Run() {
   I.dummyDiscount = DummyDiscount.data();
   I.dummyReward = DummyReward.data();
   I.dummyInliningDefault = DummyInliningDefault.data();
-  Result[0] = runEmitCInlinerAction<ActionTy>(I);
+  Result[0] = runMLIRInlinerAction<ActionTy>(I);
 }

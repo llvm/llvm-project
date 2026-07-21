@@ -1,24 +1,27 @@
-option(LLVM_USE_EMITC_REGALLOC_EVICT_MODEL
-  "Use the fully in-tree regalloc eviction model integration instead of TensorFlow AOT"
-  OFF)
-
 # Marked optional so LLVM's source audit does not require it in default builds.
 list(APPEND LLVM_OPTIONAL_SOURCES
-  EmitCRegAllocEvictModel.cpp)
+  MLIRRegAllocEvictModel.cpp)
 
-# The regalloc model wrapper is only built when the fully in-tree model integration is enabled.
-if (LLVM_USE_EMITC_REGALLOC_EVICT_MODEL)
-  list(APPEND CodeGenInTreeModelSources
-    EmitCRegAllocEvictModel.cpp)
-endif()
+set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
+set(LLVM_RAEVICT_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING
+  "URL to download the LLVM register allocator eviction model")
 
-if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+# Release-mode regalloc eviction can be backed either by TensorFlow AOT
+# artifacts or by the in-tree MLIR flow. In both cases LLVM builds a thin
+# wrapper so MLRegAllocEvictAdvisor continues to talk to one serving interface.
+if (LLVM_BUILD_REGALLOCEVICTMODEL)
   include(TensorFlowCompile)
-  set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
-
-  set(LLVM_RAEVICT_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM register allocator eviction model")
-
-  if (DEFINED LLVM_HAVE_TF_AOT AND NOT LLVM_USE_EMITC_REGALLOC_EVICT_MODEL)
+  if (LLVM_USE_MLIR_FOR_MLGO)
+    list(APPEND CodeGenInTreeModelSources
+      MLIRRegAllocEvictModel.cpp)
+    mlir_find_and_compile(
+      ${LLVM_RAEVICT_MODEL_PATH}
+      ${LLVM_RAEVICT_MODEL_CURRENT_URL}
+      ${LLVM_RAEVICT_MODEL_PATH_DEFAULT}
+      "../Analysis/models/gen-regalloc-eviction-test-model.py"
+      "llvm/CodeGen/MLIRRegAllocEvictModel.inc"
+    )
+  else()
     tf_find_and_compile(
       ${LLVM_RAEVICT_MODEL_PATH}
       ${LLVM_RAEVICT_MODEL_CURRENT_URL}
@@ -30,10 +33,10 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
       llvm::RegAllocEvictModel
     )
   endif()
+endif()
 
-  if (LLVM_HAVE_TFLITE)
-    list(APPEND MLLinkDeps ${tensorflow_c_api} ${tensorflow_fx})
-  endif()
+if (LLVM_HAVE_TFLITE)
+  list(APPEND MLLinkDeps ${tensorflow_c_api} ${tensorflow_fx})
 endif()
 
 add_llvm_component_library(LLVMCodeGen
@@ -310,9 +313,9 @@ add_llvm_component_library(LLVMCodeGen
   TransformUtils
   )
 
-if (LLVM_USE_EMITC_REGALLOC_EVICT_MODEL)
+if (LLVM_BUILD_REGALLOCEVICTMODEL AND LLVM_USE_MLIR_FOR_MLGO)
   target_compile_definitions(LLVMCodeGen
-    PRIVATE LLVM_HAVE_EMITC_REGALLOCEVICTMODEL)
+    PRIVATE LLVM_HAVE_MLIR_REGALLOCEVICTMODEL)
 endif()
 
 add_subdirectory(SelectionDAG)

@@ -1,4 +1,4 @@
-//===- EmitCRegAllocEvictModel.h - EmitC regalloc model wrapper -*- C++ -*-===//
+//===- MLIRRegAllocEvictModel.h - MLIR regalloc model wrapper -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file
-/// Declares the wrapper around the EmitC-translated MLGO regalloc eviction
-/// model.
+/// Wraps the MLIR-translated MLGO regalloc eviction model in the interface
+/// expected by ReleaseModeModelRunner.
+///
+/// The generated `.inc` file only contains lowered model code. This wrapper
+/// owns the named regalloc tensors, keeps their layout stable across generated
+/// model variants, and exposes the same serving API that the rest of LLVM
+/// already uses for release-mode MLGO models.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_EMITCREGALLOCEVICTMODEL_H
-#define LLVM_CODEGEN_EMITCREGALLOCEVICTMODEL_H
+#ifndef LLVM_CODEGEN_MLIRREGALLOCEVICTMODEL_H
+#define LLVM_CODEGEN_MLIRREGALLOCEVICTMODEL_H
 
 #include <cmath>
 #include <cstddef>
@@ -22,7 +26,7 @@
 
 namespace llvm {
 
-class EmitCRegAllocEvictModel final {
+class MLIRRegAllocEvictModel final {
 public:
   int LookupArgIndex(const std::string &Name);
   int LookupResultIndex(const std::string &Name);
@@ -87,6 +91,8 @@ private:
   I64InterferenceTensor MinStageInput{};
   F32Scalar ProgressInput{};
 
+  // These scalars remain part of the serving API even when a translated model
+  // does not make semantic use of all of them.
   I32Scalar DummyStepType{};
   F32Scalar DummyDiscount{};
   F32Scalar DummyReward{};

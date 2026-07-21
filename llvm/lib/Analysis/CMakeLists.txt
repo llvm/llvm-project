@@ -1,36 +1,43 @@
-option(LLVM_USE_EMITC_INLINER_MODEL
-  "Use the fully in-tree inliner model integration instead of TensorFlow AOT"
-  OFF)
-
 # Marked optional so LLVM's source audit does not require it in default builds.
 list(APPEND LLVM_OPTIONAL_SOURCES
-  EmitCInlinerSizeModel.cpp)
+  MLIRInlinerSizeModel.cpp)
 
 if (LLVM_HAVE_TFLITE)
   list(APPEND MLLinkDeps
     tensorflow-lite::tensorflow-lite)
 endif()
 
-# The inlining model wrapper is only built when the fully in-tree model integration is enabled.
-if (LLVM_USE_EMITC_INLINER_MODEL)
-  list(APPEND AnalysisInTreeModelSources
-    EmitCInlinerSizeModel.cpp)
-elseif (DEFINED LLVM_HAVE_TF_AOT)
-  include(TensorFlowCompile)
-  set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
-  set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING
-      "URL to download the LLVM inliner model")
+set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
+set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING
+    "URL to download the LLVM inliner model")
 
-  tf_find_and_compile(
-    ${LLVM_INLINER_MODEL_PATH}
-    ${LLVM_INLINER_MODEL_CURRENT_URL}
-    ${LLVM_INLINER_MODEL_PATH_DEFAULT}
-    "models/gen-inline-oz-test-model.py"
-    serve
-    action
-    InlinerSizeModel
-    llvm::InlinerSizeModel
-  )
+# Release-mode inlining can be backed either by TensorFlow AOT artifacts or by
+# the in-tree MLIR flow. In both cases LLVM builds a thin wrapper so
+# MLInlineAdvisor continues to talk to one serving interface.
+if (LLVM_BUILD_INLINERSIZEMODEL)
+  include(TensorFlowCompile)
+  if (LLVM_USE_MLIR_FOR_MLGO)
+    list(APPEND AnalysisInTreeModelSources
+      MLIRInlinerSizeModel.cpp)
+    mlir_find_and_compile(
+      ${LLVM_INLINER_MODEL_PATH}
+      ${LLVM_INLINER_MODEL_CURRENT_URL}
+      ${LLVM_INLINER_MODEL_PATH_DEFAULT}
+      "models/gen-inline-oz-test-model.py"
+      "llvm/Analysis/MLIRInlinerSizeModel.inc"
+    )
+  else()
+    tf_find_and_compile(
+      ${LLVM_INLINER_MODEL_PATH}
+      ${LLVM_INLINER_MODEL_CURRENT_URL}
+      ${LLVM_INLINER_MODEL_PATH_DEFAULT}
+      "models/gen-inline-oz-test-model.py"
+      serve
+      action
+      InlinerSizeModel
+      llvm::InlinerSizeModel
+    )
+  endif()
 endif()
 
 # The implementation of ConstantFolding.cpp relies on the use of math functions
@@ -198,9 +205,9 @@ add_llvm_component_library(LLVMAnalysis
   TargetParser
   )
 
-if (LLVM_USE_EMITC_INLINER_MODEL)
+if (LLVM_BUILD_INLINERSIZEMODEL AND LLVM_USE_MLIR_FOR_MLGO)
   target_compile_definitions(LLVMAnalysis
-    PRIVATE LLVM_HAVE_EMITC_INLINERSIZEMODEL)
+    PRIVATE LLVM_HAVE_MLIR_INLINERSIZEMODEL)
 endif()
 
 include(CheckCXXSymbolExists)

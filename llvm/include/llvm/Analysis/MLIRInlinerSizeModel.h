@@ -1,4 +1,4 @@
-//===- EmitCInlinerSizeModel.h - EmitC inliner model wrapper ----*- C++ -*-===//
+//===- MLIRInlinerSizeModel.h - MLIR inliner model wrapper ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// Declares the wrapper around the EmitC-translated MLGO inliner model.
+/// Wraps the MLIR-translated MLGO inliner model in the interface expected by
+/// ReleaseModeModelRunner.
+///
+/// The generated `.inc` file only contains lowered model code. This wrapper
+/// owns the named inliner tensors, keeps their layout stable across generated
+/// model variants, and exposes the same serving API that the rest of LLVM
+/// already uses for release-mode MLGO models.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_ANALYSIS_EMITCINLINERSIZEMODEL_H
-#define LLVM_LIB_ANALYSIS_EMITCINLINERSIZEMODEL_H
+#ifndef LLVM_LIB_ANALYSIS_MLIRINLINERSIZEMODEL_H
+#define LLVM_LIB_ANALYSIS_MLIRINLINERSIZEMODEL_H
 
 #include <array>
 #include <cstdint>
@@ -19,7 +25,7 @@
 
 namespace llvm {
 
-class EmitCInlinerSizeModel final {
+class MLIRInlinerSizeModel final {
 public:
   int LookupArgIndex(const std::string &Name);
   int LookupResultIndex(const std::string &Name);
