@@ -2547,6 +2547,11 @@ struct MicrosoftRecordLayoutBuilder {
   struct ElementInfo {
     CharUnits Size;
     CharUnits Alignment;
+    /// The alignment to use when updating the enclosing record's alignment.
+    /// This differs from Alignment only on targets that reuse over-aligned tail
+    /// padding, where over-alignment applied directly to a field must not raise
+    /// the record's alignment (only its required alignment).
+    CharUnits NonRequiredAlignment;
   };
   typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
   MicrosoftRecordLayoutBuilder(const ASTContext &Context,
@@ -2700,6 +2705,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
   Alignment = std::max(Alignment, BaseAlignment);
   RequiredAlignment = std::max(RequiredAlignment, Layout.getRequiredAlignment());
   Info.Alignment = std::max(Info.Alignment, Layout.getRequiredAlignment());
+  Info.NonRequiredAlignment = Info.Alignment;
   Info.Size = Layout.getNonVirtualSize();
   return Info;
 }
@@ -2713,35 +2719,54 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
       Context.getTypeInfoInChars(FD->getType()->getUnqualifiedDesugaredType());
   ElementInfo Info{TInfo.Width, TInfo.Align};
   // Respect align attributes on the field.
-  CharUnits FieldRequiredAlignment =
+  CharUnits DirectFieldAlignment =
       Context.toCharUnitsFromBits(FD->getMaxAlignment());
+  // The portion of the field's required alignment that comes from its type
+  // rather than from over-alignment applied directly to the field.
+  CharUnits FieldTypeRequiredAlignment = CharUnits::Zero();
   // Respect align attributes on the type.
   if (Context.isAlignmentRequired(FD->getType()))
-    FieldRequiredAlignment = std::max(
-        Context.getTypeAlignInChars(FD->getType()), FieldRequiredAlignment);
+    FieldTypeRequiredAlignment = Context.getTypeAlignInChars(FD->getType());
   // Respect attributes applied to subobjects of the field.
   if (FD->isBitField())
     // For some reason __declspec align impacts alignment rather than required
     // alignment when it is applied to bitfields.
-    Info.Alignment = std::max(Info.Alignment, FieldRequiredAlignment);
+    Info.Alignment =
+        std::max(Info.Alignment,
+                 std::max(DirectFieldAlignment, FieldTypeRequiredAlignment));
   else {
     if (const auto *RT = FD->getType()
                              ->getBaseElementTypeUnsafe()
                              ->getAsCanonical<RecordType>()) {
       auto const &Layout = Context.getASTRecordLayout(RT->getDecl());
       EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
-      FieldRequiredAlignment = std::max(FieldRequiredAlignment,
-                                        Layout.getRequiredAlignment());
+      FieldTypeRequiredAlignment =
+          std::max(FieldTypeRequiredAlignment, Layout.getRequiredAlignment());
     }
     // Capture required alignment as a side-effect.
-    RequiredAlignment = std::max(RequiredAlignment, FieldRequiredAlignment);
+    RequiredAlignment =
+        std::max(RequiredAlignment,
+                 std::max(DirectFieldAlignment, FieldTypeRequiredAlignment));
   }
   // Respect pragma pack, attribute pack and declspec align
   if (!MaxFieldAlignment.isZero())
     Info.Alignment = std::min(Info.Alignment, MaxFieldAlignment);
   if (FD->hasAttr<PackedAttr>())
     Info.Alignment = CharUnits::One();
-  Info.Alignment = std::max(Info.Alignment, FieldRequiredAlignment);
+  // The alignment used to update the record's alignment excludes over-alignment
+  // applied directly to the field; the alignment used for placement includes
+  // it.  On targets that don't reuse over-aligned tail padding the two are the
+  // same.
+  Info.NonRequiredAlignment =
+      std::max(Info.Alignment, FieldTypeRequiredAlignment);
+  Info.Alignment = std::max(Info.NonRequiredAlignment, DirectFieldAlignment);
+  // Bitfields are excluded: over-alignment applied directly to a bitfield
+  // raises the record's alignment (not its required alignment) and is immune to
+  // #pragma pack, so it must not be stripped here.  Stripping it would drop
+  // that alignment when #pragma pack clamps the bitfield's natural alignment
+  // below the over-alignment.
+  if (!reuseOveralignedBaseTailPadding() || FD->isBitField())
+    Info.NonRequiredAlignment = Info.Alignment;
   return Info;
 }
 
@@ -2994,7 +3019,7 @@ void MicrosoftRecordLayoutBuilder::layoutField(const FieldDecl *FD) {
   }
   LastFieldIsNonZeroWidthBitfield = false;
   ElementInfo Info = getAdjustedElementInfo(FD);
-  Alignment = std::max(Alignment, Info.Alignment);
+  Alignment = std::max(Alignment, Info.NonRequiredAlignment);
 
   const CXXRecordDecl *FieldClass = FD->getType()->getAsCXXRecordDecl();
   bool IsOverlappingEmptyField = FD->isPotentiallyOverlapping() &&
@@ -3073,7 +3098,7 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
         llvm::alignDown(FieldBitOffset, Context.toBits(Info.Alignment)) +
         Context.toBits(Info.Size));
     Size = std::max(Size, NewSize);
-    Alignment = std::max(Alignment, Info.Alignment);
+    Alignment = std::max(Alignment, Info.NonRequiredAlignment);
   } else if (IsUnion) {
     placeFieldAtOffset(CharUnits::Zero());
     Size = std::max(Size, Info.Size);
@@ -3085,7 +3110,7 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
         Context.toBits(DataSize) - RemainingBitsInField;
     placeFieldAtOffset(FieldOffset);
     Size = FieldOffset + Info.Size;
-    Alignment = std::max(Alignment, Info.Alignment);
+    Alignment = std::max(Alignment, Info.NonRequiredAlignment);
     RemainingBitsInField = Context.toBits(Info.Size) - Width;
     ::CheckFieldPadding(Context, IsUnion, Context.toBits(FieldOffset),
                         UnpaddedFieldOffsetInBits, FD);
@@ -3117,7 +3142,7 @@ MicrosoftRecordLayoutBuilder::layoutZeroWidthBitField(const FieldDecl *FD) {
     placeFieldAtOffset(FieldOffset);
     RemainingBitsInField = 0;
     Size = FieldOffset;
-    Alignment = std::max(Alignment, Info.Alignment);
+    Alignment = std::max(Alignment, Info.NonRequiredAlignment);
     ::CheckFieldPadding(Context, IsUnion, Context.toBits(FieldOffset),
                         UnpaddedFieldOffsetInBits, FD);
   }

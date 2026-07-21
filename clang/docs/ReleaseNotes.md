@@ -429,9 +429,9 @@ features cannot lower the translation-unit ABI level;
 #### Windows Support
 
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
-  over-aligned, non-standard-layout base class is followed by another base
-  class. MSVC on Arm64 (but not Arm64EC or x64) reuses the tail padding of the
-  over-aligned base for the subsequent base; Clang now does the same.
+  over-aligned base class is followed by another base class. MSVC on Arm64 (but
+  not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
+  subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
 #### LoongArch Support
