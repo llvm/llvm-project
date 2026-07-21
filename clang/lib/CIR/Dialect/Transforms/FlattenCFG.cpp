@@ -518,16 +518,6 @@ public:
                                                exit);
   }
 
-  // Return the cleanup-kind attribute or a null attribute if the loop has no
-  // cleanups.
-  static cir::CleanupKindAttr getLoopCleanupKind(cir::LoopOpInterface op) {
-    if (auto whileOp = mlir::dyn_cast<cir::WhileOp>(op.getOperation()))
-      return whileOp.getCleanupKindAttr();
-    if (auto forOp = mlir::dyn_cast<cir::ForOp>(op.getOperation()))
-      return forOp.getCleanupKindAttr();
-    return {};
-  }
-
   // Rewrite a loop that has a per-iteration cleanup region into a loop whose
   // condition is always 'true' and whose body is a cir.cleanup.scope enclosing
   // the original condition, body, and step regions.
@@ -567,7 +557,7 @@ public:
     mlir::Location loc = op.getLoc();
     mlir::Region *stepRegion = op.maybeGetStep();
 
-    cir::CleanupKindAttr cleanupKind = getLoopCleanupKind(op);
+    cir::CleanupKindAttr cleanupKind = op.maybeGetCleanupKind();
     assert(cleanupKind && "loop cleanup region without a cleanup kind");
 
     mlir::Region &condRegion = op.getCond();
