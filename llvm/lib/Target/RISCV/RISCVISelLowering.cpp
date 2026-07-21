@@ -6458,13 +6458,13 @@ static SDValue lowerVECTOR_SHUFFLEAsPUnzip(ShuffleVectorSDNode *SVN,
   return DAG.getNode(Opc, DL, VT, V1, V2);
 }
 
-// Match the shuffle mask <0, N, 2, N+2, ...>: even result lanes take the even
-// source lanes (operand 0) and odd result lanes come from the second operand.
-// XformToShuffleWithZero forms this from `(and src, low-half-mask)` with a zero
-// second operand, which is a packed zero-extend, i.e. RISCVISD::PPAIRE(src, 0).
-// Undef lanes (e.g. from widening the 32-bit view to a legal 64-bit type on
-// RV64) always match, since PPAIRE refines them.
-static bool isPackedZExtShuffleMask(ArrayRef<int> Mask) {
+// Match a pair-even shuffle mask <0, N, 2, N+2, ...>: even result lanes take
+// the even lanes of operand 0 and odd result lanes come from operand 1 (as
+// formed by DAGCombiner::XformToShuffleWithZero for a packed zero-extend `and`,
+// and matched by lowerVECTOR_SHUFFLEAsPPair). Undef lanes (e.g. from widening
+// the 32-bit view to a legal 64-bit type on RV64) always match, since PPAIRE
+// refines them.
+static bool isPairEvenShuffleMask(ArrayRef<int> Mask) {
   unsigned NumElts = Mask.size();
   if (NumElts % 2 != 0)
     return false;
@@ -6526,16 +6526,25 @@ static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
   if (V2.isUndef())
     return SDValue();
 
-  // Match <start, N+start, start+2, N+start+2, ...>: each widened element of
-  // V1/V2 contributes its low (start=0, ppaire) or high (start=1, ppairo) byte.
+  // A splat operand's lanes are all equal, so a lane selecting from it matches
+  // any of its positions. This covers the zero operand XformToShuffleWithZero
+  // forms for a packed zero-extend, which keeps each zeroed lane at its own
+  // position rather than the strided one.
+  bool V1IsSplat = DAG.isSplatValue(V1);
+  bool V2IsSplat = DAG.isSplatValue(V2);
+
+  // Match <start, N+start, start+2, N+start+2, ...>: even lanes come from V1
+  // and odd lanes from V2 (start=0, ppaire) or vice versa (start=1, ppairo).
   // Trailing lanes may be undef when a 4-byte source was widened to v8i8.
   auto IsStrided = [&](unsigned Start) {
     for (unsigned I = 0; I != NumElts / 2; ++I) {
       int M0 = Mask[2 * I];
       int M1 = Mask[2 * I + 1];
-      if (M0 < 0 && M1 < 0)
-        continue;
-      if (M0 != (int)(Start + 2 * I) || M1 != (int)(NumElts + Start + 2 * I))
+      if (M0 >= 0 &&
+          (V1IsSplat ? M0 >= (int)NumElts : M0 != (int)(Start + 2 * I)))
+        return false;
+      if (M1 >= 0 && (V2IsSplat ? M1 < (int)NumElts
+                                : M1 != (int)(NumElts + Start + 2 * I)))
         return false;
     }
     return true;
@@ -6567,15 +6576,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   // fixed/scalable-vector lowering below.
   if (Subtarget.hasStdExtP() && !Subtarget.hasVInstructions()) {
     ArrayRef<int> Mask = SVN->getMask();
-
-    // shuffle(src, zero, <0, N, 2, N+2, ...>) is a packed zero-extend:
-    // PPAIRE(src, 0). XformToShuffleWithZero forms this from an `and` with a
-    // low-half mask (see isVectorClearMaskLegal).
-    if (ISD::isConstantSplatVectorAllZeros(V2.getNode()) &&
-        isPackedZExtShuffleMask(Mask))
-      return DAG.getNode(RISCVISD::PPAIRE, DL, VT, V1,
-                         DAG.getNode(ISD::SPLAT_VECTOR, DL, VT,
-                                     DAG.getConstant(0, DL, XLenVT)));
 
     // Select an element reverse shuffle to VECTOR_REVERSE. The tablegen
     // patterns select rev8/rev16/ppairoe.* from VECTOR_REVERSE.
@@ -7255,7 +7255,7 @@ bool RISCVTargetLowering::isVectorClearMaskLegal(ArrayRef<int> M,
     return false;
   MVT SVT = VT.getSimpleVT();
   return (SVT == MVT::v4i8 || SVT == MVT::v8i8 || SVT == MVT::v4i16) &&
-         isPackedZExtShuffleMask(M);
+         isPairEvenShuffleMask(M);
 }
 
 bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
