@@ -28,3 +28,10 @@
 
 ; PTX64: .visible .global .align 8 .u64 sadd[2] = {g+4, 7};
 @sadd = addrspace(1) global { i64, i64 } { i64 add (i64 ptrtoint (ptr addrspace(1) @g to i64), i64 4), i64 7 }
+
+; Self-references are emitted as a declaration followed by the definition.
+; PTX32:      .extern .global .align 4 .u32 self;
+; PTX32-NEXT: .visible .global .align 4 .u32 self = self;
+; PTX64:      .extern .global .align 8 .u64 self;
+; PTX64-NEXT: .visible .global .align 8 .u64 self = self;
+@self = addrspace(1) global ptr addrspace(1) @self
