@@ -26,23 +26,6 @@ def err_fe_linking_module : Error<"cannot link module '%0': %1">, DefaultFatal;
 def warn_fe_linking_module : Warning<"linking module '%0': %1">, InGroup<LinkerWarnings>;
 def note_fe_linking_module : Note<"linking module '%0': %1">;
 
-def warn_loadtime_comment_var_volatile : Warning<
-    "%0 named in '-mloadtime-comment-vars=' is volatile-qualified and will not "
-    "be preserved">,
-    InGroup<LoadtimeCommentVar>;
-def warn_loadtime_comment_var_storage : Warning<
-    "%0 named in '-mloadtime-comment-vars=' does not have static storage "
-    "duration and will not be preserved">,
-    InGroup<LoadtimeCommentVar>;
-def warn_loadtime_comment_var_dynamic_init : Warning<
-    "%0 named in '-mloadtime-comment-vars=' is not constant-initialized and "
-    "will not be preserved">,
-    InGroup<LoadtimeCommentVar>;
-def warn_loadtime_comment_var_not_string_literal : Warning<
-    "pointer %0 named in '-mloadtime-comment-vars=' is not initialized with a "
-    "string literal and will not be preserved">,
-    InGroup<LoadtimeCommentVar>;
-
 def warn_fe_frame_larger_than : Warning<"stack frame size (%0) exceeds limit (%1) in '%2'">,
     BackendInfo, InGroup<BackendFrameLargerThan>;
 def warn_fe_backend_frame_larger_than: Warning<"%0">,

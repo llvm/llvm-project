@@ -23,6 +23,15 @@
 // RUN:   -mloadtime-comment-vars=p_ok,arr_ok,p_dyn,p_ind \
 // RUN:   -emit-llvm -verify -o - %t/init.cpp | FileCheck %t/init.cpp
 //
+// The diagnostics are produced by Sema, so they are emitted even when no code
+// is generated.
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix \
+// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr \
+// RUN:   -fsyntax-only -verify %t/diag.c
+// RUN: %clang_cc1 -std=c++17 -triple powerpc64-ibm-aix \
+// RUN:   -mloadtime-comment-vars=p_ok,arr_ok,p_dyn,p_ind \
+// RUN:   -fsyntax-only -verify %t/init.cpp
+//
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix \
 // RUN:   "-mloadtime-comment-vars=foo, bar" \
 // RUN:   -emit-llvm -o - %t/list.c | FileCheck %t/list.c --check-prefix=SPACE
@@ -178,7 +187,7 @@ __thread char *tls_ptr = "@(#) tls"; // expected-warning {{'tls_ptr' named in '-
 // Pointer bound to another object (a "deferred pointer chain") rather than a
 // string literal.
 static const char target[] = "@(#) target";
-const char *ind_ptr = target; // expected-warning {{pointer 'ind_ptr' named in '-mloadtime-comment-vars=' is not initialized with a string literal and will not be preserved}}
+const char *ind_ptr = target; // expected-warning {{'ind_ptr' named in '-mloadtime-comment-vars=' is not initialized with a string literal and will not be preserved}}
 
 // A const character array is a valid form and is preserved.
 const char const_arr[] = "@(#) const arr";
@@ -221,7 +230,7 @@ const char *p_dyn = make(); // expected-warning {{'p_dyn' named in '-mloadtime-c
 
 // Constant-initialized, but the pointer is bound to another global (a "deferred
 // pointer chain") rather than a string literal.
-const char *p_ind = src; // expected-warning {{pointer 'p_ind' named in '-mloadtime-comment-vars=' is not initialized with a string literal and will not be preserved}}
+const char *p_ind = src; // expected-warning {{'p_ind' named in '-mloadtime-comment-vars=' is not initialized with a string literal and will not be preserved}}
 
 // CHECK: @p_ok = {{.*}}!loadtime_comment
 // CHECK: @arr_ok = {{.*}}!loadtime_comment
