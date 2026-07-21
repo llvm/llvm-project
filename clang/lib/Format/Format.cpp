@@ -1619,7 +1619,7 @@ template <> struct MappingTraits<FormatStyle> {
       Style.SpacesInParens = FormatStyle::SIPO_Custom;
     }
 
-    if (Style.DisableFormat.DisableIncludeSorting)
+    if (Style.DisableFormat.DisableSortIncludes)
       Style.SortIncludes.Enabled = false;
   }
 };
@@ -1937,7 +1937,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ContinuationIndentWidth = 4;
   LLVMStyle.Cpp11BracedListStyle = FormatStyle::BLS_AlignFirstComment;
   LLVMStyle.DerivePointerAlignment = false;
-  LLVMStyle.DisableFormat = {/*DisableIncludeSorting=*/false, /*DisablePostPreprocessorFormatting=*/false};
+  LLVMStyle.DisableFormat = {/*DisableSortIncludes=*/false, /*DisablePostPreprocessorFormatting=*/false};
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
   LLVMStyle.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
   LLVMStyle.EnumTrailingComma = FormatStyle::ETC_Leave;
@@ -2412,7 +2412,7 @@ FormatStyle getClangFormatStyle() {
 
 FormatStyle getNoStyle() {
   FormatStyle NoStyle = getLLVMStyle();
-  NoStyle.DisableFormat = {/*DisableIncludeSorting=*/true, /*DisablePostPreprocessorFormatting=*/true};
+  NoStyle.DisableFormat = {/*DisableSortIncludes=*/true, /*DisablePostPreprocessorFormatting=*/true};
   NoStyle.SortIncludes = {};
   NoStyle.SortUsingDeclarations = FormatStyle::SUD_Never;
   return NoStyle;
