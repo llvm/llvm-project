@@ -41,6 +41,10 @@ public:
   /// changingInstr() and changedInstr() will never be called on these
   /// observers.
   GISelObserverWrapper *AllObservers = nullptr;
+
+protected:
+  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
 };
 } // namespace llvm
 
