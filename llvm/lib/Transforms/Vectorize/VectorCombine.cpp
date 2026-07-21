@@ -155,6 +155,7 @@ private:
   bool foldEquivalentReductionCmp(Instruction &I);
   bool foldReduceAddCmpZero(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
+  bool foldInterleaveOfHighHalfTruncs(Instruction &I);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool foldDeinterleaveIntrinsics(Instruction &I);
   bool foldBitcastOfVPLoad(Instruction &I);
@@ -5882,6 +5883,108 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   return true;
 }
 
+/// Fold an interleave of shifted, truncated deinterleave results into a
+/// deinterleave of the original vector at half the element width, directly
+/// selecting the high half of each source element.
+///
+/// ```
+/// %d = call { <vscale x 2 x i16>, ... }
+///           @llvm.vector.deinterleave4(<vscale x 8 x i16> %x)
+/// %d0 = extractvalue { <vscale x 2 x i16>, ... } %d, 0
+/// %d1 = extractvalue { <vscale x 2 x i16>, ... } %d, 1
+/// %d2 = extractvalue { <vscale x 2 x i16>, ... } %d, 2
+/// %d3 = extractvalue { <vscale x 2 x i16>, ... } %d, 3
+/// %s0 = lshr <vscale x 2 x i16> %d0, splat (i16 8)
+/// %s1 = lshr <vscale x 2 x i16> %d1, splat (i16 8)
+/// %s2 = lshr <vscale x 2 x i16> %d2, splat (i16 8)
+/// %s3 = lshr <vscale x 2 x i16> %d3, splat (i16 8)
+/// %t0 = trunc <vscale x 2 x i16> %s0 to <vscale x 2 x i8>
+/// %t1 = trunc <vscale x 2 x i16> %s1 to <vscale x 2 x i8>
+/// %t2 = trunc <vscale x 2 x i16> %s2 to <vscale x 2 x i8>
+/// %t3 = trunc <vscale x 2 x i16> %s3 to <vscale x 2 x i8>
+/// %r = call <vscale x 8 x i8> @llvm.vector.interleave4(%t0, %t1, %t2, %t3)
+/// ```
+/// becomes:
+///
+/// ```
+/// %bc = bitcast <vscale x 8 x i16> %x to <vscale x 16 x i8>
+/// %d = call { <vscale x 8 x i8>, <vscale x 8 x i8> }
+///           @llvm.vector.deinterleave2(<vscale x 16 x i8> %bc)
+/// %r = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } %d, 1
+/// ```
+bool VectorCombine::foldInterleaveOfHighHalfTruncs(Instruction &I) {
+  auto *Interleave = dyn_cast<IntrinsicInst>(&I);
+  if (!Interleave || Interleave->hasOperandBundles())
+    return false;
+
+  unsigned Factor = getInterleaveIntrinsicFactor(Interleave->getIntrinsicID());
+  if (!Factor || Interleave->arg_size() != Factor)
+    return false;
+
+  auto *InterleaveTy = dyn_cast<VectorType>(Interleave->getType());
+  if (!InterleaveTy || !InterleaveTy->getElementType()->isIntegerTy())
+    return false;
+
+  unsigned DstEltBits = InterleaveTy->getScalarSizeInBits();
+  Intrinsic::ID DeinterleaveID = Intrinsic::getDeinterleaveIntrinsicID(Factor);
+  IntrinsicInst *Deinterleave = nullptr;
+
+  for (unsigned Idx = 0; Idx != Factor; ++Idx) {
+    auto *Trunc = dyn_cast<TruncInst>(Interleave->getArgOperand(Idx));
+    if (!Trunc || !Trunc->hasOneUse())
+      return false;
+
+    auto *Shift = dyn_cast<BinaryOperator>(Trunc->getOperand(0));
+    if (!Shift || !Shift->hasOneUse() ||
+        (Shift->getOpcode() != Instruction::LShr &&
+         Shift->getOpcode() != Instruction::AShr) ||
+        !match(Shift->getOperand(1), m_SpecificInt(DstEltBits)))
+      return false;
+
+    // Each interleave operand must come from the corresponding deinterleave
+    // result.
+    auto *Extract = dyn_cast<ExtractValueInst>(Shift->getOperand(0));
+    if (!Extract || !Extract->hasOneUse() || Extract->getNumIndices() != 1 ||
+        *Extract->idx_begin() != Idx)
+      return false;
+
+    auto *DI = dyn_cast<IntrinsicInst>(Extract->getAggregateOperand());
+    if (!DI || DI->hasOperandBundles() ||
+        DI->getIntrinsicID() != DeinterleaveID)
+      return false;
+
+    if (!Deinterleave)
+      Deinterleave = DI;
+    else if (DI != Deinterleave)
+      return false;
+  }
+
+  // Require the entire matched tree to become dead, otherwise the replacement
+  // will add another shuffle sequence to the remaining operations.
+  if (!Deinterleave || !Deinterleave->hasNUses(Factor))
+    return false;
+
+  Value *Source = Deinterleave->getArgOperand(0);
+  auto *SourceTy = dyn_cast<VectorType>(Source->getType());
+  if (!SourceTy ||
+      SourceTy->getElementCount() != InterleaveTy->getElementCount() ||
+      !SourceTy->getElementType()->isIntegerTy() ||
+      SourceTy->getScalarSizeInBits() != 2 * DstEltBits)
+    return false;
+
+  auto *BitcastTy = VectorType::getDoubleElementsVectorType(InterleaveTy);
+  Value *Bitcast = Builder.CreateBitCast(Source, BitcastTy);
+  Value *NewDeinterleave = Builder.CreateIntrinsic(
+      Intrinsic::vector_deinterleave2, {BitcastTy}, {Bitcast});
+  // A vector bitcast orders each element's low half first on little-endian
+  // targets and its high half first on big-endian targets.
+  unsigned HighHalfIndex = DL->isLittleEndian() ? 1 : 0;
+  Value *HighHalves =
+      Builder.CreateExtractValue(NewDeinterleave, HighHalfIndex);
+  replaceValue(I, *HighHalves);
+  return true;
+}
+
 /// If we're interleaving 2 constant splats, for instance `<vscale x 8 x i32>
 /// <splat of 666>` and `<vscale x 8 x i32> <splat of 777>`, we can create a
 /// larger splat `<vscale x 8 x i64> <splat of ((777 << 32) | 666)>` first
@@ -6475,6 +6578,8 @@ bool VectorCombine::run() {
       if (scalarizeExtExtract(I))
         return true;
       if (scalarizeVPIntrinsic(I))
+        return true;
+      if (foldInterleaveOfHighHalfTruncs(I))
         return true;
       if (foldInterleaveIntrinsics(I))
         return true;
