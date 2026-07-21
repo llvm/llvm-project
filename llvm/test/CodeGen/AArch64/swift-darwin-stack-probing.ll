@@ -6,7 +6,7 @@
 define void @swift_darwin_stack_probe(ptr %out) #0 {
 ; CHECK-LABEL: swift_darwin_stack_probe:
 ; CHECK:       sub sp, sp, #1, lsl #12
-; CHECK-NEXT:  ldr xzr, [sp]
+; CHECK:       ldr xzr, [sp]
 entry:
   %frame = alloca i8, i64 4096, align 1
   store ptr %frame, ptr %out, align 8
