@@ -1008,6 +1008,14 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             CurrentMD);
     }
 
+    // Enforce the single-operand form of llvm.loop.distribute metadata.
+    if (CurrentMD->getNumOperands() > 0 &&
+        (CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
+         CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.disable")))
+      Check(CurrentMD->getNumOperands() == 1,
+            "Expected one operand for llvm.loop.distribute metadata",
+            CurrentMD);
+
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
           CurrentMD);
@@ -3889,6 +3897,11 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
         "denormal_fpenv attribute may not apply to call sites", Call);
 
+  Check(!Attrs.hasFnAttr(Attribute::StrictFP) ||
+            Call.getFunction()->isStrictFP(),
+        "call site marked strictfp without caller function marked strictfp",
+        Call);
+
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
@@ -5473,17 +5486,11 @@ void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
           Op);
     auto *CallgraphMD = cast<MDNode>(Op);
     Check(CallgraphMD->getNumOperands() == 1,
-          "Well-formed generalized callgraph metadata must contain exactly one "
+          "Well-formed callgraph metadata must contain exactly one "
           "operand",
           Op);
     Check(isa<MDString>(CallgraphMD->getOperand(0)),
           "The operand of callgraph metadata for functions must be an MDString",
-          Op);
-    Check(cast<MDString>(CallgraphMD->getOperand(0))
-              ->getString()
-              .ends_with(".generalized"),
-          "Only generalized callgraph metadata can be part of the callee_type "
-          "metadata list",
           Op);
   }
 }

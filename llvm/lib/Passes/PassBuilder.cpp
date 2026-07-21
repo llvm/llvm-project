@@ -309,6 +309,7 @@
 #include "llvm/Transforms/Scalar/JumpTableToSwitch.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Scalar/LICM.h"
+#include "llvm/Transforms/Scalar/LogicalSROA.h"
 #include "llvm/Transforms/Scalar/LoopAccessAnalysisPrinter.h"
 #include "llvm/Transforms/Scalar/LoopBoundSplit.h"
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
@@ -916,6 +917,8 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
       UnrollOpts.setRuntime(Enable);
     } else if (ParamName == "upperbound") {
       UnrollOpts.setUpperBound(Enable);
+    } else if (ParamName == "prepare-for-lto") {
+      UnrollOpts.setPrepareForLTO(Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid LoopUnrollPass parameter '{}'", ParamName).str(),

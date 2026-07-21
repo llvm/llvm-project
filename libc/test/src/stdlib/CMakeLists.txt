@@ -401,7 +401,9 @@ add_libc_test(
     libc.src.string.strdup
     libc.src.sys.random.getrandom
     libc.src.sys.stat.mkdirat
+    libc.src.unistd.chdir
     libc.src.unistd.close
+    libc.src.unistd.getcwd
     libc.src.unistd.getpid
     libc.src.unistd.unlinkat
     libc.test.UnitTest.ErrnoCheckingTest

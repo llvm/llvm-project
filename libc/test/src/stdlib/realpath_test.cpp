@@ -28,7 +28,9 @@
 #include "src/string/strdup.h"
 #include "src/sys/random/getrandom.h"
 #include "src/sys/stat/mkdirat.h"
+#include "src/unistd/chdir.h"
 #include "src/unistd/close.h"
+#include "src/unistd/getcwd.h"
 #include "src/unistd/getpid.h"
 #include "src/unistd/unlinkat.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -37,6 +39,7 @@
 namespace cpp = LIBC_NAMESPACE::cpp;
 namespace path = LIBC_NAMESPACE::path;
 using LIBC_NAMESPACE::FixedVector;
+using LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::testing::tlog;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
@@ -170,10 +173,23 @@ cpp::string unique_id() {
   return id;
 }
 
-class LlvmLibcRealpathTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
+class LlvmLibcRealpathTest : public ErrnoCheckingTest {
 public:
+  void SetUp() override {
+    ErrnoCheckingTest::SetUp();
+
+    (void)LIBC_NAMESPACE::getcwd(start_dir, sizeof(start_dir));
+    ASSERT_ERRNO_SUCCESS();
+  }
+
+  void TearDown() override {
+    ASSERT_THAT(LIBC_NAMESPACE::chdir(start_dir), Succeeds());
+
+    ErrnoCheckingTest::TearDown();
+  }
+
   char *realpath_buffered(const char *path) {
-    return LIBC_NAMESPACE::realpath(path, buf_);
+    return LIBC_NAMESPACE::realpath(path, realpath_buf);
   }
 
   char *realpath_buffered(const cpp::string &path) {
@@ -206,7 +222,11 @@ public:
   }
 
 private:
-  char buf_[PATH_MAX];
+  // Buffer for storing realpath output.
+  char realpath_buf[PATH_MAX];
+
+  // Current working dir at test SetUp.
+  char start_dir[PATH_MAX];
 };
 
 TEST_F(LlvmLibcRealpathTest, ErrorsWithInvalidArgIfNullPath) {
@@ -351,4 +371,114 @@ TEST_F(LlvmLibcRealpathTest, AllocatesResultWhenBufferIsNull) {
   char *result = LIBC_NAMESPACE::realpath("/", nullptr);
   ASSERT_STREQ(result, "/");
   ::free(result);
+}
+
+TEST_F(LlvmLibcRealpathTest, ErrorsWithNotDirWhenFileIsInPath) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("ErrorsWithNotDirWhenFileIsInPath", test_dir));
+
+  ASSERT_THAT(test_dir.touch("file"), Succeeds());
+
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("file/.")), nullptr);
+  ASSERT_ERRNO_EQ(ENOTDIR);
+
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("file/")), nullptr);
+  ASSERT_ERRNO_EQ(ENOTDIR);
+}
+
+TEST_F(LlvmLibcRealpathTest, FileAtEndOfPathIsOk) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("FileAtEndOfPathIsOk", test_dir));
+
+  ASSERT_THAT(test_dir.mkdir("a"), Succeeds());
+  ASSERT_THAT(test_dir.touch("a/file"), Succeeds());
+
+  ASSERT_STREQ(realpath_buffered(test_dir.absolute_path("a/file")),
+               test_dir.absolute_path("a/file").c_str());
+}
+
+TEST_F(LlvmLibcRealpathTest, ErrorsWithNoEntWhenComponentDoesNotExist) {
+  TestDir test_dir;
+  ASSERT_TRUE(
+      create_test_dir("ErrorsWithNoEntWhenComponentDoesNotExist", test_dir));
+
+  // A missing directory should give ENOENT.
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("a/b")), nullptr);
+  ASSERT_ERRNO_EQ(ENOENT);
+
+  // Should fail if the final component doesn't exist.
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("a")), nullptr);
+  ASSERT_ERRNO_EQ(ENOENT);
+}
+
+TEST_F(LlvmLibcRealpathTest, ErrorsWithNoAccessWhenDirectoryNotSearchable) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("ErrorsWithNoAccessWhenDirectoryNotSearchable",
+                              test_dir));
+
+  ASSERT_THAT(test_dir.mkdir("a", /* mode= */ 0644), Succeeds());
+
+  ASSERT_STREQ(realpath_buffered(test_dir.absolute_path("a/b")), nullptr);
+  ASSERT_ERRNO_EQ(EACCES);
+}
+
+TEST_F(LlvmLibcRealpathTest, RelativePathResolvesToCurrentWorkingDir) {
+  TestDir test_dir;
+  ASSERT_TRUE(
+      create_test_dir("RelativePathResolvesToCurrentWorkingDir", test_dir));
+
+  ASSERT_THAT(LIBC_NAMESPACE::chdir(test_dir.c_str()), Succeeds());
+  ASSERT_STREQ(realpath_buffered("."), test_dir.c_str());
+
+  ASSERT_THAT(test_dir.mkdir("a"), Succeeds());
+  ASSERT_STREQ(realpath_buffered("a"), test_dir.absolute_path("a").c_str());
+}
+
+// Creates a directory with the desired_size and then chdir's into it.
+// Returns true on success.
+[[nodiscard]] bool chdir_to_absolute_path_with_size(TestDir &test_dir,
+                                                    size_t desired_size,
+                                                    cpp::string &out) {
+  if (!create_absolute_path_with_size(test_dir, desired_size, out))
+    return false;
+
+  // Convert the directory to be relative to test_dir.
+  const char *test_dir_relative_path =
+      out.c_str() + test_dir.view().size() + PATH_SEP_SIZE;
+
+  // Change directories into the path iteratively.
+  // This allows us to chdir into paths longer than PATH_MAX, as long as each
+  // of test_dir and test_dir_relative_path are shorter than PATH_MAX.
+  if (LIBC_NAMESPACE::chdir(test_dir.c_str()))
+    return false;
+  if (LIBC_NAMESPACE::chdir(test_dir_relative_path))
+    return false;
+  return true;
+}
+
+TEST_F(LlvmLibcRealpathTest, RelativeRealpathAcceptsPathExactlyMaxSize) {
+  TestDir test_dir;
+  ASSERT_TRUE(
+      create_test_dir("RelativeRealpathAcceptsPathExactlyMaxSize", test_dir));
+
+  cpp::string path;
+  ASSERT_TRUE(chdir_to_absolute_path_with_size(test_dir, PATH_MAX - 1, path));
+
+  ASSERT_STREQ(realpath_buffered("."), path.c_str());
+}
+
+TEST_F(LlvmLibcRealpathTest, RelativeRealpathRejectsPathExceedingMaxSize) {
+  TestDir test_dir;
+  ASSERT_TRUE(
+      create_test_dir("RelativeRealpathRejectsPathExceedingMaxSize", test_dir));
+
+  cpp::string path;
+  if (!chdir_to_absolute_path_with_size(test_dir, PATH_MAX, path)) {
+    // Skip the test if the system didn't allow creating the path.
+    ASSERT_ERRNO_EQ(ENAMETOOLONG);
+    return;
+  }
+
+  ASSERT_EQ(realpath_buffered("."), nullptr);
+  ASSERT_ERRNO_EQ(ENAMETOOLONG);
 }
