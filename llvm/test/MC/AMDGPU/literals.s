@@ -7,6 +7,7 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck %s --check-prefixes=GFX8PLUS,GFX12XX,GFX12
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -show-encoding %s | FileCheck %s --check-prefixes=GFX8PLUS,GFX12XX,GFX1250,GFX1250-ASM
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -disassemble -show-encoding | FileCheck %s --check-prefixes=GFX8PLUS,GFX12XX,GFX1250,GFX1250-DIS
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX90A
 
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSICI,NOSI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSICI,NOCI --implicit-check-not=error:
@@ -1420,6 +1421,7 @@ s_add_i32 s0, src_pops_exiting_wave_id, s0
 // NOGFX1250: :[[@LINE-4]]:15: error: src_pops_exiting_wave_id register not available on this GPU
 // NOSICI: :[[@LINE-5]]:15: error: src_pops_exiting_wave_id register not available on this GPU
 // NOVI: :[[@LINE-6]]:15: error: src_pops_exiting_wave_id register not available on this GPU
+// NOGFX90A: :[[@LINE-7]]:15: error: src_pops_exiting_wave_id register not available on this GPU
 
 s_and_b64 s[0:1], s[0:1], src_shared_base
 // GFX11: s_and_b64 s[0:1], s[0:1], src_shared_base ; encoding: [0x00,0xeb,0x80,0x8b]
@@ -1456,6 +1458,7 @@ s_and_b64 s[0:1], s[0:1], src_pops_exiting_wave_id
 // NOGFX1250: :[[@LINE-4]]:27: error: src_pops_exiting_wave_id register not available on this GPU
 // NOSICI: :[[@LINE-5]]:27: error: src_pops_exiting_wave_id register not available on this GPU
 // NOVI: :[[@LINE-6]]:27: error: src_pops_exiting_wave_id register not available on this GPU
+// NOGFX90A: :[[@LINE-7]]:27: error: src_pops_exiting_wave_id register not available on this GPU
 
 v_add_u16 v0, src_shared_base, v0
 // GFX9: v_add_u16_e32 v0, src_shared_base, v0   ; encoding: [0xeb,0x00,0x00,0x4c]

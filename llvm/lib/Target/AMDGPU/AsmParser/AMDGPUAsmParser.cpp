@@ -7197,7 +7197,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case SRC_FLAT_SCRATCH_BASE_HI:
     return hasGloballyAddressableScratch();
   case SRC_POPS_EXITING_WAVE_ID:
-    return isGFX9Plus() && !isGFX11Plus();
+    return isGFX9Plus() && !isGFX11Plus() && !hasMAIInsts(getSTI());
   case TBA:
   case TBA_LO:
   case TBA_HI:
