@@ -117,13 +117,13 @@ let Predicates = [HasStdExtZvzip] in {
   }
 }
 
+let Predicates = [HasStdExtZvzip] in {
 multiclass VPatVUnzipIntrinsic<string intrinsic_name,
                                string instruction_name> {
   foreach VtiToWti = AllZvzipVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat(GetVTypeMinimalPredicates<vti>.Predicates,
-                                 [HasStdExtZvzip]) in {
+    let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
       def : VPatUnaryNoMask<intrinsic_name, instruction_name, "V",
                             vti.Vector, wti.Vector, vti.Log2SEW,
                             wti.LMul, vti.RegClass, wti.RegClass>;
@@ -136,14 +136,14 @@ multiclass VPatVZipIntrinsic<string intrinsic_name,
   foreach VtiToWti = AllZvzipVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat(GetVTypeMinimalPredicates<vti>.Predicates,
-                                 [HasStdExtZvzip]) in {
+    let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
       defm : VPatBinary<intrinsic_name, instruction_name # "_VV_" # wti.LMul.MX,
                         wti.Vector, vti.Vector, vti.Vector, wti.Mask,
                         vti.Log2SEW, wti.RegClass, vti.RegClass, vti.RegClass>;
     }
   }
 }
+} // Predicates = [HasStdExtZvzip]
 
 defm : VPatVUnzipIntrinsic<"int_riscv_vunzipe", "PseudoVUNZIPE">;
 defm : VPatVUnzipIntrinsic<"int_riscv_vunzipo", "PseudoVUNZIPO">;
@@ -189,12 +189,12 @@ def vunzipe_vl : RVSDNode<"VUNZIPE_VL", SDT_RISCVUnzip_VL>;
 def vunzipo_vl : RVSDNode<"VUNZIPO_VL", SDT_RISCVUnzip_VL>;
 } // HasPassthruOp = true
 
+let Predicates = [HasStdExtZvzip] in {
 multiclass VPatVZIP<SDPatternOperator vop, string instruction_name> {
   foreach VtiToWti = AllZvzipVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat([HasStdExtZvzip],
-                                 GetVTypeMinimalPredicates<vti>.Predicates) in {
+    let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
       def : VPatBinaryVL_V<vop, instruction_name, "VV",
                            wti.Vector, vti.Vector, vti.Vector, wti.Mask,
                            vti.Log2SEW, wti.LMul, wti.RegClass, vti.RegClass,
@@ -207,14 +207,14 @@ multiclass VPatVUNZIP<SDPatternOperator op, string instruction_name> {
   foreach VtiToWti = AllZvzipVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat([HasStdExtZvzip],
-                                 GetVTypeMinimalPredicates<vti>.Predicates) in {
+    let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
       def : VPatUnaryVLNoMask_V<op, instruction_name, "V",
                                 vti.Vector, wti.Vector, vti.Log2SEW,
                                 wti.LMul, vti.RegClass, wti.RegClass>;
     }
   }
 }
+} // Predicates = [HasStdExtZvzip]
 
 defm : VPatVZIP<vzip_vl, "PseudoVZIP">;
 defm : VPatVUNZIP<vunzipe_vl, "PseudoVUNZIPE">;
