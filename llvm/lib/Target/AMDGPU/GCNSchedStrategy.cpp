@@ -1466,6 +1466,11 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
   TII = ST.getInstrInfo();
   SRI = ST.getRegisterInfo();
 
+  // rewrite() only inserts COPYs within existing blocks and never alters CFG
+  // edges, so the post-dominator tree is stable for the whole stage; compute it
+  // once here and reuse it in Check 3 and Case 1.
+  MPDT.recalculate(MF);
+
   std::vector<std::pair<MachineInstr *, unsigned>> RewriteCands;
   DenseMap<MachineBasicBlock *, std::set<Register>> CopyForUse;
   SmallPtrSet<MachineInstr *, 8> CopyForDef;
@@ -2252,6 +2257,31 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
   return Profit < ScheduleMetrics::ScaleFactor;
 }
 
+bool RewriteMFMAFormStage::shouldRevertScheduling(unsigned WavesAfter) {
+  if (PressureAfter == PressureBefore)
+    return false;
+
+  if (GCNSchedStage::shouldRevertScheduling(WavesAfter))
+    return true;
+
+  // This stage targets archVGPR pressure specifically, so the base
+  // mayCauseSpilling (gated on the total-RP isRegionWithExcessRP flag) may miss
+  // archVGPR excess. archVGPR and AGPR share one physical limit; revert if
+  // either dimension is still over that limit and worse than before rewrite.
+  if (RegionsWithExcessArchVGPR[RegionIdx]) {
+    unsigned MaxArchVGPRs = ST.getAddressableNumArchVGPRs();
+    if (PressureAfter.getArchVGPRNum() > MaxArchVGPRs &&
+        PressureAfter.getArchVGPRNum() > PressureBefore.getArchVGPRNum())
+      return true;
+    if (PressureAfter.getAGPRNum() > MaxArchVGPRs &&
+        PressureAfter.getAGPRNum() > PressureBefore.getAGPRNum())
+      return true;
+  } else if (mayCauseSpilling(WavesAfter)) {
+    return true;
+  }
+  return false;
+}
+
 bool ClusteredLowOccStage::shouldRevertScheduling(unsigned WavesAfter) {
   if (PressureAfter == PressureBefore)
     return false;
@@ -2445,6 +2475,32 @@ void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
   }
 }
 
+SmallVector<RewriteMFMAFormStage::CopyGroup, 2>
+RewriteMFMAFormStage::getCopyGroups(ArrayRef<MachineOperand *> Uses,
+                                    Register Reg, MachineRegisterInfo &MRI,
+                                    const SIRegisterInfo *SRI,
+                                    const TargetRegisterInfo *TRI) {
+  const TargetRegisterClass *DstRC = MRI.getRegClass(Reg);
+  const TargetRegisterClass *AgprRC = SRI->getEquivalentAGPRClass(DstRC);
+  const TargetRegisterClass *FullVGPRRC = SRI->getEquivalentVGPRClass(DstRC);
+  DenseMap<unsigned, SmallVector<MachineOperand *, 4>> BySubReg;
+  for (MachineOperand *MO : Uses)
+    BySubReg[MO->getSubReg()].push_back(MO);
+  SmallVector<CopyGroup, 2> Groups;
+  for (auto &[SR, SRUses] : BySubReg) {
+    unsigned SrcSubReg = AMDGPU::NoSubRegister;
+    const TargetRegisterClass *VGPRRC = FullVGPRRC;
+    if (SR != AMDGPU::NoSubRegister)
+      if (const auto *SubRC = TRI->getSubRegisterClass(AgprRC, SR))
+        if (const auto *NarrowRC = SRI->getEquivalentVGPRClass(SubRC)) {
+          SrcSubReg = SR;
+          VGPRRC = NarrowRC;
+        }
+    Groups.push_back({SrcSubReg, VGPRRC, std::move(SRUses)});
+  }
+  return Groups;
+}
+
 bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
     return false;
@@ -2453,11 +2509,35 @@ bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
   return true;
 }
 
+bool RewriteMFMAFormStage::isSrc2MergePoint(
+    Register Src2Reg, const MachineBasicBlock *P,
+    const SmallPtrSetImpl<const MachineBasicBlock *> &DefBlocks) const {
+  auto &MDT = DAG.LIS->getDomTree();
+
+  // (A) P post-dominates every def block -- the COPY reads a single merged
+  // %acc.
+  for (const MachineBasicBlock *DefBB : DefBlocks)
+    if (!MPDT.dominates(P, DefBB))
+      return false;
+
+  // (B) P dominates every use of Src2Reg -- %MappedReg reaches every consumer.
+  //     Scanning all uses is a safe superset (non-candidate uses can only
+  //     reject a rewrite, never break one).
+  for (const MachineOperand &UseMO : DAG.MRI.use_nodbg_operands(Src2Reg))
+    if (!MDT.dominates(P, UseMO.getParent()->getParent()))
+      return false;
+
+  return true;
+}
+
 bool RewriteMFMAFormStage::hasSrc2BridgeConflict(
     ArrayRef<SlotIndex> DefIdxs, Register Src2Reg,
+    const MachineBasicBlock *CandBlock,
     const SmallPtrSetImpl<const MachineBasicBlock *> &BridgeBlocks,
-    const SmallPtrSetImpl<const MachineBasicBlock *> &RedefPartialBlocks)
-    const {
+    const SmallPtrSetImpl<const MachineBasicBlock *> &RedefPartialBlocks,
+    const SmallSetVector<MachineInstr *, 16> &RewriteSet,
+    const DenseSet<Register> &CandSrc2Regs) const {
+  // Returns true (conflict, exclude the candidate) if any check below fires.
   auto &MDT = DAG.LIS->getDomTree();
 
   SmallVector<MachineInstr *, 8> MAIMIs;
@@ -2469,72 +2549,44 @@ bool RewriteMFMAFormStage::hasSrc2BridgeConflict(
     else
       NonMAIMIs.push_back(MI);
   }
-
   if (NonMAIMIs.empty())
-    return false; // All reaching defs are MAI; no bridge copies needed.
+    return false;
 
-  // Check 1: MAI def dominates non-MAI def.  The MFMA writes all lanes (AGPR),
-  // then a non-MAI def partially overwrites some; a bridge copy there would be
-  // a read-modify-write on AGPR, which the bridge mechanism cannot implement.
-  bool SkipCheck2 = false;
-  if (!MAIMIs.empty()) {
-    for (MachineInstr *M : MAIMIs)
-      for (MachineInstr *N : NonMAIMIs)
-        if (MDT.dominates(M, N))
-          return true;
+  // Check 1: MAI def dominating a non-MAI def = AGPR RMW the bridge can't do.
+  for (MachineInstr *M : MAIMIs)
+    for (MachineInstr *N : NonMAIMIs)
+      if (MDT.dominates(M, N))
+        return true;
 
-    // Early-safe: if every MAI reaching def is a candidate and parallel to
-    // every non-MAI def (Check 1 ruled out MAI dominating non-MAI; here the
-    // reverse), then %MappedReg is defined on every path to a use -- a
-    // candidate MAI gives an AGPR value directly, a non-MAI def carries a
-    // bridge copy -- so Check 2 can be skipped.  Check 3 is independent and
-    // must still run.
-    bool AllParallelAndCandidates = true;
-    for (MachineInstr *M : MAIMIs) {
-      if (!isRewriteCandidate(M)) {
-        AllParallelAndCandidates = false;
-        break;
+  // SkipBridgeCoverage: skip Check 2 when every MAI def is a candidate
+  // (supplies an AGPR value) not dominated by any non-MAI def (parallel; the
+  // other direction is Check 1).
+  bool SkipBridgeCoverage =
+      !MAIMIs.empty() && all_of(MAIMIs, [&](MachineInstr *M) {
+        return isRewriteCandidate(M) &&
+               none_of(NonMAIMIs,
+                       [&](MachineInstr *N) { return MDT.dominates(N, M); });
+      });
+  if (!SkipBridgeCoverage) {
+    // True if every entry->UseBlock path crosses a bridge block: walk preds,
+    // stopping at bridge blocks; reaching entry (no preds) means uncovered.
+    auto CoveredByBridgeSet = [&](const MachineBasicBlock *UseBlock) {
+      if (BridgeBlocks.contains(UseBlock))
+        return true;
+      SmallPtrSet<const MachineBasicBlock *, 16> Visited;
+      SmallVector<const MachineBasicBlock *, 16> Worklist(
+          UseBlock->pred_begin(), UseBlock->pred_end());
+      while (!Worklist.empty()) {
+        const MachineBasicBlock *B = Worklist.pop_back_val();
+        if (BridgeBlocks.contains(B))
+          continue;
+        if (B->pred_empty())
+          return false;
+        if (Visited.insert(B).second)
+          Worklist.append(B->pred_begin(), B->pred_end());
       }
-      for (MachineInstr *N : NonMAIMIs) {
-        if (MDT.dominates(N, M)) {
-          AllParallelAndCandidates = false;
-          break;
-        }
-      }
-      if (!AllParallelAndCandidates)
-        break;
-    }
-    if (AllParallelAndCandidates)
-      SkipCheck2 = true;
-  }
-
-  // Check 2: every entry->use path of Src2Reg must hit a bridge block (a
-  // non-MAI def block where rewrite() inserts the bridge copy, or the use block
-  // itself), else %MappedReg is undefined on the bypassing path.  Bridge blocks
-  // must *jointly* cover every path (dominance is too strict), so a backward
-  // walk that reaches entry without crossing one proves an uncovered path.
-  // Every use counts, incl. a plain COPY.  BridgeBlocks: see
-  // computeExclusionSet.
-  auto CoveredByBridgeSet = [&](const MachineBasicBlock *UseBlock) {
-    if (BridgeBlocks.contains(UseBlock))
       return true;
-    SmallPtrSet<const MachineBasicBlock *, 16> Visited;
-    SmallVector<const MachineBasicBlock *, 16> Worklist(UseBlock->pred_begin(),
-                                                        UseBlock->pred_end());
-    while (!Worklist.empty()) {
-      const MachineBasicBlock *B = Worklist.pop_back_val();
-      if (BridgeBlocks.contains(B))
-        continue; // This path is covered; do not walk past the bridge block.
-      if (B->pred_empty())
-        return false; // Reached entry without crossing a bridge block.
-      if (!Visited.insert(B).second)
-        continue;
-      Worklist.append(B->pred_begin(), B->pred_end());
-    }
-    return true;
-  };
-
-  if (!SkipCheck2) {
+    };
     for (const MachineOperand &UseMO : DAG.MRI.use_nodbg_operands(Src2Reg)) {
       const MachineBasicBlock *UseBlock = UseMO.getParent()->getParent();
       if (!CoveredByBridgeSet(UseBlock))
@@ -2542,31 +2594,57 @@ bool RewriteMFMAFormStage::hasSrc2BridgeConflict(
     }
   }
 
-  // Check 3: original-register connectivity.  rewrite() redirects Src2Reg's
-  // uses to %MappedReg, so non-AGPR-form partial subreg defs in >=2 blocks with
-  // none dominating all uses split Src2Reg's live interval into disconnected
-  // fragments.  AGPR-form defs are absent from RedefPartialBlocks (skipped by
-  // Case1), preserving the diamond joint-coverage case.
-  if (RedefPartialBlocks.size() >= 2) {
-    bool SingleDominator = false;
-    for (const MachineBasicBlock *B : RedefPartialBlocks) {
-      bool DomAllUses = true;
-      for (const MachineOperand &UseMO : DAG.MRI.use_nodbg_operands(Src2Reg)) {
-        if (!MDT.dominates(B, UseMO.getParent()->getParent())) {
-          DomAllUses = false;
-          break;
-        }
-      }
-      if (DomAllUses) {
-        SingleDominator = true;
-        break;
-      }
+  // Check 3 (fragmentation gate): a non-fragmented interval needs no merge
+  // point; a fragmented one must funnel through a single merge block.
+  if (RedefPartialBlocks.size() < 2)
+    return false;
+  auto isAcyclicSingleBlockMFMAMerge = [&]() {
+    // MAIMIs is non-empty here; only the single-non-MAI-block shape is checked.
+    SmallPtrSet<const MachineBasicBlock *, 4> NonMAIBlocks;
+    for (MachineInstr *N : NonMAIMIs)
+      NonMAIBlocks.insert(N->getParent());
+    if (NonMAIBlocks.size() != 1)
+      return false;
+    const MachineBasicBlock *NonMAIBlock = *NonMAIBlocks.begin();
+    for (MachineInstr *M : MAIMIs) {
+      const MachineBasicBlock *MBlk = M->getParent();
+      if (MBlk == CandBlock || MBlk == NonMAIBlock ||
+          !MPDT.dominates(CandBlock, MBlk))
+        return false;
     }
-    if (!SingleDominator)
-      return true;
+    return true;
+  };
+  bool MergeOk = MAIMIs.empty()
+                     ? isSrc2MergePoint(Src2Reg, CandBlock, RedefPartialBlocks)
+                     : isAcyclicSingleBlockMFMAMerge();
+  if (!MergeOk)
+    return true;
+
+  // Coverage: bridge COPYs come only from non-AGPR-form reaching defs.  If
+  // those don't jointly cover every live lane of Src2Reg, neither emit strategy
+  // can reconstruct the full value.  No subranges = whole-reg live = no lane
+  // gap.
+  if (!DAG.LIS->hasInterval(Src2Reg))
+    return false;
+  const LiveInterval &LI = DAG.LIS->getInterval(Src2Reg);
+  if (!LI.hasSubRanges())
+    return false;
+
+  LaneBitmask LiveLanes = LaneBitmask::getNone();
+  for (const LiveInterval::SubRange &SR : LI.subranges())
+    LiveLanes |= SR.LaneMask;
+
+  LaneBitmask BridgeDefLanes = LaneBitmask::getNone();
+  for (MachineInstr *N : NonMAIMIs) {
+    if (isReachingDefAGPRForm(N, RewriteSet, CandSrc2Regs, *TII))
+      continue; // Match Src2DefsReplace's filter exactly.
+    unsigned Sub = getDefSubReg(*N, Src2Reg);
+    BridgeDefLanes |= (Sub == AMDGPU::NoSubRegister)
+                          ? LaneBitmask::getAll()
+                          : DAG.TRI->getSubRegIndexLaneMask(Sub);
   }
 
-  return false;
+  return (BridgeDefLanes & LiveLanes) != LiveLanes;
 }
 
 void RewriteMFMAFormStage::propagateExclusionForward(
@@ -2586,19 +2664,12 @@ void RewriteMFMAFormStage::propagateExclusionForward(
           TII->getNamedOperand(*UserMI, AMDGPU::OpName::src2);
       if (!UserSrc2 || !UserSrc2->isReg() || UserSrc2->getReg() != DstReg)
         continue;
-      if (ExcludedMFMAs.insert(UserMI).second) {
-        LLVM_DEBUG(dbgs() << "[initHeuristics] exclude downstream MFMA "
-                             "(src2 = excluded MFMA dst): "
-                          << *UserMI);
+      if (ExcludedMFMAs.insert(UserMI).second)
         Worklist.push_back(UserMI);
-      }
     }
   }
 }
 
-// rewrite() reclassifies DstReg to AGPR so the MFMA writes its result directly
-// into AGPR (no post-MFMA copy).  That is legal only if every def and use of
-// DstReg across its live range supports AGPR-class operands; check that here.
 bool RewriteMFMAFormStage::hasDstSubregConflict(Register DstReg,
                                                 MachineInstr *MFMA) {
   SmallVector<MachineOperand *, 8> DstReachingUses;
@@ -2606,9 +2677,7 @@ bool RewriteMFMAFormStage::hasDstSubregConflict(Register DstReg,
   SmallPtrSet<MachineInstr *, 8> CheckedDefs;
   SmallVector<MachineInstr *, 4> SafeSubregDefs;
 
-  // Phase 1: classify subreg reaching defs.
-  // Non-agnostic subreg def → immediate conflict.
-  // Agnostic (COPY/AV_MOV) subreg def → defer to orphan-use check.
+  // Phase 1: non-agnostic subreg def → conflict; agnostic → defer to Phase 2.
   for (MachineOperand *RUOp : DstReachingUses) {
     SmallVector<SlotIndex, 8> ReachingDefs;
     findReachingDefs(*RUOp, DAG.LIS, ReachingDefs);
@@ -2624,9 +2693,8 @@ bool RewriteMFMAFormStage::hasDstSubregConflict(Register DstReg,
     }
   }
 
-  // Phase 2: agnostic subreg defs lower to v_accvgpr_write after reclassify,
-  // so their orphan uses read an AGPR sub-register.  Only COPY and AV_MOV can
-  // legally source an AGPR sub-register; anything else is a conflict.
+  // Phase 2: an agnostic subreg def's lane becomes AGPR after reclassify, so a
+  // non-agnostic use of it can't legally source that AGPR sub-register lane.
   for (MachineInstr *RD : SafeSubregDefs) {
     SlotIndex RDIdx = DAG.LIS->getInstructionIndex(*RD);
     for (MachineOperand &UseMO : DAG.MRI.use_nodbg_operands(DstReg)) {
@@ -2647,120 +2715,95 @@ bool RewriteMFMAFormStage::hasDstSubregConflict(Register DstReg,
 
 SmallPtrSet<MachineInstr *, 16> RewriteMFMAFormStage::computeExclusionSet(
     const SmallSetVector<MachineInstr *, 16> &RewriteSet) {
-  // Per-MI checks, cheapest-first: (1) hasSrc2BridgeConflict, then
-  // (2) hasDstSubregConflict (skipped when 1 already excludes).  Exclusion
-  // propagates forward (dst->src2 via propagateExclusionForward) and backward
-  // (MAI reaching-defs of a conflicted src2).
+  // Per-MI checks, cheapest-first: hasSrc2BridgeConflict before
+  // hasDstSubregConflict.
   SmallPtrSet<MachineInstr *, 16> ExcludedMFMAs;
 
-  // Per src2 register, union reaching-def blocks across all candidates (one
-  // candidate sees only one path): non-MFMA -> Src2BridgeBlocks (Check 2), plus
-  // non-AGPR-form partial-subreg -> Src2RedefPartialBlocks (Check 3). Reaching-
-  // def (not all-def) keeps bypass-killed and entry IMPLICIT_DEFs out.
   DenseMap<Register, SmallPtrSet<const MachineBasicBlock *, 8>>
       Src2BridgeBlocks;
   DenseMap<Register, SmallPtrSet<const MachineBasicBlock *, 8>>
       Src2RedefPartialBlocks;
 
-  // Rebuild the block maps from the still-live candidates \p Active: excluding
-  // a candidate makes its src2/MAI def non-AGPR-form (isReachingDefAGPRForm
-  // reads Active), which can add new Check 3 redef sources -- so the full
-  // pre-exclusion set would miss them.
-  auto recomputeBlocks = [&](const SmallSetVector<MachineInstr *, 16> &Active) {
-    Src2BridgeBlocks.clear();
-    Src2RedefPartialBlocks.clear();
-    DenseSet<Register> CandSrc2Regs;
-    for (MachineInstr *MI : Active) {
-      MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-      if (Src2 && Src2->isReg())
-        CandSrc2Regs.insert(Src2->getReg());
-    }
-    for (MachineInstr *MI : Active) {
-      MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-      if (!Src2 || !Src2->isReg())
+  // src2 reaching defs per candidate, computed in Phase 2 and reused in
+  // Phase 3.
+  DenseMap<MachineInstr *, SmallVector<SlotIndex, 8>> Src2DefsCache;
+
+  // === Phase 1: gather candidate src2 regs ===
+  // Consumed by isReachingDefAGPRForm; must be complete before Phase 2 uses it,
+  // hence its own pass.
+  DenseSet<Register> CandSrc2Regs;
+  for (MachineInstr *MI : RewriteSet) {
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    if (Src2 && Src2->isReg())
+      CandSrc2Regs.insert(Src2->getReg());
+  }
+
+  // === Phase 2: build per-src2 block maps ===
+  // Union across candidates: one candidate sees only one reaching path.
+  for (MachineInstr *MI : RewriteSet) {
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    if (!Src2 || !Src2->isReg())
+      continue;
+    Register Src2Reg = Src2->getReg();
+    auto &Blocks = Src2BridgeBlocks[Src2Reg];
+    auto &RedefBlocks = Src2RedefPartialBlocks[Src2Reg];
+    SmallVector<SlotIndex, 8> &Src2Defs = Src2DefsCache[MI];
+    findReachingDefs(*Src2, DAG.LIS, Src2Defs);
+    for (SlotIndex SI : Src2Defs) {
+      MachineInstr *RD = DAG.LIS->getInstructionFromIndex(SI);
+      if (!RD)
         continue;
-      Register Src2Reg = Src2->getReg();
-      auto &Blocks = Src2BridgeBlocks[Src2Reg];
-      auto &RedefBlocks = Src2RedefPartialBlocks[Src2Reg];
-      SmallVector<SlotIndex, 8> Src2Defs;
-      findReachingDefs(*Src2, DAG.LIS, Src2Defs);
-      for (SlotIndex SI : Src2Defs) {
-        MachineInstr *RD = DAG.LIS->getInstructionFromIndex(SI);
-        if (!RD || TII->isMFMA(*RD))
-          continue;
-        Blocks.insert(RD->getParent());
-        // Check 3 fragmentation source: non-AGPR-form partial-subreg defs only
-        // (AGPR-form skipped by Case1; full-width defs stay connected).
-        if (!isReachingDefAGPRForm(RD, Active, CandSrc2Regs, *TII) &&
+      if (TII->isMFMA(*RD)) {
+        // Fragmentation source: an MAI def is an independent value source into
+        // Src2Reg, so it counts toward Check 3's interval-fragmentation test.
+        RedefBlocks.insert(RD->getParent());
+      } else {
+        Blocks.insert(RD->getParent()); // Bridge-coverage source.
+        if (!isReachingDefAGPRForm(RD, RewriteSet, CandSrc2Regs, *TII) &&
             getDefSubReg(*RD, Src2Reg) != AMDGPU::NoSubRegister)
-          RedefBlocks.insert(RD->getParent());
+          RedefBlocks.insert(RD->getParent()); // Fragmentation source.
       }
     }
-  };
+  }
 
-  // Fixpoint: each exclusion can expose new conflicts in others (see
-  // recomputeBlocks).  Iterate to convergence; exclusions only grow over a
-  // finite candidate set, so this terminates.
-  bool Changed;
-  do {
-    Changed = false;
+  // === Phase 3: per-MI conflict (from the block maps above) + propagation ===
+  for (MachineInstr *MI : RewriteSet) {
+    // May have been excluded by forward/backward propagation earlier in this
+    // pass.
+    if (ExcludedMFMAs.count(MI))
+      continue;
 
-    SmallSetVector<MachineInstr *, 16> Active;
-    for (MachineInstr *MI : RewriteSet)
-      if (!ExcludedMFMAs.count(MI))
-        Active.insert(MI);
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    Register DstReg = MI->getOperand(0).getReg();
 
-    recomputeBlocks(Active);
-
-    for (MachineInstr *MI : Active) {
-      // May have been excluded by forward/backward propagation earlier this
-      // round.
-      if (ExcludedMFMAs.count(MI))
-        continue;
-
-      MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-      Register DstReg = MI->getOperand(0).getReg();
-
-      bool HasConflict = false;
-      SmallVector<SlotIndex, 8> Src2Defs;
-      if (Src2->isReg()) {
-        findReachingDefs(*Src2, DAG.LIS, Src2Defs);
-        HasConflict = hasSrc2BridgeConflict(
-            Src2Defs, Src2->getReg(), Src2BridgeBlocks[Src2->getReg()],
-            Src2RedefPartialBlocks[Src2->getReg()]);
-      }
-      bool HasDstSubregDef = !HasConflict && hasDstSubregConflict(DstReg, MI);
-
-      if (!HasConflict && !HasDstSubregDef)
-        continue;
-
-      if (ExcludedMFMAs.insert(MI).second) {
-        LLVM_DEBUG(
-            dbgs() << "[computeExclusionSet] exclude MFMA ("
-                   << (HasConflict ? "src2 dominance conflict" : "")
-                   << (HasConflict && HasDstSubregDef ? " + " : "")
-                   << (HasDstSubregDef ? "dst non-MAI subreg overwrite" : "")
-                   << "): " << *MI);
-        propagateExclusionForward(MI, ExcludedMFMAs);
-        Changed = true;
-      }
-
-      // Backward: exclude MAI reaching-defs that are themselves candidates.
-      if (!HasConflict)
-        continue;
-      for (SlotIndex SI : Src2Defs) {
-        MachineInstr *DefMI = DAG.LIS->getInstructionFromIndex(SI);
-        if (!TII->isMFMA(*DefMI) || !isRewriteCandidate(DefMI) ||
-            !ExcludedMFMAs.insert(DefMI).second)
-          continue;
-        LLVM_DEBUG(dbgs() << "[computeExclusionSet] exclude MAI def "
-                             "(backward from src2 dominance conflict): "
-                          << *DefMI);
-        propagateExclusionForward(DefMI, ExcludedMFMAs);
-        Changed = true;
-      }
+    bool HasConflict = false;
+    ArrayRef<SlotIndex> Src2Defs;
+    if (Src2->isReg()) {
+      Src2Defs = Src2DefsCache[MI]; // Reuse the Phase 2 computation.
+      HasConflict = hasSrc2BridgeConflict(
+          Src2Defs, Src2->getReg(), MI->getParent(),
+          Src2BridgeBlocks[Src2->getReg()],
+          Src2RedefPartialBlocks[Src2->getReg()], RewriteSet, CandSrc2Regs);
     }
-  } while (Changed);
+    bool HasDstSubregDef = !HasConflict && hasDstSubregConflict(DstReg, MI);
+
+    if (!HasConflict && !HasDstSubregDef)
+      continue;
+
+    if (ExcludedMFMAs.insert(MI).second)
+      propagateExclusionForward(MI, ExcludedMFMAs);
+
+    // Backward: exclude MAI reaching-defs that are themselves candidates.
+    if (!HasConflict)
+      continue;
+    for (SlotIndex SI : Src2Defs) {
+      MachineInstr *DefMI = DAG.LIS->getInstructionFromIndex(SI);
+      if (!TII->isMFMA(*DefMI) || !isRewriteCandidate(DefMI) ||
+          !ExcludedMFMAs.insert(DefMI).second)
+        continue;
+      propagateExclusionForward(DefMI, ExcludedMFMAs);
+    }
+  }
 
   return ExcludedMFMAs;
 }
@@ -2770,9 +2813,9 @@ RewriteMFMAFormStage::MFMACopyPlan RewriteMFMAFormStage::analyzeCopyPoints(
     const DenseSet<Register> &Src2Regs, bool Src2NeedsVGPR) {
   MFMACopyPlan Plan;
 
-  // Case 1: the reaching defs of the src2 operand that need a bridge copy.
-  // If src2 stays VGPR, every reaching def needs a copy; otherwise reaching
-  // defs already in AGPR form (group members, av-movs, group copies) don't.
+  // Case 1: src2 reaching defs needing a bridge copy.  If Src2NeedsVGPR, every
+  // def needs one; else AGPR-form defs (group members, av-movs, group copies)
+  // don't.
   MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
   if (Src2->isReg()) {
     SmallVector<SlotIndex, 8> Src2ReachingDefs;
@@ -2828,15 +2871,12 @@ bool RewriteMFMAFormStage::initHeuristics(
       if (isRewriteCandidate(&MI))
         RewriteSet.insert(&MI);
 
-  // Remove unsafe candidates so RewriteSet becomes the post-exclusion group --
-  // both the Pass 2 worklist and the "will be AGPR-form" set queried
-  // downstream.
+  // Remove unsafe candidates so RewriteSet is the post-exclusion group -- both
+  // the Pass 2 worklist and the "will be AGPR-form" set queried downstream.
   SmallPtrSet<MachineInstr *, 16> ExcludedMFMAs =
       computeExclusionSet(RewriteSet);
-  for (MachineInstr *Excluded : ExcludedMFMAs) {
-    LLVM_DEBUG(dbgs() << "[initHeuristics] skip excluded MFMA: " << *Excluded);
+  for (MachineInstr *Excluded : ExcludedMFMAs)
     RewriteSet.remove(Excluded);
-  }
 
   // src2 regs of the post-exclusion group only: an excluded candidate's src2
   // stays VGPR, so isReachingDefAGPRForm must not treat a COPY from it as
@@ -2847,6 +2887,10 @@ bool RewriteMFMAFormStage::initHeuristics(
     if (Src2 && Src2->isReg())
       CandSrc2Regs.insert(Src2->getReg());
   }
+
+  // rewrite() emits src2 bridge COPYs once per Src2Reg (its first candidate);
+  // charge only that first candidate too, matching what rewrite() emits.
+  DenseSet<Register> ChargedSrc2Regs;
 
   // Pass 2: compute heuristics for the remaining (rewritable) candidates.
   for (MachineInstr *MI : RewriteSet) {
@@ -2871,17 +2915,21 @@ bool RewriteMFMAFormStage::initHeuristics(
     MFMACopyPlan Plan =
         analyzeCopyPoints(MI, RewriteSet, CandSrc2Regs, Src2NeedsVGPR);
 
-    if (Src2->isReg()) {
-      for (MachineInstr *RD : Plan.Src2DefsNeedingCopy) {
-        // If this reaching def writes into the src2 register itself (possibly
-        // a partial subreg write), the def will be reclassified together with
-        // src2 and does not need a bridge copy.
-        if (any_of(RD->defs(), [&](const MachineOperand &DefOp) {
-              return DefOp.isReg() && DefOp.getReg() == Src2->getReg();
-            }))
-          continue;
-        CopyForDef.insert(RD);
-      }
+    if (Src2->isReg() && !Plan.Src2DefsNeedingCopy.empty() &&
+        ChargedSrc2Regs.insert(Src2->getReg()).second) {
+      // Charge exactly the COPYs rewrite()'s Case 1 will emit for this
+      // Src2Reg's first bridging candidate: the merged path is one COPY before
+      // the MFMA (charge MI -- its block matches, and the dst class
+      // approximates the src2-width COPY closely enough for this
+      // spill-estimate); the per-BB path is one COPY per def-BB after its last
+      // def (charge each BB's LastRD).
+      Src2BridgeDecision D =
+          classifySrc2Bridge(MI, Src2, Plan.Src2DefsNeedingCopy);
+      if (D.UseMerged)
+        CopyForDef.insert(MI);
+      else
+        for (MachineBasicBlock *BB : D.Plan.SortedBBs)
+          CopyForDef.insert(D.Plan.PerBBMap.find(BB)->second.LastRD);
     }
 
     MachineOperand &Dst = MI->getOperand(0);
@@ -3013,6 +3061,225 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   return Cost + CopyCost;
 }
 
+RewriteMFMAFormStage::Src2BridgePlan
+RewriteMFMAFormStage::computeSrc2BridgePlan(
+    const SmallSetVector<MachineInstr *, 8> &Src2DefsReplace, Register Src2Reg,
+    const MachineBasicBlock *UseMBB) {
+  Src2BridgePlan Plan;
+
+  // Phase 1: live lanes of src2 -- union of sub-ranges, or all lanes if the reg
+  // has none (else AllLanesCovered reads as spuriously uncovered for full-width
+  // src2).
+  if (DAG.LIS->hasInterval(Src2Reg)) {
+    const LiveInterval &Src2LI = DAG.LIS->getInterval(Src2Reg);
+    if (Src2LI.hasSubRanges())
+      for (const LiveInterval::SubRange &SR : Src2LI.subranges())
+        Plan.Src2LiveLanes |= SR.LaneMask;
+    else
+      Plan.Src2LiveLanes = LaneBitmask::getAll();
+  }
+
+  // Phase 2: fold each reaching def into per-BB state (lanes written, last def)
+  // and accumulate the total lanes defined across all BBs.
+  LaneBitmask TotalDefLanes = LaneBitmask::getNone();
+  for (MachineInstr *RD : Src2DefsReplace) {
+    unsigned SubReg = getDefSubReg(*RD, Src2Reg);
+    if (SubReg != AMDGPU::NoSubRegister)
+      Plan.HasSubregDef = true;
+    LaneBitmask Lanes = (SubReg == AMDGPU::NoSubRegister)
+                            ? LaneBitmask::getAll()
+                            : DAG.TRI->getSubRegIndexLaneMask(SubReg);
+    TotalDefLanes |= Lanes;
+    Src2PerBBEntry &Entry = Plan.PerBBMap[RD->getParent()];
+    Entry.UnionLanes |= Lanes;
+    if (!Entry.LastRD || DAG.LIS->getInstructionIndex(*Entry.LastRD) <
+                             DAG.LIS->getInstructionIndex(*RD))
+      Entry.LastRD = RD;
+  }
+
+  // Phase 3: do the defs jointly cover every live lane of src2?
+  Plan.AllLanesCovered =
+      Plan.Src2LiveLanes.any() &&
+      (TotalDefLanes & Plan.Src2LiveLanes) == Plan.Src2LiveLanes;
+
+  // Phase 4: order def-BBs by their last-def slot, then test whether they form
+  // a dominator chain (each dominates the next) -- the sequential-bridge path.
+  for (auto &[BB, Entry] : Plan.PerBBMap)
+    Plan.SortedBBs.push_back(BB);
+  llvm::sort(Plan.SortedBBs, [&](MachineBasicBlock *A, MachineBasicBlock *B) {
+    return DAG.LIS->getInstructionIndex(*Plan.PerBBMap[A].LastRD) <
+           DAG.LIS->getInstructionIndex(*Plan.PerBBMap[B].LastRD);
+  });
+  auto &MDT = DAG.LIS->getDomTree();
+  Plan.IsSequential = true;
+  for (unsigned I = 0; I + 1 < Plan.SortedBBs.size(); ++I)
+    if (!MDT.dominates(Plan.SortedBBs[I], Plan.SortedBBs[I + 1])) {
+      Plan.IsSequential = false;
+      break;
+    }
+
+  // The per-BB (sequential) bridge chain only works if the deepest def-BB
+  // dominates the use: each per-BB COPY consumes Src2Reg inside its own def-BB,
+  // so if some path reaches the use without passing through the deepest def-BB
+  // (e.g. a bypass edge, or parallel def-BBs that each fully define Src2Reg),
+  // Src2Reg's sub-defs no longer share the merge-point use that kept its live
+  // interval connected -> "Multiple connected components". Fall back to the
+  // merged (single full-width COPY before the MFMA) path in that case.
+  if (Plan.IsSequential && !Plan.SortedBBs.empty() && UseMBB &&
+      !MDT.dominates(Plan.SortedBBs.back(), UseMBB))
+    Plan.IsSequential = false;
+
+  return Plan;
+}
+
+RewriteMFMAFormStage::Src2BridgeDecision
+RewriteMFMAFormStage::classifySrc2Bridge(
+    MachineInstr *MI, MachineOperand *Src2,
+    const SmallSetVector<MachineInstr *, 8> &Src2DefsReplace) {
+  Src2BridgeDecision D;
+  D.Plan =
+      computeSrc2BridgePlan(Src2DefsReplace, Src2->getReg(), MI->getParent());
+
+  SmallVector<SlotIndex, 8> Src2AllDefs;
+  findReachingDefs(*Src2, DAG.LIS, Src2AllDefs);
+  bool HasMAIReachingDef = false;
+  for (SlotIndex SI : Src2AllDefs)
+    if (MachineInstr *RD = DAG.LIS->getInstructionFromIndex(SI))
+      if (TII->isMFMA(*RD))
+        HasMAIReachingDef = true;
+
+  // per-BB bridging (one COPY per def-BB) is the default; three shapes below
+  // need a merged full-width COPY instead.  Otherwise (a single dominating
+  // def-BB, or none) per-BB is always safe.
+  bool ParallelMultiArm = D.Plan.SortedBBs.size() >= 2 && !D.Plan.IsSequential;
+
+  const MachineBasicBlock *CandBlock = MI->getParent();
+  bool PerBBSafe = true;
+  if (ParallelMultiArm) {
+    // Shape 1 -- parallel arms (>=2 mutually non-dominating def-BBs).  Safe
+    // only if
+    //   1. Lanes: the arms jointly cover every live lane (AllLanesCovered),
+    //   else
+    //      MappedReg is left partly undefined; and
+    //   2. Connectivity: some non-implicit use dominated by CandBlock (past the
+    //      merge point, so every arm reaches it) survives to keep Src2Reg
+    //      connected -- otherwise redirecting the candidate uses to MappedReg
+    //      splits its interval per arm ("Multiple connected components").
+    bool RemainingUseConnects = false;
+    if (D.Plan.AllLanesCovered) {
+      auto &MDT = DAG.LIS->getDomTree();
+      for (MachineOperand &UseMO : DAG.MRI.use_nodbg_operands(Src2->getReg())) {
+        if (UseMO.isImplicit())
+          continue;
+        MachineInstr *UseMI = UseMO.getParent();
+        // A src2 use of any MFMA on this reg is redirected to MappedReg
+        // (isRewriteCandidate is state-dependent -- already-rewritten MFMAs
+        // report false -- so match on the src2 operand, aligned with
+        // ReplaceMap).
+        if (TII->isMFMA(*UseMI) &&
+            TII->getNamedOperand(*UseMI, AMDGPU::OpName::src2) == &UseMO)
+          continue;
+        if (!MDT.dominates(CandBlock, UseMI->getParent()))
+          continue;
+        RemainingUseConnects = true;
+        break;
+      }
+    }
+    PerBBSafe = D.Plan.AllLanesCovered && RemainingUseConnects;
+  } else if (D.Plan.SortedBBs.size() >= 2) {
+    // Shape 2 -- sequential multi-BB defs (dominator chain): the per-def-BB
+    // COPYs must jointly cover every live lane.
+    PerBBSafe = D.Plan.AllLanesCovered;
+  } else if (D.Plan.SortedBBs.size() == 1 && !D.Plan.IsSequential) {
+    // Shape 3 -- single def-BB not dominating the use: a per-BB COPY leaves
+    // MappedReg undefined on the bypass path, so fall back to merged -- unless
+    // a MAI reaching def forces per-BB (merged would read Src2Reg after its
+    // MFMA def is renamed to AGPR form; the upstream coverage gate keeps per-BB
+    // safe here).
+    PerBBSafe = HasMAIReachingDef;
+  }
+
+  D.UseMerged = !PerBBSafe;
+  return D;
+}
+
+void RewriteMFMAFormStage::emitMergedSrc2Bridge(
+    MachineInstr *MI, Register Src2Reg, Register MappedReg,
+    function_ref<void(MachineInstr *, MachineInstrBuilder &)>
+        UpdateRegionBefore) {
+  // At the MFMA the LIS PHI has merged all paths, so every sub-range is live
+  // and the full-width COPY reads a fully-defined Src2Reg.
+  MachineInstrBuilder VGPRCopy =
+      BuildMI(*MI->getParent(), MI->getIterator(), MI->getDebugLoc(),
+              TII->get(TargetOpcode::COPY))
+          .addDef(MappedReg, {}, 0)
+          .addUse(Src2Reg, {}, 0);
+  DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
+  UpdateRegionBefore(MI, VGPRCopy);
+}
+
+void RewriteMFMAFormStage::emitPerDefBBSrc2Bridges(
+    Register Src2Reg, Register MappedReg, const Src2BridgePlan &Plan,
+    SmallPtrSetImpl<MachineInstr *> &ReachingDefCopies,
+    function_ref<void(MachineInstr *, MachineInstrBuilder &)>
+        UpdateRegionAfter) {
+  // One bridge COPY per def-BB, after its last reaching def. Def-BBs form a
+  // dominator chain (Plan.IsSequential), so each COPY dominates the MFMA.
+  //
+  // A full-width def overwrites upstream same-reg defs, so multiple def-BBs
+  // must be complementary sub-reg writes — enforced by the assert below.
+  assert((Plan.SortedBBs.size() <= 1 || Plan.AllLanesCovered) &&
+         "sequential multi-BB src2 bridges must jointly cover the live range");
+
+  // Lane mask -> the sub-reg index exactly matching it and valid in the AGPR
+  // class; NoSubRegister if none.
+  const TargetRegisterClass *AgprRC =
+      SRI->getEquivalentAGPRClass(DAG.MRI.getRegClass(Src2Reg));
+  auto findSubRegForLanes = [&](LaneBitmask Lanes) -> unsigned {
+    for (unsigned SubIdx = 1; SubIdx < DAG.TRI->getNumSubRegIndices();
+         ++SubIdx) {
+      if (DAG.TRI->getSubRegIndexLaneMask(SubIdx) != Lanes)
+        continue;
+      if (AgprRC && DAG.TRI->getSubClassWithSubReg(AgprRC, SubIdx) == nullptr)
+        continue;
+      return SubIdx;
+    }
+    return AMDGPU::NoSubRegister;
+  };
+
+  bool IsFirstSubRegCopy = true;
+  for (MachineBasicBlock *BB : Plan.SortedBBs) {
+    const Src2PerBBEntry &Entry = Plan.PerBBMap.find(BB)->second;
+    MachineInstr *RD = Entry.LastRD;
+    if (!ReachingDefCopies.insert(RD).second)
+      continue;
+
+    // Narrow to a sub-reg COPY only when the defs jointly cover the range but
+    // this BB writes just part of it; otherwise (incl. AllLanesCovered==0) stay
+    // full-width, so no MappedReg lane is left undefined.
+    unsigned CopySrcSubReg = AMDGPU::NoSubRegister;
+    if (Plan.AllLanesCovered &&
+        (Entry.UnionLanes & Plan.Src2LiveLanes) != Plan.Src2LiveLanes)
+      CopySrcSubReg = findSubRegForLanes(Entry.UnionLanes);
+
+    // The first sub-reg write into the fresh MappedReg is flagged undef to
+    // establish its full live range; later sub-reg writes fill in the rest.
+    RegState DefFlags = RegState(0);
+    if (CopySrcSubReg != AMDGPU::NoSubRegister && IsFirstSubRegCopy) {
+      DefFlags = RegState::Undef;
+      IsFirstSubRegCopy = false;
+    }
+
+    MachineInstrBuilder VGPRCopy =
+        BuildMI(*RD->getParent(), std::next(RD->getIterator()),
+                RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
+            .addDef(MappedReg, DefFlags, CopySrcSubReg)
+            .addUse(Src2Reg, {}, CopySrcSubReg);
+    DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
+    UpdateRegionAfter(RD, VGPRCopy);
+  }
+}
+
 bool RewriteMFMAFormStage::rewrite(
     ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands) {
   DenseMap<MachineInstr *, unsigned> FirstMIToRegion;
@@ -3041,14 +3308,15 @@ bool RewriteMFMAFormStage::rewrite(
   // operands, 2. the reaching uses of the dst operands, and 3. the reaching
   // defs of the reaching uses of the dst operand.
   //
-  // In the first case, we simply insert copies after each of the reaching
-  // definitions. In the second case, we collect all the uses of a given dest
-  // and organize them by MBB. Then, we insert 1 copy for each MBB before the
+  // In the first case, we insert one copy per def-BB after that BB's last
+  // reaching def (or, for parallel BBs with subreg defs, a single copy before
+  // the MFMA). In the second case, we collect all the uses of a given dest and
+  // organize them by MBB. Then, we insert 1 copy for each MBB before the
   // earliest use. Since the use may have multiple reaching defs, and since we
   // want to replace the register it is using with the result of the copy, we
-  // must handle case 3. In the third case, we simply insert a copy after each
-  // of the reaching defs to connect to the copy of the reaching uses of the dst
-  // reg. This allows us to avoid inserting copies next to the MFMAs.
+  // must handle case 3. In the third case, we insert a copy after the reaching
+  // defs to connect to the copy of the reaching uses of the dst reg, grouped by
+  // sub-reg. This allows us to avoid inserting copies next to the MFMAs.
   //
   // While inserting the copies, we maintain a map of operands which will use
   // different regs (i.e. the result of the copies). For example, a case 1 src2
@@ -3080,8 +3348,36 @@ bool RewriteMFMAFormStage::rewrite(
   DenseMap<unsigned, DenseMap<Register, SmallPtrSet<MachineOperand *, 8>>>
       ReachingUseTracker;
 
-  // Collect the candidate group; its members share AGPR-form operands
-  // post-rewrite, so reaching defs feeding any member need no bridge copy.
+  // Bilateral region-boundary helpers (used by Case 1, 2, and 3).
+  auto UpdateRegionBefore = [&](MachineInstr *UseInst,
+                                MachineInstrBuilder &Copy) {
+    auto FI = FirstMIToRegion.find(UseInst);
+    if (FI != FirstMIToRegion.end()) {
+      DAG.Regions[FI->second].first = Copy;
+      FirstMIToRegion.erase(UseInst);
+      auto LMI = LastMIToRegion.find(UseInst);
+      if (LMI != LastMIToRegion.end()) {
+        DAG.Regions[LMI->second].second = Copy;
+        LastMIToRegion.erase(UseInst);
+      }
+    }
+  };
+  auto UpdateRegionAfter = [&](MachineInstr *DefInst,
+                               MachineInstrBuilder &Copy) {
+    if (LastMIToRegion.contains(DefInst)) {
+      DAG.Regions[LastMIToRegion[DefInst]].second = Copy;
+      LastMIToRegion.erase(DefInst);
+      auto FI2 = FirstMIToRegion.find(DefInst);
+      if (FI2 != FirstMIToRegion.end()) {
+        DAG.Regions[FI2->second].first = Copy;
+        FirstMIToRegion.erase(DefInst);
+      }
+    }
+  };
+
+  // Collect the candidate group (post-exclusion); its members share AGPR-form
+  // operands post-rewrite, so reaching defs feeding any member need no bridge
+  // copy.
   SmallSetVector<MachineInstr *, 16> RewriteCandsSet;
   DenseSet<Register> RewriteSrc2Regs;
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
@@ -3118,7 +3414,8 @@ bool RewriteMFMAFormStage::rewrite(
 
       if (!Src2DefsReplace.empty()) {
         auto RI = RedefMap.find(Src2Reg);
-        if (RI != RedefMap.end()) {
+        bool NewMapping = RI == RedefMap.end();
+        if (!NewMapping) {
           MappedReg = RI->second;
         } else {
           assert(!ReachingDefCopyMap.contains(Src2Reg));
@@ -3131,26 +3428,18 @@ bool RewriteMFMAFormStage::rewrite(
           RedefMap[Src2Reg] = MappedReg;
         }
 
-        // If none exists, create a copy from this reaching def.
-        // We may have inserted a copy already in an earlier iteration.
-        for (MachineInstr *RD : Src2DefsReplace) {
-          // Do not create redundant copies.
-          if (ReachingDefCopyMap[Src2Reg].insert(RD).second) {
-            MachineInstrBuilder VGPRCopy =
-                BuildMI(*RD->getParent(), std::next(RD->getIterator()),
-                        RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
-                    .addDef(MappedReg, {}, 0)
-                    .addUse(Src2Reg, {}, 0);
-            DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-
-            // If this reaching def was the last MI in the region, update the
-            // region boundaries.
-            if (LastMIToRegion.contains(RD)) {
-              unsigned UpdateRegion = LastMIToRegion[RD];
-              DAG.Regions[UpdateRegion].second = VGPRCopy;
-              LastMIToRegion.erase(RD);
-            }
-          }
+        // Emit the bridge COPYs once per Src2Reg, when its mapping is first
+        // created (strategy chosen below); later sharers reuse the same
+        // MappedReg.  Re-emitting would define MappedReg twice, splitting its
+        // live interval into multiple connected components.
+        if (NewMapping) {
+          Src2BridgeDecision D = classifySrc2Bridge(MI, Src2, Src2DefsReplace);
+          if (D.UseMerged)
+            emitMergedSrc2Bridge(MI, Src2Reg, MappedReg, UpdateRegionBefore);
+          else
+            emitPerDefBBSrc2Bridges(Src2Reg, MappedReg, D.Plan,
+                                    ReachingDefCopyMap[Src2Reg],
+                                    UpdateRegionAfter);
         }
       }
 
@@ -3171,76 +3460,108 @@ bool RewriteMFMAFormStage::rewrite(
       return false;
 
     Register MappedReg = DstReg;
+    SmallVector<MachineOperand *, 4> SameBlockUses; // same-BB Case2 uses
+
+    // Case 2 uses and Case 3 defs come from the shared coarse plan.
     const SmallSetVector<MachineOperand *, 8> &DstReachingUseCopies =
         Plan.DstUsesNeedingCopy;
     const SmallSetVector<MachineInstr *, 8> &DstUseDefsReplace =
         Plan.DstUseDefsNeedingCopy;
 
     if (!DstUseDefsReplace.empty()) {
-      auto RI = RedefMap.find(DstReg);
-      if (RI != RedefMap.end()) {
-        MappedReg = RI->second;
-      } else {
-        assert(!ReachingDefCopyMap.contains(DstReg));
-        const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
-        const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
+      // Reclassify DstReg to AGPR directly when only subreg COPY/AV_MOV writes
+      // reach here (Strategy A); a full-width non-MAI def instead needs a VGPR
+      // snapshot (MappedReg) via bridge COPYs (Strategy B). Non-agnostic subreg
+      // writers are gated out upstream by HasDstSubregDef in initHeuristics.
+      bool HasFullWidthDef = any_of(DstUseDefsReplace, [&](MachineInstr *RD) {
+        return getDefSubReg(*RD, DstReg) == AMDGPU::NoSubRegister;
+      });
+      if (HasFullWidthDef) {
+        auto RI = RedefMap.find(DstReg);
+        if (RI != RedefMap.end()) {
+          MappedReg = RI->second;
+        } else {
+          assert(!ReachingDefCopyMap.contains(DstReg));
+          const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
+          const TargetRegisterClass *VGPRRC =
+              SRI->getEquivalentVGPRClass(DstRC);
 
-        // Track the mapping of the original register to the new register.
-        MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
-        RedefMap[DstReg] = MappedReg;
-      }
+          // Track the mapping of the original register to the new register.
+          MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
+          RedefMap[DstReg] = MappedReg;
+        }
 
-      // If none exists, create a copy from this reaching def.
-      // We may have inserted a copy already in an earlier iteration.
-      for (MachineInstr *RD : DstUseDefsReplace) {
-        // Do not create reundant copies.
-        if (ReachingDefCopyMap[DstReg].insert(RD).second) {
+        // If none exists, create a copy from this reaching def.
+        // We may have inserted a copy already in an earlier iteration.
+        for (MachineInstr *RD : DstUseDefsReplace) {
+          // Do not create redundant copies.
+          if (!ReachingDefCopyMap[DstReg].insert(RD).second)
+            continue;
+          unsigned SubReg = getDefSubReg(*RD, DstReg);
           MachineInstrBuilder VGPRCopy =
               BuildMI(*RD->getParent(), std::next(RD->getIterator()),
                       RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
-                  .addDef(MappedReg, {}, 0)
-                  .addUse(DstReg, {}, 0);
+                  .addDef(MappedReg,
+                          SubReg != AMDGPU::NoSubRegister ? RegState::Undef
+                                                          : RegState(0),
+                          SubReg)
+                  .addUse(DstReg, {}, SubReg);
           DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-
-          // If this reaching def was the last MI in the region, update the
-          // region boundaries.
-          auto LMI = LastMIToRegion.find(RD);
-          if (LMI != LastMIToRegion.end()) {
-            unsigned UpdateRegion = LMI->second;
-            DAG.Regions[UpdateRegion].second = VGPRCopy;
-            LastMIToRegion.erase(RD);
-          }
+          UpdateRegionAfter(RD, VGPRCopy);
         }
       }
     }
 
     DenseSet<MachineOperand *> &DstRegSet = ReplaceMap[DstReg];
+    // Same-BB uses deferred to getCopyGroups batch (dedup + narrow).
+    // Cross-BB uses deferred to ReachingUseTracker batch.
     for (MachineOperand *RU : DstReachingUseCopies) {
       MachineBasicBlock *RUBlock = RU->getParent()->getParent();
-      // Just keep track of the reaching use of this register by block. After we
-      // have scanned all the MFMAs we can find optimal insert pts.
+      unsigned BBNum = RUBlock->getNumber();
       if (RUBlock != MI->getParent()) {
-        ReachingUseTracker[RUBlock->getNumber()][DstReg].insert(RU);
+        LLVM_DEBUG(dbgs() << "[RewriteMFMAForm] Case2 enqueue (cross-BB): Dst="
+                          << printReg(DstReg, SRI) << " use in BB#" << BBNum
+                          << ": " << *RU->getParent());
+        ReachingUseTracker[BBNum][DstReg].insert(RU);
         continue;
       }
+      SameBlockUses.push_back(RU);
+    }
 
-      // Special case, the use is in the same block as the MFMA. Insert the copy
-      // just before the use.
-      const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
-      const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
-      Register NewUseReg = DAG.MRI.createVirtualRegister(VGPRRC);
-      MachineInstr *UseInst = RU->getParent();
-      MachineInstrBuilder VGPRCopy =
-          BuildMI(*UseInst->getParent(), UseInst->getIterator(),
-                  UseInst->getDebugLoc(), TII->get(TargetOpcode::COPY))
-              .addDef(NewUseReg, {}, 0)
-              .addUse(DstReg, {}, 0);
-      DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-      // Since we know this use has only one reaching def, we can replace the
-      // use reg.
-      RU->setReg(NewUseReg);
-      // Track the copy source operand for r eplacement.
-      DstRegSet.insert(&VGPRCopy->getOperand(1));
+    if (!SameBlockUses.empty()) {
+      MachineInstr *UseInst =
+          (*llvm::min_element(SameBlockUses, [&](MachineOperand *A,
+                                                 MachineOperand *B) {
+            return SlotIndex::isEarlierInstr(
+                DAG.LIS->getInstructionIndex(*A->getParent()),
+                DAG.LIS->getInstructionIndex(*B->getParent()));
+          }))->getParent();
+      bool FirstGroup = true;
+      for (auto &[SrcSubReg, VGPRRC, GroupUses] :
+           getCopyGroups(SameBlockUses, DstReg, DAG.MRI, SRI, DAG.TRI)) {
+        Register GroupReg = DAG.MRI.createVirtualRegister(VGPRRC);
+        MachineInstrBuilder VGPRCopy =
+            BuildMI(*UseInst->getParent(), UseInst->getIterator(),
+                    UseInst->getDebugLoc(), TII->get(TargetOpcode::COPY))
+                .addDef(GroupReg, {}, 0)
+                .addUse(DstReg, {}, SrcSubReg);
+        DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
+        LLVM_DEBUG(dbgs() << "[RewriteMFMAForm] Case2 same-BB COPY: "
+                          << printReg(DstReg, SRI) << " -> "
+                          << printReg(GroupReg, SRI) << "  SrcSubReg="
+                          << SrcSubReg << "  before: " << *UseInst
+                          << "  inserted: " << *VGPRCopy);
+        if (FirstGroup) {
+          UpdateRegionBefore(UseInst, VGPRCopy);
+          FirstGroup = false;
+        }
+        for (MachineOperand *RU : GroupUses) {
+          RU->setReg(GroupReg);
+          if (SrcSubReg != AMDGPU::NoSubRegister)
+            RU->setSubReg(AMDGPU::NoSubRegister);
+        }
+        DstRegSet.insert(&VGPRCopy->getOperand(1));
+      }
     }
 
     // Track the register for reclassification
@@ -3252,50 +3573,53 @@ bool RewriteMFMAFormStage::rewrite(
     DstRegSet.insert(Dst);
   }
 
-  // Handle the copies for dst uses.
+  // Handle the copies for cross-BB dst uses (Case 2): one COPY per
+  // (block, register, sub-reg group), before that group's earliest use.
   using RUBType =
       std::pair<unsigned, DenseMap<Register, SmallPtrSet<MachineOperand *, 8>>>;
   for (RUBType RUBlockEntry : ReachingUseTracker) {
     using RUDType = std::pair<Register, SmallPtrSet<MachineOperand *, 8>>;
     for (RUDType RUDst : RUBlockEntry.second) {
-      MachineOperand *OpBegin = *RUDst.second.begin();
-      SlotIndex InstPt = DAG.LIS->getInstructionIndex(*OpBegin->getParent());
-
-      // Find the earliest use in this block.
-      for (MachineOperand *User : RUDst.second) {
-        SlotIndex NewInstPt = DAG.LIS->getInstructionIndex(*User->getParent());
-        if (SlotIndex::isEarlierInstr(NewInstPt, InstPt))
-          InstPt = NewInstPt;
+      LLVM_DEBUG(dbgs() << "[RewriteMFMAForm] Case2: processing Dst="
+                        << printReg(RUDst.first, SRI) << " in BB#"
+                        << RUBlockEntry.first << " uses=" << RUDst.second.size()
+                        << "\n");
+      // Sub-reg groups, each inserting at its own earliest use to minimize live
+      // range (UpdateRegionBefore is idempotent, so per-group calls are safe).
+      SmallVector<MachineOperand *, 8> UserOps(RUDst.second.begin(),
+                                               RUDst.second.end());
+      for (auto &[SrcSubReg, VGPRRC, GroupUses] :
+           getCopyGroups(UserOps, RUDst.first, DAG.MRI, SRI, DAG.TRI)) {
+        // Find earliest use in this group.
+        MachineInstr *UseInst =
+            (*llvm::min_element(GroupUses, [&](MachineOperand *A,
+                                               MachineOperand *B) {
+              return SlotIndex::isEarlierInstr(
+                  DAG.LIS->getInstructionIndex(*A->getParent()),
+                  DAG.LIS->getInstructionIndex(*B->getParent()));
+            }))->getParent();
+        Register GroupReg = DAG.MRI.createVirtualRegister(VGPRRC);
+        MachineInstrBuilder VGPRCopy =
+            BuildMI(*UseInst->getParent(), UseInst->getIterator(),
+                    UseInst->getDebugLoc(), TII->get(TargetOpcode::COPY))
+                .addDef(GroupReg, {}, 0)
+                .addUse(RUDst.first, {}, SrcSubReg);
+        DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
+        LLVM_DEBUG({
+          dbgs() << "[RewriteMFMAForm] Case2 cross-BB group COPY: "
+                 << printReg(RUDst.first, DAG.TRI) << " -> "
+                 << printReg(GroupReg, DAG.TRI) << "  SrcSubReg=" << SrcSubReg
+                 << "  BB#" << UseInst->getParent()->getNumber()
+                 << "  before: " << *UseInst << "  inserted: " << *VGPRCopy;
+        });
+        UpdateRegionBefore(UseInst, VGPRCopy);
+        for (MachineOperand *U : GroupUses) {
+          U->setReg(GroupReg);
+          if (SrcSubReg != AMDGPU::NoSubRegister)
+            U->setSubReg(AMDGPU::NoSubRegister);
+        }
+        ReplaceMap[RUDst.first].insert(&VGPRCopy->getOperand(1));
       }
-
-      const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(RUDst.first);
-      const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
-      Register NewUseReg = DAG.MRI.createVirtualRegister(VGPRRC);
-      MachineInstr *UseInst = DAG.LIS->getInstructionFromIndex(InstPt);
-
-      MachineInstrBuilder VGPRCopy =
-          BuildMI(*UseInst->getParent(), UseInst->getIterator(),
-                  UseInst->getDebugLoc(), TII->get(TargetOpcode::COPY))
-              .addDef(NewUseReg, {}, 0)
-              .addUse(RUDst.first, {}, 0);
-      DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-
-      // If this UseInst was the first MI in the region, update the region
-      // boundaries.
-      auto FI = FirstMIToRegion.find(UseInst);
-      if (FI != FirstMIToRegion.end()) {
-        unsigned UpdateRegion = FI->second;
-        DAG.Regions[UpdateRegion].first = VGPRCopy;
-        FirstMIToRegion.erase(UseInst);
-      }
-
-      // Replace the operand for all users.
-      for (MachineOperand *User : RUDst.second) {
-        User->setReg(NewUseReg);
-      }
-
-      // Track the copy source operand for replacement.
-      ReplaceMap[RUDst.first].insert(&VGPRCopy->getOperand(1));
     }
   }
 
@@ -3332,10 +3656,12 @@ bool RewriteMFMAFormStage::rewrite(
   RegionPressureMap LiveInUpdater(&DAG, false);
   LiveInUpdater.buildLiveRegMap();
 
-  for (unsigned Region = 0; Region < DAG.Regions.size(); Region++)
+  // reanalyze() rebuilds live intervals for the whole function, so refresh
+  // every region; leaving others stale would skew later occupancy decisions.
+  for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     DAG.LiveIns[Region] = LiveInUpdater.getLiveRegsForRegionIdx(Region);
-
-  DAG.Pressure[RegionIdx] = DAG.getRealRegPressure(RegionIdx);
+    DAG.Pressure[Region] = DAG.getRealRegPressure(Region);
+  }
 
   return true;
 }
