@@ -124,14 +124,16 @@ public:
     ParentLoop = L;
   }
 
-  /// Return true if the specified loop is contained within in this loop.
+  /// Return true if the specified loop is contained within this loop.
+  ///
+  /// This walks the parent chain and is O(depth). Deep nesting is not a
+  /// performance target (yet).
   bool contains(const LoopT *L) const {
     assert(!isInvalid() && "Loop not in a valid state!");
-    if (L == this)
-      return true;
-    if (!L)
-      return false;
-    return contains(L->getParentLoop());
+    for (; L; L = L->getParentLoop())
+      if (L == this)
+        return true;
+    return false;
   }
 
   /// Return true if the specified basic block is in this loop, using LoopInfo's
