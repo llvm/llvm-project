@@ -22,7 +22,8 @@ namespace Fortran::semantics {
 
 // TODO: C1234, C1235 -- defined I/O constraints
 
-static const Symbol *FindEnumerationTypeComponent(const DerivedTypeSpec &);
+static const Symbol *FindEnumerationTypeComponent(
+    common::DefinedIo, const DerivedTypeSpec &, const Scope &);
 
 class FormatErrorReporter {
 public:
@@ -352,7 +353,8 @@ void IoChecker::Enter(const parser::InputItem &spec) {
         // effective item, which may not appear in list-directed input.
         const Scope &scope{context_.FindScope(at)};
         if (!HasDefinedIo(common::DefinedIo::ReadFormatted, derived, &scope)) {
-          if (const Symbol *bad{FindEnumerationTypeComponent(derived)}) {
+          if (const Symbol *bad{FindEnumerationTypeComponent(
+                  common::DefinedIo::ReadFormatted, derived, scope)}) {
             context_.Say(at,
                 "List-directed input item has a component '%s' of enumeration type"_err_en_US,
                 bad->name());
@@ -713,7 +715,8 @@ void IoChecker::Enter(const parser::OutputItem &item) {
             const Scope &scope{context_.FindScope(at)};
             if (!HasDefinedIo(
                     common::DefinedIo::WriteFormatted, derived, &scope)) {
-              if (const Symbol *bad{FindEnumerationTypeComponent(derived)}) {
+              if (const Symbol *bad{FindEnumerationTypeComponent(
+                      common::DefinedIo::WriteFormatted, derived, scope)}) {
                 context_.Say(at,
                     "List-directed output item has a component '%s' of enumeration type"_err_en_US,
                     bad->name());
@@ -1273,28 +1276,58 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
   return FindInaccessibleComponent(which, derived, scope, visited);
 }
 
-// Returns the first direct (effective) component of `derived` whose type is an
-// enumeration type, else nullptr.  Mirrors the F2023 12.6.3 effective-item
-// expansion used to detect an enumeration effective item reached through a
-// derived-type list item.
-static const Symbol *FindEnumerationTypeComponent(
-    const DerivedTypeSpec &derived) {
-  if (!derived.GetScope()) {
+// Finds a direct (effective) component whose type is an enumeration type,
+// expanding a derived-type list item into its components per F2023 12.6.3.  A
+// component that is itself processed by defined I/O is treated as a single
+// value and is not expanded, so its subtree is skipped (based off of
+// FindInaccessibleComponent).
+static const Symbol *FindEnumerationTypeComponent(common::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope &scope,
+    VisitedSymbolSet &visited) {
+  if (!visited.insert(&derived.typeSymbol()).second) {
     return nullptr;
   }
-  DirectComponentIterator directs{derived};
-  for (const Symbol &component : directs) {
-    if (auto compType{evaluate::DynamicType::From(component)};
-        compType && compType->category() == TypeCategory::Derived) {
-      if (const auto *compDetails{compType->GetDerivedTypeSpec()
-                  .typeSymbol()
-                  .detailsIf<DerivedTypeDetails>()};
-          compDetails && compDetails->isEnumerationType()) {
-        return &component;
+  if (const Scope *dtScope{derived.scope()}) {
+    for (const auto &pair : *dtScope) {
+      const Symbol &symbol{*pair.second};
+      if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+        const DerivedTypeSpec *componentDerived{nullptr};
+        if (const DeclTypeSpec *type{details->type()}) {
+          if (type->category() == DeclTypeSpec::Category::TypeDerived) {
+            componentDerived = &type->derivedTypeSpec();
+          }
+        }
+        if (!componentDerived) {
+          continue;
+        }
+        // The component's type is itself an enumeration type: this is the
+        // enumeration effective item we are looking for.
+        if (const auto *compDetails{
+                componentDerived->typeSymbol().detailsIf<DerivedTypeDetails>()};
+            compDetails && compDetails->isEnumerationType()) {
+          return &symbol;
+        }
+        // The component is processed by defined I/O. It is treated as a single
+        // value and does not expand into its components.
+        if (HasDefinedIo(which, *componentDerived, &scope)) {
+          continue;
+        }
+        // Otherwise the component expands into its own components; recurse to
+        // look for an enumeration effective item nested within it.
+        if (const Symbol *bad{FindEnumerationTypeComponent(
+                which, *componentDerived, scope, visited)}) {
+          return bad;
+        }
       }
     }
   }
   return nullptr;
+}
+
+static const Symbol *FindEnumerationTypeComponent(common::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope &scope) {
+  VisitedSymbolSet visited;
+  return FindEnumerationTypeComponent(which, derived, scope, visited);
 }
 
 // Fortran 2018, 12.6.3 paragraphs 5 & 7
@@ -1326,7 +1359,7 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
     if ((which == common::DefinedIo::ReadUnformatted ||
             which == common::DefinedIo::WriteUnformatted) &&
         !HasDefinedIo(which, derived, &scope)) {
-      if (FindEnumerationTypeComponent(derived)) {
+      if (FindEnumerationTypeComponent(which, derived, scope)) {
         return &context_.Say(where,
             "Enumeration type may not be used in unformatted I/O"_err_en_US);
       }
@@ -1407,23 +1440,16 @@ void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
             continue;
           }
         }
-        // Check direct components for enumeration types
-        if (derived.GetScope()) {
-          DirectComponentIterator directs{derived};
-          for (const Symbol &component : directs) {
-            if (auto compType{evaluate::DynamicType::From(component)};
-                compType && compType->category() == TypeCategory::Derived) {
-              const auto &compDerived{compType->GetDerivedTypeSpec()};
-              if (const auto *compDetails{compDerived.typeSymbol()
-                          .detailsIf<DerivedTypeDetails>()}) {
-                if (compDetails->isEnumerationType()) {
-                  context_.Say(namelistLocation,
-                      "Namelist group object '%s' has a direct component '%s' of enumeration type"_err_en_US,
-                      object.name(), component.name());
-                  break;
-                }
-              }
-            }
+        // A namelist group object of derived type that is not processed by
+        // defined I/O expands into its components (F2023 12.6.3), so reject one
+        // that reaches an enumeration effective item.
+        const Scope &scope{context_.FindScope(namelistLocation)};
+        if (!HasDefinedIo(which, derived, &scope)) {
+          if (const Symbol *bad{
+                  FindEnumerationTypeComponent(which, derived, scope)}) {
+            context_.Say(namelistLocation,
+                "Namelist group object '%s' has a direct component '%s' of enumeration type"_err_en_US,
+                object.name(), bad->name());
           }
         }
       }
