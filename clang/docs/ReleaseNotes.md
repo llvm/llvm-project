@@ -115,6 +115,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### New Compiler Flags
 
+- New option `-fdefined-pointer-subtraction` added to preserve stable semantics
+  when subtracting pointers to unrelated objects.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -322,6 +325,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
+
+- Fixed a crash when a lambda parameter pack was given a default argument that
+  is a pack expansion referencing an enclosing function's parameter pack (e.g.
+  `[](Types... = args...) {}`). Clang now diagnoses the illegal default
+  argument instead of asserting. (#GH210714)
 
 #### Bug Fixes to AST Handling
 
