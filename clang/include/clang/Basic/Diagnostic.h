@@ -559,6 +559,11 @@ private:
   /// Number of errors reported
   unsigned NumErrors;
 
+  /// Name of the plugin whose diagnostics are currently being registered, set
+  /// by a PluginDiagnosticScope; empty when no plugin is registering. Used to
+  /// auto-scope ungrouped plugin warnings and remarks into "<plugin>-plugin".
+  std::string ActivePluginName;
+
   /// A function pointer that converts an opaque diagnostic
   /// argument to a strings.
   ///
@@ -907,15 +912,105 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
-  // FIXME: this API should almost never be used; custom diagnostics do not
-  // have an associated diagnostic group and thus cannot be controlled by users
-  // like other diagnostics. The number of times this API is used in Clang
-  // should only ever be reduced, not increased.
-  // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
+  // A diagnostic created here belongs to no diagnostic group, so users cannot
+  // control it with -W flags. Prefer the group-taking overload below whenever
+  // the diagnostic should be user-controllable; uses of this ungrouped form in
+  // Clang should only ever be reduced, not increased.
+  // [[deprecated("Pass a group name, or use a CustomDiagDesc instead of a "
+  //              "Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
+    // While a plugin is registering diagnostics (a PluginDiagnosticScope is
+    // active), a warning or remark created through this ungrouped overload
+    // would be uncontrollable by the user -- the very problem plugin groups
+    // exist to solve. Place it in the plugin's own "<plugin>-plugin" group
+    // instead, so it behaves like one registered through getCustomPluginDiagID.
+    // An error is not controllable by group flags, so it is left untouched.
+    if (!ActivePluginName.empty() && (L == Warning || L == Remark))
+      return getCustomPluginDiagID(L, FormatString, ActivePluginName);
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
                                   StringRef(FormatString, N - 1));
   }
+
+  /// Compute the diagnostic ID for a custom diagnostic placed in the warning
+  /// group \p Group. The group may be an existing (TableGen) group, so the
+  /// diagnostic can join a built-in group such as -Wdeprecated, or a
+  /// runtime-registered group whose name is not known at build time. Either way
+  /// it is controllable with -W<group> / -Wno-<group> / -Werror=<group> (and
+  /// -R<group> for a remark), like a built-in warning. \p StableID, when given,
+  /// is a build-independent identifier used as the diagnostic's SARIF ruleId.
+  template <unsigned N>
+  unsigned getCustomDiagID(Level L, const char (&FormatString)[N],
+                           StringRef Group, StringRef StableID = {}) {
+    return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
+                                  StringRef(FormatString, N - 1), Group,
+                                  StableID);
+  }
+
+  /// Convenience over the group-taking getCustomDiagID that places a plugin's
+  /// diagnostic in its own runtime group "<PluginName>-plugin" (or the subgroup
+  /// "<PluginName>-plugin-<Subgroup>"), the naming convention behind the
+  /// -Wplugin umbrella. A plugin that instead wants to join an existing group
+  /// can call getCustomDiagID(L, FormatString, Group) directly. \p StableID,
+  /// when given, is used as the diagnostic's SARIF ruleId.
+  template <unsigned N>
+  unsigned getCustomPluginDiagID(Level L, const char (&FormatString)[N],
+                                 StringRef PluginName, StringRef Subgroup = {},
+                                 StringRef StableID = {}) {
+    return Diags->getCustomPluginDiagID((DiagnosticIDs::Level)L,
+                                        StringRef(FormatString, N - 1),
+                                        PluginName, Subgroup, StableID);
+  }
+
+  /// One entry in a plugin's diagnostic table, mirroring a single TableGen
+  /// Diagnostic record. A plugin registers a table of these with
+  /// getCustomPluginDiagIDs to organize its diagnostics the way Clang organizes
+  /// its own .td-generated ones: grouped, controllable, and stably identified.
+  struct PluginDiagnostic {
+    /// Record name. Becomes the plugin's enumerator and, together with the
+    /// plugin name, the SARIF ruleId "<plugin>_<name>".
+    StringRef Name;
+    Level DiagLevel;
+    /// Diagnostic format string, e.g. "unexpected token %0".
+    StringRef Message;
+    /// Subgroup within the plugin's "<plugin>-plugin" group, or empty for the
+    /// group itself.
+    StringRef Subgroup;
+  };
+
+  /// Register a whole plugin diagnostic table at once: a convenience over
+  /// getCustomPluginDiagID that places every entry in the plugin's own group
+  /// "<PluginName>-plugin[-<Subgroup>]" and derives each diagnostic's stable
+  /// SARIF ruleId from the plugin and record names, so the plugin spells
+  /// neither the group nor the id. This is the runtime equivalent of #including
+  /// a clang-tblgen'd diagnostics table. Returns the assigned IDs in table
+  /// order, so a caller can index them by a parallel enumeration.
+  SmallVector<unsigned>
+  getCustomPluginDiagIDs(StringRef PluginName,
+                         ArrayRef<PluginDiagnostic> Table);
+
+  /// The plugin whose diagnostics are currently being registered, or empty when
+  /// none is (see PluginDiagnosticScope).
+  StringRef getActivePluginName() const { return ActivePluginName; }
+
+  /// While an instance is alive, a warning or remark registered through the
+  /// ungrouped getCustomDiagID(Level, FormatString) overload is redirected into
+  /// \p PluginName's "<plugin>-plugin" group, so a plugin cannot accidentally
+  /// create a diagnostic no -W flag can reach. The frontend brackets each
+  /// plugin's ParseArgs and CreateASTConsumer with one of these. Scopes nest;
+  /// the innermost active name wins, and the previous name is restored on exit.
+  class PluginDiagnosticScope {
+    DiagnosticsEngine &Diags;
+    std::string Saved;
+
+  public:
+    PluginDiagnosticScope(DiagnosticsEngine &Diags, StringRef PluginName)
+        : Diags(Diags), Saved(std::move(Diags.ActivePluginName)) {
+      Diags.ActivePluginName = PluginName.str();
+    }
+    ~PluginDiagnosticScope() { Diags.ActivePluginName = std::move(Saved); }
+    PluginDiagnosticScope(const PluginDiagnosticScope &) = delete;
+    PluginDiagnosticScope &operator=(const PluginDiagnosticScope &) = delete;
+  };
 
   /// Converts a diagnostic argument (as an intptr_t) into the string
   /// that represents it.

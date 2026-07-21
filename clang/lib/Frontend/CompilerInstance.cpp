@@ -1118,6 +1118,17 @@ void CompilerInstance::LoadRequestedPlugins() {
     }
   }
 
+  // Give every loaded plugin a diagnostic group named "<plugin>-plugin", so its
+  // diagnostics can be controlled with -W<plugin>-plugin / -Wno-<plugin>-plugin
+  // (and -Wplugin as an umbrella) like a built-in warning. The command line was
+  // already parsed in createDiagnostics, before any plugin was loaded, so a
+  // -W flag naming such a group was deferred; registering the group here marks
+  // it as owned so it is not reported as unknown.
+  for (const FrontendPluginRegistry::entry &Plugin :
+       FrontendPluginRegistry::entries())
+    getDiagnostics().getDiagnosticIDs()->registerPluginGroup(
+        (Plugin.getName() + "-plugin").str());
+
   // Check if any of the loaded plugins replaces the main AST action
   for (const FrontendPluginRegistry::entry &Plugin :
        FrontendPluginRegistry::entries()) {
@@ -1128,6 +1139,16 @@ void CompilerInstance::LoadRequestedPlugins() {
       break;
     }
   }
+
+  // Every frontend plugin group is now known, so a -W<plugin>-plugin flag that
+  // named a group no loaded plugin owns is a misspelled option -- report it. A
+  // backend (pass) plugin, however, registers its group only when it emits a
+  // diagnostic during codegen, which is after this point; so when any pass
+  // plugin is loaded a flag may still be claimed later, and reporting here would
+  // risk a false "unknown warning option". Skip the report in that case.
+  if (getCodeGenOpts().PassPlugins.empty())
+    getDiagnostics().getDiagnosticIDs()->reportUnclaimedPluginGroups(
+        getDiagnostics());
 }
 
 /// Determine the appropriate source input kind based on language

@@ -22,20 +22,87 @@ using namespace clang;
 
 namespace {
 
+// A plugin that wants to organize its diagnostics the way Clang organizes its
+// own would write them as TableGen records in a .td file and run
+//   clang-tblgen -gen-clang-diags-defs
+// to generate a table of DIAG(...) rows it #includes. To keep the example
+// self-contained we hand-write the equivalent table with an X-macro; a real
+// plugin would generate the PRINT_FNS_DIAGS body instead. Each row is one
+// diagnostic: a record name (which becomes both the enumerator below and, with
+// the plugin name, the SARIF ruleId), a level, a message, and an optional
+// subgroup of the plugin's "print-fns-plugin" group.
+#define PRINT_FNS_DIAGS(DIAG)                                                  \
+  DIAG(suspicious_decl, Warning, "suspicious top-level declaration '%0'", "")  \
+  DIAG(forbidden_decl, Error, "forbidden top-level declaration '%0'", "")      \
+  DIAG(saw_decl, Remark, "saw top-level declaration '%0'", "")
+
+// The stable enumeration, generated from the table's first column, gives the
+// plugin type-safe names for its diagnostics just like clang's diag::warn_*.
+namespace print_fns {
+enum Kind {
+#define DIAG(ENUM, LEVEL, MSG, SUBGROUP) ENUM,
+  PRINT_FNS_DIAGS(DIAG)
+#undef DIAG
+};
+} // namespace print_fns
+
+// The same table as PluginDiagnostic rows, ready for one-shot registration.
+static const DiagnosticsEngine::PluginDiagnostic PrintFnsDiagTable[] = {
+#define DIAG(ENUM, LEVEL, MSG, SUBGROUP)                                       \
+  {#ENUM, DiagnosticsEngine::LEVEL, MSG, SUBGROUP},
+    PRINT_FNS_DIAGS(DIAG)
+#undef DIAG
+};
+
 class PrintFunctionsConsumer : public ASTConsumer {
   CompilerInstance &Instance;
   std::set<std::string> ParsedTemplates;
+  bool WarnOnDecls;
+  bool RemarkOnDecls;
+  bool ErrorOnDecls;
+  // Diagnostic IDs assigned by getCustomPluginDiagIDs, indexed by
+  // print_fns::Kind. Registering the whole table up front (rather than lazily
+  // on first use) makes every diagnostic a member of the "print-fns-plugin"
+  // group before the source is parsed, so a `#pragma clang diagnostic` naming
+  // the group can be applied to them.
+  llvm::SmallVector<unsigned> DiagIDs;
 
 public:
   PrintFunctionsConsumer(CompilerInstance &Instance,
-                         std::set<std::string> ParsedTemplates)
-      : Instance(Instance), ParsedTemplates(ParsedTemplates) {}
+                         std::set<std::string> ParsedTemplates,
+                         bool WarnOnDecls, bool RemarkOnDecls,
+                         bool ErrorOnDecls)
+      : Instance(Instance), ParsedTemplates(ParsedTemplates),
+        WarnOnDecls(WarnOnDecls), RemarkOnDecls(RemarkOnDecls),
+        ErrorOnDecls(ErrorOnDecls) {
+    // One call registers the whole table. Each diagnostic lands in the plugin's
+    // "print-fns-plugin" group (derived from the plugin name) with a stable
+    // SARIF ruleId "print_fns_<record>" (likewise derived), so the plugin
+    // spells neither the group nor the id.
+    DiagIDs = Instance.getDiagnostics().getCustomPluginDiagIDs("print-fns",
+                                                               PrintFnsDiagTable);
+  }
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
     for (DeclGroupRef::iterator i = DG.begin(), e = DG.end(); i != e; ++i) {
       const Decl *D = *i;
-      if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
-        llvm::errs() << "top-level-decl: \"" << ND->getNameAsString() << "\"\n";
+      const NamedDecl *ND = dyn_cast<NamedDecl>(D);
+      if (!ND)
+        continue;
+      llvm::errs() << "top-level-decl: \"" << ND->getNameAsString() << "\"\n";
+      // A user controls the warning with -Wno-print-fns-plugin and the remark
+      // with -Rno-print-fns-plugin (or the -Wplugin / -Wno-plugin umbrella),
+      // while the error keeps its severity -- group flags never silence errors.
+      DiagnosticsEngine &Diags = Instance.getDiagnostics();
+      if (RemarkOnDecls)
+        Diags.Report(ND->getLocation(), DiagIDs[print_fns::saw_decl])
+            << ND->getNameAsString();
+      if (WarnOnDecls)
+        Diags.Report(ND->getLocation(), DiagIDs[print_fns::suspicious_decl])
+            << ND->getNameAsString();
+      if (ErrorOnDecls)
+        Diags.Report(ND->getLocation(), DiagIDs[print_fns::forbidden_decl])
+            << ND->getNameAsString();
     }
 
     return true;
@@ -78,10 +145,15 @@ public:
 
 class PrintFunctionNamesAction : public PluginASTAction {
   std::set<std::string> ParsedTemplates;
+  bool WarnOnDecls = false;
+  bool RemarkOnDecls = false;
+  bool ErrorOnDecls = false;
+
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  llvm::StringRef) override {
-    return std::make_unique<PrintFunctionsConsumer>(CI, ParsedTemplates);
+    return std::make_unique<PrintFunctionsConsumer>(
+        CI, ParsedTemplates, WarnOnDecls, RemarkOnDecls, ErrorOnDecls);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
@@ -91,7 +163,13 @@ protected:
 
       // Example error handling.
       DiagnosticsEngine &D = CI.getDiagnostics();
-      if (args[i] == "-an-error") {
+      if (args[i] == "-warn-decls") {
+        WarnOnDecls = true;
+      } else if (args[i] == "-remark-decls") {
+        RemarkOnDecls = true;
+      } else if (args[i] == "-error-decls") {
+        ErrorOnDecls = true;
+      } else if (args[i] == "-an-error") {
         unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
                                             "invalid argument '%0'");
         D.Report(DiagID) << args[i];

@@ -385,7 +385,20 @@ Module *FrontendAction::getCurrentModule() const {
 std::unique_ptr<ASTConsumer>
 FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
                                          StringRef InFile) {
-  std::unique_ptr<ASTConsumer> Consumer = CreateASTConsumer(CI, InFile);
+  std::unique_ptr<ASTConsumer> Consumer;
+  {
+    // When the main action is itself a plugin (-plugin <name>), its own
+    // CreateASTConsumer is where it registers diagnostics; scope it so an
+    // ungrouped plugin warning/remark is placed in "<name>-plugin". The name is
+    // FrontendOpts.ActionName for a PluginAction; for any other action the name
+    // is empty and the scope is inert.
+    StringRef MainPluginName;
+    if (CI.getFrontendOpts().ProgramAction == frontend::PluginAction)
+      MainPluginName = CI.getFrontendOpts().ActionName;
+    DiagnosticsEngine::PluginDiagnosticScope DiagScope(CI.getDiagnostics(),
+                                                       MainPluginName);
+    Consumer = CreateASTConsumer(CI, InFile);
+  }
   if (!Consumer)
     return nullptr;
 
@@ -448,6 +461,10 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
           ActionType = PluginASTAction::AddAfterMainAction;
       }
     }
+    // Scope the plugin's ParseArgs and CreateASTConsumer so an ungrouped
+    // warning or remark it registers there is placed in "<plugin>-plugin".
+    DiagnosticsEngine::PluginDiagnosticScope DiagScope(CI.getDiagnostics(),
+                                                       Plugin.getName());
     if ((ActionType == PluginASTAction::AddBeforeMainAction ||
          ActionType == PluginASTAction::AddAfterMainAction) &&
         P->ParseArgs(
