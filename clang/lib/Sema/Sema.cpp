@@ -2727,6 +2727,10 @@ LambdaScopeInfo *Sema::getCurGenericLambda() {
 }
 
 bool Sema::shouldRetainCommentsInAST(SourceLocation Loc) const {
+  if (!LangOpts.CommentOpts.RetainCommentsFromSystemHeaders &&
+      SourceMgr.isInSystemHeader(Loc))
+    return false;
+
   if (LangOpts.CommentOpts.ParseAllComments)
     return true;
 
@@ -2754,9 +2758,6 @@ bool Sema::shouldRetainCommentsInAST(SourceLocation Loc) const {
 }
 
 void Sema::ActOnComment(SourceRange Comment) {
-  if (!LangOpts.CommentOpts.RetainCommentsFromSystemHeaders &&
-      SourceMgr.isInSystemHeader(Comment.getBegin()))
-    return;
   if (!shouldRetainCommentsInAST(Comment.getBegin()))
     return;
   RawComment RC(SourceMgr, Comment, LangOpts.CommentOpts, false);
