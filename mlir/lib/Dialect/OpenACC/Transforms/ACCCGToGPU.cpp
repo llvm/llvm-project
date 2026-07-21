@@ -2500,7 +2500,8 @@ void ACCCGToGPULowering::processPrivateLocal(
         perThreadArrayReductionAccum(privateLocal.getResult());
     bool isThreadPrivate = isThreadXPrivatize(privatizeOp);
     bool canUseDynamicAlloca =
-        isThreadPrivate && baseTy.getRank() > 0 && !baseTy.hasStaticShape() &&
+        (isThreadPrivate || arrayAccum) && baseTy.getRank() > 0 &&
+        !baseTy.hasStaticShape() &&
         baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
     if ((isThreadPrivate || arrayAccum) &&
         (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
@@ -2594,7 +2595,7 @@ void ACCCGToGPULowering::processPrivateLocal(
       perThreadArrayReductionAccum(privateLocal.getResult());
   for (mlir::acc::GPUParallelDimAttr parDim : parDimsPair.first) {
     bool canUseDynamicAlloca =
-        parDim.isThreadX() && baseTy.getRank() > 0 &&
+        (parDim.isThreadX() || arrayAccum) && baseTy.getRank() > 0 &&
         !baseTy.hasStaticShape() &&
         baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
     if ((parDim.isThreadX() || arrayAccum) &&
@@ -3334,7 +3335,7 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
   } else {
     isPerThreadPrivate = llvm::any_of(
         op.getParDims().getArray(),
-        [](mlir::acc::GPUParallelDimAttr d) { return d.isThreadX(); });
+        [](mlir::acc::GPUParallelDimAttr d) { return d.isAnyThread(); });
   }
   if (!isPerThreadPrivate) {
     // Block-shared accumulator: no-op only when the accumulate spans a block
