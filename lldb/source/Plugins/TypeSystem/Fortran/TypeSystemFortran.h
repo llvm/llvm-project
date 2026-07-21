@@ -375,6 +375,23 @@ public:
     return 0;
   }
 
+  DWARFExpressionList
+  GetDataLocationExpression(lldb::opaque_compiler_type_t type);
+
+  DWARFExpressionList
+  GetUpperBoundExpression(lldb::opaque_compiler_type_t type);
+
+  DWARFExpressionList
+  GetLowerBoundExpression(lldb::opaque_compiler_type_t type);
+
+  DWARFExpressionList
+  GetElementCountExpression(lldb::opaque_compiler_type_t type);
+
+  DWARFExpressionList GetAllocatedExpression(lldb::opaque_compiler_type_t type);
+
+  DWARFExpressionList
+  GetByteStrideExpression(lldb::opaque_compiler_type_t type);
+
 #ifndef NDEBUG
   /// Convenience LLVM-style dump method for use in the debugger only.
   LLVM_DUMP_METHOD void dump(lldb::opaque_compiler_type_t type) const override {
