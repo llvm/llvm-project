@@ -2386,3 +2386,75 @@ define i32 @signum_i32_or_wrong_ext(i32 %x) {
   %r = or i32 %signbit, %sgt0ext
   ret i32 %r
 }
+
+; (-X) lshr (bitwidth - 1) | ashr (X) (bitwidth - 1)
+
+define i32 @signum_i32_lshr(i32 %x) {
+; CHECK-LABEL: @signum_i32_lshr(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[NEG]], 31
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SIGN]], [[LSHR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sign = ashr i32 %x, 31
+  %neg = sub i32 0, %x
+  %lshr = lshr i32 %neg, 31
+  %r = or i32 %sign, %lshr
+  ret i32 %r
+}
+
+define i32 @signum_i32_lshr_commuted(i32 %x) {
+; CHECK-LABEL: @signum_i32_lshr_commuted(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[NEG]], 31
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[LSHR]], [[SIGN]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sign = ashr i32 %x, 31
+  %neg = sub i32 0, %x
+  %lshr = lshr i32 %neg, 31
+  %r = or i32 %lshr, %sign
+  ret i32 %r
+}
+
+; Negative tests
+
+define i32 @signum_i32_lshr_multi_use_both(i32 %x) {
+; CHECK-LABEL: @signum_i32_lshr_multi_use_both(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[NEG]], 31
+; CHECK-NEXT:    call void @use(i32 [[SIGN]])
+; CHECK-NEXT:    call void @use(i32 [[LSHR]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SIGN]], [[LSHR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sign = ashr i32 %x, 31
+  %neg = sub i32 0, %x
+  %lshr = lshr i32 %neg, 31
+  call void @use(i32 %sign)
+  call void @use(i32 %lshr)
+  %r = or i32 %sign, %lshr
+  ret i32 %r
+}
+
+define i32 @signum_i32_lshr_commuted_multi_use_both(i32 %x) {
+; CHECK-LABEL: @signum_i32_lshr_commuted_multi_use_both(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[NEG]], 31
+; CHECK-NEXT:    call void @use(i32 [[SIGN]])
+; CHECK-NEXT:    call void @use(i32 [[LSHR]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[LSHR]], [[SIGN]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sign = ashr i32 %x, 31
+  %neg = sub i32 0, %x
+  %lshr = lshr i32 %neg, 31
+  call void @use(i32 %sign)
+  call void @use(i32 %lshr)
+  %r = or i32 %lshr, %sign
+  ret i32 %r
+}
