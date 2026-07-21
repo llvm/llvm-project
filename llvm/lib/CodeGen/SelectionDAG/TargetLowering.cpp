@@ -11251,11 +11251,6 @@ SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,
   ElementCount LaneOffsetEC =
       ElementCount::get(N->getConstantOperandVal(3), VT.isScalableVT());
 
-  // The first lane is always active, so v1i1 => true.
-  if (LaneOffsetEC.isZero() &&
-      VT.getVectorElementCount() == ElementCount::getFixed(1))
-    return DAG.getBoolConstant(true, DL, VT, VT);
-
   EVT AddrVT = SourceValue->getValueType(0);
   bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
 
