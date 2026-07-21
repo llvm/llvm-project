@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/tgamma.h"
 #include "hdr/errno_macros.h"
+#include "src/math/tgamma.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcTgammaTest = LIBC_NAMESPACE::testing::FPTest<double>;
-
-using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcTgammaTest, SpecialNumbers) {
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::tgamma(sNaN), FE_INVALID);
