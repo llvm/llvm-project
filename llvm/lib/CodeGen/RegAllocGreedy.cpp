@@ -2400,10 +2400,9 @@ bool RAGreedy::shouldAvoidCSRForRemat(const LiveInterval &VirtReg,
       !TII->isAsCheapAsAMove(*DefMI))
     return false;
 
-  // This logic aims to address a specific problem: The first use of CSR for
-  // cheap-to-rematerialize live ranges because they cross calls, not because
-  // pressure requires it. With this check and the check for an available for a
-  // register that is not a first-use CSR below, we can scope this.
+  // Only consider live ranges with register-mask interference. This limits the
+  // heuristic to avoiding a first-use CSR required by a call rather than by
+  // register pressure.
   if (!Matrix->checkRegMaskInterference(VirtReg))
     return false;
 
