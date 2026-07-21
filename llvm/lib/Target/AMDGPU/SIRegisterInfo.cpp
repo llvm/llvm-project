@@ -40,17 +40,17 @@ static cl::opt<bool> EnableSpillCFISavedRegs(
     cl::desc("Enable spilling the registers required for CFI emission"),
     cl::ReallyHidden, cl::init(false), cl::ZeroOrMore);
 
-static cl::opt<unsigned>
-    StressVGPRLimit("amdgpu-stress-vgpr", cl::Hidden, cl::init(0),
-                    cl::desc("Limit VGPRs to N registers by reserving the rest"));
+static cl::opt<unsigned> StressVGPRLimit(
+    "amdgpu-stress-vgpr", cl::Hidden, cl::init(0),
+    cl::desc("Limit VGPRs to N registers by reserving the rest"));
 
-static cl::opt<unsigned>
-    StressAGPRLimit("amdgpu-stress-agpr", cl::Hidden, cl::init(0),
-                    cl::desc("Limit AGPRs to N registers by reserving the rest"));
+static cl::opt<unsigned> StressAGPRLimit(
+    "amdgpu-stress-agpr", cl::Hidden, cl::init(0),
+    cl::desc("Limit AGPRs to N registers by reserving the rest"));
 
-static cl::opt<unsigned>
-    StressSGPRLimit("amdgpu-stress-sgpr", cl::Hidden, cl::init(0),
-                    cl::desc("Limit SGPRs to N registers by reserving the rest"));
+static cl::opt<unsigned> StressSGPRLimit(
+    "amdgpu-stress-sgpr", cl::Hidden, cl::init(0),
+    cl::desc("Limit SGPRs to N registers by reserving the rest"));
 
 std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
