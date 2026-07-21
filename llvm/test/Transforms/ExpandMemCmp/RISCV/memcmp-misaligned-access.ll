@@ -16,30 +16,14 @@ declare i32 @memcmp(ptr, ptr, iXLen)
 define i32 @memcmp_size_3_align_4(ptr align 4 %a, ptr align 4 %b) {
 ; RV64-LABEL: define i32 @memcmp_size_3_align_4(
 ; RV64-SAME: ptr align 4 [[A:%.*]], ptr align 4 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; RV64-NEXT:    br label %[[LOADBB:.*]]
-; RV64:       [[RES_BLOCK:.*]]:
-; RV64-NEXT:    [[TMP1:%.*]] = icmp ult i16 [[TMP5:%.*]], [[TMP6:%.*]]
-; RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 1
-; RV64-NEXT:    br label %[[ENDBLOCK:.*]]
-; RV64:       [[LOADBB]]:
-; RV64-NEXT:    [[TMP3:%.*]] = load i16, ptr [[A]], align 4
-; RV64-NEXT:    [[TMP4:%.*]] = load i16, ptr [[B]], align 4
-; RV64-NEXT:    [[TMP5]] = call i16 @llvm.bswap.i16(i16 [[TMP3]])
-; RV64-NEXT:    [[TMP6]] = call i16 @llvm.bswap.i16(i16 [[TMP4]])
-; RV64-NEXT:    [[TMP7:%.*]] = icmp eq i16 [[TMP5]], [[TMP6]]
-; RV64-NEXT:    br i1 [[TMP7]], label %[[LOADBB1:.*]], label %[[RES_BLOCK]]
-; RV64:       [[LOADBB1]]:
-; RV64-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 2
-; RV64-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[B]], i64 2
-; RV64-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP8]], align 2
-; RV64-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP9]], align 2
-; RV64-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP10]] to i32
-; RV64-NEXT:    [[TMP13:%.*]] = zext i8 [[TMP11]] to i32
-; RV64-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP12]], [[TMP13]]
-; RV64-NEXT:    br label %[[ENDBLOCK]]
-; RV64:       [[ENDBLOCK]]:
-; RV64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP14]], %[[LOADBB1]] ], [ [[TMP2]], %[[RES_BLOCK]] ]
-; RV64-NEXT:    ret i32 [[PHI_RES]]
+; RV64-NEXT:    [[TMP1:%.*]] = load i24, ptr [[A]], align 4
+; RV64-NEXT:    [[TMP2:%.*]] = load i24, ptr [[B]], align 4
+; RV64-NEXT:    [[TMP3:%.*]] = zext i24 [[TMP1]] to i32
+; RV64-NEXT:    [[TMP4:%.*]] = zext i24 [[TMP2]] to i32
+; RV64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; RV64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP4]])
+; RV64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ucmp.i32.i32(i32 [[TMP5]], i32 [[TMP6]])
+; RV64-NEXT:    ret i32 [[TMP7]]
 ;
 ; RV64-UNALIGNED-LABEL: define i32 @memcmp_size_3_align_4(
 ; RV64-UNALIGNED-SAME: ptr align 4 [[A:%.*]], ptr align 4 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -116,34 +100,14 @@ define i32 @memcmp_size_3_align_1(ptr %a, ptr %b) {
 define i32 @memcmp_size_6_align_8(ptr align 8 %a, ptr align 8 %b) {
 ; RV64-LABEL: define i32 @memcmp_size_6_align_8(
 ; RV64-SAME: ptr align 8 [[A:%.*]], ptr align 8 [[B:%.*]]) #[[ATTR0]] {
-; RV64-NEXT:    br label %[[LOADBB:.*]]
-; RV64:       [[RES_BLOCK:.*]]:
-; RV64-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP5:%.*]], %[[LOADBB]] ], [ [[TMP14:%.*]], %[[LOADBB1:.*]] ]
-; RV64-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP6:%.*]], %[[LOADBB]] ], [ [[TMP15:%.*]], %[[LOADBB1]] ]
-; RV64-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
-; RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 1
-; RV64-NEXT:    br label %[[ENDBLOCK:.*]]
-; RV64:       [[LOADBB]]:
-; RV64-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 8
-; RV64-NEXT:    [[TMP4:%.*]] = load i32, ptr [[B]], align 8
-; RV64-NEXT:    [[TMP5]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
-; RV64-NEXT:    [[TMP6]] = call i32 @llvm.bswap.i32(i32 [[TMP4]])
-; RV64-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], [[TMP6]]
-; RV64-NEXT:    br i1 [[TMP7]], label %[[LOADBB1]], label %[[RES_BLOCK]]
-; RV64:       [[LOADBB1]]:
-; RV64-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 4
-; RV64-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[B]], i64 4
-; RV64-NEXT:    [[TMP10:%.*]] = load i16, ptr [[TMP8]], align 4
-; RV64-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP9]], align 4
-; RV64-NEXT:    [[TMP12:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP10]])
-; RV64-NEXT:    [[TMP13:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP11]])
-; RV64-NEXT:    [[TMP14]] = zext i16 [[TMP12]] to i32
-; RV64-NEXT:    [[TMP15]] = zext i16 [[TMP13]] to i32
-; RV64-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP14]], [[TMP15]]
-; RV64-NEXT:    br i1 [[TMP16]], label %[[ENDBLOCK]], label %[[RES_BLOCK]]
-; RV64:       [[ENDBLOCK]]:
-; RV64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, %[[LOADBB1]] ], [ [[TMP2]], %[[RES_BLOCK]] ]
-; RV64-NEXT:    ret i32 [[PHI_RES]]
+; RV64-NEXT:    [[TMP1:%.*]] = load i48, ptr [[A]], align 8
+; RV64-NEXT:    [[TMP2:%.*]] = load i48, ptr [[B]], align 8
+; RV64-NEXT:    [[TMP3:%.*]] = zext i48 [[TMP1]] to i64
+; RV64-NEXT:    [[TMP4:%.*]] = zext i48 [[TMP2]] to i64
+; RV64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; RV64-NEXT:    [[TMP6:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP4]])
+; RV64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ucmp.i32.i64(i64 [[TMP5]], i64 [[TMP6]])
+; RV64-NEXT:    ret i32 [[TMP7]]
 ;
 ; RV64-UNALIGNED-LABEL: define i32 @memcmp_size_6_align_8(
 ; RV64-UNALIGNED-SAME: ptr align 8 [[A:%.*]], ptr align 8 [[B:%.*]]) #[[ATTR0]] {
@@ -222,30 +186,14 @@ define i32 @memcmp_size_6_align_2(ptr align 2 %a, ptr align 2 %b) {
 define i32 @memcmp_size_3_align_2(ptr align 2 %a, ptr align 2 %b) {
 ; RV64-LABEL: define i32 @memcmp_size_3_align_2(
 ; RV64-SAME: ptr align 2 [[A:%.*]], ptr align 2 [[B:%.*]]) #[[ATTR0]] {
-; RV64-NEXT:    br label %[[LOADBB:.*]]
-; RV64:       [[RES_BLOCK:.*]]:
-; RV64-NEXT:    [[TMP1:%.*]] = icmp ult i16 [[TMP5:%.*]], [[TMP6:%.*]]
-; RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 1
-; RV64-NEXT:    br label %[[ENDBLOCK:.*]]
-; RV64:       [[LOADBB]]:
-; RV64-NEXT:    [[TMP3:%.*]] = load i16, ptr [[A]], align 2
-; RV64-NEXT:    [[TMP4:%.*]] = load i16, ptr [[B]], align 2
-; RV64-NEXT:    [[TMP5]] = call i16 @llvm.bswap.i16(i16 [[TMP3]])
-; RV64-NEXT:    [[TMP6]] = call i16 @llvm.bswap.i16(i16 [[TMP4]])
-; RV64-NEXT:    [[TMP7:%.*]] = icmp eq i16 [[TMP5]], [[TMP6]]
-; RV64-NEXT:    br i1 [[TMP7]], label %[[LOADBB1:.*]], label %[[RES_BLOCK]]
-; RV64:       [[LOADBB1]]:
-; RV64-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 2
-; RV64-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[B]], i64 2
-; RV64-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP8]], align 2
-; RV64-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP9]], align 2
-; RV64-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP10]] to i32
-; RV64-NEXT:    [[TMP13:%.*]] = zext i8 [[TMP11]] to i32
-; RV64-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP12]], [[TMP13]]
-; RV64-NEXT:    br label %[[ENDBLOCK]]
-; RV64:       [[ENDBLOCK]]:
-; RV64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP14]], %[[LOADBB1]] ], [ [[TMP2]], %[[RES_BLOCK]] ]
-; RV64-NEXT:    ret i32 [[PHI_RES]]
+; RV64-NEXT:    [[TMP1:%.*]] = load i24, ptr [[A]], align 2
+; RV64-NEXT:    [[TMP2:%.*]] = load i24, ptr [[B]], align 2
+; RV64-NEXT:    [[TMP3:%.*]] = zext i24 [[TMP1]] to i32
+; RV64-NEXT:    [[TMP4:%.*]] = zext i24 [[TMP2]] to i32
+; RV64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; RV64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP4]])
+; RV64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ucmp.i32.i32(i32 [[TMP5]], i32 [[TMP6]])
+; RV64-NEXT:    ret i32 [[TMP7]]
 ;
 ; RV64-UNALIGNED-LABEL: define i32 @memcmp_size_3_align_2(
 ; RV64-UNALIGNED-SAME: ptr align 2 [[A:%.*]], ptr align 2 [[B:%.*]]) #[[ATTR0]] {
@@ -266,34 +214,14 @@ define i32 @memcmp_size_3_align_2(ptr align 2 %a, ptr align 2 %b) {
 define i32 @memcmp_size_6_align_4(ptr align 4 %a, ptr align 4 %b) {
 ; RV64-LABEL: define i32 @memcmp_size_6_align_4(
 ; RV64-SAME: ptr align 4 [[A:%.*]], ptr align 4 [[B:%.*]]) #[[ATTR0]] {
-; RV64-NEXT:    br label %[[LOADBB:.*]]
-; RV64:       [[RES_BLOCK:.*]]:
-; RV64-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP5:%.*]], %[[LOADBB]] ], [ [[TMP14:%.*]], %[[LOADBB1:.*]] ]
-; RV64-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP6:%.*]], %[[LOADBB]] ], [ [[TMP15:%.*]], %[[LOADBB1]] ]
-; RV64-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
-; RV64-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 1
-; RV64-NEXT:    br label %[[ENDBLOCK:.*]]
-; RV64:       [[LOADBB]]:
-; RV64-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
-; RV64-NEXT:    [[TMP4:%.*]] = load i32, ptr [[B]], align 4
-; RV64-NEXT:    [[TMP5]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
-; RV64-NEXT:    [[TMP6]] = call i32 @llvm.bswap.i32(i32 [[TMP4]])
-; RV64-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], [[TMP6]]
-; RV64-NEXT:    br i1 [[TMP7]], label %[[LOADBB1]], label %[[RES_BLOCK]]
-; RV64:       [[LOADBB1]]:
-; RV64-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 4
-; RV64-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[B]], i64 4
-; RV64-NEXT:    [[TMP10:%.*]] = load i16, ptr [[TMP8]], align 4
-; RV64-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP9]], align 4
-; RV64-NEXT:    [[TMP12:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP10]])
-; RV64-NEXT:    [[TMP13:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP11]])
-; RV64-NEXT:    [[TMP14]] = zext i16 [[TMP12]] to i32
-; RV64-NEXT:    [[TMP15]] = zext i16 [[TMP13]] to i32
-; RV64-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP14]], [[TMP15]]
-; RV64-NEXT:    br i1 [[TMP16]], label %[[ENDBLOCK]], label %[[RES_BLOCK]]
-; RV64:       [[ENDBLOCK]]:
-; RV64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, %[[LOADBB1]] ], [ [[TMP2]], %[[RES_BLOCK]] ]
-; RV64-NEXT:    ret i32 [[PHI_RES]]
+; RV64-NEXT:    [[TMP1:%.*]] = load i48, ptr [[A]], align 4
+; RV64-NEXT:    [[TMP2:%.*]] = load i48, ptr [[B]], align 4
+; RV64-NEXT:    [[TMP3:%.*]] = zext i48 [[TMP1]] to i64
+; RV64-NEXT:    [[TMP4:%.*]] = zext i48 [[TMP2]] to i64
+; RV64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; RV64-NEXT:    [[TMP6:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP4]])
+; RV64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ucmp.i32.i64(i64 [[TMP5]], i64 [[TMP6]])
+; RV64-NEXT:    ret i32 [[TMP7]]
 ;
 ; RV64-UNALIGNED-LABEL: define i32 @memcmp_size_6_align_4(
 ; RV64-UNALIGNED-SAME: ptr align 4 [[A:%.*]], ptr align 4 [[B:%.*]]) #[[ATTR0]] {
