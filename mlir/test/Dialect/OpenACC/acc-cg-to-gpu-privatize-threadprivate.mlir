@@ -26,11 +26,11 @@ func.func @threadprivate(%host: memref<i32>) {
 
 // CHECK-LABEL: func.func @dynamic_threadprivate
 // CHECK:       gpu.launch
-// CHECK:         %[[STORAGE:.*]] = memref.view %{{.*}}[%{{.*}}]{{.*}} : memref<?xi8> to memref<?x?xi32>
+// CHECK:         %[[STORAGE:.*]] = memref.view %{{.*}}[%{{.*}}][%{{.*}}, %{{.*}}, %{{.*}}]
 // CHECK:         %[[SLICE:.*]] = memref.subview %[[STORAGE]]
-// CHECK:         %[[META:.*]]:4 = memref.extract_strided_metadata %[[SLICE]]
+// CHECK:         %{{.*}}, %[[OFFSET:.*]], %{{.*}}, %{{.*}} = memref.extract_strided_metadata %[[SLICE]]
 // CHECK:         %[[ELEMENT_BYTES:.*]] = arith.constant 4 : index
-// CHECK:         %[[BYTE_OFFSET:.*]] = arith.muli %[[META]]#1, %[[ELEMENT_BYTES]]
+// CHECK:         %[[BYTE_OFFSET:.*]] = arith.muli %[[OFFSET]], %[[ELEMENT_BYTES]]
 // CHECK:         %[[PRIVATE:.*]] = memref.view %{{.*}}[%[[BYTE_OFFSET]]]
 // CHECK:         memref.store %{{.*}}, %[[PRIVATE]][%{{.*}}] : memref<?xi32>
 
