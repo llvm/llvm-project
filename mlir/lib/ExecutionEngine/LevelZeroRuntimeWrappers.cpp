@@ -551,7 +551,7 @@ extern "C" ze_kernel_handle_t mgpuModuleGetFunction(ze_module_handle_t module,
 extern "C" void mgpuLaunchKernel(ze_kernel_handle_t kernel, size_t gridX,
                                  size_t gridY, size_t gridZ, size_t blockX,
                                  size_t blockY, size_t blockZ,
-                                 size_t sharedMemBytes, StreamWrapper *stream,
+                                 int32_t sharedMemBytes, StreamWrapper *stream,
                                  void **params, void ** /*extra*/,
                                  size_t paramsCount) {
 

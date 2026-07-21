@@ -226,6 +226,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_ptrace_macros
+  HDR
+    sys-ptrace-macros.h
+)
+
+add_macro_header(
   sys_epoll_macros
   HDR
     sys-epoll-macros.h
@@ -306,6 +312,12 @@ add_macro_header(
   sys_socket_macros
   HDR
     sys-socket-macros.h
+)
+
+add_macro_header(
+  net_if_macros
+  HDR
+    net-if-macros.h
 )
 
 add_macro_header(
@@ -447,3 +459,9 @@ else()
       _LIBC_MODULAR_FORMAT_PRINTF.h
   )
 endif()
+
+add_macro_header(
+  alloca_macros
+  HDR
+    alloca-macros.h
+)

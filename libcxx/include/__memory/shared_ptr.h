@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___MEMORY_SHARED_PTR_H
 #define _LIBCPP___MEMORY_SHARED_PTR_H
 
+#include <__atomic/memory_order.h>
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
@@ -27,19 +28,17 @@
 #include <__memory/allocator_destructor.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/auto_ptr.h>
-#include <__memory/compressed_pair.h>
 #include <__memory/construct_at.h>
 #include <__memory/destroy.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/shared_count.h>
 #include <__memory/uninitialized_algorithms.h>
+#include <__memory/uninitialized_multidimensional_algorithms.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/add_reference.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
-#include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
@@ -47,9 +46,9 @@
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/nat.h>
-#include <__type_traits/negation.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_extent.h>
+#include <__type_traits/remove_pointer.h>
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
@@ -59,9 +58,6 @@
 #include <__utility/swap.h>
 #include <__verbose_abort>
 #include <typeinfo>
-#if _LIBCPP_HAS_ATOMIC_HEADER
-#  include <__atomic/memory_order.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -94,12 +90,14 @@ template <class _Tp>
 class weak_ptr;
 
 template <class _Tp, class _Dp, class _Alloc>
-class __shared_ptr_pointer : public __shared_weak_count {
-  _LIBCPP_COMPRESSED_TRIPLE(_Tp, __ptr_, _Dp, __deleter_, _Alloc, __alloc_);
+class _LIBCPP_HIDE_STRUCT_FROM_ABI __shared_ptr_pointer final : public __shared_weak_count {
+  _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Dp __deleter_;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Tp __ptr_;
 
 public:
   _LIBCPP_HIDE_FROM_ABI __shared_ptr_pointer(_Tp __p, _Dp __d, _Alloc __a)
-      : __ptr_(__p), __deleter_(std::move(__d)), __alloc_(std::move(__a)) {}
+      : __alloc_(std::move(__a)), __deleter_(std::move(__d)), __ptr_(__p) {}
 
 #if _LIBCPP_HAS_RTTI
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL const void* __get_deleter(const type_info& __t) const _NOEXCEPT override {
@@ -110,17 +108,16 @@ public:
 private:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
     __deleter_(__ptr_);
+    __ptr_.~_Tp();
     __deleter_.~_Dp();
   }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
-    typedef typename __allocator_traits_rebind<_Alloc, __shared_ptr_pointer>::type _Al;
-    typedef allocator_traits<_Al> _ATraits;
-    typedef pointer_traits<typename _ATraits::pointer> _PTraits;
+    using __alloc_t = __allocator_traits_rebind_t<_Alloc, __shared_ptr_pointer>;
 
-    _Al __a(__alloc_);
+    __alloc_t __a(__alloc_);
     __alloc_.~_Alloc();
-    __a.deallocate(_PTraits::pointer_to(*this), 1);
+    __a.deallocate(pointer_traits<typename allocator_traits<__alloc_t>::pointer>::pointer_to(*this), 1);
   }
 };
 
@@ -130,79 +127,54 @@ private:
 struct __for_overwrite_tag {};
 
 template <class _Tp, class _Alloc>
-struct __shared_ptr_emplace : __shared_weak_count {
-  using __value_type _LIBCPP_NODEBUG = __remove_cv_t<_Tp>;
+struct _LIBCPP_HIDE_STRUCT_FROM_ABI __shared_ptr_emplace : __shared_weak_count {
+  using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<_Alloc>;
+  using __value_type _LIBCPP_NODEBUG   = __remove_cv_t<_Tp>;
 
-  template <class... _Args,
-            class _Allocator                                                                         = _Alloc,
-            __enable_if_t<is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&...) : __storage_(std::move(__a)) {
-    static_assert(
-        sizeof...(_Args) == 0, "No argument should be provided to the control block when using _for_overwrite");
-    ::new (static_cast<void*>(__get_elem())) __value_type;
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&... __args) : __alloc_(std::move(__a)) {
+    allocator_traits<_Alloc>::construct(__alloc_, __get_elem(), std::forward<_Args>(__args)...);
   }
 
-  template <class... _Args,
-            class _Allocator                                                                          = _Alloc,
-            __enable_if_t<!is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&... __args) : __storage_(std::move(__a)) {
-    using _TpAlloc = typename __allocator_traits_rebind<_Alloc, __value_type>::type;
-    _TpAlloc __tmp(*__get_alloc());
-    allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), std::forward<_Args>(__args)...);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _Alloc* __get_alloc() _NOEXCEPT { return __storage_.__get_alloc(); }
-
-  _LIBCPP_HIDE_FROM_ABI __value_type* __get_elem() _NOEXCEPT { return __storage_.__get_elem(); }
+  _LIBCPP_HIDE_FROM_ABI __value_type* __get_elem() _NOEXCEPT { return reinterpret_cast<__value_type*>(__buffer_); }
 
 private:
-  template <class _Allocator                                                                         = _Alloc,
-            __enable_if_t<is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __on_zero_shared_impl() _NOEXCEPT {
-    __get_elem()->~__value_type();
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
+    allocator_traits<_Alloc>::destroy(__alloc_, __get_elem());
   }
-
-  template <class _Allocator                                                                          = _Alloc,
-            __enable_if_t<!is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __on_zero_shared_impl() _NOEXCEPT {
-    using _TpAlloc = typename __allocator_traits_rebind<_Allocator, __remove_cv_t<_Tp> >::type;
-    _TpAlloc __tmp(*__get_alloc());
-    allocator_traits<_TpAlloc>::destroy(__tmp, __get_elem());
-  }
-
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override { __on_zero_shared_impl(); }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
-    using _ControlBlockAlloc   = typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type;
-    using _ControlBlockPointer = typename allocator_traits<_ControlBlockAlloc>::pointer;
-    _ControlBlockAlloc __tmp(*__get_alloc());
-    __storage_.~_Storage();
-    allocator_traits<_ControlBlockAlloc>::deallocate(__tmp, pointer_traits<_ControlBlockPointer>::pointer_to(*this), 1);
+    using __alloc_t = __allocator_traits_rebind_t<_Alloc, __shared_ptr_emplace>;
+    __alloc_t __tmp(__alloc_);
+    __alloc_.~_Alloc();
+    allocator_traits<__alloc_t>::deallocate(
+        __tmp, pointer_traits<typename allocator_traits<__alloc_t>::pointer>::pointer_to(*this), 1);
   }
 
-  // TODO: It should be possible to refactor this to remove `_Storage` entirely.
-  // This class implements the control block for non-array shared pointers created
-  // through `std::allocate_shared` and `std::make_shared`.
-  struct _Storage {
-    struct _Data {
-      _LIBCPP_COMPRESSED_PAIR(_Alloc, __alloc_, __value_type, __elem_);
-    };
+  _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
+  _ALIGNAS_TYPE(__value_type) char __buffer_[sizeof(__value_type)];
+};
 
-    _ALIGNAS_TYPE(_Data) char __buffer_[sizeof(_Data)];
+template <class _Tp, class _Alloc>
+struct _LIBCPP_HIDE_STRUCT_FROM_ABI __shared_ptr_emplace_for_overwrite : __shared_weak_count {
+  using __value_type _LIBCPP_NODEBUG = __remove_cv_t<_Tp>;
 
-    _LIBCPP_HIDE_FROM_ABI explicit _Storage(_Alloc&& __a) { ::new ((void*)__get_alloc()) _Alloc(std::move(__a)); }
-    _LIBCPP_HIDE_FROM_ABI ~_Storage() { __get_alloc()->~_Alloc(); }
+  _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace_for_overwrite(_Alloc __a) : __alloc_(std::move(__a)) {}
 
-    _LIBCPP_HIDE_FROM_ABI _Alloc* __get_alloc() _NOEXCEPT {
-      return std::addressof(reinterpret_cast<_Data*>(__buffer_)->__alloc_);
-    }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override { __value_.~__value_type(); }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
+    using __alloc_t      = __allocator_traits_rebind_t<_Alloc, __shared_ptr_emplace_for_overwrite>;
+    using __alloc_traits = allocator_traits<__alloc_t>;
+    __alloc_t __tmp(__alloc_);
+    __alloc_.~_Alloc();
+    __alloc_traits::deallocate(__tmp, pointer_traits<typename __alloc_traits::pointer>::pointer_to(*this), 1);
+  }
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI __value_type* __get_elem() _NOEXCEPT {
-      return std::addressof(reinterpret_cast<_Data*>(__buffer_)->__elem_);
-    }
-  };
+  _LIBCPP_HIDE_FROM_ABI __value_type* __get_elem() _NOEXCEPT { return std::addressof(__value_); }
 
-  _Storage __storage_;
+private:
+  _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __value_type __value_;
 };
 
 struct __shared_ptr_dummy_rebind_allocator_type;
@@ -627,7 +599,26 @@ private:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __enable_weak_this(...) _NOEXCEPT {}
+  template <class _Vp>
+  static __type_identity<_Vp> __get_shared_from_this_impl(const enable_shared_from_this<_Vp>*);
+
+  template <class _Vp, class = void>
+  struct __get_shared_from_this {
+    using type _LIBCPP_NODEBUG = __nat;
+  };
+
+  template <class _Vp>
+  struct __get_shared_from_this<_Vp, __void_t<decltype(__get_shared_from_this_impl(static_cast<_Vp*>(nullptr)))> > {
+    using type _LIBCPP_NODEBUG = const enable_shared_from_this<typename decltype(__get_shared_from_this_impl(
+        static_cast<_Vp*>(nullptr)))::type>*;
+  };
+
+  template <
+      class _Yp,
+      class _OrigPtr,
+      __enable_if_t<!is_convertible<_OrigPtr, typename __get_shared_from_this<__remove_pointer_t<_Yp> >::type>::value,
+                    int> = 0>
+  _LIBCPP_HIDE_FROM_ABI void __enable_weak_this(_Yp, _OrigPtr) {}
 
   template <class, class _Yp>
   struct __shared_ptr_default_delete : default_delete<_Yp> {};
@@ -654,15 +645,22 @@ shared_ptr(unique_ptr<_Tp, _Dp>) -> shared_ptr<_Tp>;
 //
 // std::allocate_shared and std::make_shared
 //
-template <class _Tp, class _Alloc, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> = 0>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&&... __args) {
-  using _ControlBlock          = __shared_ptr_emplace<_Tp, _Alloc>;
+
+template <class _ControlBlock, class _Tp, class _Alloc, class... _Args>
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> __allocate_shared_impl(const _Alloc& __alloc, _Args&&... __args) {
   using _ControlBlockAllocator = typename __allocator_traits_rebind<_Alloc, _ControlBlock>::type;
-  __allocation_guard<_ControlBlockAllocator> __guard(__a, 1);
-  ::new ((void*)std::addressof(*__guard.__get())) _ControlBlock(__a, std::forward<_Args>(__args)...);
+  __allocation_guard<_ControlBlockAllocator> __guard(__alloc, 1);
+  ::new ((void*)std::addressof(*__guard.__get())) _ControlBlock(__alloc, std::forward<_Args>(__args)...);
   auto __control_block = __guard.__release_ptr();
   return shared_ptr<_Tp>::__create_with_control_block(
-      (*__control_block).__get_elem(), std::addressof(*__control_block));
+      __control_block->__get_elem(), std::__to_address(__control_block));
+}
+
+template <class _Tp, class _Alloc, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> = 0>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&&... __args) {
+  using _CanonicalAlloc = __allocator_traits_rebind_t<_Alloc, __remove_cv_t<_Tp> >;
+  using _ControlBlock   = __shared_ptr_emplace<_Tp, _CanonicalAlloc>;
+  return std::__allocate_shared_impl<_ControlBlock, _Tp>(_CanonicalAlloc(__a), std::forward<_Args>(__args)...);
 }
 
 template <class _Tp, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> = 0>
@@ -674,9 +672,9 @@ template <class _Tp, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> =
 
 template <class _Tp, class _Alloc, __enable_if_t<!is_array<_Tp>::value, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a) {
-  using _ForOverwriteAllocator = __allocator_traits_rebind_t<_Alloc, __for_overwrite_tag>;
-  _ForOverwriteAllocator __alloc(__a);
-  return std::allocate_shared<_Tp>(__alloc);
+  using _CanonicalAlloc = __allocator_traits_rebind_t<_Alloc, remove_cv_t<_Tp>>;
+  using _ControlBlock   = __shared_ptr_emplace_for_overwrite<_Tp, _CanonicalAlloc>;
+  return std::__allocate_shared_impl<_ControlBlock, _Tp>(_CanonicalAlloc(__a));
 }
 
 template <class _Tp, __enable_if_t<!is_array<_Tp>::value, int> = 0>

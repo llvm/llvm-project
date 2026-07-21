@@ -10,8 +10,8 @@ void foo() {
   int r = _Generic(a, double: 1, float: 2, int: 3, default: 4);
 }
 
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"]
-// CIR: %[[RES:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["r", init]
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!s32i>
+// CIR: %[[RES:.*]] = cir.alloca "r" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[RES_VAL:.*]] = cir.const #cir.int<3> : !s32i
 // CIR: cir.store{{.*}} %[[RES_VAL]], %[[RES]] : !s32i, !cir.ptr<!s32i>
 

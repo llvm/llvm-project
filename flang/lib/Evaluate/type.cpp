@@ -162,6 +162,14 @@ std::size_t DynamicType::GetAlignment(
         return derived_->scope()->alignment().value_or(1);
       }
       break;
+
+    // EnumerationTypes skip normal instantiation and may not have scope set.
+    case semantics::DerivedTypeSpec::Category::EnumerationType:
+      if (derived_ && derived_->GetScope()) {
+        return derived_->GetScope()->alignment().value_or(1);
+      }
+      break;
+
     case semantics::DerivedTypeSpec::Category::IntrinsicVector:
     case semantics::DerivedTypeSpec::Category::PairVector:
     case semantics::DerivedTypeSpec::Category::QuadVector:
@@ -199,6 +207,21 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     }
     break;
   case TypeCategory::Derived:
+    // EnumerationTypes might not have scope set yet, so they need to use
+    // GetScope() instead of scope().  Since EnumerationTypes are an internal
+    // only type, they can never be polymorphic, so the check in the
+    // corresponding conditional below is unnecessary here.
+    if (derived_ &&
+        (GetDerivedTypeSpec().category() ==
+            semantics::DerivedTypeSpec::Category::EnumerationType) &&
+        derived_->GetScope()) {
+      auto size{derived_->GetScope()->size()};
+      auto align{aligned ? derived_->GetScope()->alignment().value_or(0) : 0};
+      auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
+      return Expr<SubscriptInteger>{
+          static_cast<ConstantSubscript>(alignedSize)};
+    }
+    // Regular derived type path.
     if (!IsPolymorphic() && derived_ && derived_->scope()) {
       auto size{derived_->scope()->size()};
       auto align{aligned ? derived_->scope()->alignment().value_or(0) : 0};
@@ -540,6 +563,12 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
   return AreSameDerivedType(x, y, true, true, false, inProgress);
 }
 
+bool AreSameDerivedTypeIgnoringLengthParameters(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
+  SetOfDerivedTypePairs inProgress;
+  return AreSameDerivedType(x, y, false, true, false, inProgress);
+}
+
 bool AreSameDerivedTypeIgnoringSequence(
     const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
   SetOfDerivedTypePairs inProgress;
@@ -878,7 +907,10 @@ std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &type,
     return true;
   case TypeCategory::Real:
   case TypeCategory::Complex:
-    return type.kind() >= 4 /* not a short or half float */ || !features ||
+    // KIND=2 is IEEE-754 binary16, interoperable with C _Float16.
+    // KIND=3 (bfloat16) has no standard interoperable C type, so it is
+    // accepted only under CUDA (or when reading a module file).
+    return type.kind() == 2 || type.kind() >= 4 || !features ||
         features->IsEnabled(common::LanguageFeature::CUDA);
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL

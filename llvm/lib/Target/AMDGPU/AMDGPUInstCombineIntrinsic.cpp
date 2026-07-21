@@ -52,26 +52,26 @@ struct AMDGPUImageDMaskIntrinsic {
 // handling NaNs.
 static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
                            const APFloat &Src2) {
+  assert(!Src0.isNaN() && !Src1.isNaN() && !Src2.isNaN() &&
+         "nans handled separately");
   APFloat Max3 = maxnum(maxnum(Src0, Src1), Src2);
 
-  APFloat::cmpResult Cmp0 = Max3.compare(Src0);
-  assert(Cmp0 != APFloat::cmpUnordered && "nans handled separately");
-  if (Cmp0 == APFloat::cmpEqual)
+  if (Max3.bitwiseIsEqual(Src0))
     return maxnum(Src1, Src2);
 
-  APFloat::cmpResult Cmp1 = Max3.compare(Src1);
-  assert(Cmp1 != APFloat::cmpUnordered && "nans handled separately");
-  if (Cmp1 == APFloat::cmpEqual)
+  if (Max3.bitwiseIsEqual(Src1))
     return maxnum(Src0, Src2);
 
   return maxnum(Src0, Src1);
 }
 
-// Check if a value can be converted to a 16-bit value without losing
-// precision.
+// Check if a value can be converted to a 16-bit value without losing precision.
 // The value is expected to be either a float (IsFloat = true) or an unsigned
-// integer (IsFloat = false).
-static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat) {
+// integer (IsFloat = false). When AllowI16SExt is set, a sext from i16 is also
+// accepted: for unsigned addresses sext and zext only differ for a negative
+// i16, which is out of bounds anyway (see caller).
+static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat,
+                                    bool AllowI16SExt = false) {
   Type *VTy = V.getType();
   if (VTy->isHalfTy() || VTy->isIntegerTy(16)) {
     // The value is already 16-bit, so we don't want to convert to 16-bit again!
@@ -96,11 +96,21 @@ static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat) {
     }
   }
 
+  // Coordinates may arrive as extractelement((s|z|fp)ext Vec), Idx. The
+  // widening cast has one use per lane, so it is never sunk into the extract;
+  // strip the extract here so the cast check below is common to scalar and
+  // vector coords.
+  Value *CastCandidate;
+  if (!match(&V, m_ExtractElt(m_Value(CastCandidate), m_Value())))
+    CastCandidate = &V;
+
   Value *CastSrc;
-  bool IsExt = IsFloat ? match(&V, m_FPExt(PatternMatch::m_Value(CastSrc)))
-                       : match(&V, m_ZExt(PatternMatch::m_Value(CastSrc)));
+  bool IsExt = IsFloat ? match(CastCandidate, m_FPExt(m_Value(CastSrc)))
+                       : match(CastCandidate, m_ZExt(m_Value(CastSrc)));
+  if (!IsExt && !IsFloat && AllowI16SExt)
+    IsExt = match(CastCandidate, m_SExt(m_Value(CastSrc)));
   if (IsExt) {
-    Type *CastSrcTy = CastSrc->getType();
+    Type *CastSrcTy = CastSrc->getType()->getScalarType();
     if (CastSrcTy->isHalfTy() || CastSrcTy->isIntegerTy(16))
       return true;
   }
@@ -113,6 +123,13 @@ static Value *convertTo16Bit(Value &V, InstCombiner::BuilderTy &Builder) {
   Type *VTy = V.getType();
   if (isa<FPExtInst, SExtInst, ZExtInst>(&V))
     return cast<Instruction>(&V)->getOperand(0);
+  // Vector form: extractelement((s|z|fp)ext Vec), Idx -> extractelement(Vec,
+  // Idx), taking the narrow lane directly so the widening cast can be removed.
+  Instruction *VecCast;
+  Value *Idx;
+  if (match(&V, m_ExtractElt(m_Instruction(VecCast), m_Value(Idx))) &&
+      isa<FPExtInst, SExtInst, ZExtInst>(VecCast))
+    return Builder.CreateExtractElement(VecCast->getOperand(0), Idx);
   if (VTy->isIntegerTy())
     return Builder.CreateIntCast(&V, Type::getInt16Ty(V.getContext()), false);
   if (VTy->isFloatingPointTy())
@@ -138,11 +155,15 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   // Modify arguments and types
   Func(Args, OverloadTys);
 
-  CallInst *NewCall = IC.Builder.CreateIntrinsic(NewIntr, OverloadTys, Args);
+  CallInst *NewCall =
+      IC.Builder.CreateIntrinsicWithoutFolding(NewIntr, OverloadTys, Args);
   NewCall->takeName(&OldIntr);
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
     NewCall->copyFastMathFlags(&OldIntr);
+  // Copy attributes
+  AttributeList OldAttrList = OldIntr.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   // Erase and replace uses
   if (!InstToReplace.getType()->isVoidTy())
@@ -331,11 +352,16 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
   // true means derivatives can be converted to 16 bit, coordinates not
   bool OnlyDerivatives = false;
 
+  // Sampler-less addresses are unsigned, so a sext from i16 folds to a16 like a
+  // zext: they only disagree for a negative i16 (>= 0x8000), which is out of
+  // bounds while the max image dimension is <= 0x8000.
+  bool AllowI16SExt = !HasSampler;
+
   for (unsigned OperandIndex = ImageDimIntr->GradientStart;
        OperandIndex < ImageDimIntr->VAddrEnd; OperandIndex++) {
     Value *Coord = II.getOperand(OperandIndex);
     // If the values are not derived from 16-bit values, we cannot optimize.
-    if (!canSafelyConvertTo16Bit(*Coord, HasSampler)) {
+    if (!canSafelyConvertTo16Bit(*Coord, HasSampler, AllowI16SExt)) {
       if (OperandIndex < ImageDimIntr->CoordStart ||
           ImageDimIntr->GradientStart == ImageDimIntr->CoordStart) {
         return std::nullopt;
@@ -883,6 +909,29 @@ matchDsSwizzleBitmaskPattern(ArrayRef<uint8_t> Ids) {
          XorMask << AMDGPU::Swizzle::BITMASK_XOR_SHIFT;
 }
 
+/// Match a GFX9+ DS_SWIZZLE rotate-mode permutation: a cyclic left-rotation
+/// of all 32 lanes within each 32-lane group by a constant N in [0, 31],
+/// i.e. dst_lane = (src_lane + N) % 32. On wave64, hasPeriodicLayout<32>
+/// ensures both 32-lane groups rotate by the same amount.
+static std::optional<unsigned>
+matchDsSwizzleRotatePattern(ArrayRef<uint8_t> Ids) {
+  if (!hasPeriodicLayout<32>(Ids))
+    return std::nullopt;
+
+  // Determine the rotation amount from lane 0: every lane must read from
+  // lane (I + N) % 32 where N = Ids[0] and 0 <= N <= 31.
+  unsigned N = Ids[0];
+  if (N >= 32)
+    return std::nullopt;
+
+  for (unsigned I = 0; I < 32; ++I)
+    if (Ids[I] != (I + N) % 32)
+      return std::nullopt;
+
+  return AMDGPU::Swizzle::ROTATE_MODE_ENC |
+         (N << AMDGPU::Swizzle::ROTATE_SIZE_SHIFT);
+}
+
 /// Emit v_mov_b32_dpp with the given control word, row/bank masks 0xF, and
 /// bound_ctrl=1 so out-of-bounds lanes are well-defined and the DPP mov can
 /// be folded into a consuming VALU op by GCNDPPCombine.
@@ -951,6 +1000,11 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
                                         ArrayRef<uint8_t> Ids,
                                         const GCNSubtarget &ST,
                                         const DataLayout &DL) {
+  // Identity shuffle (every lane reads itself) folds to the source value.
+  if (all_of(enumerate(Ids),
+             [](const auto &E) { return E.value() == E.index(); }))
+    return Src;
+
   // Uniform shuffle (all lanes read the same value) is handled by cheaper
   // broadcast/readlane intrinsics.
   if (all_equal(Ids))
@@ -987,7 +1041,7 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
       return createMovDpp8(B, Src, *Sel);
   }
 
-  if (ST.hasPermLaneX16()) {
+  if (ST.hasPermlane16Insts()) {
     if (isFullRowPattern(Ids)) {
       uint64_t Sel = computePermlane16Masks(Ids);
       return createPermlane16(B, Src, Lo_32(Sel), Hi_32(Sel));
@@ -1004,6 +1058,13 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
   // is available on every target that has ds_swizzle.
   if (std::optional<unsigned> Imm = matchDsSwizzleBitmaskPattern(Ids))
     return createDsSwizzle(B, Src, *Imm, DL);
+
+  // DS_SWIZZLE rotate mode (GFX9+): handles cyclic 32-lane rotations that
+  // bitmask mode cannot express (e.g. +1 mod 32 requires inter-bit carry).
+  if (ST.hasDsSwizzleRotateMode()) {
+    if (std::optional<unsigned> Imm = matchDsSwizzleRotatePattern(Ids))
+      return createDsSwizzle(B, Src, *Imm, DL);
+  }
 
   if (ST.hasPermLane64() && matchHalfWaveSwapPattern(Ids))
     return createPermlane64(B, Src);
@@ -1048,7 +1109,6 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
 
   return IC.replaceInstUsesWith(II, Result);
 }
-
 std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
@@ -1644,15 +1704,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         // intrinsic exposes) is one bit per thread, masked with the EXEC
         // register (which contains the bitmask of live threads). So a
         // comparison that always returns true is the same as a read of the
-        // EXEC register.
-        Metadata *MDArgs[] = {MDString::get(II.getContext(), "exec")};
-        MDNode *MD = MDNode::get(II.getContext(), MDArgs);
-        Value *Args[] = {MetadataAsValue::get(II.getContext(), MD)};
-        CallInst *NewCall = IC.Builder.CreateIntrinsic(Intrinsic::read_register,
-                                                       II.getType(), Args);
-        NewCall->addFnAttr(Attribute::Convergent);
-        NewCall->takeName(&II);
-        return IC.replaceInstUsesWith(II, NewCall);
+        // EXEC register. ballot(true) reads EXEC at the wave-size width, so
+        // zext/trunc the result to the intrinsic's return type.
+        Type *WaveTy = IC.Builder.getIntNTy(ST->getWavefrontSize());
+        Value *Ballot = IC.Builder.CreateIntrinsic(
+            Intrinsic::amdgcn_ballot, WaveTy, IC.Builder.getTrue());
+        Value *Result = IC.Builder.CreateZExtOrTrunc(Ballot, II.getType());
+        return IC.replaceInstUsesWith(II, Result);
       }
 
       // Canonicalize constants to RHS.
@@ -1745,7 +1803,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
       Value *Args[] = {SrcLHS, SrcRHS,
                        ConstantInt::get(CC->getType(), SrcPred)};
-      CallInst *NewCall = IC.Builder.CreateIntrinsic(
+      Value *NewCall = IC.Builder.CreateIntrinsic(
           NewIID, {II.getType(), SrcLHS->getType()}, Args);
       NewCall->takeName(&II);
       return IC.replaceInstUsesWith(II, NewCall);
@@ -2183,7 +2241,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Args[0] = Src0;
     Args[1] = Src1;
 
-    CallInst *NewII = IC.Builder.CreateIntrinsic(
+    Value *NewII = IC.Builder.CreateIntrinsic(
         IID, {Src0->getType(), Src1->getType()}, Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
@@ -2225,7 +2283,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Args[1] = Src0;
     Args[3] = Src1;
 
-    CallInst *NewII = IC.Builder.CreateIntrinsic(
+    Value *NewII = IC.Builder.CreateIntrinsic(
         IID, {II.getArgOperand(5)->getType(), Src0->getType(), Src1->getType()},
         Args, &II);
     NewII->takeName(&II);
@@ -2375,10 +2433,12 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       Args[0] = IC.Builder.CreateShuffleVector(II.getOperand(0), EltMask);
   }
 
-  CallInst *NewCall =
-      IC.Builder.CreateIntrinsic(II.getIntrinsicID(), OverloadTys, Args);
+  CallInst *NewCall = IC.Builder.CreateIntrinsicWithoutFolding(
+      II.getIntrinsicID(), OverloadTys, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
+  AttributeList OldAttrList = II.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   if (IsLoad) {
     if (NewNumElts == 1) {

@@ -58,8 +58,7 @@ define i32 @brkn_all_active(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vsca
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkn.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
-  %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %3 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %2, <vscale x 16 x i1> %1)
+  %3 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> %1)
   %conv = zext i1 %3 to i32
   ret i32 %conv
 }

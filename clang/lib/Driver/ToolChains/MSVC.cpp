@@ -205,6 +205,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (TC.getVFS().exists(LibPath))
       CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
   }
+  for (const auto &LibPath : TC.getFilePaths()) {
+    if (LibPath.length() > 0)
+      CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
+  }
   auto CRTPath = TC.getCompilerRTPath();
   if (TC.getVFS().exists(CRTPath))
     CmdArgs.push_back(Args.MakeArgString("-libpath:" + CRTPath));
@@ -282,7 +286,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (C.getDriver().isUsingLTO()) {
+  if (TC.isUsingLTO(Args)) {
     if (Arg *A = tools::getLastProfileSampleUseArg(Args))
       CmdArgs.push_back(Args.MakeArgString(std::string("-lto-sample-profile:") +
                                            A->getValue()));
@@ -340,9 +344,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // truncate the .debug_* sections to eight characters. PE/COFF doesn't allow
     // section names longer than eight bytes in executables - LLD uses the same
     // name length extension as in object files (where long names are allowed).
+    // Also 'lld-link' for hybrid object files if -marm64x is requested.
     if (Args.hasArg(options::OPT_gdwarf, options::OPT_gdwarf_2,
                     options::OPT_gdwarf_3, options::OPT_gdwarf_4,
-                    options::OPT_gdwarf_5, options::OPT_gdwarf_6))
+                    options::OPT_gdwarf_5, options::OPT_gdwarf_6,
+                    options::OPT_marm64x))
       Linker = "lld-link";
     else
       Linker = "link";
@@ -357,7 +363,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(
           Args.MakeArgString(std::string("/vfsoverlay:") + A->getValue()));
 
-    if (C.getDriver().isUsingLTO() &&
+    if (TC.isUsingLTO(Args) &&
         Args.hasFlag(options::OPT_gsplit_dwarf, options::OPT_gno_split_dwarf,
                      false))
       CmdArgs.push_back(Args.MakeArgString(Twine("/dwodir:") +
@@ -494,6 +500,31 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::move(LinkCmd));
 }
 
+void tools::ARM64XObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
+                                        const InputInfo &Output,
+                                        const InputInfoList &Inputs,
+                                        const ArgList &Args,
+                                        const char *LinkingOutput) const {
+  // Assume llvm-objcopy is only used for hybrid ARM64X object files.
+  if (Inputs.size() != 2)
+    return;
+
+  std::string ObjcopyPath = getToolChain().GetProgramPath("llvm-objcopy");
+  const char *Exec = Args.MakeArgString(ObjcopyPath);
+
+  // Embed the hybrid object in the .obj.arm64ec section.
+  ArgStringList CmdArgs;
+  CmdArgs.push_back(Args.MakeArgString("--add-section=.obj.arm64ec=" +
+                                       Twine(Inputs[1].getFilename())));
+  // Mark the .obj.arm64ec section as discardable.
+  CmdArgs.push_back("--set-section-flags=.obj.arm64ec=exclude");
+  CmdArgs.push_back(Inputs[0].getFilename());
+  CmdArgs.push_back(Output.getFilename());
+
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs, Output));
+}
+
 MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
@@ -523,6 +554,19 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
       llvm::findVCToolChainViaSetupConfig(getVFS(), VCToolsVersion,
                                           VCToolChainPath, VSLayout) ||
       llvm::findVCToolChainViaRegistry(VCToolChainPath, VSLayout);
+
+  loadMultilibsFromYAML(Args, D);
+}
+
+Tool *MSVCToolChain::getTool(Action::ActionClass AC) const {
+  switch (AC) {
+  case Action::ObjcopyJobClass:
+    if (!Objcopy)
+      Objcopy.reset(new tools::ARM64XObjcopy(*this));
+    return Objcopy.get();
+  default:
+    return ToolChain::getTool(AC);
+  }
 }
 
 Tool *MSVCToolChain::buildLinker() const {
@@ -592,6 +636,19 @@ void MSVCToolChain::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
     CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
                                        RocmInstallation->getLibPath()),
                     "amdhip64.lib"});
+
+    // For HIP device PGO, link clang_rt.profile_rocm when available. It is a
+    // self-contained superset of clang_rt.profile, emitted first so the base
+    // archive stays inert (avoiding a /MD-vs-/MT CRT mix in the host image).
+    if (needsProfileRT(Args) &&
+        getVFS().exists(getCompilerRT(Args, "profile_rocm", FT_Static))) {
+      CmdArgs.push_back(getCompilerRTArgString(Args, "profile_rocm"));
+      // Force the linker to retain the constructor-only hipModuleLoad*
+      // interceptor object from clang_rt.profile_rocm (see Linux.cpp). The
+      // constructor self-skips for programs that do not use hipModuleLoad.
+      CmdArgs.push_back(
+          "-include:__llvm_profile_offload_register_dynamic_module");
+    }
   }
 }
 
@@ -767,6 +824,18 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
+  // Add multilib variant include paths in priority order.
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
+      SmallString<128> Dir(*StdlibIncDir);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      if (getDriver().getVFS().exists(Dir))
+        addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  }
+
   // Honor %INCLUDE% and %EXTERNAL_INCLUDE%. It should have essential search
   // paths set by vcvarsall.bat. Skip if the user expressly set any of the
   // Windows SDK or VC Tools options.
@@ -877,15 +946,16 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
                    IsWindowsMSVC)) {
     // -fms-compatibility-version=19.33 is default, aka 2022, 17.3
     // NOTE: when changing this value, also update
-    // clang/docs/CommandGuide/clang.rst and clang/docs/UsersManual.rst
+    // clang/docs/CommandGuide/clang.rst and clang/docs/UsersManual.md
     // accordingly.
     MSVT = VersionTuple(19, 33);
   }
   return MSVT;
 }
 
-std::string MSVCToolChain::ComputeEffectiveClangTriple(
-    const ArgList &Args, llvm::StringRef BoundArch, types::ID InputType) const {
+std::string
+MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args, BoundArch BA,
+                                           types::ID InputType) const {
   // The MSVC version doesn't care about the architecture, even though it
   // may look at the triple internally.
   VersionTuple MSVT = computeMSVCVersion(/*D=*/nullptr, Args);
@@ -895,7 +965,7 @@ std::string MSVCToolChain::ComputeEffectiveClangTriple(
   // For the rest of the triple, however, a computed architecture name may
   // be needed.
   llvm::Triple Triple(
-      ToolChain::ComputeEffectiveClangTriple(Args, BoundArch, InputType));
+      ToolChain::ComputeEffectiveClangTriple(Args, BA, InputType));
   if (Triple.getEnvironment() == llvm::Triple::MSVC) {
     StringRef ObjFmt = Triple.getEnvironmentName().split('-').second;
     if (ObjFmt.empty())
@@ -908,9 +978,8 @@ std::string MSVCToolChain::ComputeEffectiveClangTriple(
 }
 
 SanitizerMask MSVCToolChain::getSupportedSanitizers(
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -1047,8 +1116,7 @@ static void TranslatePermissiveMinus(Arg *A, llvm::opt::DerivedArgList &DAL,
 
 llvm::opt::DerivedArgList *
 MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             StringRef BoundArch,
-                             Action::OffloadKind OFK) const {
+                             BoundArch BA, Action::OffloadKind OFK) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
   const OptTable &Opts = getDriver().getOpts();
 
@@ -1103,7 +1171,7 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 }
 
 void MSVCToolChain::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, BoundArch BA,
     Action::OffloadKind DeviceOffloadKind) const {
   // MSVC STL kindly allows removing all usages of typeid by defining
   // _HAS_STATIC_RTTI to 0. Do so, when compiling with -fno-rtti

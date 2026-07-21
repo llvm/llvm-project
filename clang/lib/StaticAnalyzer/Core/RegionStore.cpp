@@ -586,6 +586,8 @@ public:
   std::optional<SVal>
   getConstantValFromConstArrayInitializer(RegionBindingsConstRef B,
                                           const ElementRegion *R);
+  std::optional<SVal> getConstantValFromInitializer(const FieldRegion *R,
+                                                    bool IsMainAnalysis);
   std::optional<SVal>
   getSValFromInitListExpr(const InitListExpr *ILE,
                           const SmallVector<uint64_t, 2> &ConcreteOffsets,
@@ -2106,6 +2108,87 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
   return getBindingForFieldOrElementCommon(B, R, R->getElementType());
 }
 
+std::optional<SVal>
+RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
+                                                  bool IsMainAnalysis) {
+  SmallVector<const SubRegion *, 4> Path;
+  const MemRegion *Cur = R;
+  while (Cur && !isa<VarRegion>(Cur)) {
+    if (isa<FieldRegion, ElementRegion>(Cur)) {
+      Path.push_back(cast<SubRegion>(Cur));
+      Cur = cast<SubRegion>(Cur)->getSuperRegion();
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  const auto *VR = dyn_cast<VarRegion>(Cur);
+  if (!VR)
+    return std::nullopt;
+
+  const VarDecl *VD = VR->getDecl();
+  QualType LeafTy = R->getDecl()->getType();
+
+  bool TrustInit =
+      (VD->getType().isConstQualified() || LeafTy.isConstQualified() ||
+       (IsMainAnalysis && VD->hasGlobalStorage()));
+  if (!TrustInit)
+    return std::nullopt;
+
+  const Expr *Init = VD->getAnyInitializer();
+  if (!Init)
+    return std::nullopt;
+
+  const Expr *E = Init;
+  for (const SubRegion *SR : llvm::reverse(Path)) {
+    // If E is not an InitListExpr, it may be an ImplicitValueInitExpr
+    // representing zero-initialization of this aggregate element.
+    if (isa<ImplicitValueInitExpr>(E))
+      return svalBuilder.makeZeroVal(LeafTy);
+
+    const auto *ILE = dyn_cast<InitListExpr>(E);
+    if (!ILE)
+      return std::nullopt;
+
+    if (const auto *FR = dyn_cast<FieldRegion>(SR)) {
+      if (ILE->getType()->isUnionType()) {
+        // A union InitListExpr has one init for one member. We can only
+        // resolve if the accessed field matches the initialized member.
+        const FieldDecl *InitField = ILE->getInitializedFieldInUnion();
+        if (InitField != FR->getDecl())
+          return std::nullopt;
+        if (ILE->getNumInits() == 0)
+          return svalBuilder.makeZeroVal(LeafTy);
+        E = ILE->getInit(0);
+      } else {
+        unsigned Idx = FR->getDecl()->getFieldIndex();
+        if (Idx >= ILE->getNumInits())
+          return std::nullopt;
+        E = ILE->getInit(Idx);
+      }
+      continue;
+    }
+
+    if (const auto *ER = dyn_cast<ElementRegion>(SR)) {
+      auto CI = ER->getIndex().getAs<nonloc::ConcreteInt>();
+      if (!CI)
+        return std::nullopt;
+      uint64_t Idx = CI->getValue()->getZExtValue();
+      if (Idx < ILE->getNumInits())
+        E = ILE->getInit(Idx);
+      else if (const Expr *Filler = ILE->getArrayFiller())
+        E = Filler;
+      else
+        return std::nullopt;
+      continue;
+    }
+
+    return std::nullopt;
+  }
+
+  return svalBuilder.getConstantVal(E);
+}
+
 SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
                                             const FieldRegion* R) {
 
@@ -2113,30 +2196,12 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
   if (const std::optional<SVal> &V = B.getDirectBinding(R))
     return *V;
 
-  // If the containing record was initialized, try to get its constant value.
-  const FieldDecl *FD = R->getDecl();
-  QualType Ty = FD->getType();
-  const MemRegion* superR = R->getSuperRegion();
-  if (const auto *VR = dyn_cast<VarRegion>(superR)) {
-    const VarDecl *VD = VR->getDecl();
-    QualType RecordVarTy = VD->getType();
-    unsigned Index = FD->getFieldIndex();
-    // Either the record variable or the field has an initializer that we can
-    // trust. We trust initializers of constants and, additionally, respect
-    // initializers of globals when analyzing main().
-    if (RecordVarTy.isConstQualified() || Ty.isConstQualified() ||
-        (B.isMainAnalysis() && VD->hasGlobalStorage()))
-      if (const Expr *Init = VD->getAnyInitializer())
-        if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
-          if (Index < InitList->getNumInits()) {
-            if (const Expr *FieldInit = InitList->getInit(Index))
-              if (std::optional<SVal> V = svalBuilder.getConstantVal(FieldInit))
-                return *V;
-          } else {
-            return svalBuilder.makeZeroVal(Ty);
-          }
-        }
-  }
+  // Try to resolve the field value from the variable's initializer.
+  if (std::optional<SVal> V =
+          getConstantValFromInitializer(R, B.isMainAnalysis()))
+    return *V;
+
+  QualType Ty = R->getDecl()->getType();
 
   // Handle the case where we are accessing into a larger scalar object.
   // For example, this handles:

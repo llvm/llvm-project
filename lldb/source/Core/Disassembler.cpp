@@ -413,7 +413,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
 
     const Declaration &decl = v->GetDeclaration();
     if (decl.GetFile()) {
-      decl_file = decl.GetFile().GetFilename().GetString();
+      decl_file = decl.GetFile().GetFilename().str();
       if (decl.GetLine() > 0)
         decl_line = decl.GetLine();
     }
@@ -1085,7 +1085,7 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream &out_stream) {
 
 bool Instruction::TestEmulation(Stream &out_stream, const char *file_name) {
   if (!file_name) {
-    out_stream.Printf("Instruction::TestEmulation:  Missing file_name.");
+    out_stream.PutCString("Instruction::TestEmulation:  Missing file_name.");
     return false;
   }
   FILE *test_file = FileSystem::Instance().Fopen(file_name, "r");
@@ -1157,9 +1157,9 @@ bool Instruction::TestEmulation(Stream &out_stream, const char *file_name) {
         insn_emulator_up->TestEmulation(out_stream, arch, data_dictionary);
 
   if (success)
-    out_stream.Printf("Emulation test succeeded.");
+    out_stream.PutCString("Emulation test succeeded.");
   else
-    out_stream.Printf("Emulation test failed.");
+    out_stream.PutCString("Emulation test failed.");
 
   return success;
 }

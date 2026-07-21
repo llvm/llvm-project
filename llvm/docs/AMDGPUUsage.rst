@@ -49,61 +49,178 @@ LLVM
 Target Triples
 --------------
 
-Use the Clang option ``--target=<Architecture>-<Vendor>-<OS>-<Environment>``
-to specify the target triple:
+Use the Clang option ``--target=<Architecture><SubArch>-<Vendor>-<OS>-<Environment>``
+to specify the target triple.
 
-  .. table:: AMDGPU Architectures
-     :name: amdgpu-architecture-table
+.. note::
+   Historically, the single top-level ``amdgcn`` architecture was used
+   for all devices and specific devices by the subtarget. It has been
+   replaced with the ``amdgpu`` architecture combined with a subarch
+   suffix. The legacy spelling is accepted for accepted for
+   compatibility.
 
-     ============ ==============================================================
-     Architecture Description
-     ============ ==============================================================
-     ``r600``     AMD GPUs HD2XXX-HD6XXX for graphics and compute shaders.
-     ``amdgcn``   AMD GPUs GCN GFX6 onwards for graphics and compute shaders.
-     ============ ==============================================================
+.. table:: AMDGPU Architectures
+   :name: amdgpu-architecture-table
 
-  .. table:: AMDGPU Vendors
-     :name: amdgpu-vendor-table
+   ============ ==============================================================
+   Architecture Description
+   ============ ==============================================================
+   ``r600``     AMD GPUs HD2XXX-HD6XXX for graphics and compute shaders.
+   ``amdgpu``   AMD GPUs GCN GFX6 onwards for graphics and compute shaders.
+   ``amdgcn``   Legacy alias for ``amdgpu``.
+   ============ ==============================================================
 
-     ============ ==============================================================
-     Vendor       Description
-     ============ ==============================================================
-     ``amd``      Can be used for all AMD GPU usage.
-     ``mesa``     Can be used if the OS is ``mesa3d``.
-     ============ ==============================================================
+The following table lists each major subarch and the minor subarches it
+covers. The *Default Processor* column gives the generic processor that a
+major subarch selects by default for code generation; this is the
+corresponding generic processor for families that have one (see
+:ref:`amdgpu-generic-processor-table`). Major subarches listed as *(none)*
+are placeholders for families that do not yet have a generic target. See
+:ref:`amdgpu-subarch-compatibility` for how subarches are matched.
 
-  .. table:: AMDGPU Operating Systems
-     :name: amdgpu-os
+.. list-table:: AMDGPU Subarchitectures
+   :name: amdgpu-major-subarch-table
+   :header-rows: 1
 
-     ============== ============================================================
-     OS             Description
-     ============== ============================================================
-     *<empty>*      Defaults to the *unknown* OS.
-     ``amdhsa``     Compute kernels executed on HSA [HSA]_ compatible runtimes
-                    such as:
+   * - Major Subarch
+     - Default Processor
+     - Covered Subarches (Processor)
+   * - ``amdgpu6``
+     - *(none)*
+     - ``amdgpu6.00`` (``gfx600``), ``amdgpu6.01`` (``gfx601``),
+       ``amdgpu6.02`` (``gfx602``)
+   * - ``amdgpu7``
+     - *(none)*
+     - ``amdgpu7.00`` (``gfx700``), ``amdgpu7.01`` (``gfx701``),
+       ``amdgpu7.02`` (``gfx702``), ``amdgpu7.03`` (``gfx703``),
+       ``amdgpu7.04`` (``gfx704``), ``amdgpu7.05`` (``gfx705``)
+   * - ``amdgpu8``
+     - *(none)*
+     - ``amdgpu8.01`` (``gfx801``), ``amdgpu8.02`` (``gfx802``),
+       ``amdgpu8.03`` (``gfx803``), ``amdgpu8.05`` (``gfx805``)
+   * - ``amdgpu8.10``
+     - *(none)*
+     - ``amdgpu8.10`` (``gfx810``)
+   * - ``amdgpu9``
+     - ``gfx9-generic``
+     - ``amdgpu9.00`` (``gfx900``), ``amdgpu9.02`` (``gfx902``),
+       ``amdgpu9.04`` (``gfx904``), ``amdgpu9.06`` (``gfx906``),
+       ``amdgpu9.09`` (``gfx909``), ``amdgpu9.0c`` (``gfx90c``)
+   * - ``amdgpu9.08``
+     - *(none)*
+     - ``amdgpu9.08`` (``gfx908``)
+   * - ``amdgpu9.0a``
+     - *(none)*
+     - ``amdgpu9.0a`` (``gfx90a``)
+   * - ``amdgpu9.4``
+     - ``gfx9-4-generic``
+     - ``amdgpu9.42`` (``gfx942``), ``amdgpu9.50`` (``gfx950``)
+   * - ``amdgpu10.1``
+     - ``gfx10-1-generic``
+     - ``amdgpu10.10`` (``gfx1010``), ``amdgpu10.11`` (``gfx1011``),
+       ``amdgpu10.12`` (``gfx1012``), ``amdgpu10.13`` (``gfx1013``)
+   * - ``amdgpu10.3``
+     - ``gfx10-3-generic``
+     - ``amdgpu10.30`` (``gfx1030``), ``amdgpu10.31`` (``gfx1031``),
+       ``amdgpu10.32`` (``gfx1032``), ``amdgpu10.33`` (``gfx1033``),
+       ``amdgpu10.34`` (``gfx1034``), ``amdgpu10.35`` (``gfx1035``),
+       ``amdgpu10.36`` (``gfx1036``)
+   * - ``amdgpu11``
+     - ``gfx11-generic``
+     - ``amdgpu11.00`` (``gfx1100``), ``amdgpu11.01`` (``gfx1101``),
+       ``amdgpu11.02`` (``gfx1102``), ``amdgpu11.03`` (``gfx1103``),
+       ``amdgpu11.50`` (``gfx1150``), ``amdgpu11.51`` (``gfx1151``),
+       ``amdgpu11.52`` (``gfx1152``), ``amdgpu11.53`` (``gfx1153``)
+       ``amdgpu11.54`` (``gfx1154``)
+   * - ``amdgpu11.7``
+     - ``gfx11-7-generic``
+     - ``amdgpu11.70`` (``gfx1170``), ``amdgpu11.71`` (``gfx1171``),
+       ``amdgpu11.72`` (``gfx1172``)
+   * - ``amdgpu12``
+     - ``gfx12-generic``
+     - ``amdgpu12.00`` (``gfx1200``), ``amdgpu12.01`` (``gfx1201``)
+   * - ``amdgpu12.5``
+     - ``gfx12-5-generic``
+     - ``amdgpu12.50`` (``gfx1250``), ``amdgpu12.51`` (``gfx1251``)
+   * - ``amdgpu13``
+     - ``gfx13-generic``
+     - ``amdgpu13.10`` (``gfx1310``)
 
-                    - AMD's ROCm™ runtime [AMD-ROCm]_ using the *rocm-amdhsa*
-                      loader on Linux. See *AMD ROCm Platform Release Notes*
-                      [AMD-ROCm-Release-Notes]_ for supported hardware and
-                      software.
-                    - AMD's PAL runtime using the *pal-amdhsa* loader on
-                      Windows.
+.. table:: AMDGPU Vendors
+   :name: amdgpu-vendor-table
 
-     ``amdpal``     Graphic shaders and compute kernels executed on AMD's PAL
-                    runtime using the *pal-amdpal* loader on Windows and Linux
-                    Pro.
-     ``mesa3d``     Graphic shaders and compute kernels executed on AMD's Mesa
-                    3D runtime using the *mesa-mesa3d* loader on Linux.
-     ============== ============================================================
+   ============ ==============================================================
+   Vendor       Description
+   ============ ==============================================================
+   ``amd``      Can be used for all AMD GPU usage.
+   ``mesa``     Can be used if the OS is ``mesa3d``.
+   ============ ==============================================================
 
-  .. table:: AMDGPU Environments
-     :name: amdgpu-environment-table
+.. table:: AMDGPU Operating Systems
+   :name: amdgpu-os
 
-     ============ ==============================================================
-     Environment  Description
-     ============ ==============================================================
-     *<empty>*    Default.
-     ============ ==============================================================
+   ============== ============================================================
+   OS             Description
+   ============== ============================================================
+   *<empty>*      Defaults to the *unknown* OS.
+   ``amdhsa``     Compute kernels executed on HSA [HSA]_ compatible runtimes
+                  such as:
+
+                  - AMD's ROCm™ runtime [AMD-ROCm]_ using the *rocm-amdhsa*
+                    loader on Linux. See *AMD ROCm Platform Release Notes*
+                    [AMD-ROCm-Release-Notes]_ for supported hardware and
+                    software.
+                  - AMD's PAL runtime using the *pal-amdhsa* loader on
+                    Windows.
+
+   ``amdpal``     Graphic shaders and compute kernels executed on AMD's PAL
+                  runtime using the *pal-amdpal* loader on Windows and Linux
+                  Pro.
+   ``mesa3d``     Graphic shaders and compute kernels executed on AMD's Mesa
+                  3D runtime using the *mesa-mesa3d* loader on Linux.
+   ============== ============================================================
+
+.. table:: AMDGPU Environments
+   :name: amdgpu-environment-table
+
+   ============ ==============================================================
+   Environment  Description
+   ============ ==============================================================
+   *<empty>*    Default.
+   ============ ==============================================================
+
+.. _amdgpu-subarch-compatibility:
+
+Subarchitecture Compatibility
+-----------------------------
+
+For the ``amdgpu`` architecture the ISA version is encoded in the
+triple's *SubArch* component. Every unique ISA has its own *minor
+subarch* (for example ``amdgpu9.00`` for ``gfx900``). ``amdgcn`` is a
+legacy alias of ``amdgpu`` (see :ref:`amdgpu-architecture-table`)
+which does not support subarches.
+
+Minor subarches are grouped into *major subarches* that name a family
+of largely compatible ISA versions (for example ``amdgpu9``). A major
+subarch corresponds to a :ref:`generic processor
+<amdgpu-generic-processor-table>` when one exists for that family; the
+remaining major subarches are placeholders for families that do not
+yet have a generic target for code generation.
+
+Two subarches are considered *compatible* when:
+
+* they are identical, or
+* one of them is the major subarch of the family that the other belongs to.
+
+In particular, two distinct *minor* subarches are never compatible
+with each other, even within the same family (for example
+``amdgpu9.00`` and ``amdgpu9.06`` are not compatible). A minor subarch
+is compatible with itself and its own major subarch, and a major
+subarch is compatible with itself and every minor subarch it covers. A
+triple with no subarch (``amdgpu``) is treated as compatible with
+anything, as a backwards-compatibility allowance. When linking modules
+with compatible-but-unequal subarches, the more specific (minor)
+subarch is selected for the merged module.
 
 .. _amdgpu-processors:
 
@@ -123,481 +240,492 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
   .. table:: AMDGPU Processors
      :name: amdgpu-processor-table
 
-     =========== =============== ============ ===== ================= =============== =============== ======================
-     Processor   Alternative     Target       dGPU/ Target            Target          OS Support      Example
-                 Processor       Triple       APU   Features          Properties      *(see*          Products
-                                 Architecture       Supported                         `amdgpu-os`_
-                                                                                      *and
-                                                                                      corresponding
-                                                                                      runtime release
-                                                                                      notes for
-                                                                                      current
-                                                                                      information and
-                                                                                      level of
-                                                                                      support)*
-     =========== =============== ============ ===== ================= =============== =============== ======================
+     =========== =============== =============== ===== ================= =============== =============== ======================
+     Processor   Alternative     Target          dGPU/ Target            Target          OS Support      Example
+                 Processor       Triple          APU   Features          Properties      *(see*          Products
+                                 Architecture          Supported                         `amdgpu-os`_
+                                                                                         *and
+                                                                                         corresponding
+                                                                                         runtime
+                                                                                         release
+                                                                                         notes for
+                                                                                         current
+                                                                                         information
+                                                                                         and
+                                                                                         level
+                                                                                         of
+                                                                                         support)*
+     =========== =============== =============== ===== ================= =============== =============== ======================
      **Radeon HD 2000/3000 Series (R600)** [AMD-RADEON-HD-2000-3000]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``r600``                    ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``r630``                    ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``rs880``                   ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``rv670``                   ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
+     --------------------------------------------------------------------------------------------------------------------------
+     ``r600``                    ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``r630``                    ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``rs880``                   ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``rv670``                   ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
      **Radeon HD 4000 Series (R700)** [AMD-RADEON-HD-4000]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``rv710``                   ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``rv730``                   ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``rv770``                   ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
+     --------------------------------------------------------------------------------------------------------------------------
+     ``rv710``                   ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``rv730``                   ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``rv770``                   ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
      **Radeon HD 5000 Series (Evergreen)** [AMD-RADEON-HD-5000]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``cedar``                   ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``cypress``                 ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``juniper``                 ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``redwood``                 ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``sumo``                    ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
+     --------------------------------------------------------------------------------------------------------------------------
+     ``cedar``                   ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``cypress``                 ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``juniper``                 ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``redwood``                 ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``sumo``                    ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
      **Radeon HD 6000 Series (Northern Islands)** [AMD-RADEON-HD-6000]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``barts``                   ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``caicos``                  ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``cayman``                  ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``turks``                   ``r600``     dGPU                    - Does not
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
+     --------------------------------------------------------------------------------------------------------------------------
+     ``barts``                   ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``caicos``                  ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``cayman``                  ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``turks``                   ``r600``        dGPU                    - Does not
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
      **GCN GFX6 (Southern Islands (SI))** [AMD-GCN-GFX6]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx600``  - ``tahiti``    ``amdgcn``   dGPU                    - Does not      - *pal-amdpal*
-                                                                        support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``gfx601``  - ``pitcairn``  ``amdgcn``   dGPU                    - Does not      - *pal-amdpal*
-                 - ``verde``                                            support
-                                                                        generic
-                                                                        address
-                                                                        space
-     ``gfx602``  - ``hainan``    ``amdgcn``   dGPU                    - Does not      - *pal-amdpal*
-                 - ``oland``                                            support
-                                                                        generic
-                                                                        address
-                                                                        space
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx600``  - ``tahiti``    ``amdgpu6.00``   dGPU                   - Does not      - *pal-amdpal*
+                                                                           support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``gfx601``  - ``pitcairn``  ``amdgpu6.01``   dGPU                   - Does not      - *pal-amdpal*
+                 - ``verde``                                               support
+                                                                           generic
+                                                                           address
+                                                                           space
+     ``gfx602``  - ``hainan``    ``amdgpu6.02``   dGPU                   - Does not      - *pal-amdpal*
+                 - ``oland``                                               support
+                                                                           generic
+                                                                           address
+                                                                           space
      **GCN GFX7 (Sea Islands (CI))** [AMD-GCN-GFX7]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx700``  - ``kaveri``    ``amdgcn``   APU                     - Offset        - *rocm-amdhsa* - A6-7000
-                                                                        flat          - *pal-amdhsa*  - A6 Pro-7050B
-                                                                        scratch       - *pal-amdpal*  - A8-7100
-                                                                                                      - A8 Pro-7150B
-                                                                                                      - A10-7300
-                                                                                                      - A10 Pro-7350B
-                                                                                                      - FX-7500
-                                                                                                      - A8-7200P
-                                                                                                      - A10-7400P
-                                                                                                      - FX-7600P
-     ``gfx701``  - ``hawaii``    ``amdgcn``   dGPU                    - Offset        - *rocm-amdhsa* - FirePro W8100
-                                                                        flat          - *pal-amdhsa*  - FirePro W9100
-                                                                        scratch       - *pal-amdpal*  - FirePro S9150
-                                                                                                      - FirePro S9170
-     ``gfx702``                  ``amdgcn``   dGPU                    - Offset        - *rocm-amdhsa* - Radeon R9 290
-                                                                        flat          - *pal-amdhsa*  - Radeon R9 290x
-                                                                        scratch       - *pal-amdpal*  - Radeon R390
-                                                                                                      - Radeon R390x
-     ``gfx703``  - ``kabini``    ``amdgcn``   APU                     - Offset        - *pal-amdhsa*  - E1-2100
-                 - ``mullins``                                          flat          - *pal-amdpal*  - E1-2200
-                                                                        scratch                       - E1-2500
-                                                                                                      - E2-3000
-                                                                                                      - E2-3800
-                                                                                                      - A4-5000
-                                                                                                      - A4-5100
-                                                                                                      - A6-5200
-                                                                                                      - A4 Pro-3340B
-     ``gfx704``  - ``bonaire``   ``amdgcn``   dGPU                    - Offset        - *pal-amdhsa*  - Radeon HD 7790
-                                                                        flat          - *pal-amdpal*  - Radeon HD 8770
-                                                                        scratch                       - R7 260
-                                                                                                      - R7 260X
-     ``gfx705``                  ``amdgcn``   APU                     - Offset        - *pal-amdhsa*  *TBA*
-                                                                        flat          - *pal-amdpal*
-                                                                        scratch                       .. TODO::
-
-                                                                                                        Add product
-                                                                                                        names.
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx700``  - ``kaveri``    ``amdgpu7.00``   APU                    - Offset        - *rocm-amdhsa* - A6-7000
+                                                                           flat          - *pal-amdhsa*  - A6 Pro-7050B
+                                                                           scratch       - *pal-amdpal*  - A8-7100
+                                                                                                         - A8 Pro-7150B
+                                                                                                         - A10-7300
+                                                                                                         - A10 Pro-7350B
+                                                                                                         - FX-7500
+                                                                                                         - A8-7200P
+                                                                                                         - A10-7400P
+                                                                                                         - FX-7600P
+     ``gfx701``  - ``hawaii``    ``amdgpu7.01``   dGPU                   - Offset        - *rocm-amdhsa* - FirePro W8100
+                                                                           flat          - *pal-amdhsa*  - FirePro W9100
+                                                                           scratch       - *pal-amdpal*  - FirePro S9150
+                                                                                                         - FirePro S9170
+     ``gfx702``                  ``amdgpu7.02``   dGPU                   - Offset        - *rocm-amdhsa* - Radeon R9 290
+                                                                           flat          - *pal-amdhsa*  - Radeon R9 290x
+                                                                           scratch       - *pal-amdpal*  - Radeon R390
+                                                                                                         - Radeon R390x
+     ``gfx703``  - ``kabini``    ``amdgpu7.03``   APU                    - Offset        - *pal-amdhsa*  - E1-2100
+                 - ``mullins``                                             flat          - *pal-amdpal*  - E1-2200
+                                                                           scratch                       - E1-2500
+                                                                                                         - E2-3000
+                                                                                                         - E2-3800
+                                                                                                         - A4-5000
+                                                                                                         - A4-5100
+                                                                                                         - A6-5200
+                                                                                                         - A4 Pro-3340B
+     ``gfx704``  - ``bonaire``   ``amdgpu7.04``   dGPU                   - Offset        - *pal-amdhsa*  - Radeon HD 7790
+                                                                           flat          - *pal-amdpal*  - Radeon HD 8770
+                                                                           scratch                       - R7 260
+                                                                                                         - R7 260X
+     ``gfx705``                  ``amdgpu7.05``   APU                    - Offset        - *pal-amdhsa*  *TBA*
+                                                                           flat          - *pal-amdpal*
+                                                                           scratch                       .. TODO::
+                                                                                                           Add product
+                                                                                                           names.
 
      **GCN GFX8 (Volcanic Islands (VI))** [AMD-GCN-GFX8]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack           - Offset        - *rocm-amdhsa* - A6-8500P
-                                                                        flat          - *pal-amdhsa*  - Pro A6-8500B
-                                                                        scratch       - *pal-amdpal*  - A8-8600P
-                                                                                                      - Pro A8-8600B
-                                                                                                      - FX-8800P
-                                                                                                      - Pro A12-8800B
-                                                                                                      - A10-8700P
-                                                                                                      - Pro A10-8700B
-                                                                                                      - A10-8780P
-                                                                                                      - A10-9600P
-                                                                                                      - A10-9630P
-                                                                                                      - A12-9700P
-                                                                                                      - A12-9730P
-                                                                                                      - FX-9800P
-                                                                                                      - FX-9830P
-                                                                                                      - E2-9010
-                                                                                                      - A6-9210
-                                                                                                      - A9-9410
-     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU                    - Offset        - *rocm-amdhsa* - Radeon R9 285
-                 - ``tonga``                                            flat          - *pal-amdhsa*  - Radeon R9 380
-                                                                        scratch       - *pal-amdpal*  - Radeon R9 385
-     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU                                    - *rocm-amdhsa* - Radeon R9 Nano
-                                                                                      - *pal-amdhsa*  - Radeon R9 Fury
-                                                                                      - *pal-amdpal*  - Radeon R9 FuryX
-                                                                                                      - Radeon Pro Duo
-                                                                                                      - FirePro S9300x2
-                                                                                                      - Radeon Instinct MI8
-     \           - ``polaris10`` ``amdgcn``   dGPU                    - Offset        - *rocm-amdhsa* - Radeon RX 470
-                                                                        flat          - *pal-amdhsa*  - Radeon RX 480
-                                                                        scratch       - *pal-amdpal*  - Radeon Instinct MI6
-     \           - ``polaris11`` ``amdgcn``   dGPU                    - Offset        - *rocm-amdhsa* - Radeon RX 460
-                                                                        flat          - *pal-amdhsa*
-                                                                        scratch       - *pal-amdpal*
-     ``gfx805``  - ``tongapro``  ``amdgcn``   dGPU                    - Offset        - *rocm-amdhsa* - FirePro S7150
-                                                                        flat          - *pal-amdhsa*  - FirePro S7100
-                                                                        scratch       - *pal-amdpal*  - FirePro W7100
-                                                                                                      - Mobile FirePro
-                                                                                                        M7170
-     ``gfx810``  - ``stoney``    ``amdgcn``   APU   - xnack           - Offset        - *rocm-amdhsa* *TBA*
-                                                                        flat          - *pal-amdhsa*
-                                                                        scratch       - *pal-amdpal*  .. TODO::
-
-                                                                                                        Add product
-                                                                                                        names.
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx801``  - ``carrizo``   ``amdgpu8.01``  APU   - xnack           - Offset        - *rocm-amdhsa* - A6-8500P
+                                                                           flat          - *pal-amdhsa*  - Pro A6-8500B
+                                                                           scratch       - *pal-amdpal*  - A8-8600P
+                                                                                                         - Pro A8-8600B
+                                                                                                         - FX-8800P
+                                                                                                         - Pro A12-8800B
+                                                                                                         - A10-8700P
+                                                                                                         - Pro A10-8700B
+                                                                                                         - A10-8780P
+                                                                                                         - A10-9600P
+                                                                                                         - A10-9630P
+                                                                                                         - A12-9700P
+                                                                                                         - A12-9730P
+                                                                                                         - FX-9800P
+                                                                                                         - FX-9830P
+                                                                                                         - E2-9010
+                                                                                                         - A6-9210
+                                                                                                         - A9-9410
+     ``gfx802``  - ``iceland``   ``amdgpu8.02``   dGPU                   - Offset        - *rocm-amdhsa* - Radeon R9 285
+                 - ``tonga``                                               flat          - *pal-amdhsa*  - Radeon R9 380
+                                                                           scratch       - *pal-amdpal*  - Radeon R9 385
+     ``gfx803``  - ``fiji``      ``amdgpu8.03``   dGPU                                   - *rocm-amdhsa* - Radeon R9 Nano
+                                                                                         - *pal-amdhsa*  - Radeon R9 Fury
+                                                                                         - *pal-amdpal*  - Radeon R9 FuryX
+                                                                                                         - Radeon Pro Duo
+                                                                                                         - FirePro S9300x2
+                                                                                                         - Radeon Instinct MI8
+     \           - ``polaris10`` ``amdgpu8.03``   dGPU                   - Offset        - *rocm-amdhsa* - Radeon RX 470
+                                                                           flat          - *pal-amdhsa*  - Radeon RX 480
+                                                                           scratch       - *pal-amdpal*  - Radeon Instinct MI6
+     \           - ``polaris11`` ``amdgpu8.03``   dGPU                   - Offset        - *rocm-amdhsa* - Radeon RX 460
+                                                                           flat          - *pal-amdhsa*
+                                                                           scratch       - *pal-amdpal*
+     ``gfx805``  - ``tongapro``  ``amdgpu8.05``   dGPU                   - Offset        - *rocm-amdhsa* - FirePro S7150
+                                                                           flat          - *pal-amdhsa*  - FirePro S7100
+                                                                           scratch       - *pal-amdpal*  - FirePro W7100
+                                                                                                         - Mobile FirePro
+                                                                                                           M7170
+     ``gfx810``  - ``stoney``    ``amdgpu8.10``   APU   - xnack          - Offset        - *rocm-amdhsa* *TBA*
+                                                                           flat          - *pal-amdhsa*
+                                                                           scratch       - *pal-amdpal*  .. TODO::
+                                                                                                           Add product
+                                                                                                           names.
 
      **GCN GFX9 (Vega)** [AMD-GCN-GFX900-GFX904-VEGA]_ [AMD-GCN-GFX906-VEGA7NM]_ [AMD-GCN-GFX908-CDNA1]_ [AMD-GCN-GFX90A-CDNA2]_ [AMD-GCN-GFX942-CDNA3]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx900``                  ``amdgcn``   dGPU  - xnack           - Absolute      - *rocm-amdhsa* - Radeon Vega
-                                                                        flat          - *pal-amdhsa*    Frontier Edition
-                                                                        scratch       - *pal-amdpal*  - Radeon RX Vega 56
-                                                                                                      - Radeon RX Vega 64
-                                                                                                      - Radeon RX Vega 64
-                                                                                                        Liquid
-                                                                                                      - Radeon Instinct MI25
-     ``gfx902``                  ``amdgcn``   APU   - xnack           - Absolute      - *rocm-amdhsa* - Ryzen 3 2200G
-                                                                        flat          - *pal-amdhsa*  - Ryzen 5 2400G
-                                                                        scratch       - *pal-amdpal*
-     ``gfx904``                  ``amdgcn``   dGPU  - xnack                           - *rocm-amdhsa* *TBA*
-                                                                                      - *pal-amdhsa*
-                                                                                      - *pal-amdpal*  .. TODO::
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx900``                  ``amdgpu9.00``   dGPU  - xnack          - Absolute      - *rocm-amdhsa* - Radeon Vega
+                                                                           flat          - *pal-amdhsa*    Frontier Edition
+                                                                           scratch       - *pal-amdpal*  - Radeon RX Vega 56
+                                                                                                         - Radeon RX Vega 64
+                                                                                                         - Radeon RX Vega 64
+                                                                                                           Liquid
+                                                                                                         - Radeon Instinct MI25
+     ``gfx902``                  ``amdgpu9.02``   APU   - xnack          - Absolute      - *rocm-amdhsa* - Ryzen 3 2200G
+                                                                           flat          - *pal-amdhsa*  - Ryzen 5 2400G
+                                                                           scratch       - *pal-amdpal*
+     ``gfx904``                  ``amdgpu9.05``   dGPU  - xnack                          - *rocm-amdhsa* *TBA*
+                                                                                         - *pal-amdhsa*
+                                                                                         - *pal-amdpal*  .. TODO::
+                                                                                                           Add product
+                                                                                                           names.
 
-                                                                                                        Add product
-                                                                                                        names.
+     ``gfx906``                  ``amdgpu9.06``   dGPU  - sramecc        - Absolute      - *rocm-amdhsa* - Radeon Instinct MI50
+                                                        - xnack            flat          - *pal-amdhsa*  - Radeon Instinct MI60
+                                                                           scratch       - *pal-amdpal*  - Radeon VII
+                                                                                                         - Radeon Pro VII
+     ``gfx908``                  ``amdgpu9.08``   dGPU  - sramecc                        - *rocm-amdhsa* - AMD Instinct MI100 Accelerator
+                                                        - xnack          - Absolute
+                                                                           flat
+                                                                           scratch
+     ``gfx909``                  ``amdgpu9.09``   APU   - xnack          - Absolute      - *pal-amdpal*  *TBA*
+                                                                           flat
+                                                                           scratch                       .. TODO::
 
-     ``gfx906``                  ``amdgcn``   dGPU  - sramecc         - Absolute      - *rocm-amdhsa* - Radeon Instinct MI50
-                                                    - xnack             flat          - *pal-amdhsa*  - Radeon Instinct MI60
-                                                                        scratch       - *pal-amdpal*  - Radeon VII
-                                                                                                      - Radeon Pro VII
-     ``gfx908``                  ``amdgcn``   dGPU  - sramecc                         - *rocm-amdhsa* - AMD Instinct MI100 Accelerator
-                                                    - xnack           - Absolute
-                                                                        flat
-                                                                        scratch
-     ``gfx909``                  ``amdgcn``   APU   - xnack           - Absolute      - *pal-amdpal*  *TBA*
-                                                                        flat
-                                                                        scratch                       .. TODO::
+                                                                                                          Add product
+                                                                                                          names.
 
-                                                                                                        Add product
-                                                                                                        names.
+     ``gfx90a``                  ``amdgpu9.0a``   dGPU  - sramecc        - Absolute      - *rocm-amdhsa* - AMD Instinct MI210 Accelerator
+                                                        - tgsplit          flat          - *rocm-amdhsa* - AMD Instinct MI250 Accelerator
+                                                        - xnack            scratch       - *rocm-amdhsa* - AMD Instinct MI250X Accelerator
+                                                        - kernarg
+                                                          preload        - Packed
+                                                          (except          work-item
+                                                          MI210)           IDs
 
-     ``gfx90a``                  ``amdgcn``   dGPU  - sramecc         - Absolute      - *rocm-amdhsa* - AMD Instinct MI210 Accelerator
-                                                    - tgsplit           flat          - *rocm-amdhsa* - AMD Instinct MI250 Accelerator
-                                                    - xnack             scratch       - *rocm-amdhsa* - AMD Instinct MI250X Accelerator
-                                                    - kernarg preload - Packed
-                                                      (except MI210)    work-item
-                                                                        IDs
 
-     ``gfx90c``                  ``amdgcn``   APU   - xnack           - Absolute      - *pal-amdpal*  - Ryzen 7 4700G
-                                                                        flat                          - Ryzen 7 4700GE
-                                                                        scratch                       - Ryzen 5 4600G
-                                                                                                      - Ryzen 5 4600GE
-                                                                                                      - Ryzen 3 4300G
-                                                                                                      - Ryzen 3 4300GE
-                                                                                                      - Ryzen Pro 4000G
-                                                                                                      - Ryzen 7 Pro 4700G
-                                                                                                      - Ryzen 7 Pro 4750GE
-                                                                                                      - Ryzen 5 Pro 4650G
-                                                                                                      - Ryzen 5 Pro 4650GE
-                                                                                                      - Ryzen 3 Pro 4350G
-                                                                                                      - Ryzen 3 Pro 4350GE
+     ``gfx90c``                  ``amdgpu9.0c``   APU   - xnack          - Absolute      - *pal-amdpal*  - Ryzen 7 4700G
+                                                                           flat                          - Ryzen 7 4700GE
+                                                                           scratch                       - Ryzen 5 4600G
+                                                                                                         - Ryzen 5 4600GE
+                                                                                                         - Ryzen 3 4300G
+                                                                                                         - Ryzen 3 4300GE
+                                                                                                         - Ryzen Pro 4000G
+                                                                                                         - Ryzen 7 Pro 4700G
+                                                                                                         - Ryzen 7 Pro 4750GE
+                                                                                                         - Ryzen 5 Pro 4650G
+                                                                                                         - Ryzen 5 Pro 4650GE
+                                                                                                         - Ryzen 3 Pro 4350G
+                                                                                                         - Ryzen 3 Pro 4350GE
 
-     ``gfx942``                  ``amdgcn``   dGPU  - sramecc         - Architected                   - AMD Instinct MI300X
-                                                    - tgsplit           flat                          - AMD Instinct MI300A
-                                                    - xnack             scratch
-                                                    - kernarg preload - Packed
-                                                                        work-item
-                                                                        IDs
+     ``gfx942``                  ``amdgpu9.42``   dGPU  - sramecc        - Architected                   - AMD Instinct MI300X
+                                                        - tgsplit          flat                          - AMD Instinct MI300A
+                                                        - xnack            scratch
+                                                        - kernarg        - Packed
+                                                          preload          work-item
+                                                                           IDs
 
-     ``gfx950``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
-                                                    - tgsplit           flat
-                                                    - xnack             scratch                       .. TODO::
-                                                    - kernarg preload - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     ``gfx950``                  ``amdgpu9.50``   dGPU  - sramecc        - Architected                   *TBA*
+                                                        - tgsplit          flat
+                                                        - xnack            scratch                       .. TODO::
+                                                        - kernarg        - Packed
+                                                          preload          work-item                       Add product
+                                                                           IDs                             names.
 
      **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon Pro 5600 XT
-                                                    - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5600M
-                                                    - xnack             scratch       - *pal-amdpal*  - Radeon RX 5700
-                                                                                                      - Radeon RX 5700 XT
-     ``gfx1011``                 ``amdgcn``   dGPU  - cumode                          - *rocm-amdhsa* - Radeon Pro V520
-                                                    - wavefrontsize64 - Absolute      - *pal-amdhsa*  - Radeon Pro 5600M
-                                                    - xnack             flat          - *pal-amdpal*
-                                                                        scratch
-     ``gfx1012``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5500
-                                                    - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5500 XT
-                                                    - xnack             scratch       - *pal-amdpal*
-     ``gfx1013``                 ``amdgcn``   APU   - cumode          - Absolute      - *rocm-amdhsa* *TBA*
-                                                    - wavefrontsize64   flat          - *pal-amdhsa*
-                                                    - xnack             scratch       - *pal-amdpal*  .. TODO::
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx1010``                 ``amdgpu10.10`` dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon Pro 5600 XT
+                                                       - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5600M
+                                                       - xnack             scratch       - *pal-amdpal*  - Radeon RX 5700
+                                                                                                         - Radeon RX 5700 XT
+     ``gfx1011``                 ``amdgpu10.11`` dGPU  - cumode                          - *rocm-amdhsa* - Radeon Pro V520
+                                                       - wavefrontsize64 - Absolute      - *pal-amdhsa*  - Radeon Pro 5600M
+                                                       - xnack             flat          - *pal-amdpal*
+                                                                           scratch
+     ``gfx1012``                 ``amdgpu10.12`` dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5500
+                                                       - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5500 XT
+                                                       - xnack             scratch       - *pal-amdpal*
+     ``gfx1013``                 ``amdgpu10.13`` APU   - cumode          - Absolute      - *rocm-amdhsa* *TBA*
+                                                       - wavefrontsize64   flat          - *pal-amdhsa*
+                                                       - xnack             scratch       - *pal-amdpal*  . TODO::
 
-                                                                                                        Add product
-                                                                                                        names.
+                                                                                                          Add product
+                                                                                                          names.
 
      **GCN GFX10.3 (RDNA 2)** [AMD-GCN-GFX10-RDNA2]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1030``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6800
-                                                    - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 6800 XT
-                                                                        scratch       - *pal-amdpal*  - Radeon RX 6900 XT
-                                                                                                      - Radeon PRO W6800
-                                                                                                      - Radeon PRO V620
-     ``gfx1031``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6700 XT
-                                                    - wavefrontsize64   flat          - *pal-amdhsa*
-                                                                        scratch       - *pal-amdpal*
-     ``gfx1032``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* *TBA*
-                                                    - wavefrontsize64   flat          - *pal-amdhsa*
-                                                                        scratch       - *pal-amdpal*  .. TODO::
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx1030``                 ``amdgpu10.30`` dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6800
+                                                       - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 6800 XT
+                                                                           scratch       - *pal-amdpal*  - Radeon RX 6900 XT
+                                                                                                         - Radeon PRO W6800
+                                                                                                         - Radeon PRO V620
+     ``gfx1031``                 ``amdgpu10.31`` dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6700 XT
+                                                       - wavefrontsize64   flat          - *pal-amdhsa*
+                                                                           scratch       - *pal-amdpal*
+     ``gfx1032``                 ``amdgpu10.32`` dGPU  - cumode          - Absolute      - *rocm-amdhsa*  *TBA*
+                                                       - wavefrontsize64   flat          - *pal-amdhsa*
+                                                                           scratch       - *pal-amdpal*   .. TODO::
 
-                                                                                                        Add product
-                                                                                                        names.
+                                                                                                           Add product
+                                                                                                           names.
 
-     ``gfx1033``                 ``amdgcn``   APU   - cumode          - Absolute      - *pal-amdpal*  *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1033``                 ``amdgpu10.33`` APU   - cumode          - Absolute      - *pal-amdpal*   *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       . TODO::
 
-                                                                                                        Add product
-                                                                                                        names.
-     ``gfx1034``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *pal-amdpal*  *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+                                                                                                           Add product
+                                                                                                           names.
+     ``gfx1034``                 ``amdgpu10.34`` dGPU  - cumode          - Absolute      - *pal-amdpal*  *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
 
-                                                                                                        Add product
-                                                                                                        names.
+                                                                                                           Add product
+                                                                                                           names.
 
-     ``gfx1035``                 ``amdgcn``   APU   - cumode          - Absolute      - *pal-amdpal*  *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                                                        Add product
-                                                                                                        names.
+     ``gfx1035``                 ``amdgpu10.35`` APU   - cumode          - Absolute      - *pal-amdpal*   *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
+                                                                                                           Add product
+                                                                                                           names.
 
-     ``gfx1036``                 ``amdgcn``   APU   - cumode          - Absolute      - *pal-amdpal*  *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1036``                 ``amdgpu10.36`` APU   - cumode          - Absolute      - *pal-amdpal*  *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
 
-                                                                                                        Add product
-                                                                                                        names.
+                                                                                                           Add product
+                                                                                                           names.
 
      **GCN GFX11 (RDNA 3)** [AMD-GCN-GFX11-RDNA3]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1100``                 ``amdgcn``   dGPU  - cumode          - Architected   - *pal-amdpal*  - Radeon PRO W7900 Dual Slot
-                                                    - wavefrontsize64   flat                          - Radeon PRO W7900
-                                                                        scratch                       - Radeon PRO W7800
-                                                                      - Packed                        - Radeon RX 7900 XTX
-                                                                        work-item                     - Radeon RX 7900 XT
-                                                                        IDs                           - Radeon RX 7900 GRE
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx1100``                 ``amdgpu11.00`` dGPU  - cumode          - Architected   - *pal-amdpal*  - Radeon PRO W7900 Dual Slot
+                                                       - wavefrontsize64   flat                          - Radeon PRO W7900
+                                                                           scratch                       - Radeon PRO W7800
+                                                                         - Packed                        - Radeon RX 7900 XTX
+                                                                           work-item                     - Radeon RX 7900 XT
+                                                                           IDs                           - Radeon RX 7900 GRE
 
-     ``gfx1101``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 7800 XT
-                                                    - wavefrontsize64   flat                          - Radeon RX 7700 XT
-                                                                        scratch                       - Radeon RX 7700
-                                                                      - Packed
-                                                                        work-item
-                                                                        IDs
+     ``gfx1101``                 ``amdgpu11.01`` dGPU  - cumode          - Architected                   - Radeon RX 7800 XT
+                                                       - wavefrontsize64   flat                          - Radeon RX 7700 XT
+                                                                           scratch                       - Radeon RX 7700
+                                                                         - Packed
+                                                                           work-item
+                                                                           IDs
 
-     ``gfx1102``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 7600 XT
-                                                    - wavefrontsize64   flat                          - Radeon RX 7600
-                                                                        scratch
-                                                                      - Packed
-                                                                        work-item
-                                                                        IDs
+     ``gfx1102``                 ``amdgpu11.02`` dGPU  - cumode          - Architected                   - Radeon RX 7600 XT
+                                                       - wavefrontsize64   flat                          - Radeon RX 7600
+                                                                           scratch
+                                                                         - Packed
+                                                                           work-item
+                                                                           IDs
 
-     ``gfx1103``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     ``gfx1103``                 ``amdgpu11.03`` APU   - cumode          - Architected                   *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                        .. TODO::
+                                                                         - Packed
+                                                                           work-item                        Add product
+                                                                           IDs                              names.
 
      **GCN GFX11.5 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   Radeon 890M
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx1150``                 ``amdgpu11.50``  APU  - cumode          - Architected                   Radeon 890M
+                                                       - wavefrontsize64   flat
+                                                                           scratch                        .. TODO::
+                                                                         - Packed
+                                                                           work-item                        Add product
+                                                                           IDs                              names.
 
-     ``gfx1151``                 ``amdgcn``   APU   - cumode          - Architected                   Radeon 8060S
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     ``gfx1151``                 ``amdgpu11.51``  APU  - cumode          - Architected                   Radeon 8060S
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
+                                                                         - Packed
+                                                                           work-item                       Add product
+                                                                           IDs                             names.
 
-     ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   Radeon 860M
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     ``gfx1152``                 ``amdgpu11.52``  APU  - cumode          - Architected                   Radeon 860M
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
+                                                                         - Packed
+                                                                           work-item                       Add product
+                                                                           IDs                             names.
 
-     ``gfx1153``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     ``gfx1153``                 ``amdgpu11.53`` APU   - cumode          - Architected                   *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
+                                                                         - Packed
+                                                                           work-item                       Add product
+                                                                           IDs                             names.
+
+     ``gfx1154``                 ``amdgpu11.54`` APU   - cumode          - Architected                   *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
+                                                                         - Packed
+                                                                           work-item                       Add product
+                                                                           IDs                             names.
 
      **GCN GFX11.7 (RDNA 4m)**
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1170``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx1170``                 ``amdgpu11.70`` APU   - cumode          - Architected                   *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
+                                                                         - Packed
+                                                                           work-item                       Add product
+                                                                           IDs                             names.
 
-     ``gfx1171``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     ``gfx1171``                 ``amdgpu11.71`` APU   - cumode          - Architected                   *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
+                                                                         - Packed
+                                                                           work-item                       Add product
+                                                                           IDs                             names.
 
-     ``gfx1172``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     ``gfx1172``                 ``amdgpu11.72`` APU   - cumode          - Architected                   *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
+                                                                         - Packed
+                                                                           work-item                      Add product
+                                                                           IDs                            names.
 
      **GCN GFX12 (RDNA 4)** [AMD-GCN-GFX12-RDNA4]_
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 9060
-                                                    - wavefrontsize64   flat                          - Radeon RX 9060 XT
-                                                                        scratch
-                                                                      - Packed
-                                                                        work-item
-                                                                        IDs
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx1200``                 ``amdgpu12.00``  dGPU - cumode          - Architected                   - Radeon RX 9060
+                                                       - wavefrontsize64   flat                          - Radeon RX 9060 XT
+                                                                           scratch
+                                                                         - Packed
+                                                                           work-item
+                                                                           IDs
 
-     ``gfx1201``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 9070
-                                                    - wavefrontsize64   flat                          - Radeon RX 9070 XT
-                                                                        scratch                       - Radeon RX 9070 GRE
-                                                                      - Packed
-                                                                        work-item
-                                                                        IDs
+     ``gfx1201``                 ``amdgpu12.01``  dGPU - cumode          - Architected                   - Radeon RX 9070
+                                                       - wavefrontsize64   flat                          - Radeon RX 9070 XT
+                                                                           scratch                       - Radeon RX 9070 GRE
+                                                                         - Packed
+                                                                           work-item
+                                                                           IDs
 
-     ``gfx1250``                 ``amdgcn``   APU                     - Architected                   *TBA*
-                                                                        flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
-                                                                      - Globally
-                                                                        Accessible
-                                                                        Scratch
-                                                                      - Workgroup
-                                                                        Clusters
+     ``gfx1250``                 ``amdgpu12.50``  APU                    - Architected                   *TBA*
+                                                                           flat
+                                                                           scratch                         .. TODO::
+                                                                         - Packed
+                                                                           work-item                         Add product
+                                                                           IDs                               names.
+                                                                         - Globally
+                                                                           Accessible
+                                                                           Scratch
+                                                                         - Workgroup
+                                                                           Clusters
 
-     ``gfx1251``                 ``amdgcn``   APU                     - Architected                   *TBA*
-                                                                        flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
-                                                                      - Globally
-                                                                        Accessible
-                                                                        Scratch
-                                                                      - Workgroup
-                                                                        Clusters
+     ``gfx1251``                 ``amdgpu12.51``  APU                    - Architected                   *TBA*
+                                                                           flat
+                                                                           scratch                       .. TODO::
+                                                                         - Packed
+                                                                           work-item                       Add product
+                                                                           IDs                             names.
+                                                                         - Globally
+                                                                           Accessible
+                                                                           Scratch
+                                                                         - Workgroup
+                                                                           Clusters
 
      **GCN GFX13 (RDNA 5)**
-     -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1310``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+     --------------------------------------------------------------------------------------------------------------------------
+     ``gfx1310``                 ``amdgpu13.10`` dGPU  - cumode          - Architected                   *TBA*
+                                                       - wavefrontsize64   flat
+                                                                           scratch                       .. TODO::
+                                                                         - Packed
+                                                                           work-item                       Add product
+                                                                           IDs                             names.
 
-     =========== =============== ============ ===== ================= =============== =============== ======================
+     =========== =============== =============== ===== ================= =============== =============== ======================
 
 Generic processors allow execution of a single code object on any of the processors that
-it supports. Such code objects may not perform as well as those for the non-generic processors.
+it supports. Such code objects may not perform as well as those for
+the non-generic processors.
 
-Generic processors are only available on code object V6 and above (see :ref:`amdgpu-elf-code-object`).
+Generic processors are only available on code object V6 and above (see
+:ref:`amdgpu-elf-code-object`).
 
 Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor-versioning` for more information on how versioning works.
 
@@ -610,7 +738,7 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                            Architecture
 
      ==================== ============== ================= ================== ================= =================================
-     ``gfx9-generic``     ``amdgcn``     - ``gfx900``      - xnack            - Absolute flat   - ``v_mad_mix`` instructions
+     ``gfx9-generic``     ``amdgpu9``    - ``gfx900``      - xnack            - Absolute flat   - ``v_mad_mix`` instructions
                                          - ``gfx902``                           scratch           are not available on
                                          - ``gfx904``                                             ``gfx900``, ``gfx902``,
                                          - ``gfx906``                                             ``gfx909``, ``gfx90c``
@@ -632,13 +760,13 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                   - ``v_dot2_f32_f16``
 
 
-     ``gfx9-4-generic``   ``amdgcn``     - ``gfx942``      - sramecc          - Architected     FP8 and BF8 instructions,
+     ``gfx9-4-generic``   ``amdgpu9.4``  - ``gfx942``      - sramecc          - Architected     FP8 and BF8 instructions,
                                          - ``gfx950``      - tgsplit            flat scratch    FP8 and BF8 conversion
                                                            - xnack            - Packed          instructions, as well as
                                                            - kernarg preload    work-item       instructions with XF32 format
                                                                                 IDs             support are not available.
 
-     ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
+     ``gfx10-1-generic``  ``amdgpu10.1`` - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
                                          - ``gfx1011``     - wavefrontsize64    scratch           not available on ``gfx1011``
                                          - ``gfx1012``     - cumode                               and ``gfx1012``
                                          - ``gfx1013``
@@ -657,7 +785,7 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                   ``gfx1013``
 
 
-     ``gfx10-3-generic``  ``amdgcn``     - ``gfx1030``     - wavefrontsize64  - Absolute flat   No restrictions.
+     ``gfx10-3-generic``  ``amdgpu10.3`` - ``gfx1030``     - wavefrontsize64  - Absolute flat   No restrictions.
                                          - ``gfx1031``     - cumode             scratch
                                          - ``gfx1032``
                                          - ``gfx1033``
@@ -666,17 +794,15 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                          - ``gfx1036``
 
 
-     ``gfx11-generic``    ``amdgcn``     - ``gfx1100``     - wavefrontsize64  - Architected     Various codegen pessimizations
+     ``gfx11-generic``    ``amdgpu11``   - ``gfx1100``     - wavefrontsize64  - Architected     Various codegen pessimizations
                                          - ``gfx1101``     - cumode             flat scratch    are applied to work around some
                                          - ``gfx1102``                        - Packed          hazards specific to some targets
                                          - ``gfx1103``                          work-item       within this family.
                                          - ``gfx1150``                          IDs
-                                         - ``gfx1151``
+                                         - ``gfx1151``                                          Not all VGPRs can be used on:
                                          - ``gfx1152``
-                                         - ``gfx1153``                                          Not all VGPRs can be used on:
-
-                                                                                                - ``gfx1100``
-                                                                                                - ``gfx1101``
+                                         - ``gfx1153``                                          - ``gfx1100``
+                                         - ``gfx1154``                                          - ``gfx1101``
                                                                                                 - ``gfx1151``
 
                                                                                                 SALU floating point instructions
@@ -696,14 +822,26 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1103``
 
 
-     ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
+     ``gfx11-7-generic``  ``amdgpu11.7`` - ``gfx1170``     - wavefrontsize64  - Architected     No restrictions.
+                                         - ``gfx1171``     - cumode             flat scratch
+                                         - ``gfx1172``                        - Packed
+                                                                                work-item
+                                                                                IDs
+
+     ``gfx12-generic``    ``amdgpu12``   - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
                                          - ``gfx1201``     - cumode             flat scratch
                                                                               - Packed
                                                                                 work-item
                                                                                 IDs
 
-     ``gfx12-5-generic``  ``amdgcn``     - ``gfx1250``                        - Architected     Functionally equivalent to
+     ``gfx12-5-generic``  ``amdgpu12.5`` - ``gfx1250``                        - Architected     Functionally equivalent to
                                          - ``gfx1251``                          flat scratch    gfx1250.
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
+
+     ``gfx13-generic``    ``amdgpu13``   - ``gfx1310``     - wavefrontsize64  - Architected     No restrictions.
+                                                           - cumode             flat scratch
                                                                               - Packed
                                                                                 work-item
                                                                                 IDs
@@ -859,11 +997,14 @@ consumed by the AMDGPU backend during code generation.
          semantics. This is an alias of **strict** that is allowed to link
          with any other module. Code generation is identical to **strict**.
        - ``1``: **relaxed**. The backend may merge misaligned buffer
-         accesses for performance, even if that changes OOB behaviour.
+         accesses for performance, even if that changes OOB behaviour, and will
+         not split vector accesses that may produce unexpected OOB accesses.
        - ``2``: **strict**. The backend preserves per-byte OOB guarantees
          by preventing merging of misaligned buffer accesses that could
          straddle an OOB boundary (e.g. as required by Vulkan
-         ``robustBufferAccess2``).
+         ``robustBufferAccess2``) and by splitting vector accesses to buffer
+         fat pointers that may produce incorrect results under a robust buffer
+         access scheme. See :ref:`amdgpu-fat-buffer-oob-handling` for details.
 
    * - ``amdgpu.tbuffer.oob.mode``
      - ``i32``
@@ -1339,6 +1480,51 @@ instruction with ``one-as`` sync scope is specified via
                             other operations within the same address space.
     ======================= ===================================================
 
+.. _amdgpu-fat-buffer-oob-handling:
+
+Buffer Fat Pointer out of bounds (OOB) handling
+-----------------------------------------------
+
+Instructions that load from or store to buffer resources (and thus, by extension
+buffer fat pointers and buffer strided pointers) generally implement handling for
+out of bounds (OOB) memory accesses, including those that are partially OOB,
+if the buffer resource resource has the required flags set. How ordinary
+``load`` and ``store`` instructions are lowered to buffer operations is partly
+controlled by the ``amdgpu.buffer.oob.mode`` (see :ref:`amdgpu-module-flags`). If
+that flag is set to ``1`` (relaxed), no handling to improve the expected behavior
+of OOB accesses is performed, while if it is set to ``0`` (any) or ``2`` (strict),
+operations may be split to ensure correctness under stronger models of how
+out-of-bounds accesses should behave.
+
+When operating on more than 32 bits of data, the ``voffset`` used for the access
+will be range-checked for each 32-bit word independently. This check uses saturating
+arithmetic and interprets the offset as an unsigned value.
+
+The behavior described above conflicts with the ABI requirements of certain graphics
+APIs that require out of bounds accesses to be handled strictly so that accessed
+that begin out of bounds but then access in-bounds elements (such as loading a
+``<4 x i32>`` beginning at offset ``-4``) still load the three in-bounds integers
+(producing ``<0, v0, v1, v2>`` and not ``<0, 0, 0, 0>``. So, under strict OOB
+handling, such an access will be split into four ``i32`` accesses. Note this this
+can only happen for underaligned loads - such wraparound isn't possible for
+loads that are alligned to their natural size.
+
+Similarly, buffer fat pointers permit operating on types such as ``<8 x i8>`` which
+must be accessed (and bounds-checked) 4 bytes at a time. Non-word-aligned
+accesses to such types from near the end of a buffer resource (such as starting
+a load of an ``<8 x i8>`` from an offset of ``6`` on an 8-byte buffer) will treat
+the initial two bytes to be loaded/stored as out of bounds, even though, under
+a strict interpretation of the bounds-checking semantics, they would be in bounds.
+Under strict OOB handling, such a load will be split into a sequence of ``<2 x i16>``
+loads.
+
+.. note::
+
+  No attempt will be made to shrink buffer intrinsic calls (calling
+  ``llvm.amdgcn.raw.ptr.buffer.*`` directly) in order to cause them to meet the
+  requirements of strict OOB mode. However, in strict OOB mode, those intrinsics
+  will not be combined in a way that would violate the guarantees of that mode.
+
 Target Types
 ------------
 
@@ -1503,21 +1689,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
 
   :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specified state.
-  llvm.amdgcn.load.to.lds.p<1/7>                   Loads values from global memory (either in the form of a global
-                                                   a raw fat buffer pointer) to LDS. The size of the data copied can be 1, 2,
-                                                   or 4 bytes (and gfx950 also allows 12 or 16 bytes). The LDS pointer
-                                                   argument should be wavefront-uniform; the global pointer need not be.
-                                                   The LDS pointer is implicitly offset by 4 * lane_id bytes for size <= 4 bytes
-                                                   and 16 * lane_id bytes for larger sizes. This lowers to `global_load_lds`,
-                                                   `buffer_load_* ... lds`, or `global_load__* ... lds` depending on address
-                                                   space and architecture. `amdgcn.global.load.lds` has the same semantics as
-                                                   `amdgcn.load.to.lds.p1`.
-
-  llvm.amdgcn.load.async.to.lds.p<1/7>             Same as `llvm.amdgcn.load.to.lds.p<1/7>`, but the completion of this
-                                                   :ref:`asynchronous version<amdgpu-async-operations>` is not automatically tracked
-                                                   by the compiler. The user must explicitly track the completion with `asyncmark`
-                                                   operations before using their side-effects.
-
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
                                                    the lowest active lane of the input operand. Currently implemented
                                                    for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
@@ -1878,7 +2049,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    * Flat pointer.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
-                                                     Note that the scope used must ensure that the L2 cache will be hit.
 
   llvm.amdgcn.global.load.monitor                  Available on GFX12.5 only.
                                                    Corresponds to ``global_load_monitor_b32/64/128`` (``.b32/64/128`` suffixes)
@@ -1888,10 +2058,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    This intrinsic has 3 operands:
 
-                                                   * Flat pointer.
+                                                   * Global pointer.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
-                                                     Note that the scope used must ensure that the L2 cache will be hit.
 
   llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64     Available starting GFX12.5.
                                                    Corresponds to ``ds_atomic_barrier_arrive_rtn_b64``.
@@ -2082,6 +2251,31 @@ The 3rd operand for ``.store`` or 2nd for ``.load`` intrinsics is the
 The last operand of the intrinsic is the
 :ref:`synchronization scope<amdgpu-intrinsics-syncscope-metadata-operand>` of the operation.
 
+DMA Intrinsics
+~~~~~~~~~~~~~~
+
+DMA intrinsics transfer data between global memory and LDS without occupying
+registers. See :ref:`amdgpu-dma-operations` for full documentation.
+
+::
+
+  llvm.amdgcn.load[.async].to.lds
+  llvm.amdgcn.global.load[.async].lds
+  llvm.amdgcn.{raw|struct}[.ptr].buffer.load[.async].lds
+  llvm.amdgcn.{global|cluster}.load.async.to.lds.b{8,32,64,128}
+  llvm.amdgcn.global.store.async.from.lds.b{8,32,64,128}
+
+Tensor Intrinsics
+~~~~~~~~~~~~~~~~~
+
+Tensor intrinsics transfer data between global memory and LDS using a tensor
+descriptor. Despite the absence of ``.async`` in their names, these intrinsics
+are asynchronous. See :ref:`amdgpu-dma-operations` for full documentation.
+
+::
+
+  llvm.amdgcn.tensor.{load.to|store.from}.lds
+
 Intrinsic Operands
 ~~~~~~~~~~~~~~~~~~
 
@@ -2134,6 +2328,18 @@ Example:
   %0 = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr %addr, i32 4, metadata !0)
 
   !0 = !{ !"agent" }
+
+.. _amdgpu_unsupported_constructs:
+
+Unsupported IR Constructs
+-------------------------
+
+The following LLVM IR constructs are not supported by the AMDGPU backend:
+
+* atomic accesses with less than natural alignment or an access size of
+  more than 64 bits
+
+This list is not exhaustive.
 
 .. _amdgpu_metadata:
 
@@ -2234,6 +2440,28 @@ and
 
   !0 = !{}
 
+.. _amdgpu_expected_active_lanes:
+
+'``amdgpu.expected.active.lanes``' Metadata
+-------------------------------------------------
+
+A profiling-derived hint describing how many lanes of the wavefront are
+expected to be active. The metadata has a single ``i32`` constant operand
+giving the expected number of active lanes as an absolute count (the same
+value is used for both wave32 and wave64 targets). This structure is
+enforced by the verifier.
+
+The AMDGPU atomic optimizer uses this metadata on LDS atomics to decide
+whether to skip the DPP optimization.
+
+.. code-block:: llvm
+
+  ; Few expected active lanes: the atomic optimizer may skip the DPP optimization.
+  %old0 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 4}
+
+  ; Many expected active lanes: the DPP optimization is not skipped.
+  %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 32}
+
 
 LLVM IR Attributes
 ==================
@@ -2249,6 +2477,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-flat-work-group-size"="min,max"          Specify the minimum and maximum flat work group sizes that
                                                       will be specified when the kernel is dispatched. Generated
                                                       by the ``amdgpu_flat_work_group_size`` CLANG attribute [CLANG-ATTR]_.
+                                                      If the ``reqd_work_group_size`` metadata is present, the product
+                                                      of its three workgroup size dimensions must match both ``min``
+                                                      and ``max``.
                                                       The IR implied default value is 1,1024. Clang may emit this attribute
                                                       with more restrictive bounds depending on language defaults.
                                                       If the actual block or workgroup size exceeds the limit at any point during
@@ -2360,6 +2591,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       kernel argument that holds the completion action pointer. If this
                                                       attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
+     "amdgpu-tg-split"                                Enable threadgroup split execution mode for the function. This must be
+                                                      consistently set (or unset) for all reachable functions. This is only
+                                                      relevant on targets with the `tgsplit-support` feature.
+
      "amdgpu-lds-size"="min[,max]"                    Min is the minimum number of bytes that will be allocated in the Local
                                                       Data Store at address zero. Variables are allocated within this frame
                                                       using absolute symbol metadata, primarily by the AMDGPULowerModuleLDS
@@ -2430,9 +2665,6 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       any AGPRs.
 
                                                       This is only relevant on targets with AGPRs which support accum_offset (gfx90a+).
-
-     "amdgpu-sgpr-hazard-wait"                        Disabled SGPR hazard wait insertion if set to 0.
-                                                      Exists for testing performance impact of SGPR hazard waits only.
 
      "amdgpu-sgpr-hazard-boundary-cull"               Enable insertion of SGPR hazard cull sequences at function call boundaries.
                                                       Cull sequence reduces future hazard waits, but has a performance cost.
@@ -3035,7 +3267,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1152``          0x055      ``gfx1152``.
      *reserved*                                 0x056      Reserved.
-     *reserved*                                 0x057      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1154``          0x057      ``gfx1154``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
@@ -3045,6 +3277,9 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1171``          0x05e      ``gfx1171``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      *reserved*                                 0x060      Reserved.
+     *reserved*                                 0x061      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC``  0x062      ``gfx11-7-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC``    0x063      ``gfx13-generic``
      *reserved*                                 0x070      Reserved.
      ========================================== ========== =============================
 
@@ -7171,19 +7406,7 @@ operations.
 termed vector memory operations.
 
 ``global_load_lds`` or ``buffer/global_load`` instructions with the `lds` flag
-are LDS DMA loads. They interact with caches as if the loaded data were
-being loaded to registers and not to LDS, and so therefore support the same
-cache modifiers. They cannot be performed atomically. They implement volatile
-(via aux/cpol bit 31) and nontemporal (via metadata) as if they were loads
-from the global address space.
-
-The LDS DMA instructions are synchronous by default, which means that the
-compiler will automatically ensure that the corresponding operation has
-completed before its side-effects are used. The :ref:`asynchronous
-versions<amdgpu-async-operations>` of these same instructions perform the same
-operations, but without automatic tracking in the compiler; the user must
-explicitly track the completion of these instructions before using their
-side-effects.
+are :ref:`LDS DMA operations<amdgpu-dma-operations>`.
 
 Private address space uses ``buffer_load/store`` using the scratch V#
 (GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread
@@ -7199,29 +7422,8 @@ treated as non-atomic.
 A memory synchronization scope wider than work-group is not meaningful for the
 group (LDS) address space and is treated as work-group.
 
-When a work-group's maximum flat work-group size does not exceed the wavefront
-size, the work-group fits within a single wavefront. In this case, LLVM
-``workgroup`` synchronization scope is equivalent to ``wavefront`` scope.
-
-If the compiler can determine this bound (e.g., via ``amdgpu-flat-work-group-size``),
-the AMDGPU backend optimizes ``workgroup`` scope operations by lowering them to
-``wavefront``-scoped machine instructions.
-
-It applies to atomic ``load``, ``store``, ``atomicrmw``, and ``cmpxchg``
-instructions, and to ``fence`` instructions, when they use synchronizing memory
-orderings (``acquire``, ``release``, ``acq_rel``, or ``seq_cst``).
-
 The memory model does not support the region address space which is treated as
 non-atomic.
-
-Acquire memory ordering is not meaningful on store atomic instructions and is
-treated as non-atomic.
-
-Release memory ordering is not meaningful on load atomic instructions and is
-treated as non-atomic.
-
-Acquire-release memory ordering is not meaningful on load or store atomic
-instructions and is treated as acquire and release respectively.
 
 The memory order also adds the single thread optimization constraints defined in
 table
@@ -7260,7 +7462,11 @@ table
      ============ ==============================================================
 
 The code sequences used to implement the memory model are defined in the
-following sections:
+sections listed below.
+
+**Note:** The presence of :ref:`AV metadata<amdgpu-av-metadata>` can **suppress
+cache operations** (such as write-back or invalidate) that are usually part of
+these sequences.
 
 * :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`
@@ -17531,7 +17737,8 @@ For GFX125x:
 
   * In order to monitor a cache line in the L2 cache, these instructions must
     ensure that the L2 cache is always hit by setting the ``SCOPE`` of the instruction
-    appropriately.
+    appropriately. The compiler may adjust the scope of the instruction accordingly
+    to ensure this is the case.
   * For non-atomic and atomic code sequences, it is valid to replace
     ``global_load_b32/64/128`` with a ``global_load_monitor_b32/64/128`` and a
     ``flat_load_b32/64/128`` with a ``flat_load_monitor_b32/64/128``.

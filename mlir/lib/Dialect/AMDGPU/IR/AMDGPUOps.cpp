@@ -563,7 +563,7 @@ LogicalResult MFMAOp::verify() {
                        " result values for this operation but got " +
                        Twine(destLen));
 
-  if (destElem.isF64() && getBlgp() != MFMAPermB::none)
+  if (destElem.isF64() && getBlgp() != ROCDL::MFMAPermB::none)
     return emitOpError(
         "double-precision ops do not support permuting lanes of B");
   if (destElem.isF64() && getCbsz() != 0)

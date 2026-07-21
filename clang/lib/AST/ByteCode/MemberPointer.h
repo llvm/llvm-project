@@ -44,7 +44,7 @@ public:
   MemberPointer() = default;
   MemberPointer(Pointer Base, const ValueDecl *Dcl)
       : Base(Base), DeclAndIsDerivedMember(Dcl) {}
-  MemberPointer(uint32_t Address, const Descriptor *D) {
+  MemberPointer(uint32_t Address, const Type *) {
     // We only reach this for Address == 0, when creating a null member pointer.
     assert(Address == 0);
   }

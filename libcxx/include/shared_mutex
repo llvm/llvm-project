@@ -200,7 +200,7 @@ public:
   [[nodiscard]] _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool try_lock() {
     return __base_.try_lock();
   }
-  _LIBCPP_RELEASE_CAPABILITY _LIBCPP_HIDE_FROM_ABI void unlock() { return __base_.unlock(); }
+  _LIBCPP_RELEASE_CAPABILITY() _LIBCPP_HIDE_FROM_ABI void unlock() { return __base_.unlock(); }
 
   // Shared ownership
   _LIBCPP_ACQUIRE_SHARED_CAPABILITY _LIBCPP_HIDE_FROM_ABI void lock_shared() { return __base_.lock_shared(); }
@@ -262,7 +262,7 @@ public:
     return true;
   }
 
-  _LIBCPP_RELEASE_CAPABILITY void unlock();
+  _LIBCPP_RELEASE_CAPABILITY() void unlock();
 
   // Shared ownership
   _LIBCPP_ACQUIRE_SHARED_CAPABILITY void lock_shared();
@@ -449,7 +449,7 @@ _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_THREADS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <optional>
 #    include <system_error>
 #  endif

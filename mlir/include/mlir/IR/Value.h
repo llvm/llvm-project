@@ -500,10 +500,6 @@ namespace llvm {
 
 template <>
 struct DenseMapInfo<mlir::Value> {
-  static mlir::Value getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Value::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(mlir::Value val) {
     return mlir::hash_value(val);
   }
@@ -511,25 +507,13 @@ struct DenseMapInfo<mlir::Value> {
 };
 template <>
 struct DenseMapInfo<mlir::BlockArgument> : public DenseMapInfo<mlir::Value> {
-  static mlir::BlockArgument getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return reinterpret_cast<mlir::detail::BlockArgumentImpl *>(pointer);
-  }
 };
 template <>
 struct DenseMapInfo<mlir::OpResult> : public DenseMapInfo<mlir::Value> {
-  static mlir::OpResult getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
-  }
 };
 template <typename T>
 struct DenseMapInfo<mlir::detail::TypedValue<T>>
     : public DenseMapInfo<mlir::Value> {
-  static mlir::detail::TypedValue<T> getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
-  }
 };
 
 /// Allow stealing the low bits of a value.

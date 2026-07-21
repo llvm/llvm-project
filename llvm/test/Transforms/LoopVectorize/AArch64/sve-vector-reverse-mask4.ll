@@ -56,11 +56,9 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[TMP12]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[TMP11]])
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr align 8 [[TMP13]], <vscale x 4 x i1> [[REVERSE2]], <vscale x 4 x double> poison), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
-; CHECK-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x double> @llvm.vector.reverse.nxv4f64(<vscale x 4 x double> [[WIDE_MASKED_LOAD]])
+; CHECK-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr align 8 [[TMP13]], <vscale x 4 x i1> [[REVERSE2]], <vscale x 4 x double> poison), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <vscale x 4 x double> [[REVERSE3]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[REVERSE4:%.*]] = call <vscale x 4 x double> @llvm.vector.reverse.nxv4f64(<vscale x 4 x double> [[TMP14]])
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> [[REVERSE4]], ptr align 8 [[TMP13]], <vscale x 4 x i1> [[REVERSE2]]), !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> [[TMP14]], ptr align 8 [[TMP13]], <vscale x 4 x i1> [[REVERSE2]]), !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

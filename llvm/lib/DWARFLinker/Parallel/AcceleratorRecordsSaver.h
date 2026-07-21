@@ -44,16 +44,17 @@ protected:
       : GlobalData(GlobalData), InUnit(InUnit), OutUnit(OutUnit) {}
 
   void saveObjC(const DWARFDebugInfoEntry *InputDieEntry, DIE *OutDIE,
-                AttributesInfo &AttrInfo);
+                AttributesInfo &AttrInfo, TypeEntry *TypeEntry);
 
   void saveNameRecord(const DWARFDebugInfoEntry *InputDieEntry,
                       StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag,
-                      bool AvoidForPubSections);
+                      bool AvoidForPubSections, TypeEntry *TypeEntry);
   void saveNamespaceRecord(const DWARFDebugInfoEntry *InputDieEntry,
                            StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag,
                            TypeEntry *TypeEntry);
   void saveObjCNameRecord(const DWARFDebugInfoEntry *InputDieEntry,
-                          StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag);
+                          StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag,
+                          TypeEntry *TypeEntry);
   void saveTypeRecord(const DWARFDebugInfoEntry *InputDieEntry,
                       StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag,
                       uint32_t QualifiedNameHash, bool ObjcClassImplementation,

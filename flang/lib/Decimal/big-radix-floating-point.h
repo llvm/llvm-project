@@ -21,7 +21,6 @@
 // for conversions between binary and decimal representations; it is not
 // a general-purpose facility.
 
-#include "flang/Common/bit-population-count.h"
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Common/uint128.h"
 #include "flang/Decimal/binary-floating-point.h"

@@ -47,7 +47,6 @@
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/type_traits.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
@@ -137,25 +136,6 @@ template <typename T> hash_code hash_value(const std::optional<T> &arg);
 // the header file mainly to allow inlining and constant propagation.
 namespace hashing {
 namespace detail {
-
-inline uint32_t fetch32(const char *p) {
-  uint32_t result;
-  std::memcpy(&result, p, sizeof(result));
-  if (sys::IsBigEndianHost)
-    sys::swapByteOrder(result);
-  return result;
-}
-
-constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
-  // Murmur-inspired hashing.
-  const uint64_t kMul = 0x9ddfea08eb382d69ULL;
-  uint64_t a = (low ^ high) * kMul;
-  a ^= (a >> 47);
-  uint64_t b = (high ^ a) * kMul;
-  b ^= (b >> 47);
-  b *= kMul;
-  return b;
-}
 
 /// In LLVM_ENABLE_ABI_BREAKING_CHECKS builds, the seed is non-deterministic
 /// per process (address of a function in LLVMSupport) to prevent having users
@@ -343,11 +323,11 @@ namespace detail {
 /// behavior in the presence of integral promotions. Essentially,
 /// "hash_value('4')" and "hash_value('0' + 4)" should be the same.
 inline hash_code hash_integer_value(uint64_t value) {
-  // Similar to hash_4to8_bytes but using a seed instead of length.
-  const uint64_t seed = get_execution_seed();
-  const char *s = reinterpret_cast<const char *>(&value);
-  const uint64_t a = fetch32(s);
-  return hash_16_bytes(seed + (a << 3), fetch32(s + 4));
+  // splitmix64 finalizer (xmxmx).
+  uint64_t x = value ^ get_execution_seed();
+  x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
+  x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
+  return x ^ (x >> 31);
 }
 
 } // namespace detail
@@ -391,7 +371,6 @@ template <typename T> hash_code hash_value(const std::optional<T> &arg) {
 }
 
 template <> struct DenseMapInfo<hash_code, void> {
-  static constexpr hash_code getEmptyKey() { return hash_code(-1); }
   static constexpr unsigned getHashValue(hash_code val) {
     return static_cast<unsigned>(size_t(val));
   }

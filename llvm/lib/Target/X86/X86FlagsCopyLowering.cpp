@@ -68,8 +68,6 @@ STATISTIC(NumTestsInserted, "Number of test instructions inserted");
 STATISTIC(NumAddsInserted, "Number of adds instructions inserted");
 STATISTIC(NumNFsConvertedTo, "Number of NF instructions converted to");
 
-extern cl::opt<bool> X86EnableAPXForRelocation;
-
 namespace {
 
 // Convenient array type for storing registers associated with each condition.
@@ -254,14 +252,7 @@ static EFLAGSClobber getClobberType(const MachineInstr &MI) {
   if (!FlagDef)
     return NoClobber;
 
-  // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
-  // optimization for replacing non-NF with NF. This is to keep backward
-  // compatiblity with old version of linkers without APX relocation type
-  // support on Linux OS.
-  bool IsWithReloc =
-      X86EnableAPXForRelocation ? false : isAddMemInstrWithRelocation(MI);
-
-  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode()) && !IsWithReloc)
+  if (X86::getNFVariantIfClobberRemovable(MI))
     return EvitableClobber;
 
   return InevitableClobber;
@@ -708,8 +699,9 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
   }
 
 #ifndef NDEBUG
-  for (MachineBasicBlock &MBB : MF)
-    for (MachineInstr &MI : MBB)
+  // Check reachable blocks for unlowered EFLAGS copies.
+  for (MachineBasicBlock *MBB : depth_first(&MF))
+    for (MachineInstr &MI : *MBB)
       if (MI.getOpcode() == TargetOpcode::COPY &&
           (MI.getOperand(0).getReg() == X86::EFLAGS ||
            MI.getOperand(1).getReg() == X86::EFLAGS)) {

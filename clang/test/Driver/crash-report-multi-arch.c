@@ -38,7 +38,7 @@
 // REQUIRES: crash-recovery, system-darwin
 // REQUIRES: aarch64-registered-target, x86-registered-target
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}crash-report-{{.*}}.c
 
 // CHECKSH-x86_64: # Crash reproducer

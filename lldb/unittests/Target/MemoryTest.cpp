@@ -407,7 +407,7 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
   {
     llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
     llvm::SmallVector<Range<addr_t, size_t>> ranges = {
-        {0x12345, 128}, {0x11112222, 128}, {0x77777777, 128}};
+        {0x6789, 128}, {0x333344444, 128}, {0x99999999, 128}};
     llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
         dummy_process.ReadMemoryRanges(ranges, buffer);
     for (auto [range, memory] : llvm::zip(ranges, read_results)) {

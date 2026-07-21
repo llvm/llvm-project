@@ -90,6 +90,46 @@ spirv::verifyMemorySemantics(Operation *op,
   return success();
 }
 
+LogicalResult spirv::verifyPhysicalStorageBufferDecorations(Operation *op,
+                                                            Type pointeeType) {
+  // From SPV_KHR_physical_storage_buffer:
+  // > If an OpVariable's pointee type is a pointer (or array of pointers) in
+  // > PhysicalStorageBuffer storage class, then the variable must be decorated
+  // > with exactly one of AliasedPointer or RestrictPointer.
+  auto pointeePtrType = dyn_cast<spirv::PointerType>(pointeeType);
+  if (!pointeePtrType) {
+    if (auto pointeeArrayType = dyn_cast<spirv::ArrayType>(pointeeType)) {
+      pointeePtrType =
+          dyn_cast<spirv::PointerType>(pointeeArrayType.getElementType());
+    }
+  }
+
+  if (!pointeePtrType || pointeePtrType.getStorageClass() !=
+                             spirv::StorageClass::PhysicalStorageBuffer)
+    return success();
+
+  auto getDecorationAttr = [op](spirv::Decoration decoration) {
+    return op->getAttr(spirv::getDecorationString(decoration));
+  };
+
+  bool hasAliasedPtr =
+      getDecorationAttr(spirv::Decoration::AliasedPointer) != nullptr;
+  bool hasRestrictPtr =
+      getDecorationAttr(spirv::Decoration::RestrictPointer) != nullptr;
+
+  if (!hasAliasedPtr && !hasRestrictPtr)
+    return op->emitOpError()
+           << " with physical buffer pointer must be decorated "
+              "either 'AliasedPointer' or 'RestrictPointer'";
+
+  if (hasAliasedPtr && hasRestrictPtr)
+    return op->emitOpError()
+           << " with physical buffer pointer must have exactly one "
+              "aliasing decoration";
+
+  return success();
+}
+
 void spirv::printVariableDecorations(Operation *op, OpAsmPrinter &printer,
                                      SmallVectorImpl<StringRef> &elidedAttrs) {
   // Print optional descriptor binding
@@ -1245,6 +1285,28 @@ ParseResult spirv::GLSClampOp::parse(OpAsmParser &parser,
 void spirv::GLSClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
+// spirv.GLNClampOp
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::GLNClampOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
+  return parseOneResultSameOperandTypeOp(parser, result);
+}
+void spirv::GLNClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
+
+//===----------------------------------------------------------------------===//
+// spirv.GLSmoothStepOp
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::GLSmoothStepOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
+  return parseOneResultSameOperandTypeOp(parser, result);
+}
+void spirv::GLSmoothStepOp::print(OpAsmPrinter &p) {
+  printOneResultOp(*this, p);
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GLFmaOp
 //===----------------------------------------------------------------------===//
 
@@ -1389,6 +1451,11 @@ LogicalResult spirv::GlobalVariableOp::verify() {
                          "spirv.SpecConstantCompositeOp op");
     }
   }
+
+  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
+  if (failed(
+          verifyPhysicalStorageBufferDecorations(getOperation(), pointeeType)))
+    return failure();
 
   return success();
 }
@@ -2016,8 +2083,9 @@ LogicalResult spirv::SpecConstantOperationOp::verifyRegions() {
     return emitOpError("invalid enclosed op");
 
   for (auto operand : enclosedOp.getOperands())
-    if (!isa<spirv::ConstantOp, spirv::ReferenceOfOp,
-             spirv::SpecConstantOperationOp>(operand.getDefiningOp()))
+    if (!isa_and_present<spirv::ConstantOp, spirv::ReferenceOfOp,
+                         spirv::SpecConstantOperationOp>(
+            operand.getDefiningOp()))
       return emitOpError(
           "invalid operand, must be defined by a constant operation");
 

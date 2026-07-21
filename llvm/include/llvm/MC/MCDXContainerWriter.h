@@ -18,7 +18,7 @@ namespace llvm {
 
 class raw_pwrite_stream;
 
-class MCDXContainerTargetWriter : public MCObjectTargetWriter {
+class LLVM_ABI MCDXContainerTargetWriter : public MCObjectTargetWriter {
 protected:
   MCDXContainerTargetWriter() {}
 
@@ -33,9 +33,47 @@ public:
   }
 };
 
-class DXContainerObjectWriter final : public MCObjectWriter {
+/// Contains PDB output file name.
+static constexpr StringLiteral PdbFileNameSectionName = "PDBNAME";
+/// Contains module hash.
+static constexpr StringLiteral ModuleHashSectionName = "PDBHASH";
+
+struct MCDXContainerPart {
+  StringRef Name;
+  StringRef Data;
+};
+
+class LLVM_ABI MCDXContainerBaseWriter {
+protected:
+  virtual ArrayRef<MCDXContainerPart> collectParts() {
+    llvm_unreachable("Unimplemented");
+  }
+
+  virtual bool shouldSkipSection(StringRef SectionName, size_t SectionSize) {
+    // Skip empty and auxiliary sections.
+    return SectionSize == 0 || SectionName == PdbFileNameSectionName ||
+           SectionName == ModuleHashSectionName;
+  }
+
+public:
+  MCDXContainerBaseWriter() {}
+  virtual ~MCDXContainerBaseWriter();
+
+  void write(raw_ostream &OS, const Triple &TT);
+};
+
+class LLVM_ABI DXContainerObjectWriter final : public MCDXContainerBaseWriter,
+                                               public MCObjectWriter {
   support::endian::Writer W;
   std::unique_ptr<MCDXContainerTargetWriter> TargetObjectWriter;
+  SmallVector<MCDXContainerPart> Parts;
+  SmallVector<SmallString<0>> SectionBuffers;
+
+  void clearParts();
+
+protected:
+  ArrayRef<MCDXContainerPart> collectParts() override;
+  bool shouldSkipSection(StringRef SectionName, size_t SectionSize) override;
 
 public:
   DXContainerObjectWriter(std::unique_ptr<MCDXContainerTargetWriter> MOTW,
@@ -44,6 +82,7 @@ public:
 
   uint64_t writeObject() override;
 };
+
 } // end namespace llvm
 
 #endif // LLVM_MC_MCDXCONTAINERWRITER_H

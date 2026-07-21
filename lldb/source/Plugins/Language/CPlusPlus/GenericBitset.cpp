@@ -8,7 +8,6 @@
 
 #include "LibCxx.h"
 #include "LibStdcpp.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include <optional>

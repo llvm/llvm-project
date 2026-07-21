@@ -42,12 +42,16 @@ if(LLDB_BUILT_STANDALONE)
 endif()
 
 # Configure the build directory.
-# The .noindex suffix is a marker for Spotlight to never index the
-# build directory.  LLDB queries Spotlight to locate .dSYM bundles
-# based on the UUID embedded in a binary, and because the UUID is a
-# hash of filename and .text section, there *will* be conflicts inside
-# the build directory.
-set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
+if(APPLE)
+  # The .noindex suffix is a marker for Spotlight to never index the
+  # build directory.  LLDB queries Spotlight to locate .dSYM bundles
+  # based on the UUID embedded in a binary, and because the UUID is a
+  # hash of filename and .text section, there *will* be conflicts inside
+  # the build directory.
+  set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
+else()
+  set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build" CACHE PATH "The build root for building tests.")
+endif()
 
 # Configure and create module cache directories.
 set(LLDB_TEST_MODULE_CACHE_LLDB "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-lldb" CACHE PATH "The Clang module cache used by the Clang embedded in LLDB while running tests.")
@@ -268,7 +272,16 @@ if (LLDB_ENABLE_ARM64E_DEBUGSERVER OR LLDB_USE_SYSTEM_DEBUGSERVER)
 endif()
 
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
-set(LLDB_TEST_USE_LLDB_SERVER OFF CACHE BOOL "If ON, run the test suites against the lldb-server backend on Windows")
+
+# On Windows, drive the tests through the lldb-server backend by default when
+# libxml2 is available (it is required to parse the gdb-remote target XML).
+# Without libxml2, fall back to the in-process Windows process plugin. This
+# mirrors the runtime default selected in ProcessWindows.cpp.
+set(LLDB_TEST_USE_LLDB_SERVER_DEFAULT OFF)
+if(WIN32 AND LLDB_ENABLE_LIBXML2)
+  set(LLDB_TEST_USE_LLDB_SERVER_DEFAULT ON)
+endif()
+set(LLDB_TEST_USE_LLDB_SERVER ${LLDB_TEST_USE_LLDB_SERVER_DEFAULT} CACHE BOOL "If ON, run the test suites against the lldb-server backend on Windows")
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(

@@ -6,7 +6,6 @@
 define void @cast_flags_mixed(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: VPlan for loop in 'cast_flags_mixed'
 ; CHECK:  VPlan ' for UF>=1' {
-; CHECK-NEXT:  Live-in ir<4> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
@@ -56,7 +55,6 @@ exit:
 define void @cast_flags_single(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: VPlan for loop in 'cast_flags_single'
 ; CHECK:  VPlan ' for UF>=1' {
-; CHECK-NEXT:  Live-in ir<4> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph

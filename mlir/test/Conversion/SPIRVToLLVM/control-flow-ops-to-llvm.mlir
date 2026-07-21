@@ -215,3 +215,21 @@ spirv.module Logical GLSL450 {
     spirv.ReturnValue %one : i32
   }
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.Unreachable
+//===----------------------------------------------------------------------===//
+
+spirv.module Logical GLSL450 {
+  // CHECK-LABEL: @unreachable
+  spirv.func @unreachable() -> () "None" {
+    // CHECK: llvm.br ^bb1
+    spirv.Branch ^label
+  // CHECK: ^bb1:
+  ^label:
+    // CHECK: llvm.unreachable
+    spirv.Unreachable
+  }
+}

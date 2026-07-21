@@ -128,24 +128,6 @@ func.func @member_call_dense_template_argument(%arg0 : !emitc.opaque<"MyClass">)
 
 // -----
 
-func.func @empty_operator() {
-    %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-    // expected-error @+1 {{'emitc.apply' op applicable operator must not be empty}}
-    %1 = emitc.apply ""(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-    return
-}
-
-// -----
-
-func.func @illegal_operator() {
-    %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-    // expected-error @+1 {{'emitc.apply' op applicable operator is illegal}}
-    %1 = emitc.apply "+"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-    return
-}
-
-// -----
-
 func.func @var_attribute_return_type_1() {
     // expected-error @+1 {{'emitc.variable' op requires attribute to either be an #emitc.opaque attribute or it's type ('i64') to match the op's result type ('i32')}}
     %c0 = "emitc.variable"(){value = 42: i64} : () -> !emitc.lvalue<i32>
@@ -596,8 +578,24 @@ func.func @use_global() {
 // -----
 
 func.func @member(%arg0: !emitc.lvalue<i32>) {
-  // expected-error @+1 {{'emitc.member' op operand #0 must be emitc.lvalue of EmitC opaque type values, but got '!emitc.lvalue<i32>'}}
+  // expected-error @+1 {{'emitc.member' op operand #0 must be EmitC opaque type or emitc.lvalue of EmitC opaque type values, but got '!emitc.lvalue<i32>'}}
   %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.lvalue<i32>) -> !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @member_of_value_as_lvalue(%arg0: !emitc.opaque<"mystruct">) {
+  // expected-error @+1 {{'emitc.member' op non-lvalues cannot return lvalues or arrays}}
+  %1 = "emitc.member" (%arg0) {member = "a"} : (!emitc.opaque<"mystruct">) -> !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @member_of_value_array(%arg0: !emitc.opaque<"mystruct">) {
+  // expected-error @+1 {{'emitc.member' op non-lvalues cannot return lvalues or arrays}}
+  %1 = "emitc.member" (%arg0) {member = "a"} : (!emitc.opaque<"mystruct">) -> !emitc.array<2xi32>
   return
 }
 
@@ -758,14 +756,14 @@ emitc.field @testField : !emitc.array<1xf32>
 
 // -----
 
-// expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+// expected-error @+1 {{'emitc.get_field' op expects ancestor op 'emitc.class'}}
 %1 = emitc.get_field @testField : !emitc.array<1xf32>
 
 // -----
 
 emitc.func @testMethod() {
   %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
-  // expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+  // expected-error @+1 {{'emitc.get_field' op expects ancestor op 'emitc.class'}}
   %1 = get_field @testField : !emitc.array<1xf32>
   %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
   return
@@ -981,5 +979,21 @@ func.func @address_of(%arg0: !emitc.lvalue<i32>) {
 func.func @dereference(%arg0: !emitc.ptr<i32>) {
   // expected-error @+1 {{failed to verify that input and result reference the same type}}
   %1 = "emitc.dereference"(%arg0) : (!emitc.ptr<i32>) -> !emitc.lvalue<i8>
+  return
+}
+
+// -----
+
+func.func @pre_increment_unmatch_type(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.pre_increment"(%arg0) : (!emitc.lvalue<i32>) -> i8
+  return
+}
+
+// -----
+
+func.func @post_decrement_unmatch_type(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.post_decrement"(%arg0) : (!emitc.lvalue<i32>) -> i8
   return
 }

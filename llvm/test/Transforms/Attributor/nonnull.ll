@@ -843,7 +843,7 @@ f:
 
 define i8 @parent6(ptr %a, ptr %b) {
 ; CHECK-LABEL: define {{[^@]+}}@parent6
-; CHECK-SAME: (ptr [[A:%.*]], ptr noundef [[B:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]], ptr nofree noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = load volatile i8, ptr [[B]], align 1
 ; CHECK-NEXT:    call void @use1nonnull(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret i8 [[C]]

@@ -12,6 +12,7 @@
 #include <cstdlib>
 #if LLDB_ENABLE_POSIX
 #include <netinet/in.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -20,13 +21,19 @@
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #endif
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#endif
 #include <ctime>
 #include <sys/types.h>
 
+#include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Breakpoint/WatchpointAlgorithms.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -47,22 +54,28 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
+#include "lldb/Interpreter/OptionGroupPlatform.h"
 #include "lldb/Interpreter/OptionGroupUInt64.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/Baton.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -90,6 +103,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
@@ -186,6 +200,25 @@ public:
 };
 
 std::chrono::seconds ResumeTimeout() { return std::chrono::seconds(5); }
+
+static std::pair<uint16_t, uint16_t> GetClientTerminalSize() {
+#ifdef _WIN32
+  CONSOLE_SCREEN_BUFFER_INFO csbi{};
+  HANDLE h = ::GetStdHandle(STD_OUTPUT_HANDLE);
+  if (h != INVALID_HANDLE_VALUE && ::GetConsoleScreenBufferInfo(h, &csbi)) {
+    int cols = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    int rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+    if (cols > 0 && rows > 0)
+      return {static_cast<uint16_t>(cols), static_cast<uint16_t>(rows)};
+  }
+#elif LLDB_ENABLE_POSIX
+  struct winsize ws{};
+  if (::ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0 &&
+      ws.ws_row > 0)
+    return {ws.ws_col, ws.ws_row};
+#endif
+  return {0, 0};
+}
 
 } // namespace
 
@@ -315,10 +348,29 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
 
   m_use_g_packet_for_reading =
       GetGlobalPluginProperties().GetUseGPacketForReading();
+
+  // Contribute the packet history to diagnostics bundles, named with the
+  // creation timestamp so files from different processes stay distinguishable.
+  if (Diagnostics::Enabled()) {
+    llvm::sys::TimePoint<> now = std::chrono::system_clock::now();
+    std::string name = llvm::formatv(
+        "gdb-remote-packet-history-{0:%Y-%m-%dT%H-%M-%S}.txt", now);
+    m_diagnostics_artifact_id = Diagnostics::Instance().AddArtifactProvider(
+        std::move(name), [this]() -> std::string {
+          StreamString stream;
+          DumpPluginHistory(stream);
+          return stream.GetString().str();
+        });
+  }
 }
 
 // Destructor
 ProcessGDBRemote::~ProcessGDBRemote() {
+  // Unregister before teardown so a concurrent collection can't run the
+  // provider on a half-destroyed process.
+  if (m_diagnostics_artifact_id && Diagnostics::Enabled())
+    Diagnostics::Instance().RemoveArtifactProvider(*m_diagnostics_artifact_id);
+
   //  m_mach_process.UnregisterNotificationCallbacks (this);
   Clear();
   // We need to call finalize on the process before destroying ourselves to
@@ -403,7 +455,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   if (!force && m_register_info_sp)
     return;
 
-  m_register_info_sp = std::make_shared<GDBRemoteDynamicRegisterInfo>();
+  m_register_info_sp = std::make_shared<DynamicRegisterInfo>();
 
   // Check if qHostInfo specified a specific packet timeout for this
   // connection. If so then lets update our setting so the user knows what the
@@ -813,6 +865,13 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
     if (stderr_file_spec)
       m_gdb_comm.SetSTDERR(stderr_file_spec);
 
+    if (launch_flags & eLaunchFlagUsePipes) {
+      m_gdb_comm.SetSTDIOWindowSize(0, 0);
+    } else {
+      auto [terminal_cols, terminal_rows] = GetClientTerminalSize();
+      m_gdb_comm.SetSTDIOWindowSize(terminal_cols, terminal_rows);
+    }
+
     m_gdb_comm.SetDisableASLR(launch_flags & eLaunchFlagDisableASLR);
     m_gdb_comm.SetDetachOnError(launch_flags & eLaunchFlagDetachOnError);
 
@@ -838,8 +897,19 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       // Since we can't send argv0 separate from the executable path, we need to
       // make sure to use the actual executable path found in the launch_info...
       Args args = launch_info.GetArguments();
-      if (FileSpec exe_file = launch_info.GetExecutableFile())
-        args.ReplaceArgumentAtIndex(0, exe_file.GetPath(/*denormalize=*/true));
+      if (FileSpec exe_file = launch_info.GetExecutableFile()) {
+        const llvm::Triple &remote_triple =
+            GetTarget().GetArchitecture().GetTriple();
+        if (remote_triple.getOS() != llvm::Triple::UnknownOS) {
+          FileSpec remote_exe_file(exe_file.GetPath(/*denormalize=*/false),
+                                   remote_triple);
+          args.ReplaceArgumentAtIndex(
+              0, remote_exe_file.GetPath(/*denormalize=*/true));
+        } else {
+          args.ReplaceArgumentAtIndex(0,
+                                      exe_file.GetPath(/*denormalize=*/true));
+        }
+      }
       if (llvm::Error err = m_gdb_comm.LaunchProcess(args)) {
         error = Status::FromErrorStringWithFormatv(
             "Cannot launch '{0}': {1}", args.GetArgumentAtIndex(0),
@@ -873,8 +943,18 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       SetPrivateState(SetThreadStopInfo(response));
 
       if (!disable_stdio) {
-        if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd)
+        if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
           SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
+        }
+#ifdef _WIN32
+        else if (m_stdin_forward) {
+          // No client-side PTY FD on Windows.
+          std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
+          if (!m_process_input_reader)
+            m_process_input_reader =
+                std::make_shared<IOHandlerProcessSTDIOWindows>(this);
+        }
+#endif
       }
     }
   } else {
@@ -1059,6 +1139,21 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
       SetUnixSignals(platform_sp->GetUnixSignals());
     else
       SetUnixSignals(UnixSignals::Create(GetTarget().GetArchitecture()));
+  }
+
+  // Ask any accelerator plugins installed in lldb-server for their initial
+  // actions (e.g. breakpoints to set in the native process).
+  llvm::Expected<std::vector<AcceleratorActions>> init_actions =
+      m_gdb_comm.GetAcceleratorInitializeActions();
+  if (!init_actions) {
+    LLDB_LOG_ERROR(log, init_actions.takeError(),
+                   "failed to get accelerator initialize actions: {0}");
+  } else {
+    for (const AcceleratorActions &actions : *init_actions) {
+      if (llvm::Error error = HandleAcceleratorActions(actions))
+        LLDB_LOG_ERROR(log, std::move(error),
+                       "failed to handle accelerator actions: {0}");
+    }
   }
 }
 
@@ -2563,6 +2658,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
     SetAddressableBitMasks(addressable_bits);
 
+    m_last_stop_primary_tid = tid;
+
     ThreadSP thread_sp = SetThreadStopInfo(
         tid, expedited_register_map, signo, thread_name, reason, description,
         exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
@@ -2611,7 +2708,17 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
   if (m_initial_tid != LLDB_INVALID_THREAD_ID) {
     m_thread_list.SetSelectedThreadByID(m_initial_tid);
     m_initial_tid = LLDB_INVALID_THREAD_ID;
+  } else if (m_last_stop_primary_tid != LLDB_INVALID_THREAD_ID &&
+             StateIsRunningState(m_last_broadcast_state)) {
+    if (ThreadSP primary_thread_sp = m_thread_list.FindThreadByProtocolID(
+            m_last_stop_primary_tid, /*can_update=*/false)) {
+      ThreadSP selected_thread_sp = m_thread_list.GetSelectedThread();
+      if (!selected_thread_sp ||
+          selected_thread_sp->GetID() != primary_thread_sp->GetID())
+        m_thread_list.SetSelectedThreadByID(primary_thread_sp->GetID());
+    }
   }
+  m_last_stop_primary_tid = LLDB_INVALID_THREAD_ID;
 
   // Let all threads recover from stopping and do any clean up based on the
   // previous thread state (if any).
@@ -3338,7 +3445,7 @@ size_t ProcessGDBRemote::PutSTDIN(const char *src, size_t src_len,
     ConnectionStatus status;
     m_stdio_communication.WriteAll(src, src_len, status, nullptr);
   } else if (m_stdin_forward) {
-    m_gdb_comm.SendStdinNotification(src, src_len);
+    m_gdb_comm.SendStdinNotification(src, src_len, GetInterruptTimeout());
   }
   return 0;
 }
@@ -4122,6 +4229,249 @@ bool ProcessGDBRemote::NewThreadNotifyBreakpointHit(
   Log *log = GetLog(LLDBLog::Step);
   LLDB_LOGF(log, "Hit New Thread Notification breakpoint.");
   return false;
+}
+
+namespace {
+/// Baton that carries the breakpoint hit arguments to the accelerator plugin
+/// breakpoint callback.
+class AcceleratorBreakpointCallbackBaton
+    : public TypedBaton<AcceleratorBreakpointHitArgs> {
+public:
+  explicit AcceleratorBreakpointCallbackBaton(
+      std::unique_ptr<AcceleratorBreakpointHitArgs> data)
+      : TypedBaton(std::move(data)) {}
+};
+} // namespace
+
+llvm::Error
+ProcessGDBRemote::HandleAcceleratorActions(const AcceleratorActions &actions) {
+  Log *log = GetLog(GDBRLog::Process);
+
+  // The same set of actions can be delivered to the client more than once: a
+  // plugin may keep reporting the same actions (with the same identifier) on
+  // subsequent native stops until its state advances. The identifier uniquely
+  // names a set of actions for a plugin, so skip any set we have already
+  // processed to avoid re-running its side effects (e.g. setting the same
+  // breakpoints again).
+  auto it = m_processed_accelerator_actions.find(actions.plugin_name);
+  if (it != m_processed_accelerator_actions.end() &&
+      it->second == actions.identifier) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::HandleAcceleratorActions skipping already "
+             "processed actions for plugin '{0}' with identifier {1}",
+             actions.plugin_name, actions.identifier);
+    return llvm::Error::success();
+  }
+  m_processed_accelerator_actions[actions.plugin_name] = actions.identifier;
+
+  // Handle each kind of action. More action kinds will be handled here in the
+  // future, so only return early on error; otherwise fall through so the next
+  // kind of action still gets a chance to run.
+  if (!actions.breakpoints.empty()) {
+    if (llvm::Error error = HandleAcceleratorBreakpoints(actions))
+      return error;
+  }
+
+  if (actions.connect_info) {
+    if (llvm::Error error = HandleAcceleratorConnection(actions))
+      return error;
+  }
+
+  return llvm::Error::success();
+}
+
+llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
+    const AcceleratorActions &actions) {
+  const AcceleratorConnectionInfo &connect_info = *actions.connect_info;
+  Debugger &debugger = GetTarget().GetDebugger();
+
+  OptionGroupPlatform platform_options(/*include_platform_option=*/false);
+  platform_options.SetPlatformName(connect_info.platform_name.c_str());
+  std::string exe_path = connect_info.exe_path.value_or("");
+  TargetSP accelerator_target_sp;
+  Status error = debugger.GetTargetList().CreateTarget(
+      debugger, exe_path, connect_info.triple, eLoadDependentsNo,
+      &platform_options, accelerator_target_sp);
+  if (error.Fail())
+    return error.takeError();
+  if (!accelerator_target_sp)
+    return llvm::createStringError("failed to create accelerator target");
+
+  PlatformSP platform_sp = accelerator_target_sp->GetPlatform();
+  if (!platform_sp)
+    return llvm::createStringErrorV(
+        "no platform '{0}' compatible with triple '{1}' for the accelerator "
+        "target",
+        connect_info.platform_name, connect_info.triple);
+  ProcessSP process_sp =
+      connect_info.synchronous
+          ? platform_sp->ConnectProcessSynchronous(
+                connect_info.connect_url, GetPluginNameStatic(), debugger,
+                *debugger.GetAsyncOutputStream(), accelerator_target_sp.get(),
+                error)
+          : platform_sp->ConnectProcess(connect_info.connect_url,
+                                        GetPluginNameStatic(), debugger,
+                                        accelerator_target_sp.get(), error);
+  if (error.Fail())
+    return error.takeError();
+  if (!process_sp)
+    return llvm::createStringError("failed to connect to the accelerator");
+
+  accelerator_target_sp->SetTargetSessionName(actions.session_name);
+
+  // Broadcast the new-target event so API clients can detect it.
+  auto event_sp = std::make_shared<Event>(
+      Target::eBroadcastBitNewTargetCreated,
+      new Target::TargetEventData(GetTarget().shared_from_this(),
+                                  accelerator_target_sp));
+  GetTarget().BroadcastEvent(event_sp);
+  return llvm::Error::success();
+}
+
+llvm::Error ProcessGDBRemote::HandleAcceleratorBreakpoints(
+    const AcceleratorActions &actions) {
+  Target &target = GetTarget();
+  llvm::Error error = llvm::Error::success();
+  for (const AcceleratorBreakpointInfo &bp : actions.breakpoints) {
+    // Carry data with the breakpoint so the callback can notify the plugin
+    // when the breakpoint is hit.
+    auto args_up = std::make_unique<AcceleratorBreakpointHitArgs>();
+    args_up->plugin_name = actions.plugin_name;
+    args_up->breakpoint = bp;
+
+    // Each breakpoint must specify exactly one of by_name or by_address. Bad
+    // breakpoints are collected as errors but don't stop the remaining ones
+    // from being set.
+    BreakpointSP bp_sp;
+    if (bp.by_name && bp.by_address) {
+      error = llvm::joinErrors(
+          std::move(error),
+          llvm::createStringErrorV(
+              "accelerator breakpoint {0} specifies both a by_name and a "
+              "by_address specification",
+              bp.identifier));
+      continue;
+    } else if (bp.by_name) {
+      FileSpecList bp_modules;
+      if (bp.by_name->shlib && !bp.by_name->shlib->empty())
+        bp_modules.Append(FileSpec(*bp.by_name->shlib));
+      bp_sp = target.CreateBreakpoint(
+          bp_modules.GetSize() ? &bp_modules : nullptr, // Containing modules.
+          nullptr,                                      // Containing source.
+          bp.by_name->function_name.c_str(),            // Function name.
+          eFunctionNameTypeFull,                        // Function name type.
+          eLanguageTypeUnknown,                         // Language type.
+          0,                                            // Byte offset.
+          false,                                        // Offset is insn count.
+          eLazyBoolNo,                                  // Skip prologue.
+          true,                                         // Internal breakpoint.
+          false);                                       // Request hardware.
+    } else if (bp.by_address) {
+      bp_sp = target.CreateBreakpoint(bp.by_address->load_address,
+                                      /*internal=*/true,
+                                      /*request_hardware=*/false);
+    } else {
+      error = llvm::joinErrors(
+          std::move(error),
+          llvm::createStringErrorV(
+              "accelerator breakpoint {0} has neither a by_name nor a "
+              "by_address specification",
+              bp.identifier));
+      continue;
+    }
+
+    if (!bp_sp) {
+      error = llvm::joinErrors(
+          std::move(error),
+          llvm::createStringErrorV("failed to set accelerator breakpoint {0}",
+                                   bp.identifier));
+      continue;
+    }
+
+    // Give the internal breakpoint a meaningful description for stop reasons,
+    // including the plugin that requested it.
+    std::string kind =
+        llvm::formatv("accelerator-plugin ({0})", actions.plugin_name);
+    bp_sp->SetBreakpointKind(kind.c_str());
+    auto baton_sp = std::make_shared<AcceleratorBreakpointCallbackBaton>(
+        std::move(args_up));
+    bp_sp->SetCallback(AcceleratorBreakpointHitCallback, baton_sp,
+                       /*is_synchronous=*/true);
+  }
+  return error;
+}
+
+bool ProcessGDBRemote::AcceleratorBreakpointHitCallback(
+    void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id,
+    lldb::user_id_t break_loc_id) {
+  ProcessSP process_sp = context->exe_ctx_ref.GetProcessSP();
+  ProcessGDBRemote *process = static_cast<ProcessGDBRemote *>(process_sp.get());
+  return process->AcceleratorBreakpointHit(baton, context, break_id,
+                                           break_loc_id);
+}
+
+bool ProcessGDBRemote::AcceleratorBreakpointHit(
+    void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id,
+    lldb::user_id_t break_loc_id) {
+  AcceleratorBreakpointHitArgs *callback_data =
+      static_cast<AcceleratorBreakpointHitArgs *>(baton);
+  // Copy the args so we can fill in requested symbol values before notifying
+  // lldb-server.
+  AcceleratorBreakpointHitArgs args = *callback_data;
+  Target &target = GetTarget();
+
+  const std::vector<std::string> &symbol_names = args.breakpoint.symbol_names;
+  args.symbol_values.resize(symbol_names.size());
+  for (size_t i = 0; i < symbol_names.size(); ++i) {
+    args.symbol_values[i].name = symbol_names[i];
+    SymbolContextList sc_list;
+    target.GetImages().FindSymbolsWithNameAndType(ConstString(symbol_names[i]),
+                                                  eSymbolTypeAny, sc_list);
+    for (const SymbolContext &sc : sc_list) {
+      if (!sc.symbol)
+        continue;
+      addr_t load_addr = sc.symbol->GetAddress().GetLoadAddress(&target);
+      if (load_addr != LLDB_INVALID_ADDRESS) {
+        args.symbol_values[i].value = load_addr;
+        break;
+      }
+    }
+  }
+
+  Log *log = GetLog(GDBRLog::Process);
+  llvm::Expected<AcceleratorBreakpointHitResponse> response =
+      m_gdb_comm.AcceleratorBreakpointHit(args);
+  if (!response) {
+    LLDB_LOG_ERROR(log, response.takeError(),
+                   "accelerator breakpoint hit notification failed: {0}");
+    // We could not reach the plugin, so auto-resume rather than stopping the
+    // native process at an internal breakpoint the user can't see.
+    return false;
+  }
+
+  // Disable the breakpoint if requested, but keep it around so its hit count
+  // and other stats remain visible.
+  if (response->disable_bp) {
+    if (BreakpointSP bp_sp = target.GetBreakpointByID(break_id))
+      bp_sp->SetEnabled(false);
+  }
+
+  // The plugin may request new actions (e.g. additional breakpoints) in
+  // response to this breakpoint being hit.
+  if (response->actions) {
+    if (llvm::Error error = HandleAcceleratorActions(*response->actions)) {
+      // Also print the failure to the user; during a stop, logging alone is
+      // invisible.
+      std::string message = llvm::toString(std::move(error));
+      LLDB_LOG(log, "failed to handle accelerator actions: {0}", message);
+      target.GetDebugger().GetAsyncErrorStream()->Printf(
+          "error: accelerator plugin '%s': %s\n",
+          response->actions->plugin_name.c_str(), message.c_str());
+    }
+  }
+
+  // Returning true stops the native process; false auto-resumes it.
+  return !response->auto_resume_native;
 }
 
 Status ProcessGDBRemote::UpdateAutomaticSignalFiltering() {

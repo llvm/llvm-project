@@ -1299,9 +1299,21 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
       rewriter, loc, resultType, extractOp.getTensor(), transferReadIdxs,
       /*padding=*/std::nullopt, permutationMap, inBounds);
 
+  // Mask this contiguous xfer_read here rather than relying on the generic
+  // path (the generic path assumes an identity masking map over all the loop
+  // dims, which wouldn't be valid here). A contiguous load only reads the
+  // trailing `min(dstRank, srcRank)` dims of the iteration space - the leading
+  // dims are broadcast via `permutationMap` above - so its inferred mask is
+  // rank-reduced. Build a masking map that projects the iteration space onto
+  // exactly those trailing dims so the created mask matches the xfer_read.
+  int64_t numReadDims = std::min(dstRank, srcRank);
+  auto maskingMap = AffineMap::getMinorIdentityMap(
+      linalgOp.getNumLoops(), numReadDims, rewriter.getContext());
+  Operation *maskedReadOp =
+      state.maskOperation(rewriter, transferReadOp, linalgOp, maskingMap);
+
   LDBG() << "Vectorised as contiguous load: " << extractOp;
-  return VectorizationHookResult{VectorizationHookStatus::NewOp,
-                                 transferReadOp};
+  return VectorizationHookResult{VectorizationHookStatus::NewOp, maskedReadOp};
 }
 
 /// Emit reduction operations if the shapes of the value to reduce is different
