@@ -10,7 +10,7 @@
 ! RUN:           --bufferize-hlfir \
 ! RUN:           --convert-hlfir-to-fir \
 ! RUN:           --array-value-copy \
-! RUN:           --stack-arrays \
+! RUN:           --allocation-placement="stack-arrays=true" \
 ! RUN: | FileCheck %s
 
 subroutine temp_array

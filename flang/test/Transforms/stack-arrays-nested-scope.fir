@@ -1,4 +1,4 @@
-// RUN: fir-opt --stack-arrays %s | FileCheck %s
+// RUN: fir-opt --allocation-placement="stack-arrays=true" %s | FileCheck %s
 
 // Test that an allocmem inside a fir.if is not hoisted past a
 // stackrestore when the size operand is shared across scopes.

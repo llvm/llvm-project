@@ -1,5 +1,8 @@
-// Test memory allocation pass for fir.alloca outside of function entry block
-// RUN: fir-opt --memory-allocation-opt="dynamic-array-on-heap=true" %s | FileCheck %s
+// Test allocation placement for fir.alloca outside of function entry block.
+// The default (-fno-stack-arrays) policy sends every runtime-sized array to the
+// heap, reproducing the legacy memory-allocation-opt "dynamic-array-on-heap"
+// behavior together with its deallocation-point handling.
+// RUN: fir-opt --allocation-placement %s | FileCheck %s
 
 func.func @test_loop() {
   %c1 = arith.constant 1 : index

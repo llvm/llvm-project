@@ -38,11 +38,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
-namespace fir {
-#define GEN_PASS_DEF_STACKARRAYS
-#include "flang/Optimizer/Transforms/Passes.h.inc"
-} // namespace fir
-
 #define DEBUG_TYPE "stack-arrays"
 
 static llvm::cl::opt<std::size_t> maxAllocsPerFunc(
@@ -127,20 +122,6 @@ protected:
   /// Visit control flow operations and decide whether to call visitOperation
   /// to apply the transfer function
   mlir::LogicalResult processOperation(mlir::Operation *op) override;
-};
-
-class StackArraysPass : public fir::impl::StackArraysBase<StackArraysPass> {
-public:
-  StackArraysPass() = default;
-  StackArraysPass(const StackArraysPass &pass);
-
-  llvm::StringRef getDescription() const override;
-
-  void runOnOperation() override;
-
-private:
-  Statistic runCount{this, "stackArraysRunCount",
-                     "Number of heap allocations moved to the stack"};
 };
 
 } // namespace
@@ -733,57 +714,5 @@ void fir::AllocMemConversion::insertLifetimeMarkers(
       fir::factory::genLifetimeEnd(rewriter, op->getLoc(), ptr);
     });
     newAlloc->setAttr(attrName, rewriter.getUnitAttr());
-  }
-}
-
-StackArraysPass::StackArraysPass(const StackArraysPass &pass)
-    : fir::impl::StackArraysBase<StackArraysPass>(pass) {}
-
-llvm::StringRef StackArraysPass::getDescription() const {
-  return "Move heap allocated array temporaries to the stack";
-}
-
-void StackArraysPass::runOnOperation() {
-  mlir::func::FuncOp func = getOperation();
-
-  auto &analysis = getAnalysis<fir::StackArraysAnalysisWrapper>();
-  const fir::StackArraysAnalysisWrapper::AllocMemMap *candidateOps =
-      analysis.getCandidateOps(func);
-  if (!candidateOps) {
-    signalPassFailure();
-    return;
-  }
-
-  if (candidateOps->empty())
-    return;
-  runCount += candidateOps->size();
-
-  llvm::SmallVector<mlir::Operation *> opsToConvert;
-  opsToConvert.reserve(candidateOps->size());
-  for (auto [op, _] : *candidateOps)
-    opsToConvert.push_back(op);
-
-  mlir::MLIRContext &context = getContext();
-  mlir::RewritePatternSet patterns(&context);
-  mlir::GreedyRewriteConfig config;
-  // prevent the pattern driver form merging blocks
-  config.setRegionSimplificationLevel(
-      mlir::GreedySimplifyRegionLevel::Disabled);
-
-  auto module = func->getParentOfType<mlir::ModuleOp>();
-  std::optional<mlir::DataLayout> dl =
-      module ? fir::support::getOrSetMLIRDataLayout(
-                   module, /*allowDefaultLayout=*/false)
-             : std::nullopt;
-  std::optional<fir::KindMapping> kindMap;
-  if (module)
-    kindMap = fir::getKindMapping(module);
-
-  patterns.insert<fir::AllocMemConversion>(&context, *candidateOps, dl,
-                                           kindMap);
-  if (mlir::failed(mlir::applyOpPatternsGreedily(
-          opsToConvert, std::move(patterns), config))) {
-    mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");
-    signalPassFailure();
   }
 }

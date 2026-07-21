@@ -16,14 +16,6 @@
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 
-/// Shared option in tools to control whether dynamically sized array
-/// allocations should always be on the heap.
-extern llvm::cl::opt<bool> dynamicArrayStackToHeapAllocation;
-
-/// Shared option in tools to set a maximum value for the number of elements in
-/// a compile-time sized array that can be allocated on the stack.
-extern llvm::cl::opt<std::size_t> arrayStackAllocationThreshold;
-
 /// Shared option in tools to ignore missing runtime type descriptor objects
 /// when translating FIR to LLVM. The resulting program will crash if the
 /// runtime needs the derived type descriptors, this is only a debug option to
@@ -53,14 +45,8 @@ extern llvm::codegenoptions::DebugInfoKind noDebugInfo;
 /// Optimizer Passes
 extern llvm::cl::opt<bool> disableCfgConversion;
 extern llvm::cl::opt<bool> disableFirAliasTags;
-extern llvm::cl::opt<bool> disableFirMao;
 extern llvm::cl::opt<bool> enableFirLICM;
 extern llvm::cl::opt<bool> useOldAliasTags;
-
-/// Use the unified allocation-placement pass instead of the legacy stack-arrays
-/// and memory-allocation-opt passes. Enabled by default; set to false to fall
-/// back to the legacy passes.
-extern llvm::cl::opt<bool> enableAllocationPlacement;
 
 /// Skip the allocation-placement pass entirely (no stack/heap rewriting).
 extern llvm::cl::opt<bool> disableAllocationPlacement;

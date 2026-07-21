@@ -34,7 +34,6 @@ add_flang_library(FIRTransforms
   FIRToSCF.cpp
   FIRToMemRef.cpp
   MemoryUtils.cpp
-  MemoryAllocation.cpp
   StackArrays.cpp
   MemRefDataFlowOpt.cpp
   SimplifyRegionLite.cpp
@@ -48,7 +47,6 @@ add_flang_library(FIRTransforms
   LoopVersioning.cpp
   MIFOpConversion.cpp
   MemRefDataFlowOpt.cpp
-  MemoryAllocation.cpp
   MemoryUtils.cpp
   OptimizeArrayRepacking.cpp
   PolymorphicOpConversion.cpp

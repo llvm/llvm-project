@@ -295,23 +295,6 @@ def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
   ];
 }
 
-def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
-  let summary = "Convert stack to heap allocations and vice versa.";
-  let description = [{
-    Convert stack allocations to heap allocations and vice versa based on
-    estimated size, lifetime, usage patterns, the call tree, etc.
-  }];
-  let dependentDialects = [ "fir::FIROpsDialect" ];
-  let options = [
-    Option<"dynamicArrayOnHeap", "dynamic-array-on-heap",
-           "bool", /*default=*/"false",
-           "Allocate all arrays with runtime determined size on heap.">,
-    Option<"maxStackArraySize", "maximum-array-alloc-size",
-           "std::size_t", /*default=*/"~static_cast<std::size_t>(0)",
-           "Set maximum number of elements of an array allocated on the stack.">
-  ];
-}
-
 def AllocationPlacement : Pass<"allocation-placement", "mlir::func::FuncOp"> {
   let summary = "Place array allocations on the stack or the heap by policy.";
   let description = [{
@@ -345,17 +328,6 @@ def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt
     Convert scalar literals of function arguments to global constants.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
-}
-
-def StackArrays : Pass<"stack-arrays", "mlir::func::FuncOp"> {
-  let summary = "Move local array allocations from heap memory into stack memory";
-  let description = [{
-    Convert heap allocations for arrays, even those of unknown size, into stack
-    allocations.
-  }];
-  let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect"
-  ];
 }
 
 def StackReclaim : Pass<"stack-reclaim"> {

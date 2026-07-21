@@ -1,5 +1,5 @@
 // Test insertion of llvm.lifetime for allocmem turn into alloca with constant size.
-// RUN: fir-opt --stack-arrays -stack-arrays-lifetime %s | FileCheck %s
+// RUN: fir-opt --allocation-placement="stack-arrays=true" -stack-arrays-lifetime %s | FileCheck %s
 
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"} {
 
