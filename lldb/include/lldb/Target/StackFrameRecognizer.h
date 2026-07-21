@@ -77,7 +77,8 @@ public:
 /// tracks a particular Python classobject, which will be asked to recognize
 /// stack frames.
 class ScriptedStackFrameRecognizer : public StackFrameRecognizer {
-  lldb::ScriptedStackFrameRecognizerInterfaceSP m_interface_sp;
+  lldb_private::ScriptInterpreter *m_interpreter;
+  lldb_private::StructuredData::ObjectSP m_python_object_sp;
 
   std::string m_python_class;
 

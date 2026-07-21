@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from typing import Optional
 
 import lldb
 
@@ -9,11 +8,8 @@ class ScriptedBreakpointResolver(metaclass=ABCMeta):
     The base class for a scripted breakpoint resolver.
     """
 
-    bkpt: lldb.SBBreakpoint
-    args: lldb.SBStructuredData
-
     @abstractmethod
-    def __init__(self, bkpt: lldb.SBBreakpoint, args: lldb.SBStructuredData):
+    def __init__(self, bkpt, args):
         """Construct a scripted breakpoint resolver.
 
         Args:
@@ -24,7 +20,7 @@ class ScriptedBreakpointResolver(metaclass=ABCMeta):
         self.bkpt = bkpt
         self.args = args
 
-    def overrides_resolver(self, resolver_data: lldb.SBStructuredData) -> bool:
+    def overrides_resolver(self, resolver_data):
         """Decide, from the incoming resolver options, whether this
         breakpoint should have its resolver replaced by this class. When
         `True`, this class's `__callback__` picks locations for this
@@ -42,7 +38,7 @@ class ScriptedBreakpointResolver(metaclass=ABCMeta):
         """
         return False
 
-    def set_breakpoint(self, bkpt: lldb.SBBreakpoint) -> None:
+    def set_breakpoint(self, bkpt):
         """Called once the underlying breakpoint has been fully created and
         associated to this resolver.
 
@@ -52,7 +48,7 @@ class ScriptedBreakpointResolver(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def __callback__(self, sym_ctx: lldb.SBSymbolContext) -> None:
+    def __callback__(self, sym_ctx):
         """Called once per symbol context matched by the search depth
         returned by `__get_depth__`. Set breakpoint locations here by calling
         `AddLocation` on the resolver's breakpoint.
@@ -62,7 +58,7 @@ class ScriptedBreakpointResolver(metaclass=ABCMeta):
         """
         pass
 
-    def __get_depth__(self) -> int:
+    def __get_depth__(self):
         """The search depth at which `__callback__` will be called.
 
         Returns:
@@ -71,7 +67,7 @@ class ScriptedBreakpointResolver(metaclass=ABCMeta):
         """
         return lldb.eSearchDepthModule
 
-    def get_short_help(self) -> Optional[str]:
+    def get_short_help(self):
         """A one-line description of this resolver, shown by `breakpoint list`.
 
         Returns:
@@ -79,9 +75,7 @@ class ScriptedBreakpointResolver(metaclass=ABCMeta):
         """
         pass
 
-    def was_hit(
-        self, frame: lldb.SBFrame, bp_loc: lldb.SBBreakpointLocation
-    ) -> lldb.SBBreakpointLocation:
+    def was_hit(self, frame, bp_loc):
         """Called when a location owned by this resolver is hit, to allow
         overriding which location is reported as hit.
 
@@ -96,9 +90,7 @@ class ScriptedBreakpointResolver(metaclass=ABCMeta):
         """
         return bp_loc
 
-    def get_location_description(
-        self, bp_loc: lldb.SBBreakpointLocation, level: int
-    ) -> Optional[str]:
+    def get_location_description(self, bp_loc, level):
         """Customize the description used when printing a breakpoint location
         owned by this resolver.
 

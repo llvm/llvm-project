@@ -25,15 +25,10 @@ PolicyStack &PolicyStack::Get() {
 
 Policy PolicyStack::Current() const {
   Policy p = m_stack.back();
-  // `Current()` is called on every read of the current policy (e.g. every
-  // `Process::GetState()`, itself called on every prompt redraw), so log
-  // only when verbose is set to avoid drowning out the process log.
   if (Log *log = GetLog(LLDBLog::Process)) {
-    if (log->GetVerbose()) {
-      StreamString s;
-      p.Dump(s);
-      LLDB_LOG(log, "{0}", s.GetData());
-    }
+    StreamString s;
+    p.Dump(s);
+    LLDB_LOG(log, "{0}", s.GetData());
   }
   return p;
 }
