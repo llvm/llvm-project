@@ -5527,10 +5527,22 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   if (!CFP)
     return SDValue();
 
-  // XXX - Should this flush denormals?
-  const APFloat &Val = CFP->getValueAPF();
-  APFloat One = APFloat::getOne(Val.getSemantics());
-  return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
+  APFloat ArgVal = CFP->getValueAPF();
+  const fltSemantics &Sem = ArgVal.getSemantics();
+
+  // v_rcp_f32 always flushes a denormal input to zero (preserving sign)
+  // before reciprocating.
+  if (ArgVal.isDenormal() && &Sem == &APFloat::IEEEsingle())
+    ArgVal = APFloat::getZero(Sem, ArgVal.isNegative());
+
+  APFloat One = APFloat::getOne(Sem);
+  APFloat Result = One / ArgVal;
+
+  // v_rcp_f32 always flushes a denormal result to zero (preserving sign).
+  if (Result.isDenormal() && &Sem == &APFloat::IEEEsingle())
+    Result = APFloat::getZero(Sem, Result.isNegative());
+
+  return DCI.DAG.getConstantFP(Result, SDLoc(N), N->getValueType(0));
 }
 
 bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {

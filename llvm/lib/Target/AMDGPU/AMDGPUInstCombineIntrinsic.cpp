@@ -1156,14 +1156,22 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     if (const ConstantFP *C = dyn_cast<ConstantFP>(Src)) {
-      const APFloat &ArgVal = C->getValueAPF();
-      APFloat Val(ArgVal.getSemantics(), 1);
+      APFloat ArgVal = C->getValueAPF();
+      const fltSemantics &Sem = ArgVal.getSemantics();
+
+      // v_rcp_f32 always flushes a denormal input to zero (preserving sign)
+      // before reciprocating.
+      if (ArgVal.isDenormal() && &Sem == &APFloat::IEEEsingle())
+        ArgVal = APFloat::getZero(Sem, ArgVal.isNegative());
+
+      APFloat Val(Sem, 1);
       Val.divide(ArgVal, APFloat::rmNearestTiesToEven);
 
-      // This is more precise than the instruction may give.
-      //
-      // TODO: The instruction always flushes denormal results (except for f16),
-      // should this also?
+      // v_rcp_f32 always flushes a denormal result to zero (preserving
+      // sign).
+      if (Val.isDenormal() && &Sem == &APFloat::IEEEsingle())
+        Val = APFloat::getZero(Sem, Val.isNegative());
+
       return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), Val));
     }
 

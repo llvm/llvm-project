@@ -36,6 +36,30 @@ define amdgpu_kernel void @rcp_10_f32(ptr addrspace(1) %out) #1 {
   ret void
 }
 
+; 1.0 / 2^127 = 2^-127, a denormal f32 result. v_rcp_f32 always flushes a
+; denormal result to zero (preserving sign), so this folds to +0 rather
+; than the exact reciprocal.
+; FUNC-LABEL: {{^}}rcp_denormal_result_f32:
+; SI-NOT: v_rcp_f32
+; SI: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+define amdgpu_kernel void @rcp_denormal_result_f32(ptr addrspace(1) %out) #1 {
+  %rcp = call float @llvm.amdgcn.rcp.f32(float 0x47E0000000000000)
+  store float %rcp, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; 2^-127 is a denormal f32 input. v_rcp_f32 always flushes a denormal input
+; to zero (preserving sign) before reciprocating, so this folds to
+; rcp(+0) = +Inf rather than the exact reciprocal of 2^-127.
+; FUNC-LABEL: {{^}}rcp_denormal_input_f32:
+; SI-NOT: v_rcp_f32
+; SI: v_mov_b32_e32 v{{[0-9]+}}, 0x7f800000
+define amdgpu_kernel void @rcp_denormal_input_f32(ptr addrspace(1) %out) #1 {
+  %rcp = call float @llvm.amdgcn.rcp.f32(float 0x3800000000000000)
+  store float %rcp, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}safe_no_fp32_denormals_rcp_f32:
 ; SI: v_rcp_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}
 ; SI-NOT: [[RESULT]]
