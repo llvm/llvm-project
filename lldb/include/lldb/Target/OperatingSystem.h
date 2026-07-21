@@ -49,10 +49,12 @@ public:
 
   virtual void ThreadWasSelected(Thread *thread) = 0;
 
+  /// Given a thread without a backing thread, create a register context for it.
   virtual lldb::RegisterContextSP
   CreateRegisterContextForThread(Thread *thread,
                                  lldb::addr_t reg_data_addr) = 0;
 
+  /// Given a thread without a backing thread, create a stop reason for it.
   virtual lldb::StopInfoSP CreateThreadStopReason(Thread *thread) = 0;
 
   virtual lldb::ThreadSP CreateThread(lldb::tid_t tid, lldb::addr_t context) {
