@@ -2653,6 +2653,13 @@ def isGFX9GFX10 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX11Insts))>;
 
+def HasPopsExitingWaveID :
+  Predicate<"(Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 ||"
+            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX10) &&"
+            "!Subtarget->hasMAIInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX11Insts),
+                      (not FeatureMAIInsts))>;
+
 def isGFX9GFX10GFX11 :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9 &&"
             "Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
