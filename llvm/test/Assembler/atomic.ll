@@ -178,6 +178,12 @@ define void @vector_atomicrmw_xchg(ptr %x, <2 x i16> %ival, <2 x half> %fval, <2
   ret void
 }
 
+define void @vector_atomicrmw_xchg_i1(ptr %x, <8 x i1> %val) {
+  ; CHECK: %atomic.xchg = atomicrmw xchg ptr %x, <8 x i1> %val seq_cst
+  %atomic.xchg = atomicrmw xchg ptr %x, <8 x i1> %val seq_cst
+  ret void
+}
+
 define void @int_vector_atomicrmw(ptr %x, <2 x i16> %val) {
   ; CHECK: %atomic.add = atomicrmw add ptr %x, <2 x i16> %val seq_cst
   %atomic.add = atomicrmw add ptr %x, <2 x i16> %val seq_cst
