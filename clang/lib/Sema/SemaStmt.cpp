@@ -3545,6 +3545,13 @@ Sema::NamedReturnInfo Sema::getNamedReturnInfo(const VarDecl *VD) {
     return NamedReturnInfo();
   }
 
+  const Type *T = VDType.getTypePtr();
+  if (T->getTypeClass() == Type::Auto) {
+    const auto *A = cast<DeducedType>(T);
+    if (A->isUndeducedAutoType())
+      return NamedReturnInfo();
+  }
+
   // Variables with higher required alignment than their type's ABI
   // alignment cannot use NRVO.
   if (!VD->hasDependentAlignment() && !VDType->isIncompleteType() &&

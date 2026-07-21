@@ -339,6 +339,8 @@ in a future version of Clang.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
   argument instead of asserting. (#GH210714)
 
+- Fixed a crash when returning an initialization to a top-level deleted function. (#GH208488)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
