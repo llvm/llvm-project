@@ -61,7 +61,7 @@ public:
     return LibcallImpls[Call];
   }
 
-  /// Rename the default libcall routine name for the specified libcall.
+  /// Remap the default libcall routine name for the specified libcall.
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     LibcallImpls[Call] = Impl;
   }
