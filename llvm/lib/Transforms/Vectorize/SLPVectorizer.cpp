@@ -30475,7 +30475,9 @@ public:
                 auto *FMul = dyn_cast<Instruction>(RdxVal);
                 if (FMul && FMul->getOpcode() == Instruction::FMul &&
                     FMul->hasOneUse() &&
-                    cast<FPMathOperator>(FMul)->getFastMathFlags().allowContract())
+                    cast<FPMathOperator>(FMul)
+                        ->getFastMathFlags()
+                        .allowContract())
                   ReductionCost += FusionSaving;
               }
           }
