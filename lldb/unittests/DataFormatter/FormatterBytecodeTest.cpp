@@ -251,6 +251,64 @@ TEST_F(FormatterBytecodeTest, ArithOps) {
   }
 }
 
+TEST_F(FormatterBytecodeTest, OutOfBounds) {
+  {
+    // op_lit_uint's ULEB128 operand is truncated: the interpreter runs off
+    // the end of the buffer while decoding it.
+    DataStack data;
+    ASSERT_FALSE(Interpret({op_lit_uint}, data));
+  }
+  {
+    // op_begin claims a block that is longer than the remaining bytecode.
+    DataStack data;
+    ASSERT_FALSE(Interpret({op_begin, 5, op_lit_uint, 42}, data));
+  }
+  {
+    // The ULEB128 byte's continuation bit is set, but there is no
+    // terminating byte.
+    DataStack data;
+    ASSERT_FALSE(Interpret({op_lit_uint, 0x80}, data));
+  }
+  {
+    // Same as above, but for op_lit_int's SLEB128 operand.
+    DataStack data;
+    ASSERT_FALSE(Interpret({op_lit_int, 0x80}, data));
+  }
+  {
+    // The ULEB128 operand encodes a value that doesn't fit into a uint64_t:
+    // 9 continuation bytes (63 bits) followed by a final byte contributing
+    // more than the single remaining bit.
+    DataStack data;
+    ASSERT_FALSE(Interpret({op_lit_uint, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                            0x80, 0x80, 0x80, 0x02},
+                           data));
+  }
+  {
+    // Same as above, but for op_lit_int's SLEB128 operand not fitting into
+    // an int64_t.
+    DataStack data;
+    ASSERT_FALSE(Interpret({op_lit_int, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                            0x80, 0x80, 0x80, 0x02},
+                           data));
+  }
+}
+
+TEST_F(FormatterBytecodeTest, EmptyBytecode) {
+  DataStack data;
+  ASSERT_TRUE(Interpret({}, data));
+  ASSERT_EQ(data.size(), 0u);
+}
+
+TEST_F(FormatterBytecodeTest, UnknownSelector) {
+  DataStack data;
+  ASSERT_FALSE(Interpret({op_lit_selector, 0xff, op_call}, data));
+}
+
+TEST_F(FormatterBytecodeTest, UnknownOpcode) {
+  DataStack data;
+  ASSERT_FALSE(Interpret({0xaa}, data));
+}
+
 TEST_F(FormatterBytecodeTest, CallOps) {
   {
     DataStack data;
