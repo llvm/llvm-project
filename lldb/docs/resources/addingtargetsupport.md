@@ -298,3 +298,151 @@ As you have seen above, there are a lot of moving parts to a debugger. So
 having some set of results to measure progress is very important.
 Sometimes a change will get one test to pass, sometimes hundreds, and it
 is easy to regress if you are not careful.
+
+## Target Hardware Features
+
+Some hardware features can make porting easier or harder. Below is a
+non-exhaustive list of features and their impacts on porting LLDB.
+
+### Hardware Single Step
+
+If the target lacks this feature, you will have to implement software single
+stepping. Which is much more complex and involves emulating any instruction that
+could modify the program counter.
+
+### Instruction Bundles and Sequences
+
+This is any situation where to resume the program you have to replay some
+previous instructions. LLDB needs to know the extent of the sequence.
+
+For example, an atomic sequence may implement an atomic operation by looping
+until success. When stepping through the sequence normally, this check will
+always fail (due to the debug exceptions) and cause it to loop forever.
+
+You can teach LLDB to find the sequence start point, and replay the whole thing
+as if it were one step.
+
+If you have instruction bundles, check how breakpoints behave and where in the
+bundles they can be placed.
+
+### Single Instruction Equivalents of Sequences
+
+The opposite of the previous point. If your target has single instructions
+for what is normally a sequence, this reduces the work needed in LLDB. Single
+instruction atomics are a common example.
+
+### Runtime Register Resizing
+
+Anything like AArch64's Scalable Vector Extension (SVE) registers. At each stop
+event the registers may have a different size.
+
+Support for this is currently SVE specific as it requires `lldb` to know which
+registers scale and what to derive their size from.
+
+### Registers That Come And Go At Runtime
+
+Anything like AArch64's Scalable Matrix Extension (SME) `ZA` register. This
+register can be switched off when not in use. At the moment we do not show
+this accurately. When the register is off, we show the user a fake zero
+value instead of hiding the register.
+
+### Execution Modes That Change Instruction Encoding
+
+Arm (meaning Armv7 and prior) has 2 execution modes: Arm and Thumb. If you
+attempt to execute Thumb mode code in Arm mode, it will not work. Programs can
+mix the two modes by using special mode switching branches.
+
+The debugger has to be aware of what mode the inferior is in so that it can
+correctly compare addresses, place breakpoints and use the correct breakpoint
+instruction encoding.
+
+In Arm's case, the information comes from markers in the program file, and the
+bottom bit of the program counter. This is often a source of bugs because many
+parts of the debugger have to know that this bit is not part of the instruction
+address.
+
+### Variable Length Instruction Encoding
+
+LLDB already supports a wide variety of encoding strategies, so variable length
+encoding is not much more work than fixed length.
+
+Of the current targets we have:
+* Intel which is variable length.
+* Arm (Armv7 and prior) with Arm (32-bit), Thumb 1 (16-bit) and Thumb 2
+  (a mix of 16 and 32-bit).
+* RISC-V which is variable, usually 32-bit or the 16-bit compressed
+  instructions.
+* AArch64 which is fixed length, always 32-bit.
+
+### Hardware Breakpoints and Watchpoints
+
+Breakpoints can be implemented in software by replacing an instruction with a
+software breakpoint instruction.
+
+However, if you want to only stop in certain situations (a single address space,
+a single execution mode, and so on), hardware breakpoints will be much faster.
+
+Doing this in software means you have to return into the debugger to filter
+every stop event. Which is slow even when locally debugging. Put the debug
+server on the end of a high latency connection and the slow down is multiplied.
+
+In addition, hardware breakpoints can be set in read-only memory. Which is
+important for code executing out of ROM, common on embedded targets.
+
+:::{note}
+LLDB still has to be taught how to program hardware breakpoints, and this work
+has not been done completely for all targets. This generally comes down to
+demand. If it would be faster but the use case is rare, it is unlikely to be
+supported.
+:::
+
+Watchpoints pretty much have to be implemented in hardware because the software
+equivalent is much more invasive. For example you could unmap the memory
+containing the watched location, then filter the memory faults to find the ones
+you care about.
+
+However this requires a lot of traffic between debugger and debug server, and
+needs to be implemented for every supported operating system.
+
+### Accurate Breakpoints and Watchpoints
+
+Ideally your break and watchpoint exceptions contain enough information to
+know exactly what caused them. Which seems obvious from a software level, but
+if you check the architecture specifications you will find that they often allow
+a range of behaviours.
+
+For instance, if you watch a 4 byte chunk of memory and an instruction writes 8
+bytes over it, is the hardware required to report an address in the watched 4
+bytes? Or can it report an address in the second 4 bytes, because it is still
+part of the write that triggered the watchpoint?
+
+LLDB will assume accuracy unless told otherwise, and if there are untraceable
+situations users will have to figure out which watch or breakpoints to manually
+disable so that they can continue.
+
+### Addresses That Are More Than Just Numbers
+
+Though many programming languages have rules that prevent the use of pointers
+in some integer-like ways, the reality is that a lot of hardware treats them
+as numbers.
+
+This changes with capabilities (for example CHERI), mode bits (Arm's Thumb) and
+re-use of non-address bits (AArch64's TBI, MTE and PAC). A pointer is no longer
+just a number that refers to a memory location, it contains extra information.
+
+Where the size of the pointer is equal to the bit width of the architecture
+(64-bit pointers on AArch64 for example), LLDB can probably handle it. LLDB
+already has the concept of "non-address bits" that must be removed to get the
+memory address from a pointer.
+
+If pointers are like capabilities where their size is greater than that of
+a memory address, you will need to change the type LLDB uses to store addresses
+which is a lot more work.
+
+### Multiple Address Spaces
+
+At this time LLDB does not support multiple address spaces. Work is ongoing to
+add them, with WASM and GPU targets as the main motivation.
+
+Like anything that changes what an "address" consists of, it has a big impact
+on LLDB.
