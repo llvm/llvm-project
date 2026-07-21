@@ -522,9 +522,8 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
           segments->GetItemAtIndex(j)->GetAsDictionary();
       llvm::StringRef seg_name =
           seg->GetValueForKey("name")->GetAsString()->GetValue();
-      // segment.name is initialized to all 0s, so we don't need to set the 17th
-      // byte to 0 after strncpy.
       strncpy(segment.name, seg_name.data(), std::min(seg_name.size(), 16ul));
+      segment.name[16] = '\0';
       segment.vmaddr = seg->GetValueForKey("vmaddr")->GetUnsignedIntegerValue();
       segment.vmsize = seg->GetValueForKey("vmsize")->GetUnsignedIntegerValue();
       segment.fileoff =

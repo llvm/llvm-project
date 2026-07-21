@@ -868,6 +868,7 @@ uint32_t DynamicLoaderMacOSXDYLD::ParseLoadCommands(const DataExtractor &data,
       switch (load_cmd.cmd) {
       case llvm::MachO::LC_SEGMENT: {
         data.CopyData(offset, 16, segment.name);
+        segment.name[16] = '\0';
         offset += 16;
         // We are putting 4 uint32_t values 4 uint64_t values so we have to use
         // multiple 32 bit gets below.
@@ -882,6 +883,7 @@ uint32_t DynamicLoaderMacOSXDYLD::ParseLoadCommands(const DataExtractor &data,
 
       case llvm::MachO::LC_SEGMENT_64: {
         data.CopyData(offset, 16, segment.name);
+        segment.name[16] = '\0';
         offset += 16;
         // Extract vmaddr, vmsize, fileoff, and filesize all at once
         data.GetU64(&offset, &segment.vmaddr, 4);
