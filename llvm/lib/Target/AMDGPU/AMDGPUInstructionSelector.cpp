@@ -72,12 +72,6 @@ static Register getWaveAddress(const MachineInstr *Def) {
              : Register();
 }
 
-static void diagnoseUnsupportedIntrinsic(const MachineInstr &I) {
-  const Function &F = I.getMF()->getFunction();
-  F.getContext().diagnose(DiagnosticInfoUnsupported(
-      F, "intrinsic not supported on subtarget", I.getDebugLoc(), DS_Error));
-}
-
 bool AMDGPUInstructionSelector::isVCC(Register Reg,
                                       const MachineRegisterInfo &MRI) const {
   // The verifier is oblivious to s1 being a valid value for wavesize registers.
@@ -1330,38 +1324,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectPermlaneSwapIntrin(I, IntrinsicID);
   case Intrinsic::amdgcn_wave_shuffle:
     return selectWaveShuffleIntrin(I);
-  case Intrinsic::amdgcn_fma_legacy:
-    if (!STI.hasFmaLegacy32Insts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_sudot4:
-  case Intrinsic::amdgcn_sudot8:
-    if (!STI.hasDot8Insts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_permlane16:
-  case Intrinsic::amdgcn_permlanex16:
-    if (!STI.hasPermlane16Insts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_mov_dpp8:
-    if (!STI.hasDPP8()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_tanh:
-    if (!STI.hasTanhInsts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -2544,12 +2506,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     if (!Subtarget->hasAsyncMark())
       return false;
     break;
-  case Intrinsic::amdgcn_exp_compr:
-    if (!STI.hasCompressedExport()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
@@ -2574,13 +2530,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
-  case Intrinsic::amdgcn_s_wakeup_barrier: {
-    if (!STI.hasSWakeupBarrier()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectNamedBarrierInst(I, IntrinsicID);
-  }
+  case Intrinsic::amdgcn_s_wakeup_barrier:
   case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
@@ -4217,6 +4167,15 @@ bool AMDGPUInstructionSelector::selectWaveShuffleIntrin(
         .addReg(UndefValReg)
         .addReg(UndefExecReg);
 
+    Register PoisonUnshiftedIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_SET_INACTIVE_B32),
+            PoisonUnshiftedIdxReg)
+        .addImm(0)
+        .addReg(IdxReg)
+        .addImm(0)
+        .addReg(UndefValReg)
+        .addReg(UndefExecReg);
+
     // Get permutation of each half, then we'll select which one to use
     Register SameSidePermReg = MRI->createVirtualRegister(DstRC);
     BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), SameSidePermReg)
@@ -4250,7 +4209,7 @@ bool AMDGPUInstructionSelector::selectWaveShuffleIntrin(
     Register XORReg = MRI->createVirtualRegister(DstRC);
     BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_XOR_B32_e64), XORReg)
         .addReg(ThreadIDReg)
-        .addReg(PoisonIdxReg);
+        .addReg(PoisonUnshiftedIdxReg);
 
     Register ANDReg = MRI->createVirtualRegister(DstRC);
     BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_AND_B32_e64), ANDReg)

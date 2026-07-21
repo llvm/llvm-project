@@ -1059,7 +1059,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
       ConstString const_sect_name(sect_name);
       SectionType section_type = GetSectionType(sect_name, m_sect_headers[idx]);
 
-      SectionSP section_sp(new Section(
+      SectionSP section_sp = std::make_shared<Section>(
           module_sp,       // Module to which this section belongs
           this,            // Object file to which this section belongs
           idx + 1,         // Section ID is the 1 based section index.
@@ -1074,7 +1074,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
           m_sect_headers[idx]
               .size, // Size in bytes of this section as found in the file
           m_coff_header_opt.sect_alignment, // Section alignment
-          m_sect_headers[idx].flags));      // Flags for this section
+          m_sect_headers[idx].flags);       // Flags for this section
 
       uint32_t permissions = 0;
       if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)

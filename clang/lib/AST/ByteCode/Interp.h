@@ -2203,6 +2203,14 @@ inline bool GetPtrVirtBasePop(InterpState &S, CodePtr OpPC,
   return VirtBaseHelper(S, D, Ptr);
 }
 
+inline bool GetPtrVirtBase(InterpState &S, CodePtr OpPC, const RecordDecl *D) {
+  assert(D);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+  return VirtBaseHelper(S, D, Ptr);
+}
+
 inline bool GetPtrThisVirtBase(InterpState &S, CodePtr OpPC,
                                const RecordDecl *D) {
   assert(D);
@@ -2739,7 +2747,7 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
     return false;
   }
 
-  if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
+  if (!Pointer::hasSameBase(LHS, RHS)) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_pointer_arith_unspecified)
         << LHS.toDiagnosticString(S.getASTContext())
@@ -2762,6 +2770,14 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
     S.Stk.push<T>();
     return true;
   }
+
+  // C++11 [expr.add]p6:
+  //   Unless both pointers point to elements of the same array object, or
+  //   one past the last element of the array object, the behavior is
+  //   undefined.
+  if (LHS.isBlockPointer() && !Pointer::elemsOfSameArray(LHS, RHS))
+    S.CCEDiag(S.Current->getSource(OpPC),
+              diag::note_constexpr_pointer_subtraction_not_same_array);
 
   std::optional<size_t> VL = LHS.computeLayoutOffset(S.getASTContext());
   if (!VL)
@@ -4072,6 +4088,11 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC);
 inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
   return checkDestructor(S, OpPC, Ptr);
+}
+
+inline bool IsBaseClass(InterpState &S) {
+  S.Stk.push<bool>(S.Stk.peek<Pointer>().isBaseClass());
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

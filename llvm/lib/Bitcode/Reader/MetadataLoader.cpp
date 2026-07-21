@@ -2434,6 +2434,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   }
   case bitc::METADATA_STRINGS: {
     auto CreateNextMDString = [&](StringRef Str) {
+      // Modern bitcode encodes MDStrings via this bulk record, so mirror the
+      // METADATA_STRING check above to arm the loop-attachment upgrader.
+      HasSeenOldLoopTags |= mayBeOldLoopAttachmentTag(Str);
       ++NumMDStringLoaded;
       MetadataList.assignValue(MDString::get(Context, Str), NextMetadataNo);
       NextMetadataNo++;
