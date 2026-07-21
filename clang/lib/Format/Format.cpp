@@ -838,6 +838,20 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortRecordStyle> {
   }
 };
 
+template <> struct MappingTraits<FormatStyle::DisableFormatOptions> {
+  static void enumInput(IO &IO, FormatStyle::DisableFormatOptions &Value) {
+    IO.enumCase(Value, "false", FormatStyle::DisableFormatOptions{/*DisableSortIncludes=*/false,
+                                                                  /*DisablePostPreprocessorFormatting=*/false});
+    IO.enumCase(Value, "true", FormatStyle::DisableFormatOptions{/*DisableSortIncludes=*/true,
+                                                                 /*DisablePostPreprocessorFormatting=*/true});
+  }
+
+  static void mapping(IO &IO, FormatStyle::DisableFormatOptions &Value) {
+    IO.mapOptional("DisableIncludeSorting", Value.DisableSortIncludes);
+    IO.mapOptional("DisablePostPreprocessorFormatting", Value.DisablePostPreprocessorFormatting);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
   static void enumInput(IO &IO, FormatStyle::SortIncludesOptions &Value) {
     IO.enumCase(Value, "Never", FormatStyle::SortIncludesOptions{});
@@ -1604,6 +1618,9 @@ template <> struct MappingTraits<FormatStyle> {
       }
       Style.SpacesInParens = FormatStyle::SIPO_Custom;
     }
+
+    if (Style.DisableFormat.DisableIncludeSorting)
+      Style.SortIncludes.Enabled = false;
   }
 };
 
@@ -1920,7 +1937,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ContinuationIndentWidth = 4;
   LLVMStyle.Cpp11BracedListStyle = FormatStyle::BLS_AlignFirstComment;
   LLVMStyle.DerivePointerAlignment = false;
-  LLVMStyle.DisableFormat = false;
+  LLVMStyle.DisableFormat = {/*DisableIncludeSorting=*/false, /*DisablePostPreprocessorFormatting=*/false};
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
   LLVMStyle.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
   LLVMStyle.EnumTrailingComma = FormatStyle::ETC_Leave;
@@ -2395,7 +2412,7 @@ FormatStyle getClangFormatStyle() {
 
 FormatStyle getNoStyle() {
   FormatStyle NoStyle = getLLVMStyle();
-  NoStyle.DisableFormat = true;
+  NoStyle.DisableFormat = {/*DisableIncludeSorting=*/true, /*DisablePostPreprocessorFormatting=*/true};
   NoStyle.SortIncludes = {};
   NoStyle.SortUsingDeclarations = FormatStyle::SUD_Never;
   return NoStyle;
@@ -4227,7 +4244,7 @@ reformat(const FormatStyle &Style, StringRef Code,
   if (Expanded.BraceWrapping.AfterEnum)
     Expanded.AllowShortEnumsOnASingleLine = false;
 
-  if (Expanded.DisableFormat)
+  if (Expanded.DisableFormat.DisablePostPreprocessorFormatting)
     return {tooling::Replacements(), 0};
   if (isLikelyXml(Code))
     return {tooling::Replacements(), 0};
