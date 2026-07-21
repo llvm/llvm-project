@@ -51,8 +51,8 @@ RUN wget https://apt.llvm.org/llvm.sh && \
 # testing CI for libc-based compiler-rt builtins. The package only symlinks
 # the tools into /usr/bin under versioned names (lit-23, FileCheck-23, ...),
 # so also symlink them under their canonical names.
-RUN apt-get install -y llvm-23-tools && \
-    ln -s -t /usr/bin $(dpkg -L llvm-23-tools | grep '^/usr/lib/llvm-23/bin/')
+RUN apt-get install -y llvm-23-tools llvm-23 && \
+    ln -s -t /usr/bin $(dpkg -L llvm-23-tools llvm-23 | grep '^/usr/lib/llvm-23/bin/')
 
 
 # Install gmp and mpfr for cross compilation
