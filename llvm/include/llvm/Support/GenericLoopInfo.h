@@ -130,10 +130,11 @@ public:
   /// performance target (yet).
   bool contains(const LoopT *L) const {
     assert(!isInvalid() && "Loop not in a valid state!");
-    for (; L; L = L->getParentLoop())
-      if (L == this)
-        return true;
-    return false;
+    if (L == this)
+      return true;
+    if (!L)
+      return false;
+    return contains(L->getParentLoop());
   }
 
   /// Return true if the specified basic block is in this loop, using LoopInfo's
