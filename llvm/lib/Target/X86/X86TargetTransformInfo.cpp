@@ -7420,8 +7420,10 @@ InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
 }
 
 InstructionCost X86TTIImpl::getBranchMispredictPenalty() const {
-  // TODO: Hook MispredictPenalty of SchedMachineModel into this.
-  return 14;
+  unsigned Penalty = ST->getSchedModel().MispredictPenalty;
+  if (!Penalty)
+    return 14;
+  return Penalty;
 }
 
 bool X86TTIImpl::isVectorShiftByScalarCheap(Type *Ty) const {
