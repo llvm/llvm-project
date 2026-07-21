@@ -90,6 +90,7 @@ entry:
   %vector = call <2 x i32> @llvm.vector.extract.subvector.v2i32.v4i32(<4 x i32> %a, i64 2)
   ret <2 x i32> %vector
 }
+
 define <2 x i32> @extract_v2i32_v2i32(<2 x i32> %a) {
 ; CHECK-SD-LABEL: extract_v2i32_v2i32:
 ; CHECK-SD:       // %bb.0: // %entry
@@ -125,6 +126,7 @@ entry:
   %vector = call <8 x i16> @llvm.vector.extract.subvector.v8i16.v16i16(<16 x i16> %a, i64 8)
   ret <8 x i16> %vector
 }
+
 define <8 x i16> @extract_v8i16_v8i16(<8 x i16> %a) {
 ; CHECK-SD-LABEL: extract_v8i16_v8i16:
 ; CHECK-SD:       // %bb.0: // %entry
