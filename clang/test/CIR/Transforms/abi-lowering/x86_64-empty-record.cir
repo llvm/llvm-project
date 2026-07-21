@@ -35,7 +35,7 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @ret_empty()
-  // CHECK-NOT: -> !rec_E0
+  // CHECK-NOT: !rec_E0
   // CHECK: cir.return
 
   // The empty argument is also dropped at call sites: the caller's own empty
