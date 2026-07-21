@@ -1,6 +1,7 @@
 ; RUN: not llc -mtriple=amdgpu9.50 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -mtriple=amdgpu6.00 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
-; ERROR: error: <unknown>:0:0: in function class_bf16 void (ptr addrspace(1), ptr addrspace(1), ptr addrspace(1)): llvm.amdgcn.class does not support bf16
+; ERROR: error: <unknown>:0:0: in function class_bf16 void (ptr addrspace(1), ptr addrspace(1), ptr addrspace(1)): llvm.amdgcn.class only supports f16, f32, and f64
 
 declare i1 @llvm.amdgcn.class.bf16(bfloat %a, i32 %b)
 

@@ -11187,10 +11187,12 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   case Intrinsic::amdgcn_class: {
     SDValue Src = Op.getOperand(1);
-    if (Src.getValueType() == MVT::bf16) {
+    EVT SrcVT = Src.getValueType();
+    if (SrcVT != MVT::f16 && SrcVT != MVT::f32 && SrcVT != MVT::f64) {
       DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
-          "llvm.amdgcn.class does not support bf16", DL.getDebugLoc()));
+          "llvm.amdgcn.class only supports f16, f32, and f64",
+          DL.getDebugLoc()));
       return DAG.getPOISON(VT);
     }
     return DAG.getNode(AMDGPUISD::FP_CLASS, DL, VT, Src, Op.getOperand(2));
