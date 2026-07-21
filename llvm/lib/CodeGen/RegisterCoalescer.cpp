@@ -2232,8 +2232,6 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
     // which can dominate compile time.
     if (Result == JoinResult::Deferred)
       LLVM_DEBUG(dbgs() << "\tWill retry later.\n");
-    else
-      LLVM_DEBUG(dbgs() << "\tNot retrying.\n");
     return Result;
   }
 
