@@ -917,3 +917,17 @@ body:             |
     SI_RETURN_TO_EPILOG %1
 
 ...
+
+# FIXME: This should not fold
+---
+name:            fold_inline_imm_f16_pseudo_scalar_trans_restriction
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fold_inline_imm_f16_pseudo_scalar_trans_restriction
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; GCN-NEXT: [[V_S_EXP_F16_e64_:%[0-9]+]]:sgpr_32 = V_S_EXP_F16_e64 0, -1, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_S_EXP_F16_e64_]]
+    %0:sreg_32 = S_MOV_B32 -1
+    %1:sgpr_32 = V_S_EXP_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
+    SI_RETURN_TO_EPILOG %1
+...
