@@ -2152,6 +2152,11 @@ bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
     return false;
   };
 
+  // The check is applied here, per add operand, rather than inside
+  // matchAddressRecursively, so that it only fires when an add directly
+  // consumes the value. matchAddressRecursively is also entered for the LEA
+  // root itself and from the SUB case's operand fold.
+  // Firing there produces worse code.
   auto MatchOperand = [&](SDValue Op) {
     if (SplitsMaterializedValue(Op))
       return matchAddressBase(Op, AM);
