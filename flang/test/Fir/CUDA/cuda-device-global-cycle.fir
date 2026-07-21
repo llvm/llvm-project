@@ -1,8 +1,8 @@
 // RUN: fir-opt --cuf-device-global %s | FileCheck %s
 
 // Mutually referencing type-descriptor globals must not cause infinite
-// recursion, and GPU copies must not retain addr_of cycles (NVPTX rejects
-// circular global initializers).
+// recursion. One GPU copy must drop its initializer to break the cycle, while
+// the other keeps its complete initializer.
 module attributes {gpu.container_module} {
   fir.global linkonce @_QMmE.dt.t1 constant : i64 {
     %0 = fir.address_of(@_QMmE.dt.t2) : !fir.ref<i64>
@@ -27,10 +27,9 @@ module attributes {gpu.container_module} {
 // CHECK: fir.global linkonce @_QMmE.dt.t2
 // CHECK: fir.address_of(@_QMmE.dt.t1)
 
-// CHECK-LABEL: gpu.module @cuda_device_mod
-// CHECK: fir.global linkonce @_QMmE.dt.t1
-// CHECK-NOT: fir.address_of
-// CHECK: fir.zero_bits !fir.ref<i64>
-// CHECK: fir.global linkonce @_QMmE.dt.t2
-// CHECK-NOT: fir.address_of
-// CHECK: fir.zero_bits !fir.ref<i64>
+// Cut the lexicographically last global in the cycle; the other keeps its init.
+// CHECK-LABEL: gpu.module @cuda_device_mod {
+// CHECK: fir.global @_QMmE.dt.t2 constant : i64{{$}}
+// CHECK: fir.global linkonce @_QMmE.dt.t1 constant : i64 {
+// CHECK: fir.address_of(@_QMmE.dt.t2)
+// CHECK: fir.has_value
