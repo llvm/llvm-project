@@ -969,6 +969,9 @@ def target_page_size():
     if config.target_arch in ("amdgcn", "nvptx64"):
         return 4096
     if emulator:
+        # FIXME: Some emulators may support querying the target page size.
+        # For now, avoid advertising page-size features under emulation; only
+        # a few obscure tests depend on this.
         return None
     try:
         proc = subprocess.Popen(
