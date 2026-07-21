@@ -824,6 +824,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   Tuple-like bindings (types using the tuple protocol with ``get<N>()``,
   such as ``std::pair`` or ``std::tuple``) are not yet supported and
   will produce a compilation error.
+  When the original variable is explicitly mapped in a target region
+  but only bindings from it are used (not the original variable itself),
+  modifications to the bindings will not be reflected in the original variable.
+  To ensure correct behavior, either use the original variable directly in the
+  target region or map the bindings explicitly instead.
 
 ### SYCL Support
 
