@@ -135,3 +135,38 @@ gpu.func @load_gather_from_dyn_memref_subview(%dyn: memref<?xf16>, %offset: vect
   gpu.return
 }
 }
+
+// -----
+
+// A memref memory space is not always an IntegerAttr: SPIR-V storage classes
+// (and other dialect attributes) are also legal memory spaces. Storage
+// classes with no known numeric address space mapping (e.g. StorageBuffer)
+// fall back to the default global address space instead of asserting.
+gpu.module @test {
+// CHECK-LABEL: @store_scatter_spirv_default_memspace
+gpu.func @store_scatter_spirv_default_memspace(%src: memref<1024xf32, #spirv.storage_class<StorageBuffer>>, %offset: vector<1xindex>, %mask: vector<1xi1>) {
+  %0 = arith.constant dense<2.9>: vector<1xf32>
+  // CHECK: %[[PTR:.*]] = llvm.inttoptr %{{.*}} : i64 to !llvm.ptr<1>
+  // CHECK: llvm.store %{{.*}}, %[[PTR]] {{.*}} : f32, !llvm.ptr<1>
+  xegpu.store %0, %src[%offset], %mask <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>
+      : vector<1xf32>, memref<1024xf32, #spirv.storage_class<StorageBuffer>>, vector<1xindex>, vector<1xi1>
+  gpu.return
+}
+}
+
+// -----
+
+// SPIR-V storage classes that do have a known mapping (here Workgroup, SPIR-V's
+// local/shared memory class) translate to the matching XeVM address space
+// (3 = shared), not just the default.
+gpu.module @test {
+// CHECK-LABEL: @store_scatter_spirv_workgroup_memspace
+gpu.func @store_scatter_spirv_workgroup_memspace(%src: memref<1024xf32, #spirv.storage_class<Workgroup>>, %offset: vector<1xindex>, %mask: vector<1xi1>) {
+  %0 = arith.constant dense<2.9>: vector<1xf32>
+  // CHECK: %[[PTR:.*]] = llvm.inttoptr %{{.*}} : i64 to !llvm.ptr<3>
+  // CHECK: llvm.store %{{.*}}, %[[PTR]] {{.*}} : f32, !llvm.ptr<3>
+  xegpu.store %0, %src[%offset], %mask <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>
+      : vector<1xf32>, memref<1024xf32, #spirv.storage_class<Workgroup>>, vector<1xindex>, vector<1xi1>
+  gpu.return
+}
+}
