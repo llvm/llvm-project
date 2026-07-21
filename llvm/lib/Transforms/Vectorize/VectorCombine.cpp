@@ -6205,7 +6205,7 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
 /// boundary to avoid scalar remainders that legalize poorly.
 static unsigned getAlignedNumElements(unsigned MaxIdx, FixedVectorType *LoadTy,
                                       const TargetTransformInfo &TTI,
-                                      const DataLayout *DL) {
+                                      const DataLayout &DL) {
   unsigned RawNumElements = MaxIdx + 1u;
   // Preserve the default behavior for scalable-vector targets.
   if (TTI.supportsScalableVectors())
@@ -6216,13 +6216,16 @@ static unsigned getAlignedNumElements(unsigned MaxIdx, FixedVectorType *LoadTy,
   if (!TTI.isTypeLegal(ElemTy))
     return RawNumElements;
 
-  unsigned ElemBits = DL->getTypeSizeInBits(ElemTy);
-  if (ElemBits == 0)
+  TypeSize ElemSize = DL.getTypeSizeInBits(ElemTy);
+  if (ElemSize.isScalable() || ElemSize.isZero())
     return RawNumElements;
 
-  unsigned RegBits =
+  TypeSize RegSize =
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
-  unsigned ElemsPerReg = RegBits / ElemBits;
+  if (RegSize.isScalable() || RegSize.isZero())
+    return RawNumElements;
+
+  unsigned ElemsPerReg = RegSize.getFixedValue() / ElemSize.getFixedValue();
   // If the load already fits in a register, keep the exact size.
   // Otherwise round up to the next full register boundary.
   if (ElemsPerReg == 0 || RawNumElements <= ElemsPerReg)
@@ -6281,7 +6284,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   // Get the range of vector elements used by shufflevector instructions.
   if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
     unsigned const NewNumElements =
-        getAlignedNumElements(Indices->second, OldLoadTy, TTI, DL);
+        getAlignedNumElements(Indices->second, OldLoadTy, TTI, *DL);
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
