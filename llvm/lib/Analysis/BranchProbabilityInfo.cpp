@@ -181,8 +181,8 @@ private:
     CycleRef getCycle() const { return C; }
 
   private:
-    const BasicBlock *const BB = nullptr;
-    CycleRef C = CycleRef();
+    const BasicBlock *const BB;
+    CycleRef C;
   };
 
   // Pair of LoopBlocks representing an edge from first to second block.
