@@ -465,8 +465,7 @@ Building the target ``docs-clang-tools-html`` will run the Sphinx documentation
 generator and create HTML documentation files in the
 ``tools/clang/tools/extra/docs/html`` directory in your build tree.
 Make sure that your check is correctly shown in the release notes and the list
-of checks. Make sure that the formatting and structure of your check's
-documentation look correct and contain no trailing whitespace.
+of checks, and that its documentation is formatted and structured correctly.
 
 Registering your Check
 ----------------------
