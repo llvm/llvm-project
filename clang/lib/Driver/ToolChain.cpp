@@ -1856,8 +1856,7 @@ ToolChain::getSystemGPUArchs(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerMask ToolChain::getSupportedSanitizers() const {
-  return getSupportedSanitizers(
-      /*BoundArch=*/"", clang::driver::Action::OFK_None);
+  return getSupportedSanitizers(BoundArch(), clang::driver::Action::OFK_None);
 }
 
 SanitizerMask
