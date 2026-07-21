@@ -9,10 +9,10 @@
 /// Wraps the MLIR-translated MLGO inliner model in the interface expected by
 /// ReleaseModeModelRunner.
 ///
-/// The generated `.inc` file only contains lowered model code. This wrapper
-/// owns the named inliner tensors, keeps their layout stable across generated
-/// model variants, and exposes the same serving API that the rest of LLVM
-/// already uses for release-mode MLGO models.
+/// The generated `.inc` file only contains the lowered model class. This
+/// wrapper adapts that name-based surface to the index-based
+/// ReleaseModeModelRunner contract that the rest of LLVM already uses for
+/// release-mode MLGO models.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,12 +21,16 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 
 namespace llvm {
 
 class MLIRInlinerSizeModel final {
 public:
+  MLIRInlinerSizeModel();
+  ~MLIRInlinerSizeModel();
+
   int LookupArgIndex(const std::string &Name);
   int LookupResultIndex(const std::string &Name);
   void *arg_data(int Index);
@@ -34,53 +38,9 @@ public:
   void Run();
 
 private:
-  enum ArgIndex : int {
-    DeadBlocks = 0,
-    CaseClusterPenalty,
-    SroaSavings,
-    JumpTablePenalty,
-    CallsiteHeight,
-    CalleeBasicBlockCount,
-    CallArgumentSetup,
-    LoweredCallArgSetup,
-    SimplifiedInstructions,
-    NrCtantParams,
-    IsMultipleBlocks,
-    LoadElimination,
-    EdgeCount,
-    CallerUsers,
-    CallerConditionallyExecutedBlocks,
-    ConstantOffsetPtrArgs,
-    CallsiteCost,
-    CallerBasicBlockCount,
-    LoadRelativeIntrinsic,
-    IndirectCallPenalty,
-    CostEstimate,
-    Threshold,
-    NestedInlineCostEstimate,
-    UnsimplifiedCommonInstructions,
-    SroaLosses,
-    NumLoops,
-    SwitchPenalty,
-    CalleeUsers,
-    NodeCount,
-    ConstantArgs,
-    LastCallToStaticBonus,
-    ColdCCPenalty,
-    CalleeConditionallyExecutedBlocks,
-    CallPenalty,
-    NestedInlines,
-
-    NumArgs
-  };
-
-  std::array<std::array<int64_t, 1>, NumArgs> Inputs{};
+  struct Impl;
+  std::unique_ptr<Impl> Model;
   std::array<int64_t, 1> Result{};
-
-  std::array<int64_t, 1> DummyInliningDefault{};
-  std::array<int32_t, 1> DummyStepType{};
-  std::array<float, 1> DummyDiscount{};
-  std::array<float, 1> DummyReward{};
 };
 
 } // namespace llvm

@@ -9,25 +9,28 @@
 /// Wraps the MLIR-translated MLGO regalloc eviction model in the interface
 /// expected by ReleaseModeModelRunner.
 ///
-/// The generated `.inc` file only contains lowered model code. This wrapper
-/// owns the named regalloc tensors, keeps their layout stable across generated
-/// model variants, and exposes the same serving API that the rest of LLVM
-/// already uses for release-mode MLGO models.
+/// The generated `.inc` file only contains the lowered model class. This
+/// wrapper adapts that name-based surface to the index-based
+/// ReleaseModeModelRunner contract that the rest of LLVM already uses for
+/// release-mode MLGO models.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_MLIRREGALLOCEVICTMODEL_H
 #define LLVM_CODEGEN_MLIRREGALLOCEVICTMODEL_H
 
-#include <cmath>
-#include <cstddef>
+#include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 
 namespace llvm {
 
 class MLIRRegAllocEvictModel final {
 public:
+  MLIRRegAllocEvictModel();
+  ~MLIRRegAllocEvictModel();
+
   int LookupArgIndex(const std::string &Name);
   int LookupResultIndex(const std::string &Name);
   void *arg_data(int Index);
@@ -35,68 +38,9 @@ public:
   void Run();
 
 private:
-  static constexpr std::size_t InterferenceCount = 33;
-
-  using F32InterferenceTensor = float[1][InterferenceCount];
-  using I64InterferenceTensor = int64_t[1][InterferenceCount];
-  using F32Scalar = float[1];
-  using I32Scalar = int32_t[1];
-  using I64Scalar = int64_t[1];
-
-  enum ArgIndex : int {
-    Mask = 0,
-    IsFree,
-    NrUrgent,
-    NrBrokenHints,
-    IsHint,
-    IsLocal,
-    NrRematerializable,
-    NrDefsAndUses,
-    WeighedReadsByMax,
-    WeighedWritesByMax,
-    WeighedReadWritesByMax,
-    WeighedIndvarsByMax,
-    HintWeightsByMax,
-    StartBBFreqByMax,
-    EndBBFreqByMax,
-    HottestBBFreqByMax,
-    LiverangeSize,
-    UseDefDensity,
-    MaxStage,
-    MinStage,
-    Progress,
-
-    NumArgs
-  };
-
-  I64InterferenceTensor MaskInput{};
-  I64InterferenceTensor IsFreeInput{};
-  F32InterferenceTensor NrUrgentInput{};
-  F32InterferenceTensor NrBrokenHintsInput{};
-  I64InterferenceTensor IsHintInput{};
-  I64InterferenceTensor IsLocalInput{};
-  F32InterferenceTensor NrRematerializableInput{};
-  F32InterferenceTensor NrDefsAndUsesInput{};
-  F32InterferenceTensor WeighedReadsByMaxInput{};
-  F32InterferenceTensor WeighedWritesByMaxInput{};
-  F32InterferenceTensor WeighedReadWritesByMaxInput{};
-  F32InterferenceTensor WeighedIndvarsByMaxInput{};
-  F32InterferenceTensor HintWeightsByMaxInput{};
-  F32InterferenceTensor StartBBFreqByMaxInput{};
-  F32InterferenceTensor EndBBFreqByMaxInput{};
-  F32InterferenceTensor HottestBBFreqByMaxInput{};
-  F32InterferenceTensor LiverangeSizeInput{};
-  F32InterferenceTensor UseDefDensityInput{};
-  I64InterferenceTensor MaxStageInput{};
-  I64InterferenceTensor MinStageInput{};
-  F32Scalar ProgressInput{};
-
-  // These scalars remain part of the serving API even when a translated model
-  // does not make semantic use of all of them.
-  I32Scalar DummyStepType{};
-  F32Scalar DummyDiscount{};
-  F32Scalar DummyReward{};
-  I64Scalar Result{};
+  struct Impl;
+  std::unique_ptr<Impl> Model;
+  std::array<int64_t, 1> Result{};
 };
 
 } // namespace llvm

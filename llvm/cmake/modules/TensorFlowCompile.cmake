@@ -139,7 +139,7 @@ function(tf_find_and_compile model default_url default_path test_model_generator
 endfunction()
 
 set(LLVM_MLGO_MLIR_PASS_PIPELINE
-  "builtin.module(func.func(tosa-to-linalg-named, tosa-to-linalg, tosa-to-arith, tosa-to-tensor),symbol-privatize,scalarize-single-element-tensor-return,one-shot-bufferize{bufferize-function-boundaries=true function-boundary-type-conversion=identity-layout-map buffer-alignment=0},buffer-results-to-out-params{hoist-static-allocs=true},buffer-deallocation-pipeline,func.func(convert-linalg-to-loops),expand-strided-metadata,canonicalize,memref-elide-reinterpret-cast,convert-to-emitc,math-expand-ops{ops=rsqrt},arith-expand,convert-math-to-emitc,convert-arith-to-emitc)"
+  "builtin.module(func.func(tosa-to-linalg-named, tosa-to-linalg, tosa-to-arith, tosa-to-tensor),symbol-privatize,scalarize-single-element-tensor-return,one-shot-bufferize{bufferize-function-boundaries=true function-boundary-type-conversion=identity-layout-map buffer-alignment=0},buffer-results-to-out-params{hoist-static-allocs=true},buffer-deallocation-pipeline,func.func(convert-linalg-to-loops),expand-strided-metadata,canonicalize,memref-elide-reinterpret-cast,convert-to-emitc,math-expand-ops{ops=rsqrt},arith-expand,convert-math-to-emitc,convert-arith-to-emitc,wrap-emitc-func-in-class,mlgo-add-reflection-map{included-field-attrs=tf_saved_model.index_path})"
   CACHE STRING
   "MLIR pass pipeline used to lower MLGO TOSA models to EmitC.")
 
