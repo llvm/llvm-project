@@ -13,4 +13,3 @@ those that have a non-deprecated equivalent.
 | `std::ios_base::seek_dir`  | `std::ios_base::seekdir`  |
 | `std::ios_base::streamoff` |                           |
 | `std::ios_base::streampos` |                           |
-

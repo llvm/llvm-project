@@ -22,5 +22,6 @@ void f(int *X, int Y) {
 ```
 
 The check warns about such unusual syntax for readability reasons:
-:   - There are programmers that are not familiar with this unusual syntax.
-    - It is possible that variables are mixed up.
+
+- There are programmers that are not familiar with this unusual syntax.
+- It is possible that variables are mixed up.

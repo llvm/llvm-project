@@ -11,4 +11,3 @@ When a swap or iter_swap function is marked as `noexcept`, it assures the
 compiler that no exceptions will be thrown during the swapping of two objects,
 which allows the compiler to perform certain optimizations such as omitting
 exception handling code.
-

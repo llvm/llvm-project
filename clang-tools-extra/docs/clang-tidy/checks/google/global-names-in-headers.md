@@ -8,4 +8,3 @@ Flag global namespace pollution in header files. Right now it only triggers on
 
 The relevant style guide section is
 <https://google.github.io/styleguide/cppguide.html#Namespaces>.
-

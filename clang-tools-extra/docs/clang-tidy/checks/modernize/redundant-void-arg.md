@@ -15,4 +15,3 @@ Examples:
   | `void (C::*p)(void);`             | `void (C::*p)();`         |
   | `C::C(void) {}`                   | `C::C() {}`               |
   | `C::~C(void) {}`                  | `C::~C() {}`              |
-

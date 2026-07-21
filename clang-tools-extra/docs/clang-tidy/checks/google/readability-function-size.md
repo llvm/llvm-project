@@ -6,4 +6,3 @@
 The `google-readability-function-size` check is an alias, please see
 {doc}`readability-function-size <../readability/function-size>` for more
 information.
-

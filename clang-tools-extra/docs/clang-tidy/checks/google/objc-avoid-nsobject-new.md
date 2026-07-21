@@ -26,4 +26,3 @@ Foo *bar = [[Foo alloc] init];
 
 This check corresponds to the Google Objective-C Style Guide rule
 [Do Not Use +new](https://google.github.io/styleguide/objcguide.html#do-not-use-new).
-

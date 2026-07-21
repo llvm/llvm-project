@@ -8,4 +8,3 @@ tagged with the `LIBC_INLINE` macro, except for functions implicit to classes
 or deleted functions.
 See the [libc style guide](https://libc.llvm.org/dev/code_style.html) for more
 information about this macro.
-

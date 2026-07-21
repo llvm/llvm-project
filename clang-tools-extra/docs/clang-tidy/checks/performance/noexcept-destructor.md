@@ -10,4 +10,3 @@ When a destructor is marked as `noexcept`, it assures the compiler that
 no exceptions will be thrown during the destruction of an object, which
 allows the compiler to perform certain optimizations such as omitting
 exception handling code.
-

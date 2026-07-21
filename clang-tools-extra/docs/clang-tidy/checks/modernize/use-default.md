@@ -9,4 +9,3 @@ orphan: true
 
 This check has been renamed to
 {doc}`modernize-use-equals-default <../modernize/use-equals-default>`.
-
