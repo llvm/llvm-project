@@ -290,7 +290,8 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
         std::make_unique<AddressManager>(*this, *ErrorOrObj, Obj, DLBRM),
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
 
-    PL.collect(*ErrorOrObj);
+    if (Error E = PL.collect(*ErrorOrObj))
+      reportWarning(toString(std::move(E)), Obj.getObjectFilename());
 
     Error E = RL.link(*ErrorOrObj);
     // FIXME: Remark parsing errors are not propagated to the user.

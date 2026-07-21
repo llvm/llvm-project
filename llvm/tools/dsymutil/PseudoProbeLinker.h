@@ -19,6 +19,9 @@ namespace llvm {
 class Triple;
 namespace dsymutil {
 
+/// The PseudoProbeLinker collects and concatenates pseudo probe sections
+/// __probes and __probe_descs from the debug map objects and writes them as
+/// binary blobs into the .dSYM bundle.
 class PseudoProbeLinker {
   const LinkOptions &Options;
   std::string Probes;
@@ -27,7 +30,7 @@ class PseudoProbeLinker {
 public:
   PseudoProbeLinker(const LinkOptions &Options) : Options(Options) {}
 
-  void collect(const object::ObjectFile &Obj);
+  Error collect(const object::ObjectFile &Obj);
 
   Error emit(const Triple &TheTriple) const;
 

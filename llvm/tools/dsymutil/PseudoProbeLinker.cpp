@@ -9,48 +9,48 @@
 #include "PseudoProbeLinker.h"
 #include "LinkUtils.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/MachO.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cassert>
 
 namespace llvm {
 namespace dsymutil {
 
-void PseudoProbeLinker::collect(const object::ObjectFile &Obj) {
+Error PseudoProbeLinker::collect(const object::ObjectFile &Obj) {
   const auto *MO = dyn_cast<object::MachOObjectFile>(&Obj);
   if (!MO)
-    return;
+    return Error::success();
 
   for (const object::SectionRef &Section : MO->sections()) {
     Expected<StringRef> NameOrErr = Section.getName();
-    if (!NameOrErr) {
-      consumeError(NameOrErr.takeError());
-      continue;
-    }
-    std::string *Dest = nullptr;
-    if (*NameOrErr == "__probes")
-      Dest = &Probes;
-    else if (*NameOrErr == "__probe_descs")
-      Dest = &ProbeDescs;
-    else
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+
+    std::string *Dest = StringSwitch<std::string *>(*NameOrErr)
+                            .Case("__probes", &Probes)
+                            .Case("__probe_descs", &ProbeDescs)
+                            .Default(nullptr);
+    if (!Dest)
       continue;
 
+    assert(Section.relocations().empty() &&
+           "pseudo-probe section unexpectedly carries relocations");
     if (!Section.relocations().empty())
-      report_fatal_error(
-          Twine("unexpected relocations in pseudo-probe section ") + *NameOrErr,
-          /*GenCrashDiag=*/false);
+      return createStringError(
+          inconvertibleErrorCode(),
+          "unexpected relocations in pseudo-probe section " + *NameOrErr);
 
     Expected<StringRef> ContentsOrErr = Section.getContents();
-    if (!ContentsOrErr) {
-      consumeError(ContentsOrErr.takeError());
-      continue;
-    }
+    if (!ContentsOrErr)
+      return ContentsOrErr.takeError();
     *Dest += *ContentsOrErr;
   }
+  return Error::success();
 }
 
 Error PseudoProbeLinker::emit(const Triple &TheTriple) const {
@@ -70,7 +70,7 @@ Error PseudoProbeLinker::emit(const Triple &TheTriple) const {
   if (Options.NumDebugMaps > 1)
     Suffix = ("-" + TheTriple.getArchName()).str();
 
-  // write pseudo_probes metadata
+  // Write pseudo_probes metadata.
   Path.clear();
   sys::path::append(Path, *Options.ResourceDir, "Profiling",
                     "pseudo_probes" + Suffix);
@@ -80,7 +80,7 @@ Error PseudoProbeLinker::emit(const Triple &TheTriple) const {
     return errorCodeToError(EC);
   ProbesOS << getProbes();
 
-  // write pseudo_probe_descs metadata
+  // Write pseudo_probe_descs metadata.
   Path.clear();
   sys::path::append(Path, *Options.ResourceDir, "Profiling",
                     "pseudo_probe_descs" + Suffix);
