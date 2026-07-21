@@ -2393,7 +2393,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
-   FeatureSmemPrefetchInsts
+   FeatureSmemPrefetchInsts,
+   FeatureAsyncLoadToLDSInsts,
 ]>;
 
 def FeatureISAVersion13_Generic: FeatureSet<

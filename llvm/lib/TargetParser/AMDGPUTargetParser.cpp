@@ -529,6 +529,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["cvt-pknorm-vop3-insts"] = true;
     Features["image-insts"] = true;
+    Features["async-load-to-lds-insts"] = true;
     break;
   case GK_GFX1251:
     Features["gfx1251-gemm-insts"] = true;
