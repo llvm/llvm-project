@@ -173,10 +173,11 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
     LLVM_DEBUG(dbgs() << "Region is known to spill, use alternative "
                          "VGPRCriticalLimit calculation method.\n");
     unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
-    unsigned Granule =
-        AMDGPU::IsaInfo::getVGPRAllocGranule(ST, DynamicVGPRBlockSize);
-    unsigned Addressable =
-        AMDGPU::IsaInfo::getAddressableNumVGPRs(ST, DynamicVGPRBlockSize);
+    bool Wave32 = ST.getFeatureBits().test(AMDGPU::FeatureWavefrontSize32);
+    unsigned Granule = AMDGPU::getVGPRAllocGranule(
+        ST.getTargetID().getGPUKind(), DynamicVGPRBlockSize, Wave32);
+    unsigned Addressable = AMDGPU::getAddressableNumVGPRs(
+        ST.getTargetID().getGPUKind(), DynamicVGPRBlockSize, Wave32);
     unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
     VGPRBudget = std::max(VGPRBudget, Granule);
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);

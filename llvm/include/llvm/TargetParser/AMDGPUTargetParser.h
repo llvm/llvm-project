@@ -86,7 +86,14 @@ enum ArchFeatureKind : uint32_t {
   FEATURE_XNACK_ON_OFF_MODES = 1 << 10,
 
   // VI SGPR initialization bug requiring a fixed SGPR allocation size.
-  FEATURE_SGPR_INIT_BUG = 1 << 11
+  FEATURE_SGPR_INIT_BUG = 1 << 11,
+
+  // GFX90A-style unified VGPR/AGPR register file instructions.
+  FEATURE_GFX90A_INSTS = 1 << 12,
+
+  // VGPR register-file capacities.
+  FEATURE_1536_VGPRS = 1 << 13,
+  FEATURE_1024_ADDRESSABLE_VGPRS = 1 << 14
 };
 
 enum FeatureError : uint32_t {
@@ -160,6 +167,33 @@ LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
 
 LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
+
+LLVM_ABI unsigned getEUsPerCU(GPUKind AK, bool CuMode);
+LLVM_ABI unsigned getEUsPerCU(Triple::SubArchType SubArch, bool CuMode);
+
+LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);
+LLVM_ABI unsigned getMaxWavesPerEU(Triple::SubArchType SubArch);
+
+LLVM_ABI unsigned getTotalNumVGPRs(GPUKind AK, bool Wave32);
+LLVM_ABI unsigned getTotalNumVGPRs(Triple::SubArchType SubArch, bool Wave32);
+
+enum { MAX_DYNAMIC_VGPR_BLOCKS = 8 };
+
+LLVM_ABI unsigned getVGPRAllocGranule(GPUKind AK, unsigned DynamicVGPRBlockSize,
+                                      bool Wave32);
+LLVM_ABI unsigned getVGPRAllocGranule(Triple::SubArchType SubArch,
+                                      unsigned DynamicVGPRBlockSize,
+                                      bool Wave32);
+
+LLVM_ABI unsigned getAddressableNumArchVGPRs(GPUKind AK, bool Wave32);
+LLVM_ABI unsigned getAddressableNumArchVGPRs(Triple::SubArchType SubArch,
+                                             bool Wave32);
+
+LLVM_ABI unsigned
+getAddressableNumVGPRs(GPUKind AK, unsigned DynamicVGPRBlockSize, bool Wave32);
+LLVM_ABI unsigned getAddressableNumVGPRs(Triple::SubArchType SubArch,
+                                         unsigned DynamicVGPRBlockSize,
+                                         bool Wave32);
 
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns

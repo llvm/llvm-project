@@ -830,7 +830,9 @@ public:
 
   /// \returns VGPR allocation granularity supported by the subtarget.
   unsigned getVGPRAllocGranule(unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getVGPRAllocGranule(*this, DynamicVGPRBlockSize);
+    return AMDGPU::getVGPRAllocGranule(
+        getTargetID().getGPUKind(), DynamicVGPRBlockSize,
+        getFeatureBits().test(AMDGPU::FeatureWavefrontSize32));
   }
 
   /// \returns VGPR encoding granularity supported by the subtarget.
@@ -840,18 +842,24 @@ public:
 
   /// \returns Total number of VGPRs supported by the subtarget.
   unsigned getTotalNumVGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumVGPRs(*this);
+    return AMDGPU::getTotalNumVGPRs(
+        getTargetID().getGPUKind(),
+        getFeatureBits().test(AMDGPU::FeatureWavefrontSize32));
   }
 
   /// \returns Addressable number of architectural VGPRs supported by the
   /// subtarget.
   unsigned getAddressableNumArchVGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(*this);
+    return AMDGPU::getAddressableNumArchVGPRs(
+        getTargetID().getGPUKind(),
+        getFeatureBits().test(AMDGPU::FeatureWavefrontSize32));
   }
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
   unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getAddressableNumVGPRs(*this, DynamicVGPRBlockSize);
+    return AMDGPU::getAddressableNumVGPRs(
+        getTargetID().getGPUKind(), DynamicVGPRBlockSize,
+        getFeatureBits().test(AMDGPU::FeatureWavefrontSize32));
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
