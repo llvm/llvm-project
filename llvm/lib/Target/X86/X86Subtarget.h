@@ -17,10 +17,10 @@
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
 #include "X86SelectionDAGInfo.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/TargetParser/Triple.h"
+#include <bitset>
 #include <climits>
 #include <memory>
 
@@ -67,7 +67,7 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   bool ATTRIBUTE = DEFAULT;
 #include "X86GenSubtargetInfo.inc"
   /// ReservedRReg R#i is not available as a general purpose register.
-  BitVector ReservedRReg;
+  std::bitset<X86::NUM_TARGET_REGS> ReservedRReg;
 
   /// The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
@@ -101,6 +101,8 @@ class X86Subtarget final : public X86GenSubtargetInfo {
 
   /// Required vector width from function attribute.
   unsigned RequiredVectorWidth;
+
+  bool HasUserReservedRegisters;
 
   X86SelectionDAGInfo TSInfo;
   // Ordering here is important. X86InstrInfo initializes X86RegisterInfo which
@@ -162,6 +164,7 @@ public:
   bool isRegisterReservedByUser(Register i) const override {
     return ReservedRReg[i.id()];
   }
+  bool hasUserReservedRegisters() const { return HasUserReservedRegisters; }
 
 private:
   /// Initialize the full set of dependencies so we can use an initializer
@@ -306,6 +309,8 @@ public:
   bool isTargetMCU() const { return TargetTriple.isOSIAMCU(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
 
+  bool isLFI() const { return TargetTriple.isLFI(); }
+
   bool isTargetWindowsMSVC() const {
     return TargetTriple.isWindowsMSVCEnvironment();
   }
@@ -331,6 +336,8 @@ public:
   bool isUEFI() const { return TargetTriple.isUEFI(); }
 
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
+
+  bool isOSWindowsOrUEFI() const { return TargetTriple.isOSWindowsOrUEFI(); }
 
   bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 

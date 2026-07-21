@@ -1,0 +1,21 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {!s32i, !cir.array<!s8i x 0>}>
+
+// A flexible array member is declared as a zero-length array, but its
+// initializer may be a larger array of the *same element type*. The verifier
+// accepts this as a special case for the trailing record member.
+
+// FAM initialized with a larger array of the same element type.
+// CHECK: cir.global external @withData = #cir.const_record<{#cir.int<3> : !s32i, #cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i]> : !cir.array<!s8i x 3>}> : !rec_S
+cir.global external @withData = #cir.const_record<{#cir.int<3> : !s32i, #cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i]> : !cir.array<!s8i x 3>}> : !rec_S
+
+// FAM initialized with a larger, zeroed array.
+// CHECK: cir.global external @withZeros = #cir.const_record<{#cir.int<3> : !s32i, #cir.zero : !cir.array<!s8i x 8>}> : !rec_S
+cir.global external @withZeros = #cir.const_record<{#cir.int<3> : !s32i, #cir.zero : !cir.array<!s8i x 8>}> : !rec_S
+
+// FAM with no extra data: the trailing array is exactly zero-length.
+// CHECK: cir.global external @noData = #cir.const_record<{#cir.int<3> : !s32i, #cir.zero : !cir.array<!s8i x 0>}> : !rec_S
+cir.global external @noData = #cir.const_record<{#cir.int<3> : !s32i, #cir.zero : !cir.array<!s8i x 0>}> : !rec_S

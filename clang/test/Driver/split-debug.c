@@ -57,6 +57,14 @@
 // SINGLE_WITH_FILENAME: "-split-dwarf-file" "{{.*}}foo.o"
 // SINGLE_WITH_FILENAME-NOT: "-split-dwarf-output"
 
+/// /Fo places the .dwo next to the .obj.
+// RUN: %clang_cl -### -c --target=x86_64-unknown-windows-msvc -gdwarf -gsplit-dwarf /Foobj/out.obj -- %s 2>&1 | FileCheck %s --check-prefix=SPLIT_SLASH_FO
+// RUN: %clang_cl -### -c --target=x86_64-unknown-windows-msvc -gdwarf -gsplit-dwarf /Fo:obj/out.obj -- %s 2>&1 | FileCheck %s --check-prefix=SPLIT_SLASH_FO
+// RUN: %clang_cl -### -c --target=x86_64-unknown-windows-msvc -gdwarf -gsplit-dwarf /Foobj/ -- %s 2>&1 | FileCheck %s --check-prefix=SPLIT_SLASH_FO_DIR
+
+// SPLIT_SLASH_FO:      "-split-dwarf-file" "obj{{[/\\]+}}out.dwo" "-split-dwarf-output" "obj{{[/\\]+}}out.dwo"
+// SPLIT_SLASH_FO_DIR:  "-split-dwarf-file" "obj{{[/\\]+}}split-debug.dwo" "-split-dwarf-output" "obj{{[/\\]+}}split-debug.dwo"
+
 /// If linking is the final phase, the .dwo filename is derived from -o (if specified) or "a".
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -gsplit-dwarf -g %s -o obj/out 2>&1 | FileCheck %s --check-prefix=SPLIT_LINK
 // RUN: %clang_cl -### --target=x86_64-unknown-windows-msvc -gsplit-dwarf -g -o obj/out -- %s 2>&1 | FileCheck %s --check-prefix=SPLIT_LINK

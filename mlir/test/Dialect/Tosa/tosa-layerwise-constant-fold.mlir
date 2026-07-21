@@ -46,6 +46,25 @@ func.func @transpose_nofold_shape(%arg0: tensor<3x4xf32>) -> tensor<?x?xf32> {
 
 // -----
 
+// CHECK-LABEL: @transpose_nofold_unranked_result_not_reshape
+func.func @transpose_nofold_unranked_result_not_reshape(%arg0: tensor<6x7xf32>) -> tensor<*xf32> {
+  // CHECK: tosa.transpose
+  %1 = tosa.transpose %arg0 { perms = array<i32: 1, 0> }: (tensor<6x7xf32>) -> tensor<*xf32>
+  return %1 : tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @reciprocal_nofold_unranked_result
+func.func @reciprocal_nofold_unranked_result() -> tensor<*xf32> {
+  %input = "tosa.const"() {values = dense<2.0> : tensor<6x7xf32>} : () -> tensor<6x7xf32>
+  // CHECK: tosa.reciprocal
+  %1 = tosa.reciprocal %input : (tensor<6x7xf32>) -> tensor<*xf32>
+  return %1 : tensor<*xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @transpose_fold_splat
 func.func @transpose_fold_splat() -> tensor<3x2xf32> {
   %input = "tosa.const"() {values = dense<4.0> : tensor<2x3xf32>} : () -> tensor<2x3xf32>

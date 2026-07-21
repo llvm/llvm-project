@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr
 
 #include "unique_ptr.h"
 #include <vector>

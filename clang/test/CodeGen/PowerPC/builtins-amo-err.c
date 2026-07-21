@@ -75,4 +75,20 @@ void test_amo() {
   __builtin_amo_stdat_s(ptr12, value12, 24);
   // FC-ERROR: error: argument value 6 is outside the valid range [0, 5, 7, 24]
   __builtin_amo_stdat_s(ptr12, value12, 6);
+
+  unsigned int *ptr13, value13, value14;
+  // AIX32-ERROR: error: this builtin is only available on 64-bit targets
+  __builtin_amo_lwat_csne(ptr13, value12, value14);
+
+  unsigned long int *ptr14, value15, value16;
+  // AIX32-ERROR: error: this builtin is only available on 64-bit targets
+  __builtin_amo_ldat_csne(ptr14, value15, value16);
+
+  signed int *ptr15, value17, value18;
+  // AIX32-ERROR: error: this builtin is only available on 64-bit targets
+  __builtin_amo_lwat_csne_s(ptr15, value17, value18);
+
+  signed long int *ptr16, value19, value20;
+  // AIX32-ERROR: error: this builtin is only available on 64-bit targets
+  __builtin_amo_ldat_csne_s(ptr16, value19, value20);
 }

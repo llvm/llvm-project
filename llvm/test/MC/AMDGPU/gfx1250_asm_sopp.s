@@ -62,7 +62,7 @@ s_monitor_sleep 0
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_sendmsg_rtn_b32 s1, sendmsg(MSG_RTN_SAVE_WAVE_HAS_TDM)     ; encoding: [0x0a,0x00,0xb6,0xbf]
-// GFX12: s_sendmsg_rtn_b32 s1, sendmsg(MSG_RTN_SAVE_WAVE_HAS_TDM) ; encoding: [0x98,0x4c,0x81,0xbe]
+// GFX1250: s_sendmsg_rtn_b32 s1, sendmsg(MSG_RTN_SAVE_WAVE_HAS_TDM) ; encoding: [0x98,0x4c,0x81,0xbe]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_RTN_SAVE_WAVE_HAS_TDM)     ; encoding: [0x0a,0x00,0xb6,0xbf]

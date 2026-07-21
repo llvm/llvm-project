@@ -95,8 +95,7 @@ DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
 
 DiagnosticBuilder Parser::DiagCompat(SourceLocation Loc,
                                      unsigned CompatDiagId) {
-  return Diag(Loc,
-              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId));
+  return Diag(Loc, DiagnosticIDs::getCompatDiagId(getLangOpts(), CompatDiagId));
 }
 
 DiagnosticBuilder Parser::DiagCompat(const Token &Tok, unsigned CompatDiagId) {
@@ -192,6 +191,11 @@ bool Parser::ExpectAndConsumeSemi(unsigned DiagID, StringRef TokenUsed) {
   }
 
   return ExpectAndConsume(tok::semi, DiagID , TokenUsed);
+}
+
+bool Parser::isLikelyAtStartOfNewDeclaration() {
+  return Tok.isAtStartOfLine() &&
+         isDeclarationSpecifier(ImplicitTypenameContext::No);
 }
 
 void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
@@ -1303,12 +1307,14 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
+      D.SetRangeEnd(PrevTokLocation);
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
           << 0 /* defaulted */;
       BodyKind = Sema::FnBodyKind::Default;
+      D.SetRangeEnd(PrevTokLocation);
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
     }
@@ -1853,7 +1859,7 @@ bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
 }
 
 bool Parser::TryAnnotateTypeOrScopeToken(
-    ImplicitTypenameContext AllowImplicitTypename) {
+    ImplicitTypenameContext AllowImplicitTypename, bool IsAddressOfOperand) {
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
@@ -1969,9 +1975,11 @@ bool Parser::TryAnnotateTypeOrScopeToken(
 
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus)
-    if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHasErrors=*/false,
-                                       /*EnteringContext*/ false))
+    if (ParseOptionalCXXScopeSpecifier(
+            SS, /*ObjectType=*/nullptr,
+            /*ObjectHasErrors=*/false,
+            /*EnteringContext=*/false,
+            /*IsAddressOfOperand=*/IsAddressOfOperand))
       return true;
 
   return TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation,
@@ -2444,7 +2452,13 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 
-  if (PP.hadModuleLoaderFatalFailure()) {
+  // Clang modules can inject token streams while loading, so a fatal loader
+  // failure must stop parsing. C++20 named module imports are ordinary
+  // declarations, and a prior failed import should not hide later diagnostics.
+  bool IsCXX20NamedModuleImport =
+      getLangOpts().CPlusPlusModules && !IsObjCAtImport && !Path.empty();
+
+  if (PP.hadModuleLoaderFatalFailure() && !IsCXX20NamedModuleImport) {
     // With a fatal failure in the module loader, we abort parsing.
     cutOffParsing();
     return nullptr;

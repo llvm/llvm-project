@@ -89,7 +89,7 @@ uint64_t InputSection::getVA(uint64_t off) const {
   return parent->addr + getOffset(off);
 }
 
-static uint64_t resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
+uint64_t macho::resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
                                       int64_t offset) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(type);
   uint64_t symVA;

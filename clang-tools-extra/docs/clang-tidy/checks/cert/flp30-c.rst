@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-flp30-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/float-loop-counter.html
 
 cert-flp30-c
 ============
@@ -11,4 +9,4 @@ for more information
 
 This check corresponds to the CERT C Coding Standard rule
 `FLP30-C. Do not use floating-point variables as loop counters
-<https://www.securecoding.cert.org/confluence/display/c/FLP30-C.+Do+not+use+floating-point+variables+as+loop+counters>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/floating-point-flp/flp30-c/>`_.

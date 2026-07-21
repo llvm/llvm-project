@@ -187,6 +187,40 @@ public:
     [[maybe_unused]] Cleanup *obj = new (buffer) T(a...);
   }
 
+  /// Push a cleanup with non-constant storage requirements on the
+  /// stack.  The cleanup type must provide an additional static method:
+  ///   static size_t getExtraSize(size_t);
+  /// The argument to this method will be the value N, which will also
+  /// be passed as the first argument to the constructor.
+  ///
+  /// The data stored in the extra storage must obey the same
+  /// restrictions as normal cleanup member data.
+  ///
+  /// The pointer returned from this method is valid until the cleanup
+  /// stack is modified.
+  template <class T, class... As>
+  T *pushCleanupWithExtra(CleanupKind kind, size_t n, As... a) {
+    static_assert(alignof(T) <= ScopeStackAlignment,
+                  "Cleanup's alignment is too large.");
+    void *buffer = pushCleanup(kind, sizeof(T) + T::getExtraSize(n));
+    return new (buffer) T(n, a...);
+  }
+
+  /// Push a cleanup by copying a serialized cleanup object from the
+  /// LifetimeExtendedCleanupStack onto the EH scope stack. This is used when
+  /// a full-expression's RunCleanupsScope exits: cleanups that were deferred
+  /// for lifetime extension (e.g. destroying a temporary bound to a local
+  /// reference) are promoted from the byte buffer to the enclosing scope's
+  /// EH stack so they run when that scope ends.
+  ///
+  /// The memcpy is safe because Cleanup subclasses are required to be POD-like
+  /// (see the Cleanup class comment), and the vtable pointer is part of the
+  /// copied bytes, so the clone dispatches to the correct emit() override.
+  void pushCopyOfCleanup(CleanupKind kind, const void *cleanup, size_t size) {
+    void *buffer = pushCleanup(kind, size);
+    std::memcpy(buffer, cleanup, size);
+  }
+
   void setCGF(CIRGenFunction *inCGF) { cgf = inCGF; }
 
   /// Pops a cleanup scope off the stack.  This is private to CIRGenCleanup.cpp.

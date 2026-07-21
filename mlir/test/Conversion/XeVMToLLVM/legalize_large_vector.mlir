@@ -49,3 +49,47 @@ module @test_illegal_vector {
       llvm.return
   }
 }
+
+// -----
+
+module @test_match_fail {
+  // CHECK-LABEL: llvm.func @test_match_fail
+  // CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr, %[[ARG3:.*]]: !llvm.ptr
+  llvm.func @test_match_fail(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: !llvm.ptr) {
+    // CHECK: %[[VAR0:.*]] = llvm.load %[[ARG0]]
+    %0 = llvm.load %arg0 : !llvm.ptr -> vector<4xi16>
+    // CHECK: %[[VAR1:.*]] = llvm.load %[[ARG1]]
+    %1 = llvm.load %arg1 : !llvm.ptr -> vector<4xi16>
+    // CHECK: %[[VAR2:.*]] = llvm.shufflevector %[[VAR0]], %[[VAR1]]
+    %2 = llvm.shufflevector %0, %1 [0, 1, 2, 3, 4, 5, 6, 7] : vector<4xi16>
+    // CHECK: %[[VAR3:.*]] = llvm.shufflevector %[[VAR0]], %[[VAR0]]
+    %3 = llvm.shufflevector %0, %0 [0, 1, 2, 3, 4, 5, 6, 7] : vector<4xi16>
+    // CHECK: %[[VAR4:.*]] = llvm.shufflevector %[[VAR2]], %[[VAR2]]
+    %4 = llvm.shufflevector %2, %2 [0, 1, 2, 3, 4, 5] : vector<8xi16>
+    // CHECK: %[[VAR5:.*]] = llvm.shufflevector %[[VAR3]], %[[VAR3]]
+    %5 = llvm.shufflevector %3, %3 [0, 1, 2, 3, 4, 5] : vector<8xi16>
+    llvm.store %4, %arg2 : vector<6xi16>, !llvm.ptr
+    llvm.store %5, %arg3 : vector<6xi16>, !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+module @test_non_private_addrspace {
+  // CHECK-LABEL: llvm.func @test_non_private_addrspace
+  // CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr<1>, %[[ARG1:.*]]: !llvm.ptr<1>, %[[ARG2:.*]]: !llvm.ptr<1>
+  llvm.func @test_non_private_addrspace(%arg0: !llvm.ptr<1>, %arg1: !llvm.ptr<1>, %arg2: !llvm.ptr<1>) {
+    // CHECK: %[[VAR0:.*]] = llvm.load %[[ARG0]] : !llvm.ptr<1> -> vector<8xi16>
+    %0 = llvm.load %arg0 : !llvm.ptr<1> -> vector<8xi16>
+    // CHECK: %[[VAR1:.*]] = llvm.shufflevector %[[VAR0]], %[[VAR0]] [0, 1, 2, 3] : vector<8xi16>
+    %1 = llvm.shufflevector %0, %0 [0, 1, 2, 3] : vector<8xi16>
+    // CHECK: %[[VAR2:.*]] = llvm.shufflevector %[[VAR0]], %[[VAR0]] [4, 5, 6, 7] : vector<8xi16>
+    %2 = llvm.shufflevector %0, %0 [4, 5, 6, 7] : vector<8xi16>
+    // CHECK: llvm.store %[[VAR1]], %[[ARG1]] : vector<4xi16>, !llvm.ptr<1>
+    llvm.store %1, %arg1 : vector<4xi16>, !llvm.ptr<1>
+    // CHECK: llvm.store %[[VAR2]], %[[ARG2]] : vector<4xi16>, !llvm.ptr<1>
+    llvm.store %2, %arg2 : vector<4xi16>, !llvm.ptr<1>
+    llvm.return
+  }
+}

@@ -346,7 +346,7 @@ void AssumingOp::getSuccessorRegions(
   // parent, so return the correct RegionSuccessor purely based on the index
   // being None or 0.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -354,7 +354,7 @@ void AssumingOp::getSuccessorRegions(
 }
 
 ValueRange AssumingOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AssumingOp::inlineRegionIntoParent(AssumingOp &op,
@@ -652,18 +652,18 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
     return getShapes().front();
   }
 
-  if (!adaptor.getShapes().front())
+  auto firstAttr =
+      dyn_cast_or_null<DenseIntElementsAttr>(adaptor.getShapes().front());
+  if (!firstAttr)
     return nullptr;
 
-  SmallVector<int64_t, 6> resultShape(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getShapes().front())
-          .getValues<int64_t>());
+  SmallVector<int64_t, 6> resultShape(firstAttr.getValues<int64_t>());
 
   for (auto next : adaptor.getShapes().drop_front()) {
-    if (!next)
+    auto nextAttr = dyn_cast_or_null<DenseIntElementsAttr>(next);
+    if (!nextAttr)
       return nullptr;
-    auto nextShape = llvm::to_vector<6>(
-        llvm::cast<DenseIntElementsAttr>(next).getValues<int64_t>());
+    auto nextShape = llvm::to_vector<6>(nextAttr.getValues<int64_t>());
 
     SmallVector<int64_t, 6> tmpShape;
     // If the shapes are not compatible, we can't fold it.

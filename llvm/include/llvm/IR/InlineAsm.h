@@ -444,6 +444,10 @@ public:
     }
   };
 
+  static AsmDialect getDialect(unsigned ExtraInfo) {
+    return ExtraInfo & Extra_AsmDialect ? AD_Intel : AD_ATT;
+  }
+
   static std::vector<StringRef> getExtraInfoNames(unsigned ExtraInfo) {
     std::vector<StringRef> Result;
     if (ExtraInfo & InlineAsm::Extra_HasSideEffects)
@@ -459,9 +463,7 @@ public:
     if (ExtraInfo & InlineAsm::Extra_MayUnwind)
       Result.push_back("unwind");
 
-    AsmDialect Dialect =
-        InlineAsm::AsmDialect((ExtraInfo & InlineAsm::Extra_AsmDialect));
-
+    AsmDialect Dialect = getDialect(ExtraInfo);
     if (Dialect == InlineAsm::AD_ATT)
       Result.push_back("attdialect");
     if (Dialect == InlineAsm::AD_Intel)

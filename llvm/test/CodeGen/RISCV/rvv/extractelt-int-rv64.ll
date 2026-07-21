@@ -794,11 +794,11 @@ define i32 @extractelt_sdiv_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ;
 ; RV64M-LABEL: extractelt_sdiv_nxv4i32_splat:
 ; RV64M:       # %bb.0:
+; RV64M-NEXT:    lui a0, 349525
+; RV64M-NEXT:    addi a0, a0, 1366
 ; RV64M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64M-NEXT:    vmv.x.s a0, v8
-; RV64M-NEXT:    lui a1, 349525
-; RV64M-NEXT:    addi a1, a1, 1366
-; RV64M-NEXT:    mul a0, a0, a1
+; RV64M-NEXT:    vmv.x.s a1, v8
+; RV64M-NEXT:    mul a0, a1, a0
 ; RV64M-NEXT:    srli a1, a0, 63
 ; RV64M-NEXT:    srli a0, a0, 32
 ; RV64M-NEXT:    addw a0, a0, a1
@@ -822,11 +822,11 @@ define i32 @extractelt_udiv_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ;
 ; RV64M-LABEL: extractelt_udiv_nxv4i32_splat:
 ; RV64M:       # %bb.0:
+; RV64M-NEXT:    lui a0, 349525
+; RV64M-NEXT:    addi a0, a0, 1366
 ; RV64M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64M-NEXT:    vmv.x.s a0, v8
-; RV64M-NEXT:    lui a1, 349525
-; RV64M-NEXT:    addi a1, a1, 1366
-; RV64M-NEXT:    mul a0, a0, a1
+; RV64M-NEXT:    vmv.x.s a1, v8
+; RV64M-NEXT:    mul a0, a1, a0
 ; RV64M-NEXT:    srli a1, a0, 63
 ; RV64M-NEXT:    srli a0, a0, 32
 ; RV64M-NEXT:    addw a0, a0, a1
@@ -862,9 +862,9 @@ define i64 @extractelt_nxv16i64_neg1(<vscale x 16 x i64> %v) {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi a0, sp, 64
+; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    slli a3, a2, 3
 ; CHECK-NEXT:    srli a1, a1, 32
 ; CHECK-NEXT:    slli a2, a2, 1
@@ -924,12 +924,12 @@ define i64 @extractelt_nxv16i64_idx(<vscale x 16 x i64> %v, i32 zeroext %idx) {
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    andi sp, sp, -64
-; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    addi a2, sp, 64
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    vs8r.v v8, (a2)
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    ld a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80

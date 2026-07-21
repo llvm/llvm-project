@@ -366,6 +366,10 @@ private:
     return CUNode->getSourceLanguage();
   }
 
+  /// Emit the bytes of an APInt value into an existing DIEBlock,
+  /// respecting target endianness.
+  void addIntToBlock(DIEBlock &Block, const APInt &Val);
+
   /// A helper to add a wide integer constant to a DIE using a block
   /// form.
   void addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val);

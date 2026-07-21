@@ -14,6 +14,7 @@
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
+#include "src/__support/macros/is_defined.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 
@@ -72,6 +73,16 @@ struct Memcpy {
 
 namespace LIBC_NAMESPACE_DECL {
 namespace generic {
+
+template <typename T> LIBC_INLINE void stream(Ptr dst, T value) {
+#if __has_builtin(__builtin_nontemporal_store)
+  __builtin_nontemporal_store(value, reinterpret_cast<T *>(dst));
+#else
+  // Falling back to regular stores is always safe
+  store<T>(dst, value);
+#endif
+}
+template <typename T> LIBC_INLINE void fence() { _mm_sfence(); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t

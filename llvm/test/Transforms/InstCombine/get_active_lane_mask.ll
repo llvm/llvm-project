@@ -76,3 +76,16 @@ define <4 x i1> @ext_has_active_lanes() {
   %ext = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv16i1(<vscale x 16 x i1> %wide.alm, i64 4)
   ret <4 x i1> %ext
 }
+
+define <4 x i1> @extract_fixed_from_active_lane_mask() vscale_range(4, 4) {
+; CHECK-LABEL: define <4 x i1> @extract_fixed_from_active_lane_mask(
+; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 15)
+; CHECK-NEXT:    [[EXT:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.nxv4i1(<vscale x 4 x i1> [[MASK]], i64 4)
+; CHECK-NEXT:    ret <4 x i1> [[EXT]]
+;
+  %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 15)
+  %ext = call <4 x i1> @llvm.vector.extract.v4i1.nxv4i1(<vscale x 4 x i1> %mask, i64 4)
+  ret <4 x i1> %ext
+}
+

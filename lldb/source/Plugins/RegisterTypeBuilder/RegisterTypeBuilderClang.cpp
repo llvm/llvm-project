@@ -11,7 +11,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "RegisterTypeBuilderClang.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb_private;
@@ -23,7 +23,9 @@ void RegisterTypeBuilderClang::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
-void RegisterTypeBuilderClang::Terminate() {}
+void RegisterTypeBuilderClang::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 lldb::RegisterTypeBuilderSP
 RegisterTypeBuilderClang::CreateInstance(Target &target) {

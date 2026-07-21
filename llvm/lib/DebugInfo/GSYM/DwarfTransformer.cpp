@@ -128,7 +128,7 @@ static DWARFDie GetParentDeclContextDIE(DWARFDie &Die) {
 /// .debug_info. If we create a qualified name string in this function by
 /// combining multiple strings in the DWARF string table or info, we will make
 /// a copy of the string when we add it to the string table.
-static std::optional<uint32_t>
+static std::optional<gsym_strp_t>
 getQualifiedNameIndex(DWARFDie &Die, uint64_t Language, GsymCreator &Gsym) {
   // If the dwarf has mangled name, use mangled name
   if (auto LinkageName = Die.getLinkageName()) {
@@ -627,10 +627,10 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
 
       // Include the full unmangled name if available, otherwise the short name.
       if (const char *LinkName = OriginDie.getLinkageName()) {
-        uint32_t LinkNameOff = Gsym.insertString(LinkName, /*Copy=*/false);
+        gsym_strp_t LinkNameOff = Gsym.insertString(LinkName, /*Copy=*/false);
         CSI.MatchRegex.push_back(LinkNameOff);
       } else if (const char *ShortName = OriginDie.getShortName()) {
-        uint32_t ShortNameOff = Gsym.insertString(ShortName, /*Copy=*/false);
+        gsym_strp_t ShortNameOff = Gsym.insertString(ShortName, /*Copy=*/false);
         CSI.MatchRegex.push_back(ShortNameOff);
       }
     }
@@ -653,10 +653,9 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
 Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
   auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
-    DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
     // Apple uses DW_AT_GNU_dwo_id for things other than split DWARF.
     if (IsMachO)
-      return ReturnDie;
+      return DwarfUnit.getUnitDIE(false);
 
     if (DwarfUnit.getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
@@ -673,10 +672,10 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
                  << DWOName << "\n";
             });
       else {
-        ReturnDie = DWOCU->getUnitDIE(false);
+        return DWOCU->getUnitDIE(false);
       }
     }
-    return ReturnDie;
+    return DwarfUnit.getUnitDIE(false);
   };
   if (NumThreads == 1) {
     // Parse all DWARF data from this thread, use the same string/file table
@@ -735,9 +734,11 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
                                      OutputAggregator &Out) {
   Out << "Verifying GSYM file \"" << GsymPath << "\":\n";
 
-  auto Gsym = GsymReader::openFile(GsymPath);
-  if (!Gsym)
-    return Gsym.takeError();
+  llvm::Expected<std::unique_ptr<GsymReader>> GsymOrErr =
+      GsymReader::openFile(GsymPath);
+  if (!GsymOrErr)
+    return GsymOrErr.takeError();
+  std::unique_ptr<GsymReader> &Gsym = *GsymOrErr;
 
   auto NumAddrs = Gsym->getNumAddresses();
   DILineInfoSpecifier DLIS(

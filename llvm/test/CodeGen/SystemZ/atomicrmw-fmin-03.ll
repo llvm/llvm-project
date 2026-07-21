@@ -8,9 +8,10 @@ define void @f1(ptr %ret, ptr %src, ptr %b) {
 ; CHECK: lgr [[SRC:%r[0-9]+]], %r3
 ; CHECK: ld [[FBL:%f[0-9]+]], 0(%r4)
 ; CHECK: ld [[FBH:%f[0-9]+]], 8(%r4)
-; CHECK: ld [[FSL:%f[0-9]+]], 0(%r3)
-; CHECK: ld [[FSH:%f[0-9]+]], 8(%r3)
+; CHECK: lpq [[RIL:%r[0-9]+]], 0(%r3)
 ; CHECK: lgr [[RET:%r[0-9]+]], %r2
+; CHECK: ldgr [[FSL:%f[0-9]+]], [[RIL]]
+; CHECK: ldgr [[FSH:%f[0-9]+]],
 ; CHECK: [[L:\.L.+]]:
 ; CHECK: std [[FBL]], 160(%r15)
 ; CHECK: std [[FBH]], 168(%r15)

@@ -93,7 +93,6 @@ define half @test_vext_v8i16(<8 x i16> %a) {
 ; CHECK-LABEL: test_vext_v8i16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov h0, v0.h[5]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <8 x i16> %a, i32 5
@@ -117,7 +116,6 @@ define half @test_vext_v4i16(<4 x i16> %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov h0, v0.h[1]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <4 x i16> %a, i32 1

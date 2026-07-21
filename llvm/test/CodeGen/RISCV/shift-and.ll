@@ -67,9 +67,9 @@ define i64 @test4(i64 %x) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a2, a1, 26
 ; RV32I-NEXT:    srli a0, a0, 6
-; RV32I-NEXT:    srli a1, a1, 6
 ; RV32I-NEXT:    or a0, a0, a2
 ; RV32I-NEXT:    lui a2, 1048572
+; RV32I-NEXT:    srli a1, a1, 6
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    ret
 ;

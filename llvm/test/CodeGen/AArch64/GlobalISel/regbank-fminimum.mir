@@ -52,8 +52,8 @@ body:             |
     ; CHECK-LABEL: name: create_copy
     ; CHECK: %a:gpr(s32) = COPY $w0
     ; CHECK-NEXT: %b:gpr(s32) = COPY $w1
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s32) = COPY %a(s32)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s32) = COPY %b(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(i32) = COPY %a(s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i32) = COPY %b(s32)
     ; CHECK-NEXT: %needs_fpr:fpr(s32) = G_FMINIMUM [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $s0 = COPY %needs_fpr(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0

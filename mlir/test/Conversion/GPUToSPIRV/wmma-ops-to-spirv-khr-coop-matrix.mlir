@@ -4,7 +4,7 @@
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.6,
-    [Shader, CooperativeMatrixKHR, Float16],
+    [Shader, CooperativeMatrixKHR, Float16, Int8],
     [SPV_KHR_storage_buffer_storage_class, SPV_KHR_cooperative_matrix]>,
     #spirv.resource_limits<>>} {
 
@@ -73,6 +73,30 @@ module attributes {
       gpu.subgroup_mma_store_matrix %D, %ptr[%i,%i] {leadDimension = 32 : index} :
         !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16, #spirv.storage_class<StorageBuffer>>
       // CHECK: spirv.Return
+      gpu.return
+    }
+
+    // CHECK-LABEL: spirv.func @gpu_wmma_signed_i8_mma_op
+    // CHECK-SAME:    !spirv.coopmatrix<16x16xsi8, Subgroup, MatrixA>
+    // CHECK-SAME:    !spirv.coopmatrix<16x16xsi8, Subgroup, MatrixB>
+    // CHECK-SAME:    !spirv.coopmatrix<16x16xi32, Subgroup, MatrixAcc>
+    gpu.func @gpu_wmma_signed_i8_mma_op(
+      %A: !gpu.mma_matrix<16x16xsi8, "AOp">,
+      %B: !gpu.mma_matrix<16x16xsi8, "BOp">,
+      %C: !gpu.mma_matrix<16x16xi32, "COp">,
+      %ptr: memref<16x16xi32, #spirv.storage_class<StorageBuffer>>) kernel
+      attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 4, 1]>} {
+      // CHECK:      spirv.KHR.CooperativeMatrixMulAdd {{%.*}}, {{%.*}}, {{%.*}}, <ASigned|BSigned> :
+      // CHECK-SAME:   !spirv.coopmatrix<16x16xsi8, Subgroup, MatrixA>,
+      // CHECK-SAME:   !spirv.coopmatrix<16x16xsi8, Subgroup, MatrixB>
+      // CHECK-SAME:   -> !spirv.coopmatrix<16x16xi32, Subgroup, MatrixAcc>
+      %D = gpu.subgroup_mma_compute %A, %B, %C : !gpu.mma_matrix<16x16xsi8, "AOp">,
+                                                 !gpu.mma_matrix<16x16xsi8, "BOp">
+                                                 -> !gpu.mma_matrix<16x16xi32, "COp">
+      %i = arith.constant 0 : index
+      // CHECK:      spirv.KHR.CooperativeMatrixStore %{{.+}}, %{{.+}}, %{{.+}}, <RowMajor>
+      gpu.subgroup_mma_store_matrix %D, %ptr[%i, %i] {leadDimension = 32 : index} :
+        !gpu.mma_matrix<16x16xi32, "COp">, memref<16x16xi32, #spirv.storage_class<StorageBuffer>>
       gpu.return
     }
 

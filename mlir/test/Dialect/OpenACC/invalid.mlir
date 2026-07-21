@@ -968,3 +968,19 @@ func.func @verify_host_data_duplicate_use_device(%arg0 : memref<i32>) {
   }
   return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/107027.
+// acc.parallel with async operands but no asyncOperandsDeviceType attribute
+// must produce a diagnostic instead of crashing in verifyDeviceTypeCountMatch.
+
+func.func @verify_parallel_async_missing_device_type(%arg0: i64) {
+// expected-error @below {{async operands count must match async device_type count}}
+  "acc.parallel"(%arg0) <{
+    operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>
+  }> ({
+    acc.yield
+  }) : (i64) -> ()
+  return
+}

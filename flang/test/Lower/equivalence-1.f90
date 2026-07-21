@@ -59,7 +59,7 @@ SUBROUTINE s3
 END SUBROUTINE s3
 
 ! test that equivalence in main program containing arrays are placed in global memory.
-! CHECK: fir.global internal @_QFEa : !fir.array<400000000xi8>
+! CHECK: fir.global internal @_QFEa {alignment = 64 : i64} : !fir.array<400000000xi8>
   integer :: a, b(100000000)
   equivalence (a, b)
   b(1) = 42

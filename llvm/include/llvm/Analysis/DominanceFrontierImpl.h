@@ -77,9 +77,9 @@ template <class BlockT, bool IsPostDom>
 void DominanceFrontierBase<BlockT, IsPostDom>::analyze(const DomTreeT &DT) {
   // NOTE: RootNode might be virtual for `IsPostDom == true`.
   const DomTreeNodeT *RootNode = DT.getRootNode();
-  assert(IsPostDom ||
-         (DT.root_size() == 1 && RootNode->getBlock() == *DT.root_begin()) &&
-             "Multiple roots for forward dominators?");
+  assert((IsPostDom ||
+          (DT.root_size() == 1 && RootNode->getBlock() == *DT.root_begin())) &&
+         "Multiple roots for forward dominators?");
   BlockT *BB = RootNode->getBlock();
 
   std::vector<DFCalculateWorkObject<BlockT>> workList;

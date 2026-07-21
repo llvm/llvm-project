@@ -179,7 +179,7 @@ struct ATTR_USE N::S s; // expected-error {{'ATTR_NAME' cannot appear here}}
 struct ATTR_USE Template<int> t; // expected-error {{'ATTR_NAME' cannot appear here}}
 struct ATTR_USE ::template Template<int> u; // expected-error {{'ATTR_NAME' cannot appear here}}
 template struct ATTR_USE Template<char>; // expected-error {{'ATTR_NAME' cannot appear here}}
-template struct __attribute__((pure)) Template<std::size_t>; // We still allow GNU-style attributes here
+template struct __attribute__((warn_unused)) Template<std::size_t>; // We still allow GNU-style attributes here
 template <> struct ATTR_USE Template<void>; // expected-error {{'ATTR_NAME' only applies to non-K&R-style functions}}
 
 enum ATTR_USE E1 {}; // expected-error {{'ATTR_NAME' only applies to non-K&R-style functions}}

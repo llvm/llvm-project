@@ -273,16 +273,16 @@ bool ObjectFileWasm::DecodeSections() {
   return true;
 }
 
-size_t ObjectFileWasm::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  if (!ValidateModuleHeader(extractor_sp->GetData())) {
-    return 0;
-  }
+ModuleSpecList
+ObjectFileWasm::GetModuleSpecifications(const FileSpec &file,
+                                        DataExtractorSP &extractor_sp,
+                                        offset_t file_offset, offset_t length) {
+  if (!ValidateModuleHeader(extractor_sp->GetData()))
+    return {};
 
-  ModuleSpec spec(file, ArchSpec("wasm32-unknown-unknown-wasm"));
-  specs.Append(spec);
-  return 1;
+  ModuleSpecList specs;
+  specs.Append(ModuleSpec(file, ArchSpec("wasm32")));
+  return specs;
 }
 
 ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp,
@@ -290,7 +290,7 @@ ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t offset, offset_t length)
     : ObjectFile(module_sp, file, offset, length, extractor_sp, data_offset),
-      m_arch("wasm32-unknown-unknown-wasm") {
+      m_arch("wasm32") {
   m_data_nsp->SetAddressByteSize(4);
 }
 
@@ -300,7 +300,7 @@ ObjectFileWasm::ObjectFileWasm(const lldb::ModuleSP &module_sp,
                                lldb::addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr,
                  std::make_shared<DataExtractor>(header_data_sp)),
-      m_arch("wasm32-unknown-unknown-wasm") {}
+      m_arch("wasm32") {}
 
 bool ObjectFileWasm::ParseHeader() {
   // We already parsed the header during initialization.
@@ -308,8 +308,17 @@ bool ObjectFileWasm::ParseHeader() {
 }
 
 struct WasmFunction {
+  /// Offset from the section to the start of the function. This points past the
+  /// function size, which some other tools consider part of the function.
   lldb::offset_t section_offset = LLDB_INVALID_OFFSET;
+
+  /// Function size, which includes the function header, but not the size ULEB
+  /// that proceeds it.
   uint32_t size = 0;
+
+  /// Offset from section_offset to the first instruction in the function, past
+  /// the local variable declarations.
+  uint32_t code_offset = 0;
 };
 
 static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
@@ -353,6 +362,22 @@ static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
   return function_imports;
 }
 
+/// Get the offset in the function to the first instruction.
+static llvm::Expected<uint32_t> GetFunctionCodeOffset(DataExtractor &data,
+                                                      lldb::offset_t offset) {
+  // Wasm function bodies start with:
+  //   [local_count: ULEB128]
+  //   [local_decl: {count: ULEB128, type: byte}] × local_count
+  //   [instructions...]
+  const lldb::offset_t locals_start = offset;
+  const uint32_t local_count = data.GetULEB128(&offset);
+  for (uint32_t i = 0; i < local_count; ++i) {
+    data.GetULEB128(&offset); // count
+    data.GetU8(&offset);      // valtype
+  }
+  return offset - locals_start;
+}
+
 static llvm::Expected<std::vector<WasmFunction>>
 ParseFunctions(DataExtractor &data) {
   lldb::offset_t offset = 0;
@@ -365,13 +390,21 @@ ParseFunctions(DataExtractor &data) {
   functions.reserve(*function_count);
 
   for (uint32_t i = 0; i < *function_count; ++i) {
+    // llvm-objdump considers the ULEB with the function size to be part of the
+    // function. We can't do that here because that would not match the DWARF,
+    // which considers the function to start with the local variable
+    // declarations (the header).
     llvm::Expected<uint32_t> function_size = GetULEB32(data, offset);
     if (!function_size)
       return function_size.takeError();
-    // llvm-objdump considers the ULEB with the function size to be part of the
-    // function. We can't do that here because that would break symbolic
-    // breakpoints, as that address is never executed.
-    functions.push_back({offset, *function_size});
+
+    // Functions start with with a number of local variable declarations.
+    // They're part of the function but they're not instructions.
+    llvm::Expected<uint32_t> code_offset = GetFunctionCodeOffset(data, offset);
+    if (!code_offset)
+      return code_offset.takeError();
+
+    functions.push_back({offset, *function_size, *code_offset});
 
     std::optional<lldb::offset_t> next_offset =
         llvm::checkedAddUnsigned<lldb::offset_t>(offset, *function_size);
@@ -453,6 +486,28 @@ static llvm::Expected<std::vector<WasmSegment>> ParseData(DataExtractor &data) {
   return segments;
 }
 
+/// Parse the minimum size in bytes of the module's first linear memory. This is
+/// the memory guaranteed to exist at instantiation, and so the upper bound of
+/// the static data region.
+static llvm::Expected<uint64_t> ParseMemoryMinSize(DataExtractor &data) {
+  lldb::offset_t offset = 0;
+
+  llvm::Expected<uint32_t> memory_count = GetULEB32(data, offset);
+  if (!memory_count)
+    return memory_count.takeError();
+  if (*memory_count == 0)
+    return llvm::createStringError("module declares no linear memory");
+
+  // The limits of a memory are a flags byte followed by the minimum, and
+  // optionally the maximum, page count.
+  data.GetU8(&offset);
+  llvm::Expected<uint32_t> min_pages = GetULEB32(data, offset);
+  if (!min_pages)
+    return min_pages.takeError();
+
+  return static_cast<uint64_t>(*min_pages) * llvm::wasm::WasmDefaultPageSize;
+}
+
 static llvm::Expected<std::vector<Symbol>>
 ParseNames(SectionSP code_section_sp, DataExtractor &name_data,
            const std::vector<WasmFunction> &functions,
@@ -503,6 +558,8 @@ ParseNames(SectionSP code_section_sp, DataExtractor &name_data,
                                /*size_is_valid=*/true,
                                /*contains_linker_annotations=*/false,
                                /*flags=*/0);
+          if (func.code_offset)
+            symbols.back().SetPrologueByteSize(func.code_offset);
         }
       }
     } break;
@@ -693,17 +750,21 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
   }
 
   lldb::user_id_t segment_id = 0;
+  lldb::addr_t static_data_end = 0;
   for (const WasmSegment &segment : segments) {
     if (segment.type == WasmSegment::Active) {
       // FIXME: Support segments with a memory index.
       if (segment.memory_index != 0) {
-        LLDB_LOG(log, "Skipping segment {0}: non-zero memory index is "
-                      "currently unsupported");
+        LLDB_LOG(log,
+                 "Skipping segment {}: non-zero memory index is "
+                 "currently unsupported",
+                 segment.name);
         continue;
       }
 
       if (segment.init_expr_offset == LLDB_INVALID_OFFSET) {
-        LLDB_LOG(log, "Skipping segment {0}: unsupported init expression");
+        LLDB_LOG(log, "Skipping segment {}: unsupported init expression",
+                 segment.name);
         continue;
       }
     }
@@ -727,6 +788,36 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
         /*log2align=*/0, /*flags=*/0);
     m_sections_up->AddSection(segment_sp);
     GetModule()->GetSectionList()->AddSection(segment_sp);
+
+    if (segment.type == WasmSegment::Active)
+      static_data_end = std::max(static_data_end, file_vm_addr + segment.size);
+  }
+
+  // Zero-initialized globals (BSS) have no data segment, so the loop above
+  // leaves their linear-memory addresses uncovered by any section, and a static
+  // read of one can't be resolved. Cover the rest of linear memory with a
+  // zero-fill section. SetLoadAddress maps it like a data segment so live reads
+  // still go through process memory.
+  if (std::optional<section_info> mem_info =
+          GetSectionInfo(llvm::wasm::WASM_SEC_MEMORY)) {
+    DataExtractor mem_data = ReadImageData(mem_info->offset, mem_info->size);
+    llvm::Expected<uint64_t> memory_size = ParseMemoryMinSize(mem_data);
+    if (!memory_size) {
+      LLDB_LOG_ERROR(log, memory_size.takeError(),
+                     "Failed to parse Wasm memory section: {0}");
+    } else if (*memory_size > static_data_end) {
+      SectionSP bss_sp =
+          std::make_shared<Section>(GetModule(),
+                                    /*obj_file=*/this, ++segment_id << 8,
+                                    ConstString(".bss"), eSectionTypeZeroFill,
+                                    /*file_vm_addr=*/static_data_end,
+                                    /*vm_size=*/*memory_size - static_data_end,
+                                    /*file_offset=*/0,
+                                    /*file_size=*/0,
+                                    /*log2align=*/0, /*flags=*/0);
+      m_sections_up->AddSection(bss_sp);
+      GetModule()->GetSectionList()->AddSection(bss_sp);
+    }
   }
 }
 
@@ -765,10 +856,22 @@ bool ObjectFileWasm::SetLoadAddress(Target &target, lldb::addr_t load_address,
   const size_t num_sections = section_list->GetSize();
   for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
     SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-    if (target.SetSectionLoadAddress(
-            section_sp, load_address | section_sp->GetFileOffset())) {
-      ++num_loaded_sections;
+    lldb::addr_t section_load_addr;
+    if (section_sp->GetType() == eSectionTypeData ||
+        section_sp->GetType() == eSectionTypeZeroFill) {
+      // Data and BSS sections live in linear memory, a separate address space
+      // from code (the top two bits of the 64-bit address encode the space: 0
+      // for Memory, 1 for Object/code), so place the section at its virtual
+      // address in the Memory space while preserving the module id.
+      section_load_addr = (load_address & ~(uint64_t(0b11) << 62)) |
+                          section_sp->GetFileAddress();
+    } else {
+      // Code (and other) sections are addressed by their offset within the
+      // module in the Object address space.
+      section_load_addr = load_address | section_sp->GetFileOffset();
     }
+    if (target.SetSectionLoadAddress(section_sp, section_load_addr))
+      ++num_loaded_sections;
   }
 
   return num_loaded_sections > 0;

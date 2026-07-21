@@ -48,7 +48,7 @@ void UncheckedStatusOrAccessCheck::check(
     return;
 
   UncheckedStatusOrAccessDiagnoser Diagnoser;
-  if (llvm::Expected<llvm::SmallVector<SourceLocation>> Locs =
+  if (llvm::Expected<SmallVector<SourceLocation>> Locs =
           dataflow::diagnoseFunction<UncheckedStatusOrAccessModel,
                                      SourceLocation>(*FuncDecl, *Result.Context,
                                                      Diagnoser))

@@ -28,7 +28,7 @@ define void @test(i32 signext %n, i1 %arg) {
 ; CHECK:       if.else14:
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
-; CHECK-NEXT:    [[SCALE_0:%.*]] = phi ppc_fp128 [ 0xM3FF00000000000000000000000000000, [[IF_ELSE14]] ], [ [[SCALE_0]], [[DO_BODY]] ]
+; CHECK-NEXT:    [[SCALE_0:%.*]] = phi ppc_fp128 [ 1.000000e+00, [[IF_ELSE14]] ], [ [[SCALE_0]], [[DO_BODY]] ]
 ; CHECK-NEXT:    br i1 [[ARG]], label [[DO_BODY]], label [[IF_THEN33:%.*]]
 ; CHECK:       if.then33:
 ; CHECK-NEXT:    br i1 [[ARG]], label [[_ZN5BOOST4MATH4SIGNIGEEIRKT__EXIT30:%.*]], label [[COND_FALSE_I28:%.*]]

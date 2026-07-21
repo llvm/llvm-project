@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/isnanf.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/isnanf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, isnanf, (float x)) { return __builtin_isnan(x); }
+LLVM_LIBC_FUNCTION(int, isnanf, (float x)) { return math::isnanf(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

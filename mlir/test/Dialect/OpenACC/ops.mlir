@@ -1187,6 +1187,18 @@ acc.shutdown device_num(%idxValue : index) if(%ifCond)
 
 // -----
 
+%devTypeInt = arith.constant 2 : i32
+%onHostInt = acc.on_device %devTypeInt : i32 -> i1
+%devTypeIndex = arith.constant 2 : index
+%onHostIndex = acc.on_device %devTypeIndex : index -> i1
+
+// CHECK: [[DEVTYPEINT:%.*]] = arith.constant 2 : i32
+// CHECK: %[[ONHOSTINT:.*]] = acc.on_device [[DEVTYPEINT]] : i32 -> i1
+// CHECK: [[DEVTYPEINDEX:%.*]] = arith.constant 2 : index
+// CHECK: %[[ONHOSTINDEX:.*]] = acc.on_device [[DEVTYPEINDEX]] : index -> i1
+
+// -----
+
 func.func @testexitdataop(%a: !llvm.ptr) -> () {
   %ifCond = arith.constant true
   %i64Value = arith.constant 1 : i64
@@ -2522,3 +2534,49 @@ func.func @test_getdeviceptr_opaque_ptr(%a: !llvm.ptr) -> () {
 // CHECK-SAME:    %[[A:.*]]: !llvm.ptr)
 // CHECK:         %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[A]] : !llvm.ptr) -> !llvm.ptr
 // CHECK:         acc.declare_enter dataOperands(%[[DEVPTR]] : !llvm.ptr)
+
+// -----
+
+acc.reduction.recipe @reduction_maximum_memref_f32 : memref<f32> reduction_operator <maximumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_maximum_memref_f32 : memref<f32> reduction_operator <maximumf>
+
+acc.reduction.recipe @reduction_maxnum_memref_f32 : memref<f32> reduction_operator <maxnumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_maxnum_memref_f32 : memref<f32> reduction_operator <maxnumf>
+
+acc.reduction.recipe @reduction_minimum_memref_f32 : memref<f32> reduction_operator <minimumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_minimum_memref_f32 : memref<f32> reduction_operator <minimumf>
+
+acc.reduction.recipe @reduction_minnum_memref_f32 : memref<f32> reduction_operator <minnumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_minnum_memref_f32 : memref<f32> reduction_operator <minnumf>

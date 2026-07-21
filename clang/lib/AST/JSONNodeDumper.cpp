@@ -771,7 +771,7 @@ void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
   case UnaryTransformType::Enum:                                               \
     JOS.attribute("transformKind", #Trait);                                    \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 
@@ -1117,6 +1117,32 @@ void JSONNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *LSD) {
 
 void JSONNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *ASD) {
   JOS.attribute("access", createAccessSpecifier(ASD->getAccess()));
+}
+
+void JSONNodeDumper::VisitExplicitInstantiationDecl(
+    const ExplicitInstantiationDecl *D) {
+  attributeOnlyIfTrue("isExternTemplate", D->isExternTemplate());
+  if (D->getSpecialization())
+    JOS.attribute("specializationDeclId",
+                  createPointerRepresentation(D->getSpecialization()));
+  switch (D->getTemplateSpecializationKind()) {
+  case TSK_Undeclared:
+    break;
+  case TSK_ImplicitInstantiation:
+    JOS.attribute("templateSpecializationKind", "implicit_instantiation");
+    break;
+  case TSK_ExplicitSpecialization:
+    JOS.attribute("templateSpecializationKind", "explicit_specialization");
+    break;
+  case TSK_ExplicitInstantiationDeclaration:
+    JOS.attribute("templateSpecializationKind",
+                  "explicit_instantiation_declaration");
+    break;
+  case TSK_ExplicitInstantiationDefinition:
+    JOS.attribute("templateSpecializationKind",
+                  "explicit_instantiation_definition");
+    break;
+  }
 }
 
 void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {

@@ -43,6 +43,7 @@ public:
       : MCSymbol(Name, IsTemporary) {}
 
   void setADA(MCSectionGOFF *AssociatedDataArea) {
+    assert(AssociatedDataArea && "ADA must be non-null");
     ADA = AssociatedDataArea;
     AssociatedDataArea->RequiresNonZeroLength = true;
   }
@@ -89,7 +90,7 @@ public:
                     : GOFF::ESDBindingStrength::ESD_BST_Strong;
   }
 
-  bool setSymbolAttribute(MCSymbolAttr Attribute);
+  LLVM_ABI bool setSymbolAttribute(MCSymbolAttr Attribute);
 
   bool isInEDSection() const {
     return isInSection() && static_cast<MCSectionGOFF &>(getSection()).isED();

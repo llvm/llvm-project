@@ -785,8 +785,7 @@ private:
                                          TT.str(),
                                      inconvertibleErrorCode());
 
-    auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), MAI.get(),
-                                           MRI.get(), STI.get());
+    auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), *MAI, *MRI, *STI);
 
     std::unique_ptr<MCDisassembler> Disassembler(
         TheTarget->createMCDisassembler(*STI, *Ctx));

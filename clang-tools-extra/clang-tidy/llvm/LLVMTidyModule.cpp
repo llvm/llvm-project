@@ -11,11 +11,13 @@
 #include "../readability/ElseAfterReturnCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/QualifiedAutoCheck.h"
+#include "FormatvStringCheck.h"
 #include "HeaderGuardCheck.h"
 #include "IncludeOrderCheck.h"
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
 #include "PreferRegisterOverUnsignedCheck.h"
 #include "PreferStaticOverAnonymousNamespaceCheck.h"
+#include "RedundantCastingCheck.h"
 #include "TwineLocalCheck.h"
 #include "TypeSwitchCaseTypesCheck.h"
 #include "UseNewMLIROpBuilderCheck.h"
@@ -31,6 +33,7 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<readability::ElseAfterReturnCheck>(
         "llvm-else-after-return");
+    CheckFactories.registerCheck<FormatvStringCheck>("llvm-formatv-string");
     CheckFactories.registerCheck<LLVMHeaderGuardCheck>("llvm-header-guard");
     CheckFactories.registerCheck<IncludeOrderCheck>("llvm-include-order");
     CheckFactories.registerCheck<readability::NamespaceCommentCheck>(
@@ -43,6 +46,8 @@ public:
         "llvm-prefer-static-over-anonymous-namespace");
     CheckFactories.registerCheck<readability::QualifiedAutoCheck>(
         "llvm-qualified-auto");
+    CheckFactories.registerCheck<RedundantCastingCheck>(
+        "llvm-redundant-casting");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
     CheckFactories.registerCheck<TypeSwitchCaseTypesCheck>(
         "llvm-type-switch-case-types");

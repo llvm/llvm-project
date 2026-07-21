@@ -14,6 +14,7 @@
 #define FLT_MIN_EXP -125
 #define FLT_RADIX 2
 #define FLT_MIN 0x1.0p-126f
+#define FLT_TRUE_MIN 0x1p-149f
 #define FLT_EPSILON 0x1.0p-23f
 #define FLT_NAN __builtin_nanf("")
 
@@ -29,6 +30,7 @@
 #define DBL_MIN_EXP -1021
 #define DBL_MAX 0x1.fffffffffffffp1023
 #define DBL_MIN 0x1.0p-1022
+#define DBL_TRUE_MIN 0x1p-1074
 #define DBL_EPSILON 0x1.0p-52
 #define DBL_NAN __builtin_nan("")
 
@@ -56,6 +58,7 @@
 #define HALF_MAX_EXP +16
 #define HALF_MIN_10_EXP -4
 #define HALF_MIN_EXP -13
+#define HALF_TRUE_MIN 0x1p-24h
 #define HALF_RADIX 2
 #define HALF_NAN __builtin_nanf16("")
 

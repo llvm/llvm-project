@@ -23,10 +23,13 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
 #  if _LIBCPP_HAS_THREADS
+
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #    if !_LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
@@ -72,6 +75,8 @@ _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one
 // notify all waiters waiting on the address directly with the native platform wait
 template <std::size_t _Size>
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native(const void*) _NOEXCEPT;
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 #    if _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
@@ -254,8 +259,8 @@ _LIBCPP_HIDE_FROM_ABI void __atomic_wait(_AtomicWaitable& __a, _Tp __val, memory
   });
 }
 
-#endif // C++20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ATOMIC_ATOMIC_SYNC_H

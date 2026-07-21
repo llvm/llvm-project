@@ -39,7 +39,10 @@ LocationsRequestHandler::Run(const protocol::LocationsArguments &args) const {
       return llvm::make_error<DAPError>(
           "Value locations are only available for pointers and references");
 
-    lldb::addr_t raw_addr = variable.GetValueAsAddress();
+    lldb::SBError error;
+    lldb::addr_t raw_addr = variable.GetData().GetAddress(error, 0);
+    if (error.Fail())
+      return ToError(error);
     lldb::SBAddress addr = dap.target.ResolveLoadAddress(raw_addr);
     lldb::SBLineEntry line_entry = GetLineEntryForAddress(dap.target, addr);
 

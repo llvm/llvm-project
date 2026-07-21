@@ -324,7 +324,7 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # CHECK-NOT: Mismatched elements
 # CHECK: PASS
 
-# DUMPIR:       %[[TID_X:.*]] = gpu.thread_id  x
+# DUMPIR:       %[[TID_X:.*]] = gpu.thread_id x
 # DUMPIR:       %[[C128:.*]] = arith.constant 128 : index
 # DUMPIR:       %[[REM1:.*]] = arith.remui %[[TID_X]], %[[C128]] : index
 # DUMPIR:       %[[C0:.*]] = arith.constant 0 : index
@@ -333,7 +333,7 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # DUMPIR:       %[[DIV1:.*]] = arith.divui %[[TID_X]], %[[C128_1]] : index
 # DUMPIR:       %[[C1:.*]] = arith.constant 1 : index
 # DUMPIR:       %[[IS_PRODUCER:.*]] = arith.cmpi eq, %[[DIV1]], %[[C1]] : index
-# DUMPIR:       %[[TID_X_2:.*]] = gpu.thread_id  x
+# DUMPIR:       %[[TID_X_2:.*]] = gpu.thread_id x
 # DUMPIR:       %[[C128_2:.*]] = arith.constant 128 : index
 # DUMPIR:       %[[REM2:.*]] = arith.remui %[[TID_X_2]], %[[C128_2]] : index
 # DUMPIR:       %[[C0_2:.*]] = arith.constant 0 : index
@@ -342,7 +342,7 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # DUMPIR:       %[[DIV2:.*]] = arith.divui %[[TID_X_2]], %[[C128_3]] : index
 # DUMPIR:       %[[C0_3:.*]] = arith.constant 0 : index
 # DUMPIR:       %[[IS_CONSUMER:.*]] = arith.cmpi eq, %[[DIV2]], %[[C0_3]] : index
-# DUMPIR:       %[[TID_X_3:.*]] = gpu.thread_id  x
+# DUMPIR:       %[[TID_X_3:.*]] = gpu.thread_id x
 # DUMPIR:       %[[MBAR_MMA:.*]] = nvgpu.mbarrier.create -> <memorySpace = #gpu.address_space<workgroup>, num_barriers = 7>
 # DUMPIR:       %[[MBAR_TMA:.*]] = nvgpu.mbarrier.create -> <memorySpace = #gpu.address_space<workgroup>, num_barriers = 7>
 # DUMPIR:       %[[C0_4:.*]] = arith.constant 0 : index
@@ -361,7 +361,7 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # DUMPIR:         nvgpu.tma.prefetch.descriptor %{{.*}} : <tensor = memref<64x64xf16, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none>
 # DUMPIR:       }
 # DUMPIR:       scf.if %[[IS_PRODUCER]] {
-# DUMPIR:         nvvm.setmaxregister  decrease 40
+# DUMPIR:         nvvm.setmaxregister decrease 40
 # DUMPIR:         %[[TRUE:.*]] = arith.constant true
 # DUMPIR:         %[[C0_PROD:.*]] = arith.constant 0 : index
 # DUMPIR:         %[[C16:.*]] = arith.constant 16 : index
@@ -376,13 +376,13 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # DUMPIR:           %[[TRUE_2:.*]] = arith.constant true
 # DUMPIR:           %[[FLIP:.*]] = arith.xori %arg16, %[[TRUE_2]] : i1
 # DUMPIR:           %[[PHASE:.*]] = arith.select %[[IS_LAST]], %[[FLIP]], %arg16 : i1
-# DUMPIR:           %[[BID_X:.*]] = gpu.block_id  x
-# DUMPIR:           %[[BID_Y:.*]] = gpu.block_id  y
+# DUMPIR:           %[[BID_X:.*]] = gpu.block_id x
+# DUMPIR:           %[[BID_Y:.*]] = gpu.block_id y
 # DUMPIR:           %[[C128_TILE:.*]] = arith.constant 128 : index
 # DUMPIR:           %[[DIM_X:.*]] = arith.muli %[[BID_X]], %[[C128_TILE]] : index
 # DUMPIR:           %[[C128_TILE_2:.*]] = arith.constant 128 : index
 # DUMPIR:           %[[DIM_Y:.*]] = arith.muli %[[BID_Y]], %[[C128_TILE_2]] : index
-# DUMPIR:           %[[TID_PROD:.*]] = gpu.thread_id  x
+# DUMPIR:           %[[TID_PROD:.*]] = gpu.thread_id x
 # DUMPIR:           %[[C16384:.*]] = arith.constant 16384 : index
 # DUMPIR:           %[[OFF_A:.*]] = arith.muli %[[SLOT]], %[[C16384]] : index
 # DUMPIR:           %[[C16384_2:.*]] = arith.constant 16384 : index
@@ -414,7 +414,7 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # DUMPIR:         }
 # DUMPIR:       }
 # DUMPIR:       scf.if %[[IS_CONSUMER]] {
-# DUMPIR:         nvvm.setmaxregister  increase 232
+# DUMPIR:         nvvm.setmaxregister increase 232
 # DUMPIR:         %[[FALSE:.*]] = arith.constant false
 # DUMPIR:         %[[ACC_INIT:.*]] = nvgpu.warpgroup.mma.init.accumulator -> <fragmented = vector<128x128xf32>>
 # DUMPIR:         %[[C0_CONS:.*]] = arith.constant 0 : index
@@ -456,9 +456,9 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # DUMPIR:           scf.yield %[[ACC]], %[[PHASE_CONS]] : !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>, i1
 # DUMPIR:         }
 # DUMPIR:         nvvm.wgmma.wait.group.sync.aligned 0
-# DUMPIR:         %[[TID_EPI:.*]] = gpu.thread_id  x
-# DUMPIR:         %[[BID_X_EPI:.*]] = gpu.block_id  x
-# DUMPIR:         %[[BID_Y_EPI:.*]] = gpu.block_id  y
+# DUMPIR:         %[[TID_EPI:.*]] = gpu.thread_id x
+# DUMPIR:         %[[BID_X_EPI:.*]] = gpu.block_id x
+# DUMPIR:         %[[BID_Y_EPI:.*]] = gpu.block_id y
 # DUMPIR:         %[[C128_EPI:.*]] = arith.constant 128 : index
 # DUMPIR:         %[[DIM_X_EPI:.*]] = arith.muli %[[BID_X_EPI]], %[[C128_EPI]] : index
 # DUMPIR:         %[[C128_EPI_2:.*]] = arith.constant 128 : index

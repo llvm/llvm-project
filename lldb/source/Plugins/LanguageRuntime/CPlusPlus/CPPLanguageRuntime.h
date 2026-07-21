@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/StringMap.h"
 
+#include "ItaniumABIRuntime.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
@@ -41,6 +42,19 @@ public:
   FindLibCppStdFunctionCallableInfo(lldb::ValueObjectSP &valobj_sp);
 
   static char ID;
+
+  static void Initialize();
+
+  static void Terminate();
+
+  static lldb_private::LanguageRuntime *
+  CreateInstance(Process *process, lldb::LanguageType language);
+
+  static llvm::StringRef GetPluginNameStatic() {
+    return "cpp-language-runtime";
+  }
+
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || LanguageRuntime::isA(ClassID);
@@ -81,15 +95,55 @@ public:
 
   bool IsSymbolARuntimeThunk(const Symbol &symbol) override;
 
-protected:
-  // Classes that inherit from CPPLanguageRuntime can see and modify these
-  CPPLanguageRuntime(Process *process);
+  llvm::Expected<LanguageRuntime::VTableInfo>
+  GetVTableInfo(ValueObject &in_value, bool check_type) override;
+
+  bool GetDynamicTypeAndAddress(ValueObject &in_value,
+                                lldb::DynamicValueType use_dynamic,
+                                TypeAndOrName &class_type_or_name,
+                                Address &address, Value::ValueType &value_type,
+                                llvm::ArrayRef<uint8_t> &local_buffer) override;
+
+  TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
+                                 ValueObject &static_value) override;
+
+  bool CouldHaveDynamicValue(ValueObject &in_value) override;
+
+  void SetExceptionBreakpoints() override;
+
+  void ClearExceptionBreakpoints() override;
+
+  bool ExceptionBreakpointsAreSet() override;
+
+  bool ExceptionBreakpointsExplainStop(lldb::StopInfoSP stop_reason) override;
+
+  lldb::BreakpointResolverSP
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp,
+                          bool throw_bp) override;
+
+  lldb::SearchFilterSP CreateExceptionSearchFilter() override;
+
+  lldb::ValueObjectSP
+  GetExceptionObjectForThread(lldb::ThreadSP thread_sp) override;
 
 private:
+  CPPLanguageRuntime(Process *process);
+
+  lldb::BreakpointResolverSP
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp,
+                          bool throw_bp, bool for_expressions);
+
+  lldb::BreakpointSP CreateExceptionBreakpoint(bool catch_bp, bool throw_bp,
+                                               bool for_expressions,
+                                               bool is_internal);
+
   using OperatorStringToCallableInfoMap =
     llvm::StringMap<CPPLanguageRuntime::LibCppStdFunctionCallableInfo>;
 
   OperatorStringToCallableInfoMap CallableLookupCache;
+
+  lldb::BreakpointSP m_cxx_exception_bp_sp;
+  ItaniumABIRuntime m_itanium_runtime;
 };
 
 } // namespace lldb_private

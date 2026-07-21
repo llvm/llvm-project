@@ -129,8 +129,16 @@ attributes #12 = { noduplicate }
 
 ; CHECK: define{{.*}}@foo.destroy(
 ; CHECK-NEXT: entry.destroy:
-; CHECK-NEXT: call void @_ZdlPv
-; CHECK-NEXT: ret void
+; CHECK-NEXT:   call ptr @llvm.coro.free(
+; CHECK-NEXT:   %.not = icmp eq ptr %1, null
+; CHECK-NEXT:   br i1 %.not, label %CoroEnd, label %coro.free 
+
+; CHECK: coro.free:
+; CHECK-NEXT:   call void @_ZdlPv
+; CHECK-NEXT:   br label %CoroEnd 
+
+; CHECK: CoroEnd:
+; CHECK-NEXT:   ret void
 
 ; CHECK: define{{.*}}@foo.cleanup(
 ; CHECK-NEXT: entry.cleanup:

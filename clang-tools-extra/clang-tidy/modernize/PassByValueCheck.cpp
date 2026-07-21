@@ -173,9 +173,9 @@ static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
         C->getNumParams() != Ctor->getNumParams())
       return false;
     for (int I = 0, E = C->getNumParams(); I < E; ++I) {
-      const clang::QualType CandidateParamType =
+      const QualType CandidateParamType =
           C->parameters()[I]->getType().getCanonicalType();
-      const clang::QualType CtorParamType =
+      const QualType CtorParamType =
           Ctor->parameters()[I]->getType().getCanonicalType();
       const bool IsLValueRValuePair =
           CtorParamType->isLValueReferenceType() &&

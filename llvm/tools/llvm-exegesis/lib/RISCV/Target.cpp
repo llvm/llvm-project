@@ -101,7 +101,7 @@ template <class BaseT> class RISCVSnippetGenerator : public BaseT {
       return 128U;
     if (isOpcodeAvailableIn(Opcode, {Feature_HasStdExtZvkshBit}))
       return 256U;
-    if (isOpcodeAvailableIn(Opcode, {Feature_HasStdExtZvknhaOrZvknhbBit}))
+    if (isOpcodeAvailableIn(Opcode, {Feature_HasStdExtZvknhaBit}))
       // In Zvknh[ab], when SEW=64 is used (i.e. Zvknhb), EGW is 256.
       // Otherwise it's 128.
       return SEW == 64 ? 256U : 128U;
@@ -400,14 +400,14 @@ void RISCVSnippetGenerator<BaseT>::annotateWithVType(
         using namespace RISCV_MC;
         if (isOpcodeAvailableIn(BaseOpcode, {Feature_HasStdExtZvkgBit,
                                              Feature_HasStdExtZvknedBit,
-                                             Feature_HasStdExtZvknhaOrZvknhbBit,
+                                             Feature_HasStdExtZvknhaBit,
                                              Feature_HasStdExtZvksedBit,
                                              Feature_HasStdExtZvkshBit})) {
           if (*SEW != 32)
             // Zvknhb supports SEW=64 as well.
             if (*SEW != 64 || !STI.hasFeature(RISCV::FeatureStdExtZvknhb) ||
                 !isOpcodeAvailableIn(BaseOpcode,
-                                     {Feature_HasStdExtZvknhaOrZvknhbBit})) {
+                                     {Feature_HasStdExtZvknhaBit})) {
               SEW = SEWCandidates.erase(SEW);
               continue;
             }

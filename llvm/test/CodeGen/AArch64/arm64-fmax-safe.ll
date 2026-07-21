@@ -31,12 +31,14 @@ define double @test_cross(float %in) {
 }
 
 ; Same as previous, but with ordered comparison;
-; must become fminnm, not fmin.
+; Should not become either fminnm or fmin, because neither have the correct
+; behavior for sNaN.
 define double @test_cross_fail_nan(float %in) {
 ; CHECK-LABEL: test_cross_fail_nan:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fminnm s0, s0, s1
+; CHECK-NEXT:    fcmp s0, #0.0
+; CHECK-NEXT:    fcsel s0, s0, s1, mi
 ; CHECK-NEXT:    fcvt d0, s0
 ; CHECK-NEXT:    ret
   %cmp = fcmp olt float %in, 0.000000e+00

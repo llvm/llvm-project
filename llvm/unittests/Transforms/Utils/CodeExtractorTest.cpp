@@ -145,6 +145,74 @@ TEST(CodeExtractor, InputOutputMonitoring) {
   EXPECT_FALSE(verifyFunction(*Func));
 }
 
+TEST(CodeExtractor, InputOutputReturnMonitoring) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
+    define i32 @foo(i32 %x, i32 %y, i32 %z) {
+    header:
+      %0 = icmp ugt i32 %x, %y
+      br i1 %0, label %body1, label %body2
+
+    body1:
+      %1 = add i32 %z, 2
+      br label %notExtracted
+
+    body2:
+      %2 = mul i32 %z, 7
+      br label %notExtracted
+
+    notExtracted:
+      %3 = phi i32 [ %1, %body1 ], [ %2, %body2 ]
+      %4 = add i32 %3, %x
+      ret i32 %4
+    }
+  )invalid",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 3> Candidates{getBlockByName(Func, "header"),
+                                          getBlockByName(Func, "body1"),
+                                          getBlockByName(Func, "body2")};
+
+  CodeExtractor CE(Candidates, /* DT */ nullptr, /* AggregateArgs */ false,
+                   /* BFI */ nullptr, /* BPI */ nullptr, /* AC */ nullptr,
+                   /* AllowVarargs */ false, /* AllowAlloca */ false,
+                   /* AllocaBlock */ nullptr, /* DeallocationBlocks */ {},
+                   /* Suffix */ "", /* ArgsInZeroAddressSpace */ false,
+                   /* VoidReturnWithSingleOutput */ false);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs;
+  Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+  EXPECT_TRUE(Outlined);
+
+  EXPECT_EQ(Inputs.size(), 3u);
+  EXPECT_EQ(Inputs[0], Func->getArg(2));
+  EXPECT_EQ(Inputs[1], Func->getArg(0));
+  EXPECT_EQ(Inputs[2], Func->getArg(1));
+  EXPECT_EQ(Outputs.size(), 0u);
+  BasicBlock *Exit = getBlockByName(Func, "notExtracted");
+  BasicBlock *ExitSplit = getBlockByName(Outlined, "notExtracted.split");
+  // Ensure that PHI in exit block has only one incoming value (from code
+  // replacer block).
+  EXPECT_TRUE(Exit && cast<PHINode>(Exit->front()).getNumIncomingValues() == 1);
+  // Ensure that there is a PHI in outlined function with 2 incoming values.
+  EXPECT_TRUE(ExitSplit &&
+              cast<PHINode>(ExitSplit->front()).getNumIncomingValues() == 2);
+
+  BasicBlock *ExitStub = getBlockByName(Outlined, "notExtracted.exitStub");
+  Instruction *ExitTerm = ExitStub->getTerminator();
+  ReturnInst *ExitReturn = dyn_cast<ReturnInst>(ExitTerm);
+  EXPECT_TRUE(ExitReturn);
+  Value *RetVal = ExitReturn->getReturnValue();
+  EXPECT_TRUE(RetVal);
+
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
 TEST(CodeExtractor, ExitBlockOrderingPhis) {
   LLVMContext Ctx;
   SMDiagnostic Err;
@@ -353,7 +421,7 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
     }
   )invalid", Err, Ctx));
 
-	if (!M) {
+  if (!M) {
     Err.print("unit", errs());
     exit(1);
   }
@@ -678,7 +746,7 @@ TEST(CodeExtractor, OpenMPAggregateArgs) {
   SMDiagnostic Err;
   std::unique_ptr<Module> M(parseAssemblyString(R"ir(
     target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
-    target triple = "amdgcn-amd-amdhsa"
+    target triple = "amdgpu7.00-amd-amdhsa"
 
     define void @foo(ptr %0) {
       %2= alloca ptr, align 8, addrspace(5)
@@ -711,7 +779,8 @@ TEST(CodeExtractor, OpenMPAggregateArgs) {
                    /* AssumptionCache */ nullptr,
                    /* AllowVarArgs */ true,
                    /* AllowAlloca */ true,
-                   /* AllocaBlock*/ &Func->getEntryBlock(),
+                   /* AllocationBlock*/ &Func->getEntryBlock(),
+                   /* DeallocationBlocks */ {},
                    /* Suffix */ ".outlined",
                    /* ArgsInZeroAddressSpace */ true);
 

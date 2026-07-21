@@ -52,7 +52,7 @@ entry:
 define nofpclass(pinf) { float } @ret_nofpclass_struct_ty_pinf__ninf() {
 ; CHECK-LABEL: define nofpclass(pinf) { float } @ret_nofpclass_struct_ty_pinf__ninf() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { float } { float 0xFFF0000000000000 }
+; CHECK-NEXT:    ret { float } { float -inf }
 ;
 entry:
   ret { float } { float 0xFFF0000000000000 }
@@ -61,7 +61,7 @@ entry:
 define nofpclass(pinf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_pinf__ninf() {
 ; CHECK-LABEL: define nofpclass(pinf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_pinf__ninf() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { float, float } { float 0xFFF0000000000000, float 0xFFF0000000000000 }
+; CHECK-NEXT:    ret { float, float } { float -inf, float -inf }
 ;
 entry:
   ret { float, float } { float 0xFFF0000000000000, float 0xFFF0000000000000 }
@@ -70,7 +70,7 @@ entry:
 define nofpclass(pinf) { <2 x float> } @ret_nofpclass_vector_elems_struct_ty_pinf__ninf() {
 ; CHECK-LABEL: define nofpclass(pinf) { <2 x float> } @ret_nofpclass_vector_elems_struct_ty_pinf__ninf() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { <2 x float> } { <2 x float> splat (float 0xFFF0000000000000) }
+; CHECK-NEXT:    ret { <2 x float> } { <2 x float> splat (float -inf) }
 ;
 entry:
   ret { <2 x float>} { <2 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000> }
@@ -81,7 +81,7 @@ entry:
 define nofpclass(pinf) [ 1 x [ 1 x float ]] @ret_nofpclass_nested_array_ty_pinf__ninf() {
 ; CHECK-LABEL: @ret_nofpclass_nested_array_ty_pinf__ninf() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret {{.*}}float 0xFFF0000000000000
+; CHECK-NEXT:    ret {{.*}}float -inf
 ;
 entry:
   ret [ 1 x [ 1 x float ]] [[ 1 x float ] [float 0xFFF0000000000000]]
@@ -100,7 +100,7 @@ entry:
 define nofpclass(ninf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_ninf__npinf() {
 ; CHECK-LABEL: define nofpclass(ninf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_ninf__npinf() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { float, float } { float 0x7FF0000000000000, float 0x7FF0000000000000 }
+; CHECK-NEXT:    ret { float, float } { float +inf, float +inf }
 ;
 entry:
   ret { float, float } { float 0x7FF0000000000000, float 0x7FF0000000000000 }
@@ -183,7 +183,7 @@ define nofpclass(inf norm sub zero) float @simplify_demanded_extractvalue_only_n
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) float @simplify_demanded_extractvalue_only_nan(
 ; CHECK-SAME: i1 [[COND:%.*]], [2 x float] [[ARG0:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue [2 x float] [[ARG0]], 0
-; CHECK-NEXT:    [[EXTRACT:%.*]] = select i1 [[COND]], float [[TMP1]], float 0x7FF8000000000000
+; CHECK-NEXT:    [[EXTRACT:%.*]] = select i1 [[COND]], float [[TMP1]], float +qnan
 ; CHECK-NEXT:    ret float [[EXTRACT]]
 ;
   %select = select i1 %cond, [2 x float] %arg0, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
@@ -199,4 +199,72 @@ define nofpclass(nan inf norm sub nzero) float @simplify_demanded_extractvalue_o
   %select = select i1 %cond, [2 x float] %arg0, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
   %extract = extractvalue [2 x float] %select, 0
   ret float %extract
+}
+
+define nofpclass(nan) [2 x float] @simplify_demanded_insertvalue_array_insertee(i1 %cond, [2 x float] %array, float %unknown) {
+; CHECK-LABEL: define nofpclass(nan) [2 x float] @simplify_demanded_insertvalue_array_insertee(
+; CHECK-SAME: i1 [[COND:%.*]], [2 x float] [[ARRAY:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertvalue [2 x float] [[ARRAY]], float [[UNKNOWN]], 0
+; CHECK-NEXT:    ret [2 x float] [[INSERT]]
+;
+  %select = select i1 %cond, float 0x7FF8000000000000, float %unknown
+  %insert = insertvalue [2 x float] %array, float %select, 0
+  ret [2 x float] %insert
+}
+
+define nofpclass(nan) [2 x float] @simplify_demanded_insertvalue_array_inserted(i1 %cond, [2 x float] %array, float %unknown) {
+; CHECK-LABEL: define nofpclass(nan) [2 x float] @simplify_demanded_insertvalue_array_inserted(
+; CHECK-SAME: i1 [[COND:%.*]], [2 x float] [[ARRAY:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertvalue [2 x float] [[ARRAY]], float [[UNKNOWN]], 0
+; CHECK-NEXT:    ret [2 x float] [[INSERT]]
+;
+  %select = select i1 %cond, [2 x float] %array, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+  %insert = insertvalue [2 x float] %select, float %unknown, 0
+  ret [2 x float] %insert
+}
+
+define nofpclass(nan) [2 x float] @simplify_demanded_insertvalue_array_both(i1 %cond, [2 x float] %array, float %unknown) {
+; CHECK-LABEL: define nofpclass(nan) [2 x float] @simplify_demanded_insertvalue_array_both(
+; CHECK-SAME: i1 [[COND:%.*]], [2 x float] [[ARRAY:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertvalue [2 x float] [[ARRAY]], float [[UNKNOWN]], 0
+; CHECK-NEXT:    ret [2 x float] [[INSERT]]
+;
+  %select.array = select i1 %cond, [2 x float] %array, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+  %select.scalar = select i1 %cond, float 0x7FF8000000000000, float %unknown
+  %insert = insertvalue [2 x float] %select.array, float %select.scalar, 0
+  ret [2 x float] %insert
+}
+
+define nofpclass(inf norm sub zero) [2 x float] @only_nan_simplify_demanded_insertvalue_array(i1 %cond, [2 x float] %array, float %unknown) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) [2 x float] @only_nan_simplify_demanded_insertvalue_array(
+; CHECK-SAME: i1 [[COND:%.*]], [2 x float] [[ARRAY:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float +qnan, float [[UNKNOWN]]
+; CHECK-NEXT:    [[INSERT:%.*]] = insertvalue [2 x float] [[ARRAY]], float [[SELECT]], 0
+; CHECK-NEXT:    ret [2 x float] [[INSERT]]
+;
+  %select = select i1 %cond, float 0x7FF8000000000000, float %unknown
+  %insert = insertvalue [2 x float] %array, float %select, 0
+  ret [2 x float] %insert
+}
+
+define nofpclass(nan) { float, float } @simplify_demanded_insertvalue_struct_inserted(i1 %cond, { float, float } %array, float %unknown) {
+; CHECK-LABEL: define nofpclass(nan) { float, float } @simplify_demanded_insertvalue_struct_inserted(
+; CHECK-SAME: i1 [[COND:%.*]], { float, float } [[ARRAY:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertvalue { float, float } [[ARRAY]], float [[UNKNOWN]], 0
+; CHECK-NEXT:    ret { float, float } [[INSERT]]
+;
+  %select = select i1 %cond, { float, float } %array, { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 }
+  %insert = insertvalue { float, float } %select, float %unknown, 0
+  ret { float, float } %insert
+}
+
+define nofpclass(nan) { float, float } @simplify_demanded_insertvalue_struct_insertee(i1 %cond, { float, float } %array, float %unknown) {
+; CHECK-LABEL: define nofpclass(nan) { float, float } @simplify_demanded_insertvalue_struct_insertee(
+; CHECK-SAME: i1 [[COND:%.*]], { float, float } [[ARRAY:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertvalue { float, float } [[ARRAY]], float [[UNKNOWN]], 0
+; CHECK-NEXT:    ret { float, float } [[INSERT]]
+;
+  %select = select i1 %cond, float 0x7FF8000000000000, float %unknown
+  %insert = insertvalue { float, float } %array, float %select, 0
+  ret { float, float } %insert
 }

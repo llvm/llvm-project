@@ -1,8 +1,12 @@
-;; Tagged symbols are only available on aarch64-linux-android.
-; RUN: not llc -filetype=null %s -mtriple=aarch64-unknown-linux 2>&1 | FileCheck %s --check-prefix=ERR
+;; Tagged symbols are only available on AArch64.
 ; RUN: %if x86-registered-target %{ not llc -filetype=null %s -mtriple=x86_64-unknown-linux 2>&1 | FileCheck %s --check-prefix=ERR %}
 
-; ERR: error: tagged symbols (-fsanitize=memtag-globals) are only supported on AArch64 Android
+; ERR: error: tagged symbols (-fsanitize=memtag-globals) are only supported on AArch64
+
+; RUN: llc %s -mtriple=aarch64-unknown-linux -o %t.linux.S
+; RUN: FileCheck %s --input-file=%t.linux.S --check-prefix=CHECK-ASM
+; RUN: llvm-mc -filetype=obj %t.linux.S -triple=aarch64-unknown-linux -o %t.linux.o
+; RUN: llvm-readelf -r %t.linux.o | FileCheck %s --check-prefix=CHECK-RELOCS
 
 ; RUN: llc %s -mtriple=aarch64-linux-android31 -o %t.S
 ; RUN: FileCheck %s --input-file=%t.S --check-prefix=CHECK-ASM

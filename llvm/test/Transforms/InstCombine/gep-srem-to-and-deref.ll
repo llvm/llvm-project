@@ -41,7 +41,7 @@ define ptr @pos_not_i8(ptr %foo, i64 %x) {
 ; CHECK-LABEL: define ptr @pos_not_i8(
 ; CHECK-SAME: ptr [[FOO:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[IDX1:%.*]] = and i64 [[X]], 3
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i32, ptr [[FOO]], i64 [[IDX1]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[FOO]], i64 [[IDX1]]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
   %idx = srem i64 %x, 4

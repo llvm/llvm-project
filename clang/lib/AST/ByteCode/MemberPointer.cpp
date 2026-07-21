@@ -8,7 +8,6 @@
 
 #include "MemberPointer.h"
 #include "Context.h"
-#include "FunctionPointer.h"
 #include "Program.h"
 #include "Record.h"
 
@@ -76,11 +75,6 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
   return Pointer(const_cast<Block *>(Base.block()), Offset, Offset);
 }
 
-FunctionPointer MemberPointer::toFunctionPointer(const Context &Ctx) const {
-  return FunctionPointer(
-      Ctx.getProgram().getFunction(cast<FunctionDecl>(getDecl())));
-}
-
 APValue MemberPointer::toAPValue(const ASTContext &ASTCtx) const {
   if (isZero())
     return APValue(static_cast<ValueDecl *>(nullptr), /*IsDerivedMember=*/false,
@@ -95,8 +89,20 @@ APValue MemberPointer::toAPValue(const ASTContext &ASTCtx) const {
 
 ComparisonCategoryResult
 MemberPointer::compare(const MemberPointer &RHS) const {
-  if (this->getDecl() == RHS.getDecl()) {
+  assert(!isZero());
+  assert(!RHS.isZero());
 
+  const auto getCmpDecl = [](const MemberPointer &P) -> const Decl * {
+    const Decl *D = P.getDecl()->getMostRecentDecl();
+    if (const auto *FD = dyn_cast<FieldDecl>(D))
+      D = FD->getFirstDecl();
+    return D;
+  };
+
+  const Decl *LHSCmpDecl = getCmpDecl(*this);
+  const Decl *RHSCmpDecl = getCmpDecl(RHS);
+
+  if (LHSCmpDecl == RHSCmpDecl) {
     if (this->PathLength != RHS.PathLength)
       return ComparisonCategoryResult::Unordered;
 

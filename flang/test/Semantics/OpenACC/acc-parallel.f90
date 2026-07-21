@@ -207,7 +207,7 @@ subroutine acc_parallel_default_none
   l = 10
   !$acc parallel default(none)
   !$acc loop
-  !ERROR: The DEFAULT(NONE) clause requires that 'l' must be listed in a data-mapping clause
+  !WARNING: OpenACC DEFAULT(NONE) ignored for scalar 'l' (-fno-openacc-default-none-scalars-strict) [-Wopenacc-default-none-scalars-strict]
   do i = 1, l
     !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
     a(1,i) = 1
@@ -221,4 +221,11 @@ subroutine acc_parallel_default_none
   end do
   !$acc end parallel
   !$acc end data
+
+  ! Named DO loop construct name should not be flagged by default(none).
+  !$acc parallel loop firstprivate(l) copyin(a) default(none)
+  outer: do i = 1, l
+    a(1,i) = 1
+  end do outer
+  !$acc end parallel
 end subroutine acc_parallel_default_none

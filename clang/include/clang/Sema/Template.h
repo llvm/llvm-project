@@ -97,6 +97,8 @@ enum class TemplateSubstitutionKind : char {
     /// The kind of substitution described by this argument list.
     TemplateSubstitutionKind Kind = TemplateSubstitutionKind::Specialization;
 
+    bool RetainInnerDepths = false;
+
   public:
     /// Construct an empty set of template argument lists.
     MultiLevelTemplateArgumentList() = default;
@@ -107,6 +109,10 @@ enum class TemplateSubstitutionKind : char {
     }
 
     void setKind(TemplateSubstitutionKind K) { Kind = K; }
+
+    void setRetainInnerDepths() { RetainInnerDepths = true; }
+
+    bool retainInnerDepths() const { return RetainInnerDepths; }
 
     /// Determine the kind of template substitution being performed.
     TemplateSubstitutionKind getKind() const { return Kind; }
@@ -185,13 +191,12 @@ enum class TemplateSubstitutionKind : char {
       return !(*this)(Depth, Index).isNull();
     }
 
-    bool isAnyArgInstantiationDependent(const ASTContext &C) const {
+    bool isAnyArgInstantiationDependent() const {
       for (ArgumentListLevel ListLevel : TemplateArgumentLists)
         for (const TemplateArgument &TA : ListLevel.Args)
           // There might be null template arguments representing unused template
           // parameter mappings in an MLTAL during concept checking.
-          if (!TA.isNull() &&
-              C.getCanonicalTemplateArgument(TA).isInstantiationDependent())
+          if (!TA.isNull() && TA.isInstantiationDependent())
             return true;
       return false;
     }

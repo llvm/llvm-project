@@ -100,7 +100,7 @@ enum TransferType : uint8_t {
 /// Matches a Stmt whose parent is a CompoundStmt, and which is directly
 /// following two VarDecls matching the inner matcher.
 AST_MATCHER_P(Stmt, hasPreTwoVarDecl,
-              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
+              SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
               InnerMatchers) {
   const DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
   if (Parents.size() != 1)
@@ -119,7 +119,7 @@ AST_MATCHER_P(Stmt, hasPreTwoVarDecl,
 /// Matches a Stmt whose parent is a CompoundStmt, and which is directly
 /// followed by two VarDecls matching the inner matcher.
 AST_MATCHER_P(Stmt, hasNextTwoVarDecl,
-              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
+              SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
               InnerMatchers) {
   const DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
   if (Parents.size() != 1)
@@ -138,7 +138,7 @@ AST_MATCHER_P(Stmt, hasNextTwoVarDecl,
 /// Matches a CompoundStmt which has two VarDecls matching the inner matcher in
 /// the beginning.
 AST_MATCHER_P(CompoundStmt, hasFirstTwoVarDecl,
-              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
+              SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
               InnerMatchers) {
   return matchNVarDeclStartingWith(Node.body_begin(), Node.body_end(),
                                    InnerMatchers, Finder, Builder);
@@ -253,7 +253,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                   hasRHS(expr(hasType(PairType))))
                   .bind(StdTieAssignStmtName)),
           hasPreTwoVarDecl(
-              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
+              SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
                   varDecl(equalsBoundNode(std::string(FirstVarDeclName))),
                   varDecl(equalsBoundNode(std::string(SecondVarDeclName)))}),
           hasParent(compoundStmt(UnlessFirstVarOrSecondVarIsCapturedByLambda)
@@ -274,7 +274,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                                     expr().bind(InitExprName))))
                             .bind(PairDeclName)),
           hasNextTwoVarDecl(
-              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
+              SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
                   VarInitWithFirstMember, VarInitWithSecondMember}),
           hasParent(compoundStmt(UnlessFirstVarOrSecondVarIsCapturedByLambda)
                         .bind(ScopeBlockName))),
@@ -293,13 +293,12 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                       hasInitializer(ignoringCopyCtorAndImplicitCast(
                           expr().bind(InitExprName))))
                   .bind(PairDeclName)),
-          hasBody(
-              compoundStmt(
-                  hasFirstTwoVarDecl(llvm::SmallVector<
-                                     ast_matchers::internal::Matcher<VarDecl>>{
-                      VarInitWithFirstMember, VarInitWithSecondMember}),
-                  UnlessFirstVarOrSecondVarIsCapturedByLambda)
-                  .bind(ScopeBlockName)))
+          hasBody(compoundStmt(
+                      hasFirstTwoVarDecl(
+                          SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
+                              VarInitWithFirstMember, VarInitWithSecondMember}),
+                      UnlessFirstVarOrSecondVarIsCapturedByLambda)
+                      .bind(ScopeBlockName)))
           .bind(ForRangeStmtName),
       this);
 }

@@ -6,29 +6,23 @@
 define noundef range(i32 0, -2147483647) i32 @_Z10bitfloor32j(i32 noundef %x) local_unnamed_addr {
 ; AIX32-LABEL: _Z10bitfloor32j:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    cntlzw r4, r3
-; AIX32-NEXT:    lis r5, -32768
-; AIX32-NEXT:    cmplwi r3, 0
-; AIX32-NEXT:    srw r4, r5, r4
-; AIX32-NEXT:    iseleq r3, 0, r4
+; AIX32-NEXT:    cntlzw r3, r3
+; AIX32-NEXT:    lis r4, -32768
+; AIX32-NEXT:    srw r3, r4, r3
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: _Z10bitfloor32j:
 ; AIX64:       # %bb.0: # %entry
-; AIX64-NEXT:    cntlzw r4, r3
-; AIX64-NEXT:    lis r5, -32768
-; AIX64-NEXT:    cmplwi r3, 0
-; AIX64-NEXT:    srw r4, r5, r4
-; AIX64-NEXT:    iseleq r3, 0, r4
+; AIX64-NEXT:    cntlzw r3, r3
+; AIX64-NEXT:    lis r4, -32768
+; AIX64-NEXT:    srw r3, r4, r3
 ; AIX64-NEXT:    blr
 ;
 ; LNX64-LABEL: _Z10bitfloor32j:
 ; LNX64:       # %bb.0: # %entry
-; LNX64-NEXT:    cntlzw r4, r3
-; LNX64-NEXT:    cmplwi r3, 0
-; LNX64-NEXT:    lis r5, -32768
-; LNX64-NEXT:    srw r4, r5, r4
-; LNX64-NEXT:    iseleq r3, 0, r4
+; LNX64-NEXT:    cntlzw r3, r3
+; LNX64-NEXT:    lis r4, -32768
+; LNX64-NEXT:    srw r3, r4, r3
 ; LNX64-NEXT:    blr
 entry:
   %cmp.i = icmp eq i32 %x, 0
@@ -62,22 +56,18 @@ define noundef range(i64 0, -9223372036854775807) i64 @_Z10bitfloor64y(i64 nound
 ;
 ; AIX64-LABEL: _Z10bitfloor64y:
 ; AIX64:       # %bb.0: # %entry
-; AIX64-NEXT:    li r5, 1
-; AIX64-NEXT:    cntlzd r4, r3
-; AIX64-NEXT:    cmpldi r3, 0
-; AIX64-NEXT:    rldic r5, r5, 63, 0
-; AIX64-NEXT:    srd r4, r5, r4
-; AIX64-NEXT:    iseleq r3, 0, r4
+; AIX64-NEXT:    li r4, 1
+; AIX64-NEXT:    cntlzd r3, r3
+; AIX64-NEXT:    rldic r4, r4, 63, 0
+; AIX64-NEXT:    srd r3, r4, r3
 ; AIX64-NEXT:    blr
 ;
 ; LNX64-LABEL: _Z10bitfloor64y:
 ; LNX64:       # %bb.0: # %entry
-; LNX64-NEXT:    li r5, 1
-; LNX64-NEXT:    cntlzd r4, r3
-; LNX64-NEXT:    cmpldi r3, 0
-; LNX64-NEXT:    rldic r5, r5, 63, 0
-; LNX64-NEXT:    srd r4, r5, r4
-; LNX64-NEXT:    iseleq r3, 0, r4
+; LNX64-NEXT:    li r4, 1
+; LNX64-NEXT:    cntlzd r3, r3
+; LNX64-NEXT:    rldic r4, r4, 63, 0
+; LNX64-NEXT:    srd r3, r4, r3
 ; LNX64-NEXT:    blr
 entry:
   %cmp.i = icmp eq i64 %x, 0

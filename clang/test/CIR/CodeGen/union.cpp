@@ -13,7 +13,7 @@ union U {
   float f;
   double d;
 };
-// CIR: !rec_U = !cir.record<union "U" {!cir.bool, !s16i, !s32i, !cir.float, !cir.double}>
+// CIR: !rec_U = !cir.union<"U" {!cir.bool, !s16i, !s32i, !cir.float, !cir.double}>
 // LLVM: %union.U = type { double }
 // OGCG: %union.U = type { double }
 
@@ -46,7 +46,7 @@ void shouldGenerateUnionAccess(union U u) {
 // LLVM:   store %union.U %{{.*}}, ptr %[[BASE]]
 // LLVM:   store i8 1, ptr %[[BASE]]
 // LLVM:   store i32 1, ptr %[[BASE]]
-// LLVM:   store float 0x3FB99999A0000000, ptr %[[BASE]]
+// LLVM:   store float 1.000000e-01, ptr %[[BASE]]
 // LLVM:   store double 1.000000e-01, ptr %[[BASE]]
 
 // OGCG: define {{.*}}shouldGenerateUnionAccess
@@ -55,5 +55,5 @@ void shouldGenerateUnionAccess(union U u) {
 // OGCG:   store i64 %{{.*}}, ptr %[[DIVE]]
 // OGCG:   store i8 1, ptr %[[BASE]]
 // OGCG:   store i32 1, ptr %[[BASE]]
-// OGCG:   store float 0x3FB99999A0000000, ptr %[[BASE]]
+// OGCG:   store float 1.000000e-01, ptr %[[BASE]]
 // OGCG:   store double 1.000000e-01, ptr %[[BASE]]

@@ -314,11 +314,6 @@ struct IRInstructionDataList
 LLVM_ABI bool isClose(const IRInstructionData &A, const IRInstructionData &B);
 
 struct IRInstructionDataTraits : DenseMapInfo<IRInstructionData *> {
-  static inline IRInstructionData *getEmptyKey() { return nullptr; }
-  static inline IRInstructionData *getTombstoneKey() {
-    return reinterpret_cast<IRInstructionData *>(-1);
-  }
-
   static unsigned getHashValue(const IRInstructionData *E) {
     using llvm::hash_value;
     assert(E && "IRInstructionData is a nullptr?");
@@ -327,11 +322,7 @@ struct IRInstructionDataTraits : DenseMapInfo<IRInstructionData *> {
 
   static bool isEqual(const IRInstructionData *LHS,
                       const IRInstructionData *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey() ||
-        LHS == getEmptyKey() || LHS == getTombstoneKey())
-      return LHS == RHS;
-
-    assert(LHS && RHS && "nullptr should have been caught by getEmptyKey?");
+    assert(LHS && RHS && "nullptr is not expected as a key");
     return isClose(*LHS, *RHS);
   }
 };
@@ -507,13 +498,6 @@ struct IRInstructionMapper {
   IRInstructionMapper(SpecificBumpPtrAllocator<IRInstructionData> *IDA,
                       SpecificBumpPtrAllocator<IRInstructionDataList> *IDLA)
       : InstDataAllocator(IDA), IDLAllocator(IDLA) {
-    // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
-    // changed.
-    static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
-                  static_cast<unsigned>(-1));
-    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
-                  static_cast<unsigned>(-2));
-
     IDL = new (IDLAllocator->Allocate())
         IRInstructionDataList();
   }
@@ -525,7 +509,12 @@ struct IRInstructionMapper {
     InstructionClassification() = default;
 
     // TODO: Determine a scheme to resolve when the label is similar enough.
-    InstrType visitBranchInst(BranchInst &BI) {
+    InstrType visitUncondBrInst(UncondBrInst &BI) {
+      if (EnableBranches)
+        return Legal;
+      return Illegal;
+    }
+    InstrType visitCondBrInst(CondBrInst &BI) {
       if (EnableBranches)
         return Legal;
       return Illegal;
@@ -955,7 +944,7 @@ public:
   /// \returns std::nullopt if not present.
   std::optional<unsigned> getGVN(Value *V) {
     assert(V != nullptr && "Value is a nullptr?");
-    DenseMap<Value *, unsigned>::iterator VNIt = ValueToNumber.find(V);
+    auto VNIt = ValueToNumber.find(V);
     if (VNIt == ValueToNumber.end())
       return std::nullopt;
     return VNIt->second;
@@ -966,7 +955,7 @@ public:
   /// \returns The Value associated with the number.
   /// \returns std::nullopt if not present.
   std::optional<Value *> fromGVN(unsigned Num) {
-    DenseMap<unsigned, Value *>::iterator VNIt = NumberToValue.find(Num);
+    auto VNIt = NumberToValue.find(Num);
     if (VNIt == NumberToValue.end())
       return std::nullopt;
     assert(VNIt->second != nullptr && "Found value is a nullptr!");
@@ -980,7 +969,7 @@ public:
   /// \returns An optional containing the value, and std::nullopt if it could
   /// not be found.
   std::optional<unsigned> getCanonicalNum(unsigned N) {
-    DenseMap<unsigned, unsigned>::iterator NCIt = NumberToCanonNum.find(N);
+    auto NCIt = NumberToCanonNum.find(N);
     if (NCIt == NumberToCanonNum.end())
       return std::nullopt;
     return NCIt->second;
@@ -993,7 +982,7 @@ public:
   /// \returns An optional containing the value, and std::nullopt if it could
   /// not be found.
   std::optional<unsigned> fromCanonicalNum(unsigned N) {
-    DenseMap<unsigned, unsigned>::iterator CNIt = CanonNumToNumber.find(N);
+    auto CNIt = CanonNumToNumber.find(N);
     if (CNIt == CanonNumToNumber.end())
       return std::nullopt;
     return CNIt->second;
@@ -1190,13 +1179,12 @@ private:
 
 /// Printer pass that uses \c IRSimilarityAnalysis.
 class IRSimilarityAnalysisPrinterPass
-    : public PassInfoMixin<IRSimilarityAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<IRSimilarityAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit IRSimilarityAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

@@ -11,7 +11,9 @@
 
 #include "Address.h"
 #include "CGValue.h"
+#include "CodeGenModule.h"
 #include "CodeGenTypeCache.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GEPNoWrapFlags.h"
@@ -44,7 +46,7 @@ private:
 
 typedef CGBuilderInserter CGBuilderInserterTy;
 
-typedef llvm::IRBuilder<llvm::ConstantFolder, CGBuilderInserterTy>
+typedef llvm::IRBuilder<llvm::TargetFolder, CGBuilderInserterTy>
     CGBuilderBaseTy;
 
 class CGBuilderTy : public CGBuilderBaseTy {
@@ -89,16 +91,20 @@ class CGBuilderTy : public CGBuilderBaseTy {
   }
 
 public:
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::LLVMContext &C)
-      : CGBuilderBaseTy(C), TypeCache(TypeCache) {}
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::LLVMContext &C,
-              const llvm::ConstantFolder &F,
+  CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C)
+      : CGBuilderBaseTy(C, llvm::TargetFolder(CGM.getDataLayout())),
+        TypeCache(CGM) {}
+  CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C,
               const CGBuilderInserterTy &Inserter)
-      : CGBuilderBaseTy(C, F, Inserter), TypeCache(TypeCache) {}
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::Instruction *I)
-      : CGBuilderBaseTy(I), TypeCache(TypeCache) {}
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::BasicBlock *BB)
-      : CGBuilderBaseTy(BB), TypeCache(TypeCache) {}
+      : CGBuilderBaseTy(C, llvm::TargetFolder(CGM.getDataLayout()), Inserter),
+        TypeCache(CGM) {}
+  CGBuilderTy(const CodeGenModule &CGM, llvm::Instruction *I)
+      : CGBuilderBaseTy(I->getParent(), I->getIterator(),
+                        llvm::TargetFolder(CGM.getDataLayout())),
+        TypeCache(CGM) {}
+  CGBuilderTy(const CodeGenModule &CGM, llvm::BasicBlock *BB)
+      : CGBuilderBaseTy(BB, llvm::TargetFolder(CGM.getDataLayout())),
+        TypeCache(CGM) {}
 
   llvm::ConstantInt *getSize(CharUnits N) {
     return llvm::ConstantInt::getSigned(TypeCache.SizeTy, N.getQuantity());
@@ -351,6 +357,28 @@ public:
                             llvm::Type *ElementType, CharUnits Align,
                             const Twine &Name = "") {
     return RawAddress(CreateInBoundsGEP(Addr.getElementType(),
+                                        emitRawPointerFromAddress(Addr),
+                                        IdxList, Name),
+                      ElementType, Align, Addr.isKnownNonNull());
+  }
+
+  using CGBuilderBaseTy::CreateStructuredGEP;
+  llvm::Value *CreateAccessChain(bool Logical, llvm::Type *BaseType,
+                                 llvm::Value *PtrBase,
+                                 ArrayRef<llvm::Value *> IdxList,
+                                 const Twine &Name = "") {
+
+    if (Logical)
+      return CreateStructuredGEP(BaseType, PtrBase, IdxList, Name);
+    return CreateInBoundsGEP(BaseType, PtrBase, IdxList, Name);
+  }
+
+  Address CreateAccessChain(bool Logical, Address Addr,
+                            ArrayRef<llvm::Value *> IdxList,
+                            llvm::Type *ElementType, CharUnits Align,
+                            const Twine &Name = "") {
+
+    return RawAddress(CreateAccessChain(Logical, Addr.getElementType(),
                                         emitRawPointerFromAddress(Addr),
                                         IdxList, Name),
                       ElementType, Align, Addr.isKnownNonNull());

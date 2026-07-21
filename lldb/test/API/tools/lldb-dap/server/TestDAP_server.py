@@ -11,31 +11,38 @@ import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
+from subprocess import Popen
+from typing import Tuple
 
 
 class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
     def start_server(
-        self, connection, connection_timeout=None, wait_seconds_for_termination=None
-    ):
-        log_file_path = self.getBuildArtifact("dap.log")
-        (process, connection) = dap_server.DebugAdapterServer.launch(
-            executable=self.lldbDAPExec,
-            connection=connection,
-            connection_timeout=connection_timeout,
-            log_file=log_file_path,
+        self, connection, connection_timeout=30
+    ) -> Tuple[Popen[bytes], str]:
+        self.create_debug_adapter(
+            connection=connection, connection_timeout=connection_timeout
         )
+        assert self.dap_server.process
+        assert self.dap_server.connection
+
+        # Save the process instance for the cleanup in case a new server is
+        # created.
+        process: Popen[bytes] = self.dap_server.process
 
         def cleanup():
-            if wait_seconds_for_termination is not None:
-                process.wait(wait_seconds_for_termination)
-            else:
-                process.terminate()
+            try:
+                process.stdin.close()
+                process.wait(timeout=5)
+            except TimeoutExpired:
+                process.kill()
 
         self.addTearDownHook(cleanup)
 
-        return (process, connection)
+        return (process, self.dap_server.connection)
 
-    def run_debug_session(self, connection, name, sleep_seconds_in_middle=None):
+    def run_debug_session(
+        self, connection: str, name: str, *, sleep_seconds_in_middle: float = 0
+    ):
         self.dap_server = dap_server.DebugAdapterServer(
             connection=connection, spawn_helper=self.spawnSubprocess
         )
@@ -48,7 +55,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
             args=[name],
             disconnectAutomatically=False,
         )
-        if sleep_seconds_in_middle is not None:
+        if sleep_seconds_in_middle:
             time.sleep(sleep_seconds_in_middle)
         self.set_source_breakpoints(source, [breakpoint_line])
         self.continue_to_next_stop()
@@ -88,14 +95,11 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_server_interrupt(self):
         """
-        Test launching a binary with lldb-dap in server mode and shutting down the server while the debug session is still active.
+        Test launching a binary with lldb-dap in server mode and shutting down
+        the server while the debug session is still active.
         """
         self.build()
-        (process, connection) = self.start_server(connection="listen://localhost:0")
-        self.dap_server = dap_server.DebugAdapterServer(
-            connection=connection,
-            spawn_helper=self.spawnSubprocess,
-        )
+        (process, _) = self.start_server(connection="listen://localhost:0")
         program = self.getBuildArtifact("a.out")
         source = "main.c"
         breakpoint_line = line_number(source, "// breakpoint")
@@ -122,39 +126,39 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_connection_timeout_at_server_start(self):
         """
-        Test launching lldb-dap in server mode with connection timeout and waiting for it to terminate automatically when no client connects.
+        Test launching lldb-dap in server mode with connection timeout and
+        waiting for it to terminate automatically when no client connects.
         """
         self.build()
         self.start_server(
             connection="listen://localhost:0",
             connection_timeout=1,
-            wait_seconds_for_termination=5,
         )
 
     @skipIfWindows
     def test_connection_timeout_long_debug_session(self):
         """
-        Test launching lldb-dap in server mode with connection timeout and terminating the server after the a long debug session.
+        Test launching lldb-dap in server mode with connection timeout and
+        terminating the server after the a long debug session.
         """
         self.build()
         (_, connection) = self.start_server(
             connection="listen://localhost:0",
             connection_timeout=1,
-            wait_seconds_for_termination=5,
         )
         # The connection timeout should not cut off the debug session
-        self.run_debug_session(connection, "Alice", 1.5)
+        self.run_debug_session(connection, "Alice", sleep_seconds_in_middle=1.5)
 
     @skipIfWindows
     def test_connection_timeout_multiple_sessions(self):
         """
-        Test launching lldb-dap in server mode with connection timeout and terminating the server after the last debug session.
+        Test launching lldb-dap in server mode with connection timeout and
+        terminating the server after the last debug session.
         """
         self.build()
         (_, connection) = self.start_server(
             connection="listen://localhost:0",
             connection_timeout=1,
-            wait_seconds_for_termination=5,
         )
         time.sleep(0.5)
         # Should be able to connect to the server.

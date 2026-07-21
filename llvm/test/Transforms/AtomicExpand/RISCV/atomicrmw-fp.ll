@@ -4,7 +4,8 @@
 define float @test_atomicrmw_fadd_f32(ptr %ptr, float %value) {
 ; CHECK-LABEL: @test_atomicrmw_fadd_f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca float, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @__atomic_load_4(ptr [[PTR:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP8]] to float
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -30,7 +31,8 @@ define float @test_atomicrmw_fadd_f32(ptr %ptr, float %value) {
 define float @test_atomicrmw_fsub_f32(ptr %ptr, float %value) {
 ; CHECK-LABEL: @test_atomicrmw_fsub_f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca float, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @__atomic_load_4(ptr [[PTR:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP8]] to float
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]

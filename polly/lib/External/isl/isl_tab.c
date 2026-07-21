@@ -105,16 +105,18 @@ isl_ctx *isl_tab_get_ctx(struct isl_tab *tab)
 int isl_tab_extend_cons(struct isl_tab *tab, unsigned n_new)
 {
 	unsigned off;
+	isl_ctx *ctx;
 
 	if (!tab)
 		return -1;
 
 	off = 2 + tab->M;
 
+	ctx = isl_tab_get_ctx(tab);
 	if (tab->max_con < tab->n_con + n_new) {
 		struct isl_tab_var *con;
 
-		con = isl_realloc_array(tab->mat->ctx, tab->con,
+		con = isl_realloc_array(ctx, tab->con,
 				    struct isl_tab_var, tab->max_con + n_new);
 		if (!con)
 			return -1;
@@ -128,14 +130,14 @@ int isl_tab_extend_cons(struct isl_tab *tab, unsigned n_new)
 					tab->n_row + n_new, off + tab->n_col);
 		if (!tab->mat)
 			return -1;
-		row_var = isl_realloc_array(tab->mat->ctx, tab->row_var,
+		row_var = isl_realloc_array(ctx, tab->row_var,
 					    int, tab->mat->n_row);
 		if (!row_var)
 			return -1;
 		tab->row_var = row_var;
 		if (tab->row_sign) {
 			enum isl_tab_row_sign *s;
-			s = isl_realloc_array(tab->mat->ctx, tab->row_sign,
+			s = isl_realloc_array(ctx, tab->row_sign,
 					enum isl_tab_row_sign, tab->mat->n_row);
 			if (!s)
 				return -1;

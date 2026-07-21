@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unk-unk -o - -emit-llvm -debug-info-kind=limited %s | FileCheck --check-prefixes NOSEPARATOR,BOTH %s
-// RUN: %clang_cc1 -triple amdgcn-unk-unk -o - -emit-llvm -debug-info-kind=limited %s | FileCheck --check-prefixes SEPARATOR,BOTH %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -o - -emit-llvm -debug-info-kind=limited %s | FileCheck --check-prefixes SEPARATOR,BOTH %s
 
 struct First {
   // BOTH-DAG: ![[FIRST:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "First", file: !{{[0-9]+}}, line: {{[0-9]+}}, size: 32, elements: ![[FIRST_ELEMENTS:[0-9]+]])

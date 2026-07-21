@@ -10,40 +10,24 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include <utility>
 using namespace llvm;
 
-namespace {
-  class UnpackMachineBundles : public MachineFunctionPass {
-  public:
-    static char ID; // Pass identification
-    UnpackMachineBundles(
-        std::function<bool(const MachineFunction &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
-
-    bool runOnMachineFunction(MachineFunction &MF) override;
-
-  private:
-    std::function<bool(const MachineFunction &)> PredicateFtor;
-  };
-} // end anonymous namespace
-
-char UnpackMachineBundles::ID = 0;
-char &llvm::UnpackMachineBundlesID = UnpackMachineBundles::ID;
-INITIALIZE_PASS(UnpackMachineBundles, "unpack-mi-bundles",
-                "Unpack machine instruction bundles", false, false)
-
-bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
-  if (PredicateFtor && !PredicateFtor(MF))
+static bool unpackBundles(MachineFunction &MF,
+                          std::function<bool(const MachineFunction &)> Ftor) {
+  if (Ftor && !Ftor(MF))
     return false;
 
   bool Changed = false;
@@ -75,10 +59,42 @@ bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-FunctionPass *
-llvm::createUnpackMachineBundles(
+namespace {
+
+class UnpackMachineBundlesLegacy : public MachineFunctionPass {
+public:
+  static char ID; // Pass identification
+  UnpackMachineBundlesLegacy(
+      std::function<bool(const MachineFunction &)> Ftor = nullptr)
+      : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+private:
+  std::function<bool(const MachineFunction &)> PredicateFtor;
+};
+} // end anonymous namespace
+
+PreservedAnalyses
+UnpackMachineBundlesPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  if (unpackBundles(MF, PredicateFtor))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}
+
+char UnpackMachineBundlesLegacy::ID = 0;
+char &llvm::UnpackMachineBundlesID = UnpackMachineBundlesLegacy::ID;
+INITIALIZE_PASS(UnpackMachineBundlesLegacy, "unpack-mi-bundles",
+                "Unpack machine instruction bundles", false, false)
+
+bool UnpackMachineBundlesLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return unpackBundles(MF, PredicateFtor);
+}
+
+FunctionPass *llvm::createUnpackMachineBundlesLegacy(
     std::function<bool(const MachineFunction &)> Ftor) {
-  return new UnpackMachineBundles(std::move(Ftor));
+  return new UnpackMachineBundlesLegacy(std::move(Ftor));
 }
 
 /// Return the first DebugLoc that has line number information, given a

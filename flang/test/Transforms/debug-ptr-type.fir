@@ -31,7 +31,7 @@ module {
 #loc3 = loc("test.f90":7:1)
 #loc4 = loc("test.f90":8:1)
 
-// CHECK-DAG: #[[INT_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer"{{.*}}>
+// CHECK-DAG: #[[INT_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=4)"{{.*}}>
 // CHECK-DAG: #[[ARR1_TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}dataLocation = {{.*}}, associated = <[DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne]>, elements = #llvm.di_subrange<count = #llvm.di_expression<{{.*}}>, lowerBound = #llvm.di_expression<{{.*}}>, #llvm.di_subrange<count = #llvm.di_expression<{{.*}}>, lowerBound = #llvm.di_expression<{{.*}}>>>
 // CHECK-DAG: #[[ARR2_TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}dataLocation = {{.*}}, associated = <[DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne]>, elements = #llvm.di_subrange<count = #llvm.di_expression<{{.*}}>, lowerBound = #llvm.di_expression<{{.*}}>>>
 

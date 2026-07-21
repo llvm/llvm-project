@@ -1,11 +1,11 @@
 ; This test shows how value attributes are being passed during different translation steps.
 ; See also test/CodeGen/SPIRV/optimizations/add-check-overflow.ll.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=prepare-functions 2>&1 | FileCheck %s  --check-prefix=CHECK-PREPARE
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=spirv-prepare-functions 2>&1 | FileCheck %s  --check-prefix=CHECK-PREPARE
 ; Intrinsics with aggregate return type are not substituted/removed.
 ; CHECK-PREPARE: @llvm.uadd.with.overflow.i32
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=emit-intrinsics 2>&1 | FileCheck %s  --check-prefix=CHECK-IR
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=spirv-emit-intrinsics 2>&1 | FileCheck %s  --check-prefix=CHECK-IR
 ; Aggregate data are wrapped into @llvm.fake.use(),
 ; and their attributes are packed into a metadata for @llvm.spv.value.md().
 ; CHECK-IR: %[[R1:.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32

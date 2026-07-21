@@ -15,15 +15,15 @@
 define <2 x bfloat> @vfneg_vv_v2bf16(<2 x bfloat> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-ZVFHMIN-LABEL: vfneg_vv_v2bf16:
 ; ZVFH-ZVFHMIN:       # %bb.0:
-; ZVFH-ZVFHMIN-NEXT:    lui a1, 8
-; ZVFH-ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFH-ZVFHMIN-NEXT:    lui a0, 8
+; ZVFH-ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFH-ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v2bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, ma
-; ZVFBFA-NEXT:    vfneg.v v8, v8, v0.t
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
+; ZVFBFA-NEXT:    vfneg.v v8, v8
 ; ZVFBFA-NEXT:    ret
   %v = call <2 x bfloat> @llvm.vp.fneg.v2bf16(<2 x bfloat> %va, <2 x i1> %m, i32 %evl)
   ret <2 x bfloat> %v
@@ -32,14 +32,14 @@ define <2 x bfloat> @vfneg_vv_v2bf16(<2 x bfloat> %va, <2 x i1> %m, i32 zeroext 
 define <2 x bfloat> @vfneg_vv_v2bf16_unmasked(<2 x bfloat> %va, i32 zeroext %evl) {
 ; ZVFH-ZVFHMIN-LABEL: vfneg_vv_v2bf16_unmasked:
 ; ZVFH-ZVFHMIN:       # %bb.0:
-; ZVFH-ZVFHMIN-NEXT:    lui a1, 8
-; ZVFH-ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a1
+; ZVFH-ZVFHMIN-NEXT:    lui a0, 8
+; ZVFH-ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFH-ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v2bf16_unmasked:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16alt, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfneg.v v8, v8
 ; ZVFBFA-NEXT:    ret
   %v = call <2 x bfloat> @llvm.vp.fneg.v2bf16(<2 x bfloat> %va, <2 x i1> splat (i1 true), i32 %evl)
@@ -49,15 +49,15 @@ define <2 x bfloat> @vfneg_vv_v2bf16_unmasked(<2 x bfloat> %va, i32 zeroext %evl
 define <4 x bfloat> @vfneg_vv_v4bf16(<4 x bfloat> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-ZVFHMIN-LABEL: vfneg_vv_v4bf16:
 ; ZVFH-ZVFHMIN:       # %bb.0:
-; ZVFH-ZVFHMIN-NEXT:    lui a1, 8
-; ZVFH-ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFH-ZVFHMIN-NEXT:    lui a0, 8
+; ZVFH-ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFH-ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v4bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, mf2, ta, ma
-; ZVFBFA-NEXT:    vfneg.v v8, v8, v0.t
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
+; ZVFBFA-NEXT:    vfneg.v v8, v8
 ; ZVFBFA-NEXT:    ret
   %v = call <4 x bfloat> @llvm.vp.fneg.v4bf16(<4 x bfloat> %va, <4 x i1> %m, i32 %evl)
   ret <4 x bfloat> %v
@@ -66,14 +66,14 @@ define <4 x bfloat> @vfneg_vv_v4bf16(<4 x bfloat> %va, <4 x i1> %m, i32 zeroext 
 define <4 x bfloat> @vfneg_vv_v4bf16_unmasked(<4 x bfloat> %va, i32 zeroext %evl) {
 ; ZVFH-ZVFHMIN-LABEL: vfneg_vv_v4bf16_unmasked:
 ; ZVFH-ZVFHMIN:       # %bb.0:
-; ZVFH-ZVFHMIN-NEXT:    lui a1, 8
-; ZVFH-ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a1
+; ZVFH-ZVFHMIN-NEXT:    lui a0, 8
+; ZVFH-ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFH-ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v4bf16_unmasked:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, mf2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16alt, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfneg.v v8, v8
 ; ZVFBFA-NEXT:    ret
   %v = call <4 x bfloat> @llvm.vp.fneg.v4bf16(<4 x bfloat> %va, <4 x i1> splat (i1 true), i32 %evl)
@@ -83,15 +83,15 @@ define <4 x bfloat> @vfneg_vv_v4bf16_unmasked(<4 x bfloat> %va, i32 zeroext %evl
 define <8 x bfloat> @vfneg_vv_v8bf16(<8 x bfloat> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-ZVFHMIN-LABEL: vfneg_vv_v8bf16:
 ; ZVFH-ZVFHMIN:       # %bb.0:
-; ZVFH-ZVFHMIN-NEXT:    lui a1, 8
-; ZVFH-ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFH-ZVFHMIN-NEXT:    lui a0, 8
+; ZVFH-ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFH-ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v8bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m1, ta, ma
-; ZVFBFA-NEXT:    vfneg.v v8, v8, v0.t
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
+; ZVFBFA-NEXT:    vfneg.v v8, v8
 ; ZVFBFA-NEXT:    ret
   %v = call <8 x bfloat> @llvm.vp.fneg.v8bf16(<8 x bfloat> %va, <8 x i1> %m, i32 %evl)
   ret <8 x bfloat> %v
@@ -100,14 +100,14 @@ define <8 x bfloat> @vfneg_vv_v8bf16(<8 x bfloat> %va, <8 x i1> %m, i32 zeroext 
 define <8 x bfloat> @vfneg_vv_v8bf16_unmasked(<8 x bfloat> %va, i32 zeroext %evl) {
 ; ZVFH-ZVFHMIN-LABEL: vfneg_vv_v8bf16_unmasked:
 ; ZVFH-ZVFHMIN:       # %bb.0:
-; ZVFH-ZVFHMIN-NEXT:    lui a1, 8
-; ZVFH-ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a1
+; ZVFH-ZVFHMIN-NEXT:    lui a0, 8
+; ZVFH-ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFH-ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v8bf16_unmasked:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m1, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16alt, m1, ta, ma
 ; ZVFBFA-NEXT:    vfneg.v v8, v8
 ; ZVFBFA-NEXT:    ret
   %v = call <8 x bfloat> @llvm.vp.fneg.v8bf16(<8 x bfloat> %va, <8 x i1> splat (i1 true), i32 %evl)
@@ -117,15 +117,15 @@ define <8 x bfloat> @vfneg_vv_v8bf16_unmasked(<8 x bfloat> %va, i32 zeroext %evl
 define <16 x bfloat> @vfneg_vv_v16bf16(<16 x bfloat> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-ZVFHMIN-LABEL: vfneg_vv_v16bf16:
 ; ZVFH-ZVFHMIN:       # %bb.0:
-; ZVFH-ZVFHMIN-NEXT:    lui a1, 8
-; ZVFH-ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFH-ZVFHMIN-NEXT:    lui a0, 8
+; ZVFH-ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFH-ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v16bf16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m2, ta, ma
-; ZVFBFA-NEXT:    vfneg.v v8, v8, v0.t
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
+; ZVFBFA-NEXT:    vfneg.v v8, v8
 ; ZVFBFA-NEXT:    ret
   %v = call <16 x bfloat> @llvm.vp.fneg.v16bf16(<16 x bfloat> %va, <16 x i1> %m, i32 %evl)
   ret <16 x bfloat> %v
@@ -134,14 +134,14 @@ define <16 x bfloat> @vfneg_vv_v16bf16(<16 x bfloat> %va, <16 x i1> %m, i32 zero
 define <16 x bfloat> @vfneg_vv_v16bf16_unmasked(<16 x bfloat> %va, i32 zeroext %evl) {
 ; ZVFH-ZVFHMIN-LABEL: vfneg_vv_v16bf16_unmasked:
 ; ZVFH-ZVFHMIN:       # %bb.0:
-; ZVFH-ZVFHMIN-NEXT:    lui a1, 8
-; ZVFH-ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a1
+; ZVFH-ZVFHMIN-NEXT:    lui a0, 8
+; ZVFH-ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFH-ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFH-ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v16bf16_unmasked:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfneg.v v8, v8
 ; ZVFBFA-NEXT:    ret
   %v = call <16 x bfloat> @llvm.vp.fneg.v16bf16(<16 x bfloat> %va, <16 x i1> splat (i1 true), i32 %evl)
@@ -151,22 +151,22 @@ define <16 x bfloat> @vfneg_vv_v16bf16_unmasked(<16 x bfloat> %va, i32 zeroext %
 define <2 x half> @vfneg_vv_v2f16(<2 x half> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v2f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfneg.v v8, v8, v0.t
+; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFH-NEXT:    vfneg.v v8, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfneg_vv_v2f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a1, 8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v2f16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    lui a1, 8
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; ZVFBFA-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v8, v8, a0
 ; ZVFBFA-NEXT:    ret
   %v = call <2 x half> @llvm.vp.fneg.v2f16(<2 x half> %va, <2 x i1> %m, i32 %evl)
   ret <2 x half> %v
@@ -175,22 +175,22 @@ define <2 x half> @vfneg_vv_v2f16(<2 x half> %va, <2 x i1> %m, i32 zeroext %evl)
 define <2 x half> @vfneg_vv_v2f16_unmasked(<2 x half> %va, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v2f16_unmasked:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFH-NEXT:    vfneg.v v8, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfneg_vv_v2f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a1, 8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v8, v8, a1
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v2f16_unmasked:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    lui a1, 8
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; ZVFBFA-NEXT:    vxor.vx v8, v8, a1
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v8, v8, a0
 ; ZVFBFA-NEXT:    ret
   %v = call <2 x half> @llvm.vp.fneg.v2f16(<2 x half> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x half> %v
@@ -199,22 +199,22 @@ define <2 x half> @vfneg_vv_v2f16_unmasked(<2 x half> %va, i32 zeroext %evl) {
 define <4 x half> @vfneg_vv_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v4f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfneg.v v8, v8, v0.t
+; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFH-NEXT:    vfneg.v v8, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfneg_vv_v4f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a1, 8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v4f16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    lui a1, 8
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFBFA-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v8, v8, a0
 ; ZVFBFA-NEXT:    ret
   %v = call <4 x half> @llvm.vp.fneg.v4f16(<4 x half> %va, <4 x i1> %m, i32 %evl)
   ret <4 x half> %v
@@ -223,22 +223,22 @@ define <4 x half> @vfneg_vv_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %evl)
 define <4 x half> @vfneg_vv_v4f16_unmasked(<4 x half> %va, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v4f16_unmasked:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vfneg.v v8, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfneg_vv_v4f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a1, 8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v8, v8, a1
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v4f16_unmasked:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    lui a1, 8
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFBFA-NEXT:    vxor.vx v8, v8, a1
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v8, v8, a0
 ; ZVFBFA-NEXT:    ret
   %v = call <4 x half> @llvm.vp.fneg.v4f16(<4 x half> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x half> %v
@@ -247,22 +247,22 @@ define <4 x half> @vfneg_vv_v4f16_unmasked(<4 x half> %va, i32 zeroext %evl) {
 define <8 x half> @vfneg_vv_v8f16(<8 x half> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v8f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVFH-NEXT:    vfneg.v v8, v8, v0.t
+; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFH-NEXT:    vfneg.v v8, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfneg_vv_v8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a1, 8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v8f16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    lui a1, 8
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVFBFA-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v8, v8, a0
 ; ZVFBFA-NEXT:    ret
   %v = call <8 x half> @llvm.vp.fneg.v8f16(<8 x half> %va, <8 x i1> %m, i32 %evl)
   ret <8 x half> %v
@@ -271,22 +271,22 @@ define <8 x half> @vfneg_vv_v8f16(<8 x half> %va, <8 x i1> %m, i32 zeroext %evl)
 define <8 x half> @vfneg_vv_v8f16_unmasked(<8 x half> %va, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v8f16_unmasked:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFH-NEXT:    vfneg.v v8, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfneg_vv_v8f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a1, 8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v8, v8, a1
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v8f16_unmasked:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    lui a1, 8
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; ZVFBFA-NEXT:    vxor.vx v8, v8, a1
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v8, v8, a0
 ; ZVFBFA-NEXT:    ret
   %v = call <8 x half> @llvm.vp.fneg.v8f16(<8 x half> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x half> %v
@@ -295,22 +295,22 @@ define <8 x half> @vfneg_vv_v8f16_unmasked(<8 x half> %va, i32 zeroext %evl) {
 define <16 x half> @vfneg_vv_v16f16(<16 x half> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v16f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; ZVFH-NEXT:    vfneg.v v8, v8, v0.t
+; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFH-NEXT:    vfneg.v v8, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfneg_vv_v16f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a1, 8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v16f16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    lui a1, 8
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vxor.vx v8, v8, a1, v0.t
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v8, v8, a0
 ; ZVFBFA-NEXT:    ret
   %v = call <16 x half> @llvm.vp.fneg.v16f16(<16 x half> %va, <16 x i1> %m, i32 %evl)
   ret <16 x half> %v
@@ -319,22 +319,22 @@ define <16 x half> @vfneg_vv_v16f16(<16 x half> %va, <16 x i1> %m, i32 zeroext %
 define <16 x half> @vfneg_vv_v16f16_unmasked(<16 x half> %va, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v16f16_unmasked:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFH-NEXT:    vfneg.v v8, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfneg_vv_v16f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    lui a1, 8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vxor.vx v8, v8, a1
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vxor.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfneg_vv_v16f16_unmasked:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    lui a1, 8
-; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vxor.vx v8, v8, a1
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vxor.vx v8, v8, a0
 ; ZVFBFA-NEXT:    ret
   %v = call <16 x half> @llvm.vp.fneg.v16f16(<16 x half> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x half> %v
@@ -343,8 +343,8 @@ define <16 x half> @vfneg_vv_v16f16_unmasked(<16 x half> %va, i32 zeroext %evl) 
 define <2 x float> @vfneg_vv_v2f32(<2 x float> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x float> @llvm.vp.fneg.v2f32(<2 x float> %va, <2 x i1> %m, i32 %evl)
   ret <2 x float> %v
@@ -353,7 +353,7 @@ define <2 x float> @vfneg_vv_v2f32(<2 x float> %va, <2 x i1> %m, i32 zeroext %ev
 define <2 x float> @vfneg_vv_v2f32_unmasked(<2 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v2f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x float> @llvm.vp.fneg.v2f32(<2 x float> %va, <2 x i1> splat (i1 true), i32 %evl)
@@ -363,8 +363,8 @@ define <2 x float> @vfneg_vv_v2f32_unmasked(<2 x float> %va, i32 zeroext %evl) {
 define <4 x float> @vfneg_vv_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x float> @llvm.vp.fneg.v4f32(<4 x float> %va, <4 x i1> %m, i32 %evl)
   ret <4 x float> %v
@@ -373,7 +373,7 @@ define <4 x float> @vfneg_vv_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext %ev
 define <4 x float> @vfneg_vv_v4f32_unmasked(<4 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v4f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x float> @llvm.vp.fneg.v4f32(<4 x float> %va, <4 x i1> splat (i1 true), i32 %evl)
@@ -383,8 +383,8 @@ define <4 x float> @vfneg_vv_v4f32_unmasked(<4 x float> %va, i32 zeroext %evl) {
 define <8 x float> @vfneg_vv_v8f32(<8 x float> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x float> @llvm.vp.fneg.v8f32(<8 x float> %va, <8 x i1> %m, i32 %evl)
   ret <8 x float> %v
@@ -393,7 +393,7 @@ define <8 x float> @vfneg_vv_v8f32(<8 x float> %va, <8 x i1> %m, i32 zeroext %ev
 define <8 x float> @vfneg_vv_v8f32_unmasked(<8 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v8f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x float> @llvm.vp.fneg.v8f32(<8 x float> %va, <8 x i1> splat (i1 true), i32 %evl)
@@ -403,8 +403,8 @@ define <8 x float> @vfneg_vv_v8f32_unmasked(<8 x float> %va, i32 zeroext %evl) {
 define <16 x float> @vfneg_vv_v16f32(<16 x float> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x float> @llvm.vp.fneg.v16f32(<16 x float> %va, <16 x i1> %m, i32 %evl)
   ret <16 x float> %v
@@ -413,7 +413,7 @@ define <16 x float> @vfneg_vv_v16f32(<16 x float> %va, <16 x i1> %m, i32 zeroext
 define <16 x float> @vfneg_vv_v16f32_unmasked(<16 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x float> @llvm.vp.fneg.v16f32(<16 x float> %va, <16 x i1> splat (i1 true), i32 %evl)
@@ -423,8 +423,8 @@ define <16 x float> @vfneg_vv_v16f32_unmasked(<16 x float> %va, i32 zeroext %evl
 define <2 x double> @vfneg_vv_v2f64(<2 x double> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x double> @llvm.vp.fneg.v2f64(<2 x double> %va, <2 x i1> %m, i32 %evl)
   ret <2 x double> %v
@@ -433,7 +433,7 @@ define <2 x double> @vfneg_vv_v2f64(<2 x double> %va, <2 x i1> %m, i32 zeroext %
 define <2 x double> @vfneg_vv_v2f64_unmasked(<2 x double> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v2f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x double> @llvm.vp.fneg.v2f64(<2 x double> %va, <2 x i1> splat (i1 true), i32 %evl)
@@ -443,8 +443,8 @@ define <2 x double> @vfneg_vv_v2f64_unmasked(<2 x double> %va, i32 zeroext %evl)
 define <4 x double> @vfneg_vv_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.fneg.v4f64(<4 x double> %va, <4 x i1> %m, i32 %evl)
   ret <4 x double> %v
@@ -453,7 +453,7 @@ define <4 x double> @vfneg_vv_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext %
 define <4 x double> @vfneg_vv_v4f64_unmasked(<4 x double> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v4f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.fneg.v4f64(<4 x double> %va, <4 x i1> splat (i1 true), i32 %evl)
@@ -463,8 +463,8 @@ define <4 x double> @vfneg_vv_v4f64_unmasked(<4 x double> %va, i32 zeroext %evl)
 define <8 x double> @vfneg_vv_v8f64(<8 x double> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x double> @llvm.vp.fneg.v8f64(<8 x double> %va, <8 x i1> %m, i32 %evl)
   ret <8 x double> %v
@@ -473,7 +473,7 @@ define <8 x double> @vfneg_vv_v8f64(<8 x double> %va, <8 x i1> %m, i32 zeroext %
 define <8 x double> @vfneg_vv_v8f64_unmasked(<8 x double> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v8f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x double> @llvm.vp.fneg.v8f64(<8 x double> %va, <8 x i1> splat (i1 true), i32 %evl)
@@ -483,8 +483,8 @@ define <8 x double> @vfneg_vv_v8f64_unmasked(<8 x double> %va, i32 zeroext %evl)
 define <15 x double> @vfneg_vv_v15f64(<15 x double> %va, <15 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v15f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <15 x double> @llvm.vp.fneg.v15f64(<15 x double> %va, <15 x i1> %m, i32 %evl)
   ret <15 x double> %v
@@ -493,7 +493,7 @@ define <15 x double> @vfneg_vv_v15f64(<15 x double> %va, <15 x i1> %m, i32 zeroe
 define <15 x double> @vfneg_vv_v15f64_unmasked(<15 x double> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v15f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <15 x double> @llvm.vp.fneg.v15f64(<15 x double> %va, <15 x i1> splat (i1 true), i32 %evl)
@@ -503,8 +503,8 @@ define <15 x double> @vfneg_vv_v15f64_unmasked(<15 x double> %va, i32 zeroext %e
 define <16 x double> @vfneg_vv_v16f64(<16 x double> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v16f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfneg.v v8, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x double> @llvm.vp.fneg.v16f64(<16 x double> %va, <16 x i1> %m, i32 %evl)
   ret <16 x double> %v
@@ -513,7 +513,7 @@ define <16 x double> @vfneg_vv_v16f64(<16 x double> %va, <16 x i1> %m, i32 zeroe
 define <16 x double> @vfneg_vv_v16f64_unmasked(<16 x double> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v16f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x double> @llvm.vp.fneg.v16f64(<16 x double> %va, <16 x i1> splat (i1 true), i32 %evl)
@@ -523,23 +523,9 @@ define <16 x double> @vfneg_vv_v16f64_unmasked(<16 x double> %va, i32 zeroext %e
 define <32 x double> @vfneg_vv_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v32f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 16
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v24, v0, 2
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    bltu a0, a2, .LBB34_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:  .LBB34_2:
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vfneg.v v8, v8, v0.t
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfneg.v v16, v16, v0.t
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vfneg.v v8, v8
+; CHECK-NEXT:    vfneg.v v16, v16
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.fneg.v32f64(<32 x double> %va, <32 x i1> %m, i32 %evl)
   ret <32 x double> %v
@@ -548,19 +534,8 @@ define <32 x double> @vfneg_vv_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroe
 define <32 x double> @vfneg_vv_v32f64_unmasked(<32 x double> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v32f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 16
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    bltu a0, a2, .LBB35_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:  .LBB35_2:
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfneg.v v16, v16
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.fneg.v32f64(<32 x double> %va, <32 x i1> splat (i1 true), i32 %evl)

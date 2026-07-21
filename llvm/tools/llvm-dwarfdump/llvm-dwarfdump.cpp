@@ -338,6 +338,17 @@ static opt<bool>
     ShowVariableCoverage("show-variable-coverage",
                          desc("Show per-variable coverage metrics."),
                          cat(DwarfDumpCategory));
+static opt<std::string>
+    CoverageBaseline("coverage-baseline",
+                     desc("File to use as the baseline for variable coverage "
+                          "statistics (implies --show-variable-coverage)"),
+                     value_desc("filename"), cat(DwarfDumpCategory));
+static opt<std::string>
+    BitcodeFile("variable-coverage-bitcode-file",
+                desc("File containing LLVM IR (bitcode or textual) used for "
+                     "calculating variable definedness in coverage statistics "
+                     "(implies --show-variable-coverage)"),
+                value_desc("filename"), cat(DwarfDumpCategory));
 static opt<bool> CombineInstances(
     "combine-inline-variable-instances",
     desc(
@@ -718,7 +729,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   if (!MCRegInfo)
     logAllUnhandledErrors(createStringError(inconvertibleErrorCode(),
                                             "Error in creating MCRegInfo"),
-                          errs(), Filename.str() + ": ");
+                          errs(), Filename + ": ");
 
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (!MCRegInfo)
@@ -915,7 +926,8 @@ int main(int argc, char **argv) {
     DumpType |= DIDT_UUID;
   if (DumpAll)
     DumpType = DIDT_All;
-  if (DumpType == DIDT_Null && !ShowVariableCoverage) {
+  if (DumpType == DIDT_Null && !ShowVariableCoverage &&
+      CoverageBaseline.empty() && BitcodeFile.empty()) {
     if (Verbose || Verify)
       DumpType = DIDT_All;
     else
@@ -967,10 +979,25 @@ int main(int argc, char **argv) {
       Success &= handleFile(Object, dumpObjectFile, OutputFile.os());
   }
 
-  if (ShowVariableCoverage) {
+  if (!CoverageBaseline.empty()) {
+    auto handleBaseline = [&](ObjectFile &BaselineObj,
+                              DWARFContext &BaselineCtx, const Twine &Filename,
+                              raw_ostream &OS) {
+      auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
+                              const Twine &Filename, raw_ostream &OS) {
+        return showVariableCoverage(Obj, DICtx, &BaselineObj, &BaselineCtx,
+                                    BitcodeFile, CombineInstances, OS);
+      };
+      for (StringRef Object : Objects)
+        Success &= handleFile(Object, showCoverage, OutputFile.os());
+      return true;
+    };
+    Success &= handleFile(CoverageBaseline, handleBaseline, OutputFile.os());
+  } else if (ShowVariableCoverage || !BitcodeFile.empty()) {
     auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
                             const Twine &Filename, raw_ostream &OS) {
-      return showVariableCoverage(Obj, DICtx, CombineInstances, OS);
+      return showVariableCoverage(Obj, DICtx, nullptr, nullptr, BitcodeFile,
+                                  CombineInstances, OS);
     };
     for (StringRef Object : Objects)
       Success &= handleFile(Object, showCoverage, OutputFile.os());

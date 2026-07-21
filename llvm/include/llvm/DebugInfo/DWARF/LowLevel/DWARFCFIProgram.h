@@ -189,8 +189,7 @@ public:
         addInstruction(Opcode, 0);
         StringRef Expression = Data.getBytes(C, ExprLength);
 
-        DataExtractor Extractor(Expression, Data.isLittleEndian(),
-                                Data.getAddressSize());
+        DataExtractor Extractor(Expression, Data.isLittleEndian());
         // Note. We do not pass the DWARF format to DWARFExpression, because
         // DW_OP_call_ref, the only operation which depends on the format, is
         // prohibited in call frame instructions, see sec. 6.4.2 in DWARFv5.
@@ -205,8 +204,7 @@ public:
 
         uint64_t BlockLength = Data.getULEB128(C);
         StringRef Expression = Data.getBytes(C, BlockLength);
-        DataExtractor Extractor(Expression, Data.isLittleEndian(),
-                                Data.getAddressSize());
+        DataExtractor Extractor(Expression, Data.isLittleEndian());
         // Note. We do not pass the DWARF format to DWARFExpression, because
         // DW_OP_call_ref, the only operation which depends on the format, is
         // prohibited in call frame instructions, see sec. 6.4.2 in DWARFv5.

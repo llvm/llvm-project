@@ -40,11 +40,7 @@ struct ExecutionEnvironment {
   typedef void (*ConfigEnvCallbackPtr)(
       int, const char *[], const char *[], const EnvironmentDefaultList *);
 
-#if !defined(_OPENMP)
-  // FIXME: https://github.com/llvm/llvm-project/issues/84942
-  constexpr
-#endif
-      ExecutionEnvironment(){};
+  constexpr ExecutionEnvironment() {};
   void Configure(int argc, const char *argv[], const char *envp[],
       const EnvironmentDefaultList *envDefaults);
 
@@ -71,6 +67,9 @@ struct ExecutionEnvironment {
       decimal::FortranRounding::RoundNearest}; // RP(==PN)
   Convert conversion{Convert::Unknown}; // FORT_CONVERT
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
+  // FLANG_TIMEF_IN_MILLISECONDS=1 sets TIMEF resolution to milliseconds.
+  // Default resolution is seconds.
+  bool timefInMillisec{false};
   bool defaultUTF8{false}; // DEFAULT_UTF8
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
   bool truncateStream{true}; // FORT_TRUNCATE_STREAM
@@ -82,6 +81,7 @@ struct ExecutionEnvironment {
   // CUDA related variables
   std::size_t cudaStackLimit{0}; // ACC_OFFLOAD_STACK_SIZE
   bool cudaDeviceIsManaged{false}; // NV_CUDAFOR_DEVICE_IS_MANAGED
+  bool cudaCheckError{false}; // NV_CUDAFOR_CHECK_ERROR
 };
 
 RT_OFFLOAD_VAR_GROUP_BEGIN

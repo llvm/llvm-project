@@ -1,3 +1,4 @@
+import datetime
 import subprocess
 import sys
 import os
@@ -165,8 +166,14 @@ def get_branches_found_in_previous_run(github_token: str) -> list[str]:
     for workflow_run in iter(
         repo.get_workflow("prune-branches.yml").get_runs(branch="main")
     ):
-        if workflow_run.status == "completed":
-            break
+        if not workflow_run.status == "completed":
+            continue
+        cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+            days=7
+        )
+        if workflow_run.run_started_at > cutoff:
+            continue
+        break
     assert workflow_run
     workflow_artifact = None
     for workflow_artifact in iter(workflow_run.get_artifacts()):

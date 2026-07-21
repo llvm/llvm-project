@@ -14,6 +14,7 @@ def watchpoint_command(frame, wp, dict):
         print("I stopped the second time, but with no return")
         frame.EvaluateExpression("cookie = 666")
         num_hits += 1
+        return True
     else:
         print("I stopped the %d time" % (num_hits))
         frame.EvaluateExpression("cookie = 999")

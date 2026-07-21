@@ -45,7 +45,4 @@ _start:
 # CHECK-NEXT:         Name:            myctor
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Name:            _start
-# CHECK-NEXT:     GlobalNames:
-# CHECK-NEXT:       - Index:           0
-# CHECK-NEXT:         Name:            __stack_pointer
 # CHECK-NEXT: ...

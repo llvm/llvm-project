@@ -32,6 +32,10 @@ public:
 
     bool isBitField() const { return Decl->isBitField(); }
     bool isUnnamedBitField() const { return Decl->isUnnamedBitField(); }
+    unsigned bitWidth() const {
+      assert(isBitField());
+      return Decl->getBitWidthValue();
+    }
 
     Field(const FieldDecl *D, const Descriptor *Desc, unsigned Offset)
         : Decl(D), Desc(Desc), Offset(Offset) {}
@@ -107,7 +111,8 @@ public:
   /// Returns a base descriptor.
   const Base *getBase(QualType T) const;
   /// Returns a base descriptor.
-  const Base *getBase(const RecordDecl *FD) const;
+  const Base *getBase(const RecordDecl *RD) const;
+  const Base *getBaseOrNull(const RecordDecl *RD) const;
 
   using const_virtual_iter = VirtualBaseList::const_iterator;
   llvm::iterator_range<const_virtual_iter> virtual_bases() const {
@@ -138,7 +143,7 @@ private:
   BaseList Bases;
   /// List of all the fields in the record.
   FieldList Fields;
-  /// List o fall virtual bases.
+  /// List of all virtual bases.
   VirtualBaseList VirtualBases;
 
   /// Mapping from declarations to bases.

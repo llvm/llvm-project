@@ -28,10 +28,11 @@ define void @test(ptr %p) {
 ; VEC-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; VEC-NEXT:  entry:
 ; VEC-NEXT:    [[P1:%.*]] = ptrtoint ptr [[P]] to i64
-; VEC-NEXT:    [[TMP0:%.*]] = add i64 [[P1]], 16
-; VEC-NEXT:    [[UMAX2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 add (i64 ptrtoint (ptr @h to i64), i64 1))
-; VEC-NEXT:    [[TMP1:%.*]] = add i64 [[UMAX2]], -9
-; VEC-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[P1]]
+; VEC-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[P]] to i64
+; VEC-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 16
+; VEC-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 add (i64 ptrtoint (ptr @h to i64), i64 1))
+; VEC-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP9]], [[TMP0]]
+; VEC-NEXT:    [[TMP2:%.*]] = add i64 [[TMP15]], -9
 ; VEC-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; VEC-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 8
@@ -58,7 +59,6 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 1, i16 2, i16 3, i16 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[STEP_ADD:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
-; VEC-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 0
 ; VEC-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 3
@@ -66,7 +66,7 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[TMP32:%.*]] = add i64 [[INDEX]], 5
 ; VEC-NEXT:    [[TMP33:%.*]] = add i64 [[INDEX]], 6
 ; VEC-NEXT:    [[TMP34:%.*]] = add i64 [[INDEX]], 7
-; VEC-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP15]], 1
+; VEC-NEXT:    [[TMP19:%.*]] = shl i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP16]], 1
 ; VEC-NEXT:    [[TMP21:%.*]] = shl i64 [[TMP17]], 1
 ; VEC-NEXT:    [[TMP22:%.*]] = shl i64 [[TMP18]], 1
@@ -97,7 +97,7 @@ define void @test(ptr %p) {
 ; VEC:       middle.block:
 ; VEC-NEXT:    [[TMP42:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 1)
 ; VEC-NEXT:    [[TMP28:%.*]] = zext <4 x i16> [[TMP42]] to <4 x i64>
-; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP28]], i32 3
+; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP28]], i64 3
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VEC:       scalar.ph:

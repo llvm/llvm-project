@@ -140,8 +140,14 @@ public:
                             Register Original);
   bool rmFromMergeableSpills(MachineInstr &Spill, int StackSlot);
   void hoistAllSpills();
+  void LRE_WillShrinkVirtReg(Register) override;
   bool LRE_CanEraseVirtReg(Register) override;
   void LRE_DidCloneVirtReg(Register, Register) override;
+
+private:
+  // Vregs unassigned from the matrix during LRE_WillShrinkVirtReg, pending
+  // re-assignment after the interval is shrunk/split.
+  DenseMap<Register, MCRegister> PendingReassignments;
 };
 
 class InlineSpiller : public Spiller {
@@ -482,6 +488,14 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   --MII; // Point to store instruction.
   LLVM_DEBUG(dbgs() << "\thoisted: " << SrcVNI->def << '\t' << *MII);
 
+  // When the def is a PHI, SkipPHIsLabelsAndDebug may place the store past
+  // prologue instructions. Therefore if that copy was the end of a segment
+  // we need to extend it to the store.
+  if (SrcVNI->isPHIDef()) {
+    SlotIndex StoreUseIdx = LIS.getInstructionIndex(*MII).getRegSlot(true);
+    SrcLI.extendInBlock(LIS.getMBBStartIdx(MBB), StoreUseIdx);
+  }
+
   // If there is only 1 store instruction is required for spill, add it
   // to mergeable list. In X86 AMX, 2 intructions are required to store.
   // We disable the merge for this case.
@@ -680,10 +694,45 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // live interval; this happens if we rematted to all uses, and
   // then further split one of those live ranges.
   if (!DefMI) {
-    markValueUsed(&VirtReg, ParentVNI);
-    LLVM_DEBUG(dbgs() << "\tcannot remat missing def for " << UseIdx << '\t'
-                      << MI);
-    return false;
+    // Try to find the rematerializable definition by tracing through COPY
+    // chains.
+    LiveInterval &LI = LIS.getInterval(VirtReg.reg());
+    VNInfo *CurVNI = LI.getVNInfoAt(UseIdx);
+    MachineInstr *CurDef = nullptr;
+
+    LLVM_DEBUG(dbgs() << "\ttracing COPY chain from "
+                      << printReg(VirtReg.reg(), &TRI) << "\n");
+
+    // Trace backwards through COPY chain using VNInfo
+    while (CurVNI) {
+      CurDef = LIS.getInstructionFromIndex(CurVNI->def);
+
+      LLVM_DEBUG(dbgs() << "\t -> def at " << CurVNI->def << ": "
+                        << (CurDef ? TII.getName(CurDef->getOpcode()) : "null")
+                        << "\n");
+
+      if (!CurDef || !CurDef->isFullCopy())
+        break;
+
+      Register SrcReg = CurDef->getOperand(1).getReg();
+      if (!SrcReg.isVirtual())
+        break;
+      LLVM_DEBUG(dbgs() << "\t -> tracing through COPY to "
+                        << printReg(SrcReg, &TRI) << "\n");
+      LiveInterval &SrcLI = LIS.getInterval(SrcReg);
+      CurVNI = SrcLI.getVNInfoBefore(CurVNI->def);
+    }
+    if (CurDef && TII.isReMaterializable(*CurDef)) {
+      DefMI = CurDef;
+      LLVM_DEBUG(dbgs() << "\tFound remat possibility through COPY chain: "
+                        << *DefMI);
+    }
+    if (!DefMI) {
+      markValueUsed(&VirtReg, ParentVNI);
+      LLVM_DEBUG(dbgs() << "\tcannot remat missing def for " << UseIdx << '\t'
+                        << MI);
+      return false;
+    }
   }
 
   LiveRangeEdit::Remat RM(ParentVNI);
@@ -726,9 +775,18 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Constrain it to the register class of MI.
   MRI.constrainRegClass(NewVReg, MRI.getRegClass(VirtReg.reg()));
 
+  // Compute which lanes of the virtual register are live at the use point.
+  LaneBitmask UsedLanes = LaneBitmask::getAll();
+  if (VirtReg.hasSubRanges()) {
+    UsedLanes = LaneBitmask::getNone();
+    for (const LiveInterval::SubRange &SR : VirtReg.subranges())
+      if (SR.liveAt(UseIdx))
+        UsedLanes |= SR.LaneMask;
+  }
+
   // Finally we can rematerialize OrigMI before MI.
-  SlotIndex DefIdx =
-      Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM, TRI);
+  SlotIndex DefIdx = Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM,
+                                           TRI, false, 0, nullptr, UsedLanes);
 
   // We take the DebugLoc from MI, since OrigMI may be attributed to a
   // different source location.
@@ -1007,9 +1065,11 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       MI->untieRegOperand(Idx);
     }
 
+  MachineInstr *CopyMI = nullptr;
   MachineInstr *FoldMI =
-      LoadMI ? TII.foldMemoryOperand(*MI, FoldOps, *LoadMI, &LIS)
-             : TII.foldMemoryOperand(*MI, FoldOps, StackSlot, &LIS, &VRM);
+      LoadMI
+          ? TII.foldMemoryOperand(*MI, FoldOps, *LoadMI, CopyMI, &LIS, &VRM)
+          : TII.foldMemoryOperand(*MI, FoldOps, StackSlot, CopyMI, &LIS, &VRM);
   if (!FoldMI) {
     // Re-tie operands.
     for (auto Tied : TiedOps)
@@ -1041,7 +1101,49 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   if (TII.isStoreToStackSlot(*MI, FI) &&
       HSpiller.rmFromMergeableSpills(*MI, FI))
     --NumSpills;
-  LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
+  SlotIndex FoldIdx = LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
+  if (CopyMI) {
+    SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
+    if (!MRI.isSSA()) {
+      Register CopyDstReg = CopyMI->getOperand(0).getReg();
+      LiveInterval &LI = LIS.getInterval(CopyDstReg);
+
+      // The addSegment below extends CopyDstReg's LiveInterval with a new
+      // segment for the copy. If CopyDstReg is already assigned in the
+      // LiveRegMatrix, we must unassign before the modification and reassign
+      // after, so the matrix stays consistent with the updated interval.
+      // This can happen when the fold target creates a copy
+      // to preserve a source operand, defining a vreg that was already
+      // allocated to a physreg.
+      bool NeedMatrixReassign =
+          Matrix && CopyDstReg.isVirtual() && VRM.hasPhys(CopyDstReg);
+      MCRegister PhysReg;
+      if (NeedMatrixReassign) {
+        PhysReg = VRM.getPhys(CopyDstReg);
+        Matrix->unassign(LI);
+      }
+
+      VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
+      LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+
+      if (NeedMatrixReassign)
+        Matrix->assign(LI, PhysReg);
+
+      Register OrigReg = VRM.getOriginal(CopyDstReg);
+      if (OrigReg != CopyDstReg) {
+        // Extend the original LI to cover the same range so that the
+        // sub-interval invariant holds: the original must be live wherever
+        // any of its children are live.  Without this, reMaterializeFor()
+        // can query OrigLI at an early-clobber slot that falls inside
+        // [CopyIdx, FoldIdx) and get a null VNI, triggering an assertion.
+        assert(LIS.hasInterval(OrigReg) && "OrigReg should have live interval");
+        LiveInterval &OrigLI = LIS.getInterval(OrigReg);
+        if (VNInfo *OrigVNI = OrigLI.getVNInfoAt(FoldIdx.getRegSlot()))
+          OrigLI.addSegment(
+              LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), OrigVNI));
+      }
+    }
+  }
   // Update the call info.
   if (MI->isCandidateForAdditionalCallInfo())
     MI->getMF()->moveAdditionalCallInfo(MI, FoldMI);
@@ -1083,8 +1185,18 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   // Insert any new instructions other than FoldMI into the LIS maps.
   assert(!MIS.empty() && "Unexpected empty span of instructions!");
   for (MachineInstr &MI : MIS)
-    if (&MI != FoldMI)
+    if (&MI != FoldMI && &MI != CopyMI)
       LIS.InsertMachineInstrInMaps(MI);
+
+  if (CopyMI) {
+    Register R = CopyMI->getOperand(1).getReg();
+    if (R.isVirtual()) {
+      LiveInterval &LI = LIS.getInterval(R);
+      LIS.shrinkToUses(&LI);
+    } else {
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
+    }
+  }
 
   // TII.foldMemoryOperand may have left some implicit operands on the
   // instruction.  Strip them.
@@ -1756,12 +1868,36 @@ void HoistSpillHelper::hoistAllSpills() {
     }
     Edit.eliminateDeadDefs(SpillsToRm, {});
   }
+
+  // Flush vregs that were unassigned from the matrix during shrinking but
+  // were not split (so LRE_DidCloneVirtReg never re-assigned them).
+  for (auto &[VReg, PhysReg] : PendingReassignments) {
+    assert(Matrix && LIS.hasInterval(VReg) &&
+           "Pending reassignment without matrix or live interval");
+    Matrix->assign(LIS.getInterval(VReg), PhysReg);
+  }
+  PendingReassignments.clear();
+}
+
+/// Called when a virtual register's live interval is about to be shrunk.
+/// Unassign from the matrix so the shrunk interval can be re-assigned by a
+/// later LRE_DidCloneVirtReg or by hoistAllSpills' flush, and stash the
+/// physreg in PendingReassignments since the unassign clears VRM.
+void HoistSpillHelper::LRE_WillShrinkVirtReg(Register VirtReg) {
+  if (!Matrix || !VRM.hasPhys(VirtReg) || !LIS.hasInterval(VirtReg))
+    return;
+
+  MCRegister PhysReg = VRM.getPhys(VirtReg);
+  LiveInterval &LI = LIS.getInterval(VirtReg);
+  Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
+  PendingReassignments[VirtReg] = PhysReg;
 }
 
 /// Called before a virtual register is erased from LiveIntervals.
 /// Forcibly remove the register from LiveRegMatrix before it's deleted,
 /// preventing dangling pointers.
 bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
+  PendingReassignments.erase(VirtReg);
   if (Matrix && VRM.hasPhys(VirtReg)) {
     const LiveInterval &LI = LIS.getInterval(VirtReg);
     Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
@@ -1772,12 +1908,40 @@ bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
 /// For VirtReg clone, the \p New register should have the same physreg or
 /// stackslot as the \p old register.
 void HoistSpillHelper::LRE_DidCloneVirtReg(Register New, Register Old) {
-  if (VRM.hasPhys(Old))
-    VRM.assignVirt2Phys(New, VRM.getPhys(Old));
-  else if (VRM.getStackSlot(Old) != VirtRegMap::NO_STACK_SLOT)
+  // New is freshly created by LiveRangeEdit::eliminateDeadDefs and its interval
+  // is guaranteed to exist on every path below.
+  assert(LIS.hasInterval(New) && "Cloned vreg without live interval");
+
+  auto PendingIt = PendingReassignments.find(Old);
+  if (PendingIt != PendingReassignments.end()) {
+    // Old was already unassigned in LRE_WillShrinkVirtReg, which only
+    // enrolls vregs when Matrix is non-null and the interval exists.
+    assert(Matrix && LIS.hasInterval(Old) &&
+           "Pending reassignment without matrix or live interval");
+    MCRegister PhysReg = PendingIt->second;
+    PendingReassignments.erase(PendingIt);
+
+    // Reassign both Old (with its shrunk interval) and New to the matrix.
+    Matrix->assign(LIS.getInterval(Old), PhysReg);
+    Matrix->assign(LIS.getInterval(New), PhysReg);
+  } else if (VRM.hasPhys(Old)) {
+    MCRegister PhysReg = VRM.getPhys(Old);
+    if (Matrix) {
+      if (LIS.hasInterval(Old)) {
+        const LiveInterval &LI = LIS.getInterval(Old);
+        // Drop stale pre-clone segments before reassigning Old's current LI.
+        Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
+        Matrix->assign(LI, PhysReg);
+      }
+      Matrix->assign(LIS.getInterval(New), PhysReg);
+    } else {
+      VRM.assignVirt2Phys(New, PhysReg);
+    }
+  } else if (VRM.getStackSlot(Old) != VirtRegMap::NO_STACK_SLOT) {
     VRM.assignVirt2StackSlot(New, VRM.getStackSlot(Old));
-  else
+  } else {
     llvm_unreachable("VReg should be assigned either physreg or stackslot");
+  }
   if (VRM.hasShape(Old))
     VRM.assignVirt2Shape(New, VRM.getShape(Old));
 }

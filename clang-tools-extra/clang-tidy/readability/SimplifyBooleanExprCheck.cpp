@@ -806,7 +806,7 @@ void SimplifyBooleanExprCheck::replaceWithAssignment(const ASTContext &Context,
 }
 
 /// Swaps a \c BinaryOperator opcode from `&&` to `||` or vice-versa.
-static bool flipDemorganOperator(llvm::SmallVectorImpl<FixItHint> &Output,
+static bool flipDemorganOperator(SmallVectorImpl<FixItHint> &Output,
                                  const BinaryOperator *BO) {
   assert(BO->isLogicalOp());
   if (BO->getOperatorLoc().isMacroID())

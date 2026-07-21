@@ -61,7 +61,7 @@ main(alpha)
 # DUMPIR:     %[[C1_2:.*]] = arith.constant 1 : index
 # DUMPIR:     %[[C1_3:.*]] = arith.constant 1 : index
 # DUMPIR:     gpu.launch blocks(%arg1, %arg2, %arg3) in (%arg7 = %[[C1]], %arg8 = %[[C1_0]], %arg9 = %[[C1_1]]) threads(%arg4, %arg5, %arg6) in (%arg10 = %[[C4]], %arg11 = %[[C1_2]], %arg12 = %[[C1_3]]) dynamic_shared_memory_size %[[C0_I32]] {
-# DUMPIR:       %[[TIDX:.*]] = gpu.thread_id  x
+# DUMPIR:       %[[TIDX:.*]] = gpu.thread_id x
 # DUMPIR:       %[[MYVAL:.*]] = arith.addi %arg0, %[[TIDX]] : index
 # DUMPIR:       gpu.printf "GPU thread %llu has %llu\0A", %[[TIDX]], %[[MYVAL]] : index, index
 # DUMPIR:       gpu.terminator
