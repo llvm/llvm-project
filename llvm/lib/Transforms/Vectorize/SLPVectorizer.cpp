@@ -3434,15 +3434,12 @@ private:
       Instruction *I,
       const SmallDenseSet<Value *> *VectorizedVals = nullptr) const;
 
-  /// Estimates the number of scalar instructions in the tree, each weighted by
-  /// its loop-nest trip count (nest-invariant entries are dropped when
-  /// \p TreeLoop is non-null).
-  uint64_t getNumScalarInsts(bool HasTreeLoop);
+  /// Estimates the number of scalar instructions in the tree.
+  unsigned getNumScalarInsts() const;
 
   /// Estimates the number of vector instructions (including buildvectors,
-  /// shuffles, and extracts) the tree produces, weighted like
-  /// getNumScalarInsts().
-  uint64_t getNumVectorInsts(bool HasTreeLoop);
+  /// shuffles, and extracts) that the tree will produce.
+  unsigned getNumVectorInsts() const;
 
   /// Return information about the vector formed for the specified index
   /// of a vector of (the same) instruction.
@@ -3491,10 +3488,6 @@ private:
   /// scale when per-lane information is unavailable or the feature is off.
   uint64_t getGatherNodeEffectiveScale(const TreeEntry &TE,
                                        Instruction *U = nullptr);
-
-  /// \returns the loop-nest execution scale of \p TE.
-  uint64_t getEntryEffectiveScale(const TreeEntry &TE,
-                                  Instruction *U = nullptr);
 
   /// Get the loop nest for the given loop \p L.
   ArrayRef<const Loop *> getLoopNest(const Loop *L);
@@ -13512,16 +13505,12 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI);
 
-uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
-  uint64_t Total = 0;
+unsigned BoUpSLP::getNumScalarInsts() const {
+  unsigned Count = 0;
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     const TreeEntry &TE = *Ptr;
     if (DeletedNodes.contains(&TE))
       continue;
-    uint64_t Scale = getEntryEffectiveScale(TE);
-    if (HasTreeLoop && Scale <= 1)
-      continue;
-    unsigned Count = 0;
     if (TE.isGather() || TransformedToGatherNodes.contains(&TE)) {
       // Count extractelement scalars in gathers - they exist in the scalar
       // code regardless of vectorization. ExtractElement instructions
@@ -13529,13 +13518,12 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
       for (Value *V : TE.Scalars)
         if (isa<ExtractElementInst>(V))
           ++Count;
-      Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
       continue;
     }
     // CombinedVectorize entries (e.g. the fmul child of an FMulAdd, or the
     // cmp child of a MinMax select) are absorbed into the parent on both
-    // scalar and vector sides. The backend fuses fadd+fmul -> fma and
-    // select+cmp -> smin/smax even for scalar code, so skip to avoid
+    // scalar and vector sides. The backend fuses fadd+fmul → fma and
+    // select+cmp → smin/smax even for scalar code, so skip to avoid
     // double-counting.
     if (TE.State == TreeEntry::CombinedVectorize)
       continue;
@@ -13560,7 +13548,7 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
     }
     // Even when the whole node is not combined, individual scalar
     // instructions may be fused by the backend. Each fused pair (e.g.
-    // fadd+fmul -> fma, select+cmp -> smin/smax) becomes a single scalar
+    // fadd+fmul → fma, select+cmp → smin/smax) becomes a single scalar
     // instruction, absorbing the operand instruction. Subtract 1 for each
     // such match to avoid over-counting the scalar side.
     if (TE.CombinedOp == TreeEntry::NotCombinedOp && TE.hasState()) {
@@ -13594,27 +13582,22 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
         }
       }
     }
-    Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
   }
-  return Total;
+  return Count;
 }
 
-uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
-  uint64_t Total = 0;
-  // Source vector -> max scale among the gather entries sharing it, so the
-  // combined shufflevector is still weighted like an in-loop entry below.
-  SmallDenseMap<Value *, uint64_t, 4> GatherExtractSourceVecs;
+unsigned BoUpSLP::getNumVectorInsts() const {
+  unsigned Count = 0;
+  SmallPtrSet<Value *, 4> GatherExtractSourceVecs;
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     const TreeEntry &TE = *Ptr;
     if (DeletedNodes.contains(&TE))
       continue;
     if (TE.State == TreeEntry::CombinedVectorize)
       continue;
-    uint64_t Scale = getEntryEffectiveScale(TE);
-    if (HasTreeLoop && Scale <= 1)
-      continue;
-    unsigned Count = 0;
-    if (TE.isGather() || TransformedToGatherNodes.contains(&TE)) {
+    bool IsGatherOrTransformed =
+        TE.isGather() || TransformedToGatherNodes.contains(&TE);
+    if (IsGatherOrTransformed) {
       if (TE.hasState()) {
         if (const TreeEntry *E =
                 getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
@@ -13624,7 +13607,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
         if (const TreeEntry *E =
                 getSameValuesTreeEntry(TE.getMainOp(), RevScalars);
             E && E->getVectorFactor() == TE.getVectorFactor()) {
-          Total = SaturatingAdd(Total, Scale);
+          ++Count;
           continue;
         }
       }
@@ -13634,19 +13617,14 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
       if (all_of(TE.Scalars,
                  IsaPred<ExtractElementInst, UndefValue, Constant>)) {
         for (Value *V : TE.Scalars)
-          if (auto *EE = dyn_cast<ExtractElementInst>(V)) {
-            uint64_t &VecScale =
-                GatherExtractSourceVecs.try_emplace(EE->getVectorOperand(), 0)
-                    .first->second;
-            VecScale = std::max(VecScale, Scale);
-          }
+          if (auto *EE = dyn_cast<ExtractElementInst>(V))
+            GatherExtractSourceVecs.insert(EE->getVectorOperand());
       } else {
         for (Value *V : TE.Scalars) {
           if (!isConstant(V))
             ++Count;
         }
       }
-      Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
       continue;
     }
     // InsertElement/ExtractElement vectorize entries don't produce real
@@ -13662,7 +13640,6 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
         Count += 2;
       if (!TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty())
         ++Count;
-      Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
       continue;
     }
     if (TE.State == TreeEntry::SplitVectorize)
@@ -13671,10 +13648,8 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
       ++Count;
     if (!TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty())
       ++Count;
-    Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
   }
-  for (const auto &VecAndScale : GatherExtractSourceVecs)
-    Total = SaturatingAdd(Total, VecAndScale.second);
+  Count += GatherExtractSourceVecs.size();
   // Count extract instructions from ExternalUses, skipping insertelements
   // (those get folded into shuffles, not real extracts).
   SmallPtrSet<Value *, 8> CountedExtracts;
@@ -13687,9 +13662,9 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
       continue;
     if (!CountedExtracts.insert(EU.Scalar).second)
       continue;
-    ++Total;
+    ++Count;
   }
-  return Total;
+  return Count;
 }
 
 void BoUpSLP::TreeEntry::buildAltOpShuffleMask(
@@ -16466,12 +16441,6 @@ uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE,
   return std::clamp<uint64_t>(Avg, 1, BaseScale);
 }
 
-uint64_t BoUpSLP::getEntryEffectiveScale(const TreeEntry &TE, Instruction *U) {
-  if (TE.isGather() || TE.State == TreeEntry::SplitVectorize)
-    return getGatherNodeEffectiveScale(TE, U);
-  return getScaleToLoopIterations(TE);
-}
-
 InstructionCost
 BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
                                   Type *VecTy, Type *FinalVecTy,
@@ -19008,6 +18977,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     // per-lane refined scale that accounts for LICM-hoistable insertelements
     // when an operand is invariant in the current loop nest but defined in
     // an outer loop. This prevents over-costing cross-loop-nest buildvectors.
+    const bool IsGatherLike =
+        TE.isGather() || TE.State == TreeEntry::SplitVectorize;
     if (!CostIsFree && !TE.isGather() && TE.hasState()) {
       if (PrevVecParent == TE.getMainOp()->getParent()) {
         Scale = PrevScale;
@@ -19016,7 +18987,10 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       }
     }
     if (!CostIsFree && !Scale) {
-      Scale = getEntryEffectiveScale(TE, TE.Idx == 0 ? RdxRoot : nullptr);
+      Scale =
+          IsGatherLike
+              ? getGatherNodeEffectiveScale(TE, TE.Idx == 0 ? RdxRoot : nullptr)
+              : getScaleToLoopIterations(TE);
       C *= Scale;
       EntryToScale.try_emplace(&TE, Scale);
       if (!TE.isGather() && TE.hasState()) {
@@ -19395,8 +19369,12 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         continue;
       }
       uint64_t Scale = EntryToScale.lookup(TE.get());
-      if (!Scale)
-        Scale = getEntryEffectiveScale(*TE);
+      if (!Scale) {
+        const bool IsGatherLike =
+            TE->isGather() || TE->State == TreeEntry::SplitVectorize;
+        Scale = IsGatherLike ? getGatherNodeEffectiveScale(*TE.get())
+                             : getScaleToLoopIterations(*TE.get());
+      }
       C *= Scale;
       NodesCosts.try_emplace(TE.get(), C);
     }
@@ -19480,14 +19458,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       (!SLPReVec ||
        !isa<VectorType>(
            VectorizableTree.front()->Scalars.front()->getType()))) {
-    // Loop containing the tree root; null for flat code or disabled
-    // loop-aware modeling. Shared by both calls below.
-    const Loop *TreeLoop = nullptr;
-    if (LoopAwareTripCount != 0 && VectorizableTree.front()->hasState())
-      TreeLoop =
-          LI->getLoopFor(VectorizableTree.front()->getMainOp()->getParent());
-    uint64_t NumScalar = getNumScalarInsts(TreeLoop);
-    uint64_t NumVector = getNumVectorInsts(TreeLoop);
+    unsigned NumScalar = getNumScalarInsts();
+    unsigned NumVector = getNumVectorInsts();
     LLVM_DEBUG(dbgs() << "SLP: Inst count check: vector=" << NumVector
                       << " scalar=" << NumScalar << "\n");
     if (NumVector > NumScalar && !BypassesInstCountCheck()) {
