@@ -54,8 +54,8 @@ to be compatible with the Visual C++ compiler, cl.exe.
 
 In addition to language-specific features, Clang has a variety of
 features that depend on what CPU architecture or operating system is
-being compiled for. Please see the
-{ref}`Target-Specific Features and Limitations <target_features>` section for
+being compiled for. Please see the {ref}`Target-Specific Features and
+Limitations <target_features>` section for
 more details.
 
 (terminology)=
@@ -515,7 +515,8 @@ this hotness value.
 
 This option, which defaults to zero, controls the minimum hotness an
 optimization remark would need in order to be output by Clang. This is
-currently supported with optimization remarks (see {ref}`Options to Emit Optimization Reports <rpass>`) when profile hotness information in
+currently supported with optimization remarks (see {ref}`Options to Emit
+Optimization Reports <rpass>`) when profile hotness information in
 diagnostics is enabled (see
 {ref}`-fdiagnostics-show-hotness <opt_fdiagnostics-show-hotness>`).
 :::
@@ -1219,8 +1220,8 @@ the options that control it:
    default)
    \[{ref}`-fdiagnostics-print-source-range-info <opt_fdiagnostics-print-source-range-info>`\].
 
-For more information please see
-{ref}`Formatting of Diagnostics <cl_diag_formatting>`.
+For more information please see {ref}`Formatting of
+Diagnostics <cl_diag_formatting>`.
 
 #### Diagnostic Mappings
 
@@ -2305,9 +2306,9 @@ option is intended for use in cases where the sanitizer runtime cannot
 be used (for instance, when building libc or a kernel module), or where
 the binary size increase caused by the sanitizer runtime is a concern.
 
-This flag is only compatible with
-{doc}`control flow integrity <ControlFlowIntegrity>` schemes and
-{doc}`UndefinedBehaviorSanitizer` checks other than `vptr`.
+This flag is only compatible with {doc}`control flow integrity
+<ControlFlowIntegrity>` schemes and {doc}`UndefinedBehaviorSanitizer`
+checks other than `vptr`.
 
 This flag is enabled by default for sanitizers in the `cfi` group.
 :::
@@ -4468,7 +4469,8 @@ error: use of undeclared identifier 'get_enqueued_local_size'
 error: use of undeclared identifier 'get_local_size'
 ```
 
-More information about the standard types and functions is provided in {ref}`the section on the OpenCL Header <opencl_header>`.
+More information about the standard types and functions is provided in {ref}`the
+section on the OpenCL Header <opencl_header>`.
 :::
 
 (opencl_cl_ext)=
@@ -4555,8 +4557,8 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
   such as for example [POCL](http://portablecl.org/), can be used.
 
   This target does not support multiple memory segments and, therefore, the fake
-  address space map can be added using the
-  {ref}`-ffake-address-space-map <opencl_fake_address_space_map>` flag.
+  address space map can be added using the {ref}`-ffake-address-space-map
+  <opencl_fake_address_space_map>` flag.
 
   All known OpenCL extensions and features are set to supported in the generic targets,
   however {option}`-cl-ext` flag can be used to toggle individual extensions and
