@@ -4500,9 +4500,9 @@ void BinaryFunction::calculateLoopInfo() {
     L->EntryCount = L->getHeader()->getExecutionCount() - L->TotalBackEdgeCount;
 
     // Compute exit count.
-    SmallVector<BinaryLoop::Edge, 1> ExitEdges;
+    SmallVector<BinaryLoopInfo::Edge, 1> ExitEdges;
     BLI->getExitEdges(*L, ExitEdges);
-    for (BinaryLoop::Edge &Exit : ExitEdges) {
+    for (BinaryLoopInfo::Edge &Exit : ExitEdges) {
       const BinaryBasicBlock *Exiting = Exit.first;
       const BinaryBasicBlock *ExitTarget = Exit.second;
       auto BI = Exiting->branch_info_begin();

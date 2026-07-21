@@ -1840,9 +1840,8 @@ static void deleteDeadBlocksFromLoop(Loop &L,
                  [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
   // Walk from this loop up through its parents removing all of the dead blocks.
-  for (Loop *ParentL = &L; ParentL; ParentL = ParentL->getParentLoop())
-    LI.removeBlocksIf(*ParentL,
-                      [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
+  LI.removeBlocksFromLoopAndAncestors(
+      &L, nullptr, [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
   // Now delete the dead child loops. Run the per-child deletion callbacks
   // first, while the loop forest is still fully consistent (markLoopAsDeleted
@@ -2040,9 +2039,9 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
   // *up* the nest.
   if (!LoopBlockSet.empty() && L.getParentLoop() != ParentL) {
     // Remove this loop's (original) blocks from all of the intervening loops.
-    for (Loop *IL = L.getParentLoop(); IL != ParentL; IL = IL->getParentLoop())
-      LI.removeBlocksIf(
-          *IL, [&](BasicBlock *BB) { return BB == PH || L.contains(BB); });
+    LI.removeBlocksFromLoopAndAncestors(
+        L.getParentLoop(), ParentL,
+        [&](BasicBlock *BB) { return BB == PH || L.contains(BB); });
 
     LI.changeLoopFor(PH, ParentL);
     L.getParentLoop()->removeChildLoop(&L);
@@ -2074,11 +2073,7 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
   SmallPtrSet<BasicBlock *, 16> NewExitLoopBlocks;
   Loop *PrevExitL = L.getParentLoop(); // The deepest possible exit loop.
 
-  auto RemoveUnloopedBlocksFromLoop =
-      [&LI](Loop &L, SmallPtrSetImpl<BasicBlock *> &UnloopedBlocks) {
-        LI.removeBlocksIf(
-            L, [&](BasicBlock *BB) { return UnloopedBlocks.count(BB); });
-      };
+  auto InUnlooped = [&](BasicBlock *BB) { return UnloopedBlocks.count(BB); };
 
   SmallVector<BasicBlock *, 16> Worklist;
   while (!UnloopedBlocks.empty() && !ExitsInLoops.empty()) {
@@ -2094,8 +2089,8 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
     // exit loop and this exit loop. This works because the ExitInLoops list is
     // sorted in increasing order of loop depth and thus we visit loops in
     // decreasing order of loop depth.
-    for (; PrevExitL != &ExitL; PrevExitL = PrevExitL->getParentLoop())
-      RemoveUnloopedBlocksFromLoop(*PrevExitL, UnloopedBlocks);
+    LI.removeBlocksFromLoopAndAncestors(PrevExitL, &ExitL, InUnlooped);
+    PrevExitL = &ExitL;
 
     // Walk the CFG back until we hit the cloned PH adding everything reachable
     // and in the unlooped set to this exit block's loop.
@@ -2143,8 +2138,7 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
 
   // Any remaining unlooped blocks are no longer part of any loop unless they
   // are part of some child loop.
-  for (; PrevExitL; PrevExitL = PrevExitL->getParentLoop())
-    RemoveUnloopedBlocksFromLoop(*PrevExitL, UnloopedBlocks);
+  LI.removeBlocksFromLoopAndAncestors(PrevExitL, nullptr, InUnlooped);
   for (auto *BB : UnloopedBlocks)
     if (Loop *BBL = LI.getLoopFor(BB))
       if (BBL == &L || !L.contains(BBL))
