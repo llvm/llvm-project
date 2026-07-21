@@ -38,8 +38,7 @@ void mock::MockLiboffload::initDefault() {
       .WillByDefault([this](const ol_init_args_t *InitArgs) -> ol_result_t {
         // TODO: complicated cases with non-default settings are not covered.
         const ol_init_args_t DefaultArgs = OL_INIT_ARGS_INIT;
-        if (InitArgs && (*InitArgs != DefaultArgs))
-          return makeEmptyStrError(OL_ERRC_UNIMPLEMENTED);
+        EXPECT_TRUE(!InitArgs || (*InitArgs == DefaultArgs));
 
         assert(!DefaultDevice);
         DefaultPlatform = mock::createDummyHandle<ol_platform_handle_t>();
@@ -69,70 +68,54 @@ void mock::MockLiboffload::initDefault() {
       .WillByDefault([this](ol_platform_handle_t Platform,
                             ol_platform_info_t PropName,
                             size_t *PropSizeRet) -> ol_result_t {
-        if (!Platform)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!PropSizeRet)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Platform);
+        EXPECT_TRUE(PropSizeRet);
 
-        if (PropName == OL_PLATFORM_INFO_BACKEND) {
-          *PropSizeRet = sizeof(ol_platform_backend_t);
-          return OL_SUCCESS;
-        }
-
-        return makeEmptyStrError(OL_ERRC_UNIMPLEMENTED);
+        EXPECT_EQ(PropName, OL_PLATFORM_INFO_BACKEND);
+        *PropSizeRet = sizeof(ol_platform_backend_t);
+        return OL_SUCCESS;
       });
 
   ON_CALL(*this, olGetPlatformInfo)
       .WillByDefault([this](ol_platform_handle_t Platform,
                             ol_platform_info_t PropName, size_t PropSize,
                             void *PropValue) -> ol_result_t {
-        if (!Platform)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!PropSize)
-          return makeEmptyStrError(OL_ERRC_INVALID_SIZE);
-        if (!PropValue)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Platform);
+        EXPECT_TRUE(PropSize);
+        EXPECT_TRUE(PropValue);
 
-        if (PropName == OL_PLATFORM_INFO_BACKEND) {
-          if (PropSize != sizeof(ol_platform_backend_t))
-            return makeEmptyStrError(OL_ERRC_INVALID_SIZE);
-          assignAs<ol_platform_backend_t>(PropValue,
-                                          Platform == HostPlatform
-                                              ? OL_PLATFORM_BACKEND_HOST
-                                              : OL_PLATFORM_BACKEND_LEVEL_ZERO);
-          return OL_SUCCESS;
-        }
-
-        return makeEmptyStrError(OL_ERRC_UNIMPLEMENTED);
+        EXPECT_EQ(PropName, OL_PLATFORM_INFO_BACKEND);
+        EXPECT_EQ(PropSize, sizeof(ol_platform_backend_t));
+        assignAs<ol_platform_backend_t>(PropValue,
+                                        Platform == HostPlatform
+                                            ? OL_PLATFORM_BACKEND_HOST
+                                            : OL_PLATFORM_BACKEND_LEVEL_ZERO);
+        return OL_SUCCESS;
       });
 
   ON_CALL(*this, olGetDeviceInfo)
       .WillByDefault([this](ol_device_handle_t Device,
                             ol_device_info_t PropName, size_t PropSize,
                             void *PropValue) -> ol_result_t {
-        if (!Device)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!PropSize)
-          return makeEmptyStrError(OL_ERRC_INVALID_SIZE);
-        if (!PropValue)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Device);
+        EXPECT_TRUE(PropSize);
+        EXPECT_TRUE(PropValue);
 
         switch (PropName) {
         case OL_DEVICE_INFO_PLATFORM: {
-          if (PropSize != sizeof(ol_platform_handle_t))
-            return makeEmptyStrError(OL_ERRC_INVALID_SIZE);
+          EXPECT_EQ(PropSize, sizeof(ol_platform_handle_t));
           assignAs<ol_platform_handle_t>(
               PropValue, reinterpret_cast<mock::dummy_handle_t>(Device)
                              ->getDataAs<ol_platform_handle_t>());
           return OL_SUCCESS;
         }
         case OL_DEVICE_INFO_TYPE: {
-          if (PropSize != sizeof(ol_device_type_t))
-            return makeEmptyStrError(OL_ERRC_INVALID_SIZE);
+          EXPECT_EQ(PropSize, sizeof(ol_device_type_t));
           assignAs<ol_device_type_t>(PropValue, OL_DEVICE_TYPE_GPU);
           return OL_SUCCESS;
         }
         default:
+          ADD_FAILURE();
           return makeEmptyStrError(OL_ERRC_UNIMPLEMENTED);
         }
       });
@@ -141,10 +124,8 @@ void mock::MockLiboffload::initDefault() {
       .WillByDefault([this](ol_device_handle_t Device,
                             ol_device_info_t PropName,
                             size_t *PropSizeRet) -> ol_result_t {
-        if (!Device)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!PropSizeRet)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Device);
+        EXPECT_TRUE(PropSizeRet);
         switch (PropName) {
         case OL_DEVICE_INFO_PLATFORM: {
           *PropSizeRet = sizeof(ol_platform_handle_t);
@@ -155,6 +136,7 @@ void mock::MockLiboffload::initDefault() {
           return OL_SUCCESS;
         }
         default:
+          ADD_FAILURE();
           return makeEmptyStrError(OL_ERRC_UNIMPLEMENTED);
         }
       });
@@ -162,8 +144,7 @@ void mock::MockLiboffload::initDefault() {
   ON_CALL(*this, olIterateDevices)
       .WillByDefault([this](ol_device_iterate_cb_t Callback,
                             void *UserData) -> ol_result_t {
-        if (!Callback)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Callback);
 
         assert(DefaultDevice);
         std::ignore = Callback(DefaultDevice, UserData);
@@ -175,8 +156,7 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olDestroyProgram)
       .WillByDefault([this](ol_program_handle_t Program) -> ol_result_t {
-        if (!Program)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        EXPECT_TRUE(Program);
         mock::releaseDummyHandle(Program);
         return OL_SUCCESS;
       });
@@ -185,11 +165,10 @@ void mock::MockLiboffload::initDefault() {
       .WillByDefault([this](ol_device_handle_t Device, const void *ProgData,
                             size_t ProgDataSize,
                             ol_program_handle_t *Program) -> ol_result_t {
-        if (!Device)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!ProgData || !Program || !ProgDataSize)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
-
+        EXPECT_TRUE(Device);
+        EXPECT_TRUE(ProgData);
+        EXPECT_TRUE(ProgDataSize);
+        EXPECT_TRUE(Program);
         *Program = mock::createDummyHandleWithData<ol_program_handle_t>(
             reinterpret_cast<unsigned char *>(&Device), sizeof(Device));
         return OL_SUCCESS;
@@ -198,10 +177,10 @@ void mock::MockLiboffload::initDefault() {
   ON_CALL(*this, olIsValidBinary)
       .WillByDefault([this](ol_device_handle_t Device, const void *ProgData,
                             size_t ProgDataSize, bool *Valid) -> ol_result_t {
-        if (!Device)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!ProgData || !Valid || !ProgDataSize)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Device);
+        EXPECT_TRUE(ProgData);
+        EXPECT_TRUE(ProgDataSize);
+        EXPECT_TRUE(Valid);
         *Valid = true;
         return OL_SUCCESS;
       });
@@ -210,12 +189,10 @@ void mock::MockLiboffload::initDefault() {
       .WillByDefault([this](ol_program_handle_t Program, const char *Name,
                             ol_symbol_kind_t Kind,
                             ol_symbol_handle_t *Symbol) -> ol_result_t {
-        if (!Program)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!Name || !Symbol)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Program);
+        EXPECT_TRUE(Name);
         std::ignore = Kind;
-
+        EXPECT_TRUE(Symbol);
         *Symbol = mock::createDummyHandleWithData<ol_symbol_handle_t>(
             reinterpret_cast<unsigned char *>(&Program), sizeof(Program));
         return OL_SUCCESS;
@@ -224,10 +201,8 @@ void mock::MockLiboffload::initDefault() {
   ON_CALL(*this, olCreateQueue)
       .WillByDefault([this](ol_device_handle_t Device,
                             ol_queue_handle_t *Queue) -> ol_result_t {
-        if (!Device)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!Queue)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Device);
+        EXPECT_TRUE(Queue);
         // Attach device as data to check what device queue belongs to if needed
         *Queue = mock::createDummyHandleWithData<ol_queue_handle_t>(
             reinterpret_cast<unsigned char *>(&Device), sizeof(Device));
@@ -236,16 +211,14 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olDestroyQueue)
       .WillByDefault([this](ol_queue_handle_t Queue) -> ol_result_t {
-        if (!Queue)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        EXPECT_TRUE(Queue);
         mock::releaseDummyHandle(Queue);
         return OL_SUCCESS;
       });
 
   ON_CALL(*this, olSyncQueue)
       .WillByDefault([this](ol_queue_handle_t Queue) -> ol_result_t {
-        if (!Queue)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        EXPECT_TRUE(Queue);
         std::ignore = Queue;
         return OL_SUCCESS;
       });
@@ -253,13 +226,10 @@ void mock::MockLiboffload::initDefault() {
   ON_CALL(*this, olWaitEvents)
       .WillByDefault([this](ol_queue_handle_t Queue, ol_event_handle_t *Events,
                             size_t NumEvents) -> ol_result_t {
-        if (!Queue)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!Events)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Queue);
+        EXPECT_TRUE(Events);
         for (size_t I = 0; I < NumEvents; ++I) {
-          if (!Events[I])
-            return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+          EXPECT_TRUE(Events[I]);
         }
         return OL_SUCCESS;
       });
@@ -267,11 +237,9 @@ void mock::MockLiboffload::initDefault() {
   ON_CALL(*this, olCreateEvent)
       .WillByDefault([this](ol_queue_handle_t Queue, ol_event_flags_t Flags,
                             ol_event_handle_t *Event) -> ol_result_t {
-        if (!Queue)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!Event)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Queue);
         std::ignore = Flags;
+        EXPECT_TRUE(Event);
         *Event = mock::createDummyHandleWithData<ol_event_handle_t>(
             reinterpret_cast<unsigned char *>(&Queue), sizeof(Queue));
         return OL_SUCCESS;
@@ -284,26 +252,22 @@ void mock::MockLiboffload::initDefault() {
                             const ol_kernel_launch_prop_t *Properties,
                             size_t NumArgs, void **ArgPtrs,
                             const size_t *ArgSizes) -> ol_result_t {
-        if (!Device || !Kernel || !Queue)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!LaunchSizeArgs)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Queue);
+        EXPECT_TRUE(Device);
+        EXPECT_TRUE(Kernel);
+        EXPECT_TRUE(LaunchSizeArgs);
         std::ignore = Properties;
-        if ((ArgPtrs == nullptr) != (ArgSizes == nullptr))
-          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
-        if (NumArgs > 0 && (!ArgPtrs || !ArgSizes))
-          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+        EXPECT_TRUE(NumArgs == 0 || ArgPtrs != nullptr);
+        EXPECT_TRUE(!ArgPtrs == !ArgSizes);
         for (size_t I = 0; I < NumArgs; ++I) {
-          if (ArgSizes[I] > 0 && !ArgPtrs[I])
-            return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+          EXPECT_TRUE(ArgSizes[I] == 0 || ArgPtrs[I] != nullptr);
         }
         return OL_SUCCESS;
       });
 
   ON_CALL(*this, olSyncEvent)
       .WillByDefault([this](ol_event_handle_t Event) -> ol_result_t {
-        if (!Event)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        EXPECT_TRUE(Event);
         return OL_SUCCESS;
       });
 
@@ -312,30 +276,28 @@ void mock::MockLiboffload::initDefault() {
                             ol_device_handle_t DstDevice, const void *SrcPtr,
                             ol_device_handle_t SrcDevice,
                             size_t Size) -> ol_result_t {
-        if (!Queue || !DstDevice || !SrcDevice)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!DstPtr || !SrcPtr)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Queue);
+        EXPECT_TRUE(DstPtr);
+        EXPECT_TRUE(DstDevice);
+        EXPECT_TRUE(SrcPtr);
+        EXPECT_TRUE(SrcDevice);
         return OL_SUCCESS;
       });
 
   ON_CALL(*this, olGetMemInfo)
       .WillByDefault([this](const void *Ptr, ol_mem_info_t PropName,
                             size_t PropSize, void *PropValue) -> ol_result_t {
-        if (!Ptr)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        EXPECT_TRUE(Ptr);
         // Other properties are not used by the runtime yet
         EXPECT_EQ(PropName, OL_MEM_INFO_DEVICE);
-        if (PropSize < sizeof(ol_device_handle_t))
-          return makeEmptyStrError(OL_ERRC_INVALID_SIZE);
+        EXPECT_EQ(PropSize, sizeof(ol_device_handle_t));
         assignAs(PropValue, DefaultDevice);
         return OL_SUCCESS;
       });
 
   ON_CALL(*this, olDestroyEvent)
       .WillByDefault([this](ol_event_handle_t Event) -> ol_result_t {
-        if (!Event)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        EXPECT_TRUE(Event);
         mock::releaseDummyHandle(Event);
         return OL_SUCCESS;
       });
