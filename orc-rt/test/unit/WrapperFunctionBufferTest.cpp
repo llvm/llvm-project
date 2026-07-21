@@ -18,7 +18,7 @@ using namespace orc_rt;
 
 namespace {
 constexpr const char *TestString = "test string";
-} // end anonymous namespace
+} // namespace
 
 TEST(WrapperFunctionUtilsTest, DefaultWrapperFunctionBuffer) {
   WrapperFunctionBuffer B;

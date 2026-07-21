@@ -439,21 +439,21 @@ namespace Offsets {
   constexpr C c{12};
 #if !defined(_WIN32)
 #if __SIZEOF_SIZE_T__ == 8
-  static_assert( (fold((char*)&c.c) - fold((char*)&c)) == 12);
-  static_assert( (fold((char*)&c.b) - fold((char*)&c)) == 8);
-  static_assert( (fold((char*)&c.a) - fold((char*)&c)) == 20);
-  static_assert( (fold((char*)&c.x) - fold((char*)&c)) == 16);
+  static_assert( (fold((char*)&c.c - (char*)&c)) == 12);
+  static_assert( (fold((char*)&c.b - (char*)&c)) == 8);
+  static_assert( (fold((char*)&c.a - (char*)&c)) == 20);
+  static_assert( (fold((char*)&c.x - (char*)&c)) == 16);
 #else
-  static_assert( (fold((char*)&c.c) - fold((char*)&c)) == 8);
-  static_assert( (fold((char*)&c.b) - fold((char*)&c)) == 4);
-  static_assert( (fold((char*)&c.a) - fold((char*)&c)) == 16);
-  static_assert( (fold((char*)&c.x) - fold((char*)&c)) == 12);
+  static_assert( (fold((char*)&c.c - (char*)&c)) == 8);
+  static_assert( (fold((char*)&c.b - (char*)&c)) == 4);
+  static_assert( (fold((char*)&c.a - (char*)&c)) == 16);
+  static_assert( (fold((char*)&c.x - (char*)&c)) == 12);
 #endif
 # else
-  static_assert( (fold((char*)&c.c) - fold((char*)&c)) == 16);
-  static_assert( (fold((char*)&c.b) - fold((char*)&c)) == 8);
-  static_assert( (fold((char*)&c.a) - fold((char*)&c)) == 28);
-  static_assert( (fold((char*)&c.x) - fold((char*)&c)) == 24);
+  static_assert( (fold((char*)&c.c - (char*)&c)) == 16);
+  static_assert( (fold((char*)&c.b - (char*)&c)) == 8);
+  static_assert( (fold((char*)&c.a - (char*)&c)) == 28);
+  static_assert( (fold((char*)&c.x - (char*)&c)) == 24);
 #endif
 
   static_assert( (fold((char*)&c.c) != fold((char*)&c)));
