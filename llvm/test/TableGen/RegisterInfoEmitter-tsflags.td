@@ -38,11 +38,11 @@ def SDRegs : MyClass<32, [i32], (add D, S)>{
 
 def MyTarget : Target;
 
-// CHECK:  extern const TargetRegisterClass SDRegsRegClass = {
+// CHECK:  SDRegsRegClassID
 // CHECK:  0x07, /* TSFlags */
-// CHECK:  extern const TargetRegisterClass DRegsRegClass = {
+// CHECK:  DRegsRegClassID
 // CHECK:  0x06, /* TSFlags */
-// CHECK:  extern const TargetRegisterClass MyRegsRegClass = {
+// CHECK:  MyRegsRegClassID
 // CHECK:  0x00, /* TSFlags */
-// CHECK:  extern const TargetRegisterClass SRegsRegClass = {
+// CHECK:  SRegsRegClassID
 // CHECK:  0x01, /* TSFlags */

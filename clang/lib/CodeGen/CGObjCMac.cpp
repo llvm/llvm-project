@@ -6610,10 +6610,6 @@ void CGObjCMac::FinishModule() {
   if ((!LazySymbols.empty() || !DefinedSymbols.empty()) &&
       CGM.getTriple().isOSBinFormatMachO()) {
     SmallString<256> Asm;
-    Asm += CGM.getModule().getModuleInlineAsm();
-    if (!Asm.empty() && Asm.back() != '\n')
-      Asm += '\n';
-
     llvm::raw_svector_ostream OS(Asm);
     for (const auto *Sym : DefinedSymbols)
       OS << "\t.objc_class_name_" << Sym->getName() << "=0\n"
@@ -6624,7 +6620,7 @@ void CGObjCMac::FinishModule() {
       OS << "\t.objc_category_name_" << Category << "=0\n"
          << "\t.globl .objc_category_name_" << Category << "\n";
 
-    CGM.getModule().setModuleInlineAsm(OS.str());
+    CGM.getModule().appendModuleInlineAsm(OS.str());
   }
 }
 

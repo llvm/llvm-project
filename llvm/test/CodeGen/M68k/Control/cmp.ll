@@ -190,9 +190,9 @@ define i32 @test13(i32 %mask, i32 %base, i32 %intra) {
 ; CHECK-LABEL: test13:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    move.b (7,%sp), %d0
-; CHECK-NEXT:    and.b #8, %d0
-; CHECK-NEXT:    cmpi.b #0, %d0
+; CHECK-NEXT:    move.l (4,%sp), %d0
+; CHECK-NEXT:    and.l #8, %d0
+; CHECK-NEXT:    cmpi.l #0, %d0
 ; CHECK-NEXT:    bne .LBB9_1
 ; CHECK-NEXT:  ; %bb.2:
 ; CHECK-NEXT:    lea (8,%sp), %a0

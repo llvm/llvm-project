@@ -597,8 +597,8 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::ppc64:
   case Triple::ppc64le:
     return computePowerDataLayout(*this, ABIName);
+  case Triple::amdgpu:
   case Triple::r600:
-  case Triple::amdgcn:
     return computeAMDDataLayout(*this);
   case Triple::riscv32:
   case Triple::riscv64:

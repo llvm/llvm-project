@@ -279,13 +279,12 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     }
     // SHT_RELR relocations are only supported at API level >= 30.
     // ANDROID_RELR relocations were supported at API level >= 28.
-    // Relocation packer was supported at API level >= 23.
     if (!Triple.isAndroidVersionLT(30)) {
       ExtraOpts.push_back("--pack-dyn-relocs=android+relr");
     } else if (!Triple.isAndroidVersionLT(28)) {
       ExtraOpts.push_back("--pack-dyn-relocs=android+relr");
       ExtraOpts.push_back("--use-android-relr-tags");
-    } else if (!Triple.isAndroidVersionLT(23)) {
+    } else {
       ExtraOpts.push_back("--pack-dyn-relocs=android");
     }
   }
@@ -317,15 +316,9 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // and the MIPS ABI require .dynsym to be sorted in different ways.
   // .gnu.hash needs symbols to be grouped by hash code whereas the MIPS
   // ABI requires a mapping between the GOT and the symbol table.
-  // Android loader does not support .gnu.hash until API 23.
   // Hexagon linker/loader does not support .gnu.hash.
-  // SUSE SLES 11 will stop being supported Mar 2028.
-  if (!IsMips && !IsHexagon) {
-    if (Distro.IsOpenSUSE() || (IsAndroid && Triple.isAndroidVersionLT(23)))
-      ExtraOpts.push_back("--hash-style=both");
-    else
-      ExtraOpts.push_back("--hash-style=gnu");
-  }
+  if (!IsMips && !IsHexagon)
+    ExtraOpts.push_back("--hash-style=gnu");
 
 #ifdef ENABLE_LINKER_BUILD_ID
   ExtraOpts.push_back("--build-id");

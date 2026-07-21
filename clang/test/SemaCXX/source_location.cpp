@@ -862,23 +862,11 @@ struct CompoundLiteral {
 static_assert(CompoundLiteral{}.a == __LINE__);
 
 
-// FIXME
-// Init captures are subexpressions of the lambda expression
-// so according to the standard immediate invocations in init captures
-// should be evaluated at the call site.
-// However Clang does not yet implement this as it would introduce
-// a fair bit of complexity.
-// We intend to implement that functionality once we find real world
-// use cases that require it.
 constexpr int test_init_capture(int a =
                 [b = SL::current().line()] { return b; }()) {
   return a;
 }
-#if defined(USE_CONSTEVAL) && !defined(NEW_INTERP)
-static_assert(test_init_capture() == __LINE__ - 4);
-#else
 static_assert(test_init_capture() == __LINE__ );
-#endif
 
 namespace check_immediate_invocations_in_templates {
 

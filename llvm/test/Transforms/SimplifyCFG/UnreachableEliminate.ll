@@ -1211,6 +1211,23 @@ return:
   ret i8 %r
 }
 
+; Make sure we don't call paramHasNonNullAttr on a ptr vector argument.
+
+define void @pr207188() {
+; CHECK-LABEL: @pr207188(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @fn_arg_vec(<2 x ptr> splat (ptr null))
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb
+
+bb:
+  %phi = phi <2 x ptr> [ splat (ptr null), %entry ]
+  call void @fn_arg_vec(<2 x ptr> %phi)
+  ret void
+}
+
 attributes #0 = { null_pointer_is_valid }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }

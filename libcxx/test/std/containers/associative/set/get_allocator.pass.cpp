@@ -31,6 +31,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
   }
   return true;
 }
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER >= 26

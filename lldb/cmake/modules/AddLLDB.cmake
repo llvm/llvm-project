@@ -188,6 +188,22 @@ function(add_lldb_library name)
     "LINK_LIBS;CLANG_LIBS;ALLOWED_INTERNAL_DEPENDENCIES"
     ${ARGN})
 
+  foreach(link_lib ${PARAM_LINK_LIBS})
+    # May not be a target yet.
+    if (NOT TARGET ${link_lib})
+      continue()
+    endif()
+
+    if (link_lib MATCHES "^clang")
+      message(FATAL_ERROR "Library ${name} links against clang library ${link_lib} via LINK_LIBS but must be added via CLANG_LIBS")
+    endif()
+
+    get_target_property(_is_llvm_component ${link_lib} LLVM_COMPONENT)
+    if (link_lib MATCHES "^LLVM" AND ${_is_llvm_component})
+      message(FATAL_ERROR "Library ${name} links against LLVM library ${link_lib} via LINK_LIBS but must be added via LINK_COMPONENTS")
+    endif()
+  endforeach()
+
   set(_check_internal_deps FALSE)
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
     set(_allowed_internal_deps "")
@@ -469,10 +485,32 @@ function(add_lldb_tool name)
   set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endfunction()
 
+# liblldb statically absorbs lldbHost, lldbUtility, and every plugin. A tool
+# that links the shared liblldb while also linking those archives statically
+# carries a second copy of their object code. On ELF, if the tool re-exports
+# the archive symbols through its own .dynsym, the dynamic linker can bind the
+# shared liblldb's internal references to the tool's copy instead of its own,
+# breaking shared state such as the HostInfo singletons. --exclude-libs,ALL
+# keeps the archive symbols out of the tool's .dynsym. Only ELF is affected:
+# Mach-O uses two-level namespaces and PE/COFF does not export symbols by
+# default.
+function(lldb_prevent_liblldb_symbol_interposition name)
+  if(UNIX AND NOT APPLE)
+    target_link_options(${name} PRIVATE "LINKER:--exclude-libs,ALL")
+  endif()
+endfunction()
+
 # The test suite relies on finding LLDB.framework binary resources in the
 # build-tree. Remove them before installing to avoid collisions with their
 # own install targets.
 function(lldb_add_to_buildtree_lldb_framework name subdir)
+  # The rpaths needed to find the LLVM dylib in the buildtree differ from installation rpaths.
+  if (LLVM_LINK_LLVM_DYLIB)
+    set_target_properties(${name} PROPERTIES
+      BUILD_WITH_INSTALL_RPATH OFF
+    )
+  endif()
+
   # Destination for the copy in the build-tree. While the framework target may
   # not exist yet, it will exist when the generator expression gets expanded.
   set(copy_dest "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/${subdir}/$<TARGET_FILE_NAME:${name}>")
@@ -501,6 +539,14 @@ function(lldb_add_scriptinterpreter_plugin_to_framework name)
   if(NOT LLDB_BUILD_FRAMEWORK)
     return()
   endif()
+
+  # The rpaths needed to find the LLVM dylib in the buildtree differ from installation rpaths.
+  if (LLVM_LINK_LLVM_DYLIB)
+    set_target_properties(${name} PROPERTIES
+      BUILD_WITH_INSTALL_RPATH OFF
+    )
+  endif()
+
   set_property(TARGET ${name} APPEND PROPERTY
     INSTALL_RPATH "@loader_path/../../..")
   # Copy under the unversioned name: PluginManager derives a plugin's

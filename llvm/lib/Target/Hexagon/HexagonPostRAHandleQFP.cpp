@@ -92,68 +92,9 @@ cl::opt<bool> DisablePostRAHandleQFloat(
     cl::desc("Disable handling of Qfloat spills/refills after register "
              "allocation."));
 
-// This static function gets all reached uses of a def.
-// When it encounters a phi node, it goes over the
-// reached uses of the phi node too.
-static void getAllRealUses(NodeAddr<DefNode *> DA, NodeSet &UNodeSet,
-                           Liveness *L, DataFlowGraph *G,
-                           bool comprehensive = false) {
-  RegisterRef DR = DA.Addr->getRegRef(*G);
-  NodeAddr<StmtNode *> DefStmt = DA.Addr->getOwner(*G);
-  MachineInstr *Instr = DefStmt.Addr->getCode();
-  auto UseSet = L->getAllReachedUses(DR, DA);
-
-  for (auto UI : UseSet) {
-    NodeAddr<UseNode *> UA = G->addr<UseNode *>(UI);
-
-    /*LLVM_DEBUG(
-      NodeAddr<StmtNode *> UseStmt = UA.Addr->getOwner(*G);
-      MachineInstr* UseInstr = UseStmt.Addr->getCode();
-      if (UseInstr != nullptr)
-        {dbgs() << "\t\t[Reached Use]: "; UseInstr->dump();}
-    );*/
-
-    MachineFunction *MF = Instr->getMF();
-    const auto &HRI = MF->getSubtarget<HexagonSubtarget>().getRegisterInfo();
-    Register RR = UA.Addr->getRegRef(*G).Id;
-    if (HRI->isFakeReg(RR))
-      continue;
-
-    if (UA.Addr->getFlags() & NodeAttrs::PhiRef) {
-      NodeAddr<PhiNode *> PA = UA.Addr->getOwner(*G);
-      NodeId id = PA.Id;
-      const Liveness::RefMap &phiUse = L->getRealUses(id);
-      for (auto I : phiUse) {
-        if (!G->getPRI().alias(RegisterRef(I.first), DR))
-          continue;
-        auto phiUseSet = I.second;
-        for (auto phiUI : phiUseSet) {
-          NodeAddr<UseNode *> phiUA = G->addr<UseNode *>(phiUI.first);
-          UNodeSet.insert(phiUA.Id);
-        }
-      }
-    } else {
-      // FIXME Due to bug in RDF, check if the reaching def of the use
-      // reaches this instruction
-      if (comprehensive) {
-        UNodeSet.insert(UA.Id);
-        continue;
-      }
-      NodeAddr<StmtNode *> UseStmt = UA.Addr->getOwner(*G);
-      for (NodeAddr<UseNode *> UA : UseStmt.Addr->members_if(G->IsUse, *G)) {
-        NodeId QFPDefNode = UA.Addr->getReachingDef();
-        NodeAddr<DefNode *> RegDef = G->addr<DefNode *>(QFPDefNode);
-        // FIXME Reaching def computation error
-        if (QFPDefNode == 0)
-          continue;
-        NodeAddr<StmtNode *> RegStmt = RegDef.Addr->getOwner(*G);
-        MachineInstr *ReachDefInstr = RegStmt.Addr->getCode();
-        if (ReachDefInstr && ReachDefInstr == Instr)
-          UNodeSet.insert(UA.Id);
-      }
-    }
-  }
-}
+static cl::opt<bool> EnablePostRAXqfCompliance(
+    "enable-postra-xqf-check", cl::init(false),
+    cl::desc("Enable ABI compliance for xqf operands post regalloc."));
 
 namespace llvm {
 FunctionPass *createHexagonPostRAHandleQFP();
@@ -250,7 +191,7 @@ private:
   MapVector<MachineInstr *, unsigned> QFNonSatMIs;
 
   // Stores the qf-generating vmul/vadd/etc. nodes with mutiple reaching defs
-  std::set<NodeId> PossibleMultiReachDefs;
+  std::set<NodeAddr<StmtNode *>> PossibleMultiReachDefs;
   // Qf generating instructions to ignore. Do not insert conversion instruction
   // to sf/hf from qf, if the instr is present in this list; since that means
   // a conversion has already been inserted after the instruction.
@@ -260,7 +201,8 @@ private:
   enum class RegType { qf32, qf16, qf32_double, qf16_double, ieee, undefined };
   // Stores the copy instructions which their reaching def, along with the op
   // type
-  std::map<std::pair<NodeId, NodeId>, RegType> QFCopys;
+  std::map<std::pair<NodeAddr<DefNode *>, NodeAddr<DefNode *>>, RegType>
+      QFCopys;
 
   // Stores the reaching defs of copies whose result has to be converted to IEEE
   DenseMap<MachineInstr *, RegType> ReachDefOfCopies;
@@ -310,6 +252,142 @@ private:
 // instead of IEEE type. This diagnostic pass can be used
 // as a final verifier for XQF implementation. Turned off by
 // default
+class XqfPostRADiagnosis {
+public:
+  XqfPostRADiagnosis(DataFlowGraph &G, Liveness &L, const HexagonInstrInfo *HII)
+      : G(&G), L(&L), HII(HII) {}
+  // Deleting default constructor to handle misconstruction
+  XqfPostRADiagnosis() = delete;
+
+  void runCompliance() const;
+  void print_warning(Twine &, MachineInstr *, MachineInstr *) const;
+
+private:
+  DataFlowGraph *G = nullptr;
+  Liveness *L = nullptr;
+  const HexagonInstrInfo *HII = nullptr;
+};
+
+void XqfPostRADiagnosis::print_warning(Twine &wstr, MachineInstr *DefMI,
+                                       MachineInstr *UseMI) const {
+#ifndef NDEBUG
+  dbgs() << wstr;
+  dbgs() << "\n\tDef:";
+  DefMI->dump();
+  // dbgs() << "\t" << DefMI->getParent()->getName();
+  dbgs() << "\tUse:";
+  UseMI->dump();
+  // dbgs() << "\t" << UseMI->getParent()->getName();
+#endif // NDEBUG
+}
+
+// This static function gets all reached uses of a def.
+// When it encounters a phi node, it goes over the
+// reached uses of the phi node too.
+static void getAllRealUses(NodeAddr<DefNode *> DA, NodeSet &UNodeSet,
+                           Liveness *L, DataFlowGraph *G,
+                           bool comprehensive = false) {
+  RegisterRef DR = DA.Addr->getRegRef(*G);
+  NodeAddr<StmtNode *> DefStmt = DA.Addr->getOwner(*G);
+  MachineInstr *Instr = DefStmt.Addr->getCode();
+  auto UseSet = L->getAllReachedUses(DR, DA);
+
+  for (auto UI : UseSet) {
+    NodeAddr<UseNode *> UA = G->addr<UseNode *>(UI);
+
+    MachineFunction *MF = Instr->getMF();
+    const auto &HRI = MF->getSubtarget<HexagonSubtarget>().getRegisterInfo();
+    Register RR = UA.Addr->getRegRef(*G).Id;
+    if (HRI->isFakeReg(RR))
+      continue;
+
+    if (UA.Addr->getFlags() & NodeAttrs::PhiRef) {
+      NodeAddr<PhiNode *> PA = UA.Addr->getOwner(*G);
+      NodeId id = PA.Id;
+      const Liveness::RefMap &phiUse = L->getRealUses(id);
+      for (auto I : phiUse) {
+        if (!G->getPRI().alias(RegisterRef(I.first), DR))
+          continue;
+        auto phiUseSet = I.second;
+        for (auto phiUI : phiUseSet) {
+          NodeAddr<UseNode *> phiUA = G->addr<UseNode *>(phiUI.first);
+          UNodeSet.insert(phiUA.Id);
+        }
+      }
+    } else {
+      // FIXME Due to bug in RDF, check if the reaching def of the use
+      // reaches this instruction
+      if (comprehensive) {
+        UNodeSet.insert(UA.Id);
+        continue;
+      }
+      NodeAddr<StmtNode *> UseStmt = UA.Addr->getOwner(*G);
+      for (NodeAddr<UseNode *> UA : UseStmt.Addr->members_if(G->IsUse, *G)) {
+        NodeId QFPDefNode = UA.Addr->getReachingDef();
+        NodeAddr<DefNode *> RegDef = G->addr<DefNode *>(QFPDefNode);
+        // FIXME Reaching def computation error
+        if (QFPDefNode == 0)
+          continue;
+        NodeAddr<StmtNode *> RegStmt = RegDef.Addr->getOwner(*G);
+        MachineInstr *ReachDefInstr = RegStmt.Addr->getCode();
+        if (ReachDefInstr && ReachDefInstr == Instr)
+          UNodeSet.insert(UA.Id);
+      }
+    }
+  }
+}
+
+void XqfPostRADiagnosis::runCompliance() const {
+  NodeAddr<FuncNode *> FA = G->getFunc();
+  for (NodeAddr<BlockNode *> BA : FA.Addr->members(*G)) {
+    for (auto IA : BA.Addr->members(*G)) {
+      if (!G->IsCode<NodeAttrs::Stmt>(IA))
+        continue;
+      NodeAddr<StmtNode *> SA = IA;
+      MachineInstr *DefMI = SA.Addr->getCode();
+      if (DefMI->isDebugInstr() || DefMI->isInlineAsm())
+        continue;
+      auto NodeBase = SA.Addr->members_if(G->IsDef, *G);
+      if (NodeBase.empty())
+        continue;
+      NodeAddr<DefNode *> DfNode = NodeBase.front();
+
+      NodeSet UseSet;
+      getAllRealUses(DfNode, UseSet, L, G, true);
+      for (auto UI : UseSet) {
+        NodeAddr<UseNode *> UA = G->addr<UseNode *>(UI);
+        if (UA.Addr->getFlags() & NodeAttrs::PhiRef)
+          continue;
+        NodeAddr<StmtNode *> UseStmt = UA.Addr->getOwner(*G);
+        MachineInstr *UseMI = UseStmt.Addr->getCode();
+        if (UseMI->isDebugInstr() || UseMI->isInlineAsm())
+          continue;
+        unsigned OpNo = UA.Addr->getOp().getOperandNo();
+        if (HII->usesQF32Operand(UseMI, OpNo) && !HII->isQFP32Instr(DefMI)) {
+          Twine wstr(Twine("Mismatch: sf type used as qf32 at operand ")
+                         .concat(Twine(OpNo)));
+          print_warning(wstr, DefMI, UseMI);
+        } else if (!HII->usesQF32Operand(UseMI, OpNo) &&
+                   HII->isQFP32Instr(DefMI)) {
+          Twine wstr(Twine("Mismatch: qf32 type used as sf at operand ")
+                         .concat(Twine(OpNo)));
+          print_warning(wstr, DefMI, UseMI);
+        } else if (HII->usesQF16Operand(UseMI, OpNo) &&
+                   !HII->isQFP16Instr(DefMI)) {
+          Twine wstr(Twine("Mismatch: hf type used as qf16 at operand ")
+                         .concat(Twine(OpNo)));
+          print_warning(wstr, DefMI, UseMI);
+        } else if (!HII->usesQF16Operand(UseMI, OpNo) &&
+                   HII->isQFP16Instr(DefMI)) {
+          Twine wstr(Twine("Mismatch: qf16 type used as hf at operand ")
+                         .concat(Twine(OpNo)));
+          print_warning(wstr, DefMI, UseMI);
+        }
+      }
+    }
+  }
+}
+
 char HexagonPostRAHandleQFP::ID = 0;
 
 namespace llvm {
@@ -952,7 +1030,7 @@ void HexagonPostRAHandleQFP::collectCopies(NodeAddr<StmtNode *> *StNode) {
 
       // If the reaching def is a COPY,collect it with reg type ieee
       if (ReachDefInstr->getOpcode() == TargetOpcode::COPY) {
-        auto pairKey = std::make_pair(CopyDef.Id, RegDef.Id);
+        auto pairKey = std::make_pair(CopyDef, RegDef);
         QFCopys[pairKey] = RegType::ieee;
         continue;
       }
@@ -988,7 +1066,7 @@ void HexagonPostRAHandleQFP::collectCopies(NodeAddr<StmtNode *> *StNode) {
         else
           continue;
       }
-      auto pairKey = std::make_pair(CopyDef.Id, RegDef.Id);
+      auto pairKey = std::make_pair(CopyDef, RegDef);
       QFCopys[pairKey] = RegT;
     }
   }
@@ -1072,8 +1150,8 @@ void HexagonPostRAHandleQFP::collectQFUses(NodeAddr<DefNode *> RegDef,
 
     Register UsedReg = UA.Addr->getRegRef(*DFG).Id;
     if (QFPSatInstsMap.find(UseMI->getOpcode()) != QFPSatInstsMap.end()) {
-      if (PossibleMultiReachDefs.count(UseStmt.Id) == 0) {
-        PossibleMultiReachDefs.insert(UseStmt.Id);
+      if (PossibleMultiReachDefs.count(UseStmt) == 0) {
+        PossibleMultiReachDefs.insert(UseStmt);
         LLVM_DEBUG(dbgs() << "\n[Collect instr with possible multidef]:";
                    UseMI->dump());
       }
@@ -1094,15 +1172,14 @@ bool HexagonPostRAHandleQFP::HandleMultiReachingDefs() {
   // But it is not expected to since if any instruction has multiple
   // definitions it should already be present in it.
   for (auto It : PossibleMultiReachDefs) {
-    NodeAddr<StmtNode *> Stmt = DFG->addr<StmtNode *>(It);
-    MachineInstr *Instr = Stmt.Addr->getCode();
+    MachineInstr *Instr = It.Addr->getCode();
     // get the op type for the original instruction.
     // True is sf/hf, false is qf
     auto Pair = QFUsesMap[Instr];
 
     unsigned short UseNo = 1;
     // Iterate over the operands
-    for (NodeAddr<UseNode *> UA : Stmt.Addr->members_if(DFG->IsUse, *DFG)) {
+    for (NodeAddr<UseNode *> UA : It.Addr->members_if(DFG->IsUse, *DFG)) {
 
       // If the type is qf for the operand,
       // we skip since there is no scope for mismatch
@@ -1406,7 +1483,7 @@ bool HexagonPostRAHandleQFP::HandleCopies() {
   for (auto It : QFCopys) {
 
     // Get details of the copy node
-    NodeAddr<DefNode *> CopyNode = DFG->addr<DefNode *>(It.first.first);
+    NodeAddr<DefNode *> CopyNode = It.first.first;
     NodeAddr<StmtNode *> StNode = CopyNode.Addr->getOwner(*DFG);
     [[maybe_unused]] auto *CopyMI = StNode.Addr->getCode();
     LLVM_DEBUG(dbgs() << "\nHandling Reaching Defs of COPY: "; CopyMI->dump();
@@ -1433,7 +1510,7 @@ bool HexagonPostRAHandleQFP::HandleCopies() {
     if (RTy != RegType::ieee) {
 
       // get details of the reaching def node
-      NodeAddr<DefNode *> ReachDefNode = DFG->addr<DefNode *>(It.first.second);
+      NodeAddr<DefNode *> ReachDefNode = It.first.second;
       NodeAddr<StmtNode *> StNode = ReachDefNode.Addr->getOwner(*DFG);
       auto *ReachingDef = StNode.Addr->getCode();
 
@@ -1459,7 +1536,7 @@ bool HexagonPostRAHandleQFP::HandleCopies() {
   for (auto It : QFCopys) {
 
     // Get details of the copy node
-    NodeAddr<DefNode *> CopyNode = DFG->addr<DefNode *>(It.first.first);
+    NodeAddr<DefNode *> CopyNode = It.first.first;
     NodeAddr<StmtNode *> StNode = CopyNode.Addr->getOwner(*DFG);
     auto *CopyMI = StNode.Addr->getCode();
     LLVM_DEBUG(dbgs() << "\nHandling COPY: "; CopyMI->dump());
@@ -1737,6 +1814,18 @@ bool HexagonPostRAHandleQFP::runOnMachineFunction(MachineFunction &MF) {
   QFUsesMap.clear();
   IgnoreInsertConvList.clear();
 
+  // Option if enabled, checks for qf use-def mismatches
+  if (EnablePostRAXqfCompliance) {
+    dbgs() << "\nChecking for ABI compliance for XQF post register \
+allocation for function: "
+           << MF.getName() << "\n";
+    DataFlowGraph DFG(MF, *HII, *HRI, *MDT, MDF);
+    DFG.build();
+    Liveness LV(*MRI, DFG);
+    LV.computeLiveIns();
+    XqfPostRADiagnosis VDiag(DFG, LV, HII);
+    VDiag.runCompliance();
+  }
   return Changed;
 }
 
