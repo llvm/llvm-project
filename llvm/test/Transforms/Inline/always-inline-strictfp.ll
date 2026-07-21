@@ -1,15 +1,15 @@
 ; RUN: opt -passes=always-inline,verify %s -S | FileCheck %s
 
-declare void @foo() strictfp
+declare void @foo()
 
 define void @callee() alwaysinline strictfp {
 entry:
-  call void @foo()
+  call void @foo() strictfp
   ret void
 }
 
 ; CHECK: define void @caller() [[ATTR:#[0-9]+]]
-; CHECK: call void @foo()
+; CHECK: call void @foo() [[ATTR]]
 define void @caller() {
 entry:
   call void @callee()
