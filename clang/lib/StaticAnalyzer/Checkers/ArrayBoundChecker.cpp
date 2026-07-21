@@ -687,7 +687,10 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       return;
     }
 
-    if (isTainted(State, ByteOffset)) {
+    // FIXME: Remove `Res.mayOverflow()` and provide diagnostics for the case
+    // when the tainted access operation cannot overflow but can underflow.
+    // (This is an NFC commit, so I cannot include this improvement.)
+    if (Res.mayOverflow() && isTainted(State, ByteOffset)) {
       // Diagnostic detail: saying "tainted offset" is always correct, but
       // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
       // nicer to say "tainted index".
