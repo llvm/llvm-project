@@ -92,8 +92,9 @@ exit:
 }
 
 ; Constant-step Sub induction: %iv decrements by 1 each iteration (step loop-invariant).
-; Exercises the Instruction::Sub branch in hasVariantStepIncrement, which must
-; correctly identify the step as loop-invariant and allow normal VPlan widening.
+; Exercises the Sub branch of the variant-step check in createWidenInductionRecipe,
+; which must correctly identify the step as loop-invariant and allow normal VPlan
+; widening.
 define void @induction_sub_const_step(i32 %n, ptr %a) {
 ; CHECK-LABEL: define void @induction_sub_const_step(
 ; CHECK-SAME: i32 [[N:%.*]], ptr [[A:%.*]]) {
@@ -165,6 +166,93 @@ loop:
 exit:
   ret void
 }
+
+; Sub analog of variant_step_induction: %iv decrements by a loop-variant
+; amount (zext of a comparison) instead of incrementing. Without covering the
+; Sub case of the variant-step check, this would regress to the same class of
+; miscompile as the Add case above, computing the exit value as
+; 'trunc i32 %n.vec to i8' instead of extracting the true last lane.
+define { i32, i32 } @variant_step_induction_sub(i8 %a, i32 %b) {
+; CHECK-LABEL: define { i32, i32 } @variant_step_induction_sub(
+; CHECK-SAME: i8 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[TMP0]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 8
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 8
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[B]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i8> poison, i8 [[A]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT2]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sub <4 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 1, i8 2, i8 3>
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 -4)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt <4 x i8> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt <4 x i8> [[STEP_ADD]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> [[BROADCAST_SPLAT2]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[BROADCAST_SPLAT2]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8]] = add <4 x i32> [[TMP6]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP9]] = add <4 x i32> [[TMP7]], [[VEC_PHI3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], splat (i8 -4)
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = zext <4 x i1> [[TMP5]] to <4 x i8>
+; CHECK-NEXT:    [[TMP12:%.*]] = sub <4 x i8> [[STEP_ADD]], [[TMP11]]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i8> [[TMP12]], i64 3
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[IV]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[CMP]], i32 [[B]], i32 0
+; CHECK-NEXT:    [[RDX_NEXT]] = add nsw i32 [[ADD]], [[RDX]]
+; CHECK-NEXT:    [[DEC:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[IV_NEXT]] = sub i8 [[IV]], [[DEC]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i8 [ [[IV_NEXT]], %[[LOOP]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[IV_NEXT_LCSSA]] to i32
+; CHECK-NEXT:    [[R0:%.*]] = insertvalue { i32, i32 } undef, i32 [[CONV]], 0
+; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i32, i32 } [[R0]], i32 [[RDX_NEXT_LCSSA]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[R1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %a, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ 0, %entry ], [ %rdx.next, %loop ]
+  %cmp = icmp ugt i8 %iv, 0
+  %add = select i1 %cmp, i32 %b, i32 0
+  %rdx.next = add nsw i32 %add, %rdx
+  %dec = zext i1 %cmp to i8
+  %iv.next = sub i8 %iv, %dec
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %conv = zext i8 %iv.next to i32
+  %r0 = insertvalue { i32, i32 } undef, i32 %conv, 0
+  %r1 = insertvalue { i32, i32 } %r0, i32 %rdx.next, 1
+  ret { i32, i32 } %r1
+}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -172,4 +260,6 @@ exit:
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
 ;.

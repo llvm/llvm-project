@@ -615,40 +615,6 @@ static void simplifyLiveInsWithSCEV(VPlan &Plan,
 /// To make RUN_VPLAN_PASS print initial VPlan.
 static void printAfterInitialConstruction(VPlan &) {}
 
-/// Returns true if \p BackedgeVal advances \p PhiR by a loop-variant step.
-static bool hasVariantStepIncrement(VPValue *BackedgeVal, VPPhi *PhiR,
-                                    const InductionDescriptor &IndDesc,
-                                    PredicatedScalarEvolution &PSE,
-                                    Loop &OrigLoop) {
-  if (IndDesc.getKind() != InductionDescriptor::IK_IntInduction)
-    return false;
-
-  // Use m_c_Add to capture ActualStep regardless of operand order; subtraction
-  // is non-commutative so m_Sub requires PhiR on the left.
-  VPValue *ActualStep = nullptr;
-  switch (IndDesc.getInductionOpcode()) {
-  case Instruction::Add:
-    if (!match(BackedgeVal, m_c_Add(m_Specific(PhiR), m_VPValue(ActualStep))))
-      return false;
-    break;
-  case Instruction::Sub:
-    if (!match(BackedgeVal, m_Sub(m_Specific(PhiR), m_VPValue(ActualStep))))
-      return false;
-    break;
-  default:
-    return false;
-  }
-
-  const SCEV *ActualStepSCEV = vputils::getSCEVExprForVPValue(ActualStep, PSE);
-  // If the VPlan step has no computable SCEV, conservatively treat it as
-  // variant to avoid replacing it with the (potentially mismatched) IndDesc
-  // step or computing a wrong exit value.
-  if (isa<SCEVCouldNotCompute>(ActualStepSCEV))
-    return true;
-
-  return !PSE.getSE()->isLoopInvariant(ActualStepSCEV, &OrigLoop);
-}
-
 std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
                              PredicatedScalarEvolution &PSE,
@@ -734,8 +700,19 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // Update wide induction increments to use the same step as the corresponding
   // wide induction. This enables detecting induction increments directly in
   // VPlan and removes redundant splats.
-  bool HasVariantStepIncrement =
-      hasVariantStepIncrement(BackedgeVal, PhiR, IndDesc, PSE, OrigLoop);
+  bool HasVariantStepIncrement = false;
+  // Use m_c_Add to capture IncStep regardless of operand order; subtraction
+  // is non-commutative so m_Sub requires PhiR on the left.
+  VPValue *IncStep;
+  if (match(BackedgeVal, m_c_Add(m_Specific(PhiR), m_VPValue(IncStep))) ||
+      match(BackedgeVal, m_Sub(m_Specific(PhiR), m_VPValue(IncStep)))) {
+    const SCEV *IncStepSCEV = vputils::getSCEVExprForVPValue(IncStep, PSE);
+    // If the VPlan step has no computable SCEV, conservatively treat it as
+    // variant to avoid replacing it with the (potentially mismatched) IndDesc
+    // step or computing a wrong exit value.
+    HasVariantStepIncrement = isa<SCEVCouldNotCompute>(IncStepSCEV) ||
+                               !SE.isLoopInvariant(IncStepSCEV, &OrigLoop);
+  }
   if (!HasVariantStepIncrement &&
       match(BackedgeVal, m_Add(m_Specific(PhiR), m_VPValue())))
     BackedgeVal->getDefiningRecipe()->setOperand(1, Step);
