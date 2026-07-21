@@ -2828,4 +2828,170 @@ TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
             (AMDGPU::IsaVersion{0, 0, 0}));
 }
 
+TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {
+  using AMDGPU::TargetID;
+  Triple AMDHSA("amdgcn-amd-amdhsa");
+  Triple AMDHSACanon("amdgpu-amd-amdhsa");
+
+  // TargetID::providesFor is directional: it asks whether an image built
+  // for *this target can provide the device code for a request for the other
+  // target. An unspecified feature acts as a wildcard that can provide for a
+  // specific request, but not the other way around.
+
+  // Exact match provides for itself.
+  EXPECT_TRUE(
+      TargetID(AMDHSA, "gfx90a").providesFor(TargetID(AMDHSA, "gfx90a")));
+
+  // Different processors are never compatible.
+  EXPECT_FALSE(
+      TargetID(AMDHSA, "gfx90a").providesFor(TargetID(AMDHSA, "gfx908")));
+
+  // The pure "generic"/empty wildcard processor provides for any specific
+  // processor, in both directions (unknown arch acts as a wildcard).
+  EXPECT_TRUE(
+      TargetID(AMDHSA, "generic").providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_TRUE(
+      TargetID(AMDHSA, "gfx90a").providesFor(TargetID(AMDHSA, "generic")));
+  EXPECT_TRUE(TargetID(AMDHSA, "").providesFor(TargetID(AMDHSA, "gfx908")));
+
+  // A major-family/generic processor provides for a specific member of its
+  // family (gfx900), but a specific processor does not provide for the generic
+  // family.
+  Triple AMDHSAMajor9("amdgpu9-amd-amdhsa");
+  EXPECT_TRUE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx900")));
+  EXPECT_TRUE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx902")));
+
+  EXPECT_TRUE(TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "")));
+  EXPECT_TRUE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx9-generic")));
+  EXPECT_TRUE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "generic")));
+  EXPECT_TRUE(TargetID(AMDHSAMajor9, "gfx9-generic")
+                  .providesFor(TargetID(AMDHSA, "gfx9-generic")));
+
+  EXPECT_FALSE(
+      TargetID(AMDHSA, "gfx900").providesFor(TargetID(AMDHSAMajor9, "")));
+  // A specific processor and a member of a different major family do not
+  // provide for each other.
+  EXPECT_FALSE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx1030")));
+
+  // xnack: an unspecified (wildcard) image provides for an explicit request,
+  // but an explicit image does not provide for a request that lacks it, and
+  // explicit On vs Off never match.
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:xnack+")));
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:xnack-")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:xnack+")
+                   .providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:xnack-")
+                   .providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a:xnack+")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:xnack+")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:xnack+")
+                   .providesFor(TargetID(AMDHSA, "gfx90a:xnack-")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:xnack-")
+                   .providesFor(TargetID(AMDHSA, "gfx90a:xnack+")));
+
+  // sramecc behaves the same way as xnack.
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:sramecc+")));
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:sramecc-")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:sramecc+")
+                   .providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:sramecc-")
+                   .providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:sramecc+")
+                   .providesFor(TargetID(AMDHSA, "gfx90a:sramecc-")));
+
+  // Both feature modifiers together: a wildcard provides for a fully-specified
+  // request, but a partially-specified image only provides when its explicit
+  // features match.
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+")));
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a:sramecc+")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:sramecc-")
+                   .providesFor(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+")));
+
+  // The legacy "amdgcn" and canonical "amdgpu" triple spellings are unified.
+  EXPECT_TRUE(
+      TargetID(AMDHSA, "gfx90a").providesFor(TargetID(AMDHSACanon, "gfx90a")));
+  EXPECT_TRUE(
+      TargetID(AMDHSACanon, "gfx90a").providesFor(TargetID(AMDHSA, "gfx90a")));
+}
+
+TEST(TargetParserTest, testAMDGPUTargetIDEquivalent) {
+  using AMDGPU::TargetID;
+  Triple AMDHSA("amdgcn-amd-amdhsa");
+  Triple AMDHSACanon("amdgpu-amd-amdhsa");
+
+  // TargetID::isEquivalent is a symmetric semantic equality: same processor and
+  // features, looking through triple spelling differences.
+  auto Equivalent = [](const TargetID &A, const TargetID &B) {
+    EXPECT_EQ(A.isEquivalent(B), B.isEquivalent(A));
+    return A.isEquivalent(B);
+  };
+
+  // Same target is equivalent to itself.
+  EXPECT_TRUE(
+      Equivalent(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSA, "gfx90a")));
+
+  // Different processors are not equivalent.
+  EXPECT_FALSE(
+      Equivalent(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSA, "gfx908")));
+
+  // A specific processor and a member of its generic family are distinct and
+  // not equivalent (this is the over-merge that produced duplicate symbols).
+  EXPECT_FALSE(
+      Equivalent(TargetID(AMDHSA, "gfx900"), TargetID(AMDHSA, "gfx9-generic")));
+
+  // Legacy "amdgcn" and canonical "amdgpu" spellings are equivalent.
+  EXPECT_TRUE(
+      Equivalent(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSACanon, "gfx90a")));
+
+  // The same processor spelled via the triple subarch (with no processor name)
+  // and via the processor name (with a major-family subarch triple) are
+  // equivalent, e.g. amdgpu9-amd-amdhsa + "gfx900" and amdgpu9.00-amd-amdhsa.
+  Triple AMDHSAMajor9("amdgpu9-amd-amdhsa");
+  Triple AMDHSASub900("amdgpu9.00-amd-amdhsa");
+  EXPECT_TRUE(
+      Equivalent(TargetID(AMDHSAMajor9, "gfx900"), TargetID(AMDHSASub900, "")));
+  EXPECT_TRUE(
+      Equivalent(TargetID(AMDHSASub900, ""), TargetID(AMDHSA, "gfx900")));
+  EXPECT_TRUE(Equivalent(TargetID(AMDHSAMajor9, "gfx9-generic"),
+                         TargetID(AMDHSAMajor9, "")));
+
+  // The same processor with different feature settings is not equivalent.
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a"),
+                          TargetID(AMDHSA, "gfx90a:xnack+")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:xnack-")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc-")));
+  EXPECT_TRUE(Equivalent(TargetID(AMDHSA, "gfx90a:xnack+"),
+                         TargetID(AMDHSA, "gfx90a:xnack+")));
+
+  // Target IDs that set both xnack and sramecc are equivalent only when both
+  // settings match; a difference in either feature makes them distinct.
+  EXPECT_TRUE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                         TargetID(AMDHSA, "gfx90a:sramecc+:xnack+")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc+:xnack-")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc-:xnack+")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc-:xnack-")));
+  // A fully-specified target ID is not equivalent to one that leaves a feature
+  // unspecified, even if the specified features agree.
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc+")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                          TargetID(AMDHSA, "gfx90a")));
+}
+
 } // namespace

@@ -837,6 +837,8 @@ public:
         LSI->Lambda->getLambdaDependencyKind());
   }
 
+  ExprResult TransformLambdaConstraint(Expr *AC) { return AC; }
+
   QualType TransformReferenceType(TypeLocBuilder &TLB, ReferenceTypeLoc TL);
 
   StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr);
@@ -2146,23 +2148,26 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   OMPClause *RebuildOMPNumTeamsClause(
       ArrayRef<Expr *> VarList, OpenMPNumTeamsClauseModifier Modifier,
-      Expr *ModifierExpr, SourceLocation ModifierLoc, SourceLocation StartLoc,
+      Expr *ModifierExpr, SourceLocation ModifierLoc,
+      OpenMPNumTeamsClauseModifier ModifierExtra, Expr *ModifierExtraExpr,
+      SourceLocation ModifierExtraLoc, SourceLocation StartLoc,
       SourceLocation LParenLoc, SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPNumTeamsClause(
-        VarList, Modifier, ModifierExpr, ModifierLoc, StartLoc, LParenLoc,
-        EndLoc);
+        VarList, Modifier, ModifierExpr, ModifierLoc, ModifierExtra,
+        ModifierExtraExpr, ModifierExtraLoc, StartLoc, LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'thread_limit' clause.
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPThreadLimitClause(ArrayRef<Expr *> VarList,
-                                         SourceLocation StartLoc,
-                                         SourceLocation LParenLoc,
-                                         SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPThreadLimitClause(VarList, StartLoc,
-                                                           LParenLoc, EndLoc);
+  OMPClause *RebuildOMPThreadLimitClause(
+      ArrayRef<Expr *> VarList, OpenMPThreadLimitClauseModifier Modifier,
+      Expr *ModifierExpr, SourceLocation ModifierLoc, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPThreadLimitClause(
+        VarList, Modifier, ModifierExpr, ModifierLoc, StartLoc, LParenLoc,
+        EndLoc);
   }
 
   /// Build a new OpenMP 'priority' clause.
@@ -11811,7 +11816,8 @@ TreeTransform<Derived>::TransformOMPNumTeamsClause(OMPNumTeamsClause *C) {
   }
   return getDerived().RebuildOMPNumTeamsClause(
       Vars, C->getModifier(), ModifierExpr, C->getModifierLoc(),
-      C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      OMPC_NUMTEAMS_unknown, nullptr, SourceLocation(), C->getBeginLoc(),
+      C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -11825,8 +11831,16 @@ TreeTransform<Derived>::TransformOMPThreadLimitClause(OMPThreadLimitClause *C) {
       return nullptr;
     Vars.push_back(EVar.get());
   }
+  Expr *ModifierExpr = C->getModifierExpr();
+  if (ModifierExpr) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(ModifierExpr));
+    if (EVar.isInvalid())
+      return nullptr;
+    ModifierExpr = EVar.get();
+  }
   return getDerived().RebuildOMPThreadLimitClause(
-      Vars, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+      Vars, C->getModifier(), ModifierExpr, C->getModifierLoc(),
+      C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -16295,11 +16309,13 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   assert(FPTL && "Not a FunctionProtoType?");
 
   AssociatedConstraint TRC = E->getCallOperator()->getTrailingRequiresClause();
-  // If the concept refers to any outer parameter packs, we track the SubstIndex
-  // for evaluation.
-  if (TRC && TRC.ConstraintExpr->containsUnexpandedParameterPack() &&
-      !TRC.ArgPackSubstIndex)
-    TRC.ArgPackSubstIndex = SemaRef.ArgPackSubstIndex;
+  if (TRC) {
+    ExprResult E = getDerived().TransformLambdaConstraint(
+        const_cast<Expr *>(TRC.ConstraintExpr));
+    if (E.isInvalid())
+      return E;
+    TRC.ConstraintExpr = E.get();
+  }
 
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),

@@ -12,7 +12,7 @@ if (llvm_install_binutils_symlinks) {
   symlink_or_copy("readtapi") {
     deps = [ ":llvm-readtapi" ]
     source = "llvm-readtapi"
-    output = "$root_out_dir/bin/readtapi"
+    output = "$llvm_current_bindir/readtapi"
   }
 }
 

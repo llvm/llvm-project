@@ -30,6 +30,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   ConversionChecker.cpp
   CXXDeleteChecker.cpp
   CXXSelfAssignmentChecker.cpp
+  DanglingPtrDeref.cpp
   DeadStoresChecker.cpp
   DebugCheckers.cpp
   DebugContainerModeling.cpp

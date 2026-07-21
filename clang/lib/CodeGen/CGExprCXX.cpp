@@ -2108,8 +2108,20 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   //     operator delete are both irrelevant to the trigger.
   if (E->isGlobalDelete() && CGM.getTarget().getCXXABI().isMicrosoft()) {
     const CXXRecordDecl *RD = E->getDestroyedType()->getAsCXXRecordDecl();
-    if (RD && RD->hasDefinition() && !RD->hasTrivialDestructor())
+    if (RD && RD->hasDefinition() && !RD->hasTrivialDestructor()) {
       CGM.noteDirectGlobalDelete();
+      // Ensure a __global_delete wrapper (and thus a strong forwarding body)
+      // is emitted in THIS TU for the resolved global ::operator delete, even
+      // when no vector deleting destructor here references it. Without this, a
+      // TU that only does ::delete (with the deleting destructor defined in
+      // another TU) would emit no forwarder, leaving the wrapper bound to the
+      // trapping empty fallback and crashing at runtime.
+      const FunctionDecl *OD = E->getOperatorDelete();
+      assert(!isa<CXXMethodDecl>(OD) &&
+             "global ::delete should resolve to a namespace-scope "
+             "operator delete");
+      CGM.getOrCreateMSVCGlobalDeleteWrapper(OD);
+    }
   }
 
   // Null check the pointer.
@@ -2193,9 +2205,8 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   }
 }
 
-static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
-                                         llvm::Type *StdTypeInfoPtrTy,
-                                         bool HasNullCheck) {
+static Address EmitTypeidOperand(CodeGenFunction &CGF, const Expr *E,
+                                 bool HasNullCheck) {
   // Get the vtable pointer.
   Address ThisPtr = CGF.EmitLValue(E).getAddress();
 
@@ -2225,8 +2236,7 @@ static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
     CGF.EmitBlock(EndBlock);
   }
 
-  return CGF.CGM.getCXXABI().EmitTypeid(CGF, SrcRecordTy, ThisPtr,
-                                        StdTypeInfoPtrTy);
+  return ThisPtr;
 }
 
 llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
@@ -2250,17 +2260,21 @@ llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
     return MaybeASCast(TypeInfo);
   }
 
+  const Expr *Operand = E->getExprOperand();
+  QualType OperandTy = Operand->getType();
+
   // C++ [expr.typeid]p2:
   //   When typeid is applied to a glvalue expression whose type is a
   //   polymorphic class type, the result refers to a std::type_info object
   //   representing the type of the most derived object (that is, the dynamic
   //   type) to which the glvalue refers.
-  // If the operand is already most derived object, no need to look up vtable.
-  if (E->isPotentiallyEvaluated() && !E->isMostDerived(getContext()))
-    return EmitTypeidFromVTable(*this, E->getExprOperand(), PtrTy,
-                                E->hasNullCheck());
+  if (E->isPotentiallyEvaluated()) {
+    Address ThisPtr = EmitTypeidOperand(*this, Operand, E->hasNullCheck());
+    if (!E->isMostDerived(getContext()))
+      return CGM.getCXXABI().EmitTypeid(*this, OperandTy, ThisPtr, PtrTy);
+    // If the operand is already most derived object, no need to look up vtable.
+  }
 
-  QualType OperandTy = E->getExprOperand()->getType();
   return MaybeASCast(CGM.GetAddrOfRTTIDescriptor(OperandTy));
 }
 

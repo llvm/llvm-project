@@ -3609,8 +3609,13 @@ public:
       ExtnameUndeclaredIdentifiers;
 
   /// Set containing all typedefs that are likely unused.
-  llvm::SmallSetVector<const TypedefNameDecl *, 4>
+  llvm::SmallPtrSet<const TypedefNameDecl *, 4>
       UnusedLocalTypedefNameCandidates;
+
+  /// Store UnusedLocalTypedefNameCandidates in \p Sorted in a deterministic
+  /// order.
+  void getSortedUnusedLocalTypedefNameCandidates(
+      SmallVectorImpl<const TypedefNameDecl *> &Sorted) const;
 
   typedef LazyVector<const DeclaratorDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadUnusedFileScopedDecls, 2, 2>
@@ -10919,6 +10924,12 @@ public:
                                         const UnresolvedSetImpl &Fns,
                                         bool PerformADL = true);
 
+  /// Perform lookup for an overloaded unary operator.
+  void LookupOverloadedUnaryOp(OverloadCandidateSet &CandidateSet,
+                               OverloadedOperatorKind Op,
+                               const UnresolvedSetImpl &Fns,
+                               ArrayRef<Expr *> Args, bool RequiresADL = true);
+
   /// Create a unary operation that may resolve to an overloaded
   /// operator.
   ///
@@ -13773,14 +13784,6 @@ public:
   // FIXME: Does this belong in Sema? It's tough to implement it anywhere else.
   unsigned LastEmittedCodeSynthesisContextDepth = 0;
 
-  /// The template instantiation callbacks to trace or track
-  /// instantiations (objects can be chained).
-  ///
-  /// This callbacks is used to print, trace or track template
-  /// instantiations as they are being constructed.
-  std::vector<std::unique_ptr<TemplateInstantiationCallback>>
-      TemplateInstCallbacks;
-
   /// The current index into pack expansion arguments that will be
   /// used for substitution of parameter packs.
   ///
@@ -13923,21 +13926,6 @@ public:
   /// act like a CXXIdExpression rather than an attempt to call.
   ExprResult SubstCXXIdExpr(Expr *E,
                             const MultiLevelTemplateArgumentList &TemplateArgs);
-
-  // A RAII type used by the TemplateDeclInstantiator and TemplateInstantiator
-  // to disable constraint evaluation, then restore the state.
-  template <typename InstTy> struct ConstraintEvalRAII {
-    InstTy &TI;
-    bool OldValue;
-
-    ConstraintEvalRAII(InstTy &TI)
-        : TI(TI), OldValue(TI.getEvaluateConstraints()) {
-      TI.setEvaluateConstraints(false);
-    }
-    ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
-    ConstraintEvalRAII(const ConstraintEvalRAII &) = delete;
-    ConstraintEvalRAII &operator=(const ConstraintEvalRAII &) = delete;
-  };
 
   // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult

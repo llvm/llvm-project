@@ -48,6 +48,7 @@
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
@@ -1204,7 +1205,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   if (!CGM.getCodeGenOpts().ZOSPPA1Name)
-    Fn->addFnAttr("zos-ppa1-name", "none");
+    Fn->addFnAttr("zos-ppa1-name", "");
 
   if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX &&
       !CGM.getDiags().isIgnored(diag::warn_fe_backend_frame_larger_than, Loc))
@@ -3066,7 +3067,7 @@ static void CreateMultiVersionResolverReturn(CodeGenModule &CGM,
 
 void CodeGenFunction::EmitMultiVersionResolver(
     llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
-
+  llvm::SaveAndRestore<llvm::Function *> savedCurFn(CurFn, Resolver);
   llvm::Triple::ArchType ArchType =
       getContext().getTargetInfo().getTriple().getArch();
 

@@ -162,8 +162,8 @@ public:
   void addPostRegAlloc(PassManagerWrapper &PMW) const;
   void addPreEmitPass(PassManagerWrapper &PMWM) const;
   void addPreEmitRegAlloc(PassManagerWrapper &PMW) const;
-  Error addRegAssignmentFast(PassManagerWrapper &PMW) const;
-  Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
+  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) const;
+  Expected<bool> addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) const;
   void addPreRegAlloc(PassManagerWrapper &PMW) const;
   Error addFastRegAlloc(PassManagerWrapper &PMW) const;
   Error addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
@@ -1076,8 +1076,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // Add promote kernel arguments pass to the opt pipeline right before
         // infer address spaces which is needed to do actual address space
         // rewriting.
-        if (Level.getSpeedupLevel() > OptimizationLevel::O1.getSpeedupLevel() &&
-            EnablePromoteKernelArguments)
+        if (Level > OptimizationLevel::O1 && EnablePromoteKernelArguments)
           FPM.addPass(AMDGPUPromoteKernelArgumentsPass());
 
         // Add infer address spaces pass to the opt pipeline after inlining
@@ -1112,6 +1111,13 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
+        // Clean up redundant memory round-trips that the full-LTO pipeline,
+        // unlike the non-LTO/ThinLTO ones, otherwise leaves for codegen.
+        if (Level != OptimizationLevel::O0) {
+          PM.addPass(createModuleToFunctionPassAdaptor(
+              EarlyCSEPass(/*UseMemorySSA=*/true)));
+        }
+
         // When we are using -fgpu-rdc, we can only run accelerator code
         // selection after linking to prevent, otherwise we end up removing
         // potentially reachable symbols that were exported as external in other
@@ -1274,7 +1280,9 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
+    : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
+  setEnableDefaultMachineVerifier(false);
+}
 
 enum class OOBFlagValue {
   Any = 0,
@@ -2515,7 +2523,7 @@ Error AMDGPUCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) const {
   return Base::addFastRegAlloc(PMW);
 }
 
-Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
+Error AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteFast(
     PassManagerWrapper &PMW) const {
   if (auto Err = validateRegAllocOptions())
     return Err;
@@ -2598,7 +2606,7 @@ void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
 }
 
-Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
+Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
     PassManagerWrapper &PMW) const {
   if (auto Err = validateRegAllocOptions())
     return Err;
@@ -2649,7 +2657,7 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   addMachineFunctionPass(VirtRegRewriterPass(true), PMW);
 
   addMachineFunctionPass(AMDGPUMarkLastScratchLoadPass(), PMW);
-  return Error::success();
+  return true;
 }
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {

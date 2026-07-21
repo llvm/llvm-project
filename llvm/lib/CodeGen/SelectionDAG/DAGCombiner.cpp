@@ -4560,8 +4560,10 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       // fold (sub Sym+c1, Sym+c2) -> c1-c2
       if (GlobalAddressSDNode *GB = dyn_cast<GlobalAddressSDNode>(N1))
         if (GA->getGlobal() == GB->getGlobal())
-          return DAG.getConstant((uint64_t)GA->getOffset() - GB->getOffset(),
-                                 DL, VT);
+          return DAG.getConstant(
+              APInt(VT.getScalarSizeInBits(), GA->getOffset() - GB->getOffset(),
+                    /*isSigned=*/false, /*implicitTrunc=*/true),
+              DL, VT);
     }
 
   // sub X, (sextinreg Y i1) -> add X, (and Y 1)
@@ -13119,28 +13121,22 @@ SDValue DAGCombiner::foldSelectToUMin(SDValue LHS, SDValue RHS, SDValue True,
 }
 
 // Combine x olt y ? x : y to pseudo_fmin and x ogt y ? x : y to pseudo_fmax.
-static SDValue combineSelectToPseudoMinMax(SelectionDAG &DAG, SDNode *N) {
-  SDLoc DL(N);
-  SDValue Cond = N->getOperand(0);
-  SDValue LHS = N->getOperand(1);
-  SDValue RHS = N->getOperand(2);
-  EVT VT = LHS.getValueType();
+// Op0/Op1 are the setcc operands, LHS/RHS are the select operands, Flags are
+// from the select.
+// The return value is the opcode and its operands.
+static std::tuple<unsigned, SDValue, SDValue> combineSelectCCToPseudoMinMax(
+    SelectionDAG &DAG, const SDLoc &DL, ISD::CondCode CC, SDValue Op0,
+    SDValue Op1, SDValue LHS, SDValue RHS, SDNodeFlags Flags, bool IsStrict) {
+  std::tuple<unsigned, SDValue, SDValue> Invalid(0, {}, {});
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if ((Cond.getOpcode() != ISD::SETCC &&
-       Cond.getOpcode() != ISD::STRICT_FSETCCS) ||
-      !VT.isFloatingPoint())
-    return SDValue();
-
-  bool IsStrict = Cond->isStrictFPOpcode();
-  ISD::CondCode CC =
-      cast<CondCodeSDNode>(Cond.getOperand(IsStrict ? 3 : 2))->get();
-  SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
-  SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
+  EVT VT = LHS.getValueType();
+  if (!VT.isFloatingPoint())
+    return Invalid;
 
   // Check for x CC y ? x : y.
   if (!DAG.isEqualTo(LHS, Op0) || !DAG.isEqualTo(RHS, Op1)) {
     if (!DAG.isEqualTo(LHS, Op1) || !DAG.isEqualTo(RHS, Op0))
-      return SDValue();
+      return Invalid;
 
     // Convert x CC y ? y : x to x inv(CC) y ? x : y.
     CC = ISD::getSetCCInverse(CC, VT);
@@ -13161,8 +13157,8 @@ static SDValue combineSelectToPseudoMinMax(SelectionDAG &DAG, SDNode *N) {
   case ISD::SETOLE:
     // Converting this to a min would handle comparisons between positive
     // and negative zero incorrectly.
-    if (!N->getFlags().hasNoSignedZeros() &&
-        !DAG.isKnownNeverLogicalZero(LHS) && !DAG.isKnownNeverLogicalZero(RHS))
+    if (!Flags.hasNoSignedZeros() && !DAG.isKnownNeverLogicalZero(LHS) &&
+        !DAG.isKnownNeverLogicalZero(RHS))
       break;
     Opcode = ISD::PSEUDO_FMIN;
     break;
@@ -13178,8 +13174,8 @@ static SDValue combineSelectToPseudoMinMax(SelectionDAG &DAG, SDNode *N) {
   case ISD::SETOGE:
     // Converting this to a max would handle comparisons between positive
     // and negative zero incorrectly.
-    if (!N->getFlags().hasNoSignedZeros() &&
-        !DAG.isKnownNeverLogicalZero(LHS) && !DAG.isKnownNeverLogicalZero(RHS))
+    if (!Flags.hasNoSignedZeros() && !DAG.isKnownNeverLogicalZero(LHS) &&
+        !DAG.isKnownNeverLogicalZero(RHS))
       break;
     Opcode = ISD::PSEUDO_FMAX;
     break;
@@ -13194,23 +13190,46 @@ static SDValue combineSelectToPseudoMinMax(SelectionDAG &DAG, SDNode *N) {
   }
 
   if (!Opcode)
-    return SDValue();
+    return Invalid;
 
   if (IsStrict)
     Opcode = Opcode == ISD::PSEUDO_FMIN ? ISD::STRICT_PSEUDO_FMIN
                                         : ISD::STRICT_PSEUDO_FMAX;
   if (!TLI.isOperationLegalOrCustom(Opcode, VT))
+    return Invalid;
+
+  return {Opcode, LHS, RHS};
+}
+
+static SDValue combineSelectToPseudoMinMax(SelectionDAG &DAG, SDNode *N) {
+  SDLoc DL(N);
+  SDValue Cond = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+  EVT VT = LHS.getValueType();
+  if ((Cond.getOpcode() != ISD::SETCC &&
+       Cond.getOpcode() != ISD::STRICT_FSETCCS))
+    return SDValue();
+
+  bool IsStrict = Cond->isStrictFPOpcode();
+  ISD::CondCode CC =
+      cast<CondCodeSDNode>(Cond.getOperand(IsStrict ? 3 : 2))->get();
+  SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
+  SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
+  auto [Opcode, NewLHS, NewRHS] = combineSelectCCToPseudoMinMax(
+      DAG, DL, CC, Op0, Op1, LHS, RHS, N->getFlags(), IsStrict);
+  if (!Opcode)
     return SDValue();
 
   // Propagate fast-math-flags.
   SelectionDAG::FlagInserter FlagsInserter(DAG, N->getFlags());
   if (IsStrict) {
-    SDValue Ret = DAG.getNode(Opcode, DL, {N->getValueType(0), MVT::Other},
-                              {Cond.getOperand(0), LHS, RHS});
+    SDValue Ret = DAG.getNode(Opcode, DL, {VT, MVT::Other},
+                              {Cond.getOperand(0), NewLHS, NewRHS});
     DAG.ReplaceAllUsesOfValueWith(Cond.getValue(1), Ret.getValue(1));
     return Ret;
   }
-  return DAG.getNode(Opcode, DL, N->getValueType(0), LHS, RHS);
+  return DAG.getNode(Opcode, DL, VT, NewLHS, NewRHS);
 }
 
 SDValue DAGCombiner::visitSELECT(SDNode *N) {
@@ -14655,6 +14674,12 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
   // If we can fold this based on the true/false value, do so.
   if (SimplifySelectOps(N, N2, N3))
     return SDValue(N, 0); // Don't revisit N.
+
+  auto [Opcode, NewLHS, NewRHS] = combineSelectCCToPseudoMinMax(
+      DAG, DL, CC, N0, N1, N2, N3, N->getFlags(), /*IsStrict=*/false);
+  if (Opcode)
+    return DAG.getNode(Opcode, DL, N->getValueType(0), NewLHS, NewRHS,
+                       N->getFlags());
 
   // fold select_cc into other things, such as min/max/abs
   return SimplifySelectCC(DL, N0, N1, N2, N3, CC);
@@ -27868,6 +27893,15 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
         V.hasOneUse())
       if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
         return DAG.getSplatVector(NVT, DL, V.getOperand(0));
+
+  // ty1 extract_vector(ty2 get_active_lane_mask(X, Y), 0) --> ty1
+  // get_active_lane_mask(X, Y)
+  if (ExtIdx == 0 && V.getOpcode() == ISD::GET_ACTIVE_LANE_MASK &&
+      V.hasOneUse() &&
+      (!LegalOperations ||
+       TLI.isOperationLegal(ISD::GET_ACTIVE_LANE_MASK, NVT)))
+    return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, NVT, V.getOperand(0),
+                       V.getOperand(1));
 
   // extract_subvector(insert_subvector(x,y,c1),c2)
   //  --> extract_subvector(y,c2-c1)

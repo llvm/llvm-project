@@ -852,6 +852,8 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
 StringRef ToolChain::getOSLibName() const {
   if (Triple.isOSDarwin())
     return "darwin";
+  if (Triple.isWindowsCygwinEnvironment())
+    return "cygwin";
 
   switch (Triple.getOS()) {
   case llvm::Triple::FreeBSD:
@@ -1122,6 +1124,14 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (auto Path = getPathForTriple(T))
     return *Path;
 
+  // Handle the legacy AMDGPU triple case as well.
+  if (T.getArchName() == "amdgcn") {
+    llvm::Triple Canon(T);
+    Canon.setArchName("amdgpu");
+    if (auto Path = getPathForTriple(Canon))
+      return *Path;
+  }
+
   if (T.isOSAIX()) {
     llvm::Triple AIXTriple;
     if (T.getEnvironment() == Triple::UnknownEnvironment) {
@@ -1215,6 +1225,14 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
   };
 
   AddPath({getTriple().str()});
+
+  // Handle the legacy AMDGPU triple case as well.
+  if (getTriple().getArchName() == "amdgcn") {
+    llvm::Triple Canon(getTriple());
+    Canon.setArchName("amdgpu");
+    AddPath({Canon.str()});
+  }
+
   AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
   return Paths;
 }
