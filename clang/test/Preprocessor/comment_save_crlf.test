@@ -1,0 +1,22 @@
+# RUN: rm -rf %t && split-file %s %t
+# RUN: %python %t/to-crlf.py %t/input.c %t/crlf.c
+# RUN: %clang_cc1 -E -C -o %t/out.i %t/crlf.c
+# RUN: %python %t/check.py %t/crlf.c %t/out.i
+
+#--- input.c
+int a;
+/* multi-line
+   block comment */
+int b;
+
+#--- to-crlf.py
+import sys
+
+data = open(sys.argv[1], "rb").read().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+open(sys.argv[2], "wb").write(data)
+
+#--- check.py
+import sys
+
+assert b"\r\n" in open(sys.argv[1], "rb").read(), "input is not CRLF"
+sys.exit(b"\r\r\n" in open(sys.argv[2], "rb").read())
