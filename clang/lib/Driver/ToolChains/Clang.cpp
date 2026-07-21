@@ -1538,6 +1538,15 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
   AddUnalignedAccessWarning(CmdArgs);
 }
 
+void Clang::AddAMDGPUTargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  // Pass through -mxnack/-mno-xnack and -msramecc/-mno-sramecc flags to cc1.
+  if (Arg *A = Args.getLastArg(options::OPT_mxnack, options::OPT_mno_xnack))
+    A->render(Args, CmdArgs);
+  if (Arg *A = Args.getLastArg(options::OPT_msramecc, options::OPT_mno_sramecc))
+    A->render(Args, CmdArgs);
+}
+
 void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
                                 const ArgList &Args, bool KernelOrKext,
                                 ArgStringList &CmdArgs) const {
@@ -1563,6 +1572,10 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be:
     AddAArch64TargetArgs(Args, CmdArgs);
+    break;
+
+  case llvm::Triple::amdgpu:
+    AddAMDGPUTargetArgs(Args, CmdArgs);
     break;
 
   case llvm::Triple::loongarch32:
