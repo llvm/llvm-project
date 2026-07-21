@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -163,6 +164,34 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   setFeatureBits(Hexagon_MC::completeHVXFeatures(FeatureBits));
 
   return *this;
+}
+
+void HexagonSubtarget::initLibcallLoweringInfo(
+    LibcallLoweringInfo &Info) const {
+  // The generic arithmetic/division helper routines (__adddf3, __divsi3, ...)
+  // exist in Hexagon's compiler-rt alongside the preferred __hexagon_*
+  // variants, so both are available. The __hexagon_* variant is the one that
+  // must be used; select it explicitly here.
+  static const struct {
+    const RTLIB::Libcall Op;
+    const RTLIB::LibcallImpl Impl;
+  } LibraryCalls[] = {
+      {RTLIB::SDIV_I32, RTLIB::impl___hexagon_divsi3},
+      {RTLIB::SDIV_I64, RTLIB::impl___hexagon_divdi3},
+      {RTLIB::UDIV_I32, RTLIB::impl___hexagon_udivsi3},
+      {RTLIB::UDIV_I64, RTLIB::impl___hexagon_udivdi3},
+      {RTLIB::SREM_I32, RTLIB::impl___hexagon_modsi3},
+      {RTLIB::SREM_I64, RTLIB::impl___hexagon_moddi3},
+      {RTLIB::UREM_I32, RTLIB::impl___hexagon_umodsi3},
+      {RTLIB::UREM_I64, RTLIB::impl___hexagon_umoddi3},
+      {RTLIB::ADD_F64, RTLIB::impl___hexagon_adddf3},
+      {RTLIB::SUB_F64, RTLIB::impl___hexagon_subdf3},
+      {RTLIB::MUL_F64, RTLIB::impl___hexagon_muldf3},
+      {RTLIB::DIV_F64, RTLIB::impl___hexagon_divdf3},
+      {RTLIB::DIV_F32, RTLIB::impl___hexagon_divsf3},
+  };
+  for (const auto &LC : LibraryCalls)
+    Info.setLibcallImpl(LC.Op, LC.Impl);
 }
 
 bool HexagonSubtarget::isHVXElementType(MVT Ty, bool IncludeBool) const {
