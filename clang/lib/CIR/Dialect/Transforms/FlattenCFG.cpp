@@ -17,9 +17,9 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
@@ -682,9 +682,9 @@ public:
     // exceptions that might be thrown from the step region. Rather than trying
     // to figure out all of the cleanup routing here, we sink the condition into
     // the body region, hoist the step region (if any) and create a new
-    // cir.cleanup.scope enclosing the body region. Subsequent passes of the
-    // greedy driver will flatten the cir.cleanup.scope and the loop reusing
-    // the normal handlers.
+    // cir.cleanup.scope enclosing the body region. A subsequent sweep of the
+    // pass will flatten the cir.cleanup.scope and the loop reusing the normal
+    // handlers.
     if (op.maybeGetCleanup())
       return rewriteLoopWithCleanup(op, rewriter);
 
@@ -2001,20 +2001,43 @@ void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
 }
 
 void CIRFlattenCFGPass::runOnOperation() {
-  RewritePatternSet patterns(&getContext());
-  populateFlattenCFGPatterns(patterns);
+  RewritePatternSet patternList(&getContext());
+  populateFlattenCFGPatterns(patternList);
+  FrozenRewritePatternSet patterns(std::move(patternList));
 
-  // Collect operations to apply patterns.
-  llvm::SmallVector<Operation *, 16> ops;
-  getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp, CleanupScopeOp,
-            TryOp>(op))
-      ops.push_back(op);
-  });
+  PatternApplicator applicator(patterns);
+  // We need _A_ cost model, and everything here is the same cost-model, so this
+  // is effectively a no-op, but necessary to use the PatternApplicator.
+  applicator.applyDefaultCostModel();
 
-  // Apply patterns.
-  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
-    signalPassFailure();
+  mlir::PatternRewriter rewriter(&getContext());
+
+
+  bool changed;
+  do {
+    changed = false;
+    // Collect flatten candidates post-order so an inner op is handled before
+    // its parent; op pointers stay valid across the block splits / region
+    // inlines the patterns perform (a pattern only erases the matched op and
+    // its descendants, which are visited first), so the list can be iterated
+    // directly.
+    llvm::SmallVector<Operation *, 16> ops;
+    getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
+      if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp,
+              CleanupScopeOp, TryOp>(op))
+        ops.push_back(op);
+    });
+
+    for (mlir::Operation *op : ops) {
+      rewriter.setInsertionPoint(op);
+      if (mlir::succeeded(applicator.matchAndRewrite(op, rewriter))) {
+        // A vast majority of these don't modify the structured ops.  However,
+        // if they do, we have to try again. Store whether we've made any
+        // modifications and try again until we stop changing anything.
+        changed = true;
+      }
+    }
+  } while (changed);
 }
 
 } // namespace
