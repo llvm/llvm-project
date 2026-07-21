@@ -321,7 +321,7 @@ def parse_args():
         help="Write Chrome tracing compatible JSON to the specified file",
     )
     execution_group.add_argument(
-        "--wtt-log",
+        "--wtt-output",
         type=lit.reports.WttReport,
         help="Write a WTT (.wtl) log file for Windows test infrastructure consumption",
     )
@@ -546,7 +546,7 @@ def parse_args():
                 opts.xunit_xml_output,
                 opts.resultdb_output,
                 opts.time_trace_output,
-                opts.wtt_log,
+                opts.wtt_output,
             ],
         )
     )
