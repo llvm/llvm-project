@@ -1,27 +1,17 @@
 #include "kmp.h"
 
+#include <utility>
+
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC || KMP_ARCH_AARCH64 ||        \
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
       KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF ||   \
       KMP_ARCH_AARCH64_32)
 
-template <size_t... Indices> struct microtask_index_sequence {};
-
-template <size_t N, size_t... Indices>
-struct make_microtask_index_sequence
-    : make_microtask_index_sequence<N - 1, N - 1, Indices...> {};
-
-template <size_t... Indices>
-struct make_microtask_index_sequence<0, Indices...> {
-  using type = microtask_index_sequence<Indices...>;
-};
-
 template <size_t> using microtask_argument_t = void *;
 
 template <size_t... Indices>
 static void invokeMicrotask(microtask_t pkfn, int *gtid, int *tid,
-                            void *p_argv[],
-                            microtask_index_sequence<Indices...>) {
+                            void *p_argv[], std::index_sequence<Indices...>) {
   // WebAssembly's `call_indirect` requires the callee type to exactly match the
   // call site. Cast the variadic microtask_t to the fixed-arity signature that
   // matches argc before invoking it.
@@ -45,8 +35,7 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
 
 #define KMP_INVOKE_MICROTASK_CASE(N)                                           \
   case N:                                                                      \
-    invokeMicrotask(pkfn, &gtid, &tid, p_argv,                                 \
-                    make_microtask_index_sequence<N>::type{});                 \
+    invokeMicrotask(pkfn, &gtid, &tid, p_argv, std::make_index_sequence<N>{}); \
     break
 
   switch (argc) {
