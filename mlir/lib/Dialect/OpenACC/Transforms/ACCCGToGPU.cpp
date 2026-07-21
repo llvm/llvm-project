@@ -383,6 +383,14 @@ static bool isThreadXPrivatize(PrivatizeOp privatize) {
   return false;
 }
 
+/// True when \p privatize has any thread-level parallelism.
+static bool isThreadPrivatize(PrivatizeOp privatize) {
+  if (GPUParallelDimsAttr parDimsAttr = privatize.getParDimsAttr())
+    return llvm::any_of(parDimsAttr.getArray(),
+                        [](GPUParallelDimAttr d) { return d.isAnyThread(); });
+  return false;
+}
+
 /// Emits a workgroup-wide GPU barrier.
 static void emitGPUBarrierWorkgroup(OpBuilder &builder, Location loc) {
   gpu::BarrierOp::create(builder, loc);
@@ -728,28 +736,6 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
     }
   }
 
-  // Descriptor construction may obscure the forward use chain. Fall back to
-  // tracing each accumulate operand back to this private local.
-  acc::PrivateLocalOp privateLocal = v.getDefiningOp<acc::PrivateLocalOp>();
-  if (!privateLocal)
-    return nullptr;
-  acc::ComputeRegionOp computeRegion =
-      privateLocal->getParentOfType<acc::ComputeRegionOp>();
-  if (!computeRegion)
-    return nullptr;
-  acc::ReductionAccumulateArrayOp result;
-  computeRegion.walk([&](acc::ReductionAccumulateArrayOp accArr) {
-    if (getPrivateLocalForMemref(accArr.getMemref()) != privateLocal)
-      return WalkResult::advance();
-    bool hasThread = llvm::any_of(accArr.getParDims().getArray(),
-                                  [](auto pd) { return pd.isAnyThread(); });
-    if (!hasThread || !reductionHasBlockContext(accArr))
-      return WalkResult::advance();
-    result = accArr;
-    return WalkResult::interrupt();
-  });
-  if (result)
-    return result;
   return nullptr;
 }
 
@@ -2523,12 +2509,13 @@ void ACCCGToGPULowering::processPrivateLocal(
         perThreadArrayReductionAccum(privateLocal.getResult());
     bool isThreadPrivate = isThreadXPrivatize(privatizeOp);
     bool canUseDynamicAlloca =
-        (isThreadPrivate || arrayAccum) && baseTy.getRank() > 0 &&
+        isThreadPrivatize(privatizeOp) && baseTy.getRank() > 0 &&
         !baseTy.hasStaticShape() &&
         baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
-    if ((isThreadPrivate || arrayAccum) &&
-        (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
-         canUseDynamicAlloca)) {
+    bool canUseStaticAlloca =
+        (isThreadPrivate || arrayAccum) &&
+        canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack);
+    if (canUseStaticAlloca || canUseDynamicAlloca) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy,
                                               privatizeOp.getDynamicSizes());
       if (arrayAccum) {
@@ -2618,12 +2605,13 @@ void ACCCGToGPULowering::processPrivateLocal(
       perThreadArrayReductionAccum(privateLocal.getResult());
   for (mlir::acc::GPUParallelDimAttr parDim : parDimsPair.first) {
     bool canUseDynamicAlloca =
-        (parDim.isThreadX() || arrayAccum) && baseTy.getRank() > 0 &&
+        isThreadPrivatize(privatizeOp) && baseTy.getRank() > 0 &&
         !baseTy.hasStaticShape() &&
         baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
-    if ((parDim.isThreadX() || arrayAccum) &&
-        (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
-         canUseDynamicAlloca)) {
+    bool canUseStaticAlloca =
+        (parDim.isThreadX() || arrayAccum) &&
+        canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack);
+    if (canUseStaticAlloca || canUseDynamicAlloca) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy,
                                               privatizeOp.getDynamicSizes());
       if (arrayAccum) {

@@ -245,17 +245,39 @@ func.func @descriptor_indirect_dynamic_thread_y(%m: index, %n: index) {
   %extent = arith.muli %m, %n : index
   %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
   %ty = acc.par_width %c128 {par_dim = #acc.par_dim<thread_y>}
-  %private = acc.privatize(%m, %n) [#acc<par_dims[block_x, thread_y]>]
+  %private_data = acc.privatize(%m, %n)
+      [#acc<par_dims[block_x, thread_y]>]
       : (index, index) -> !acc.private_type<memref<?x?xi32>>
+  %private_descriptor = acc.privatize [#acc<par_dims[block_x, thread_y]>]
+      : () -> !acc.private_type<memref<1xindex>>
   acc.kernel_environment {
     acc.compute_region launch(%kbx = %bx, %kty = %ty)
-        ins(%arg = %private, %ext = %extent)
-        : (!acc.private_type<memref<?x?xi32>>, index) {
-      %local = acc.private_local %arg
+        ins(%arg_data = %private_data, %arg_descriptor = %private_descriptor,
+            %ext = %extent)
+        : (!acc.private_type<memref<?x?xi32>>,
+           !acc.private_type<memref<1xindex>>, index) {
+      %c0 = arith.constant 0 : index
+      %c1_k = arith.constant 1 : index
+      %c0_i32 = arith.constant 0 : i32
+      %local_data = acc.private_local %arg_data
           {acc.par_dims = #acc<par_dims[block_x, thread_y]>}
           : (!acc.private_type<memref<?x?xi32>>) -> memref<?x?xi32>
-      %descriptor_value = builtin.unrealized_conversion_cast %local
-          : memref<?x?xi32> to memref<?x?xi32>
+      %local_descriptor = acc.private_local %arg_descriptor
+          {acc.par_dims = #acc<par_dims[block_x, thread_y]>}
+          : (!acc.private_type<memref<1xindex>>) -> memref<1xindex>
+      %m_dim = memref.dim %local_data, %c0 : memref<?x?xi32>
+      %n_dim = memref.dim %local_data, %c1_k : memref<?x?xi32>
+      scf.for %i = %c0 to %m_dim step %c1_k {
+        scf.for %j = %c0 to %n_dim step %c1_k {
+          memref.store %c0_i32, %local_data[%i, %j] : memref<?x?xi32>
+        }
+      }
+      %descriptor = builtin.unrealized_conversion_cast %local_data
+          : memref<?x?xi32> to index
+      memref.store %descriptor, %local_descriptor[%c0] : memref<1xindex>
+      %loaded_descriptor = memref.load %local_descriptor[%c0] : memref<1xindex>
+      %descriptor_value = builtin.unrealized_conversion_cast %loaded_descriptor
+          : index to memref<?x?xi32>
       %bounds = acc.bounds extent(%ext : index)
       acc.reduction_accumulate_array %descriptor_value bounds(%bounds) <add>
           : memref<?x?xi32>
