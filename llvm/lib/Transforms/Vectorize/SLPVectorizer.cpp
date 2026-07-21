@@ -10089,7 +10089,11 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                            }))
                   continue;
                 unsigned Sz = VectorizableTree.size();
-                buildTreeRec(SubSlice, 0, EdgeInfo(), InterleaveFactor);
+                // A chunk smaller than InterleaveFactor cannot form an
+                // interleave group; keep it non-interleaved instead.
+                buildTreeRec(
+                    SubSlice, 0, EdgeInfo(),
+                    SubSlice.size() >= InterleaveFactor ? InterleaveFactor : 0);
                 if (Sz == VectorizableTree.size()) {
                   IsVectorized = false;
                   // Try non-interleaved vectorization with smaller vector
