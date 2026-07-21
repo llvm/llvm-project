@@ -44,7 +44,9 @@ public:
   CreateRegisterContextForThread(Thread *thread,
                                  lldb::addr_t reg_data_addr) override;
 
-  lldb::StopInfoSP CreateThreadStopReason(Thread *thread) override;
+  lldb::StopInfoSP CreateThreadStopReason(Thread *thread) override {
+    return nullptr;
+  }
 
   bool DoesPluginReportAllThreads() override { return false; }
 
