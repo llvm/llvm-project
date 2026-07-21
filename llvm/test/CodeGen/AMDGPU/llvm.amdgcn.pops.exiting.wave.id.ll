@@ -3,6 +3,22 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.00 < %s | FileCheck %s -check-prefixes=GFX9,GFX9-GISEL
 ; RUN: llc -global-isel=0 -mtriple=amdgpu10.10 < %s | FileCheck %s -check-prefixes=GFX10,SDAG,GFX10-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu10.10 < %s | FileCheck %s -check-prefixes=GFX10,GFX10-GISEL
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgpu9.08 < %s 2>&1 | FileCheck %s -check-prefix=NOPOPS
+; RUN: not llc -global-isel=1 -mtriple=amdgpu9.08 < %s 2>&1 | FileCheck %s -check-prefix=NOPOPS
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgpu9.0a < %s 2>&1 | FileCheck %s -check-prefix=NOPOPS
+; RUN: not llc -global-isel=1 -mtriple=amdgpu9.0a < %s 2>&1 | FileCheck %s -check-prefix=NOPOPS
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgpu9.4 < %s 2>&1 | FileCheck %s -check-prefix=NOPOPS
+; RUN: not llc -global-isel=1 -mtriple=amdgpu9.4 < %s 2>&1 | FileCheck %s -check-prefix=NOPOPS
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgpu9.42 < %s 2>&1 | FileCheck %s -check-prefix=NOPOPS
+; RUN: not llc -global-isel=1 -mtriple=amdgpu9.42 < %s 2>&1 | FileCheck %s -check-prefix=NOPOPS
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgpu9.50 < %s 2>&1 | FileCheck %s -check-prefix=NOPOPS
+; RUN: not llc -global-isel=1 -mtriple=amdgpu9.50 < %s 2>&1 | FileCheck %s -check-prefix=NOPOPS
+
+; POPS (Primitive Ordered Pixel Shading) is a graphics-pipe-only HW feature,
+; absent on all compute-only CDNA parts (gfx908, gfx90a, gfx940, gfx942,
+; gfx950). SRC_POPS_EXITING_WAVE_ID is not a valid SGPR source on those
+; targets.
+; NOPOPS: LLVM ERROR: {{[Cc]}}annot select: {{.*}}pops.exiting.wave.id
 
 declare void @foo(i32)
 
