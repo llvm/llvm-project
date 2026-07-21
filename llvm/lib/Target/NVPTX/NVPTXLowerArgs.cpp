@@ -6,133 +6,39 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//
-// Arguments to kernel and device functions are passed via param space,
-// which imposes certain restrictions:
+// Arguments to kernel functions are passed via param space, which imposes
+// certain restrictions:
 // http://docs.nvidia.com/cuda/parallel-thread-execution/#state-spaces
 //
 // Kernel parameters are read-only and accessible only via ld.param
 // instruction, directly or via a pointer.
-//
-// Device function parameters are directly accessible via
-// ld.param/st.param, but taking the address of one returns a pointer
-// to a copy created in local space which *can't* be used with
-// ld.param/st.param.
 //
 // Copying a byval struct into local memory in IR allows us to enforce
 // the param space restrictions, gives the rest of IR a pointer w/o
 // param space restrictions, and gives us an opportunity to eliminate
 // the copy.
 //
-// Pointer arguments to kernel functions need more work to be lowered:
+// This pass lowers byval parameters of kernel functions. It rewrites the
+// kernel's signature so that each byval argument is declared directly as a
+// pointer in the param address space (`ptr addrspace(101)`), then adjusts the
+// body to match. The parameter symbols occupy this space when lowered during
+// ISel, so making the IR type honest avoids the need for a cast or intrinsic to
+// reinterpret a generic pointer as a param-space pointer.
 //
-// 1. Convert non-byval pointer arguments of CUDA kernels to pointers in the
-//    global address space. This allows later optimizations to emit
-//    ld.global.*/st.global.* for accessing these pointer arguments. For
-//    example,
+// This pass uses 1 of 3 possible strategies to lower byval parameters:
 //
-//    define void @foo(float* %input) {
-//      %v = load float, float* %input, align 4
-//      ...
-//    }
+// 1. Direct readonly nocapture uses: If we can trace through all the uses and
+//    we can convert them all to param AS, then we'll do this. This is useful
+//    for pre-SM70 targets where cvta.param is not available.
 //
-//    becomes
+// 2. Grid constant: If the argument is a grid constant (and the target supports
+//    cvta.param), we can cast back to generic address space to use the pointer
+//    directly.
 //
-//    define void @foo(float* %input) {
-//      %input2 = addrspacecast float* %input to float addrspace(1)*
-//      %input3 = addrspacecast float addrspace(1)* %input2 to float*
-//      %v = load float, float* %input3, align 4
-//      ...
-//    }
+// 3. Local copy: If we can't trace through all the uses and we can't convert
+//    them all to param AS, then we'll create a local copy of the argument in
+//    local memory. This is useful for arguments that are mutated.
 //
-//    Later, NVPTXInferAddressSpaces will optimize it to
-//
-//    define void @foo(float* %input) {
-//      %input2 = addrspacecast float* %input to float addrspace(1)*
-//      %v = load float, float addrspace(1)* %input2, align 4
-//      ...
-//    }
-//
-// 2. Convert byval kernel parameters to pointers in the param address space
-//    (so that NVPTX emits ld/st.param).  Convert pointers *within* a byval
-//    kernel parameter to pointers in the global address space. This allows
-//    NVPTX to emit ld/st.global.
-//
-//    struct S {
-//      int *x;
-//      int *y;
-//    };
-//    __global__ void foo(S s) {
-//      int *b = s.y;
-//      // use b
-//    }
-//
-//    "b" points to the global address space. In the IR level,
-//
-//    define void @foo(ptr byval %input) {
-//      %b_ptr = getelementptr {ptr, ptr}, ptr %input, i64 0, i32 1
-//      %b = load ptr, ptr %b_ptr
-//      ; use %b
-//    }
-//
-//    becomes
-//
-//    define void @foo({i32*, i32*}* byval %input) {
-//      %b_param = addrspacecat ptr %input to ptr addrspace(101)
-//      %b_ptr = getelementptr {ptr, ptr}, ptr addrspace(101) %b_param, i64 0, i32 1
-//      %b = load ptr, ptr addrspace(101) %b_ptr
-//      %b_global = addrspacecast ptr %b to ptr addrspace(1)
-//      ; use %b_generic
-//    }
-//
-//    Create a local copy of kernel byval parameters used in a way that *might* mutate
-//    the parameter, by storing it in an alloca. Mutations to "grid_constant" parameters
-//    are undefined behaviour, and don't require local copies.
-//
-//    define void @foo(ptr byval(%struct.s) align 4 %input) {
-//       store i32 42, ptr %input
-//       ret void
-//    }
-//
-//    becomes
-//
-//    define void @foo(ptr byval(%struct.s) align 4 %input) #1 {
-//      %input1 = alloca %struct.s, align 4
-//      %input2 = addrspacecast ptr %input to ptr addrspace(101)
-//      %input3 = load %struct.s, ptr addrspace(101) %input2, align 4
-//      store %struct.s %input3, ptr %input1, align 4
-//      store i32 42, ptr %input1, align 4
-//      ret void
-//    }
-//
-//    If %input were passed to a device function, or written to memory,
-//    conservatively assume that %input gets mutated, and create a local copy.
-//
-//    Convert param pointers to grid_constant byval kernel parameters that are
-//    passed into calls (device functions, intrinsics, inline asm), or otherwise
-//    "escape" (into stores/ptrtoints) to the generic address space, using the
-//    `nvvm.ptr.param.to.gen` intrinsic, so that NVPTX emits cvta.param
-//    (available for sm70+)
-//
-//    define void @foo(ptr byval(%struct.s) %input) {
-//      ; %input is a grid_constant
-//      %call = call i32 @escape(ptr %input)
-//      ret void
-//    }
-//
-//    becomes
-//
-//    define void @foo(ptr byval(%struct.s) %input) {
-//      %input1 = addrspacecast ptr %input to ptr addrspace(101)
-//      ; the following intrinsic converts pointer to generic. We don't use an addrspacecast
-//      ; to prevent generic -> param -> generic from getting cancelled out
-//      %input1.gen = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) %input1)
-//      %call = call i32 @escape(ptr %input1.gen)
-//      ret void
-//    }
-//
-// TODO: merge this pass with NVPTXInferAddressSpaces so that other passes don't
-// cancel the addrspacecast pair this pass emits.
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
@@ -144,18 +50,17 @@
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
-#include "llvm/Support/NVVMAttributes.h"
 
 #define DEBUG_TYPE "nvptx-lower-args"
 
@@ -163,12 +68,12 @@ using namespace llvm;
 using namespace NVPTXAS;
 
 namespace {
-class NVPTXLowerArgsLegacyPass : public FunctionPass {
-  bool runOnFunction(Function &F) override;
+class NVPTXLowerArgsLegacyPass : public ModulePass {
+  bool runOnModule(Module &M) override;
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerArgsLegacyPass() : FunctionPass(ID) {}
+  NVPTXLowerArgsLegacyPass() : ModulePass(ID) {}
   StringRef getPassName() const override {
     return "Lower pointer arguments of CUDA kernels";
   }
@@ -178,31 +83,13 @@ public:
 };
 } // namespace
 
-char NVPTXLowerArgsLegacyPass::ID = 1;
+char NVPTXLowerArgsLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
                       "Lower arguments (NVPTX)", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
                     "Lower arguments (NVPTX)", false, false)
-
-// =============================================================================
-// If the function had a byval struct ptr arg, say foo(ptr byval(%struct.x) %d),
-// and we can't guarantee that the only accesses are loads,
-// then add the following instructions to the first basic block:
-//
-// %temp = alloca %struct.x, align 8
-// %tempd = addrspacecast ptr %d to ptr addrspace(101)
-// %tv = load %struct.x, ptr addrspace(101) %tempd
-// store %struct.x %tv, ptr %temp, align 8
-//
-// The above code allocates some space in the stack and copies the incoming
-// struct from param space to local space.
-// Then replace all occurrences of %d by %temp.
-//
-// In case we know that all users are GEPs or Loads, replace them with the same
-// ones in parameter AS, so we can access them using ld.param.
-// =============================================================================
 
 /// Recursively convert the users of a param to the param address space.
 static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
@@ -287,25 +174,6 @@ static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
     I->eraseFromParent();
 }
 
-// Create a call to the nvvm_internal_addrspace_wrap intrinsic and set the
-// alignment of the return value based on the alignment of the argument.
-static CallInst *createNVVMInternalAddrspaceWrap(IRBuilder<> &IRB,
-                                                 Argument &Arg) {
-  CallInst *ArgInParam = IRB.CreateIntrinsic(
-      Intrinsic::nvvm_internal_addrspace_wrap,
-      {IRB.getPtrTy(ADDRESS_SPACE_ENTRY_PARAM), Arg.getType()}, &Arg, {},
-      Arg.getName() + ".param");
-
-  if (MaybeAlign ParamAlign = Arg.getParamAlign())
-    ArgInParam->addRetAttr(
-        Attribute::getWithAlignment(ArgInParam->getContext(), *ParamAlign));
-
-  Arg.addAttr(Attribute::get(Arg.getContext(), NVVMAttr::GridConstant));
-  Arg.addAttr(Attribute::ReadOnly);
-
-  return ArgInParam;
-}
-
 namespace {
 struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
   using Base = PtrUseVisitor<ArgUseChecker>;
@@ -382,7 +250,12 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
   void visitMemSetInst(MemSetInst &II) { PI.setAborted(&II); }
 }; // struct ArgUseChecker
 
-void copyByValParam(Function &F, Argument &Arg) {
+// Create a local copy of the byval parameter \p Arg in an alloca, filled by a
+// copy from \p ParamPtr (a pointer to the parameter), and replace all uses of
+// \p Arg with the alloca. \p ParamPtr is either the natively param-space
+// argument (when called from the signature rewrite) or the generic byval
+// argument itself (when called early, before the signature has been rewritten).
+void copyByValParam(Function &F, Argument &Arg, Value &ParamPtr) {
   LLVM_DEBUG(dbgs() << "Creating a local copy of " << Arg << "\n");
   Type *ByValType = Arg.getParamByValType();
   const DataLayout &DL = F.getDataLayout();
@@ -395,108 +268,186 @@ void copyByValParam(Function &F, Argument &Arg) {
       Arg.getParamAlign().value_or(DL.getPrefTypeAlign(ByValType)));
   Arg.replaceAllUsesWith(AllocA);
 
-  Value *ArgInParamAS = createNVVMInternalAddrspaceWrap(IRB, Arg);
+  // If the parameter is never read (writeonly or readnone), there is nothing to
+  // copy in; the alloca above already provides the writable local storage the
+  // body needs, and reading the param here would contradict the attribute.
+  if (Arg.hasAttribute(Attribute::ReadNone) ||
+      Arg.hasAttribute(Attribute::WriteOnly))
+    return;
 
-  // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
-  // addrspacecast preserves alignment.  Since params are constant, this load
+  // Be sure to propagate alignment to this copy; LLVM doesn't know that NVPTX
+  // addrspacecast preserves alignment.  Since params are constant, this copy
   // is definitely not volatile.
   const auto ArgSize = *AllocA->getAllocationSize(DL);
-  IRB.CreateMemCpy(AllocA, AllocA->getAlign(), ArgInParamAS, AllocA->getAlign(),
+  IRB.CreateMemCpy(AllocA, AllocA->getAlign(), &ParamPtr, AllocA->getAlign(),
                    ArgSize);
 }
 } // namespace
 
-static bool argIsProcessed(Argument *Arg) {
-  if (Arg->use_empty())
-    return true;
-
-  // If the argument is already wrapped, it was processed by this pass before.
-  if (Arg->hasOneUse())
-    if (const auto *II = dyn_cast<IntrinsicInst>(*Arg->user_begin()))
-      if (II->getIntrinsicID() == Intrinsic::nvvm_internal_addrspace_wrap)
-        return true;
-
-  return false;
+// Returns true if F has a byval argument not yet in the param address space.
+// Such arguments are lowered exactly once, so one already in param space means
+// the kernel has already been processed.
+static bool kernelNeedsByValLowering(const Function &F) {
+  return any_of(F.args(), [](const Argument &A) {
+    return A.hasByValAttr() &&
+           A.getType()->getPointerAddressSpace() != ADDRESS_SPACE_ENTRY_PARAM;
+  });
 }
 
-static void lowerKernelByValParam(Argument *Arg, Function &F,
-                                  const bool HasCvtaParam) {
+// Lower the uses of a single kernel byval argument. \p OldArg is the original
+// (generic) argument whose uses are being rewritten; \p NewParamArg is its
+// replacement, natively in the param address space.
+static void lowerKernelByValParam(Argument &OldArg, Argument &NewParamArg,
+                                  Function &F, const bool HasCvtaParam) {
   assert(isKernelFunction(F));
 
   const DataLayout &DL = F.getDataLayout();
   IRBuilder<> IRB(&F.getEntryBlock().front());
 
-  if (argIsProcessed(Arg))
+  if (OldArg.use_empty())
     return;
 
   // (1) First check the easy case, if were able to trace through all the uses
   // and we can convert them all to param AS, then we'll do this.
   ArgUseChecker AUC(DL);
-  ArgUseChecker::PtrInfo PI = AUC.visitArgPtr(*Arg);
+  ArgUseChecker::PtrInfo PI = AUC.visitArgPtr(OldArg);
   const bool ArgUseIsReadOnly = !(PI.isEscaped() || PI.isAborted());
   if (ArgUseIsReadOnly && AUC.Conditionals.empty()) {
     // Convert all loads and intermediate operations to use parameter AS and
     // skip creation of a local copy of the argument.
-    SmallVector<Use *, 16> UsesToUpdate(llvm::make_pointer_range(Arg->uses()));
-    Value *ArgInParamAS = createNVVMInternalAddrspaceWrap(IRB, *Arg);
+    SmallVector<Use *, 16> UsesToUpdate(make_pointer_range(OldArg.uses()));
     for (Use *U : UsesToUpdate)
-      convertToParamAS(U, ArgInParamAS);
+      convertToParamAS(U, &NewParamArg);
+    // This path does not replaceAllUsesWith the old argument, so any debug-info
+    // uses would be left dangling and reset to poison when the old function is
+    // erased. Point them at the new param-space argument instead.
+    if (OldArg.isUsedByMetadata()) {
+      SmallVector<DbgVariableRecord *, 4> DbgUsers;
+      findDbgUsers(&OldArg, DbgUsers);
+      for (DbgVariableRecord *DVR : DbgUsers)
+        DVR->replaceVariableLocationOp(&OldArg, &NewParamArg);
+    }
     return;
   }
 
   // (2) If the argument is grid constant, we get to use the pointer directly.
-  if (HasCvtaParam && (ArgUseIsReadOnly || isParamGridConstant(*Arg))) {
-    LLVM_DEBUG(dbgs() << "Using non-copy pointer to " << *Arg << "\n");
+  if (HasCvtaParam && (ArgUseIsReadOnly || isParamGridConstant(OldArg))) {
+    LLVM_DEBUG(dbgs() << "Using non-copy pointer to " << OldArg << "\n");
 
-    // Cast argument to param address space. Because the backend will emit the
-    // argument already in the param address space, we need to use the noop
-    // intrinsic, this had the added benefit of preventing other optimizations
-    // from folding away this pair of addrspacecasts.
-    Instruction *ArgInParamAS = createNVVMInternalAddrspaceWrap(IRB, *Arg);
-
-    // Cast param address to generic address space.
+    // Cast the param-space argument to the generic address space. Because the
+    // argument is natively in param space, this cast only ever goes
+    // param -> generic and lowers to cvta.param; there is no inverse cast for
+    // InferAddressSpaces to fold it away with.
     Value *GenericArg = IRB.CreateAddrSpaceCast(
-        ArgInParamAS, IRB.getPtrTy(ADDRESS_SPACE_GENERIC),
-        Arg->getName() + ".gen");
+        &NewParamArg, IRB.getPtrTy(ADDRESS_SPACE_GENERIC),
+        OldArg.getName() + ".gen");
 
-    Arg->replaceAllUsesWith(GenericArg);
-
-    // Do not replace Arg in the cast to param space
-    ArgInParamAS->setOperand(0, Arg);
+    OldArg.replaceAllUsesWith(GenericArg);
     return;
   }
 
   // (3) Otherwise we have to create a copy of the argument in local memory.
-  copyByValParam(F, *Arg);
+  copyByValParam(F, OldArg, NewParamArg);
+}
+
+// Mark a param-space byval argument as non-writable.
+static void markArgNonWritable(Argument &Arg) {
+  if (Arg.onlyReadsMemory())
+    return;
+
+  if (Arg.hasAttribute(Attribute::WriteOnly)) {
+    Arg.removeAttr(Attribute::WriteOnly);
+    Arg.addAttr(Attribute::ReadNone);
+    return;
+  }
+
+  Arg.addAttr(Attribute::ReadOnly);
+}
+
+// Rewrite a kernel's signature so that each byval argument is declared directly
+// as a pointer in the param address space, then lower the body to match. This
+// creates a new function, moves the body across, and erases \p F.
+static void rewriteKernelByValSignature(Function &F, const bool HasCvtaParam) {
+  LLVMContext &Ctx = F.getContext();
+  FunctionType *FTy = F.getFunctionType();
+
+  // Build the new signature: byval pointer arguments move to the param address
+  // space; all other arguments are unchanged.
+  SmallVector<Type *> Params(FTy->params());
+  for (const Argument &Arg : F.args())
+    if (Arg.hasByValAttr())
+      Params[Arg.getArgNo()] = PointerType::get(Ctx, ADDRESS_SPACE_ENTRY_PARAM);
+
+  Function *NF = Function::Create(
+      FunctionType::get(FTy->getReturnType(), Params, FTy->isVarArg()),
+      F.getLinkage(), F.getAddressSpace());
+  NF->copyAttributesFrom(&F);
+  NF->setComdat(F.getComdat());
+  F.getParent()->getFunctionList().insert(F.getIterator(), NF);
+
+  // ISel reads the param symbol directly for kernel byval arguments; this is
+  // valid because the signature rewrite above puts them in the param address
+  // space. Mark them non-writable: any mutation is redirected to a local copy
+  // below, so the param itself is never written.
+  for (Argument &NewArg : NF->args())
+    if (NewArg.hasByValAttr())
+      markArgNonWritable(NewArg);
+
+  // Take over F's name and uses (e.g. @llvm.used, nvvm.annotations metadata),
+  // then move the body across.
+  F.replaceAllUsesWith(NF);
+  NF->takeName(&F);
+  NF->splice(NF->begin(), &F);
+
+  // Remap arguments. Non-byval arguments keep their type and are replaced
+  // directly; byval arguments change address space, so their uses are lowered
+  // to operate on the new param-space argument.
+  for (auto [OldArg, NewArg] : zip_equal(F.args(), NF->args())) {
+    if (OldArg.hasByValAttr())
+      lowerKernelByValParam(OldArg, NewArg, *NF, HasCvtaParam);
+    else
+      OldArg.replaceAllUsesWith(&NewArg);
+    NewArg.takeName(&OldArg);
+  }
+
+  // Move function-level metadata (debug info, etc.) to the new function.
+  NF->copyMetadata(&F, /*Offset=*/0);
+  F.clearMetadata();
+
+  F.eraseFromParent();
 }
 
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
 static bool processFunction(Function &F, NVPTXTargetMachine &TM) {
-  if (!isKernelFunction(F))
+  if (!isKernelFunction(F) || F.isDeclaration())
     return false;
 
-  const NVPTXSubtarget *ST = TM.getSubtargetImpl(F);
-  const bool HasCvtaParam = ST->hasCvtaParam();
+  // Skip kernels with no byval arguments, and those already lowered (byval
+  // arguments sitting in the param address space).
+  if (!kernelNeedsByValLowering(F))
+    return false;
 
   LLVM_DEBUG(dbgs() << "Lowering kernel args of " << F.getName() << "\n");
-  bool Changed = false;
-  for (Argument &Arg : F.args())
-    if (Arg.hasByValAttr()) {
-      lowerKernelByValParam(&Arg, F, HasCvtaParam);
-      Changed = true;
-    }
+  const NVPTXSubtarget *ST = TM.getSubtargetImpl(F);
+  rewriteKernelByValSignature(F, ST->hasCvtaParam());
+  return true;
+}
 
+static bool processModule(Module &M, NVPTXTargetMachine &TM) {
+  bool Changed = false;
+  for (Function &F : make_early_inc_range(M))
+    Changed |= processFunction(F, TM);
   return Changed;
 }
 
-bool NVPTXLowerArgsLegacyPass::runOnFunction(Function &F) {
+bool NVPTXLowerArgsLegacyPass::runOnModule(Module &M) {
   auto &TM = getAnalysis<TargetPassConfig>().getTM<NVPTXTargetMachine>();
-  return processFunction(F, TM);
+  return processModule(M, TM);
 }
 
-FunctionPass *llvm::createNVPTXLowerArgsPass() {
+ModulePass *llvm::createNVPTXLowerArgsPass() {
   return new NVPTXLowerArgsLegacyPass();
 }
 
@@ -507,7 +458,7 @@ static bool copyFunctionByValArgs(Function &F) {
   if (isKernelFunction(F)) {
     for (Argument &Arg : F.args())
       if (Arg.hasByValAttr() && !isParamGridConstant(Arg)) {
-        copyByValParam(F, Arg);
+        copyByValParam(F, Arg, Arg);
         Changed = true;
       }
   }
@@ -520,9 +471,9 @@ PreservedAnalyses NVPTXCopyByValArgsPass::run(Function &F,
                                   : PreservedAnalyses::all();
 }
 
-PreservedAnalyses NVPTXLowerArgsPass::run(Function &F,
-                                          FunctionAnalysisManager &AM) {
+PreservedAnalyses NVPTXLowerArgsPass::run(Module &M,
+                                          ModuleAnalysisManager &AM) {
   auto &NTM = static_cast<NVPTXTargetMachine &>(TM);
-  bool Changed = processFunction(F, NTM);
+  bool Changed = processModule(M, NTM);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

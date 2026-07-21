@@ -17,8 +17,10 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DataLayout.h"
@@ -156,6 +158,59 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
     return true;
 
   return shouldMangleCXXName(D);
+}
+
+namespace {
+// Visits a function body looking for a direct call back to the symbol the
+// function will link as.  Detects both asm-label aliases and __builtin_*
+// wrappers (PR9614 / glibc btowc pattern).
+struct FunctionIsDirectlyRecursive
+    : public ConstStmtVisitor<FunctionIsDirectlyRecursive, bool> {
+  const StringRef Name;
+  const Builtin::Context &BI;
+  FunctionIsDirectlyRecursive(StringRef N, const Builtin::Context &C)
+      : Name(N), BI(C) {}
+
+  bool VisitCallExpr(const CallExpr *E) {
+    const FunctionDecl *FD = E->getDirectCallee();
+    if (!FD)
+      return false;
+    AsmLabelAttr *Attr = FD->getAttr<AsmLabelAttr>();
+    if (Attr && Name == Attr->getLabel())
+      return true;
+    unsigned BuiltinID = FD->getBuiltinID();
+    if (!BuiltinID || !BI.isLibFunction(BuiltinID))
+      return false;
+    std::string BuiltinNameStr = BI.getName(BuiltinID);
+    StringRef BuiltinName = BuiltinNameStr;
+    return BuiltinName.consume_front("__builtin_") && Name == BuiltinName;
+  }
+
+  bool VisitStmt(const Stmt *S) {
+    for (const Stmt *Child : S->children())
+      if (Child && this->Visit(Child))
+        return true;
+    return false;
+  }
+};
+} // namespace
+
+bool MangleContext::isTriviallyRecursive(const FunctionDecl *FD) {
+  StringRef Name;
+  if (shouldMangleDeclName(FD)) {
+    // C++-mangled functions can only recurse into themselves through an
+    // asm label that bypasses the mangled name.
+    AsmLabelAttr *Attr = FD->getAttr<AsmLabelAttr>();
+    if (!Attr)
+      return false;
+    Name = Attr->getLabel();
+  } else {
+    Name = FD->getName();
+  }
+
+  FunctionIsDirectlyRecursive Walker(Name, FD->getASTContext().BuiltinInfo);
+  const Stmt *Body = FD->getBody();
+  return Body ? Walker.Visit(Body) : false;
 }
 
 /// Given an LLDB function call label, this function prints the label

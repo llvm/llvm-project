@@ -20,11 +20,14 @@
 #define W_OK 2
 #define R_OK 4
 
+#define _SC_ARG_MAX 0
 #define _SC_PAGESIZE 1
 #define _SC_PAGE_SIZE _SC_PAGESIZE
+#define _SC_OPEN_MAX 4
+#define _SC_THREADS 67
 #define _SC_NPROCESSORS_CONF 83
 #define _SC_NPROCESSORS_ONLN 84
-#define _SC_THREADS 67
+#define _SC_PHYS_PAGES 85
 
 #define _PC_FILESIZEBITS 0
 #define _PC_LINK_MAX 1

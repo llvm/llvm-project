@@ -60,5 +60,21 @@
 .set min_no_lparen, min four, five)
 // ASM: :[[@LINE-1]]:{{[0-9]+}}: error: expected newline
 
+.set occupancy_wrong_arity, occupancy(one, two, three)
+// ASM: :[[@LINE-1]]:{{[0-9]+}}: error: occupancy expression expects 9 operands
+// ASM: :[[@LINE-2]]:{{[0-9]+}}: error: missing expression
+
+.set alignto_wrong_arity, alignto(one)
+// ASM: :[[@LINE-1]]:{{[0-9]+}}: error: alignto expression expects 2 operands
+// ASM: :[[@LINE-2]]:{{[0-9]+}}: error: missing expression
+
+.set totalnumvgprs_wrong_arity, totalnumvgprs(one)
+// ASM: :[[@LINE-1]]:{{[0-9]+}}: error: totalnumvgprs expression expects 2 operands
+// ASM: :[[@LINE-2]]:{{[0-9]+}}: error: missing expression
+
+.set extrasgprs_wrong_arity, extrasgprs(one, two, three, one)
+// ASM: :[[@LINE-1]]:{{[0-9]+}}: error: extrasgprs expression expects 3 operands
+// ASM: :[[@LINE-2]]:{{[0-9]+}}: error: missing expression
+
 .set four, 4
 .set five, 5

@@ -45,6 +45,7 @@
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <atomic>
 #include <functional>
 #include <list>
 #include <map>
@@ -810,6 +811,45 @@ public:
   /// final addresses functions will have.
   uint64_t LayoutStartAddress{0};
 
+  /// Maximum alignment of objects emitted into the main (hot) and cold code
+  /// sections, populated by the parallel AlignerPass (updateMaxCodeAlignment).
+  std::atomic<uint16_t> MaxMainCodeAlignment{1};
+  std::atomic<uint16_t> MaxColdCodeAlignment{1};
+
+  /// Alignment-related options sourced from CommandLineOpts. Populated by
+  /// RewriteInstance::adjustCommandLineOptions() so passes and the emitter
+  /// can read them via BinaryContext instead of touching opts::* directly.
+  /// Defaults must stay in sync with the cl::init values in
+  /// bolt/lib/Utils/CommandLineOpts.cpp.
+  unsigned AlignText{0};
+  unsigned AlignFunctions{64};
+  unsigned AlignBlocksMinSize{0};
+  unsigned AlignBlocksThreshold{800};
+  unsigned AlignFunctionsMaxBytes{32};
+  unsigned BlockAlignment{16};
+  bool AlignBlocks{false};
+  bool PreserveBlocksAlignment{false};
+  bool UseCompactAligner{true};
+  bool X86AlignBranchBoundaryHotOnly{true};
+
+  /// Fold \p Alignment into the running max for the main code section (when
+  /// \p InMainSection) and/or the cold code section (when \p InColdSection),
+  /// reflecting which output section(s) the object is emitted into. Safe to
+  /// call concurrently.
+  void updateMaxCodeAlignment(uint16_t Alignment, bool InMainSection,
+                              bool InColdSection) {
+    auto AtomicMax = [](std::atomic<uint16_t> &Max, uint16_t Value) {
+      uint16_t Cur = Max.load(std::memory_order_relaxed);
+      while (Value > Cur &&
+             !Max.compare_exchange_weak(Cur, Value, std::memory_order_relaxed))
+        ;
+    };
+    if (InMainSection)
+      AtomicMax(MaxMainCodeAlignment, Alignment);
+    if (InColdSection)
+      AtomicMax(MaxColdCodeAlignment, Alignment);
+  }
+
   /// Old .text info.
   uint64_t OldTextSectionAddress{0};
   uint64_t OldTextSectionOffset{0};
@@ -1369,7 +1409,8 @@ public:
 
   /// Register dynamic relocation at \p Address.
   void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
-                            uint64_t Addend, uint64_t Value = 0);
+                            uint64_t Addend, uint64_t Value = 0,
+                            bool IsRELR = false);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
   /// if there is no dynamic relocation at such address.
@@ -1404,6 +1445,11 @@ public:
 
   /// Populate some internal data structures with debug info.
   void preprocessDebugInfo();
+
+  /// Record DWARF lexical-scope range boundaries into the containing functions'
+  /// BinaryFunction::DebugScopeBoundaryOffsets. Relies on preprocessDebugInfo's
+  /// actions: populated ProcessedCUs and pre-extracted DIEs for split dwarf.
+  void collectDebugScopeBoundaries();
 
   /// Add a filename entry from SrcCUID to DestCUID.
   unsigned addDebugFilenameToUnit(const uint32_t DestCUID,
@@ -1471,16 +1517,6 @@ public:
   /// the function is 'hot'. Consider it hot if count is above the average exec
   /// count of profiled functions.
   uint64_t getHotThreshold() const;
-
-  /// Return true if instruction \p Inst requires an offset for further
-  /// processing (e.g. assigning a profile).
-  bool keepOffsetForInstruction(const MCInst &Inst) const {
-    if (MIB->isCall(Inst) || MIB->isBranch(Inst) || MIB->isReturn(Inst) ||
-        MIB->isPrefix(Inst) || MIB->isIndirectBranch(Inst)) {
-      return true;
-    }
-    return false;
-  }
 
   /// Return true if the function should be emitted to the output file.
   bool shouldEmit(const BinaryFunction &Function) const;

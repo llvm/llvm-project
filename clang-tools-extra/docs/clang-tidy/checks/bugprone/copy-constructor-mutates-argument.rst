@@ -8,4 +8,4 @@ in copy constructors and copy assignment operators.
 
 This check corresponds to the CERT C Coding Standard rule
 `OOP58-CPP. Copy operations must not mutate the source object
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/OOP58-CPP.+Copy+operations+must+not+mutate+the+source+object>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/object-oriented-programming-oop/oop58-cpp/>`_.

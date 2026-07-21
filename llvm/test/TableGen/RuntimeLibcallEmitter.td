@@ -33,21 +33,21 @@ def calloc  : RuntimeLibcallImpl<CALLOC, "calloc">;
 def CompilerRTLibcalls : LibcallImpls<(add __ashlsi3, __lshrdi3)>;
 def LibmLibcalls : LibcallImpls<(add sqrtl_f80)>;
 
-def isSimpleArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::simple}]>;
-def isFooArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::foo}]>;
+def isSimpleArch : RuntimeLibcallAvailability<[{TT.getArch() == Triple::simple}]>;
+def isFooArch : RuntimeLibcallAvailability<[{TT.getArch() == Triple::foo}]>;
 
 
-def isZOS : RuntimeLibcallPredicate<[{TT.getOS() == Triple::zos}]>;
-def isPPC : RuntimeLibcallPredicate<[{TT.getArch().isPPC()}]>;
-def isPPC64 : RuntimeLibcallPredicate<[{TT.getArch().isPPC64()}]>;
+def isZOS : RuntimeLibcallAvailability<[{TT.getOS() == Triple::zos}]>;
+def isPPC : RuntimeLibcallAvailability<[{TT.getArch().isPPC()}]>;
+def isPPC64 : RuntimeLibcallAvailability<[{TT.getArch().isPPC64()}]>;
 
 
-def isFoo : RuntimeLibcallPredicate<[{isFOO()}]>;
-def isBarOS : RuntimeLibcallPredicate<[{TT.getOS() == Triple::bar}]>;
-def isBuzzArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::buzz}]>;
-def isBlahArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::blah}]>;
+def isFoo : RuntimeLibcallAvailability<[{isFOO()}]>;
+def isBarOS : RuntimeLibcallAvailability<[{TT.getOS() == Triple::bar}]>;
+def isBuzzArch : RuntimeLibcallAvailability<[{TT.getArch() == Triple::buzz}]>;
+def isBlahArch : RuntimeLibcallAvailability<[{TT.getArch() == Triple::blah}]>;
 
-def hasCompilerRT : RuntimeLibcallPredicate<[{TT.hasCompilerRT()}]>;
+def hasCompilerRT : RuntimeLibcallAvailability<[{TT.hasCompilerRT()}]>;
 
 
 def SimpleLibrary : SystemRuntimeLibrary<isSimpleArch,

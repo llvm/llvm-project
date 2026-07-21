@@ -790,6 +790,17 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
     break;
+  case MCCFIInstruction::OpLLVMSetRAState: {
+    OS << "llvm_set_ra_state ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    OS << CFI.getRASignState() << ", ";
+    if (MCSymbol *PACSym = CFI.getRASignSymbol())
+      MachineOperand::printSymbol(OS, *PACSym);
+    else
+      OS << CFI.getRASignOffset();
+    break;
+  }
   case MCCFIInstruction::OpLLVMRegisterPair: {
     const auto &Fields =
         CFI.getExtraFields<MCCFIInstruction::RegisterPairFields>();
@@ -1134,8 +1145,8 @@ bool MachinePointerInfo::isDereferenceable(unsigned Size, LLVMContext &C,
   if (BasePtr == nullptr)
     return false;
 
-  return isDereferenceableAndAlignedPointer(
-      BasePtr, Align(1), APInt(DL.getPointerSizeInBits(), Offset + Size),
+  return isDereferenceablePointer(
+      BasePtr, APInt(DL.getPointerSizeInBits(), Offset + Size),
       SimplifyQuery(DL, dyn_cast<Instruction>(BasePtr)));
 }
 

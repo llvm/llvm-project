@@ -80,101 +80,49 @@ define i16 @clmul_i16(i16 %x, i16 %y) {
 define i32 @clmul_i32(i32 %x, i32 %y) {
 ; CHECK-NEON-LABEL: clmul_i32:
 ; CHECK-NEON:       // %bb.0:
-; CHECK-NEON-NEXT:    and w8, w1, #0x2
-; CHECK-NEON-NEXT:    and w9, w1, #0x1
-; CHECK-NEON-NEXT:    and w10, w1, #0x4
-; CHECK-NEON-NEXT:    mul w8, w0, w8
-; CHECK-NEON-NEXT:    and w11, w1, #0x8
-; CHECK-NEON-NEXT:    and w12, w1, #0x10
-; CHECK-NEON-NEXT:    mul w9, w0, w9
-; CHECK-NEON-NEXT:    and w13, w1, #0x20
-; CHECK-NEON-NEXT:    and w14, w1, #0x40
-; CHECK-NEON-NEXT:    mul w10, w0, w10
-; CHECK-NEON-NEXT:    and w2, w1, #0x800
-; CHECK-NEON-NEXT:    and w15, w1, #0x80
-; CHECK-NEON-NEXT:    mul w11, w0, w11
-; CHECK-NEON-NEXT:    and w16, w1, #0x100
-; CHECK-NEON-NEXT:    and w17, w1, #0x200
-; CHECK-NEON-NEXT:    mul w12, w0, w12
-; CHECK-NEON-NEXT:    eor w8, w9, w8
-; CHECK-NEON-NEXT:    and w9, w1, #0x1000
-; CHECK-NEON-NEXT:    mul w13, w0, w13
-; CHECK-NEON-NEXT:    and w18, w1, #0x400
-; CHECK-NEON-NEXT:    mul w14, w0, w14
-; CHECK-NEON-NEXT:    eor w10, w10, w11
-; CHECK-NEON-NEXT:    and w11, w1, #0x2000
-; CHECK-NEON-NEXT:    mul w2, w0, w2
-; CHECK-NEON-NEXT:    eor w8, w8, w10
-; CHECK-NEON-NEXT:    and w10, w1, #0x4000
-; CHECK-NEON-NEXT:    mul w9, w0, w9
-; CHECK-NEON-NEXT:    eor w12, w12, w13
-; CHECK-NEON-NEXT:    and w13, w1, #0x8000
-; CHECK-NEON-NEXT:    mul w15, w0, w15
-; CHECK-NEON-NEXT:    eor w12, w12, w14
-; CHECK-NEON-NEXT:    and w14, w1, #0x10000
-; CHECK-NEON-NEXT:    mul w16, w0, w16
-; CHECK-NEON-NEXT:    eor w8, w8, w12
-; CHECK-NEON-NEXT:    and w12, w1, #0x20000
-; CHECK-NEON-NEXT:    mul w11, w0, w11
-; CHECK-NEON-NEXT:    eor w9, w2, w9
-; CHECK-NEON-NEXT:    and w2, w1, #0x400000
-; CHECK-NEON-NEXT:    mul w17, w0, w17
-; CHECK-NEON-NEXT:    mul w10, w0, w10
-; CHECK-NEON-NEXT:    eor w15, w15, w16
-; CHECK-NEON-NEXT:    and w16, w1, #0x40000
-; CHECK-NEON-NEXT:    mul w13, w0, w13
-; CHECK-NEON-NEXT:    eor w9, w9, w11
-; CHECK-NEON-NEXT:    and w11, w1, #0x800000
-; CHECK-NEON-NEXT:    mul w18, w0, w18
-; CHECK-NEON-NEXT:    eor w15, w15, w17
-; CHECK-NEON-NEXT:    and w17, w1, #0x80000
-; CHECK-NEON-NEXT:    mul w14, w0, w14
-; CHECK-NEON-NEXT:    eor w9, w9, w10
-; CHECK-NEON-NEXT:    and w10, w1, #0x1000000
-; CHECK-NEON-NEXT:    mul w12, w0, w12
-; CHECK-NEON-NEXT:    eor w9, w9, w13
-; CHECK-NEON-NEXT:    and w13, w1, #0x2000000
-; CHECK-NEON-NEXT:    mul w16, w0, w16
-; CHECK-NEON-NEXT:    eor w15, w15, w18
-; CHECK-NEON-NEXT:    and w18, w1, #0x100000
-; CHECK-NEON-NEXT:    mul w2, w0, w2
-; CHECK-NEON-NEXT:    eor w8, w8, w15
-; CHECK-NEON-NEXT:    and w15, w1, #0x200000
-; CHECK-NEON-NEXT:    mul w11, w0, w11
+; CHECK-NEON-NEXT:    and w8, w1, #0x11111111
+; CHECK-NEON-NEXT:    and w9, w0, #0x22222222
+; CHECK-NEON-NEXT:    and w10, w1, #0x22222222
+; CHECK-NEON-NEXT:    and w11, w0, #0x11111111
+; CHECK-NEON-NEXT:    and w13, w1, #0x88888888
+; CHECK-NEON-NEXT:    and w15, w0, #0x44444444
+; CHECK-NEON-NEXT:    and w17, w1, #0x44444444
+; CHECK-NEON-NEXT:    and w18, w0, #0x88888888
+; CHECK-NEON-NEXT:    mul w12, w9, w8
+; CHECK-NEON-NEXT:    mul w14, w11, w10
+; CHECK-NEON-NEXT:    mul w16, w15, w13
+; CHECK-NEON-NEXT:    mul w0, w18, w17
+; CHECK-NEON-NEXT:    mul w1, w9, w13
 ; CHECK-NEON-NEXT:    eor w12, w14, w12
-; CHECK-NEON-NEXT:    and w14, w1, #0x4000000
-; CHECK-NEON-NEXT:    mul w17, w0, w17
-; CHECK-NEON-NEXT:    eor w12, w12, w16
-; CHECK-NEON-NEXT:    and w16, w1, #0x8000000
-; CHECK-NEON-NEXT:    mul w10, w0, w10
-; CHECK-NEON-NEXT:    eor w8, w8, w9
-; CHECK-NEON-NEXT:    mul w13, w0, w13
-; CHECK-NEON-NEXT:    eor w11, w2, w11
-; CHECK-NEON-NEXT:    and w2, w1, #0x20000000
-; CHECK-NEON-NEXT:    mul w18, w0, w18
-; CHECK-NEON-NEXT:    eor w12, w12, w17
-; CHECK-NEON-NEXT:    and w17, w1, #0x10000000
-; CHECK-NEON-NEXT:    mul w14, w0, w14
-; CHECK-NEON-NEXT:    eor w10, w11, w10
-; CHECK-NEON-NEXT:    and w11, w1, #0x40000000
-; CHECK-NEON-NEXT:    mul w15, w0, w15
-; CHECK-NEON-NEXT:    eor w10, w10, w13
-; CHECK-NEON-NEXT:    and w13, w1, #0x80000000
-; CHECK-NEON-NEXT:    mul w16, w0, w16
-; CHECK-NEON-NEXT:    eor w12, w12, w18
-; CHECK-NEON-NEXT:    mul w17, w0, w17
-; CHECK-NEON-NEXT:    eor w10, w10, w14
-; CHECK-NEON-NEXT:    mul w2, w0, w2
-; CHECK-NEON-NEXT:    eor w9, w12, w15
-; CHECK-NEON-NEXT:    mul w11, w0, w11
-; CHECK-NEON-NEXT:    eor w10, w10, w16
-; CHECK-NEON-NEXT:    eor w8, w8, w9
-; CHECK-NEON-NEXT:    mul w13, w0, w13
-; CHECK-NEON-NEXT:    eor w9, w10, w17
-; CHECK-NEON-NEXT:    eor w8, w8, w9
-; CHECK-NEON-NEXT:    eor w10, w2, w11
-; CHECK-NEON-NEXT:    eor w9, w10, w13
-; CHECK-NEON-NEXT:    eor w0, w8, w9
+; CHECK-NEON-NEXT:    mul w2, w11, w8
+; CHECK-NEON-NEXT:    mul w3, w15, w17
+; CHECK-NEON-NEXT:    eor w14, w16, w0
+; CHECK-NEON-NEXT:    mul w4, w18, w10
+; CHECK-NEON-NEXT:    eor w12, w12, w14
+; CHECK-NEON-NEXT:    mul w5, w9, w10
+; CHECK-NEON-NEXT:    eor w14, w2, w1
+; CHECK-NEON-NEXT:    and w12, w12, #0x22222222
+; CHECK-NEON-NEXT:    mul w9, w9, w17
+; CHECK-NEON-NEXT:    mul w17, w11, w17
+; CHECK-NEON-NEXT:    eor w16, w3, w4
+; CHECK-NEON-NEXT:    mul w10, w15, w10
+; CHECK-NEON-NEXT:    mul w15, w15, w8
+; CHECK-NEON-NEXT:    mul w11, w11, w13
+; CHECK-NEON-NEXT:    eor w17, w17, w5
+; CHECK-NEON-NEXT:    mul w13, w18, w13
+; CHECK-NEON-NEXT:    mul w8, w18, w8
+; CHECK-NEON-NEXT:    eor w9, w11, w9
+; CHECK-NEON-NEXT:    eor w13, w15, w13
+; CHECK-NEON-NEXT:    eor w8, w10, w8
+; CHECK-NEON-NEXT:    eor w10, w14, w16
+; CHECK-NEON-NEXT:    eor w11, w17, w13
+; CHECK-NEON-NEXT:    eor w8, w9, w8
+; CHECK-NEON-NEXT:    and w9, w10, #0x11111111
+; CHECK-NEON-NEXT:    and w10, w11, #0x44444444
+; CHECK-NEON-NEXT:    and w8, w8, #0x88888888
+; CHECK-NEON-NEXT:    orr w9, w9, w12
+; CHECK-NEON-NEXT:    orr w8, w10, w8
+; CHECK-NEON-NEXT:    orr w0, w9, w8
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-AES-LABEL: clmul_i32:
@@ -191,274 +139,49 @@ define i32 @clmul_i32(i32 %x, i32 %y) {
 define i64 @clmul_i64(i64 %x, i64 %y) {
 ; CHECK-NEON-LABEL: clmul_i64:
 ; CHECK-NEON:       // %bb.0:
-; CHECK-NEON-NEXT:    sub sp, sp, #304
-; CHECK-NEON-NEXT:    stp x29, x30, [sp, #208] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    stp x28, x27, [sp, #224] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    stp x26, x25, [sp, #240] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    stp x24, x23, [sp, #256] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    stp x22, x21, [sp, #272] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    stp x20, x19, [sp, #288] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 304
-; CHECK-NEON-NEXT:    .cfi_offset w19, -8
-; CHECK-NEON-NEXT:    .cfi_offset w20, -16
-; CHECK-NEON-NEXT:    .cfi_offset w21, -24
-; CHECK-NEON-NEXT:    .cfi_offset w22, -32
-; CHECK-NEON-NEXT:    .cfi_offset w23, -40
-; CHECK-NEON-NEXT:    .cfi_offset w24, -48
-; CHECK-NEON-NEXT:    .cfi_offset w25, -56
-; CHECK-NEON-NEXT:    .cfi_offset w26, -64
-; CHECK-NEON-NEXT:    .cfi_offset w27, -72
-; CHECK-NEON-NEXT:    .cfi_offset w28, -80
-; CHECK-NEON-NEXT:    .cfi_offset w30, -88
-; CHECK-NEON-NEXT:    .cfi_offset w29, -96
-; CHECK-NEON-NEXT:    and x8, x1, #0x2
-; CHECK-NEON-NEXT:    mul x9, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x1
-; CHECK-NEON-NEXT:    mul x10, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x4
-; CHECK-NEON-NEXT:    mul x11, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x8
-; CHECK-NEON-NEXT:    mul x13, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x10
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    mul x12, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x20
-; CHECK-NEON-NEXT:    mul x14, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x40
-; CHECK-NEON-NEXT:    eor x10, x11, x13
-; CHECK-NEON-NEXT:    and x11, x1, #0x10000000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #200] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x80
-; CHECK-NEON-NEXT:    mul x15, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x100
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #160] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x200
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #152] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x400
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #184] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x800
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #192] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x1000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #144] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x2000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #136] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x4000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #176] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x8000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #168] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x10000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #120] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x20000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #80] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x40000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #72] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x80000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #104] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x100000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #96] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x200000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #128] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x400000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #112] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x800000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #64] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x1000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #40] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x2000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    ldr x30, [sp, #40] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x8, [sp, #32] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x4000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #56] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x8000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #48] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x10000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #88] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x20000000
-; CHECK-NEON-NEXT:    mul x26, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x40000000
-; CHECK-NEON-NEXT:    mul x22, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x80000000
-; CHECK-NEON-NEXT:    mul x23, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x100000000
-; CHECK-NEON-NEXT:    mul x24, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x200000000
-; CHECK-NEON-NEXT:    eor x22, x26, x22
-; CHECK-NEON-NEXT:    ldr x26, [sp, #32] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x25, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x400000000
-; CHECK-NEON-NEXT:    eor x22, x22, x23
-; CHECK-NEON-NEXT:    and x23, x1, #0x400000000000000
-; CHECK-NEON-NEXT:    mul x27, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x800000000
-; CHECK-NEON-NEXT:    eor x22, x22, x24
-; CHECK-NEON-NEXT:    ldr x24, [sp, #48] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x28, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x1000000000
-; CHECK-NEON-NEXT:    eor x22, x22, x25
-; CHECK-NEON-NEXT:    ldr x25, [sp, #88] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x29, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x2000000000
-; CHECK-NEON-NEXT:    eor x22, x22, x27
-; CHECK-NEON-NEXT:    mul x21, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x4000000000
-; CHECK-NEON-NEXT:    mul x7, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x8000000000
-; CHECK-NEON-NEXT:    mul x19, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x10000000000
-; CHECK-NEON-NEXT:    mul x5, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x20000000000
-; CHECK-NEON-NEXT:    eor x7, x21, x7
-; CHECK-NEON-NEXT:    mul x6, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x40000000000
-; CHECK-NEON-NEXT:    mul x20, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x80000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    mul x23, x0, x23
-; CHECK-NEON-NEXT:    str x8, [sp, #24] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x100000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #16] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x200000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #8] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x400000000000
-; CHECK-NEON-NEXT:    mul x4, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x800000000000
-; CHECK-NEON-NEXT:    mul x17, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x1000000000000
-; CHECK-NEON-NEXT:    mul x18, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x2000000000000
-; CHECK-NEON-NEXT:    mul x3, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x4000000000000
-; CHECK-NEON-NEXT:    eor x17, x4, x17
-; CHECK-NEON-NEXT:    mul x2, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x8000000000000
-; CHECK-NEON-NEXT:    eor x17, x17, x18
-; CHECK-NEON-NEXT:    and x18, x1, #0x4000000000000000
-; CHECK-NEON-NEXT:    mul x16, x0, x8
-; CHECK-NEON-NEXT:    eor x8, x9, x10
-; CHECK-NEON-NEXT:    ldr x9, [sp, #160] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x12, x14
-; CHECK-NEON-NEXT:    ldr x12, [sp, #80] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x17, x17, x3
-; CHECK-NEON-NEXT:    eor x9, x15, x9
-; CHECK-NEON-NEXT:    mul x15, x0, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #200] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x17, x17, x2
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #152] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x18, x0, x18
-; CHECK-NEON-NEXT:    eor x8, x8, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #184] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x16, x17, x16
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    and x11, x1, #0x20000000000000
-; CHECK-NEON-NEXT:    ldr x17, [sp, #24] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    mul x14, x0, x11
-; CHECK-NEON-NEXT:    and x10, x1, #0x40000000000000
-; CHECK-NEON-NEXT:    eor x11, x8, x9
-; CHECK-NEON-NEXT:    ldr x8, [sp, #192] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x9, [sp, #144] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x13, x0, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #136] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x15, x16, x15
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #120] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x16, [sp, #16] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #72] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #176] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x8, x1, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x9, x0, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x11, x1, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x12, x0, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x14, x1, #0x8888888888888888
+; CHECK-NEON-NEXT:    and x15, x0, #0x4444444444444444
+; CHECK-NEON-NEXT:    and x17, x1, #0x4444444444444444
+; CHECK-NEON-NEXT:    and x18, x0, #0x8888888888888888
+; CHECK-NEON-NEXT:    mul x10, x9, x8
+; CHECK-NEON-NEXT:    mul x13, x12, x11
+; CHECK-NEON-NEXT:    mul x16, x15, x14
+; CHECK-NEON-NEXT:    mul x0, x18, x17
+; CHECK-NEON-NEXT:    eor x10, x13, x10
+; CHECK-NEON-NEXT:    mul x1, x9, x14
+; CHECK-NEON-NEXT:    mul x2, x12, x8
+; CHECK-NEON-NEXT:    eor x13, x16, x0
+; CHECK-NEON-NEXT:    mul x3, x15, x17
+; CHECK-NEON-NEXT:    eor x10, x10, x13
+; CHECK-NEON-NEXT:    and x10, x10, #0x2222222222222222
+; CHECK-NEON-NEXT:    mul x4, x18, x11
+; CHECK-NEON-NEXT:    eor x13, x2, x1
+; CHECK-NEON-NEXT:    mul x5, x9, x11
+; CHECK-NEON-NEXT:    mul x9, x9, x17
+; CHECK-NEON-NEXT:    eor x16, x3, x4
+; CHECK-NEON-NEXT:    mul x17, x12, x17
+; CHECK-NEON-NEXT:    mul x11, x15, x11
+; CHECK-NEON-NEXT:    mul x15, x15, x8
+; CHECK-NEON-NEXT:    eor x17, x17, x5
+; CHECK-NEON-NEXT:    mul x12, x12, x14
+; CHECK-NEON-NEXT:    mul x14, x18, x14
+; CHECK-NEON-NEXT:    mul x8, x18, x8
+; CHECK-NEON-NEXT:    eor x9, x12, x9
 ; CHECK-NEON-NEXT:    eor x14, x15, x14
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    and x10, x1, #0x80000000000000
-; CHECK-NEON-NEXT:    ldr x15, [sp, #8] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #104] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x14, x13
-; CHECK-NEON-NEXT:    eor x9, x9, x12
-; CHECK-NEON-NEXT:    mul x12, x0, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #168] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #96] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x12, x17, x14
 ; CHECK-NEON-NEXT:    eor x8, x11, x8
-; CHECK-NEON-NEXT:    ldr x11, [sp, #128] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    and x10, x1, #0x100000000000000
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #64] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x10, x0, x10
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #112] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    and x11, x1, #0x200000000000000
-; CHECK-NEON-NEXT:    eor x9, x9, x30
-; CHECK-NEON-NEXT:    mul x11, x0, x11
-; CHECK-NEON-NEXT:    eor x9, x9, x26
-; CHECK-NEON-NEXT:    ldr x26, [sp, #56] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x26
-; CHECK-NEON-NEXT:    eor x9, x9, x24
-; CHECK-NEON-NEXT:    and x24, x1, #0x800000000000000
-; CHECK-NEON-NEXT:    eor x9, x9, x25
-; CHECK-NEON-NEXT:    mul x24, x0, x24
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    eor x9, x22, x28
-; CHECK-NEON-NEXT:    and x22, x1, #0x1000000000000000
-; CHECK-NEON-NEXT:    eor x9, x9, x29
-; CHECK-NEON-NEXT:    mul x21, x0, x22
-; CHECK-NEON-NEXT:    and x11, x1, #0x8000000000000000
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    eor x9, x7, x19
-; CHECK-NEON-NEXT:    and x7, x1, #0x2000000000000000
-; CHECK-NEON-NEXT:    eor x9, x9, x5
-; CHECK-NEON-NEXT:    mul x4, x0, x7
-; CHECK-NEON-NEXT:    eor x10, x10, x23
-; CHECK-NEON-NEXT:    eor x9, x9, x6
-; CHECK-NEON-NEXT:    eor x10, x10, x24
-; CHECK-NEON-NEXT:    eor x9, x9, x20
-; CHECK-NEON-NEXT:    mul x11, x0, x11
-; CHECK-NEON-NEXT:    eor x9, x9, x17
-; CHECK-NEON-NEXT:    eor x10, x10, x21
-; CHECK-NEON-NEXT:    eor x9, x9, x16
-; CHECK-NEON-NEXT:    ldp x20, x19, [sp, #288] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x15
-; CHECK-NEON-NEXT:    eor x10, x10, x4
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    eor x9, x13, x12
-; CHECK-NEON-NEXT:    eor x10, x10, x18
-; CHECK-NEON-NEXT:    ldp x22, x21, [sp, #272] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    ldp x24, x23, [sp, #256] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    eor x9, x10, x11
-; CHECK-NEON-NEXT:    ldp x26, x25, [sp, #240] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    eor x0, x8, x9
-; CHECK-NEON-NEXT:    ldp x28, x27, [sp, #224] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    ldp x29, x30, [sp, #208] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    add sp, sp, #304
+; CHECK-NEON-NEXT:    eor x11, x13, x16
+; CHECK-NEON-NEXT:    eor x8, x9, x8
+; CHECK-NEON-NEXT:    and x9, x11, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x11, x12, #0x4444444444444444
+; CHECK-NEON-NEXT:    and x8, x8, #0x8888888888888888
+; CHECK-NEON-NEXT:    orr x9, x9, x10
+; CHECK-NEON-NEXT:    orr x8, x11, x8
+; CHECK-NEON-NEXT:    orr x0, x9, x8
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-AES-LABEL: clmul_i64:
@@ -472,9 +195,8 @@ define i64 @clmul_i64(i64 %x, i64 %y) {
   ret i64 %a
 }
 
-
-define i128 @clmul_i128(i128 %x, i128 %y) {
-; CHECK-NEON-LABEL: clmul_i128:
+define i96 @clmul_i96(i96 %x, i96 %y) {
+; CHECK-NEON-LABEL: clmul_i96:
 ; CHECK-NEON:       // %bb.0:
 ; CHECK-NEON-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
 ; CHECK-NEON-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
@@ -482,8 +204,8 @@ define i128 @clmul_i128(i128 %x, i128 %y) {
 ; CHECK-NEON-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEON-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEON-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    sub sp, sp, #1952
-; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 2048
+; CHECK-NEON-NEXT:    sub sp, sp, #592
+; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 688
 ; CHECK-NEON-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEON-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEON-NEXT:    .cfi_offset w21, -24
@@ -496,1262 +218,929 @@ define i128 @clmul_i128(i128 %x, i128 %y) {
 ; CHECK-NEON-NEXT:    .cfi_offset w28, -80
 ; CHECK-NEON-NEXT:    .cfi_offset w30, -88
 ; CHECK-NEON-NEXT:    .cfi_offset w29, -96
-; CHECK-NEON-NEXT:    rbit x8, x2
-; CHECK-NEON-NEXT:    rbit x9, x0
-; CHECK-NEON-NEXT:    and x7, x2, #0x2
-; CHECK-NEON-NEXT:    and x18, x2, #0x1
-; CHECK-NEON-NEXT:    and x4, x2, #0x4
-; CHECK-NEON-NEXT:    and x5, x2, #0x10
-; CHECK-NEON-NEXT:    and x10, x8, #0x2
-; CHECK-NEON-NEXT:    and x6, x2, #0x80
-; CHECK-NEON-NEXT:    and x17, x2, #0x800
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1944] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x1
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1936] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x4
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1928] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x8
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1920] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x10
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1912] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x20
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1904] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x40
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1888] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x80
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1896] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x100
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1880] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x200
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1864] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x400
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1872] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x800
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1856] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x1000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1832] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x2000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1840] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x4000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1824] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x8000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1848] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x10000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1816] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x20000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1792] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x40000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1784] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x80000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1808] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x100000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1776] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x200000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1800] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x400000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1768] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x800000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1728] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x1000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1760] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x2000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1720] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x4000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1752] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x8000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1736] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x10000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1744] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x20000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1696] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x40000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1656] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x80000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1688] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x100000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1672] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x200000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1680] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x400000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1664] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x800000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1704] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x1000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1712] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x2000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1640] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x4000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1608] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x8000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1584] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x10000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1632] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x20000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1600] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x40000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1616] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x80000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1592] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x100000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1624] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x200000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1648] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x400000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1568] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x800000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1520] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x1000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1536] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x2000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1512] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x4000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1560] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x8000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1504] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x10000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1552] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x20000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1528] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x40000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1576] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x80000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1544] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x100000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1480] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x200000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1448] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x400000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1472] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x800000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1456] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x1000000000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #1488] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x2000000000000000
-; CHECK-NEON-NEXT:    and x8, x8, #0x4000000000000000
-; CHECK-NEON-NEXT:    mul x8, x9, x8
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x8, [sp, #1496] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x1, x7
-; CHECK-NEON-NEXT:    str x10, [sp, #1464] // 8-byte Spill
-; CHECK-NEON-NEXT:    str x8, [sp, #1032] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x1, x18
-; CHECK-NEON-NEXT:    mul x18, x0, x18
-; CHECK-NEON-NEXT:    str x8, [sp, #1008] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x1, x4
-; CHECK-NEON-NEXT:    str x18, [sp, #1128] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x18, x0, x4
-; CHECK-NEON-NEXT:    str x8, [sp, #992] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x2, #0x8
-; CHECK-NEON-NEXT:    mul x9, x1, x8
-; CHECK-NEON-NEXT:    str x18, [sp, #1120] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x9, [sp, #976] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x9, x1, x5
-; CHECK-NEON-NEXT:    str x8, [sp, #1112] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x5
-; CHECK-NEON-NEXT:    str x9, [sp, #952] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x9, x2, #0x20
-; CHECK-NEON-NEXT:    mul x10, x1, x9
-; CHECK-NEON-NEXT:    str x8, [sp, #1096] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1008] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x10, [sp, #928] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x2, #0x40
-; CHECK-NEON-NEXT:    mul x11, x1, x10
-; CHECK-NEON-NEXT:    str x8, [sp, #1072] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #976] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x11, [sp, #944] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x11, x1, x6
-; CHECK-NEON-NEXT:    str x8, [sp, #1104] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x6
-; CHECK-NEON-NEXT:    str x11, [sp, #936] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x11, x2, #0x100
-; CHECK-NEON-NEXT:    mul x12, x1, x11
-; CHECK-NEON-NEXT:    str x8, [sp, #1064] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #928] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x12, [sp, #920] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x12, x2, #0x200
-; CHECK-NEON-NEXT:    mul x13, x1, x12
-; CHECK-NEON-NEXT:    str x8, [sp, #1048] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x12
-; CHECK-NEON-NEXT:    str x13, [sp, #968] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x13, x2, #0x400
-; CHECK-NEON-NEXT:    mul x14, x1, x13
-; CHECK-NEON-NEXT:    str x8, [sp, #1040] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x13
-; CHECK-NEON-NEXT:    str x14, [sp, #960] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x14, x1, x17
-; CHECK-NEON-NEXT:    str x8, [sp, #1088] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x17
-; CHECK-NEON-NEXT:    str x14, [sp, #848] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x14, x2, #0x1000
-; CHECK-NEON-NEXT:    mul x15, x1, x14
-; CHECK-NEON-NEXT:    str x8, [sp, #1000] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x14
-; CHECK-NEON-NEXT:    str x15, [sp, #824] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x15, x2, #0x2000
-; CHECK-NEON-NEXT:    mul x16, x1, x15
-; CHECK-NEON-NEXT:    ldr x12, [sp, #824] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x8, [sp, #984] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x15
-; CHECK-NEON-NEXT:    str x16, [sp, #896] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x16, x2, #0x4000
-; CHECK-NEON-NEXT:    mul x19, x1, x16
-; CHECK-NEON-NEXT:    str x8, [sp, #1024] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x8, x0, x16
-; CHECK-NEON-NEXT:    str x19, [sp, #888] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x19, x2, #0x8000
-; CHECK-NEON-NEXT:    mul x20, x1, x19
-; CHECK-NEON-NEXT:    str x8, [sp, #1016] // 8-byte Spill
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1032] // 8-byte Reload
+; CHECK-NEON-NEXT:    sbfx x9, x2, #1, #1
+; CHECK-NEON-NEXT:    lsl x8, x0, #1
+; CHECK-NEON-NEXT:    sbfx x16, x2, #0, #1
+; CHECK-NEON-NEXT:    lsl x10, x0, #2
+; CHECK-NEON-NEXT:    sbfx x13, x2, #2, #1
+; CHECK-NEON-NEXT:    lsl x11, x0, #3
+; CHECK-NEON-NEXT:    sbfx x14, x2, #3, #1
+; CHECK-NEON-NEXT:    lsl x12, x0, #4
+; CHECK-NEON-NEXT:    sbfx x15, x2, #4, #1
+; CHECK-NEON-NEXT:    str x9, [sp, #200] // 8-byte Spill
+; CHECK-NEON-NEXT:    sbfx x17, x2, #8, #1
+; CHECK-NEON-NEXT:    sbfx x18, x2, #12, #1
+; CHECK-NEON-NEXT:    str x8, [sp, #512] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x8, x9, x8
+; CHECK-NEON-NEXT:    and x9, x16, x0
+; CHECK-NEON-NEXT:    str x10, [sp, #568] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x10, x13, x10
 ; CHECK-NEON-NEXT:    eor x8, x9, x8
-; CHECK-NEON-NEXT:    ldr x9, [sp, #992] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x20, [sp, #904] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x20, x2, #0x10000
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    mul x21, x1, x20
-; CHECK-NEON-NEXT:    ldr x10, [sp, #952] // 8-byte Reload
+; CHECK-NEON-NEXT:    str x11, [sp, #552] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x11, x14, x11
+; CHECK-NEON-NEXT:    sbfx x4, x2, #10, #1
+; CHECK-NEON-NEXT:    stp x14, x13, [sp, #272] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    eor x9, x10, x11
+; CHECK-NEON-NEXT:    and x10, x15, x12
+; CHECK-NEON-NEXT:    str x12, [sp, #536] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x11, x0, #5
+; CHECK-NEON-NEXT:    sbfx x14, x2, #5, #1
+; CHECK-NEON-NEXT:    lsl x12, x0, #6
+; CHECK-NEON-NEXT:    str x16, [sp, #152] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x13, x0, #7
+; CHECK-NEON-NEXT:    str x15, [sp, #288] // 8-byte Spill
+; CHECK-NEON-NEXT:    sbfx x15, x2, #6, #1
+; CHECK-NEON-NEXT:    sbfx x16, x2, #7, #1
+; CHECK-NEON-NEXT:    str x14, [sp, #192] // 8-byte Spill
 ; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #944] // 8-byte Reload
+; CHECK-NEON-NEXT:    sbfx x20, x2, #20, #1
+; CHECK-NEON-NEXT:    stp x11, x12, [sp, #480] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    and x11, x14, x11
+; CHECK-NEON-NEXT:    lsl x14, x0, #8
+; CHECK-NEON-NEXT:    str x13, [sp, #520] // 8-byte Spill
 ; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    mul x11, x0, x19
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    ldr x10, [sp, #936] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #968] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x21, [sp, #880] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x21, x2, #0x20000
-; CHECK-NEON-NEXT:    mul x22, x1, x21
-; CHECK-NEON-NEXT:    str x11, [sp, #1032] // 8-byte Spill
-; CHECK-NEON-NEXT:    ldr x11, [sp, #920] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x11, x15, x12
+; CHECK-NEON-NEXT:    stp x16, x15, [sp, #240] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    and x12, x16, x13
+; CHECK-NEON-NEXT:    and x13, x17, x14
+; CHECK-NEON-NEXT:    str x14, [sp, #544] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x14, x0, #9
+; CHECK-NEON-NEXT:    sbfx x15, x2, #9, #1
+; CHECK-NEON-NEXT:    str x17, [sp, #232] // 8-byte Spill
+; CHECK-NEON-NEXT:    eor x9, x10, x11
+; CHECK-NEON-NEXT:    eor x10, x12, x13
+; CHECK-NEON-NEXT:    str x14, [sp, #528] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x11, x15, x14
+; CHECK-NEON-NEXT:    lsl x12, x0, #11
+; CHECK-NEON-NEXT:    sbfx x17, x2, #11, #1
+; CHECK-NEON-NEXT:    lsl x14, x0, #12
+; CHECK-NEON-NEXT:    str x15, [sp, #256] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x15, x0, #10
+; CHECK-NEON-NEXT:    lsl x13, x0, #13
+; CHECK-NEON-NEXT:    sbfx x16, x2, #13, #1
+; CHECK-NEON-NEXT:    str x12, [sp, #464] // 8-byte Spill
 ; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #848] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    ldr x10, [sp, #896] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x22, [sp, #840] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x22, x2, #0x40000
+; CHECK-NEON-NEXT:    and x11, x17, x12
+; CHECK-NEON-NEXT:    and x12, x18, x14
+; CHECK-NEON-NEXT:    str x13, [sp, #576] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x13, x16, x13
 ; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    mul x23, x1, x22
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    ldr x11, [sp, #960] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #888] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x12, x0, x20
+; CHECK-NEON-NEXT:    and x12, x4, x15
+; CHECK-NEON-NEXT:    str x14, [sp, #496] // 8-byte Spill
 ; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #904] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    mul x11, x0, x21
-; CHECK-NEON-NEXT:    str x23, [sp, #832] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x23, x2, #0x80000
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    mul x24, x1, x23
-; CHECK-NEON-NEXT:    ldr x10, [sp, #880] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x9, x10, x12
+; CHECK-NEON-NEXT:    eor x10, x11, x13
+; CHECK-NEON-NEXT:    lsl x11, x0, #14
+; CHECK-NEON-NEXT:    sbfx x14, x2, #14, #1
+; CHECK-NEON-NEXT:    lsl x12, x0, #16
+; CHECK-NEON-NEXT:    str x15, [sp, #416] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x13, x0, #15
+; CHECK-NEON-NEXT:    sbfx x15, x2, #16, #1
+; CHECK-NEON-NEXT:    stp x18, x17, [sp, #168] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    sbfx x17, x2, #15, #1
 ; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    str x12, [sp, #1008] // 8-byte Spill
-; CHECK-NEON-NEXT:    str x11, [sp, #992] // 8-byte Spill
-; CHECK-NEON-NEXT:    ldr x11, [sp, #840] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x24, [sp, #872] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x24, x2, #0x100000
+; CHECK-NEON-NEXT:    str x16, [sp, #216] // 8-byte Spill
+; CHECK-NEON-NEXT:    sbfx x16, x2, #17, #1
+; CHECK-NEON-NEXT:    sbfx x24, x2, #26, #1
+; CHECK-NEON-NEXT:    str x14, [sp, #136] // 8-byte Spill
+; CHECK-NEON-NEXT:    sbfx x7, x2, #30, #1
+; CHECK-NEON-NEXT:    cmn w2, #1
+; CHECK-NEON-NEXT:    stp x12, x11, [sp, #448] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    and x11, x14, x11
+; CHECK-NEON-NEXT:    lsl x14, x0, #17
+; CHECK-NEON-NEXT:    str x13, [sp, #424] // 8-byte Spill
 ; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    mul x25, x1, x24
-; CHECK-NEON-NEXT:    ldr x11, [sp, #832] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x9, [sp, #872] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x11, x17, x13
+; CHECK-NEON-NEXT:    str x15, [sp, #224] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x12, x15, x12
+; CHECK-NEON-NEXT:    and x13, x16, x14
+; CHECK-NEON-NEXT:    str x14, [sp, #504] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x14, x0, #18
+; CHECK-NEON-NEXT:    sbfx x15, x2, #18, #1
+; CHECK-NEON-NEXT:    eor x9, x10, x11
+; CHECK-NEON-NEXT:    eor x10, x12, x13
+; CHECK-NEON-NEXT:    lsl x12, x0, #19
+; CHECK-NEON-NEXT:    str x14, [sp, #472] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x11, x15, x14
+; CHECK-NEON-NEXT:    sbfx x14, x2, #19, #1
+; CHECK-NEON-NEXT:    str x17, [sp, #88] // 8-byte Spill
 ; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    str x25, [sp, #864] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x25, x2, #0x200000
-; CHECK-NEON-NEXT:    mul x26, x1, x25
-; CHECK-NEON-NEXT:    str x26, [sp, #912] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x26, x2, #0x400000
-; CHECK-NEON-NEXT:    mul x27, x1, x26
-; CHECK-NEON-NEXT:    str x27, [sp, #760] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x27, x2, #0x800000
-; CHECK-NEON-NEXT:    mul x28, x1, x27
-; CHECK-NEON-NEXT:    ldr x11, [sp, #760] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x28, [sp, #736] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x28, x2, #0x1000000
-; CHECK-NEON-NEXT:    mul x29, x1, x28
-; CHECK-NEON-NEXT:    ldr x12, [sp, #736] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    mul x12, x0, x22
-; CHECK-NEON-NEXT:    str x29, [sp, #784] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x29, x2, #0x2000000
-; CHECK-NEON-NEXT:    mul x30, x1, x29
-; CHECK-NEON-NEXT:    ldr x10, [sp, #784] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x12, [sp, #976] // 8-byte Spill
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    ldr x11, [sp, #864] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    str x30, [sp, #776] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x4000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    ldr x11, [sp, #776] // 8-byte Reload
+; CHECK-NEON-NEXT:    lsl x13, x0, #22
+; CHECK-NEON-NEXT:    str x16, [sp, #208] // 8-byte Spill
+; CHECK-NEON-NEXT:    sbfx x16, x2, #22, #1
+; CHECK-NEON-NEXT:    and x11, x14, x12
+; CHECK-NEON-NEXT:    str x14, [sp, #48] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x14, x0, #23
+; CHECK-NEON-NEXT:    sbfx x17, x2, #23, #1
+; CHECK-NEON-NEXT:    str x15, [sp, #184] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x15, x0, #20
 ; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    mul x11, x0, x23
-; CHECK-NEON-NEXT:    str x30, [sp, #800] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x4000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1144] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x8000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x11, [sp, #968] // 8-byte Spill
-; CHECK-NEON-NEXT:    ldr x11, [sp, #912] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #800] // 8-byte Reload
+; CHECK-NEON-NEXT:    str x12, [sp, #392] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x12, x16, x13
 ; CHECK-NEON-NEXT:    eor x8, x8, x9
+; CHECK-NEON-NEXT:    stp x13, x14, [sp, #432] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    and x13, x17, x14
+; CHECK-NEON-NEXT:    lsl x14, x0, #24
+; CHECK-NEON-NEXT:    stp x17, x16, [sp, #120] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    sbfx x16, x2, #24, #1
+; CHECK-NEON-NEXT:    eor x11, x12, x13
+; CHECK-NEON-NEXT:    str x15, [sp, #352] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x12, x20, x15
+; CHECK-NEON-NEXT:    sbfx x15, x2, #25, #1
+; CHECK-NEON-NEXT:    str x14, [sp, #584] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x13, x16, x14
+; CHECK-NEON-NEXT:    lsl x14, x0, #25
+; CHECK-NEON-NEXT:    str x16, [sp, #144] // 8-byte Spill
+; CHECK-NEON-NEXT:    eor x9, x10, x12
+; CHECK-NEON-NEXT:    eor x10, x11, x13
+; CHECK-NEON-NEXT:    lsl x13, x0, #21
+; CHECK-NEON-NEXT:    sbfx x16, x2, #21, #1
+; CHECK-NEON-NEXT:    and x11, x15, x14
+; CHECK-NEON-NEXT:    lsl x12, x0, #26
+; CHECK-NEON-NEXT:    str x14, [sp, #560] // 8-byte Spill
 ; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    str x30, [sp, #792] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x8000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1152] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x10000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #816] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x10000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1160] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x20000000
-; CHECK-NEON-NEXT:    ldr x9, [sp, #816] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #728] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x20000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1168] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x40000000
-; CHECK-NEON-NEXT:    ldr x11, [sp, #728] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #696] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x40000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1176] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x80000000
-; CHECK-NEON-NEXT:    ldr x12, [sp, #696] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #792] // 8-byte Reload
+; CHECK-NEON-NEXT:    str x16, [sp, #40] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x11, x16, x13
+; CHECK-NEON-NEXT:    lsl x14, x0, #27
+; CHECK-NEON-NEXT:    sbfx x16, x2, #27, #1
+; CHECK-NEON-NEXT:    str x15, [sp, #104] // 8-byte Spill
+; CHECK-NEON-NEXT:    sbfx x15, x2, #28, #1
+; CHECK-NEON-NEXT:    str x13, [sp, #344] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x13, x0, #28
+; CHECK-NEON-NEXT:    eor x9, x9, x11
+; CHECK-NEON-NEXT:    str x12, [sp, #408] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x12, x24, x12
+; CHECK-NEON-NEXT:    and x11, x16, x14
 ; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    str x30, [sp, #688] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x80000000
+; CHECK-NEON-NEXT:    str x14, [sp, #384] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x14, x0, #30
+; CHECK-NEON-NEXT:    str x13, [sp, #400] // 8-byte Spill
+; CHECK-NEON-NEXT:    eor x10, x10, x11
+; CHECK-NEON-NEXT:    and x11, x15, x13
+; CHECK-NEON-NEXT:    str x15, [sp, #264] // 8-byte Spill
+; CHECK-NEON-NEXT:    lsl x13, x0, #29
+; CHECK-NEON-NEXT:    sbfx x15, x2, #29, #1
 ; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    str x30, [sp, #1184] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x100000000
-; CHECK-NEON-NEXT:    ldr x12, [sp, #688] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    mul x12, x0, x24
-; CHECK-NEON-NEXT:    str x30, [sp, #744] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x100000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1192] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x200000000
-; CHECK-NEON-NEXT:    ldr x10, [sp, #744] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x12, [sp, #960] // 8-byte Spill
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    str x30, [sp, #720] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x200000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1200] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x400000000
-; CHECK-NEON-NEXT:    ldr x11, [sp, #720] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
+; CHECK-NEON-NEXT:    eor x9, x10, x11
+; CHECK-NEON-NEXT:    lsl x12, x0, #31
+; CHECK-NEON-NEXT:    stp x13, x14, [sp, #368] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    and x10, x15, x13
+; CHECK-NEON-NEXT:    sbfx x13, x2, #32, #1
+; CHECK-NEON-NEXT:    and x11, x7, x14
+; CHECK-NEON-NEXT:    sbfx x21, x2, #33, #1
+; CHECK-NEON-NEXT:    str x12, [sp, #360] // 8-byte Spill
 ; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    str x30, [sp, #768] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x400000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1208] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x800000000
-; CHECK-NEON-NEXT:    ldr x9, [sp, #768] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    str x30, [sp, #808] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x800000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1216] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x1000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #856] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x1000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1224] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x2000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #648] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x2000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1232] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x4000000000
-; CHECK-NEON-NEXT:    ldr x11, [sp, #648] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #632] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x4000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1240] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x8000000000
-; CHECK-NEON-NEXT:    ldr x12, [sp, #632] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    mul x12, x0, x25
-; CHECK-NEON-NEXT:    str x30, [sp, #664] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x8000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1248] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x10000000000
-; CHECK-NEON-NEXT:    ldr x10, [sp, #664] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x12, [sp, #952] // 8-byte Spill
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    str x30, [sp, #640] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x10000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1256] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x20000000000
-; CHECK-NEON-NEXT:    ldr x11, [sp, #640] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
+; CHECK-NEON-NEXT:    csel x11, xzr, x12, gt
+; CHECK-NEON-NEXT:    and x12, x13, x0, lsl #32
+; CHECK-NEON-NEXT:    sbfx x14, x2, #34, #1
+; CHECK-NEON-NEXT:    str x13, [sp, #32] // 8-byte Spill
 ; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    str x30, [sp, #680] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x20000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1264] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x40000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #672] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x40000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1272] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x80000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #712] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x80000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1280] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x100000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #704] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x100000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1288] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x200000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #752] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x200000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1296] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x400000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #520] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x400000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1304] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x800000000000
-; CHECK-NEON-NEXT:    ldr x11, [sp, #520] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #504] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x800000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1312] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x1000000000000
-; CHECK-NEON-NEXT:    ldr x12, [sp, #504] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
+; CHECK-NEON-NEXT:    and x11, x21, x0, lsl #33
+; CHECK-NEON-NEXT:    sbfx x13, x2, #35, #1
+; CHECK-NEON-NEXT:    eor x8, x8, x9
+; CHECK-NEON-NEXT:    eor x9, x10, x12
+; CHECK-NEON-NEXT:    and x10, x14, x0, lsl #34
+; CHECK-NEON-NEXT:    sbfx x12, x2, #36, #1
+; CHECK-NEON-NEXT:    eor x9, x9, x11
+; CHECK-NEON-NEXT:    and x11, x13, x0, lsl #35
+; CHECK-NEON-NEXT:    sbfx x25, x2, #37, #1
+; CHECK-NEON-NEXT:    sbfx x22, x2, #38, #1
+; CHECK-NEON-NEXT:    eor x9, x9, x10
+; CHECK-NEON-NEXT:    and x10, x12, x0, lsl #36
+; CHECK-NEON-NEXT:    sbfx x19, x2, #39, #1
+; CHECK-NEON-NEXT:    str x12, [sp, #312] // 8-byte Spill
+; CHECK-NEON-NEXT:    eor x9, x9, x11
+; CHECK-NEON-NEXT:    and x11, x25, x0, lsl #37
+; CHECK-NEON-NEXT:    and x12, x22, x0, lsl #38
+; CHECK-NEON-NEXT:    sbfx x5, x2, #40, #1
+; CHECK-NEON-NEXT:    eor x9, x9, x10
+; CHECK-NEON-NEXT:    and x10, x19, x0, lsl #39
+; CHECK-NEON-NEXT:    sbfx x26, x2, #41, #1
+; CHECK-NEON-NEXT:    str x13, [sp, #296] // 8-byte Spill
 ; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    mul x12, x0, x26
-; CHECK-NEON-NEXT:    str x30, [sp, #560] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x1000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1320] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x2000000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x12, [sp, #944] // 8-byte Spill
-; CHECK-NEON-NEXT:    ldr x12, [sp, #808] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x12, x5, x0, lsl #40
+; CHECK-NEON-NEXT:    sbfx x13, x2, #42, #1
+; CHECK-NEON-NEXT:    eor x10, x11, x10
+; CHECK-NEON-NEXT:    and x11, x26, x0, lsl #41
+; CHECK-NEON-NEXT:    sbfx x27, x2, #43, #1
+; CHECK-NEON-NEXT:    eor x8, x8, x9
+; CHECK-NEON-NEXT:    eor x9, x10, x12
+; CHECK-NEON-NEXT:    str x13, [sp, #24] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x10, x13, x0, lsl #42
+; CHECK-NEON-NEXT:    sbfx x13, x2, #44, #1
+; CHECK-NEON-NEXT:    stp x14, x15, [sp, #8] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    eor x9, x9, x11
+; CHECK-NEON-NEXT:    and x11, x27, x0, lsl #43
+; CHECK-NEON-NEXT:    sbfx x12, x2, #45, #1
+; CHECK-NEON-NEXT:    sbfx x14, x2, #46, #1
+; CHECK-NEON-NEXT:    eor x9, x9, x10
+; CHECK-NEON-NEXT:    and x10, x13, x0, lsl #44
+; CHECK-NEON-NEXT:    sbfx x28, x2, #47, #1
+; CHECK-NEON-NEXT:    eor x9, x9, x11
+; CHECK-NEON-NEXT:    str x12, [sp, #304] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x11, x12, x0, lsl #45
+; CHECK-NEON-NEXT:    and x12, x14, x0, lsl #46
+; CHECK-NEON-NEXT:    sbfx x6, x2, #48, #1
+; CHECK-NEON-NEXT:    eor x9, x9, x10
+; CHECK-NEON-NEXT:    and x10, x28, x0, lsl #47
+; CHECK-NEON-NEXT:    sbfx x29, x2, #49, #1
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    str x13, [sp, #96] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x12, x6, x0, lsl #48
+; CHECK-NEON-NEXT:    eor x13, x8, x9
+; CHECK-NEON-NEXT:    eor x9, x11, x10
+; CHECK-NEON-NEXT:    and x10, x29, x0, lsl #49
+; CHECK-NEON-NEXT:    str x14, [sp, #72] // 8-byte Spill
+; CHECK-NEON-NEXT:    sbfx x14, x2, #50, #1
 ; CHECK-NEON-NEXT:    eor x9, x9, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #680] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #560] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x30, [sp, #552] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x2000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1328] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x4000000000000
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    ldr x12, [sp, #672] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #552] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    mul x12, x0, x27
-; CHECK-NEON-NEXT:    str x30, [sp, #584] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x4000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1336] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x8000000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x12, [sp, #936] // 8-byte Spill
-; CHECK-NEON-NEXT:    ldr x12, [sp, #856] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #712] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x30, [sp, #576] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x8000000000000
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    str x30, [sp, #1344] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x10000000000000
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    ldr x12, [sp, #584] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x9, [sp, #752] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #704] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #576] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x30, [sp, #608] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x10000000000000
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    str x30, [sp, #1352] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x20000000000000
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    ldr x10, [sp, #608] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    mul x12, x0, x28
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    str x30, [sp, #592] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x20000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1360] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x40000000000000
-; CHECK-NEON-NEXT:    ldr x11, [sp, #592] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x12, [sp, #928] // 8-byte Spill
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    str x30, [sp, #624] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x40000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1368] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x80000000000000
-; CHECK-NEON-NEXT:    ldr x9, [sp, #624] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    str x30, [sp, #616] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x80000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1376] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x100000000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #528] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x100000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1384] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x200000000000000
-; CHECK-NEON-NEXT:    ldr x11, [sp, #528] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #512] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x200000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1392] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x400000000000000
-; CHECK-NEON-NEXT:    ldr x12, [sp, #512] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    mul x12, x0, x29
-; CHECK-NEON-NEXT:    str x30, [sp, #544] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x400000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1400] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x800000000000000
-; CHECK-NEON-NEXT:    ldr x10, [sp, #544] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x12, [sp, #920] // 8-byte Spill
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    ldr x11, [sp, #616] // 8-byte Reload
+; CHECK-NEON-NEXT:    sbfx x8, x2, #55, #1
+; CHECK-NEON-NEXT:    sbfx x30, x2, #51, #1
+; CHECK-NEON-NEXT:    eor x9, x9, x10
+; CHECK-NEON-NEXT:    sbfx x10, x2, #54, #1
+; CHECK-NEON-NEXT:    and x11, x14, x0, lsl #50
+; CHECK-NEON-NEXT:    str x16, [sp, #160] // 8-byte Spill
+; CHECK-NEON-NEXT:    sbfx x16, x2, #52, #1
+; CHECK-NEON-NEXT:    and x18, x8, x0, lsl #55
+; CHECK-NEON-NEXT:    stp x10, x8, [sp, #320] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    sbfx x8, x2, #56, #1
 ; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    eor x21, x8, x9
-; CHECK-NEON-NEXT:    str x30, [sp, #536] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x800000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1408] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x1000000000000000
-; CHECK-NEON-NEXT:    ldr x11, [sp, #536] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1144] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x11, x0, x11
-; CHECK-NEON-NEXT:    str x30, [sp, #568] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x1000000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1416] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x2000000000000000
-; CHECK-NEON-NEXT:    ldr x8, [sp, #568] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    eor x8, x10, x8
-; CHECK-NEON-NEXT:    str x11, [sp, #1144] // 8-byte Spill
-; CHECK-NEON-NEXT:    str x30, [sp, #600] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x2000000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1424] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x4000000000000000
-; CHECK-NEON-NEXT:    mul x30, x1, x30
-; CHECK-NEON-NEXT:    str x30, [sp, #656] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x30, x2, #0x4000000000000000
-; CHECK-NEON-NEXT:    and x2, x2, #0x8000000000000000
-; CHECK-NEON-NEXT:    str x30, [sp, #1432] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x30, x1, x2
-; CHECK-NEON-NEXT:    and x1, x3, #0x2
-; CHECK-NEON-NEXT:    str x2, [sp, #1440] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x1
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    stp x1, x2, [sp, #488] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x4
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x8
-; CHECK-NEON-NEXT:    ldp x10, x9, [sp, #488] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    str x1, [sp, #456] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x10
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x11, [sp, #456] // 8-byte Reload
-; CHECK-NEON-NEXT:    stp x2, x1, [sp, #472] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x20
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x10, [sp, #472] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1152] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #480] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x11, x0, x11
-; CHECK-NEON-NEXT:    str x1, [sp, #464] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x40
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x80
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    str x11, [sp, #1152] // 8-byte Spill
-; CHECK-NEON-NEXT:    ldr x11, [sp, #600] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #464] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #424] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x100
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    str x1, [sp, #384] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x200
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x12, [sp, #384] // 8-byte Reload
-; CHECK-NEON-NEXT:    stp x1, x2, [sp, #440] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x400
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x800
-; CHECK-NEON-NEXT:    ldr x11, [sp, #448] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #424] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #440] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1160] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    mul x12, x0, x12
-; CHECK-NEON-NEXT:    str x1, [sp, #392] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x1000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    str x12, [sp, #1160] // 8-byte Spill
-; CHECK-NEON-NEXT:    ldr x12, [sp, #656] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #376] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x2000
-; CHECK-NEON-NEXT:    eor x8, x8, x12
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x12, [sp, #376] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x16, x8, x30
-; CHECK-NEON-NEXT:    stp x1, x2, [sp, #408] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x4000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x11, [sp, #416] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #392] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #408] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1168] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #400] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x8000
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    mul x12, x0, x12
-; CHECK-NEON-NEXT:    str x1, [sp, #432] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x10000
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x20000
-; CHECK-NEON-NEXT:    str x12, [sp, #1168] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    str x1, [sp, #328] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x40000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x12, [sp, #328] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #320] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x80000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    stp x1, x2, [sp, #352] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x100000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x11, [sp, #360] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #400] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #320] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #344] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x200000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1176] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x12, x0, x12
-; CHECK-NEON-NEXT:    str x1, [sp, #368] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x400000
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x800000
-; CHECK-NEON-NEXT:    str x12, [sp, #1176] // 8-byte Spill
-; CHECK-NEON-NEXT:    ldr x12, [sp, #432] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #352] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #368] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    str x1, [sp, #232] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x1000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x13, [sp, #232] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #224] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x2000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    stp x2, x1, [sp, #280] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x4000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x12, [sp, #280] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #344] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #224] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #272] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x8000000
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x10000000
-; CHECK-NEON-NEXT:    eor x12, x12, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #1184] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x11, [sp, #288] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x11, x12, x11
-; CHECK-NEON-NEXT:    ldr x12, [sp, #272] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x13, x0, x13
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    stp x1, x2, [sp, #304] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x20000000
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x40000000
-; CHECK-NEON-NEXT:    ldr x10, [sp, #312] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x13, [sp, #1184] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    stp x1, x2, [sp, #168] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x80000000
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x100000000
-; CHECK-NEON-NEXT:    ldp x13, x12, [sp, #168] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x12, x12, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #1192] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x13, x0, x13
-; CHECK-NEON-NEXT:    stp x1, x2, [sp, #200] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x200000000
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x400000000
-; CHECK-NEON-NEXT:    ldr x11, [sp, #208] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x11, x12, x11
-; CHECK-NEON-NEXT:    ldr x12, [sp, #304] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x13, [sp, #1192] // 8-byte Spill
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #200] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x9, x10
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1200] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #216] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x800000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x10, [sp, #216] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x12, x0, x12
-; CHECK-NEON-NEXT:    stp x2, x1, [sp, #256] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x1000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x9, [sp, #256] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x12, [sp, #1200] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x11, x30, x0, lsl #51
+; CHECK-NEON-NEXT:    and x12, x10, x0, lsl #54
+; CHECK-NEON-NEXT:    sbfx x17, x2, #53, #1
+; CHECK-NEON-NEXT:    sbfx x10, x2, #57, #1
+; CHECK-NEON-NEXT:    str x4, [sp, #112] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x4, x16, x0, lsl #52
+; CHECK-NEON-NEXT:    str x8, [sp, #80] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x8, x8, x0, lsl #56
+; CHECK-NEON-NEXT:    eor x11, x9, x11
+; CHECK-NEON-NEXT:    str x10, [sp, #56] // 8-byte Spill
+; CHECK-NEON-NEXT:    eor x12, x12, x18
+; CHECK-NEON-NEXT:    and x9, x17, x0, lsl #53
+; CHECK-NEON-NEXT:    and x10, x10, x0, lsl #57
+; CHECK-NEON-NEXT:    sbfx x23, x2, #58, #1
+; CHECK-NEON-NEXT:    eor x11, x11, x4
+; CHECK-NEON-NEXT:    eor x8, x12, x8
 ; CHECK-NEON-NEXT:    eor x9, x11, x9
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    str x1, [sp, #336] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x2000000000
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x4000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    str x1, [sp, #136] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x8000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x11, [sp, #136] // 8-byte Reload
-; CHECK-NEON-NEXT:    stp x1, x2, [sp, #152] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x10000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x10, [sp, #160] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1208] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x11, x0, x11
-; CHECK-NEON-NEXT:    str x1, [sp, #144] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x20000000000
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x40000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    str x11, [sp, #1208] // 8-byte Spill
-; CHECK-NEON-NEXT:    ldr x11, [sp, #264] // 8-byte Reload
+; CHECK-NEON-NEXT:    sbfx x4, x2, #59, #1
+; CHECK-NEON-NEXT:    eor x12, x8, x10
+; CHECK-NEON-NEXT:    and x10, x23, x0, lsl #58
+; CHECK-NEON-NEXT:    eor x9, x13, x9
+; CHECK-NEON-NEXT:    sbfx x18, x2, #60, #1
+; CHECK-NEON-NEXT:    extr x8, x1, x0, #63
+; CHECK-NEON-NEXT:    str x9, [sp, #336] // 8-byte Spill
+; CHECK-NEON-NEXT:    eor x9, x12, x10
+; CHECK-NEON-NEXT:    ldr x10, [sp, #200] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x11, x4, x0, lsl #59
+; CHECK-NEON-NEXT:    extr x12, x1, x0, #62
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #61
+; CHECK-NEON-NEXT:    str x14, [sp, #64] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x10, x10, x8
+; CHECK-NEON-NEXT:    and x8, x18, x0, lsl #60
 ; CHECK-NEON-NEXT:    eor x9, x9, x11
 ; CHECK-NEON-NEXT:    ldr x11, [sp, #152] // 8-byte Reload
-; CHECK-NEON-NEXT:    stp x1, x2, [sp, #184] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x80000000000
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    mul x2, x0, x1
-; CHECK-NEON-NEXT:    and x1, x3, #0x100000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    stp x1, x2, [sp, #240] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x200000000000
-; CHECK-NEON-NEXT:    and x2, x3, #0x1000000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    mul x2, x0, x2
-; CHECK-NEON-NEXT:    str x1, [sp, #296] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x400000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    str x1, [sp, #40] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x800000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x11, [sp, #40] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #16] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x2000000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x12, [sp, #16] // 8-byte Reload
+; CHECK-NEON-NEXT:    cmn w3, #1
+; CHECK-NEON-NEXT:    eor x15, x9, x8
+; CHECK-NEON-NEXT:    ldp x8, x9, [sp, #272] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    and x11, x11, x1
+; CHECK-NEON-NEXT:    eor x14, x11, x10
+; CHECK-NEON-NEXT:    extr x10, x1, x0, #60
+; CHECK-NEON-NEXT:    and x11, x9, x12
+; CHECK-NEON-NEXT:    and x12, x8, x13
+; CHECK-NEON-NEXT:    ldr x8, [sp, #288] // 8-byte Reload
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #59
 ; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #144] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x2
+; CHECK-NEON-NEXT:    extr x9, x1, x0, #57
+; CHECK-NEON-NEXT:    and x10, x8, x10
+; CHECK-NEON-NEXT:    ldr x8, [sp, #192] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x11, x14, x11
+; CHECK-NEON-NEXT:    extr x12, x1, x0, #58
+; CHECK-NEON-NEXT:    and x13, x8, x13
+; CHECK-NEON-NEXT:    extr x8, x1, x0, #56
+; CHECK-NEON-NEXT:    eor x10, x10, x13
+; CHECK-NEON-NEXT:    ldp x13, x14, [sp, #240] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    and x9, x13, x9
+; CHECK-NEON-NEXT:    ldr x13, [sp, #232] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x12, x14, x12
 ; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1216] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #56] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x4000000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    mul x23, x0, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #336] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #192] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #48] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x8000000000000
+; CHECK-NEON-NEXT:    ldr x12, [sp, #256] // 8-byte Reload
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #52
+; CHECK-NEON-NEXT:    and x8, x13, x8
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #55
+; CHECK-NEON-NEXT:    eor x10, x11, x10
+; CHECK-NEON-NEXT:    eor x8, x9, x8
+; CHECK-NEON-NEXT:    extr x9, x1, x0, #54
+; CHECK-NEON-NEXT:    ldr x11, [sp, #112] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x12, x12, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #53
+; CHECK-NEON-NEXT:    eor x8, x8, x12
+; CHECK-NEON-NEXT:    and x9, x11, x9
+; CHECK-NEON-NEXT:    ldp x12, x11, [sp, #168] // 16-byte Folded Reload
 ; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #56] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x9, [sp, #248] // 8-byte Reload
+; CHECK-NEON-NEXT:    ldr x9, [sp, #216] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x8, x10, x8
+; CHECK-NEON-NEXT:    and x11, x11, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #51
+; CHECK-NEON-NEXT:    and x12, x12, x14
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    extr x12, x1, x0, #50
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #49
+; CHECK-NEON-NEXT:    and x13, x9, x13
+; CHECK-NEON-NEXT:    sbfx x9, x2, #61, #1
+; CHECK-NEON-NEXT:    eor x10, x11, x13
+; CHECK-NEON-NEXT:    ldr x11, [sp, #136] // 8-byte Reload
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #47
+; CHECK-NEON-NEXT:    and x11, x11, x12
+; CHECK-NEON-NEXT:    and x12, x9, x0, lsl #61
+; CHECK-NEON-NEXT:    eor x10, x10, x11
+; CHECK-NEON-NEXT:    ldr x11, [sp, #88] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x12, x15, x12
+; CHECK-NEON-NEXT:    extr x15, x1, x0, #39
+; CHECK-NEON-NEXT:    and x11, x11, x14
+; CHECK-NEON-NEXT:    str x12, [sp, #288] // 8-byte Spill
+; CHECK-NEON-NEXT:    ldr x12, [sp, #224] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x10, x10, x11
+; CHECK-NEON-NEXT:    extr x11, x1, x0, #48
+; CHECK-NEON-NEXT:    eor x8, x8, x10
+; CHECK-NEON-NEXT:    extr x10, x1, x0, #46
+; CHECK-NEON-NEXT:    and x11, x12, x11
+; CHECK-NEON-NEXT:    ldr x12, [sp, #208] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x12, x12, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #45
 ; CHECK-NEON-NEXT:    eor x11, x11, x12
 ; CHECK-NEON-NEXT:    ldr x12, [sp, #184] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #48] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #96] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x10000000000000
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x10, [sp, #96] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1224] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x10, x12, x10
+; CHECK-NEON-NEXT:    extr x12, x1, x0, #44
 ; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    ldr x11, [sp, #240] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x24, x0, x12
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    str x1, [sp, #88] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x20000000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x11, [sp, #88] // 8-byte Reload
+; CHECK-NEON-NEXT:    ldr x11, [sp, #48] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x11, x11, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #42
 ; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1232] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x25, x0, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #296] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #112] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x40000000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #112] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x9
+; CHECK-NEON-NEXT:    and x11, x20, x12
+; CHECK-NEON-NEXT:    extr x12, x1, x0, #41
 ; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    str x1, [sp, #104] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x80000000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    str x1, [sp, #120] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x100000000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x9, [sp, #120] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #80] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x200000000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x11, [sp, #80] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #32] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x400000000000000
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x12, [sp, #32] // 8-byte Reload
+; CHECK-NEON-NEXT:    ldp x14, x11, [sp, #120] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr x20, [sp, #40] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x11, x11, x13
+; CHECK-NEON-NEXT:    and x12, x14, x12
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #40
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    ldr x12, [sp, #144] // 8-byte Reload
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #43
+; CHECK-NEON-NEXT:    and x12, x12, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #38
+; CHECK-NEON-NEXT:    and x14, x20, x14
 ; CHECK-NEON-NEXT:    eor x11, x11, x12
 ; CHECK-NEON-NEXT:    ldr x12, [sp, #104] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    str x1, [sp, #24] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x800000000000000
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    ldr x12, [sp, #24] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x15, x8, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1248] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1240] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x27, x0, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1944] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #72] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x1000000000000000
-; CHECK-NEON-NEXT:    mul x26, x0, x12
-; CHECK-NEON-NEXT:    ldr x10, [sp, #72] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1904] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1920] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #64] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x2000000000000000
-; CHECK-NEON-NEXT:    ldr x8, [sp, #64] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x8, x10, x8
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1936] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1928] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #128] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x4000000000000000
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1912] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1888] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1792] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1256] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1880] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x28, x0, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #128] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #1056] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x1, x3, #0x8000000000000000
-; CHECK-NEON-NEXT:    eor x14, x8, x11
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1896] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1832] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x1, x0, x1
-; CHECK-NEON-NEXT:    eor x10, x8, x10
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1864] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1856] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x8, x11
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1264] // 8-byte Reload
-; CHECK-NEON-NEXT:    str x1, [sp, #1080] // 8-byte Spill
-; CHECK-NEON-NEXT:    mul x1, x0, x7
-; CHECK-NEON-NEXT:    mul x29, x0, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1872] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1840] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    str x1, [sp, #1136] // 8-byte Spill
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1816] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x8, x12
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1824] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1784] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1272] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x30, x0, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1848] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1808] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    eor x11, x12, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1776] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1728] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1768] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x8, x12
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1280] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x22, x0, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1800] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1760] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    eor x11, x12, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1720] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1656] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1696] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x8, x12
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1288] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x20, x0, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1752] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1688] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x12, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1736] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1608] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1672] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1296] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x19, x0, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1744] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1680] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1640] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x8, x12
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1664] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1584] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1304] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x7, x0, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1704] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1632] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x12, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1600] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x12, [sp, #1520] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1568] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x8, x12
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1312] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x6, x0, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1712] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1616] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x9, x10
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1448] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1536] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x6, x7, x6
-; CHECK-NEON-NEXT:    ldr x7, [sp, #1424] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1592] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x7, x0, x7
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1512] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1320] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x5, x0, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1624] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1560] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x12, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1504] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1480] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1328] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x4, x0, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1648] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1552] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x13, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1576] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1472] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1528] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x11, x9
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1456] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1488] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1336] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1544] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x3, x0, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #992] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1464] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x13, x9
-; CHECK-NEON-NEXT:    eor x8, x8, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1344] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x1, x0, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1056] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x14, x14, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1496] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1080] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x9, x8
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1352] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x14, x10
-; CHECK-NEON-NEXT:    eor x14, x21, x16
-; CHECK-NEON-NEXT:    rbit x8, x8
-; CHECK-NEON-NEXT:    mul x18, x0, x9
-; CHECK-NEON-NEXT:    eor x13, x15, x13
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1360] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x13, x14
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1112] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x17, x0, x9
-; CHECK-NEON-NEXT:    eor x2, x13, x8, lsr #1
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1136] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1128] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x9, x8
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1120] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x9, x10
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1096] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1072] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x8, x13
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1104] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x14, x9, x10
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1368] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x10, [sp, #984] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x14, x14, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1064] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x21, x0, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1048] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x13, x14
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1040] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    ldr x9, [sp, #1000] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1376] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x16, x0, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1088] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1024] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x13, x8
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1016] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1008] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x14, x10, x11
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1384] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x11, [sp, #936] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x15, x0, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1032] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #976] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x14, x10
-; CHECK-NEON-NEXT:    eor x10, x8, x9
-; CHECK-NEON-NEXT:    ldr x8, [sp, #968] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x13, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1392] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x13, x0, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #960] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #944] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x14, x8, x11
-; CHECK-NEON-NEXT:    ldr x8, [sp, #1168] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1176] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x15, x13
-; CHECK-NEON-NEXT:    eor x8, x8, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #928] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x14, x14, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1184] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1400] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x12, x0, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #952] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #920] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    ldr x10, [sp, #1152] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x14, x14, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1192] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x13, x12
-; CHECK-NEON-NEXT:    ldr x13, [sp, #1440] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1144] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x13, x0, x13
-; CHECK-NEON-NEXT:    eor x14, x14, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1200] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x14, x10
-; CHECK-NEON-NEXT:    ldr x14, [sp, #1208] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #1408] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x14
-; CHECK-NEON-NEXT:    ldr x14, [sp, #1160] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x23
-; CHECK-NEON-NEXT:    mul x11, x0, x11
 ; CHECK-NEON-NEXT:    eor x10, x10, x14
-; CHECK-NEON-NEXT:    ldr x14, [sp, #1416] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x24
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    eor x10, x25, x26
-; CHECK-NEON-NEXT:    eor x10, x10, x27
-; CHECK-NEON-NEXT:    eor x8, x9, x8
-; CHECK-NEON-NEXT:    mul x14, x0, x14
-; CHECK-NEON-NEXT:    eor x9, x10, x28
-; CHECK-NEON-NEXT:    eor x10, x6, x5
-; CHECK-NEON-NEXT:    eor x10, x10, x4
-; CHECK-NEON-NEXT:    ldr x4, [sp, #1432] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x29
-; CHECK-NEON-NEXT:    eor x10, x10, x3
-; CHECK-NEON-NEXT:    eor x9, x9, x30
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #35
+; CHECK-NEON-NEXT:    lsl x20, x2, #32
+; CHECK-NEON-NEXT:    eor x8, x8, x10
+; CHECK-NEON-NEXT:    and x12, x12, x15
+; CHECK-NEON-NEXT:    extr x15, x1, x0, #34
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    and x12, x24, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #37
+; CHECK-NEON-NEXT:    ldr x24, [sp, #160] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    extr x12, x1, x0, #33
+; CHECK-NEON-NEXT:    and x15, x7, x15
+; CHECK-NEON-NEXT:    extr x7, x1, x0, #36
+; CHECK-NEON-NEXT:    and x13, x24, x13
+; CHECK-NEON-NEXT:    ldr x24, [sp, #16] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x12, x12, x20, asr #63
+; CHECK-NEON-NEXT:    eor x11, x11, x13
+; CHECK-NEON-NEXT:    extr x20, x1, x0, #32
+; CHECK-NEON-NEXT:    and x14, x24, x14
+; CHECK-NEON-NEXT:    eor x13, x14, x15
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #31
+; CHECK-NEON-NEXT:    ldr x15, [sp, #264] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x12, x13, x12
+; CHECK-NEON-NEXT:    ldr x13, [sp, #32] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x15, x15, x7
+; CHECK-NEON-NEXT:    and x13, x13, x20
+; CHECK-NEON-NEXT:    eor x10, x11, x15
+; CHECK-NEON-NEXT:    ldr x15, [sp, #296] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x12, x12, x13
+; CHECK-NEON-NEXT:    and x13, x21, x14
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #30
+; CHECK-NEON-NEXT:    eor x11, x12, x13
+; CHECK-NEON-NEXT:    ldr x12, [sp, #8] // 8-byte Reload
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #27
+; CHECK-NEON-NEXT:    eor x8, x8, x10
+; CHECK-NEON-NEXT:    and x12, x12, x14
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #26
+; CHECK-NEON-NEXT:    eor x10, x11, x12
+; CHECK-NEON-NEXT:    extr x11, x1, x0, #25
+; CHECK-NEON-NEXT:    and x12, x25, x13
+; CHECK-NEON-NEXT:    and x13, x22, x14
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #24
+; CHECK-NEON-NEXT:    eor x12, x12, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #29
+; CHECK-NEON-NEXT:    and x11, x19, x11
 ; CHECK-NEON-NEXT:    eor x11, x12, x11
-; CHECK-NEON-NEXT:    mul x4, x0, x4
-; CHECK-NEON-NEXT:    eor x10, x10, x1
-; CHECK-NEON-NEXT:    eor x9, x9, x22
-; CHECK-NEON-NEXT:    eor x10, x10, x18
-; CHECK-NEON-NEXT:    eor x9, x9, x20
+; CHECK-NEON-NEXT:    and x12, x5, x14
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #23
+; CHECK-NEON-NEXT:    and x13, x15, x13
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    extr x12, x1, x0, #22
+; CHECK-NEON-NEXT:    eor x10, x10, x13
+; CHECK-NEON-NEXT:    ldr x13, [sp, #24] // 8-byte Reload
+; CHECK-NEON-NEXT:    extr x15, x1, x0, #28
+; CHECK-NEON-NEXT:    and x14, x26, x14
+; CHECK-NEON-NEXT:    extr x5, x1, x0, #21
+; CHECK-NEON-NEXT:    and x12, x13, x12
+; CHECK-NEON-NEXT:    ldr x13, [sp, #312] // 8-byte Reload
 ; CHECK-NEON-NEXT:    eor x11, x11, x14
-; CHECK-NEON-NEXT:    eor x10, x10, x17
-; CHECK-NEON-NEXT:    eor x9, x9, x19
-; CHECK-NEON-NEXT:    eor x11, x11, x7
-; CHECK-NEON-NEXT:    eor x10, x10, x21
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #20
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    and x12, x27, x5
+; CHECK-NEON-NEXT:    and x13, x13, x15
+; CHECK-NEON-NEXT:    extr x15, x1, x0, #18
+; CHECK-NEON-NEXT:    extr x5, x1, x0, #17
+; CHECK-NEON-NEXT:    eor x10, x10, x13
+; CHECK-NEON-NEXT:    ldr x13, [sp, #96] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    extr x12, x1, x0, #16
+; CHECK-NEON-NEXT:    eor x8, x8, x10
+; CHECK-NEON-NEXT:    and x13, x13, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #72] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x12, x6, x12
+; CHECK-NEON-NEXT:    eor x11, x11, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #14
+; CHECK-NEON-NEXT:    and x14, x14, x15
+; CHECK-NEON-NEXT:    and x15, x28, x5
+; CHECK-NEON-NEXT:    extr x5, x1, x0, #13
+; CHECK-NEON-NEXT:    eor x14, x14, x15
+; CHECK-NEON-NEXT:    extr x15, x1, x0, #15
+; CHECK-NEON-NEXT:    ldr x6, [sp, #304] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x12, x14, x12
+; CHECK-NEON-NEXT:    and x14, x29, x15
+; CHECK-NEON-NEXT:    extr x15, x1, x0, #19
+; CHECK-NEON-NEXT:    eor x12, x12, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #64] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x15, x6, x15
+; CHECK-NEON-NEXT:    and x13, x14, x13
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #12
+; CHECK-NEON-NEXT:    eor x10, x11, x15
+; CHECK-NEON-NEXT:    eor x12, x12, x13
+; CHECK-NEON-NEXT:    and x13, x30, x5
+; CHECK-NEON-NEXT:    eor x10, x8, x10
+; CHECK-NEON-NEXT:    eor x12, x12, x13
+; CHECK-NEON-NEXT:    and x13, x16, x14
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #11
+; CHECK-NEON-NEXT:    eor x11, x12, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #8
+; CHECK-NEON-NEXT:    ldr x15, [sp, #320] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x12, x17, x14
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #7
+; CHECK-NEON-NEXT:    ldr x16, [sp, #288] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x8, x11, x12
+; CHECK-NEON-NEXT:    ldr x12, [sp, #80] // 8-byte Reload
+; CHECK-NEON-NEXT:    extr x11, x1, x0, #6
+; CHECK-NEON-NEXT:    ldr x17, [sp, #568] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x12, x12, x13
+; CHECK-NEON-NEXT:    ldr x13, [sp, #56] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x11, x23, x11
+; CHECK-NEON-NEXT:    and x13, x13, x14
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #5
+; CHECK-NEON-NEXT:    eor x12, x12, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #4
+; CHECK-NEON-NEXT:    eor x11, x12, x11
+; CHECK-NEON-NEXT:    and x12, x4, x14
+; CHECK-NEON-NEXT:    extr x14, x1, x0, #10
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    and x12, x18, x13
+; CHECK-NEON-NEXT:    extr x13, x1, x0, #3
+; CHECK-NEON-NEXT:    and x14, x15, x14
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    extr x12, x1, x0, #9
+; CHECK-NEON-NEXT:    and x9, x9, x13
+; CHECK-NEON-NEXT:    sbfx x13, x2, #62, #1
+; CHECK-NEON-NEXT:    extr x15, x1, x0, #2
+; CHECK-NEON-NEXT:    eor x8, x8, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #328] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x9, x11, x9
+; CHECK-NEON-NEXT:    asr x11, x2, #63
+; CHECK-NEON-NEXT:    and x12, x14, x12
+; CHECK-NEON-NEXT:    and x14, x13, x15
+; CHECK-NEON-NEXT:    extr x15, x1, x0, #1
+; CHECK-NEON-NEXT:    eor x9, x9, x14
+; CHECK-NEON-NEXT:    sbfx x14, x3, #0, #1
+; CHECK-NEON-NEXT:    eor x12, x8, x12
+; CHECK-NEON-NEXT:    and x8, x13, x0, lsl #62
+; CHECK-NEON-NEXT:    and x13, x11, x15
+; CHECK-NEON-NEXT:    lsl x15, x3, #62
+; CHECK-NEON-NEXT:    eor x10, x10, x12
+; CHECK-NEON-NEXT:    eor x12, x9, x13
+; CHECK-NEON-NEXT:    and x9, x11, x0, lsl #63
+; CHECK-NEON-NEXT:    and x11, x14, x0
+; CHECK-NEON-NEXT:    ldr x13, [sp, #512] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x8, x16, x8
+; CHECK-NEON-NEXT:    eor x11, x12, x11
+; CHECK-NEON-NEXT:    lsl x12, x3, #60
+; CHECK-NEON-NEXT:    ldr x16, [sp, #552] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x13, x13, x15, asr #63
+; CHECK-NEON-NEXT:    lsl x14, x3, #59
+; CHECK-NEON-NEXT:    lsl x15, x3, #58
+; CHECK-NEON-NEXT:    and x12, x16, x12, asr #63
+; CHECK-NEON-NEXT:    ldr x16, [sp, #536] // 8-byte Reload
+; CHECK-NEON-NEXT:    ldr x1, [sp, #584] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x11, x11, x13
+; CHECK-NEON-NEXT:    lsl x13, x3, #61
+; CHECK-NEON-NEXT:    lsl x0, x3, #33
+; CHECK-NEON-NEXT:    and x14, x16, x14, asr #63
+; CHECK-NEON-NEXT:    lsl x16, x3, #57
 ; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    mov x1, x2
-; CHECK-NEON-NEXT:    eor x9, x10, x16
-; CHECK-NEON-NEXT:    eor x10, x11, x4
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    eor x9, x10, x13
-; CHECK-NEON-NEXT:    eor x0, x8, x9
-; CHECK-NEON-NEXT:    add sp, sp, #1952
+; CHECK-NEON-NEXT:    and x13, x17, x13, asr #63
+; CHECK-NEON-NEXT:    ldr x17, [sp, #480] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x12, x12, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #488] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x15, x17, x15, asr #63
+; CHECK-NEON-NEXT:    lsl x17, x3, #56
+; CHECK-NEON-NEXT:    eor x11, x11, x13
+; CHECK-NEON-NEXT:    and x14, x14, x16, asr #63
+; CHECK-NEON-NEXT:    lsl x16, x3, #55
+; CHECK-NEON-NEXT:    ldr x13, [sp, #464] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x12, x12, x15
+; CHECK-NEON-NEXT:    ldr x15, [sp, #520] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x10, x10, x11
+; CHECK-NEON-NEXT:    eor x12, x12, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #544] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x15, x15, x17, asr #63
+; CHECK-NEON-NEXT:    lsl x17, x3, #54
+; CHECK-NEON-NEXT:    and x14, x14, x16, asr #63
+; CHECK-NEON-NEXT:    lsl x16, x3, #53
+; CHECK-NEON-NEXT:    eor x12, x12, x15
+; CHECK-NEON-NEXT:    ldr x15, [sp, #528] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x12, x12, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #416] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x15, x15, x17, asr #63
+; CHECK-NEON-NEXT:    lsl x17, x3, #52
+; CHECK-NEON-NEXT:    and x14, x14, x16, asr #63
+; CHECK-NEON-NEXT:    lsl x16, x3, #51
+; CHECK-NEON-NEXT:    eor x12, x12, x15
+; CHECK-NEON-NEXT:    and x13, x13, x17, asr #63
+; CHECK-NEON-NEXT:    ldr x17, [sp, #576] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x11, x12, x14
+; CHECK-NEON-NEXT:    ldr x12, [sp, #496] // 8-byte Reload
+; CHECK-NEON-NEXT:    lsl x14, x3, #48
+; CHECK-NEON-NEXT:    eor x11, x11, x13
+; CHECK-NEON-NEXT:    lsl x13, x3, #49
+; CHECK-NEON-NEXT:    lsl x15, x3, #47
+; CHECK-NEON-NEXT:    and x12, x12, x16, asr #63
+; CHECK-NEON-NEXT:    ldr x16, [sp, #456] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x13, x16, x13, asr #63
+; CHECK-NEON-NEXT:    ldr x16, [sp, #424] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    lsl x12, x3, #50
+; CHECK-NEON-NEXT:    and x14, x16, x14, asr #63
+; CHECK-NEON-NEXT:    lsl x16, x3, #46
+; CHECK-NEON-NEXT:    and x12, x17, x12, asr #63
+; CHECK-NEON-NEXT:    ldr x17, [sp, #448] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x13, x13, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #504] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x15, x17, x15, asr #63
+; CHECK-NEON-NEXT:    lsl x17, x3, #45
+; CHECK-NEON-NEXT:    eor x11, x11, x12
+; CHECK-NEON-NEXT:    and x14, x14, x16, asr #63
+; CHECK-NEON-NEXT:    lsl x16, x3, #44
+; CHECK-NEON-NEXT:    eor x10, x10, x11
+; CHECK-NEON-NEXT:    eor x13, x13, x15
+; CHECK-NEON-NEXT:    ldr x15, [sp, #472] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x13, x13, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #392] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x15, x15, x17, asr #63
+; CHECK-NEON-NEXT:    lsl x17, x3, #43
+; CHECK-NEON-NEXT:    and x14, x14, x16, asr #63
+; CHECK-NEON-NEXT:    lsl x16, x3, #42
+; CHECK-NEON-NEXT:    eor x13, x13, x15
+; CHECK-NEON-NEXT:    ldr x15, [sp, #352] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x13, x13, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #344] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x15, x15, x17, asr #63
+; CHECK-NEON-NEXT:    lsl x17, x3, #41
+; CHECK-NEON-NEXT:    and x14, x14, x16, asr #63
+; CHECK-NEON-NEXT:    lsl x16, x3, #40
+; CHECK-NEON-NEXT:    eor x12, x13, x15
+; CHECK-NEON-NEXT:    ldr x13, [sp, #432] // 8-byte Reload
+; CHECK-NEON-NEXT:    lsl x15, x3, #37
+; CHECK-NEON-NEXT:    eor x12, x12, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #440] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x13, x13, x17, asr #63
+; CHECK-NEON-NEXT:    ldr x17, [sp, #384] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x14, x14, x16, asr #63
+; CHECK-NEON-NEXT:    lsl x16, x3, #39
+; CHECK-NEON-NEXT:    eor x12, x12, x13
+; CHECK-NEON-NEXT:    lsl x13, x3, #36
+; CHECK-NEON-NEXT:    eor x12, x12, x14
+; CHECK-NEON-NEXT:    ldp x18, x14, [sp, #400] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    and x13, x17, x13, asr #63
+; CHECK-NEON-NEXT:    lsl x17, x3, #34
+; CHECK-NEON-NEXT:    and x16, x1, x16, asr #63
+; CHECK-NEON-NEXT:    and x14, x14, x15, asr #63
+; CHECK-NEON-NEXT:    lsl x15, x3, #35
+; CHECK-NEON-NEXT:    eor x11, x12, x16
+; CHECK-NEON-NEXT:    eor x13, x14, x13
+; CHECK-NEON-NEXT:    ldr x14, [sp, #368] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x15, x18, x15, asr #63
+; CHECK-NEON-NEXT:    lsl x18, x3, #38
+; CHECK-NEON-NEXT:    and x14, x14, x17, asr #63
+; CHECK-NEON-NEXT:    ldr x17, [sp, #560] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x13, x13, x15
+; CHECK-NEON-NEXT:    ldr x15, [sp, #376] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x17, x17, x18, asr #63
+; CHECK-NEON-NEXT:    eor x12, x13, x14
+; CHECK-NEON-NEXT:    ldr x13, [sp, #360] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x15, x15, x0, asr #63
+; CHECK-NEON-NEXT:    eor x11, x11, x17
+; CHECK-NEON-NEXT:    csel x13, xzr, x13, gt
+; CHECK-NEON-NEXT:    eor x12, x12, x15
+; CHECK-NEON-NEXT:    eor x9, x10, x11
+; CHECK-NEON-NEXT:    ldr x11, [sp, #336] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x10, x12, x13
+; CHECK-NEON-NEXT:    eor x0, x11, x8
+; CHECK-NEON-NEXT:    eor x1, x9, x10
+; CHECK-NEON-NEXT:    add sp, sp, #592
 ; CHECK-NEON-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEON-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEON-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEON-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEON-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEON-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-AES-LABEL: clmul_i96:
+; CHECK-AES:       // %bb.0:
+; CHECK-AES-NEXT:    rbit x8, x2
+; CHECK-AES-NEXT:    rbit x9, x0
+; CHECK-AES-NEXT:    fmov d0, x3
+; CHECK-AES-NEXT:    fmov d1, x0
+; CHECK-AES-NEXT:    fmov d2, x2
+; CHECK-AES-NEXT:    fmov d3, x8
+; CHECK-AES-NEXT:    fmov d4, x9
+; CHECK-AES-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-AES-NEXT:    pmull v3.1q, v4.1d, v3.1d
+; CHECK-AES-NEXT:    fmov d4, x1
+; CHECK-AES-NEXT:    pmull v1.1q, v1.1d, v2.1d
+; CHECK-AES-NEXT:    pmull v4.1q, v4.1d, v2.1d
+; CHECK-AES-NEXT:    fmov x10, d0
+; CHECK-AES-NEXT:    fmov x8, d3
+; CHECK-AES-NEXT:    fmov x0, d1
+; CHECK-AES-NEXT:    fmov x9, d4
+; CHECK-AES-NEXT:    rbit x8, x8
+; CHECK-AES-NEXT:    eor x9, x10, x9
+; CHECK-AES-NEXT:    eor x1, x9, x8, lsr #1
+; CHECK-AES-NEXT:    ret
+  %a = call i96 @llvm.clmul.i96(i96 %x, i96 %y)
+  ret i96 %a
+}
+
+define i128 @clmul_i128(i128 %x, i128 %y) {
+; CHECK-NEON-LABEL: clmul_i128:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    sub sp, sp, #352
+; CHECK-NEON-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp x28, x27, [sp, #272] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp x26, x25, [sp, #288] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp x24, x23, [sp, #304] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp x22, x21, [sp, #320] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp x20, x19, [sp, #336] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 352
+; CHECK-NEON-NEXT:    .cfi_offset w19, -8
+; CHECK-NEON-NEXT:    .cfi_offset w20, -16
+; CHECK-NEON-NEXT:    .cfi_offset w21, -24
+; CHECK-NEON-NEXT:    .cfi_offset w22, -32
+; CHECK-NEON-NEXT:    .cfi_offset w23, -40
+; CHECK-NEON-NEXT:    .cfi_offset w24, -48
+; CHECK-NEON-NEXT:    .cfi_offset w25, -56
+; CHECK-NEON-NEXT:    .cfi_offset w26, -64
+; CHECK-NEON-NEXT:    .cfi_offset w27, -72
+; CHECK-NEON-NEXT:    .cfi_offset w28, -80
+; CHECK-NEON-NEXT:    .cfi_offset w30, -88
+; CHECK-NEON-NEXT:    .cfi_offset w29, -96
+; CHECK-NEON-NEXT:    and x10, x2, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x12, x1, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x11, x2, #0x8888888888888888
+; CHECK-NEON-NEXT:    mul x8, x12, x10
+; CHECK-NEON-NEXT:    and x5, x1, #0x4444444444444444
+; CHECK-NEON-NEXT:    and x21, x1, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x6, x2, #0x1111111111111111
+; CHECK-NEON-NEXT:    rbit x13, x0
+; CHECK-NEON-NEXT:    and x29, x0, #0x2222222222222222
+; CHECK-NEON-NEXT:    mul x14, x21, x10
+; CHECK-NEON-NEXT:    and x15, x13, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x17, x13, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x4, x13, #0x4444444444444444
+; CHECK-NEON-NEXT:    and x13, x13, #0x8888888888888888
+; CHECK-NEON-NEXT:    mul x26, x12, x11
+; CHECK-NEON-NEXT:    str x8, [sp, #248] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x8, x5, x11
+; CHECK-NEON-NEXT:    str x14, [sp, #88] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x9, x21, x6
+; CHECK-NEON-NEXT:    mul x20, x5, x6
+; CHECK-NEON-NEXT:    str x8, [sp, #240] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x8, x21, x11
+; CHECK-NEON-NEXT:    mul x22, x5, x10
+; CHECK-NEON-NEXT:    str x8, [sp, #232] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x8, x12, x6
+; CHECK-NEON-NEXT:    str x8, [sp, #224] // 8-byte Spill
+; CHECK-NEON-NEXT:    rbit x8, x2
+; CHECK-NEON-NEXT:    and x14, x8, #0x1111111111111111
+; CHECK-NEON-NEXT:    mul x16, x15, x14
+; CHECK-NEON-NEXT:    str x16, [sp, #216] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x16, x8, #0x2222222222222222
+; CHECK-NEON-NEXT:    mul x18, x17, x16
+; CHECK-NEON-NEXT:    str x18, [sp, #208] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x18, x8, #0x8888888888888888
+; CHECK-NEON-NEXT:    and x8, x8, #0x4444444444444444
+; CHECK-NEON-NEXT:    mul x7, x4, x18
+; CHECK-NEON-NEXT:    str x7, [sp, #200] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x7, x13, x8
+; CHECK-NEON-NEXT:    str x7, [sp, #192] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x7, x15, x18
+; CHECK-NEON-NEXT:    str x7, [sp, #184] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x7, x17, x14
+; CHECK-NEON-NEXT:    str x7, [sp, #176] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x7, x4, x8
+; CHECK-NEON-NEXT:    str x7, [sp, #168] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x7, x13, x16
+; CHECK-NEON-NEXT:    str x7, [sp, #160] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x7, x15, x16
+; CHECK-NEON-NEXT:    mul x15, x15, x8
+; CHECK-NEON-NEXT:    mul x8, x17, x8
+; CHECK-NEON-NEXT:    stp x15, x7, [sp, #144] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    str x8, [sp, #128] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x8, x4, x16
+; CHECK-NEON-NEXT:    str x8, [sp, #136] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x8, x4, x14
+; CHECK-NEON-NEXT:    str x8, [sp, #104] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x8, x17, x18
+; CHECK-NEON-NEXT:    str x8, [sp, #120] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x8, x13, x18
+; CHECK-NEON-NEXT:    str x8, [sp, #96] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x8, x13, x14
+; CHECK-NEON-NEXT:    str x8, [sp, #112] // 8-byte Spill
+; CHECK-NEON-NEXT:    and x8, x2, #0x4444444444444444
+; CHECK-NEON-NEXT:    and x2, x0, #0x1111111111111111
+; CHECK-NEON-NEXT:    mul x24, x12, x8
+; CHECK-NEON-NEXT:    and x12, x1, #0x8888888888888888
+; CHECK-NEON-NEXT:    and x1, x0, #0x8888888888888888
+; CHECK-NEON-NEXT:    mul x27, x21, x8
+; CHECK-NEON-NEXT:    and x21, x0, #0x4444444444444444
+; CHECK-NEON-NEXT:    mul x14, x12, x8
+; CHECK-NEON-NEXT:    mul x15, x12, x10
+; CHECK-NEON-NEXT:    mul x18, x12, x11
+; CHECK-NEON-NEXT:    mul x4, x12, x6
+; CHECK-NEON-NEXT:    and x12, x3, #0x4444444444444444
+; CHECK-NEON-NEXT:    mul x30, x1, x12
+; CHECK-NEON-NEXT:    eor x18, x20, x18
+; CHECK-NEON-NEXT:    eor x20, x26, x27
+; CHECK-NEON-NEXT:    mul x28, x21, x12
+; CHECK-NEON-NEXT:    eor x4, x22, x4
+; CHECK-NEON-NEXT:    mul x13, x2, x12
+; CHECK-NEON-NEXT:    mul x12, x29, x12
+; CHECK-NEON-NEXT:    mul x19, x5, x8
+; CHECK-NEON-NEXT:    and x5, x3, #0x2222222222222222
+; CHECK-NEON-NEXT:    mul x16, x2, x5
+; CHECK-NEON-NEXT:    stp x13, x12, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    and x12, x3, #0x8888888888888888
+; CHECK-NEON-NEXT:    and x3, x3, #0x1111111111111111
+; CHECK-NEON-NEXT:    mul x0, x21, x12
+; CHECK-NEON-NEXT:    eor x15, x19, x15
+; CHECK-NEON-NEXT:    mul x7, x29, x12
+; CHECK-NEON-NEXT:    mul x13, x1, x12
+; CHECK-NEON-NEXT:    mul x12, x2, x12
+; CHECK-NEON-NEXT:    mul x17, x1, x5
+; CHECK-NEON-NEXT:    mul x25, x29, x5
+; CHECK-NEON-NEXT:    str x12, [sp, #40] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x12, x21, x5
+; CHECK-NEON-NEXT:    eor x17, x28, x17
+; CHECK-NEON-NEXT:    ldp x28, x27, [sp, #272] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    mul x5, x21, x3
+; CHECK-NEON-NEXT:    mul x23, x1, x3
+; CHECK-NEON-NEXT:    stp x12, x13, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    mul x12, x29, x3
+; CHECK-NEON-NEXT:    mul x13, x2, x3
+; CHECK-NEON-NEXT:    mul x3, x29, x6
+; CHECK-NEON-NEXT:    eor x12, x16, x12
+; CHECK-NEON-NEXT:    eor x16, x0, x30
+; CHECK-NEON-NEXT:    eor x12, x12, x16
+; CHECK-NEON-NEXT:    mul x0, x1, x10
+; CHECK-NEON-NEXT:    eor x13, x13, x7
+; CHECK-NEON-NEXT:    and x12, x12, #0x2222222222222222
+; CHECK-NEON-NEXT:    eor x13, x13, x17
+; CHECK-NEON-NEXT:    str x3, [sp, #80] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x3, x29, x11
+; CHECK-NEON-NEXT:    and x13, x13, #0x1111111111111111
+; CHECK-NEON-NEXT:    orr x12, x13, x12
+; CHECK-NEON-NEXT:    ldp x17, x13, [sp, #40] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    eor x13, x13, x25
+; CHECK-NEON-NEXT:    ldp x26, x25, [sp, #288] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    str x3, [sp, #72] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x3, x29, x10
+; CHECK-NEON-NEXT:    str x3, [sp, #64] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x3, x29, x8
+; CHECK-NEON-NEXT:    str x3, [sp, #32] // 8-byte Spill
+; CHECK-NEON-NEXT:    ldr x3, [sp, #248] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x3, x3, x9
+; CHECK-NEON-NEXT:    ldr x9, [sp, #240] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x9, x9, x14
+; CHECK-NEON-NEXT:    mul x14, x1, x8
+; CHECK-NEON-NEXT:    eor x9, x3, x9
+; CHECK-NEON-NEXT:    ldp x29, x3, [sp, #224] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    and x9, x9, #0x2222222222222222
+; CHECK-NEON-NEXT:    eor x3, x29, x3
+; CHECK-NEON-NEXT:    ldp x29, x30, [sp, #256] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    eor x3, x3, x15
+; CHECK-NEON-NEXT:    ldr x15, [sp, #88] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x3, x3, #0x1111111111111111
+; CHECK-NEON-NEXT:    eor x19, x24, x15
+; CHECK-NEON-NEXT:    orr x9, x3, x9
+; CHECK-NEON-NEXT:    eor x3, x20, x4
+; CHECK-NEON-NEXT:    eor x18, x19, x18
+; CHECK-NEON-NEXT:    and x3, x3, #0x8888888888888888
+; CHECK-NEON-NEXT:    mul x15, x21, x8
+; CHECK-NEON-NEXT:    and x18, x18, #0x4444444444444444
+; CHECK-NEON-NEXT:    orr x18, x18, x3
+; CHECK-NEON-NEXT:    mul x4, x2, x10
+; CHECK-NEON-NEXT:    orr x9, x9, x18
+; CHECK-NEON-NEXT:    ldp x18, x16, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    mul x10, x21, x10
+; CHECK-NEON-NEXT:    eor x16, x5, x16
+; CHECK-NEON-NEXT:    ldp x5, x3, [sp, #208] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    eor x13, x13, x16
+; CHECK-NEON-NEXT:    ldr x16, [sp, #56] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x18, x18, x23
+; CHECK-NEON-NEXT:    and x13, x13, #0x4444444444444444
+; CHECK-NEON-NEXT:    mul x8, x2, x8
+; CHECK-NEON-NEXT:    eor x3, x5, x3
+; CHECK-NEON-NEXT:    ldp x7, x5, [sp, #192] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    eor x16, x17, x16
+; CHECK-NEON-NEXT:    mul x17, x21, x11
+; CHECK-NEON-NEXT:    eor x16, x16, x18
+; CHECK-NEON-NEXT:    ldp x24, x23, [sp, #304] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    eor x5, x5, x7
+; CHECK-NEON-NEXT:    ldp x19, x7, [sp, #176] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    eor x18, x3, x5
+; CHECK-NEON-NEXT:    ldr x5, [sp, #152] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x16, x16, #0x8888888888888888
+; CHECK-NEON-NEXT:    and x18, x18, #0x2222222222222222
+; CHECK-NEON-NEXT:    orr x13, x13, x16
+; CHECK-NEON-NEXT:    eor x7, x19, x7
+; CHECK-NEON-NEXT:    ldp x20, x19, [sp, #160] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    orr x12, x12, x13
+; CHECK-NEON-NEXT:    eor x14, x17, x14
+; CHECK-NEON-NEXT:    eor x9, x12, x9
+; CHECK-NEON-NEXT:    eor x19, x19, x20
+; CHECK-NEON-NEXT:    mul x20, x2, x6
+; CHECK-NEON-NEXT:    eor x3, x7, x19
+; CHECK-NEON-NEXT:    ldr x7, [sp, #128] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x3, x3, #0x1111111111111111
+; CHECK-NEON-NEXT:    mul x2, x2, x11
+; CHECK-NEON-NEXT:    eor x5, x7, x5
+; CHECK-NEON-NEXT:    ldp x19, x7, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    orr x16, x3, x18
+; CHECK-NEON-NEXT:    mul x11, x1, x11
+; CHECK-NEON-NEXT:    eor x7, x7, x19
+; CHECK-NEON-NEXT:    mul x19, x21, x6
+; CHECK-NEON-NEXT:    ldp x22, x21, [sp, #112] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    eor x5, x5, x7
+; CHECK-NEON-NEXT:    ldr x7, [sp, #144] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x5, x5, #0x4444444444444444
+; CHECK-NEON-NEXT:    eor x7, x21, x7
+; CHECK-NEON-NEXT:    ldr x21, [sp, #136] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x11, x19, x11
+; CHECK-NEON-NEXT:    eor x21, x21, x22
+; CHECK-NEON-NEXT:    eor x7, x7, x21
+; CHECK-NEON-NEXT:    ldp x22, x21, [sp, #320] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    and x7, x7, #0x8888888888888888
+; CHECK-NEON-NEXT:    orr x18, x5, x7
+; CHECK-NEON-NEXT:    orr x13, x16, x18
+; CHECK-NEON-NEXT:    ldr x18, [sp, #80] // 8-byte Reload
+; CHECK-NEON-NEXT:    mul x16, x1, x6
+; CHECK-NEON-NEXT:    rbit x13, x13
+; CHECK-NEON-NEXT:    eor x18, x4, x18
+; CHECK-NEON-NEXT:    eor x12, x18, x14
+; CHECK-NEON-NEXT:    eor x1, x9, x13, lsr #1
+; CHECK-NEON-NEXT:    eor x13, x15, x0
+; CHECK-NEON-NEXT:    and x9, x12, #0x2222222222222222
+; CHECK-NEON-NEXT:    ldp x14, x12, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    eor x10, x10, x16
+; CHECK-NEON-NEXT:    eor x8, x8, x14
+; CHECK-NEON-NEXT:    ldr x14, [sp, #32] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x12, x20, x12
+; CHECK-NEON-NEXT:    eor x12, x12, x13
+; CHECK-NEON-NEXT:    eor x8, x8, x11
+; CHECK-NEON-NEXT:    eor x14, x2, x14
+; CHECK-NEON-NEXT:    and x11, x12, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x8, x8, #0x4444444444444444
+; CHECK-NEON-NEXT:    eor x10, x14, x10
+; CHECK-NEON-NEXT:    ldp x20, x19, [sp, #336] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    and x10, x10, #0x8888888888888888
+; CHECK-NEON-NEXT:    orr x9, x11, x9
+; CHECK-NEON-NEXT:    orr x8, x8, x10
+; CHECK-NEON-NEXT:    orr x0, x9, x8
+; CHECK-NEON-NEXT:    add sp, sp, #352
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-AES-LABEL: clmul_i128:
@@ -1827,54 +1216,53 @@ define i16 @clmul_i16_zext(i8 %x, i8 %y) {
 define i32 @clmul_i32_zext(i16 %x, i16 %y) {
 ; CHECK-NEON-LABEL: clmul_i32_zext:
 ; CHECK-NEON:       // %bb.0:
-; CHECK-NEON-NEXT:    and w8, w0, #0xffff
-; CHECK-NEON-NEXT:    and w9, w1, #0x2
-; CHECK-NEON-NEXT:    and w10, w1, #0x1
-; CHECK-NEON-NEXT:    mul w9, w8, w9
-; CHECK-NEON-NEXT:    and w11, w1, #0x4
-; CHECK-NEON-NEXT:    and w12, w1, #0x8
-; CHECK-NEON-NEXT:    mul w10, w8, w10
-; CHECK-NEON-NEXT:    and w13, w1, #0x10
-; CHECK-NEON-NEXT:    and w14, w1, #0x20
-; CHECK-NEON-NEXT:    mul w11, w8, w11
-; CHECK-NEON-NEXT:    and w16, w1, #0x80
-; CHECK-NEON-NEXT:    and w17, w1, #0x100
-; CHECK-NEON-NEXT:    mul w12, w8, w12
-; CHECK-NEON-NEXT:    and w2, w1, #0x800
-; CHECK-NEON-NEXT:    and w15, w1, #0x40
-; CHECK-NEON-NEXT:    mul w13, w8, w13
-; CHECK-NEON-NEXT:    eor w9, w10, w9
-; CHECK-NEON-NEXT:    and w10, w1, #0x1000
+; CHECK-NEON-NEXT:    mov w8, #4369 // =0x1111
+; CHECK-NEON-NEXT:    mov w9, #8738 // =0x2222
+; CHECK-NEON-NEXT:    mov w13, #34952 // =0x8888
+; CHECK-NEON-NEXT:    mov w14, #17476 // =0x4444
+; CHECK-NEON-NEXT:    and w10, w1, w8
+; CHECK-NEON-NEXT:    and w11, w0, w9
+; CHECK-NEON-NEXT:    and w9, w1, w9
+; CHECK-NEON-NEXT:    and w8, w0, w8
+; CHECK-NEON-NEXT:    and w16, w1, w13
+; CHECK-NEON-NEXT:    and w17, w0, w14
+; CHECK-NEON-NEXT:    and w14, w1, w14
+; CHECK-NEON-NEXT:    and w13, w0, w13
+; CHECK-NEON-NEXT:    mul w12, w11, w10
+; CHECK-NEON-NEXT:    mul w15, w8, w9
+; CHECK-NEON-NEXT:    mul w18, w17, w16
+; CHECK-NEON-NEXT:    mul w0, w13, w14
+; CHECK-NEON-NEXT:    mul w1, w11, w16
+; CHECK-NEON-NEXT:    eor w12, w15, w12
+; CHECK-NEON-NEXT:    mul w2, w8, w10
+; CHECK-NEON-NEXT:    mul w3, w17, w14
+; CHECK-NEON-NEXT:    eor w15, w18, w0
+; CHECK-NEON-NEXT:    mul w4, w13, w9
+; CHECK-NEON-NEXT:    eor w12, w12, w15
+; CHECK-NEON-NEXT:    mul w5, w11, w9
+; CHECK-NEON-NEXT:    and w12, w12, #0x22222222
+; CHECK-NEON-NEXT:    mul w11, w11, w14
 ; CHECK-NEON-NEXT:    mul w14, w8, w14
-; CHECK-NEON-NEXT:    and w18, w1, #0x200
-; CHECK-NEON-NEXT:    and w0, w1, #0x400
-; CHECK-NEON-NEXT:    mul w16, w8, w16
-; CHECK-NEON-NEXT:    eor w11, w11, w12
-; CHECK-NEON-NEXT:    and w12, w1, #0x2000
-; CHECK-NEON-NEXT:    mul w17, w8, w17
-; CHECK-NEON-NEXT:    eor w9, w9, w11
-; CHECK-NEON-NEXT:    and w11, w1, #0x4000
-; CHECK-NEON-NEXT:    mul w2, w8, w2
-; CHECK-NEON-NEXT:    eor w13, w13, w14
-; CHECK-NEON-NEXT:    and w14, w1, #0x8000
-; CHECK-NEON-NEXT:    mul w10, w8, w10
-; CHECK-NEON-NEXT:    mul w15, w8, w15
-; CHECK-NEON-NEXT:    eor w16, w16, w17
-; CHECK-NEON-NEXT:    mul w18, w8, w18
-; CHECK-NEON-NEXT:    mul w12, w8, w12
-; CHECK-NEON-NEXT:    eor w10, w2, w10
-; CHECK-NEON-NEXT:    mul w0, w8, w0
-; CHECK-NEON-NEXT:    eor w13, w13, w15
-; CHECK-NEON-NEXT:    mul w11, w8, w11
-; CHECK-NEON-NEXT:    eor w9, w9, w13
-; CHECK-NEON-NEXT:    mul w8, w8, w14
-; CHECK-NEON-NEXT:    eor w14, w16, w18
-; CHECK-NEON-NEXT:    eor w10, w10, w12
-; CHECK-NEON-NEXT:    eor w12, w14, w0
-; CHECK-NEON-NEXT:    eor w10, w10, w11
-; CHECK-NEON-NEXT:    eor w9, w9, w12
-; CHECK-NEON-NEXT:    eor w8, w10, w8
-; CHECK-NEON-NEXT:    eor w0, w9, w8
+; CHECK-NEON-NEXT:    eor w15, w3, w4
+; CHECK-NEON-NEXT:    mul w9, w17, w9
+; CHECK-NEON-NEXT:    mul w17, w17, w10
+; CHECK-NEON-NEXT:    mul w8, w8, w16
+; CHECK-NEON-NEXT:    eor w14, w14, w5
+; CHECK-NEON-NEXT:    mul w16, w13, w16
+; CHECK-NEON-NEXT:    mul w10, w13, w10
+; CHECK-NEON-NEXT:    eor w13, w2, w1
+; CHECK-NEON-NEXT:    eor w8, w8, w11
+; CHECK-NEON-NEXT:    eor w16, w17, w16
+; CHECK-NEON-NEXT:    eor w9, w9, w10
+; CHECK-NEON-NEXT:    eor w10, w13, w15
+; CHECK-NEON-NEXT:    eor w11, w14, w16
+; CHECK-NEON-NEXT:    eor w8, w8, w9
+; CHECK-NEON-NEXT:    and w9, w10, #0x11111111
+; CHECK-NEON-NEXT:    and w10, w11, #0x44444444
+; CHECK-NEON-NEXT:    and w8, w8, #0x88888888
+; CHECK-NEON-NEXT:    orr w9, w9, w12
+; CHECK-NEON-NEXT:    orr w8, w10, w8
+; CHECK-NEON-NEXT:    orr w0, w9, w8
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-AES-LABEL: clmul_i32_zext:
@@ -1895,102 +1283,51 @@ define i32 @clmul_i32_zext(i16 %x, i16 %y) {
 define i64 @clmul_i64_zext(i32 %x, i32 %y) {
 ; CHECK-NEON-LABEL: clmul_i64_zext:
 ; CHECK-NEON:       // %bb.0:
-; CHECK-NEON-NEXT:    mov w8, w1
-; CHECK-NEON-NEXT:    and x9, x8, #0x2
-; CHECK-NEON-NEXT:    and x10, x8, #0x1
-; CHECK-NEON-NEXT:    and x11, x8, #0x4
-; CHECK-NEON-NEXT:    umull x9, w9, w0
-; CHECK-NEON-NEXT:    and x12, x8, #0x8
-; CHECK-NEON-NEXT:    and x13, x8, #0x10
-; CHECK-NEON-NEXT:    umull x10, w10, w0
-; CHECK-NEON-NEXT:    and x14, x8, #0x20
-; CHECK-NEON-NEXT:    and x15, x8, #0x40
-; CHECK-NEON-NEXT:    umull x11, w11, w0
-; CHECK-NEON-NEXT:    and x2, x8, #0x800
-; CHECK-NEON-NEXT:    and x16, x8, #0x80
-; CHECK-NEON-NEXT:    umull x12, w12, w0
-; CHECK-NEON-NEXT:    and x17, x8, #0x100
-; CHECK-NEON-NEXT:    and x18, x8, #0x200
-; CHECK-NEON-NEXT:    umull x13, w13, w0
-; CHECK-NEON-NEXT:    eor x9, x10, x9
-; CHECK-NEON-NEXT:    and x10, x8, #0x1000
-; CHECK-NEON-NEXT:    umull x14, w14, w0
-; CHECK-NEON-NEXT:    and x1, x8, #0x400
-; CHECK-NEON-NEXT:    umull x15, w15, w0
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    and x12, x8, #0x2000
-; CHECK-NEON-NEXT:    umull x2, w2, w0
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    and x11, x8, #0x4000
-; CHECK-NEON-NEXT:    umull x10, w10, w0
-; CHECK-NEON-NEXT:    eor x13, x13, x14
-; CHECK-NEON-NEXT:    and x14, x8, #0x8000
-; CHECK-NEON-NEXT:    umull x16, w16, w0
-; CHECK-NEON-NEXT:    eor x13, x13, x15
-; CHECK-NEON-NEXT:    and x15, x8, #0x10000
-; CHECK-NEON-NEXT:    umull x17, w17, w0
-; CHECK-NEON-NEXT:    eor x9, x9, x13
-; CHECK-NEON-NEXT:    and x13, x8, #0x20000
-; CHECK-NEON-NEXT:    umull x12, w12, w0
-; CHECK-NEON-NEXT:    eor x10, x2, x10
-; CHECK-NEON-NEXT:    and x2, x8, #0x400000
-; CHECK-NEON-NEXT:    umull x18, w18, w0
-; CHECK-NEON-NEXT:    umull x11, w11, w0
-; CHECK-NEON-NEXT:    eor x16, x16, x17
-; CHECK-NEON-NEXT:    and x17, x8, #0x40000
-; CHECK-NEON-NEXT:    umull x14, w14, w0
+; CHECK-NEON-NEXT:    mov w8, w0
+; CHECK-NEON-NEXT:    mov w9, w1
+; CHECK-NEON-NEXT:    and x10, x9, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x11, x8, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x13, x9, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x14, x8, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x16, x9, #0x8888888888888888
+; CHECK-NEON-NEXT:    and x17, x8, #0x4444444444444444
+; CHECK-NEON-NEXT:    and x9, x9, #0x4444444444444444
+; CHECK-NEON-NEXT:    and x8, x8, #0x8888888888888888
+; CHECK-NEON-NEXT:    mul x12, x11, x10
+; CHECK-NEON-NEXT:    mul x15, x14, x13
+; CHECK-NEON-NEXT:    mul x18, x17, x16
+; CHECK-NEON-NEXT:    mul x0, x8, x9
+; CHECK-NEON-NEXT:    mul x1, x11, x16
+; CHECK-NEON-NEXT:    mul x2, x14, x10
+; CHECK-NEON-NEXT:    mul x3, x17, x9
+; CHECK-NEON-NEXT:    mul x4, x8, x13
+; CHECK-NEON-NEXT:    mul x5, x11, x13
+; CHECK-NEON-NEXT:    mul x11, x11, x9
+; CHECK-NEON-NEXT:    mul x9, x14, x9
+; CHECK-NEON-NEXT:    mul x13, x17, x13
+; CHECK-NEON-NEXT:    mul x17, x17, x10
+; CHECK-NEON-NEXT:    eor x9, x9, x5
+; CHECK-NEON-NEXT:    mul x14, x14, x16
+; CHECK-NEON-NEXT:    mul x16, x8, x16
+; CHECK-NEON-NEXT:    mul x8, x8, x10
+; CHECK-NEON-NEXT:    eor x10, x15, x12
+; CHECK-NEON-NEXT:    eor x12, x18, x0
 ; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    and x12, x8, #0x800000
-; CHECK-NEON-NEXT:    umull x1, w1, w0
-; CHECK-NEON-NEXT:    eor x16, x16, x18
-; CHECK-NEON-NEXT:    and x18, x8, #0x80000
-; CHECK-NEON-NEXT:    umull x15, w15, w0
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    and x11, x8, #0x1000000
-; CHECK-NEON-NEXT:    umull x13, w13, w0
-; CHECK-NEON-NEXT:    eor x10, x10, x14
-; CHECK-NEON-NEXT:    and x14, x8, #0x2000000
-; CHECK-NEON-NEXT:    umull x17, w17, w0
-; CHECK-NEON-NEXT:    eor x16, x16, x1
-; CHECK-NEON-NEXT:    and x1, x8, #0x100000
-; CHECK-NEON-NEXT:    umull x2, w2, w0
+; CHECK-NEON-NEXT:    eor x12, x2, x1
+; CHECK-NEON-NEXT:    eor x15, x3, x4
+; CHECK-NEON-NEXT:    eor x11, x14, x11
+; CHECK-NEON-NEXT:    eor x12, x12, x15
+; CHECK-NEON-NEXT:    and x10, x10, #0x2222222222222222
+; CHECK-NEON-NEXT:    eor x16, x17, x16
 ; CHECK-NEON-NEXT:    eor x9, x9, x16
-; CHECK-NEON-NEXT:    and x16, x8, #0x200000
-; CHECK-NEON-NEXT:    umull x12, w12, w0
-; CHECK-NEON-NEXT:    eor x13, x15, x13
-; CHECK-NEON-NEXT:    and x15, x8, #0x4000000
-; CHECK-NEON-NEXT:    umull x18, w18, w0
-; CHECK-NEON-NEXT:    eor x13, x13, x17
-; CHECK-NEON-NEXT:    and x17, x8, #0x8000000
-; CHECK-NEON-NEXT:    umull x11, w11, w0
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    umull x14, w14, w0
-; CHECK-NEON-NEXT:    eor x12, x2, x12
-; CHECK-NEON-NEXT:    and x2, x8, #0x20000000
-; CHECK-NEON-NEXT:    umull x1, w1, w0
-; CHECK-NEON-NEXT:    eor x13, x13, x18
-; CHECK-NEON-NEXT:    and x18, x8, #0x10000000
-; CHECK-NEON-NEXT:    umull x15, w15, w0
-; CHECK-NEON-NEXT:    eor x11, x12, x11
-; CHECK-NEON-NEXT:    and x12, x8, #0x40000000
-; CHECK-NEON-NEXT:    umull x16, w16, w0
-; CHECK-NEON-NEXT:    eor x11, x11, x14
-; CHECK-NEON-NEXT:    and x8, x8, #0x80000000
-; CHECK-NEON-NEXT:    umull x17, w17, w0
-; CHECK-NEON-NEXT:    eor x13, x13, x1
-; CHECK-NEON-NEXT:    umull x18, w18, w0
-; CHECK-NEON-NEXT:    eor x11, x11, x15
-; CHECK-NEON-NEXT:    umull x2, w2, w0
-; CHECK-NEON-NEXT:    eor x10, x13, x16
-; CHECK-NEON-NEXT:    umull x12, w12, w0
-; CHECK-NEON-NEXT:    eor x11, x11, x17
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    umull x8, w8, w0
-; CHECK-NEON-NEXT:    eor x10, x11, x18
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    eor x11, x2, x12
+; CHECK-NEON-NEXT:    eor x8, x13, x8
+; CHECK-NEON-NEXT:    and x9, x9, #0x4444444444444444
 ; CHECK-NEON-NEXT:    eor x8, x11, x8
-; CHECK-NEON-NEXT:    eor x0, x9, x8
+; CHECK-NEON-NEXT:    and x11, x12, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x8, x8, #0x8888888888888888
+; CHECK-NEON-NEXT:    orr x10, x11, x10
+; CHECK-NEON-NEXT:    orr x8, x9, x8
+; CHECK-NEON-NEXT:    orr x0, x10, x8
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-AES-LABEL: clmul_i64_zext:
@@ -2011,14 +1348,14 @@ define i64 @clmul_i64_zext(i32 %x, i32 %y) {
 define i128 @clmul_i128_zext(i64 %x, i64 %y) {
 ; CHECK-NEON-LABEL: clmul_i128_zext:
 ; CHECK-NEON:       // %bb.0:
-; CHECK-NEON-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    sub sp, sp, #624
-; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 720
+; CHECK-NEON-NEXT:    sub sp, sp, #144
+; CHECK-NEON-NEXT:    stp x29, x30, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp x28, x27, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp x26, x25, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp x24, x23, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp x22, x21, [sp, #112] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    stp x20, x19, [sp, #128] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEON-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEON-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEON-NEXT:    .cfi_offset w21, -24
@@ -2031,534 +1368,110 @@ define i128 @clmul_i128_zext(i64 %x, i64 %y) {
 ; CHECK-NEON-NEXT:    .cfi_offset w28, -80
 ; CHECK-NEON-NEXT:    .cfi_offset w30, -88
 ; CHECK-NEON-NEXT:    .cfi_offset w29, -96
-; CHECK-NEON-NEXT:    and x8, x1, #0x2
-; CHECK-NEON-NEXT:    mul x11, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x1
-; CHECK-NEON-NEXT:    mul x12, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x4
-; CHECK-NEON-NEXT:    mul x13, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x8
-; CHECK-NEON-NEXT:    mul x14, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x10
-; CHECK-NEON-NEXT:    mul x15, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x20
-; CHECK-NEON-NEXT:    mul x16, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x40
-; CHECK-NEON-NEXT:    mul x17, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x80
-; CHECK-NEON-NEXT:    mul x18, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x100
-; CHECK-NEON-NEXT:    mul x3, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x200
-; CHECK-NEON-NEXT:    mul x2, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x400
-; CHECK-NEON-NEXT:    mul x4, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x800
-; CHECK-NEON-NEXT:    mul x5, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x1000
-; CHECK-NEON-NEXT:    mul x20, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x2000
-; CHECK-NEON-NEXT:    mul x6, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x4000
-; CHECK-NEON-NEXT:    mul x7, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x8000
-; CHECK-NEON-NEXT:    mul x19, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x10000
-; CHECK-NEON-NEXT:    mul x21, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x20000
-; CHECK-NEON-NEXT:    mul x22, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x40000
-; CHECK-NEON-NEXT:    mul x23, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x80000
-; CHECK-NEON-NEXT:    mul x24, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x100000
-; CHECK-NEON-NEXT:    mul x25, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x200000
-; CHECK-NEON-NEXT:    mul x26, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x400000
-; CHECK-NEON-NEXT:    mul x27, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x800000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #592] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x1000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #584] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x2000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #616] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x4000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #576] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x8000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #608] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x10000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #600] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x20000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #568] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x40000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #512] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x80000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #536] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x100000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #528] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x200000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #560] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x400000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #520] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x800000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #552] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x1000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #544] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x2000000000
-; CHECK-NEON-NEXT:    mul x9, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x4000000000
-; CHECK-NEON-NEXT:    mul x10, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x8000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #464] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x10000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #456] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x20000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    stp x8, x9, [sp, #488] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x40000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    stp x10, x8, [sp, #440] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x80000000000
-; CHECK-NEON-NEXT:    mul x9, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x100000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    stp x8, x9, [sp, #472] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x200000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #504] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x400000000000
-; CHECK-NEON-NEXT:    mul x9, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x800000000000
-; CHECK-NEON-NEXT:    mul x10, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x1000000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #416] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x2000000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    str x8, [sp, #408] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x4000000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    stp x8, x9, [sp, #424] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x8000000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    stp x10, x8, [sp, #392] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x8, x1, #0x100000000000000
-; CHECK-NEON-NEXT:    mul x9, x0, x8
-; CHECK-NEON-NEXT:    and x8, x1, #0x200000000000000
-; CHECK-NEON-NEXT:    mul x8, x0, x8
-; CHECK-NEON-NEXT:    stp x8, x9, [sp, #376] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    and x9, x1, #0x400000000000000
-; CHECK-NEON-NEXT:    rbit x8, x1
-; CHECK-NEON-NEXT:    mul x9, x0, x9
-; CHECK-NEON-NEXT:    and x10, x8, #0x2
-; CHECK-NEON-NEXT:    str x9, [sp, #368] // 8-byte Spill
-; CHECK-NEON-NEXT:    rbit x9, x0
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #360] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x1
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #352] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x4
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #344] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x8
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #336] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x10
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #328] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x20
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #320] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x40
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #312] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x80
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #304] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x100
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #296] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x200
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #288] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x400
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #280] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x800
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #272] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x1000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #256] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x2000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #248] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x4000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #264] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x8000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #240] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x10000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #232] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x20000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #200] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x40000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #224] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x80000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #192] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x100000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #216] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x200000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #208] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x400000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #184] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x800000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #136] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x1000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #168] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x2000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #160] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x4000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #176] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x8000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #152] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x10000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #144] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x20000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #128] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x40000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #120] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x80000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #112] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x100000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #104] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x200000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #96] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x400000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #88] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x800000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #80] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x1000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #72] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x2000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #64] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x4000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #56] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x8000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #48] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x10000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #40] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x20000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #32] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x40000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #24] // 8-byte Spill
-; CHECK-NEON-NEXT:    and x10, x8, #0x80000000000
-; CHECK-NEON-NEXT:    mul x10, x9, x10
-; CHECK-NEON-NEXT:    str x10, [sp, #16] // 8-byte Spill
-; CHECK-NEON-NEXT:    eor x10, x12, x11
-; CHECK-NEON-NEXT:    and x12, x8, #0x100000000000
-; CHECK-NEON-NEXT:    mul x12, x9, x12
-; CHECK-NEON-NEXT:    eor x11, x13, x14
-; CHECK-NEON-NEXT:    and x13, x8, #0x200000000000
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    eor x11, x15, x16
-; CHECK-NEON-NEXT:    ldr x14, [sp, #608] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x17
-; CHECK-NEON-NEXT:    mul x30, x9, x13
-; CHECK-NEON-NEXT:    and x13, x8, #0x400000000000
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    mul x29, x9, x13
-; CHECK-NEON-NEXT:    and x13, x8, #0x800000000000
-; CHECK-NEON-NEXT:    str x12, [sp, #8] // 8-byte Spill
-; CHECK-NEON-NEXT:    eor x12, x18, x3
-; CHECK-NEON-NEXT:    eor x11, x12, x2
-; CHECK-NEON-NEXT:    eor x12, x5, x20
-; CHECK-NEON-NEXT:    mul x28, x9, x13
-; CHECK-NEON-NEXT:    eor x11, x11, x4
-; CHECK-NEON-NEXT:    ldr x13, [sp, #592] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    eor x11, x12, x6
-; CHECK-NEON-NEXT:    eor x12, x21, x22
-; CHECK-NEON-NEXT:    eor x11, x11, x7
-; CHECK-NEON-NEXT:    eor x12, x12, x23
-; CHECK-NEON-NEXT:    eor x13, x27, x13
-; CHECK-NEON-NEXT:    eor x11, x11, x19
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    eor x11, x12, x24
-; CHECK-NEON-NEXT:    and x12, x8, #0x1000000000000
-; CHECK-NEON-NEXT:    eor x11, x11, x25
-; CHECK-NEON-NEXT:    mul x27, x9, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #584] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x26
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #616] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x13, x12
-; CHECK-NEON-NEXT:    and x13, x8, #0x2000000000000
-; CHECK-NEON-NEXT:    eor x11, x12, x11
-; CHECK-NEON-NEXT:    ldr x12, [sp, #576] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x25, x9, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #512] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #568] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x14
-; CHECK-NEON-NEXT:    ldr x14, [sp, #536] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x13
-; CHECK-NEON-NEXT:    and x13, x8, #0x4000000000000
-; CHECK-NEON-NEXT:    mul x24, x9, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #600] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x14
-; CHECK-NEON-NEXT:    ldr x14, [sp, #552] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #528] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #560] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x13
-; CHECK-NEON-NEXT:    and x13, x8, #0x8000000000000
-; CHECK-NEON-NEXT:    eor x11, x12, x11
-; CHECK-NEON-NEXT:    ldr x12, [sp, #520] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x23, x9, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #440] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #496] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x14
-; CHECK-NEON-NEXT:    ldr x14, [sp, #464] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x13
-; CHECK-NEON-NEXT:    and x13, x8, #0x10000000000000
-; CHECK-NEON-NEXT:    mul x21, x9, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #544] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x14
-; CHECK-NEON-NEXT:    ldr x14, [sp, #256] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #456] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x26, x10, x11
-; CHECK-NEON-NEXT:    ldr x10, [sp, #488] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x11, [sp, #448] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x13
-; CHECK-NEON-NEXT:    and x13, x8, #0x20000000000000
-; CHECK-NEON-NEXT:    eor x10, x12, x10
-; CHECK-NEON-NEXT:    mul x20, x9, x13
-; CHECK-NEON-NEXT:    ldr x12, [sp, #392] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #432] // 8-byte Reload
-; CHECK-NEON-NEXT:    ldr x13, [sp, #480] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    and x12, x8, #0x40000000000000
-; CHECK-NEON-NEXT:    eor x10, x10, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #416] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x7, x9, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #472] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #504] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #408] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x22, x10, x13
-; CHECK-NEON-NEXT:    ldr x10, [sp, #424] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    and x12, x8, #0x80000000000000
-; CHECK-NEON-NEXT:    eor x10, x11, x10
-; CHECK-NEON-NEXT:    ldr x11, [sp, #400] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x5, x9, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #368] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x19, x10, x11
-; CHECK-NEON-NEXT:    ldp x11, x10, [sp, #376] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    and x11, x8, #0x100000000000000
-; CHECK-NEON-NEXT:    eor x6, x10, x12
-; CHECK-NEON-NEXT:    ldp x12, x10, [sp, #352] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mul x4, x9, x11
-; CHECK-NEON-NEXT:    eor x10, x12, x10
-; CHECK-NEON-NEXT:    ldp x12, x11, [sp, #336] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldp x13, x12, [sp, #320] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #312] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x13
-; CHECK-NEON-NEXT:    and x13, x8, #0x200000000000000
-; CHECK-NEON-NEXT:    eor x11, x12, x11
-; CHECK-NEON-NEXT:    mul x3, x9, x13
-; CHECK-NEON-NEXT:    and x13, x8, #0x400000000000000
-; CHECK-NEON-NEXT:    eor x12, x10, x11
-; CHECK-NEON-NEXT:    ldp x11, x10, [sp, #296] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mul x2, x9, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #280] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x10, x11
-; CHECK-NEON-NEXT:    ldr x10, [sp, #288] // 8-byte Reload
+; CHECK-NEON-NEXT:    and x12, x1, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x13, x0, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x14, x1, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x11, x0, #0x1111111111111111
+; CHECK-NEON-NEXT:    mul x8, x13, x12
+; CHECK-NEON-NEXT:    and x10, x1, #0x8888888888888888
+; CHECK-NEON-NEXT:    and x16, x0, #0x4444444444444444
+; CHECK-NEON-NEXT:    and x2, x1, #0x4444444444444444
+; CHECK-NEON-NEXT:    rbit x1, x1
+; CHECK-NEON-NEXT:    mul x9, x11, x14
+; CHECK-NEON-NEXT:    and x7, x1, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x21, x1, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x24, x1, #0x8888888888888888
+; CHECK-NEON-NEXT:    mul x4, x11, x12
+; CHECK-NEON-NEXT:    and x1, x1, #0x4444444444444444
+; CHECK-NEON-NEXT:    mul x5, x16, x2
+; CHECK-NEON-NEXT:    stp x8, x9, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    and x9, x0, #0x8888888888888888
+; CHECK-NEON-NEXT:    rbit x0, x0
+; CHECK-NEON-NEXT:    mul x8, x16, x10
+; CHECK-NEON-NEXT:    and x19, x0, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x22, x0, #0x1111111111111111
+; CHECK-NEON-NEXT:    and x25, x0, #0x4444444444444444
+; CHECK-NEON-NEXT:    mul x6, x9, x14
+; CHECK-NEON-NEXT:    and x0, x0, #0x8888888888888888
+; CHECK-NEON-NEXT:    mul x28, x19, x24
+; CHECK-NEON-NEXT:    str x8, [sp, #24] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x8, x9, x2
+; CHECK-NEON-NEXT:    mul x29, x22, x7
+; CHECK-NEON-NEXT:    mul x30, x25, x1
+; CHECK-NEON-NEXT:    str x8, [sp, #16] // 8-byte Spill
+; CHECK-NEON-NEXT:    mul x8, x13, x10
+; CHECK-NEON-NEXT:    mul x17, x0, x21
+; CHECK-NEON-NEXT:    mul x20, x19, x7
+; CHECK-NEON-NEXT:    str x8, [sp, #8] // 8-byte Spill
+; CHECK-NEON-NEXT:    ldp x18, x8, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    mul x23, x22, x21
+; CHECK-NEON-NEXT:    eor x17, x30, x17
+; CHECK-NEON-NEXT:    eor x8, x8, x18
+; CHECK-NEON-NEXT:    ldp x3, x18, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    mul x26, x25, x24
+; CHECK-NEON-NEXT:    mul x27, x0, x1
+; CHECK-NEON-NEXT:    eor x18, x18, x3
+; CHECK-NEON-NEXT:    ldr x3, [sp, #8] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x8, x8, x18
+; CHECK-NEON-NEXT:    mul x15, x19, x21
 ; CHECK-NEON-NEXT:    eor x3, x4, x3
-; CHECK-NEON-NEXT:    and x4, x1, #0x2000000000000000
-; CHECK-NEON-NEXT:    eor x11, x11, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #272] // 8-byte Reload
+; CHECK-NEON-NEXT:    eor x4, x5, x6
+; CHECK-NEON-NEXT:    eor x18, x3, x4
+; CHECK-NEON-NEXT:    eor x4, x29, x28
+; CHECK-NEON-NEXT:    eor x5, x23, x20
+; CHECK-NEON-NEXT:    mul x19, x19, x1
+; CHECK-NEON-NEXT:    eor x17, x4, x17
+; CHECK-NEON-NEXT:    and x8, x8, #0x2222222222222222
+; CHECK-NEON-NEXT:    eor x6, x26, x27
+; CHECK-NEON-NEXT:    and x17, x17, #0x1111111111111111
+; CHECK-NEON-NEXT:    mul x1, x22, x1
+; CHECK-NEON-NEXT:    eor x3, x5, x6
+; CHECK-NEON-NEXT:    ldp x28, x27, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    mul x21, x25, x21
+; CHECK-NEON-NEXT:    ldp x29, x30, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    mul x25, x25, x7
+; CHECK-NEON-NEXT:    eor x15, x1, x15
+; CHECK-NEON-NEXT:    mul x22, x22, x24
+; CHECK-NEON-NEXT:    mul x24, x0, x24
+; CHECK-NEON-NEXT:    mul x0, x0, x7
+; CHECK-NEON-NEXT:    eor x4, x22, x19
+; CHECK-NEON-NEXT:    ldp x20, x19, [sp, #128] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    mul x7, x13, x14
+; CHECK-NEON-NEXT:    eor x1, x25, x24
+; CHECK-NEON-NEXT:    ldp x24, x23, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    mul x13, x13, x2
+; CHECK-NEON-NEXT:    ldp x26, x25, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    eor x0, x21, x0
+; CHECK-NEON-NEXT:    ldp x22, x21, [sp, #112] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    mul x2, x11, x2
+; CHECK-NEON-NEXT:    mul x14, x16, x14
+; CHECK-NEON-NEXT:    mul x16, x16, x12
+; CHECK-NEON-NEXT:    mul x11, x11, x10
+; CHECK-NEON-NEXT:    mul x10, x9, x10
+; CHECK-NEON-NEXT:    mul x9, x9, x12
+; CHECK-NEON-NEXT:    eor x12, x15, x1
+; CHECK-NEON-NEXT:    eor x15, x4, x0
+; CHECK-NEON-NEXT:    and x0, x3, #0x2222222222222222
+; CHECK-NEON-NEXT:    and x12, x12, #0x4444444444444444
+; CHECK-NEON-NEXT:    and x15, x15, #0x8888888888888888
+; CHECK-NEON-NEXT:    orr x17, x17, x0
+; CHECK-NEON-NEXT:    orr x12, x12, x15
+; CHECK-NEON-NEXT:    eor x15, x2, x7
+; CHECK-NEON-NEXT:    eor x10, x16, x10
 ; CHECK-NEON-NEXT:    eor x11, x11, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #248] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x2, x3, x2
-; CHECK-NEON-NEXT:    eor x10, x10, x14
-; CHECK-NEON-NEXT:    eor x11, x12, x11
-; CHECK-NEON-NEXT:    ldr x12, [sp, #264] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x10, x10, x13
-; CHECK-NEON-NEXT:    and x13, x8, #0x800000000000000
-; CHECK-NEON-NEXT:    mul x3, x0, x4
-; CHECK-NEON-NEXT:    eor x12, x10, x12
-; CHECK-NEON-NEXT:    ldr x10, [sp, #240] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x18, x9, x13
-; CHECK-NEON-NEXT:    ldr x13, [sp, #200] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x12, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #232] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldp x14, x12, [sp, #216] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    eor x13, x10, x13
-; CHECK-NEON-NEXT:    and x10, x8, #0x1000000000000000
-; CHECK-NEON-NEXT:    mul x17, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #192] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x12, x13, x12
-; CHECK-NEON-NEXT:    ldr x13, [sp, #136] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x18, x2, x18
-; CHECK-NEON-NEXT:    eor x12, x12, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #184] // 8-byte Reload
-; CHECK-NEON-NEXT:    and x2, x1, #0x4000000000000000
-; CHECK-NEON-NEXT:    eor x12, x12, x14
-; CHECK-NEON-NEXT:    ldr x14, [sp, #168] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x10, x13
-; CHECK-NEON-NEXT:    and x10, x8, #0x2000000000000000
-; CHECK-NEON-NEXT:    and x8, x8, #0x4000000000000000
-; CHECK-NEON-NEXT:    mul x16, x9, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #208] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x13, x13, x14
-; CHECK-NEON-NEXT:    eor x17, x18, x17
-; CHECK-NEON-NEXT:    eor x12, x12, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #160] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x15, x9, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #152] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    eor x13, x13, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #176] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x18, x0, x2
-; CHECK-NEON-NEXT:    eor x16, x17, x16
-; CHECK-NEON-NEXT:    and x17, x1, #0x8000000000000000
-; CHECK-NEON-NEXT:    eor x12, x13, x10
-; CHECK-NEON-NEXT:    and x13, x1, #0x10000000000000
-; CHECK-NEON-NEXT:    eor x9, x12, x8
-; CHECK-NEON-NEXT:    ldp x10, x8, [sp, #120] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    mul x14, x0, x13
-; CHECK-NEON-NEXT:    eor x12, x8, x10
-; CHECK-NEON-NEXT:    ldr x8, [sp, #144] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x8
-; CHECK-NEON-NEXT:    ldp x8, x10, [sp, #104] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    orr x12, x17, x12
+; CHECK-NEON-NEXT:    eor x10, x15, x10
+; CHECK-NEON-NEXT:    rbit x12, x12
+; CHECK-NEON-NEXT:    and x13, x18, #0x1111111111111111
+; CHECK-NEON-NEXT:    eor x9, x14, x9
+; CHECK-NEON-NEXT:    and x10, x10, #0x4444444444444444
+; CHECK-NEON-NEXT:    orr x8, x13, x8
 ; CHECK-NEON-NEXT:    eor x9, x11, x9
-; CHECK-NEON-NEXT:    eor x14, x19, x14
-; CHECK-NEON-NEXT:    eor x12, x12, x10
-; CHECK-NEON-NEXT:    eor x11, x12, x8
-; CHECK-NEON-NEXT:    ldr x8, [sp, #96] // 8-byte Reload
-; CHECK-NEON-NEXT:    and x12, x1, #0x20000000000000
-; CHECK-NEON-NEXT:    mul x13, x0, x12
-; CHECK-NEON-NEXT:    eor x11, x11, x8
-; CHECK-NEON-NEXT:    ldp x10, x8, [sp, #56] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x10
-; CHECK-NEON-NEXT:    ldp x12, x10, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #48] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x12
-; CHECK-NEON-NEXT:    ldr x12, [sp, #40] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x10
-; CHECK-NEON-NEXT:    and x10, x1, #0x40000000000000
-; CHECK-NEON-NEXT:    eor x8, x8, x12
-; CHECK-NEON-NEXT:    mul x12, x0, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #72] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x10
-; CHECK-NEON-NEXT:    ldr x10, [sp, #32] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x9, x9, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #24] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x8, x8, x10
-; CHECK-NEON-NEXT:    and x10, x1, #0x80000000000000
-; CHECK-NEON-NEXT:    eor x8, x8, x11
-; CHECK-NEON-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
-; CHECK-NEON-NEXT:    mul x10, x0, x10
-; CHECK-NEON-NEXT:    eor x8, x8, x11
-; CHECK-NEON-NEXT:    eor x11, x29, x28
-; CHECK-NEON-NEXT:    ldr x29, [sp, #8] // 8-byte Reload
-; CHECK-NEON-NEXT:    eor x11, x11, x27
-; CHECK-NEON-NEXT:    and x28, x1, #0x800000000000000
-; CHECK-NEON-NEXT:    eor x8, x8, x29
-; CHECK-NEON-NEXT:    eor x11, x11, x25
-; CHECK-NEON-NEXT:    mul x27, x0, x28
-; CHECK-NEON-NEXT:    eor x8, x8, x30
-; CHECK-NEON-NEXT:    and x25, x1, #0x1000000000000000
-; CHECK-NEON-NEXT:    eor x8, x9, x8
-; CHECK-NEON-NEXT:    eor x9, x11, x24
-; CHECK-NEON-NEXT:    mul x11, x0, x25
-; CHECK-NEON-NEXT:    eor x9, x9, x23
-; CHECK-NEON-NEXT:    eor x9, x9, x21
-; CHECK-NEON-NEXT:    eor x9, x9, x20
-; CHECK-NEON-NEXT:    eor x9, x9, x7
-; CHECK-NEON-NEXT:    eor x9, x9, x5
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    eor x9, x16, x15
-; CHECK-NEON-NEXT:    mul x15, x0, x17
-; CHECK-NEON-NEXT:    eor x16, x6, x27
-; CHECK-NEON-NEXT:    eor x8, x8, x9
-; CHECK-NEON-NEXT:    eor x9, x14, x13
-; CHECK-NEON-NEXT:    eor x11, x16, x11
-; CHECK-NEON-NEXT:    rbit x8, x8
-; CHECK-NEON-NEXT:    eor x9, x9, x12
-; CHECK-NEON-NEXT:    eor x11, x11, x3
-; CHECK-NEON-NEXT:    eor x13, x26, x22
-; CHECK-NEON-NEXT:    eor x9, x9, x10
-; CHECK-NEON-NEXT:    eor x10, x11, x18
-; CHECK-NEON-NEXT:    lsr x1, x8, #1
-; CHECK-NEON-NEXT:    eor x8, x13, x9
-; CHECK-NEON-NEXT:    eor x9, x10, x15
-; CHECK-NEON-NEXT:    eor x0, x8, x9
-; CHECK-NEON-NEXT:    add sp, sp, #624
-; CHECK-NEON-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    lsr x1, x12, #1
+; CHECK-NEON-NEXT:    and x9, x9, #0x8888888888888888
+; CHECK-NEON-NEXT:    orr x9, x10, x9
+; CHECK-NEON-NEXT:    orr x0, x8, x9
+; CHECK-NEON-NEXT:    add sp, sp, #144
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-AES-LABEL: clmul_i128_zext:

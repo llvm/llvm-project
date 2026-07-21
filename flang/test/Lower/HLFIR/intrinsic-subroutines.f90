@@ -64,25 +64,28 @@ end program
 ! CHECK:             %[[VAL_34:.*]] = arith.select %[[VAL_33]], %[[VAL_20]], %[[VAL_32]] : i32
 ! CHECK:             fir.store %[[VAL_34]] to %[[VAL_19]] : !fir.ref<i32>
 ! CHECK:           }
-! CHECK:           %[[VAL_35:.*]] = arith.constant 5 : i32
-! CHECK:           %[[VAL_36:.*]] = hlfir.elemental %[[VAL_8]] unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.logical<4>> {
-! CHECK:           ^bb0(%[[VAL_37:.*]]: index):
-! CHECK:             %[[VAL_38:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_37]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
-! CHECK:             %[[VAL_39:.*]] = fir.load %[[VAL_38]] : !fir.ref<i32>
-! CHECK:             %[[VAL_40:.*]] = arith.cmpi ne, %[[VAL_39]], %[[VAL_35]] : i32
-! CHECK:             %[[VAL_41:.*]] = fir.convert %[[VAL_40]] : (i1) -> !fir.logical<4>
-! CHECK:             hlfir.yield_element %[[VAL_41]] : !fir.logical<4>
+! CHECK:           scf.execute_region no_inline {
+! CHECK:             %[[VAL_35:.*]] = arith.constant 5 : i32
+! CHECK:             %[[VAL_36:.*]] = hlfir.elemental %[[VAL_8]] unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.logical<4>> {
+! CHECK:             ^bb0(%[[VAL_37:.*]]: index):
+! CHECK:               %[[VAL_38:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_37]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
+! CHECK:               %[[VAL_39:.*]] = fir.load %[[VAL_38]] : !fir.ref<i32>
+! CHECK:               %[[VAL_40:.*]] = arith.cmpi ne, %[[VAL_39]], %[[VAL_35]] : i32
+! CHECK:               %[[VAL_41:.*]] = fir.convert %[[VAL_40]] : (i1) -> !fir.logical<4>
+! CHECK:               hlfir.yield_element %[[VAL_41]] : !fir.logical<4>
+! CHECK:             }
+! CHECK:             %[[VAL_42:.*]] = hlfir.any %[[VAL_36]] : (!hlfir.expr<3x!fir.logical<4>>) -> !fir.logical<4>
+! CHECK:             hlfir.destroy %[[VAL_36]] : !hlfir.expr<3x!fir.logical<4>>
+! CHECK:             %[[VAL_44:.*]] = fir.convert %[[VAL_42]] : (!fir.logical<4>) -> i1
+! CHECK:             cf.cond_br %[[VAL_44]], ^bb1, ^bb2
+! CHECK:           ^bb1:
+! CHECK:             %[[VAL_45:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_46:.*]] = arith.constant false
+! CHECK:             %[[VAL_47:.*]] = arith.constant false
+! CHECK:             fir.call @_FortranAStopStatement(%[[VAL_45]], %[[VAL_46]], %[[VAL_47]]) fastmath<contract> : (i32, i1, i1) -> ()
+! CHECK:             fir.unreachable
+! CHECK:           ^bb2:
+! CHECK:             scf.yield
 ! CHECK:           }
-! CHECK:           %[[VAL_42:.*]] = hlfir.any %[[VAL_43:.*]] : (!hlfir.expr<3x!fir.logical<4>>) -> !fir.logical<4>
-! CHECK:           hlfir.destroy %[[VAL_43]] : !hlfir.expr<3x!fir.logical<4>>
-! CHECK:           %[[VAL_44:.*]] = fir.convert %[[VAL_42]] : (!fir.logical<4>) -> i1
-! CHECK:           cf.cond_br %[[VAL_44]], ^bb1, ^bb2
-! CHECK:         ^bb1:
-! CHECK:           %[[VAL_45:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_46:.*]] = arith.constant false
-! CHECK:           %[[VAL_47:.*]] = arith.constant false
-! CHECK:           fir.call @_FortranAStopStatement(%[[VAL_45]], %[[VAL_46]], %[[VAL_47]]) fastmath<contract> : (i32, i1, i1) -> ()
-! CHECK:           fir.unreachable
-! CHECK:         ^bb2:
 ! CHECK:           return
 ! CHECK:         }
