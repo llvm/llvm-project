@@ -459,8 +459,15 @@ FuncUnwinders::GetUnwindPlanArchitectureDefault(Thread &thread) {
 
   ProcessSP process_sp(thread.CalculateProcess());
   if (process_sp) {
-    if (ABI *abi = process_sp->GetABI().get())
+    if (ABI *abi = process_sp->GetABI().get()) {
       m_unwind_plan_arch_default_sp = abi->CreateDefaultUnwindPlan();
+      assert(((!m_unwind_plan_arch_default_sp ||
+               m_unwind_plan_arch_default_sp->GetRowCount() == 0 ||
+               m_unwind_plan_arch_default_sp->GetRowAtIndex(0)
+                   ->GetUnspecifiedRegistersAreUndefined())) &&
+             "Default UnwindPlan must set "
+             "UnspecifiedRegistersAreUndefined to true");
+    }
   }
 
   return m_unwind_plan_arch_default_sp;

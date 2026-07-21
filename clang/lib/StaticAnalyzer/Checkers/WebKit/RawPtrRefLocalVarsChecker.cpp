@@ -207,7 +207,7 @@ public:
   virtual bool isSafePtrType(const QualType) const = 0;
   virtual bool isSafeExpr(const Expr *) const { return false; }
   virtual bool isSafeDecl(const Decl *) const { return false; }
-  virtual const char *ptrKind() const = 0;
+  virtual const char *typeName() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -414,9 +414,10 @@ public:
     llvm::raw_svector_ostream Os(Buf);
 
     if (isa<ParmVarDecl>(V)) {
-      Os << "Assignment to an " << ptrKind() << " parameter ";
+      Os << "Parameter ";
       printQuotedQualifiedName(Os, V);
-      Os << " is unsafe.";
+      Os << " is a ";
+      printPointerTypeAndType(Os, V->getType());
 
       PathDiagnosticLocation BSLoc(Value->getExprLoc(), BR->getSourceManager());
       auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -435,13 +436,36 @@ public:
         Os << "'" << safeGetName(BindingDecl) << "'";
       else
         printQuotedQualifiedName(Os, V);
-      Os << " is " << ptrKind() << " and unsafe.";
+      Os << " is a ";
+      printPointerTypeAndType(Os, V->getType());
 
       PathDiagnosticLocation BSLoc(V->getLocation(), BR->getSourceManager());
       auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
       Report->addRange(V->getSourceRange());
       Report->setDeclWithIssue(DeclWithIssue);
       BR->emitReport(std::move(Report));
+    }
+  }
+
+  void printPointerTypeAndType(llvm::raw_svector_ostream &Os,
+                               QualType QT) const {
+    auto *VarType = QT.getTypePtr();
+    if (RTC && isa<TypedefType>(VarType)) {
+      Os << typeName() << " ";
+      assert(RTC);
+      if (auto *Decl = RTC->getCanonicalDecl(QT)) {
+        printQuotedQualifiedName(Os, Decl);
+      } else {
+        auto Typedef = VarType->getAs<TypedefType>();
+        assert(Typedef);
+        printQuotedQualifiedName(Os, Typedef->getDecl());
+      }
+    } else {
+      auto *DesugaredType = VarType->getUnqualifiedDesugaredType();
+      bool IsPtr = isa<PointerType, ObjCObjectPointerType>(DesugaredType);
+      Os << "raw " << (IsPtr ? "pointer" : "reference") << " to ";
+      Os << typeName() << " ";
+      printTypeName(Os, QT);
     }
   }
 };
@@ -460,7 +484,7 @@ public:
   bool isSafePtrType(const QualType type) const final {
     return isRefOrCheckedPtrType(type);
   }
-  const char *ptrKind() const final { return "uncounted"; }
+  const char *typeName() const final { return "RefPtr-capable type"; }
 };
 
 class UncheckedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
@@ -480,7 +504,7 @@ public:
   bool isSafeExpr(const Expr *E) const final {
     return isExprToGetCheckedPtrCapableMember(E);
   }
-  const char *ptrKind() const final { return "unchecked"; }
+  const char *typeName() const final { return "CheckedPtr-capable type"; }
 };
 
 class UnretainedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
@@ -501,15 +525,11 @@ public:
   bool isSafePtrType(const QualType type) const final {
     return isRetainPtrOrOSPtrType(type);
   }
-  bool isSafeExpr(const Expr *E) const final {
-    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
-           isa<ObjCMessageExpr>(E);
-  }
   bool isSafeDecl(const Decl *D) const final {
     // Treat NS/CF globals in system header as immortal.
     return BR->getSourceManager().isInSystemHeader(D->getLocation());
   }
-  const char *ptrKind() const final { return "unretained"; }
+  const char *typeName() const final { return "RetainPtr-capable type"; }
 };
 
 } // namespace

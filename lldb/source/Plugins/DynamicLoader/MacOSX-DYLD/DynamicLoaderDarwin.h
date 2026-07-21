@@ -124,9 +124,9 @@ protected:
     /// When we need to read a binary's mach header and load commands
     /// out of memory, this specifies how much to read to get
     /// everything in one read packet, if known.  Increase the
-    /// default 512 bytes to 3192 which is enough to include most
+    /// default 512 bytes to 8192 which is enough to include most
     /// mach header + load commands.
-    uint32_t mh_and_load_cmd_size = 3192;
+    uint32_t mh_and_load_cmd_size = 8192;
 
     ImageInfo() = default;
 
@@ -143,7 +143,7 @@ protected:
       os_type = llvm::Triple::OSType::UnknownOS;
       os_env = llvm::Triple::EnvironmentType::UnknownEnvironment;
       min_version_os_sdk.clear();
-      mh_and_load_cmd_size = 3192;
+      mh_and_load_cmd_size = 8192;
     }
 
     bool operator==(const ImageInfo &rhs) const {
@@ -168,8 +168,6 @@ protected:
     }
 
     lldb_private::ArchSpec GetArchitecture() const;
-
-    const Segment *FindSegment(lldb_private::ConstString name) const;
 
     void PutToLog(lldb_private::Log *log) const;
 

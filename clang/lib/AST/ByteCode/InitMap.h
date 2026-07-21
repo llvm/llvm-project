@@ -82,7 +82,7 @@ struct InitMapPtr final {
   /// V's value after the initmap has been destroyed because
   /// all its elements have already been initialized.
   static constexpr intptr_t AllInitializedValue = 1;
-  uintptr_t V = 0;
+  uintptr_t V = NoInitMapValue;
 
   explicit InitMapPtr() = default;
   bool hasInitMap() const {

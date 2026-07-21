@@ -569,13 +569,13 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, CommentInfo *I) {
       [&]() -> llvm::Error {
         if (!LocalChildren.empty())
           I->Children =
-              allocateArray<CommentInfo>(LocalChildren, TransientArena);
+              allocateArray<CommentInfo>(LocalChildren, getTransientArena());
         if (!AttrKeys.empty())
-          I->AttrKeys = allocateArray(AttrKeys, TransientArena);
+          I->AttrKeys = allocateArray(AttrKeys, getTransientArena());
         if (!AttrValues.empty())
-          I->AttrValues = allocateArray(AttrValues, TransientArena);
+          I->AttrValues = allocateArray(AttrValues, getTransientArena());
         if (!Args.empty())
-          I->Args = allocateArray(Args, TransientArena);
+          I->Args = allocateArray(Args, getTransientArena());
 
         return llvm::Error::success();
       },
@@ -608,9 +608,9 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FunctionInfo *I) {
         return routeReferenceBlock(BlockOrCode, LocalNamespaces, I);
       },
       [&]() -> llvm::Error {
-        I->Params = allocateArray(LocalParams, TransientArena);
+        I->Params = allocateArray(LocalParams, getTransientArena());
         if (!LocalNamespaces.empty())
-          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
+          I->Namespace = allocateArray(LocalNamespaces, getTransientArena());
         return llvm::Error::success();
       });
 }
@@ -632,9 +632,9 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, EnumInfo *I) {
         return routeReferenceBlock(BlockOrCode, LocalNamespaces, I);
       },
       [&]() -> llvm::Error {
-        I->Members = allocateArray(LocalMembers, TransientArena);
+        I->Members = allocateArray(LocalMembers, getTransientArena());
         if (!LocalNamespaces.empty())
-          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
+          I->Namespace = allocateArray(LocalNamespaces, getTransientArena());
         return llvm::Error::success();
       });
 }
@@ -679,14 +679,14 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, BaseRecordInfo *I) {
       },
       [&]() -> llvm::Error {
         if (!LocalMembers.empty())
-          I->Members = allocateArray(LocalMembers, TransientArena);
+          I->Members = allocateArray(LocalMembers, getTransientArena());
         if (!LocalParents.empty())
-          I->Parents = allocateArray(LocalParents, TransientArena);
+          I->Parents = allocateArray(LocalParents, getTransientArena());
         if (!LocalVirtualParents.empty())
           I->VirtualParents =
-              allocateArray(LocalVirtualParents, TransientArena);
-        I->Bases = allocateArray(LocalBases, TransientArena);
-        I->Friends = allocateArray(LocalFriends, TransientArena);
+              allocateArray(LocalVirtualParents, getTransientArena());
+        I->Bases = allocateArray(LocalBases, getTransientArena());
+        I->Friends = allocateArray(LocalFriends, getTransientArena());
         return llvm::Error::success();
       });
 }
@@ -730,16 +730,16 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, RecordInfo *I) {
       },
       [&]() -> llvm::Error {
         if (!LocalMembers.empty())
-          I->Members = allocateArray(LocalMembers, TransientArena);
+          I->Members = allocateArray(LocalMembers, getTransientArena());
         if (!LocalParents.empty())
-          I->Parents = allocateArray(LocalParents, TransientArena);
+          I->Parents = allocateArray(LocalParents, getTransientArena());
         if (!LocalVirtualParents.empty())
           I->VirtualParents =
-              allocateArray(LocalVirtualParents, TransientArena);
+              allocateArray(LocalVirtualParents, getTransientArena());
         if (!LocalNamespaces.empty())
-          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
-        I->Bases = allocateArray(LocalBases, TransientArena);
-        I->Friends = allocateArray(LocalFriends, TransientArena);
+          I->Namespace = allocateArray(LocalNamespaces, getTransientArena());
+        I->Bases = allocateArray(LocalBases, getTransientArena());
+        I->Friends = allocateArray(LocalFriends, getTransientArena());
         return llvm::Error::success();
       });
 }
@@ -769,8 +769,8 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, TemplateInfo *I) {
         return false;
       },
       [&]() -> llvm::Error {
-        I->Params = allocateArray(LocalParams, TransientArena);
-        I->Constraints = allocateArray(LocalConstraints, TransientArena);
+        I->Params = allocateArray(LocalParams, getTransientArena());
+        I->Constraints = allocateArray(LocalConstraints, getTransientArena());
         return llvm::Error::success();
       },
       [&](unsigned BlockOrCode) -> llvm::Error {
@@ -796,7 +796,7 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID,
         return false;
       },
       [&]() -> llvm::Error {
-        I->Params = allocateArray(LocalParams, TransientArena);
+        I->Params = allocateArray(LocalParams, getTransientArena());
         return llvm::Error::success();
       },
       [&](unsigned BlockOrCode) -> llvm::Error {
@@ -1221,7 +1221,7 @@ llvm::Error ClangDocBitcodeReader::readBlockWithNamespace(unsigned ID, T I) {
       },
       [&]() -> llvm::Error {
         if (!LocalNamespaces.empty())
-          I->Namespace = allocateArray(LocalNamespaces, TransientArena);
+          I->Namespace = allocateArray(LocalNamespaces, getTransientArena());
         return llvm::Error::success();
       });
 }
@@ -1254,7 +1254,8 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, FriendInfo *I) {
       },
       [&]() -> llvm::Error {
         if (!LocalParams.empty())
-          I->Params = allocateArray<FieldTypeInfo>(LocalParams, TransientArena);
+          I->Params =
+              allocateArray<FieldTypeInfo>(LocalParams, getTransientArena());
         return llvm::Error::success();
       },
       [&](unsigned BlockOrCode) -> llvm::Error {

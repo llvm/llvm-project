@@ -9,8 +9,9 @@ on:
       - '.github/workflows/libc-overlay-tests.yml'
 
 jobs:
-  build:
+  native:
     if: github.repository_owner == 'llvm'
+    name: ${{ matrix.os }} - ${{ matrix.compiler.c_compiler }}
     timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container || null }}
@@ -21,15 +22,17 @@ jobs:
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
-            container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
+            container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23
+            linker: lld-23
           - os: ubuntu-24.04-arm
             container: 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:latest@sha256:138636a45bb70f7b51a858b282e66291cb3c5c85371afee09032a5e09b263395'
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23
+            linker: lld-23
           - os: windows-2022
             compiler:
               c_compiler: clang-cl
@@ -44,7 +47,7 @@ jobs:
               cpp_compiler: clang++
     
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         persist-credentials: false
     
@@ -56,7 +59,7 @@ jobs:
     # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
     # frequent small object writes.
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
         max-size: 1G
         key: libc_overlay_build_v2_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
@@ -89,6 +92,7 @@ jobs:
         -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
         -DLIBC_COMPILE_OPTIONS_NATIVE=""
         -DLLVM_ENABLE_RUNTIMES=libc
+        -DLLVM_USE_LINKER="${{ matrix.linker }}"
         -G Ninja
         -S runtimes
 
@@ -99,9 +103,89 @@ jobs:
         --parallel 
         --target libc
 
+    - name: Build Test
+      run: >
+        cmake 
+        --build build 
+        --parallel 
+        --target check-libc-build
+
     - name: Test
       run: >
         cmake 
         --build build 
         --parallel 
         --target check-libc
+
+  qemu:
+    if: github.repository_owner == 'llvm'
+    name: qemu - ${{ matrix.arch }} - ${{ matrix.c_compiler }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container:
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:b9c8ea74685ea46c86594428c41a1ba95bc6d33b28183c0ddac64414344950fd'
+      # We need to enable privileged containers so that certain libc tests
+      # have the necessary permissions (like SYS_TIME). There are no security
+      # implications as we are already running in an isolated VM.
+      options: --privileged
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: armhf
+            target_triple: arm-linux-gnueabihf
+            c_compiler: clang-23
+            cxx_compiler: clang++-23
+          - arch: riscv64
+            target_triple: riscv64-linux-gnu
+            c_compiler: clang-23
+            cxx_compiler: clang++-23
+            mpfr_path: /usr/riscv64-linux-gnu
+            mpc_path: riscv64-linux-gnu
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+        with:
+          max-size: 1G
+          key: libc_qemu_overlay_${{ matrix.arch }}_${{ matrix.c_compiler }}
+          variant: sccache
+
+      - name: Create QEMU wrapper
+        run: |
+          mkdir build
+          cat << 'EOF' > /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
+          #!/bin/bash
+          qemu-${{ matrix.arch }}-static -L /usr/${{ matrix.target_triple }} "$@"
+          EOF
+          chmod +x /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S runtimes -G Ninja \
+            -DLLVM_ENABLE_RUNTIMES=libc \
+            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx_compiler }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_USE_LINKER=lld-23 \
+            -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple}} \
+            -DLLVM_LIBC_MPFR_INSTALL_PATH="${{ matrix.mpfr_path }}" \
+            -DLIBC_MPC_INSTALL_PATH="${{ matrix.mpc_path }}" \
+            -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh
+
+      - name: Build
+        run: |
+          cmake --build build --parallel --target libc
+
+      - name: Build Test
+        run: |
+          cmake --build build --parallel --target check-libc-build
+
+      - name: Run Test
+        run: |
+          cmake --build build --parallel --target check-libc

@@ -113,8 +113,8 @@ define signext i32 @test3(i32 signext %v, i32 signext %w, i32 signext %x, i32 si
 ;
 ; CMOV-LABEL: test3:
 ; CMOV:       # %bb.0:
-; CMOV-NEXT:    xor a1, a1, a0
 ; CMOV-NEXT:    xor a3, a3, a2
+; CMOV-NEXT:    xor a1, a1, a0
 ; CMOV-NEXT:    bnez a4, .LBB2_2
 ; CMOV-NEXT:  # %bb.1:
 ; CMOV-NEXT:    mv a1, a0
@@ -130,11 +130,11 @@ define signext i32 @test3(i32 signext %v, i32 signext %w, i32 signext %x, i32 si
 ; SHORT_FORWARD:       # %bb.0:
 ; SHORT_FORWARD-NEXT:    beqz a4, .LBB2_2
 ; SHORT_FORWARD-NEXT:  # %bb.1:
-; SHORT_FORWARD-NEXT:    xor a0, a0, a1
+; SHORT_FORWARD-NEXT:    xor a2, a2, a3
 ; SHORT_FORWARD-NEXT:  .LBB2_2:
 ; SHORT_FORWARD-NEXT:    beqz a4, .LBB2_4
 ; SHORT_FORWARD-NEXT:  # %bb.3:
-; SHORT_FORWARD-NEXT:    xor a2, a2, a3
+; SHORT_FORWARD-NEXT:    xor a0, a0, a1
 ; SHORT_FORWARD-NEXT:  .LBB2_4:
 ; SHORT_FORWARD-NEXT:    addw a0, a0, a2
 ; SHORT_FORWARD-NEXT:    ret
@@ -143,11 +143,11 @@ define signext i32 @test3(i32 signext %v, i32 signext %w, i32 signext %x, i32 si
 ; RV32IXQCI:       # %bb.0:
 ; RV32IXQCI-NEXT:    beqz a4, .LBB2_2
 ; RV32IXQCI-NEXT:  # %bb.1:
-; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:    xor a2, a2, a3
 ; RV32IXQCI-NEXT:  .LBB2_2:
 ; RV32IXQCI-NEXT:    beqz a4, .LBB2_4
 ; RV32IXQCI-NEXT:  # %bb.3:
-; RV32IXQCI-NEXT:    xor a2, a2, a3
+; RV32IXQCI-NEXT:    xor a0, a0, a1
 ; RV32IXQCI-NEXT:  .LBB2_4:
 ; RV32IXQCI-NEXT:    add a0, a0, a2
 ; RV32IXQCI-NEXT:    ret

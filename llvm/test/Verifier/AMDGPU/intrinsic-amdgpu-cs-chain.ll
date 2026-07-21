@@ -11,6 +11,13 @@ define amdgpu_cs_chain void @bad_flags(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr
   unreachable
 }
 
+define amdgpu_cs_chain void @bad_flags_value(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr) {
+  ; CHECK: flags must be 0 or 1 for llvm.amdgcn.cs.chain
+  ; CHECK-NEXT: @llvm.amdgcn.cs.chain
+  call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr, i32 2)
+  unreachable
+}
+
 define amdgpu_cs_chain void @bad_vgpr_args(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } inreg %vgpr) {
   ; CHECK: VGPR arguments must not have the `inreg` attribute
   ; CHECK-NEXT: @llvm.amdgcn.cs.chain

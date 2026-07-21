@@ -46,14 +46,6 @@ template <> struct DenseMapInfo<DivRemMapKey> {
            Val1.Divisor == Val2.Divisor;
   }
 
-  static DivRemMapKey getEmptyKey() {
-    return DivRemMapKey(false, nullptr, nullptr);
-  }
-
-  static DivRemMapKey getTombstoneKey() {
-    return DivRemMapKey(true, nullptr, nullptr);
-  }
-
   static unsigned getHashValue(const DivRemMapKey &Val) {
     return (unsigned)(reinterpret_cast<uintptr_t>(
                           static_cast<Value *>(Val.Dividend)) ^

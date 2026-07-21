@@ -1909,17 +1909,17 @@ defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, MIMG
 //def IMAGE_RSRC256 : MIMG_NoPattern_RSRC256 <"image_rsrc256", mimgopc<0x7e>>;
 //def IMAGE_SAMPLER : MIMG_NoPattern_ <"image_sampler", mimgopc<0x7f>>;
 
-let OtherPredicates = [HasImageInsts, HasGFX10_AEncoding, isGFX10Only] in
+let OtherPredicates = [HasImageInsts, HasBVHRayTracingInsts, isGFX10Only] in
 defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
 
-let OtherPredicates = [HasImageInsts, HasGFX10_AEncoding] in {
+let OtherPredicates = [HasImageInsts, HasBVHRayTracingInsts] in {
 defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x80, 0x18, 0x18, MIMG.NOP>, "image_msaa_load">;
 
 defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0, 0>;
 defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1, 0>;
 defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0, 0>;
 defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1, 0>;
-} // End OtherPredicates = [HasImageInsts, HasGFX10_AEncoding]
+} // End OtherPredicates = [HasImageInsts, HasBVHRayTracingInsts]
 
 defm IMAGE_BVH_DUAL_INTERSECT_RAY  : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x80, MIMG.NOP, MIMG.NOP>, "image_bvh_dual_intersect_ray", 1, 0, 1>;
 defm IMAGE_BVH8_INTERSECT_RAY      : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x81, MIMG.NOP, MIMG.NOP>, "image_bvh8_intersect_ray", 1, 0, 0, 1>;
@@ -2183,8 +2183,8 @@ class VIMAGE_TENSOR_Pseudo<string opName, bit _UpTo2D = 0> :
 
   bit UpTo2D = _UpTo2D;
   let InOperandList = !if(UpTo2D, (ins SReg_128_XNULL:$vaddr0, SReg_256_XNULL:$vaddr1, R128A16:$r128, CPol:$cpol),
-                                      (ins SReg_128_XNULL:$vaddr0, SReg_256_XNULL:$vaddr1, SReg_128_XNULL:$vaddr2,
-                                       SReg_128_XNULL:$vaddr3, R128A16:$r128, CPol:$cpol));
+                                      (ins SReg_128_XNULL:$vaddr0, SReg_256_XNULL:$vaddr1, SReg_128:$vaddr2,
+                                       SReg_128:$vaddr3, R128A16:$r128, CPol:$cpol));
   string AsmOperands = " $vaddr0, $vaddr1"#!if(UpTo2D, "", ", $vaddr2, $vaddr3")#"$r128$cpol";
 }
 

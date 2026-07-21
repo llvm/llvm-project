@@ -9,7 +9,7 @@
 #define PR_SME_SET_VL 63
 #endif
 
-#define SMSTART_SM() asm volatile("smstart SM")
+#define SMSTART_SM() asm volatile("msr  s0_3_c4_c3_3, xzr" /*smstart sm*/)
 
 void write_sve_regs() {
   // We assume the smefa64 feature is present, which allows ffr access

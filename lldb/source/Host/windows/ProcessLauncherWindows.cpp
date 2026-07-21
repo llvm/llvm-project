@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/Support/WindowsError.h"
 
 #include <string>
@@ -226,16 +227,20 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   // command line is not empty, its contents may be modified by CreateProcessW.
   WCHAR *pwcommandLine = wcommandLine.empty() ? nullptr : &wcommandLine[0];
 
-  std::wstring wexecutable, wworkingDirectory;
-  llvm::ConvertUTF8toWide(launch_info.GetExecutableFile().GetPath(),
-                          wexecutable);
+  llvm::SmallVector<wchar_t, MAX_PATH> wexecutable;
+  if (std::error_code ec = llvm::sys::windows::widenPath(
+          launch_info.GetExecutableFile().GetPath(), wexecutable)) {
+    error = Status(ec);
+    return HostProcess();
+  }
+  std::wstring wworkingDirectory;
   llvm::ConvertUTF8toWide(launch_info.GetWorkingDirectory().GetPath(),
                           wworkingDirectory);
 
   PROCESS_INFORMATION pi = {};
 
   BOOL result = ::CreateProcessW(
-      wexecutable.c_str(), pwcommandLine, nullptr, nullptr,
+      wexecutable.data(), pwcommandLine, nullptr, nullptr,
       /*bInheritHandles=*/!inherited_handles.empty() ||
           pty_mode != PseudoConsole::Mode::None,
       flags, environment.data(),
@@ -244,21 +249,17 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   if (!result) {
     // Call GetLastError before we make any other system calls.
-    error = Status(::GetLastError(), eErrorTypeWin32);
     // Note that error 50 ("The request is not supported") will occur if you
     // try debug a 64-bit inferior from a 32-bit LLDB.
-  }
-
-  if (result) {
-    // Do not call CloseHandle on pi.hProcess, since we want to pass that back
-    // through the HostProcess.
-    ::CloseHandle(pi.hThread);
-    if (pty_mode == PseudoConsole::Mode::Pipe)
-      launch_info.GetPTY().CloseAnonymousPipes();
-  }
-
-  if (!result)
+    error = Status(::GetLastError(), eErrorTypeWin32);
     return HostProcess();
+  }
+
+  // Do not call CloseHandle on pi.hProcess, since we want to pass that back
+  // through the HostProcess.
+  ::CloseHandle(pi.hThread);
+  if (pty_mode == PseudoConsole::Mode::Pipe)
+    launch_info.GetPTY().CloseAnonymousPipes();
 
   return HostProcess(pi.hProcess);
 }

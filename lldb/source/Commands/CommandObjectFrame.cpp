@@ -568,6 +568,8 @@ protected:
       // modifiers above that should apply equally to synthetic and normal
       // variables, any other synthetic variable we should default to showing.
       return is_synthetic;
+    case eValueTypeSyntheticFlag:
+      llvm_unreachable("This flag was unset");
     }
     llvm_unreachable("Unexpected scope value");
   }
@@ -731,6 +733,10 @@ protected:
             valobj_sp = frame->GetValueForVariableExpressionPath(
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
                 var_sp, error);
+            // Check only the `error` argument, because doing
+            // `valobj_sp->GetError()` will update the value and potentially
+            // return a new error that happens during the update, even if
+            // `GetValueForVariableExpressionPath` reported no errors.
             if (valobj_sp && error.Success()) {
               result.GetValueObjectList().Append(valobj_sp);
 
@@ -770,10 +776,6 @@ protected:
                     break;
                   }
               if (!found_recognized) {
-                // Check only the `error` argument, because doing
-                // `valobj_sp->GetError()` will update the value and potentially
-                // return a new error that happens during the update, even if
-                // `GetValueForVariableExpressionPath` reported no errors.
                 if (error.Fail())
                   result.SetError(error.takeError());
                 else

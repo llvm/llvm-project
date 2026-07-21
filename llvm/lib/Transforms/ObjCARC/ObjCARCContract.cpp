@@ -529,8 +529,8 @@ bool ObjCARCContract::tryToPeepholeInstruction(
 /// Should we use objc_claimAutoreleasedReturnValue?
 static bool useClaimRuntimeCall(Module &M) {
   // Let the flag override our OS-based default.
-  if (UseObjCClaimRV != cl::BOU_UNSET)
-    return UseObjCClaimRV == cl::BOU_TRUE;
+  if (UseObjCClaimRV != cl::boolOrDefault::BOU_UNSET)
+    return UseObjCClaimRV == cl::boolOrDefault::BOU_TRUE;
 
   Triple TT(M.getTargetTriple());
 

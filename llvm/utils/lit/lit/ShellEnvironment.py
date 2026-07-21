@@ -19,6 +19,18 @@ kDevNull = "/dev/null"
 class ShellCommandResult:
     """Captures the result of an individual command."""
 
+    # TODO(prasoon054): Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10.
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = (
+        "command",
+        "stdout",
+        "stderr",
+        "exitCode",
+        "timeoutReached",
+        "outputFiles",
+    )
+
     def __init__(
         self, command, stdout, stderr, exitCode, timeoutReached, outputFiles=[]
     ):
@@ -43,6 +55,11 @@ class ShellEnvironment:
     Environment variables are not implemented, but cwd tracking is. In addition,
     we maintain a dir stack for pushd/popd.
     """
+
+    # TODO(prasoon054): Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10.
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = ("cwd", "env", "umask", "dirStack", "ulimit", "normalize_slashes")
 
     def __init__(self, cwd, env, umask=-1, ulimit=None, normalize_slashes=False):
         self.cwd = cwd
@@ -173,6 +190,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
+            redir_filename = lit.util.get_windows_extended_path(redir_filename)
             fd = open(redir_filename, mode, encoding="utf-8")
         # Workaround a Win32 and/or subprocess bug when appending.
         #

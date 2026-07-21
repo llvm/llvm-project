@@ -186,7 +186,8 @@ const Expr *digThroughConstructorsConversions(const Expr *E) {
 }
 
 /// Returns true when two Exprs are equivalent.
-bool areSameExpr(ASTContext *Context, const Expr *First, const Expr *Second) {
+bool areSameExpr(const ASTContext *Context, const Expr *First,
+                 const Expr *Second) {
   return utils::areStatementsIdentical(First, Second, *Context, true);
 }
 
@@ -277,7 +278,8 @@ static bool isIndexInSubscriptExpr(const Expr *IndexExpr,
 ///   (*container)[index]
 ///   (*container).at(index)
 /// \endcode
-static bool isIndexInSubscriptExpr(ASTContext *Context, const Expr *IndexExpr,
+static bool isIndexInSubscriptExpr(const ASTContext *Context,
+                                   const Expr *IndexExpr,
                                    const VarDecl *IndexVar, const Expr *Obj,
                                    const Expr *SourceExpr, bool PermitDeref) {
   if (!SourceExpr || !Obj || !isIndexInSubscriptExpr(IndexExpr, IndexVar))
@@ -339,7 +341,7 @@ static bool isDereferenceOfUop(const UnaryOperator *Uop,
 ///     // use t, do not use i
 ///   }
 /// \endcode
-static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
+static bool isAliasDecl(const ASTContext *Context, const Decl *TheDecl,
                         const VarDecl *IndexVar) {
   const auto *VDecl = dyn_cast<VarDecl>(TheDecl);
   if (!VDecl)
@@ -422,7 +424,7 @@ static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
 ///   for (int i = 0; i < N; ++i) {  /* use arr[i] */ }
 ///   for (int i = 0; i < arraysize(arr); ++i) { /* use arr[i] */ }
 /// \endcode
-static bool arrayMatchesBoundExpr(ASTContext *Context,
+static bool arrayMatchesBoundExpr(const ASTContext *Context,
                                   const QualType &ArrayType,
                                   const Expr *ConditionExpr) {
   if (!ConditionExpr || ConditionExpr->isValueDependent())

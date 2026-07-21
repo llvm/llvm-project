@@ -14,7 +14,9 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROF_H
 #define LLVM_PROFILEDATA_SAMPLEPROF_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -32,7 +34,6 @@
 #include <cstdint>
 #include <list>
 #include <map>
-#include <set>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -115,6 +116,23 @@ static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
          uint64_t('2') << (64 - 56) | uint64_t(Format);
 }
 
+// The oldest version of the extensible binary format we support.
+static constexpr uint64_t MinSupportedVersion = 103;
+
+// The default version of the extensible binary profile format written by the
+// compiler.  We default to v103 as v104 is work in progress.
+static constexpr uint64_t DefaultVersion = 103;
+
+// The latest supported version of the extensible binary profile format.
+static constexpr uint64_t LatestVersion = 104;
+
+// Query if a given format version is supported by this compiler.
+static inline bool formatVersionIsSupported(uint64_t Version) {
+  return Version >= MinSupportedVersion && Version <= LatestVersion;
+}
+
+// Unused.  Retained for downstream uses only.
+LLVM_DEPRECATED("Use DefaultVersion or LatestVersion instead", "DefaultVersion")
 static inline uint64_t SPVersion() { return 103; }
 
 // Section Type used by SampleProfileExtBinaryBaseReader and
@@ -191,6 +209,10 @@ enum class SecNameTableFlags : uint32_t {
   // the suffix when doing profile matching when seeing the flag.
   SecFlagUniqSuffix = (1 << 2)
 };
+enum class SecProfileSymbolListFlags : uint32_t {
+  SecFlagInValid = 0,
+  SecFlagMD5 = (1 << 0)
+};
 enum class SecProfSummaryFlags : uint32_t {
   SecFlagInValid = 0,
   /// SecFlagPartial means the profile is for common/shared code.
@@ -236,6 +258,9 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
   switch (Type) {
   case SecNameTable:
     IsFlagLegal = std::is_same<SecNameTableFlags, SecFlagType>();
+    break;
+  case SecProfileSymbolList:
+    IsFlagLegal = std::is_same<SecProfileSymbolListFlags, SecFlagType>();
     break;
   case SecProfSummary:
     IsFlagLegal = std::is_same<SecProfSummaryFlags, SecFlagType>();
@@ -315,13 +340,22 @@ struct LineLocation {
   uint32_t Discriminator;
 };
 
-struct LineLocationHash {
-  uint64_t operator()(const LineLocation &Loc) const {
-    return Loc.getHashCode();
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
+
+} // end namespace sampleprof
+
+template <> struct DenseMapInfo<sampleprof::LineLocation> {
+  static unsigned getHashValue(const sampleprof::LineLocation &Val) {
+    return DenseMapInfo<uint64_t>::getHashValue(Val.getHashCode());
+  }
+
+  static bool isEqual(const sampleprof::LineLocation &LHS,
+                      const sampleprof::LineLocation &RHS) {
+    return LHS == RHS;
   }
 };
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
+namespace sampleprof {
 
 /// Key represents type of a C++ polymorphic class type by its vtable and value
 /// represents its counter.
@@ -331,7 +365,7 @@ using TypeCountMap = std::map<FunctionId, uint64_t>;
 
 /// Write \p Map to the output stream. Keys are linearized using \p NameTable
 /// and written as ULEB128. Values are written as ULEB128 as well.
-std::error_code
+LLVM_ABI std::error_code
 serializeTypeMap(const TypeCountMap &Map,
                  const MapVector<FunctionId, uint32_t> &NameTable,
                  raw_ostream &OS);
@@ -359,8 +393,8 @@ public:
     }
   };
 
-  using SortedCallTargetSet = std::set<CallTarget, CallTargetComparator>;
-  using CallTargetMap = std::unordered_map<FunctionId, uint64_t>;
+  using SortedCallTargetSet = SmallVector<CallTarget>;
+  using CallTargetMap = DenseMap<FunctionId, uint64_t>;
   SampleRecord() = default;
 
   /// Increment the number of samples for this record by \p S.
@@ -416,7 +450,7 @@ public:
 
   uint64_t getSamples() const { return NumSamples; }
   const CallTargetMap &getCallTargets() const { return CallTargets; }
-  const SortedCallTargetSet getSortedCallTargets() const {
+  SortedCallTargetSet getSortedCallTargets() const {
     return sortCallTargets(CallTargets);
   }
 
@@ -428,12 +462,9 @@ public:
   }
 
   /// Sort call targets in descending order of call frequency.
-  static const SortedCallTargetSet
-  sortCallTargets(const CallTargetMap &Targets) {
-    SortedCallTargetSet SortedTargets;
-    for (const auto &[Target, Frequency] : Targets) {
-      SortedTargets.emplace(Target, Frequency);
-    }
+  static SortedCallTargetSet sortCallTargets(const CallTargetMap &Targets) {
+    auto SortedTargets = llvm::to_vector_of<CallTarget>(Targets);
+    llvm::sort(SortedTargets, CallTargetComparator());
     return SortedTargets;
   }
 
@@ -463,9 +494,7 @@ public:
     return NumSamples == Other.NumSamples && CallTargets == Other.CallTargets;
   }
 
-  bool operator!=(const SampleRecord &Other) const {
-    return !(*this == Other);
-  }
+  bool operator!=(const SampleRecord &Other) const { return !(*this == Other); }
 
 private:
   uint64_t NumSamples = 0;
@@ -563,8 +592,8 @@ public:
 
   SampleContext(StringRef Name)
       : Func(Name), State(UnknownContext), Attributes(ContextNone) {
-        assert(!Name.empty() && "Name is empty");
-      }
+    assert(!Name.empty() && "Name is empty");
+  }
 
   SampleContext(FunctionId Func)
       : Func(Func), State(UnknownContext), Attributes(ContextNone) {}
@@ -619,8 +648,7 @@ public:
 
   // Decode context string for a frame to get function name and location.
   // `ContextStr` is in the form of `FuncName:StartLine.Discriminator`.
-  static void decodeContextString(StringRef ContextStr,
-                                  FunctionId &Func,
+  static void decodeContextString(StringRef ContextStr, FunctionId &Func,
                                   LineLocation &LineLoc) {
     // Get function name
     auto EntrySplit = ContextStr.split(':');
@@ -772,8 +800,7 @@ using BodySampleMap = std::map<LineLocation, SampleRecord>;
 using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
 using CallsiteTypeMap = std::map<LineLocation, TypeCountMap>;
-using LocToLocMap =
-    std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
+using LocToLocMap = DenseMap<LineLocation, LineLocation>;
 
 /// Representation of the samples collected for a function.
 ///
@@ -822,8 +849,7 @@ public:
 
   sampleprof_error addCalledTargetSamples(uint32_t LineOffset,
                                           uint32_t Discriminator,
-                                          FunctionId Func,
-                                          uint64_t Num,
+                                          FunctionId Func, uint64_t Num,
                                           uint64_t Weight = 1) {
     return BodySamples[LineLocation(LineOffset, Discriminator)].addCalledTarget(
         Func, Num, Weight);
@@ -853,9 +879,7 @@ public:
 
   // Remove all call site samples for inlinees. This is needed when flattening
   // a nested profile.
-  void removeAllCallsiteSamples() {
-    CallsiteSamples.clear();
-  }
+  void removeAllCallsiteSamples() { CallsiteSamples.clear(); }
 
   // Accumulate all call target samples to update the body samples.
   void updateCallsiteSamples() {
@@ -979,11 +1003,11 @@ public:
   /// \p Loc with the maximum total sample count. If \p Remapper or \p
   /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
   /// with equivalent name as \p CalleeName.
-  LLVM_ABI const FunctionSamples *findFunctionSamplesAt(
-      const LineLocation &Loc, StringRef CalleeName,
-      SampleProfileReaderItaniumRemapper *Remapper,
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *
+  findFunctionSamplesAt(const LineLocation &Loc, StringRef CalleeName,
+                        SampleProfileReaderItaniumRemapper *Remapper,
+                        const HashKeyMap<DenseMap, FunctionId, FunctionId>
+                            *FuncNameToProfNameMap = nullptr) const;
 
   bool empty() const { return TotalSamples == 0; }
 
@@ -1154,10 +1178,10 @@ public:
   /// corresponding function is no less than \p Threshold, add its corresponding
   /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
   /// to \p S.
-  void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S,
-                            const HashKeyMap<std::unordered_map, FunctionId,
-                                             Function *>  &SymbolMap,
-                            uint64_t Threshold) const {
+  void findInlinedFunctions(
+      DenseSet<GlobalValue::GUID> &S,
+      const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap,
+      uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
     auto IsDeclaration = [](const Function *F) {
@@ -1274,7 +1298,8 @@ public:
     if (!UseMD5)
       return Func.stringRef();
 
-    assert(GUIDToFuncNameMap && "GUIDToFuncNameMap needs to be populated first");
+    assert(GUIDToFuncNameMap &&
+           "GUIDToFuncNameMap needs to be populated first");
     return GUIDToFuncNameMap->lookup(Func.getHashCode());
   }
 
@@ -1310,11 +1335,11 @@ public:
   /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
   /// to find matching FunctionSamples with not exactly the same but equivalent
   /// name.
-  LLVM_ABI const FunctionSamples *findFunctionSamples(
-      const DILocation *DIL,
-      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *
+  findFunctionSamples(const DILocation *DIL,
+                      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
+                      const HashKeyMap<DenseMap, FunctionId, FunctionId>
+                          *FuncNameToProfNameMap = nullptr) const;
 
   LLVM_ABI static bool ProfileIsProbeBased;
 
@@ -1341,9 +1366,7 @@ public:
 
   /// Return the GUID of the context's name. If the context is already using
   /// MD5, don't hash it again.
-  uint64_t getGUID() const {
-    return getFunction().getHashCode();
-  }
+  uint64_t getGUID() const { return getFunction().getHashCode(); }
 
   // Find all the names in the current FunctionSamples including names in
   // all the inline instances and names of call targets.
@@ -1482,8 +1505,8 @@ public:
   }
 
   size_t erase(const SampleContext &Ctx) {
-    return HashKeyMap<std::unordered_map, SampleContext, FunctionSamples>::
-        erase(Ctx);
+    return HashKeyMap<std::unordered_map, SampleContext,
+                      FunctionSamples>::erase(Ctx);
   }
 
   size_t erase(const key_type &Key) { return base_type::erase(Key); }
@@ -1525,7 +1548,7 @@ private:
 /// sure ProfileMap's key is consistent with FunctionSample's name/context.
 class SampleContextTrimmer {
 public:
-  SampleContextTrimmer(SampleProfileMap &Profiles) : ProfileMap(Profiles){};
+  SampleContextTrimmer(SampleProfileMap &Profiles) : ProfileMap(Profiles) {};
   // Trim and merge cold context profile when requested. TrimBaseProfileOnly
   // should only be effective when TrimColdContext is true. On top of
   // TrimColdContext, TrimBaseProfileOnly can be used to specify to trim all
@@ -1557,7 +1580,7 @@ public:
     FrameNode(FunctionId FName = FunctionId(),
               FunctionSamples *FSamples = nullptr,
               LineLocation CallLoc = {0, 0})
-        : FuncName(FName), FuncSamples(FSamples), CallSiteLoc(CallLoc){};
+        : FuncName(FName), FuncSamples(FSamples), CallSiteLoc(CallLoc) {};
 
     // Map line+discriminator location to child frame
     std::map<uint64_t, FrameNode> AllChildFrames;
@@ -1631,10 +1654,10 @@ private:
         Profile.addBodySamples(I.first.LineOffset, I.first.Discriminator,
                                CalleeProfile.getHeadSamplesEstimate());
         // Add callsite sample.
-        Profile.addCalledTargetSamples(
-            I.first.LineOffset, I.first.Discriminator,
-            CalleeProfile.getFunction(),
-            CalleeProfile.getHeadSamplesEstimate());
+        Profile.addCalledTargetSamples(I.first.LineOffset,
+                                       I.first.Discriminator,
+                                       CalleeProfile.getFunction(),
+                                       CalleeProfile.getHeadSamplesEstimate());
         // Update total samples.
         TotalSamples = TotalSamples >= CalleeProfile.getTotalSamples()
                            ? TotalSamples - CalleeProfile.getTotalSamples()
@@ -1673,29 +1696,59 @@ public:
     Syms.insert(Name.copy(Allocator));
   }
 
-  bool contains(StringRef Name) { return Syms.count(Name); }
+  bool contains(StringRef Name) const {
+    return IsMD5 ? ColdGUIDTable.contains(llvm::MD5Hash(Name))
+                 : Syms.count(Name);
+  }
 
   void merge(const ProfileSymbolList &List) {
+    assert(!List.IsMD5 &&
+           "Merging pre-hashed MD5 ProfileSymbolList not yet implemented");
     for (auto Sym : List.Syms)
       add(Sym, true);
   }
 
-  unsigned size() { return Syms.size(); }
+  unsigned size() const { return IsMD5 ? ColdGUIDTable.size() : Syms.size(); }
   void reserve(size_t Size) { Syms.reserve(Size); }
 
   void setToCompress(bool TC) { ToCompress = TC; }
   bool toCompress() { return ToCompress; }
+
+  std::vector<uint64_t> collectGUIDs() const {
+    assert(!IsMD5 &&
+           "Collecting GUIDs from existing MD5 table not yet implemented");
+    std::vector<uint64_t> Keys;
+    Keys.reserve(Syms.size());
+    llvm::append_range(Keys, llvm::map_range(Syms, llvm::MD5Hash));
+    llvm::sort(Keys);
+    Keys.erase(llvm::unique(Keys), Keys.end());
+    return Keys;
+  }
+
+  void setColdGUIDTable(EytzingerTableSpan<support::ulittle64_t> Table) {
+    assert(Syms.empty() &&
+           "Setting ColdGUIDTable shadows existing strings in Syms");
+    ColdGUIDTable = Table;
+    IsMD5 = true;
+  }
+  EytzingerTableSpan<support::ulittle64_t> getColdGUIDTable() const {
+    assert(IsMD5 && "Retrieving ColdGUIDTable from non-MD5 ProfileSymbolList");
+    return ColdGUIDTable;
+  }
+  bool isMD5() const { return IsMD5; }
 
   LLVM_ABI std::error_code read(const uint8_t *Data, uint64_t ListSize);
   LLVM_ABI std::error_code write(raw_ostream &OS);
   LLVM_ABI void dump(raw_ostream &OS = dbgs()) const;
 
 private:
+  bool IsMD5 = false;
   // Determine whether or not to compress the symbol list when
   // writing it into profile. The variable is unused when the symbol
   // list is read from an existing profile.
   bool ToCompress = false;
   DenseSet<StringRef> Syms;
+  EytzingerTableSpan<support::ulittle64_t> ColdGUIDTable;
   BumpPtrAllocator Allocator;
 };
 
@@ -1704,12 +1757,6 @@ private:
 using namespace sampleprof;
 // Provide DenseMapInfo for SampleContext.
 template <> struct DenseMapInfo<SampleContext> {
-  static inline SampleContext getEmptyKey() { return SampleContext(); }
-
-  static inline SampleContext getTombstoneKey() {
-    return SampleContext(FunctionId(~1ULL));
-  }
-
   static unsigned getHashValue(const SampleContext &Val) {
     return Val.getHashCode();
   }

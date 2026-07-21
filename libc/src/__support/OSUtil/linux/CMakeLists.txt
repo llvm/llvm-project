@@ -4,12 +4,12 @@ endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 add_subdirectory(syscall_wrappers)
+add_subdirectory(stat)
 
 add_object_library(
   linux_util
   SRCS
     exit.cpp
-    fcntl.cpp
   HDRS
     io.h
     syscall.h
@@ -17,12 +17,6 @@ add_object_library(
     .${LIBC_TARGET_ARCHITECTURE}.linux_${LIBC_TARGET_ARCHITECTURE}_util
     libc.src.__support.common
     libc.src.__support.CPP.string_view
-    libc.src.__support.error_or
-    libc.hdr.fcntl_macros
-    libc.hdr.types.struct_flock
-    libc.hdr.types.struct_flock64
-    libc.hdr.types.struct_f_owner_ex
-    libc.hdr.types.off_t
     libc.include.sys_syscall
 )
 
@@ -31,15 +25,28 @@ add_header_library(
   HDRS
     auxv.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.sys_auxv_macros
     libc.hdr.sys_mman_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.CPP.optional
     libc.src.__support.threads.callonce
+)
+
+add_header_library(
+  path
+  HDRS
+    path.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.string_view
 )
 
 add_header_library(

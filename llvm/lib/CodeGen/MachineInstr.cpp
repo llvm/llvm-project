@@ -101,8 +101,6 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
                            DebugLoc DL, bool NoImp)
     : MCID(&TID), NumOperands(0), Flags(0), AsmPrinterFlags(0),
       Opcode(TID.Opcode), DebugInstrNum(0), DbgLoc(std::move(DL)) {
-  assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
-
   // Reserve space for the expected number of operands.
   if (unsigned NumOps = MCID->getNumOperands() + MCID->implicit_defs().size() +
                         MCID->implicit_uses().size()) {
@@ -121,8 +119,6 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
     : MCID(&MI.getDesc()), NumOperands(0), Flags(0), AsmPrinterFlags(0),
       Opcode(MI.getOpcode()), DebugInstrNum(0), Info(MI.Info),
       DbgLoc(MI.getDebugLoc()) {
-  assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
-
   CapOperands = OperandCapacity::get(MI.getNumOperands());
   Operands = MF.allocateOperandArray(CapOperands);
 
@@ -1901,6 +1897,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "samesign ";
   if (getFlag(MachineInstr::InBounds))
     OS << "inbounds ";
+  if (getFlag(MachineInstr::LRSplit))
+    OS << "lr-split ";
 
   // Print the opcode name.
   if (TII)

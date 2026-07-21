@@ -1301,7 +1301,8 @@ static fir::ExtendedValue placeTrivialInMemory(mlir::Location loc,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                    hlfir::Entity entity, mlir::Type targetType) {
+                    hlfir::Entity entity, mlir::Type targetType,
+                    unsigned corank) {
   // fir::factory::createBoxValue is not meant to deal with procedures.
   // Dereference procedure pointers here.
   if (entity.isProcedurePointer())
@@ -1317,7 +1318,7 @@ hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::Value base = fir::getBase(exv);
   if (fir::isa_trivial(base.getType()))
     exv = placeTrivialInMemory(loc, builder, base, targetType);
-  fir::BoxValue box = fir::factory::createBoxValue(builder, loc, exv);
+  fir::BoxValue box = fir::factory::createBoxValue(builder, loc, exv, corank);
   return {box, cleanup};
 }
 

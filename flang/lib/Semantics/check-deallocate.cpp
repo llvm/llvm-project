@@ -12,7 +12,6 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Semantics/expression.h"
 #include "flang/Semantics/tools.h"
 #include <optional>
 

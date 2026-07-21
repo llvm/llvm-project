@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
 // UNSUPPORTED: gcc
-// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22, clang-23, apple-clang-17, apple-clang-21
+// UNSUPPORTED: clang-21, clang-22, clang-23, clang-24, apple-clang-21
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile -Wno-dynamic-class-memaccess
 
@@ -652,6 +652,26 @@ void structTests() {
     s2.b3 = 27;
     s1.b4 = 3;
     s2.b4 = 3;
+    __builtin_clear_padding(&s2);
+    assert(memcmp(&s1, &s2, sizeof(S)) == 0);
+  }
+
+  // unnamed bit fields
+  {
+    struct S {
+      unsigned int b1 : 1;
+      unsigned int    : 30;
+      unsigned int b2 : 1;
+    };
+
+    S s1, s2;
+    memset(&s1, 0, sizeof(S));
+    memset(&s2, 42, sizeof(S));
+
+    s1.b1 = 1;
+    s1.b2 = 1;
+    s2.b1 = 1;
+    s2.b2 = 1;
     __builtin_clear_padding(&s2);
     assert(memcmp(&s1, &s2, sizeof(S)) == 0);
   }

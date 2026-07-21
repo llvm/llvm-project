@@ -59,33 +59,36 @@ public:
 
 class ProgramPoint {
 public:
-  enum Kind { BlockEdgeKind,
-              BlockEntranceKind,
-              BlockExitKind,
-              PreStmtKind,
-              PreStmtPurgeDeadSymbolsKind,
-              PostStmtPurgeDeadSymbolsKind,
-              PostStmtKind,
-              PreLoadKind,
-              PostLoadKind,
-              PreStoreKind,
-              PostStoreKind,
-              PostConditionKind,
-              PostLValueKind,
-              PostAllocatorCallKind,
-              MinPostStmtKind = PostStmtKind,
-              MaxPostStmtKind = PostAllocatorCallKind,
-              PostInitializerKind,
-              CallEnterKind,
-              CallExitBeginKind,
-              CallExitEndKind,
-              FunctionExitKind,
-              PreImplicitCallKind,
-              PostImplicitCallKind,
-              MinImplicitCallKind = PreImplicitCallKind,
-              MaxImplicitCallKind = PostImplicitCallKind,
-              LoopExitKind,
-              EpsilonKind};
+  enum Kind {
+    BlockEdgeKind,
+    BlockEntranceKind,
+    BlockExitKind,
+    PreStmtKind,
+    PreStmtPurgeDeadSymbolsKind,
+    PostStmtPurgeDeadSymbolsKind,
+    PostStmtKind,
+    PreLoadKind,
+    PostLoadKind,
+    PreStoreKind,
+    PostStoreKind,
+    PostConditionKind,
+    PostLValueKind,
+    PostAllocatorCallKind,
+    MinPostStmtKind = PostStmtKind,
+    MaxPostStmtKind = PostAllocatorCallKind,
+    PostInitializerKind,
+    CallEnterKind,
+    CallExitBeginKind,
+    CallExitEndKind,
+    FunctionExitKind,
+    PreImplicitCallKind,
+    PostImplicitCallKind,
+    MinImplicitCallKind = PreImplicitCallKind,
+    MaxImplicitCallKind = PostImplicitCallKind,
+    LoopExitKind,
+    LifetimeEndKind,
+    EpsilonKind
+  };
 
   static StringRef getProgramPointKindName(Kind K);
   std::optional<SourceLocation> getSourceLocation() const;
@@ -725,6 +728,29 @@ private:
     }
 };
 
+/// Represents a point when the lifetime of an automatic object ends.
+class LifetimeEnd : public ProgramPoint {
+public:
+  LifetimeEnd(const Stmt *S, const VarDecl *D, const StackFrame *SF)
+      : ProgramPoint(S, D, LifetimeEndKind, SF) {}
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const Stmt *getTriggerStmt() const {
+    return static_cast<const Stmt *>(getData1());
+  }
+
+  /// Returns the variable declaration whose lifetime has ended.
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const VarDecl *getDecl() const {
+    return static_cast<const VarDecl *>(getData2());
+  }
+
+private:
+  friend class ProgramPoint;
+  LifetimeEnd() = default;
+  static bool isKind(const ProgramPoint &Location) {
+    return Location.getKind() == LifetimeEndKind;
+  }
+};
+
 /// This is a meta program point, which should be skipped by all the diagnostic
 /// reasoning etc.
 class EpsilonPoint : public ProgramPoint {
@@ -750,20 +776,6 @@ private:
 namespace llvm { // Traits specialization for DenseMap
 
 template <> struct DenseMapInfo<clang::ProgramPoint> {
-
-static inline clang::ProgramPoint getEmptyKey() {
-  uintptr_t x =
-   reinterpret_cast<uintptr_t>(DenseMapInfo<void*>::getEmptyKey()) & ~0x7;
-  return clang::BlockEntrance(nullptr, reinterpret_cast<clang::CFGBlock *>(x),
-                              nullptr);
-}
-
-static inline clang::ProgramPoint getTombstoneKey() {
-  uintptr_t x =
-   reinterpret_cast<uintptr_t>(DenseMapInfo<void*>::getTombstoneKey()) & ~0x7;
-  return clang::BlockEntrance(nullptr, reinterpret_cast<clang::CFGBlock *>(x),
-                              nullptr);
-}
 
 static unsigned getHashValue(const clang::ProgramPoint &Loc) {
   return Loc.getHashValue();

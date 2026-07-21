@@ -101,7 +101,7 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr inbounds ir<%y>, ir<%iv>
+; CHECK-NEXT:      WIDEN-GEP ir<%arrayidx> = getelementptr inbounds ir<%y>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp eq ir<%arrayidx>, ir<%z>
@@ -281,13 +281,13 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP4]]> * ir<4>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<4>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.AB.0> = getelementptr inbounds ir<@AB>, ir<0>, vp<[[VP6]]>
-; CHECK-NEXT:      INTERLEAVE-GROUP with factor 4 at %AB.0, ir<%gep.AB.0>
+; CHECK-NEXT:      INTERLEAVE-GROUP with factor 4, ir<%gep.AB.0>
 ; CHECK-NEXT:        ir<%AB.0> = load from index 0
 ; CHECK-NEXT:        ir<%AB.1> = load from index 1
 ; CHECK-NEXT:        ir<%AB.3> = load from index 3
 ; CHECK-NEXT:      WIDEN ir<%add> = add nsw ir<%AB.0>, ir<%AB.1>
 ; CHECK-NEXT:      CLONE ir<%gep.CD.0> = getelementptr inbounds ir<@CD>, ir<0>, vp<[[VP6]]>
-; CHECK-NEXT:      INTERLEAVE-GROUP with factor 4 at <badref>, ir<%gep.CD.0>
+; CHECK-NEXT:      INTERLEAVE-GROUP with factor 4, ir<%gep.CD.0>
 ; CHECK-NEXT:        store ir<%add> to index 0
 ; CHECK-NEXT:        store ir<1> to index 1
 ; CHECK-NEXT:        store ir<2> to index 2

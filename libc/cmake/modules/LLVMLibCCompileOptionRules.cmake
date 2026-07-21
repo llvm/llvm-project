@@ -134,10 +134,6 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_COPT_USE_MEM_BUILTINS")
   endif()
 
-  if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
-    libc_add_definition(config_options "LIBC_TYPES_TIME_T_IS_32_BIT")
-  endif()
-
   if(LIBC_ADD_NULL_CHECKS)
     libc_add_definition(config_options "LIBC_ADD_NULL_CHECKS")
   endif()
@@ -227,8 +223,6 @@ function(_get_common_compile_options output_var flags)
   set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags} ${arch_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
-    list(APPEND compile_options "-fpie")
-
     if(LLVM_LIBC_FULL_BUILD)
       # Only add -ffreestanding flag in non-GPU full build mode.
       if(NOT LIBC_TARGET_OS_IS_GPU)
@@ -323,8 +317,8 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-Wshadow")
     endif()
 
-    if(LIBC_CC_SUPPORTS_NO_FENV_ACCESS)
-      list(APPEND compile_options "-Wno-fenv-access")
+    if(LIBC_COMPILER_HAS_STDC_FENV_ACCESS)
+      list(APPEND compile_options "-DLIBC_COMPILER_HAS_STDC_FENV_ACCESS")
     endif()
   elseif(MSVC)
     list(APPEND compile_options "/EHs-c-")

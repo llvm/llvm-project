@@ -54,6 +54,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  expected_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    expected_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.expected
+    libc.src.__support.CPP.type_traits
+)
+
+add_libc_test(
   stringview_test
   SUITE
     libc-cpp-utils-tests
@@ -61,6 +72,8 @@ add_libc_test(
     stringview_test.cpp
   DEPENDS
     libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.type_traits
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_libc_test(
@@ -167,6 +180,7 @@ add_libc_test(
   SRCS
     string_test.cpp
   DEPENDS
+  libc.hdr.func.free
   libc.src.__support.CPP.string
   libc.src.__support.CPP.string_view
 )

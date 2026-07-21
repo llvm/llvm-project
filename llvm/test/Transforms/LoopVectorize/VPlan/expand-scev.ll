@@ -6,11 +6,10 @@
 define void @scev_add_expanded(ptr %dst, i64 %n) {
 ; CHECK-LABEL: VPlan for loop in 'scev_add_expanded'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.preheader>:
-; CHECK-NEXT:    IR   %0 = add i64 %n, 2
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%0>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add ir<%n>, ir<2>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -33,13 +32,12 @@ exit:
 define void @scev_add_lshr_expanded(ptr %dst, i64 %n) {
 ; CHECK-LABEL: VPlan for loop in 'scev_add_lshr_expanded'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.preheader>:
-; CHECK-NEXT:    IR   %0 = add i64 %n, -1
-; CHECK-NEXT:    IR   %1 = lshr i64 %0, 1
-; CHECK-NEXT:    IR   %2 = add nuw i64 %1, 1
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add ir<%n>, ir<-1>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = lshr vp<[[VP2]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = add nuw vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -62,13 +60,12 @@ exit:
 define void @scev_add_udiv3_expanded(ptr %dst, i64 %n) {
 ; CHECK-LABEL: VPlan for loop in 'scev_add_udiv3_expanded'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.preheader>:
-; CHECK-NEXT:    IR   %0 = add i64 %n, -1
-; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
-; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add ir<%n>, ir<-1>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = udiv vp<[[VP2]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = add nuw nsw vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -94,7 +91,7 @@ define void @scev_expand_vscale_mul(ptr %dst, i64 %n) {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.preheader>:
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = vscale i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.vscale()
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = shl nuw vp<[[VP2]]>, ir<2>
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, vp<[[VP3]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
@@ -111,6 +108,550 @@ loop:
   %iv.next = add nuw i64 %iv, 1
   %cmp.loop = icmp ult i64 %iv.next, %n
   br i1 %cmp.loop, label %loop, label %exit, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+define void @scev_expand_udiv(ptr %dst, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'scev_expand_udiv'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop.preheader>:
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%div>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  %div = udiv i64 %n, 3
+  %cmp = icmp ne i64 %div, 0
+  br i1 %cmp, label %loop.preheader, label %exit
+
+loop.preheader:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %loop.preheader ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %cmp.loop = icmp ult i64 %iv.next, %div
+  br i1 %cmp.loop, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The trip count is a zero-extended SCEV expression.
+define void @scev_zext_expanded(ptr %dst, i32 %a, i32 %b) {
+; CHECK-LABEL: VPlan for loop in 'scev_zext_expanded'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop.preheader>:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext ir<%p> to i64
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  %p = mul i32 %a, %b
+  %cmp = icmp ne i32 %p, 0
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %pz = zext i32 %p to i64
+  %cmp.loop = icmp eq i64 %iv.next, %pz
+  br i1 %cmp.loop, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The trip count is a sign-extended SCEV expression.
+define void @scev_sext_expanded(ptr %dst, i32 %a, i32 %b) {
+; CHECK-LABEL: VPlan for loop in 'scev_sext_expanded'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop.preheader>:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = sext ir<%p> to i64
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  %p = mul i32 %a, %b
+  %cmp = icmp sgt i32 %p, 0
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %ps = sext i32 %p to i64
+  %cmp.loop = icmp eq i64 %iv.next, %ps
+  br i1 %cmp.loop, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The trip count of a signed-bounded loop is a smax SCEV.
+define void @scev_smax_expanded(ptr %dst, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'scev_smax_expanded'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.smax(ir<%n>, ir<1>)
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cmp.loop = icmp slt i64 %iv.next, %n
+  br i1 %cmp.loop, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The trip count of a reverse loop contains an smin SCEV.
+define void @scev_smin_expanded(ptr %dst, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'scev_smin_expanded'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add nsw ir<%n>, ir<-1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = call i64 @llvm.smin(vp<[[VP2]]>, ir<0>)
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub ir<%n>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %n, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i32, ptr %dst, i64 %iv
+  store i32 0, ptr %gep
+  %iv.next = add nsw i64 %iv, -1
+  %cmp.loop = icmp sgt i64 %iv.next, 0
+  br i1 %cmp.loop, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The trip count of a pointer-induction loop is a pointer-difference SCEV
+; containing ptrtoint of each pointer; check those are expanded to PtrToInt
+; VPInstructions.
+define void @scev_ptrtoint_expanded(ptr %start, ptr %end) {
+; CHECK-LABEL: VPlan for loop in 'scev_ptrtoint_expanded'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = ptrtoint ir<%end> to i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = ptrtoint ir<%start> to i64
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP2]]>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop ]
+  store i8 0, ptr %ptr.iv, align 1
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 1
+  %cmp.loop = icmp eq ptr %ptr.iv.next, %end
+  br i1 %cmp.loop, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; FIXME: shl incorrectly carries nsw.
+; Test for https://github.com/llvm/llvm-project/issues/205252.
+define i32 @mul_by_signed_min_expanded_to_shl(i1 %a) {
+; CHECK-LABEL: VPlan for loop in 'mul_by_signed_min_expanded_to_shl'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %rem.neg = zext i1 %a to i32
+; CHECK-NEXT:    IR   %sub = sub i32 %rem.neg, 1
+; CHECK-NEXT:    IR   %shl = shl i32 %sub, 31
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = shl nuw ir<%rem.neg>, ir<31>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add vp<[[VP2]]>, ir<-2147483547>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  %rem.neg = zext i1 %a to i32
+  %sub = sub i32 %rem.neg, 1
+  %shl = shl i32 %sub, 31
+  br label %loop
+
+loop:
+  %arg = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %iv = phi i32 [ %shl, %entry ], [ %iv.next, %loop ]
+  %add = or i32 %arg, 2
+  %iv.next = add i32 %iv, 1
+  %c = icmp slt i32 %iv, 100
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret i32 %add
+}
+
+; SCEV expansion of trip count with an AddRec from the outer loop.
+define void @scev_addrec_expanded(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'scev_addrec_expanded'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%2> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<outer>:
+; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+; CHECK-NEXT:    IR   %0 = add i64 %outer.iv, 4
+; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
+; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 3
+  %bound = add i64 %outer.iv, 5
+  %ec.inner = icmp ult i64 %iv.next, %bound
+  br i1 %ec.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add nuw i64 %outer.iv, 1
+  %ec.outer = icmp ult i64 %outer.iv.next, 100
+  br i1 %ec.outer, label %outer, label %exit
+
+exit:
+  ret void
+}
+
+define void @addrec_outer_iv_narrow(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'addrec_outer_iv_narrow'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%0> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<outer>:
+; CHECK-NEXT:    IR   %indvar = phi i64 [ %indvar.next, %outer.latch ], [ 0, %entry ]
+; CHECK-NEXT:    IR   %outer.iv = phi i32 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+; CHECK-NEXT:    IR   %0 = add i64 %indvar, 5
+; CHECK-NEXT:    IR   %ext = zext i32 %outer.iv to i64
+; CHECK-NEXT:  Successor(s): vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %outer.iv = phi i32 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %ext = zext i32 %outer.iv to i64
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %bound = add i64 %ext, 5
+  %ec.inner = icmp ult i64 %iv.next, %bound
+  br i1 %ec.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add nuw i32 %outer.iv, 1
+  %ec.outer = icmp ult i32 %outer.iv.next, 100
+  br i1 %ec.outer, label %outer, label %exit
+
+exit:
+  ret void
+}
+
+; AddRec {0,+,2}<nuw> from the outer loop feeds the inner trip count via its
+; incremented value.
+define void @addrec_non_unit_outer_stride(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'addrec_non_unit_outer_stride'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%2> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<outer>:
+; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+; CHECK-NEXT:    IR   %0 = add i64 %outer.iv, 6
+; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
+; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
+; CHECK-NEXT:    IR   %outer.iv.next = add nuw i64 %outer.iv, 2
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %outer.iv.next = add nuw i64 %outer.iv, 2
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 3
+  %bound = add i64 %outer.iv.next, 5
+  %ec.inner = icmp ult i64 %iv.next, %bound
+  br i1 %ec.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %ec.outer = icmp ult i64 %outer.iv.next, 100
+  br i1 %ec.outer, label %outer, label %exit
+
+exit:
+  ret void
+}
+
+; AddRec in outer-most loop needs expansion.
+define void @addrec_over_grandparent_loop(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'addrec_over_grandparent_loop'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%2> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<middle>:
+; CHECK-NEXT:    IR   %mid = phi i64 [ 0, %outermost ], [ %mid.next, %mid.latch ]
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outermost
+
+outermost:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.iv.latch ]
+  br label %middle
+
+middle:
+  %mid = phi i64 [ 0, %outermost ], [ %mid.next, %mid.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %middle ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 3
+  %bound = add i64 %outer.iv, 5
+  %ec.inner = icmp ult i64 %iv.next, %bound
+  br i1 %ec.inner, label %inner, label %mid.latch
+
+mid.latch:
+  %mid.next = add nuw i64 %mid, 1
+  %cm = icmp ult i64 %mid.next, 50
+  br i1 %cm, label %middle, label %outer.iv.latch
+
+outer.iv.latch:
+  %outer.iv.next = add nuw i64 %outer.iv, 1
+  %co = icmp ult i64 %outer.iv.next, 100
+  br i1 %co, label %outermost, label %exit
+
+exit:
+  ret void
+}
+
+define void @addrec_phi_not_in_inner_preheader(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'addrec_phi_not_in_inner_preheader'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%2> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<inner.ph>:
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %scaled = add i64 %outer.iv, 5
+  %cc = icmp ult i64 %outer.iv, 1000
+  br i1 %cc, label %inner.ph, label %exit
+
+inner.ph:
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %inner.ph ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 3
+  %ec.inner = icmp ult i64 %iv.next, %scaled
+  br i1 %ec.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add nuw i64 %outer.iv, 1
+  br label %outer.header
+
+exit:
+  ret void
+}
+
+; {5,+,4}<nuw> from outer loop needs expansion.
+define void @addrec_nuw_flags(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'addrec_nuw_flags'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%3> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<outer>:
+; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+; CHECK-NEXT:    IR   %0 = shl nuw nsw i64 %outer.iv, 2
+; CHECK-NEXT:    IR   %1 = add i64 %0, 4
+; CHECK-NEXT:    IR   %2 = udiv i64 %1, 3
+; CHECK-NEXT:    IR   %3 = add nuw nsw i64 %2, 1
+; CHECK-NEXT:    IR   %m = mul nuw i64 %outer.iv, 4
+; CHECK-NEXT:    IR   %bound = add nuw i64 %m, 5
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%3>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %m = mul nuw i64 %outer.iv, 4
+  %bound = add nuw i64 %m, 5
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 3
+  %ec.inner = icmp ult i64 %iv.next, %bound
+  br i1 %ec.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add nuw i64 %outer.iv, 1
+  %ec.outer = icmp ult i64 %outer.iv.next, 100
+  br i1 %ec.outer, label %outer, label %exit
+
+exit:
+  ret void
+}
+
+; The outer loop has a non-affine recurrence %ar = {4,+,5,+,3}<outer> which
+; needs expanding as part of the trip count.
+define void @addrec_non_affine_outer_recurrence_no_canonical_iv(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'addrec_non_affine_outer_recurrence_no_canonical_iv'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%2> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<outer>:
+; CHECK-NEXT:    IR   %induction.iv = phi i64 [ %induction.iv.next, %outer.latch ], [ 9, %entry ]
+; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 5, %entry ], [ %outer.iv.next, %outer.latch ]
+; CHECK-NEXT:    IR   %ar = phi i64 [ 4, %entry ], [ %ar.next, %outer.latch ]
+; CHECK-NEXT:    IR   %umax = call i64 @llvm.umax.i64(i64 %induction.iv, i64 3)
+; CHECK-NEXT:    IR   %0 = add i64 %umax, -1
+; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
+; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %outer.iv = phi i64 [ 5, %entry ], [ %outer.iv.next, %outer.latch ]
+  %ar = phi i64 [ 4, %entry ], [ %ar.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 3
+  %bound = add i64 %ar, 5
+  %ec.inner = icmp ult i64 %iv.next, %bound
+  br i1 %ec.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add nuw i64 %outer.iv, 3
+  %ar.next = add i64 %ar, %outer.iv
+  %ec.outer = icmp ult i64 %outer.iv.next, 100
+  br i1 %ec.outer, label %outer, label %exit
+
+exit:
+  ret void
+}
+
+; The outer loop has a canonical IV (%outer.iv) and non-affine recurrence
+; %ar = {4,+,5,+,3}<outer> which needs expanding as part of the trip count.
+define void @addrec_non_affine_outer_recurrence_with_canonical_iv(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'addrec_non_affine_outer_recurrence_with_canonical_iv'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%2> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<outer>:
+; CHECK-NEXT:    IR   %induction.iv = phi i64 [ %induction.iv.next, %outer.latch ], [ 9, %entry ]
+; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+; CHECK-NEXT:    IR   %ar = phi i64 [ 4, %entry ], [ %ar.next, %outer.latch ]
+; CHECK-NEXT:    IR   %umax = call i64 @llvm.umax.i64(i64 %induction.iv, i64 3)
+; CHECK-NEXT:    IR   %0 = add i64 %umax, -1
+; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
+; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %ar = phi i64 [ 4, %entry ], [ %ar.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 3
+  %bound = add i64 %ar, 5
+  %ec.inner = icmp ult i64 %iv.next, %bound
+  br i1 %ec.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add nuw i64 %outer.iv, 1
+  %ar.next = add i64 %ar, %outer.iv
+  %ec.outer = icmp ult i64 %outer.iv.next, 100
+  br i1 %ec.outer, label %outer, label %exit
 
 exit:
   ret void

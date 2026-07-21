@@ -11,9 +11,13 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/write.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -430,23 +434,17 @@ int Thread::set_name(const cpp::string_view &name) {
   char path_name_buffer[THREAD_NAME_PATH_SIZE];
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path_name_buffer, O_RDWR);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD,
-                                             path_name_buffer, O_RDWR);
-#endif
-  if (fd < 0)
-    return -fd;
+  ErrorOr<int> fd = linux_syscalls::open(path_name_buffer, O_RDWR, 0);
+  if (!fd)
+    return fd.error();
 
-  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_write, fd, name.data(),
-                                                 name.size());
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
+  auto write_result =
+      linux_syscalls::write(fd.value(), name.data(), name.size());
+  linux_syscalls::close(fd.value());
 
-  if (retval < 0)
-    return -retval;
-  else if (retval != int(name.size()))
+  if (!write_result)
+    return write_result.error();
+  else if (write_result.value() != static_cast<ssize_t>(name.size()))
     return EIO;
   else
     return 0;
@@ -472,21 +470,16 @@ int Thread::get_name(cpp::StringStream &name) const {
   char path_name_buffer[THREAD_NAME_PATH_SIZE];
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path_name_buffer, O_RDONLY);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD,
-                                             path_name_buffer, O_RDONLY);
-#endif
-  if (fd < 0)
-    return -fd;
+  ErrorOr<int> fd = linux_syscalls::open(path_name_buffer, O_RDONLY, 0);
+  if (!fd)
+    return fd.error();
 
-  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_read, fd, name_buffer,
-                                                 NAME_SIZE_MAX);
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
-  if (retval < 0)
-    return -retval;
+  auto read_result =
+      linux_syscalls::read(fd.value(), name_buffer, NAME_SIZE_MAX);
+  linux_syscalls::close(fd.value());
+  if (!read_result)
+    return read_result.error();
+  int retval = static_cast<int>(read_result.value());
   if (retval == NAME_SIZE_MAX)
     return ERANGE;
   if (name_buffer[retval - 1] == '\n')
