@@ -1022,8 +1022,7 @@ bool PPCMIPeephole::simplifyCode() {
         unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
         // just do a sign-extending load.
-        if (!NarrowSubReg &&
-            (SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX)) {
+        if ((SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX)) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
 
