@@ -12,11 +12,12 @@
 
 ! This tests the fix for https://github.com/llvm/llvm-project/issues/209123
 ! We are only interested in ensuring that functions used in target regions should have
-! the omp.declare_target attribute so the -omp-host-op-fitler pass doesn't crash.
+! the omp.declare_target attribute so the -omp-host-op-filter pass doesn't crash.
 
 ! CHECK-LABEL: IR Dump Before HostOpFilteringPass: omp-host-op-filter
 ! CHECK: llvm.func{{.*}}@__mlir_math_ipowi_i32
-! CHECK-SAME: attributes{{.*}}omp.declare_target
+! CHECK-SAME: attributes{{.*}}omp.declare_target{{.*}}device_type =
+! CHECK-NOT: (host)
 
 module m
 contains
