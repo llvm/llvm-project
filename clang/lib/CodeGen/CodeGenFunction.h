@@ -4185,6 +4185,9 @@ public:
   /// Emits the lvalue for the expression with possibly captured variable.
   LValue EmitOMPSharedLValue(const Expr *E);
 
+  /// Emits the original address for a structured binding.
+  Address EmitOMPBindingOriginalAddr(const BindingDecl *BD, SourceLocation Loc);
+
 private:
   /// Helpers for blocks.
   llvm::Value *EmitBlockLiteral(const CGBlockInfo &Info);
