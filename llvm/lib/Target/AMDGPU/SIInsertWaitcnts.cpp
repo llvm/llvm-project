@@ -1309,15 +1309,26 @@ void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
 
 void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
                                      AMDGPU::Waitcnt &UpdateWait) const {
-  // Waiting for some counters implies waiting for VM_VSRC, since an
-  // instruction that decrements a counter on completion would have
-  // decremented VM_VSRC once its VGPR operands had been read.
-  if (CheckWait.get(AMDGPU::VM_VSRC) >=
-      std::min({CheckWait.get(AMDGPU::LOAD_CNT),
-                CheckWait.get(AMDGPU::STORE_CNT),
-                CheckWait.get(AMDGPU::SAMPLE_CNT),
-                CheckWait.get(AMDGPU::BVH_CNT), CheckWait.get(AMDGPU::DS_CNT)}))
-    UpdateWait.set(AMDGPU::VM_VSRC, ~0u);
+  // Waiting for a VMEM counter (like LOAD_CNT) implies an equivalent wait for
+  // VM_VSRC, because if the VMEM operation has completed then it must surely
+  // have read its VGPR sources, but only if there are no other outstanding VMEM
+  // operations that use a different counter (like SAMPLE_CNT).
+  static constexpr AMDGPU::InstCounterType VmemCounters[] = {
+      AMDGPU::LOAD_CNT, AMDGPU::STORE_CNT, AMDGPU::SAMPLE_CNT, AMDGPU::BVH_CNT,
+      AMDGPU::DS_CNT};
+  HWEvents VmemEvents = llvm::accumulate(
+      VmemCounters, HWEvents(), [&](HWEvents Acc, AMDGPU::InstCounterType T) {
+        return Acc | Context->getWaitEvents(T);
+      });
+  HWEvents PendingVmemEvents = PendingEvents & VmemEvents;
+  for (AMDGPU::InstCounterType T : VmemCounters) {
+    unsigned CheckCount = CheckWait.get(T);
+    if (UpdateWait.get(AMDGPU::VM_VSRC) >= CheckCount &&
+        (CheckCount == 0 || !counterOutOfOrder(T)) &&
+        (PendingVmemEvents & ~Context->getWaitEvents(T)) == 0)
+      UpdateWait.set(AMDGPU::VM_VSRC, ~0u);
+  }
+
   simplifyWaitcnt(UpdateWait, AMDGPU::VM_VSRC);
 }
 
@@ -1717,7 +1728,7 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
                                  Wait.get(AMDGPU::STORE_CNT));
     Modified |= promoteSoftWaitCnt(WaitcntVsCntInstr);
 
-    ScoreBrackets.applyWaitcnt(AMDGPU::STORE_CNT, Wait.get(AMDGPU::STORE_CNT));
+    ScoreBrackets.applyWaitcnt(Wait, AMDGPU::STORE_CNT);
     Wait.set(AMDGPU::STORE_CNT, ~0u);
 
     LLVM_DEBUG(It.isEnd()
@@ -2004,8 +2015,8 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Modified |= updateOperandIfDifferent(*CombinedLoadDsCntInstr,
                                            AMDGPU::OpName::simm16, NewEnc);
       Modified |= promoteSoftWaitCnt(CombinedLoadDsCntInstr);
-      ScoreBrackets.applyWaitcnt(AMDGPU::LOAD_CNT, Wait.get(AMDGPU::LOAD_CNT));
-      ScoreBrackets.applyWaitcnt(AMDGPU::DS_CNT, Wait.get(AMDGPU::DS_CNT));
+      ScoreBrackets.applyWaitcnt(Wait, AMDGPU::LOAD_CNT);
+      ScoreBrackets.applyWaitcnt(Wait, AMDGPU::DS_CNT);
       Wait.set(AMDGPU::LOAD_CNT, ~0u);
       Wait.set(AMDGPU::DS_CNT, ~0u);
 
@@ -2116,11 +2127,9 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         std::min(Wait.get(AMDGPU::VA_VDST_RD), Wait.get(AMDGPU::VA_VDST_WR));
     Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, VaVdst);
 
-    ScoreBrackets.applyWaitcnt(AMDGPU::VA_VDST_RD,
-                               Wait.get(AMDGPU::VA_VDST_RD));
-    ScoreBrackets.applyWaitcnt(AMDGPU::VA_VDST_WR,
-                               Wait.get(AMDGPU::VA_VDST_WR));
-    ScoreBrackets.applyWaitcnt(AMDGPU::VM_VSRC, Wait.get(AMDGPU::VM_VSRC));
+    ScoreBrackets.applyWaitcnt(Wait, AMDGPU::VA_VDST_RD);
+    ScoreBrackets.applyWaitcnt(Wait, AMDGPU::VA_VDST_WR);
+    ScoreBrackets.applyWaitcnt(Wait, AMDGPU::VM_VSRC);
     Wait.set(AMDGPU::VA_VDST_RD, ~0u);
     Wait.set(AMDGPU::VA_VDST_WR, ~0u);
     Wait.set(AMDGPU::VM_VSRC, ~0u);

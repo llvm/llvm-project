@@ -7569,7 +7569,6 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
       /*BlockFrequencyInfo=*/nullptr,
       /*ProfileSummaryInfo=*/nullptr, ORE, static_cast<int>(OptLevel),
       /*UserThreshold=*/std::nullopt,
-      /*UserCount=*/std::nullopt,
       /*UserAllowPartial=*/true,
       /*UserAllowRuntime=*/true,
       /*UserUpperBound=*/std::nullopt,
@@ -7644,9 +7643,9 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   bool MaxOrZero = false;
   unsigned TripMultiple = 0;
 
-  computeUnrollCount(L, TTI, DT, &LI, &AC, SE, EphValues, &ORE, TripCount,
-                     MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP);
-  unsigned Factor = UP.Count;
+  unsigned Factor =
+      computeUnrollCount(L, TTI, DT, &LI, &AC, SE, EphValues, &ORE, TripCount,
+                         MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP);
   LLVM_DEBUG(dbgs() << "Suggesting unroll factor of " << Factor << "\n");
 
   // This function returns 1 to signal to not unroll a loop.

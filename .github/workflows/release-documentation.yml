@@ -32,6 +32,12 @@ on:
       WWW_RELEASES_TOKEN:
         description: "Secret used to create a PR with the documentation changes."
         required: false
+      LLVM_TOKEN_GENERATOR_CLIENT_ID:
+        description: "Client ID for our GitHub App we use for generating access tokens."
+        required: true
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+        description: "Private key for our GitHub App we use for generating access tokens."
+        required: true
 
 jobs:
   # This job checks permissions and validates inputs to prevent potential
