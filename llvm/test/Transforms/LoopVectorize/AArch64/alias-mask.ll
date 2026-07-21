@@ -5,8 +5,8 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-TF-LABEL: define void @alias_mask(
 ; CHECK-TF-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-TF-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
+; CHECK-TF-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-TF-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK-TF:       [[VECTOR_CLAMPED_VF_CHECK]]:
 ; CHECK-TF-NEXT:    [[ALIAS_MASK:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 [[B2]], i64 [[C1]], i64 1)
@@ -65,9 +65,9 @@ define void @alias_mask_multiple(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-TF-LABEL: define void @alias_mask_multiple(
 ; CHECK-TF-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-NEXT:    [[A3:%.*]] = ptrtoaddr ptr [[A]] to i64
-; CHECK-TF-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-TF-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
+; CHECK-TF-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-TF-NEXT:    [[A3:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-TF-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK-TF:       [[VECTOR_CLAMPED_VF_CHECK]]:
 ; CHECK-TF-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 [[A3]], i64 [[C1]], i64 1)
@@ -130,8 +130,8 @@ define i8 @alias_masking_exit_value(ptr %ptrA, ptr %ptrB) {
 ; CHECK-TF-LABEL: define i8 @alias_masking_exit_value(
 ; CHECK-TF-SAME: ptr [[PTRA:%.*]], ptr [[PTRB:%.*]]) #[[ATTR0]] {
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-NEXT:    [[PTRA2:%.*]] = ptrtoaddr ptr [[PTRA]] to i64
 ; CHECK-TF-NEXT:    [[PTRB1:%.*]] = ptrtoaddr ptr [[PTRB]] to i64
+; CHECK-TF-NEXT:    [[PTRA2:%.*]] = ptrtoaddr ptr [[PTRA]] to i64
 ; CHECK-TF-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK-TF:       [[VECTOR_CLAMPED_VF_CHECK]]:
 ; CHECK-TF-NEXT:    [[ALIAS_MASK:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 [[PTRA2]], i64 [[PTRB1]], i64 1)
@@ -197,8 +197,8 @@ define i32 @partial_reduce(ptr %a, ptr %b, i64 %n) {
 ; CHECK-TF-LABEL: define i32 @partial_reduce(
 ; CHECK-TF-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-TF-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-TF-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-TF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-TF:       [[VECTOR_PH]]:
 ; CHECK-TF-NEXT:    [[ALIAS_MASK:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 [[A2]], i64 [[B1]], i64 1)
@@ -286,15 +286,12 @@ define void @alias_mask_reverse_iterate(ptr noalias %ptrA, ptr %ptrB, ptr %ptrC,
 ; CHECK-TF-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP8]], i64 [[TMP10]]
 ; CHECK-TF-NEXT:    [[REVERSE:%.*]] = call <vscale x 16 x i1> @llvm.vector.reverse.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP11]], <vscale x 16 x i1> [[REVERSE]], <vscale x 16 x i8> poison)
-; CHECK-TF-NEXT:    [[REVERSE3:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_LOAD]])
 ; CHECK-TF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[PTRB]], i64 [[OFFSET_IDX]]
 ; CHECK-TF-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i64 [[TMP10]]
 ; CHECK-TF-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP13]], <vscale x 16 x i1> [[REVERSE]], <vscale x 16 x i8> poison)
-; CHECK-TF-NEXT:    [[REVERSE6:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_LOAD5]])
-; CHECK-TF-NEXT:    [[TMP14:%.*]] = add <vscale x 16 x i8> [[REVERSE6]], [[REVERSE3]]
+; CHECK-TF-NEXT:    [[REVERSE7:%.*]] = add <vscale x 16 x i8> [[WIDE_MASKED_LOAD5]], [[WIDE_MASKED_LOAD]]
 ; CHECK-TF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[PTRC]], i64 [[OFFSET_IDX]]
 ; CHECK-TF-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i64 [[TMP10]]
-; CHECK-TF-NEXT:    [[REVERSE7:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> [[TMP14]])
 ; CHECK-TF-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[REVERSE7]], ptr align 1 [[TMP16]], <vscale x 16 x i1> [[REVERSE]])
 ; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[IV_START]])

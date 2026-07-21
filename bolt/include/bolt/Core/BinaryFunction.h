@@ -39,6 +39,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -279,6 +280,10 @@ private:
   std::unique_ptr<BinaryLoopInfo> BLI;
   std::unique_ptr<BinaryDominatorTree> BDT;
 
+  /// Epoch for basic block indices, bumped by updateBBIndices(). See
+  /// getBlockNumberEpoch().
+  unsigned BlockNumberEpoch = 0;
+
   /// All labels in the function that are referenced via relocations from
   /// data objects. Typically these are jump table destinations and computed
   /// goto labels.
@@ -294,6 +299,12 @@ private:
 
   /// Offsets of indirect branches with unknown destinations.
   std::set<uint64_t> UnknownIndirectBranchOffsets;
+
+  /// Offsets of instructions that begin or end a DWARF lexical scope
+  /// (inlined_subroutine / lexical_block low_pc/high_pc and DW_AT_ranges).
+  /// Populated before disassembly and cleared once disassembly of this
+  /// function is done.
+  SparseBitVector<> DebugScopeBoundaryOffsets;
 
   /// A set of local and global symbols corresponding to secondary entry points.
   /// Each additional function entry point has a corresponding entry in the map.
@@ -681,6 +692,12 @@ private:
     return !ExternallyReferencedOffsets.empty();
   }
 
+  /// True if there are references to \p Offset inside this function from data,
+  /// e.g. from indirect goto references.
+  bool hasInternalReferenceAt(uint64_t Offset) const {
+    return ExternallyReferencedOffsets.count(Offset) != 0;
+  }
+
   /// Return an entry ID corresponding to a symbol known to belong to
   /// the function.
   ///
@@ -827,6 +844,11 @@ public:
         BinaryBasicBlock &front()        { return *BasicBlocks.front(); }
   const BinaryBasicBlock & back() const  { return *BasicBlocks.back(); }
         BinaryBasicBlock & back()        { return *BasicBlocks.back(); }
+
+  /// Epoch bumped whenever basic block indices are reassigned by
+  /// updateBBIndices(), so number-indexed structures (LoopInfo, DominatorTree)
+  /// can detect stale block numbers. See BinaryBasicBlock::getIndex().
+  unsigned getBlockNumberEpoch() const { return BlockNumberEpoch; }
   inline iterator_range<iterator> blocks() {
     return iterator_range<iterator>(begin(), end());
   }
@@ -1347,6 +1369,23 @@ public:
   const DenseSet<uint64_t> &getInternalRefDataRelocations() const {
     return InternalRefDataRelocations;
   }
+
+  /// Add function-relative \p Offset as a DWARF lexical-scope boundary.
+  void addDebugScopeBoundaryOffset(uint32_t Offset) {
+    DebugScopeBoundaryOffsets.set(Offset);
+  }
+
+  /// Return true if function-relative \p Offset begins/ends a DWARF scope.
+  bool isDebugScopeBoundaryOffset(uint32_t Offset) {
+    return DebugScopeBoundaryOffsets.test(Offset);
+  }
+
+  /// Return true if an "Offset" annotation should be kept for instruction
+  /// \p Inst located at function-relative \p Offset. Offsets are kept for
+  /// control-flow instructions (profile matching) and for instructions that
+  /// begin/end a DWARF lexical scope (needed to translate scope ranges
+  /// precisely; see DebugScopeBoundaryOffsets).
+  bool keepOffsetForInstruction(const MCInst &Inst, uint32_t Offset);
 
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {
@@ -2439,14 +2478,16 @@ public:
   /// is corrupted. If it is unable to fix it, it returns false.
   bool finalizeCFIState();
 
-  /// Return true if this function needs an address-translation table after
-  /// its code emission.
-  bool requiresAddressTranslation() const;
-
   /// Return true if the linker needs to generate an address map for this
   /// function. Used for keeping track of the mapping from input to out
   /// addresses of basic blocks.
   bool requiresAddressMap() const;
+
+  /// Return true if this function needs an address-translation table after
+  /// its code emission, or to update any metadata accurately (debug info,
+  /// SDT probes). This is gated since it incurs extra cost for the linker
+  /// to keep track of more addresses.
+  bool requiresPreciseAddressMap() const;
 
   /// Adjust branch instructions to match the CFG.
   ///
@@ -2646,6 +2687,12 @@ struct GraphTraits<bolt::BinaryFunction *>
     return nodes_iterator(F->end());
   }
   static size_t size(bolt::BinaryFunction *F) { return F->size(); }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 template <>
@@ -2666,6 +2713,12 @@ struct GraphTraits<const bolt::BinaryFunction *>
     return nodes_iterator(F->end());
   }
   static size_t size(const bolt::BinaryFunction *F) { return F->size(); }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 template <>
@@ -2674,6 +2727,12 @@ struct GraphTraits<Inverse<bolt::BinaryFunction *>>
   static NodeRef getEntryNode(Inverse<bolt::BinaryFunction *> G) {
     return G.Graph->getLayout().block_front();
   }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 template <>
@@ -2681,6 +2740,12 @@ struct GraphTraits<Inverse<const bolt::BinaryFunction *>>
     : public GraphTraits<Inverse<const bolt::BinaryBasicBlock *>> {
   static NodeRef getEntryNode(Inverse<const bolt::BinaryFunction *> G) {
     return G.Graph->getLayout().block_front();
+  }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
   }
 };
 

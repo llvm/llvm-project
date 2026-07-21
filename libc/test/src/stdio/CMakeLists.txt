@@ -173,6 +173,7 @@ add_fp_unittest(
   SRCS
     sprintf_test.cpp
   DEPENDS
+    libc.src.stdio.printf_core.printf_config
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
     libc.include.inttypes
@@ -502,6 +503,8 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       fdopen_test.cpp
     DEPENDS
+      libc.hdr.fcntl_macros
+      libc.hdr.sys_stat_macros
       libc.src.fcntl.open
       libc.src.stdio.fclose
       libc.src.stdio.fdopen

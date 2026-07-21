@@ -242,6 +242,10 @@ def __builtin_amdgcn_qsad_pk_u16_u8 : AMDGPUBuiltin<"uint64_t(uint64_t, unsigned
 def __builtin_amdgcn_mqsad_pk_u16_u8 : AMDGPUBuiltin<"uint64_t(uint64_t, unsigned int, uint64_t)", [Const], "mqsad-pk-insts">;
 def __builtin_amdgcn_mqsad_u32_u8 : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(uint64_t, unsigned int, _ExtVector<4, unsigned int>)", [Const], "mqsad-insts">;
 
+//===----------------------------------------------------------------------===//
+// Buffer builtins.
+//===----------------------------------------------------------------------===//
+
 def __builtin_amdgcn_make_buffer_rsrc : AMDGPUBuiltin<"__amdgpu_buffer_rsrc_t(void *, short, int64_t, int)", [Const]>;
 def __builtin_amdgcn_raw_buffer_store_b8 : AMDGPUBuiltin<"void(unsigned char, __amdgpu_buffer_rsrc_t, int, int, _Constant int)">;
 def __builtin_amdgcn_raw_buffer_store_b16 : AMDGPUBuiltin<"void(unsigned short, __amdgpu_buffer_rsrc_t, int, int, _Constant int)">;
@@ -279,6 +283,32 @@ def __builtin_amdgcn_raw_ptr_buffer_load_lds : AMDGPUBuiltin<"void(__amdgpu_buff
 def __builtin_amdgcn_raw_ptr_buffer_load_async_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
 def __builtin_amdgcn_struct_ptr_buffer_load_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
 def __builtin_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
+
+let Documentation = [DocSBufferLoad], ArgNames = ["rsrc", "offset", "aux"] in {
+def __builtin_amdgcn_s_buffer_load_i32 : AMDGPUBuiltin<"int(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v2i32 : AMDGPUBuiltin<"_Vector<2, int>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v3i32 : AMDGPUBuiltin<"_Vector<3, int>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v4i32 : AMDGPUBuiltin<"_Vector<4, int>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v8i32 : AMDGPUBuiltin<"_Vector<8, int>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v16i32 : AMDGPUBuiltin<"_Vector<16, int>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_f32 : AMDGPUBuiltin<"float(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v2f32 : AMDGPUBuiltin<"_Vector<2, float>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v3f32 : AMDGPUBuiltin<"_Vector<3, float>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v4f32 : AMDGPUBuiltin<"_Vector<4, float>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v8f32 : AMDGPUBuiltin<"_Vector<8, float>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v16f32 : AMDGPUBuiltin<"_Vector<16, float>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_i8 : AMDGPUBuiltin<"char(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_u8 : AMDGPUBuiltin<"unsigned char(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_i16 : AMDGPUBuiltin<"short(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_u16 : AMDGPUBuiltin<"unsigned short(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v2i8 : AMDGPUBuiltin<"_Vector<2, char>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v3i8 : AMDGPUBuiltin<"_Vector<3, char>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v4i8 : AMDGPUBuiltin<"_Vector<4, char>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_f16 : AMDGPUBuiltin<"_Float16(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v2f16 : AMDGPUBuiltin<"_Vector<2, _Float16>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v3f16 : AMDGPUBuiltin<"_Vector<3, _Float16>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+def __builtin_amdgcn_s_buffer_load_v4f16 : AMDGPUBuiltin<"_Vector<4, _Float16>(__amdgpu_buffer_rsrc_t, int, _Constant int)", [Const]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Global Available/Visible memory accesses.
@@ -443,10 +473,10 @@ def __builtin_amdgcn_s_ttracedata_imm : AMDGPUBuiltin<"void(_Constant short)", [
 // Postfix l indicates the 1st argument is i64.
 // Postfix h indicates the 4/5-th arguments are half4.
 //===----------------------------------------------------------------------===//
-def __builtin_amdgcn_image_bvh_intersect_ray : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(unsigned int, float, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, unsigned int>)", [Const], "gfx10-insts">;
-def __builtin_amdgcn_image_bvh_intersect_ray_h : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(unsigned int, float, _ExtVector<4, float>, _ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, unsigned int>)", [Const], "gfx10-insts">;
-def __builtin_amdgcn_image_bvh_intersect_ray_l : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(uint64_t, float, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, unsigned int>)", [Const], "gfx10-insts">;
-def __builtin_amdgcn_image_bvh_intersect_ray_lh : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(uint64_t, float, _ExtVector<4, float>, _ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, unsigned int>)", [Const], "gfx10-insts">;
+def __builtin_amdgcn_image_bvh_intersect_ray : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(unsigned int, float, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, unsigned int>)", [Const], "bvh-ray-tracing-insts">;
+def __builtin_amdgcn_image_bvh_intersect_ray_h : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(unsigned int, float, _ExtVector<4, float>, _ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, unsigned int>)", [Const], "bvh-ray-tracing-insts">;
+def __builtin_amdgcn_image_bvh_intersect_ray_l : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(uint64_t, float, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, unsigned int>)", [Const], "bvh-ray-tracing-insts">;
+def __builtin_amdgcn_image_bvh_intersect_ray_lh : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(uint64_t, float, _ExtVector<4, float>, _ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, unsigned int>)", [Const], "bvh-ray-tracing-insts">;
 
 
 //===----------------------------------------------------------------------===//

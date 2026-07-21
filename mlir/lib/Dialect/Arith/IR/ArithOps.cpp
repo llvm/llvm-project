@@ -1235,6 +1235,11 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
       });
 }
 
+void arith::AddFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<AddFOfNegFLhs, AddFOfNegFRhs>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // SubFOp
 //===----------------------------------------------------------------------===//

@@ -17,10 +17,10 @@ define i16 @last_active_lane_live_out(i32 %x) {
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
+; CHECK-NEXT:    EMIT vp<%active.lane.mask> = active lane mask ir<0>, ir<2>, ir<1>
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<%active.lane.mask> = active lane mask ir<0>, ir<2>, ir<1>
 ; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = not vp<%active.lane.mask>
 ; CHECK-NEXT:    EMIT vp<%first.inactive.lane> = first-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<%last.active.lane> = sub vp<%first.inactive.lane>, ir<1>

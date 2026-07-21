@@ -763,13 +763,13 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
       if (objfile) {
         SectionList *sections = objfile->GetSectionList();
         if (sections) {
-          ConstString commpage_dbstr("__commpage");
+          llvm::StringRef commpage_sect_name("__commpage");
           Section *commpage_section =
-              sections->FindSectionByName(commpage_dbstr).get();
+              sections->FindSectionByName(commpage_sect_name).get();
           if (commpage_section) {
             ModuleSpec module_spec(objfile->GetFileSpec(),
                                    image_info.GetArchitecture());
-            module_spec.GetObjectName() = commpage_dbstr;
+            module_spec.GetObjectName() = ConstString(commpage_sect_name);
             ModuleSP commpage_image_module_sp(
                 target_images.FindFirstModule(module_spec));
             if (!commpage_image_module_sp) {
@@ -902,16 +902,6 @@ lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
       arch_spec.MergeFrom(sim_spec);
   }
   return arch_spec;
-}
-
-const DynamicLoaderDarwin::Segment *
-DynamicLoaderDarwin::ImageInfo::FindSegment(ConstString name) const {
-  const size_t num_segments = segments.size();
-  for (size_t i = 0; i < num_segments; ++i) {
-    if (segments[i].name == name)
-      return &segments[i];
-  }
-  return nullptr;
 }
 
 // Dump an image info structure to the file handle provided.

@@ -5789,13 +5789,15 @@ defm VDIV : avx512_fp_binop_p<0x5E, "vdiv", any_fdiv, fdiv, HasAVX512,
                               SchedWriteFDivSizes>,
             avx512_fp_binop_ph<0x5E, "vdiv", any_fdiv, fdiv, SchedWriteFDivSizes>,
             avx512_fp_binop_p_round<0x5E, "vdiv", X86fdivRnd, SchedWriteFDivSizes>;
-defm VMIN : avx512_fp_binop_p<0x5D, "vmin", X86any_fmin, X86fmin, HasAVX512,
+defm VMIN : avx512_fp_binop_p<0x5D, "vmin", X86any_fmin, pseudo_fmin, HasAVX512,
                               SchedWriteFCmpSizes, 0>,
-            avx512_fp_binop_ph<0x5D, "vmin", X86any_fmin, X86fmin, SchedWriteFCmpSizes, 0>,
+            avx512_fp_binop_ph<0x5D, "vmin", X86any_fmin, pseudo_fmin,
+                               SchedWriteFCmpSizes, 0>,
             avx512_fp_binop_p_sae<0x5D, "vmin", X86fminSAE, SchedWriteFCmpSizes>;
-defm VMAX : avx512_fp_binop_p<0x5F, "vmax", X86any_fmax, X86fmax, HasAVX512,
+defm VMAX : avx512_fp_binop_p<0x5F, "vmax", X86any_fmax, pseudo_fmax, HasAVX512,
                               SchedWriteFCmpSizes, 0>,
-            avx512_fp_binop_ph<0x5F, "vmax", X86any_fmax, X86fmax, SchedWriteFCmpSizes, 0>,
+            avx512_fp_binop_ph<0x5F, "vmax", X86any_fmax, pseudo_fmax,
+                               SchedWriteFCmpSizes, 0>,
             avx512_fp_binop_p_sae<0x5F, "vmax", X86fmaxSAE, SchedWriteFCmpSizes>;
 let isCodeGenOnly = 1 in {
   defm VMINC : avx512_fp_binop_p<0x5D, "vmin", X86fminc, X86fminc, HasAVX512,
@@ -11782,7 +11784,20 @@ def VPTERNLOG132_imm8 : SDNodeXForm<timm, [{
   return getI8Imm(NewImm, SDLoc(N));
 }]>;
 def VPTERNLOG231_imm8 : SDNodeXForm<timm, [{
-  // Convert a VPTERNLOG immediate by moving operand 1 to the end.
+  // Convert a VPTERNLOG immediate by moving operand 2 to the beginning.
+  uint8_t Imm = N->getZExtValue();
+  // Move bits 2->1, 4->2, 6->3, 1->4, 3->5, 5->6
+  uint8_t NewImm = Imm & 0x81;
+  if (Imm & 0x04) NewImm |= 0x02;
+  if (Imm & 0x10) NewImm |= 0x04;
+  if (Imm & 0x40) NewImm |= 0x08;
+  if (Imm & 0x02) NewImm |= 0x10;
+  if (Imm & 0x08) NewImm |= 0x20;
+  if (Imm & 0x20) NewImm |= 0x40;
+  return getI8Imm(NewImm, SDLoc(N));
+}]>;
+def VPTERNLOG312_imm8 : SDNodeXForm<timm, [{
+  // Convert a VPTERNLOG immediate by moving operand 0 to the end.
   uint8_t Imm = N->getZExtValue();
   // Move bits 1->2, 2->4, 3->6, 4->1, 5->3, 6->5
   uint8_t NewImm = Imm & 0x81;
@@ -11794,20 +11809,6 @@ def VPTERNLOG231_imm8 : SDNodeXForm<timm, [{
   if (Imm & 0x40) NewImm |= 0x20;
   return getI8Imm(NewImm, SDLoc(N));
 }]>;
-def VPTERNLOG312_imm8 : SDNodeXForm<timm, [{
-  // Convert a VPTERNLOG immediate by moving operand 2 to the beginning.
-  uint8_t Imm = N->getZExtValue();
-  // Move bits 1->4, 2->1, 3->5, 4->2, 5->6, 6->3
-  uint8_t NewImm = Imm & 0x81;
-  if (Imm & 0x02) NewImm |= 0x10;
-  if (Imm & 0x04) NewImm |= 0x02;
-  if (Imm & 0x08) NewImm |= 0x20;
-  if (Imm & 0x10) NewImm |= 0x04;
-  if (Imm & 0x20) NewImm |= 0x40;
-  if (Imm & 0x40) NewImm |= 0x08;
-  return getI8Imm(NewImm, SDLoc(N));
-}]>;
-
 multiclass avx512_ternlog<bits<8> opc, string OpcodeStr, SDNode OpNode,
                           X86FoldableSchedWrite sched, X86VectorVTInfo _,
                           string Name>{
