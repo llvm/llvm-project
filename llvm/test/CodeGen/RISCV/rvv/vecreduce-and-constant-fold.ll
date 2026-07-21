@@ -4,13 +4,7 @@
 define i32 @test_and_const() {
 ; CHECK-LABEL: test_and_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 12401
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vsext.vf4 v9, v8
-; CHECK-NEXT:    vredand.vs v8, v9, v9
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    li a0, 3
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> <i32 -1, i32 15, i32 7, i32 3>)
   ret i32 %r
@@ -19,13 +13,7 @@ define i32 @test_and_const() {
 define i32 @test_and_const_wide() {
 ; CHECK-LABEL: test_and_const_wide:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 10
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    li a0, 10
-; CHECK-NEXT:    vmadd.vx v10, a0, v8
-; CHECK-NEXT:    vredand.vs v8, v10, v10
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> <i32 10, i32 20, i32 30, i32 40, i32 50, i32 60, i32 70, i32 80>)
   ret i32 %r
@@ -45,12 +33,6 @@ define i32 @test_and_nonconst(<4 x i32> %v) {
 define i32 @test_and_poison() {
 ; CHECK-LABEL: test_and_poison:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI3_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI3_0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vredand.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> <i32 -1, i32 15, i32 poison, i32 3>)
   ret i32 %r
