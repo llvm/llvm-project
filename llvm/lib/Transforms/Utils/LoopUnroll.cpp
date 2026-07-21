@@ -1719,10 +1719,16 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.hasUsesOutsideReductionChain())
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
-  // Skip unsupported reductions.
-  // TODO: Handle any-of and find-last reductions.
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindRecurrenceKind(RK))
+  // Skip unsupported reductions, including sub, any-of and find-last.
+  // TODO: Handle sub, any-of and find-last reductions.
+  if (RK != RecurKind::Add && RK != RecurKind::Mul && RK != RecurKind::Or &&
+      RK != RecurKind::And && RK != RecurKind::Xor && RK != RecurKind::SMin &&
+      RK != RecurKind::SMax && RK != RecurKind::UMin && RK != RecurKind::UMax &&
+      RK != RecurKind::FAdd && RK != RecurKind::FMul && RK != RecurKind::FMin &&
+      RK != RecurKind::FMax && RK != RecurKind::FMinNum &&
+      RK != RecurKind::FMaxNum && RK != RecurKind::FMinimum &&
+      RK != RecurKind::FMaximum && RK != RecurKind::FMinimumNum &&
+      RK != RecurKind::FMaximumNum && RK != RecurKind::FMulAdd)
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
