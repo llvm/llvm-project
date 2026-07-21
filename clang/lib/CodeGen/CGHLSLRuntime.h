@@ -335,14 +335,17 @@ private:
                                    llvm::GlobalVariable *GV,
                                    HLSLResourceBindingAttr *RBA);
 
-  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B,
+                                         const FunctionDecl *FD,
+                                         llvm::Type *Type,
                                          const clang::DeclaratorDecl *Decl,
                                          HLSLAppliedSemanticAttr *Semantic,
                                          std::optional<unsigned> Index);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                         HLSLAppliedSemanticAttr *Semantic,
                                         std::optional<unsigned> Index);
-  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B,
+                                    const FunctionDecl *FD, llvm::Type *Type,
                                     const clang::DeclaratorDecl *Decl,
                                     HLSLAppliedSemanticAttr *Semantic,
                                     std::optional<unsigned> Index);
