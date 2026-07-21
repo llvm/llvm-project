@@ -3,7 +3,7 @@
 /// End-to-end test for vector.compressstore for SVE
 
 // In order to demonstrate the impact of using scalable vectors, vscale is set
-// to 2 so that vector<[16]xi32> constains 32 rather than 16 elements at
+// to 2 so that vector<[16]xi32> contains 32 rather than 16 elements at
 // run-time
 //
 // Note that you can also tweak the size of vscale by passing this flag to
@@ -11,7 +11,7 @@
 //  * -cpu max,sve-max-vq=[1-16]
 // (select the value between 1 and 16).
 
-// DEFINE: %{compile} =  mlir-opt %s -test-lower-to-llvm
+// DEFINE: %{compile} =  mlir-opt %s -test-lower-to-llvm -o %t
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e main -entry-point-result=void --march=aarch64 --mattr="+sve"\
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%native_mlir_arm_runner_utils
 

@@ -2328,8 +2328,6 @@ def Vector_ExpandLoadOp :
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
 
-    Note, at the moment this Op is only available for fixed-width vectors.
-
     Examples:
 
     ```mlir
@@ -2418,8 +2416,6 @@ def Vector_CompressStoreOp :
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
-
-    Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
 
