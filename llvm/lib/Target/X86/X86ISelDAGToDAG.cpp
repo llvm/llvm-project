@@ -2109,7 +2109,7 @@ bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
   // it if it gets CSE'd with a different node.
   HandleSDNode Handle(N);
 
-  auto IsAddLike = [&](SDValue V) {
+  auto IsAddOrAddLike = [&](SDValue V) {
     return V.getOpcode() == ISD::ADD || CurDAG->isADDLike(V);
   };
 
@@ -2124,14 +2124,15 @@ bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
       return false;
 
     // add-like: decomposes to base + index (+ disp)
-    if (IsAddLike(Op))
-      return IsAddLike(Op.getOperand(0)) || IsAddLike(Op.getOperand(1));
+    if (IsAddOrAddLike(Op))
+      return IsAddOrAddLike(Op.getOperand(0)) ||
+             IsAddOrAddLike(Op.getOperand(1));
 
     // shl by 1/2/3 folds to a scaled index
     if (Op.getOpcode() == ISD::SHL)
       if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1)))
         return C->getZExtValue() >= 1 && C->getZExtValue() <= 3 &&
-               IsAddLike(Op.getOperand(0));
+               IsAddOrAddLike(Op.getOperand(0));
 
     return false;
   };
