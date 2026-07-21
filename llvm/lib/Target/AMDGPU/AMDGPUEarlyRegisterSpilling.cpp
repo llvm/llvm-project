@@ -77,7 +77,7 @@ public:
                       // instructions.
     MoveRestoreInsideTheLoop, // Move the restore inside the loop.
     EmitNewRestoreBeforeUse, // Emit a restore before a use instead of using the
-                             // restore of another use.
+                             // restore of the Head of the group.
   };
 
 protected:
@@ -761,9 +761,10 @@ static bool mustKeepSeparatePhiRestoreBlocks(const DomGroup &G1,
              DomGroup::RestorePlacement::IncomingBlockOfPhi;
 }
 
-void AMDGPUEarlyRegisterSpilling::groupUses(
-    Register CandidateReg, MachineBasicBlock *SpillBlock, MachineInstr *CurMI,
-    SetVectorType &DominatedUses, SmallVector<DomGroup> &GroupOfUses) {
+static void assignUsesToGroups(Register CandidateReg, MachineInstr *CurMI,
+                               SetVectorType &DominatedUses,
+                               std::vector<DomGroup> &Groups,
+                               const MachineLoopInfo *MLI) {
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   MachineLoop *OutermostLoopOfCurLoop = nullptr;
@@ -777,7 +778,6 @@ void AMDGPUEarlyRegisterSpilling::groupUses(
              OutermostLoopOfCurLoop->contains(UseLoop)));
   };
 
-  std::vector<DomGroup> Groups;
   for (auto *Use : DominatedUses) {
     MachineLoop *UseLoop = MLI->getLoopFor(Use->getParent());
     if (Use->isPHI()) {
@@ -810,6 +810,16 @@ void AMDGPUEarlyRegisterSpilling::groupUses(
                           DomGroup::RestorePlacement::BeforeHead);
     }
   }
+}
+
+void AMDGPUEarlyRegisterSpilling::groupUses(
+    Register CandidateReg, MachineBasicBlock *SpillBlock, MachineInstr *CurMI,
+    SetVectorType &DominatedUses, SmallVector<DomGroup> &GroupOfUses) {
+  MachineBasicBlock *CurMBB = CurMI->getParent();
+  MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
+
+  std::vector<DomGroup> Groups;
+  assignUsesToGroups(CandidateReg, CurMI, DominatedUses, Groups, MLI);
 
   if (DisableRestoreGrouping) {
     for (auto &G1 : Groups) {
@@ -1294,10 +1304,10 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
           }
         }
 
-        // Group the uses together.
-        SmallVector<DomGroup> GroupOfUses;
-        groupUses(CandidateReg, CurMBB, CurMI, UsesDominatedByCurMI,
-                  GroupOfUses);
+        // Assign groups to the uses.
+        std::vector<DomGroup> GroupOfUses;
+        assignUsesToGroups(CandidateReg, CurMI, UsesDominatedByCurMI,
+                           GroupOfUses, MLI);
 
         auto Candidate = std::make_unique<RestoreCandidate>(
             OrigRestore->getOperand(0).getReg(), Mask,
