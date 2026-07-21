@@ -156,6 +156,9 @@ public:
   LIBC_INLINE string &operator=(string_view view) { return assign(view); }
 
   LIBC_INLINE string &operator=(string &&other) {
+    if (this == &other)
+      return *this;
+
     move_assign_from_buffer(other.buffer_, other.capacity_, other.size_);
     other.reset_no_deallocate();
     return *this;

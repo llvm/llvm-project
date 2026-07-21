@@ -279,7 +279,7 @@ TEST(LlvmLibcStringTest, SelfAssignAtCapacityTest) {
   string s("aaa");
 
   // Append until the string is at its capacity
-  // to exercise self-assigning past capacity.
+  // to exercise assigning past capacity.
   while (s.size() + 1 < s.capacity())
     s += 'a';
   ASSERT_EQ(s.capacity(), s.size() + 1);
@@ -289,6 +289,13 @@ TEST(LlvmLibcStringTest, SelfAssignAtCapacityTest) {
   s = string_view(longer_string);
 
   ASSERT_EQ(s, longer_string);
+}
+
+TEST(LlvmLibcStringTest, SelfMoveAssign) {
+  string s("aaa");
+  s = move(s);
+
+  ASSERT_STREQ(s.c_str(), "aaa");
 }
 
 TEST(LlvmLibcStringTest, SelfAppendAtCapacityTest) {
