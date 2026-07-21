@@ -1,10 +1,6 @@
 // RUN: %libomp-compile-and-run
 #include <stdio.h>
 
-// This test fails on Arm64EC as __kmp_invoke_microtask doesn't support more
-// than 16 arguments on that target.
-// XFAIL: arm64ec
-
 int main()
 {
 
@@ -40,4 +36,3 @@ int main()
 
   return 0;
 }
-
