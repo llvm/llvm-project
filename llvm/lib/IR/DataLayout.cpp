@@ -17,6 +17,7 @@
 
 #include "llvm/IR/DataLayout.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
@@ -221,6 +222,7 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
   FloatSpecs = Other.FloatSpecs;
   VectorSpecs = Other.VectorSpecs;
   PointerSpecs = Other.PointerSpecs;
+  NoopAddrSpaceCastGroups = Other.NoopAddrSpaceCastGroups;
   StructABIAlignment = Other.StructABIAlignment;
   StructPrefAlignment = Other.StructPrefAlignment;
   return *this;
@@ -240,6 +242,7 @@ bool DataLayout::operator==(const DataLayout &Other) const {
          LegalIntWidths == Other.LegalIntWidths && IntSpecs == Other.IntSpecs &&
          FloatSpecs == Other.FloatSpecs && VectorSpecs == Other.VectorSpecs &&
          PointerSpecs == Other.PointerSpecs &&
+         NoopAddrSpaceCastGroups == Other.NoopAddrSpaceCastGroups &&
          StructABIAlignment == Other.StructABIAlignment &&
          StructPrefAlignment == Other.StructPrefAlignment;
 }
@@ -527,6 +530,40 @@ Error DataLayout::parsePointerSpec(
   return Error::success();
 }
 
+Error DataLayout::parseAddrSpaceCastGroup(StringRef Spec) {
+  // as:<address space>:<address space>[:<address space>]...
+  // Declares a group of address spaces whose mutual addrspacecasts are no-ops,
+  // i.e. the cast preserves both the bit pattern and the represented address.
+  assert(Spec.starts_with("as"));
+  StringRef Rest = Spec.drop_front(2);
+  if (!Rest.consume_front(":"))
+    return createSpecFormatError(
+        "as:<address space>:<address space>[:<address space>]...");
+
+  SmallVector<unsigned, 4> Group;
+  for (StringRef Str : split(Rest, ':')) {
+    unsigned AddrSpace;
+    if (Error Err = parseAddrSpace(Str, AddrSpace))
+      return Err;
+    // An address space may belong to at most one no-op cast group, otherwise
+    // group membership would no longer define an equivalence relation.
+    for (const SmallVectorImpl<unsigned> &Existing : NoopAddrSpaceCastGroups)
+      if (is_contained(Existing, AddrSpace))
+        return createStringError("address space " + Twine(AddrSpace) +
+                                 " is already in a no-op cast group");
+    if (is_contained(Group, AddrSpace))
+      return createStringError("address space " + Twine(AddrSpace) +
+                               " listed more than once in a no-op cast group");
+    Group.push_back(AddrSpace);
+  }
+  if (Group.size() < 2)
+    return createStringError(
+        "a no-op address space cast group must list at least two address "
+        "spaces");
+  NoopAddrSpaceCastGroups.push_back(std::move(Group));
+  return Error::success();
+}
+
 Error DataLayout::parseSpecification(
     StringRef Spec, SmallVectorImpl<unsigned> &NonIntegralAddressSpaces,
     SmallDenseSet<StringRef, 8> &AddrSpaceNames) {
@@ -554,6 +591,12 @@ Error DataLayout::parseSpecification(
     VectorsAreElementAligned = true;
     return Error::success();
   }
+
+  // Address space cast group: a set of address spaces whose mutual
+  // addrspacecasts are no-ops. Handled before the single-character dispatch
+  // since it also starts with 'a' (cf. the 'a' aggregate specifier).
+  if (Spec.starts_with("as"))
+    return parseAddrSpaceCastGroup(Spec);
 
   // The rest of the specifiers are single-character.
   assert(!Spec.empty() && "Empty specification is handled by the caller");
@@ -775,6 +818,15 @@ void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
     I->AddrSpaceName = AddrSpaceName.str();
     I->NullPtrValue = std::move(NullPtrValue);
   }
+}
+
+bool DataLayout::isNoopAddrSpaceCast(unsigned SrcAS, unsigned DstAS) const {
+  if (SrcAS == DstAS)
+    return true;
+  for (const SmallVectorImpl<unsigned> &Group : NoopAddrSpaceCastGroups)
+    if (is_contained(Group, SrcAS) && is_contained(Group, DstAS))
+      return true;
+  return false;
 }
 
 Align DataLayout::getIntegerAlignment(uint32_t BitWidth,

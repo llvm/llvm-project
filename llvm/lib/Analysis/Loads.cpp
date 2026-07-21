@@ -215,9 +215,18 @@ static bool isDereferenceableAndAlignedPointer(
                                               Alignment, Size, SQ, IgnoreFree,
                                               Visited, MaxDepth);
 
-  if (const AddrSpaceCastOperator *ASC = dyn_cast<AddrSpaceCastOperator>(V))
-    return isDereferenceableAndAlignedPointer(
-        ASC->getOperand(0), Alignment, Size, SQ, IgnoreFree, Visited, MaxDepth);
+  if (const AddrSpaceCastOperator *ASC = dyn_cast<AddrSpaceCastOperator>(V)) {
+    // Only look through the cast if it is known to preserve the represented
+    // address (and therefore dereferenceability). For a non-noop cast the
+    // result may refer to an entirely different location, so the source's
+    // dereferenceability tells us nothing about the casted pointer.
+    if (SQ.DL.isNoopAddrSpaceCast(ASC->getSrcAddressSpace(),
+                                  ASC->getDestAddressSpace()))
+      return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
+                                                Size, SQ, IgnoreFree,
+                                                Visited, MaxDepth);
+    return false;
+  }
 
   return SQ.AC &&
          isDereferenceableAndAlignedPointerViaAssumption(

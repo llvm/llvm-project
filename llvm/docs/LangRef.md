@@ -3601,6 +3601,17 @@ as follows:
     It is only supported for backwards compatibility, the flags of the `p`
     specifier should be used instead for new code.
 
+`as:<address space0>:<address space1>:<address space2>...`
+:   This declares a group of address spaces whose mutual `addrspacecast`s
+    are guaranteed to be no-ops, i.e. each such cast preserves both the bit
+    pattern and the represented address. Optimizations may look through these
+    casts when reasoning about, for example, pointer dereferenceability. A
+    group must list at least two address spaces, and an address space may
+    appear in at most one group. An `addrspacecast` between two address
+    spaces that are not in a common group (and are not equal) is not assumed to
+    be a no-op. Multiple `as` specifiers may be given to declare independent
+    groups.
+
 `<abi>` is a lower bound on what is required for a type to be considered
 aligned. This is used in various places, such as:
 

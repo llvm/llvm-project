@@ -144,6 +144,12 @@ private:
   /// Pointer type specifications. Sorted and uniqued by address space number.
   SmallVector<PointerSpec, 8> PointerSpecs;
 
+  /// Groups of address spaces whose mutual `addrspacecast`s are guaranteed to
+  /// be no-ops, i.e. the cast preserves both the bit pattern and the
+  /// represented address. Declared via the "as:<as0>:<as1>..." specifier. An
+  /// address space not listed in any group is only no-op-castable to itself.
+  SmallVector<SmallVector<unsigned, 4>, 1> NoopAddrSpaceCastGroups;
+
   /// The string representation used to create this DataLayout
   std::string StringRepresentation;
 
@@ -183,6 +189,9 @@ private:
   /// Attempts to parse pointer specification ('p').
   Error parsePointerSpec(StringRef Spec,
                          SmallDenseSet<StringRef, 8> &AddrSpaceNames);
+
+  /// Attempts to parse an address space cast group specification ("as").
+  Error parseAddrSpaceCastGroup(StringRef Spec);
 
   /// Attempts to parse a single specification.
   Error parseSpecification(StringRef Spec,
@@ -270,6 +279,14 @@ public:
   unsigned getDefaultGlobalsAddressSpace() const {
     return DefaultGlobalsAddrSpace;
   }
+
+  /// Returns true if casting a pointer from \p SrcAS to \p DstAS via
+  /// `addrspacecast` is guaranteed to be a no-op, i.e. it preserves both the
+  /// bit pattern and the represented address. Such casts can be looked through
+  /// when reasoning about dereferenceability. An address space is always a
+  /// no-op cast to itself; for differing address spaces this is true only when
+  /// they are declared in the same "as:..." group in the data layout string.
+  LLVM_ABI bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DstAS) const;
 
   bool hasMicrosoftFastStdCallMangling() const {
     return ManglingMode == MM_WinCOFFX86;

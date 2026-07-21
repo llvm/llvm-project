@@ -1,7 +1,10 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop-mssa(loop-simplifycfg,licm)' -S < %s | FileCheck %s
 ; RUN: opt -S -passes=licm -verify-memoryssa < %s | FileCheck %s
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+; The addrspacecast 0->1 in @test2_addrspacecast is a no-op on this target, so
+; declare address spaces 0 and 1 as a no-op cast group to allow looking through
+; it when proving dereferenceability for hoisting.
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-as:0:1"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Make sure the basic alloca pointer hoisting works:
