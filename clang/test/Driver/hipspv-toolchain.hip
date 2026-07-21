@@ -91,7 +91,7 @@
 
 //      CHIPSTAR: {{".*clang.*"}} "-cc1" "-triple" "spirv64-unknown-chipstar"
 // CHIPSTAR-SAME: "-emit-obj"
-// CHIPSTAR-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_EXT_relaxed_printf_string_address_space,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
+// CHIPSTAR-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
 // CHIPSTAR-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
 // RUN: env "PATH=" %clang -### --no-default-config -o %t.dummy.img \
@@ -108,7 +108,7 @@
 
 //      CHIPSTAR-SUBARCH: {{".*clang.*"}} "-cc1" "-triple" "spirv64v1.3-unknown-chipstar"
 // CHIPSTAR-SUBARCH-SAME: "-emit-obj"
-// CHIPSTAR-SUBARCH-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_EXT_relaxed_printf_string_address_space,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
+// CHIPSTAR-SUBARCH-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
 // CHIPSTAR-SUBARCH-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
 // Check unknown linker options are ignored - such as ones that are targeted at
