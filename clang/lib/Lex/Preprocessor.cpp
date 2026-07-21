@@ -1353,6 +1353,9 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
   } else if (!Result.isAtPhysicalStartOfLine())
     return false;
 
+  assert(CurPPLexer &&
+         "CurPPLexer is null when calling HandleModuleContextualKeyword.");
+
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);
 
