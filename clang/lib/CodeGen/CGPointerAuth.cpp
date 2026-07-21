@@ -641,15 +641,16 @@ CodeGenModule::getVTablePointerAuthentication(const CXXRecordDecl *Record,
   if (!Record->getDefinition() || !Record->isPolymorphic())
     return std::nullopt;
 
-  if (!IsVTTEntry) {
-    auto Existing = VTablePtrAuthInfos.find(Record);
-    if (Existing != VTablePtrAuthInfos.end())
-      return Existing->getSecond();
-  }
+  if (IsVTTEntry)
+    return computeVTPointerAuthentication(Record, IsVTTEntry);
+
+  auto Existing = VTablePtrAuthInfos.find(Record);
+  if (Existing != VTablePtrAuthInfos.end())
+    return Existing->getSecond();
+
   std::optional<PointerAuthQualifier> Authentication =
       computeVTPointerAuthentication(Record, IsVTTEntry);
-  if (!IsVTTEntry)
-    VTablePtrAuthInfos.insert(std::make_pair(Record, Authentication));
+  VTablePtrAuthInfos.insert(std::make_pair(Record, Authentication));
   return Authentication;
 }
 
