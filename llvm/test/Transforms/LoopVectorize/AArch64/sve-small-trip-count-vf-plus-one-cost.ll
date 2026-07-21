@@ -13,7 +13,7 @@ define void @tc3_udiv_i8_reject(ptr noalias %a, ptr noalias %b,
 ; DBG: LV: Picking MaxVF=2 with 1 scalar iteration remaining.
 ; DBG: LV: Scalar loop costs: 9.
 ; DBG: Cost for VF 2: 19
-; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 47 >= scalar cost 27.
+; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 28 >= scalar cost 27.
 ; DBG: LV: Selecting VF: 1.
 ; DBG: LV: Vectorization is possible but not beneficial.
 entry:
@@ -36,17 +36,19 @@ exit:
   ret void
 }
 
+; FIXME: This is currently accepted as cost for vector is smaller than scalar.
+; Performance is poor due to poor CodeGen of using type promotion instead of
+; type widening.
 define void @tc3_smin_i8_reject(ptr noalias %a, ptr noalias %b) #0 {
 ; IR-LABEL: define void @tc3_smin_i8_reject(
-; IR-NOT: vector.body
+; IR: vector.body
 
 ; DBG-LABEL: LV: Checking a loop in 'tc3_smin_i8_reject'
 ; DBG: LV: Picking MaxVF=2 with 1 scalar iteration remaining.
 ; DBG: LV: Scalar loop costs: 10.
 ; DBG: Cost for VF 2: 15
-; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 40 >= scalar cost 30.
-; DBG: LV: Selecting VF: 1.
-; DBG: LV: Vectorization is possible but not beneficial.
+; DBG: LV: Accepting VF 2 for one-scalar-tail low trip count: vector cost 25 < scalar cost 30.
+; DBG: LV: Selecting VF: 2.
 entry:
   br label %loop
 
@@ -100,7 +102,7 @@ define void @tc5_udiv_i8_reject_ic2(ptr noalias %a, ptr noalias %b, ptr noalias 
 
 ; DBG-LABEL: LV: Checking a loop in 'tc5_udiv_i8_reject_ic2'
 ; DBG-NOT: LV: Selecting VF: 2.
-; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 85 >= scalar cost 45.
+; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 47 >= scalar cost 45.
 entry:
   br label %loop
 

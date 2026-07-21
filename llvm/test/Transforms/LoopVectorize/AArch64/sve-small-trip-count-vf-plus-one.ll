@@ -12,9 +12,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @tc5_vf4_vectorize_i32(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc5_vf4_vectorize_i32(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[SCALAR_PH1:.*:]]
-; CHECK-NEXT:    br label %[[LOOP1:.*]]
-; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:  [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[A]], align 4
@@ -22,11 +22,11 @@ define void @tc5_vf4_vectorize_i32(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[B]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[SCALAR_PH1:.*]]
+; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_A]], align 4
@@ -34,7 +34,7 @@ define void @tc5_vf4_vectorize_i32(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 5
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -62,9 +62,9 @@ exit:
 define void @tc5_vf4_vectorize_i16(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc5_vf4_vectorize_i16(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
+; CHECK-NEXT:  [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[A]], align 2
@@ -72,11 +72,11 @@ define void @tc5_vf4_vectorize_i16(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store <4 x i16> [[TMP0]], ptr [[B]], align 2
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[LOOP1:.*]]
-; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    br label %[[SCALAR_PH1:.*]]
+; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i16, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i16, ptr [[GEP_A]], align 2
@@ -84,7 +84,7 @@ define void @tc5_vf4_vectorize_i16(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store i16 [[ADD]], ptr [[GEP_B]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 5
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -111,26 +111,21 @@ exit:
 define void @tc5_vf4_vectorize_i8(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc5_vf4_vectorize_i8(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[WIDE_LOAD]], splat (i8 1)
-; CHECK-NEXT:    store <2 x i8> [[TMP2]], ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:  [[SCALAR_PH:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add <4 x i8> [[WIDE_LOAD]], splat (i8 1)
+; CHECK-NEXT:    store <4 x i8> [[TMP0]], ptr [[B]], align 1
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH1:.*]]
+; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[GEP_A]], align 1
@@ -138,7 +133,7 @@ define void @tc5_vf4_vectorize_i8(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store i8 [[ADD]], ptr [[GEP_B]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 5
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -165,9 +160,9 @@ exit:
 define void @tc5_forced_ic2_vectorize_i32(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc5_forced_ic2_vectorize_i32(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[SCALAR_PH1:.*:]]
-; CHECK-NEXT:    br label %[[LOOP1:.*]]
-; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:  [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
@@ -180,11 +175,11 @@ define void @tc5_forced_ic2_vectorize_i32(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[SCALAR_PH1:.*]]
+; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_A]], align 4
@@ -192,7 +187,7 @@ define void @tc5_forced_ic2_vectorize_i32(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 5
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -219,9 +214,9 @@ exit:
 define void @tc5_forced_ic2_vectorize_i64(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc5_forced_ic2_vectorize_i64(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[SCALAR_PH:.*:]]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
+; CHECK-NEXT:  [[SCALAR_PH1:.*:]]
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 2
@@ -234,11 +229,11 @@ define void @tc5_forced_ic2_vectorize_i64(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH1:.*]]
-; CHECK:       [[SCALAR_PH1]]:
-; CHECK-NEXT:    br label %[[LOOP1:.*]]
-; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[GEP_A]], align 4
@@ -246,7 +241,7 @@ define void @tc5_forced_ic2_vectorize_i64(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 5
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -327,9 +322,9 @@ exit:
 define void @tc5_vf4_unsafe_useric_distance4_i32(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc5_vf4_unsafe_useric_distance4_i32(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:  [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 4
@@ -341,11 +336,11 @@ define void @tc5_vf4_unsafe_useric_distance4_i32(ptr noalias %a, ptr noalias %b)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 8, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[SCALAR_PH1:.*]]
+; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 8, %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[B_DST:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[B_SRC:%.*]] = getelementptr inbounds i32, ptr [[B_DST]], i64 -4
 ; CHECK-NEXT:    [[DEP:%.*]] = load i32, ptr [[B_SRC]], align 4
@@ -355,7 +350,7 @@ define void @tc5_vf4_unsafe_useric_distance4_i32(ptr noalias %a, ptr noalias %b)
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[B_DST]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 9
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -422,13 +417,28 @@ exit:
   ret void
 }
 
+; FIXME: This is currently accepted as cost for vector is smaller than scalar.
+; Performance is poor due to poor CodeGen of using type promotion instead of
+; type widening.
 define void @tc3_smin_i8_reject(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc3_smin_i8_reject(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[SCALAR_PH:.*]]:
+; CHECK-NEXT:  [[SCALAR_PH:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[B]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i8>, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[WIDE_LOAD]], <2 x i8> [[WIDE_LOAD1]])
+; CHECK-NEXT:    store <2 x i8> [[TMP0]], ptr [[B]], align 1
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH1:.*]]
+; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
@@ -437,7 +447,7 @@ define void @tc3_smin_i8_reject(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store i8 [[MIN]], ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 3
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
