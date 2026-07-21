@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++17 -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux-gnu -analyzer-checker=core,debug.ExprInspection -std=c++17 -verify %s
 
 // https://github.com/llvm/llvm-project/issues/210183
 //
