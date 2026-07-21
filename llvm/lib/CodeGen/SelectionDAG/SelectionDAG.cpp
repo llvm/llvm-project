@@ -7140,6 +7140,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::VECREDUCE_SMIN:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_MUL:
   case ISD::STEP_VECTOR: {
     SDValue Ops = {N1};
     if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
@@ -7836,7 +7837,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     // Constant fold integer vector reductions with constant BUILD_VECTORs.
     if ((Opcode == ISD::VECREDUCE_ADD || Opcode == ISD::VECREDUCE_SMAX ||
          Opcode == ISD::VECREDUCE_SMIN || Opcode == ISD::VECREDUCE_UMAX ||
-         Opcode == ISD::VECREDUCE_UMIN) &&
+         Opcode == ISD::VECREDUCE_UMIN || Opcode == ISD::VECREDUCE_MUL) &&
         ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
       unsigned EltBits = N1.getValueType().getScalarSizeInBits();
       unsigned BaseOpcode = ISD::getVecReduceBaseOpcode(Opcode);
@@ -10462,6 +10463,15 @@ SDValue SelectionDAG::getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl) {
   for (const SDValue &Op : Ops)
     VTs.push_back(Op.getValueType());
   return getNode(ISD::MERGE_VALUES, dl, getVTList(VTs), Ops);
+}
+
+SDValue SelectionDAG::getErrorMergeValues(ArrayRef<EVT> ResultTypes,
+                                          SDValue Chain, const SDLoc &dl) {
+  SmallVector<SDValue, 4> RetValues;
+  RetValues.reserve(ResultTypes.size());
+  for (EVT VT : ResultTypes)
+    RetValues.push_back(VT == MVT::Other ? Chain : getPOISON(VT));
+  return getMergeValues(RetValues, dl);
 }
 
 SDValue SelectionDAG::getMemIntrinsicNode(

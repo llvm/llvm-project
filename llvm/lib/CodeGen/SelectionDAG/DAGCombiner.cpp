@@ -27197,6 +27197,89 @@ static SDValue combineConcatVectorOfShuffleAndItsOperands(
   return DAG.getVectorShuffle(VT, dl, ShufOps[0], ShufOps[1], Mask);
 }
 
+// concat(shuffle(loadA, loadB, mask0), shuffle(loadA, loadB, mask1))
+// -> shuffle(loadAB, poison, concat(mask0, mask1))
+// only if loadA and loadB can be proven consecutive.
+static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
+                                             const TargetLowering &TLI,
+                                             bool LegalOperations) {
+  SDValue A, B;
+  ArrayRef<int> M0, M1;
+  if (!sd_match(N,
+                m_Node(ISD::CONCAT_VECTORS,
+                       m_OneUse(m_Shuffle(m_NUses<2>(m_Value(A)),
+                                          m_NUses<2>(m_Value(B)), m_Mask(M0))),
+                       m_OneUse(m_Shuffle(m_Deferred(A), m_Deferred(B),
+                                          m_Mask(M1))))))
+    return SDValue();
+  auto *LoadA = dyn_cast<LoadSDNode>(A.getNode());
+  auto *LoadB = dyn_cast<LoadSDNode>(B.getNode());
+  if (!LoadA || !LoadB || !ISD::isNON_EXTLoad(LoadA) ||
+      !ISD::isNON_EXTLoad(LoadB))
+    return SDValue();
+
+  // Check if the address spaces of both loads are the same.
+  if (LoadA->getAddressSpace() != LoadB->getAddressSpace())
+    return SDValue();
+
+  // Check if the loads are consecutive.
+  LoadSDNode *Base = nullptr;
+  if (DAG.areNonVolatileConsecutiveLoads(
+          LoadB, LoadA, LoadB->getMemoryVT().getStoreSize(), /*Dist=*/1)) {
+    Base = LoadA;
+  } else if (DAG.areNonVolatileConsecutiveLoads(
+                 LoadA, LoadB, LoadA->getMemoryVT().getStoreSize(),
+                 /*Dist=*/1)) {
+    Base = LoadB;
+  } else {
+    return SDValue(); // not adjacent
+  }
+
+  unsigned Fast = 0;
+  Align NewAlign = Base->getAlign();
+  EVT WideVT =
+      LoadA->getMemoryVT().getDoubleNumVectorElementsVT(*DAG.getContext());
+  if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), WideVT,
+                              Base->getAddressSpace(), NewAlign,
+                              Base->getMemOperand()->getFlags(), &Fast) ||
+      !Fast)
+    return SDValue();
+
+  // Create a shuffle of the wide load.
+  SmallVector<int, 32> Mask;
+  if (Base == LoadA) {
+    llvm::append_range(Mask, M0);
+    llvm::append_range(Mask, M1);
+  } else {
+    SmallVector<int, 16> C0(M0), C1(M1);
+    ShuffleVectorSDNode::commuteMask(C0);
+    ShuffleVectorSDNode::commuteMask(C1);
+    llvm::append_range(Mask, C0);
+    llvm::append_range(Mask, C1);
+  }
+
+  // Check if the wide load, new shuffle and it's mask is legal.
+  if (LegalOperations &&
+      (!TLI.isOperationLegal(ISD::LOAD, WideVT) ||
+       !TLI.isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, WideVT) ||
+       !TLI.isShuffleMaskLegal(Mask, WideVT)))
+    return SDValue();
+
+  // Create a wide load of twice the size of the original load.
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *WideMMO = MF.getMachineMemOperand(
+      Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
+  SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
+                                 Base->getBasePtr(), WideMMO);
+  // Redirect old chain users to the new chain.
+  DAG.makeEquivalentMemoryOrdering(LoadA, WideLoad);
+  DAG.makeEquivalentMemoryOrdering(LoadB, WideLoad);
+
+  // Create a new shuffle with the new mask.
+  return DAG.getVectorShuffle(WideVT, SDLoc(N), WideLoad, DAG.getPOISON(WideVT),
+                              Mask);
+}
+
 static SDValue combineConcatVectorOfSplats(SDNode *N, SelectionDAG &DAG,
                                            const TargetLowering &TLI,
                                            bool LegalTypes,
@@ -27368,6 +27451,9 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
 
   if (SDValue V = combineConcatVectorOfShuffleAndItsOperands(
           N, DAG, TLI, LegalTypes, LegalOperations))
+    return V;
+
+  if (SDValue V = combineConcatVectorOfShuffles(N, DAG, TLI, LegalOperations))
     return V;
 
   // Type legalization of vectors and DAG canonicalization of SHUFFLE_VECTOR

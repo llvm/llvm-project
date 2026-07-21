@@ -1059,14 +1059,20 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
 
   bool TryToMatchSplat64 = false;
 
-  int64_t Imm;
+  std::optional<int64_t> Imm;
   for (unsigned I = 0, E = Defs.size(); I != E; ++I) {
     const MachineOperand *Op = Defs[I].first;
-    if (!Op->isImm())
+    if (!Op->isImm()) {
+      if (Op->isReg()) {
+        MachineInstr *Def = MRI->getVRegDef(Op->getReg());
+        if (!Def || Def->isImplicitDef())
+          continue;
+      }
       return {};
+    }
 
     int64_t SubImm = Op->getImm();
-    if (!I) {
+    if (!Imm) {
       Imm = SubImm;
       continue;
     }
@@ -1083,8 +1089,11 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
     }
   }
 
-  if (!TryToMatchSplat64)
-    return {Defs[0].first->getImm(), SrcRC};
+  if (!TryToMatchSplat64) {
+    if (Imm)
+      return {*Imm, SrcRC};
+    return {};
+  }
 
   // Fallback to recognizing 64-bit splats broken into 32-bit pieces
   // (i.e. recognize every other other element is 0 for 64-bit immediates)

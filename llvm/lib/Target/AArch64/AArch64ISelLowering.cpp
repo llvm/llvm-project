@@ -5091,28 +5091,8 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
         DAG.getNode(ISD::FP_EXTEND, DL, NewVT, Op.getOperand(0)));
   }
 
-  if (VT.isScalableVector()) {
-    if (VT.getVectorElementType() == MVT::i1) {
-      SDLoc DL(Op);
-      EVT CvtVT = getPromotedVTForPredicate(VT);
-      SDValue Cvt = DAG.getNode(Op.getOpcode(), DL, CvtVT, Op.getOperand(0));
-      SDValue Zero = DAG.getConstant(0, DL, CvtVT);
-      return DAG.getSetCC(DL, VT, Cvt, Zero, ISD::SETNE);
-    }
-
-    // Let common code split the operation.
-    if (InVT == MVT::nxv8f32)
-      return Op;
-
-    unsigned Opcode = Op.getOpcode() == ISD::FP_TO_UINT
-                          ? AArch64ISD::FCVTZU_MERGE_PASSTHRU
-                          : AArch64ISD::FCVTZS_MERGE_PASSTHRU;
-    return LowerToPredicatedOp(Op, DAG, Opcode);
-  }
-
-  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()) ||
-      useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable()))
-    return LowerFixedLengthFPToIntToSVE(Op, DAG);
+  if (SDValue Res = tryLowerFPToIntToSVE(Op, DAG))
+    return Res;
 
   uint64_t VTSize = VT.getFixedSizeInBits();
   uint64_t InVTSize = InVT.getFixedSizeInBits();
@@ -34749,15 +34729,63 @@ AArch64TargetLowering::LowerGET_ACTIVE_LANE_MASK(SDValue Op,
                      DAG.getVectorIdxConstant(0, DL));
 }
 
+static unsigned getSVEOpcodeForFPToInt(unsigned Opc) {
+  switch (Opc) {
+  case ISD::FP_TO_UINT:
+    return AArch64ISD::FCVTZU_MERGE_PASSTHRU;
+  case ISD::FP_TO_SINT:
+    return AArch64ISD::FCVTZS_MERGE_PASSTHRU;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+}
+
+SDValue AArch64TargetLowering::tryLowerFPToIntToSVE(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  // Strict FP_TO_INT is not yet implemented.
+  if (Op->isStrictFPOpcode())
+    return SDValue();
+
+  EVT InVT = Op.getOperand(0).getValueType();
+  EVT VT = Op.getValueType();
+
+  SDLoc DL(Op);
+  if (VT.isScalableVector()) {
+    // Optimize the i1 case by using setcc.
+    if (VT.getVectorElementType() == MVT::i1) {
+      EVT CvtVT = getPromotedVTForPredicate(VT);
+      SDValue Cvt = DAG.getNode(Op.getOpcode(), DL, CvtVT, Op.getOperand(0));
+      SDValue Zero = DAG.getConstant(0, DL, CvtVT);
+      return DAG.getSetCC(DL, VT, Cvt, Zero, ISD::SETNE);
+    }
+
+    // Let common code split the operation.
+    if (InVT == MVT::nxv8f32)
+      return Op;
+
+    SmallVector<SDValue, 4> Operands;
+    Operands.push_back(getPredicateForVector(DAG, DL, VT));
+    Operands.push_back(Op.getOperand(0));
+    Operands.push_back(DAG.getPOISON(VT));
+    return DAG.getNode(getSVEOpcodeForFPToInt(Op.getOpcode()), DL, VT, Operands,
+                       Op->getFlags());
+  }
+
+  bool UseSVE = !Subtarget->isNeonAvailable();
+  if (useSVEForFixedLengthVectorVT(VT, UseSVE) ||
+      useSVEForFixedLengthVectorVT(InVT, UseSVE))
+    return LowerFixedLengthFPToIntToSVE(Op, DAG);
+
+  return SDValue();
+}
+
 SDValue
 AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(SDValue Op,
                                                     SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
-
-  bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT;
-  unsigned Opcode = IsSigned ? AArch64ISD::FCVTZS_MERGE_PASSTHRU
-                             : AArch64ISD::FCVTZU_MERGE_PASSTHRU;
+  assert(!Op->isStrictFPOpcode() && "Strict FP_TO_INT not yet supported");
+  unsigned Opcode = getSVEOpcodeForFPToInt(Op.getOpcode());
 
   SDLoc DL(Op);
   SDValue Val = Op.getOperand(0);

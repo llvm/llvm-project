@@ -917,6 +917,8 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
       UnrollOpts.setRuntime(Enable);
     } else if (ParamName == "upperbound") {
       UnrollOpts.setUpperBound(Enable);
+    } else if (ParamName == "prepare-for-lto") {
+      UnrollOpts.setPrepareForLTO(Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid LoopUnrollPass parameter '{}'", ParamName).str(),

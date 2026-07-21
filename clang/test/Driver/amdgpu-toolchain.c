@@ -77,3 +77,9 @@
 // RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE-AMDGPU %s
 //      PROFILE-AMDGPU: ld.lld
 // PROFILE-AMDGPU-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgpu-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_amdgpu_per_target_subdir \
+// RUN:   %s 2>&1 | FileCheck -check-prefixes=LIBPATH-AMDGPU %s
+//      LIBPATH-AMDGPU: ld.lld
+// LIBPATH-AMDGPU-SAME: "-L[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgpu-amd-amdhsa"
