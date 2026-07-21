@@ -63,10 +63,10 @@ public:
   }
 
 protected:
-  std::string FileName = "/test/input.cc";
+  std::string FileName = "input.cc";
   std::string OldNamespace = "na::nb";
   std::string NewNamespace = "x::y";
-  std::string FilePattern = "/test/input.cc";
+  std::string FilePattern = "input.cc";
 };
 
 TEST_F(ChangeNamespaceTest, NoMatchingNamespace) {
