@@ -750,7 +750,11 @@ public:
 
 template <class _Tp>
 class optional<_Tp&&> {
+#  if _LIBCPP_STD_VER >= 26
   static_assert(false, "instantiation of optional with an rvalue reference type is ill-formed");
+#  else
+  static_assert(false, "instantiation of optional with a reference type is ill-formed");
+#  endif
 };
 
 _LIBCPP_END_NAMESPACE_STD
