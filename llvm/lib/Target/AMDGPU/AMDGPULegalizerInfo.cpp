@@ -1153,8 +1153,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
   }
   FPTruncActions.scalarize(0).lower();
-
-  getActionDefinitionsBuilder(G_FPEXT)
+  .getActionDefinitionsBuilder(G_FPEXT)
+      .customIf([](const LegalityQuery &Query) {
+        // Custom lowering for bf16 fpext.
+        unsigned DstSize = Query.Types[0].getSizeInBits();
+        return Query.Types[1].isBFloat16() && (DstSize == 32 || DstSize == 64);
+      })
       .legalFor({{S64, S32}, {S32, S16}})
       .narrowScalarFor({{S64, S16}}, changeElementSizeTo(0, S32))
       .scalarize(0);
@@ -2371,6 +2375,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeFFREXP(MI, MRI, B);
   case TargetOpcode::G_FSQRT:
     return legalizeFSQRT(MI, MRI, B);
+  case TargetOpcode::G_FPEXT:
+    return legalizeFPExt(MI, MRI, B);
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
   case TargetOpcode::G_UDIVREM:
@@ -6126,6 +6132,31 @@ bool AMDGPULegalizerInfo::legalizeFSQRT(MachineInstr &MI,
   if (Ty == F16)
     return legalizeFSQRTF16(MI, MRI, B);
   return false;
+}
+
+// Expand a bf16 fpext. This is based on the SDAG ISD::BF16_TO_FP lowering.
+bool AMDGPULegalizerInfo::legalizeFPExt(MachineInstr &MI,
+                                        MachineRegisterInfo &MRI,
+                                        MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  assert(MRI.getType(Src).isBFloat16() &&
+         "expected a bf16 source for custom fpext lowering");
+
+  const LLT I32 = LLT::integer(32);
+  auto Ext = B.buildAnyExt(I32, B.buildBitcast(I16, Src));
+  auto Shift = B.buildShl(I32, Ext, B.buildConstant(I32, 16));
+
+  if (DstTy.getSizeInBits() == 32) {
+    B.buildBitcast(Dst, Shift);
+  } else {
+    assert(DstTy == LLT::float64() && "unexpected fpext destination type");
+    B.buildFPExt(Dst, B.buildBitcast(LLT::float32(), Shift));
+  }
+
+  MI.eraseFromParent();
+  return true;
 }
 
 // Expand llvm.amdgcn.rsq.clamp on targets that don't support the instruction.
