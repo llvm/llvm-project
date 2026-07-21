@@ -408,7 +408,7 @@ def warn_profile_data_misexpect : Warning<
 } // end of instrumentation issue category
 
 def warn_cgs_no_proto : Warning<
-  "indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: %0, type string: %1)%select{| even though arguments are passed at this call site}2">,
+  "indirect call to a function with no prototype; generating callee_type metadata as if calling a variadic function (type: %0, type string: %1)">,
   InGroup<DiagGroup<"call-graph-section-no-prototype">>;
 
 def warn_ssaf_extract_tu_summary_file_unknown_output_format :

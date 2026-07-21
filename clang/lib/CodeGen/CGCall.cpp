@@ -6368,8 +6368,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           StringRef TypeStr;
           if (auto *MDS = dyn_cast_or_null<llvm::MDString>(MD))
             TypeStr = MDS->getString();
-          CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto)
-              << CST << TypeStr << !CallArgs.empty();
+          CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto) << CST << TypeStr;
         }
       }
     }

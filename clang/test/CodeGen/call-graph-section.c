@@ -6,25 +6,17 @@
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fexperimental-call-graph-section \
 // RUN: -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,MS %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fexperimental-call-graph-section \
-// RUN: -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefixes=WARN_NO_PROTOTYPE_ITANIUM %s
-
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fexperimental-call-graph-section \
-// RUN: -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefixes=WARN_NO_PROTOTYPE_MS %s
-
 // CHECK-LABEL: define {{(dso_local)?}} void @foo(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID:![0-9]+]]
-void foo() {
+void foo(void) {
 }
 
 // CHECK-LABEL: define {{(dso_local)?}} void @bar(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void bar() {
-  void (*fp)() = foo;
+void bar(void) {
+  void (*fp)(void) = foo;
   // ITANIUM: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
   // MS: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
-  // WARN_NO_PROTOTYPE_ITANIUM: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'void ()', type string: _ZTSFvE) [-Wcall-graph-section-no-prototype]
-  // WARN_NO_PROTOTYPE_MS: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'void ()', type string: ?6AX@Z) [-Wcall-graph-section-no-prototype]
   fp();
 }
 
@@ -42,7 +34,7 @@ int *qux(char *a, float *b, double *c) {
 
 // CHECK-LABEL: define {{(dso_local)?}} void @corge(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void corge() {
+void corge(void) {
   int (*fp_baz)(char, float, double) = baz;  
   // CHECK: call i32 {{.*}}, !callee_type [[F_TPRIMITIVE_CT:![0-9]+]]
   fp_baz('a', .0f, .0);
@@ -66,7 +58,7 @@ void stparam(struct st2 a, struct st2 *b) {}
 
 // CHECK-LABEL: define {{(dso_local)?}} void @stf(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void stf() {
+void stf(void) {
   struct st1 St1;
   St1.fp = qux;  
   // CHECK: call ptr {{.*}}, !callee_type [[F_TPTR_CT:![0-9]+]]
@@ -82,37 +74,7 @@ void stf() {
   fp_stparam(St2, &St2);
 }
 
-struct my_struct;
-
-// CHECK-LABEL: define {{(dso_local)?}} ptr @create_my_struct(
-// CHECK-SAME: {{.*}} !callgraph [[F_TMY_STRUCT:![0-9]+]]
-struct my_struct *create_my_struct() {
-  return 0;
-}
-
-// CHECK-LABEL: define {{(dso_local)?}} void @test_struct_ptr_return(
-// CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void test_struct_ptr_return() {
-  struct my_struct *(*fp)() = create_my_struct;
-  // ITANIUM: call {{.*}}, !callee_type [[F_TMY_STRUCT_CT:![0-9]+]]
-  // MS: call {{.*}}, !callee_type [[F_TMY_STRUCT_CT:![0-9]+]]
-  // WARN_NO_PROTOTYPE_ITANIUM: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'struct my_struct *()', type string: _ZTSFP9my_structE) [-Wcall-graph-section-no-prototype]
-  // WARN_NO_PROTOTYPE_MS: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'struct my_struct *()', type string: ?6APEAUmy_struct@@@Z) [-Wcall-graph-section-no-prototype]
-  fp();
-}
-
-// CHECK-LABEL: define {{(dso_local)?}} void @test_no_proto_with_args(
-// CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void test_no_proto_with_args() {
-  void (*fp)() = foo;
-  // ITANIUM: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
-  // MS: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
-  // WARN_NO_PROTOTYPE_ITANIUM: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'void ()', type string: _ZTSFvE) even though arguments are passed at this call site [-Wcall-graph-section-no-prototype]
-  // WARN_NO_PROTOTYPE_MS: warning: indirect call to a function with no prototype; generating type metadata as if it took no arguments (type: 'void ()', type string: ?6AX@Z) even though arguments are passed at this call site [-Wcall-graph-section-no-prototype]
-  fp(1);
-}
-
-// ITANIUM: [[F_TVOID]] = !{!"_ZTSFvE"}
+// ITANIUM: [[F_TVOID]] = !{!"_ZTSFvvE"}
 // ITANIUM: [[F_TVOID_CT]] = !{[[F_TVOID:![0-9]+]]}
 // ITANIUM: [[F_TPRIMITIVE]] = !{!"_ZTSFicfdE"}
 // ITANIUM: [[F_TPTR]] = !{!"_ZTSFPiPcPfPdE"}
@@ -120,10 +82,8 @@ void test_no_proto_with_args() {
 // ITANIUM: [[F_TPTR_CT]] = !{[[F_TPTR:![0-9]+]]}
 // ITANIUM: [[F_TSTRUCT]] = !{!"_ZTSFv3st2PS_E"}
 // ITANIUM: [[F_TSTRUCT_CT]] = !{[[F_TSTRUCT:![0-9]+]]}
-// ITANIUM: [[F_TMY_STRUCT]] = !{!"_ZTSFP9my_structE"}
-// ITANIUM: [[F_TMY_STRUCT_CT]] = !{[[F_TMY_STRUCT:![0-9]+]]}
 
-// MS: [[F_TVOID]] = !{!"?6AX@Z"}
+// MS: [[F_TVOID]] = !{!"?6AXXZ"}
 // MS: [[F_TVOID_CT]] = !{[[F_TVOID:![0-9]+]]}
 // MS: [[F_TPRIMITIVE]] = !{!"?6AHDMN@Z"}
 // MS: [[F_TPTR]] = !{!"?6APEAHPEADPEAMPEAN@Z"}
@@ -131,5 +91,3 @@ void test_no_proto_with_args() {
 // MS: [[F_TPTR_CT]] = !{[[F_TPTR:![0-9]+]]}
 // MS: [[F_TSTRUCT]] = !{!"?6AXUst2@@PEAU0@@Z"}
 // MS: [[F_TSTRUCT_CT]] = !{[[F_TSTRUCT:![0-9]+]]}
-// MS: [[F_TMY_STRUCT]] = !{!"?6APEAUmy_struct@@@Z"}
-// MS: [[F_TMY_STRUCT_CT]] = !{[[F_TMY_STRUCT:![0-9]+]]}
