@@ -2090,15 +2090,30 @@ bool X86DAGToDAGISel::hasMaterializingUse(SDValue V) const {
       continue;
     }
     // Selection may already have turned the ISD::STORE into a machine store by
-    // the time we get here. For a store the memory reference comes first, so
-    // the stored value is the operand at X86::AddrNumOperands (as in e.g.
-    // X86AvoidStoreForwardingBlocks). Note there is no getOperandBias() here:
-    // unlike a MachineInstr, an SDNode's operand list has no leading defs.
-    if (User->isMachineOpcode() &&
-        TII->get(User->getMachineOpcode()).mayStore() &&
-        User->getNumOperands() > X86::AddrNumOperands &&
-        User->getOperand(X86::AddrNumOperands) == V)
-      return true;
+    // the time we get here. V materializes it if it is a stored value, i.e. an
+    // operand that is neither part of the memory reference (the address
+    // operands) nor the chain/glue. The memory reference is not always the
+    // first operand, so locate it via the instruction's memory-operand info
+    // rather than assuming a fixed layout. (No getOperandBias() is needed:
+    // unlike a MachineInstr, an SDNode's operand list has no leading defs.)
+    if (!User->isMachineOpcode())
+      continue;
+    const MCInstrDesc &Desc = TII->get(User->getMachineOpcode());
+    if (!Desc.mayStore())
+      continue;
+    int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
+    if (MemRefBegin < 0)
+      continue;
+    unsigned MemRefEnd = MemRefBegin + X86::AddrNumOperands;
+    for (unsigned I = 0, E = User->getNumOperands(); I != E; ++I) {
+      if (I >= static_cast<unsigned>(MemRefBegin) && I < MemRefEnd)
+        continue; // an address operand
+      SDValue Opnd = User->getOperand(I);
+      if (Opnd.getValueType() == MVT::Other || Opnd.getValueType() == MVT::Glue)
+        continue; // chain / glue
+      if (Opnd == V)
+        return true; // a stored value operand
+    }
   }
   return false;
 }
