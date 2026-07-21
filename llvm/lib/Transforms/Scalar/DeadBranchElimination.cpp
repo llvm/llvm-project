@@ -169,9 +169,10 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
       TrapBB = BasicBlock::Create(Ctx, "dbe.unreachable", Clone);
       new UnreachableInst(Ctx, TrapBB);
     }
+    // Drop the PHI entries while the edge still exists, then redirect it.
     BasicBlock *Succ = BI->getSuccessor(B.SuccIdx);
-    BI->setSuccessor(B.SuccIdx, TrapBB);
     Succ->removePredecessor(BB);
+    BI->setSuccessor(B.SuccIdx, TrapBB);
   }
 
   // A branch nested inside a removed body is itself unreachable in the
@@ -211,7 +212,11 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
       if (!isEdgeProvenDead(SE, BI, B->SuccIdx)) {
         B->St = Status::ProvenReachable;
         Changed = true;
-      }
+        LLVM_DEBUG(dbgs() << "DBE: promote " << B->BranchBB->getName() << "/"
+                          << B->SuccIdx << "\n");
+      } else
+        LLVM_DEBUG(dbgs() << "DBE: still-dead " << B->BranchBB->getName()
+                          << "/" << B->SuccIdx << "\n");
     }
   }
 
