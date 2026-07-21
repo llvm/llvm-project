@@ -46,11 +46,18 @@
 
 #include "llvm/Transforms/Scalar/DeadBranchElimination.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -106,11 +113,26 @@ bool isEdgeProvenDead(ScalarEvolution &SE, BranchInst *BI, unsigned SuccIdx) {
   return false;
 }
 
+/// The analyses are computed on short-lived clone functions, so use a
+/// private, uninstrumented analysis manager rather than the surrounding
+/// pipeline's one: the clones must not show up in pass-manager debug logs,
+/// and their cached results must die with them.
+FunctionAnalysisManager makePrivateFAM() {
+  FunctionAnalysisManager FAM;
+  FAM.registerPass([] { return PassInstrumentationAnalysis(); });
+  FAM.registerPass([] { return TargetLibraryAnalysis(); });
+  FAM.registerPass([] { return TargetIRAnalysis(); });
+  FAM.registerPass([] { return AssumptionAnalysis(); });
+  FAM.registerPass([] { return DominatorTreeAnalysis(); });
+  FAM.registerPass([] { return LoopAnalysis(); });
+  FAM.registerPass([] { return ScalarEvolutionAnalysis(); });
+  return FAM;
+}
+
 /// One fixed-point iteration: rebuild the clone with all Unknown bodies
 /// replaced by 'unreachable', re-run the analysis, and promote every body
 /// whose edge cannot be proven dead. Returns true if any status changed.
-bool refineOnce(Function &F, std::vector<BranchBody> &Bodies,
-                FunctionAnalysisManager &FAM) {
+bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
   ValueToValueMapTy VMap;
   Function *Clone = CloneFunction(&F, VMap);
   LLVMContext &Ctx = F.getContext();
@@ -156,6 +178,7 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies,
 
   bool Changed = false;
   {
+    FunctionAnalysisManager FAM = makePrivateFAM();
     auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(*Clone);
     for (auto &[B, BB] : ToCheck) {
       auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
@@ -172,7 +195,6 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies,
     }
   }
 
-  FAM.clear(*Clone, Clone->getName());
   Clone->eraseFromParent();
   return Changed;
 }
@@ -200,12 +222,16 @@ bool foldDeadBranches(Function &F, ArrayRef<BranchBody> Dead) {
   return Changed;
 }
 
-bool runOnFunction(Function &F, FunctionAnalysisManager &FAM) {
+bool runOnFunction(Function &F) {
   std::vector<BranchBody> Bodies = collectBranchBodies(F);
   if (Bodies.empty())
     return false;
 
-  while (refineOnce(F, Bodies, FAM))
+  auto HasUnknown = [&] {
+    return any_of(Bodies,
+                  [](const BranchBody &B) { return B.St == Status::Unknown; });
+  };
+  while (HasUnknown() && refineOnce(F, Bodies))
     ;
 
   std::vector<BranchBody> Dead;
@@ -222,17 +248,13 @@ bool runOnFunction(Function &F, FunctionAnalysisManager &FAM) {
 
 PreservedAnalyses DeadBranchEliminationPass::run(Module &M,
                                                  ModuleAnalysisManager &AM) {
-  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool Changed = false;
   // This is a module pass (it temporarily creates function clones), but it
   // transforms functions independently.
   for (Function &F : M) {
     if (F.isDeclaration() || F.isPresplitCoroutine() || F.hasOptNone())
       continue;
-    if (runOnFunction(F, FAM)) {
-      FAM.invalidate(F, PreservedAnalyses::none());
-      Changed = true;
-    }
+    Changed |= runOnFunction(F);
   }
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
