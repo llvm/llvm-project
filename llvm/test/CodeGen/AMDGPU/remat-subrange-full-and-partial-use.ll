@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -O3 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa < %s | FileCheck %s
 
 ; Regression test for an assertion in the AMDGPU pipeline:
 ;   Assertion `SubRegIdx != 0 && LI.hasSubRanges()' failed.
