@@ -1556,18 +1556,30 @@ LogicalResult ResolveLayoutConflicts::run() {
   // Scan all operations in the parent op and resolve layout conflicts at
   // tensor descriptor and vector use points.
   auto r = parentOp->walk([&](Operation *op) -> WalkResult {
-    // if the operation inputs vector and output scalar, like multi-reduction
-    // we need to check if the result has layout and add a convert_layout to
-    // serve as anchor op for the reduction op's layout.
-    if (isa<vector::MultiDimReductionOp>(op) || isa<vector::ReductionOp>(op)) {
-      for (OpResult result : op->getResults()) {
-        if (result.getType().isIntOrFloat()) {
-          auto res = assignResultLayout(result);
-          if (failed(res)) {
-            DBGS() << "Failed to resolve vector consumer for multi-reduction "
-                   << *op << "\n";
-            return WalkResult::interrupt();
-          }
+    for (OpResult result : op->getResults()) {
+      // if the operation inputs vector and output scalar, like multi-reduction
+      // we need to check if the result has layout and add a convert_layout to
+      // serve as anchor op for the reduction op's layout.
+      if (result.getType().isIntOrFloat() &&
+          (isa<vector::MultiDimReductionOp>(op) ||
+           isa<vector::ReductionOp>(op))) {
+        auto res = assignResultLayout(result);
+        if (failed(res)) {
+          DBGS() << "Failed to assign layout for scalar consumer of reduction "
+                 << *op << "\n";
+          return WalkResult::interrupt();
+        }
+      }
+      // If the op is a region branch op with a vector result that has no uses,
+      // we need to add a convert_layout to serve as an anchor op for the
+      // result's layout.
+      if (isa<VectorType>(result.getType()) && result.use_empty() &&
+          isa<RegionBranchOpInterface>(op)) {
+        auto res = assignResultLayout(result);
+        if (failed(res)) {
+          DBGS() << "Failed to assign layout for vector consumer of region op "
+                 << *op << "\n";
+          return WalkResult::interrupt();
         }
       }
     }
@@ -1731,13 +1743,18 @@ ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
 }
 
 using GetLayoutFnTy = function_ref<xegpu::DistributeLayoutAttr(Value)>;
+
 /// Update an operation with the layout of its results. If the result type is
 /// a vector type, a temporary layout attribute is added to the operation. If
 /// the result type is a tensor descriptor type, the type is updated with the
 /// layout attribute. The users of the result are also updated with the layout
 /// attribute.
-static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
-                              GetLayoutFnTy getLayoutOfValue) {
+///
+/// If the global propagation left a result without a layout, forward-fill it
+/// locally from the operand layouts.
+static LogicalResult updateOpWithForwardFill(mlir::OpBuilder &builder,
+                                             mlir::Operation *op,
+                                             GetLayoutFnTy getLayoutOfValue) {
   // Region ops (like scf.for) are already handled by the
   // updateControlFlowOps.
   if (mlir::isa<mlir::RegionBranchOpInterface>(op))
@@ -1751,9 +1768,23 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
       continue;
     // If the result has no layout but has users, emit a warning and continue.
     xegpu::DistributeLayoutAttr layout = getLayoutOfValue(result);
+    if (!layout) {
+      // Gather operand layouts, indexed by operand number.
+      SmallVector<xegpu::DistributeLayoutAttr> srcLayouts;
+      srcLayouts.reserve(op->getNumOperands());
+      bool anyAssigned = false;
+      for (Value operand : op->getOperands()) {
+        auto srclayout = xegpu::getDistributeLayoutAttr(operand);
+        srcLayouts.push_back(srclayout);
+        anyAssigned |= (srclayout != nullptr);
+      }
+      if (anyAssigned) {
+        layout =
+            xegpu::inferResultLayoutFromSourceForNonAnchorOp(op, srcLayouts);
+      }
+    }
     if (!layout && result.getNumUses() > 0) {
       op->emitWarning("op has users but no layout assigned for its result");
-      continue;
     }
     // If the result is a tensor descriptor type, update the tensor desc type
     // with layout.
@@ -1767,73 +1798,6 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
     xegpu::setDistributeLayoutAttr(result, layout);
-  }
-  return success();
-}
-
-/// Region ops like scf.for need special handling because they have blocks
-/// inside. If the blocks have tensor descriptor type as block arguments,
-/// thier types must be updated. Also region op can have results that may not
-/// have any users (e.g. A and B tiles). They are not assigned a layout by
-/// layout analysis because they have no users. However inside the region op
-/// corresponding block arguments for these results do have layouts.
-/// Therefore, in this case we still need to update the result types with the
-/// layout attribute. This function function updates the internal block
-/// arguments and the result types of the region op with the assigned layouts.
-/// clang-format off
-/// Example: scf.for ... iter_args(...) -> (out types) {
-///   ^bb0(block types):
-///     ...
-///   scf.yield ... : (yield types)
-/// }
-/// clang-format on
-/// In this example, at scf.yield, control-flow can transfer to two successor
-/// regions. One is the ^bb0 (for loop body) and the other is the scf.for op
-/// itself (yield the results). So we update both the block arguments of the
-/// successor region (i.e. block types) and the result types of the scf.for op
-/// (i.e. out types). Note that yield types are updated by respective
-/// producers inside bb0.
-static LogicalResult
-updateControlFlowOps(mlir::OpBuilder &builder,
-                     mlir::RegionBranchTerminatorOpInterface terminator,
-                     GetLayoutFnTy getLayoutOfValue) {
-  // Only process if the terminator is inside a region branch op.
-  auto branchOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
-  if (!branchOp)
-    return success();
-
-  RegionBranchSuccessorMapping mapping;
-  branchOp.getSuccessorOperandInputMapping(mapping,
-                                           RegionBranchPoint(terminator));
-  for (const auto &[successorOperand, successorInputs] : mapping) {
-    for (Value successorInput : successorInputs) {
-      Type inputType = successorInput.getType();
-      // We only need to operate on tensor descriptor or vector types.
-      if (!isa<xegpu::TensorDescType, VectorType>(inputType))
-        continue;
-      xegpu::DistributeLayoutAttr successorOperandLayout =
-          getLayoutOfValue(successorOperand->get());
-
-      // If either of the layouts is not assigned, we cannot proceed.
-      if (!successorOperandLayout) {
-        LLVM_DEBUG(DBGS() << "No layout assigned for forwarded operand in "
-                             "branch terminator: "
-                          << successorOperand->get() << "\n");
-        return failure();
-      }
-      // Get tensor descriptor type with the layout.
-      if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType)) {
-        auto newTdescTy = xegpu::TensorDescType::get(
-            tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
-            tdescTy.getEncoding(), successorOperandLayout);
-        successorInput.setType(newTdescTy);
-        continue;
-      }
-      // If the type is a vector type and this region argument is an OpResult,
-      // set the layout attribute on the OpResult.
-      if (auto result = dyn_cast<OpResult>(successorInput))
-        xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
-    }
   }
   return success();
 }
@@ -1926,12 +1890,12 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
 
   Operation *op = target;
   auto walkResult = op->walk([&](mlir::Block *block) -> WalkResult {
-    for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
+    for (mlir::Operation &op : block->getOperations()) {
       LogicalResult r = success();
       TypeSwitch<Operation *>(&op)
           .Case([&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
-            r = updateControlFlowOps(builder, branchTermOp,
-                                     getLayoutFromPropagation);
+            r = xegpu::propagateYieldOperandsToRegionResults(
+                branchTermOp, getLayoutFromPropagation);
           })
           .Case([&](mlir::RegionBranchOpInterface branchOp) {
             r = xegpu::propagateRegionArgsToInits(branchOp,
@@ -1942,7 +1906,7 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
                                           getLayoutFromPropagation);
           })
           .Default([&](Operation *op) {
-            r = updateOp(builder, op, getLayoutFromPropagation);
+            r = updateOpWithForwardFill(builder, op, getLayoutFromPropagation);
           });
       if (failed(r)) {
         op.emitError("Failed to update operation with the layout.");
