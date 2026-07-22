@@ -428,3 +428,17 @@ void test_reduction_binding_nontrivial() {
   }
   use(a.value);
 }
+
+struct Triple { int x, y, z; };
+
+void test_bindings_only_orig_not_dereferenced() {
+  Triple t{1, 2, 3};
+  auto [a, b, c] = t;
+  // expected-error@+1{{original variable 't' is explicitly mapped but only bindings from it are used in target region; either use 't' directly or map the bindings explicitly}}
+#pragma omp target map(tofrom: t)
+  {
+    a = a + 10;
+    b = b + 20;
+    c = c + 30;
+  }
+}

@@ -12728,6 +12728,9 @@ def note_omp_previous_dsa_for_binding : Note<
 def err_omp_decomposition_bindings_different_capture_kinds : Error<
   "bindings from structured binding %0 require conflicting capture kinds "
   "(by-reference vs. by-copy)">;
+def err_omp_original_var_mapped_bindings_only_used : Error<
+  "original variable %0 is explicitly mapped but only bindings from it are used "
+  "in target region; either use %0 directly or map the bindings explicitly">;
 def err_omp_var_expected : Error<
   "expected variable of the '%0' type%select{|, not %2}1">;
 def err_omp_non_pointer_type_array_shaping_base : Error<
