@@ -71,21 +71,23 @@ struct TestInt {
   }
 };
 
-template <typename T>
-struct ConvertibleTo {
-  operator T() const { return T(1); }
-};
-
 int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
   // Make sure we can call `std::isgreater` with mixed-type promotions with __promote_t<_A1, _A2>.
   {
+    assert(std::isgreater(2.0, 1));     // double vs int
+    assert(!std::isgreater(1, 2.0f));   // int vs float
+    assert(std::isgreater(2.0L, 1.0f)); // long double vs float
+    assert(!std::isgreater(std::numeric_limits<double>::quiet_NaN(), 0));
+
+#if TEST_STD_VER >= 23
     static_assert(std::isgreater(2.0, 1));     // double vs int
     static_assert(!std::isgreater(1, 2.0f));   // int vs float
     static_assert(std::isgreater(2.0L, 1.0f)); // long double vs float
     static_assert(!std::isgreater(std::numeric_limits<double>::quiet_NaN(), 0));
+#endif
   }
 
   return 0;

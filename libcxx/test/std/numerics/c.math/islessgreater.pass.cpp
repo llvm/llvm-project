@@ -75,11 +75,6 @@ struct TestInt {
   }
 };
 
-template <typename T>
-struct ConvertibleTo {
-  operator T() const { return T(1); }
-};
-
 int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
