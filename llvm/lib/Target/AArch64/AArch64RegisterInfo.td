@@ -248,7 +248,9 @@ def GPR64z : RegisterOperand<GPR64> {
   let GIZeroRegister = XZR;
 }
 
-// GPR argument registers.
+// GPR argument registers. This is an ABI register set, not an allocation
+// constraint.
+let isAllocatable = 0 in
 def GPR64arg : RegisterClass<"AArch64", [i64], 64, (sequence "X%u", 0, 7)>;
 
 // GPR register classes which include WZR/XZR AND SP/WSP. This is not a
