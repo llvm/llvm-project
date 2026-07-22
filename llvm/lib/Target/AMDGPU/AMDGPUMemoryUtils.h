@@ -30,6 +30,8 @@ class TargetExtType;
 
 namespace AMDGPU {
 
+static constexpr unsigned NamedBarrierTypeSizeInBytes = 16;
+
 using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
 using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
 
@@ -42,6 +44,10 @@ void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source);
 
 // If GV is a named-barrier return its type. Otherwise return nullptr.
 TargetExtType *isNamedBarrier(const GlobalVariable &GV);
+
+/// \returns how many named barriers are declared by \p GV.
+unsigned getNumNamedBarriersDeclared(const DataLayout &DL,
+                                     const GlobalVariable &GV);
 
 bool isDynamicLDS(const GlobalVariable &GV);
 bool isLDSVariableToLower(const GlobalVariable &GV);
