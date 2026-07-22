@@ -4087,61 +4087,93 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
+  const SmallVector<std::pair<unsigned, Register>, 4> *VirtRegHints =
+      MRI.getRegAllocationHints(VirtReg);
 
-  switch (Hint.first) {
-  case AMDGPURI::Size32: {
-    Register Paired = Hint.second;
-    assert(Paired);
-    Register PairedPhys;
-    if (Paired.isPhysical()) {
-      PairedPhys =
-          getMatchingSuperReg(Paired, AMDGPU::lo16, &AMDGPU::VGPR_32RegClass);
-    } else if (VRM && VRM->hasPhys(Paired)) {
-      PairedPhys = getMatchingSuperReg(VRM->getPhys(Paired), AMDGPU::lo16,
-                                       &AMDGPU::VGPR_32RegClass);
-    }
-
-    // Prefer the paired physreg.
-    if (PairedPhys)
-      // isLo(Paired) is implicitly true here from the API of
-      // getMatchingSuperReg.
-      Hints.push_back(PairedPhys);
+  if (!VirtRegHints)
     return false;
-  }
-  case AMDGPURI::Size16: {
-    Register Paired = Hint.second;
-    assert(Paired);
-    Register PairedPhys;
-    if (Paired.isPhysical()) {
-      PairedPhys = TRI->getSubReg(Paired, AMDGPU::lo16);
-    } else if (VRM && VRM->hasPhys(Paired)) {
-      PairedPhys = TRI->getSubReg(VRM->getPhys(Paired), AMDGPU::lo16);
-    }
 
-    // First prefer the paired physreg.
-    if (PairedPhys)
-      Hints.push_back(PairedPhys);
-    else {
-      // Add all the lo16 physregs.
-      // When the Paired operand has not yet been assigned a physreg it is
-      // better to try putting VirtReg in a lo16 register, because possibly
-      // later Paired can be assigned to the overlapping register and the COPY
-      // can be eliminated.
-      for (MCPhysReg PhysReg : Order) {
-        if (PhysReg == PairedPhys || AMDGPU::isHi16Reg(PhysReg, *this))
-          continue;
-        if (AMDGPU::VGPR_16RegClass.contains(PhysReg) &&
-            !MRI.isReserved(PhysReg))
-          Hints.push_back(PhysReg);
+  SmallSet<Register, 32> HintedRegs;
+  for (const auto &[Type, Reg] : *VirtRegHints) {
+    switch (Type) {
+    case AMDGPURI::Size32: {
+      Register Paired = Reg;
+      assert(Paired);
+      Register PairedPhys;
+      if (Paired.isPhysical()) {
+        PairedPhys =
+            getMatchingSuperReg(Paired, AMDGPU::lo16, &AMDGPU::VGPR_32RegClass);
+      } else if (VRM && VRM->hasPhys(Paired)) {
+        PairedPhys = getMatchingSuperReg(VRM->getPhys(Paired), AMDGPU::lo16,
+                                         &AMDGPU::VGPR_32RegClass);
       }
+
+      // Prefer the paired physreg.
+      if (PairedPhys)
+        // isLo(Paired) is implicitly true here from the API of
+        // getMatchingSuperReg.
+        Hints.push_back(PairedPhys);
+      return false;
     }
-    return false;
+    case AMDGPURI::Size16: {
+      Register Paired = Reg;
+      assert(Paired);
+      Register PairedPhys;
+      if (Paired.isPhysical()) {
+        PairedPhys = TRI->getSubReg(Paired, AMDGPU::lo16);
+      } else if (VRM && VRM->hasPhys(Paired)) {
+        PairedPhys = TRI->getSubReg(VRM->getPhys(Paired), AMDGPU::lo16);
+      }
+
+      // First prefer the paired physreg.
+      if (PairedPhys)
+        Hints.push_back(PairedPhys);
+      else {
+        // Add all the lo16 physregs.
+        // When the Paired operand has not yet been assigned a physreg it is
+        // better to try putting VirtReg in a lo16 register, because possibly
+        // later Paired can be assigned to the overlapping register and the COPY
+        // can be eliminated.
+        for (MCPhysReg PhysReg : Order) {
+          if (PhysReg == PairedPhys || AMDGPU::isHi16Reg(PhysReg, *this))
+            continue;
+          if (AMDGPU::VGPR_16RegClass.contains(PhysReg) &&
+              !MRI.isReserved(PhysReg))
+            Hints.push_back(PhysReg);
+        }
+      }
+      return false;
+    }
+    case AMDGPURI::ChainHint: {
+      Register Phys = Reg;
+      if (VRM && Phys.isVirtual())
+        Phys = VRM->getPhys(Phys);
+
+      // Don't add the same reg twice (VRegHints may contain multiple virtual
+      // registers allocated to the same physreg).
+      if (!HintedRegs.insert(Phys).second)
+        continue;
+      // Check that Phys is a valid hint in VirtReg's register class.
+      if (!Phys.isPhysical())
+        continue;
+      if (MRI.isReserved(Phys))
+        continue;
+      // Check that Phys is in the allocation order. We shouldn't heed hints
+      // from VirtReg's register class if they aren't in the allocation order.
+      // The target probably has a reason for removing the register.
+      if (!is_contained(Order, Phys))
+        continue;
+
+      // All clear, tell the register allocator to prefer this register.
+      Hints.push_back(Phys.id());
+      continue;
+    }
+    default:
+      continue;
+    }
   }
-  default:
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
-  }
+  return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                   VRM);
 }
 
 MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {

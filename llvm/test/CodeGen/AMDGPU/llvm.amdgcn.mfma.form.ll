@@ -24,7 +24,12 @@ define <4 x float> @default(<8 x half> %arg0, <8 x half> %arg1, <4 x float> %arg
 ; VGPRRC-LABEL: default:
 ; VGPRRC:       ; %bb.0:
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VGPRRC-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11]
+; VGPRRC-NEXT:    v_mfma_f32_16x16x32_f16 v[8:11], v[0:3], v[4:7], v[8:11]
+; VGPRRC-NEXT:    s_nop 7
+; VGPRRC-NEXT:    v_mov_b32_e32 v0, v8
+; VGPRRC-NEXT:    v_mov_b32_e32 v1, v9
+; VGPRRC-NEXT:    v_mov_b32_e32 v2, v10
+; VGPRRC-NEXT:    v_mov_b32_e32 v3, v11
 ; VGPRRC-NEXT:    s_setpc_b64 s[30:31]
   %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %arg0, <8 x half> %arg1, <4 x float> %arg2, i32 0, i32 0, i32 0)
   ret <4 x float> %result
@@ -50,7 +55,12 @@ define <4 x float> @request_agpr(<8 x half> %arg0, <8 x half> %arg1, <4 x float>
 ; VGPRRC-LABEL: request_agpr:
 ; VGPRRC:       ; %bb.0:
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VGPRRC-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11]
+; VGPRRC-NEXT:    v_mfma_f32_16x16x32_f16 v[8:11], v[0:3], v[4:7], v[8:11]
+; VGPRRC-NEXT:    s_nop 7
+; VGPRRC-NEXT:    v_mov_b32_e32 v0, v8
+; VGPRRC-NEXT:    v_mov_b32_e32 v1, v9
+; VGPRRC-NEXT:    v_mov_b32_e32 v2, v10
+; VGPRRC-NEXT:    v_mov_b32_e32 v3, v11
 ; VGPRRC-NEXT:    s_setpc_b64 s[30:31]
   %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %arg0, <8 x half> %arg1, <4 x float> %arg2, i32 0, i32 0, i32 0)
   ret <4 x float> %result
@@ -60,13 +70,23 @@ define <4 x float> @request_no_agpr(<8 x half> %arg0, <8 x half> %arg1, <4 x flo
 ; HEURRC-LABEL: request_no_agpr:
 ; HEURRC:       ; %bb.0:
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; HEURRC-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11]
+; HEURRC-NEXT:    v_mfma_f32_16x16x32_f16 v[8:11], v[0:3], v[4:7], v[8:11]
+; HEURRC-NEXT:    s_nop 7
+; HEURRC-NEXT:    v_mov_b32_e32 v0, v8
+; HEURRC-NEXT:    v_mov_b32_e32 v1, v9
+; HEURRC-NEXT:    v_mov_b32_e32 v2, v10
+; HEURRC-NEXT:    v_mov_b32_e32 v3, v11
 ; HEURRC-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VGPRRC-LABEL: request_no_agpr:
 ; VGPRRC:       ; %bb.0:
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VGPRRC-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11]
+; VGPRRC-NEXT:    v_mfma_f32_16x16x32_f16 v[8:11], v[0:3], v[4:7], v[8:11]
+; VGPRRC-NEXT:    s_nop 7
+; VGPRRC-NEXT:    v_mov_b32_e32 v0, v8
+; VGPRRC-NEXT:    v_mov_b32_e32 v1, v9
+; VGPRRC-NEXT:    v_mov_b32_e32 v2, v10
+; VGPRRC-NEXT:    v_mov_b32_e32 v3, v11
 ; VGPRRC-NEXT:    s_setpc_b64 s[30:31]
   %result = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half> %arg0, <8 x half> %arg1, <4 x float> %arg2, i32 0, i32 0, i32 0)
   ret <4 x float> %result

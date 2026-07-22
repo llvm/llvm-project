@@ -1060,6 +1060,17 @@ public:
     return false;
   }
 
+  /// Return the register allocation hint types that require register class
+  /// compatibility checks.
+  virtual ArrayRef<unsigned>
+  getHintTypesRequiringRegisterClassCompatibility() const {
+    return {};
+  }
+
+  /// Remove incompatible register allocation hints for all hint types that
+  /// require register class compatibility checks.
+  void removeIncompatibleHints(MachineRegisterInfo *const MRI) const;
+
   //===--------------------------------------------------------------------===//
   /// Debug information queries.
 

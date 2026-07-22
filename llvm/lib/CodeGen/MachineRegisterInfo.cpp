@@ -714,3 +714,63 @@ void MachineRegisterInfo::updateDbgUsersToReg(
     }
   }
 }
+
+EquivalenceClasses<Register>
+MachineRegisterInfo::createTypedHintsEC(unsigned Type) {
+  EquivalenceClasses<Register> TypedHintsEC;
+  for (unsigned I = 0, E = RegAllocHints.size(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+
+    for (auto &[HintType, HintReg] : RegAllocHints[Reg]) {
+      if (HintType != Type)
+        continue;
+
+      TypedHintsEC.insert(Reg);
+      TypedHintsEC.insert(HintReg);
+      TypedHintsEC.unionSets(Reg, HintReg);
+    }
+  }
+
+  return TypedHintsEC;
+}
+
+void MachineRegisterInfo::removeIncompatibleHintsOfType(unsigned Type) {
+  EquivalenceClasses<Register> TypedHintsEC = createTypedHintsEC(Type);
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+
+  SmallVector<Register> InvalidLeaders;
+  for (const EquivalenceClasses<llvm::Register>::ECValue *I : TypedHintsEC) {
+    if (!I->isLeader())
+      continue;
+
+    auto hasCompatibleRCs = [&]() {
+      for (auto AI = TypedHintsEC.member_begin(*I),
+                End = TypedHintsEC.member_end();
+           AI != End; ++AI) {
+        for (auto BI = std::next(AI); BI != End; ++BI) {
+          const TargetRegisterClass *ARC = getRegClass(*AI);
+          const TargetRegisterClass *BRC = getRegClass(*BI);
+          if (!TRI->getCommonSubClass(ARC, BRC))
+            return false;
+        }
+      }
+      return true;
+    };
+
+    if (!hasCompatibleRCs())
+      InvalidLeaders.push_back(I->getData());
+  }
+
+  for (Register Leader : InvalidLeaders) {
+    SmallVector<Register> Members(TypedHintsEC.members(Leader));
+    for (Register Member : Members) {
+      auto &MemberHints = RegAllocHints[Member];
+      MemberHints.erase(
+          llvm::remove_if(MemberHints,
+                          [&](const std::pair<unsigned, Register> &Hint) {
+                            return Hint.first == Type;
+                          }),
+          MemberHints.end());
+    }
+  }
+}
