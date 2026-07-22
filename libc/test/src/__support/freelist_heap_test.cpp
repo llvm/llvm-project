@@ -367,18 +367,18 @@ TEST_FOR_EACH_ALLOCATOR(AllocationSize, 2048) {
   EXPECT_EQ(allocator.allocation_size(ptr), size_t(0));
 }
 
-TEST_FOR_EACH_ALLOCATOR(CanSanitize, 2048) {
-  allocator.sanitize();
+TEST_FOR_EACH_ALLOCATOR(IntegrityCheck, 2048) {
+  allocator.integrity_check();
 
   void *ptr1 = allocator.allocate(512);
-  allocator.sanitize();
+  allocator.integrity_check();
 
   void *ptr2 = allocator.allocate(512);
-  allocator.sanitize();
+  allocator.integrity_check();
 
   allocator.free(ptr1);
-  allocator.sanitize();
+  allocator.integrity_check();
 
   allocator.free(ptr2);
-  allocator.sanitize();
+  allocator.integrity_check();
 }

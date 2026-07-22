@@ -43,7 +43,7 @@ public:
     LIBC_INLINE size_t size() const { return block().inner_size(); }
 
   protected:
-    LIBC_INLINE void sanitize() const {
+    LIBC_INLINE void integrity_check() const {
       LIBC_HEAP_INTEGRITY_CHECK(next->prev == this,
                                 "FreeList node corruption detected");
       LIBC_HEAP_INTEGRITY_CHECK(prev->next == this,
@@ -95,7 +95,7 @@ public:
   void remove(Node *node);
 
   /// Verify integrity of all nodes in the list.
-  void sanitize() const;
+  void integrity_check() const;
 
 private:
   Node *begin_;

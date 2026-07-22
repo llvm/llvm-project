@@ -46,11 +46,11 @@ public:
   /// allocated. Returns nullptr if there is no such block.
   BlockRef remove_best_fit(size_t size);
 
-  /// Sanitization check for the entire store.
-  LIBC_INLINE void sanitize() const {
-    large_trie.sanitize();
+  /// Integrity check for the entire store.
+  LIBC_INLINE void integrity_check() const {
+    large_trie.integrity_check();
     for (const FreeList &list : small_lists)
-      list.sanitize();
+      list.integrity_check();
   }
 
 private:

@@ -13,7 +13,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 void FreeTrie::remove(Node *node) {
   LIBC_ASSERT(!empty() && "cannot remove from empty trie");
-  node->sanitize();
+  node->integrity_check();
   FreeList list = node;
   list.pop();
   Node *new_node = static_cast<Node *>(list.begin());
@@ -23,10 +23,10 @@ void FreeTrie::remove(Node *node) {
     // root and its children.
     Node *leaf = node;
     while (leaf->lower || leaf->upper) {
-      leaf->sanitize();
+      leaf->integrity_check();
       leaf = leaf->lower ? leaf->lower : leaf->upper;
     }
-    leaf->sanitize();
+    leaf->integrity_check();
     if (leaf == node) {
       // If the root is a leaf, then removing it empties the subtrie.
       replace_node(node, nullptr);
@@ -66,17 +66,17 @@ void FreeTrie::replace_node(Node *node, Node *new_node) {
     node->upper->parent = new_node;
 }
 
-void FreeTrie::sanitize() const {
-  auto sanitize_trie_node = [&](auto &self, const Node *node) -> void {
+void FreeTrie::integrity_check() const {
+  auto integrity_check_trie_node = [&](auto &self, const Node *node) -> void {
     if (!node)
       return;
-    node->sanitize();
+    node->integrity_check();
     FreeList list = const_cast<Node *>(node);
-    list.sanitize();
+    list.integrity_check();
     self(self, node->lower);
     self(self, node->upper);
   };
-  sanitize_trie_node(sanitize_trie_node, root);
+  integrity_check_trie_node(integrity_check_trie_node, root);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
