@@ -78,7 +78,7 @@
   static size_t size();                                                        \
   static const char *symbol(size_t); /* get symbol name in [0, size()) */      \
   static void **                                                               \
-      pointer(size_t); /* get pointer to function pointer in [0, size()) */    \
+  pointer(size_t); /* get pointer to function pointer in [0, size()) */        \
   }
 
 // DLWRAP_FINALIZE() implements the functions from DLWRAP_INITIALIZE
@@ -107,7 +107,9 @@ template <size_t S> struct count {
   static constexpr size_t N = count<S - 1>::N;
 };
 
-template <> struct count<0> { static constexpr size_t N = 0; };
+template <> struct count<0> {
+  static constexpr size_t N = 0;
+};
 
 // Get a constexpr size_t ID, starts at zero
 #define DLWRAP_ID() (dlwrap::type::count<__LINE__>::N)
@@ -135,7 +137,12 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
   static_assert(Requested == Required, "Arity Error");
 }
 
+// Template to check if a symbol was loaded successfully
 template <auto Fn> bool loaded();
+
+// Template to check if a symbol is provided by dlwrap
+// By default all symbols resolve to false
+template <auto Fn> constexpr bool IsDlOpened = false;
 
 } // namespace dlwrap
 
@@ -160,6 +167,7 @@ template <auto Fn> bool loaded();
   DLWRAP_INC();                                                                \
   DLWRAP_SYMBOL(SYMBOL, DLWRAP_ID() - 1);                                      \
   namespace dlwrap {                                                           \
+  template <> inline constexpr bool IsDlOpened<&::SYMBOL> = true;              \
   struct SYMBOL##_Trait : public dlwrap::trait<decltype(&SYMBOL)> {            \
     using T = dlwrap::trait<decltype(&SYMBOL)>;                                \
     static T::FunctionType get() {                                             \
