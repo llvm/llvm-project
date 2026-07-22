@@ -92,7 +92,7 @@ void MCGOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
   MCSectionGOFF *Section = getContext().getGOFFSection(
       SectionKind::getBSS(), Symbol->getName(),
       GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
-                   GOFF::ESD_BSC_ImportExport, 0},
+                   Symbol->getBindingScope(), 0},
       ED);
 
   pushSection();
