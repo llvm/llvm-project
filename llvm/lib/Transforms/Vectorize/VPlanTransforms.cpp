@@ -5808,7 +5808,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       VPValue *Mask = MemR->getMask();
       if (!Mask)
         Mask = Plan.getTrue();
-      SmallVector<VPValue *, 4> Ops;
+      SmallVector<VPValue *, 5> Ops;
       if (StoredValue)
         Ops.push_back(StoredValue);
       Ops.append({NewPtr, StrideInBytes, Mask, I32VF});
