@@ -317,6 +317,11 @@ public:
     return Invocation->getFrontendOpts();
   }
 
+  ssaf::SSAFOptions &getSSAFOpts() { return Invocation->getSSAFOpts(); }
+  const ssaf::SSAFOptions &getSSAFOpts() const {
+    return Invocation->getSSAFOpts();
+  }
+
   HeaderSearchOptions &getHeaderSearchOpts() {
     return Invocation->getHeaderSearchOpts();
   }

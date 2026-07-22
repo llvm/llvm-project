@@ -11,6 +11,7 @@
 #include "mlir-c/Support.h"
 #include "mlir-c/Transforms.h"
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/IRMapping.h"
 #include "mlir/CAPI/Rewrite.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Wrap.h"
@@ -21,6 +22,8 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
+
+#include <cassert>
 
 using namespace mlir;
 
@@ -116,6 +119,12 @@ MlirOperation mlirRewriterBaseClone(MlirRewriterBase rewriter,
 MlirOperation mlirRewriterBaseCloneWithoutRegions(MlirRewriterBase rewriter,
                                                   MlirOperation op) {
   return wrap(unwrap(rewriter)->cloneWithoutRegions(*unwrap(op)));
+}
+
+MlirOperation mlirRewriterBaseCloneWithMapping(MlirRewriterBase rewriter,
+                                               MlirOperation op,
+                                               MlirIRMapping mapping) {
+  return wrap(unwrap(rewriter)->clone(*unwrap(op), *unwrap(mapping)));
 }
 
 void mlirRewriterBaseCloneRegionBefore(MlirRewriterBase rewriter,
@@ -568,6 +577,64 @@ void mlirConversionTargetAddIllegalDialect(MlirConversionTarget target,
   unwrap(target)->addIllegalDialect(unwrap(dialectName));
 }
 
+namespace {
+/// Wraps a C dynamic-legality callback as a C++ DynamicLegalityCallbackFn,
+/// translating the tri-state MlirConversionTargetLegality result into the
+/// std::optional<bool> expected by ConversionTarget (NO_OPINION -> nullopt).
+ConversionTarget::DynamicLegalityCallbackFn
+wrapLegalityCallback(MlirConversionTargetDynamicLegalityCallback callback,
+                     void *userData) {
+  return [callback, userData](Operation *op) -> std::optional<bool> {
+    switch (callback(wrap(op), userData)) {
+    case MLIR_CONVERSION_TARGET_LEGALITY_LEGAL:
+      return true;
+    case MLIR_CONVERSION_TARGET_LEGALITY_ILLEGAL:
+      return false;
+    case MLIR_CONVERSION_TARGET_LEGALITY_NO_OPINION:
+      return std::nullopt;
+    }
+    llvm_unreachable("unknown MlirConversionTargetLegality");
+  };
+}
+} // namespace
+
+void mlirConversionTargetAddDynamicallyLegalOp(
+    MlirConversionTarget target, MlirStringRef opName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData) {
+  assert(callback && "expected non-null legality callback");
+  MLIRContext *ctx = &unwrap(target)->getContext();
+  OperationName name(unwrap(opName), ctx);
+  unwrap(target)->addDynamicallyLegalOp(
+      name, wrapLegalityCallback(callback, userData));
+}
+
+void mlirConversionTargetAddDynamicallyLegalDialect(
+    MlirConversionTarget target, MlirStringRef dialectName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData) {
+  assert(callback && "expected non-null legality callback");
+  unwrap(target)->addDynamicallyLegalDialect(
+      wrapLegalityCallback(callback, userData), unwrap(dialectName));
+}
+
+void mlirConversionTargetMarkOpRecursivelyLegal(
+    MlirConversionTarget target, MlirStringRef opName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData) {
+  MLIRContext *ctx = &unwrap(target)->getContext();
+  OperationName name(unwrap(opName), ctx);
+  ConversionTarget::DynamicLegalityCallbackFn fn;
+  if (callback)
+    fn = wrapLegalityCallback(callback, userData);
+  unwrap(target)->markOpRecursivelyLegal(name, fn);
+}
+
+void mlirConversionTargetMarkUnknownOpDynamicallyLegal(
+    MlirConversionTarget target,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData) {
+  assert(callback && "expected non-null legality callback");
+  unwrap(target)->markUnknownOpDynamicallyLegal(
+      wrapLegalityCallback(callback, userData));
+}
+
 //===----------------------------------------------------------------------===//
 /// TypeConverter API
 //===----------------------------------------------------------------------===//
@@ -585,21 +652,71 @@ void mlirTypeConverterAddConversion(
     MlirTypeConverterConversionCallback convertType, void *userData) {
   unwrap(typeConverter)
       ->addConversion(
-          [convertType, userData](Type type) -> std::optional<Type> {
+          [convertType, userData](Type type, SmallVectorImpl<Type> &results)
+              -> std::optional<LogicalResult> {
             MlirType converted{nullptr};
-            MlirLogicalResult result =
+            MlirTypeConverterConversionStatus status =
                 convertType(wrap(type), &converted, userData);
-            if (mlirLogicalResultIsFailure(result))
-              return std::nullopt; // allowed to try another conversion function
-            if (mlirTypeIsNull(converted))
-              return nullptr;
-            return unwrap(converted);
+            switch (status) {
+            case MlirTypeConverterConversionStatusSuccess:
+              results.push_back(unwrap(converted));
+              return success();
+            case MlirTypeConverterConversionStatusFailure:
+              // Failure: fail the conversion without trying another
+              // registered conversion function.
+              return failure();
+            case MlirTypeConverterConversionStatusDeclined:
+              // Declined: allow the driver to try another conversion function.
+              return std::nullopt;
+            }
+            llvm_unreachable("unknown MlirTypeConverterConversionStatus");
           });
 }
 
 MlirType mlirTypeConverterConvertType(MlirTypeConverter typeConverter,
                                       MlirType type) {
   return wrap(unwrap(typeConverter)->convertType(unwrap(type)));
+}
+
+namespace {
+/// Wraps a C materialization callback as a C++ materialization callback of the
+/// form `Value(OpBuilder &, Type, ValueRange, Location)`, shared by both source
+/// and target materializations. The builder is always a RewriterBase in the
+/// conversion driver, so it is safe to expose it as an MlirRewriterBase.
+std::function<Value(OpBuilder &, Type, ValueRange, Location)>
+wrapMaterializationCallback(MlirTypeConverterMaterializationCallback callback,
+                            void *userData) {
+  return [callback, userData](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) -> Value {
+    SmallVector<MlirValue> wrappedInputs;
+    wrappedInputs.reserve(inputs.size());
+    for (Value v : inputs)
+      wrappedInputs.push_back(wrap(v));
+    MlirValue result =
+        callback(wrap(static_cast<RewriterBase *>(&builder)), wrap(type),
+                 static_cast<intptr_t>(wrappedInputs.size()),
+                 wrappedInputs.data(), wrap(loc), userData);
+    return mlirValueIsNull(result) ? Value() : unwrap(result);
+  };
+}
+} // namespace
+
+void mlirTypeConverterAddSourceMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterMaterializationCallback callback, void *userData) {
+  assert(callback && "expected non-null materialization callback");
+  unwrap(typeConverter)
+      ->addSourceMaterialization(
+          wrapMaterializationCallback(callback, userData));
+}
+
+void mlirTypeConverterAddTargetMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterMaterializationCallback callback, void *userData) {
+  assert(callback && "expected non-null materialization callback");
+  unwrap(typeConverter)
+      ->addTargetMaterialization(
+          wrapMaterializationCallback(callback, userData));
 }
 
 //===----------------------------------------------------------------------===//

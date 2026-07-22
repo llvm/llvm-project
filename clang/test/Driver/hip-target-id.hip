@@ -23,19 +23,22 @@
 
 // CHECK: [[CLANG:"[^"]*clang[^"]*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-target-cpu" "gfx908"
-// CHECK-SAME: "-target-feature" "+sramecc"
-// CHECK-SAME: "-target-feature" "+xnack"
+// CHECK-SAME: "-mxnack"
+// CHECK-SAME: "-msramecc"
+
+// TMP: [[CLANG:"[^"]*clang[^"]*"]] "-cc1as" "-triple" "amdgcn-amd-amdhsa"
+// TMP-SAME: "-target-cpu" "gfx908"
+// TMP-SAME: "-mxnack"
+// TMP-SAME: "-msramecc"
 
 // CHECK: [[LLD:"[^"]*lld[^"]*"]] {{.*}} "-plugin-opt=mcpu=gfx908"
-// CHECK-SAME: "-plugin-opt=-mattr=+sramecc,+xnack"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-target-cpu" "gfx908"
-// CHECK-SAME: "-target-feature" "-sramecc"
-// CHECK-SAME: "-target-feature" "+xnack"
+// CHECK-SAME: "-mxnack"
+// CHECK-SAME: "-mno-sramecc"
 
 // CHECK: [[LLD]] {{.*}} "-plugin-opt=mcpu=gfx908"
-// CHECK-SAME: "-plugin-opt=-mattr=-sramecc,+xnack"
 
 // CHECK: {{"[^"]*clang-offload-bundler[^"]*"}}
 // CHECK-SAME: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack+,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc-:xnack+"
@@ -60,4 +63,4 @@
 // RUN:   --offload-arch=gfx906 \
 // RUN:   --no-offload-new-driver --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=MULTI %s
-// MULTI: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx900:xnack+,hipv4-amdgcn-amd-amdhsa--gfx900:xnack-,hipv4-amdgcn-amd-amdhsa--gfx906,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc+,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc-"
+// MULTI: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx900:xnack+,hipv4-amdgcn-amd-amdhsa--gfx900:xnack-,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc+,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc-,hipv4-amdgcn-amd-amdhsa--gfx906"

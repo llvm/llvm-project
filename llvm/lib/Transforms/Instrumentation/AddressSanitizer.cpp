@@ -599,6 +599,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                         (kSmallX86_64ShadowOffsetAlignMask << Mapping.Scale));
     else if (IsBPF)
       Mapping.Offset = kDynamicShadowSentinel;
+    else if (IsWasm)
+      Mapping.Offset = kWebAssemblyShadowOffset;
     else
       Mapping.Offset = kDefaultShadowOffset64;
   }
@@ -1423,6 +1425,12 @@ static bool isSupportedAddrspace(const Triple &TargetTriple, Value *Addr) {
 }
 
 Value *AddressSanitizer::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
+  if (TargetTriple.isOSDarwin() &&
+      TargetTriple.getArch() == llvm::Triple::aarch64) {
+    // Strip MTE-tag bits before translating to shadow address
+    Shadow = IRB.CreateAnd(Shadow,
+                           ConstantInt::get(IntptrTy, ~(uint64_t(0x0f) << 56)));
+  }
   // Shadow >> scale
   Shadow = IRB.CreateLShr(Shadow, Mapping.Scale);
   if (Mapping.Offset == 0) return Shadow;

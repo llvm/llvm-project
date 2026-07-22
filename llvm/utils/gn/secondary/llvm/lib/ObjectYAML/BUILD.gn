@@ -17,6 +17,7 @@ static_library("ObjectYAML") {
     "CodeViewYAMLSymbols.cpp",
     "CodeViewYAMLTypeHashing.cpp",
     "CodeViewYAMLTypes.cpp",
+    "ContiguousBlobAccumulator.cpp",
     "DWARFEmitter.cpp",
     "DWARFYAML.cpp",
     "DXContainerEmitter.cpp",

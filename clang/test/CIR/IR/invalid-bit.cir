@@ -1,0 +1,12 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// cir.byte_swap requires an unsigned integer whose width is a multiple of 16
+// bits.
+
+module {
+  cir.func @bad_byte_swap_width(%x : !cir.int<u, 24>) {
+    // expected-error@+1 {{'cir.byte_swap' op operand #0 must be unsigned integer type with a width that is a multiple of 16 bits, but got '!cir.int<u, 24>'}}
+    %0 = cir.byte_swap %x : !cir.int<u, 24>
+    cir.return
+  }
+}

@@ -79,6 +79,32 @@ entry:
   ret void
 }
 
+; A gep off a select of two argument pointers does not alias a noalias argument.
+; CHECK-LABEL: Function: select_and_gep_unknown_size
+; CHECK: NoModRef:   call void @llvm.memset.p0.i32(ptr %g, i8 0, i32 %size, i1 false) <->   call void @llvm.memset.p0.i32(ptr %z, i8 0, i32 %size, i1 false)
+define void @select_and_gep_unknown_size(i1 %c, ptr %x, ptr %y, ptr noalias %z, i32 %size) {
+entry:
+  %p = select i1 %c, ptr %x, ptr %y
+  %g = getelementptr inbounds i8, ptr %p, i64 1
+  call void @llvm.memset.p0.i32(ptr %g, i8 0, i32 %size, i1 false)
+  call void @llvm.memset.p0.i32(ptr %z, i8 0, i32 %size, i1 false)
+  ret void
+}
+
+; If a select arm is the other pointer, the gep may alias it.
+; CHECK-LABEL: Function: select_and_gep_unknown_size_may
+; CHECK: MayAlias:	i8* %g, i8* %z
+define void @select_and_gep_unknown_size_may(i1 %c, ptr %x, ptr %z) {
+entry:
+  %p = select i1 %c, ptr %x, ptr %z
+  %g = getelementptr inbounds i8, ptr %p, i64 1
+  store i8 0, ptr %g
+  store i8 0, ptr %z
+  ret void
+}
+
+declare void @llvm.memset.p0.i32(ptr, i8, i32, i1)
+
 ; On the first iteration, sel1 = a1, sel2 = a2, phi = a3
 ; On the second iteration, sel1 = a2, sel1 = a1, phi = a2
 ; As such, sel1 and phi may alias.

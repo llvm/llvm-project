@@ -1628,7 +1628,9 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
     // dependent call to the call operator of that type.
     return Ctx.DependentTy;
   } else if (CalleeType->isDependentType() ||
-             CalleeType->isSpecificPlaceholderType(BuiltinType::Overload)) {
+             CalleeType->isSpecificPlaceholderType(BuiltinType::Overload) ||
+             CalleeType->isSpecificPlaceholderType(BuiltinType::BuiltinFn)) {
+    // Dependent builtin calls keep their placeholder until instantiation.
     return Ctx.DependentTy;
   }
 
@@ -1691,7 +1693,7 @@ OffsetOfExpr::OffsetOfExpr(const ASTContext &C, QualType type,
   setDependence(computeDependence(this));
 }
 
-IdentifierInfo *OffsetOfNode::getFieldName() const {
+const IdentifierInfo *OffsetOfNode::getFieldName() const {
   assert(getKind() == Field || getKind() == Identifier);
   if (getKind() == Field)
     return getField()->getIdentifier();
@@ -2088,7 +2090,8 @@ ImplicitCastExpr *ImplicitCastExpr::Create(const ASTContext &C, QualType T,
   // Per C++ [conv.lval]p3, lvalue-to-rvalue conversions on class and
   // std::nullptr_t have special semantics not captured by CK_LValueToRValue.
   assert((Kind != CK_LValueToRValue ||
-          !(T->isNullPtrType() || T->getAsCXXRecordDecl())) &&
+          !(T->isNullPtrType() ||
+            (T->getAsCXXRecordDecl() && !C.getLangOpts().HLSL))) &&
          "invalid type for lvalue-to-rvalue conversion");
   ImplicitCastExpr *E =
       new (Buffer) ImplicitCastExpr(T, Kind, Operand, PathSize, FPO, VK);
@@ -3719,6 +3722,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case FunctionParmPackExprClass:
   case RecoveryExprClass:
   case CXXFoldExprClass:
+  case CXXExpansionSelectExprClass:
     // Make a conservative assumption for dependent nodes.
     return IncludePossibleEffects;
 
@@ -5317,6 +5321,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_max_fetch:
   case AO__atomic_fetch_min:
   case AO__atomic_fetch_max:
+  case AO__atomic_fetch_fminimum:
+  case AO__atomic_fetch_fmaximum:
+  case AO__atomic_fetch_fminimum_num:
+  case AO__atomic_fetch_fmaximum_num:
   case AO__atomic_fetch_uinc:
   case AO__atomic_fetch_udec:
     return 3;
@@ -5340,6 +5348,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_max_fetch:
   case AO__scoped_atomic_fetch_min:
   case AO__scoped_atomic_fetch_max:
+  case AO__scoped_atomic_fetch_fminimum:
+  case AO__scoped_atomic_fetch_fmaximum:
+  case AO__scoped_atomic_fetch_fminimum_num:
+  case AO__scoped_atomic_fetch_fmaximum_num:
   case AO__scoped_atomic_exchange_n:
   case AO__scoped_atomic_fetch_uinc:
   case AO__scoped_atomic_fetch_udec:

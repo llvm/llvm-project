@@ -107,6 +107,17 @@ public:
     if (!forcedTargetABI.empty())
       fir::setTargetABI(mod, forcedTargetABI);
 
+    // If no data layout is set, derive it from the target triple to get
+    // correct target-specific alignments rather than a generic default.
+    if (!mod.getDataLayoutSpec()) {
+      llvm::Triple triple(fir::getTargetTriple(mod));
+      std::string dlStr = triple.computeDataLayout();
+      if (!dlStr.empty()) {
+        llvm::DataLayout llvmDL(dlStr);
+        fir::support::setMLIRDataLayout(mod, llvmDL);
+      }
+    }
+
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =
@@ -916,15 +927,16 @@ public:
           })
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
 
-    // Saved potential shift in argument. Handling of result can add arguments
-    // at the beginning of the function signature.
-    unsigned argumentShift = newInTyAndAttrs.size();
+    // New index of each original argument, so that saved attributes can follow
+    // their argument when target expansion shifts arguments to the right.
+    llvm::SmallVector<unsigned> newArgIndex;
 
     // Convert arguments
     llvm::SmallVector<mlir::Type> trailingTys;
     for (auto e : llvm::enumerate(funcTy.getInputs())) {
       auto ty = e.value();
       unsigned index = e.index();
+      newArgIndex.push_back(newInTyAndAttrs.size());
       llvm::TypeSwitch<mlir::Type>(ty)
           .Case([&](fir::BoxCharType boxTy) {
             if (noCharacterConversion) {
@@ -1187,16 +1199,19 @@ public:
       for (mlir::NamedAttribute resAttr : resAttrList)
         func.setResultAttr(resId, resAttr.getName(), resAttr.getValue());
 
-    // Replace attributes to the correct argument if there was an argument shift
-    // to the right.
-    if (argumentShift > 0) {
-      for (std::pair<unsigned, mlir::NamedAttribute> savedAttr : savedAttrs) {
-        func.removeArgAttr(savedAttr.first, savedAttr.second.getName());
-        func.setArgAttr(savedAttr.first + argumentShift,
-                        savedAttr.second.getName(),
-                        savedAttr.second.getValue());
-      }
-    }
+    // Move each saved argument attribute to the index its argument now
+    // occupies. Target expansion (e.g. splitting a complex value into two
+    // scalars) can insert arguments mid-list and shift the following ones; an
+    // attribute such as fir.host_assoc must follow its argument rather than
+    // stay on the old index and land on an unrelated one. This keeps the
+    // attributes consistent (it may not cause a miscompile today). Remove all
+    // before setting so a moved attribute does not clobber another argument's
+    // attribute.
+    for (std::pair<unsigned, mlir::NamedAttribute> savedAttr : savedAttrs)
+      func.removeArgAttr(savedAttr.first, savedAttr.second.getName());
+    for (std::pair<unsigned, mlir::NamedAttribute> savedAttr : savedAttrs)
+      func.setArgAttr(newArgIndex[savedAttr.first], savedAttr.second.getName(),
+                      savedAttr.second.getValue());
 
     for (auto &fixup : fixups) {
       if constexpr (std::is_same_v<FuncOpTy, mlir::func::FuncOp>)

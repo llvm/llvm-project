@@ -33,7 +33,6 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <cinttypes>
 #include <list>
-#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -2986,6 +2985,7 @@ struct ModuleSubprogram {
   std::variant<common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>,
       common::Indirection<SeparateModuleSubprogram>,
+      common::Indirection<OpenACCRoutineConstruct>,
       common::Indirection<CompilerDirective>>
       u;
 };
@@ -3236,10 +3236,14 @@ struct ProcedureStmt {
 
 // R1502 interface-specification ->
 //         interface-body | procedure-stmt | compiler-directive
+// Flang extension: an OpenACC ROUTINE directive is also accepted directly
+// within an interface block, e.g. a named directive preceding the interface
+// body it applies to.
 struct InterfaceSpecification {
   UNION_CLASS_BOILERPLATE(InterfaceSpecification);
   std::variant<InterfaceBody, Statement<ProcedureStmt>,
-      common::Indirection<CompilerDirective>>
+      common::Indirection<CompilerDirective>,
+      common::Indirection<OpenACCRoutineConstruct>>
       u;
 };
 
@@ -3599,6 +3603,16 @@ struct OmpTypeNameList {
   WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeName>);
 };
 
+struct OmpReservedIdentifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpReservedIdentifier, Name);
+};
+
+// "Proper" locator, i.e. a function reference or a reserved locator.
+struct OmpLocator {
+  UNION_CLASS_BOILERPLATE(OmpLocator);
+  std::variant<FunctionReference, OmpReservedIdentifier> u;
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3612,7 +3626,7 @@ struct OmpObject {
     CharBlock source;
   };
   UNION_CLASS_BOILERPLATE(OmpObject);
-  std::variant<Designator, /*common block*/ Name, Invalid> u;
+  std::variant<Designator, OmpLocator, Name, Invalid> u;
 };
 
 struct OmpObjectList {
@@ -3688,15 +3702,6 @@ struct OmpInitializerExpression : public OmpStylizedExpression {
 };
 
 inline namespace arguments {
-struct OmpLocator {
-  UNION_CLASS_BOILERPLATE(OmpLocator);
-  std::variant<OmpObject, FunctionReference> u;
-};
-
-struct OmpLocatorList {
-  WRAPPER_CLASS_BOILERPLATE(OmpLocatorList, std::list<OmpLocator>);
-};
-
 // Ref: [4.5:58-60], [5.0:58-60], [5.1:63-68], [5.2:197-198], [6.0:334-336]
 //
 // Argument to DECLARE VARIANT with the base-name present. (When only
@@ -3737,7 +3742,7 @@ struct OmpReductionSpecifier {
 struct OmpArgument {
   CharBlock source;
   UNION_CLASS_BOILERPLATE(OmpArgument);
-  std::variant<OmpLocator, // {variable, extended, locator}-list-item
+  std::variant<OmpObject,
       OmpBaseVariantNames, // base-name:variant-name
       OmpMapperSpecifier, OmpReductionSpecifier>
       u;
@@ -4150,6 +4155,24 @@ struct OmpLinearModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpLinearModifier, Value);
 };
 
+// Ref: [6.0:372-373]
+//
+// loop-modifier ->
+//    FLATTENED |
+//    FUSED | GRID | IDENTITY |
+//    INTERCHANGED |
+//    INTRATILE | OFFSETS |
+//    REVERSED | SPLIT |
+//    UNROLLED
+//    [( ScalarIntConstantExpr-list )]
+struct OmpLoopModifier {
+  TUPLE_CLASS_BOILERPLATE(OmpLoopModifier);
+  std::tuple<llvm::omp::LoopModifier,
+      std::optional<std::list<ScalarIntConstantExpr>>>
+      t;
+  CharBlock source;
+};
+
 // Ref: [5.1:100-104], [5.2:277], [6.0:452-453]
 //
 // lower-bound ->
@@ -4478,6 +4501,16 @@ struct OmpCombinerClause {
 //   CONTAINS(directive-name[, directive-name])
 struct OmpContainsClause {
   WRAPPER_CLASS_BOILERPLATE(OmpContainsClause, OmpDirectiveList);
+};
+
+// Ref: [6.0:372-373]
+//
+// apply-clause ->
+//    APPLY( [loop-modifier :] directive-specification-list )
+struct OmpApplyClause {
+  TUPLE_CLASS_BOILERPLATE(OmpApplyClause);
+  MODIFIER_BOILERPLATE(OmpLoopModifier);
+  std::tuple<MODIFIERS(), std::list<OmpDirectiveSpecification>> t;
 };
 
 // Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:109]

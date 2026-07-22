@@ -15,6 +15,8 @@
 // RUN:   | FileCheck -check-prefix=HIP-PGO %s
 // profile_rocm must precede the base profile so the base archive stays inert.
 // HIP-PGO: "{{.*}}libclang_rt.profile_rocm.a"
+// The constructor-only hipModuleLoad* interceptor object is force-linked.
+// HIP-PGO: "-u" "__llvm_profile_offload_register_dynamic_module"
 // HIP-PGO: "{{.*}}libclang_rt.profile.a"
 
 // Without profiling, the ROCm device-profile runtime is not linked.

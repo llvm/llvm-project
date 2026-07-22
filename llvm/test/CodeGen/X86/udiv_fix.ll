@@ -80,11 +80,6 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divw %cx
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    addl %eax, %eax
-; X64-NEXT:    cwtl
-; X64-NEXT:    shrl %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func3:
@@ -97,11 +92,6 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divw %cx
-; X86-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    cwtl
-; X86-NEXT:    shrl %eax
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
   %y2 = sext i8 %y to i15
   %y3 = shl i15 %y2, 7
@@ -240,13 +230,13 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-LABEL: vec:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pxor %xmm2, %xmm2
-; X64-NEXT:    movdqa %xmm1, %xmm3
-; X64-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; X64-NEXT:    movq %xmm3, %rcx
 ; X64-NEXT:    movdqa %xmm0, %xmm4
 ; X64-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm2[2],xmm4[3],xmm2[3]
 ; X64-NEXT:    psllq $31, %xmm4
 ; X64-NEXT:    movq %xmm4, %rax
+; X64-NEXT:    movdqa %xmm1, %xmm3
+; X64-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; X64-NEXT:    movd %xmm3, %ecx
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divq %rcx
 ; X64-NEXT:    movq %rax, %xmm3
@@ -254,7 +244,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %xmm4, %rax
 ; X64-NEXT:    movdqa %xmm1, %xmm4
 ; X64-NEXT:    psrldq {{.*#+}} xmm4 = xmm4[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X64-NEXT:    movq %xmm4, %rcx
+; X64-NEXT:    movd %xmm4, %ecx
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divq %rcx
 ; X64-NEXT:    movq %rax, %xmm4
@@ -269,7 +259,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-NEXT:    movq %xmm0, %rax
 ; X64-NEXT:    psrlq $32, %xmm1
-; X64-NEXT:    movq %xmm1, %rcx
+; X64-NEXT:    movd %xmm1, %ecx
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divq %rcx
 ; X64-NEXT:    movq %rax, %xmm0

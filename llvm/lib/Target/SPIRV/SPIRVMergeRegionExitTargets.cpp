@@ -131,7 +131,7 @@ static void validateRegionExits(const SPIRV::ConvergenceRegion *CR) {
   for (auto *Child : CR->Children)
     validateRegionExits(Child);
 
-  std::unordered_set<BasicBlock *> ExitTargets;
+  SmallPtrSet<BasicBlock *, 0> ExitTargets;
   for (auto *Exit : CR->Exits) {
     for (auto *BB : successors(Exit)) {
       if (CR->Blocks.count(BB) == 0)

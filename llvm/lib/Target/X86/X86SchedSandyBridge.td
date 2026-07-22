@@ -582,8 +582,7 @@ def : WriteRes<WriteCLMulLd, [SBPort015, SBPort23]> {
 }
 
 // Load/store MXCSR.
-// FIXME: This is probably wrong. Only STMXCSR should require Port4.
-def : WriteRes<WriteLDMXCSR, [SBPort0,SBPort4,SBPort5,SBPort23]> { let Latency = 5; let NumMicroOps = 4; let ReleaseAtCycles = [1,1,1,1]; }
+def : WriteRes<WriteLDMXCSR, [SBPort0,SBPort5,SBPort23]> { let Latency = 5; let NumMicroOps = 3; let ReleaseAtCycles = [1,1,1]; }
 def : WriteRes<WriteSTMXCSR, [SBPort0,SBPort4,SBPort5,SBPort23]> { let Latency = 5; let NumMicroOps = 4; let ReleaseAtCycles = [1,1,1,1]; }
 
 def : WriteRes<WriteSystem,     [SBPort015]> { let Latency = 100; }
