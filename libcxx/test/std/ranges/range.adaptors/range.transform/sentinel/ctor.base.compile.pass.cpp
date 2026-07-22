@@ -15,11 +15,12 @@
 #include <ranges>
 
 #include "test_iterators.h"
+#include "../types.h"
 
-using Range     = std::ranges::subrange<int*, sentinel_wrapper<int*>>;
-using RangeSent = std::ranges::sentinel_t<Range>;
-using SplitView = std::ranges::split_view<Range, std::ranges::single_view<int>>;
-using SplitSent = std::ranges::sentinel_t<SplitView>;
+using Range         = std::ranges::subrange<int*, sentinel_wrapper<int*>>;
+using BaseSent      = std::ranges::sentinel_t<Range>;
+using TransformView = std::ranges::transform_view<Range, PlusOne>;
+using TransformSent = std::ranges::sentinel_t<TransformView>;
 
-static_assert(!std::is_constructible_v<SplitSent, RangeSent>);
-static_assert(!std::is_convertible_v<RangeSent, SplitSent>);
+static_assert(!std::is_constructible_v<TransformSent, BaseSent>);
+static_assert(!std::is_convertible_v<BaseSent, TransformSent>);

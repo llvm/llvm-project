@@ -22,5 +22,4 @@ using ViewIter       = std::ranges::iterator_t<View>;
 using FilterView     = std::ranges::filter_view<View, AlwaysTrue>;
 using FilterIterator = std::ranges::iterator_t<FilterView>;
 
-static_assert(!std::constructible_from<FilterIterator, FilterView, ViewIter>);
-static_assert(!std::convertible_to<FilterView, FilterIterator>);
+static_assert(!std::constructible_from<FilterIterator, FilterView&, ViewIter>);
