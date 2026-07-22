@@ -53,6 +53,7 @@ add_flang_library(FortranLower
   DEPENDS
   CUFAttrs
   CUFDialect
+  FIRAnalysis
   FIRDialect
   FIRTransforms
   HLFIRDialect
@@ -61,6 +62,7 @@ add_flang_library(FortranLower
   LINK_LIBS
   CUFAttrs
   CUFDialect
+  FIRAnalysis
   FIRDialect
   FIRDialectSupport
   FIRBuilder

@@ -32,6 +32,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -132,6 +133,7 @@ struct IncrementLoopInfo {
 
   // Data members for structured loops.
   mlir::Operation *loopOp = nullptr;
+  mlir::Operation *loopVariableStore = nullptr;
 
   // Data members for unstructured loops.
   bool hasRealControl = false;
@@ -3062,18 +3064,16 @@ private:
         if (genDoConcurrent)
           continue;
 
-        // Lower the loop without the secondary-induction iter_arg so memory
-        // recurrences (e.g. reductions) stay visible to later analyses. The DO
-        // variable is recomputed from the induction variable in the body; its
-        // post-loop value is materialized in genFIRIncrementLoopEnd.
+        // Start with SSA-controlled induction. After lowering the body, switch
+        // to memory-controlled induction if another reference may modify it.
         auto loopOp = fir::DoLoopOp::create(
             *builder, loc, lowerValue, upperValue, stepValue,
             /*unordered=*/false, /*finalCountValue=*/false,
             /*iterArgs=*/mlir::ValueRange{});
         info.loopOp = loopOp;
         builder->setInsertionPointToStart(loopOp.getBody());
-        fir::StoreOp::create(*builder, loc, loopOp.getInductionVar(),
-                             info.loopVariable);
+        info.loopVariableStore = fir::StoreOp::create(
+            *builder, loc, loopOp.getInductionVar(), info.loopVariable);
         addLoopAnnotationAttr(info, dirs);
         continue;
       }
@@ -3214,13 +3214,39 @@ private:
           continue;
         }
 
-        // End fir.do_loop. The loop carries no secondary-induction iter_arg, so
-        // materialize the Fortran post-loop value lb + tripCount*step after the
-        // loop for later uses of the DO variable. Compute it in the loop's
-        // index type (matching how the loop counts iterations) so the trip
-        // arithmetic does not overflow the DO variable's type for empty
-        // range-extreme loops.
+        // Detect writes that may update the DO variable through another
+        // reference.
         auto doLoopOp = mlir::cast<fir::DoLoopOp>(info.loopOp);
+        fir::AliasAnalysis aliasAnalysis;
+        bool loopVariableMayBeModified = false;
+        for (mlir::Operation &op : doLoopOp.getBody()->without_terminator()) {
+          if (&op != info.loopVariableStore &&
+              aliasAnalysis.getModRef(&op, info.loopVariable).isMod()) {
+            loopVariableMayBeModified = true;
+            break;
+          }
+        }
+        if (loopVariableMayBeModified) {
+          builder->setInsertionPoint(doLoopOp);
+          fir::StoreOp::create(*builder, loc, doLoopOp.getLowerBound(),
+                               info.loopVariable);
+          info.loopVariableStore->erase();
+          info.loopVariableStore = nullptr;
+
+          builder->setInsertionPoint(doLoopOp.getBody()->getTerminator());
+          mlir::Value value =
+              fir::LoadOp::create(*builder, loc, info.loopVariable);
+          mlir::Value step = builder->createConvert(
+              loc, info.getLoopVariableType(), doLoopOp.getStep());
+          value =
+              mlir::arith::AddIOp::create(*builder, loc, value, step, iofAttr);
+          fir::StoreOp::create(*builder, loc, value, info.loopVariable);
+          builder->setInsertionPointAfter(doLoopOp);
+          continue;
+        }
+
+        // Compute the SSA-controlled post-loop value in index type to avoid
+        // narrow integer overflow for empty range-extreme loops.
         builder->setInsertionPointAfter(doLoopOp);
         mlir::Type idxTy = builder->getIndexType();
         mlir::Value lb =
