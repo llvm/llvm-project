@@ -1156,32 +1156,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     if (const ConstantFP *C = dyn_cast<ConstantFP>(Src)) {
-      APFloat ArgVal = C->getValueAPF();
-      const fltSemantics &Sem = ArgVal.getSemantics();
-      bool IsCorrectlyRounded =
-          &Sem == &APFloat::IEEEhalf() || &Sem == &APFloat::BFloat();
-
-      // v_rcp_f32/f64 always flush a denormal input to zero (preserving
-      // sign) before reciprocating.
-      if (!IsCorrectlyRounded && ArgVal.isDenormal())
-        ArgVal = APFloat::getZero(Sem, ArgVal.isNegative());
-
-      APFloat Val(Sem, 1);
-      Val.divide(ArgVal, APFloat::rmNearestTiesToEven);
-
-      // v_rcp_f32/f64 always flush a denormal result to zero (preserving
-      // sign).
-      if (!IsCorrectlyRounded && Val.isDenormal())
-        Val = APFloat::getZero(Sem, Val.isNegative());
-
-      // v_rcp_f16/bf16 are correctly rounded, but v_rcp_f32/f64 only
-      // approximate the reciprocal, so the exact division above need not
-      // match the hardware.
-      if (!IsCorrectlyRounded && !Val.isZero() && !Val.isInfinity() &&
-          !Val.isNaN() && !Val.isOne() && !Val.isMinusOne())
+      std::optional<APFloat> Val = AMDGPU::evaluateRcp(C->getValueAPF());
+      if (!Val)
         break;
 
-      return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), Val));
+      return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), *Val));
     }
 
     FastMathFlags FMF = cast<FPMathOperator>(II).getFastMathFlags();

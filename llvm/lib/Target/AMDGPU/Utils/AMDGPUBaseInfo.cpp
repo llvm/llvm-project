@@ -3837,6 +3837,34 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
   return A;
 }
 
+std::optional<APFloat> evaluateRcp(const APFloat &Val) {
+  const fltSemantics &Sem = Val.getSemantics();
+
+  // v_rcp_f16/bf16 are correctly rounded.
+  if (&Sem == &APFloat::IEEEhalf() || &Sem == &APFloat::BFloat())
+    return APFloat::getOne(Sem) / Val;
+
+  // v_rcp_f32/f64 always flush a denormal input to zero (preserving sign)
+  // before reciprocating.
+  APFloat Arg = Val;
+  if (Arg.isDenormal())
+    Arg = APFloat::getZero(Sem, Arg.isNegative());
+
+  APFloat Result = APFloat::getOne(Sem) / Arg;
+
+  // v_rcp_f32/f64 always flush a denormal result to zero (preserving sign).
+  if (Result.isDenormal())
+    Result = APFloat::getZero(Sem, Result.isNegative());
+
+  // v_rcp_f32/f64 only approximate the reciprocal, except for these special
+  // cases where the result is exact.
+  if (!Result.isZero() && !Result.isInfinity() && !Result.isNaN() &&
+      !Result.isOne() && !Result.isMinusOne())
+    return std::nullopt;
+
+  return Result;
+}
+
 } // namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::TargetIDSetting S) {
