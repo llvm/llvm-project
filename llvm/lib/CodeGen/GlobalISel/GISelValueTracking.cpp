@@ -148,9 +148,10 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
     // An out-of-range constant index produces poison. Keep all lanes demanded,
     // which is poison-safe and matches SelectionDAG's conservative behavior.
     APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
-    if (auto Idx = getIConstantVRegVal(Extract.getIndexReg(), MRI))
+    if (auto Idx = getIConstantVRegVal(Extract.getIndexReg(), MRI)) {
       if (Idx->ult(NumSrcElts))
         DemandedSrcElts = APInt::getOneBitSet(NumSrcElts, Idx->getZExtValue());
+    }
     return isKnownNeverZero(InVec, DemandedSrcElts, Depth + 1);
   }
 
@@ -2763,8 +2764,9 @@ GISelValueTrackingPrinterPass::run(MachineFunction &MF,
           continue;
         KnownBits Known = VTA.getKnownBits(Reg);
         unsigned SignedBits = VTA.computeNumSignBits(Reg);
+        bool IsKnownNeverZero = VTA.isKnownNeverZero(Reg);
         OS << "  " << MO << " KnownBits:" << Known << " SignBits:" << SignedBits
-           << '\n';
+           << " IsKnownNeverZero:" << IsKnownNeverZero << '\n';
       };
     }
   }

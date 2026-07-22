@@ -23,7 +23,8 @@ from UpdateTestChecks import mir
 
 VT_FUNCTION_RE = re.compile(
     r"\s*name:\s*@(?P<func>[A-Za-z0-9_-]+)"
-    r"(?P<body>(\s*%[0-9a-zA-Z_]+:[A-Za-z0-9_-]+\s*KnownBits:[01?]+\sSignBits:[0-9]+$)+)",
+    r"(?P<body>(\s*%[0-9a-zA-Z_]+:[A-Za-z0-9_-]+\s*KnownBits:[01?]+"
+    r"\sSignBits:[0-9]+\sIsKnownNeverZero:[01]$)+)",
     flags=(re.X | re.M),
 )
 
