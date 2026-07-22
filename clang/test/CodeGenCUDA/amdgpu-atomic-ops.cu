@@ -22,23 +22,23 @@
 
 __global__ void ffp1(float *p) {
   // FUN-LABEL: @_Z4ffp1Pf
-  // SAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 4, [[DEFMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+$]]
-  // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 4, [[DEFMD]]
-  // SAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 4, [[DEFMD]]
-  // SAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 4, [[DEFMD]]
-  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE:[0-9]+]], [[DEFMD]]
-  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fadd ptr {{.*}} monotonic, align 4, [[DEFMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+$]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 4, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmax ptr {{.*}} monotonic, align 4, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmin ptr {{.*}} monotonic, align 4, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fadd ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE:[0-9]+]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmax ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmin ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
 
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 4, [[FADDMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+, !amdgpu.ignore.denormal.mode ![0-9]+$]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 4, [[DEFMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+$]]
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 4, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 4, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE:[0-9]+]], [[FADDMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fadd ptr {{.*}} monotonic, align 4, [[FADDMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+, !amdgpu.ignore.denormal.mode ![0-9]+$]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 4, [[DEFMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+$]]
+  // UNSAFEIR: atomicrmw contract fmax ptr {{.*}} monotonic, align 4, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmin ptr {{.*}} monotonic, align 4, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fadd ptr {{.*}} monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE:[0-9]+]], [[FADDMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmax ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmin ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
 
   // SAFE: global_atomic_add_f32
   // SAFE: global_atomic_cmpswap
@@ -67,23 +67,23 @@ __global__ void ffp1(float *p) {
 
 __global__ void ffp2(double *p) {
   // FUN-LABEL: @_Z4ffp2Pd
-  // SAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // SAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // SAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fadd ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmax ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmin ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
 
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fadd ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmax ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmin ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
 
   // SAFE: global_atomic_cmpswap_b64
   // SAFE: global_atomic_cmpswap_b64
@@ -111,23 +111,23 @@ __global__ void ffp2(double *p) {
 // long double is the same as double for amdgcn.
 __global__ void ffp3(long double *p) {
   // FUN-LABEL: @_Z4ffp3Pe
-  // SAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // SAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // SAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fadd ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmax ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmin ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
 
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fadd ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmax ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmin ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
 
   // SAFE: global_atomic_cmpswap_b64
   // SAFE: global_atomic_cmpswap_b64
@@ -153,11 +153,11 @@ __global__ void ffp3(long double *p) {
 __device__ double ffp4(double *p, float f) {
   // FUN-LABEL: @_Z4ffp4Pdf
   // CHECK: fpext contract float {{.*}} to double
-  // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
 
-  // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
   __atomic_fetch_sub(p, f, memory_order_relaxed);
   return __hip_atomic_fetch_sub(p, f, memory_order_relaxed, __HIP_MEMORY_SCOPE_AGENT);
 }
@@ -165,34 +165,34 @@ __device__ double ffp4(double *p, float f) {
 __device__ double ffp5(double *p, int i) {
   // FUN-LABEL: @_Z4ffp5Pdi
   // CHECK: sitofp contract i32 {{.*}} to double
-  // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
   __atomic_fetch_sub(p, i, memory_order_relaxed);
 
-  // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
   return __hip_atomic_fetch_sub(p, i, memory_order_relaxed, __HIP_MEMORY_SCOPE_AGENT);
 }
 
 __global__ void ffp6(_Float16 *p) {
   // FUN-LABEL: @_Z4ffp6PDF16
-  // SAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 2, [[DEFMD]]
-  // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 2, [[DEFMD]]
-  // SAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 2, [[DEFMD]]
-  // SAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 2, [[DEFMD]]
-  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fadd ptr {{.*}} monotonic, align 2, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 2, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmax ptr {{.*}} monotonic, align 2, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmin ptr {{.*}} monotonic, align 2, [[DEFMD]]
+  // SAFEIR: atomicrmw contract fadd ptr {{.*}} syncscope("agent") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fsub ptr {{.*}} syncscope("workgroup") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmax ptr {{.*}} syncscope("agent") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // SAFEIR: atomicrmw contract fmin ptr {{.*}} syncscope("workgroup") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
 
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 2, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 2, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 2, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 2, [[DEFMD]]
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fadd ptr {{.*}} monotonic, align 2, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 2, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmax ptr {{.*}} monotonic, align 2, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmin ptr {{.*}} monotonic, align 2, [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fadd ptr {{.*}} monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fsub ptr {{.*}} monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmax ptr {{.*}} syncscope("agent") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
+  // UNSAFEIR: atomicrmw contract fmin ptr {{.*}} syncscope("workgroup") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
 
   // SAFE: _Z4ffp6PDF16
   // SAFE: global_atomic_cmpswap
