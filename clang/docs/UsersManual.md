@@ -55,8 +55,7 @@ to be compatible with the Visual C++ compiler, cl.exe.
 In addition to language-specific features, Clang has a variety of
 features that depend on what CPU architecture or operating system is
 being compiled for. Please see the {ref}`Target-Specific Features and
-Limitations <target_features>` section for
-more details.
+Limitations <target_features>` section for more details.
 
 (terminology)=
 
@@ -215,10 +214,10 @@ prints the column number of a diagnostic. For example, when this is
 enabled, Clang will print something like:
 
 ```
-   test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
-   #endif bad
-          ^
-          //
+test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+#endif bad
+       ^
+       //
 
 ```
 When this is disabled, Clang will print "test.c:28: warning..." with
@@ -240,10 +239,10 @@ prints the filename, line number and column number of a diagnostic.
 For example, when this is enabled, Clang will print something like:
 
 ```
-   test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
-   #endif bad
-          ^
-          //
+test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+#endif bad
+       ^
+       //
 
 ```
 When this is disabled, Clang will not print the "test.c:28:8: "
@@ -262,10 +261,10 @@ diagnostic. For example, when this is enabled, Clang will print
 something like:
 
 ```
-   test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
-   #endif bad
-          ^
-          //
+test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+#endif bad
+       ^
+       //
 ```
 :::
 
@@ -289,10 +288,10 @@ specific parts of the diagnostic, e.g.,
 When this is disabled, Clang will just print:
 
 ```
-   test.c:2:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
-   #endif bad
-          ^
-          //
+test.c:2:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+#endif bad
+       ^
+       //
 
 ```
 If the `NO_COLOR` environment variable is defined and not empty
@@ -348,12 +347,12 @@ option name when outputting a warning diagnostic. For example, in
 this output:
 
 ```
-   test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
-   #endif bad
-          ^
-          //
-
+test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+#endif bad
+       ^
+       //
 ```
+
 Passing **-fno-diagnostics-show-option** will prevent Clang from
 printing the [{option}`-Wextra-tokens`] information in
 the diagnostic. This information tells you the flag needed to enable
@@ -375,11 +374,11 @@ For example, a format string warning will produce these three
 renditions based on the setting of this option:
 
 ```
-   t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int' [-Wformat]
-   t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int' [-Wformat,1]
-   t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int' [-Wformat,Format String]
-
+t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int' [-Wformat]
+t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int' [-Wformat,1]
+t.c:3:11: warning: conversion specifies type 'char *' but the argument has type 'int' [-Wformat,Format String]
 ```
+
 This category can be used by clients that want to group diagnostics
 by category, so it should be a high-level category. We want dozens
 of these, not hundreds or thousands of them.
@@ -498,11 +497,11 @@ For example, in this output, the block containing the callsite of `foo` was
 executed 3000 times according to the profile data:
 
 ```
-   s.c:7:10: remark: foo inlined into bar (hotness: 3000) [-Rpass-analysis=inline]
-     sum += foo(x, x - 2);
-            ^
-
+s.c:7:10: remark: foo inlined into bar (hotness: 3000) [-Rpass-analysis=inline]
+  sum += foo(x, x - 2);
+         ^
 ```
+
 This option is implied when
 {ref}`-fsave-optimization-record <opt_fsave-optimization-record>` is used.
 Otherwise, it defaults to off.
@@ -533,12 +532,12 @@ prints the information on how to fix a specific diagnostic
 underneath it when it knows. For example, in this output:
 
 ```
-   test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
-   #endif bad
-          ^
-          //
-
+test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+#endif bad
+       ^
+       //
 ```
+
 Passing **-fno-diagnostics-fixit-info** will prevent Clang from
 printing the "//" line at the end of the message. This information
 is useful for users who may not understand what is wrong, but can be
@@ -557,11 +556,11 @@ information is a simple sequence of brace enclosed ranges, where each range
 lists the start and end line/column locations. For example, in this output:
 
 ```
- exprs.c:47:15:{47:8-47:14}{47:17-47:24}: error: invalid operands to binary expression ('int *' and '_Complex float')
-    P = (P-42) + Gamma*4;
-        ~~~~~~ ^ ~~~~~~~
-
+exprs.c:47:15:{47:8-47:14}{47:17-47:24}: error: invalid operands to binary expression ('int *' and '_Complex float')
+   P = (P-42) + Gamma*4;
+       ~~~~~~ ^ ~~~~~~~
 ```
+
 The {}'s are generated by -fdiagnostics-print-source-range-info.
 
 The printed column numbers count bytes from the beginning of the
@@ -577,9 +576,9 @@ parseable format at the end of diagnostics. The following example
 illustrates the format:
 
 ```
-  fix-it:"t.cpp":{7:25-7:29}:"Gamma"
-
+fix-it:"t.cpp":{7:25-7:29}:"Gamma"
 ```
+
 The range printed is a half-open range, so in this example the
 characters at column 25 up to but not including column 29 on line 7
 in t.cpp should be replaced with the string "Gamma". Either the
@@ -606,13 +605,13 @@ highlighting will still appear on differing arguments.
 Default:
 
 ```
- t.cc:4:5: note: candidate function not viable: no known conversion from 'vector<map<[...], map<float, [...]>>>' to 'vector<map<[...], map<double, [...]>>>' for 1st argument;
-
+t.cc:4:5: note: candidate function not viable: no known conversion from 'vector<map<[...], map<float, [...]>>>' to 'vector<map<[...], map<double, [...]>>>' for 1st argument;
 ```
+
 -fno-elide-type:
 
 ```
- t.cc:4:5: note: candidate function not viable: no known conversion from 'vector<map<int, map<float, int>>>' to 'vector<map<int, map<double, int>>>' for 1st argument;
+t.cc:4:5: note: candidate function not viable: no known conversion from 'vector<map<int, map<float, int>>>' to 'vector<map<int, map<double, int>>>' for 1st argument;
 ```
 :::
 
@@ -628,21 +627,21 @@ line, with differences marked inline. This is compatible with
 Default:
 
 ```
- t.cc:4:5: note: candidate function not viable: no known conversion from 'vector<map<[...], map<float, [...]>>>' to 'vector<map<[...], map<double, [...]>>>' for 1st argument;
-
+t.cc:4:5: note: candidate function not viable: no known conversion from 'vector<map<[...], map<float, [...]>>>' to 'vector<map<[...], map<double, [...]>>>' for 1st argument;
 ```
+
 With {option}`-fdiagnostics-show-template-tree`:
 
 ```
- t.cc:4:5: note: candidate function not viable: no known conversion for 1st argument;
-   vector<
-     map<
-       [...],
-       map<
-         [float != double],
-         [...]>>>
-
+t.cc:4:5: note: candidate function not viable: no known conversion for 1st argument;
+  vector<
+    map<
+      [...],
+      map<
+        [float != double],
+        [...]>>>
 ```
+
 :::
 
 :::{option} -fcaret-diagnostics-max-lines:
@@ -692,11 +691,11 @@ This option, which defaults to on, enables warnings about extra
 tokens at the end of preprocessor directives. For example:
 
 ```
-   test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
-   #endif bad
-          ^
-
+test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
+#endif bad
+       ^
 ```
+
 These extra tokens are not strictly conforming, and are usually best
 handled by commenting them out.
 :::
@@ -710,17 +709,17 @@ This option, which defaults to on, enables a warning in the
 following code:
 
 ```
- template<typename T> struct set{};
- template<typename T> struct trait { typedef const T& type; };
- struct Value {
-   template<typename T> void set(typename trait<T>::type value) {}
- };
- void foo() {
-   Value v;
-   v.set<double>(3.2);
- }
-
+template<typename T> struct set{};
+template<typename T> struct trait { typedef const T& type; };
+struct Value {
+  template<typename T> void set(typename trait<T>::type value) {}
+};
+void foo() {
+  Value v;
+  v.set<double>(3.2);
+}
 ```
+
 C++ [basic.lookup.classref] requires this to be an error, but,
 because it's hard to work around, Clang downgrades it to a warning
 as an extension.
@@ -735,18 +734,19 @@ This option enables warnings about binding a
 reference to a temporary when the temporary doesn't have a usable
 copy constructor. For example:
 
+```cpp
+struct NonCopyable {
+  NonCopyable();
+private:
+  NonCopyable(const NonCopyable&);
+};
+void foo(const NonCopyable&);
+void bar() {
+  foo(NonCopyable());  // Disallowed in C++98; allowed in C++11.
+}
 ```
-   struct NonCopyable {
-     NonCopyable();
-   private:
-     NonCopyable(const NonCopyable&);
-   };
-   void foo(const NonCopyable&);
-   void bar() {
-     foo(NonCopyable());  // Disallowed in C++98; allowed in C++11.
-   }
 
-```
+```cpp
 struct NonCopyable2 {
   NonCopyable2();
   NonCopyable2(NonCopyable2&);
@@ -757,7 +757,6 @@ void bar() {
 }
 ```
 
-```
 Note that if `NonCopyable2::NonCopyable2()` has a default argument
 whose instantiation produces a compile error, that error will still
 be a hard error in C++98 mode even if this warning is turned off.
