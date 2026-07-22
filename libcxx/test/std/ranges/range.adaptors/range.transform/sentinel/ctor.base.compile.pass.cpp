@@ -17,9 +17,8 @@
 #include "test_iterators.h"
 #include "../types.h"
 
-using Range         = std::ranges::subrange<int*, sentinel_wrapper<int*>>;
-using BaseSent      = std::ranges::sentinel_t<Range>;
-using TransformView = std::ranges::transform_view<Range, PlusOne>;
+using BaseSent      = std::ranges::sentinel_t<SizedSentinelView>;
+using TransformView = std::ranges::transform_view<SizedSentinelView, PlusOne>;
 using TransformSent = std::ranges::sentinel_t<TransformView>;
 
 static_assert(!std::is_constructible_v<TransformSent, BaseSent>);
