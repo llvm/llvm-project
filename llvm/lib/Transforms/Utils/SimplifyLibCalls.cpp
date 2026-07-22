@@ -2051,10 +2051,14 @@ static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilderBase &B,
 static Value *optimizeSinCosDoubleFP(CallInst *CI, IRBuilderBase &B) {
   auto *RetTy = dyn_cast<StructType>(CI->getType());
   if (!RetTy || RetTy->getNumElements() != 2 ||
-      !RetTy->getElementType(0)->isDoubleTy())
+      !RetTy->getElementType(0)->getScalarType()->isDoubleTy())
     return nullptr;
 
   Value *X = valueHasFloatPrecision(CI->getArgOperand(0));
+  if (!X)
+    if (auto *Ext = dyn_cast<FPExtInst>(CI->getArgOperand(0)))
+      if (Ext->getOperand(0)->getType()->getScalarType()->isFloatTy())
+        X = Ext->getOperand(0);
   if (!X)
     return nullptr;
 
@@ -2064,7 +2068,7 @@ static Value *optimizeSinCosDoubleFP(CallInst *CI, IRBuilderBase &B) {
       return nullptr;
     for (User *EVU : EV->users()) {
       auto *Cast = dyn_cast<FPTruncInst>(EVU);
-      if (!Cast || !Cast->getType()->isFloatTy())
+      if (!Cast || !Cast->getType()->getScalarType()->isFloatTy())
         return nullptr;
     }
   }
@@ -2072,11 +2076,13 @@ static Value *optimizeSinCosDoubleFP(CallInst *CI, IRBuilderBase &B) {
   IRBuilderBase::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(CI->getFastMathFlags());
 
-  Value *NewCall = B.CreateIntrinsic(Intrinsic::sincos, B.getFloatTy(), X);
+  Value *NewCall = B.CreateIntrinsic(Intrinsic::sincos, X->getType(), X);
+  cast<Instruction>(NewCall)->setMetadata(
+      LLVMContext::MD_fpmath, CI->getMetadata(LLVMContext::MD_fpmath));
   Value *Res = PoisonValue::get(RetTy);
   for (unsigned I = 0; I != 2; ++I) {
-    Value *Ext =
-        B.CreateFPExt(B.CreateExtractValue(NewCall, I), B.getDoubleTy());
+    Value *Ext = B.CreateFPExt(B.CreateExtractValue(NewCall, I),
+                               RetTy->getElementType(I));
     Res = B.CreateInsertValue(Res, Ext, I);
   }
   return Res;

@@ -134,6 +134,64 @@ define { float, float } @sin_cos_pair_shrink(float %f) {
   ret { float, float } %r1
 }
 
+define { <2 x float>, <2 x float> } @sincos_shrink_vector(<2 x float> %f) {
+; CHECK-LABEL: define { <2 x float>, <2 x float> } @sincos_shrink_vector(
+; CHECK-SAME: <2 x float> [[F:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> [[F]])
+; CHECK-NEXT:    ret { <2 x float>, <2 x float> } [[TMP1]]
+;
+  %d = fpext fast <2 x float> %f to <2 x double>
+  %sincos = call fast { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %d)
+  %s = extractvalue { <2 x double>, <2 x double> } %sincos, 0
+  %c = extractvalue { <2 x double>, <2 x double> } %sincos, 1
+  %sf = fptrunc fast <2 x double> %s to <2 x float>
+  %cf = fptrunc fast <2 x double> %c to <2 x float>
+  %r0 = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> %sf, 0
+  %r1 = insertvalue { <2 x float>, <2 x float> } %r0, <2 x float> %cf, 1
+  ret { <2 x float>, <2 x float> } %r1
+}
+
+define { <vscale x 2 x float>, <vscale x 2 x float> } @sincos_shrink_scalable_vector(<vscale x 2 x float> %f) {
+; CHECK-LABEL: define { <vscale x 2 x float>, <vscale x 2 x float> } @sincos_shrink_scalable_vector(
+; CHECK-SAME: <vscale x 2 x float> [[F:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.sincos.nxv2f32(<vscale x 2 x float> [[F]])
+; CHECK-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float> } [[TMP1]]
+;
+  %d = fpext fast <vscale x 2 x float> %f to <vscale x 2 x double>
+  %sincos = call fast { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double> %d)
+  %s = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %sincos, 0
+  %c = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %sincos, 1
+  %sf = fptrunc fast <vscale x 2 x double> %s to <vscale x 2 x float>
+  %cf = fptrunc fast <vscale x 2 x double> %c to <vscale x 2 x float>
+  %r0 = insertvalue { <vscale x 2 x float>, <vscale x 2 x float> } poison, <vscale x 2 x float> %sf, 0
+  %r1 = insertvalue { <vscale x 2 x float>, <vscale x 2 x float> } %r0, <vscale x 2 x float> %cf, 1
+  ret { <vscale x 2 x float>, <vscale x 2 x float> } %r1
+}
+
+define { float, float } @sincos_shrink_fpmath(float %f) {
+; CHECK-LABEL: define { float, float } @sincos_shrink_fpmath(
+; CHECK-SAME: float [[F:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast { float, float } @llvm.sincos.f32(float [[F]]), !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    ret { float, float } [[TMP1]]
+;
+  %d = fpext fast float %f to double
+  %sincos = call fast { double, double } @llvm.sincos.f64(double %d), !fpmath !0
+  %s = extractvalue { double, double } %sincos, 0
+  %c = extractvalue { double, double } %sincos, 1
+  %sf = fptrunc fast double %s to float
+  %cf = fptrunc fast double %c to float
+  %r0 = insertvalue { float, float } poison, float %sf, 0
+  %r1 = insertvalue { float, float } %r0, float %cf, 1
+  ret { float, float } %r1
+}
+
 declare { double, double } @llvm.sincos.f64(double)
+declare { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double>)
+declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double>)
 declare double @llvm.sin.f64(double)
 declare double @llvm.cos.f64(double)
+
+!0 = !{float 2.500000e+00}
+;.
+; CHECK: [[META0]] = !{float 2.500000e+00}
+;.
