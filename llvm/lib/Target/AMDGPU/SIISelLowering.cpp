@@ -10326,6 +10326,16 @@ static void packImage16bitOpsToDwords(SelectionDAG &DAG, SDValue Op,
   }
 }
 
+/// Emit a DiagnosticInfoUnsupported for an unsupported image intrinsic and
+/// return poison values of \p ResultTypes, preserving the chain if present.
+static SDValue diagnoseUnsupportedImage(SelectionDAG &DAG, SDValue Op,
+                                        ArrayRef<EVT> ResultTypes,
+                                        const SDLoc &DL, const Twine &Msg) {
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(), Msg, DL.getDebugLoc()));
+  return DAG.getErrorMergeValues(ResultTypes, Op.getOperand(0), DL);
+}
+
 SDValue SITargetLowering::lowerImage(SDValue Op,
                                      const AMDGPU::ImageDimIntrinsicInfo *Intr,
                                      SelectionDAG &DAG, bool WithChain) const {
@@ -10372,6 +10382,12 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
          IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16_NORTN ||
          IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16 ||
          IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16_NORTN);
+
+    if (!IsAtomicPacked16Bit && VData.getValueSizeInBits() != 32 &&
+        VData.getValueSizeInBits() != 64) {
+      return diagnoseUnsupportedImage(DAG, Op, OrigResultTypes, DL,
+                                      "unsupported image atomic data type");
+    }
 
     bool Is64Bit = VData.getValueSizeInBits() == 64;
     if (BaseOpcode->AtomicX2) {
@@ -10692,21 +10708,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx90a,
                                      NumVDataDwords, NumVAddrDwords);
       if (Opcode == -1) {
-        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-            DAG.getMachineFunction().getFunction(),
-            "requested image instruction is not supported on this GPU",
-            DL.getDebugLoc()));
-
-        unsigned Idx = 0;
-        SmallVector<SDValue, 3> RetValues(OrigResultTypes.size());
-        for (EVT VT : OrigResultTypes) {
-          if (VT == MVT::Other)
-            RetValues[Idx++] = Op.getOperand(0); // Chain
-          else
-            RetValues[Idx++] = DAG.getPOISON(VT);
-        }
-
-        return DAG.getMergeValues(RetValues, DL);
+        return diagnoseUnsupportedImage(
+            DAG, Op, OrigResultTypes, DL,
+            "requested image instruction is not supported on this GPU");
       }
     }
     if (Opcode == -1 &&
@@ -11181,9 +11185,20 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_fract:
     return DAG.getNode(AMDGPUISD::FRACT, DL, VT, Op.getOperand(1));
 
-  case Intrinsic::amdgcn_class:
-    return DAG.getNode(AMDGPUISD::FP_CLASS, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2));
+  case Intrinsic::amdgcn_class: {
+    SDValue Src = Op.getOperand(1);
+    EVT SrcVT = Src.getValueType();
+    bool IsLegal = SrcVT == MVT::f32 || SrcVT == MVT::f64 ||
+                   (SrcVT == MVT::f16 && Subtarget->has16BitInsts());
+    if (!IsLegal) {
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          DAG.getMachineFunction().getFunction(),
+          "llvm.amdgcn.class only supports f16, f32, and f64",
+          DL.getDebugLoc()));
+      return DAG.getPOISON(VT);
+    }
+    return DAG.getNode(AMDGPUISD::FP_CLASS, DL, VT, Src, Op.getOperand(2));
+  }
   case Intrinsic::amdgcn_div_fmas:
     return DAG.getNode(AMDGPUISD::DIV_FMAS, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(4));
@@ -11467,6 +11482,11 @@ SDValue SITargetLowering::lowerRawBufferAtomicIntrin(SDValue Op,
   SDLoc DL(Op);
 
   SDValue VData = Op.getOperand(2);
+  if (VData.getValueSizeInBits() != 32 && VData.getValueSizeInBits() != 64) {
+    SmallVector<EVT, 2> ResultTypes(Op->values());
+    return diagnoseUnsupportedImage(DAG, Op, ResultTypes, DL,
+                                    "unsupported buffer atomic data type");
+  }
   SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
   auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
   auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
@@ -11495,6 +11515,11 @@ SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
 
   SDValue VData = Op.getOperand(2);
+  if (VData.getValueSizeInBits() != 32 && VData.getValueSizeInBits() != 64) {
+    SmallVector<EVT, 2> ResultTypes(Op->values());
+    return diagnoseUnsupportedImage(DAG, Op, ResultTypes, DL,
+                                    "unsupported buffer atomic data type");
+  }
   SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
   auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
   auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
@@ -11808,6 +11833,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                          AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap: {
+    SDValue Src = Op.getOperand(2);
+    if (Src.getValueSizeInBits() != 32 && Src.getValueSizeInBits() != 64) {
+      SmallVector<EVT, 2> ResultTypes(Op->values());
+      return diagnoseUnsupportedImage(DAG, Op, ResultTypes, DL,
+                                      "unsupported buffer atomic data type");
+    }
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(4), DAG);
     auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
     auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
@@ -11832,6 +11863,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap: {
+    SDValue Src = Op.getOperand(2);
+    if (Src.getValueSizeInBits() != 32 && Src.getValueSizeInBits() != 64) {
+      SmallVector<EVT, 2> ResultTypes(Op->values());
+      return diagnoseUnsupportedImage(DAG, Op, ResultTypes, DL,
+                                      "unsupported buffer atomic data type");
+    }
     SDValue Rsrc = bufferRsrcPtrToVector(Op->getOperand(4), DAG);
     auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(6), DAG);
     auto SOffset = selectSOffset(Op.getOperand(7), DAG, Subtarget);

@@ -22,6 +22,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -330,16 +331,22 @@ static FailureOr<std::optional<int64_t>> getWorkerPrivateSharedMemoryNumCopies(
     return std::optional<int64_t>();
 
   auto workerArgConst = workerArg->getDefiningOp<arith::ConstantIndexOp>();
-  if (!workerArgConst) {
-    if (support) {
-      (void)support->emitNYI(privateLocal.getLoc(),
-                             "worker-private variables in shared memory "
-                             "require compile-time constant num_workers");
-      return failure();
-    }
-    return std::optional<int64_t>();
+  if (workerArgConst)
+    return std::optional<int64_t>(workerArgConst.value());
+
+  FailureOr<int64_t> workerArgBound =
+      ValueBoundsConstraintSet::computeConstantBound(presburger::BoundType::EQ,
+                                                     *workerArg);
+  if (succeeded(workerArgBound))
+    return std::optional<int64_t>(*workerArgBound);
+
+  if (support) {
+    (void)support->emitNYI(privateLocal.getLoc(),
+                           "worker-private variables in shared memory "
+                           "require compile-time constant num_workers");
+    return failure();
   }
-  return std::optional<int64_t>(workerArgConst.value());
+  return std::optional<int64_t>();
 }
 
 static bool isInsideACCSpecializedRoutine(Operation *op) {
