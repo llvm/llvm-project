@@ -305,8 +305,8 @@ lookupBuiltin(StringRef DemangledCall,
     // Prefix and suffix to be added to the builtin's name for lookup.
     // For example, OpenCL "abs" taking an unsigned value has a prefix "u_",
     // and "group_reduce_max" taking an unsigned value has a suffix "u".
-    std::string Prefix;
-    std::string Suffix;
+    StringRef Prefix;
+    StringRef Suffix;
 
     switch (FirstArgumentType) {
     // Unsigned:
@@ -341,12 +341,12 @@ lookupBuiltin(StringRef DemangledCall,
 
     // If argument-type name prefix was added, look up the builtin again.
     if (!Prefix.empty() &&
-        (Builtin = SPIRV::lookupBuiltin(Prefix + BuiltinName, Set)))
+        (Builtin = SPIRV::lookupBuiltin((Prefix + BuiltinName).str(), Set)))
       return std::make_unique<SPIRV::IncomingCall>(
           BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
 
     if (!Suffix.empty() &&
-        (Builtin = SPIRV::lookupBuiltin(BuiltinName + Suffix, Set)))
+        (Builtin = SPIRV::lookupBuiltin((BuiltinName + Suffix).str(), Set)))
       return std::make_unique<SPIRV::IncomingCall>(
           BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
   }
