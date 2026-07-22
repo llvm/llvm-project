@@ -23,13 +23,13 @@
 // buffer has to be refilled (underflow) several times, and check that every value
 // is read correctly and that EOF is detected at the end.
 
-// RUN: seq 1 5000 > %t.input
+// FILE_DEPENDENCIES: ../many-ints.dat
 
 // RUN: %{build} -DSYNC_WITH_STDIO_FALSE
-// RUN: %{exec} %t.exe < %t.input
+// RUN: %{exec} %t.exe < %{temp}/many-ints.dat
 
 // RUN: %{build}
-// RUN: %{exec} %t.exe < %t.input
+// RUN: %{exec} %t.exe < %{temp}/many-ints.dat
 
 #include <cassert>
 #include <iostream>
