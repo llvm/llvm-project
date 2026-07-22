@@ -6,8 +6,8 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftReflectionLoading(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
+    @skipIfWindows  # https://github.com/swiftlang/llvm-project/issues/13443
     @swiftTest
-    @expectedFailureWindows
     def test(self):
         """Test that no SwiftASTContext is initialized just to stop at a breakpoint"""
         self.build()

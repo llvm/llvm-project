@@ -34,14 +34,12 @@ class TestSwiftBackwardInteropSteppingClass(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_setter_step_in_class(self):
         thread = self.setup('Break here for setter - class')
         self.check_step_in(thread, 'testSetter', 'SwiftClass.swiftProperty.setter')
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_setter_step_over_class(self):
         thread = self.setup('Break here for setter - class')
         self.check_step_over(thread, 'testSetter')
@@ -49,14 +47,12 @@ class TestSwiftBackwardInteropSteppingClass(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_overriden_step_in_class(self):
         thread = self.setup('Break here for overridden - class')
         self.check_step_in(thread, 'testOverridenMethod', 'SwiftSubclass.overrideableMethod')
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_overriden_step_over_class(self):
         thread = self.setup('Break here for overridden')
         self.check_step_over(thread, 'testOverridenMethod')

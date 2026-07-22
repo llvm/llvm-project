@@ -37,45 +37,10 @@ xfail lldb-shell :: SwiftREPL/Regex.test
 xfail lldb-shell :: SwiftREPL/SimpleExpressions.test
 xfail lldb-shell :: SwiftREPL/enum-singlecase.test
 
-xfail lldb-api :: commands/apropos/with-process/TestAproposWithProcess.py
-xfail lldb-api :: commands/command/nested_alias/TestNestedAlias.py
-xfail lldb-api :: commands/expression/entry-bp/TestExprEntryBP.py
-xfail lldb-api :: commands/memory/write/TestMemoryWrite.py
-xfail lldb-api :: functionalities/breakpoint/address_breakpoints/TestAddressBreakpoints.py
-xfail lldb-api :: functionalities/breakpoint/auto_continue/TestBreakpointAutoContinue.py
-xfail lldb-api :: functionalities/breakpoint/breakpoint_conditions/TestBreakpointConditions.py
-xfail lldb-api :: functionalities/breakpoint/breakpoint_options/TestBreakpointOptions.py
-xfail lldb-api :: functionalities/breakpoint/step_over_breakpoint/TestStepOverBreakpoint.py
-xfail lldb-api :: functionalities/conditional_break/TestConditionalBreak.py
-xfail lldb-api :: functionalities/memory/find/TestMemoryFind.py
-xfail lldb-api :: lang/c/anonymous/TestAnonymous.py
-xfail lldb-api :: lang/c/array_types/TestArrayTypes.py
-xfail lldb-api :: lang/c/enum_types/TestEnumTypes.py
-xfail lldb-api :: lang/c/forward/TestForwardDeclaration.py
-xfail lldb-api :: lang/c/function_types/TestFunctionTypes.py
-xfail lldb-api :: lang/c/register_variables/TestRegisterVariables.py
-xfail lldb-api :: lang/c/set_values/TestSetValues.py
-xfail lldb-api :: lang/c/shared_lib/TestSharedLib.py
-xfail lldb-api :: lang/cpp/class_types/TestClassTypes.py
-xfail lldb-api :: lang/cpp/inlines/TestInlines.py
-xfail lldb-api :: python_api/compile_unit/TestCompileUnitAPI.py
-xfail lldb-api :: python_api/thread/TestThreadAPI.py
 xfail lldb-api :: source-manager/TestSourceManager.py
-xfail lldb-shell :: Driver/TestConvenienceVariables.test
 
 # https://github.com/swiftlang/llvm-project/issues/9620
 xfail lldb-shell :: Swift/expression-diagnostics.test
-
-# https://github.com/swiftlang/llvm-project/issues/9540
-xfail lldb-shell :: SymbolFile/NativePDB/local-variables.cpp
-xfail lldb-shell :: SymbolFile/NativePDB/stack_unwinding01.cpp
-xfail lldb-api :: lang/c/local_variables/TestLocalVariables.py
-
-# https://github.com/swiftlang/llvm-project/issues/9637
-xfail lldb-api :: python_api/address_range/TestAddressRange.py
-
-# https://github.com/swiftlang/llvm-project/issues/9643
-xfail lldb-shell :: Commands/command-process-launch-user-entry.test
 
 # Skip SymbolTests because we cannot xfail unittests by name. We would need to
 # specify their indexes, but these are subject to change. Right now, failures
@@ -108,12 +73,6 @@ skip lldb-api :: functionalities/breakpoint/same_cu_name/TestFileBreakpoinsSameC
 # https://github.com/swiftlang/llvm-project/issues/9101
 skip lldb-api :: tools/lldb-server
 
-### Tests that pass accidentally ###
-
-https://github.com/llvm/llvm-project/issues/116972
-skip lldb-api :: api/command-return-object/TestSBCommandReturnObject.py
-skip lldb-api :: api/multiple-targets/TestMultipleTargets.py
-
 ### Tests that fail during setup and thus show up as UNRESOLVED ***
 
 # https://github.com/swiftlang/llvm-project/issues/9887
@@ -134,6 +93,4 @@ skip lldb-api :: lang/c/trampoline_stepping/TestTrampolineStepping.py
 
 # Untriaged: new in stable/21.x
 skip lldb-api :: commands/frame/var-dil/basics/QualifiedId/TestFrameVarDILQualifiedId.py
-skip lldb-api :: functionalities/dead-strip/TestDeadStrip.py
-skip lldb-api :: functionalities/memory/holes/TestMemoryHoles.py
 skip lldb-api :: lang/cpp/forward/TestCPPForwardDeclaration.py

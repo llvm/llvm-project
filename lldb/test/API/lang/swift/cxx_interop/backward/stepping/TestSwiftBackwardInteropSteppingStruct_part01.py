@@ -35,28 +35,24 @@ class TestSwiftBackwardInteropSteppingStruct(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_method_step_in_struct(self):
         thread = self.setup("Break here for method - struct")
         self.check_step_in(thread, "testMethod", "SwiftStruct.swiftMethod")
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_method_step_over_struct(self):
         thread = self.setup("Break here for method - struct")
         self.check_step_over(thread, "testMethod")
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_init_step_in_struct(self):
         thread = self.setup("Break here for constructor - struct")
         self.check_step_in(thread, "testConstructor", "SwiftStruct.init")
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test_init_step_over_struct(self):
         thread = self.setup("Break here for constructor - struct")
         self.check_step_over(thread, "testConstructor")
