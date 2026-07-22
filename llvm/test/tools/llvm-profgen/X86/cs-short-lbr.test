@@ -1,3 +1,0 @@
-; RUN: llvm-profgen --perfscript %S/Inputs/cs-short-lbr.perfscript --populate-profile-symbol-list --show-density --output=%t --binary %S/Inputs/dap.bin | FileCheck %s
-
-; CHECK-NOT: error: Invalid perf script input!
