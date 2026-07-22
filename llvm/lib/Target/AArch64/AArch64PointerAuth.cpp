@@ -25,6 +25,40 @@ using namespace llvm::AArch64PAuth;
 
 namespace {
 
+/// Control the emission of .cfi_set_ra_state, which replaces the
+/// deprecated .cfi_negate_ra_state_with_pc [1].
+///
+/// The latter is fundamentally unable to express some program orders [2], as
+/// the dwarf 'program' reads functions in a linear scan of their addresses to
+/// reconstruct the state of the frame, whereas control flow may enter and exit
+/// such regions arbitrarily (such as in hot-cold-split, and shrinkwrapped
+/// fucntions), and thus the negate-based cfi is unable to encode the address of
+/// the signing instruciton in all program orders.
+///
+/// Since .cfi_negate_ra_state is still sufficient for describing
+/// ptrauth-returns=pauth, we default to using the new CFI only for PAuth_LR, as
+/// DW_CFA_AARCH64_negate_ra_state has a smaller encoding than
+/// DW_CFA_AARCH64_set_ra_state.
+///
+/// 1: https://github.com/ARM-software/abi-aa/pull/346
+/// 2: https://github.com/ARM-software/abi-aa/issues/327
+enum class SetRAStateMode {
+  Never,   // Always use .cfi_negate_ra_state(_with_pc)
+  PAuthLR, // Use .cfi_set_ra_state only for PAuth_LR
+  Always,  // Use .cfi_set_ra_state for both PAuth and PAuth_LR
+};
+cl::opt<SetRAStateMode> CFILLVMSetRASignStateMode(
+    "aarch64-cfi-llvm-set-ra-sign-state", cl::init(SetRAStateMode::Never),
+    cl::desc("Control emission of .cfi_set_ra_state for PAC return address "
+             "signing CFI"),
+    cl::values(clEnumValN(SetRAStateMode::Never, "never",
+                          "Always use legacy .cfi_negate_ra_state[_with_pc]"),
+               clEnumValN(SetRAStateMode::PAuthLR, "pauth-lr",
+                          "Use new CFI only for PAuth_LR (default)"),
+               clEnumValN(SetRAStateMode::Always, "always",
+                          "Use new CFI for both PAuth and PAuth_LR")),
+    cl::Hidden);
+
 class AArch64PointerAuthImpl {
 public:
   bool run(MachineFunction &MF);
@@ -77,9 +111,17 @@ static void emitEpiloguePACSymOffsetIntoReg(const TargetInstrInfo &TII,
 }
 
 // Wrap a given PAC instruction in CFI that describes it.
+//
 // Depending on the type of CFI required, we may need to emit the directive
 // either before or after the instruction, so that unwinders can correctly
 // interpret the location of the signing instruction.
+//
+// As a general rule, CFI opcodes describe the actions needed to recover the
+// register state leading up to a not-yet-retired instruction, with one
+// exception: .cfi_negate_ra_state_with_pc always comes before the paci[ab]sppc,
+// since the unwinder uses the location of the CFI itself to derive the address
+// of the signing instruction [1].
+// 1: https://github.com/llvm/llvm-project/pull/137795#issuecomment-2838779129
 template <typename BuildPACMIFn>
 static void decoratePACWithCFI(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI, bool EmitCFI,
@@ -91,15 +133,37 @@ static void decoratePACWithCFI(MachineBasicBlock &MBB,
 
   auto &MF = *MBB.getParent();
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
-
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
+  const Triple &TT = MF.getTarget().getTargetTriple();
+
   if (MFnI.branchProtectionPAuthLR()) {
-    CFIBuilder.buildNegateRAStateWithPC();
-    BuildPACMI();
+    switch (CFILLVMSetRASignStateMode) {
+    case SetRAStateMode::Never:
+      CFIBuilder.buildNegateRAStateWithPC();
+      BuildPACMI();
+      break;
+    case SetRAStateMode::PAuthLR:
+    case SetRAStateMode::Always: {
+      BuildPACMI();
+      MCSymbol *PACSym = MFnI.getSigningInstrLabel();
+      assert(PACSym && "No PAC instruction to refer to");
+      CFIBuilder.buildSetRAState(2, PACSym);
+      break;
+    }
+    }
   } else {
-    BuildPACMI();
-    if (!MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
-      CFIBuilder.buildNegateRAState();
+    switch (CFILLVMSetRASignStateMode) {
+    case SetRAStateMode::Never:
+    case SetRAStateMode::PAuthLR:
+      BuildPACMI();
+      if (!TT.isOSBinFormatMachO()) {
+        CFIBuilder.buildNegateRAState();
+      }
+      break;
+    case SetRAStateMode::Always:
+      BuildPACMI();
+      CFIBuilder.buildSetRAState(1, nullptr);
+      break;
     }
   }
 }
@@ -115,41 +179,57 @@ static void emitAUTCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
   const Triple &TT = MF.getTarget().getTargetTriple();
 
   if (MFnI.branchProtectionPAuthLR()) {
-    // DW_CFA_AARCH64_negate_ra_state_with_pc is semantically broken for
-    // functions where shrinkwrapping places signing/authenticating pairs on
-    // distinct CFG paths.
-    //
-    // DWARF CFI is evaluated linearly over the byte stream, not along control
-    // flow edges. The toggle semantics of this directive therefore cannot
-    // faithfully represent the signed/unsigned RA state for all possible CFG
-    // paths. The added complexity versus DW_CFA_AARCH64_negate_ra_state is
-    // that an unwinder must also reconstruct the PC of the PACI[AB]SPPC in
-    // order to verify the signed LR, and that address is derived from the
-    // location of this directive in the linear CFI stream.
-    //
-    // The correct fix is to use DW_CFA_AARCH64_set_ra_state_with_pc, which
-    // sets the RA state and signing address absolutely rather than toggling
-    // them. An unwinder that supports this directive can reconstruct the
-    // correct state on any CFG path, regardless of how many
-    // signing/authenticating pairs exist in the function. However, not all
-    // unwinders support this directive, so we cannot rely on it exclusively.
-    //
-    // For unwinders that only support DW_CFA_AARCH64_negate_ra_state_with_pc,
-    // libunwind exploits a loophole: it records the address at the
-    // DW_CFA_AARCH64_negate_ra_state_with_pc site to authenticate the LR, but
-    // does not care that the CFI state remains "signed with pc" after
-    // authentication has occurred. This means we can safely omit the
-    // FrameDestroy emission of this directive, treating it solely as a marker
-    // for the signing site, as long as each function has at most one such
-    // signing location. That invariant holds today because shrinkwrapping
-    // does not yet hoist or sink PAuth_LR frame code across CFG join/split
-    // points; once it does, we must avoid those transformations on platforms
-    // that have this limitation.
-    //
-    // https://github.com/ARM-software/abi-aa/issues/327
-    // https://github.com/ARM-software/abi-aa/pull/346
+    switch (CFILLVMSetRASignStateMode) {
+    case SetRAStateMode::Never:
+      // DW_CFA_AARCH64_negate_ra_state_with_pc is semantically broken for
+      // functions where shrinkwrapping places signing/authenticating pairs on
+      // distinct CFG paths.
+      //
+      // DWARF CFI is evaluated linearly over the byte stream, not along control
+      // flow edges. The toggle semantics of this directive therefore cannot
+      // faithfully represent the signed/unsigned RA state for all possible CFG
+      // paths. The added complexity versus DW_CFA_AARCH64_negate_ra_state is
+      // that an unwinder must also reconstruct the PC of the PACI[AB]SPPC in
+      // order to verify the signed LR, and that address is derived from the
+      // location of this directive in the linear CFI stream.
+      //
+      // The correct fix is to use DW_CFA_AARCH64_set_ra_state_with_pc, which
+      // sets the RA state and signing address absolutely rather than toggling
+      // them. An unwinder that supports this directive can reconstruct the
+      // correct state on any CFG path, regardless of how many
+      // signing/authenticating pairs exist in the function. However, not all
+      // unwinders support this directive, so we cannot rely on it exclusively.
+      //
+      // For unwinders that only support DW_CFA_AARCH64_negate_ra_state_with_pc,
+      // libunwind exploits a loophole: it records the address at the
+      // DW_CFA_AARCH64_negate_ra_state_with_pc site to authenticate the LR, but
+      // does not care that the CFI state remains "signed with pc" after
+      // authentication has occurred. This means we can safely omit the
+      // FrameDestroy emission of this directive, treating it solely as a marker
+      // for the signing site, as long as each function has at most one such
+      // signing location. That invariant holds today because shrinkwrapping
+      // does not yet hoist or sink PAuth_LR frame code across CFG join/split
+      // points; once it does, we must avoid those transformations on platforms
+      // that have this limitation.
+      //
+      // https://github.com/ARM-software/abi-aa/issues/327
+      // https://github.com/ARM-software/abi-aa/pull/346
+      break;
+    case SetRAStateMode::PAuthLR:
+    case SetRAStateMode::Always:
+      CFIBuilder.buildSetRAState(0, nullptr);
+      break;
+    }
   } else if (!TT.isOSBinFormatMachO()) {
-    CFIBuilder.buildNegateRAState();
+    switch (CFILLVMSetRASignStateMode) {
+    case SetRAStateMode::Never:
+    case SetRAStateMode::PAuthLR:
+      CFIBuilder.buildNegateRAState();
+      break;
+    case SetRAStateMode::Always:
+      CFIBuilder.buildSetRAState(0, nullptr);
+      break;
+    }
   }
 }
 
