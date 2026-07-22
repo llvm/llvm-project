@@ -176,7 +176,7 @@ defm V_MAD_LEGACY_F32 : VOP3Inst <"v_mad_legacy_f32", VOP3_Profile<VOP_F32_F32_F
 defm V_MAD_F32 : VOP3Inst <"v_mad_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fmad>;
 } // End SubtargetPredicate = HasMadMacInsts
 
-let SubtargetPredicate = HasFmaLegacy32 in
+let SubtargetPredicate = HasFmaLegacy32Insts in
 defm V_FMA_LEGACY_F32 : VOP3Inst <"v_fma_legacy_f32",
                                  VOP3_Profile<VOP_F32_F32_F32_F32>,
                                  int_amdgcn_fma_legacy>;
@@ -1794,7 +1794,7 @@ class VOP3_CVT_SR_FP16_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_F1632_FP
 
 // FIXME: GlobalISel cannot distinguish f16 and bf16 and may start using bf16 patterns
 //        instead of less complex f16. Disable GlobalISel for these for now.
-def bf16_fpround : PatFrag <(ops node:$src0),  (fpround $src0), [{ return true; }]> {
+def bf16_fpround : PatFrag <(ops node:$src0),  (any_fpround $src0), [{ return true; }]> {
   let GISelPredicateCode = [{return false;}];
 }
 
@@ -2072,9 +2072,9 @@ let SubtargetPredicate = HasAshrPkInsts, True16Predicate = UseRealTrue16Insts in
   defm : AshrPkU8Pat<V_ASHR_PK_U8_I32_t16_e64, 0, 255, 1>;
 }
 
-let SubtargetPredicate = isGFX13Plus in {
-  defm V_CVT_SCALEF32_PK32_BF6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>>;
-  defm V_CVT_SCALEF32_PK32_FP6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>>;
+let SubtargetPredicate = HasF32ToFP6BF6ConversionScaleInsts in {
+  defm V_CVT_SCALEF32_PK32_BF6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>,  int_amdgcn_cvt_scalef32_pk32_bf6_f32>;
+  defm V_CVT_SCALEF32_PK32_FP6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>,  int_amdgcn_cvt_scalef32_pk32_fp6_f32>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -997,6 +997,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
 
+  Tokens = annotate("auto x = y.in(foo) - w;");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown); // NOT TT_CastRParen
+  EXPECT_TOKEN(Tokens[9], tok::minus, TT_BinaryOperator);
+
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
   Tokens = annotate("#define FOO(bar) foo((Foo)&bar)", Style);
@@ -1706,6 +1711,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
   EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("template <typename T>\n"
+                    "struct S {\n"
+                    "  template <typename Foo>\n"
+                    "    requires T::template Has<Foo>\n"
+                    "  void func(Foo);\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 30u) << Tokens;
+  EXPECT_TOKEN(Tokens[20], tok::greater, TT_TemplateCloser);
+  EXPECT_TRUE(Tokens[20]->ClosesRequiresClause);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsPragmaRegion) {

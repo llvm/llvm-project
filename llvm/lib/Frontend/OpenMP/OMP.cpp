@@ -81,14 +81,12 @@ static void
 collectPrivatizingConstructs(llvm::SmallSet<Directive, 16> &Constructs,
                              unsigned Version) {
   llvm::SmallSet<Clause, 16> Privatizing;
-  for (auto C :
-       llvm::enum_seq_inclusive<Clause>(Clause::First_, Clause::Last_)) {
+  for (auto C : clauses()) {
     if (isPrivatizingClause(C, Version))
       Privatizing.insert(C);
   }
 
-  for (auto D : llvm::enum_seq_inclusive<Directive>(Directive::First_,
-                                                    Directive::Last_)) {
+  for (auto D : directives()) {
     bool AllowsPrivatizing = llvm::any_of(Privatizing, [&](Clause C) {
       return isAllowedClauseForDirective(D, C, Version);
     });

@@ -1472,5 +1472,16 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
 
+LLVM_ABI void Intrinsic::printFPClassMask(raw_ostream &OS,
+                                          const Constant *ImmArgVal) {
+  uint64_t Val = cast<ConstantInt>(ImmArgVal)->getZExtValue();
+  OS << static_cast<FPClassTest>(Val);
+}
+
 #define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"
+
+// Emit the default-argument values table and lookup function
+// (Intrinsic::getAllDefaultArgValues).
+#define GET_INTRINSIC_DEFAULT_ARG_VALUES
 #include "llvm/IR/IntrinsicImpl.inc"

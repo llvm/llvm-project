@@ -76,6 +76,7 @@ add_flang_library(FortranLower
   MIFDialect
 
   LINK_COMPONENTS
+  FrontendOpenMP
   Support
 
   MLIR_DEPS

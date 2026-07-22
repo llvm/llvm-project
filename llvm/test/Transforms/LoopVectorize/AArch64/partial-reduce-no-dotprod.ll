@@ -69,7 +69,7 @@ define i40 @partial_reduce_not_known_factor(i32 %a, i32 %b, i16 %N) {
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i16 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i16 [[SMAX]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[SMAX]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]

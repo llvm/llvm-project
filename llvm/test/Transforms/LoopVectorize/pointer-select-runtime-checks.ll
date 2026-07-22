@@ -84,10 +84,12 @@ define void @test_loop_dependent_select1(ptr %src.1, ptr %src.2, ptr %dst, i1 %c
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[DST1]], [[SRC_12]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP16]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK_FR:%.*]] = freeze i1 [[DIFF_CHECK]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[DST1]], [[SRC_23]]
-; CHECK-NEXT:    [[DIFF_CHECK5:%.*]] = icmp ult i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP4]], 1
+; CHECK-NEXT:    [[DIFF_CHECK5:%.*]] = icmp ult i64 [[TMP17]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK5_FR:%.*]] = freeze i1 [[DIFF_CHECK5]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK_FR]], [[DIFF_CHECK5_FR]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]

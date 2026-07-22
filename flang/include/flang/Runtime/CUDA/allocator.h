@@ -25,16 +25,16 @@ void RTDECL(CUFRegisterAllocator)();
 
 void CUFResetStream(cudaStream_t stream);
 
-void *CUFAllocPinned(std::size_t, std::int64_t *);
+void *CUFAllocPinned(std::size_t, std::size_t, std::int64_t *);
 void CUFFreePinned(void *);
 
-void *CUFAllocDevice(std::size_t, std::int64_t *);
+void *CUFAllocDevice(std::size_t, std::size_t, std::int64_t *);
 void CUFFreeDevice(void *);
 
-void *CUFAllocManaged(std::size_t, std::int64_t *);
+void *CUFAllocManaged(std::size_t, std::size_t, std::int64_t *);
 void CUFFreeManaged(void *);
 
-void *CUFAllocUnified(std::size_t, std::int64_t *);
+void *CUFAllocUnified(std::size_t, std::size_t, std::int64_t *);
 void CUFFreeUnified(void *);
 
 } // namespace Fortran::runtime::cuda

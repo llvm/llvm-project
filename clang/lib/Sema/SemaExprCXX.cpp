@@ -1070,10 +1070,8 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
 
       // We don't keep the instantiated default argument expressions around so
       // we must rebuild them here.
-      for (unsigned I = 1, E = CD->getNumParams(); I != E; ++I) {
-        if (CheckCXXDefaultArgExpr(ThrowLoc, CD, CD->getParamDecl(I)))
-          return true;
-      }
+      if (BuildCtorClosureDefaultArgs(ThrowLoc, CD, /*IsCopy=*/true))
+        return true;
     }
   }
 
@@ -1489,6 +1487,14 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
 }
 
 bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {
+  // If we're outside the body of a member function, then we'll have a specified
+  // type for 'this'. Constraint substitution is the exception: a concept is
+  // evaluated in its own declaration context (see GH#197215), so it loses the
+  // enclosing '*this' even though it may legitimately name a member of the
+  // class currently being instantiated.
+  if (CXXThisTypeOverride.isNull() && !inConstraintSubstitution())
+    return false;
+
   // Determine whether we're looking into a class that's currently being
   // defined.
   CXXRecordDecl *Class = BaseType->getAsCXXRecordDecl();
@@ -7658,7 +7664,6 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
     Expr *const FE, LambdaScopeInfo *const CurrentLSI, Sema &S) {
 
   assert(!S.isUnevaluatedContext());
-  assert(S.CurContext->isDependentContext());
 #ifndef NDEBUG
   DeclContext *DC = S.CurContext;
   while (isa_and_nonnull<CapturedDecl>(DC))

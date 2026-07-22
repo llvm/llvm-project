@@ -1312,6 +1312,14 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   return CODLayer->add(JD, std::move(TSM));
 }
 
+// End the session before this class's members (CODLayer, IPLayer, LCTMgr) are
+// destroyed: endSession joins the compile threads, and those threads may still
+// be operating on the CompileOnDemandLayer's per-dylib IndirectStubsManagers.
+LLLazyJIT::~LLLazyJIT() {
+  if (auto Err = ES->endSession())
+    ES->reportError(std::move(Err));
+}
+
 LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
 
   // If LLJIT construction failed then bail out.

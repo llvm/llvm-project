@@ -33,6 +33,7 @@
 #include "lldb/Breakpoint/WatchpointAlgorithms.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -65,7 +66,6 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/ProcessIOHandler.h"
-#include "lldb/Target/RegisterFlags.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
@@ -75,6 +75,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -102,6 +103,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
@@ -346,10 +348,29 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
 
   m_use_g_packet_for_reading =
       GetGlobalPluginProperties().GetUseGPacketForReading();
+
+  // Contribute the packet history to diagnostics bundles, named with the
+  // creation timestamp so files from different processes stay distinguishable.
+  if (Diagnostics::Enabled()) {
+    llvm::sys::TimePoint<> now = std::chrono::system_clock::now();
+    std::string name = llvm::formatv(
+        "gdb-remote-packet-history-{0:%Y-%m-%dT%H-%M-%S}.txt", now);
+    m_diagnostics_artifact_id = Diagnostics::Instance().AddArtifactProvider(
+        std::move(name), [this]() -> std::string {
+          StreamString stream;
+          DumpPluginHistory(stream);
+          return stream.GetString().str();
+        });
+  }
 }
 
 // Destructor
 ProcessGDBRemote::~ProcessGDBRemote() {
+  // Unregister before teardown so a concurrent collection can't run the
+  // provider on a half-destroyed process.
+  if (m_diagnostics_artifact_id && Diagnostics::Enabled())
+    Diagnostics::Instance().RemoveArtifactProvider(*m_diagnostics_artifact_id);
+
   //  m_mach_process.UnregisterNotificationCallbacks (this);
   Clear();
   // We need to call finalize on the process before destroying ourselves to
@@ -434,7 +455,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   if (!force && m_register_info_sp)
     return;
 
-  m_register_info_sp = std::make_shared<GDBRemoteDynamicRegisterInfo>();
+  m_register_info_sp = std::make_shared<DynamicRegisterInfo>();
 
   // Check if qHostInfo specified a specific packet timeout for this
   // connection. If so then lets update our setting so the user knows what the
@@ -2637,6 +2658,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
     SetAddressableBitMasks(addressable_bits);
 
+    m_last_stop_primary_tid = tid;
+
     ThreadSP thread_sp = SetThreadStopInfo(
         tid, expedited_register_map, signo, thread_name, reason, description,
         exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
@@ -2685,7 +2708,17 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
   if (m_initial_tid != LLDB_INVALID_THREAD_ID) {
     m_thread_list.SetSelectedThreadByID(m_initial_tid);
     m_initial_tid = LLDB_INVALID_THREAD_ID;
+  } else if (m_last_stop_primary_tid != LLDB_INVALID_THREAD_ID &&
+             StateIsRunningState(m_last_broadcast_state)) {
+    if (ThreadSP primary_thread_sp = m_thread_list.FindThreadByProtocolID(
+            m_last_stop_primary_tid, /*can_update=*/false)) {
+      ThreadSP selected_thread_sp = m_thread_list.GetSelectedThread();
+      if (!selected_thread_sp ||
+          selected_thread_sp->GetID() != primary_thread_sp->GetID())
+        m_thread_list.SetSelectedThreadByID(primary_thread_sp->GetID());
+    }
   }
+  m_last_stop_primary_tid = LLDB_INVALID_THREAD_ID;
 
   // Let all threads recover from stopping and do any clean up based on the
   // previous thread state (if any).

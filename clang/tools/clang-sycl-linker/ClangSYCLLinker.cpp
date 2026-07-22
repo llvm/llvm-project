@@ -725,8 +725,11 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Arch);
 
-  StringRef ExtraArgs = Args.getLastArgValue(OPT_ocloc_options_EQ);
-  ExtraArgs.split(CmdArgs, " ", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  // getAllArgValues returns a temporary vector; retain it so the StringRefs
+  // remain valid through the executeCommands call below.
+  std::vector<std::string> ExtraArgsStorage =
+      Args.getAllArgValues(OPT_ocloc_options_EQ);
+  llvm::append_range(CmdArgs, ExtraArgsStorage);
 
   CmdArgs.push_back("-output");
   CmdArgs.push_back(OutputFile);
@@ -769,20 +772,20 @@ enum class IRSplitMode {
 /// Parses the value of \p --module-split-mode.
 static std::optional<IRSplitMode> convertStringToSplitMode(StringRef S) {
   return StringSwitch<std::optional<IRSplitMode>>(S)
-      .Case("source", IRSplitMode::SPLIT_PER_TU)
+      .Case("translation_unit", IRSplitMode::SPLIT_PER_TU)
       .Case("kernel", IRSplitMode::SPLIT_PER_KERNEL)
-      .Case("none", IRSplitMode::SPLIT_NONE)
+      .Case("link_unit", IRSplitMode::SPLIT_NONE)
       .Default(std::nullopt);
 }
 
 static StringRef splitModeToString(IRSplitMode Mode) {
   switch (Mode) {
   case IRSplitMode::SPLIT_PER_TU:
-    return "source";
+    return "translation_unit";
   case IRSplitMode::SPLIT_PER_KERNEL:
     return "kernel";
   case IRSplitMode::SPLIT_NONE:
-    return "none";
+    return "link_unit";
   }
   llvm_unreachable("bad split mode");
 }
