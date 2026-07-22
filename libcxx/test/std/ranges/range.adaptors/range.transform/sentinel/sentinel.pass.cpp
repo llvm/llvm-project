@@ -16,7 +16,7 @@
 #include "test_macros.h"
 #include "../types.h"
 
-template<class T>
+template <class T>
 concept EndIsIter = requires(T t) { ++t.end(); };
 
 constexpr bool test() {
@@ -33,7 +33,7 @@ constexpr bool test() {
 
   std::ranges::transform_view transformView2(SizedSentinelView{4}, PlusOne());
   auto sent4 = transformView2.end();
-  auto iter = transformView1.begin();
+  auto iter  = transformView1.begin();
   {
     assert(iter != sent1);
     assert(iter != sent2);
@@ -47,10 +47,10 @@ constexpr bool test() {
   }
 
   {
-    assert(sent1 - iter  == 8);
-    assert(sent4 - iter  == 4);
-    assert(iter  - sent1 == -8);
-    assert(iter  - sent4 == -4);
+    assert(sent1 - iter == 8);
+    assert(sent4 - iter == 4);
+    assert(iter - sent1 == -8);
+    assert(iter - sent4 == -4);
   }
 
   return true;
