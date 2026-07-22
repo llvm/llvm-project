@@ -5744,7 +5744,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcNan);
 
       // fcInf can only be cleared if the source format has no Inf encoding
-      // (IEEE-754) AND the dst max exp can accommodate src max exp.
+      // AND the dst max exp can accommodate src max exp.
       if (!APFloat::semanticsHasInf(SrcSemantics) &&
           APFloat::semanticsMaxExponent(SrcSemantics) <=
               APFloat::semanticsMaxExponent(DstSemantics))
