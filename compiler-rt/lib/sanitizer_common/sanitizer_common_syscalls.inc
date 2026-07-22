@@ -1908,9 +1908,9 @@ POST_SYSCALL(getsockopt)
     // getsockopt cannot succeed with a null optlen, but guard it before
     // dereferencing since the hook is called with raw, untrusted arguments.
     if (optlen) {
-      if (optval)
-        POST_WRITE(optval, *(unsigned int*)optlen);
       POST_WRITE(optlen, sizeof(int));
+      if (optval)
+        POST_WRITE(optval, *(unsigned int *)optlen);
     }
   }
 }
