@@ -248,15 +248,16 @@ MemoryLocation getLocation(Instruction *I);
 /// \returns True if the instruction is not a volatile or atomic load/store.
 bool isSimple(Instruction *I);
 
-/// Checks if the loads \p VL with pointer operands \p PointerOps are each
-/// (optionally via a constant-offset GEP) a `select Cond, A, B` picking between
-/// the same two base pointers A/B on every lane - the shape a fully unrolled
-/// `x = cond ? A[i] : B[i]` takes. On success \p TrueBase / \p FalseBase are
-/// the candidate bases and \p Conditions holds each lane's `select` condition,
-/// used to build the blend mask. Lane \p Idx must be at `Base + Idx *
-/// sizeof(ScalarTy)`; only dense, natural lane order starting at the base is
-/// recognized (reordered or partial groups fall back to Gather/Scatter).
-bool isSelectedBaseLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+/// Checks if the loads with scalar type \p ScalarTy and pointer operands
+/// \p PointerOps are each (optionally via a constant-offset GEP) a
+/// `select Cond, A, B` picking between the same two base pointers A/B on
+/// every lane - the shape a fully unrolled `x = cond ? A[i] : B[i]` takes. On
+/// success \p TrueBase / \p FalseBase are the candidate bases and
+/// \p Conditions holds each lane's `select` condition, used to build the
+/// blend mask. Lane \p Idx must be at `Base + Idx * sizeof(ScalarTy)`; only
+/// dense, natural lane order starting at the base is recognized (reordered or
+/// partial groups fall back to Gather/Scatter).
+bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
                         const DataLayout &DL, Value *&TrueBase,
                         Value *&FalseBase,
                         SmallVectorImpl<Value *> &Conditions);

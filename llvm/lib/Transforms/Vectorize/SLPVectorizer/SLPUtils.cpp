@@ -540,13 +540,12 @@ bool isSimple(Instruction *I) {
   return true;
 }
 
-bool isSelectedBaseLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
                         const DataLayout &DL, Value *&TrueBase,
                         Value *&FalseBase,
                         SmallVectorImpl<Value *> &Conditions) {
   TrueBase = nullptr;
   FalseBase = nullptr;
-  Type *ScalarTy = VL.front()->getType();
   uint64_t ScalarSize = DL.getTypeStoreSize(ScalarTy);
   Conditions.assign(PointerOps.size(), nullptr);
   for (auto [Idx, P] : enumerate(PointerOps)) {

@@ -70,6 +70,12 @@ features cannot lower the translation-unit ABI level;
 
 ### Clang Python Bindings Potentially Breaking Changes
 
+- Remove the deprecated `CompletionChunk.isKind...` methods.
+  Existing uses should be adapted to directly compare equality of the `CompletionChunk` kind with the corresponding `CompletionChunkKind` variant.
+
+  Affected methods: `isKindOptional`, `isKindTypedText`, `isKindPlaceHolder`,
+  `isKindInformative` and `isKindResultType`.
+
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
@@ -343,6 +349,13 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed a regression where an internal-linkage function (e.g. a `static` or
+  anonymous-namespace helper) declared in the global module fragment of the
+  current translation unit was removed from the overload set when the calling
+  template was instantiated after the global module fragment was closed,
+  producing a spurious "no matching function" error with no candidate notes.
+  (#GH210822)
+  
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default

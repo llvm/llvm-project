@@ -16,7 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
-#include "mlir/Dialect/OpenMP/OpenMPOffloadUtils.h"
+#include "mlir/Dialect/OpenMP/OpenMPUtils.h"
 #include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -152,6 +152,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
         getTriple().isGPU(), langOpts.OpenMPForceUSM, langOpts.OpenMP,
         langOpts.OMPHostIRFile, langOpts.OMPTargetTriples, langOpts.NoGPULib);
     mlir::omp::setOffloadModuleInterfaceAttributes(theModule, ompOpts);
+    mlir::omp::setOpenMPVersionAttribute(theModule, langOpts.OpenMP);
   }
 
   if (langOpts.CUDA)
