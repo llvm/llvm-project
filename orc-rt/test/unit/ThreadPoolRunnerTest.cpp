@@ -150,4 +150,4 @@ TEST(ThreadPoolRunnerTest, ConcurrentCalls) {
   }
 }
 
-} // end anonymous namespace
+} // namespace

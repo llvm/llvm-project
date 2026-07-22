@@ -233,9 +233,10 @@
 ; GCN-O1-NEXT:        Induction Variable Users
 ; GCN-O1-NEXT:        Loop Strength Reduction
 ; GCN-O1-NEXT:      Remove unreachable blocks from the CFG
-; GCN-O1-NEXT:      Natural Loop Information
+; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-NEXT:      Branch Probability Analysis
+; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      Block Frequency Analysis
 ; GCN-O1-NEXT:      Constant Hoisting
 ; GCN-O1-NEXT:      Replace intrinsics with calls to vector library
@@ -251,6 +252,7 @@
 ; GCN-O1-NEXT:      Dominator Tree Construction
 ; GCN-O1-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O1-NEXT:      Natural Loop Information
+; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-NEXT:      Branch Probability Analysis
 ; GCN-O1-NEXT:      Block Frequency Analysis
@@ -318,11 +320,11 @@
 ; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
-; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-NEXT:        Branch Probability Analysis
 ; GCN-O1-NEXT:        Assignment Tracking Analysis
 ; GCN-O1-NEXT:        Lazy Branch Probability Analysis
+; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O1-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
@@ -520,6 +522,7 @@
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-OPTS-NEXT:      Canonicalize natural loops
+; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:      Optimization Remark Emitter
@@ -543,9 +546,10 @@
 ; GCN-O1-OPTS-NEXT:        Induction Variable Users
 ; GCN-O1-OPTS-NEXT:        Loop Strength Reduction
 ; GCN-O1-OPTS-NEXT:      Remove unreachable blocks from the CFG
-; GCN-O1-OPTS-NEXT:      Natural Loop Information
+; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Branch Probability Analysis
+; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:      Constant Hoisting
 ; GCN-O1-OPTS-NEXT:      Replace intrinsics with calls to vector library
@@ -562,6 +566,7 @@
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
+; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:      Block Frequency Analysis
@@ -635,11 +640,11 @@
 ; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
-; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:        Assignment Tracking Analysis
 ; GCN-O1-OPTS-NEXT:        Lazy Branch Probability Analysis
+; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
@@ -861,6 +866,7 @@
 ; GCN-O2-NEXT:      LCSSA Verifier
 ; GCN-O2-NEXT:      Loop-Closed SSA Form Pass
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
+; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O2-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O2-NEXT:      Loop Pass Manager
@@ -870,9 +876,10 @@
 ; GCN-O2-NEXT:        Induction Variable Users
 ; GCN-O2-NEXT:        Loop Strength Reduction
 ; GCN-O2-NEXT:      Remove unreachable blocks from the CFG
-; GCN-O2-NEXT:      Natural Loop Information
+; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Post-Dominator Tree Construction
 ; GCN-O2-NEXT:      Branch Probability Analysis
+; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      Block Frequency Analysis
 ; GCN-O2-NEXT:      Constant Hoisting
 ; GCN-O2-NEXT:      Replace intrinsics with calls to vector library
@@ -889,6 +896,7 @@
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O2-NEXT:      Natural Loop Information
+; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Post-Dominator Tree Construction
 ; GCN-O2-NEXT:      Branch Probability Analysis
 ; GCN-O2-NEXT:      Block Frequency Analysis
@@ -963,11 +971,11 @@
 ; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
-; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        Post-Dominator Tree Construction
 ; GCN-O2-NEXT:        Branch Probability Analysis
 ; GCN-O2-NEXT:        Assignment Tracking Analysis
 ; GCN-O2-NEXT:        Lazy Branch Probability Analysis
+; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O2-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
@@ -1179,6 +1187,7 @@
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:      Function Alias Analysis Results
 ; GCN-O3-NEXT:      Memory Dependence Analysis
+; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
@@ -1196,6 +1205,7 @@
 ; GCN-O3-NEXT:      LCSSA Verifier
 ; GCN-O3-NEXT:      Loop-Closed SSA Form Pass
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
+; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Loop Pass Manager
@@ -1205,9 +1215,10 @@
 ; GCN-O3-NEXT:        Induction Variable Users
 ; GCN-O3-NEXT:        Loop Strength Reduction
 ; GCN-O3-NEXT:      Remove unreachable blocks from the CFG
-; GCN-O3-NEXT:      Natural Loop Information
+; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Post-Dominator Tree Construction
 ; GCN-O3-NEXT:      Branch Probability Analysis
+; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      Block Frequency Analysis
 ; GCN-O3-NEXT:      Constant Hoisting
 ; GCN-O3-NEXT:      Replace intrinsics with calls to vector library
@@ -1222,6 +1233,7 @@
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:      Function Alias Analysis Results
 ; GCN-O3-NEXT:      Memory Dependence Analysis
+; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
@@ -1231,6 +1243,7 @@
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O3-NEXT:      Natural Loop Information
+; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Post-Dominator Tree Construction
 ; GCN-O3-NEXT:      Branch Probability Analysis
 ; GCN-O3-NEXT:      Block Frequency Analysis
@@ -1305,11 +1318,11 @@
 ; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
-; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        Post-Dominator Tree Construction
 ; GCN-O3-NEXT:        Branch Probability Analysis
 ; GCN-O3-NEXT:        Assignment Tracking Analysis
 ; GCN-O3-NEXT:        Lazy Branch Probability Analysis
+; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O3-NEXT:        MachineDominator Tree Construction

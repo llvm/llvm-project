@@ -1830,6 +1830,8 @@ def riscv_wsuba : RVSDNode<"WSUBA", SDT_RISCVWideningAddSubAccumulate>;
 
 def riscv_waddu : RVSDNode<"WADDU", SDTIntBinHiLoOp, [SDNPCommutative]>;
 def riscv_wsubu : RVSDNode<"WSUBU", SDTIntBinHiLoOp>;
+def riscv_wadd  : RVSDNode<"WADD",  SDTIntBinHiLoOp, [SDNPCommutative]>;
+def riscv_wsub  : RVSDNode<"WSUB",  SDTIntBinHiLoOp>;
 
 def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
 
@@ -1868,6 +1870,7 @@ def SDT_RISCVPPairEven : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                               SDTCisSameAs<0, 1>,
                                               SDTCisSameAs<0, 2>]>;
 def riscv_ppaire : RVSDNode<"PPAIRE", SDT_RISCVPPairEven>;
+def riscv_ppairo : RVSDNode<"PPAIRO", SDT_RISCVPPairEven>;
 def SDT_RISCVPackedBinary : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                  SDTCisSameAs<0, 1>,
                                                  SDTCisSameAs<0, 2>]>;
@@ -1920,6 +1923,11 @@ def SDT_RISCVPZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                          SDTCisSameAs<0, 1>,
                                          SDTCisSameAs<0, 2>]>;
 def riscv_pzip : RVSDNode<"PZIP", SDT_RISCVPZip>;
+
+def SDT_RISCVPWZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                          SDTCisSubVecOfVec<1, 0>,
+                                          SDTCisSameAs<1, 2>]>;
+def riscv_pwzip : RVSDNode<"PWZIP", SDT_RISCVPWZip>;
 
 // Deinterleave the even/odd lanes of two packed vectors.
 def SDT_RISCVPUnzip : SDTypeProfile<1, 2, [SDTCisVec<0>,
@@ -2293,14 +2301,24 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v2i32 (zext (v2i16 GPR:$rs))), (WZIP16P GPR:$rs, (v2i16 X0))>;
 
   // Packed zip.
-  def : Pat<(v8i8 (riscv_pzip (v8i8 GPRPair:$rs1),
-                               (v8i8 GPRPair:$rs2))),
-            (WZIP8P (i32 (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even)),
-                    (i32 (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)))>;
-  def : Pat<(v4i16 (riscv_pzip (v4i16 GPRPair:$rs1),
-                                (v4i16 GPRPair:$rs2))),
-            (WZIP16P (i32 (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even)),
-                     (i32 (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)))>;
+  def : Pat<(v8i8 (riscv_pwzip (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (WZIP8P GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pwzip (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (WZIP16P GPR:$rs1, GPR:$rs2)>;
+
+  // Packed pair: pair the even/odd-position elements of rs1 and rs2.
+  def : Pat<(v4i8 (riscv_ppaire (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8 (riscv_ppairo (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (PPAIRO_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v8i8 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIRE_DB GPRPair:$rs1, GPRPair:$rs2)>;
+  def : Pat<(v8i8 (riscv_ppairo GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIRO_DB GPRPair:$rs1, GPRPair:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIRE_DH GPRPair:$rs1, GPRPair:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppairo GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIRO_DH GPRPair:$rs1, GPRPair:$rs2)>;
 
   // Sign-extend patterns using pwadd with zero
   def : Pat<(v4i16 (sext (v4i8 GPR:$rs))), (PWADD_B GPR:$rs, (v4i8 X0))>;
@@ -2557,9 +2575,6 @@ let append Predicates = [IsRV32] in {
 
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (BuildGPRPair GPR:$a, GPR:$b)>;
-
-  def : Pat<(v8i8 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
-            (PPAIRE_DB GPRPair:$rs1, GPRPair:$rs2)>;
 
   // Concat vector patterns
   def : Pat<(v8i8 (concat_vectors (v4i8 GPR:$a), (v4i8 GPR:$b))),
@@ -2820,11 +2835,34 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v4i16 (riscv_punzipo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (UNZIP16HP GPR:$rs1, GPR:$rs2)>;
 
+  // Match undef to X0 to avoid false dependency.
+  // FIXME: Match operand 0 too?
+  // FIXME: Enable BreakFalseDep pass?
+  def : Pat<(v8i8 (riscv_punzipe (v8i8 GPR:$rs1), (v8i8 undef))),
+            (UNZIP8P GPR:$rs1, (v8i8 X0))>;
+  def : Pat<(v8i8 (riscv_punzipo (v8i8 GPR:$rs1), (v8i8 undef))),
+            (UNZIP8HP GPR:$rs1, (v8i8 X0))>;
+  def : Pat<(v4i16 (riscv_punzipe (v4i16 GPR:$rs1), (v4i16 undef))),
+            (UNZIP16P GPR:$rs1, (v4i16 X0))>;
+  def : Pat<(v4i16 (riscv_punzipo (v4i16 GPR:$rs1), (v4i16 undef))),
+            (UNZIP16HP GPR:$rs1, (v4i16 X0))>;
+
   // Packed zip.
   def : Pat<(v8i8 (riscv_pzip (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
             (ZIP8P GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_pzip (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (ZIP16P GPR:$rs1, GPR:$rs2)>;
+
+  // Packed pair: pair the even/odd-position elements of rs1 and rs2.
+  def : Pat<(v8i8 (riscv_ppaire (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v8i8 (riscv_ppairo (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PPAIRO_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppaire (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PPAIRE_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppairo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PPAIRO_H GPR:$rs1, GPR:$rs2)>;
+
   // Sign extend inreg patterns using psext. sext_invec is lowered to
   // zext_invec+sext_inreg.
   def : Pat<(v4i16 (sext_inreg GPR:$rs1, v4i8)), (PSEXT_H_B GPR:$rs1)>;

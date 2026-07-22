@@ -163,13 +163,13 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
 
 std::optional<TypeAndShape> TypeAndShape::Characterize(
     const ActualArgument &arg, FoldingContext &context, bool invariantOnly) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
+  if (const auto *expr{arg.GetArgExpr()}) {
     return Characterize(*expr, context, invariantOnly);
-  } else if (const Symbol * assumed{arg.GetAssumedTypeDummy()}) {
-    return Characterize(*assumed, context, invariantOnly);
-  } else {
-    return std::nullopt;
   }
+  if (const Symbol *assumed{arg.GetAssumedTypeDummy()}) {
+    return Characterize(*assumed, context, invariantOnly);
+  }
+  return std::nullopt;
 }
 
 bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
@@ -668,6 +668,7 @@ static std::optional<Procedure> CharacterizeProcedure(
               }
             }
             result.cudaSubprogramAttrs = subp.cudaSubprogramAttrs();
+            result.hasOpenACCRoutine = !subp.openACCRoutineInfos().empty();
             return std::move(result);
           },
           [&](const semantics::ProcEntityDetails &proc)
@@ -695,6 +696,9 @@ static std::optional<Procedure> CharacterizeProcedure(
                 // functions as their interfaces.
                 result->attrs.reset(Procedure::Attr::Elemental);
               }
+              if (result && !proc.openACCRoutineInfos().empty()) {
+                result->hasOpenACCRoutine = true;
+              }
               return result;
             } else {
               Procedure result;
@@ -716,6 +720,7 @@ static std::optional<Procedure> CharacterizeProcedure(
               } else if (symbol.test(semantics::Symbol::Flag::Function)) {
                 return std::nullopt;
               }
+              result.hasOpenACCRoutine = !proc.openACCRoutineInfos().empty();
               // The PASS name, if any, is not a characteristic.
               return std::move(result);
             }
@@ -957,13 +962,19 @@ std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
 std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
     const ActualArgument &arg, FoldingContext &context,
     bool forImplicitInterface) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
+  if (const auto *expr{arg.GetArgExpr()}) {
     return FromActual(std::move(name), *expr, context, forImplicitInterface);
-  } else if (arg.GetAssumedTypeDummy()) {
-    return std::nullopt;
-  } else {
-    return DummyArgument{AlternateReturn{}};
   }
+  if (arg.GetAssumedTypeDummy()) {
+    return std::nullopt;
+  }
+  // Guard: GetArgExpr() returns the first non-NIL consequent for a
+  // ConditionalArg, so normal conditional args are handled above.  An
+  // all-.NIL. ConditionalArg would reach here (GetArgExpr() returns nullptr),
+  // but that case is rejected earlier by the F2023 C1540 check.  Only a true
+  // alternate-return label should reach this point.
+  CHECK(arg.isAlternateReturn());
+  return DummyArgument{AlternateReturn{}};
 }
 
 bool DummyArgument::IsOptional() const {

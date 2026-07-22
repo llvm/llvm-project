@@ -1620,7 +1620,7 @@ bool DSEState::isGuaranteedLoopIndependent(const Instruction *Current,
   // would also be valid but we currently disable that to limit compile time).
   if (Current->getParent() == KillingDef->getParent())
     return true;
-  const Cycle *CurrentC = CI.getCycle(Current->getParent());
+  CycleRef CurrentC = CI.getCycle(Current->getParent());
   if (CurrentC && CurrentC == CI.getCycle(KillingDef->getParent()))
     return true;
   // Otherwise check the memory location is invariant to any loops.

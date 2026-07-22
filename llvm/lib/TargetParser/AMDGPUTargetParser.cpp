@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
@@ -429,15 +430,56 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
                                  StringMap<bool> &Features) {
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
+  case GK_GFX1310:
+  case GK_GFX13_GENERIC:
+    Features["ci-insts"] = true;
+    Features["dot7-insts"] = true;
+    Features["dot8-insts"] = true;
+    Features["dl-insts"] = true;
+    Features["16-bit-insts"] = true;
+    Features["dpp"] = true;
+    Features["gfx8-insts"] = true;
+    Features["gfx9-insts"] = true;
+    Features["gfx10-insts"] = true;
+    Features["gfx10-3-insts"] = true;
+    Features["gfx11-insts"] = true;
+    Features["gfx12-insts"] = true;
+    Features["gfx1250-insts"] = true;
+    Features["gfx13-insts"] = true;
+    Features["bitop3-insts"] = true;
+    Features["prng-inst"] = true;
+    Features["tanh-insts"] = true;
+    Features["tensor-cvt-lut-insts"] = true;
+    Features["bf16-trans-insts"] = true;
+    Features["bf16-cvt-insts"] = true;
+    Features["bf16-pk-insts"] = true;
+    Features["fp8-conversion-insts"] = true;
+    Features["permlane16-swap"] = true;
+    Features["ashr-pk-insts"] = true;
+    Features["atomic-buffer-pk-add-bf16-inst"] = true;
+    Features["atomic-fadd-rtn-insts"] = true;
+    Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+    Features["atomic-flat-pk-add-16-insts"] = true;
+    Features["atomic-global-pk-add-bf16-inst"] = true;
+    Features["atomic-ds-pk-add-16-insts"] = true;
+    Features["s-wakeup-barrier-inst"] = true;
+    Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
+    Features["f32-to-fp6bf6-cvt-scale-insts"] = true;
+    Features["clusters"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
+    Features["cvt-pknorm-vop3-insts"] = true;
+    Features["image-insts"] = true;
+    break;
   case GK_GFX1251:
     Features["gfx1251-gemm-insts"] = true;
     [[fallthrough]];
   case GK_GFX1250:
     Features["swmmac-gfx1200-insts"] = true;
     Features["swmmac-gfx1250-insts"] = true;
-    [[fallthrough]];
-  case GK_GFX1310:
-  case GK_GFX13_GENERIC:
     Features["cube-insts"] = true;
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["lerp-inst"] = true;
@@ -519,6 +561,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["gfx12-insts"] = true;
     Features["atomic-fadd-rtn-insts"] = true;
     Features["image-insts"] = true;
+    Features["bvh-ray-tracing-insts"] = true;
     Features["cube-insts"] = true;
     Features["lerp-inst"] = true;
     Features["sad-insts"] = true;
@@ -553,6 +596,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["gfx11-insts"] = true;
     Features["atomic-fadd-rtn-insts"] = true;
     Features["image-insts"] = true;
+    Features["bvh-ray-tracing-insts"] = true;
     Features["cube-insts"] = true;
     Features["lerp-inst"] = true;
     Features["sad-insts"] = true;
@@ -596,6 +640,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["gfx11-insts"] = true;
     Features["atomic-fadd-rtn-insts"] = true;
     Features["image-insts"] = true;
+    Features["bvh-ray-tracing-insts"] = true;
     Features["cube-insts"] = true;
     Features["lerp-inst"] = true;
     Features["sad-insts"] = true;
@@ -632,6 +677,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["gfx10-insts"] = true;
     Features["gfx10-3-insts"] = true;
     Features["image-insts"] = true;
+    Features["bvh-ray-tracing-insts"] = true;
     Features["s-memrealtime"] = true;
     Features["s-memtime-inst"] = true;
     Features["gws"] = true;
@@ -659,6 +705,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   case GK_GFX1013:
   case GK_GFX1010:
   case GK_GFX10_1_GENERIC:
+    if (Kind == GK_GFX1013)
+      Features["bvh-ray-tracing-insts"] = true;
     Features["dl-insts"] = true;
     Features["ci-insts"] = true;
     Features["16-bit-insts"] = true;
@@ -906,14 +954,15 @@ TargetID::TargetID(GPUKind Arch, const Triple &TT, TargetIDSetting XnackSetting,
       XnackSetting(XnackSetting), SramEccSetting(SramEccSetting),
       IsAMDHSA(TT.getOS() == Triple::AMDHSA) {}
 
-static TargetIDSetting
-getTargetIDSettingFromFeatureString(StringRef FeatureString) {
-  if (FeatureString.ends_with("-"))
-    return TargetIDSetting::Off;
-  if (FeatureString.ends_with("+"))
+// Parse a feature modifier sign ("+"/"-"). Returns "Unsupported" if \p Sign is
+// neither (i.e. the modifier is malformed).
+static TargetIDSetting getTargetIDSettingFromFeatureString(StringRef Sign) {
+  if (Sign == "+")
     return TargetIDSetting::On;
+  if (Sign == "-")
+    return TargetIDSetting::Off;
 
-  llvm_unreachable("Malformed feature string");
+  return TargetIDSetting::Unsupported;
 }
 
 // Derive the architecture from the processor name in \p TargetIDStr. "generic"
@@ -925,72 +974,136 @@ static GPUKind getGPUKindFromTargetID(const Triple &TT, StringRef TargetIDStr) {
              : parseArchAMDGCN(CPUName);
 }
 
+// Compute the xnack/sramecc settings for processor \p Arch from the
+// processor+features string \p TargetIDStr
+// (e.g. "gfx90a:xnack+:sramecc-"). Returns false if a modifier names an unknown
+// or repeated feature, names one the processor does not support, or has a
+// malformed sign.
+static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
+                                    TargetIDSetting &XnackSetting,
+                                    TargetIDSetting &SramEccSetting) {
+  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
+  XnackSetting = (ArchAttr & FEATURE_XNACK_ON_OFF_MODES)
+                     ? TargetIDSetting::Any
+                     : TargetIDSetting::Unsupported;
+  SramEccSetting = (ArchAttr & FEATURE_SRAMECC) ? TargetIDSetting::Any
+                                                : TargetIDSetting::Unsupported;
+
+  // The first component is the processor; the rest are feature modifiers of the
+  // form "<feature><+|->".
+  SmallVector<StringRef, 3> Split;
+  TargetIDStr.split(Split, ':');
+  bool SeenXnack = false;
+  bool SeenSramEcc = false;
+  bool Valid = true;
+  for (unsigned I = 1, E = Split.size(); I != E; ++I) {
+    StringRef FeatureString = Split[I];
+    if (FeatureString.consume_front("xnack")) {
+      TargetIDSetting Sign = getTargetIDSettingFromFeatureString(FeatureString);
+      if (SeenXnack || XnackSetting == TargetIDSetting::Unsupported ||
+          Sign == TargetIDSetting::Unsupported)
+        Valid = false;
+      else
+        XnackSetting = Sign;
+      SeenXnack = true;
+    } else if (FeatureString.consume_front("sramecc")) {
+      TargetIDSetting Sign = getTargetIDSettingFromFeatureString(FeatureString);
+      if (SeenSramEcc || SramEccSetting == TargetIDSetting::Unsupported ||
+          Sign == TargetIDSetting::Unsupported)
+        Valid = false;
+      else
+        SramEccSetting = Sign;
+      SeenSramEcc = true;
+    } else {
+      // Unknown feature name.
+      Valid = false;
+    }
+  }
+  return Valid;
+}
+
 TargetID::TargetID(const Triple &TT, StringRef TargetIDStr)
     : TargetID(getGPUKindFromTargetID(TT, TargetIDStr), TT,
                TargetIDSetting::Unsupported, TargetIDSetting::Unsupported) {
-  // Default xnack/sramecc to the "Any" wildcard when the architecture supports
-  // them, then apply any explicit feature overrides from the target-id string.
-  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
-  if (ArchAttr & FEATURE_XNACK)
-    XnackSetting = TargetIDSetting::Any;
-  if (ArchAttr & FEATURE_SRAMECC)
-    SramEccSetting = TargetIDSetting::Any;
-  setTargetIDFromTargetIDStream(TargetIDStr);
+  // Derive the feature settings from the string. Validity is not checked here;
+  // parseTargetIDString validates untrusted input.
+  computeTargetIDFeatures(Arch, TargetIDStr, XnackSetting, SramEccSetting);
 }
 
-void TargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
-  SmallVector<StringRef, 3> TargetIDSplit;
-  TargetID.split(TargetIDSplit, ':');
+std::optional<TargetID> TargetID::parse(const Triple &TT,
+                                        StringRef ProcAndFeatures) {
+  if (!TT.isAMDGCN())
+    return std::nullopt;
 
-  for (const auto &FeatureString : TargetIDSplit) {
-    if (FeatureString.starts_with("xnack"))
-      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
-    if (FeatureString.starts_with("sramecc"))
-      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
-  }
+  // A named processor (i.e. not the empty/generic wildcard, which is resolved
+  // from the triple's subarch) must be a recognized GPU.
+  StringRef CPUName = ProcAndFeatures.split(':').first;
+  if (!CPUName.empty() && CPUName != "generic" &&
+      parseArchAMDGCN(CPUName) == GK_NONE)
+    return std::nullopt;
+
+  // Parse the processor and its feature modifiers, then construct directly from
+  // the resulting fields.
+  GPUKind Arch = getGPUKindFromTargetID(TT, ProcAndFeatures);
+  TargetIDSetting XnackSetting, SramEccSetting;
+  if (!computeTargetIDFeatures(Arch, ProcAndFeatures, XnackSetting,
+                               SramEccSetting))
+    return std::nullopt;
+
+  return TargetID(Arch, TT, XnackSetting, SramEccSetting);
 }
 
 std::optional<TargetID>
 TargetID::parseTargetIDString(StringRef TargetIDDirective) {
-  // Split on '-' to get arch-vendor-os-environment-processor:features
-  // There is a single dash separator after the 4-component triple
+  // Split on '-' to get arch-vendor-os-environment-processor:features. There is
+  // a single dash separator after the 4-component triple, so the
+  // processor+features field must be present (even if empty).
   SmallVector<StringRef, 5> Parts;
   TargetIDDirective.split(Parts, '-', /*MaxSplit=*/4);
-  if (Parts.size() < 4)
+  if (Parts.size() < 5)
     return std::nullopt;
 
-  Triple TT(Parts[0], Parts[1], Parts[2], Parts[3]);
-  if (!TT.isAMDGCN())
-    return std::nullopt;
+  return parse(Triple(Parts[0], Parts[1], Parts[2], Parts[3]), Parts[4]);
+}
 
-  // The processor+features field must be present, even if empty (the ISA can
-  // be encoded in the triple's subarch, e.g.
-  // "amdgpu12.50-amd-amdhsa-unknown-").
-  return TargetID(TT, Parts[4]);
+// Append the explicit (On/Off) sramecc/xnack feature modifiers in canonical
+// order, e.g. ":sramecc-:xnack+".
+static void printFeatureModifiers(raw_ostream &OS, TargetIDSetting SramEcc,
+                                  TargetIDSetting Xnack) {
+  if (SramEcc == TargetIDSetting::Off)
+    OS << ":sramecc-";
+  else if (SramEcc == TargetIDSetting::On)
+    OS << ":sramecc+";
+
+  if (Xnack == TargetIDSetting::Off)
+    OS << ":xnack-";
+  else if (Xnack == TargetIDSetting::On)
+    OS << ":xnack+";
 }
 
 void TargetID::print(raw_ostream &StreamRep) const {
   StreamRep << TargetTripleString << '-' << getArchNameAMDGCN(Arch);
 
-  if (IsAMDHSA) {
-    // sramecc.
-    if (getSramEccSetting() == TargetIDSetting::Off)
-      StreamRep << ":sramecc-";
-    else if (getSramEccSetting() == TargetIDSetting::On)
-      StreamRep << ":sramecc+";
-
-    // xnack.
-    if (getXnackSetting() == TargetIDSetting::Off)
-      StreamRep << ":xnack-";
-    else if (getXnackSetting() == TargetIDSetting::On)
-      StreamRep << ":xnack+";
-  }
+  if (IsAMDHSA)
+    printFeatureModifiers(StreamRep, getSramEccSetting(), getXnackSetting());
 }
 
 std::string TargetID::toString() const {
   std::string Str;
   raw_string_ostream OS(Str);
   OS << *this;
+  return Str;
+}
+
+void TargetID::printCanonicalTargetIDString(raw_ostream &OS) const {
+  OS << getArchNameAMDGCN(Arch);
+  printFeatureModifiers(OS, getSramEccSetting(), getXnackSetting());
+}
+
+std::string TargetID::getCanonicalFeatureString() const {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  printCanonicalTargetIDString(OS);
   return Str;
 }
 
