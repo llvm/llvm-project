@@ -3317,7 +3317,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                                                /*CheckPastEnd*/ false,
                                                /*UseMaxSize*/ true);
     assert(ContainingBF && "cannot find function for address in code");
-    if (!IsAArch64 && !ContainingBF->containsAddress(Rel.getOffset())) {
+    if (!IsAArch64 && !IsPPC64 &&
+        !ContainingBF->containsAddress(Rel.getOffset())) {
       if (opts::Verbosity >= 1)
         BC->outs() << formatv(
             "BOLT-INFO: {0} has relocations in padding area\n", *ContainingBF);
