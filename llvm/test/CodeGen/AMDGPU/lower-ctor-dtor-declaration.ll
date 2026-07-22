@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck %s
 
 @llvm.global_ctors = external global [2 x { i32, ptr, ptr }]
 @llvm.global_dtors = external global [2 x { i32, ptr, ptr }]

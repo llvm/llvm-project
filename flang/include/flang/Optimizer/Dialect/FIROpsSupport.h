@@ -98,6 +98,16 @@ static constexpr llvm::StringRef getVolatileAttrName() {
   return "fir.volatile";
 }
 
+/// Attribute to mark a dummy data object argument as read-only, i.e. the callee
+/// does not write through this argument. Lowered to the LLVM `readonly`
+/// argument attribute by the FunctionAttr pass. CallInterface currently emits
+/// it for a conservative subset of by-reference INTENT(IN) dummies. The
+/// attribute is shallow: on a reference to a descriptor, it only protects the
+/// descriptor storage and does not imply that the described data is read-only.
+static constexpr llvm::StringRef getReadOnlyAttrName() {
+  return "fir.read_only";
+}
+
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
 static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {

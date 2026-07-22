@@ -119,23 +119,19 @@ static llvm::cl::opt<bool>
 
 static llvm::cl::opt<OutputFormatTy>
     FormatEnum("format", llvm::cl::desc("Format for outputted docs."),
-               llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
-                                           "Documentation in YAML format."),
-                                clEnumValN(OutputFormatTy::md, "md",
+               llvm::cl::values(clEnumValN(OutputFormatTy::md, "md",
                                            "Documentation in MD format."),
                                 clEnumValN(OutputFormatTy::html, "html",
                                            "Documentation in HTML format."),
                                 clEnumValN(OutputFormatTy::json, "json",
                                            "Documentation in JSON format")),
-               llvm::cl::init(OutputFormatTy::yaml),
+               llvm::cl::init(OutputFormatTy::json),
                llvm::cl::cat(ClangDocCategory));
 
 static llvm::ExitOnError ExitOnErr;
 
 static llvm::StringRef getFormatString() {
   switch (FormatEnum) {
-  case OutputFormatTy::yaml:
-    return "yaml";
   case OutputFormatTy::md:
     return "md";
   case OutputFormatTy::html:

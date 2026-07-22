@@ -15,7 +15,6 @@ add_clang_library(clangDoc STATIC
   MDGenerator.cpp
   Representation.cpp
   Serialize.cpp
-  YAMLGenerator.cpp
   JSONGenerator.cpp
 
   DEPENDS

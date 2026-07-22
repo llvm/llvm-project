@@ -2,13 +2,16 @@
 Test lldb-dap setExceptionBreakpoints request
 """
 
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-import lldbdap_testcase
+from lldbsuite.test.decorators import (
+    skipIfTargetDoesNotSupportSharedLibraries,
+    skipIfWindows,
+)
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()
-class TestDAP_setExceptionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_setExceptionBreakpoints(DAPTestCaseBase):
     @skipIfWindows
     def test_functionality(self):
         """Tests setting and clearing exception breakpoints.
@@ -28,17 +31,22 @@ class TestDAP_setExceptionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # without launching or attaching to a process, so we must start a
         # process in order to be able to set breakpoints.
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        session = self.build_and_create_session()
 
-        response = self.dap_server.request_setExceptionBreakpoints(
-            filters=["cpp_throw", "cpp_catch"],
-        )
-        if response:
-            self.assertTrue(response["success"])
+        with session.configure(LaunchArgs(program)) as ctx:
+            response = session.set_exception_breakpoints(
+                filters=["cpp_throw", "cpp_catch"]
+            )
+            breakpoints = self.expect_not_none(response.body.breakpoints)
+            for bp in breakpoints:
+                self.assertTrue(bp.verified, True)
 
-        self.continue_to_exception_breakpoint(
-            expected_description=r"breakpoint 1\.1", expected_text=r"C\+\+ Throw"
+        session.verify_stopped_on_exception(
+            expected_description=r"breakpoint 1\.1",
+            expected_text=r"C\+\+ Throw",
+            after=ctx.process_event,
         )
-        self.continue_to_exception_breakpoint(
+        session.continue_to_exception_breakpoint(
             expected_description=r"breakpoint 2\.1", expected_text=r"C\+\+ Catch"
         )
+        session.continue_to_exit()

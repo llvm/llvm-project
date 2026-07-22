@@ -3879,10 +3879,10 @@ void Parser::ParseDeclarationSpecifiers(
       // when a variable name matches a type brought in by a using-directive.
       if (DS.getTypeSpecType() == DeclSpec::TST_auto) {
         Token Next = NextToken();
-        if (Next.isOneOf(tok::equal, tok::l_paren, tok::l_square, tok::amp,
-                         tok::ampamp, tok::star, tok::coloncolon, tok::comma,
-                         tok::semi, tok::colon, tok::greater, tok::r_paren,
-                         tok::arrow))
+        if (Next.isOneOf(tok::equal, tok::l_paren, tok::l_square, tok::l_brace,
+                         tok::amp, tok::ampamp, tok::star, tok::coloncolon,
+                         tok::comma, tok::semi, tok::colon, tok::greater,
+                         tok::r_paren, tok::arrow))
           goto DoneWithDeclSpec;
       }
 
@@ -4631,7 +4631,7 @@ void Parser::ParseDeclarationSpecifiers(
       continue;
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
       // HACK: libstdc++ already uses '__remove_cv' as an alias template so we
       // work around this by expecting all transform type traits to be suffixed
       // with '('. They're an identifier otherwise.
@@ -7806,9 +7806,10 @@ void Parser::ParseParameterDeclarationClause(
                                                      /*DefaultArg=*/nullptr);
               // Skip the statement expression and continue parsing
               SkipUntil(tok::comma, StopBeforeMatch);
-              continue;
+              DefArgResult = ExprError();
+            } else {
+              DefArgResult = ParseAssignmentExpression();
             }
-            DefArgResult = ParseAssignmentExpression();
           }
           if (DefArgResult.isInvalid()) {
             Actions.ActOnParamDefaultArgumentError(Param, EqualLoc,

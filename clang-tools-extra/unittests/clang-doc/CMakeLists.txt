@@ -28,7 +28,6 @@ add_extra_unittest(ClangDocTests
   HTMLGeneratorTest.cpp
   MergeTest.cpp
   SerializeTest.cpp
-  YAMLGeneratorTest.cpp
   JSONGeneratorTest.cpp
   )
 

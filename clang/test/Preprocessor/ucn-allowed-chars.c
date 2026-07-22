@@ -38,8 +38,8 @@ extern char \u0D61; // C99, C11, C++03, C++11
 
 
 #if __cplusplus
-// expected-error@10 {{character <U+0384> not allowed in an identifier}}
-// expected-error@12 {{character <U+FFFF> not allowed in an identifier}}
+// expected-error@10 {{character '΄' U+0384 not allowed in an identifier}}
+// expected-error@12 {{character U+FFFF not allowed in an identifier}}
 // expected-error@18 {{expected unqualified-id}}
 # if __cplusplus >= 201103L
 // C++11
@@ -56,8 +56,8 @@ extern char \u0D61; // C99, C11, C++03, C++11
 # if __STDC_VERSION__ >= 202311L
 // C23
 // expected-warning@8 {{using this character in an identifier is incompatible with C99}}
-// expected-error@10 {{character <U+0384> not allowed in an identifier}}
-// expected-error@12 {{character <U+FFFF> not allowed in an identifier}}
+// expected-error@10 {{character '΄' U+0384 not allowed in an identifier}}
+// expected-error@12 {{character U+FFFF not allowed in an identifier}}
 // expected-error@18 {{expected identifier}}
 // expected-error@19 {{expected identifier}}
 // expected-error@33 {{invalid universal character}}
@@ -65,7 +65,7 @@ extern char \u0D61; // C99, C11, C++03, C++11
 // C11
 // expected-warning@8 {{using this character in an identifier is incompatible with C99}}
 // expected-warning@10 {{using this character in an identifier is incompatible with C99}}
-// expected-error@12 {{character <U+FFFF> not allowed in an identifier}}
+// expected-error@12 {{character U+FFFF not allowed in an identifier}}
 // expected-warning@18 {{starting an identifier with this character is incompatible with C99}}
 // expected-error@19 {{expected identifier}}
 // expected-error@33 {{invalid universal character}}
