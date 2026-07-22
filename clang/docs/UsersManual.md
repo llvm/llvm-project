@@ -949,8 +949,8 @@ Clang options that don't fit neatly into other categories.
 
 This flag controls the value of `__GNUC__` and related macros. This flag
 does not enable or disable any GCC extensions implemented in Clang. Setting
-the version to zero causes Clang to leave `__GNUC__` and other
-GNU-namespaced macros, such as `__GXX_WEAK__`, undefined.
+the version to zero causes Clang to leave `__GNUC__` and other GNU-namespaced
+macros, such as `__GXX_WEAK__`, undefined.
 :::
 
 :::{option} -MV
@@ -1715,15 +1715,14 @@ and `-fno-fast-math` behave when combined. To keep the value of
 
 * `-ffast-math` sets `ffp-contract` to `fast`.
 
-* `-fno-fast-math` sets `-ffp-contract` to `on` (`fast` for CUDA and
-  HIP).
+* `-fno-fast-math` sets `-ffp-contract` to `on` (`fast` for CUDA and HIP).
 
-* If `-ffast-math` and `-ffp-contract` are both seen, but
-  `-ffast-math` is not followed by `-fno-fast-math`, `ffp-contract`
-  will be given the value of whichever option was last seen.
+* If `-ffast-math` and `-ffp-contract` are both seen, but `-ffast-math` is not
+  followed by `-fno-fast-math`, `ffp-contract` will be given the value of
+  whichever option was last seen.
 
-* If `-fno-fast-math` is seen and `-ffp-contract` has been seen at least
-  once, the `ffp-contract` will get the value of the last seen value of
+* If `-fno-fast-math` is seen and `-ffp-contract` has been seen at least once,
+  the `ffp-contract` will get the value of the last seen value of
   `-ffp-contract`.
 
 * If `-fno-fast-math` is seen and `-ffp-contract` has not been seen, the
@@ -1741,7 +1740,8 @@ Select which denormal numbers the code is permitted to require.
 Valid values are:
 
 * `ieee` - IEEE 754 denormal numbers
-* `preserve-sign` - the sign of a flushed-to-zero number is preserved in the sign of 0
+* `preserve-sign` - the sign of a flushed-to-zero number is preserved in the
+  sign of 0
 * `positive-zero` - denormals are flushed to positive zero
 
 The default value depends on the target. For most targets, it defaults to
@@ -1760,28 +1760,29 @@ Defaults to `-fstrict-float-cast-overflow`.
 
 :::{option} -f[no-]math-errno
 
-Require math functions to indicate errors by setting errno.
-The default varies by ToolChain.  `-fno-math-errno` allows optimizations
-that might cause standard C math functions to not set `errno`.
-For example, on some systems, the math function `sqrt` is specified
-as setting `errno` to `EDOM` when the input is negative. On these
-systems, the compiler cannot normally optimize a call to `sqrt` to use
-inline code (e.g. the x86 `sqrtsd` instruction) without additional
-checking to ensure that `errno` is set appropriately.
+Require math functions to indicate errors by setting errno. The default varies
+by ToolChain.  `-fno-math-errno` allows optimizations that might cause standard
+C math functions to not set `errno`. For example, on some systems, the math
+function `sqrt` is specified as setting `errno` to `EDOM` when the input is
+negative. On these systems, the compiler cannot normally optimize a call to
+`sqrt` to use inline code (e.g. the x86 `sqrtsd` instruction) without
+additional checking to ensure that `errno` is set appropriately.
 `-fno-math-errno` permits these transformations.
 
 On some targets, math library functions never set `errno`, and so
-`-fno-math-errno` is the default. This includes most BSD-derived
-systems, including Darwin.
-:::
+`-fno-math-errno` is the default. This includes most BSD-derived systems,
+including Darwin. :::
 
 :::{option} -f[no-]trapping-math
 
-Control floating point exception behavior. `-fno-trapping-math` allows optimizations that assume that floating point operations cannot generate traps such as divide-by-zero, overflow and underflow.
+Control floating point exception behavior. `-fno-trapping-math` allows
+optimizations that assume that floating point operations cannot generate traps
+such as divide-by-zero, overflow and underflow.
 
-- The option `-ftrapping-math` behaves identically to `-ffp-exception-behavior=strict`.
-- The option `-fno-trapping-math` behaves identically to `-ffp-exception-behavior=ignore`.   This is the default.
-:::
+- The option `-ftrapping-math` behaves identically to
+  `-ffp-exception-behavior=strict`.
+- The option `-fno-trapping-math` behaves identically to
+  `-ffp-exception-behavior=ignore`.   This is the default. :::
 
 :::{option} -ffp-contract=<value>
 
@@ -1911,22 +1912,39 @@ Defaults to `-fno-finite-math-only`.
 
 :::{option} -f[no-]rounding-math
 
-Force floating-point operations to honor the dynamically-set rounding mode by default.
+Force floating-point operations to honor the dynamically-set rounding mode by
+default.
 
-The result of a floating-point operation often cannot be exactly represented in the result type and therefore must be rounded.  IEEE 754 describes different rounding modes that control how to perform this rounding, not all of which are supported by all implementations.  C provides interfaces (`fesetround` and `fesetenv`) for dynamically controlling the rounding mode, and while it also recommends certain conventions for changing the rounding mode, these conventions are not typically enforced in the ABI.  Since the rounding mode changes the numerical result of operations, the compiler must understand something about it in order to optimize floating point operations.
+The result of a floating-point operation often cannot be exactly represented in
+the result type and therefore must be rounded.  IEEE 754 describes different
+rounding modes that control how to perform this rounding, not all of which are
+supported by all implementations.  C provides interfaces (`fesetround` and
+`fesetenv`) for dynamically controlling the rounding mode, and while it also
+recommends certain conventions for changing the rounding mode, these
+conventions are not typically enforced in the ABI.  Since the rounding mode
+changes the numerical result of operations, the compiler must understand
+something about it in order to optimize floating point operations.
 
-Note that floating-point operations performed as part of constant initialization are formally performed prior to the start of the program and are therefore not subject to the current rounding mode.  This includes the initialization of global variables and local `static` variables.  Floating-point operations in these contexts will be rounded using `FE_TONEAREST`.
+Note that floating-point operations performed as part of constant
+initialization are formally performed prior to the start of the program and are
+therefore not subject to the current rounding mode.  This includes the
+initialization of global variables and local `static` variables.
+Floating-point operations in these contexts will be rounded using
+`FE_TONEAREST`.
 
-- The option `-fno-rounding-math` allows the compiler to assume that the rounding mode is set to `FE_TONEAREST`.  This is the default.
-- The option `-frounding-math` forces the compiler to honor the dynamically-set rounding mode.  This prevents optimizations which might affect results if the rounding mode changes or is different from the default; for example, it prevents floating-point operations from being reordered across most calls and prevents constant-folding when the result is not exactly representable.
-:::
+- The option `-fno-rounding-math` allows the compiler to assume that the
+  rounding mode is set to `FE_TONEAREST`.  This is the default.
+- The option `-frounding-math` forces the compiler to honor the dynamically-set
+  rounding mode.  This prevents optimizations which might affect results if the
+  rounding mode changes or is different from the default; for example, it
+  prevents floating-point operations from being reordered across most calls and
+  prevents constant-folding when the result is not exactly representable. :::
 
 :::{option} -ffp-model=<value>
 
-Specify floating point behavior. `-ffp-model` is an umbrella
-option that encompasses functionality provided by other, single
-purpose, floating point options.  Valid values are: `precise`, `strict`,
-`fast`, and `aggressive`.
+Specify floating point behavior. `-ffp-model` is an umbrella option that
+encompasses functionality provided by other, single purpose, floating point
+options.  Valid values are: `precise`, `strict`, `fast`, and `aggressive`.
 Details:
 
 * `precise` Disables optimizations that are not value-safe on
@@ -1945,13 +1963,11 @@ Details:
 * `aggressive` Behaves identically to specifying both `-ffast-math` and
   `ffp-contract=fast`
 
-Note: If your command line specifies multiple instances
-of the `-ffp-model` option, or if your command line option specifies
-`-ffp-model` and later on the command line selects a floating point
-option that has the effect of negating part of the  `ffp-model` that
-has been selected, then the compiler will issue a diagnostic warning
-that the override has occurred.
-:::
+Note: If your command line specifies multiple instances of the `-ffp-model`
+option, or if your command line option specifies `-ffp-model` and later on the
+command line selects a floating point option that has the effect of negating
+part of the  `ffp-model` that has been selected, then the compiler will issue a
+diagnostic warning that the override has occurred. :::
 
 :::{option} -ffp-exception-behavior=<value>
 
@@ -1977,26 +1993,28 @@ however, in the case of NETBSD 6.99.26 and under, the default value is
 default value is `extended`, with SSE the default value is `source`.
 Details:
 
-* `source` The compiler uses the floating-point type declared in the source program as the evaluation method.
-* `double` The compiler uses `double` as the floating-point evaluation method for all float expressions of type that is narrower than `double`.
-* `extended` The compiler uses `long double` as the floating-point evaluation method for all float expressions of type that is narrower than `long double`.
-:::
+* `source` The compiler uses the floating-point type declared in the source
+  program as the evaluation method.
+* `double` The compiler uses `double` as the floating-point evaluation method
+  for all float expressions of type that is narrower than `double`.
+* `extended` The compiler uses `long double` as the floating-point evaluation
+  method for all float expressions of type that is narrower than `long double`.
+  :::
 
 :::{option} -f[no-]protect-parens
 
-This option pertains to floating-point types, complex types with
-floating-point components, and vectors of these types. Some arithmetic
-expression transformations that are mathematically correct and permissible
-according to the C and C++ language standards may be incorrect when dealing
-with floating-point types, such as reassociation and distribution. Further,
-the optimizer may ignore parentheses when computing arithmetic expressions
-in circumstances where the parenthesized and unparenthesized expression
-express the same mathematical value. For example (a+b)+c is the same
-mathematical value as a+(b+c), but the optimizer is free to evaluate the
-additions in any order regardless of the parentheses. When enabled, this
-option forces the optimizer to honor the order of operations with respect
-to parentheses in all circumstances.
-Defaults to `-fno-protect-parens`.
+This option pertains to floating-point types, complex types with floating-point
+components, and vectors of these types. Some arithmetic expression
+transformations that are mathematically correct and permissible according to
+the C and C++ language standards may be incorrect when dealing with
+floating-point types, such as reassociation and distribution. Further, the
+optimizer may ignore parentheses when computing arithmetic expressions in
+circumstances where the parenthesized and unparenthesized expression express
+the same mathematical value. For example (a+b)+c is the same mathematical value
+as a+(b+c), but the optimizer is free to evaluate the additions in any order
+regardless of the parentheses. When enabled, this option forces the optimizer
+to honor the order of operations with respect to parentheses in all
+circumstances. Defaults to `-fno-protect-parens`.
 
 Note that floating-point contraction (option `-ffp-contract=`) is disabled
 when `-fprotect-parens` is enabled.  Also note that in safe floating-point
@@ -2880,6 +2898,21 @@ preferred alignment.
 
 If `-falign-functions` is specified, or if the function has an
 `aligned` attribute, this option is ignored.
+:::
+
+:::{option} -fdefined-pointer-subtraction
+
+The C and C++ standards require both operands of a pointer subtraction to
+refer to elements of the same array object. Clang normally exploits this
+rule when lowering pointer subtraction operations, for example by emitting
+IR constructs such as `sdiv exact` that rely on the computed byte offset
+being an exact multiple of the pointee size.
+
+`-fdefined-pointer-subtraction` disables these assumptions and emits IR
+that preserves the behavior of pointer subtraction even when the standard
+requirements are violated. This is primarily intended for low-level code,
+such as kernels and boot loaders, that performs pointer arithmetic over
+externally defined memory layouts rather than ordinary C or C++ objects.
 :::
 
 (strict_aliasing)=
