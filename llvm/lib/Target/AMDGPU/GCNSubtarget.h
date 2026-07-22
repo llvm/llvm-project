@@ -49,12 +49,12 @@ public:
   // Following 2 enums are documented at:
   //   - https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
   enum class TrapHandlerAbi {
-    NONE   = 0x00,
+    NONE = 0x00,
     AMDHSA = 0x01,
   };
 
   enum class TrapID {
-    LLVMAMDHSATrap      = 0x02,
+    LLVMAMDHSATrap = 0x02,
     LLVMAMDHSADebugTrap = 0x03,
   };
 
@@ -755,7 +755,7 @@ public:
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
-    return AMDGPU::IsaInfo::getSGPRAllocGranule(*this);
+    return AMDGPU::getSGPRAllocGranule(getTargetID().getGPUKind());
   }
 
   /// \returns SGPR encoding granularity supported by the subtarget.
@@ -765,12 +765,12 @@ public:
 
   /// \returns Total number of SGPRs supported by the subtarget.
   unsigned getTotalNumSGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumSGPRs(*this);
+    return AMDGPU::getTotalNumSGPRs(getTargetID().getGPUKind());
   }
 
   /// \returns Addressable number of SGPRs supported by the subtarget.
   unsigned getAddressableNumSGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumSGPRs(*this);
+    return AMDGPU::getAddressableNumSGPRs(getTargetID().getGPUKind());
   }
 
   /// \returns Minimum number of SGPRs that meets the given number of waves per

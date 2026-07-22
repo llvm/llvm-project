@@ -1059,8 +1059,9 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   // Last value the induction variable at \p lvl actually takes:
   // lb + ((ub - lb) / step) * step. For unit steps this is exactly ub.
   auto computeLastIV = [&](const int lvl) -> mlir::Value {
-    const auto constStep = fir::getIntIfConstant(steps[lvl]);
-    if (constStep && (*constStep == 1 || *constStep == -1))
+    const std::optional<llvm::APInt> constStep =
+        fir::getIntIfConstant(steps[lvl]);
+    if (constStep && (constStep->isOne() || constStep->isAllOnes()))
       return ubs[lvl];
     const mlir::Value lb = lbs[lvl];
     const mlir::Value ub = ubs[lvl];
