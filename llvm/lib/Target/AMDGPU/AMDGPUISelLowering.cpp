@@ -1539,24 +1539,15 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
   GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = G->getGlobal();
 
-  const auto TrapAndPoison = [&] {
-    SDLoc DL(Op);
-    SDValue Trap = DAG.getNode(ISD::TRAP, DL, MVT::Other, DAG.getEntryNode());
-    SDValue OutputChain =
-        DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Trap, DAG.getRoot());
-    DAG.setRoot(OutputChain);
-    return DAG.getPOISON(Op.getValueType());
-  };
-
   if (G->getAddressSpace() == AMDGPUAS::BARRIER) {
     const GlobalVariable *GVar = cast<GlobalVariable>(GV);
 
     if (!AMDGPU::isNamedBarrier(*GVar)) {
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-          Fn, "Unsupported use of BARRIER address space!",
+          Fn, "unsupported use of BARRIER address space",
           SDLoc(Op).getDebugLoc(), DS_Error));
-      return TrapAndPoison();
+      return DAG.getPOISON(Op.getValueType());
     }
 
     unsigned Offset = MFI->allocateBarrierGlobal(DL, *cast<GlobalVariable>(GV));
@@ -1586,7 +1577,11 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
       // functions that use local objects. However, if these dead functions are
       // not eliminated, we don't want a compile time error. Just emit a warning
       // and a trap, since there should be no callable path here.
-      return TrapAndPoison();
+      SDValue Trap = DAG.getNode(ISD::TRAP, DL, MVT::Other, DAG.getEntryNode());
+      SDValue OutputChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                                        Trap, DAG.getRoot());
+      DAG.setRoot(OutputChain);
+      return DAG.getPOISON(Op.getValueType());
     }
 
     // TODO: We could emit code to handle the initialization somewhere.

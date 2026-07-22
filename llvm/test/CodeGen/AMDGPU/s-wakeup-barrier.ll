@@ -5,7 +5,7 @@
 ; RUN: not llc -global-isel=0 -mtriple=amdgpu12.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: not llc -global-isel=1 -mtriple=amdgpu12.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-; ERR: error: <unknown>:0:0: in function @kernel1 void (ptr addrspace(1), ptr addrspace(3)): llvm.amdgcn.s.wakeup.barrier requires target feature 's-wakeup-barrier-inst'
+; ERR: error: <unknown>:0:0: in function @kernel1 void (ptr addrspace(1), ptr addrspace(15)): llvm.amdgcn.s.wakeup.barrier requires target feature 's-wakeup-barrier-inst'
 
 @bar = internal addrspace(15) global target("amdgcn.named.barrier", 0) poison
 

@@ -1106,6 +1106,8 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
                           TargetExtType::IsTokenLike);
 
   // Opaque types in the AMDGPU name space.
+  // NOTE: If the size of the type is changed, it must be also updated in
+  // AMDGPUMemoryUtils.h !
   if (Name == "amdgcn.named.barrier") {
     return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
                           TargetExtType::CanBeGlobal);

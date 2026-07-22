@@ -172,7 +172,7 @@ AMDGPUMachineFunctionInfo::allocateBarrierGlobal(const DataLayout &DL,
     report_fatal_error(
         "named barrier GV cannot be used to represent the NULL named barrier");
   }
-  unsigned BarCnt = GV.getGlobalSize(DL) / 16;
+  unsigned BarCnt = AMDGPU::getNumNamedBarriersDeclared(DL, GV);
   recordNumNamedBarriers(BarAddr.value(), BarCnt);
   return BarAddr.value();
 }

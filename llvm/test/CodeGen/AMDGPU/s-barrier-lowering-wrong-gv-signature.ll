@@ -8,7 +8,7 @@
 ; @addrspacecasted doesn't trip up on this because we are not doing any unsupported
 ; operation.
 ;
-; CHECK: in function wrong_type void (): Unsupported use of BARRIER address space!
+; CHECK: in function wrong_type void (): unsupported use of BARRIER address space
 
 @bar = internal global target("amdgcn.named.barrier", 0) poison
 @bar2 = internal addrspace(15) global i32 poison

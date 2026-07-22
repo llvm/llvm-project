@@ -1365,7 +1365,10 @@ supported for the ``amdgcn`` target.
   Pointer are 32 bits and directly correspond to valid barrier IDs. When consumed by an
   intrinsic, all barrier pointers must, when interpreted as signed 32 bit integers,
   have a value corresponding to a valid barrier ID on the target.
-  Otherwise, the behavior is undefined
+  Otherwise, the behavior is undefined.
+
+  The ``NULL`` pointer (as a constant) can be consumed by some intrinsics and
+  corresponds to the NULL named barrier.
 
   These pointers do not have a corresponding hardware aperture but safe round-tripping
   through the generic address space is still possible. Attempting to dereference a

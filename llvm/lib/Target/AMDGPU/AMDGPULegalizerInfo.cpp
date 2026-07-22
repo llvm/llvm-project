@@ -3368,21 +3368,16 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
   MachineFunction &MF = B.getMF();
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  const auto TrapAndPoison = [&] {
-    B.buildTrap();
-    B.buildUndef(DstReg);
-    MI.eraseFromParent();
-    return true;
-  };
-
   if (AS == AMDGPUAS::BARRIER) {
     const GlobalVariable *GVar = cast<GlobalVariable>(GV);
     if (!AMDGPU::isNamedBarrier(*GVar)) {
       const Function &Fn = MF.getFunction();
       Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-          Fn, "Unsupported use of BARRIER address space!", MI.getDebugLoc(),
+          Fn, "unsupported use of BARRIER address space", MI.getDebugLoc(),
           DS_Error));
-      return TrapAndPoison();
+      B.buildUndef(DstReg);
+      MI.eraseFromParent();
+      return true;
     }
 
     B.buildConstant(DstReg,
@@ -3404,7 +3399,10 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
       // functions that use local objects. However, if these dead functions are
       // not eliminated, we don't want a compile time error. Just emit a warning
       // and a trap, since there should be no callable path here.
-      return TrapAndPoison();
+      B.buildTrap();
+      B.buildUndef(DstReg);
+      MI.eraseFromParent();
+      return true;
     }
 
     // TODO: We could emit code to handle the initialization somewhere.

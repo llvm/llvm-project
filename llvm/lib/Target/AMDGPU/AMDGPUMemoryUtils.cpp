@@ -84,6 +84,14 @@ TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
   return nullptr;
 }
 
+unsigned getNumNamedBarriersDeclared(const DataLayout &DL,
+                                     const GlobalVariable &GV) {
+  assert(isNamedBarrier(GV));
+  unsigned GVSize = GV.getGlobalSize(DL);
+  assert(GVSize && (GVSize % NamedBarrierTypeSizeInBytes == 0));
+  return GVSize / NamedBarrierTypeSizeInBytes;
+}
+
 bool isDynamicLDS(const GlobalVariable &GV) {
   // external zero size addrspace(3) without initializer is dynlds.
   const Module *M = GV.getParent();
