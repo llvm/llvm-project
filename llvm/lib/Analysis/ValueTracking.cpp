@@ -5749,18 +5749,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
               APFloat::semanticsMaxExponent(DstSemantics))
         Known.knownNot(fcInf);
 
-      // Check and clear for FNUZ formats which lacks negative zero
-      if (SrcSemantics->nanEncoding == fltNanEncoding::NegativeZero)
-        Known.knownNot(fcNegZero);
-
       // Check and clear all neg flags for formats that do not have signed
       // representation.
       if (!APFloat::semanticsHasSignedRepr(*SrcSemantics))
         Known.knownNot(fcNegative);
 
-      // Check if format has no zero at all, Float8E8M0FNU
+      // Check if format has no zero at all (Float8E8M0FNU), or no negative
+      // zero.
       if (!APFloat::semanticsHasZero(*SrcSemantics))
         Known.knownNot(fcZero);
+      else if (SrcSemantics->nanEncoding == fltNanEncoding::NegativeZero)
+        Known.knownNot(fcNegZero);
 
       // If src lands normally in dest, the result can never be subnormal.
       if (APFloat::isRepresentableAsNormalIn(*SrcSemantics, DstSemantics))
