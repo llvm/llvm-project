@@ -657,6 +657,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::FCmp:
   case Instruction::ExtractElement:
   case Instruction::Store:
+  case VPInstruction::ActiveLaneMask:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -671,7 +672,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
     return 2;
   case Instruction::InsertElement:
   case Instruction::Select:
-  case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ReductionStartVector:
     return 3;
@@ -803,9 +803,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // Get the original loop tripcount.
     Value *ScalarTC = State.get(getOperand(1), VPLane(0));
 
+    unsigned Multiplier =
+        getOpcode() == VPInstruction::ActiveLaneMask
+            ? 1
+            : cast<VPConstantInt>(getOperand(2))->getZExtValue();
+
     // If this part of the active lane mask is scalar, generate the CMP directly
     // to avoid unnecessary extracts.
-    unsigned Multiplier = cast<VPConstantInt>(getOperand(2))->getZExtValue();
     if (State.VF.isScalar() && Multiplier == 1)
       return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0, ScalarTC,
                                Name);
@@ -1124,23 +1128,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (Src->getType() == DstTy)
       return Src;
 
-    // If the VF is scalar & this is an extract of an active lane mask,
-    // generate an ICMP directly.
-    VPValue *Start, *TC;
-    if (State.VF.isScalar() &&
-        match(getOperand(0),
-              m_WideActiveLaneMask(m_VPValue(Start), m_VPValue(TC),
-                                   m_VPValue()))) {
-      Value *StartV = State.get(Start);
-      if (Part > 0)
-        StartV = Builder.CreateAdd(StartV, State.get(getOperand(1)));
-      return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, StartV,
-                               State.get(TC));
-    }
-
-    auto *Idx = ConstantInt::get(Builder.getInt64Ty(),
-                                 State.VF.getKnownMinValue() * Part);
-    return Builder.CreateExtractVector(DstTy, Src, Idx);
+    return Builder.CreateExtractVector(
+        DstTy, Src, Builder.getInt64(State.VF.getKnownMinValue() * Part), Name);
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -1452,7 +1441,10 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask: {
     Type *ArgTy = getOperand(0)->getScalarType();
-    unsigned Multiplier = cast<VPConstantInt>(getOperand(2))->getZExtValue();
+    unsigned Multiplier =
+        getOpcode() == VPInstruction::ActiveLaneMask
+            ? 1
+            : cast<VPConstantInt>(getOperand(2))->getZExtValue();
     Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF * Multiplier);
     IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
                                   {ArgTy, ArgTy});

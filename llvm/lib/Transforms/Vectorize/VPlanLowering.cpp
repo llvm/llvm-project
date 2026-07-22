@@ -151,17 +151,15 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   // TODO: Check if dropping the flags is needed.
   TopRegion->clearCanonicalIVNUW(CanonicalIVIncrement);
   DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
-  // We can't use StartV directly in the WideActiveLaneMask
-  // VPInstruction, since we have to take unrolling into account.
-  // Each part needs to start at Part * VF
   auto *VecPreheader = Plan.getVectorPreheader();
   VPBuilder Builder(VecPreheader);
-
-  // Create the WideActiveLaneMask instruction using the correct
-  // start values.
   VPValue *TC = Plan.getTripCount();
   VPValue *VF = &Plan.getVF();
 
+  // We can't use StartV directly in the WideActiveLaneMask
+  // VPInstruction, since we have to take unrolling into account.
+  // CanonicalIVIncrementForPart is needed so that ExtractVectorForPart
+  // is unrolled for each part, rather than each extract starting at 0.
   auto *EntryIncrement =
       Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
                                   {StartV, VF}, {}, DL, "index.part.next");
@@ -225,12 +223,9 @@ void VPlanTransforms::materializeHeaderMask(
       VPIRFlags::WrapFlagsTy(/*HasNUW=*/true, /*HasNSW=*/false)));
   VPValue *Mask;
   if (UseActiveLaneMask) {
-    VPValue *ALMMultiplier =
-        Plan.getConstantInt(LoopRegion->getCanonicalIVType(), 1);
-    Mask = Builder.createNaryOp(
-        VPInstruction::ActiveLaneMask,
-        {WideCanonicalIV, Plan.getTripCount(), ALMMultiplier}, nullptr,
-        "active.lane.mask");
+    Mask = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
+                                {WideCanonicalIV, Plan.getTripCount()}, nullptr,
+                                "active.lane.mask");
   } else {
     Mask = Builder.createICmp(CmpInst::ICMP_ULE, WideCanonicalIV,
                               Plan.getOrCreateBackedgeTakenCount());

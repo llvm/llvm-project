@@ -12,13 +12,11 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[UMAX:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY2:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 0, i64 [[UMAX]])
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = icmp ult i64 0, [[UMAX]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = icmp ult i64 1, [[UMAX]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE5:%.*]] ]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_LOAD_CONTINUE5]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_LOAD_CONTINUE5]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT7:%.*]], [[PRED_LOAD_CONTINUE5]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[PRED_LOAD_CONTINUE5]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[PRED_LOAD_CONTINUE5]] ]
@@ -44,7 +42,6 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[TMP17]] = select i1 [[ACTIVE_LANE_MASK]], i32 [[TMP15]], i32 [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP18]] = select i1 [[ACTIVE_LANE_MASK2]], i32 [[TMP16]], i32 [[VEC_PHI3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT1:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = icmp ult i64 [[INDEX_NEXT]], [[UMAX]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX_NEXT]], 1
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT7]] = icmp ult i64 [[TMP19]], [[UMAX]]
