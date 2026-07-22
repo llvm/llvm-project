@@ -1155,16 +1155,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   FPTruncActions.scalarize(0).lower();
 
   getActionDefinitionsBuilder(G_FPEXT)
-      .lowerIf([](const LegalityQuery &Query) {
-        const LLT DstTy = Query.Types[0];
-        const LLT SrcTy = Query.Types[1];
-
-        // TODO: Simplify to {{F32, BF16}, {F64, BF16}} once extended LLTs are
-        // used everywhere.
-        return SrcTy.isBFloat16() && (DstTy.isFloat32() || DstTy.isFloat64());
-      })
       .legalFor({{F64, F32}, {F32, F16}})
       .narrowScalarFor({{F64, F16}}, changeElementSizeTo(0, F32))
+      .lowerFor({{F32, BF16}, {F64, BF16}})
       .scalarize(0);
 
   auto &FSubActions = getActionDefinitionsBuilder({G_FSUB, G_STRICT_FSUB});
