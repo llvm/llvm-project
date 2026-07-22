@@ -381,9 +381,10 @@ void GCNIterativeScheduler::restoreFlags(MachineInstr &MI) {
 }
 
 void GCNIterativeScheduler::restoreRegionFlags(const Region &R) {
-  for (auto I = R.Begin; I != R.End; ++I)
+  for (MachineBasicBlock::iterator I = R.Begin; I != R.End; ++I) {
     if (!I->isDebugInstr())
       restoreFlags(*I);
+  }
 }
 
 // minimal required region scheduler, works for ranges of SUnits*,
@@ -631,8 +632,9 @@ void GCNIterativeScheduler::scheduleILP(
                                        ST, DynamicVGPRBlockSize) >= TgtOcc) {
         LLVM_DEBUG(dbgs() << ", scheduling minimal register\n");
         scheduleBest(*R);
-      } else
+      } else {
         restoreRegionFlags(*R);
+      }
     } else {
       scheduleRegion(*R, ILPSchedule, RP);
       LLVM_DEBUG(printSchedResult(dbgs(), R, RP));
