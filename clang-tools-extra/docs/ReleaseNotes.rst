@@ -103,6 +103,12 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone/signed-char-misuse>` check by adding a
+  diagnostic for ``signed char`` values passed as an argument to a
+  ``<cctype>``/``<ctype.h>`` character classification or conversion
+  function.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

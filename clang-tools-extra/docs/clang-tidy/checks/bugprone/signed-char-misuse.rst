@@ -41,6 +41,11 @@ Currently, this check warns in the following cases:
 - ``signed char`` and ``unsigned char`` are compared with
   equality/inequality operator
 - ``signed char`` is converted to an integer in the array subscript
+- ``signed char`` is passed as an argument to a ``<cctype>``/``<ctype.h>``
+  character classification or conversion function (e.g. ``isalpha``,
+  ``toupper``). These functions require their argument to be representable
+  as an ``unsigned char`` or equal to ``EOF``; any other value is undefined
+  behavior.
 
 See also:
 `STR34-C. Cast characters to unsigned char before converting to larger
@@ -106,6 +111,26 @@ so both arguments will have the same type.
     if (static_cast<unsigned char>(SChar) == USChar)
       return true;
     return false;
+  }
+
+Another use case is passing a ``signed char`` to a ``<cctype>``/``<ctype.h>``
+function. These functions interpret their argument as an ``unsigned char``,
+so a ``signed char`` holding a non-ASCII character is passed as a negative
+value, which is undefined behavior.
+
+.. code-block:: c++
+
+  bool isValid(signed char SChar) {
+    return std::isalpha(SChar);
+  }
+
+The fix is the same as above: cast the ``signed char`` to ``unsigned char``
+before passing it to the function.
+
+.. code-block:: c++
+
+  bool isValid(signed char SChar) {
+    return std::isalpha(static_cast<unsigned char>(SChar));
   }
 
 Options

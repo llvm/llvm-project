@@ -125,11 +125,38 @@ void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {
           .bind("arraySubscript");
 
   Finder->addMatcher(STDArraySubscript, this);
+
+  // Catch signed char values passed to a <cctype>/<ctype.h> classification
+  // or conversion function; any value other than EOF or one representable
+  // as unsigned char is undefined behavior. Unlike the matchers above, this
+  // matches the uncast argument directly instead of going through
+  // charCastExpression(), because hasArgument() strips implicit casts off
+  // the argument before matching it.
+  const auto IntTypedef = qualType(hasDeclaration(typedefDecl(
+      hasAnyName(utils::options::parseStringList(CharTypedefsToIgnoreList)))));
+  const auto CctypeFunctionArgument =
+      callExpr(
+          callee(functionDecl(
+              hasAnyName("isalnum", "std::isalnum", "isalpha", "std::isalpha",
+                         "isblank", "std::isblank", "iscntrl", "std::iscntrl",
+                         "isdigit", "std::isdigit", "isgraph", "std::isgraph",
+                         "islower", "std::islower", "isprint", "std::isprint",
+                         "ispunct", "std::ispunct", "isspace", "std::isspace",
+                         "isupper", "std::isupper", "isxdigit", "std::isxdigit",
+                         "tolower", "std::tolower", "toupper", "std::toupper"),
+              hasParameter(0, parmVarDecl(hasType(IntegerType))))),
+          hasArgument(0,
+                      expr(hasType(qualType(isAnyCharacter(), isSignedInteger(),
+                                            unless(IntTypedef))))
+                          .bind("signedCastExpression")))
+          .bind("cctypeFunctionArgument");
+
+  Finder->addMatcher(CctypeFunctionArgument, this);
 }
 
 void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *SignedCastExpression =
-      Result.Nodes.getNodeAs<ImplicitCastExpr>("signedCastExpression");
+      Result.Nodes.getNodeAs<Expr>("signedCastExpression");
   const auto *IntegerType = Result.Nodes.getNodeAs<QualType>("integerType");
   assert(SignedCastExpression);
   assert(IntegerType);
@@ -138,8 +165,7 @@ void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
   // The potential misinterpretation happens for negative values only.
   Expr::EvalResult EVResult;
   if (!SignedCastExpression->isValueDependent() &&
-      SignedCastExpression->getSubExpr()->EvaluateAsInt(EVResult,
-                                                        *Result.Context)) {
+      SignedCastExpression->EvaluateAsInt(EVResult, *Result.Context)) {
     const llvm::APSInt Value = EVResult.Val.getInt();
     if (Value.isNonNegative())
       return;
@@ -164,6 +190,11 @@ void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (Result.Nodes.getNodeAs<Expr>("arraySubscript")) {
     diag(SignedCastExpression->getBeginLoc(),
          "'signed char' to %0 conversion in array subscript; "
+         "consider casting to 'unsigned char' first.")
+        << *IntegerType;
+  } else if (Result.Nodes.getNodeAs<Expr>("cctypeFunctionArgument")) {
+    diag(SignedCastExpression->getBeginLoc(),
+         "'signed char' to %0 conversion passed to a <cctype> function; "
          "consider casting to 'unsigned char' first.")
         << *IntegerType;
   } else {
