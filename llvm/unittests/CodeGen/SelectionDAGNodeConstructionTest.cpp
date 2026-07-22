@@ -47,6 +47,33 @@ TEST_F(SelectionDAGNodeConstructionTest, AND) {
   EXPECT_EQ(DAG->getNode(ISD::AND, DL, MVT::i32, Undef, Undef), Undef);
 }
 
+TEST_F(SelectionDAGNodeConstructionTest, AtomicRMWFlags) {
+  SDLoc DL;
+  SDValue Ptr = DAG->getUNDEF(MVT::i64);
+  SDValue Val = DAG->getUNDEF(MVT::f32);
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo(),
+      MachineMemOperand::MOLoad | MachineMemOperand::MOStore, 4, Align(4),
+      AAMDNodes(), nullptr, SyncScope::System, AtomicOrdering::Monotonic);
+
+  SDNodeFlags Flags;
+  Flags.setNoNaNs(true);
+  Flags.setNoSignedZeros(true);
+  SDValue Atomic = DAG->getAtomic(ISD::ATOMIC_LOAD_FADD, DL, MVT::f32,
+                                  DAG->getEntryNode(), Ptr, Val, MMO, Flags);
+  EXPECT_TRUE(Atomic->getFlags().hasNoNaNs());
+  EXPECT_TRUE(Atomic->getFlags().hasNoSignedZeros());
+
+  SDNodeFlags FewerFlags;
+  FewerFlags.setNoNaNs(true);
+  SDValue SameAtomic = DAG->getAtomic(
+      ISD::ATOMIC_LOAD_FADD, DL, MVT::f32, DAG->getEntryNode(), Ptr, Val, MMO,
+      FewerFlags);
+  EXPECT_EQ(Atomic, SameAtomic);
+  EXPECT_TRUE(SameAtomic->getFlags().hasNoNaNs());
+  EXPECT_FALSE(SameAtomic->getFlags().hasNoSignedZeros());
+}
+
 TEST_F(SelectionDAGNodeConstructionTest, MUL) {
   SDLoc DL;
   SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,

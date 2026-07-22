@@ -331,9 +331,10 @@ public:
       return true;
     case Instruction::PHI:
     case Instruction::Select:
-    case Instruction::Call: {
+    case Instruction::Call:
       return isSupportedFloatingPointType(V->getType());
-    }
+    case Instruction::AtomicRMW:
+      return V->getType()->isFPOrFPVectorTy();
     default:
       return false;
     }

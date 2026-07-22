@@ -789,7 +789,8 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     } else {
       auto PerformOp = [&](IRBuilderBase &Builder, Value *Loaded) {
         return buildAtomicRMWValue(AI->getOperation(), Builder, Loaded,
-                                   AI->getValOperand());
+                                   AI->getValOperand(),
+                                   AI->getFastMathFlagsOrNone());
       };
       expandAtomicOpToLLSC(AI, AI->getType(), AI->getPointerOperand(),
                            AI->getAlign(), AI->getOrdering(), PerformOp);
@@ -1013,7 +1014,8 @@ static Value *insertMaskedValue(IRBuilderBase &Builder, Value *WideWord,
 static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
                                     IRBuilderBase &Builder, Value *Loaded,
                                     Value *Shifted_Inc, Value *Inc,
-                                    const PartwordMaskValues &PMV) {
+                                    const PartwordMaskValues &PMV,
+                                    FastMathFlags FMF) {
   // TODO: update to use
   // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge in order
   // to merge bits from two values without requiring PMV.Inv_Mask.
@@ -1031,7 +1033,8 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Nand: {
     // The other arithmetic ops need to be masked into place.
-    Value *NewVal = buildAtomicRMWValue(Op, Builder, Loaded, Shifted_Inc);
+    Value *NewVal =
+        buildAtomicRMWValue(Op, Builder, Loaded, Shifted_Inc, FMF);
     Value *NewVal_Masked = Builder.CreateAnd(NewVal, PMV.Mask);
     Value *Loaded_MaskOut = Builder.CreateAnd(Loaded, PMV.Inv_Mask);
     Value *FinalVal = Builder.CreateOr(Loaded_MaskOut, NewVal_Masked);
@@ -1057,7 +1060,8 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
     // the original size, and expand out again after doing the
     // operation. Bitcasts will be inserted for FP values.
     Value *Loaded_Extract = extractMaskedValue(Builder, Loaded, PMV);
-    Value *NewVal = buildAtomicRMWValue(Op, Builder, Loaded_Extract, Inc);
+    Value *NewVal =
+        buildAtomicRMWValue(Op, Builder, Loaded_Extract, Inc, FMF);
     Value *FinalVal = insertMaskedValue(Builder, Loaded, NewVal, PMV);
     return FinalVal;
   }
@@ -1102,7 +1106,8 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
 
   auto PerformPartwordOp = [&](IRBuilderBase &Builder, Value *Loaded) {
     return performMaskedAtomicOp(Op, Builder, Loaded, ValOperand_Shifted,
-                                 AI->getValOperand(), PMV);
+                                 AI->getValOperand(), PMV,
+                                 AI->getFastMathFlagsOrNone());
   };
 
   Value *OldResult;
@@ -1865,7 +1870,8 @@ bool AtomicExpandImpl::expandAtomicRMWToCmpXchg(
       AI->getOrdering(), AI->getSyncScopeID(), AI->isVolatile(),
       [&](IRBuilderBase &Builder, Value *Loaded) {
         return buildAtomicRMWValue(AI->getOperation(), Builder, Loaded,
-                                   AI->getValOperand());
+                                   AI->getValOperand(),
+                                   AI->getFastMathFlagsOrNone());
       },
       CreateCmpXchg, /*MetadataSrc=*/AI);
 

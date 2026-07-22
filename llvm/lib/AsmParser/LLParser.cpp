@@ -9133,8 +9133,8 @@ int LLParser::parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
 }
 
 /// parseAtomicRMW
-///   ::= 'atomicrmw' 'volatile'? 'elementwise'? BinOp TypeAndValue ','
-///   TypeAndValue
+///   ::= 'atomicrmw' 'volatile'? 'fast-math flags'? 'elementwise'? BinOp
+///   TypeAndValue ',' TypeAndValue
 ///       'singlethread'? AtomicOrdering
 int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   Value *Ptr, *Val; LocTy PtrLoc, ValLoc;
@@ -9149,6 +9149,7 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
 
   if (EatIfPresent(lltok::kw_volatile))
     IsVolatile = true;
+  FastMathFlags FMF = EatFastMathFlagsIfPresent();
   if (EatIfPresent(lltok::kw_elementwise))
     IsElementwise = true;
 
@@ -9268,12 +9269,17 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   if (Size < 8 || (Size & (Size - 1)))
     return error(ValLoc,
                  "atomicrmw operand must have a power-of-two byte size");
+  if (FMF.any() && !Val->getType()->isFPOrFPVectorTy())
+    return error(ValLoc, "fast-math-flags specified for atomicrmw without "
+                         "floating-point type");
   const Align DefaultAlignment(
       PFS.getFunction().getDataLayout().getTypeStoreSize(Val->getType()));
   AtomicRMWInst *RMWI = new AtomicRMWInst(Operation, Ptr, Val,
                                           Alignment.value_or(DefaultAlignment),
                                           Ordering, SSID, IsElementwise);
   RMWI->setVolatile(IsVolatile);
+  if (FMF.any())
+    RMWI->setFastMathFlags(FMF);
   Inst = RMWI;
   return AteExtraComma ? InstExtraComma : InstNormal;
 }

@@ -4307,9 +4307,10 @@ LLVM IR floating-point operations ({ref}`fneg <i_fneg>`, {ref}`fadd <i_fadd>`,
 {ref}`fsub <i_fsub>`, {ref}`fmul <i_fmul>`, {ref}`fdiv <i_fdiv>`,
 {ref}`frem <i_frem>`, {ref}`fcmp <i_fcmp>`, {ref}`fptrunc <i_fptrunc>`,
 {ref}`fpext <i_fpext>`), {ref}`uitofp <i_uitofp>`, {ref}`sitofp <i_sitofp>`,
-and {ref}`phi <i_phi>`, {ref}`select <i_select>`, or {ref}`call <i_call>`
-instructions that return floating-point types may use the following flags to
-enable otherwise unsafe floating-point transformations.
+and {ref}`phi <i_phi>`, {ref}`select <i_select>`, {ref}`call <i_call>` or 
+{ref}`atomicrmw <i_atomicrmw>` instructions that return floating-point types, 
+may use the following flags to enable otherwise unsafe floating-point 
+transformations.
 
 `fast`
 :   This flag is a shorthand for specifying all fast-math flags at once, and
@@ -4339,6 +4340,14 @@ types:
 - Floating-point scalar or vector types
 - Array types (nested to any depth) of floating-point scalar or vector types
 - Homogeneous literal struct types of floating-point scalar or vector types
+
+(fastmath_atomicrmw_types)=
+
+For {ref}`atomicrmw <i_atomicrmw>` instructions, the following types are
+considered to be floating-point types:
+
+- Floating-point scalar types
+- Fixed vector types of floating-point elements
 
 #### Rewrite-based flags
 
@@ -12085,7 +12094,7 @@ done:
 ##### Syntax:
 
 ```
-atomicrmw [volatile] [elementwise] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
+atomicrmw [volatile] [fast-math flags]* [elementwise] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
 ```
 
 ##### Overview:
@@ -12127,6 +12136,11 @@ For add/sub/and/nand/or/xor/max/min/umax/umin/uinc_wrap/udec_wrap/usub_cond/usub
 For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point or fixed vector of floating-point type.
 For xchg, this must be an integer type, floating-point type, or pointer type, or, if the `elementwise` modifier is present, a fixed vector of integer type, floating-point type, or pointer type.
 The type of the `<pointer>` operand must be a pointer to the type of `<value>`.
+An `atomicrmw` can also take any number of {ref}`fast-math flags <fastmath>`,
+which are optimization hints to enable otherwise unsafe floating-point
+optimizations. Fast-math flags are only valid for `atomicrmw` instructions
+operating on {ref}`supported floating-point types <fastmath_atomicrmw_types>`.
+The flags additionally apply to the value written to memory.
 If the `atomicrmw` is marked as `volatile`, then the optimizer is not allowed to modify the
 number or order of execution of this `atomicrmw` with other
 {ref}`volatile operations <volatile>`.

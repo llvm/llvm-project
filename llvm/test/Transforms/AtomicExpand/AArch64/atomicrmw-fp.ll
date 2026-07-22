@@ -7,7 +7,7 @@ define float @test_atomicrmw_fadd_f32(ptr %ptr, float %value) !prof !0 {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; CHECK-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
+; CHECK-NEXT:    [[NEW:%.*]] = fadd nnan nsz float [[LOADED]], [[VALUE:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
@@ -18,7 +18,7 @@ define float @test_atomicrmw_fadd_f32(ptr %ptr, float %value) !prof !0 {
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret float [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr %ptr, float %value seq_cst
+  %res = atomicrmw nnan nsz fadd ptr %ptr, float %value seq_cst
   ret float %res
 }
 

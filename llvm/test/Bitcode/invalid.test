@@ -225,6 +225,13 @@ RUN:   FileCheck --check-prefix=NONPOINTER-ATOMICRMW %s
 
 NONPOINTER-ATOMICRMW: Invalid atomicrmw record
 
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-atomicrmw-fmf-truncated.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ATOMICRMW-FMF %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-atomicrmw-fmf-surplus.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ATOMICRMW-FMF %s
+
+INVALID-ATOMICRMW-FMF: Invalid atomicrmw record
+
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-fcmp-opnum.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-FCMP-OPNUM %s
 

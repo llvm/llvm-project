@@ -51,7 +51,7 @@ std::pair<Value *, Value *> llvm::buildCmpXchgValue(IRBuilderBase &Builder,
 
 Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
                                  IRBuilderBase &Builder, Value *Loaded,
-                                 Value *Val) {
+                                 Value *Val, FastMathFlags FMF) {
   Value *NewVal;
   switch (Op) {
   case AtomicRMWInst::Xchg:
@@ -81,21 +81,21 @@ Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
     NewVal = Builder.CreateICmpULE(Loaded, Val);
     return Builder.CreateSelect(NewVal, Loaded, Val, "new");
   case AtomicRMWInst::FAdd:
-    return Builder.CreateFAdd(Loaded, Val, "new");
+    return Builder.CreateFAddFMF(Loaded, Val, FMF, "new");
   case AtomicRMWInst::FSub:
-    return Builder.CreateFSub(Loaded, Val, "new");
+    return Builder.CreateFSubFMF(Loaded, Val, FMF, "new");
   case AtomicRMWInst::FMax:
-    return Builder.CreateMaxNum(Loaded, Val);
+    return Builder.CreateMaxNum(Loaded, Val, FMF);
   case AtomicRMWInst::FMin:
-    return Builder.CreateMinNum(Loaded, Val);
+    return Builder.CreateMinNum(Loaded, Val, FMF);
   case AtomicRMWInst::FMaximum:
-    return Builder.CreateMaximum(Loaded, Val);
+    return Builder.CreateMaximum(Loaded, Val, FMF);
   case AtomicRMWInst::FMinimum:
-    return Builder.CreateMinimum(Loaded, Val);
+    return Builder.CreateMinimum(Loaded, Val, FMF);
   case AtomicRMWInst::FMaximumNum:
-    return Builder.CreateMaximumNum(Loaded, Val);
+    return Builder.CreateMaximumNum(Loaded, Val, FMF);
   case AtomicRMWInst::FMinimumNum:
-    return Builder.CreateMinimumNum(Loaded, Val);
+    return Builder.CreateMinimumNum(Loaded, Val, FMF);
   case AtomicRMWInst::UIncWrap: {
     Constant *One = ConstantInt::get(Loaded->getType(), 1);
     Value *Inc = Builder.CreateAdd(Loaded, One);
@@ -135,7 +135,8 @@ bool llvm::lowerAtomicRMWInst(AtomicRMWInst *RMWI) {
   Value *Val = RMWI->getValOperand();
 
   LoadInst *Orig = Builder.CreateLoad(Val->getType(), Ptr);
-  Value *Res = buildAtomicRMWValue(RMWI->getOperation(), Builder, Orig, Val);
+  Value *Res = buildAtomicRMWValue(RMWI->getOperation(), Builder, Orig, Val,
+                                   RMWI->getFastMathFlagsOrNone());
   Builder.CreateStore(Res, Ptr);
   RMWI->replaceAllUsesWith(Orig);
   RMWI->eraseFromParent();

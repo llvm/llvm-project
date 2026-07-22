@@ -3684,7 +3684,8 @@ bool IRTranslator::translateAtomicRMW(const User &U,
       *MF->getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
                                 Flags, MRI->getType(Val), getMemOpAlign(I),
                                 I.getAAMetadata(), nullptr, I.getSyncScopeID(),
-                                I.getOrdering()));
+                                I.getOrdering()),
+      MachineInstr::copyFlagsFromInstruction(I));
   return true;
 }
 

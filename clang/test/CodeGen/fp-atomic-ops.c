@@ -19,6 +19,9 @@
 // RUN: %clang_cc1 %s -emit-llvm -DDOUBLE -O0 -o - -triple=x86_64-linux-gnu \
 // RUN:   | FileCheck -check-prefixes=FLOAT,DOUBLE %s
 
+// RUN: %clang_cc1 %s -emit-llvm -O0 -ffast-math -ffp-contract=fast -o - \
+// RUN:   -triple=x86_64-linux-gnu | FileCheck -check-prefix=FAST %s
+
 typedef enum memory_order {
   memory_order_relaxed = __ATOMIC_RELAXED,
   memory_order_acquire = __ATOMIC_ACQUIRE,
@@ -29,9 +32,11 @@ typedef enum memory_order {
 
 void test(float *f, float ff, double *d, double dd) {
   // FLOAT: atomicrmw fadd ptr {{.*}} monotonic
+  // FAST: atomicrmw fast fadd ptr {{.*}} monotonic
   __atomic_fetch_add(f, ff, memory_order_relaxed);
 
   // FLOAT: atomicrmw fsub ptr {{.*}} monotonic
+  // FAST: atomicrmw fast fsub ptr {{.*}} monotonic
   __atomic_fetch_sub(f, ff, memory_order_relaxed);
 
 #ifdef DOUBLE

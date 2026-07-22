@@ -757,7 +757,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(AtomicCmpXchgInst, Value)
 /// combines it with another value, and then stores the result back.  Returns
 /// the old value.
 ///
-class AtomicRMWInst : public Instruction {
+class AtomicRMWInst : public Instruction, public FastMathFlagsStorage {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;

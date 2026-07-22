@@ -38,9 +38,9 @@ define i8 @min() {
 define float @fadd() {
 ; CHECK-LABEL: @fadd(
   %i = alloca float
-  %j = atomicrmw fadd ptr %i, float 42.0 monotonic
+  %j = atomicrmw nnan nsz fadd ptr %i, float 42.0 monotonic
 ; CHECK: [[INST:%[a-z0-9]+]] = load
-; CHECK-NEXT: fadd
+; CHECK-NEXT: fadd nnan nsz
 ; CHECK-NEXT: store
   ret float %j
 ; CHECK: ret float [[INST]]
@@ -60,9 +60,9 @@ define float @fsub() {
 define float @fmax() {
 ; CHECK-LABEL: @fmax(
   %i = alloca float
-  %j = atomicrmw fmax ptr %i, float 42.0 monotonic
+  %j = atomicrmw ninf fmax ptr %i, float 42.0 monotonic
 ; CHECK: [[INST:%[a-z0-9]+]] = load
-; CHECK-NEXT: call float @llvm.maxnum.f32
+; CHECK-NEXT: call ninf float @llvm.maxnum.f32
 ; CHECK-NEXT: store
   ret float %j
 ; CHECK: ret float [[INST]]
@@ -82,9 +82,9 @@ define float @fmin() {
 define float @fmaximum() {
 ; CHECK-LABEL: @fmaximum(
   %i = alloca float
-  %j = atomicrmw fmaximum ptr %i, float 42.0 monotonic
+  %j = atomicrmw nnan fmaximum ptr %i, float 42.0 monotonic
 ; CHECK: [[INST:%[a-z0-9]+]] = load
-; CHECK-NEXT: call float @llvm.maximum.f32
+; CHECK-NEXT: call nnan float @llvm.maximum.f32
 ; CHECK-NEXT: store
   ret float %j
 ; CHECK: ret float [[INST]]

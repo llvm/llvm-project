@@ -4478,6 +4478,7 @@ AtomicRMWInst *AtomicRMWInst::cloneImpl() const {
       getOperation(), getOperand(0), getOperand(1), getAlign(), getOrdering(),
       getSyncScopeID(), isElementwise());
   Result->setVolatile(isVolatile());
+  Result->FMF = FMF;
   return Result;
 }
 

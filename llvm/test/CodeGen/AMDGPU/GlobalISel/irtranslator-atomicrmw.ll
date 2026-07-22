@@ -8,10 +8,10 @@ define float @test_atomicrmw_fadd(ptr addrspace(3) %addr) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float 1.000000e+00
-  ; CHECK-NEXT:   [[ATOMICRMW_FADD:%[0-9]+]]:_(f32) = G_ATOMICRMW_FADD [[COPY]](p3), [[C]] :: (load store seq_cst (f32) on %ir.addr, addrspace 3)
+  ; CHECK-NEXT:   [[ATOMICRMW_FADD:%[0-9]+]]:_(f32) = nnan nsz G_ATOMICRMW_FADD [[COPY]](p3), [[C]] :: (load store seq_cst (f32) on %ir.addr, addrspace 3)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ATOMICRMW_FADD]](f32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
-  %oldval = atomicrmw fadd ptr addrspace(3) %addr, float 1.0 seq_cst
+  %oldval = atomicrmw nnan nsz fadd ptr addrspace(3) %addr, float 1.0 seq_cst
   ret float %oldval
 }
 

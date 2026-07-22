@@ -140,7 +140,7 @@ __global__ void use_implicitarg_ptr(int* out) {
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fmax ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]] monotonic, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw contract fmax ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP1]], ptr addrspace(4) [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -152,7 +152,7 @@ __global__ void use_implicitarg_ptr(int* out) {
 // AMDGCNSPIRV-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = atomicrmw fmax ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]] monotonic, align 4
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = atomicrmw contract fmax ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]] monotonic, align 4
 // AMDGCNSPIRV-NEXT:    store volatile float [[TMP1]], ptr addrspace(4) [[X_ASCAST]], align 4
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -171,7 +171,7 @@ __global__ void test_ds_fmax(float src) {
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspace(3) @_ZZ12test_ds_faddfE6shared, float [[TMP0]] monotonic, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw contract fadd ptr addrspace(3) @_ZZ12test_ds_faddfE6shared, float [[TMP0]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP1]], ptr addrspace(4) [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -183,7 +183,7 @@ __global__ void test_ds_fmax(float src) {
 // AMDGCNSPIRV-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // AMDGCNSPIRV-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspace(3) @_ZZ12test_ds_faddfE6shared, float [[TMP0]] monotonic, align 4
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = atomicrmw contract fadd ptr addrspace(3) @_ZZ12test_ds_faddfE6shared, float [[TMP0]] monotonic, align 4
 // AMDGCNSPIRV-NEXT:    store volatile float [[TMP1]], ptr addrspace(4) [[X_ASCAST]], align 4
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -208,7 +208,7 @@ __global__ void test_ds_fadd(float src) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr addrspace(3)
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw contract fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP3]], ptr addrspace(4) [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -228,7 +228,7 @@ __global__ void test_ds_fadd(float src) {
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr addrspace(3)
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = atomicrmw contract fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
 // AMDGCNSPIRV-NEXT:    store volatile float [[TMP3]], ptr addrspace(4) [[X_ASCAST]], align 4
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -371,7 +371,7 @@ __device__ void func(float *x);
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr addrspace(3)
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw contract fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP3]], ptr addrspace(4) [[X_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    call spir_func addrspace(4) void @_Z4funcPf(ptr addrspace(4) noundef [[TMP4]]) #[[ATTR8:[0-9]+]]
@@ -393,7 +393,7 @@ __device__ void func(float *x);
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr addrspace(3)
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = atomicrmw contract fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
 // AMDGCNSPIRV-NEXT:    store volatile float [[TMP3]], ptr addrspace(4) [[X_ASCAST]], align 4
 // AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    call spir_func addrspace(4) void @_Z4funcPf(ptr addrspace(4) noundef [[TMP4]]) #[[ATTR8:[0-9]+]]

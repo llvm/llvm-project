@@ -1395,10 +1395,12 @@ static int getDecodedBinaryOpcode(unsigned Val, Type *Ty) {
   }
 }
 
-static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val,
-                                                   bool &IsElementwise) {
+static AtomicRMWInst::BinOp
+getDecodedRMWOperation(unsigned Val, bool &IsElementwise,
+                       bool &HasFastMathFlags) {
   IsElementwise = Val & bitc::RMW_ELEMENTWISE_FLAG;
-  switch (Val & ~bitc::RMW_ELEMENTWISE_FLAG) {
+  HasFastMathFlags = Val & bitc::RMW_FMF_FLAG;
+  switch (Val & ~(bitc::RMW_ELEMENTWISE_FLAG | bitc::RMW_FMF_FLAG)) {
   default: return AtomicRMWInst::BAD_BINOP;
   case bitc::RMW_XCHG: return AtomicRMWInst::Xchg;
   case bitc::RMW_ADD: return AtomicRMWInst::Add;
@@ -6718,7 +6720,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_INST_ATOMICRMW_OLD:
     case bitc::FUNC_CODE_INST_ATOMICRMW: {
       // ATOMICRMW_OLD: [ptrty, ptr, val, op, vol, ordering, ssid, align?]
-      // ATOMICRMW: [ptrty, ptr, valty, val, op, vol, ordering, ssid, align?]
+      // ATOMICRMW: [ptrty, ptr, valty, val, op, fmf?, vol, ordering, ssid,
+      //             align?]
       const size_t NumRecords = Record.size();
       unsigned OpNum = 0;
 
@@ -6742,29 +6745,46 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           return error("Invalid atomicrmw record");
       }
 
-      if (!(NumRecords == (OpNum + 4) || NumRecords == (OpNum + 5)))
+      if (NumRecords <= OpNum)
         return error("Invalid atomicrmw record");
 
       bool IsElementwise = false;
+      bool HasFastMathFlags = false;
       const AtomicRMWInst::BinOp Operation =
-          getDecodedRMWOperation(Record[OpNum], IsElementwise);
+          getDecodedRMWOperation(Record[OpNum++], IsElementwise,
+                                 HasFastMathFlags);
       if (Operation < AtomicRMWInst::FIRST_BINOP ||
           Operation > AtomicRMWInst::LAST_BINOP)
         return error("Invalid atomicrmw record");
 
-      const bool IsVol = Record[OpNum + 1];
+      const size_t MinNumRecords = OpNum + (HasFastMathFlags ? 4 : 3);
+      if (!(NumRecords == MinNumRecords || NumRecords == MinNumRecords + 1))
+        return error("Invalid atomicrmw record");
 
-      const AtomicOrdering Ordering = getDecodedOrdering(Record[OpNum + 2]);
+      FastMathFlags FMF;
+      if (HasFastMathFlags) {
+        FMF = getDecodedFastMathFlags(Record[OpNum++]);
+        if (!FMF.any())
+          return error(
+              "Fast math flags indicator set for atomicrmw with no FMF");
+        if (!Val->getType()->isFPOrFPVectorTy())
+          return error("Fast-math-flags specified for atomicrmw without "
+                      "floating-point scalar or vector type");
+      }
+
+      const bool IsVol = Record[OpNum++];
+
+      const AtomicOrdering Ordering = getDecodedOrdering(Record[OpNum++]);
       if (Ordering == AtomicOrdering::NotAtomic ||
           Ordering == AtomicOrdering::Unordered)
         return error("Invalid atomicrmw record");
 
-      const SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
+      const SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum++]);
 
       MaybeAlign Alignment;
 
-      if (NumRecords == (OpNum + 5)) {
-        if (Error Err = parseAlignmentValue(Record[OpNum + 4], Alignment))
+      if (NumRecords == (OpNum + 1)) {
+        if (Error Err = parseAlignmentValue(Record[OpNum], Alignment))
           return Err;
       }
 
@@ -6776,6 +6796,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
                             IsElementwise);
       ResTypeID = ValTypeID;
       cast<AtomicRMWInst>(I)->setVolatile(IsVol);
+      if (FMF.any())
+        I->setFastMathFlags(FMF);
 
       InstructionList.push_back(I);
       break;

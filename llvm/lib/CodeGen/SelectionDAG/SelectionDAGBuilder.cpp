@@ -5335,10 +5335,13 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
       I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
 
-  SDValue L =
-    DAG.getAtomic(NT, dl, MemVT, InChain,
-                  getValue(I.getPointerOperand()), getValue(I.getValOperand()),
-                  MMO);
+  SDNodeFlags NodeFlags;
+  if (auto *FPMO = dyn_cast<FPMathOperator>(&I))
+    NodeFlags.copyFMF(*FPMO);
+
+  SDValue L = DAG.getAtomic(NT, dl, MemVT, InChain,
+                            getValue(I.getPointerOperand()),
+                            getValue(I.getValOperand()), MMO, NodeFlags);
 
   SDValue OutChain = L.getValue(1);
 

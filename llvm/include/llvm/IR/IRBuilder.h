@@ -1052,24 +1052,28 @@ public:
   }
 
   /// Create call to the minimum intrinsic.
-  Value *CreateMinimum(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateBinaryIntrinsic(Intrinsic::minimum, LHS, RHS, nullptr, Name);
+  Value *CreateMinimum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                       const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::minimum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the maximum intrinsic.
-  Value *CreateMaximum(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS, nullptr, Name);
+  Value *CreateMaximum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                       const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the minimumnum intrinsic.
-  Value *CreateMinimumNum(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateBinaryIntrinsic(Intrinsic::minimumnum, LHS, RHS, nullptr,
+  Value *CreateMinimumNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                          const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::minimumnum, LHS, RHS, FMFSource,
                                  Name);
   }
 
   /// Create call to the maximum intrinsic.
-  Value *CreateMaximumNum(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateBinaryIntrinsic(Intrinsic::maximumnum, LHS, RHS, nullptr,
+  Value *CreateMaximumNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                          const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::maximumnum, LHS, RHS, FMFSource,
                                  Name);
   }
 
@@ -1988,8 +1992,11 @@ public:
       Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
     }
 
-    return Insert(
-        new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise));
+    AtomicRMWInst *RMWI =
+        new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise);
+    if (isa<FPMathOperator>(RMWI))
+      setFPAttrs(RMWI, nullptr, FMF);
+    return Insert(RMWI);
   }
 
   Value *CreateStructuredGEP(Type *BaseType, Value *PtrBase,

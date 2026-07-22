@@ -7,7 +7,7 @@
 // is generated.
 //
 // CHECK-LABEL: test_builtin_rmw
-// CHECK: atomicrmw fmax {{.*}} syncscope("singlethread")
+// CHECK: atomicrmw contract fmax {{.*}} syncscope("singlethread")
 //
 // CHECK-LABEL: test_scoped_atomic
 // CHECK: atomicrmw {{.*}} syncscope("singlethread")

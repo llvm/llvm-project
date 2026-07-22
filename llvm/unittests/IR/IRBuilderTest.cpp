@@ -864,6 +864,26 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   EXPECT_TRUE(FRem->hasNoNaNs());
 }
 
+TEST_F(IRBuilderTest, AtomicRMWFastMathFlags) {
+  IRBuilder<> Builder(BB);
+  auto *AtomicGV = new GlobalVariable(*M, Type::getFloatTy(Ctx), false,
+                                      GlobalValue::ExternalLinkage, nullptr);
+  Value *Val = Builder.CreateLoad(AtomicGV->getValueType(), AtomicGV);
+
+  FastMathFlags FMF;
+  FMF.setNoNaNs();
+  FMF.setNoSignedZeros();
+  Builder.setFastMathFlags(FMF);
+
+  AtomicRMWInst *RMW = Builder.CreateAtomicRMW(
+      AtomicRMWInst::FAdd, AtomicGV, Val, Align(4),
+      AtomicOrdering::Monotonic);
+  EXPECT_EQ(FMF, RMW->getFastMathFlags());
+
+  std::unique_ptr<AtomicRMWInst> Clone(cast<AtomicRMWInst>(RMW->clone()));
+  EXPECT_EQ(FMF, Clone->getFastMathFlags());
+}
+
 TEST_F(IRBuilderTest, WrapFlags) {
   IRBuilder<NoFolder> Builder(BB);
 

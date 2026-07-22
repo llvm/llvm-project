@@ -92,7 +92,7 @@ __global__
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fmax ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]] monotonic, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw contract fmax ptr addrspace(3) @_ZZ12test_ds_fmaxfE6shared, float [[TMP0]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP1]], ptr [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -109,7 +109,7 @@ __global__
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspace(3) @_ZZ12test_ds_faddfE6shared, float [[TMP0]] monotonic, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw contract fadd ptr addrspace(3) @_ZZ12test_ds_faddfE6shared, float [[TMP0]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP1]], ptr [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -134,7 +134,7 @@ __global__ void test_ds_fadd(float src) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SHARED_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw contract fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP3]], ptr [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -232,7 +232,7 @@ __device__ void func(float *x);
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SHARED_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw contract fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP3]], ptr [[X_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SHARED_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    call void @_Z4funcPf(ptr noundef [[TMP4]]) #[[ATTR8:[0-9]+]]

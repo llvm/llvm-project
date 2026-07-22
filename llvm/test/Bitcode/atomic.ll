@@ -16,3 +16,22 @@ define void @test_cmpxchg(i32* %addr, i32 %desired, i32 %new) {
 
   ret void
 }
+
+define float @test_atomicrmw_fmf(ptr %addr, float %value) {
+  ; CHECK: %fast = atomicrmw fast fadd ptr %addr, float %value monotonic
+  %fast = atomicrmw fast fadd ptr %addr, float %value monotonic
+
+  ; CHECK: %flags = atomicrmw volatile nnan ninf fsub ptr %addr, float %value acquire, align 4
+  %flags = atomicrmw volatile ninf nnan fsub ptr %addr, float %value acquire, align 4
+
+  ; CHECK: %xchg = atomicrmw nsz xchg ptr %addr, float %value seq_cst
+  %xchg = atomicrmw nsz xchg ptr %addr, float %value seq_cst
+  ret float %xchg
+}
+
+define <2 x half> @test_atomicrmw_elementwise_fmf(ptr %addr,
+                                                   <2 x half> %value) {
+  ; CHECK: %old = atomicrmw volatile fast elementwise fadd ptr %addr, <2 x half> %value monotonic
+  %old = atomicrmw volatile fast elementwise fadd ptr %addr, <2 x half> %value monotonic
+  ret <2 x half> %old
+}

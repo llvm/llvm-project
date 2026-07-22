@@ -3,6 +3,7 @@
 ; RUN: not llvm-as -disable-output %t/odd-sized.ll           2>&1 | FileCheck %t/odd-sized.ll
 ; RUN: not llvm-as -disable-output %t/add-must-be-integer.ll 2>&1 | FileCheck %t/add-must-be-integer.ll
 ; RUN: not llvm-as -disable-output %t/fadd-must-be-fp.ll     2>&1 | FileCheck %t/fadd-must-be-fp.ll
+; RUN: not llvm-as -disable-output %t/fast-math-integer.ll   2>&1 | FileCheck %t/fast-math-integer.ll
 
 ;--- scalar.ll
 ; CHECK: atomicrmw elementwise operand must be a fixed vector type
@@ -30,4 +31,11 @@ define <4 x float> @bad_add(ptr %p, <4 x float> %v) {
 define <4 x i32> @bad_fadd(ptr %p, <4 x i32> %v) {
   %old = atomicrmw elementwise fadd ptr %p, <4 x i32> %v monotonic
   ret <4 x i32> %old
+}
+
+;--- fast-math-integer.ll
+; CHECK: fast-math-flags specified for atomicrmw without floating-point type
+define i32 @bad_fast_math(ptr %p, i32 %v) {
+  %old = atomicrmw nnan add ptr %p, i32 %v monotonic
+  ret i32 %old
 }

@@ -39,7 +39,7 @@ LLVM_ABI bool lowerAtomicRMWInst(AtomicRMWInst *RMWI);
 /// returning the new value.
 LLVM_ABI Value *buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
                                     IRBuilderBase &Builder, Value *Loaded,
-                                    Value *Val);
+                                    Value *Val, FastMathFlags FMF = {});
 }
 
 #endif // LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H

@@ -1543,7 +1543,9 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAtomicRMW(unsigned Opcode, const DstOp &OldValRes,
                                      const SrcOp &Addr, const SrcOp &Val,
-                                     MachineMemOperand &MMO);
+                                     MachineMemOperand &MMO,
+                                     std::optional<unsigned> Flags =
+                                         std::nullopt);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_XCHG Addr, Val, MMO`.
   ///

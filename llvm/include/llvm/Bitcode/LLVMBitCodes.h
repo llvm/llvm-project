@@ -531,6 +531,7 @@ enum RMWOperations {
 
 enum RMWOperationFlags {
   RMW_ELEMENTWISE_FLAG = 1 << 5,
+  RMW_FMF_FLAG = 1 << 6,
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -692,8 +693,8 @@ enum FunctionCodes {
                                   //              fnty, fnid, args...]
   FUNC_CODE_INST_FREEZE = 58,     // FREEZE: [opty, opval]
   FUNC_CODE_INST_ATOMICRMW = 59,  // ATOMICRMW: [ptrty, ptr, valty, val,
-                                  //             operation, align, vol,
-                                  //             ordering, syncscope]
+                                  //             operation, fmf?, vol, ordering,
+                                  //             syncscope, align]
   FUNC_CODE_BLOCKADDR_USERS = 60, // BLOCKADDR_USERS: [value...]
 
   FUNC_CODE_DEBUG_RECORD_VALUE =
