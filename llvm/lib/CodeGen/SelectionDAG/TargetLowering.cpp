@@ -11254,27 +11254,36 @@ SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,
   EVT AddrVT = SourceValue->getValueType(0);
   bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
 
+  EVT CmpVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), AddrVT);
+
+  // Unsigned compare: Source >= Sink.
+  SDValue SourceAheadOfOrEqualToSink =
+      DAG.getSetCC(DL, CmpVT, SourceValue, SinkValue, ISD::SETUGE);
+
   // Take the difference between the pointers and divided by the element size,
   // to see how many lanes separate them.
   SDValue Diff = DAG.getNode(ISD::SUB, DL, AddrVT, SinkValue, SourceValue);
+
+  // RAW_MASK: Diff = Source >= Sink ? (Source - Sink) : (Sink - Source)
   if (IsReadAfterWrite)
-    Diff = DAG.getNode(ISD::ABS, DL, AddrVT, Diff);
+    Diff = DAG.getSelect(DL, AddrVT, SourceAheadOfOrEqualToSink,
+                         DAG.getNegative(Diff, DL, AddrVT), Diff);
+
   Diff = DAG.getNode(ISD::SDIV, DL, AddrVT, Diff, EltSizeInBytes);
 
   // The pointers do not alias if:
-  //  * Diff <= 0 (WAR_MASK)
-  //  * Diff == 0 (RAW_MASK)
-  EVT CmpVT =
-      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), AddrVT);
-  SDValue Zero = DAG.getConstant(0, DL, AddrVT);
-  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
-                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
+  // - Source >= Sink (WAR_MASK)
+  // - Source == Sink (RAW_MASK)
+  SDValue NoAlias = SourceAheadOfOrEqualToSink;
+  if (IsReadAfterWrite)
+    NoAlias = DAG.getSetCC(DL, CmpVT, SourceValue, SinkValue, ISD::SETEQ);
 
   // The pointers do not alias if:
   // Lane + LaneOffset < Diff (WAR/RAW_MASK)
   SDValue LaneOffset = DAG.getElementCount(DL, AddrVT, LaneOffsetEC);
   SDValue MaskN = DAG.getSelect(
-      DL, AddrVT, Cmp,
+      DL, AddrVT, NoAlias,
       DAG.getConstant(APInt::getMaxValue(AddrVT.getScalarSizeInBits()), DL,
                       AddrVT),
       Diff);
