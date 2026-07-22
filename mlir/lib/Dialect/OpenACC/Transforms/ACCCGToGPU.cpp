@@ -1253,14 +1253,9 @@ static void classifyThreadYCombine(ThreadYBroadeningInfo &info,
     info.diagnosticOp = combineOp;
 }
 
-/// Determines whether a predicate region can safely run on every ThreadY row.
-///
-/// A hierarchical block+ThreadY combine reads one partial value from each
-/// worker-private row, so ThreadY must remain active until that combine. Before
-/// broadening the predicate, recursively reject sibling combines that require
-/// ThreadY to be inactive and operations with side effects that would otherwise
-/// execute additional times. Nested predicate regions enforce their own
-/// compatibility; only their requirement for active ThreadY propagates out.
+/// ThreadY must remain active for hierarchical combines over worker rows.
+/// Broadening is rejected when siblings require inactive ThreadY or have side
+/// effects; nested predicates enforce their own safety.
 static ThreadYBroadeningInfo
 analyzeThreadYBroadening(Block &predicateBlock,
                          acc::ComputeRegionOp computeRegion) {
