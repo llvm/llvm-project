@@ -390,16 +390,16 @@ void RestoreCandidate::generateSpillRestoreInstrs(
     DomGroup &DG = *GroupsOfUses.begin();
     MachineInstr *Head = DG.getHead();
     MachineInstr *OrigRestore = DG.getRestore();
+    assert(InstrOfCandidateReg == OrigRestore &&
+           "It should be the same instruction.");
     assert(OrigRestore == InstrOfCandidateReg && "Wrong restore instruction.");
     OrigRestore->moveBefore(Head);
     updateIndexes(OrigRestore, Indexes);
     updateLiveness(OrigRestore, LIS);
     updateIndexes(Head, Indexes);
     updateLiveness(Head, LIS);
-    updateIndexes(InstrOfCandidateReg, Indexes);
-    updateLiveness(InstrOfCandidateReg, LIS);
 
-    if (InstrOfCandidateReg != CurMI) {
+    if (OrigRestore != CurMI) {
       updateIndexes(CurMI, Indexes);
       updateLiveness(CurMI, LIS);
     }
