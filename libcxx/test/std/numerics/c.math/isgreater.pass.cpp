@@ -55,7 +55,7 @@ struct TestInt {
     assert(!std::isgreater(T(1), T(1)));
     assert(!std::isgreater(low, T(0)));
 
-    if (std::is_signed<T>::value) {
+    if (lim::is_signed) {
       assert(std::isgreater(T(-1), low));
       assert(!std::isgreater(low, T(-1)));
     }
