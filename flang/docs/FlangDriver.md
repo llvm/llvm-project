@@ -563,6 +563,36 @@ config.registerHLFIROptEarlyEPCallbacks(
     });
 ```
 
+### Registering Extension Point Passes from a Plugin
+
+To add passes at these extension points from a
+[plugin](#frontend-driver-plugins), register a *pipeline config callback* with
+`fir::registerPassPipelineConfigCallback`
+(`flang/include/flang/Optimizer/Passes/Pipelines.h`). The frontend driver runs
+every registered callback on its `MLIRToLLVMPassPipelineConfig` before it builds
+the pipeline. Register from a static initializer, so the callback is in place as
+soon as the plugin is loaded and before any compilation begins:
+
+```c++
+struct MyPluginRegistration {
+  MyPluginRegistration() {
+    fir::registerPassPipelineConfigCallback(
+        [](MLIRToLLVMPassPipelineConfig &config) {
+          config.registerHLFIROptEarlyEPCallbacks(
+              [](mlir::PassManager &pm, llvm::OptimizationLevel) {
+                pm.addPass(createMyHLFIRPass());
+              });
+        });
+  }
+};
+static MyPluginRegistration myPluginRegistration;
+```
+
+These callbacks run on both the `-emit-fir` path
+(`CodeGenAction::lowerHLFIRToFIR`) and the `-emit-llvm`/`-emit-obj` path
+(`CodeGenAction::generateLLVMIR`), so registering once is enough. The registry
+is append-only and runs callbacks in registration order.
+
 ## LLVM Pass Plugins
 
 Pass plugins are dynamic shared objects that consist of one or more LLVM IR
