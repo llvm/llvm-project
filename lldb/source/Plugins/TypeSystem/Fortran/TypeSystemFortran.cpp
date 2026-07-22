@@ -21,6 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
+using namespace lldb_private::plugin::fortran;
 using namespace lldb_private::plugin::dwarf;
 
 LLDB_PLUGIN_DEFINE(TypeSystemFortran)
@@ -207,53 +208,107 @@ CompilerType TypeSystemFortran::CreateType(uint32_t kind, uint64_t bitsize,
   return GetOrCreateFortranType(underlying_kind, bitsize, name);
 }
 
-CompilerType TypeSystemFortran::CreateArrayType(
-    llvm::SmallVectorImpl<std::optional<uint64_t>> &elements_per_dimension,
-    llvm::SmallVectorImpl<std::optional<uint64_t>> &byte_strides,
-    llvm::SmallVectorImpl<int64_t> &lower_bounds, CompilerType element_type,
-    bool is_allocatable, bool is_star, uint64_t total_array_size,
-    uint64_t total_elements) {
+CompilerType TypeSystemFortran::CreateArrayType(FortranArrayMetadata array_info,
+                                                uint64_t total_array_size,
+                                                uint64_t total_elements) {
 
-  size_t rank = elements_per_dimension.size();
+  size_t rank = array_info.dimensions.size();
   llvm::SmallVector<ArrayShape, 2> array_shapes;
   ConstString type_name;
-  bool is_size_known = true;
-  if (total_array_size == 0)
-    is_size_known = false;
-  for (size_t idx = 0; idx < rank; ++idx) {
+  for (int idx = 0; idx < rank; ++idx) {
+    ArrayShape shape;
     ArrayBound lb;
     ArrayBound ub;
     ArrayBound::Category bound_category;
     uint64_t byte_stride;
-    auto byte_stride_or_err = element_type.GetByteSize(nullptr);
-    if (!byte_stride_or_err) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), byte_stride_or_err.takeError(),
-                     "{0}");
-      return CompilerType();
+    int64_t dim_elements = -1;
+
+    if (std::holds_alternative<std::monostate>(
+            array_info.dimensions[idx].byte_stride)) {
+      auto byte_stride_or_err = array_info.element_type.GetByteSize(nullptr);
+      if (!byte_stride_or_err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), byte_stride_or_err.takeError(),
+                       "{0}");
+        return CompilerType();
+      }
+      shape.SetByteStride(*byte_stride_or_err);
     }
-    byte_stride = *byte_stride_or_err;
+
+    else if (std::holds_alternative<uint64_t>(
+                 array_info.dimensions[idx].byte_stride))
+      shape.SetByteStride(
+          std::get<uint64_t>(array_info.dimensions[idx].byte_stride));
     // If the elements for this dimension are unknown it is either colon or star
     // Star can only appear as the last bound
-    if (!elements_per_dimension[idx]) {
+
+    if (!std::holds_alternative<uint64_t>(
+            array_info.dimensions[idx].element_count)) {
       bound_category = ArrayBound::Category::Colon;
 
-      if (is_star && idx == rank - 1)
+      if (std::holds_alternative<std::monostate>(
+              array_info.dimensions[idx].element_count) &&
+          idx == rank - 1)
         bound_category = ArrayBound::Category::Star;
-    } else {
-      bound_category = ArrayBound::Category::Explicit;
-      ub.SetBound(lower_bounds[idx] + *elements_per_dimension[idx] - 1);
     }
+
+    else {
+      bound_category = ArrayBound::Category::Explicit;
+      dim_elements =
+          std::get<uint64_t>(array_info.dimensions[idx].element_count);
+      shape.SetElementCount(dim_elements);
+    }
+
     lb.SetCategory(bound_category);
-    lb.SetBound(lower_bounds[idx]);
     ub.SetCategory(bound_category);
-    array_shapes.emplace_back(lb, ub, byte_stride);
+
+    if (std::holds_alternative<int64_t>(
+            array_info.dimensions[idx].lower_bound)) {
+      int64_t lbound =
+          std::get<int64_t>(array_info.dimensions[idx].lower_bound);
+      lb.SetBound(lbound);
+      if (dim_elements != -1)
+        ub.SetBound(lbound + dim_elements - 1);
+    }
+
+    else if (std::holds_alternative<std::monostate>(
+                 array_info.dimensions[idx].lower_bound)) {
+      lb.SetBound(1);
+      ub.SetBound(dim_elements);
+    }
+
+    if (std::holds_alternative<int64_t>(array_info.dimensions[idx].upper_bound))
+      ub.SetBound(std::get<int64_t>(array_info.dimensions[idx].upper_bound));
+
+    shape.SetLowerBound(lb);
+    shape.SetUpperBound(ub);
+
+    if (std::holds_alternative<DWARFExpressionList>(
+            array_info.dimensions[idx].upper_bound))
+      shape.SetUpperBoundExpression(std::get<DWARFExpressionList>(
+          array_info.dimensions[idx].upper_bound));
+    if (std::holds_alternative<DWARFExpressionList>(
+            array_info.dimensions[idx].lower_bound))
+      shape.SetLowerBoundExpression(std::get<DWARFExpressionList>(
+          array_info.dimensions[idx].lower_bound));
+    if (std::holds_alternative<DWARFExpressionList>(
+            array_info.dimensions[idx].element_count))
+      shape.SetElementCountExpression(std::get<DWARFExpressionList>(
+          array_info.dimensions[idx].element_count));
+    if (std::holds_alternative<DWARFExpressionList>(
+            array_info.dimensions[idx].byte_stride))
+      shape.SetByteStrideExpression(std::get<DWARFExpressionList>(
+          array_info.dimensions[idx].byte_stride));
+
+    array_shapes.push_back(shape);
   }
   ConstString array_type_name =
-      CreateArrayTypeName(element_type, array_shapes, is_allocatable, is_star);
+      CreateArrayTypeName(array_info.element_type, array_shapes,
+                          array_info.is_allocatable, array_info.is_star);
 
   FortranArray *array_type = new FortranArray(
-      element_type, array_shapes, array_type_name, total_array_size,
-      is_allocatable, is_size_known, total_elements);
+      array_info.element_type, array_shapes, array_type_name, total_array_size,
+      array_info.is_allocatable, array_info.is_dynamic, total_elements,
+      *array_info.allocated_exp, *array_info.data_location_exp);
 
   return CompilerType(weak_from_this(), (void *)array_type);
 }
@@ -417,94 +472,6 @@ TypeSystemFortran::GetNumChildren(opaque_compiler_type_t type,
   }
 }
 
-Expected<CompilerType> TypeSystemFortran::GetChildCompilerTypeAtIndex(
-    opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
-    bool transparent_pointers, bool omit_empty_base_classes,
-    bool ignore_array_bounds, std::string &child_name,
-    uint32_t &child_byte_size, int32_t &child_byte_offset,
-    uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
-    bool &child_is_base_class, bool &child_is_deref_of_parent,
-    ValueObject *valobj, uint64_t &language_flags) {
-  if (!type)
-    return createStringError(
-        inconvertibleErrorCode(),
-        "Failed to craft intermediate Fortran array type: type is null.");
-  FortranType *super_type = static_cast<FortranType *>(type);
-
-  if (super_type->GetKind() != FortranType::KIND_ARRAY)
-    return CompilerType();
-
-  FortranArray *fortran_type = static_cast<FortranArray *>(super_type);
-
-  if (!fortran_type)
-    return CompilerType();
-
-  ArrayRef<ArrayShape> old_dimensions = fortran_type->GetDimensions();
-  int64_t ub = old_dimensions.front().GetUpperBound().GetBound();
-  int64_t lb = old_dimensions.front().GetLowerBound().GetBound();
-  if ((idx + 1) < lb || (idx + 1) > ub)
-    return createStringError(
-        inconvertibleErrorCode(),
-        llvm::formatv(
-            "Failed to craft intermediate Fortran array type: physical index "
-            "{0} is out of bounds (array only has {1} elements)",
-            idx, fortran_type->GetTotalElements()));
-
-  if (old_dimensions.size() > 1) {
-
-    SmallVector<ArrayShape, 2> new_dimensions(old_dimensions.begin() + 1,
-                                              old_dimensions.end());
-
-    ArrayShape old_first_dimension = old_dimensions.front();
-    uint64_t new_byte_stride;
-
-    if (old_first_dimension.GetByteStride() != 0)
-      new_byte_stride = old_first_dimension.GetNumberOfElements() *
-                        old_first_dimension.GetByteStride();
-    else
-      new_byte_stride = old_first_dimension.GetNumberOfElements() *
-                        fortran_type->GetElementByteSize();
-
-    new_dimensions.front().SetByteStride(new_byte_stride);
-    bool is_star = new_dimensions.back().GetLowerBound().IsStar();
-    bool is_allocatable = fortran_type->IsAllocatable();
-    uint64_t new_total_elements = fortran_type->GetTotalElements() /
-                                  old_first_dimension.GetNumberOfElements();
-    // Fortran is 1-base indexed, and the offset of element array(1) is 0
-    if (old_dimensions.front().GetByteStride() != 0)
-      child_byte_offset = idx * old_dimensions.front().GetByteStride();
-    else
-      child_byte_offset = idx * fortran_type->GetElementByteSize();
-
-    uint64_t last_dim_stride = new_dimensions.back().GetByteStride();
-
-    if (last_dim_stride != 0) {
-      child_byte_size =
-          new_dimensions.back().GetNumberOfElements() * last_dim_stride;
-    } else {
-      child_byte_size = new_total_elements * fortran_type->GetElementByteSize();
-    }
-
-    child_name = llvm::formatv("[{0}]", idx);
-    ConstString type_name =
-        CreateArrayTypeName(fortran_type->GetElementType(), new_dimensions,
-                            is_allocatable, is_star);
-    FortranArray *array_type =
-        new FortranArray(fortran_type->GetElementType(), new_dimensions,
-                         type_name, child_byte_size, is_allocatable,
-                         fortran_type->IsSizeKnown(), new_total_elements);
-
-    return CompilerType(weak_from_this(), (void *)array_type);
-  } else {
-    if (old_dimensions.front().GetByteStride() != 0)
-      child_byte_offset = idx * old_dimensions.front().GetByteStride();
-    else
-      child_byte_offset = idx * fortran_type->GetElementByteSize();
-    child_byte_size = fortran_type->GetElementByteSize();
-    return fortran_type->GetElementType();
-  }
-}
-
 bool TypeSystemFortran::IsIntegerType(opaque_compiler_type_t type,
                                       bool &is_signed) {
   if (!type)
@@ -546,7 +513,7 @@ bool TypeSystemFortran::IsArrayType(lldb::opaque_compiler_type_t type,
   if (element_type)
     *element_type = array_type->GetElementType();
   // TODO: If it isn't we have to evaluate the DWARFExpressionList
-  if (array_type->IsSizeKnown() && size)
+  if (!array_type->IsDynamic() && size)
     *size = array_type->GetTotalElements();
 
   return true;

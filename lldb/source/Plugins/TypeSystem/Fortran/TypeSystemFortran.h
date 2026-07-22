@@ -15,7 +15,13 @@
 
 namespace lldb_private {
 
+namespace plugin {
+namespace fortran {
 class FortranType;
+struct FortranDimension;
+struct FortranArrayMetadata;
+} // namespace fortran
+} // namespace plugin
 
 /// A TypeSystem implementation for the Fortran language.
 ///
@@ -44,12 +50,9 @@ public:
 
   CompilerType CreateType(uint32_t kind, uint64_t bitsize, ConstString name);
 
-  CompilerType CreateArrayType(
-      llvm::SmallVectorImpl<std::optional<uint64_t>> &elements_per_dimension,
-      llvm::SmallVectorImpl<std::optional<uint64_t>> &byte_strides,
-      llvm::SmallVectorImpl<int64_t> &lower_bounds, CompilerType element_type,
-      bool is_allocatable, bool is_star, uint64_t total_array_size,
-      uint64_t total_elements);
+  CompilerType CreateArrayType(plugin::fortran::FortranArrayMetadata array_info,
+                               uint64_t total_array_size,
+                               uint64_t total_elements);
 
   static LanguageSet GetSupportedLanguagesForTypes();
 
@@ -356,7 +359,9 @@ public:
       uint32_t &child_byte_size, int32_t &child_byte_offset,
       uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
       bool &child_is_base_class, bool &child_is_deref_of_parent,
-      ValueObject *valobj, uint64_t &language_flags) override;
+      ValueObject *valobj, uint64_t &language_flags) override {
+    return CompilerType();
+  }
 
   // Lookup a child given a name. This function will match base class names and
   // member member names in "clang_type" only, not descendants.
@@ -374,23 +379,6 @@ public:
                                 std::vector<uint32_t> &child_indexes) override {
     return 0;
   }
-
-  DWARFExpressionList
-  GetDataLocationExpression(lldb::opaque_compiler_type_t type);
-
-  DWARFExpressionList
-  GetUpperBoundExpression(lldb::opaque_compiler_type_t type);
-
-  DWARFExpressionList
-  GetLowerBoundExpression(lldb::opaque_compiler_type_t type);
-
-  DWARFExpressionList
-  GetElementCountExpression(lldb::opaque_compiler_type_t type);
-
-  DWARFExpressionList GetAllocatedExpression(lldb::opaque_compiler_type_t type);
-
-  DWARFExpressionList
-  GetByteStrideExpression(lldb::opaque_compiler_type_t type);
 
 #ifndef NDEBUG
   /// Convenience LLVM-style dump method for use in the debugger only.
@@ -503,8 +491,11 @@ public:
 
 private:
   typedef std::pair<int, uint64_t> TypeKey;
-  typedef llvm::DenseMap<TypeKey, std::unique_ptr<FortranType>> BasicTypeMap;
-  typedef llvm::DenseMap<ConstString, std::unique_ptr<FortranType>> FunctionMap;
+  typedef llvm::DenseMap<TypeKey, std::unique_ptr<plugin::fortran::FortranType>>
+      BasicTypeMap;
+  typedef llvm::DenseMap<ConstString,
+                         std::unique_ptr<plugin::fortran::FortranType>>
+      FunctionMap;
 
   // TODO: Types are assosciated by their kind and bitsize, this helps to
   // return from their basic type and is enough for basic types but

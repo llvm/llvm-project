@@ -13,6 +13,7 @@
 #include "DWARFDeclContext.h"
 #include "DWARFDefines.h"
 #include "LogChannelDWARF.h"
+#include "Plugins/TypeSystem/Fortran/FortranTypes.h"
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDebugMap.h"
 #include "UniqueDWARFASTType.h"
@@ -25,30 +26,55 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
 using namespace llvm::dwarf;
+using namespace lldb_private::plugin::fortran;
 
 DWARFASTParserFortran::DWARFASTParserFortran(TypeSystemFortran &ast)
     : DWARFASTParser(Kind::DWARFASTParserFortran), m_ast(ast) {}
 
 DWARFASTParserFortran::~DWARFASTParserFortran() {}
 
-// Struct holding extra info needed to characterize Fortran Arrays
-// TODO: Add comments explaining each one
-struct FortranArrayInfo {
+DWARFExpressionList GetDWARFExpression(const DWARFDIE &die,
+                                       const DWARFFormValue &form_value,
+                                       ModuleSP module) {
+  auto data = die.GetData();
+  uint32_t offset = form_value.BlockData() - data.GetDataStart();
+  uint32_t length = form_value.Unsigned();
+  return DWARFExpressionList(module, DataExtractor(data, offset, length),
+                             die.GetCU());
+}
 
-  bool is_star = false;
-  bool is_allocatable = false;
-  bool size_known = true;
-
-  llvm::SmallVector<std::optional<uint64_t>, 1> elements_per_dimension;
-  llvm::SmallVector<std::optional<uint64_t>, 1> byte_stride;
-  llvm::SmallVector<int64_t, 1> lower_bounds;
-};
-
-FortranArrayInfo ParseArray(const DWARFDIE &parent_die,
-                            const ExecutionContext *exe_ctx) {
-  FortranArrayInfo array_info;
+FortranArrayMetadata ParseArray(const DWARFDIE &parent_die,
+                                const ExecutionContext *exe_ctx) {
+  // We first process the array type attributes and then each individual
+  // subrange
+  FortranArrayMetadata array_info;
+  DWARFAttributes parent_attributes = parent_die.GetAttributes();
+  ModuleSP parent_module(parent_die.GetModule());
+  for (int idx = 0; idx < parent_attributes.Size(); idx++) {
+    const dw_attr_t attr = parent_attributes.AttributeAtIndex(idx);
+    DWARFFormValue form_value;
+    if (!parent_attributes.ExtractFormValueAtIndex(idx, form_value))
+      continue;
+    switch (attr) {
+    case DW_AT_data_location:
+      array_info.is_dynamic = true;
+      array_info.data_location_exp =
+          GetDWARFExpression(parent_die, form_value, parent_module);
+      break;
+    case DW_AT_allocated:
+      array_info.is_allocatable = true;
+      array_info.is_dynamic = true;
+      array_info.allocated_exp =
+          GetDWARFExpression(parent_die, form_value, parent_module);
+      break;
+    default:
+      break;
+    }
+  }
   for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
+    ModuleSP module(die.GetModule());
+
     if (tag != DW_TAG_subrange_type)
       continue;
     // If a subrange of an array is a star meaning we can't infer how many
@@ -60,92 +86,87 @@ FortranArrayInfo ParseArray(const DWARFDIE &parent_die,
     if (attributes.Size() == 0)
       continue;
 
-    std::optional<uint64_t> num_elements;
-    std::optional<uint64_t> byte_stride;
-    int64_t lower_bound = 1;
-    int64_t upper_bound = 0;
+    DWARFValue num_elements;
+    DWARFValue byte_stride;
+    DWARFValue lower_bound;
+    DWARFValue upper_bound;
     bool upper_bound_valid = false;
     for (size_t i = 0; i < attributes.Size(); ++i) {
       const dw_attr_t attr = attributes.AttributeAtIndex(i);
       DWARFFormValue form_value;
-      if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-        switch (attr) {
-        case DW_AT_name:
-          break;
+      if (!attributes.ExtractFormValueAtIndex(i, form_value))
+        continue;
+      switch (attr) {
+      case DW_AT_name:
+        break;
 
-        case DW_AT_count:
-          array_info.is_star = false;
-          if (DWARFDIE var_die = die.GetReferencedDIE(DW_AT_count)) {
-            if (var_die.Tag() == DW_TAG_variable)
-              if (exe_ctx) {
-                if (auto frame = exe_ctx->GetFrameSP()) {
-                  Status error;
-                  lldb::VariableSP var_sp;
-                  auto valobj_sp = frame->GetValueForVariableExpressionPath(
-                      var_die.GetName(), eNoDynamicValues, 0, var_sp, error);
-                  if (valobj_sp) {
-                    num_elements = valobj_sp->GetValueAsUnsigned(0);
-                    break;
-                  }
+      case DW_AT_count:
+        array_info.is_star = false;
+        if (DWARFDIE var_die = die.GetReferencedDIE(DW_AT_count)) {
+          if (var_die.Tag() == DW_TAG_variable)
+            if (exe_ctx) {
+              if (auto frame = exe_ctx->GetFrameSP()) {
+                Status error;
+                lldb::VariableSP var_sp;
+                auto valobj_sp = frame->GetValueForVariableExpressionPath(
+                    var_die.GetName(), eNoDynamicValues, 0, var_sp, error);
+                if (valobj_sp) {
+                  num_elements = valobj_sp->GetValueAsUnsigned(0);
+                  break;
                 }
               }
-          } else if (DWARFFormValue::IsBlockForm(form_value.Form())) {
-            // TODO: Handle cases where we have to read the dope vector
-            array_info.size_known = false;
-          } else
-            num_elements = form_value.Unsigned();
-          break;
+            }
+        } else if (DWARFFormValue::IsBlockForm(form_value.Form())) {
+          num_elements = GetDWARFExpression(die, form_value, module);
+          array_info.is_dynamic = true;
+        } else
+          num_elements = form_value.Unsigned();
+        break;
 
-        case DW_AT_byte_stride:
-          if (DWARFFormValue::IsBlockForm(form_value.Form())) {
-            // TODO: Handle cases where we have to read the dope vector
-            byte_stride = 0;
-            array_info.size_known = false;
-          } else
-            byte_stride = form_value.Unsigned();
-          break;
+      case DW_AT_byte_stride:
+        if (DWARFFormValue::IsBlockForm(form_value.Form())) {
+          byte_stride = GetDWARFExpression(die, form_value, module);
+          array_info.is_dynamic = false;
+        } else
+          byte_stride = form_value.Unsigned();
+        break;
 
-        case DW_AT_lower_bound:
-          // TODO: Handle cases where we have to read the dope vector
-          if (DWARFFormValue::IsBlockForm(form_value.Form())) {
-            lower_bound = 1;
-            array_info.size_known = false;
-          }
+      case DW_AT_lower_bound:
+        if (DWARFFormValue::IsBlockForm(form_value.Form())) {
+          lower_bound = GetDWARFExpression(die, form_value, module);
+          array_info.is_dynamic = false;
+        } else
+          lower_bound = form_value.Signed();
+        break;
 
-          else
-            lower_bound = form_value.Signed();
-          break;
+      case DW_AT_upper_bound:
+        upper_bound_valid = true;
+        // TODO: Handle cases where we have to read the dope vector
+        if (DWARFFormValue::IsBlockForm(form_value.Form())) {
+          array_info.is_dynamic = false;
+          upper_bound = GetDWARFExpression(die, form_value, module);
+        } else
+          upper_bound = form_value.Signed();
+        break;
 
-        case DW_AT_upper_bound:
-          upper_bound_valid = true;
-          // TODO: Handle cases where we have to read the dope vector
-          if (DWARFFormValue::IsBlockForm(form_value.Form())) {
-            array_info.size_known = false;
-            upper_bound = 1;
-          } else
-            upper_bound = form_value.Signed();
-          break;
-
-        case DW_AT_allocated:
-          array_info.is_allocatable = true;
-          array_info.size_known = false;
-          // TODO: Save the DWARFExpression so we can query the dope vector
-          // every time
-
-        default:
-          break;
-        }
+      default:
+        break;
       }
     }
 
-    if (!num_elements || *num_elements == 0) {
-      if (upper_bound_valid && upper_bound >= lower_bound)
-        num_elements = upper_bound - lower_bound + 1;
+    if (std::holds_alternative<std::monostate>(num_elements)) {
+      if (std::holds_alternative<std::int64_t>(upper_bound) &&
+          std::holds_alternative<std::int64_t>(lower_bound))
+        num_elements =
+            static_cast<uint64_t>(std::get<int64_t>(upper_bound) -
+                                  std::get<int64_t>(lower_bound) + 1);
     }
-
-    array_info.elements_per_dimension.push_back(num_elements);
-    array_info.byte_stride.push_back(byte_stride);
-    array_info.lower_bounds.push_back(lower_bound);
+    FortranDimension dimension;
+    dimension.element_count = num_elements;
+    dimension.lower_bound = lower_bound;
+    dimension.upper_bound = upper_bound;
+    dimension.byte_stride = byte_stride;
+    array_info.dimensions.push_back(dimension);
   }
   return array_info;
 }
@@ -237,28 +258,25 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(const SymbolContext &sc,
           uint64_t total_array_size = 0;
           uint64_t total_elements = 1;
           if (array_element_type.GetCompleteType()) {
-            FortranArrayInfo array_info = ParseArray(die, nullptr);
+            FortranArrayMetadata array_info = ParseArray(die, nullptr);
             // We need to calculate the total array size, if it is known
             // at compile time
-            if (array_info.size_known) {
-              for (int idx = 0; idx < array_info.byte_stride.size(); idx++) {
-                total_elements *= *array_info.elements_per_dimension[idx];
+            if (!array_info.is_dynamic) {
+              for (int idx = 0; idx < array_info.dimensions.size(); idx++) {
+                total_elements *= std::get<uint64_t>(
+                    array_info.dimensions[idx].element_count);
               }
 
               // Total size is just total elements * the size of one element
               auto byte_size_or_err = array_element_type.GetByteSize(nullptr);
-              if (byte_size_or_err) {
+              if (byte_size_or_err)
                 total_array_size = total_elements * (*byte_size_or_err);
-              } else {
+              else
                 total_array_size = 0;
-              }
             }
 
-            compiler_type = m_ast.CreateArrayType(
-                array_info.elements_per_dimension, array_info.byte_stride,
-                array_info.lower_bounds, array_element_type,
-                array_info.is_allocatable, array_info.is_star,
-                total_array_size * 8, total_elements);
+            compiler_type = m_ast.CreateArrayType(array_info, total_array_size,
+                                                  total_elements);
 
             type_sp = dwarf->MakeType(
                 die.GetID(), compiler_type.GetTypeName(), total_array_size,
