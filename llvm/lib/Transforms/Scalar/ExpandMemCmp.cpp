@@ -91,7 +91,7 @@ class MemCmpExpansion {
   const DataLayout &DL;
   const TargetTransformInfo &TTI;
   // The known common alignment of the two source pointers.
-  const Align BaseAlign;
+  const Align CommonAlign;
   DomTreeUpdater *DTU = nullptr;
   IRBuilder<> Builder;
   // Represents the decomposition in blocks of the expansion. For example,
@@ -169,14 +169,14 @@ public:
 // matching the historical behavior of forming unaligned loads whenever the
 // target permits them.
 static bool isAccessAllowed(const CallInst *CI, const TargetTransformInfo &TTI,
-                            Align BaseAlign, unsigned LoadSize,
+                            Align CommonAlign, unsigned LoadSize,
                             uint64_t Offset) {
   // LoadSize is always a power of two here: the only non-power-of-two sizes
   // come from tail expansions, which are legalized by the backend and never
   // reach this check. A power-of-two access is thus naturally aligned exactly
   // when the known alignment is a multiple of it.
   assert(isPowerOf2_32(LoadSize) && "expected a power-of-two load size");
-  Align AccessAlign = commonAlignment(BaseAlign, Offset);
+  Align AccessAlign = commonAlignment(CommonAlign, Offset);
   if (isAligned(Align(LoadSize), AccessAlign.value()))
     return true;
   unsigned AS = CI->getArgOperand(0)->getType()->getPointerAddressSpace();
@@ -190,7 +190,7 @@ static bool isAccessAllowed(const CallInst *CI, const TargetTransformInfo &TTI,
 // the backend and skip this check.
 bool MemCmpExpansion::isAccessAllowed(unsigned LoadSize,
                                       uint64_t Offset) const {
-  return ::isAccessAllowed(CI, TTI, BaseAlign, LoadSize, Offset);
+  return ::isAccessAllowed(CI, TTI, CommonAlign, LoadSize, Offset);
 }
 
 MemCmpExpansion::LoadEntryVector MemCmpExpansion::computeGreedyLoadSequence(
@@ -322,7 +322,7 @@ MemCmpExpansion::MemCmpExpansion(
     DomTreeUpdater *DTU, const TargetTransformInfo &TTI, Align BaseAlign)
     : CI(CI), Size(Size), NumLoadsPerBlockForZeroCmp(Options.NumLoadsPerBlock),
       IsUsedForZeroCmp(IsUsedForZeroCmp), DL(TheDataLayout), TTI(TTI),
-      BaseAlign(BaseAlign), DTU(DTU), Builder(CI) {
+      CommonAlign(BaseAlign), DTU(DTU), Builder(CI) {
   assert(Size > 0 && "zero blocks");
   // Scale the max size down if the target can load more bytes than we need.
   llvm::ArrayRef<unsigned> LoadSizes(Options.LoadSizes);
