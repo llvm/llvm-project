@@ -1,4 +1,4 @@
-//===- OpenMPOffloadUtils.h - OpenMP offload utilities ----------*- C++ -*-===//
+//===- OpenMPUtils.h - OpenMP utilities -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_OPENMP_OPENMPOFFLOADUTILS_H_
-#define MLIR_DIALECT_OPENMP_OPENMPOFFLOADUTILS_H_
+#ifndef MLIR_DIALECT_OPENMP_OPENMPUTILS_H_
+#define MLIR_DIALECT_OPENMP_OPENMPUTILS_H_
 
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.h"
@@ -99,6 +99,11 @@ getOpenMPVersionAttribute(ModuleOp module, int64_t fallback = -1) {
   return fallback;
 }
 
+/// Returns true if the given module contains OpenMP code.
+[[maybe_unused]] static bool isOpenMPModule(ModuleOp module) {
+  return module->hasAttr("omp.version");
+}
+
 } // namespace mlir::omp
 
-#endif // MLIR_DIALECT_OPENMP_OPENMPOFFLOADUTILS_H_
+#endif // MLIR_DIALECT_OPENMP_OPENMPUTILS_H_
