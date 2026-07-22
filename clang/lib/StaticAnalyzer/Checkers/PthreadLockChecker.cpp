@@ -493,11 +493,8 @@ void PthreadLockChecker::AcquireLockAux(const CallEvent &Call,
       default:
         llvm_unreachable("Unknown tryLock locking semantics");
       }
-      // The state where the lock failed can be infeasible if the constraint
-      // solver only now discovers a contradiction in the accumulated
-      // constraints; only take that transition when it is feasible.
-      if (lockFail)
-        C.addTransition(lockFail);
+      assert(lockFail && lockSucc);
+      C.addTransition(lockFail);
     }
     // We might want to handle the case when the mutex lock function was inlined
     // and returned an Unknown or Undefined value.
@@ -508,9 +505,7 @@ void PthreadLockChecker::AcquireLockAux(const CallEvent &Call,
       // FIXME: If the lock function was inlined and returned true,
       // we need to behave sanely - at least generate sink.
       lockSucc = state->assume(*DefinedRetVal, false);
-      // `lockSucc` can be null here if the constraint solver only now detects
-      // a contradiction in the accumulated constraints; the shared guard below
-      // prunes this infeasible path.
+      assert(lockSucc);
     }
     // We might want to handle the case when the mutex lock function was inlined
     // and returned an Unknown or Undefined value.
@@ -519,12 +514,6 @@ void PthreadLockChecker::AcquireLockAux(const CallEvent &Call,
     assert((Semantics == XNUSemantics) && "Unknown locking semantics");
     lockSucc = state;
   }
-
-  // If the constraint solver determined the lock-acquired path is infeasible
-  // (which can surface here when it only now detects a contradiction in the
-  // accumulated constraints), prune this path.
-  if (!lockSucc)
-    return;
 
   // Record that the lock was acquired.
   lockSucc = lockSucc->add<LockSet>(lockR);
