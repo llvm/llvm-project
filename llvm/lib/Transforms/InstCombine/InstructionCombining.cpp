@@ -1403,11 +1403,12 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     return nullptr;
   };
 
+  FPTransformChecker Checker(&I);
   if (LHSIsSelect && RHSIsSelect && A == D) {
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
-    True = simplifyBinOp(Opcode, B, E, FMF, Q);
-    False = simplifyBinOp(Opcode, C, F, FMF, Q);
+    True = simplifyBinOp(Opcode, B, E, Checker, Q);
+    False = simplifyBinOp(Opcode, C, F, Checker, Q);
 
     if (LHS->hasOneUse() && RHS->hasOneUse()) {
       if (False && !True)
@@ -1418,15 +1419,15 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   } else if (LHSIsSelect && LHS->hasOneUse()) {
     // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
     Cond = A;
-    True = simplifyBinOp(Opcode, B, RHS, FMF, Q);
-    False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
+    True = simplifyBinOp(Opcode, B, RHS, Checker, Q);
+    False = simplifyBinOp(Opcode, C, RHS, Checker, Q);
     if (Value *NewSel = foldAddNegate(B, C, RHS))
       return NewSel;
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
-    True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
-    False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
+    True = simplifyBinOp(Opcode, LHS, E, Checker, Q);
+    False = simplifyBinOp(Opcode, LHS, F, Checker, Q);
     if (Value *NewSel = foldAddNegate(E, F, LHS))
       return NewSel;
   }

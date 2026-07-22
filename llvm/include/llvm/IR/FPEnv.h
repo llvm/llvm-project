@@ -74,17 +74,5 @@ inline bool isDefaultFPEnvironment(fp::ExceptionBehavior EB, RoundingMode RM) {
 /// does not have a constrained intrinsic counterpart, the function returns
 /// zero.
 LLVM_ABI Intrinsic::ID getConstrainedIntrinsicID(const Instruction &Instr);
-
-/// Returns true if the rounding mode RM may be QRM at compile time or
-/// at run time.
-inline bool canRoundingModeBe(RoundingMode RM, RoundingMode QRM) {
-  return RM == QRM || RM == RoundingMode::Dynamic;
-}
-
-/// Returns true if the possibility of a signaling NaN can be safely
-/// ignored.
-inline bool canIgnoreSNaN(fp::ExceptionBehavior EB, FastMathFlags FMF) {
-  return (EB == fp::ebIgnore || FMF.noNaNs());
-}
 }
 #endif

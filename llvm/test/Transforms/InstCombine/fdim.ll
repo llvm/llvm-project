@@ -101,8 +101,7 @@ define double @fdim_nzero() {
 
 define double @fdim_strictfp() {
 ; CHECK-LABEL: define double @fdim_strictfp() {
-; CHECK-NEXT:    [[DIM:%.*]] = call double @fdim(double 1.000000e+01, double 8.000000e+00) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    ret double [[DIM]]
+; CHECK-NEXT:    ret double 2.000000e+00
 ;
   %dim = call double @fdim(double 10.0, double 8.0) strictfp
   ret double %dim

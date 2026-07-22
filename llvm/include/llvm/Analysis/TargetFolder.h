@@ -192,7 +192,7 @@ public:
   }
 
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
-                       FastMathFlags FMF = {},
+                       FPTransformChecker Checker = {},
                        Function *CtxF = nullptr) const override {
     if (all_of(Ops, IsaPred<Constant>))
       return ConstantFoldIntrinsic(

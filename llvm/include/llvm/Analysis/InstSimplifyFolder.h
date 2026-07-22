@@ -66,12 +66,12 @@ public:
 
   Value *FoldBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
                       FastMathFlags FMF) const override {
-    return simplifyBinOp(Opc, LHS, RHS, FMF, SQ);
+    return simplifyBinOp(Opc, LHS, RHS, FPTransformChecker(FMF), SQ);
   }
 
   Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
                       FastMathFlags FMF) const override {
-    return simplifyUnOp(Opc, V, FMF, SQ);
+    return simplifyUnOp(Opc, V, FPTransformChecker(FMF), SQ);
   }
 
   Value *FoldCmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
@@ -121,9 +121,9 @@ public:
   }
 
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
-                       FastMathFlags FMF = {},
+                       FPTransformChecker Checker = {},
                        Function *CtxF = nullptr) const override {
-    return simplifyIntrinsic(ID, Ty, Ops, FMF, SQ, CtxF);
+    return simplifyIntrinsic(ID, Ty, Ops, Checker, SQ, CtxF);
   }
 
   //===--------------------------------------------------------------------===//

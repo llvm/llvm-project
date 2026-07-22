@@ -73,9 +73,7 @@ declare float @llvm.fma.f32(float, float, float)
 
 define float @fma(float %x, float %y) {
 ; CHECK-LABEL: @fma(
-; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 1.000000e+00)
-; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[M1]], [[M1]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %m1 = call float @llvm.fma.f32(float %x, float %y, float 1.0)
   %m2 = call float @llvm.fma.f32(float %y, float %x, float 1.0)
