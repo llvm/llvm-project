@@ -2059,28 +2059,28 @@ SDValue AMDGPUTargetLowering::LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG,
   ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
   ISD::NodeType ToInt = Sign ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
 
-  SDValue jq = DAG.getConstant(1, DL, IntVT);
-
-  if (Sign) {
-    // char|short jq = ia ^ ib;
-    jq = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
-
-    // jq = jq >> (bitsize - 2)
-    jq = DAG.getNode(ISD::SRA, DL, VT, jq,
-                     DAG.getConstant(BitSize - 2, DL, VT));
-
-    // jq = jq | 0x1
-    jq = DAG.getNode(ISD::OR, DL, VT, jq, DAG.getConstant(1, DL, VT));
-  }
-
   // int ia = (int)LHS;
   SDValue ia = LHS;
 
   // int ib, (int)RHS;
   SDValue ib = RHS;
 
-  // float fa = (float)ia;
+  // The calculation:
+  //   fq = fa*recip(fb)
+  // may be too small due to the 1ulp accuracy in the recip
+  // operation and rounding issues.  Since fq is truncated to produce
+  // an integer value it may be too small by one.  This is
+  // dealt with by incrementing fa by 1ulp:
+  //   fq = (fa+1ulp)*recip(fb)
+  // This will increase fa's magnitude by at most 0.5
+  // (i.e. when fabs(fa)==0x400000 the LSB of the mantissa represents 0.5).
+  // Thus, this method is safe since fa must be incremented by at least 1.0
+  // for the quotient to increase by one.
   SDValue fa = DAG.getNode(ToFp, DL, FltVT, ia);
+  SDValue faAsInt = DAG.getNode(ISD::BITCAST, DL, MVT::i32, fa);
+  SDValue faIncremented = DAG.getNode(ISD::ADD, DL, MVT::i32, faAsInt,
+                                      DAG.getConstant(1, DL, MVT::i32));
+  fa = DAG.getNode(ISD::BITCAST, DL, FltVT, faIncremented);
 
   // float fb = (float)ib;
   SDValue fb = DAG.getNode(ToFp, DL, FltVT, ib);
@@ -2091,59 +2091,12 @@ SDValue AMDGPUTargetLowering::LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG,
   // fq = trunc(fq);
   fq = DAG.getNode(ISD::FTRUNC, DL, FltVT, fq);
 
-  // float fqneg = -fq;
-  SDValue fqneg = DAG.getNode(ISD::FNEG, DL, FltVT, fq);
-
-  MachineFunction &MF = DAG.getMachineFunction();
-
-  bool UseFmadFtz = false;
-  if (Subtarget->isGCN()) {
-    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    UseFmadFtz =
-        MFI->getMode().FP32Denormals != DenormalMode::getPreserveSign();
-  }
-
-  // float fr = mad(fqneg, fb, fa);
-  unsigned OpCode = !Subtarget->hasMadMacF32Insts() ? (unsigned)ISD::FMA
-                    : UseFmadFtz ? (unsigned)AMDGPUISD::FMAD_FTZ
-                                 : (unsigned)ISD::FMAD;
-  SDValue fr = DAG.getNode(OpCode, DL, FltVT, fqneg, fb, fa);
-
   // int iq = (int)fq;
-  SDValue iq = DAG.getNode(ToInt, DL, IntVT, fq);
-
-  // fr = fabs(fr);
-  fr = DAG.getNode(ISD::FABS, DL, FltVT, fr);
-
-  // fb = fabs(fb);
-  fb = DAG.getNode(ISD::FABS, DL, FltVT, fb);
-
-  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-
-  // int cv = fr >= fb;
-  SDValue cv = DAG.getSetCC(DL, SetCCVT, fr, fb, ISD::SETOGE);
-
-  // jq = (cv ? jq : 0);
-  jq = DAG.getNode(ISD::SELECT, DL, VT, cv, jq, DAG.getConstant(0, DL, VT));
-
-  // dst = iq + jq;
-  SDValue Div = DAG.getNode(ISD::ADD, DL, VT, iq, jq);
+  SDValue Div = DAG.getNode(ToInt, DL, IntVT, fq);
 
   // Rem needs compensation, it's easier to recompute it
   SDValue Rem = DAG.getNode(ISD::MUL, DL, VT, Div, RHS);
   Rem = DAG.getNode(ISD::SUB, DL, VT, LHS, Rem);
-
-  // Truncate to number of bits this divide really is.
-  if (Sign) {
-    SDValue InRegSize
-      = DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), DivBits));
-    Div = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Div, InRegSize);
-    Rem = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Rem, InRegSize);
-  } else {
-    SDValue TruncMask = DAG.getConstant((UINT64_C(1) << DivBits) - 1, DL, VT);
-    Div = DAG.getNode(ISD::AND, DL, VT, Div, TruncMask);
-    Rem = DAG.getNode(ISD::AND, DL, VT, Rem, TruncMask);
-  }
 
   return DAG.getMergeValues({ Div, Rem }, DL);
 }

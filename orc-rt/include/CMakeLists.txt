@@ -8,6 +8,7 @@ set(ORC_RT_HEADERS
     orc-rt/AllocAction.h
     orc-rt/BitmaskEnum.h
     orc-rt/BootstrapInfo.h
+    orc-rt/CCallback.h
     orc-rt/Compiler.h
     orc-rt/Error.h
     orc-rt/ExecutorAddress.h

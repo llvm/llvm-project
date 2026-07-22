@@ -4,7 +4,7 @@ import os
 config.name = "RTSAN" + config.name_suffix
 
 
-default_rtsan_opts = "atexit_sleep_ms=0"
+default_rtsan_opts = ""
 
 if config.target_os == "Darwin":
     # On Darwin, we default to `abort_on_error=1`, which would make tests run
