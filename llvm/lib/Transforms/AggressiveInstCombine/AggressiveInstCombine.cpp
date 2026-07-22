@@ -987,7 +987,7 @@ static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
       ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
-  bool DefinedForZero = ZeroTableElem->getZExtValue() == InputBits;
+  bool DefinedForZero = ZeroTableElem->equalsInt(InputBits);
 
   IRBuilder<> B(LI);
   ConstantInt *BoolConst = B.getInt1(!DefinedForZero);

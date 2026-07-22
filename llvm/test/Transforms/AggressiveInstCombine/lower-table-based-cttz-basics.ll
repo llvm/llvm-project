@@ -522,6 +522,27 @@ entry:
   ret i32 %res
 }
 
+@table.zeroelement.wider = constant [27 x i128] [i128 18446744073709551632, i128 0, i128 1, i128 0, i128 0, i128 2, i128 7, i128 0, i128 0, i128 5, i128 3, i128 11, i128 13, i128 8, i128 0, i128 0, i128 15, i128 0, i128 0, i128 6, i128 4, i128 10, i128 12, i128 0, i128 14, i128 0, i128 9]
+define i128 @cttz_zeroelement_wider(i16 %x) {
+; CHECK-LABEL: @cttz_zeroelement_wider(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[X]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i128 18446744073709551632, i128 [[TMP1]], !prof [[PROF_1:![0-9]+]]
+; CHECK-NEXT:    ret i128 [[TMP3]]
+;
+entry:
+  %neg = sub i16 0, %x
+  %and = and i16 %neg, %x
+  %mul = mul i16 %and, 2667
+  %shr = lshr i16 %mul, 11
+  %idx = zext i16 %shr to i64
+  %gep = getelementptr inbounds [27 x i128], ptr @table.zeroelement.wider, i64 0, i64 %idx
+  %res  = load i128, ptr %gep, align 16
+  ret i128 %res
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF_1]] = !{!"branch_weights", i32 1, i32 1048575}
