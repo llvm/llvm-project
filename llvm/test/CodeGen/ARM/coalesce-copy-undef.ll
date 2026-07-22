@@ -10,10 +10,13 @@ define void @copy_undef_propogate(i32 %in, ptr %out) {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmov.32 d16[0], r0
 ; CHECK-NEXT:    mov r2, r1
-; CHECK-NEXT:    vmov.32 d16[1], r0
-; CHECK-NEXT:    add r0, r0, #1
+; CHECK-NEXT:    vorr d18, d16, d16
+; CHECK-NEXT:    vorr q10, q8, q8
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r2:128]!
-; CHECK-NEXT:    vst1.64 {d16, d17}, [r2:128]
+; CHECK-NEXT:    vmov.32 d18[1], r0
+; CHECK-NEXT:    add r0, r0, #1
+; CHECK-NEXT:    vorr d20, d18, d18
+; CHECK-NEXT:    vst1.64 {d20, d21}, [r2:128]
 ; CHECK-NEXT:    b .LBB0_1
 entry:
   %1 = insertelement <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, i32 %in, i64 6
