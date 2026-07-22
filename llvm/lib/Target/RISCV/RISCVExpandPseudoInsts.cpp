@@ -377,12 +377,10 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
   case RISCV::BGEU:
     CMovRegOpcode = RISCV::QC_MVLTU;
     CMovImmOpcode = RISCV::QC_MVLTUI;
-    IsSigned = false;
     break;
   case RISCV::BLTU:
     CMovRegOpcode = RISCV::QC_MVGEU;
     CMovImmOpcode = RISCV::QC_MVGEUI;
-    IsSigned = false;
     break;
   case RISCV::QC_BEQI:
     CMovImmOpcode = RISCV::QC_MVNEI;
