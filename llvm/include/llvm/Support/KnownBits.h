@@ -556,6 +556,16 @@ public:
   /// object.
   LLVM_ABI KnownBits reduceAdd(unsigned NumElts) const;
 
+  /// Compute known bits for horizontal umin for a vector with NumElts
+  /// elements, where each element has the known bits represented by this
+  /// object.
+  LLVM_ABI KnownBits reduceUMin(unsigned NumElts) const;
+
+  /// Compute known bits for horizontal umax for a vector with NumElts
+  /// elements, where each element has the known bits represented by this
+  /// object.
+  LLVM_ABI KnownBits reduceUMax(unsigned NumElts) const;
+
   KnownBits byteSwap() const {
     return KnownBits(Zero.byteSwap(), One.byteSwap());
   }

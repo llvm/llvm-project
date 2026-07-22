@@ -1052,6 +1052,70 @@ TEST(KnownBitsTest, ReduceAddExhaustive) {
   }
 }
 
+TEST(KnownBitsTest, ReduceUMinExhaustive) {
+  unsigned Bits = 4;
+  for (unsigned NumElts : {2, 4, 5}) {
+    ForeachKnownBits(Bits, [&](const KnownBits &EltKnown) {
+      KnownBits Computed = EltKnown.reduceUMin(NumElts);
+      KnownBits Exact(Bits);
+      Exact.Zero.setAllBits();
+      Exact.One.setAllBits();
+
+      llvm::function_ref<void(unsigned, APInt)> EnumerateCombinations;
+      auto EnumerateCombinationsImpl = [&](unsigned Depth, APInt Min) {
+        if (Depth == NumElts) {
+          Exact.One &= Min;
+          Exact.Zero &= ~Min;
+          return;
+        }
+        ForeachNumInKnownBits(EltKnown, [&](const APInt &Elt) {
+          EnumerateCombinations(Depth + 1, APIntOps::umin(Min, Elt));
+        });
+      };
+      EnumerateCombinations = EnumerateCombinationsImpl;
+
+      EnumerateCombinations(0, APInt::getMaxValue(Bits));
+
+      if (!Exact.hasConflict()) {
+        EXPECT_TRUE(
+            checkResult("reduceUMin", Exact, Computed, {EltKnown}, false));
+      }
+    });
+  }
+}
+
+TEST(KnownBitsTest, ReduceUMaxExhaustive) {
+  unsigned Bits = 4;
+  for (unsigned NumElts : {2, 4, 5}) {
+    ForeachKnownBits(Bits, [&](const KnownBits &EltKnown) {
+      KnownBits Computed = EltKnown.reduceUMax(NumElts);
+      KnownBits Exact(Bits);
+      Exact.Zero.setAllBits();
+      Exact.One.setAllBits();
+
+      llvm::function_ref<void(unsigned, APInt)> EnumerateCombinations;
+      auto EnumerateCombinationsImpl = [&](unsigned Depth, APInt Max) {
+        if (Depth == NumElts) {
+          Exact.One &= Max;
+          Exact.Zero &= ~Max;
+          return;
+        }
+        ForeachNumInKnownBits(EltKnown, [&](const APInt &Elt) {
+          EnumerateCombinations(Depth + 1, APIntOps::umax(Max, Elt));
+        });
+      };
+      EnumerateCombinations = EnumerateCombinationsImpl;
+
+      EnumerateCombinations(0, APInt::getMinValue(Bits));
+
+      if (!Exact.hasConflict()) {
+        EXPECT_TRUE(
+            checkResult("reduceUMax", Exact, Computed, {EltKnown}, false));
+      }
+    });
+  }
+}
+
 TEST(KnownBitsTest, TruncateSatExhaustive) {
   for (unsigned FromBits : {4, 8}) {
     for (unsigned ToBits = 1; ToBits < FromBits; ++ToBits) {

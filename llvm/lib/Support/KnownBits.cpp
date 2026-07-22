@@ -873,6 +873,50 @@ KnownBits KnownBits::reduceAdd(unsigned NumElts) const {
   return Result;
 }
 
+KnownBits KnownBits::reduceUMin(unsigned NumElts) const {
+  unsigned BitWidth = getBitWidth();
+  KnownBits Result(BitWidth);
+
+  if (NumElts == 0)
+    return Result;
+
+  // If all elements are the same constant, the result is that constant.
+  if (isConstant())
+    return KnownBits::makeConstant(getConstant());
+
+  // Selects one element, so any leading 0s or 1s shared by all
+  // elements stay in the result.
+  if (isNonNegative()) {
+    Result.Zero.setHighBits(countMinLeadingZeros());
+  } else if (isNegative()) {
+    Result.One.setHighBits(countMinLeadingOnes());
+  }
+
+  return Result;
+}
+
+KnownBits KnownBits::reduceUMax(unsigned NumElts) const {
+  unsigned BitWidth = getBitWidth();
+  KnownBits Result(BitWidth);
+
+  if (NumElts == 0)
+    return Result;
+
+  // If all elements are the same constant, the result is that constant.
+  if (isConstant())
+    return KnownBits::makeConstant(getConstant());
+
+  // Selects one element, so any leading 0s or 1s shared by all
+  // elements stay in the result.
+  if (isNonNegative()) {
+    Result.Zero.setHighBits(countMinLeadingZeros());
+  } else if (isNegative()) {
+    Result.One.setHighBits(countMinLeadingOnes());
+  }
+
+  return Result;
+}
+
 static KnownBits computeForSatAddSub(bool Add, bool Signed,
                                      const KnownBits &LHS,
                                      const KnownBits &RHS) {
