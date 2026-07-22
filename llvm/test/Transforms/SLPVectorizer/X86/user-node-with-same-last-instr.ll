@@ -10,8 +10,8 @@ define void @wombat(i32 %arg) {
 ; CHECK-NEXT:    br i1 false, label %[[BB2:.*]], label %[[BB5:.*]]
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP4:%.*]], %[[BB4:.*]] ], [ zeroinitializer, %[[BB1]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[ARG]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[ARG]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> <i32 0, i32 3>

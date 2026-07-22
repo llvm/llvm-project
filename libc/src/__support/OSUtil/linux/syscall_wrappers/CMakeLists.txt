@@ -1,4 +1,19 @@
 add_header_library(
+  alarm
+  HDRS
+    alarm.h
+  DEPENDS
+    libc.hdr.sys_time_macros
+    libc.hdr.types.struct_itimerval
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setitimer
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   getrandom
   HDRS
     getrandom.h
@@ -243,6 +258,34 @@ add_header_library(
     libc.hdr.types.ssize_t
     libc.hdr.types.struct_sockaddr
     libc.include.sys_syscall
+)
+
+add_header_library(
+  getitimer
+  HDRS
+    getitimer.h
+  DEPENDS
+    libc.hdr.types.struct_itimerval
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setitimer
+  HDRS
+    setitimer.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_itimerval
+    libc.include.sys_syscall
+    libc.src.__support.CPP.limits
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -640,6 +683,12 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.types.off_t
+    libc.hdr.types.struct_f_owner_ex
+    libc.hdr.types.struct_flock
+    libc.hdr.types.struct_flock64
     libc.include.sys_syscall
 )
 
@@ -674,6 +723,7 @@ add_header_library(
     dup2.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fcntl
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config

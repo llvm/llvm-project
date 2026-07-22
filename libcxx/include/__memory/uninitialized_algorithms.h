@@ -25,6 +25,7 @@
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
@@ -141,6 +142,14 @@ uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
 
 #if _LIBCPP_STD_VER >= 17
 
+template <class _Iter>
+_LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) __deref_move(_Iter& __it) {
+  if constexpr (is_lvalue_reference_v<decltype(*__it)>)
+    return std::move(*__it);
+  else
+    return *__it;
+}
+
 // uninitialized_default_construct
 
 template <class _ValueType, class _ForwardIterator, class _Sentinel>
@@ -253,7 +262,7 @@ template <class _InputIterator, class _ForwardIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_move(_InputIterator __ifirst, _InputIterator __ilast, _ForwardIterator __ofirst) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
-  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::move(*__iter); };
+  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::__deref_move(__iter); };
 
   auto __result = std::__uninitialized_move<_ValueType>(
       std::move(__ifirst), std::move(__ilast), std::move(__ofirst), __always_false(), __iter_move);
@@ -284,7 +293,7 @@ template <class _InputIterator, class _Size, class _ForwardIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<_InputIterator, _ForwardIterator>
 uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
-  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::move(*__iter); };
+  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::__deref_move(__iter); };
 
   auto __result = std::__uninitialized_move_n<_ValueType>(
       std::move(__ifirst), __n, std::move(__ofirst), __always_false(), __iter_move);
