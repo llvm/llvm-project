@@ -3362,6 +3362,88 @@ func.func @omp_distribute_allocate(%data_var : memref<i32>, %lb : i32, %ub : i32
 
 // -----
 
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_empty_map() {
+  // expected-error @below {{unexpected allocate private indices without allocate variables}}
+  omp.parallel {
+    omp.terminator
+  } {allocate_private_indices = array<i64>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_missing_map(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected an allocate private index for each allocate variable}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_map_size(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected as many allocate private indices as allocate variables}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 0, 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_map_range(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{allocate private index is out of range}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 1>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @x_private : i32
+omp.private {type = private} @y_private : i32
+
+func.func @omp_parallel_allocate_map_duplicate(
+    %allocator : i64, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{allocate private index refers to a private variable more than once}}
+  omp.parallel allocate(%allocator : i64 -> %x : !llvm.ptr,
+                        %allocator : i64 -> %y : !llvm.ptr)
+      private(@x_private %x -> %x_private,
+              @y_private %y -> %y_private : !llvm.ptr, !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 0, 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_type_mismatch(
+    %allocator : i64, %allocate_var : i64, %private_var : !llvm.ptr) {
+  // expected-error @below {{type mismatch between allocate variable and private variable at index 0}}
+  omp.parallel allocate(%allocator : i64 -> %allocate_var : i64)
+      private(@allocate_private %private_var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
 func.func @omp_distribute_nested_wrapper(%lb: index, %ub: index, %step: index) -> () {
   // expected-error @below {{an 'omp.wsloop' nested wrapper is only allowed when a composite 'omp.parallel' is the direct parent}}
   omp.distribute {

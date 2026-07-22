@@ -353,9 +353,10 @@ module attributes {omp.is_target_device = true} {
     // CHECK-NEXT: %[[MAP:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     // CHECK-NEXT: omp.target kernel_type(generic) allocate(%[[ARG0]] : !llvm.ptr -> %[[ARG0]] : !llvm.ptr) thread_limit(%[[ARG1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !llvm.ptr) private(@privatizer %[[ARG0]] -> %{{.*}} : !llvm.ptr)
+    // CHECK: } {allocate_private_indices = array<i64: 0>}
     omp.target kernel_type(generic) allocate(%arg0 : !llvm.ptr -> %arg0 : !llvm.ptr) depend(taskdependin -> %arg0 : !llvm.ptr) device(%arg1 : i32) if(%arg2) thread_limit(%arg1 : i32) in_reduction(@reduction %arg0 : !llvm.ptr) map_entries(%1 -> %arg3 : !llvm.ptr) private(@privatizer %arg0 -> %arg4 : !llvm.ptr) {
       omp.terminator
-    }
+    } {allocate_private_indices = array<i64: 0>}
 
     // CHECK-NOT: omp.target_enter_data
     // CHECK-NOT: omp.target_exit_data

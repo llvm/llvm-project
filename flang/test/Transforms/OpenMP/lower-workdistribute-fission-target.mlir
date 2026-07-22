@@ -41,7 +41,7 @@
 // CHECK:             fir.store %[[VAL_25]] to %[[VAL_14]] : !fir.ref<index>
 // CHECK:             fir.store %[[VAL_26]] to %[[VAL_17]] : !fir.ref<index>
 // CHECK:             fir.store %[[VAL_30]] to %[[VAL_20]] : !fir.ref<!fir.heap<index>>
-// CHECK:             omp.target kernel_type(spmd) map_entries(%[[VAL_7]] -> %[[VAL_31:.*]], %[[VAL_8]] -> %[[VAL_32:.*]], %[[VAL_9]] -> %[[VAL_33:.*]], %[[VAL_10]] -> %[[VAL_34:.*]], %[[VAL_13]] -> %[[VAL_35:.*]], %[[VAL_16]] -> %[[VAL_36:.*]], %[[VAL_19]] -> %[[VAL_37:.*]], %[[VAL_22]] -> %[[VAL_38:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
+// CHECK:             omp.target kernel_type(spmd) allocate(%{{.*}} : i64 -> %{{.*}} : !fir.ref<index>) map_entries(%[[VAL_7]] -> %[[VAL_31:.*]], %[[VAL_8]] -> %[[VAL_32:.*]], %[[VAL_9]] -> %[[VAL_33:.*]], %[[VAL_10]] -> %[[VAL_34:.*]], %[[VAL_13]] -> %[[VAL_35:.*]], %[[VAL_16]] -> %[[VAL_36:.*]], %[[VAL_19]] -> %[[VAL_37:.*]], %[[VAL_22]] -> %[[VAL_38:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) private(@addr_private %{{.*}} -> %{{.*}} : !fir.ref<index>) {
 // CHECK:               %[[VAL_39:.*]] = fir.load %[[VAL_35]] : !fir.ref<index>
 // CHECK:               %[[VAL_40:.*]] = fir.load %[[VAL_36]] : !fir.ref<index>
 // CHECK:               %[[VAL_41:.*]] = fir.load %[[VAL_37]] : !fir.ref<index>
@@ -62,7 +62,7 @@
 // CHECK:                 omp.terminator
 // CHECK:               } {omp.combined}
 // CHECK:               omp.terminator
-// CHECK:             } {omp.combined}
+// CHECK:             } {allocate_private_indices = array<i64: 0>, omp.combined}
 // CHECK:             %[[VAL_45:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:             %[[VAL_46:.*]] = fir.load %[[VAL_11]] : !fir.ref<index>
 // CHECK:             %[[VAL_47:.*]] = fir.load %[[VAL_14]] : !fir.ref<index>
@@ -79,6 +79,7 @@
 
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
+omp.private {type = private} @addr_private : index
 func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {
   %lb_ref = fir.alloca index {bindc_name = "lb"}
   fir.store %lb to %lb_ref : !fir.ref<index>
@@ -91,8 +92,17 @@ func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {
   %ub_map = omp.map.info var_ptr(%ub_ref : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "ub"}
   %step_map = omp.map.info var_ptr(%step_ref : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "step"}
   %addr_map = omp.map.info var_ptr(%addr : !fir.ref<index>, index) map_clauses(tofrom) capture(ByRef) -> !fir.ref<index> {name = "addr"}
+  %allocator = arith.constant 1 : i64
 
-  omp.target kernel_type(generic) map_entries(%lb_map -> %ARG0, %ub_map -> %ARG1, %step_map -> %ARG2, %addr_map -> %ARG3 : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>) {
+  "omp.target"(%addr, %allocator, %lb_map, %ub_map, %step_map, %addr_map, %addr) <{
+      allocate_private_indices = array<i64: 0>,
+      kernel_type = #omp<kernel_type(generic)>,
+      operandSegmentSizes = array<i32: 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0>,
+      private_syms = [@addr_private]
+  }> ({
+  ^bb0(%ARG0: !fir.ref<index>, %ARG1: !fir.ref<index>,
+       %ARG2: !fir.ref<index>, %ARG3: !fir.ref<index>,
+       %ARG4: !fir.ref<index>):
     %lb_val = fir.load %ARG0 : !fir.ref<index>
     %ub_val = fir.load %ARG1 : !fir.ref<index>
     %step_val = fir.load %ARG2 : !fir.ref<index>
@@ -112,7 +122,8 @@ func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {
       omp.terminator
     }
     omp.terminator
-  }
+  }) : (!fir.ref<index>, i64, !fir.ref<index>, !fir.ref<index>,
+        !fir.ref<index>, !fir.ref<index>, !fir.ref<index>) -> ()
   return
 }
 }
