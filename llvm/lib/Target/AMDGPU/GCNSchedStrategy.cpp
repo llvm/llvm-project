@@ -1316,7 +1316,7 @@ bool GCNSchedStage::initGCNSchedStage() {
   return true;
 }
 
-static void collectReachingDefsInRange(const LiveRange &QR,
+static void collectReachingDefsOnRange(const LiveRange &QR,
                                        MachineBasicBlock *UseMBB,
                                        SlotIndex UseIdx,
                                        const LiveIntervals *LIS,
@@ -1372,50 +1372,34 @@ void RewriteMFMAFormStage::findReachingDefs(
   LiveInterval &UseLI = LIS->getInterval(UseReg);
   SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI);
 
-  // Use a set to deduplicate: a full-reg def appears in every SubRange but
-  // must be inserted into DefIdxs only once.
-  SmallSet<SlotIndex, 8> ResultSet;
-
-  if (UseLI.hasSubRanges()) {
-    const TargetRegisterInfo *TRI = DAG.MRI.getTargetRegisterInfo();
-
-    if (UseSubReg) {
-      // Find the SubRange whose LaneMask fully covers the operand's lanes.
-      // If none does (e.g. register initialised via per-lane subreg writes),
-      // fall back to all overlapping SubRanges to capture every reaching def.
-      LaneBitmask UseLanes = TRI->getSubRegIndexLaneMask(UseSubReg);
-      bool FoundFullCoverage = false;
-      for (LiveInterval::SubRange &SR : UseLI.subranges()) {
-        if ((SR.LaneMask & UseLanes) == UseLanes) {
-          collectReachingDefsInRange(SR, UseMI->getParent(), UseIdx, LIS,
-                                     ResultSet);
-          FoundFullCoverage = true;
-          break;
-        }
+  // Pick the range(s) whose lanes the use reads; the walk below is per-range.
+  SmallVector<const LiveRange *, 4> Ranges;
+  if (!UseLI.hasSubRanges()) {
+    Ranges.push_back(&UseLI);
+  } else if (UseSubReg) {
+    // The single SubRange that fully covers the use's lanes, or, if none does
+    // (per-lane subreg writes), every overlapping SubRange.
+    LaneBitmask UseLanes =
+        DAG.MRI.getTargetRegisterInfo()->getSubRegIndexLaneMask(UseSubReg);
+    for (LiveInterval::SubRange &SR : UseLI.subranges())
+      if ((SR.LaneMask & UseLanes) == UseLanes) {
+        Ranges.assign(1, &SR);
+        break;
       }
-      if (!FoundFullCoverage) {
-        for (LiveInterval::SubRange &SR : UseLI.subranges())
-          if ((SR.LaneMask & UseLanes).any())
-            collectReachingDefsInRange(SR, UseMI->getParent(), UseIdx, LIS,
-                                       ResultSet);
-      }
-    } else {
-      // Full-reg use: query every subrange so that partial (subreg) defs on
-      // different lanes are all captured.
+    if (Ranges.empty())
       for (LiveInterval::SubRange &SR : UseLI.subranges())
-        collectReachingDefsInRange(SR, UseMI->getParent(), UseIdx, LIS,
-                                   ResultSet);
-      // If the register has SubRanges but none covers the use point,
-      // LiveIntervals is malformed: a full-width def must appear in at least
-      // one SubRange.
-      assert(!ResultSet.empty() &&
-             "hasSubRanges() but no SubRange live at full-reg use: "
-             "LiveInterval construction is inconsistent");
-    }
+        if ((SR.LaneMask & UseLanes).any())
+          Ranges.push_back(&SR);
   } else {
-    collectReachingDefsInRange(UseLI, UseMI->getParent(), UseIdx, LIS,
-                               ResultSet);
+    // Full-reg use: partial defs live on different lanes, so query them all.
+    for (LiveInterval::SubRange &SR : UseLI.subranges())
+      Ranges.push_back(&SR);
   }
+
+  // Dedup: a full-reg def appears in every SubRange but is inserted once.
+  SmallSet<SlotIndex, 8> ResultSet;
+  for (const LiveRange *QR : Ranges)
+    collectReachingDefsOnRange(*QR, UseMI->getParent(), UseIdx, LIS, ResultSet);
 
   DefIdxs.append(ResultSet.begin(), ResultSet.end());
 }
@@ -2403,12 +2387,19 @@ static unsigned getDefSubReg(const MachineInstr &MI, Register Reg) {
 
 /// Returns true if \p MI is a class-agnostic subreg writer (COPY or AV_MOV).
 /// These lower to v_accvgpr_write after AGPR reclassification and are legal.
-static bool isAgnosticSubregWriter(const MachineInstr *MI) {
+static bool isAgnosticSubregWriter(const MachineInstr *MI,
+                                   const SIInstrInfo *TII,
+                                   const SIRegisterInfo *SRI) {
+  // A writer can source an AGPR lane iff its def operand's register-class
+  // constraint admits AGPRs (AV/agnostic classes do, plain VGPR classes don't).
+  // COPY is a generic opcode with no operand constraint, so special-case it.
   if (MI->isCopy())
     return true;
-  unsigned Opc = MI->getOpcode();
-  return Opc == AMDGPU::AV_MOV_B32_IMM_PSEUDO ||
-         Opc == AMDGPU::AV_MOV_B64_IMM_PSEUDO;
+  const MCInstrDesc &Desc = MI->getDesc();
+  if (Desc.getNumDefs() == 0)
+    return false;
+  const TargetRegisterClass *DefRC = TII->getRegClass(Desc, 0);
+  return DefRC && SRI->hasAGPRs(DefRC);
 }
 
 /// Returns true if reaching def \p RD will be in AGPR form after the rewrite
@@ -2687,7 +2678,7 @@ bool RewriteMFMAFormStage::hasDstSubregConflict(Register DstReg,
         continue;
       if (getDefSubReg(*RD, DstReg) == AMDGPU::NoSubRegister || TII->isMAI(*RD))
         continue;
-      if (!isAgnosticSubregWriter(RD))
+      if (!isAgnosticSubregWriter(RD, TII, SRI))
         return true;
       SafeSubregDefs.push_back(RD);
     }
@@ -2706,7 +2697,7 @@ bool RewriteMFMAFormStage::hasDstSubregConflict(Register DstReg,
                  [RDIdx](SlotIndex SI) {
                    return SlotIndex::isSameInstr(SI, RDIdx);
                  }) &&
-          !isAgnosticSubregWriter(UseMO.getParent()))
+          !isAgnosticSubregWriter(UseMO.getParent(), TII, SRI))
         return true;
     }
   }
