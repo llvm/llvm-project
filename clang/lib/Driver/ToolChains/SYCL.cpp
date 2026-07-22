@@ -131,31 +131,11 @@ void SYCLToolChain::addClangTargetOptions(
     BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 
-  // Link SYCL device libraries at compile time for SPIR/SPIRV targets.
-  // We perform compile-time linking for SPIR/SPIRV targets.
-  // Other targets (like NVPTX, AMD) would link at link time.
-  if (getTriple().isSPIROrSPIRV()) {
-    // Get the device libraries for this offloading kind.
-    llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs =
-        getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind);
-
-    // Add each device library with the appropriate linking flag.
-    for (const auto &BCFile : BCLibs) {
-      // Use -mlink-builtin-bitcode for internalized libraries and
-      // -mlink-bitcode-file for non-internalized libraries.
-      CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
-                                                 : "-mlink-bitcode-file");
-      CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
-    }
-
-    // Link device libraries after middle-end optimization passes so their
-    // symbols are preserved and not eliminated by the optimizer.
-    if (!BCLibs.empty()) {
-      CC1Args.push_back("-mlink-builtin-bitcode-postopt");
-      // Suppress linker warnings that may occur due to library/target
-      // mismatches
-      CC1Args.push_back("-Wno-linker-warnings");
-    }
+  for (const auto &BCFile :
+       getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind)) {
+    CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
+                                               : "-mlink-bitcode-file");
+    CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
   }
 }
 
@@ -235,6 +215,8 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 SYCLToolChain::getDeviceLibs(
     const llvm::opt::ArgList &DriverArgs, BoundArch /*BA*/,
     const Action::OffloadKind /*DeviceOffloadingKind*/) const {
+  if (!getTriple().isSPIROrSPIRV())
+    return {};
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
     return {};
