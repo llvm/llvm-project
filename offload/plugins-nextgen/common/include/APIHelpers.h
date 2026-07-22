@@ -33,7 +33,7 @@ namespace api_helper {
 // Default template specialization for extra safety
 template <auto Fn>
 bool canCall() {
-  static_assert(false, "api_helper::canCall() should only be called on symbols decorated with API_HELPER_OPTIONAL!");
+  static_assert(sizeof(decltype(Fn)*) == 0, "api_helper::canCall() should only be called on symbols decorated with API_HELPER_OPTIONAL!");
 }
 
 } // namespace api_helper
