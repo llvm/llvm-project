@@ -45,18 +45,48 @@ PdbIndex::create(llvm::pdb::PDBFile *file) {
 
   std::unique_ptr<PdbIndex> result(new PdbIndex());
   ASSIGN_PTR_OR_RETURN(result->m_dbi, file->getPDBDbiStream());
-  ASSIGN_PTR_OR_RETURN(result->m_tpi, file->getPDBTpiStream());
-  ASSIGN_PTR_OR_RETURN(result->m_ipi, file->getPDBIpiStream());
   ASSIGN_PTR_OR_RETURN(result->m_info, file->getPDBInfoStream());
   ASSIGN_PTR_OR_RETURN(result->m_publics, file->getPDBPublicsStream());
   ASSIGN_PTR_OR_RETURN(result->m_globals, file->getPDBGlobalsStream());
   ASSIGN_PTR_OR_RETURN(result->m_symrecords, file->getPDBSymbolStream());
 
-  result->m_tpi->buildHashMap();
+  // The TPI/IPI (type) streams — usually the largest streams of a big PDB —
+  // are materialized lazily in tpi()/ipi(); symtab-only consumers (e.g.
+  // AddSymbols from the publics stream) never pay for them.
 
   result->m_file = file;
 
   return std::move(result);
+}
+
+llvm::pdb::TpiStream &PdbIndex::tpi() {
+  // Symbol parsing can run on multiple threads; materialize exactly once.
+  // Stream *presence* is validated during abilities probing, so a failure
+  // here means a corrupt stream in a PDB we already committed to — callers
+  // hold references, so the only honest exits are success or fatal (the
+  // pre-lazy behavior rejected such a PDB wholesale in create()).
+  llvm::call_once(m_tpi_once, [this] {
+    auto expected_tpi = m_file->getPDBTpiStream();
+    if (!expected_tpi) {
+      llvm::consumeError(expected_tpi.takeError());
+      llvm::report_fatal_error("PdbIndex: failed to load TPI stream");
+    }
+    m_tpi = &*expected_tpi;
+    m_tpi->buildHashMap();
+  });
+  return *m_tpi;
+}
+
+llvm::pdb::TpiStream &PdbIndex::ipi() {
+  llvm::call_once(m_ipi_once, [this] {
+    auto expected_ipi = m_file->getPDBIpiStream();
+    if (!expected_ipi) {
+      llvm::consumeError(expected_ipi.takeError());
+      llvm::report_fatal_error("PdbIndex: failed to load IPI stream");
+    }
+    m_ipi = &*expected_ipi;
+  });
+  return *m_ipi;
 }
 
 lldb::addr_t PdbIndex::MakeVirtualAddress(uint16_t segment,
