@@ -8,6 +8,7 @@
 
 #include "DXILResourceAccess.h"
 #include "DirectX.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -572,6 +573,8 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
     if (auto *Phi = dyn_cast<PHINode>(X))
       for (Use &V : Phi->incoming_values())
         Worklist.push_back(V.get());
+    else if (auto *GEP = dyn_cast<GetElementPtrInst>(X))
+      Worklist.push_back(GEP->getPointerOperand());
     else if (auto *Select = dyn_cast<SelectInst>(X))
       for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
         Worklist.push_back(V);
@@ -716,6 +719,78 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
   DeadInsts.insert(Ptr);
 }
 
+// Rematerialize V into the predecessor on the given incoming edge, cloning the
+// part of its def chain that lives in the phi's merge block. A phi is resolved
+// to its per-edge incoming value; anything defined outside the merge block
+// already dominates the predecessor and is reused as-is.
+static Value *materializeInPred(Value *V, PHINode *Phi, unsigned EdgeIdx,
+                                DenseMap<Value *, Value *> &Materialized,
+                                SmallSetVector<Instruction *, 16> &DeadInsts) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || I->getParent() != Phi->getParent())
+    return V;
+
+  if (auto *P = dyn_cast<PHINode>(I)) {
+    DeadInsts.insert(P);
+    return materializeInPred(P->getIncomingValue(EdgeIdx), Phi, EdgeIdx,
+                             Materialized, DeadInsts);
+  }
+
+  if (auto It = Materialized.find(I); It != Materialized.end())
+    return It->second;
+
+  assert((!isa<CallBase>(I) || !cast<CallBase>(I)->isConvergent()) &&
+         "Cannot rematerialize a convergent instruction into a predecessor. "
+         "GVN is the only optimization that can create an pattern that looks "
+         "like the load/store of a convergent value into a phi of resource "
+         "pointers. This must already be dealt with during index propogation.");
+
+  BasicBlock *PredBB = Phi->getIncomingBlock(EdgeIdx);
+  auto *Clone = I->clone();
+  if (I->hasName())
+    Clone->setName(I->getName());
+  for (unsigned Op = 0, E = Clone->getNumOperands(); Op < E; ++Op)
+    Clone->setOperand(Op, materializeInPred(I->getOperand(Op), Phi, EdgeIdx,
+                                            Materialized, DeadInsts));
+  Clone->insertBefore(PredBB->getTerminator()->getIterator());
+
+  Materialized[I] = Clone;
+  DeadInsts.insert(I);
+  return Clone;
+}
+
+// Undo an InstCombine/SimplifyCFG load-sink that memory semantics cannot
+// prevent: the load's pointer is a phi of resource pointers (optionally behind
+// a GEP chain). Clone the load into each predecessor addressing that edge's
+// concrete resource and merge the results with a new phi.
+static void hoistLoad(LoadInst *LI, PHINode *Phi,
+                      SmallSetVector<Instruction *, 16> &DeadInsts) {
+  unsigned NumEdges = Phi->getNumIncomingValues();
+
+  // The old resource-pointer phi will be superseded by NewPhi
+  DeadInsts.insert(Phi);
+
+  PHINode *NewPhi = PHINode::Create(LI->getType(), NumEdges, LI->getName(),
+                                    Phi->getIterator());
+  for (unsigned Idx = 0; Idx < NumEdges; ++Idx) {
+    BasicBlock *BB = Phi->getIncomingBlock(Idx);
+
+    // Rematerialize the pointer operand on this edge so the load has a
+    // dominating pointer.
+    DenseMap<Value *, Value *> Materialized;
+    Value *PtrInBB = materializeInPred(LI->getPointerOperand(), Phi, Idx,
+                                       Materialized, DeadInsts);
+
+    auto *NewLoad = cast<LoadInst>(LI->clone());
+    NewLoad->setOperand(0, PtrInBB);
+    NewLoad->insertBefore(BB->getTerminator()->getIterator());
+    NewPhi->addIncoming(NewLoad, BB);
+  }
+  LI->replaceAllUsesWith(NewPhi);
+
+  DeadInsts.insert(LI);
+}
+
 // Try to legalize dx.resource.handlefrom.*.binding and dx.resource.getpointer
 // calls with their respective index values and propagate the index values to
 // be used at resource access.
@@ -727,6 +802,14 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
 //
 // Returns true if any changes are made.
 static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
+  // Look through any GEP chain to the phi of resource pointers that a sunk
+  // load must be hoisted above.
+  auto FindPointerPhi = [](Value *Ptr) -> PHINode * {
+    while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+      Ptr = GEP->getPointerOperand();
+    return dyn_cast<PHINode>(Ptr);
+  };
+
   SmallSetVector<Instruction *, 16> DeadInsts;
   for (BasicBlock &BB : make_early_inc_range(F)) {
     for (Instruction &I : BB) {
@@ -742,12 +825,18 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           SameGlobalBinding &=
               (B == getHandleIntrinsicBinding(Handles[Idx], DRTM));
 
-        if (!SameGlobalBinding) {
-          diagnoseNonUniqueResourceAccess(&I, Handles);
+        if (SameGlobalBinding) {
+          replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts);
           continue;
         }
 
-        replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts);
+        if (auto *LI = dyn_cast<LoadInst>(&I))
+          if (auto *Phi = FindPointerPhi(LI->getPointerOperand())) {
+            hoistLoad(LI, Phi, DeadInsts);
+            continue;
+          }
+
+        diagnoseNonUniqueResourceAccess(&I, Handles);
       }
     }
   }
