@@ -44,12 +44,6 @@ if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
   add_dependencies(check-libc-build libc-hermetic-tests-build)
 endif()
 
-if(LIBC_TARGET_OS_IS_LINUX OR LIBC_TARGET_OS_IS_DARWIN)
-  set(LIBC_TEST_SUBPROCESS_TESTS 1)
-else()
-  set(LIBC_TEST_SUBPROCESS_TESTS 0)
-endif()
-
 add_subdirectory(UnitTest)
 
 if(LIBC_TARGET_OS_IS_GPU)

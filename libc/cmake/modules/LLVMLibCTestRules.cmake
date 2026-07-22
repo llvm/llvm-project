@@ -1,3 +1,9 @@
+if(LIBC_TARGET_OS_IS_LINUX OR LIBC_TARGET_OS_IS_DARWIN)
+  set(LIBC_TEST_SUBPROCESS_TESTS 1)
+else()
+  set(LIBC_TEST_SUBPROCESS_TESTS 0)
+endif()
+
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
   _get_compile_options_from_config(config_flags)
