@@ -120,3 +120,101 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:     %[[INSERT2:.+]] = tensor.insert_slice %[[GENERIC_TILE]]#1 into %[[ITERARG2]][0, %[[IV]]]
 //      CHECK:     scf.yield %[[INSERT0]], %[[INSERT1]], %[[INSERT2]]
 //      CHECK:   return %[[RESULT]]#1, %[[RESULT]]#2, %[[RESULT]]#0
+
+// -----
+
+// Verify that the default FIFO worklist reconstructs the earlier `linalg.fill`
+// before the later `linalg.copy`. Their loop results are therefore passed to
+// the downstream `linalg.mul` as result #1 and result #2, respectively.
+
+// CHECK-LABEL: func.func @worklist_fifo_order(
+// CHECK:         %[[RESULT:.+]]:3 = scf.for
+// CHECK:           %[[FILL_TILE:.+]] = linalg.fill
+// CHECK:           %[[COPY_TILE:.+]] = linalg.copy
+// CHECK:           %[[CONSUMER_TILE:.+]] = linalg.add
+// CHECK:           tensor.insert_slice %[[CONSUMER_TILE]]
+// CHECK:           tensor.insert_slice %[[FILL_TILE]]
+// CHECK:           tensor.insert_slice %[[COPY_TILE]]
+// CHECK:           scf.yield
+// CHECK:         %[[FINAL:.+]] = linalg.mul
+// CHECK-SAME:        ins(%[[RESULT]]#1, %[[RESULT]]#2
+// CHECK-SAME:        outs(%[[RESULT]]#0
+// CHECK:         return %[[FINAL]]
+
+func.func @worklist_fifo_order(
+    %input: tensor<32x32xf32>, %out: tensor<32x32xf32>)
+    -> tensor<32x32xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %fill = linalg.fill ins(%c0 : f32)
+      outs(%out : tensor<32x32xf32>) -> tensor<32x32xf32>
+  %copy = linalg.copy ins(%input : tensor<32x32xf32>)
+      outs(%out : tensor<32x32xf32>) -> tensor<32x32xf32>
+  %add = linalg.add
+      ins(%fill, %copy : tensor<32x32xf32>, tensor<32x32xf32>)
+      outs(%out : tensor<32x32xf32>) -> tensor<32x32xf32>
+  %result = linalg.mul
+      ins(%fill, %copy : tensor<32x32xf32>, tensor<32x32xf32>)
+      outs(%add : tensor<32x32xf32>) -> tensor<32x32xf32>
+  return %result : tensor<32x32xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %arg0 : !transform.any_op {transform.readonly}) {
+    %add = transform.structured.match ops{["linalg.add"]} in %arg0
+      : (!transform.any_op) -> !transform.any_op
+    %tiled, %loop = transform.test.fuse_and_yield %add [16]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Verify that preferring later producers reconstructs the `linalg.copy` before
+// the `linalg.fill`. Their loop result numbers are reversed, but the downstream
+// `linalg.mul` still receives the fill and copy values in its original order.
+
+// CHECK-LABEL: func.func @worklist_prefer_later_producers(
+// CHECK:         %[[RESULT:.+]]:3 = scf.for
+// CHECK:           %[[FILL_TILE:.+]] = linalg.fill
+// CHECK:           %[[COPY_TILE:.+]] = linalg.copy
+// CHECK:           %[[CONSUMER_TILE:.+]] = linalg.add
+// CHECK:           tensor.insert_slice %[[CONSUMER_TILE]]
+// CHECK:           tensor.insert_slice %[[COPY_TILE]]
+// CHECK:           tensor.insert_slice %[[FILL_TILE]]
+// CHECK:           scf.yield
+// CHECK:         %[[FINAL:.+]] = linalg.mul
+// CHECK-SAME:        ins(%[[RESULT]]#2, %[[RESULT]]#1
+// CHECK-SAME:        outs(%[[RESULT]]#0
+// CHECK:         return %[[FINAL]]
+
+
+func.func @worklist_prefer_later_producers(
+    %input: tensor<32x32xf32>, %out: tensor<32x32xf32>)
+    -> tensor<32x32xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %fill = linalg.fill ins(%c0 : f32)
+      outs(%out : tensor<32x32xf32>) -> tensor<32x32xf32>
+  %copy = linalg.copy ins(%input : tensor<32x32xf32>)
+      outs(%out : tensor<32x32xf32>) -> tensor<32x32xf32>
+  %add = linalg.add
+      ins(%fill, %copy : tensor<32x32xf32>, tensor<32x32xf32>)
+      outs(%out : tensor<32x32xf32>) -> tensor<32x32xf32>
+  %result = linalg.mul
+      ins(%fill, %copy : tensor<32x32xf32>, tensor<32x32xf32>)
+      outs(%add : tensor<32x32xf32>) -> tensor<32x32xf32>
+  return %result : tensor<32x32xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %arg0 : !transform.any_op {transform.readonly}) {
+    %add = transform.structured.match ops{["linalg.add"]} in %arg0
+      : (!transform.any_op) -> !transform.any_op
+    %tiled, %loop = transform.test.fuse_and_yield %add [16]
+        worklist_prefer_later_producers true
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}

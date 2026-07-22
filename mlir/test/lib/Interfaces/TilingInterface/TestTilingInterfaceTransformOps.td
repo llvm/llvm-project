@@ -30,6 +30,9 @@ def TestFuseAndYieldOp : Op<Transform_Dialect, "test.fuse_and_yield",
     producers greedily using the options provided as attributes.
     It also yields some of the fused producers for testing.
 
+    The `worklist_prefer_later_producers` attribute processes slices that occur
+    later in the tiled IR before earlier slices.
+
     On success returns the tiled operations as well as generated loops. Emits
     a definite failure if tiling fails.
   }];
@@ -38,13 +41,16 @@ def TestFuseAndYieldOp : Op<Transform_Dialect, "test.fuse_and_yield",
     (ins TransformHandleTypeInterface:$target,
         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_interchange,
-        DefaultValuedAttr<BoolAttr, "false">:$use_forall);
+        DefaultValuedAttr<BoolAttr, "false">:$use_forall,
+        DefaultValuedAttr<BoolAttr, "false">:$worklist_prefer_later_producers);
   let results = (outs TransformHandleTypeInterface:$transfomed,
       Variadic<TransformHandleTypeInterface>:$loops);
 
   let assemblyFormat = [{
     $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
-    (`use_forall` $use_forall^)? attr-dict 
+    (`use_forall` $use_forall^)?
+    (`worklist_prefer_later_producers` $worklist_prefer_later_producers^)?
+    attr-dict
     `:` functional-type(operands, results)
   }];
 }
