@@ -7569,7 +7569,6 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
       /*BlockFrequencyInfo=*/nullptr,
       /*ProfileSummaryInfo=*/nullptr, ORE, static_cast<int>(OptLevel),
       /*UserThreshold=*/std::nullopt,
-      /*UserCount=*/std::nullopt,
       /*UserAllowPartial=*/true,
       /*UserAllowRuntime=*/true,
       /*UserUpperBound=*/std::nullopt,
@@ -7644,9 +7643,9 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   bool MaxOrZero = false;
   unsigned TripMultiple = 0;
 
-  computeUnrollCount(L, TTI, DT, &LI, &AC, SE, EphValues, &ORE, TripCount,
-                     MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP);
-  unsigned Factor = UP.Count;
+  unsigned Factor =
+      computeUnrollCount(L, TTI, DT, &LI, &AC, SE, EphValues, &ORE, TripCount,
+                         MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP);
   LLVM_DEBUG(dbgs() << "Suggesting unroll factor of " << Factor << "\n");
 
   // This function returns 1 to signal to not unroll a loop.
@@ -8228,6 +8227,8 @@ CallInst *OpenMPIRBuilder::createOMPInteropInit(
   Value *ThreadId = getOrCreateThreadID(Ident);
   if (Device == nullptr)
     Device = Constant::getAllOnesValue(Int32);
+  else if (Device->getType() != Int32)
+    Device = Builder.CreateIntCast(Device, Int32, /*isSigned=*/true);
   Constant *InteropTypeVal = ConstantInt::get(Int32, (int)InteropType);
   if (NumDependences == nullptr) {
     NumDependences = ConstantInt::get(Int32, 0);
@@ -8256,6 +8257,8 @@ CallInst *OpenMPIRBuilder::createOMPInteropDestroy(
   Value *ThreadId = getOrCreateThreadID(Ident);
   if (Device == nullptr)
     Device = Constant::getAllOnesValue(Int32);
+  else if (Device->getType() != Int32)
+    Device = Builder.CreateIntCast(Device, Int32, /*isSigned=*/true);
   if (NumDependences == nullptr) {
     NumDependences = ConstantInt::get(Int32, 0);
     PointerType *PointerTypeVar = PointerType::getUnqual(M.getContext());
@@ -8284,6 +8287,8 @@ CallInst *OpenMPIRBuilder::createOMPInteropUse(const LocationDescription &Loc,
   Value *ThreadId = getOrCreateThreadID(Ident);
   if (Device == nullptr)
     Device = Constant::getAllOnesValue(Int32);
+  else if (Device->getType() != Int32)
+    Device = Builder.CreateIntCast(Device, Int32, /*isSigned=*/true);
   if (NumDependences == nullptr) {
     NumDependences = ConstantInt::get(Int32, 0);
     PointerType *PointerTypeVar = PointerType::getUnqual(M.getContext());

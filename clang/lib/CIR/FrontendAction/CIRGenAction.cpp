@@ -57,9 +57,10 @@ getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
 
 static std::unique_ptr<llvm::Module>
 lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
+                     bool EnableOpenMP,
                      llvm::StringRef mlirSaveTempsOutFile = {},
                      llvm::vfs::FileSystem *fs = nullptr) {
-  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx,
+  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx, EnableOpenMP,
                                               mlirSaveTempsOutFile, fs);
 }
 
@@ -179,9 +180,9 @@ public:
           MlirModule->print(out);
       }
 
-      std::unique_ptr<llvm::Module> LLVMModule =
-          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, mlirSaveTempsOutFile,
-                               &CI.getVirtualFileSystem());
+      std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
+          MlirModule, LLVMCtx, C.getLangOpts().OpenMP, mlirSaveTempsOutFile,
+          &CI.getVirtualFileSystem());
 
       if (linkInModules(*LLVMModule))
         return;
