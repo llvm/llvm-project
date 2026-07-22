@@ -143,6 +143,28 @@ program declaration_array_bounds
   !ERROR: Must have INTEGER type, but is REAL(4)
   integer :: test_array([1,2,3] : [2,3,4], 3, [1,2,3], 5.2)
 
+  ! Test that Integer type constraint wrapper correctly errors without aborting.
+  !ERROR: Must have INTEGER type, but is CHARACTER(KIND=1,LEN=1_8)
+  integer :: a1("a" : [1, 2])
+  !ERROR: Must have INTEGER type, but is CHARACTER(KIND=1,LEN=2_8)
+  integer :: a2(["ab", "cd"])
+  character(2), parameter :: ccc(2) = ["ab", "cd"]
+  !ERROR: Must have INTEGER type, but is CHARACTER(KIND=1,LEN=2_8)
+  integer :: a3(ccc)
+  !ERROR: Must have INTEGER type, but is typeless
+  integer :: a4(z'4' : [1, 2])
+  !ERROR: Must have INTEGER type, but is LOGICAL(4)
+  integer :: a5([.true., .false.])
+  !ERROR: Must have INTEGER type, but is REAL(4)
+  integer :: a6([1.2, 2.2, 3.2] : [1, 2, 3])
+  !ERROR: Must have INTEGER type, but is REAL(4)
+  !ERROR: Must have INTEGER type, but is REAL(4)
+  integer :: a7([1.2, 2.2, 3.2] : [1.2, 2.2, 3.2])
+  !ERROR: No explicit type declared for 'undef'
+  integer :: a8(undef : [1, 2])
+  !ERROR: No explicit type declared for 'undef'
+  integer :: a9([1, 2] : undef)
+
   integer :: dim0(0) = [integer::]
   integer :: zerosize1([integer::])
   integer :: zerosize2(dim0 : [integer::])
