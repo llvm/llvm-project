@@ -17,6 +17,7 @@ body:             |
     ; CHECK-NEXT: $vgpr4 = IMPLICIT_DEF
     ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr5, $vgpr2_vgpr3, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; CHECK-NEXT: S_WAIT_DSCNT 0
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; CHECK-NEXT: renamable $vgpr4_vgpr5_vgpr6_vgpr7 = DS_LOAD_TR16_B128 killed renamable $vgpr4, 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
