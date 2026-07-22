@@ -15,7 +15,7 @@
 #include <ranges>
 
 #include "test_iterators.h"
-                                                                    
+
 using Range     = std::ranges::subrange<int*, sentinel_wrapper<int*>>;
 using RangeSent = std::ranges::sentinel_t<Range>;
 using SplitView = std::ranges::split_view<Range, std::ranges::single_view<int>>;

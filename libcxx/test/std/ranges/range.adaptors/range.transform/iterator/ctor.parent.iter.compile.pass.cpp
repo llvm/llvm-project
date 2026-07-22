@@ -16,8 +16,8 @@
 
 #include "../types.h"
 
-using TransformView = std::ranges::transform_view<MoveOnlyView, PlusOne>;
-using TransformViewBaseIter =  std::ranges::iterator_t<MoveOnlyView>;
-using TransformIter = std::ranges::iterator_t<TransformView>;
+using TransformView         = std::ranges::transform_view<MoveOnlyView, PlusOne>;
+using TransformViewBaseIter = std::ranges::iterator_t<MoveOnlyView>;
+using TransformIter         = std::ranges::iterator_t<TransformView>;
 
 static_assert(!std::is_constructible_v<TransformIter, TransformView, TransformViewBaseIter>);
