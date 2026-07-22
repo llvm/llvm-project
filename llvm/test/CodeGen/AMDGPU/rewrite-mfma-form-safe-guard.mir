@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
 # RUN:     -run-pass=machine-scheduler \
 # RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
 # RUN:     %s -o - | FileCheck %s
