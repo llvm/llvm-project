@@ -1608,7 +1608,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     return false;
 
   // The Sarwate lookup table optimization requires a byte-multiple trip count,
-  // and should not be applied if optimizing for size.
+  // and should not be applied under any circumstances if optimizing for size.
   bool TableStrategyPossible =
       Info.TripCount % 8 == 0 && !ApplyCodeSizeHeuristics;
 
@@ -1627,24 +1627,19 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     return true;
   }
 
+  // When using the auto strategy, bail if we are optimizing for size since
+  // there's usually not a clear size benefit.
+  // TODO: The clmul optimization is around the same size in many cases, so it
+  // could be worth it to take advantage of that fact, especially if it would be
+  // much faster than the original loop.
+  if (ApplyCodeSizeHeuristics)
+    return false;
+
   LLVMContext &Ctx = Info.LHS->getContext();
   Type *CRCTy = Info.LHS->getType();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
 
-  // The clmul optimization should be applied if it is fast and likely to lower
-  // in a way that keeps code small.
-  // TODO: If clmul exists on the target but not for the required width, it
-  // might be possible to split into multiple iterations of reduction.
-  unsigned ClmulMuBW = Info.IsBigEndian ? 2 * Info.TripCount : Info.TripCount;
-  unsigned ClmulGPBW =
-      Info.LHS->getType()->getIntegerBitWidth() + Info.TripCount;
-  IntegerType *WidestClmulTy =
-      IntegerType::get(Info.LHS->getContext(), std::max(ClmulMuBW, ClmulGPBW));
-  if (ApplyCodeSizeHeuristics && TTI->haveFastClmul(WidestClmulTy)) {
-    optimizeCRCLoopUsingClmul(Info);
-    return true;
-  }
-
+  // CRC computation is mostly serial, so latency works best for comparison.
   TargetTransformInfo::TargetCostKind CostKind =
       TargetTransformInfo::TCK_Latency;
 
