@@ -15,9 +15,8 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/dup2.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/lseek.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
@@ -194,20 +193,29 @@ int get_fileno(File *f) {
 }
 
 int reopenfile(File *f, const char *path, const char *mode) {
-  auto modeflags = File::mode_flags(mode);
-  if (modeflags == 0)
-    return EINVAL;
+  f->flush_unlocked();
 
+  auto modeflags = File::mode_flags(mode);
   auto *lf = reinterpret_cast<LinuxFile *>(f);
 
   if (path != nullptr) {
+    int old_fd = lf->get_fd();
+
+    if (modeflags == 0) {
+      if (old_fd >= 0) {
+        linux_syscalls::close(old_fd);
+        lf->set_fd(-1);
+      }
+      f->reset_stream_state(modeflags);
+      return EINVAL;
+    }
+
     int open_flags = mode_flags_to_open_flags(modeflags);
 
     constexpr mode_t OPEN_MODE =
         S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
     ErrorOr<int> new_fd = linux_syscalls::open(path, open_flags, OPEN_MODE);
-    int old_fd = lf->get_fd();
 
     // If the new file fails to open, POSIX says we still have to close the old
     // file.
@@ -244,11 +252,14 @@ int reopenfile(File *f, const char *path, const char *mode) {
     return 0;
   }
 
+  if (modeflags == 0)
+    return EINVAL;
+
   int fd = lf->get_fd();
   if (fd < 0)
     return EBADF;
 
-  auto result = internal::fcntl(fd, F_GETFL);
+  auto result = linux_syscalls::fcntl(fd, F_GETFL);
   if (!result.has_value())
     return EBADF;
   int fd_flags = result.value();
@@ -274,15 +285,15 @@ int reopenfile(File *f, const char *path, const char *mode) {
   bool has_append_flag = fd_flags & O_APPEND;
 
   if (is_append && !has_append_flag) {
-    if (!internal::fcntl(fd, F_SETFL,
-                         reinterpret_cast<void *>(fd_flags | O_APPEND))
+    if (!linux_syscalls::fcntl(fd, F_SETFL,
+                               reinterpret_cast<void *>(fd_flags | O_APPEND))
              .has_value()) {
       return EBADF;
     }
     do_seek = true;
   } else if (!is_append && has_append_flag) {
-    if (!internal::fcntl(fd, F_SETFL,
-                         reinterpret_cast<void *>(fd_flags & ~O_APPEND))
+    if (!linux_syscalls::fcntl(fd, F_SETFL,
+                               reinterpret_cast<void *>(fd_flags & ~O_APPEND))
              .has_value()) {
       return EBADF;
     }

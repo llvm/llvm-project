@@ -28,9 +28,8 @@ LLVM_LIBC_FUNCTION(::FILE *, freopen,
   LIBC_CRASH_ON_NULLPTR(stream);
 
   auto *file = reinterpret_cast<File *>(stream);
-  file->lock();
-  file->flush_unlocked();
 
+  file->lock();
   int error = reopenfile(file, filename, mode);
   file->unlock();
 

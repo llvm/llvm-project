@@ -137,6 +137,7 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameInvalidModeChange) {
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 }
 
+#if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcFreopenTest, InvalidModeFailure) {
   const auto FILENAME =
       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_invalid_mode.test"));
@@ -144,14 +145,21 @@ TEST_F(LlvmLibcFreopenTest, InvalidModeFailure) {
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
+  int old_fd = LIBC_NAMESPACE::fileno(file);
+  ASSERT_GT(old_fd, 0);
+
   ASSERT_THAT(LIBC_NAMESPACE::freopen(FILENAME, "invalid_mode_str", file),
               Fails(EINVAL, static_cast<void *>(nullptr)));
 
-  // TODO: POSIX says "The original stream shall be closed regardless of whether
-  // the subsequent open succeeds." so this should not be valid. Correct this
-  // test.
+  // Per POSIX spec, original stream fd was closed on filename != nullptr
+  // freopen attempt.
+  ASSERT_EQ(-1, LIBC_NAMESPACE::fcntl(old_fd, F_GETFL));
+  ASSERT_ERRNO_EQ(EBADF);
+
+  // Clean up stream object to avoid memory leaks.
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 }
+#endif
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcFreopenTest, NonExistentFileFailure) {
@@ -310,11 +318,17 @@ TEST_F(LlvmLibcFreopenTest, StdoutRedirectionTest) {
 }
 #endif
 
-// TODO: update to death test since this crashes now.
-//  TEST_F(LlvmLibcFreopenTest, NullStreamFailure) {
-//    const auto FILENAME =
-//        libc_make_test_file_path(APPEND_LIBC_TEST("freopen_null_stream.test"));
+#define UNIT 1
+#define HERMETIC 2
+#if LIBC_TEST == UNIT
+TEST_F(LlvmLibcFreopenTest, NullStreamFailure) {
+  const auto FILENAME =
+      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_null_stream.test"));
+  const char *fn = FILENAME;
 
-//   ASSERT_THAT(LIBC_NAMESPACE::freopen(FILENAME, "r", nullptr),
-//               Fails(EINVAL, static_cast<void *>(nullptr)));
-// }
+  EXPECT_DEATH([=] { LIBC_NAMESPACE::freopen(fn, "r", nullptr); },
+               WITH_SIGNAL(-1));
+}
+#endif
+#undef UNIT
+#undef HERMETIC
