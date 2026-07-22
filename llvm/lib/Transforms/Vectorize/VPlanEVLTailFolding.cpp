@@ -189,10 +189,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                             m_VPValue(), m_VPValue(), m_VPValue(),
                             m_RemoveMask(HeaderMask, Mask),
                             m_TruncOrSelf(m_Specific(&Plan->getVF()))))) {
-    if (!Mask)
-      Mask = Plan->getTrue();
     auto *NewStore = cast<VPWidenMemIntrinsicRecipe>(&CurRecipe)->clone();
-    NewStore->setOperand(3, Mask);
+    NewStore->setOperand(3, Mask ? Mask : Plan->getTrue());
     NewStore->setOperand(4, &EVL);
     return NewStore;
   }
