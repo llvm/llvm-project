@@ -6458,13 +6458,14 @@ static SDValue lowerVECTOR_SHUFFLEAsPUnzip(ShuffleVectorSDNode *SVN,
   return DAG.getNode(Opc, DL, VT, V1, V2);
 }
 
-// Match a pair-even shuffle mask <0, N, 2, N+2, ...>: even result lanes take
-// the even lanes of operand 0 and odd result lanes come from operand 1 (as
-// formed by DAGCombiner::XformToShuffleWithZero for a packed zero-extend `and`,
-// and matched by lowerVECTOR_SHUFFLEAsPPair). Undef lanes (e.g. from widening
-// the 32-bit view to a legal 64-bit type on RV64) always match, since PPAIRE
-// refines them.
-static bool isPairEvenShuffleMask(ArrayRef<int> Mask) {
+// Match the packed zero-extend shuffle mask <0, N, 2, N+2, ...>: even result
+// lanes keep operand 0's even lanes and odd result lanes come from operand 1.
+// The odd lanes may select any element of operand 1, which is looser than a
+// strict pair-even mask; DAGCombiner::XformToShuffleWithZero forms exactly this
+// from a packed zero-extend `and`, leaving each zeroed lane at its own
+// position, and lowerVECTOR_SHUFFLEAsPPair then forms the PPAIRE. Undef lanes
+// always match.
+static bool isPackedZExtShuffleMask(ArrayRef<int> Mask) {
   unsigned NumElts = Mask.size();
   if (NumElts % 2 != 0)
     return false;
@@ -7255,7 +7256,7 @@ bool RISCVTargetLowering::isVectorClearMaskLegal(ArrayRef<int> M,
     return false;
   MVT SVT = VT.getSimpleVT();
   return (SVT == MVT::v4i8 || SVT == MVT::v8i8 || SVT == MVT::v4i16) &&
-         isPairEvenShuffleMask(M);
+         isPackedZExtShuffleMask(M);
 }
 
 bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
