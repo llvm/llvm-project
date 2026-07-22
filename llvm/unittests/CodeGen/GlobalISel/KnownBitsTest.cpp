@@ -2300,6 +2300,7 @@ TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroExtractVectorElt) {
    %may_be_zero:_(<2 x s32>) = G_BUILD_VECTOR %one, %zero
    %idx0:_(s64) = G_CONSTANT i64 0
    %idx1:_(s64) = G_CONSTANT i64 1
+   %idx_oob:_(s64) = G_CONSTANT i64 2
    %variable_idx:_(s64) = G_IMPLICIT_DEF
 
    %constant_nonzero:_(s32) = G_EXTRACT_VECTOR_ELT %may_be_zero, %idx0
@@ -2314,6 +2315,9 @@ TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroExtractVectorElt) {
    %variable_may_be_zero:_(s32) = G_EXTRACT_VECTOR_ELT %may_be_zero, %variable_idx
    %copy_variable_may_be_zero:_(s32) = COPY %variable_may_be_zero
 
+   %constant_oob:_(s32) = G_EXTRACT_VECTOR_ELT %all_nonzero, %idx_oob
+   %copy_constant_oob:_(s32) = COPY %constant_oob
+
    %wide_value:_(s64) = G_CONSTANT i64 4294967296
    %wide_vec:_(<2 x s64>) = G_BUILD_VECTOR %wide_value, %wide_value
    %width_mismatch:_(s32) = G_EXTRACT_VECTOR_ELT %wide_vec, %idx0
@@ -2327,10 +2331,11 @@ TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroExtractVectorElt) {
   auto CopySource = [this](Register Copy) {
     return MRI->getVRegDef(Copy)->getOperand(1).getReg();
   };
-  EXPECT_TRUE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 5])));
-  EXPECT_FALSE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 4])));
-  EXPECT_TRUE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 3])));
-  EXPECT_FALSE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 2])));
+  EXPECT_TRUE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 6])));
+  EXPECT_FALSE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 5])));
+  EXPECT_TRUE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 4])));
+  EXPECT_FALSE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 3])));
+  EXPECT_TRUE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 2])));
   EXPECT_FALSE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 1])));
 }
 

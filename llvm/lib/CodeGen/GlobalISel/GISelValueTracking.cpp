@@ -145,6 +145,8 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
     if (MRI.getType(R).getScalarSizeInBits() != VecTy.getScalarSizeInBits())
       return false;
     unsigned NumSrcElts = VecTy.getNumElements();
+    // An out-of-range constant index produces poison. Keep all lanes demanded,
+    // which is poison-safe and matches SelectionDAG's conservative behavior.
     APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
     if (auto Idx = getIConstantVRegVal(Extract.getIndexReg(), MRI))
       if (Idx->ult(NumSrcElts))
