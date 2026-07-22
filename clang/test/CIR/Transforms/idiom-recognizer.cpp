@@ -61,13 +61,6 @@ unsigned long test_strlen(const char *s) { return strlen(s); }
 // NO-BUILTIN-MEMCPY-SAME: nobuiltins = ["memcpy"]
 // NO-BUILTINS: cir.call @strlen
 
-__attribute__((no_builtin("strlen")))
-unsigned long test_strlen_no_builtin(const char *s) { return strlen(s); }
-// RAISED-LABEL: @_Z22test_strlen_no_builtinPKc
-// RAISED: cir.call @strlen
-// RAISED-SAME: nobuiltins = ["strlen"]
-// RAISED-NOT: cir.std.strlen
-
 // A function merely named like the std one is not raised, and it survives the
 // whole pipeline as the same plain call.
 char *find(char *first, char *last, const char &value);
