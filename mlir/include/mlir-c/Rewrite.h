@@ -330,6 +330,19 @@ mlirIRRewriterCreateFromOp(MlirOperation op);
 MLIR_CAPI_EXPORTED void mlirIRRewriterDestroy(MlirRewriterBase rewriter);
 
 //===----------------------------------------------------------------------===//
+/// Dialect constant materialization API
+//===----------------------------------------------------------------------===//
+
+/// Materializes a constant for the given attribute `value` and `type` using the
+/// dialect's `materializeConstant` hook. The operation is created with the
+/// given rewriter (used as an OpBuilder) at its current insertion point,
+/// without changing that insertion point. Returns a null operation if the
+/// dialect does not support materializing the given constant.
+MLIR_CAPI_EXPORTED MlirOperation mlirDialectMaterializeConstant(
+    MlirDialect dialect, MlirRewriterBase rewriter, MlirAttribute value,
+    MlirType type, MlirLocation loc);
+
+//===----------------------------------------------------------------------===//
 /// FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 
