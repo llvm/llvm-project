@@ -153,7 +153,8 @@ public:
   MemCmpExpansion(CallInst *CI, uint64_t Size,
                   const TargetTransformInfo::MemCmpExpansionOptions &Options,
                   const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout,
-                  DomTreeUpdater *DTU, const TargetTransformInfo &TTI);
+                  DomTreeUpdater *DTU, const TargetTransformInfo &TTI,
+                  Align BaseAlign);
 
   unsigned getNumBlocks();
   uint64_t getNumLoads() const { return LoadSequence.size(); }
@@ -313,12 +314,10 @@ MemCmpExpansion::MemCmpExpansion(
     CallInst *const CI, uint64_t Size,
     const TargetTransformInfo::MemCmpExpansionOptions &Options,
     const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout,
-    DomTreeUpdater *DTU, const TargetTransformInfo &TTI)
+    DomTreeUpdater *DTU, const TargetTransformInfo &TTI, Align BaseAlign)
     : CI(CI), Size(Size), NumLoadsPerBlockForZeroCmp(Options.NumLoadsPerBlock),
       IsUsedForZeroCmp(IsUsedForZeroCmp), DL(TheDataLayout), TTI(TTI),
-      BaseAlign(std::min(getMemCmpArgAlignment(CI, 0, DL),
-                         getMemCmpArgAlignment(CI, 1, DL))),
-      DTU(DTU), Builder(CI) {
+      BaseAlign(BaseAlign), DTU(DTU), Builder(CI) {
   assert(Size > 0 && "zero blocks");
   // Scale the max size down if the target can load more bytes than we need.
   llvm::ArrayRef<unsigned> LoadSizes(Options.LoadSizes);
@@ -929,11 +928,10 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   // kept here is always accessible in that sequence; overlapping loads and
   // merged tail expansions are checked separately against their actual offsets
   // in MemCmpExpansion.
-  const Align LhsAlign = getMemCmpArgAlignment(CI, 0, *DL);
-  const Align RhsAlign = getMemCmpArgAlignment(CI, 1, *DL);
-  const Align MinAlign = std::min(LhsAlign, RhsAlign);
+  const Align BaseAlign = std::min(getMemCmpArgAlignment(CI, 0, *DL),
+                                   getMemCmpArgAlignment(CI, 1, *DL));
   llvm::erase_if(Options.LoadSizes, [&](unsigned LoadSize) {
-    return !isAccessAllowed(CI, *TTI, MinAlign, LoadSize, /*Offset=*/0);
+    return !isAccessAllowed(CI, *TTI, BaseAlign, LoadSize, /*Offset=*/0);
   });
   // If the filter removed every load size, bail out to the libcall: the
   // MemCmpExpansion constructor asserts that at least one load size remains.
@@ -943,7 +941,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
     return false;
 
   MemCmpExpansion Expansion(CI, SizeVal, Options, IsUsedForZeroCmp, *DL, DTU,
-                            *TTI);
+                            *TTI, BaseAlign);
 
   // Don't expand if this will require more loads than desired by the target.
   if (Expansion.getNumLoads() == 0) {
