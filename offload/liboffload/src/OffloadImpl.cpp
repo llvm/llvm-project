@@ -584,6 +584,23 @@ Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
   return Error::success();
 }
 
+Error olElfIsCompatibleWithDevice_impl(ol_device_handle_t Device,
+                                       const void *ElfData, size_t ElfSize,
+                                       bool *IsCompatible) {
+  GenericDeviceTy *DeviceTy = Device->Device;
+  int32_t DeviceId = DeviceTy->getDeviceId();
+  GenericPluginTy &DevicePlugin = DeviceTy->Plugin;
+
+  StringRef Image(reinterpret_cast<const char *>(ElfData), ElfSize);
+
+  Expected<bool> ResultOrErr = DevicePlugin.isELFCompatible(DeviceId, Image);
+  if (!ResultOrErr)
+    return ResultOrErr.takeError();
+
+  *IsCompatible = *ResultOrErr;
+  return Error::success();
+}
+
 TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
   switch (Type) {
   case OL_ALLOC_TYPE_DEVICE:
