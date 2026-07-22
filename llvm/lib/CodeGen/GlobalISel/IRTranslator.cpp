@@ -2522,7 +2522,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group: {
+  case Intrinsic::strip_invariant_group:
+  case Intrinsic::threadlocal_address: {
     // Drop the intrinsic, but forward the value.
     MIRBuilder.buildCopy(getOrCreateVReg(CI),
                          getOrCreateVReg(*CI.getArgOperand(0)));
@@ -2881,7 +2882,6 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     const Function &Fn = MF->getFunction();
     Fn.getContext().diagnose(
         DiagnosticInfoUnsupportedTargetIntrinsic(Fn, ID, CI.getDebugLoc()));
-    return false;
   }
 
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
@@ -2901,7 +2901,6 @@ bool IRTranslator::translateIntrinsic(
     const Function &F = MF->getFunction();
     F.getContext().diagnose(
         DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
-    return false;
   }
 
   ArrayRef<Register> ResultRegs;
@@ -4101,11 +4100,6 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
                       MachinePointerInfo::getFixedStack(*MF, FI), Align,
                       MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile)
           .getReg(0);
-
-  if (TLI->useStackGuardXorFP()) {
-    LLVM_DEBUG(dbgs() << "Stack protector xor'ing with FP not yet implemented");
-    return false;
-  }
 
   // Retrieve guard check function, nullptr if instrumentation is inlined.
   if (const Function *GuardCheckFn = TLI->getSSPStackGuardCheck(M, *Libcalls)) {

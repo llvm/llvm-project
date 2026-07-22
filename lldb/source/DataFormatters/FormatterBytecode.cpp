@@ -107,26 +107,26 @@ static llvm::Error FormatImpl(DataStack &data) {
     }
     using namespace llvm::support::detail;
     auto arg = data[data.size() - num_args + r.Index];
-    auto format = [&](format_adapter &&adapter) {
+    auto format = [&](FormatFunctorRef &&adapter) {
       llvm::FmtAlign Align(adapter, r.Where, r.Width, r.Pad);
       Align.format(os, r.Options);
     };
 
     if (auto s = std::get_if<std::string>(&arg))
-      format(build_format_adapter(s->c_str()));
+      format(FormatFunctor(s->c_str()));
     else if (auto u = std::get_if<uint64_t>(&arg))
-      format(build_format_adapter(u));
+      format(FormatFunctor(u));
     else if (auto i = std::get_if<int64_t>(&arg))
-      format(build_format_adapter(i));
+      format(FormatFunctor(i));
     else if (auto valobj = std::get_if<ValueObjectSP>(&arg)) {
       if (!valobj->get())
-        format(build_format_adapter("null object"));
+        format(FormatFunctor("null object"));
       else
-        format(build_format_adapter(valobj->get()->GetValueAsCString()));
+        format(FormatFunctor(valobj->get()->GetValueAsCString()));
     } else if (auto type = std::get_if<CompilerType>(&arg))
-      format(build_format_adapter(type->GetDisplayTypeName()));
+      format(FormatFunctor(type->GetDisplayTypeName()));
     else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&arg))
-      format(build_format_adapter(toString(*sel)));
+      format(FormatFunctor(toString(*sel)));
   }
   data.Push(s);
   return llvm::Error::success();

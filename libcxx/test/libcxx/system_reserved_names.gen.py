@@ -122,7 +122,7 @@ for header in public_headers:
 #define __release SYSTEM_RESERVED_NAME
 
 // Android and FreeBSD use this for __attribute__((__unused__))
-#if !defined(__FreeBSD__)  && !defined(__ANDROID__)
+#if !defined(__FreeBSD__)  && !defined(__ANDROID__) && !defined(__GLIBC__)
 #define __unused SYSTEM_RESERVED_NAME
 #endif
 

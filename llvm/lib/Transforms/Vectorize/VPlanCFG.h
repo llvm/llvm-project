@@ -91,9 +91,8 @@ class VPHierarchicalChildrenIterator
     return Current;
   }
 
-  /// Templated helper to dereference successor/predecessor \p EdgeIdx of \p
-  /// Block. Used by both the const and non-const operator* implementations.
-  template <typename T1> static T1 deref(T1 Block, unsigned EdgeIdx) {
+  /// Helper to dereference successor/predecessor \p EdgeIdx of \p Block.
+  static BlockPtrTy deref(BlockPtrTy Block, unsigned EdgeIdx) {
     if (auto *R = dyn_cast<VPRegionBlock>(Block)) {
       assert(EdgeIdx == 0);
       if constexpr (Forward)
@@ -129,9 +128,7 @@ public:
     return Block == R.Block && EdgeIdx == R.EdgeIdx;
   }
 
-  const VPBlockBase *operator*() const { return deref(Block, EdgeIdx); }
-
-  BlockPtrTy operator*() { return deref(Block, EdgeIdx); }
+  BlockPtrTy operator*() const { return deref(Block, EdgeIdx); }
 
   VPHierarchicalChildrenIterator &operator++() {
     EdgeIdx++;
