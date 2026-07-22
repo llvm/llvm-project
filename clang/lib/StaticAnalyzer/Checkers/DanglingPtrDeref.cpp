@@ -54,7 +54,7 @@ void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   // Only check calls arguments if it is not inlined by the engine. In case a
-  // function is inlined checkLocation handles any dereference in its body
+  // function is inlined checkLocation handles any dereference in its body.
   if (C.wasInlined)
     return;
 
