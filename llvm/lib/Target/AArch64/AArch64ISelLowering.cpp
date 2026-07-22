@@ -34680,6 +34680,7 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   SDLoc DL(Op);
 
   SDValue Acc = Op.getOperand(0);
+  SDValue OrigAcc = Acc;
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
   EVT ResultVT = Op.getValueType();
@@ -34742,29 +34743,38 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   SDValue DotNode = DAG.getNode(Op.getOpcode(), DL, DotVT,
                                 DAG.getConstant(0, DL, DotVT), LHS, RHS);
 
-  SDValue Res;
   bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
+
   if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
     unsigned LoOpcode = IsUnsigned ? AArch64ISD::UADDWB : AArch64ISD::SADDWB;
     unsigned HiOpcode = IsUnsigned ? AArch64ISD::UADDWT : AArch64ISD::SADDWT;
     SDValue Lo = DAG.getNode(LoOpcode, DL, ResultVT, Acc, DotNode);
-    Res = DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
-  } else {
-    // Fold (nx)v4i32 into (nx)v2i64
-    auto [DotNodeLo, DotNodeHi] = DAG.SplitVector(DotNode, DL);
-    if (IsUnsigned) {
-      DotNodeLo = DAG.getZExtOrTrunc(DotNodeLo, DL, ResultVT);
-      DotNodeHi = DAG.getZExtOrTrunc(DotNodeHi, DL, ResultVT);
-    } else {
-      DotNodeLo = DAG.getSExtOrTrunc(DotNodeLo, DL, ResultVT);
-      DotNodeHi = DAG.getSExtOrTrunc(DotNodeHi, DL, ResultVT);
-    }
-    auto Lo = DAG.getNode(ISD::ADD, DL, ResultVT, Acc, DotNodeLo);
-    Res = DAG.getNode(ISD::ADD, DL, ResultVT, Lo, DotNodeHi);
+    SDValue Res = DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
+    return ConvertToScalable ? convertFromScalableVector(DAG, OrigResultVT, Res)
+                             : Res;
   }
 
-  return ConvertToScalable ? convertFromScalableVector(DAG, OrigResultVT, Res)
-                           : Res;
+  // Fold (nx)v4i32 into (nx)v2i64. Convert from scalable vectors before
+  // splitting: the dot sums sit in the low i32 lanes regardless of VL, so
+  // splitting after the extract would drop a fixed-length result's high lanes
+  // for VL > 128. See PR #177119 / issue #176954.
+  SDValue FoldDot = DotNode;
+  if (ConvertToScalable) {
+    // The dot holds two i32 lanes per i64 result lane.
+    EVT FixedDotVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                                      OrigResultVT.getVectorNumElements() * 2);
+    FoldDot = convertFromScalableVector(DAG, FixedDotVT, DotNode);
+  }
+  auto [DotNodeLo, DotNodeHi] = DAG.SplitVector(FoldDot, DL);
+  if (IsUnsigned) {
+    DotNodeLo = DAG.getZExtOrTrunc(DotNodeLo, DL, OrigResultVT);
+    DotNodeHi = DAG.getZExtOrTrunc(DotNodeHi, DL, OrigResultVT);
+  } else {
+    DotNodeLo = DAG.getSExtOrTrunc(DotNodeLo, DL, OrigResultVT);
+    DotNodeHi = DAG.getSExtOrTrunc(DotNodeHi, DL, OrigResultVT);
+  }
+  SDValue Lo = DAG.getNode(ISD::ADD, DL, OrigResultVT, OrigAcc, DotNodeLo);
+  return DAG.getNode(ISD::ADD, DL, OrigResultVT, Lo, DotNodeHi);
 }
 
 SDValue
