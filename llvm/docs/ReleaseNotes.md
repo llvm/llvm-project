@@ -87,6 +87,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the ARM Backend
 
+* Using the hard-float procedure call standard without floating-point registers
+  is now an error. Previously this would fall back to the soft-float PCS while
+  still emitting the hard-float ABI attribute tag.
+
 ### Changes to the AVR Backend
 
 ### Changes to the DirectX Backend

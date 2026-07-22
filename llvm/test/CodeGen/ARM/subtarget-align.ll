@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm-linux-gnueabihf -filetype=obj <%s | llvm-objdump --triple=armv7 --no-show-raw-insn -d - | FileCheck %s
+; RUN: llc -mtriple=arm-linux-gnueabi -filetype=obj <%s | llvm-objdump --triple=armv7 --no-show-raw-insn -d - | FileCheck %s
 
 ;; Expect architectural nop to be used between func2 and func3 but not func1
 ;; and func2 due to lack of subtarget support in func2.
