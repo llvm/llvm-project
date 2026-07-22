@@ -1869,8 +1869,8 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
     assert(!sym);
     objSym.Name = ctx.uniqueSaver.save(objSym.getName());
     sym = reinterpret_cast<Symbol *>(makeThreadLocalN<SymbolUnion>(1));
-    new (sym) Defined(ctx, &f, StringRef(), binding, visibility, type, 0, 0,
-                      nullptr);
+    new (sym)
+        Defined(ctx, &f, StringRef(), binding, visibility, type, 0, 0, nullptr);
     return;
   }
 
