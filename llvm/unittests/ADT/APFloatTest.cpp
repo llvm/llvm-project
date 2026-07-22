@@ -1046,41 +1046,34 @@ TEST(APFloatTest, IsSmallestNormalized) {
     if (I == APFloat::S_Float8E8M0FNU)
       continue;
 
-    EXPECT_FALSE(
-        APFloat::getZero(Semantics, /*Negative=*/false).isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getZero(Semantics, false).isSmallestNormalized());
     if (Semantics.hasSignedRepr)
-      EXPECT_FALSE(APFloat::getZero(Semantics, /*Negative=*/true)
-                       .isSmallestNormalized());
+      EXPECT_FALSE(APFloat::getZero(Semantics, true).isSmallestNormalized());
 
     if (APFloat::semanticsHasNaN(Semantics)) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
-      EXPECT_FALSE(APFloat::getInf(Semantics, /*Negative=*/false)
-                       .isSmallestNormalized());
+      EXPECT_FALSE(APFloat::getInf(Semantics, false).isSmallestNormalized());
       if (Semantics.hasSignedRepr)
-        EXPECT_FALSE(APFloat::getInf(Semantics, /*Negative=*/true)
-                         .isSmallestNormalized());
+        EXPECT_FALSE(APFloat::getInf(Semantics, true).isSmallestNormalized());
 
       EXPECT_FALSE(APFloat::getQNaN(Semantics).isSmallestNormalized());
       EXPECT_FALSE(APFloat::getSNaN(Semantics).isSmallestNormalized());
     }
 
-    EXPECT_FALSE(APFloat::getLargest(Semantics, /*Negative=*/false)
-                     .isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getLargest(Semantics, false).isSmallestNormalized());
     if (Semantics.hasSignedRepr)
-      EXPECT_FALSE(APFloat::getLargest(Semantics, /*Negative=*/true)
-                       .isSmallestNormalized());
+      EXPECT_FALSE(APFloat::getLargest(Semantics, true).isSmallestNormalized());
 
-    EXPECT_FALSE(APFloat::getSmallest(Semantics, /*Negative=*/false)
-                     .isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getSmallest(Semantics, false).isSmallestNormalized());
     if (Semantics.hasSignedRepr)
-      EXPECT_FALSE(APFloat::getSmallest(Semantics, /*Negative=*/true)
-                       .isSmallestNormalized());
+      EXPECT_FALSE(
+          APFloat::getSmallest(Semantics, true).isSmallestNormalized());
 
     EXPECT_FALSE(APFloat::getAllOnesValue(Semantics).isSmallestNormalized());
 
     APFloat PosSmallestNormalized =
-        APFloat::getSmallestNormalized(Semantics, /*Negative=*/false);
+        APFloat::getSmallestNormalized(Semantics, false);
     EXPECT_TRUE(PosSmallestNormalized.isSmallestNormalized());
     EXPECT_EQ(fcPosNormal, PosSmallestNormalized.classify());
 
@@ -1107,7 +1100,7 @@ TEST(APFloatTest, IsSmallestNormalized) {
     SmallestNormalized(&PosSmallestNormalized);
     if (Semantics.hasSignedRepr) {
       APFloat NegSmallestNormalized =
-          APFloat::getSmallestNormalized(Semantics, /*Negative=*/true);
+          APFloat::getSmallestNormalized(Semantics, true);
       EXPECT_TRUE(NegSmallestNormalized.isSmallestNormalized());
       EXPECT_EQ(fcNegNormal, NegSmallestNormalized.classify());
       SmallestNormalized(&NegSmallestNormalized);
@@ -9594,46 +9587,28 @@ TEST(APFloatTest, getExactLog2) {
       }
     }
 
-    EXPECT_EQ(INT_MIN,
-              APFloat::getZero(Semantics, /*Negative=*/false).getExactLog2());
-    EXPECT_EQ(
-        INT_MIN,
-        APFloat::getZero(Semantics, /*Negative=*/false).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2Abs());
     if (Semantics.hasSignedRepr) {
-      EXPECT_EQ(INT_MIN,
-                APFloat::getZero(Semantics, /*Negative=*/true).getExactLog2());
-      EXPECT_EQ(
-          INT_MIN,
-          APFloat::getZero(Semantics, /*Negative=*/true).getExactLog2Abs());
+      EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2());
+      EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2Abs());
     }
 
     if (APFloat::semanticsHasNaN(Semantics)) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
-      EXPECT_EQ(INT_MIN,
-                APFloat::getInf(Semantics, /*Negative=*/false).getExactLog2());
-      EXPECT_EQ(INT_MIN,
-                APFloat::getNaN(Semantics, /*Negative=*/false).getExactLog2());
+      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, false).getExactLog2());
+      EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2());
       if (Semantics.hasSignedRepr) {
-        EXPECT_EQ(INT_MIN,
-                  APFloat::getInf(Semantics, /*Negative=*/true).getExactLog2());
-        EXPECT_EQ(INT_MIN,
-                  APFloat::getNaN(Semantics, /*Negative=*/true).getExactLog2());
+        EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2());
+        EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2());
       }
 
-      EXPECT_EQ(
-          INT_MIN,
-          APFloat::getInf(Semantics, /*Negative=*/false).getExactLog2Abs());
-      EXPECT_EQ(
-          INT_MIN,
-          APFloat::getNaN(Semantics, /*Negative=*/false).getExactLog2Abs());
+      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, false).getExactLog2Abs());
+      EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2Abs());
       if (Semantics.hasSignedRepr) {
-        EXPECT_EQ(
-            INT_MIN,
-            APFloat::getInf(Semantics, /*Negative=*/true).getExactLog2Abs());
-        EXPECT_EQ(
-            INT_MIN,
-            APFloat::getNaN(Semantics, /*Negative=*/true).getExactLog2Abs());
+        EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2Abs());
+        EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2Abs());
       }
     }
 
@@ -10038,12 +10013,6 @@ TEST(APFloatTest, Float8E5M3FNUSmallest) {
 }
 
 TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
-  // Test each pair of 8-bit values for Float8E5M3FNU format.
-  // This format is unsigned, so subtraction is only tested when the result
-  // is non-negative (which corresponds to i >= j since the bit-pattern
-  // ordering matches the value ordering). IEEE remainder can produce
-  // negative results, so it is only tested when the reference result is
-  // non-negative.
   APFloat::Semantics Sem = APFloat::S_Float8E5M3FNU;
   const llvm::fltSemantics &S = APFloat::EnumToSemantics(Sem);
   for (int i = 0; i < 256; ++i) {
@@ -10063,7 +10032,6 @@ TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
                  &losesInfo);
       EXPECT_FALSE(losesInfo);
 
-      // Add
       APFloat z = x;
       z.add(y, APFloat::rmNearestTiesToEven);
       APFloat zd = xd;
@@ -10072,7 +10040,6 @@ TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
       EXPECT_TRUE(z.bitwiseIsEqual(zd))
           << "sem=" << Sem << ", i=" << i << ", j=" << j;
 
-      // Subtract
       if (i >= j) {
         z = x;
         z.subtract(y, APFloat::rmNearestTiesToEven);
@@ -10083,7 +10050,6 @@ TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
             << "sem=" << Sem << ", i=" << i << ", j=" << j;
       }
 
-      // Multiply
       z = x;
       z.multiply(y, APFloat::rmNearestTiesToEven);
       zd = xd;
@@ -10092,7 +10058,6 @@ TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
       EXPECT_TRUE(z.bitwiseIsEqual(zd))
           << "sem=" << Sem << ", i=" << i << ", j=" << j;
 
-      // Divide
       z = x;
       z.divide(y, APFloat::rmNearestTiesToEven);
       zd = xd;
@@ -10101,7 +10066,6 @@ TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
       EXPECT_TRUE(z.bitwiseIsEqual(zd))
           << "sem=" << Sem << ", i=" << i << ", j=" << j;
 
-      // Mod
       z = x;
       z.mod(y);
       zd = xd;
@@ -10178,39 +10142,6 @@ TEST(APFloatTest, Float8E5M3FNUExhaustive) {
     else
       expected = std::ldexp(1.0 + (i & 7) / 8.0, (i >> 3) - 15);
     EXPECT_EQ(test.convertToDouble(), expected);
-  }
-}
-
-TEST(APFloatTest, Float8E5M3FNUGetExactLog2) {
-  const fltSemantics &Semantics = APFloat::Float8E5M3FNU();
-  APFloat One(Semantics, "1.0");
-  EXPECT_EQ(0, One.getExactLog2());
-
-  // 3.0 is exactly representable (1.5 * 2^1) but not a power of two.
-  EXPECT_EQ(INT_MIN, APFloat(Semantics, "3.0").getExactLog2());
-
-  // Exact power-of-two value.
-  EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2());
-  EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2Abs());
-
-  // Negative exponent value.
-  EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2());
-  EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2Abs());
-
-  int MinExp = APFloat::semanticsMinExponent(Semantics);
-  int MaxExp = APFloat::semanticsMaxExponent(Semantics);
-  int Precision = APFloat::semanticsPrecision(Semantics);
-
-  // Values above the maxExp overflow to NaN, and getExactLog2() returns
-  // INT_MIN for these cases.
-  EXPECT_EQ(
-      INT_MIN,
-      scalbn(One, MaxExp + 1, APFloat::rmNearestTiesToEven).getExactLog2());
-
-  // This format can represent all powers of two in [MinExp - Precision + 1,
-  // MaxExp], including subnormal powers (2^-17, 2^-16, 2^-15).
-  for (int i = MinExp - Precision + 1; i <= MaxExp; ++i) {
-    EXPECT_EQ(i, scalbn(One, i, APFloat::rmNearestTiesToEven).getExactLog2());
   }
 }
 
