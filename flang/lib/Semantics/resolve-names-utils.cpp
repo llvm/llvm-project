@@ -418,13 +418,20 @@ ArraySpecAnalyzer::CheckExplicitShapeBoundsSpec(
   // Returns the Bound paired with the extent of the bound: std::nullopt
   // for a scalar bound (which broadcasts to every dimension) or, for a
   // rank-1 array bound, its constant extent (which may be zero).
+
+  // hasError should not be set to true unless there was an error
+  // diagnostic emitted beforehand.
   bool hasError{false};
   auto analyzeBound = [&](const auto &parseBound, bool isUpper)
       -> std::optional<std::pair<Bound, std::optional<std::int64_t>>> {
-    MaybeExpr expr{AnalyzeExpr(context_, parseBound.thing)};
-    // expr should never be invalid since it was analyzed as part
-    // of the rewrite to ExplicitShapeBoundsSpec
-    CHECK(expr);
+    MaybeExpr expr{AnalyzeExpr(context_, parseBound)};
+    // Analyzing the parser::Integer<> wrapper enforces the INTEGER type
+    // constraint (C885) and emits a diagnostic for a non-INTEGER bound,
+    // returning std::nullopt.
+    if (!expr) {
+      hasError = true;
+      return std::nullopt;
+    }
     if (expr->Rank() > 1) {
       context_.Say(parser::FindSourceLocation(parseBound),
           "Integer array used as %s bounds in DECLARATION must be rank-1 "
@@ -434,11 +441,11 @@ ArraySpecAnalyzer::CheckExplicitShapeBoundsSpec(
       return std::nullopt;
     }
     auto folded{evaluate::Fold(context_.foldingContext(), std::move(*expr))};
+    // The parser::Integer<> constraint enforced above guarantees an INTEGER
+    // type, so unwrapping the folded result as an integer expression must
+    // succeed.
     const auto *someInt{evaluate::UnwrapExpr<SomeIntExpr>(folded)};
-    if (!someInt) {
-      hasError = true;
-      return std::nullopt;
-    }
+    CHECK(someInt);
     auto asSI{evaluate::Fold(context_.foldingContext(),
         evaluate::ConvertToType<evaluate::SubscriptInteger>(
             common::Clone(*someInt)))};
