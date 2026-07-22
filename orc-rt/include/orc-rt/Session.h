@@ -381,8 +381,8 @@ public:
   /// Call a tagged handler in the Controller.
   ///
   /// This method can be called directly, but is expected to be more commonly
-  /// called via WrapperFunction::call using a CallViaSession object (returned
-  /// by the callViaSession method).
+  /// called via WrapperFunction::call using a ControllerCaller object (returned
+  /// by the controllerCaller method).
   void callController(OnControllerCallReturnFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) {
     if (auto TmpCA = std::atomic_load(&CA))
@@ -396,9 +396,9 @@ public:
   /// controller handler with the given tag.
   ///
   /// Useable as a Caller implementation with WrapperFunction::call.
-  class CallViaSession {
+  class ControllerCaller {
   public:
-    CallViaSession(Session &S, HandlerTag T) : S(S), T(T) {}
+    ControllerCaller(Session &S, HandlerTag T) : S(S), T(T) {}
 
     void operator()(OnControllerCallReturnFn &&HandleResult,
                     WrapperFunctionBuffer ArgBytes) {
@@ -410,10 +410,10 @@ public:
     HandlerTag T;
   };
 
-  /// Get a WrapperFunction::call-compatible Caller that will call through to
-  /// the handler with the given tag.
-  CallViaSession callViaSession(HandlerTag T) noexcept {
-    return CallViaSession(*this, T);
+  /// Get a WrapperFunction::call-compatible Caller that will call the given
+  /// handler in the controller via Session::callController.
+  ControllerCaller controllerCaller(HandlerTag T) noexcept {
+    return ControllerCaller(*this, T);
   }
 
 private:
