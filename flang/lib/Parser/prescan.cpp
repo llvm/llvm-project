@@ -1557,7 +1557,7 @@ const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
     if (canBeNonDirectiveContinuation) {
       const char *col6{nextLine_ + 5};
       if (*col6 != '\n' && *col6 != '0' && !IsSpaceOrTab(col6) &&
-          !(IsCComment(col6) && afterCComment > afterWhiteSpace)) {
+          !(IsCComment(col6) && SkipCComment(col6) > col6)) {
         if ((*col6 == 'i' || *col6 == 'I') && IsIncludeLine(nextLine_)) {
           // It's an INCLUDE line, not a continuation
         } else {
