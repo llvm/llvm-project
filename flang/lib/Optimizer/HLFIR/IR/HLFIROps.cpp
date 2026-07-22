@@ -2460,6 +2460,37 @@ llvm::LogicalResult hlfir::EvaluateInMemoryOp::verify() {
   return mlir::success();
 }
 
+//===----------------------------------------------------------------------===//
+// ConditionalOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::ConditionalOp::build(mlir::OpBuilder &builder,
+                                 mlir::OperationState &odsState,
+                                 mlir::Type resultType, mlir::Value condition) {
+  odsState.addTypes(resultType);
+  odsState.addOperands(condition);
+  // Create the then and else regions, each with one empty block.
+  odsState.addRegion()->emplaceBlock();
+  odsState.addRegion()->emplaceBlock();
+}
+
+llvm::LogicalResult hlfir::ConditionalOp::verify() {
+  if (!mlir::isa<hlfir::ExprType>(getResult().getType()))
+    return emitOpError("result must be an hlfir.expr type");
+  const auto checkRegion = [&](mlir::Region &region,
+                               llvm::StringRef name) -> llvm::LogicalResult {
+    if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(region)))
+      return emitOpError(name)
+             << " region must be terminated by an hlfir.yield";
+    return mlir::success();
+  };
+  if (const auto res = checkRegion(getThenRegion(), "then"); failed(res))
+    return res;
+  if (const auto res = checkRegion(getElseRegion(), "else"); failed(res))
+    return res;
+  return mlir::success();
+}
+
 #include "flang/Optimizer/HLFIR/HLFIROpInterfaces.cpp.inc"
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIREnums.cpp.inc"
