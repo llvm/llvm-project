@@ -73,6 +73,8 @@ public:
     //   %x = [%b,%b,%b,%b] : n-D
     if (srcRank < dstRank) {
       // Duplication.
+      if (dstType.getScalableDims()[0])
+        return failure();
       VectorType resType = VectorType::Builder(dstType).dropDim(0);
       Value bcst =
           vector::BroadcastOp::create(rewriter, loc, resType, op.getSource());
