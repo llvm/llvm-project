@@ -170,28 +170,8 @@ public:
                  PostDominatorTree *PDT);
 
 private:
-  /// Helper class to keep basic block along with its loop data information.
-  class LoopBlock {
-  public:
-    explicit LoopBlock(const BasicBlock *BB, const CycleInfo &CI)
-        : BB(BB), C(CI.getCycle(BB)) {}
-
-    const BasicBlock *getBlock() const { return BB; }
-    BasicBlock *getBlock() { return const_cast<BasicBlock *>(BB); }
-    CycleRef getCycle() const { return C; }
-
-  private:
-    const BasicBlock *const BB;
-    CycleRef C;
-  };
-
-  // Pair of LoopBlocks representing an edge from first to second block.
-  using LoopEdge = std::pair<const LoopBlock &, const LoopBlock &>;
-
-  /// Helper to construct LoopBlock for \p BB.
-  LoopBlock getLoopBlock(const BasicBlock *BB) const {
-    return LoopBlock(BB, *CI);
-  }
+  // Pair representing an edge from first to second block.
+  using LoopEdge = std::pair<const BasicBlock *, const BasicBlock *>;
 
   /// Returns true if destination block belongs to some loop and source block is
   /// either doesn't belong to any loop or belongs to a loop which is not inner
@@ -205,8 +185,8 @@ private:
   /// in all other cases.
   bool isLoopEnteringExitingEdge(const LoopEdge &Edge) const;
   // Fills in \p Enters vector with all "enter" blocks to a loop \LB belongs to.
-  void getLoopEnterBlocks(const LoopBlock &LB,
-                          SmallVectorImpl<BasicBlock *> &Enters) const;
+  void getLoopEnterBlocks(const BasicBlock *LB,
+                          SmallVectorImpl<const BasicBlock *> &Enters) const;
 
   /// Returns estimated weight for \p BB. std::nullopt if \p BB has no estimated
   /// weight.
@@ -226,23 +206,24 @@ private:
   /// estimated weight std::nullopt is returned.
   template <class IterT>
   std::optional<uint32_t>
-  getMaxEstimatedEdgeWeight(const LoopBlock &SrcBB,
+  getMaxEstimatedEdgeWeight(const BasicBlock *SrcBB,
                             iterator_range<IterT> Successors) const;
 
   /// If \p LoopBB has no estimated weight then set it to \p BBWeight and
   /// return true. Otherwise \p BB's weight remains unchanged and false is
   /// returned. In addition all blocks/loops that might need their weight to be
   /// re-estimated are put into BlockWorkList/LoopWorkList.
-  bool updateEstimatedBlockWeight(LoopBlock &LoopBB, uint32_t BBWeight,
-                                  SmallVectorImpl<BasicBlock *> &BlockWorkList,
-                                  SmallVectorImpl<LoopBlock> &LoopWorkList);
+  bool
+  updateEstimatedBlockWeight(const BasicBlock *BB, uint32_t BBWeight,
+                             SmallVectorImpl<const BasicBlock *> &BlockWorkList,
+                             SmallVectorImpl<const BasicBlock *> &LoopWorkList);
 
   /// Starting from \p LoopBB (including \p LoopBB itself) propagate \p BBWeight
   /// up the domination tree.
-  void propagateEstimatedBlockWeight(const LoopBlock &LoopBB, DominatorTree *DT,
-                                     PostDominatorTree *PDT, uint32_t BBWeight,
-                                     SmallVectorImpl<BasicBlock *> &WorkList,
-                                     SmallVectorImpl<LoopBlock> &LoopWorkList);
+  void propagateEstimatedBlockWeight(
+      const BasicBlock *BB, DominatorTree *DT, PostDominatorTree *PDT,
+      uint32_t BBWeight, SmallVectorImpl<const BasicBlock *> &WorkList,
+      SmallVectorImpl<const BasicBlock *> &LoopWorkList);
 
   /// Returns block's weight encoded in the IR.
   std::optional<uint32_t> getInitialEstimatedBlockWeight(const BasicBlock *BB);
@@ -271,13 +252,13 @@ private:
 };
 
 bool BPIConstruction::isLoopEnteringEdge(const LoopEdge &Edge) const {
-  const auto &SrcBlock = Edge.first;
-  const auto &DstBlock = Edge.second;
-  if (!DstBlock.getCycle()) // Edge into no-cycle is not entering.
+  CycleRef SrcCycle = CI->getCycle(Edge.first);
+  CycleRef DstCycle = CI->getCycle(Edge.second);
+  if (!DstCycle) // Edge into no-cycle is not entering.
     return false;
-  if (!SrcBlock.getCycle()) // Edge from no-cycle into cycle is entering.
+  if (!SrcCycle) // Edge from no-cycle into cycle is entering.
     return true;
-  return !CI->contains(DstBlock.getCycle(), SrcBlock.getCycle());
+  return !CI->contains(DstCycle, SrcCycle);
 }
 
 bool BPIConstruction::isLoopExitingEdge(const LoopEdge &Edge) const {
@@ -289,12 +270,12 @@ bool BPIConstruction::isLoopEnteringExitingEdge(const LoopEdge &Edge) const {
 }
 
 void BPIConstruction::getLoopEnterBlocks(
-    const LoopBlock &LB, SmallVectorImpl<BasicBlock *> &Enters) const {
-  CycleRef C = LB.getCycle();
+    const BasicBlock *BB, SmallVectorImpl<const BasicBlock *> &Enters) const {
+  CycleRef C = CI->getCycle(BB);
   for (BasicBlock *Entry : CI->getEntries(C))
     for (const auto *Pred : predecessors(Entry))
       if (!CI->contains(C, Pred))
-        Enters.push_back(const_cast<BasicBlock *>(Pred));
+        Enters.push_back(Pred);
 }
 
 // Propagate existing explicit probabilities from either profile data or
@@ -327,9 +308,7 @@ bool BPIConstruction::calcMetadataWeights(const BasicBlock *BB) {
   auto Succs = succ_begin(TI);
   for (unsigned I = 0, E = Weights.size(); I != E; ++I) {
     WeightSum += Weights[I];
-    const LoopBlock SrcLoopBB = getLoopBlock(BB);
-    const LoopBlock DstLoopBB = getLoopBlock(*Succs++);
-    auto EstimatedWeight = getEstimatedEdgeWeight({SrcLoopBB, DstLoopBB});
+    auto EstimatedWeight = getEstimatedEdgeWeight({BB, *Succs++});
     if (EstimatedWeight &&
         *EstimatedWeight <= static_cast<uint32_t>(BlockExecWeight::UNREACHABLE))
       UnreachableIdxs.push_back(I);
@@ -593,21 +572,18 @@ BPIConstruction::getEstimatedEdgeWeight(const LoopEdge &Edge) const {
   // For edges entering a loop take weight of a loop rather than an individual
   // block in the loop.
   return isLoopEnteringEdge(Edge)
-             ? getEstimatedLoopWeight(Edge.second.getCycle())
-             : getEstimatedBlockWeight(Edge.second.getBlock());
+             ? getEstimatedLoopWeight(CI->getCycle(Edge.second))
+             : getEstimatedBlockWeight(Edge.second);
 }
 
 template <class IterT>
 std::optional<uint32_t> BPIConstruction::getMaxEstimatedEdgeWeight(
-    const LoopBlock &SrcLoopBB, iterator_range<IterT> Successors) const {
+    const BasicBlock *SrcBB, iterator_range<IterT> Successors) const {
   std::optional<uint32_t> MaxWeight;
   for (const BasicBlock *DstBB : Successors) {
-    const LoopBlock DstLoopBB = getLoopBlock(DstBB);
-    auto Weight = getEstimatedEdgeWeight({SrcLoopBB, DstLoopBB});
-
+    auto Weight = getEstimatedEdgeWeight({SrcBB, DstBB});
     if (!Weight)
       return std::nullopt;
-
     if (!MaxWeight || *MaxWeight < *Weight)
       MaxWeight = Weight;
   }
@@ -621,11 +597,9 @@ std::optional<uint32_t> BPIConstruction::getMaxEstimatedEdgeWeight(
 // Please note by the algorithm the weight is not expected to change once set
 // thus 'false' status is used to track visited blocks.
 bool BPIConstruction::updateEstimatedBlockWeight(
-    LoopBlock &LoopBB, uint32_t BBWeight,
-    SmallVectorImpl<BasicBlock *> &BlockWorkList,
-    SmallVectorImpl<LoopBlock> &LoopWorkList) {
-  BasicBlock *BB = LoopBB.getBlock();
-
+    const BasicBlock *BB, uint32_t BBWeight,
+    SmallVectorImpl<const BasicBlock *> &BlockWorkList,
+    SmallVectorImpl<const BasicBlock *> &LoopWorkList) {
   // In general, weight is assigned to a block when it has final value and
   // can't/shouldn't be changed.  However, there are cases when a block
   // inherently has several (possibly "contradicting") weights. For example,
@@ -634,12 +608,11 @@ bool BPIConstruction::updateEstimatedBlockWeight(
   if (!EstimatedBlockWeight.insert({BB, BBWeight}).second)
     return false;
 
-  for (BasicBlock *PredBlock : predecessors(BB)) {
-    LoopBlock PredLoop = getLoopBlock(PredBlock);
+  for (const BasicBlock *PredBlock : predecessors(BB)) {
     // Add affected block/loop to a working list.
-    if (isLoopExitingEdge({PredLoop, LoopBB})) {
-      if (!EstimatedLoopWeight.count(PredLoop.getCycle()))
-        LoopWorkList.push_back(PredLoop);
+    if (isLoopExitingEdge({PredBlock, BB})) {
+      if (!EstimatedLoopWeight.count(CI->getCycle(PredBlock)))
+        LoopWorkList.push_back(PredBlock);
     } else if (!EstimatedBlockWeight.count(PredBlock))
       BlockWorkList.push_back(PredBlock);
   }
@@ -659,10 +632,9 @@ bool BPIConstruction::updateEstimatedBlockWeight(
 // In addition, \p WorkList is populated with basic blocks if at leas one
 // successor has updated estimated weight.
 void BPIConstruction::propagateEstimatedBlockWeight(
-    const LoopBlock &LoopBB, DominatorTree *DT, PostDominatorTree *PDT,
-    uint32_t BBWeight, SmallVectorImpl<BasicBlock *> &BlockWorkList,
-    SmallVectorImpl<LoopBlock> &LoopWorkList) {
-  const BasicBlock *BB = LoopBB.getBlock();
+    const BasicBlock *BB, DominatorTree *DT, PostDominatorTree *PDT,
+    uint32_t BBWeight, SmallVectorImpl<const BasicBlock *> &BlockWorkList,
+    SmallVectorImpl<const BasicBlock *> &LoopWorkList) {
   const auto *DTStartNode = DT->getNode(BB);
   const auto *PDTStartNode = PDT->getNode(BB);
 
@@ -676,17 +648,16 @@ void BPIConstruction::propagateEstimatedBlockWeight(
       // of DomBB as well.
       break;
 
-    LoopBlock DomLoopBB = getLoopBlock(DomBB);
-    const LoopEdge Edge{DomLoopBB, LoopBB};
+    const LoopEdge Edge{DomBB, BB};
     // Don't propagate weight to blocks belonging to different loops.
     if (!isLoopEnteringExitingEdge(Edge)) {
-      if (!updateEstimatedBlockWeight(DomLoopBB, BBWeight, BlockWorkList,
+      if (!updateEstimatedBlockWeight(DomBB, BBWeight, BlockWorkList,
                                       LoopWorkList))
         // If DomBB has weight set then all it's predecessors are already
         // processed (since we propagate weight up to the top of IR each time).
         break;
     } else if (isLoopExitingEdge(Edge)) {
-      LoopWorkList.push_back(DomLoopBB);
+      LoopWorkList.push_back(DomBB);
     }
   }
 }
@@ -734,8 +705,8 @@ BPIConstruction::getInitialEstimatedBlockWeight(const BasicBlock *BB) {
 // best to propagate the weight to up/down the IR.
 void BPIConstruction::estimateBlockWeights(const Function &F, DominatorTree *DT,
                                            PostDominatorTree *PDT) {
-  SmallVector<BasicBlock *, 8> BlockWorkList;
-  SmallVector<LoopBlock, 8> LoopWorkList;
+  SmallVector<const BasicBlock *, 8> BlockWorkList;
+  SmallVector<const BasicBlock *, 8> LoopWorkList;
   SmallDenseMap<CycleRef, SmallVector<BasicBlock *, 4>> LoopExitBlocks;
 
   // By doing RPO we make sure that all predecessors already have weights
@@ -745,8 +716,8 @@ void BPIConstruction::estimateBlockWeights(const Function &F, DominatorTree *DT,
     if (auto BBWeight = getInitialEstimatedBlockWeight(BB))
       // If we were able to find estimated weight for the block set it to this
       // block and propagate up the IR.
-      propagateEstimatedBlockWeight(getLoopBlock(BB), DT, PDT, *BBWeight,
-                                    BlockWorkList, LoopWorkList);
+      propagateEstimatedBlockWeight(BB, DT, PDT, *BBWeight, BlockWorkList,
+                                    LoopWorkList);
 
   // BlockWorklist/LoopWorkList contains blocks/loops with at least one
   // successor/exit having estimated weight. Try to propagate weight to such
@@ -754,8 +725,8 @@ void BPIConstruction::estimateBlockWeights(const Function &F, DominatorTree *DT,
   // Process loops and blocks. Order is not important.
   do {
     while (!LoopWorkList.empty()) {
-      const LoopBlock LoopBB = LoopWorkList.pop_back_val();
-      CycleRef C = LoopBB.getCycle();
+      const BasicBlock *LoopBB = LoopWorkList.pop_back_val();
+      CycleRef C = CI->getCycle(LoopBB);
       if (EstimatedLoopWeight.count(C))
         continue;
 
@@ -789,12 +760,11 @@ void BPIConstruction::estimateBlockWeights(const Function &F, DominatorTree *DT,
       // can't
       // think of any right now. And I doubt it will make any difference in
       // practice.
-      const LoopBlock LoopBB = getLoopBlock(BB);
-      auto MaxWeight = getMaxEstimatedEdgeWeight(LoopBB, successors(BB));
+      auto MaxWeight = getMaxEstimatedEdgeWeight(BB, successors(BB));
 
       if (MaxWeight)
-        propagateEstimatedBlockWeight(LoopBB, DT, PDT, *MaxWeight,
-                                      BlockWorkList, LoopWorkList);
+        propagateEstimatedBlockWeight(BB, DT, PDT, *MaxWeight, BlockWorkList,
+                                      LoopWorkList);
     }
   } while (!BlockWorkList.empty() || !LoopWorkList.empty());
 }
@@ -806,12 +776,12 @@ bool BPIConstruction::calcEstimatedHeuristics(const BasicBlock *BB) {
   assert(BB->getTerminator()->getNumSuccessors() > 1 &&
          "expected more than one successor!");
 
-  const LoopBlock LoopBB = getLoopBlock(BB);
+  CycleRef BBCycle = CI->getCycle(BB);
 
   SmallPtrSet<const BasicBlock *, 8> UnlikelyBlocks;
   uint32_t TC = LBH_TAKEN_WEIGHT / LBH_NONTAKEN_WEIGHT;
-  if (LoopBB.getCycle())
-    computeUnlikelySuccessors(BB, *CI, LoopBB.getCycle(), UnlikelyBlocks);
+  if (BBCycle)
+    computeUnlikelySuccessors(BB, *CI, BBCycle, UnlikelyBlocks);
 
   // Changed to 'true' if at least one successor has estimated weight.
   bool FoundEstimatedWeight = false;
@@ -820,8 +790,7 @@ bool BPIConstruction::calcEstimatedHeuristics(const BasicBlock *BB) {
   // Go over all successors of BB and put their weights into SuccWeights.
   for (const BasicBlock *SuccBB : successors(BB)) {
     std::optional<uint32_t> Weight;
-    const LoopBlock SuccLoopBB = getLoopBlock(SuccBB);
-    const LoopEdge Edge{LoopBB, SuccLoopBB};
+    const LoopEdge Edge{BB, SuccBB};
 
     Weight = getEstimatedEdgeWeight(Edge);
 
@@ -834,7 +803,7 @@ bool BPIConstruction::calcEstimatedHeuristics(const BasicBlock *BB) {
           Weight.value_or(static_cast<uint32_t>(BlockExecWeight::DEFAULT)) /
               TC);
     }
-    bool IsUnlikelyEdge = LoopBB.getCycle() && UnlikelyBlocks.contains(SuccBB);
+    bool IsUnlikelyEdge = BBCycle && UnlikelyBlocks.contains(SuccBB);
     if (IsUnlikelyEdge &&
         // Avoid adjustment of ZERO weight since it should remain unchanged.
         Weight != static_cast<uint32_t>(BlockExecWeight::ZERO)) {
