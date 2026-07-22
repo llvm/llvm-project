@@ -78,7 +78,7 @@ Args:
     DebugLoc:        { File: basic2.c, Line: 20, Column: 10 }
 ...
 --- !Analysis
-Pass:            prologepilog
+Pass:            prolog-epilog
 Name:            StackSize
 DebugLoc:        { File: basic2.c, Line: 10, Column: 0 }
 Function:        unused1
@@ -89,7 +89,7 @@ Args:
   - String:          ''''
 ...
 --- !Analysis
-Pass:            prologepilog
+Pass:            prolog-epilog
 Name:            StackSize
 DebugLoc:        { File: basic2.c, Line: 19, Column: 0 }
 Function:        foo

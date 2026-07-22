@@ -312,16 +312,16 @@ void Section::DumpName(llvm::raw_ostream &s) const {
     s << '.';
   } else {
     // The top most section prints the module basename
-    const char *name = nullptr;
+    llvm::StringRef name;
     ModuleSP module_sp(GetModule());
 
     if (m_obj_file) {
       const FileSpec &file_spec = m_obj_file->GetFileSpec();
-      name = file_spec.GetFilename().AsCString(nullptr);
+      name = file_spec.GetFilename();
     }
-    if ((!name || !name[0]) && module_sp)
-      name = module_sp->GetFileSpec().GetFilename().AsCString(nullptr);
-    if (name && name[0])
+    if (name.empty() && module_sp)
+      name = module_sp->GetFileSpec().GetFilename();
+    if (!name.empty())
       s << name << '.';
   }
   s << m_name;
@@ -556,21 +556,21 @@ SectionSP SectionList::GetSectionAtIndex(size_t idx) const {
   return sect_sp;
 }
 
-SectionSP SectionList::FindSectionByName(ConstString section_dstr) const {
+SectionSP SectionList::FindSectionByName(llvm::StringRef section_name) const {
   SectionSP sect_sp;
   // Check if we have a valid section string
-  if (section_dstr && !m_sections.empty()) {
+  if (!section_name.empty() && !m_sections.empty()) {
     const_iterator sect_iter;
     const_iterator end = m_sections.end();
     for (sect_iter = m_sections.begin();
          sect_iter != end && sect_sp.get() == nullptr; ++sect_iter) {
       Section *child_section = sect_iter->get();
       if (child_section) {
-        if (child_section->GetName() == section_dstr) {
+        if (child_section->GetName() == section_name) {
           sect_sp = *sect_iter;
         } else {
           sect_sp =
-              child_section->GetChildren().FindSectionByName(section_dstr);
+              child_section->GetChildren().FindSectionByName(section_name);
         }
       }
     }

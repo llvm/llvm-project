@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-windows-msvc \
-; RUN:   -x86-wineh-unwindv3-epilog-distance-threshold=1 -o - %s | FileCheck %s
+; RUN:   -x86-wineh-unwindv3-instr-avg-size=100000 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64-unknown-windows-msvc \
-; RUN:   -x86-wineh-unwindv3-epilog-distance-threshold=1 -filetype=obj %s -o - \
+; RUN:   -x86-wineh-unwindv3-instr-avg-size=100000 -filetype=obj %s -o - \
 ; RUN:   | llvm-readobj --unwind - | FileCheck %s --check-prefix=OBJ
 
 ; Test V3 *size-based* sub-fragment splitting (the "Unwind v2 style" heuristic).

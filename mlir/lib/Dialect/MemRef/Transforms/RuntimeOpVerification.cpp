@@ -362,37 +362,27 @@ struct ExpandShapeOpInterface
                                   generateErrorMessage) const {
     auto expandShapeOp = cast<ExpandShapeOp>(op);
 
-    // Verify that the expanded dim sizes are a product of the collapsed dim
-    // size.
+    SmallVector<OpFoldResult> outputShape = expandShapeOp.getMixedOutputShape();
+
+    // Verify that the product of output dim sizes in each reassociation group
+    // equals the corresponding input dim size.
     for (const auto &it :
          llvm::enumerate(expandShapeOp.getReassociationIndices())) {
       Value srcDimSz =
           DimOp::create(builder, loc, expandShapeOp.getSrc(), it.index());
-      int64_t groupSz = 1;
-      bool foundDynamicDim = false;
-      for (int64_t resultDim : it.value()) {
-        if (expandShapeOp.getResultType().isDynamicDim(resultDim)) {
-          // Keep this assert here in case the op is extended in the future.
-          assert(!foundDynamicDim &&
-                 "more than one dynamic dim found in reassoc group");
-          (void)foundDynamicDim;
-          foundDynamicDim = true;
-          continue;
-        }
-        groupSz *= expandShapeOp.getResultType().getDimSize(resultDim);
+      Value groupProduct = getValueOrCreateConstantIndexOp(
+          builder, loc, outputShape[it.value().front()]);
+      for (int64_t resultDim : llvm::drop_begin(it.value())) {
+        Value dimSz = getValueOrCreateConstantIndexOp(builder, loc,
+                                                      outputShape[resultDim]);
+        groupProduct = arith::MulIOp::create(builder, loc, groupProduct, dimSz);
       }
-      Value staticResultDimSz =
-          arith::ConstantIndexOp::create(builder, loc, groupSz);
-      // staticResultDimSz must divide srcDimSz evenly.
-      Value mod =
-          arith::RemSIOp::create(builder, loc, srcDimSz, staticResultDimSz);
-      Value isModZero = arith::CmpIOp::create(
-          builder, loc, arith::CmpIPredicate::eq, mod,
-          arith::ConstantIndexOp::create(builder, loc, 0));
+      Value isEqual = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, groupProduct, srcDimSz);
       cf::AssertOp::create(
-          builder, loc, isModZero,
-          generateErrorMessage(op, "static result dims in reassoc group do not "
-                                   "divide src dim evenly"));
+          builder, loc, isEqual,
+          generateErrorMessage(op, "product of output dims in reassoc group "
+                                   "does not equal input dim"));
     }
   }
 };

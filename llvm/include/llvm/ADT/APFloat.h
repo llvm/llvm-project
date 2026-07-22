@@ -414,6 +414,12 @@ public:
   /// llvm.convert.from.arbitrary.fp intrinsics.
   LLVM_ABI static bool isValidArbitraryFPFormat(StringRef Format);
 
+  /// Returns the size in bits of a valid arbitrary floating-point format
+  /// string, or 0 if the string is not a valid format. Covers every format
+  /// accepted by isValidArbitraryFPFormat, not only those
+  /// getArbitraryFPSemantics can currently lower.
+  LLVM_ABI static unsigned getArbitraryFPFormatSizeInBits(StringRef Format);
+
   /// Returns the fltSemantics for a given arbitrary FP format string,
   /// or nullptr if invalid.
   LLVM_ABI static const fltSemantics *getArbitraryFPSemantics(StringRef Format);
@@ -994,6 +1000,7 @@ enum class fltNanEncoding {
   // behavior described in https://arxiv.org/abs/2206.02915 .
   NegativeZero,
 };
+
 /* Represents floating point arithmetic semantics.  */
 struct fltSemantics {
   /* The largest E such that 2^E is representable; this matches the
@@ -1028,6 +1035,20 @@ struct fltSemantics {
      If both hasDenormals and hasZero are false exponent 0 is assumed to be a
      regular exponent instead of being reserved. This changes the bias by +1. */
   bool hasDenormals = true;
+
+  /* Whether the integer bit is explicitly represented between significant and
+     exponent, for example as specified by the x86 double extended precision
+     format.
+
+     For bit patterns designated as undefined under the standard the following
+     conversions will happen when converting from bits. These follow x87
+     behaviour:
+     - exponent = all 1's, integer bit 0, significand 0 ("pseudoinfinity")
+     - exponent = all 1's, integer bit 0, significand nonzero ("pseudoNaN")
+     - exponent!=0 nor all 1's, integer bit 0 ("unnormal")
+     - exponent = 0, integer bit 1 ("pseudodenormal")
+     The first three are treated as NaNs, the last one as Normal */
+  bool hasExplicitIntegerBit = false;
 };
 
 // This is a interface class that is currently forwarding functionalities from

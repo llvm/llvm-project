@@ -27,6 +27,7 @@ add_llvm_unittest(OrcJITTests
   EPCGenericMemoryAccessTest.cpp
   EPCGenericDylibManagerTest.cpp
   IndirectionUtilsTest.cpp
+  InProcessEPCTest.cpp
   JITTargetMachineBuilderTest.cpp
   LazyCallThroughAndReexportsTest.cpp
   LibraryResolverTest.cpp

@@ -59,9 +59,11 @@ add_llvm_target(HexagonCodeGen
   HexagonOptAddrMode.cpp
   HexagonOptimizeSZextends.cpp
   HexagonPeephole.cpp
+  HexagonPostRAHandleQFP.cpp
   HexagonQFPOptimizer.cpp
   HexagonRDFOpt.cpp
   HexagonRegisterInfo.cpp
+  HexagonXQFloatGenerator.cpp
   HexagonSelectionDAGInfo.cpp
   HexagonSplitConst32AndConst64.cpp
   HexagonSplitDouble.cpp

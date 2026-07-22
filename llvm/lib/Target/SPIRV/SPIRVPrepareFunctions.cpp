@@ -35,6 +35,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -46,6 +47,7 @@ namespace {
 
 class SPIRVPrepareFunctionsImpl {
   const SPIRVTargetMachine &TM;
+  function_ref<const TargetTransformInfo &(Function &)> GetTTI;
   bool substituteIntrinsicCalls(Function *F);
   bool substituteAbortKHRCalls(Function *F);
   bool terminateBlocksAfterTrap(Module &M, Intrinsic::ID IID);
@@ -53,7 +55,10 @@ class SPIRVPrepareFunctionsImpl {
   bool removeAggregateTypesFromCalls(Function *F);
 
 public:
-  SPIRVPrepareFunctionsImpl(const SPIRVTargetMachine &TM) : TM(TM) {}
+  SPIRVPrepareFunctionsImpl(
+      const SPIRVTargetMachine &TM,
+      function_ref<const TargetTransformInfo &(Function &)> GetTTI)
+      : TM(TM), GetTTI(GetTTI) {}
   bool runOnModule(Module &M);
 };
 
@@ -66,7 +71,14 @@ public:
       : ModulePass(ID), TM(TM) {}
 
   bool runOnModule(Module &M) override {
-    return SPIRVPrepareFunctionsImpl(TM).runOnModule(M);
+    auto GetTTI = [this](Function &F) -> const TargetTransformInfo & {
+      return getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    };
+    return SPIRVPrepareFunctionsImpl(TM, GetTTI).runOnModule(M);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
   StringRef getPassName() const override { return "SPIRV prepare functions"; }
@@ -83,8 +95,11 @@ static cl::list<std::string> SPVAllowUnknownIntrinsics(
 
 char SPIRVPrepareFunctionsLegacy::ID = 0;
 
-INITIALIZE_PASS(SPIRVPrepareFunctionsLegacy, "spirv-prepare-functions",
-                "SPIRV prepare functions", false, false)
+INITIALIZE_PASS_BEGIN(SPIRVPrepareFunctionsLegacy, "spirv-prepare-functions",
+                      "SPIRV prepare functions", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_END(SPIRVPrepareFunctionsLegacy, "spirv-prepare-functions",
+                    "SPIRV prepare functions", false, false)
 
 static std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
   Function *IntrinsicFunc = II->getCalledFunction();
@@ -145,14 +160,12 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
     Intrinsic->setCalledFunction(F);
     return true;
   }
-  // TODO copy arguments attributes: nocapture writeonly.
   FunctionCallee FC =
       M->getOrInsertFunction(FuncName, Intrinsic->getFunctionType());
   auto IntrinsicID = Intrinsic->getIntrinsicID();
   Intrinsic->setCalledFunction(FC);
-
-  F = dyn_cast<Function>(FC.getCallee());
-  assert(F && "Callee must be a function");
+  F = cast<Function>(FC.getCallee());
+  F->setAttributes(Intrinsic->getAttributes());
 
   switch (IntrinsicID) {
   case Intrinsic::memset: {
@@ -454,10 +467,13 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.
 bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
+  if (F->isDeclaration())
+    return false;
+
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   SmallVector<Instruction *> EraseFromParent;
-  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(*F);
+  const TargetTransformInfo &TTI = GetTTI(*F);
   for (BasicBlock &BB : *F) {
     for (Instruction &I : make_early_inc_range(BB)) {
       auto Call = dyn_cast<CallInst>(&I);
@@ -898,7 +914,12 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
 
 PreservedAnalyses SPIRVPrepareFunctions::run(Module &M,
                                              ModuleAnalysisManager &AM) {
-  return SPIRVPrepareFunctionsImpl(TM).runOnModule(M)
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto GetTTI = [&FAM](Function &F) -> const TargetTransformInfo & {
+    return FAM.getResult<TargetIRAnalysis>(F);
+  };
+  return SPIRVPrepareFunctionsImpl(TM, GetTTI).runOnModule(M)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }

@@ -996,7 +996,7 @@ public:
       PyGlobals::get().registerTypeCaster(
           DerivedTy::getTypeIdFunction(),
           nanobind::cast<nanobind::callable>(nanobind::cpp_function(
-              [](PyType pyType) -> DerivedTy { return pyType; })),
+              [](PyType pyType) -> DerivedTy { return DerivedTy(pyType); })),
           /*replace*/ true);
     }
 
@@ -1137,7 +1137,7 @@ public:
           DerivedTy::getTypeIdFunction(),
           nanobind::cast<nanobind::callable>(
               nanobind::cpp_function([](PyAttribute pyAttribute) -> DerivedTy {
-                return pyAttribute;
+                return DerivedTy(pyAttribute);
               })),
           /*replace*/ true);
     }
@@ -1223,7 +1223,7 @@ public:
       PyGlobals::get().registerTypeCaster(
           DerivedTy::getTypeIdFunction(),
           nanobind::cast<nanobind::callable>(nanobind::cpp_function(
-              [](PyLocation pyLoc) -> DerivedTy { return pyLoc; })),
+              [](PyLocation pyLoc) -> DerivedTy { return DerivedTy(pyLoc); })),
           /*replace*/ true);
     }
     DerivedTy::bindDerived(cls);
@@ -1700,7 +1700,7 @@ public:
       PyGlobals::get().registerValueCaster(
           DerivedTy::getTypeIdFunction(),
           nanobind::cast<nanobind::callable>(nanobind::cpp_function(
-              [](PyValue pyValue) -> DerivedTy { return pyValue; })),
+              [](PyValue pyValue) -> DerivedTy { return DerivedTy(pyValue); })),
           /*replace*/ true);
     }
 

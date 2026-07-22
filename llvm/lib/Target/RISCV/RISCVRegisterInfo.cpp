@@ -588,6 +588,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!IsRVVSpill) {
     int64_t Val = Offset.getFixed();
     int64_t Lo12 = SignExtend64<12>(Val);
+    int64_t Lo26 = SignExtend64<26>(Val);
     unsigned Opc = MI.getOpcode();
 
     if (Opc == RISCV::ADDI && !isInt<12>(Val)) {
@@ -614,6 +615,11 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // instruction will add 4 to the immediate. If that would overflow 12
       // bits, we can't fold the offset.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if (Opc == RISCV::QC_E_ADDI || RISCVInstrInfo::isBaseQCLoad(MI) ||
+               RISCVInstrInfo::isBaseQCStore(MI)) {
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
+                                Offset.getScalable());
     } else {
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
@@ -827,11 +833,15 @@ Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
                                            MCRegister Reg) const {
   auto const &STI = MF.getSubtarget<RISCVSubtarget>();
-  if (!STI.getRegisterInfo()->isGeneralPurposeRegister(MF, Reg))
-    llvm::reportFatalInternalError(
-        "isArgumentRegister is not implemented for non-GPR registers");
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
 
-  return llvm::is_contained(RISCV::getArgGPRs(STI.getTargetABI()), Reg);
+  if (TRI->isGeneralPurposeRegister(MF, Reg))
+    return llvm::is_contained(RISCV::getArgGPRs(STI), Reg);
+
+  if (TRI->isFPRegister(Reg))
+    return llvm::is_contained(RISCV::getArgFPRs(STI), Reg);
+
+  return false;
 }
 
 StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {

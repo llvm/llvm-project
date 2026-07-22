@@ -4,7 +4,9 @@
 # RUN:     | FileCheck -check-prefixes=CHECK %s --implicit-check-not="error:"
 
 c.nop 0
-# CHECK: :[[#@LINE-1]]:7: error: immediate must be non-zero in the range [-32, 31]
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[#@LINE-2]]:7: note: unexpected extra operand for instruction
+# CHECK: :[[#@LINE-3]]:7: note: immediate must be non-zero in the range [-32, 31]
 
 c.addi x0, 33
 # CHECK: :[[#@LINE-1]]:12: error: immediate must be an integer in the range [-32, 31]

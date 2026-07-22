@@ -645,66 +645,69 @@ KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
   return Res;
 }
 
-KnownBits KnownBits::pext(const KnownBits &LHS, const KnownBits &RHS) {
-  // For each source position I where mask[I] could be set, the output index j
-  // lies in [M0, M1] where these track the range of possible set-bit counts
-  // seen so far in mask.
-  //
-  // The output bit j
-  // - can be 0 if any candidate LHS[I] could be zero or popcount(mask) could
-  //   be <= j, and
-  // - can be 1 only if some candidate LHS[I] could be one and popcount(mask)
-  //   is known > j.
-  unsigned BitWidth = LHS.getBitWidth();
+KnownBits KnownBits::pext(const KnownBits &Val, const KnownBits &Mask) {
+  unsigned BitWidth = Val.getBitWidth();
   KnownBits Res(BitWidth);
+  // We start by asserting that bits cannot be 0 and cannot be 1, then clear
+  // Res bits where we know a bit could have some value.
   Res.setAllConflict();
 
+  // For each source position I where Mask[I] could be 1, the output position J
+  // lies in [M0, M1], where M0 and M1 track the range of possible 1-bit counts
+  // seen so far in Mask. Note that M0=M1 as long as bits in Mask are known;
+  // otherwise, the range of possible output positions widens.
   unsigned M0 = 0, M1 = 0;
   for (unsigned I = 0; I < BitWidth; ++I) {
-    if (!RHS.Zero[I]) {
-      APInt Range = APInt::getBitsSet(BitWidth, M0, M1 + 1);
-      if (!LHS.Zero[I])
-        Res.Zero &= ~Range; // some position in Range could be 1
-      if (!LHS.One[I])
-        Res.One &= ~Range; // some position in Range could be 0
+    if (!Mask.Zero[I]) {
+      // Mask[I] could be 1, so we decide what value the Res bits could have.
+      if (!Val.Zero[I])
+        // Val[I] could be 1 => Res[J] for J in [M0, M1] could be 1
+        Res.Zero.clearBits(M0, M1 + 1);
+      if (!Val.One[I])
+        // Val[I] could be 0 => Res[J] for J in [M0, M1] could be 0
+        Res.One.clearBits(M0, M1 + 1);
     }
-    if (RHS.One[I])
+    if (Mask.One[I])
       ++M0, ++M1;
-    else if (!RHS.Zero[I])
+    else if (!Mask.Zero[I])
       ++M1;
   }
 
-  // Output positions j >= M0 may have no source (popcount(mask) <= j), in
-  // which case they default to zero.
-  Res.One &= APInt::getLowBitsSet(BitWidth, M0);
+  // Output bits at J >= M0 may have no source (popcount(Mask) may be <= J), so
+  // they may be 0.
+  Res.One.clearBits(M0, BitWidth);
   return Res;
 }
 
-KnownBits KnownBits::pdep(const KnownBits &LHS, const KnownBits &RHS) {
-  // For each output position I where mask[I] could be set, the source index j
-  // lies in [M0, M1] where these track possible counts of set mask bits < I.
-  //
-  // The output bit
-  // - can be 0 if mask[I] or any candidate LHS[j] could be zero, and
-  // - can be 1 only if both mask[I] and some candidate LHS[j] could be one.
-  unsigned BitWidth = LHS.getBitWidth();
+KnownBits KnownBits::pdep(const KnownBits &Val, const KnownBits &Mask) {
+  unsigned BitWidth = Val.getBitWidth();
   KnownBits Res(BitWidth);
+  // We start by asserting that bits cannot be 0 and cannot be 1, then clear
+  // Res bits where we know a bit could have some value.
   Res.setAllConflict();
 
+  // For each output position I where Mask[I] could be 1, the source position J
+  // lies in [M0, M1], where M0 and M1 track the range of possible 1-bit counts
+  // seen so far in Mask. Note that M0=M1 as long as bits in Mask are known;
+  // otherwise, the range of possible source positions widens.
   unsigned M0 = 0, M1 = 0;
   for (unsigned I = 0; I < BitWidth; ++I) {
-    if (!RHS.One[I])
-      Res.One.clearBit(I); // mask[I] could be 0 -> output[I] could be 0
-    if (!RHS.Zero[I]) {
+    if (!Mask.One[I])
+      // Mask[I] could be 0 => Res[I] could be 0
+      Res.One.clearBit(I);
+    if (!Mask.Zero[I]) {
+      // Mask[I] could be 1, so we check what value the Val bits could have.
       APInt Range = APInt::getBitsSet(BitWidth, M0, M1 + 1);
-      if (!Range.isSubsetOf(LHS.One))
-        Res.One.clearBit(I); // some candidate could be 0
-      if (!Range.isSubsetOf(LHS.Zero))
-        Res.Zero.clearBit(I); // some candidate could be 1
+      if (!Range.isSubsetOf(Val.One))
+        // Any Val[J] for J in [M0, M1] could be 0 => Res[I] could be 0
+        Res.One.clearBit(I);
+      if (!Range.isSubsetOf(Val.Zero))
+        // Any Val[J] for J in [M0, M1] could be 1 => Res[I] could be 1
+        Res.Zero.clearBit(I);
     }
-    if (RHS.One[I])
+    if (Mask.One[I])
       ++M0, ++M1;
-    else if (!RHS.Zero[I])
+    else if (!Mask.Zero[I])
       ++M1;
   }
   return Res;
@@ -1289,16 +1292,27 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
     return Known;
   }
 
-  // We can figure out the minimum number of upper zero bits by doing
-  // MaxNumerator / MinDenominator. If the Numerator gets smaller or Denominator
-  // gets larger, the number of upper zero bits increases.
+  // A zero denominator is UB, so the minimum attainable denominator is the
+  // smallest non-zero value consistent with the known bits.
   APInt MinDenom = RHS.getMinValue();
-  APInt MaxNum = LHS.getMaxValue();
-  APInt MaxRes = MinDenom.isZero() ? MaxNum : MaxNum.udiv(MinDenom);
+  if (MinDenom.isZero())
+    MinDenom.setBit(RHS.countMinTrailingZeros());
 
-  unsigned LeadZ = MaxRes.countLeadingZeros();
+  // The quotient grows when the numerator grows and shrinks when the
+  // denominator grows, and all four operand bounds are attainable, so the
+  // result is in [MinNum / MaxDenom, MaxNum / MinDenom]. Keep the common
+  // leading bits of the two bounds (as ConstantRange::toKnownBits does),
+  // which can include leading ones, not just leading zeros.
+  APInt MaxRes = LHS.getMaxValue().udiv(MinDenom);
+  APInt MinRes = LHS.getMinValue().udiv(RHS.getMaxValue());
 
-  Known.Zero.setHighBits(LeadZ);
+  Known = KnownBits::makeConstant(MinRes);
+  if (std::optional<unsigned> DifferentBit =
+          APIntOps::GetMostSignificantDifferentBit(MinRes, MaxRes)) {
+    Known.Zero.clearLowBits(*DifferentBit + 1);
+    Known.One.clearLowBits(*DifferentBit + 1);
+  }
+
   Known = divComputeLowBit(Known, LHS, RHS, Exact);
 
   return Known;
@@ -1318,19 +1332,21 @@ KnownBits KnownBits::remGetLowBits(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
-  KnownBits Known = remGetLowBits(LHS, RHS);
-  if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
-    // NB: Low bits set in `remGetLowBits`.
-    APInt HighBits = ~(RHS.getConstant() - 1);
-    Known.Zero |= std::move(HighBits);
-    return Known;
-  }
+  // L % R for L < R is L. (A zero divisor is UB, and if MinR is zero this
+  // condition cannot hold anyway.)
+  if (LHS.getMaxValue().ult(RHS.getMinValue()))
+    return LHS;
 
-  // Since the result is less than or equal to either operand, any leading
-  // zero bits in either operand must also exist in the result.
-  uint32_t Leaders =
-      std::max(LHS.countMinLeadingZeros(), RHS.countMinLeadingZeros());
-  Known.Zero.setHighBits(Leaders);
+  KnownBits Known = remGetLowBits(LHS, RHS);
+
+  // L % R is at most L and, since a zero divisor is UB, strictly less than
+  // R, so the result has at least as many leading zeros as
+  // umin(MaxL, MaxR - 1), as in ConstantRange::urem. For a power-of-two
+  // constant R this computes the exact L & (R - 1): remGetLowBits preserved
+  // the low bits and this clears the bits from log2(R) up. If R is known to
+  // be zero, MaxR - 1 wraps around, which is harmless: every input is UB.
+  APInt MaxRes = APIntOps::umin(LHS.getMaxValue(), RHS.getMaxValue() - 1);
+  Known.Zero.setHighBits(MaxRes.countLeadingZeros());
   return Known;
 }
 

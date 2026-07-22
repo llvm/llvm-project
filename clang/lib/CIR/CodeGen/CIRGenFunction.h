@@ -725,12 +725,17 @@ public:
   };
 
   /// IndirectBranch - The first time an indirect goto is seen we create a block
-  /// reserved for the indirect branch. Unlike before,the actual 'indirectbr'
-  /// is emitted at the end of the function, once all block destinations have
-  /// been resolved.
+  /// reserved for the indirect branch.  The actual `cir.indirect_br` is emitted
+  /// at the end of the function, once every label destination is known.
   mlir::Block *indirectGotoBlock = nullptr;
 
-  void resolveBlockAddresses();
+  /// Labels whose address is taken in this function (via `&&label`, as either
+  /// an operation or a constant initializer).  The indirect branch block is
+  /// created lazily on the first `goto *expr`; these targets are resolved to
+  /// their LabelOps and wired as `cir.indirect_br` successors in
+  /// finishIndirectBranch.
+  llvm::SmallVector<cir::BlockAddrInfoAttr> indirectGotoTargets;
+
   void finishIndirectBranch();
 
   /// Perform the usual unary conversions on the specified expression and
@@ -1642,6 +1647,12 @@ public:
   void emitAtomicExprWithMemOrder(
       const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
       llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
+
+  mlir::Value makeBinaryAtomicValue(
+      cir::AtomicFetchKind kind, const clang::CallExpr *expr,
+      mlir::Type *originalArgType = nullptr,
+      mlir::Value *emittedArgValue = nullptr,
+      cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent);
 
   mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
 
