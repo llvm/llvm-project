@@ -2389,7 +2389,7 @@ bool RAGreedy::shouldAvoidCSRForRemat(const LiveInterval &VirtReg,
     return false;
 
   MachineInstr *DefMI = LIS->getInstructionFromIndex(OnlyVNI->def);
-  if (!DefMI || DefMI->isImplicitDef() || !TII->isReMaterializable(*DefMI) ||
+  if (!DefMI || !TII->isReMaterializable(*DefMI) ||
       !TII->isAsCheapAsAMove(*DefMI))
     return false;
 

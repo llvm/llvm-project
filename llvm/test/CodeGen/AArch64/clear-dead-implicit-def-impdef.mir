@@ -12,8 +12,7 @@ body:             |
     ; CHECK-LABEL: name: func
     ; CHECK: liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64sp = IMPLICIT_DEF
-    ; CHECK-NEXT: dead [[DEF1:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+    ; CHECK-NEXT: dead [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x2
@@ -21,7 +20,6 @@ body:             |
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64 = COPY $x4
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gpr64 = COPY $x5
     ; CHECK-NEXT: [[COPY6:%[0-9]+]]:gpr64 = COPY $x6
-    ; CHECK-NEXT: undef [[MOVi32imm:%[0-9]+]].sub_32:gpr64 = MOVi32imm 4, implicit-def [[MOVi32imm]]
     ; CHECK-NEXT: ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: BL 0, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ; CHECK-NEXT: ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
@@ -30,19 +28,22 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:gpr64 = IMPLICIT_DEF
     ; CHECK-NEXT: ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: undef [[DEF3:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF implicit-def [[DEF3]]
-    ; CHECK-NEXT: STRXui [[DEF3]], [[DEF]], 1 :: (store (s64) into stack + 8)
+    ; CHECK-NEXT: undef [[DEF1:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF implicit-def [[DEF1]]
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:gpr64sp = IMPLICIT_DEF
+    ; CHECK-NEXT: STRXui [[DEF1]], [[DEF2]], 1 :: (store (s64) into stack + 8)
     ; CHECK-NEXT: BL 0, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ; CHECK-NEXT: ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: STRXui [[MOVi32imm]], [[DEF]], 0 :: (store (s64) into stack)
+    ; CHECK-NEXT: undef [[MOVi32imm:%[0-9]+]].sub_32:gpr64 = MOVi32imm 4, implicit-def [[MOVi32imm]]
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:gpr64sp = IMPLICIT_DEF
+    ; CHECK-NEXT: STRXui [[MOVi32imm]], [[DEF3]], 0 :: (store (s64) into stack)
     ; CHECK-NEXT: ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: STRWui undef [[MOVi32imm]].sub_32, [[COPY]], 0 :: (store (s32))
+    ; CHECK-NEXT: STRWui undef %23.sub_32:gpr64, [[COPY]], 0 :: (store (s32))
     ; CHECK-NEXT: ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: STRXui [[DEF2]], undef [[DEF]], 0 :: (store (s64) into stack)
+    ; CHECK-NEXT: [[DEF4:%[0-9]+]]:gpr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: STRXui [[DEF4]], undef %27:gpr64sp, 0 :: (store (s64) into stack)
     ; CHECK-NEXT: $x0 = COPY [[COPY6]]
     ; CHECK-NEXT: ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
@@ -61,8 +62,8 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY1]]
     ; CHECK-NEXT: ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: ADJCALLSTACKDOWN 24, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: undef [[DEF4:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF implicit-def [[DEF4]]
-    ; CHECK-NEXT: STRXui [[DEF4]], undef [[DEF]], 1 :: (store (s64) into stack + 8)
+    ; CHECK-NEXT: undef [[DEF5:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF implicit-def [[DEF5]]
+    ; CHECK-NEXT: STRXui [[DEF5]], undef %28:gpr64sp, 1 :: (store (s64) into stack + 8)
     ; CHECK-NEXT: ADJCALLSTACKUP 24, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64sp = IMPLICIT_DEF
