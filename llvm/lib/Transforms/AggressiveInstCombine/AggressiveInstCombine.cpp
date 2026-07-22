@@ -1104,6 +1104,22 @@ static bool isLog2Table(Constant *Table, const APInt &Mul, const APInt &Shift,
 // %arrayidx = getelementptr inbounds i8, ptr @table, i64 %shr11
 // %0 = load i8, ptr %arrayidx, align 1
 //
+// CASE 3:
+// A variant where the most-significant set bit of the OR-cascade result is
+// isolated via subtraction before the multiply, i.e.
+// table[((v - (v >> 1)) * MulConst) >> ShiftConst], analogous to how the
+// cttz pattern isolates the least-significant set bit via `x & -x`:
+//
+// %shr = lshr i64 %v, 1
+// %or = or i64 %shr, %v
+// ... (rest of the OR-cascade, as above) ...
+// %shr11 = lshr i64 %or10, 1
+// %sub = sub i64 %or10, %shr11
+// %mul = mul i64 %sub, 571347909858961602
+// %shr12 = lshr i64 %mul, 58
+// %arrayidx = getelementptr inbounds i8, ptr @table, i64 %shr12
+// %0 = load i8, ptr %arrayidx, align 1
+//
 // All these can be lowered to @llvm.ctlz.i32/64 intrinsics and a subtract.
 //
 // This shares its initial match (load from a GEP into a constant table with
@@ -1121,6 +1137,18 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
       m_LShr(m_Mul(m_Value(X), m_APInt(MulConst)), m_APInt(ShiftConst));
   if (!match(GepIdx, m_CastOrSelf(MatchInner)))
     return false;
+
+  // The multiplied value may instead be the OR-cascade result with its
+  // most-significant set bit isolated first via `v - (v >> 1)`: since every
+  // bit below the MSB of an OR-cascade result is 1, this subtraction leaves
+  // just the MSB, mirroring how tryToRecognizeTableBasedCttz() isolates the
+  // least-significant set bit via `x & -x`.
+  bool IsolatedMSB = false;
+  Value *V;
+  if (match(X, m_Sub(m_Value(V), m_LShr(m_Deferred(V), m_SpecificInt(1))))) {
+    IsolatedMSB = true;
+    X = V;
+  }
 
   unsigned InputBits = X->getType()->getScalarSizeInBits();
   if (InputBits != 16 && InputBits != 32 && InputBits != 64 && InputBits != 128)
@@ -1140,10 +1168,24 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
     X = Y;
   }
 
-  if (!GEPScale.isIntN(InputBits) ||
-      !isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
-                   AccessType, InputBits, GEPScale.zextOrTrunc(InputBits), DL))
+  if (!GEPScale.isIntN(InputBits))
     return false;
+
+  if (IsolatedMSB) {
+    // With the MSB isolated, the multiplicand for an input whose MSB is at bit
+    // Idx is a single set bit rather than a run of low bits, which is exactly
+    // what isCTTZTable() checks for (there is no additional masking here, so
+    // pass an all-ones mask).
+    if (!isCTTZTable(GVTable->getInitializer(), *MulConst, *ShiftConst,
+                     APInt::getAllOnes(InputBits), AccessType, InputBits,
+                     GEPScale.zextOrTrunc(InputBits), DL))
+      return false;
+  } else {
+    if (!isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
+                     AccessType, InputBits, GEPScale.zextOrTrunc(InputBits),
+                     DL))
+      return false;
+  }
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
       ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
@@ -1164,24 +1206,34 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
   if (Cost > TargetTransformInfo::TCC_Basic)
     return false;
 
-  Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
-
   Constant *InputBitsM1 = ConstantInt::get(XType, InputBits - 1);
-  Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
 
-  // The table won't produce a sensible result for 0.
-  Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
-  Value *Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
+  Value *Result;
+  if (ZeroTableElem->getZExtValue() == InputBits - 1) {
+    Value *Ctlz =
+        B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, B.getFalse()});
+    Result = B.CreateAnd(B.CreateNot(Ctlz), InputBitsM1);
+  } else {
+    Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
+    Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
 
-  // The true branch of select handles the log2(0) case, which is rare.
-  if (!ProfcheckDisableMetadataFixes) {
-    if (Instruction *SelectI = dyn_cast<Instruction>(Select))
-      SelectI->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+    // The table won't produce a sensible result for 0.
+    Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
+    Value *Select =
+        B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
+
+    // The true branch of select handles the log2(0) case, which is rare.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+        SelectI->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+    }
+
+    Result = Select;
   }
 
-  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
+  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Result, AccessType);
 
   LI->replaceAllUsesWith(ZExtOrTrunc);
 
@@ -1369,6 +1421,12 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if ((ShAmt2 - ShAmt1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
     return false;
 
+  // Reject if the combined size of the loads exceeds the target type size.
+  // This avoids attempting to emit an invalid ZExt (from wider to narrower
+  // type) when out-of-bounds shifts lead to matching too many loads.
+  if (LoadSize1 + LoadSize2 > X->getType()->getScalarSizeInBits())
+    return false;
+
   // Update LOps
   AAMDNodes AATags1 = LOps.AATags;
   AAMDNodes AATags2 = LI2->getAAMetadata();
@@ -1436,9 +1494,8 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     NewLoad->setAAMetadata(LOps.AATags);
 
   Value *NewOp = NewLoad;
-  // Check if zero extend needed.
-  if (LOps.ZextType)
-    NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
+  // Zero extend if needed.
+  NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
 
   // Check if shift needed. We need to shift with the amount of load1
   // shift if not zero.

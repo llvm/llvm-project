@@ -880,6 +880,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FP_ROUND,   MVT::f32, Custom);
   }
 
+  // STRICT_(U/S)INT_TO_FP specifically use the input MVT to register with
+  // setOperationAction() as opposed to other opcodes that use the output MVT
+  // All inputs should be i32 due to type legalization
+  setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Custom);
+  setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i32, Custom);
+
   setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
   setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
 
@@ -5742,16 +5748,6 @@ SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
     return IsStrict ? DAG.getMergeValues({Result, Chain}, Loc) : Result;
   }
 
-  // FIXME: Remove this when we have strict fp instruction selection patterns
-  if (IsStrict) {
-    SDLoc Loc(Op);
-    SDValue Result =
-        DAG.getNode(Op.getOpcode() == ISD::STRICT_FP_TO_SINT ? ISD::FP_TO_SINT
-                                                             : ISD::FP_TO_UINT,
-                    Loc, Op.getValueType(), SrcVal);
-    return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
-  }
-
   return Op;
 }
 
@@ -5840,17 +5836,24 @@ SDValue ARMTargetLowering::LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   if (VT.isVector())
     return LowerVectorINT_TO_FP(Op, DAG);
+
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+
   if (isUnsupportedFloatingType(VT)) {
     RTLIB::Libcall LC;
-    if (Op.getOpcode() == ISD::SINT_TO_FP)
-      LC = RTLIB::getSINTTOFP(Op.getOperand(0).getValueType(),
-                              Op.getValueType());
+    if (Op.getOpcode() == ISD::SINT_TO_FP ||
+        Op.getOpcode() == ISD::STRICT_SINT_TO_FP)
+      LC = RTLIB::getSINTTOFP(SrcVal.getValueType(), Op.getValueType());
     else
-      LC = RTLIB::getUINTTOFP(Op.getOperand(0).getValueType(),
-                              Op.getValueType());
+      LC = RTLIB::getUINTTOFP(SrcVal.getValueType(), Op.getValueType());
+    SDLoc Loc(Op);
     MakeLibCallOptions CallOptions;
-    return makeLibCall(DAG, LC, Op.getValueType(), Op.getOperand(0),
-                       CallOptions, SDLoc(Op)).first;
+    SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+    SDValue Result;
+    std::tie(Result, Chain) = makeLibCall(DAG, LC, Op.getValueType(), SrcVal,
+                                          CallOptions, Loc, Chain);
+    return IsStrict ? DAG.getMergeValues({Result, Chain}, Loc) : Result;
   }
 
   return Op;
@@ -10516,6 +10519,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VASTART:       return LowerVASTART(Op, DAG);
   case ISD::ATOMIC_FENCE:  return LowerATOMIC_FENCE(Op, DAG, Subtarget);
   case ISD::PREFETCH:      return LowerPREFETCH(Op, DAG, Subtarget);
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::STRICT_SINT_TO_FP:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:    return LowerINT_TO_FP(Op, DAG);
   case ISD::STRICT_FP_TO_SINT:
@@ -19405,7 +19410,7 @@ EVT ARMTargetLowering::getOptimalMemOpType(
     LLVMContext &Context, const MemOp &Op,
     const AttributeList &FuncAttributes) const {
   // See if we can use NEON instructions for this...
-  if ((Op.isMemcpy() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
+  if ((Op.isMemcpyOrMemmove() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
       !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
     unsigned Fast;
     if (Op.size() >= 16 &&

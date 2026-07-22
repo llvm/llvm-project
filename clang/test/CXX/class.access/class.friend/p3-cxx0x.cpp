@@ -36,7 +36,7 @@ class A {
 public:
   class foo {};
   static int y;
-  template <typename S> friend class B<S>::ty;
+  template <typename S> friend class B<S>::ty; // expected-warning {{dependent nested name specifier 'B<S>' for friend class declaration is not supported}}
 };
 
 template<typename T> class B { typedef int ty; };
@@ -74,7 +74,7 @@ struct {
       friend
 
   float;
-  template<typename T> friend class A<T>::foo;
+  template<typename T> friend class A<T>::foo; // expected-warning {{not supported}}
 } a;
 
 void testA() { (void)sizeof(A<int>); }

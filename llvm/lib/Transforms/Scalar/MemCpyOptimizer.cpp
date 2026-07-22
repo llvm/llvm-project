@@ -1075,7 +1075,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // If the destination wasn't sufficiently aligned then increase its alignment.
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
-    cast<AllocaInst>(cpyDest)->setAlignment(srcAlign);
+    AllocaInst *DestAlloca = cast<AllocaInst>(cpyDest);
+    DestAlloca->setAlignment(std::max(DestAlloca->getAlign(), srcAlign));
   }
 
   if (NeedMoveGEP) {

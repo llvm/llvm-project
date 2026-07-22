@@ -441,8 +441,8 @@ CHECK: %1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, !al
 }
 
 TEST_F(MachineMetadataTest, MMSlotTrackerAMDGPU) {
-  auto TM = createTargetMachine(Triple::normalize("amdgcn-amd-amdhsa"),
-                                "gfx1010", "");
+  auto TM =
+      createTargetMachine(Triple::normalize("amdgpu10.10-amd-amdhsa"), "", "");
   if (!TM)
     GTEST_SKIP();
 

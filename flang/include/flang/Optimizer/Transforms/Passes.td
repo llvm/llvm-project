@@ -477,6 +477,9 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
        Option<"setNoAlias", "set-noalias", "bool", /*default=*/"false",
               "Set LLVM noalias attribute on function arguments, "
               "if possible">,
+       Option<"setReadOnly", "set-readonly", "bool", /*default=*/"false",
+              "Set LLVM readonly attribute on INTENT(IN) by-reference "
+              "function arguments, if possible">,
   ];
 }
 
@@ -543,6 +546,10 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
     "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
   ];
   let options = [
+    Option<"allocatorRegistrationFunction",
+           "allocator-registration-function", "std::string", /*default=*/"",
+           "Name of the function to call to register CUDA Fortran allocators. "
+           "Defaults to CUFRegisterAllocator.">,
     Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
            "Treat host module globals as unified memory (-gpu=mem:unified): "
            "register every plain host module global that is mirrored in the "
@@ -581,8 +588,13 @@ def CUFDeviceFuncTransform
   let dependentDialects = ["mlir::gpu::GPUDialect",
                            "mlir::cf::ControlFlowDialect",
                            "mlir::NVVM::NVVMDialect"];
-  let options = [Option<"computeCap", "compute-capability", "int",
-                        /*default=*/"0", "CUDA compute capability version">];
+  let options =
+      [Option<"computeCap", "compute-capability", "int",
+              /*default=*/"0", "CUDA compute capability version">,
+       Option<"checkioOutputDescriptor", "check-io-output-descriptor", "bool",
+              /*default=*/"false",
+              "Report an error if device code contains a call to "
+              "descriptor I/O">];
 }
 
 def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
@@ -689,6 +701,11 @@ def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
   let summary = "Convert some MIF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect",
                            "mlir::cf::ControlFlowDialect", "mlir::DLTIDialect"];
+}
+
+def EmitMIFGlobalCtors : Pass<"emit-mif-global-ctors", "mlir::ModuleOp"> {
+  let summary = "Generate GlobalCtorOp to init MIF and allocate coarrays.";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
 }
 
 def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {

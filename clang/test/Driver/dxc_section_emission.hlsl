@@ -22,4 +22,15 @@
 
 // CHECK: - Name: ILDN
 
+// Check that /Qpdb_in_private emits a PRIV part in the output container.
+// RUN: %clang_dxc -Tlib_6_7 /Fo %t-priv.dxbc /Zi /Qpdb_in_private %s 2>&1
+// RUN: obj2yaml %t-priv.dxbc | FileCheck %s --check-prefix=CHECK-PRIV
+
+// Without /Qpdb_in_private, PRIV is not emitted.
+// RUN: %clang_dxc -Tlib_6_7 /Fo %t-no-priv.dxbc /Zi %s 2>&1
+// RUN: obj2yaml %t-no-priv.dxbc | FileCheck %s --check-prefix=CHECK-NO-PRIV
+
+// CHECK-PRIV: - Name: PRIV
+// CHECK-NO-PRIV-NOT: - Name: PRIV
+
 [numthreads(1, 1, 1)] void main() {}

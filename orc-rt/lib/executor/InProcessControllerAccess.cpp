@@ -201,7 +201,7 @@ void InProcessControllerAccess::disconnect() {
 }
 
 void InProcessControllerAccess::callController(
-    OnCallHandlerCompleteFn OnComplete, HandlerTag T,
+    OnControllerCallReturn OnComplete, HandlerTag T,
     WrapperFunctionBuffer ArgBytes) {
   assert(C && "callController called before connect");
   if (C->EnterMessageScope(C)) {
@@ -209,8 +209,9 @@ void InProcessControllerAccess::callController(
                        T, ArgBytes.release());
     C->LeaveMessageScope(C);
   } else
-    OnComplete(
-        WrapperFunctionBuffer::createOutOfBandError("connection closed"));
+    // Synchronous failure: the connection is already gone, so the call can't be
+    // sent. The caller is still on the stack, so fail the handler inline.
+    failControllerCallInline(std::move(OnComplete));
 }
 
 void InProcessControllerAccess::sendWrapperResult(
@@ -223,7 +224,7 @@ void InProcessControllerAccess::sendWrapperResult(
 }
 
 uint64_t InProcessControllerAccess::registerPendingHandler(
-    OnCallHandlerCompleteFn OnComplete) {
+    OnControllerCallReturn OnComplete) {
   std::scoped_lock<std::mutex> Lock(M);
   PendingCalls[NextPendingCall] = std::move(OnComplete);
   return NextPendingCall++;
@@ -237,7 +238,7 @@ void InProcessControllerAccess::doDisconnect() {
     ToDrain = std::move(PendingCalls);
   }
   for (auto &[_, H] : ToDrain)
-    H(WrapperFunctionBuffer::createOutOfBandError("disconnected"));
+    failPendingControllerCall(std::move(H));
 
   notifyDisconnected();
 }
@@ -259,7 +260,7 @@ void InProcessControllerAccess::callWrapperEntry(
 void InProcessControllerAccess::returnJITDispatchResult(
     uint64_t CallId, orc_rt_WrapperFunctionBuffer ResultBytes) {
 
-  OnCallHandlerCompleteFn OnComplete;
+  OnControllerCallReturn OnComplete;
   {
     std::scoped_lock<std::mutex> Lock(M);
     auto I = PendingCalls.find(CallId);
@@ -272,7 +273,8 @@ void InProcessControllerAccess::returnJITDispatchResult(
   if (!OnComplete)
     return reportError(make_error<StringError>("Invalid call id"));
 
-  OnComplete(WrapperFunctionBuffer(ResultBytes));
+  handleControllerCallResult(std::move(OnComplete),
+                             WrapperFunctionBuffer(ResultBytes));
 }
 
 void InProcessControllerAccess::returnJITDispatchResultEntry(

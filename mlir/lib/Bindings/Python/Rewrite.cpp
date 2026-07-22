@@ -178,15 +178,15 @@ public:
     mlirTypeConverterAddConversion(
         typeConverter,
         [](MlirType type, MlirType *converted,
-           void *userData) -> MlirLogicalResult {
+           void *userData) -> MlirTypeConverterConversionStatus {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           auto ctx = PyMlirContext::forContext(mlirTypeGetContext(type));
           nb::object res = f(PyType(ctx, type).maybeDownCast());
           if (res.is_none())
-            return mlirLogicalResultFailure();
+            return MlirTypeConverterConversionStatusDeclined;
 
           *converted = nb::cast<PyType>(res).get();
-          return mlirLogicalResultSuccess();
+          return MlirTypeConverterConversionStatusSuccess;
         },
         convert.ptr());
   }

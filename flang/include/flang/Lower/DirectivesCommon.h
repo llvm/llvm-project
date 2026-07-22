@@ -41,7 +41,12 @@ namespace Fortran {
 namespace lower {
 
 /// Create empty blocks for the current region.
-/// These blocks replace blocks parented to an enclosing region.
+/// These blocks replace blocks parented to an enclosing region, or are
+/// created fresh when the enclosing region-level createEmptyBlocks skipped
+/// them (this happens for the body of a wrappable DO/IF nested inside a
+/// directive whose isUnstructured no longer propagates from the child; the
+/// top-level pass then treats the directive as structured and never
+/// recurses into the body).
 template <typename... TerminatorOps>
 void createEmptyRegionBlocks(
     fir::FirOpBuilder &builder,
@@ -57,6 +62,8 @@ void createEmptyRegionBlocks(
         assert(mlir::isa<TerminatorOps...>(terminatorOp) &&
                "expected terminator op");
       }
+    } else if (eval.isNewBlock) {
+      eval.block = builder.createBlock(region);
     }
     if (!eval.isDirective() && eval.hasNestedEvaluations())
       createEmptyRegionBlocks<TerminatorOps...>(builder,
@@ -176,6 +183,25 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
       bool defaultLb = baseLb == one;
       mlir::Value stride = one;
       bool strideInBytes = false;
+
+      auto genSourceExtent = [&]() -> mlir::Value {
+        if (info.isPresent && mlir::isa<fir::BaseBoxType>(
+                                  fir::unwrapRefType(info.addr.getType()))) {
+          return builder
+              .genIfOp(loc, idxTy, info.isPresent, /*withElseRegion=*/true)
+              .genThen([&]() {
+                mlir::Value ext =
+                    fir::factory::readExtent(builder, loc, dataExv, dimension);
+                fir::ResultOp::create(builder, loc, ext);
+              })
+              .genElse([&] {
+                mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+                fir::ResultOp::create(builder, loc, zero);
+              })
+              .getResults()[0];
+        }
+        return fir::factory::readExtent(builder, loc, dataExv, dimension);
+      };
 
       if (mlir::isa<fir::BaseBoxType>(
               fir::unwrapRefType(info.addr.getType()))) {
@@ -297,25 +323,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           }
         }
 
-        if (info.isPresent && mlir::isa<fir::BaseBoxType>(
-                                  fir::unwrapRefType(info.addr.getType()))) {
-          extent =
-              builder
-                  .genIfOp(loc, idxTy, info.isPresent, /*withElseRegion=*/true)
-                  .genThen([&]() {
-                    mlir::Value ext = fir::factory::readExtent(
-                        builder, loc, dataExv, dimension);
-                    fir::ResultOp::create(builder, loc, ext);
-                  })
-                  .genElse([&] {
-                    mlir::Value zero =
-                        builder.createIntegerConstant(loc, idxTy, 0);
-                    fir::ResultOp::create(builder, loc, zero);
-                  })
-                  .getResults()[0];
-        } else {
-          extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
-        }
+        extent = genSourceExtent();
 
         if (dataExvIsAssumedSize && dimension + 1 == dataExvRank) {
           extent = zero;
@@ -338,8 +346,11 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
       // and this already includes the lower extents.
       if (strideIncludeLowerExtent && !strideInBytes) {
         stride = cumulativeExtent;
+        mlir::Value strideExtent = extent;
+        if (!triplet && dimension + 1 < dataExvRank)
+          strideExtent = genSourceExtent();
         cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
-            loc, cumulativeExtent, extent);
+            loc, cumulativeExtent, strideExtent);
       }
 
       mlir::Value bound =

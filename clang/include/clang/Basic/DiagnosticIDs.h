@@ -36,7 +36,7 @@ enum class Group;
 enum {
   DIAG_SIZE_COMMON = 300,
   DIAG_SIZE_DRIVER = 400,
-  DIAG_SIZE_FRONTEND = 200,
+  DIAG_SIZE_FRONTEND = 300,
   DIAG_SIZE_SERIALIZATION = 120,
   DIAG_SIZE_LEX = 500,
   DIAG_SIZE_PARSE = 800,
@@ -485,8 +485,8 @@ public:
 
   /// Get the appropriate diagnostic Id to use for issuing a compatibility
   /// diagnostic. For use by the various DiagCompat() helpers.
-  static unsigned getCXXCompatDiagId(const LangOptions &LangOpts,
-                                     unsigned CompatDiagId);
+  static unsigned getCompatDiagId(const LangOptions &LangOpts,
+                                  unsigned CompatDiagId);
 
   /// Return true if either of the following two conditions hold:
   /// 1. \p Loc is in a system header and the diagnostic kind \p DiagID does
