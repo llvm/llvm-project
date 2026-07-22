@@ -73,7 +73,9 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK: %[[FREE_VAR:.+]] = load ptr, ptr %[[BUFF_PTR]], align 8
 //CHECK:  %[[ARRLAST:.+]] = getelementptr inbounds i32, ptr %[[FREE_VAR]], i32 100
 //CHECK:  %[[RES:.+]] = load i32, ptr %[[ARRLAST]], align 4
-//CHECK:  store i32 %[[RES]], ptr %loadgep{{.*}}, align 4
+//CHECK:  %[[CUR:.+]] = load i32, ptr %loadgep{{.*}}, align 4
+//CHECK:  %[[FIN:.+]] = select i1 {{.*}}, i32 %[[RES]], i32 %[[CUR]]
+//CHECK:  store i32 %[[FIN]], ptr %loadgep{{.*}}, align 4
 //CHECK: tail call void @free(ptr %[[FREE_VAR]])
 //CHECK: @__kmpc_end_masked
 //CHECK: omp.inscan.dispatch{{.*}}:                            ; preds = %omp_loop.body{{.*}}
@@ -84,7 +86,9 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK:   %[[LOG:.+]] = call double @llvm.log2.f64(double 1.000000e+02) #0
 //CHECK:   %[[CEIL:.+]] = call double @llvm.ceil.f64(double %[[LOG]]) #0
 //CHECK:   %[[UB:.+]] = fptoui double %[[CEIL]] to i32
-//CHECK:   br label %omp.outer.log.scan.body
+//CHECK:   br i1 {{.*}}, label %omp.outer.log.scan.body, label %omp.outer.log.scan.exit
+//CHECK: omp.outer.log.scan.exit:                          ; preds = %omp.inner.log.scan.exit, %omp_region.body{{.*}}
+//CHECK: @__kmpc_end_masked
 //CHECK: omp.outer.log.scan.body:
 //CHECK:   %[[K:.+]] = phi i32 [ 0, %{{.*}} ], [ %[[NEXTK:.+]], %omp.inner.log.scan.exit ]
 //CHECK:   %[[I:.+]] = phi i32 [ 1, %{{.*}} ], [ %[[NEXTI:.+]], %omp.inner.log.scan.exit ]
@@ -95,8 +99,6 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK:   %[[NEXTI]] = shl nuw i32 %[[I]], 1
 //CHECK:   %[[CMP2:.+]] = icmp ne i32 %[[NEXTK]], %[[UB]]
 //CHECK:   br i1 %[[CMP2]], label %omp.outer.log.scan.body, label %omp.outer.log.scan.exit
-//CHECK: omp.outer.log.scan.exit:                          ; preds = %omp.inner.log.scan.exit
-//CHECK: @__kmpc_end_masked
 //CHECK: omp.inner.log.scan.body:                          ; preds = %omp.inner.log.scan.body, %omp.outer.log.scan.body
 //CHECK:   %[[CNT:.+]] = phi i32 [ 99, %omp.outer.log.scan.body ], [ %[[CNTNXT:.+]], %omp.inner.log.scan.body ]
 //CHECK:   %[[BUFF:.+]] = load ptr, ptr %[[BUFF_PTR]]
@@ -114,7 +116,9 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK: omp.inscan.dispatch:                              ; preds = %omp_loop.body
 //CHECK:   br i1 true, label %omp.before.scan.bb, label %omp.after.scan.bb
 //CHECK: omp.before.scan.bb:
-//CHECK:   store i32 0, ptr %[[REDPRIV:.+]], align 4
+//CHECK:   %[[ISFIRST:.+]] = icmp eq i32 %{{.*}}, 1
+//CHECK:   %[[SEED:.+]] = select i1 %[[ISFIRST]], i32 %{{.*}}, i32 0
+//CHECK:   store i32 %[[SEED]], ptr %[[REDPRIV:.+]], align 4
 //CHECK: omp.loop_nest.region:                             ; preds = %omp.before.scan.bb
 //CHECK:   %[[BUFFER:.+]] = load ptr, ptr %loadgep_vla, align 8
 //CHECK:   %[[ARRAYOFFSET2:.+]] = getelementptr inbounds i32, ptr %[[BUFFER]], i32 %{{.*}}

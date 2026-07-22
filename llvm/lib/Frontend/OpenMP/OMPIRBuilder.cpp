@@ -5307,7 +5307,17 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
                                              "arrayOffset");
       Value *Src = Builder.CreateLoad(SrcTy, Val);
 
-      Builder.CreateStore(Src, OrigVar);
+      // For a zero-trip loop the buffer slot is uninitialized; keep the
+      // original variable's incoming value instead of storing garbage. The
+      // load above stays in bounds because the buffer was allocated with
+      // `Span + 1` elements, so index `Span` is always valid.
+      Value *Cur = Builder.CreateLoad(SrcTy, OrigVar);
+      Value *HasIters = Builder.CreateICmpUGT(
+          ScanRedInfo->Span,
+          llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 0));
+      Value *Final = Builder.CreateSelect(HasIters, Src, Cur);
+
+      Builder.CreateStore(Final, OrigVar);
       Builder.CreateFree(Buff);
     }
     return Error::success();
@@ -5370,7 +5380,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
         ScanRedInfo->Span,
         llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 1));
     Builder.SetInsertPoint(InputBB);
-    Builder.CreateBr(LoopBB);
+    // The log-scan prefix computation is only well-defined when there are at
+    // least two elements: `log2(Span)` is invalid for Span == 0 and the loop
+    // trip computation underflows/loops forever for Span <= 1. For Span <= 1
+    // the buffer already holds the final value(s), so skip straight to the
+    // exit.
+    llvm::Value *SpanGuard = Builder.CreateICmpUGT(
+        ScanRedInfo->Span,
+        llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 1));
+    Builder.CreateCondBr(SpanGuard, LoopBB, ExitBB);
     emitBlock(LoopBB, CurFn);
     Builder.SetInsertPoint(LoopBB);
 
@@ -5617,7 +5635,6 @@ OpenMPIRBuilder::createCanonicalScanLoops(
 
   auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
     Builder.restoreIP(CodeGenIP);
-    ScanRedInfo->IV = IV;
     createScanBBs(ScanRedInfo);
     BasicBlock *InputBlock = Builder.GetInsertBlock();
     Instruction *Terminator = InputBlock->getTerminator();
@@ -5636,9 +5653,13 @@ OpenMPIRBuilder::createCanonicalScanLoops(
   };
 
   const auto &&InputLoopGen = [&]() -> Error {
+    // Pass an empty ComputeIP: the trip count must be (re)computed at the
+    // loop's own location. Reusing the outer ComputeIP is invalid here because
+    // it was invalidated by the `scan.init` split above and would emit the
+    // recomputed trip count after a block terminator for runtime bounds.
     Expected<CanonicalLoopInfo *> LoopInfo = createCanonicalLoop(
         Builder.saveIP(), BodyGen, Start, Stop, Step, IsSigned, InclusiveStop,
-        ComputeIP, Name, true, ScanRedInfo);
+        /*ComputeIP=*/InsertPointTy(), Name, true, ScanRedInfo);
     if (!LoopInfo)
       return LoopInfo.takeError();
     Result.push_back(*LoopInfo);
@@ -5646,9 +5667,9 @@ OpenMPIRBuilder::createCanonicalScanLoops(
     return Error::success();
   };
   const auto &&ScanLoopGen = [&](LocationDescription Loc) -> Error {
-    Expected<CanonicalLoopInfo *> LoopInfo =
-        createCanonicalLoop(Loc, BodyGen, Start, Stop, Step, IsSigned,
-                            InclusiveStop, ComputeIP, Name, true, ScanRedInfo);
+    Expected<CanonicalLoopInfo *> LoopInfo = createCanonicalLoop(
+        Loc, BodyGen, Start, Stop, Step, IsSigned, InclusiveStop,
+        /*ComputeIP=*/InsertPointTy(), Name, true, ScanRedInfo);
     if (!LoopInfo)
       return LoopInfo.takeError();
     Result.push_back(*LoopInfo);
@@ -5737,8 +5758,15 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
     Builder.restoreIP(CodeGenIP);
     Value *Span = Builder.CreateMul(IV, Step);
     Value *IndVar = Builder.CreateAdd(Span, Start);
-    if (InScan)
-      ScanRedInfo->IV = IndVar;
+    if (InScan) {
+      // The scan buffer is 1-indexed by iteration number (buffer[1..TripCount])
+      // rather than by the source induction variable. Using the source value
+      // would index out of bounds for loops that do not start at 1 or that use
+      // a non-unit stride. `IV` here is the 0-based canonical loop counter, so
+      // the 1-based buffer index is `IV + 1`.
+      ScanRedInfo->IV =
+          Builder.CreateAdd(IV, ConstantInt::get(IV->getType(), 1));
+    }
     return BodyGenCB(Builder.saveIP(), IndVar);
   };
   LocationDescription LoopLoc =

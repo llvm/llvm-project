@@ -430,6 +430,16 @@ static LogicalResult checkImplementationStatus(Operation &op) {
               break;
             }
         }
+      } else if (inscanModifierSupported) {
+        if (auto byref = op.getReductionByref()) {
+          // Scan reductions (inscan modifier) only support by-value (scalar)
+          // reductions for now.
+          for (bool isByRef : *byref)
+            if (isByRef) {
+              result = todo("inscan reduction modifier with by-ref reduction");
+              break;
+            }
+        }
       }
     }
   };
@@ -5268,8 +5278,20 @@ initScanReductionVars(omp::LoopNestOp loopOp, llvm::IRBuilderBase &builder,
     assert(phis.size() == 1 &&
            "expected one value to be yielded from the reduction init region");
     setInsertPointForPossiblyEmptyBlock(builder);
-    builder.CreateStore(phis[0],
-                        moduleTranslation.lookupValue(reductionArgs[i]));
+
+    // On the first iteration, seed the reduction variable with the original
+    // variable's incoming value so that a non-identity initial value
+    // participates in the scan (e.g. `x = 10` before an inclusive-scan loop of
+    // `+1` must yield 11, 12, ...). On subsequent iterations, reset to the
+    // reduction identity. `scanInfo->IV` is the 1-based iteration index.
+    llvm::Value *identity = phis[0];
+    llvm::Value *origVar =
+        moduleTranslation.lookupValue(wsloopOp.getReductionVars()[i]);
+    llvm::Value *origVal = builder.CreateLoad(identity->getType(), origVar);
+    llvm::Value *isFirstIter = builder.CreateICmpEQ(
+        scanInfo->IV, llvm::ConstantInt::get(scanInfo->IV->getType(), 1));
+    llvm::Value *seed = builder.CreateSelect(isFirstIter, origVal, identity);
+    builder.CreateStore(seed, moduleTranslation.lookupValue(reductionArgs[i]));
   }
   return success();
 }
