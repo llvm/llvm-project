@@ -368,8 +368,8 @@ def get_actual_filename(dirname: str, filename: str) -> str:
 # Recreates the list of checks in the docs/clang-tidy/checks directory.
 def update_checks_list(clang_tidy_path: str) -> None:
     docs_dir = os.path.join(clang_tidy_path, "../docs/clang-tidy/checks")
-    filename = os.path.normpath(os.path.join(docs_dir, "list.rst"))
-    # Read the content of the current list.rst file
+    filename = os.path.normpath(os.path.join(docs_dir, "list.md"))
+    # Read the content of the current list.md file.
     with open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
     # Get all existing docs
@@ -377,12 +377,23 @@ def update_checks_list(clang_tidy_path: str) -> None:
     for subdir in filter(
         lambda s: os.path.isdir(os.path.join(docs_dir, s)), os.listdir(docs_dir)
     ):
+        if subdir == "clang-analyzer":
+            continue
         for file in os.listdir(os.path.join(docs_dir, subdir)):
             # TODO: Stop discovering reST files once all clang-tidy check
             # documentation has been migrated to MyST.
             if os.path.splitext(file)[1] in (".md", ".rst"):
                 doc_files.append((subdir, file))
     doc_files.sort()
+
+    # Filter the file for the rows in the table corresponding to CSA check
+    # aliases.
+    check_alias_lines = lines[lines.index("## Check aliases\n") :]
+    clang_analyzer_alias_rows = [
+        row
+        for row in check_alias_lines
+        if re.match(r"^\| \{doc\}`.*clang-analyzer", row)
+    ]
 
     # We couldn't find the source file from the check name, so try to find the
     # class name that corresponds to the check in the module file.
@@ -528,9 +539,11 @@ def update_checks_list(clang_tidy_path: str) -> None:
                     return match.group(1)
         return None
 
+    def doc_file_stem(doc_file: Tuple[str, str]) -> str:
+        return os.path.splitext(doc_file[1])[0]
+
     def process_doc(doc_file: Tuple[str, str]) -> Tuple[str, Optional[str]]:
-        check_file = os.path.splitext(doc_file[1])[0]
-        check_name = f"{doc_file[0]}-{check_file}"
+        check_name = f"{doc_file[0]}-{doc_file_stem(doc_file)}"
 
         with open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
             content = doc.read()
@@ -544,13 +557,18 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
             return check_name, detect_alias_target(check_name, content)
 
+    def format_doc_ref(label: str, module: str, check_file: str) -> str:
+        return f"{{doc}}`{label} <{module}/{check_file}>`"
+
+    def has_auto_fix_cell(check_name: str) -> str:
+        return has_auto_fix(check_name).strip().strip('"')
+
     def format_link(doc_file: Tuple[str, str]) -> str:
         check_name, match = process_doc(doc_file)
         if not match and check_name and not check_name.startswith("clang-analyzer-"):
-            check_file = os.path.splitext(doc_file[1])[0]
             return (
-                f"   :doc:`{check_name} <{doc_file[0]}/{check_file}>`,"
-                f"{has_auto_fix(check_name)}\n"
+                f"| {format_doc_ref(check_name, doc_file[0], doc_file_stem(doc_file))} | "
+                f"{has_auto_fix_cell(check_name)} |\n"
             )
         else:
             return ""
@@ -558,57 +576,40 @@ def update_checks_list(clang_tidy_path: str) -> None:
     def format_link_alias(doc_file: Tuple[str, str]) -> str:
         check_name, match = process_doc(doc_file)
         is_clang_analyzer = check_name.startswith("clang-analyzer-")
-        if not check_name or (not match and not is_clang_analyzer):
+        if not check_name or is_clang_analyzer or not match:
             return ""
 
         module = doc_file[0]
-        check_file = os.path.splitext(doc_file[1])[0]
-        if is_clang_analyzer:
-            title = f"Clang Static Analyzer {check_file}"
-            # Clang Static Analyzer aliases still need the external redirect
-            # target so list.rst can link to the upstream analyzer docs.
-            with open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
-                content = doc.read()
-            redirect = re.search(r"http-equiv=refresh.*?URL=([^\"'\s]+)", content)
-            # Preserve any anchor in checkers.html as part of the redirect target.
-            target = "" if not redirect else redirect.group(1)
-            autofix = ""
-            ref_begin = ""
-            ref_end = "_"
-        else:
-            # Match neighbour or current-directory doc targets.
-            redirect_parts = re.search(r"^(?:\.\./([^/]+)/)?([^/]+)$", match)
-            assert redirect_parts
-            redirect_module = redirect_parts[1] or module
-            title = f"{redirect_module}-{redirect_parts[2]}"
-            target = f"{redirect_module}/{redirect_parts[2]}"
-            autofix = has_auto_fix(title)
-            ref_begin = ":doc:"
-            ref_end = ""
+        check_file = doc_file_stem(doc_file)
+        # Match neighbour or current-directory doc targets.
+        redirect_parts = re.search(r"^(?:\.\./([^/]+)/)?([^/]+)$", match)
+        assert redirect_parts
+        redirect_module = redirect_parts[1] or module
+        redirect_check = redirect_parts[2]
+        title = f"{redirect_module}-{redirect_check}"
+        redirect = format_doc_ref(title, redirect_module, redirect_check)
+        autofix = has_auto_fix_cell(title)
 
-        if target:
-            # The checker is just a redirect.
-            return (
-                f"   :doc:`{check_name} <{module}/{check_file}>`, "
-                f"{ref_begin}`{title} <{target}>`{ref_end},{autofix}\n"
-            )
-
-        # The checker is just a alias without redirect.
-        return f"   :doc:`{check_name} <{module}/{check_file}>`, {title},{autofix}\n"
+        return (
+            f"| {format_doc_ref(check_name, module, check_file)} | "
+            f"{redirect} | {autofix} |\n"
+        )
 
     print(f"Updating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         for line in lines:
             f.write(line)
-            if line.strip() == ".. csv-table::":
+            if line == "| Name | Offers fixes |\n":
                 # We dump the checkers
-                f.write('   :header: "Name", "Offers fixes"\n\n')
-                f.writelines(map(format_link, doc_files))
+                f.write("| --- | --- |\n")
+                f.writelines(sorted(filter(None, map(format_link, doc_files))))
                 # and the aliases
-                f.write("\nCheck aliases\n-------------\n\n")
-                f.write(".. csv-table::\n")
-                f.write('   :header: "Name", "Redirect", "Offers fixes"\n\n')
-                f.writelines(map(format_link_alias, doc_files))
+                f.write("\n## Check aliases\n\n")
+                f.write("| Name | Redirect | Offers fixes |\n")
+                f.write("| --- | --- | --- |\n")
+                alias_rows = list(map(format_link_alias, doc_files))
+                alias_rows.extend(clang_analyzer_alias_rows)
+                f.writelines(sorted(filter(None, alias_rows)))
                 break
 
 
@@ -622,16 +623,13 @@ def write_docs(module_path: str, module: str, check_name: str) -> None:
     )
     print(f"Creating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
-        f.write(
-            """```{title} clang-tidy - %(check_name_dashes)s
+        f.write("""```{title} clang-tidy - %(check_name_dashes)s
 ```
 
 # %(check_name_dashes)s
 
 FIXME: Describe what patterns does the check detect and why. Give examples.
-"""
-            % {"check_name_dashes": check_name_dashes}
-        )
+""" % {"check_name_dashes": check_name_dashes})
 
 
 def get_camel_name(check_name: str) -> str:

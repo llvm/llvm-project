@@ -1,13 +1,15 @@
-.. title:: clang-tidy - clang-analyzer-security.insecureAPI.bcopy
+```{title} clang-tidy - clang-analyzer-security.insecureAPI.bcopy
+```
+
+```{eval-rst}
 .. meta::
    :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcopy
+```
 
-clang-analyzer-security.insecureAPI.bcopy
-=========================================
+# clang-analyzer-security.insecureAPI.bcopy
 
 Warn on uses of the 'bcopy' function.
 
 The `clang-analyzer-security.insecureAPI.bcopy` check is an alias, please see
-`Clang Static Analyzer Available Checkers
-<https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcopy>`_
+[Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcopy)
 for more information.

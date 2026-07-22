@@ -1,13 +1,15 @@
-.. title:: clang-tidy - clang-analyzer-osx.cocoa.SuperDealloc
+```{title} clang-tidy - clang-analyzer-osx.cocoa.SuperDealloc
+```
+
+```{eval-rst}
 .. meta::
    :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-superdealloc
+```
 
-clang-analyzer-osx.cocoa.SuperDealloc
-=====================================
+# clang-analyzer-osx.cocoa.SuperDealloc
 
 Warn about improper use of '[super dealloc]' in Objective-C.
 
 The `clang-analyzer-osx.cocoa.SuperDealloc` check is an alias, please see
-`Clang Static Analyzer Available Checkers
-<https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-superdealloc>`_
+[Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-superdealloc)
 for more information.

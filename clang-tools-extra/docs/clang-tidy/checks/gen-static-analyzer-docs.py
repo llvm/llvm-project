@@ -7,6 +7,7 @@ import subprocess
 import json
 import os
 import re
+import textwrap
 
 """Get path of script so files are always in correct directory"""
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -82,38 +83,35 @@ Args:
 def generate_documentation(checker, has_documentation):
 
     with open(
-        os.path.join(__location__, "clang-analyzer", checker["ShortName"] + ".rst"), "w"
+        os.path.join(__location__, "clang-analyzer", checker["ShortName"] + ".md"), "w"
     ) as f:
-        f.write(".. title:: clang-tidy - %s\n" % checker["FullPackageName"])
+        f.write("```{title} clang-tidy - %s\n" % checker["FullPackageName"])
+        f.write("```\n")
         if has_documentation:
+            f.write("\n")
+            # {meta} is not a supported MyST directive in the LLVM docs build,
+            # and we are not yet aware of a MyST-native way to implement these
+            # documentation redirects.
+            f.write("```{eval-rst}\n")
             f.write(".. meta::\n")
             f.write(
                 "   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#%s\n"
                 % checker["AnchorUrl"]
             )
+            f.write("```\n")
         f.write("\n")
-        f.write("%s\n" % checker["FullPackageName"])
-        f.write("=" * len(checker["FullPackageName"]) + "\n")
+        f.write("# %s\n\n" % checker["FullPackageName"])
         help_text = checker["HelpText"].strip()
         if not help_text.endswith("."):
             help_text += "."
-        characters = 80
-        for word in help_text.split(" "):
-            if characters+len(word)+1 > 80:
-                characters = len(word)
-                f.write("\n")
-                f.write(word)
-            else:
-                f.write(" ")
-                f.write(word)
-                characters += len(word) + 1
+        f.write(textwrap.fill(help_text, 80))
         f.write("\n\n")
         if has_documentation:
             f.write(
                 "The `%s` check is an alias, please see\n" % checker["FullPackageName"]
             )
             f.write(
-                "`Clang Static Analyzer Available Checkers\n<https://clang.llvm.org/docs/analyzer/checkers.html#%s>`_\n"
+                "[Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#%s)\n"
                 % checker["AnchorUrl"]
             )
             f.write("for more information.\n")
@@ -122,24 +120,41 @@ def generate_documentation(checker, has_documentation):
         f.close()
 
 
-"""Update list.rst to include the new checks
+"""Update list.md to include the new checks
 
 Args:
   checkers: dict acquired from get_checkers()
 """
 def update_documentation_list(checkers):
-    with open(os.path.join(__location__, "list.rst"), "r+") as f:
+    with open(os.path.join(__location__, "list.md"), "r+") as f:
         f_text = f.read()
-        check_text = f_text.split(':header: "Name", "Redirect", "Offers fixes"\n')[1]
-        checks = [x for x in check_text.split("\n") if ":header:" not in x and x]
+        table_header = "| Name | Redirect | Offers fixes |\n| --- | --- | --- |\n"
+        check_text = f_text.split(table_header)[1]
+        checks = [x for x in check_text.splitlines() if x.startswith("| ")]
         old_check_text = "\n".join(checks)
         checks = [x for x in checks if "clang-analyzer-" not in x]
         for checker in checkers:
             if checker["Documentation"]:
-                checks.append("   :doc:`%s <clang-analyzer/%s>`, `Clang Static Analyzer %s <https://clang.llvm.org/docs/analyzer/checkers.html#%s>`_," % (checker["FullPackageName"],
-                                                        checker["ShortName"],  checker["ShortName"], checker["AnchorUrl"]))
+                checks.append(
+                    "| {doc}`%s <clang-analyzer/%s>` | "
+                    "[Clang Static Analyzer %s](https://clang.llvm.org/docs/analyzer/checkers.html#%s) |  |"
+                    % (
+                        checker["FullPackageName"],
+                        checker["ShortName"],
+                        checker["ShortName"],
+                        checker["AnchorUrl"],
+                    )
+                )
             else:
-                checks.append("   :doc:`%s <clang-analyzer/%s>`, Clang Static Analyzer %s," % (checker["FullPackageName"], checker["ShortName"],  checker["ShortName"]))
+                checks.append(
+                    "| {doc}`%s <clang-analyzer/%s>` | "
+                    "Clang Static Analyzer %s |  |"
+                    % (
+                        checker["FullPackageName"],
+                        checker["ShortName"],
+                        checker["ShortName"],
+                    )
+                )
 
         checks.sort()
 
@@ -147,6 +162,7 @@ def update_documentation_list(checkers):
         f.seek(0)
         f_text = f_text.replace(old_check_text, "\n".join(checks))
         f.write(f_text)
+        f.truncate()
         f.close()
 
 
