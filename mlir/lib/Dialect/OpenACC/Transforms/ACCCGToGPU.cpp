@@ -2661,10 +2661,17 @@ void ACCCGToGPULowering::processPrivateLocal(
   Value subview = memref::SubViewOp::create(rewriter, loc, subviewType, view,
                                             subviewOffset, subviewSizes, ones);
 
-  // Cast subview to the target type, preserving the dynamic offset.
-  // Do NOT cast to a plain memref (offset: 0) - the LLVM optimizer
-  // would fold the gang offset to zero, making all gangs share memory.
-  Value result = castPointerLikeTypeIfNeeded(rewriter, loc, subview,
+  // Pointer-like casts cannot carry memref offsets. Shift the aligned pointer
+  // so later zero-offset views retain this thread's private slice.
+  auto metadata =
+      memref::ExtractStridedMetadataOp::create(rewriter, loc, subview);
+  Value elementBytes = arith::ConstantIndexOp::create(
+      rewriter, loc, getElementSizeInBytes(loc, baseTy.getElementType()));
+  Value byteOffset =
+      arith::MulIOp::create(rewriter, loc, metadata.getOffset(), elementBytes);
+  Value privateView = memref::ViewOp::create(rewriter, loc, baseTy, memBuffer,
+                                             byteOffset, innerDynSizes);
+  Value result = castPointerLikeTypeIfNeeded(rewriter, loc, privateView,
                                              privateLocal.getType());
   mapping.map(privateLocal.getResult(), result);
 }
