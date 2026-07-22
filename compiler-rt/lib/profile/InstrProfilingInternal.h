@@ -9,7 +9,12 @@
 #ifndef PROFILE_INSTRPROFILING_INTERNALH_
 #define PROFILE_INSTRPROFILING_INTERNALH_
 
+#if defined(__FreeBSD__) && defined(_KERNEL)
+#include <sys/stddef.h>
+#include <sys/types.h>
+#else
 #include <stddef.h>
+#endif
 
 #include "InstrProfiling.h"
 
