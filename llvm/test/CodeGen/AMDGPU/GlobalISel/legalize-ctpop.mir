@@ -194,8 +194,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[CTPOP]](s32)
     ; CHECK-NEXT: [[CTPOP1:%[0-9]+]]:_(s32) = G_CTPOP [[LSHR]](i32)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[CTPOP1]](s32)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C2]](s32)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY2]], [[C]](i32)
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY1]], [[SHL]]
     ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)

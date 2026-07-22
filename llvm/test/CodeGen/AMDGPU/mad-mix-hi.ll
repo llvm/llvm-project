@@ -9,8 +9,8 @@
 ; XUN: llc -global-isel -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-TRUE16 %s
 ; RUN: llc -global-isel -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-FAKE16 %s
 ; RUN: llc -global-isel -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GFX9,GISEL-GFX9 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu8.03 < %s | FileCheck -check-prefixes=VI,GISEL-VI %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu7.01 < %s | FileCheck -check-prefixes=GISEL-CI %s
+; RUN: llc -global-isel -mtriple=amdgpu8.03 < %s | FileCheck -check-prefixes=VI,GISEL-VI %s
+; RUN: llc -global-isel -mtriple=amdgpu7.01 < %s | FileCheck -check-prefixes=GISEL-CI %s
 
 define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo(half %src0, half %src1, half %src2) #0 {
 ; GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo:
@@ -103,16 +103,16 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo(half %src0, half %s
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; VI-NEXT:    v_mac_f32_e32 v2, v0, v1
-; VI-NEXT:    v_cvt_f16_f32_sdwa v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; VI-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-VI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo:
+; SDAG-VI:       ; %bb.0:
+; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-VI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; SDAG-VI-NEXT:    v_cvt_f16_f32_sdwa v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; SDAG-VI-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
+; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-CI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo:
 ; SDAG-CI:       ; %bb.0:
@@ -135,16 +135,34 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo(half %src0, half %s
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, v3
 ; GISEL-GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GISEL-VI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo:
+; GISEL-VI:       ; %bb.0:
+; GISEL-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GISEL-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GISEL-VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GISEL-VI-NEXT:    s_movk_i32 s4, 0x3c00
+; GISEL-VI-NEXT:    s_bfe_u32 s4, s4, 0x100000
+; GISEL-VI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; GISEL-VI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; GISEL-VI-NEXT:    v_mov_b32_e32 v1, 16
+; GISEL-VI-NEXT:    v_lshlrev_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-VI-NEXT:    v_or_b32_e32 v0, s4, v0
+; GISEL-VI-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GISEL-CI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo:
 ; GISEL-CI:       ; %bb.0:
 ; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GISEL-CI-NEXT:    s_movk_i32 s4, 0x3c00
+; GISEL-CI-NEXT:    s_bfe_u32 s4, s4, 0x100000
 ; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; GISEL-CI-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GISEL-CI-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
+; GISEL-CI-NEXT:    v_or_b32_e32 v0, s4, v0
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
@@ -178,16 +196,16 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo(half %src0, half %src
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; VI-NEXT:    v_mac_f32_e32 v2, v0, v1
-; VI-NEXT:    v_cvt_f16_f32_sdwa v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-VI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
+; SDAG-VI:       ; %bb.0:
+; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SDAG-VI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; SDAG-VI-NEXT:    v_cvt_f16_f32_sdwa v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; SDAG-VI-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-CI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
 ; SDAG-CI:       ; %bb.0:
@@ -210,6 +228,19 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo(half %src0, half %src
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, v3
 ; GISEL-GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GISEL-VI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
+; GISEL-VI:       ; %bb.0:
+; GISEL-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GISEL-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GISEL-VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GISEL-VI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; GISEL-VI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; GISEL-VI-NEXT:    v_mov_b32_e32 v1, 16
+; GISEL-VI-NEXT:    v_lshlrev_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-VI-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GISEL-VI-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GISEL-CI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
 ; GISEL-CI:       ; %bb.0:
 ; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -219,6 +250,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo(half %src0, half %src
 ; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
 ; GISEL-CI-NEXT:    v_and_b32_e32 v1, 0xffff, v3
+; GISEL-CI-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GISEL-CI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
@@ -720,3 +752,4 @@ attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone speculatable }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GISEL-GFX11-FAKE16: {{.*}}
+; VI: {{.*}}

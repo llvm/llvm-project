@@ -1225,6 +1225,14 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
   };
 
   AddPath({getTriple().str()});
+
+  // Handle the legacy AMDGPU triple case as well.
+  if (getTriple().getArchName() == "amdgcn") {
+    llvm::Triple Canon(getTriple());
+    Canon.setArchName("amdgpu");
+    AddPath({Canon.str()});
+  }
+
   AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
   return Paths;
 }

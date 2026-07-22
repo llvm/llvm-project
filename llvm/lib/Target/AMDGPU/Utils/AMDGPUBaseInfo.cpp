@@ -928,6 +928,12 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
     NumVOPD3Mods = 2;
     if (IsVOP3)
       SrcOperandsNum = 3;
+  } else if (Opcode == AMDGPU::V_DOT2_F32_F16 ||
+             Opcode == AMDGPU::V_DOT2_F32_BF16) {
+    // VOP3P opcodes that have VOPD but don't have VOP2 version. Using VOPD3
+    // path in getIndexOfSrcInMCOperands to get correct src operand indexes,
+    // but generating VOPD, not VOPD3.
+    NumVOPD3Mods = SrcOperandsNum;
   } else if (isSISrcFPOperand(OpDesc,
                               getNamedOperandIdx(Opcode, OpName::src0))) {
     // All FP VOPD instructions have Neg modifiers for all operands except
@@ -1081,7 +1087,7 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
 TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
                               StringRef FeatureString) {
   TargetID TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
-                    STI.getFeatureBits().test(FeatureSupportsXNACK)
+                    STI.getFeatureBits().test(FeatureXNACKOnOffModes)
                         ? TargetIDSetting::Any
                         : TargetIDSetting::Unsupported,
                     STI.getFeatureBits().test(FeatureSupportsSRAMECC)
@@ -1107,7 +1113,8 @@ TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
   }
 
   // Only allow changing xnack setting if the target supports on/off modes.
-  // Targets without on/off mode support keep their initial setting (Any).
+  // Targets without on/off mode support keep their initial setting
+  // (Unsupported).
 
   bool XnackSupported = STI.getFeatureBits().test(FeatureXNACKOnOffModes);
   bool SramEccSupported = TargetID.isSramEccSupported();
@@ -3834,6 +3841,34 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
     A.Dims = {(*Attr)[0], (*Attr)[1], (*Attr)[2]};
 
   return A;
+}
+
+std::optional<APFloat> evaluateRcp(const APFloat &Val) {
+  const fltSemantics &Sem = Val.getSemantics();
+
+  // v_rcp_f16/bf16 are correctly rounded.
+  if (&Sem == &APFloat::IEEEhalf() || &Sem == &APFloat::BFloat())
+    return APFloat::getOne(Sem) / Val;
+
+  // v_rcp_f32/f64 always flush a denormal input to zero (preserving sign)
+  // before reciprocating.
+  APFloat Arg = Val;
+  if (Arg.isDenormal())
+    Arg = APFloat::getZero(Sem, Arg.isNegative());
+
+  APFloat Result = APFloat::getOne(Sem) / Arg;
+
+  // v_rcp_f32/f64 always flush a denormal result to zero (preserving sign).
+  if (Result.isDenormal())
+    Result = APFloat::getZero(Sem, Result.isNegative());
+
+  // v_rcp_f32/f64 only approximate the reciprocal, except for these special
+  // cases where the result is exact.
+  if (!Result.isZero() && !Result.isInfinity() && !Result.isNaN() &&
+      !Result.isOne() && !Result.isMinusOne())
+    return std::nullopt;
+
+  return Result;
 }
 
 } // namespace AMDGPU

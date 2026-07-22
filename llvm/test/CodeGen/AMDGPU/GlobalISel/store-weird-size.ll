@@ -18,8 +18,8 @@ define void @store_i48(ptr addrspace(1) %ptr, i48 %arg) #0 {
   ; UNPACKED-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
   ; UNPACKED-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[MV]], [[C1]](i64)
   ; UNPACKED-NEXT:   G_STORE [[COPY2]](i32), [[MV]](p1) :: (store (s32) into %ir.ptr, addrspace 1)
-  ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](i64)
-  ; UNPACKED-NEXT:   G_STORE [[TRUNC]](s32), [[PTR_ADD]](p1) :: (store (s16) into %ir.ptr + 4, align 4, addrspace 1)
+  ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[LSHR]](i64)
+  ; UNPACKED-NEXT:   G_STORE [[TRUNC]](i32), [[PTR_ADD]](p1) :: (store (s16) into %ir.ptr + 4, align 4, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
   store i48 %arg, ptr addrspace(1) %ptr, align 4
   ret void
@@ -43,8 +43,8 @@ define void @store_i55(ptr addrspace(1) %ptr, i55 %arg) #0 {
   ; UNPACKED-NEXT:   [[LSHR:%[0-9]+]]:_(i64) = G_LSHR [[COPY4]], [[C1]](i32)
   ; UNPACKED-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
   ; UNPACKED-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[MV]], [[C2]](i64)
-  ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY4]](i64)
-  ; UNPACKED-NEXT:   G_STORE [[TRUNC]](s32), [[MV]](p1) :: (store (s32) into %ir.ptr, addrspace 1)
+  ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY4]](i64)
+  ; UNPACKED-NEXT:   G_STORE [[TRUNC]](i32), [[MV]](p1) :: (store (s32) into %ir.ptr, addrspace 1)
   ; UNPACKED-NEXT:   [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[LSHR]](i64)
   ; UNPACKED-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
   ; UNPACKED-NEXT:   [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[TRUNC1]], [[C3]](i32)
@@ -107,8 +107,8 @@ define void @store_i65(ptr addrspace(1) %ptr, i65 %arg) #0 {
   ; UNPACKED-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
   ; UNPACKED-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[MV]], [[C2]](i64)
   ; UNPACKED-NEXT:   G_STORE [[AND]](i64), [[MV]](p1) :: (store (s64) into %ir.ptr, align 4, addrspace 1)
-  ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](i64)
-  ; UNPACKED-NEXT:   G_STORE [[TRUNC]](s32), [[PTR_ADD]](p1) :: (store (s8) into %ir.ptr + 8, align 4, addrspace 1)
+  ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[AND1]](i64)
+  ; UNPACKED-NEXT:   G_STORE [[TRUNC]](i32), [[PTR_ADD]](p1) :: (store (s8) into %ir.ptr + 8, align 4, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
   store i65 %arg, ptr addrspace(1) %ptr, align 4
   ret void
@@ -135,8 +135,8 @@ define void @store_i95(ptr addrspace(1) %ptr, i95 %arg) #0 {
   ; UNPACKED-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
   ; UNPACKED-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[MV]], [[C2]](i64)
   ; UNPACKED-NEXT:   G_STORE [[AND]](i64), [[MV]](p1) :: (store (s64) into %ir.ptr, align 4, addrspace 1)
-  ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](i64)
-  ; UNPACKED-NEXT:   G_STORE [[TRUNC]](s32), [[PTR_ADD]](p1) :: (store (s32) into %ir.ptr + 8, addrspace 1)
+  ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[AND1]](i64)
+  ; UNPACKED-NEXT:   G_STORE [[TRUNC]](i32), [[PTR_ADD]](p1) :: (store (s32) into %ir.ptr + 8, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
   store i95 %arg, ptr addrspace(1) %ptr, align 4
   ret void
@@ -186,10 +186,10 @@ define void @store_i97(ptr addrspace(1) %ptr, i97 %arg) #0 {
   ; UNPACKED-NEXT:   [[LSHR:%[0-9]+]]:_(i64) = G_LSHR [[AND1]], [[C3]](i32)
   ; UNPACKED-NEXT:   [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
   ; UNPACKED-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[PTR_ADD]], [[C4]](i64)
-  ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](i64)
-  ; UNPACKED-NEXT:   G_STORE [[TRUNC]](s32), [[PTR_ADD]](p1) :: (store (s32) into %ir.ptr + 8, addrspace 1)
-  ; UNPACKED-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](i64)
-  ; UNPACKED-NEXT:   G_STORE [[TRUNC1]](s32), [[PTR_ADD1]](p1) :: (store (s8) into %ir.ptr + 12, align 4, addrspace 1)
+  ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[AND1]](i64)
+  ; UNPACKED-NEXT:   G_STORE [[TRUNC]](i32), [[PTR_ADD]](p1) :: (store (s32) into %ir.ptr + 8, addrspace 1)
+  ; UNPACKED-NEXT:   [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[LSHR]](i64)
+  ; UNPACKED-NEXT:   G_STORE [[TRUNC1]](i32), [[PTR_ADD1]](p1) :: (store (s8) into %ir.ptr + 12, align 4, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
   store i97 %arg, ptr addrspace(1) %ptr, align 4
   ret void

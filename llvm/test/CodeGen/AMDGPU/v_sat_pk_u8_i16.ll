@@ -6,12 +6,12 @@
 ; RUN: llc -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=SDAG-GFX12,SDAG-GFX12-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=SDAG-GFX12,SDAG-GFX12-FAKE16 %s
 
-; RUN: llc -mtriple=amdgpu8.03 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GISEL-VI %s
-; RUN: llc -mtriple=amdgpu9.00 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GISEL-GFX9 %s
+; RUN: llc -mtriple=amdgpu8.03 -global-isel < %s | FileCheck -check-prefixes=GISEL-VI %s
+; RUN: llc -mtriple=amdgpu9.00 -global-isel < %s | FileCheck -check-prefixes=GISEL-GFX9 %s
 ; RUN: llc -mtriple=amdgpu11.01 -mattr=+real-true16 -global-isel < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-TRUE16 %s
-; RUN: llc -mtriple=amdgpu11.01 -mattr=-real-true16 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgpu11.01 -mattr=-real-true16 -global-isel < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgpu12.00 -mattr=+real-true16 -global-isel < %s | FileCheck -check-prefixes=GISEL-GFX12,GISEL-GFX12-TRUE16 %s
-; RUN: llc -mtriple=amdgpu12.00 -mattr=-real-true16 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GISEL-GFX12,GISEL-GFX12-FAKE16 %s
+; RUN: llc -mtriple=amdgpu12.00 -mattr=-real-true16 -global-isel < %s | FileCheck -check-prefixes=GISEL-GFX12,GISEL-GFX12-FAKE16 %s
 
 ; <GFX9 has no V_SAT_PK, GFX9+ has V_SAT_PK, GFX11 has V_SAT_PK with t16
 
@@ -87,10 +87,10 @@ define <2 x i16> @basic_smax_smin(i16 %src0, i16 %src1) {
 ; GISEL-VI:       ; %bb.0:
 ; GISEL-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-VI-NEXT:    v_max_i16_e32 v0, 0, v0
-; GISEL-VI-NEXT:    v_max_i16_e32 v1, 0, v1
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v2, 0xff
-; GISEL-VI-NEXT:    v_min_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GISEL-VI-NEXT:    v_max_i16_e32 v1, 0, v1
 ; GISEL-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
+; GISEL-VI-NEXT:    v_min_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GISEL-VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -235,14 +235,20 @@ define amdgpu_kernel void @basic_smax_smin_sgpr(ptr addrspace(1) %out, i32 inreg
 ; GISEL-VI-LABEL: basic_smax_smin_sgpr:
 ; GISEL-VI:       ; %bb.0:
 ; GISEL-VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GISEL-VI-NEXT:    v_mov_b32_e32 v0, 0xff
 ; GISEL-VI-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-VI-NEXT:    s_sext_i32_i16 s2, s2
 ; GISEL-VI-NEXT:    s_sext_i32_i16 s3, s3
-; GISEL-VI-NEXT:    v_med3_i32 v1, s2, 0, v0
-; GISEL-VI-NEXT:    v_med3_i32 v0, s3, 0, v0
-; GISEL-VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GISEL-VI-NEXT:    v_or_b32_e32 v2, v1, v0
+; GISEL-VI-NEXT:    s_sext_i32_i16 s2, s2
+; GISEL-VI-NEXT:    s_max_i32 s3, s3, 0
+; GISEL-VI-NEXT:    s_max_i32 s2, s2, 0
+; GISEL-VI-NEXT:    s_sext_i32_i16 s3, s3
+; GISEL-VI-NEXT:    s_sext_i32_i16 s2, s2
+; GISEL-VI-NEXT:    s_min_i32 s3, s3, 0xff
+; GISEL-VI-NEXT:    s_min_i32 s2, s2, 0xff
+; GISEL-VI-NEXT:    s_and_b32 s3, 0xffff, s3
+; GISEL-VI-NEXT:    s_and_b32 s2, 0xffff, s2
+; GISEL-VI-NEXT:    s_lshl_b32 s3, s3, 16
+; GISEL-VI-NEXT:    s_or_b32 s2, s2, s3
+; GISEL-VI-NEXT:    v_mov_b32_e32 v2, s2
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-VI-NEXT:    flat_store_dword v[0:1], v2
@@ -384,8 +390,8 @@ define <2 x i16> @basic_smin_smax(i16 %src0, i16 %src1) {
 ; GISEL-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
 ; GISEL-VI-NEXT:    v_min_i16_e32 v1, 0xff, v1
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v2, 0
-; GISEL-VI-NEXT:    v_max_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GISEL-VI-NEXT:    v_max_i16_e32 v0, 0, v0
+; GISEL-VI-NEXT:    v_max_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GISEL-VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -515,11 +521,11 @@ define <2 x i16> @basic_smin_smax_combined(i16 %src0, i16 %src1) {
 ; GISEL-VI-LABEL: basic_smin_smax_combined:
 ; GISEL-VI:       ; %bb.0:
 ; GISEL-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-VI-NEXT:    v_mov_b32_e32 v2, 0xff
 ; GISEL-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
 ; GISEL-VI-NEXT:    v_max_i16_e32 v1, 0, v1
-; GISEL-VI-NEXT:    v_mov_b32_e32 v2, 0xff
-; GISEL-VI-NEXT:    v_min_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GISEL-VI-NEXT:    v_max_i16_e32 v0, 0, v0
+; GISEL-VI-NEXT:    v_min_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GISEL-VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -628,13 +634,13 @@ define <2 x i16> @vec_smax_smin(<2 x i16> %src) {
 ; GISEL-VI-LABEL: vec_smax_smin:
 ; GISEL-VI:       ; %bb.0:
 ; GISEL-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-VI-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-VI-NEXT:    v_max_i16_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GISEL-VI-NEXT:    v_max_i16_e32 v0, 0, v0
+; GISEL-VI-NEXT:    v_mov_b32_e32 v2, 0
+; GISEL-VI-NEXT:    v_max_i16_e32 v1, 0, v0
+; GISEL-VI-NEXT:    v_max_i16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v2, 0xff
-; GISEL-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
-; GISEL-VI-NEXT:    v_min_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GISEL-VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; GISEL-VI-NEXT:    v_min_i16_e32 v1, 0xff, v1
+; GISEL-VI-NEXT:    v_min_i16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GISEL-VI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GISEL-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX9-LABEL: vec_smax_smin:
@@ -729,14 +735,21 @@ define amdgpu_kernel void @vec_smax_smin_sgpr(ptr addrspace(1) %out, <2 x i16> i
 ; GISEL-VI:       ; %bb.0:
 ; GISEL-VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GISEL-VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-VI-NEXT:    v_mov_b32_e32 v0, 0xff
 ; GISEL-VI-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-VI-NEXT:    s_ashr_i32 s3, s2, 16
+; GISEL-VI-NEXT:    s_lshr_b32 s3, s2, 16
+; GISEL-VI-NEXT:    s_sext_i32_i16 s3, s3
 ; GISEL-VI-NEXT:    s_sext_i32_i16 s2, s2
-; GISEL-VI-NEXT:    v_med3_i32 v1, s2, 0, v0
-; GISEL-VI-NEXT:    v_med3_i32 v0, s3, 0, v0
-; GISEL-VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GISEL-VI-NEXT:    v_or_b32_sdwa v2, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GISEL-VI-NEXT:    s_max_i32 s3, s3, 0
+; GISEL-VI-NEXT:    s_max_i32 s2, s2, 0
+; GISEL-VI-NEXT:    s_sext_i32_i16 s3, s3
+; GISEL-VI-NEXT:    s_sext_i32_i16 s2, s2
+; GISEL-VI-NEXT:    s_min_i32 s3, s3, 0xff
+; GISEL-VI-NEXT:    s_min_i32 s2, s2, 0xff
+; GISEL-VI-NEXT:    s_and_b32 s3, 0xffff, s3
+; GISEL-VI-NEXT:    s_and_b32 s2, 0xffff, s2
+; GISEL-VI-NEXT:    s_lshl_b32 s3, s3, 16
+; GISEL-VI-NEXT:    s_or_b32 s2, s2, s3
+; GISEL-VI-NEXT:    v_mov_b32_e32 v2, s2
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-VI-NEXT:    flat_store_dword v[0:1], v2
@@ -863,12 +876,12 @@ define <2 x i16> @vec_smin_smax(<2 x i16> %src) {
 ; GISEL-VI:       ; %bb.0:
 ; GISEL-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v1, 0xff
-; GISEL-VI-NEXT:    v_min_i16_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GISEL-VI-NEXT:    v_min_i16_e32 v0, 0xff, v0
+; GISEL-VI-NEXT:    v_min_i16_e32 v2, 0xff, v0
+; GISEL-VI-NEXT:    v_min_i16_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-VI-NEXT:    v_max_i16_e32 v1, 0, v2
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v2, 0
-; GISEL-VI-NEXT:    v_max_i16_e32 v0, 0, v0
-; GISEL-VI-NEXT:    v_max_i16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GISEL-VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; GISEL-VI-NEXT:    v_max_i16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GISEL-VI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GISEL-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX9-LABEL: vec_smin_smax:

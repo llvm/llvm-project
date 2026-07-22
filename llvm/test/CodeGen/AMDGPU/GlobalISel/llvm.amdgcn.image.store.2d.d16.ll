@@ -87,15 +87,20 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ;
 ; GFX81-LABEL: image_store_v3f16:
 ; GFX81:       ; %bb.0:
-; GFX81-NEXT:    s_mov_b32 s11, s9
-; GFX81-NEXT:    s_mov_b32 s10, s8
-; GFX81-NEXT:    s_mov_b32 s9, s7
-; GFX81-NEXT:    s_mov_b32 s8, s6
-; GFX81-NEXT:    s_mov_b32 s7, s5
-; GFX81-NEXT:    s_mov_b32 s6, s4
-; GFX81-NEXT:    s_mov_b32 s5, s3
-; GFX81-NEXT:    s_mov_b32 s4, s2
-; GFX81-NEXT:    image_store v[2:4], v[0:1], s[4:11] dmask:0x7 unorm d16
+; GFX81-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
+; GFX81-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX81-NEXT:    s_mov_b32 s0, s2
+; GFX81-NEXT:    s_mov_b32 s1, s3
+; GFX81-NEXT:    s_mov_b32 s2, s4
+; GFX81-NEXT:    s_mov_b32 s3, s5
+; GFX81-NEXT:    s_mov_b32 s4, s6
+; GFX81-NEXT:    s_mov_b32 s5, s7
+; GFX81-NEXT:    s_mov_b32 s6, s8
+; GFX81-NEXT:    s_mov_b32 s7, s9
+; GFX81-NEXT:    v_or_b32_sdwa v2, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX81-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GFX81-NEXT:    v_mov_b32_e32 v4, 0
+; GFX81-NEXT:    image_store v[2:4], v[0:1], s[0:7] dmask:0x7 unorm d16
 ; GFX81-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v3f16.i32(<3 x half> %in, i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void

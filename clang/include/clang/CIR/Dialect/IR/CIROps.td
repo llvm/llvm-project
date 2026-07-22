@@ -2258,6 +2258,9 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
     mlir::Region *maybeGetCleanup() {
       return getCleanup().empty() ? nullptr : &getCleanup();
     }
+    cir::CleanupKindAttr maybeGetCleanupKind() {
+      return getCleanupKindAttr();
+    }
     llvm::SmallVector<mlir::Region *> getRegionsInExecutionOrder() {
       llvm::SmallVector<mlir::Region *> regions{&getCond(), &getBody()};
       if (mlir::Region *cleanup = maybeGetCleanup())
@@ -2385,6 +2388,9 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     mlir::Region *maybeGetStep() { return &getStep(); }
     mlir::Region *maybeGetCleanup() {
       return getCleanup().empty() ? nullptr : &getCleanup();
+    }
+    cir::CleanupKindAttr maybeGetCleanupKind() {
+      return getCleanupKindAttr();
     }
     llvm::SmallVector<mlir::Region *> getRegionsInExecutionOrder() {
       llvm::SmallVector<mlir::Region *> regions{&getCond(), &getBody(),
