@@ -58,7 +58,27 @@ struct TestOneShotModuleBufferizePass
     opt.bufferizeFunctionBoundaries = true;
     opt.functionArgTypeConverterFn =
         [&](bufferization::TensorLikeType tensor, Attribute memSpace,
-            func::FuncOp, const bufferization::BufferizationOptions &options) {
+            func::FuncOp funcOp,
+            const bufferization::BufferizationOptions &options) {
+          if (auto rankedTensor = dyn_cast<RankedTensorType>(tensor)) {
+            auto encoding = dyn_cast_if_present<test::TestTensorEncodingAttr>(
+                rankedTensor.getEncoding());
+            if (encoding && encoding.getDummy().getValue() == "custom_buffer")
+              return cast<bufferization::BufferLikeType>(
+                  test::TestMemrefType::get(
+                      rankedTensor.getContext(), rankedTensor.getShape(),
+                      rankedTensor.getElementType(), memSpace));
+          }
+          if (auto tensorType = dyn_cast<TensorType>(tensor)) {
+            Type elementType = tensorType.getElementType();
+            if (!BaseMemRefType::isValidElementType(elementType)) {
+              funcOp.emitError()
+                  << "cannot bufferize function boundary type " << tensorType
+                  << ": element type " << elementType
+                  << " is not a valid memref element type";
+              return bufferization::BufferLikeType{};
+            }
+          }
           return options.unknownTypeConverterFn(tensor, memSpace, options);
         };
     opt.unknownTypeConverterFn =

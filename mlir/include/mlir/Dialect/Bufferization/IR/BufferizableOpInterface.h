@@ -262,6 +262,7 @@ struct BufferizationOptions {
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
   /// Tensor-like -> Buffer-like type conversion.
   /// Parameters: tensor-like type, memory space, func op, bufferization options
+  /// Returning a null type signals conversion failure.
   using FunctionArgTypeConverterFn =
       std::function<BufferLikeType(TensorLikeType, Attribute memorySpace,
                                    func::FuncOp, const BufferizationOptions &)>;

@@ -92,6 +92,40 @@ func.func @custom_types_bar(%arg: !test.test_tensor<[4, 4], f64>)
   return %out : !test.test_tensor<[4, 8], f64>
 }
 
+// -----
+
+#custom_buffer = #test.tensor_encoding<"custom_buffer">
+
+// CHECK-LABEL: func.func @custom_buffer_like_callee(
+// CHECK-SAME:      %[[ARG:.*]]: !test.test_memref<[1], !llvm.array<1 x i32>>
+// CHECK-SAME:  ) -> !test.test_memref<[1], !llvm.array<1 x i32>>
+func.func @custom_buffer_like_callee(
+    %arg: tensor<1x!llvm.array<1 x i32>, #custom_buffer>)
+    -> tensor<1x!llvm.array<1 x i32>, #custom_buffer> {
+  // CHECK: %[[CALL:.*]] = call @custom_buffer_like_caller(%[[ARG]])
+  // CHECK-SAME: (!test.test_memref<[1], !llvm.array<1 x i32>>)
+  // CHECK-SAME: -> !test.test_memref<[1], !llvm.array<1 x i32>>
+  %call = func.call @custom_buffer_like_caller(%arg)
+      : (tensor<1x!llvm.array<1 x i32>, #custom_buffer>)
+      -> tensor<1x!llvm.array<1 x i32>, #custom_buffer>
+  return %call : tensor<1x!llvm.array<1 x i32>, #custom_buffer>
+}
+
+// CHECK-LABEL: func.func @custom_buffer_like_caller(
+// CHECK-SAME:      %[[ARG:.*]]: !test.test_memref<[1], !llvm.array<1 x i32>>
+// CHECK-SAME:  ) -> !test.test_memref<[1], !llvm.array<1 x i32>>
+func.func @custom_buffer_like_caller(
+    %arg: tensor<1x!llvm.array<1 x i32>, #custom_buffer>)
+    -> tensor<1x!llvm.array<1 x i32>, #custom_buffer> {
+  // CHECK: %[[CALL:.*]] = call @custom_buffer_like_callee(%[[ARG]])
+  // CHECK-SAME: (!test.test_memref<[1], !llvm.array<1 x i32>>)
+  // CHECK-SAME: -> !test.test_memref<[1], !llvm.array<1 x i32>>
+  %call = func.call @custom_buffer_like_callee(%arg)
+      : (tensor<1x!llvm.array<1 x i32>, #custom_buffer>)
+      -> tensor<1x!llvm.array<1 x i32>, #custom_buffer>
+  return %call : tensor<1x!llvm.array<1 x i32>, #custom_buffer>
+}
+
 
 // -----
 

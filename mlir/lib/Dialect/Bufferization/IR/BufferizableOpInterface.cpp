@@ -358,12 +358,24 @@ BaseMemRefType getMemRefTypeWithFullyDynamicLayout(ArrayRef<int64_t> shape,
   return MemRefType::get(shape, elementType, stridedLayout, memorySpace);
 }
 
+LogicalResult verifyMemRefElementType(func::FuncOp funcOp,
+                                      TensorType tensorType) {
+  Type elementType = tensorType.getElementType();
+  if (BaseMemRefType::isValidElementType(elementType))
+    return success();
+  return funcOp.emitError() << "cannot bufferize function boundary type "
+                            << tensorType << ": element type " << elementType
+                            << " is not a valid memref element type";
+}
+
 /// Default function arg type converter: Use a fully dynamic layout map.
 BufferLikeType
 defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
                                 func::FuncOp funcOp,
                                 const BufferizationOptions &options) {
   if (auto tensorType = mlir::dyn_cast<TensorType>(type)) {
+    if (failed(verifyMemRefElementType(funcOp, tensorType)))
+      return {};
     return cast<BufferLikeType>(
         bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
                                                            memorySpace));
@@ -440,6 +452,8 @@ void BufferizationOptions::setFunctionBoundaryTypeConversion(
                                    func::FuncOp funcOp,
                                    const BufferizationOptions &options) {
     if (auto tensorType = mlir::dyn_cast<TensorType>(type)) {
+      if (failed(verifyMemRefElementType(funcOp, tensorType)))
+        return BufferLikeType{};
       if (layoutMapOption == LayoutMapOption::IdentityLayoutMap)
         return cast<BufferLikeType>(
             bufferization::getMemRefTypeWithStaticIdentityLayout(tensorType,
