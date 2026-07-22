@@ -2415,8 +2415,7 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
   CallInst *MemI = createVectorCall(State);
   auto PtrPos = VPIntrinsic::getMemoryPointerParamPos(getVectorIntrinsicID());
-  assert(PtrPos.has_value() &&
-         "Expected a memory intrinsic with a valid pointer position");
+  assert(PtrPos && "Expected a memory intrinsic with a valid pointer position");
   MemI->addParamAttr(
       *PtrPos, Attribute::getWithAlignment(MemI->getContext(), Alignment));
   if (!MemI->getType()->isVoidTy())
@@ -2438,9 +2437,11 @@ VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
   if (DataTy->isVoidTy())
     DataTy = getOperand(0)->getScalarType();
   Type *Ty = toVectorTy(DataTy, VF);
-  return computeMemIntrinsicCost(
-      getVectorIntrinsicID(), Ty,
-      !match(getOperand(getNumOperands() - 2), m_True()), Alignment, Ctx);
+  auto MaskPos = VPIntrinsic::getMaskParamPos(getVectorIntrinsicID());
+  assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
+  return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
+                                 !match(getOperand(*MaskPos), m_True()),
+                                 Alignment, Ctx);
 }
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
