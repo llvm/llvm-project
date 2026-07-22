@@ -33,12 +33,13 @@ SymbolFileWasm::~SymbolFileWasm() = default;
 void SymbolFileWasm::AddSymbols(Symtab &symtab) {
   SymbolFileDWARF::AddSymbols(symtab);
 
-  // The Wasm "name" section names functions but not data, so data symbols such
-  // as C++ vtables are absent from the symbol table. Recover them from the
-  // DWARF. A subprogram's mangled name goes onto its existing code symbol. A
-  // global variable at a static DW_OP_addr, such as a vtable, gets a
-  // synthesized data symbol so its address resolves back to "vtable for X",
-  // which is how the Itanium C++ runtime recovers a dynamic type.
+  // The Wasm "name" section names functions but not data, so data symbols are
+  // absent from the symbol table. Recover them from the DWARF. A subprogram's
+  // mangled name goes onto its existing code symbol. A global variable at a
+  // static DW_OP_addr gets a synthesized data symbol so that its address
+  // resolves back to the variable's name. This is how the Itanium C++ runtime
+  // recovers a dynamic type from a vtable ("vtable for X"), and it also lets a
+  // plain C global resolve back to its name.
   ModuleSP module_sp = GetObjectFile()->GetModule();
   SectionList *section_list = module_sp ? module_sp->GetSectionList() : nullptr;
 
@@ -55,12 +56,14 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
         continue;
 
       DWARFDIE die(unit, &entry);
-      const char *mangled =
-          die.GetMangledName(/*substitute_name_allowed=*/false);
-      if (!mangled)
-        continue;
 
       if (tag == DW_TAG_subprogram) {
+        // Only a mangled (linkage) name is worth putting onto a code symbol.
+        // The source name is already carried by the Wasm name section.
+        const char *mangled =
+            die.GetMangledName(/*substitute_name_allowed=*/false);
+        if (!mangled)
+          continue;
         const addr_t file_addr =
             die.GetAttributeValueAsAddress(DW_AT_low_pc, LLDB_INVALID_ADDRESS);
         if (file_addr == LLDB_INVALID_ADDRESS)
@@ -71,7 +74,14 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
         continue;
       }
 
-      // A vtable's location is a plain DW_OP_addr.
+      // A global variable has no symbol at all. Use its linkage name, or the
+      // source name when there is none (plain C globals have only a
+      // DW_AT_name).
+      const char *name = die.GetMangledName(/*substitute_name_allowed=*/true);
+      if (!name)
+        continue;
+
+      // A global's location is a plain DW_OP_addr.
       if (!section_list)
         continue;
       DWARFAttributes attributes = die.GetAttributes();
@@ -105,7 +115,7 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
       // the address index before the remaining vtables are added, mis-sizing
       // them.
       symtab.AddSymbol(Symbol(
-          /*symID=*/0, Mangled(ConstString(mangled)), eSymbolTypeData,
+          /*symID=*/0, Mangled(ConstString(name)), eSymbolTypeData,
           /*external=*/true, /*is_debug=*/false, /*is_trampoline=*/false,
           /*is_artificial=*/false, AddressRange(addr, 0),
           /*size_is_valid=*/false, /*contains_linker_annotations=*/false,
