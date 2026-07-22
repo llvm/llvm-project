@@ -49,6 +49,8 @@ class TestFrameVarLogical(TestBase):
         self.expect_var_path("!!p_nullptr", value="false")
         self.expect_var_path("p_nullptr || true", value="true")
         self.expect_var_path("p_nullptr || false", value="false")
+        self.expect_var_path("nullptr || true", value="true")
+        self.expect_var_path("nullptr || false", value="false")
 
         self.expect_var_path("!array", value="false")
         self.expect_var_path("!!array", value="true")
