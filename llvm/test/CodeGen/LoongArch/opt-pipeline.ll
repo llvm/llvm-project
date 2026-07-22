@@ -107,6 +107,7 @@
 ; LAXX-NEXT:       Machine Common Subexpression Elimination
 ; LAXX-NEXT:       MachinePostDominator Tree Construction
 ; LAXX-NEXT:       Machine Cycle Info Analysis
+; LAXX-NEXT:       Machine Register Class Info Analysis
 ; LAXX-NEXT:       Machine code sinking
 ; LAXX-NEXT:       Peephole Optimizations
 ; LAXX-NEXT:       Remove dead machine instructions
