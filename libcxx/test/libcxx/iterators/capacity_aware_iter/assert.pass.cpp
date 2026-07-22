@@ -13,64 +13,13 @@
 // struct __capacity_aware_iterator;
 
 // Check assert failure if advancing, rewinding or indexing iterator past its maximum range size
-// Or if we're keeping track of the current position, if we're advancing, rewinding, indexing out of bounds.
 
 #include <__iterator/capacity_aware_iterator.h>
 #include <iterator>
 
 #include "check_assertion.h"
-
-// Specialization where we can fit a running count inside unused alignment bits.
-template <typename Iter>
-void test_bounded() {
-  int arr[] = {1, 2};
-  int* p    = arr;
-
-  constexpr long sz = std::size(arr);
-
-  using CapIter = std::__capacity_aware_iterator<Iter, decltype(p), sz>;
-
-  CapIter it = std::__make_capacity_aware_iterator<Iter, decltype(p), sz>(Iter(arr));
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      it--, "__capacity_aware_iterator::operator--: Attempt to rewind an iterator past the start");
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      it -= 1, "__capacity_aware_iterator::operator-=: Attempt to rewind an iterator past the start");
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      it += -1, "__capacity_aware_iterator::operator+=: Attempt to rewind an iterator past the start");
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      it += (sz + 1), "__capacity_aware_iterator::operator+=: Attempt to advance an iterator past the end");
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      it += -(sz + 1), "__capacity_aware_iterator::operator+=: Attempt to rewind an iterator past the start");
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      it -= (sz + 1), "__capacity_aware_iterator::operator-=: Attempt to rewind an iterator past the start");
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      it -= -(sz + 1), "__capacity_aware_iterator::operator-=: Attempt to advance an iterator past the end");
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      it[sz], "__capacity_aware_iterator::operator[]: Attempt to index an iterator at or past the end");
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      it[-sz], "__capacity_aware_iterator::operator[]: Attempt to index an iterator past the start");
-
-  ++it;
-  ++it;
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      *it, "__capacity_aware_iterator::operator*: Attempt to dereference an iterator at the end");
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      it.operator->(), "__capacity_aware_iterator::operator->: Attempt to dereference an iterator at the end");
-
-  TEST_LIBCPP_ASSERT_FAILURE(
-      ++it, "__capacity_aware_iterator::operator++: Attempt to advance an iterator past the end");
-}
+#include "test_iterators.h"
+#include "test_macros.h"
 
 template <typename Iter>
 void test() {
@@ -108,8 +57,7 @@ void test() {
 }
 
 int main(int, char**) {
-  test_bounded<int*>();
-  test<int*>();
+  test<contiguous_iterator<int*>>();
 
   return 0;
 }

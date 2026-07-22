@@ -527,6 +527,7 @@ set(files
   __iterator/size.h
   __iterator/sortable.h
   __iterator/static_bounded_iter.h
+  __iterator/static_packed_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale

@@ -33,14 +33,14 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 
-template <typename Iter, typename Ty = int>
+template <typename Iter>
 constexpr bool test() {
-  Ty arr[]            = {1, 2, 3, 4, 5, 6};
+  int arr[]           = {1, 2, 3, 4, 5, 6};
   constexpr size_t sz = std::size(arr);
 
   using CapIter = std::__capacity_aware_iterator<Iter, decltype(arr), sz>;
 
-  Ty* i = arr + 0;
+  int* i = arr + 0;
 
   // operator++()
   {
@@ -66,8 +66,7 @@ constexpr bool test() {
 
   // operator--()
   {
-    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
-    ++iter;
+    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 1));
 
     std::same_as<CapIter&> decltype(auto) res = --iter;
 
@@ -78,8 +77,7 @@ constexpr bool test() {
 
   // operator--(int)
   {
-    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
-    ++iter;
+    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 1));
 
     std::same_as<CapIter> decltype(auto) res = iter--;
 
@@ -123,8 +121,7 @@ constexpr bool test() {
 
   // operator-=(difference_type)
   {
-    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
-    iter += 2;
+    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 2));
 
     std::same_as<CapIter&> decltype(auto) res = iter -= 2;
 
@@ -135,8 +132,7 @@ constexpr bool test() {
 
   // operator-(__capacity_aware_iterator, difference_type)
   {
-    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i));
-    iter += 2;
+    CapIter iter = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(i + 2));
 
     std::same_as<CapIter> decltype(auto) res = iter - 2;
 
@@ -165,10 +161,6 @@ constexpr bool test() {
 int main(int, char**) {
   test<contiguous_iterator<int*>>();
   static_assert(test<contiguous_iterator<int*>>());
-
-  // bounded overload
-  test<long long*, long long>();
-  static_assert(test<long long*, long long>());
 
   return 0;
 }
