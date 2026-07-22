@@ -2717,7 +2717,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
   // alignment attributes.
   auto TInfo =
       Context.getTypeInfoInChars(FD->getType()->getUnqualifiedDesugaredType());
-  ElementInfo Info{TInfo.Width, TInfo.Align};
+  ElementInfo Info{TInfo.Width, TInfo.Align, CharUnits::Zero()};
   // Respect align attributes on the field.
   CharUnits DirectFieldAlignment =
       Context.toCharUnitsFromBits(FD->getMaxAlignment());
