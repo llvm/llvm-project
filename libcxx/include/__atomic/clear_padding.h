@@ -46,20 +46,27 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __ob
   return __builtin_is_constant_evaluated() ? __obj : (__builtin_clear_padding(std::addressof(__obj)), __obj);
 }
 
-template <class _Tp, class _Up, class _CasFunc>
+template <class _Tp,
+          class _Up,
+          class _CasFunc,
+          __enable_if_t<!__needs_clear_padding<__remove_cvref_t<_Tp> >::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
-  if constexpr (!__needs_clear_padding<__remove_cvref_t<_Tp> >::value) {
-    return __cas_func(__expected, __value);
+  return __cas_func(__expected, __value);
+}
+
+template <class _Tp,
+          class _Up,
+          class _CasFunc,
+          __enable_if_t<__needs_clear_padding<__remove_cvref_t<_Tp> >::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
+  std::__clear_padding_if_needed(__value);
+  __remove_cvref_t<_Tp> __expected_copy = *__expected;
+  std::__clear_padding_if_needed(__expected_copy);
+  if (__cas_func(std::addressof(__expected_copy), __value)) {
+    return true;
   } else {
-    std::__clear_padding_if_needed(__value);
-    __remove_cvref_t<_Tp> __expected_copy = *__expected;
-    std::__clear_padding_if_needed(__expected_copy);
-    if (__cas_func(std::addressof(__expected_copy), __value)) {
-      return true;
-    } else {
-      std::memcpy(__expected, std::addressof(__expected_copy), sizeof(__remove_cvref_t<_Tp>));
-      return false;
-    }
+    std::memcpy(__expected, std::addressof(__expected_copy), sizeof(__remove_cvref_t<_Tp>));
+    return false;
   }
 }
 
