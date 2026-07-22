@@ -123,6 +123,14 @@ in a future version of Clang.
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
 
+- Added the AArch64 option `-mharden-pac-ret=load-return-address` to harden
+  return address signing against PACMAN attacks. The option requires return
+  address signing to be enabled and emits a load of the return address before
+  returning, reducing the cache side channel used to guess pointer
+  authentication codes. See
+  {doc}`Return Address Signing Hardening <ReturnAddressSigningHardening>` for
+  more information.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
