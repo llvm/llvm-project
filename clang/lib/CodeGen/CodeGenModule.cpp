@@ -8652,11 +8652,7 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
 llvm::Metadata *
 CodeGenModule::CreateMetadataIdentifierForCallGraphType(QualType T) {
   if (auto *FNPT = T->getAs<FunctionNoProtoType>()) {
-    // For no-prototype functions, treat them as if they are variadic functions
-    // as we cannot determine the arguments for calls to these functions from
-    // call sites.
     FunctionProtoType::ExtProtoInfo EPI;
-    EPI.Variadic = true;
     T = getContext().getFunctionType(FNPT->getReturnType(), {}, EPI);
   }
   return CreateMetadataIdentifierImpl(T, CallGraphMetadataIdMap, "",
