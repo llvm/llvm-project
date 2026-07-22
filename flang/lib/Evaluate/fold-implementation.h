@@ -1261,12 +1261,54 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     // Don't fold the argument to KIND(); it might be a TypeParamInquiry
     // with a forced result type that doesn't match the parameter.
     for (std::optional<ActualArgument> &arg : args) {
-      if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
+      if (arg && arg->GetConditionalArg()) {
+        FoldConditionalArg(context, arg);
+      } else if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
         *expr = Fold(context, std::move(*expr));
       }
     }
   }
   if (intrinsic) {
+    // Skip intrinsic folding if any argument is still a conditional arg
+    // (i.e. its condition was not a compile-time constant).  When the
+    // condition is a compile-time constant, FoldConditionalArg already resolved
+    // it to a plain Expr above, and intrinsic folding proceeds normally.
+    //
+    // TODO:
+    // For elemental/pure intrinsics, distribute the call over each
+    // consequent of the conditional arg and fold each branch independently:
+    //   abs((c1 ? a : c2 ? b : c))
+    //     → (c1 ? abs(a) : c2 ? abs(b) : abs(c))
+    // Use ForEachConsequent to walk the chain, clone the call per
+    // consequent, fold each clone, and reassemble into a new ConditionalArg.
+    // When multiple arguments are conditional args, distribute one at a
+    // time to avoid a combinatorial cross-product expansion.
+    // This is NOT valid for non-elemental intrinsics like RESHAPE or
+    // TRANSFER whose results depend on seeing all arguments together.
+    //
+    // TODO (conformance):
+    // Type-inquiry intrinsics whose result depends only on the argument's
+    // declared type/rank (e.g. KIND, BIT_SIZE, DIGITS, HUGE, TINY, EPSILON,
+    // PRECISION, RANGE, RADIX, MAXEXPONENT, MINEXPONENT, STORAGE_SIZE, RANK)
+    // are foldable even when the condition is not constant, because C1538/C1539
+    // guarantee every consequent has the same type and rank.  Because they are
+    // not folded here, a reference such as
+    //   integer, parameter :: k = kind((flag ? a : b))
+    // is wrongly rejected ("cannot be computed as a constant value") even
+    // though it is a valid F2023 constant expression.
+    // Fix:
+    // For such a curated allow-list of type-only inquiries, before the bailout
+    // below, a curated allow-list of type-only inquiries, before the bailout
+    // below, replace the conditional-arg argument with its first non-.NIL.
+    // consequent (a representative) and fold normally.  This must NOT be
+    // applied to shape/value inquiries (SIZE, SHAPE, LBOUND/UBOUND, LEN of
+    // deferred length, ALLOCATED, ASSOCIATED, PRESENT, IS_CONTIGUOUS), whose
+    // results can differ between consequents.
+    for (const std::optional<ActualArgument> &arg : args) {
+      if (arg && arg->isConditionalArg()) {
+        return Expr<T>{std::move(funcRef)};
+      }
+    }
     const std::string name{intrinsic->name};
     if (name == "cshift") {
       return Folder<T>{context}.CSHIFT(std::move(funcRef));

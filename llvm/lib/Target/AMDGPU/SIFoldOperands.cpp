@@ -537,6 +537,13 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
     uint16_t Hi = static_cast<uint16_t>(Imm >> 16);
     if (Lo == Hi) {
       if (AMDGPU::isInlinableLiteralV216(Lo, OpType)) {
+        // If the target has feature 'BF16InlineConstFromUpperFP32', packed BF16
+        // instructions using inline constant must use OPSEL to select the upper
+        // 16-bits from FP32.
+        if (ST->hasBF16InlineConstFromUpperFP32() &&
+            (OpType == AMDGPU::OPERAND_REG_INLINE_C_V2BF16 ||
+             OpType == AMDGPU::OPERAND_REG_IMM_V2BF16))
+          NewModVal |= (SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1);
         Mod.setImm(NewModVal);
         Old.ChangeToImmediate(Lo);
         return true;
@@ -1052,14 +1059,20 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
 
   bool TryToMatchSplat64 = false;
 
-  int64_t Imm;
+  std::optional<int64_t> Imm;
   for (unsigned I = 0, E = Defs.size(); I != E; ++I) {
     const MachineOperand *Op = Defs[I].first;
-    if (!Op->isImm())
+    if (!Op->isImm()) {
+      if (Op->isReg()) {
+        MachineInstr *Def = MRI->getVRegDef(Op->getReg());
+        if (!Def || Def->isImplicitDef())
+          continue;
+      }
       return {};
+    }
 
     int64_t SubImm = Op->getImm();
-    if (!I) {
+    if (!Imm) {
       Imm = SubImm;
       continue;
     }
@@ -1076,8 +1089,11 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
     }
   }
 
-  if (!TryToMatchSplat64)
-    return {Defs[0].first->getImm(), SrcRC};
+  if (!TryToMatchSplat64) {
+    if (Imm)
+      return {*Imm, SrcRC};
+    return {};
+  }
 
   // Fallback to recognizing 64-bit splats broken into 32-bit pieces
   // (i.e. recognize every other other element is 0 for 64-bit immediates)
@@ -1805,24 +1821,6 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   SmallVector<FoldCandidate, 4> FoldList;
   MachineOperand &Dst = MI.getOperand(0);
   bool Changed = false;
-
-  if (OpToFold.isImm()) {
-    for (auto &UseMI :
-         make_early_inc_range(MRI->use_nodbg_instructions(Dst.getReg()))) {
-      // Folding the immediate may reveal operations that can be constant
-      // folded or replaced with a copy. This can happen for example after
-      // frame indices are lowered to constants or from splitting 64-bit
-      // constants.
-      //
-      // We may also encounter cases where one or both operands are
-      // immediates materialized into a register, which would ordinarily not
-      // be folded due to multiple uses or operand constraints.
-      if (tryConstantFoldOp(&UseMI)) {
-        LLVM_DEBUG(dbgs() << "Constant folded " << UseMI);
-        Changed = true;
-      }
-    }
-  }
 
   SmallVector<MachineOperand *, 4> UsesToProcess(
       llvm::make_pointer_range(MRI->use_nodbg_operands(Dst.getReg())));
@@ -2831,6 +2829,15 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
     MachineOperand *CurrentKnownM0Val = nullptr;
     for (auto &MI : make_early_inc_range(*MBB)) {
       Changed |= tryFoldCndMask(MI);
+
+      // PeepholeOptimizer may have folded an inline immediate directly onto an
+      // instruction operand without materializing it into a register first.
+      // Such an instruction is never reached through a def->use edge in
+      // foldInstOperand, so try to constant fold it here.
+      if (tryConstantFoldOp(&MI)) {
+        Changed = true;
+        continue;
+      }
 
       if (tryFoldZeroHighBits(MI)) {
         Changed = true;

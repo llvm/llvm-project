@@ -145,6 +145,7 @@ add_entrypoint_object(
   HDRS
     ../send.h
   DEPENDS
+    libc.hdr.types.size_t
     libc.hdr.types.ssize_t
     libc.src.__support.common
     libc.src.__support.OSUtil.linux.syscall_wrappers.sendto
@@ -214,6 +215,7 @@ add_entrypoint_object(
     ../recv.h
   DEPENDS
     libc.src.__support.macros.sanitizer
+    libc.hdr.types.size_t
     libc.hdr.types.ssize_t
     libc.src.__support.common
     libc.src.__support.OSUtil.linux.syscall_wrappers.recvfrom

@@ -8,9 +8,8 @@ define i8 @foo(i64 %val_i64_57) {
 ; CHECK-LABEL: define i8 @foo(
 ; CHECK-SAME: i64 [[VAL_I64_57:%.*]]) {
 ; CHECK-NEXT:  entry_1:
-; CHECK-NEXT:    [[VAL_I64_58:%.*]] = call i64 @llvm.smax.i64(i64 0, i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> <i64 0, i64 poison, i64 poison, i64 0>, i64 [[VAL_I64_57]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[VAL_I64_58]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> <i64 -9223372036854775808, i64 poison, i64 1, i64 -9223372036854775808>, i64 [[VAL_I64_57]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[TMP0]], <4 x i64> <i64 0, i64 -9223372036854775808, i64 0, i64 0>)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> <i64 poison, i64 poison, i64 poison, i64 undef>, <4 x i32> <i32 2, i32 2, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <4 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sle <4 x i64> [[TMP1]], [[TMP2]]

@@ -111,9 +111,11 @@ private:
                                   const MachineInstr &UseI, int UseOpIdx) const;
 
 public:
-  GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-               const GCNTargetMachine &TM, bool BufferOOBRelaxed = false,
-               bool TBufferOOBRelaxed = false);
+  GCNSubtarget(
+      const Triple &TT, StringRef GPU, StringRef FS, const GCNTargetMachine &TM,
+      bool BufferOOBRelaxed = false, bool TBufferOOBRelaxed = false,
+      AMDGPU::TargetIDSetting XnackSetting = AMDGPU::TargetIDSetting::Any,
+      AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
   ~GCNSubtarget() override;
 
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
@@ -343,7 +345,9 @@ public:
     return HasUnalignedScratchAccess && HasUnalignedAccessMode;
   }
 
-  bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
+  bool isXNACKEnabled() const {
+    return enableXNACK() || TargetID.isXnackOnOrAny();
+  }
 
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
@@ -640,10 +644,6 @@ public:
   /// instructions.
   bool hasVCvtPkIU16F32() const { return HasGFX11Insts; }
 
-  /// Return true if the target's EXP instruction has the COMPR flag, which
-  /// affects the meaning of the EN (enable) bits.
-  bool hasCompressedExport() const { return !HasGFX11Insts; }
-
   /// Return true if the target's EXP instruction supports the NULL export
   /// target.
   bool hasNullExportTarget() const { return !HasGFX11Insts; }
@@ -752,8 +752,6 @@ public:
   bool hasCondSubInsts() const { return HasGFX12Insts; }
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
-
-  bool hasFmaLegacy32Insts() const { return hasGFX10_3Insts(); }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

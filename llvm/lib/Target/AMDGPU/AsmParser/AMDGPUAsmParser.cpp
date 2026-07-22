@@ -1412,6 +1412,21 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   /// update the target ID first.
   bool TargetDirectiveEmitted = false;
 
+  /// State for checking that every kernel named in a .amdhsa_kernel directive
+  /// begins with the required prologue instruction sequence. Because the
+  /// directive may appear either before or after the kernel's label (it is
+  /// normally emitted after the function body, in .rodata), validation is
+  /// deferred to onEndOfFile(). We record an order-independent timeline of
+  /// parsed labels and emitted instruction opcodes, plus the set of symbols
+  /// named by .amdhsa_kernel directives, and match them up at end of file.
+  SmallVector<unsigned> OpcodeStream;
+  SmallVector<std::tuple<const MCSymbol *, SMLoc, unsigned>>
+      OpcodeStreamSymbols;
+  SmallPtrSet<const MCSymbol *, 8> AMDHSAKernelSymbols;
+
+  /// Verify recorded kernel prologues.
+  void checkKernelPrologues();
+
 private:
   void createConstantSymbol(StringRef Id, int64_t Val);
 
@@ -1600,7 +1615,9 @@ public:
 
   bool isGFX13Plus() const { return AMDGPU::isGFX13Plus(getSTI()); }
 
-  bool isGFX10_AEncoding() const { return AMDGPU::isGFX10_AEncoding(getSTI()); }
+  bool hasBVHRayTracingInsts() const {
+    return getFeatureBits()[AMDGPU::FeatureBVHRayTracingInsts];
+  }
 
   bool isGFX10_BEncoding() const {
     return AMDGPU::isGFX10_BEncoding(getSTI());
@@ -1708,6 +1725,7 @@ public:
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
   bool ParseDirective(AsmToken DirectiveID) override;
+  void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override;
   void onEndOfFile() override;
   ParseStatus parseOperand(OperandVector &Operands, StringRef Mnemonic,
                            OperandMode Mode = OperandMode_Default);
@@ -4225,7 +4243,8 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst, SMLoc IDLoc) {
   if (VDataIdx == -1 && isGFX10Plus()) // no return image_sample
     return true;
 
-  if ((DMaskIdx == -1 || TFEIdx == -1) && isGFX10_AEncoding()) // intersect_ray
+  if ((DMaskIdx == -1 || TFEIdx == -1) &&
+      hasBVHRayTracingInsts()) // intersect_ray
     return true;
 
   unsigned VDataSize = getRegOperandSize(Desc, VDataIdx);
@@ -5933,6 +5952,8 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
     emitTargetDirective();
     Out.emitInstruction(Inst, getSTI());
+    // Record for kernel prologue checking.
+    OpcodeStream.push_back(Inst.getOpcode());
     return false;
   }
 
@@ -6138,6 +6159,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   StringRef KernelName;
   if (getParser().parseIdentifier(KernelName))
     return true;
+
+  // Remember the kernel name so its prologue can be checked at end of file.
+  // The matching label may have been parsed already or may follow later.
+  AMDHSAKernelSymbols.insert(getContext().getOrCreateSymbol(KernelName));
 
   AMDGPU::MCKernelDescriptor KD =
       AMDGPU::MCKernelDescriptor::getDefaultAmdhsaKernelDescriptor(
@@ -6393,9 +6418,13 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return Error(IDRange.Start, "directive requires gfx8+", IDRange);
       if (!isUInt<1>(Val))
         return OutOfRangeError(ValRange);
-      if (Val != getTargetStreamer().getTargetID()->isXnackOnOrAny())
-        return getParser().Error(IDRange.Start, ".amdhsa_reserve_xnack_mask does not match target id",
-                                 IDRange);
+      bool XnackOn = getTargetStreamer().getTargetID()->isXnackOnOrAny() ||
+                     getSTI().hasFeature(AMDGPU::FeatureXNACK);
+      if (Val != XnackOn) {
+        return getParser().Error(
+            IDRange.Start,
+            ".amdhsa_reserve_xnack_mask does not match target id", IDRange);
+      }
     } else if (ID == ".amdhsa_float_round_mode_32") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_32, ExprVal,
@@ -7067,8 +7096,35 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUInfo() {
   return false;
 }
 
+void AMDGPUAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
+  // Record every parsed label in the timeline so that, at end of file, the
+  // instructions following a kernel's label can be located regardless of
+  // whether the .amdhsa_kernel directive came before or after the label.
+  OpcodeStreamSymbols.emplace_back(Symbol, IDLoc, OpcodeStream.size());
+}
+
+void AMDGPUAsmParser::checkKernelPrologues() {
+  if (getFeatureBits()[AMDGPU::FeatureRequiresInitialUnclausedVmem]) {
+    static const unsigned Required[] = {GLOBAL_WB_gfx12, V_NOP_e32_gfx12};
+    for (auto [Sym, Loc, Offset] : OpcodeStreamSymbols) {
+      if (!AMDHSAKernelSymbols.contains(Sym))
+        continue;
+      ArrayRef<unsigned> Prologue = ArrayRef(OpcodeStream).drop_front(Offset);
+      if (Prologue.take_front(std::size(Required)) != ArrayRef(Required)) {
+        Warning(Loc, "kernel '" + Sym->getName() +
+                         "' does not begin with the required prologue "
+                         "sequence: GLOBAL_WB followed by V_NOP");
+      }
+    }
+  }
+  OpcodeStream.clear();
+  OpcodeStreamSymbols.clear();
+  AMDHSAKernelSymbols.clear();
+}
+
 void AMDGPUAsmParser::onEndOfFile() {
   emitTargetDirective();
+  checkKernelPrologues();
   if (InfoData)
     getTargetStreamer().emitAMDGPUInfo(*InfoData);
 }
@@ -9517,7 +9573,7 @@ void AMDGPUAsmParser::onBeginOfFile() {
 
   if (!getTargetStreamer().getTargetID())
     getTargetStreamer().initializeTargetID(getSTI(),
-                                           getSTI().getFeatureString());
+                                           /*ApplyFeatureString=*/true);
 }
 
 void AMDGPUAsmParser::emitTargetDirective() {
