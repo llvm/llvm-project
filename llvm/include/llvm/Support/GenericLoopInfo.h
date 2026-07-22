@@ -66,8 +66,7 @@ template <class BlockT, class LoopT> class LoopBase {
   std::vector<BlockT *> Blocks;
 
   // The LoopInfo that owns this loop. Used to answer contains(BlockT *) from
-  // the central block-number-indexed block-to-loop map rather than a per-loop
-  // block set.
+  // the central block-to-loop map.
   LoopInfoBase<BlockT, LoopT> *LI = nullptr;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -130,11 +129,13 @@ public:
   /// performance target (yet).
   bool contains(const LoopT *L) const {
     assert(!isInvalid() && "Loop not in a valid state!");
-    if (L == this)
-      return true;
-    if (!L)
-      return false;
-    return contains(L->getParentLoop());
+    for (;;) {
+      if (L == this)
+        return true;
+      if (!L)
+        return false;
+      L = L->getParentLoop();
+    }
   }
 
   /// Return true if the specified basic block is in this loop, using LoopInfo's
