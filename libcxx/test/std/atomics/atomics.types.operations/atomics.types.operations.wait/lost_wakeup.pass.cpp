@@ -39,6 +39,7 @@ int main(int, char**) {
     auto notify = [&] {
       for (int i = 0; i < num_iterations; ++i) {
         while (waiter_ready.load() < num_waiters) {
+          std::this_thread::yield();
         }
         waiter_ready.store(0);
         state.fetch_add(1);
