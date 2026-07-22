@@ -494,4 +494,3 @@ def : MergeRule<"adjustCallerStackProbeSize">;
 def : MergeRule<"adjustMinLegalVectorWidth">;
 def : MergeRule<"adjustNullPointerValidAttr">;
 def : MergeRule<"setAND<MustProgressAttr>">;
-def : MergeRule<"setOR<StrictFPAttr>">;
