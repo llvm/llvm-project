@@ -2440,6 +2440,23 @@ public:
   bool scanLoadedSLocEntries(ModuleFile &F, SmallVectorImpl<uint32_t> &Offsets,
                              SmallVectorImpl<SLocFileIdentity> &Files);
 
+  /// Mark the scanned entries that duplicate an already-loaded file. Returns
+  /// the number of duplicates and the space they would otherwise occupy.
+  std::pair<unsigned, SourceLocation::UIntTy>
+  classifyDuplicateSLocEntries(ArrayRef<uint32_t> Offsets,
+                               ArrayRef<SLocFileIdentity> Files,
+                               SourceLocation::UIntTy SLocSpaceSize,
+                               SmallVectorImpl<bool> &IsDup);
+
+  /// Build \p F's local-to-global SLoc remapping and register its files. Run
+  /// after AllocateLoadedSLocEntries has assigned \p F's base ID and offset.
+  void buildLoadedSLocRemapping(ModuleFile &F, ArrayRef<uint32_t> Offsets,
+                                ArrayRef<SLocFileIdentity> Files,
+                                ArrayRef<bool> IsDup,
+                                SourceLocation::UIntTy SLocSpaceSize,
+                                unsigned NumDupEntries,
+                                unsigned ReducedNumEntries);
+
   /// Map a local SLoc entry offset (as stored in the entry record) to its
   /// global start offset. This is (SLocEntryBaseOffset + LocalOffset) unless a
   /// file in this module was reused from an earlier one.
