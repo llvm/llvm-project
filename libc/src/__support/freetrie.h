@@ -71,8 +71,9 @@ public:
         LIBC_HEAP_INTEGRITY_CHECK(upper->parent == this,
                                   "FreeTrie upper child corruption detected");
       if (parent)
-        LIBC_HEAP_INTEGRITY_CHECK(parent->lower == this || parent->upper == this,
-                                  "FreeTrie parent pointer corruption detected");
+        LIBC_HEAP_INTEGRITY_CHECK(
+            parent->lower == this || parent->upper == this,
+            "FreeTrie parent pointer corruption detected");
     }
   };
 
