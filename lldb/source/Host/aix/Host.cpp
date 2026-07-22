@@ -179,8 +179,10 @@ static bool GetExePathAndIds(::pid_t pid, ProcessInstanceInfo &process_info) {
   if (PathRef.empty())
     return false;
 
+  llvm::StringRef executable = PathRef.split(' ').first;
+
   // Resolve the executable path to an absolute path
-  std::string resolved_path = ResolveExecutablePath(PathRef, pid);
+  std::string resolved_path = ResolveExecutablePath(executable, pid);
   process_info.GetExecutableFile().SetFile(resolved_path,
                                            FileSpec::Style::native);
   ArchSpec arch_spec = GetXCOFFProcessCPUType(resolved_path);
