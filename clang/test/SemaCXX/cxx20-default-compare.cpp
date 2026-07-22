@@ -66,7 +66,7 @@ struct MutCheck : MutOnly {
 };
 }
 
-namespace delayed_deletion_check {
+namespace immediate_deletion_check  {
 // Explaining why a defaulted comparison operator is deleted can run while we
 // are parsing a later declaration, i.e. inside an enclosing delayed-diagnostics
 // scope. The access check for the deleted-ness computation must produce an
@@ -77,7 +77,7 @@ private:
 };
 
 struct S {
-  HasPrivateSpaceship member; // expected-note 2 {{because it would invoke a private 'operator<=>' member of 'delayed_deletion_check::HasPrivateSpaceship' to compare member 'member'}}
+  HasPrivateSpaceship member; // expected-note 2 {{because it would invoke a private 'operator<=>' member of 'immediate_deletion_check ::HasPrivateSpaceship' to compare member 'member'}}
   auto operator<=>(const S &) const = default; // expected-warning {{explicitly defaulted three-way comparison operator is implicitly deleted}} expected-note {{replace 'default' with 'delete'}} expected-note {{explicitly defaulted function was implicitly deleted here}}
 };
 
