@@ -76,8 +76,10 @@
 // WRAPPER-SAME: {{[^ ]*.o}}
 // WRAPPER-SAME: --hip-path=[[HIP_PATH]]
 
+// The in-tree SPIR-V backend is the default emitter; PATH content (e.g. a
+// stray llvm-spirv) must not affect the choice.
 // RUN: touch %t.dummy.o
-// RUN: env "PATH=" %clang -### --no-default-config -o %t.dummy.img \
+// RUN: %clang -### --no-default-config -o %t.dummy.img \
 // RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
 // RUN:   --hip-path="%S/Inputs/hipspv" \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR -DHIP_PATH=%S/Inputs/hipspv
@@ -94,7 +96,7 @@
 // CHIPSTAR-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
 // CHIPSTAR-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
-// RUN: env "PATH=" %clang -### --no-default-config -o %t.dummy.img \
+// RUN: %clang -### --no-default-config -o %t.dummy.img \
 // RUN:   --target=spirv64v1.3-unknown-chipstar \
 // RUN:   %t.dummy.o --hip-path="%S/Inputs/hipspv" \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR-SUBARCH -DHIP_PATH=%S/Inputs/hipspv
@@ -111,9 +113,23 @@
 // CHIPSTAR-SUBARCH-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
 // CHIPSTAR-SUBARCH-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
+// -fno-integrated-objemitter selects the external llvm-spirv translator.
+// RUN: %clang -### --no-default-config -o %t.dummy.img \
+// RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
+// RUN:   --hip-path="%S/Inputs/hipspv" -fno-integrated-objemitter \
+// RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR-XTOR -DHIP_PATH=%S/Inputs/hipspv
+
+//      CHIPSTAR-XTOR: {{".*opt"}} {{".*bc"}} "-load-pass-plugin"
+// CHIPSTAR-XTOR-SAME: "[[HIP_PATH]]/lib/libLLVMHipSpvPasses.so"
+// CHIPSTAR-XTOR-SAME: "-passes=hip-post-link-passes" "-o" [[LOWER_BC:".*bc"]]
+
+//      CHIPSTAR-XTOR: {{".*llvm-spirv.*"}} "--spirv-max-version=1.2"
+// CHIPSTAR-XTOR-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
+// CHIPSTAR-XTOR-SAME: [[LOWER_BC]] "-o" "{{.*img}}"
+
 // Check unknown linker options are ignored - such as ones that are targeted at
 // spirv-link. HIPSPV toolchain does linking via llvm-link.
-// RUN: env "PATH=" %clang -### --no-default-config -o %t.dummy.img \
+// RUN: %clang -### --no-default-config -o %t.dummy.img \
 // RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
 // RUN:   --hip-path="%S/Inputs/hipspv" -Xlinker foobar \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR -DHIP_PATH=%S/Inputs/hipspv
@@ -129,12 +145,11 @@
 // RUN:   | FileCheck -DVERSION=%llvm-version-major \
 // RUN:   --check-prefix=VERSIONED %s
 
-// The chipStar path must make the same choice: a versioned llvm-spirv on PATH
-// is preferred over the in-tree backend (detection mirrors the translator
-// lookup in SPIRV::constructTranslateCommand).
+// With -fno-integrated-objemitter the chipStar path must pick the same
+// versioned translator (lookup shared with SPIRV::constructTranslateCommand).
 // RUN: env "PATH=%t/versioned" %clang -### --no-default-config \
 // RUN:   -o %t.dummy.img --target=spirv64-unknown-chipstar %t.dummy.o \
-// RUN:   --hip-path="%S/Inputs/hipspv" 2>&1 \
+// RUN:   --hip-path="%S/Inputs/hipspv" -fno-integrated-objemitter 2>&1 \
 // RUN:   | FileCheck -DVERSION=%llvm-version-major --check-prefix=VERSIONED %s
 
 // VERSIONED: {{.*}}llvm-spirv-[[VERSION]]
@@ -145,17 +160,17 @@
 // translator, and that no debug flags are emitted without -g.
 // RUN: %clang -### --no-default-config -g -o %t.dummy.img \
 // RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
-// RUN:   --hip-path="%S/Inputs/hipspv" \
+// RUN:   --hip-path="%S/Inputs/hipspv" -fno-integrated-objemitter \
 // RUN: 2>&1 | FileCheck %s --check-prefix=DEBUG
 
 //      DEBUG: {{".*llvm-spirv"}} "--spirv-max-version=1.2"
-// DEBUG-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
+// DEBUG-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
 // DEBUG-SAME: "--spirv-ext=+SPV_KHR_non_semantic_info,+SPV_INTEL_optnone"
 // DEBUG-SAME: "--spirv-debug-info-version=nonsemantic-shader-200"
 
 // RUN: %clang -### --no-default-config -o %t.dummy.img \
 // RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
-// RUN:   --hip-path="%S/Inputs/hipspv" \
+// RUN:   --hip-path="%S/Inputs/hipspv" -fno-integrated-objemitter \
 // RUN: 2>&1 | FileCheck %s --check-prefix=NODEBUG
 
 //      NODEBUG: {{".*llvm-spirv"}}

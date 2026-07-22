@@ -13,10 +13,9 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Options/Options.h"
-#include "llvm/Config/llvm-config.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -100,40 +99,16 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   auto T = getToolChain().getTriple();
 
   if (T.getOS() == llvm::Triple::ChipStar) {
-    // chipStar: run HipSpvPasses via opt, then emit SPIR-V either via the
-    // external llvm-spirv translator (if available) or the in-tree SPIR-V
-    // backend (mirrors the fallback in clang-linker-wrapper).
+    // chipStar: run HipSpvPasses via opt, then emit SPIR-V with the in-tree
+    // SPIR-V backend by default, or with the external llvm-spirv translator
+    // when -fno-integrated-objemitter is given (or the backend is not built).
 
     // Run HipSpvPasses plugin via opt (must run on LLVM IR before
     // the SPIR-V backend lowers to MIR).
     TempFile = runHipSpvPasses(C, JA, *this, getToolChain(), Inputs, Output,
                                Args, Name, TempFile);
 
-    // Prefer the external llvm-spirv translator when it is available next to
-    // the toolchain (or on PATH) - required when LLVM is built without the
-    // in-tree SPIR-V target. Mirror SPIRV::constructTranslateCommand, which
-    // prefers the versioned "llvm-spirv-<major>" over the plain name, so the
-    // translator-vs-backend choice matches the binary that will actually run.
-    // Use findProgramByName (not GetProgramPath) so a missing binary is
-    // reported as not-found rather than being silently substituted by its name.
-    std::string LLVMSpirvPath;
-    {
-      StringRef DriverDir(C.getDriver().Dir);
-      std::string Versioned =
-          "llvm-spirv-" + std::to_string(LLVM_VERSION_MAJOR);
-      for (StringRef Name : {StringRef(Versioned), StringRef("llvm-spirv")}) {
-        llvm::ErrorOr<std::string> P =
-            llvm::sys::findProgramByName(Name, {DriverDir});
-        if (!P)
-          P = llvm::sys::findProgramByName(Name);
-        if (P) {
-          LLVMSpirvPath = *P;
-          break;
-        }
-      }
-    }
-
-    if (!LLVMSpirvPath.empty()) {
+    if (!getToolChain().useIntegratedBackend()) {
       // External translator path: BC -> SPIR-V via llvm-spirv.
       llvm::opt::ArgStringList TrArgs;
       if (T.getSubArch() == llvm::Triple::NoSubArch)
@@ -146,12 +121,21 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
                        ",+SPV_KHR_bit_instructions"
                        ",+SPV_EXT_shader_atomic_float_add");
 
+      // Preserve debug info requested via -g (see the comment on the
+      // equivalent block in the non-chipStar path below).
+      if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
+          A && !A->getOption().matches(options::OPT_g0)) {
+        TrArgs.push_back("--spirv-ext=+SPV_KHR_non_semantic_info"
+                         ",+SPV_INTEL_optnone");
+        TrArgs.push_back("--spirv-debug-info-version=nonsemantic-shader-200");
+      }
+
       InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
       SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
       return;
     }
 
-    // Fallback: compile the lowered bitcode to SPIR-V with the in-tree backend.
+    // Default: compile the lowered bitcode to SPIR-V with the in-tree backend.
     // Invoke `clang -cc1` directly rather than the clang driver: the driver
     // would re-run config-file loading, toolchain detection and argument
     // translation over an input that is already device-compiled and lowered,
@@ -257,6 +241,18 @@ HIPSPVToolChain::HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
+}
+
+bool HIPSPVToolChain::IsIntegratedBackendSupported() const {
+  // The in-tree SPIR-V backend can only be used when it is built.
+  std::string IgnoredError;
+  return llvm::TargetRegistry::lookupTarget(getTriple(), IgnoredError);
+}
+
+bool HIPSPVToolChain::IsIntegratedBackendDefault() const {
+  // Prefer the in-tree SPIR-V backend; fall back to the external llvm-spirv
+  // translator when the backend is not built.
+  return IsIntegratedBackendSupported();
 }
 
 void HIPSPVToolChain::addClangTargetOptions(
