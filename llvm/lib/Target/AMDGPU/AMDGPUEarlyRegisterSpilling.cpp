@@ -359,9 +359,9 @@ void SpillCandidate::generateSpillRestoreInstrs(
     updateLiveness(CurMI, LIS);
   }
 
-  for (auto *Use : RestoreInstrs) {
-    updateIndexes(Use, Indexes);
-    updateLiveness(Use, LIS);
+  for (auto *R : RestoreInstrs) {
+    updateIndexes(R, Indexes);
+    updateLiveness(R, LIS);
   }
 
   for (auto *Use : RestoreUses) {
@@ -467,9 +467,9 @@ void RestoreCandidate::generateSpillRestoreInstrs(
       updateLiveness(CurMI, LIS);
     }
 
-    for (auto *Use : RestoreInstrs) {
-      updateIndexes(Use, Indexes);
-      updateLiveness(Use, LIS);
+    for (auto *R : RestoreInstrs) {
+      updateIndexes(R, Indexes);
+      updateLiveness(R, LIS);
     }
 
     for (auto *Use : RestoreUses) {
