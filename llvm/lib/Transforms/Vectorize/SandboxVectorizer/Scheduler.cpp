@@ -76,13 +76,28 @@ void ReadyListContainer::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+
+void SchedulingPoint::print(raw_ostream &OS) const {
+  if (BasicBlock *BB = atBeforeBeginOrNull())
+    OS << "Before begin of BB " << BB->getName();
+  else if (BasicBlock *BB = atEndOrNull())
+    OS << "At end of BB " << BB->getName();
+  else
+    OS << "At instr: " << *atInstrOrNull();
+}
+
+void SchedulingPoint::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
 #endif // NDEBUG
 
 void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
   // Find where we should schedule the instructions.
   assert(ScheduleTopItOpt && "Should have been set by now!");
-  auto Where = Dir == SchedDirection::BottomUp ? *ScheduleTopItOpt
-                                               : std::next(*ScheduleTopItOpt);
+  auto Where = Dir == SchedDirection::BottomUp
+                   ? ScheduleTopItOpt->getIterator()
+                   : ScheduleTopItOpt->getNext().getIterator();
   // Move all instructions in `Bndl` to `Where`.
   Bndl.cluster(Where);
   // Update the last scheduled bundle.
@@ -124,7 +139,7 @@ void Scheduler::notifyCreateInstr(Instruction *I) {
   // If the instruction is inserted below the top-of-schedule then we mark it as
   // "scheduled".
   bool IsScheduled = ScheduleTopItOpt &&
-                     *ScheduleTopItOpt != I->getParent()->end() &&
+                     ScheduleTopItOpt->getIterator() != I->getParent()->end() &&
                      ((Dir == SchedDirection::BottomUp &&
                        (*ScheduleTopItOpt.value()).comesBefore(I)) ||
                       (Dir == SchedDirection::TopDown &&
@@ -358,12 +373,15 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
              [this](Instruction *I) { return I->getParent() != ScheduledBB; }))
     return false;
 
-  auto GetSchedPoint = [](SchedDirection Dir, const auto &Instrs) {
+  auto GetSchedPoint = [](SchedDirection Dir,
+                          const auto &Instrs) -> SchedulingPoint {
     switch (Dir) {
     case SchedDirection::BottomUp:
-      return std::next(VecUtils::getLowest(Instrs)->getIterator());
+      return SchedulingPoint(VecUtils::getLowest(Instrs)->getIterator())
+          .getNext();
     case SchedDirection::TopDown:
-      return VecUtils::getHighest(Instrs)->getIterator();
+      return SchedulingPoint(VecUtils::getHighest(Instrs)->getIterator())
+          .getPrev();
     }
     llvm_unreachable("Unhandled Dir!");
   };

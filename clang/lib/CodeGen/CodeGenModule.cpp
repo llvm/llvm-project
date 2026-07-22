@@ -1220,6 +1220,27 @@ void CodeGenModule::Release() {
       getModule().addModuleFlag(llvm::Module::Error, "amdgpu_printf_kind",
                                 MDStr);
     }
+
+    const TargetOptions &TargetOpts = getTarget().getTargetOpts();
+
+    if (TargetOpts.AMDGPUXnackState != TargetOptions::AMDGPUFeatureState::Any) {
+      // TODO: Avoid emitting the xnack flag on targets which do not support
+      // xnack configuration.
+      getModule().addModuleFlag(
+          llvm::Module::Error, "amdgpu.xnack",
+          llvm::ConstantInt::get(
+              Int32Ty, TargetOpts.AMDGPUXnackState ==
+                           TargetOptions::AMDGPUFeatureState::Enabled));
+    }
+
+    if (TargetOpts.AMDGPUSramEccState !=
+        TargetOptions::AMDGPUFeatureState::Any) {
+      getModule().addModuleFlag(
+          llvm::Module::Error, "amdgpu.sramecc",
+          llvm::ConstantInt::get(
+              Int32Ty, TargetOpts.AMDGPUSramEccState ==
+                           TargetOptions::AMDGPUFeatureState::Enabled));
+    }
   }
 
   // Emit a global array containing all external kernels or device variables

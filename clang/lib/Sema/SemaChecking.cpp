@@ -2360,23 +2360,22 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::FloatTy:
     if (!EltTy->isRealFloatingType()) {
-      // FIXME: make diagnostic's wording correct for matrices
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-             << ArgOrdinal << /* scalar or vector */ 5 << /* no int */ 0
-             << /* floating-point */ 1 << ArgTy;
+             << ArgOrdinal << /* scalar, vector, or matrix */ 6
+             << /* no int */ 0 << /* floating-point */ 1 << ArgTy;
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::IntegerTy:
     if (!EltTy->isIntegerType()) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-             << ArgOrdinal << /* scalar or vector */ 5 << /* integer */ 1
-             << /* no fp */ 0 << ArgTy;
+             << ArgOrdinal << /* scalar, vector, or matrix */ 6
+             << /* integer */ 1 << /* no fp */ 0 << ArgTy;
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::SignedIntOrFloatTy:
     if (!EltTy->isSignedIntegerType() && !EltTy->isRealFloatingType()) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-             << 1 << /* scalar or vector */ 5 << /* signed int */ 2
+             << 1 << /* scalar, vector, or matrix */ 6 << /* signed int */ 2
              << /* or fp */ 1 << ArgTy;
     }
     break;

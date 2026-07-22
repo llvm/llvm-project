@@ -861,7 +861,7 @@ bool CFI_Parser<A>::parseFDEInstructions(
 
 #if defined(_LIBUNWIND_TARGET_AARCH64)
       case DW_CFA_AARCH64_set_ra_state: {
-        int64_t value = (int64_t)addressSpace.getULEB128(p, instructionsEnd);
+        int64_t value = static_cast<int64_t>(addressSpace.getULEB128(p, instructionsEnd));
         if (value < 0 || 2 < value) {
           _LIBUNWIND_LOG0("malformed DW_CFA_AARCH64_set_ra_state DWARF "
                           "unwind, RA_SIGN_STATE value not recognized");
