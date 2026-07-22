@@ -1111,7 +1111,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
           std::bind(&NativeRegisterContextLinux_arm64::WriteAllSVE, this));
       break;
     case RegisterSetType::FPR: {
-      Invalidate(RegisterSetType::SVE_HEADER, RegisterSetType::SVE);
+      Invalidate(RegisterSetType::SVE_HEADER);
       m_sve_state = SVEState::Unknown;
       ConfigureRegisterContext();
 
@@ -1161,10 +1161,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
         src += GetFPRSize();
 
         if (error.Success()) {
-          // Wrote FPU, and SVE overlaps FPU.
-          Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-                     RegisterSetType::SVE);
-
+          Invalidate(RegisterSetType::FPR);
           m_sve_state = SVEState::Unknown;
           ConfigureRegisterContext();
         }
@@ -1356,9 +1353,7 @@ Status NativeRegisterContextLinux_arm64::WriteFPR() {
   ioVec.iov_base = GetFPRBuffer();
   ioVec.iov_len = GetFPRSize();
 
-  // SVE Z registers overlap the FP registers.
-  Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-             RegisterSetType::SVE);
+  Invalidate(RegisterSetType::FPR);
 
   return WriteRegisterSet(&ioVec, GetFPRSize(), llvm::ELF::NT_FPREGSET);
 }
@@ -1427,8 +1422,7 @@ Status NativeRegisterContextLinux_arm64::WriteSVEHeader() {
   ioVec.iov_base = GetSVEHeader();
   ioVec.iov_len = GetSVEHeaderSize();
 
-  Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-             RegisterSetType::SVE);
+  Invalidate(RegisterSetType::SVE_HEADER);
 
   return WriteRegisterSet(&ioVec, GetSVEHeaderSize(), GetSVERegSet());
 }
@@ -1462,8 +1456,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllSVE() {
   ioVec.iov_base = GetSVEBuffer();
   ioVec.iov_len = GetSVEBufferSize();
 
-  Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-             RegisterSetType::SVE);
+  Invalidate(RegisterSetType::SVE);
 
   return WriteRegisterSet(&ioVec, GetSVEBufferSize(), GetSVERegSet());
 }
@@ -1640,9 +1633,7 @@ Status NativeRegisterContextLinux_arm64::WriteZA() {
   ioVec.iov_base = GetZABuffer();
   ioVec.iov_len = GetZABufferSize();
 
-  Invalidate(RegisterSetType::ZA_HEADER, RegisterSetType::ZA,
-             // Writing to ZA may enable ZA, which means ZT0 may change too.
-             RegisterSetType::ZT);
+  Invalidate(RegisterSetType::ZA);
 
   return WriteRegisterSet(&ioVec, GetZABufferSize(), llvm::ELF::NT_ARM_ZA);
 }
@@ -1675,10 +1666,7 @@ Status NativeRegisterContextLinux_arm64::WriteZT() {
   ioVec.iov_base = GetZTBuffer();
   ioVec.iov_len = GetZTBufferSize();
 
-  Invalidate(RegisterSetType::ZT,
-             // Writing to an inactive ZT0 will enable ZA as well,
-             // which invalidates our current copy of it.
-             RegisterSetType::ZA_HEADER, RegisterSetType::ZA);
+  Invalidate(RegisterSetType::ZT);
 
   return WriteRegisterSet(&ioVec, GetZTBufferSize(), llvm::ELF::NT_ARM_ZT);
 }
@@ -1764,7 +1752,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
     // only the active mode will return valid register data.
 
     // Check for SME.
-    Invalidate(RegisterSetType::SVE_HEADER, RegisterSetType::SVE);
+    Invalidate(RegisterSetType::SVE_HEADER);
     m_sve_state = SVEState::Streaming;
     Status error = ReadSVEHeader();
 
@@ -1774,7 +1762,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
         ((m_sve_header.flags & sve::ptrace_regs_mask) == sve::ptrace_regs_sve);
 
     // Check for SVE.
-    Invalidate(RegisterSetType::SVE_HEADER, RegisterSetType::SVE);
+    Invalidate(RegisterSetType::SVE_HEADER);
     m_sve_state = SVEState::Full;
     error = ReadSVEHeader();
 
@@ -1803,7 +1791,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
     if (m_sve_state == SVEState::Full || m_sve_state == SVEState::FPSIMD ||
         m_sve_state == SVEState::Streaming ||
         m_sve_state == SVEState::StreamingFPSIMD) {
-      Invalidate(RegisterSetType::SVE_HEADER, RegisterSetType::SVE);
+      Invalidate(RegisterSetType::SVE_HEADER);
       error = ReadSVEHeader();
 
       // On every stop we configure SVE vector length by calling
