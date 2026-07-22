@@ -6,41 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
 // constexpr explicit sentinel(split_view& parent);
 
-#include <cassert>
+// The constructor is now `private` (exposition-only) per P3059R2.
+
 #include <ranges>
-#include <type_traits>
 
-#include "test_iterators.h"
+#include "../types.h"
 
-// test explicit
 using Range     = std::ranges::subrange<int*, sentinel_wrapper<int*>>;
 using SplitView = std::ranges::split_view<Range, std::ranges::single_view<int>>;
 using SplitSent = std::ranges::sentinel_t<SplitView>;
 
-constexpr bool test() {
-  {
-    int buffer[] = {0, 1, 2};
-    Range input{buffer, sentinel_wrapper<int*>(buffer + 3)};
-    SplitView sv(input, -1);
-    auto it = sv.begin();
-
-    auto sent = sv.end();
-    assert(sent != it);
-
-    ++it;
-    assert(sent == it);
-  }
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-  static_assert(test());
-
-  return 0;
-}
+static_assert(std::is_constructible_v<SplitSent, SplitView&>);
+static_assert(!std::is_convertible_v<SplitView&, SplitSent>);

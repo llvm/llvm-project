@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
-// constexpr iterator begin();
+// constexpr iterator(split_view& parent, iterator_t<V> current, subrange<iterator_t<V>> next);
 
-#include <cassert>
+// The constructor is now `private` (exposition-only) per P3059R2.
+
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 
@@ -30,24 +32,7 @@ struct TracedMoveView : std::ranges::view_base {
   constexpr TracedMoveIter end() const { return {}; }
 };
 
-constexpr bool test() {
-  using SplitView = std::ranges::split_view<TracedMoveView, TracedMoveView>;
-  using SplitIter = std::ranges::iterator_t<SplitView>;
+using SplitView = std::ranges::split_view<TracedMoveView, TracedMoveView>;
+using SplitIter = std::ranges::iterator_t<SplitView>;
 
-  SplitView sv{TracedMoveView{}, TracedMoveView{}};
-  SplitIter iter = sv.begin();
-  assert(iter.base().moved);
-
-  auto subRange = *iter;
-  assert(subRange.begin().moved);
-  assert(subRange.end().moved);
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-  static_assert(test());
-
-  return 0;
-}
+static_assert(!std::is_constructible_v<SplitIter, SplitView, TracedMoveIter, std::ranges::subrange<TracedMoveIter>>);
