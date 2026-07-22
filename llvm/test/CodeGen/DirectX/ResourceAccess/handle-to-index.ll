@@ -152,3 +152,96 @@ main:
   store i32 %add, ptr %ptr0, align 4
   ret void
 }
+
+; A single GEP after the pointer PHI: the accumulated byte offset is applied
+; once, after the merged handle/index PHIs.
+; CHECK-LABEL: gep_common_phi_load(
+; CHECK-SAME:   i1 %[[COND:.*]], i32 %[[A:.*]], i32 %[[B:.*]])
+define i32 @gep_common_phi_load(i1 %cond, i32 %a, i32 %b) {
+; CHECK-NOT: handlefromimplicitbinding
+; CHECK:     main:
+; CHECK-NEXT:  %[[C:.*]] = phi i32 [ %[[A]], %entry ], [ %[[B]], %if.then.i ]
+; CHECK-NEXT:  %[[IDX:.*]] = phi i32 [ 0, %entry ], [ 1, %if.then.i ]
+; CHECK-NEXT:  %[[HANDLE:.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 %[[IDX]], ptr nonnull @OutArr.str)
+; CHECK-NEXT:  %[[LOAD:.*]] = call { i32, i1 } @llvm.dx.resource.load.rawbuffer.i32.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %[[HANDLE]], i32 %[[C]], i32 8)
+; CHECK-NEXT:  %[[X:.*]] = extractvalue { i32, i1 } %[[LOAD]], 0
+; CHECK-NEXT:  ret i32 %[[X]]
+entry:
+  %handle0 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 0, ptr nonnull @OutArr.str)
+  %ptr0 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %handle0, i32 %a)
+  br i1 %cond, label %if.then.i, label %main
+
+if.then.i:
+  %handle1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 1, ptr nonnull @OutArr.str)
+  %ptr1 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %handle1, i32 %b)
+  br label %main
+
+main:
+  %ptr_phi = phi ptr [ %ptr0, %entry ], [ %ptr1, %if.then.i ]
+  %gep = getelementptr i32, ptr %ptr_phi, i32 2
+  %x = load i32, ptr %gep, align 4
+  ret i32 %x
+}
+
+; A GEP in each branch with the pointer PHI in between: the per-branch byte
+; offsets are themselves merged into a PHI.
+; CHECK-LABEL: gep_each_branch_phi_load(
+; CHECK-SAME:   i1 %[[COND:.*]], i32 %[[A:.*]], i32 %[[B:.*]])
+define i32 @gep_each_branch_phi_load(i1 %cond, i32 %a, i32 %b) {
+; CHECK-NOT: handlefromimplicitbinding
+; CHECK:     main:
+; CHECK-NEXT:  %[[C:.*]] = phi i32 [ %[[A]], %entry ], [ %[[B]], %if.then.i ]
+; CHECK-NEXT:  %[[IDX:.*]] = phi i32 [ 0, %entry ], [ 1, %if.then.i ]
+; CHECK-NEXT:  %[[OFF:.*]] = phi i32 [ 8, %entry ], [ 12, %if.then.i ]
+; CHECK-NEXT:  %[[HANDLE:.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 %[[IDX]], ptr nonnull @OutArr.str)
+; CHECK-NEXT:  %[[LOAD:.*]] = call { i32, i1 } @llvm.dx.resource.load.rawbuffer.i32.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %[[HANDLE]], i32 %[[C]], i32 %[[OFF]])
+; CHECK-NEXT:  %[[X:.*]] = extractvalue { i32, i1 } %[[LOAD]], 0
+; CHECK-NEXT:  ret i32 %[[X]]
+entry:
+  %handle0 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 0, ptr nonnull @OutArr.str)
+  %ptr0 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %handle0, i32 %a)
+  %gep0 = getelementptr i32, ptr %ptr0, i32 2
+  br i1 %cond, label %if.then.i, label %main
+
+if.then.i:
+  %handle1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 1, ptr nonnull @OutArr.str)
+  %ptr1 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %handle1, i32 %b)
+  %gep1 = getelementptr i32, ptr %ptr1, i32 3
+  br label %main
+
+main:
+  %ptr_phi = phi ptr [ %gep0, %entry ], [ %gep1, %if.then.i ]
+  %x = load i32, ptr %ptr_phi, align 4
+  ret i32 %x
+}
+
+; A GEP in only one branch: the branch without a GEP contributes a zero byte
+; offset to the merged offset PHI.
+; CHECK-LABEL: gep_one_branch_phi_load(
+; CHECK-SAME:   i1 %[[COND:.*]], i32 %[[A:.*]], i32 %[[B:.*]])
+define i32 @gep_one_branch_phi_load(i1 %cond, i32 %a, i32 %b) {
+; CHECK-NOT: handlefromimplicitbinding
+; CHECK:     main:
+; CHECK-NEXT:  %[[C:.*]] = phi i32 [ %[[A]], %entry ], [ %[[B]], %if.then.i ]
+; CHECK-NEXT:  %[[IDX:.*]] = phi i32 [ 0, %entry ], [ 1, %if.then.i ]
+; CHECK-NEXT:  %[[OFF:.*]] = phi i32 [ 8, %entry ], [ 0, %if.then.i ]
+; CHECK-NEXT:  %[[HANDLE:.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 %[[IDX]], ptr nonnull @OutArr.str)
+; CHECK-NEXT:  %[[LOAD:.*]] = call { i32, i1 } @llvm.dx.resource.load.rawbuffer.i32.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %[[HANDLE]], i32 %[[C]], i32 %[[OFF]])
+; CHECK-NEXT:  %[[X:.*]] = extractvalue { i32, i1 } %[[LOAD]], 0
+; CHECK-NEXT:  ret i32 %[[X]]
+entry:
+  %handle0 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 0, ptr nonnull @OutArr.str)
+  %ptr0 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %handle0, i32 %a)
+  %gep0 = getelementptr i32, ptr %ptr0, i32 2
+  br i1 %cond, label %if.then.i, label %main
+
+if.then.i:
+  %handle1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 1, ptr nonnull @OutArr.str)
+  %ptr1 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %handle1, i32 %b)
+  br label %main
+
+main:
+  %ptr_phi = phi ptr [ %gep0, %entry ], [ %ptr1, %if.then.i ]
+  %x = load i32, ptr %ptr_phi, align 4
+  ret i32 %x
+}

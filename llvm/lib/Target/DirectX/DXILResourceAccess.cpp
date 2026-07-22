@@ -8,6 +8,7 @@
 
 #include "DXILResourceAccess.h"
 #include "DirectX.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -572,6 +573,8 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
     if (auto *Phi = dyn_cast<PHINode>(X))
       for (Use &V : Phi->incoming_values())
         Worklist.push_back(V.get());
+    else if (auto *GEP = dyn_cast<GetElementPtrInst>(X))
+      Worklist.push_back(GEP->getPointerOperand());
     else if (auto *Select = dyn_cast<SelectInst>(X))
       for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
         Worklist.push_back(V);
@@ -610,23 +613,51 @@ namespace {
 struct AccessIndices {
   Value *GetPtrIdx;
   Value *HandleIdx;
+  Value *OffsetIdx;
 
   bool hasGetPtrIdx() { return GetPtrIdx != nullptr; }
   bool hasHandleIdx() { return HandleIdx != nullptr; }
+  bool hasOffsetIdx() { return OffsetIdx != nullptr; }
 };
 } // namespace
+
+// Compute the total byte offset described by a GEP as a single i32 value,
+// handling both constant and variable indices.
+static Value *accumulateGEPOffset(GetElementPtrInst *GEP,
+                                  IRBuilder<> &Builder) {
+  const DataLayout &DL = GEP->getDataLayout();
+  unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
+  APInt ConstantOffset(BitWidth, 0);
+  bool Success = GEP->collectOffset(DL, BitWidth, VariableOffsets,
+                                    ConstantOffset);
+  assert(Success && "Unhandled GEP structure for resource access");
+  (void)Success;
+
+  Type *I32 = Builder.getInt32Ty();
+  Value *Offset = ConstantInt::get(I32, ConstantOffset.getSExtValue());
+  for (auto &[V, Scale] : VariableOffsets) {
+    Value *Index = Builder.CreateZExtOrTrunc(V, I32);
+    if (!Scale.isOne())
+      Index = Builder.CreateMul(Index,
+                                ConstantInt::get(I32, Scale.getSExtValue()));
+    Offset = Builder.CreateAdd(Offset, Index);
+  }
+  return Offset;
+}
 
 // getAccessIndices traverses up the control flow that a ptr came from and
 // propagates back the indicies used to access the resource (AccessIndices):
 //
 //  - GetPtrIdx is the index of dx.resource.getpointer
 //  - HandleIdx is the index of dx.resource.handlefrom.*
+//  - OffsetIdx is the accumulated byte offset of any GEPs in the ptr chain
 static AccessIndices
 getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
       DeadInsts.insert(II);
-      return {nullptr, II->getArgOperand(/*Index=*/3)};
+      return {nullptr, II->getArgOperand(/*Index=*/3), nullptr};
     }
 
     if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
@@ -641,6 +672,20 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
     }
   }
 
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    auto *V = dyn_cast<Instruction>(GEP->getPointerOperand());
+    auto AccessIdx = getAccessIndices(V, DeadInsts);
+
+    IRBuilder<> Builder(GEP);
+    Value *GEPOffset = accumulateGEPOffset(GEP, Builder);
+    AccessIdx.OffsetIdx = AccessIdx.hasOffsetIdx()
+                              ? Builder.CreateAdd(AccessIdx.OffsetIdx, GEPOffset)
+                              : GEPOffset;
+
+    DeadInsts.insert(GEP);
+    return AccessIdx;
+  }
+
   if (auto *Phi = dyn_cast<PHINode>(I)) {
     unsigned NumEdges = Phi->getNumIncomingValues();
     assert(NumEdges != 0 && "Malformed Phi Node");
@@ -649,16 +694,20 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
     SmallVector<BasicBlock *> Blocks;
     SmallVector<Value *> GetPtrIdxs;
     SmallVector<Value *> HandleIdxs;
+    SmallVector<Value *> OffsetIdxs;
 
     bool HasGetPtr = true;
+    bool HasOffset = false;
     for (unsigned Idx = 0; Idx < NumEdges; Idx++) {
       auto *BB = Phi->getIncomingBlock(Idx);
       auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(Idx));
       auto AccessIdx = getAccessIndices(V, DeadInsts);
       HasGetPtr &= AccessIdx.hasGetPtrIdx();
+      HasOffset |= AccessIdx.hasOffsetIdx();
       Blocks.push_back(BB);
       GetPtrIdxs.push_back(AccessIdx.GetPtrIdx);
       HandleIdxs.push_back(AccessIdx.HandleIdx);
+      OffsetIdxs.push_back(AccessIdx.OffsetIdx);
     }
 
     // Only build a PHI to merge the per-edge index values when they actually
@@ -677,8 +726,15 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
 
     Value *GetPtrIdx = HasGetPtr ? MergeIndices(GetPtrIdxs) : nullptr;
     Value *HandleIdx = MergeIndices(HandleIdxs);
+    Value *OffsetIdx = nullptr;
+    if (HasOffset) {
+      for (Value *&O : OffsetIdxs)
+        if (!O)
+          O = ConstantInt::get(Builder.getInt32Ty(), 0);
+      OffsetIdx = MergeIndices(OffsetIdxs);
+    }
     DeadInsts.insert(Phi);
-    return {GetPtrIdx, HandleIdx};
+    return {GetPtrIdx, HandleIdx, OffsetIdx};
   }
 
   if (auto *Select = dyn_cast<SelectInst>(I)) {
@@ -699,8 +755,19 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
     auto *HandleSelect =
         Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.HandleIdx,
                              FalseAccessIdx.HandleIdx);
+
+    Value *OffsetSelect = nullptr;
+    if (TrueAccessIdx.hasOffsetIdx() || FalseAccessIdx.hasOffsetIdx()) {
+      Value *Zero = ConstantInt::get(Builder.getInt32Ty(), 0);
+      Value *TrueOffset =
+          TrueAccessIdx.hasOffsetIdx() ? TrueAccessIdx.OffsetIdx : Zero;
+      Value *FalseOffset =
+          FalseAccessIdx.hasOffsetIdx() ? FalseAccessIdx.OffsetIdx : Zero;
+      OffsetSelect =
+          Builder.CreateSelect(Select->getCondition(), TrueOffset, FalseOffset);
+    }
     DeadInsts.insert(Select);
-    return {GetPtrSelect, HandleSelect};
+    return {GetPtrSelect, HandleSelect, OffsetSelect};
   }
 
   llvm_unreachable("collectUsedHandles should assure this does not occur");
@@ -722,7 +789,13 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
       Builder.CreateIntrinsic(Ptr->getType(), Intrinsic::dx_resource_getpointer,
                               {Handle, AccessIdx.GetPtrIdx});
 
-  Ptr->replaceAllUsesWith(GetPtr);
+  // Reapply any byte offset that came from GEPs in the original ptr chain so
+  // that later access lowering still sees it.
+  Value *Result = GetPtr;
+  if (AccessIdx.hasOffsetIdx())
+    Result = Builder.CreateGEP(Builder.getInt8Ty(), GetPtr, AccessIdx.OffsetIdx);
+
+  Ptr->replaceAllUsesWith(Result);
   DeadInsts.insert(Ptr);
 }
 
