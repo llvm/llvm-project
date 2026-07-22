@@ -45,21 +45,6 @@ def PartialEntityAccessOpInterface : OpInterface<"PartialEntityAccessOpInterface
   ];
 }
 
-def UnderlyingStorageOpInterface : OpInterface<"UnderlyingStorageOpInterface"> {
-  let cppNamespace = "::mlir::acc";
-
-  let description = [{
-    An interface for operations that derive a pointer-like result from one
-    underlying storage value. Other operands may describe metadata such as
-    bounds, offsets, or strides and are not storage sources.
-  }];
-
-  let methods = [
-    InterfaceMethod<"Get the underlying storage value", "::mlir::Value",
-      "getStorageSource", (ins)>,
-  ];
-}
-
 def AddressOfGlobalOpInterface : OpInterface<"AddressOfGlobalOpInterface"> {
   let cppNamespace = "::mlir::acc";
 

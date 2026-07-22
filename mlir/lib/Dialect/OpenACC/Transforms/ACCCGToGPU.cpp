@@ -306,159 +306,27 @@ static bool sameEffectiveValue(Value x, int64_t y) {
   return *conX == y;
 }
 
-/// Returns the operand that preserves the storage represented by \p op.
-static Value getStorageSource(Operation *op) {
-  if (ViewLikeOpInterface viewLike = dyn_cast<ViewLikeOpInterface>(op))
-    return viewLike.getViewSource();
-  if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op);
-      castOp && castOp->getNumOperands() == 1 && castOp->getNumResults() == 1)
-    return castOp->getOperand(0);
-  if (acc::PartialEntityAccessOpInterface partialAccess =
-          dyn_cast<acc::PartialEntityAccessOpInterface>(op))
-    return partialAccess.getBaseEntity();
-  if (acc::UnderlyingStorageOpInterface storage =
-          dyn_cast<acc::UnderlyingStorageOpInterface>(op))
-    return storage.getStorageSource();
-  return {};
-}
-
-/// Continues tracking a storage value through preserving operations.
+/// Continues tracking a memref through view-like and partial-access ops.
 static bool getPassThroughResults(Operation *userOp, Value trackedOperand,
                                   SmallVectorImpl<Value> &passThroughResults) {
-  if (getStorageSource(userOp) != trackedOperand)
-    return false;
-  passThroughResults.append(userOp->result_begin(), userOp->result_end());
-  return true;
-}
-
-template <typename Effect>
-static bool hasEffectOnValue(Operation *op, Value value) {
-  auto effects = dyn_cast<MemoryEffectOpInterface>(op);
-  if (!effects)
-    return false;
-  SmallVector<MemoryEffects::EffectInstance> instances;
-  effects.getEffects(instances);
-  return llvm::any_of(instances, [&](const auto &instance) {
-    return isa<Effect>(instance.getEffect()) && instance.getValue() == value;
-  });
-}
-
-static Value getReadAddress(Operation *op) {
-  auto effects = dyn_cast<MemoryEffectOpInterface>(op);
-  if (!effects)
-    return {};
-  SmallVector<MemoryEffects::EffectInstance> instances;
-  effects.getEffects(instances);
-  Value address;
-  for (const auto &instance : instances) {
-    Value value = instance.getValue();
-    if (!isa<MemoryEffects::Read>(instance.getEffect()) || !value)
-      continue;
-    if (address && address != value)
-      return {};
-    address = value;
-  }
-  return address;
-}
-
-static bool hasAllocaRoot(Value value) {
-  DenseSet<Value> seen;
-  Value current = value;
-  while (current && seen.insert(current).second) {
-    Operation *def = current.getDefiningOp();
-    if (!def)
-      return false;
-    if (isa<memref::AllocaOp>(def))
+  if (ViewLikeOpInterface viewLikeOp = dyn_cast<ViewLikeOpInterface>(userOp)) {
+    if (viewLikeOp.getViewSource() == trackedOperand) {
+      passThroughResults.push_back(viewLikeOp.getViewDest());
       return true;
-    current = getStorageSource(def);
-  }
-  return false;
-}
-
-/// Returns the unique pointer-like value stored to \p address before \p before.
-static Value getUniqueStoredPointerValue(Value address, Operation *before) {
-  Operation *scope = before->getParentOfType<acc::ComputeRegionOp>();
-  DominanceInfo dominance(scope ? scope : before->getParentOp());
-  auto safelyPrecedes = [&](Operation *store) {
-    if (dominance.dominates(store, before))
-      return true;
-    auto predicate = store->getParentOfType<acc::PredicateRegionOp>();
-    auto privateLocal = address.getDefiningOp<acc::PrivateLocalOp>();
-    GPUParallelDimsAttr parDims;
-    if (privateLocal)
-      parDims = mlir::acc::getParDimsAttr(privateLocal);
-    bool isThreadPrivate =
-        parDims && llvm::any_of(parDims.getArray(),
-                                [](auto dim) { return dim.isAnyThread(); });
-    return predicate && store->getParentOp() == predicate.getOperation() &&
-           dominance.dominates(predicate, before) &&
-           (isThreadPrivate || hasAllocaRoot(address));
-  };
-  Operation *storedBy = nullptr;
-  Value stored;
-  SmallVector<Value> worklist{address};
-  DenseSet<Value> seen;
-  while (!worklist.empty()) {
-    Value alias = worklist.pop_back_val();
-    if (!seen.insert(alias).second)
-      continue;
-    for (Operation *user : alias.getUsers()) {
-      if (hasEffectOnValue<MemoryEffects::Write>(user, alias)) {
-        if (storedBy || !safelyPrecedes(user))
-          return {};
-        Value candidate;
-        for (Value operand : user->getOperands()) {
-          if (operand == alias)
-            continue;
-          if (candidate)
-            return {};
-          candidate = operand;
-        }
-        if (!candidate)
-          return {};
-        storedBy = user;
-        stored = candidate;
-        continue;
-      }
-      SmallVector<Value> through;
-      if (getPassThroughResults(user, alias, through))
-        worklist.append(through.begin(), through.end());
-      else if (!hasEffectOnValue<MemoryEffects::Read>(user, alias))
-        return {};
     }
-  }
-  return stored;
-}
-
-/// Tracks a uniquely stored pointer-like value through its subsequent load.
-static bool
-getMemoryPassThroughResults(Operation *userOp, Value trackedOperand,
-                            SmallVectorImpl<Value> &passThroughResults) {
-  if (hasEffectOnValue<MemoryEffects::Read>(userOp, trackedOperand) &&
-      userOp->getNumResults() == 1) {
-    passThroughResults.push_back(userOp->getResult(0));
-    return true;
+    return false;
   }
 
-  if (!llvm::is_contained(userOp->getOperands(), trackedOperand))
+  // Partial-entity accesses (e.g. array element or field access) forward the
+  // base entity through to their results, so treat them as pass-through when
+  // the base entity is the value being tracked.
+  if (acc::PartialEntityAccessOpInterface partialAccess =
+          dyn_cast<acc::PartialEntityAccessOpInterface>(userOp)) {
+    if (partialAccess.getBaseEntity() == trackedOperand) {
+      passThroughResults.append(userOp->result_begin(), userOp->result_end());
+      return true;
+    }
     return false;
-  auto effects = dyn_cast<MemoryEffectOpInterface>(userOp);
-  if (!effects)
-    return false;
-  SmallVector<MemoryEffects::EffectInstance> instances;
-  effects.getEffects(instances);
-  for (const auto &instance : instances) {
-    Value target = instance.getValue();
-    if (!isa<MemoryEffects::Write>(instance.getEffect()) || !target ||
-        target == trackedOperand)
-      continue;
-    unsigned writers = llvm::count_if(target.getUsers(), [&](Operation *user) {
-      return hasEffectOnValue<MemoryEffects::Write>(user, target);
-    });
-    if (writers != 1)
-      return false;
-    passThroughResults.push_back(target);
-    return true;
   }
   return false;
 }
@@ -472,14 +340,6 @@ static Value unwrapMemRefConversion(Value v) {
         v = viewLike.getViewSource();
         continue;
       }
-    }
-    if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op);
-        castOp && castOp->getNumOperands() == 1 &&
-        castOp->getNumResults() == 1 &&
-        isa<MemRefType>(castOp->getOperand(0).getType()) &&
-        isa<MemRefType>(castOp->getResult(0).getType())) {
-      v = castOp->getOperand(0);
-      continue;
     }
     break;
   }
@@ -841,7 +701,7 @@ static bool reductionHasBlockContext(acc::ReductionAccumulateArrayOp accArr) {
 }
 
 /// Returns the array reduction accumulate (through cast/view ops) that \p v
-/// feeds if it needs per-thread storage: its par_dims include thread_x
+/// feeds if it needs per-thread storage: its par_dims include a thread dim
 /// and it has block context so the cross-thread all_reduce is well defined.
 static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
   SmallVector<Value> worklist{v};
@@ -853,28 +713,21 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
     for (Operation *user : cur.getUsers()) {
       if (acc::ReductionAccumulateArrayOp accArr =
               dyn_cast<acc::ReductionAccumulateArrayOp>(user)) {
-        bool hasThreadX = false;
+        bool hasThread = false;
         for (auto pd : accArr.getParDims().getArray())
-          hasThreadX |= pd.isThreadX();
-        if (hasThreadX && reductionHasBlockContext(accArr))
+          hasThread |= pd.isAnyThread();
+        if (hasThread && reductionHasBlockContext(accArr))
           return accArr;
         continue;
       }
       SmallVector<Value> through;
       if (getPassThroughResults(user, cur, through))
         worklist.append(through.begin(), through.end());
-      else if (getMemoryPassThroughResults(user, cur, through))
-        worklist.append(through.begin(), through.end());
+      else if (isa<ViewLikeOpInterface>(user))
+        worklist.append(user->result_begin(), user->result_end());
     }
   }
   return nullptr;
-}
-
-static bool
-canUseDynamicReductionAlloca(MemRefType baseTy, acc::PrivatizeOp privatizeOp,
-                             acc::ReductionAccumulateArrayOp arrayAccum) {
-  return arrayAccum && !baseTy.hasStaticShape() &&
-         baseTy.getNumDynamicDims() == privatizeOp.getDynamicSizes().size();
 }
 
 /// Store the reduction identity to every element of a freshly allocated
@@ -883,8 +736,8 @@ canUseDynamicReductionAlloca(MemRefType baseTy, acc::PrivatizeOp privatizeOp,
 static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
                                     MemRefType baseTy,
                                     arith::AtomicRMWKind kind) {
-  assert(baseTy.getRank() > 0 &&
-         "per-thread array reduction accumulator must have positive rank");
+  assert(baseTy.getRank() > 0 && baseTy.hasStaticShape() &&
+         "per-thread array reduction accumulator must be static ranked");
   Value ident = createIdentityValue(b, loc, baseTy.getElementType(), kind,
                                     /*useOnlyFiniteValue=*/true);
   Value lb = arith::ConstantIndexOp::create(b, loc, 0);
@@ -896,11 +749,7 @@ static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
       return;
     }
 
-    Value ub =
-        baseTy.isDynamicDim(dim)
-            ? memref::DimOp::create(b, loc, alloca, dim).getResult()
-            : arith::ConstantIndexOp::create(b, loc, baseTy.getDimSize(dim))
-                  .getResult();
+    Value ub = arith::ConstantIndexOp::create(b, loc, baseTy.getShape()[dim]);
     auto forOp = scf::ForOp::create(b, loc, lb, ub, step);
     OpBuilder::InsertionGuard g(b);
     b.setInsertionPoint(forOp.getBody()->getTerminator());
@@ -909,38 +758,6 @@ static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
     indices.pop_back();
   };
   buildLoopNest(buildLoopNest, 0);
-}
-
-/// True when \p memref resolves to storage owned by the current thread.
-static bool isPerThreadArrayReductionStorage(Value memref) {
-  DenseSet<Value> seen;
-  Value current = memref;
-  while (current && seen.insert(current).second) {
-    Operation *def = current.getDefiningOp();
-    if (!def)
-      return false;
-    if (isa<memref::AllocaOp>(def))
-      return true;
-    if (isa<acc::UnwrapPrivateOp, acc::GPUSharedMemoryOp>(def))
-      return false;
-
-    if (Value address = getReadAddress(def)) {
-      Value stored = getUniqueStoredPointerValue(address, def);
-      if (!stored)
-        return false;
-      current = stored;
-      continue;
-    }
-
-    if (mlir::acc::GPUParallelDimsAttr parDims =
-            mlir::acc::getParDimsAttr(def)) {
-      return llvm::any_of(parDims.getArray(),
-                          [](auto dim) { return dim.isThreadX(); });
-    }
-
-    current = getStorageSource(def);
-  }
-  return false;
 }
 
 std::optional<int64_t>
@@ -2677,14 +2494,9 @@ void ACCCGToGPULowering::processPrivateLocal(
     // the accumulate can reduce each element across threads.
     acc::ReductionAccumulateArrayOp arrayAccum =
         perThreadArrayReductionAccum(privateLocal.getResult());
-    bool isThreadPrivate = isThreadXPrivatize(privatizeOp);
-    bool canUseDynamicAlloca =
-        canUseDynamicReductionAlloca(baseTy, privatizeOp, arrayAccum);
-    if ((isThreadPrivate || arrayAccum) &&
-        (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
-         canUseDynamicAlloca)) {
-      Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy,
-                                              privatizeOp.getDynamicSizes());
+    if ((isThreadXPrivatize(privatizeOp) || arrayAccum) &&
+        canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
+      Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
       if (arrayAccum) {
         FailureOr<arith::AtomicRMWKind> kind = getReductionKind(
             arrayAccum.getReductionOperator(), baseTy.getElementType(), loc);
@@ -2771,13 +2583,9 @@ void ACCCGToGPULowering::processPrivateLocal(
   acc::ReductionAccumulateArrayOp arrayAccum =
       perThreadArrayReductionAccum(privateLocal.getResult());
   for (mlir::acc::GPUParallelDimAttr parDim : parDimsPair.first) {
-    bool canUseDynamicAlloca =
-        canUseDynamicReductionAlloca(baseTy, privatizeOp, arrayAccum);
     if ((parDim.isThreadX() || arrayAccum) &&
-        (canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack) ||
-         canUseDynamicAlloca)) {
-      Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy,
-                                              privatizeOp.getDynamicSizes());
+        canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
+      Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
       if (arrayAccum) {
         FailureOr<arith::AtomicRMWKind> kind = getReductionKind(
             arrayAccum.getReductionOperator(), baseTy.getElementType(), loc);
@@ -3451,10 +3259,12 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     (void)accSupport.emitNYI(loc, "reduction: non-MemRefTy accumulate array");
     return;
   }
-  if (memrefTy.getRank() == 0) {
-    (void)accSupport.emitNYI(loc, "reduction: rank-zero accumulate array");
+  if (memrefTy.getRank() > 1 && !memrefTy.hasStaticShape()) {
+    (void)accSupport.emitNYI(loc,
+                             "reduction: dynamic multi-rank accumulate array");
     return;
   }
+
   FailureOr<arith::AtomicRMWKind> kindOr = getReductionKind(
       op.getReductionOperator(), memrefTy.getElementType(), loc);
   if (failed(kindOr))
@@ -3494,9 +3304,24 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
   }
 
   // Per-element gpu.all_reduce is only correct when each thread owns its own
-  // accumulator copy. Classify the operand from its underlying allocation
-  // rather than its shape or the accumulate's par_dims.
-  bool isPerThreadPrivate = isPerThreadArrayReductionStorage(memref);
+  // accumulator copy. For a statically-shaped accumulator, classify from the
+  // operand: an explicit shared allocation is block-shared regardless of size,
+  // and anything else (a per-thread stack alloca, or a view over one) is
+  // per-thread when it fits the per-thread stack budget and block-shared when
+  // it is too large. For a dynamically-shaped accumulator the type conveys no
+  // size, so classify from par_dims (which the producer sets to the reduction's
+  // actual parallel scope): a thread dimension means per-thread storage.
+  bool isPerThreadPrivate;
+  if (memrefTy.hasStaticShape()) {
+    Operation *rootOp = unwrapMemRefConversion(memref).getDefiningOp();
+    isPerThreadPrivate =
+        !isa_and_nonnull<memref::AllocOp>(rootOp) &&
+        canUseStackAlloca(memrefTy, loc, options.maxThreadPrivateStack);
+  } else {
+    isPerThreadPrivate = llvm::any_of(
+        op.getParDims().getArray(),
+        [](mlir::acc::GPUParallelDimAttr d) { return d.isThreadX(); });
+  }
   if (!isPerThreadPrivate) {
     // Block-shared accumulator: no-op only when the accumulate spans a block
     // dim (threads distribute distinct elements, so the block partial is in
@@ -3524,19 +3349,7 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
   Value lb =
       boundsOp.getLowerbound() ? toIndex(boundsOp.getLowerbound()) : zero;
-  Value step = one;
-  if (Value stride = boundsOp.getStride()) {
-    step = toIndex(stride);
-    if (boundsOp.getStrideInBytes()) {
-      int64_t elementSize =
-          getElementSizeInBytes(loc, memrefTy.getElementType());
-      if (elementSize == 0)
-        return;
-      Value elementSizeValue =
-          arith::ConstantIndexOp::create(rewriter, loc, elementSize);
-      step = arith::DivUIOp::create(rewriter, loc, step, elementSizeValue);
-    }
-  }
+  Value step = boundsOp.getStride() ? toIndex(boundsOp.getStride()) : one;
   // Exclusive upper bound. `extent` counts elements, so the span is
   // `extent * step` (for the common unit-stride case step is 1); fall back to
   // the inclusive upperbound when no extent is given.
@@ -3560,15 +3373,13 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     Value iv = forOp.getInductionVar();
     SmallVector<Value> indices{iv};
     if (memrefTy.getRank() > 1) {
+      assert(memrefTy.hasStaticShape() &&
+             "multi-rank array reduction accumulator must be static");
       indices.resize(memrefTy.getRank());
       Value linearIndex = iv;
       for (int64_t dim = memrefTy.getRank() - 1; dim >= 0; --dim) {
-        Value dimSize =
-            memrefTy.isDynamicDim(dim)
-                ? memref::DimOp::create(rewriter, loc, memref, dim).getResult()
-                : arith::ConstantIndexOp::create(rewriter, loc,
-                                                 memrefTy.getDimSize(dim))
-                      .getResult();
+        Value dimSize = arith::ConstantIndexOp::create(
+            rewriter, loc, memrefTy.getDimSize(dim));
         indices[dim] =
             arith::RemUIOp::create(rewriter, loc, linearIndex, dimSize);
         if (dim != 0)
