@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/SemanticSignatures.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
@@ -20,8 +21,6 @@ using namespace llvm;
 using namespace llvm::hlsl;
 
 namespace {
-// The fixed number of operands in a signature element node
-constexpr unsigned NumElementOperands = 13;
 
 // Inclusive upper bounds of the operand enums
 constexpr uint32_t MaxCompType =
@@ -45,6 +44,25 @@ Expected<uint64_t> extractInt(const MDNode *Node, unsigned OpId) {
 
 Expected<SemanticSignatureElement>
 SemanticSignatureElement::fromMetadata(const MDNode *Node) {
+  // Operand positions within a signature element metadata node.
+  enum class OpIdx : unsigned {
+    SigId,
+    SemanticName,
+    CompType,
+    SemanticKind,
+    SemanticIndices,
+    InterpMode,
+    Rows,
+    Cols,
+    StartRow,
+    StartCol,
+    UsageMask,
+    DynIndexMask,
+    GSStream,
+    NumOperands,
+  };
+  const unsigned NumElementOperands = to_underlying(OpIdx::NumOperands);
+
   if (!Node)
     return makeError("signature element node is null");
   if (Node->getNumOperands() != NumElementOperands)
@@ -52,31 +70,35 @@ SemanticSignatureElement::fromMetadata(const MDNode *Node) {
 
   SemanticSignatureElement Elem;
 
-  Expected<uint64_t> SigId = extractInt(Node, 0);
+  Expected<uint64_t> SigId = extractInt(Node, to_underlying(OpIdx::SigId));
   if (!SigId)
     return SigId.takeError();
   Elem.SigId = *SigId;
 
-  auto *Name = dyn_cast<MDString>(Node->getOperand(1));
+  auto *Name =
+      dyn_cast<MDString>(Node->getOperand(to_underlying(OpIdx::SemanticName)));
   if (!Name)
     return makeError("expected semantic name string");
   Elem.SemanticName = Name->getString();
 
-  Expected<uint64_t> CompType = extractInt(Node, 2);
+  Expected<uint64_t> CompType =
+      extractInt(Node, to_underlying(OpIdx::CompType));
   if (!CompType)
     return CompType.takeError();
   if (*CompType > MaxCompType)
     return makeError("invalid component type");
   Elem.CompType = static_cast<dxil::ElementType>(*CompType);
 
-  Expected<uint64_t> SemanticKind = extractInt(Node, 3);
+  Expected<uint64_t> SemanticKind =
+      extractInt(Node, to_underlying(OpIdx::SemanticKind));
   if (!SemanticKind)
     return SemanticKind.takeError();
   if (*SemanticKind > MaxSemanticKind)
     return makeError("invalid semantic kind");
   Elem.SemanticKind = static_cast<dxbc::PSV::SemanticKind>(*SemanticKind);
 
-  auto *Indices = dyn_cast<MDNode>(Node->getOperand(4));
+  auto *Indices =
+      dyn_cast<MDNode>(Node->getOperand(to_underlying(OpIdx::SemanticIndices)));
   if (!Indices)
     return makeError("expected semantic indices node");
   for (unsigned I = 0, E = Indices->getNumOperands(); I != E; ++I) {
@@ -86,31 +108,34 @@ SemanticSignatureElement::fromMetadata(const MDNode *Node) {
     Elem.SemanticIndices.push_back(*Index);
   }
 
-  Expected<uint64_t> InterpMode = extractInt(Node, 5);
+  Expected<uint64_t> InterpMode =
+      extractInt(Node, to_underlying(OpIdx::InterpMode));
   if (!InterpMode)
     return InterpMode.takeError();
   if (*InterpMode > MaxInterpMode)
     return makeError("invalid interpolation mode");
   Elem.InterpMode = static_cast<dxbc::PSV::InterpolationMode>(*InterpMode);
 
-  Expected<uint64_t> Rows = extractInt(Node, 6);
+  Expected<uint64_t> Rows = extractInt(Node, to_underlying(OpIdx::Rows));
   if (!Rows)
     return Rows.takeError();
   Elem.Rows = *Rows;
 
-  Expected<uint64_t> Cols = extractInt(Node, 7);
+  Expected<uint64_t> Cols = extractInt(Node, to_underlying(OpIdx::Cols));
   if (!Cols)
     return Cols.takeError();
   if (*Cols < 1 || *Cols > 4)
     return makeError("number of components per row must be within 1-4");
   Elem.Cols = *Cols;
 
-  Expected<uint64_t> StartRow = extractInt(Node, 8);
+  Expected<uint64_t> StartRow =
+      extractInt(Node, to_underlying(OpIdx::StartRow));
   if (!StartRow)
     return StartRow.takeError();
   Elem.StartRow = *StartRow;
 
-  Expected<uint64_t> StartCol = extractInt(Node, 9);
+  Expected<uint64_t> StartCol =
+      extractInt(Node, to_underlying(OpIdx::StartCol));
   if (!StartCol)
     return StartCol.takeError();
   if (*StartCol > 3 && *StartCol != UnallocatedCol)
@@ -121,21 +146,24 @@ SemanticSignatureElement::fromMetadata(const MDNode *Node) {
   if ((Elem.StartRow == UnallocatedRow) != (Elem.StartCol == UnallocatedCol))
     return makeError("start row and column sentinels must be set together");
 
-  Expected<uint64_t> UsageMask = extractInt(Node, 10);
+  Expected<uint64_t> UsageMask =
+      extractInt(Node, to_underlying(OpIdx::UsageMask));
   if (!UsageMask)
     return UsageMask.takeError();
   if (*UsageMask > 0xF)
     return makeError("usage mask must be a 4-bit value");
   Elem.UsageMask = *UsageMask;
 
-  Expected<uint64_t> DynIndexMask = extractInt(Node, 11);
+  Expected<uint64_t> DynIndexMask =
+      extractInt(Node, to_underlying(OpIdx::DynIndexMask));
   if (!DynIndexMask)
     return DynIndexMask.takeError();
   if (*DynIndexMask > 0xF)
     return makeError("dynamic index mask must be a 4-bit value");
   Elem.DynIndexMask = *DynIndexMask;
 
-  Expected<uint64_t> GSStream = extractInt(Node, 12);
+  Expected<uint64_t> GSStream =
+      extractInt(Node, to_underlying(OpIdx::GSStream));
   if (!GSStream)
     return GSStream.takeError();
   if (*GSStream > 3)

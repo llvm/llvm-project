@@ -76,8 +76,6 @@ struct SemanticSignatureElement {
     case dxil::ElementType::F16:
       return dxbc::SigMinPrecision::Float16;
     case dxil::ElementType::I16:
-    case dxil::ElementType::SNormF16:
-    case dxil::ElementType::UNormF16:
       return dxbc::SigMinPrecision::SInt16;
     case dxil::ElementType::U16:
       return dxbc::SigMinPrecision::UInt16;
