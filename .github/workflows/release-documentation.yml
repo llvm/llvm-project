@@ -100,7 +100,7 @@ jobs:
             echo "man-page-ref=llvmorg-$INPUTS_RELEASE_VERSION"
             echo "man-page-upload=$UPLOAD_MAN_PAGES"
             echo "man-page-attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-man-page-attestation"
-          } >> "$GITHUB_OUT"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Checkout LLVM
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -141,7 +141,7 @@ jobs:
         env:
           TARBALL_NAME: ${{ steps.vars.outputs.man-page-tarball-name }}
         run: |
-            echo "man-page-digest=$(cat "$TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUT
+            echo "man-page-digest=$(cat "$TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
       - id: man-page-artifact-upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
