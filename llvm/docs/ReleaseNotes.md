@@ -94,6 +94,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the RISC-V Backend
 
+* Bump svukte extension to 1.0.
+
 ### Changes to the WebAssembly Backend
 
 ### Changes to the Windows Target

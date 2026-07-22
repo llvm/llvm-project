@@ -1176,7 +1176,7 @@ def FeatureStdExtSha
                       FeatureStdExtShvsatpa, FeatureStdExtShgatpa]>;
 
 def FeatureStdExtSvukte
-    : RISCVExperimentalExtension<0, 3,
+    : RISCVExperimentalExtension<1, 0,
                                  "Address-Independent Latency of User-Mode Faults to Supervisor Addresses">;
 
 // Pointer Masking extensions
