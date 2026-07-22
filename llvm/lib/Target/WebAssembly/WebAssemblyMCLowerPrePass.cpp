@@ -17,8 +17,10 @@
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Module.h"
@@ -64,11 +66,12 @@ ModulePass *llvm::createWebAssemblyMCLowerPreLegacyPass() {
 //
 // The information stored here is essential for emitExternalDecls in the Wasm
 // AsmPrinter
-static void mcLower(Module &M, MachineModuleInfo &MMI) {
+static void mcLower(Module &M, MachineModuleInfo &MMI,
+                    llvm::function_ref<MachineFunction *(Function *)> GetMF) {
   MachineModuleInfoWasm &MMIW = MMI.getObjFileInfo<MachineModuleInfoWasm>();
 
   for (Function &F : M) {
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF = GetMF(&F);
     if (!MF)
       continue;
 
@@ -96,13 +99,21 @@ bool WebAssemblyMCLowerPreLegacy::runOnModule(Module &M) {
   if (!MMIWP)
     return false;
   MachineModuleInfo &MMI = MMIWP->getMMI();
-  mcLower(M, MMI);
+  mcLower(M, MMI, [MMIWP](Function *F) {
+    return MMIWP->getMMI().getMachineFunction(*F);
+  });
   return false;
 }
 
 PreservedAnalyses WebAssemblyMCLowerPrePass::run(Module &M,
                                                  ModuleAnalysisManager &MAM) {
   MachineModuleInfo &MMI = MAM.getResult<MachineModuleAnalysis>(M).getMMI();
-  mcLower(M, MMI);
+  mcLower(M, MMI, [&](Function *F) {
+    MachineFunctionAnalysis::Result *MFA =
+        MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
+            .getManager()
+            .getCachedResult<MachineFunctionAnalysis>(*F);
+    return MFA ? &MFA->getMF() : nullptr;
+  });
   return PreservedAnalyses::all();
 }
