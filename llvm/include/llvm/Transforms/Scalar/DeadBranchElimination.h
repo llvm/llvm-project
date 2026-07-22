@@ -9,9 +9,10 @@
 // Eliminates conditional branches that are unreachable, but that cannot be
 // proven unreachable directly because the branch body modifies the values the
 // condition depends on (a circular dependency). Uses an optimistic fixed
-// point: assume all branch bodies dead, re-run ScalarEvolution on a clone
-// with those bodies removed, and restore every body whose branch edge cannot
-// be proven never-taken, until the assumption set is self-consistent.
+// point: assume all branch bodies dead, temporarily rewrite the PHI slots
+// they feed (journaled and undone in place, no cloning), re-run
+// ScalarEvolution, and restore every body whose branch edge cannot be proven
+// never-taken, until the assumption set is self-consistent.
 //
 //===----------------------------------------------------------------------===//
 
