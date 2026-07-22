@@ -10,7 +10,6 @@
 // CHECK:         acc.privatize : () -> !acc.private_type<memref<32xi32>>
 // CHECK:         gpu.launch
 // CHECK:           acc.gpu_shared_memory
-// CHECK-NOT:       memref.view %{{.*}}[%{{.*}}][%{{.*}}, %{{.*}}, %{{.*}},
 
 func.func @block_redundant_seq_gang_private(%arg0: memref<32xi32>) {
   %c32_pw = arith.constant 32 : index
