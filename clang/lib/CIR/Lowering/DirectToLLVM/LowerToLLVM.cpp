@@ -1017,7 +1017,14 @@ getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
 }
 
 static llvm::StringRef getLLVMSyncScope(cir::SyncScopeKind syncScope) {
-  return syncScope == cir::SyncScopeKind::SingleThread ? "singlethread" : "";
+  switch (syncScope) {
+  case cir::SyncScopeKind::SingleThread:
+    return "singlethread";
+  case cir::SyncScopeKind::Workgroup:
+    return "block";
+  default:
+    return "";
+  }
 }
 
 static std::optional<llvm::StringRef>

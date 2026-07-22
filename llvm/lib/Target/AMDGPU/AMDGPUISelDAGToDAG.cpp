@@ -996,10 +996,13 @@ AMDGPUISelDAGToDAGPass::AMDGPUISelDAGToDAGPass(TargetMachine &TM)
 PreservedAnalyses
 AMDGPUISelDAGToDAGPass::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
-#ifdef EXPENSIVE_CHECKS
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   auto &F = MF.getFunction();
+  // UniformityInfoAnalysis is optional in generic dag isel,
+  // AMDGPUISelDAGToDAGPass requires it, calculate it explicitly.
+  FAM.getResult<UniformityInfoAnalysis>(F);
+#ifdef EXPENSIVE_CHECKS
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
   for (auto &L : LI.getLoopsInPreorder())

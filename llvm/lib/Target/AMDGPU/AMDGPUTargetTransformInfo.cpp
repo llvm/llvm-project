@@ -1027,6 +1027,10 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
+      // Inserts of booleans are free.
+      // TODO: Extracts are free too.
+      if (EltSize == 1 && Opcode == Instruction::InsertElement)
+        return TargetTransformInfo::TCC_Free;
       // Extract element sequences of consecutive i8 values that match a
       // register size are free most likely. It is not possible to know
       // if this extract is part of a consecutive sequence so this may
