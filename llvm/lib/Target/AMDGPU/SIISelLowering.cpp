@@ -11185,9 +11185,20 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_fract:
     return DAG.getNode(AMDGPUISD::FRACT, DL, VT, Op.getOperand(1));
 
-  case Intrinsic::amdgcn_class:
-    return DAG.getNode(AMDGPUISD::FP_CLASS, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2));
+  case Intrinsic::amdgcn_class: {
+    SDValue Src = Op.getOperand(1);
+    EVT SrcVT = Src.getValueType();
+    bool IsLegal = SrcVT == MVT::f32 || SrcVT == MVT::f64 ||
+                   (SrcVT == MVT::f16 && Subtarget->has16BitInsts());
+    if (!IsLegal) {
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          DAG.getMachineFunction().getFunction(),
+          "llvm.amdgcn.class only supports f16, f32, and f64",
+          DL.getDebugLoc()));
+      return DAG.getPOISON(VT);
+    }
+    return DAG.getNode(AMDGPUISD::FP_CLASS, DL, VT, Src, Op.getOperand(2));
+  }
   case Intrinsic::amdgcn_div_fmas:
     return DAG.getNode(AMDGPUISD::DIV_FMAS, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(4));
