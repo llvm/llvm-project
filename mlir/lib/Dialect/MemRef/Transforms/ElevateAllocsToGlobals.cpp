@@ -28,18 +28,11 @@ using namespace mlir;
 
 namespace {
 
-// Checks if 'op' is contained inside any branching or looping structure
-static bool isInsideControlFlow(mlir::Operation *op) {
-  if (mlir::getEnclosingRepetitiveRegion(op) != nullptr)
-    return true;
-
-  if (op->getParentOfType<mlir::LoopLikeOpInterface>())
-    return true;
-
-  if (auto regionParent = op->getParentOfType<mlir::RegionBranchOpInterface>())
-    return true;
-
-  return false;
+// Checks if 'op' is contained inside any branching or looping structure.
+static bool isInsideControlFlow(Operation *op) {
+  return getEnclosingRepetitiveRegion(op) ||
+         op->getParentOfType<LoopLikeOpInterface>() ||
+         op->getParentOfType<RegionBranchOpInterface>();
 }
 
 struct ElevateAllocsToGlobals : public OpRewritePattern<memref::AllocOp> {
@@ -54,8 +47,7 @@ public:
     if (!memrefType.hasStaticShape() || !allocOp.getDynamicSizes().empty())
       return failure();
 
-    auto loopParent = allocOp->getParentOfType<mlir::LoopLikeOpInterface>();
-    if (loopParent != nullptr || isInsideControlFlow(allocOp))
+    if (isInsideControlFlow(allocOp))
       return failure();
 
     memref::GlobalOp globalOp;
