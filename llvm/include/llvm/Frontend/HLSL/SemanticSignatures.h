@@ -40,13 +40,13 @@ static constexpr uint8_t UnallocatedCol = 0xFF;
 struct SemanticSignatureElement {
   uint32_t SigId;
   StringRef SemanticName;
-  dxil::ElementType CompType = dxil::ElementType::Invalid;
-  dxbc::PSV::SemanticKind SemanticKind = dxbc::PSV::SemanticKind::Arbitrary;
+  dxil::ElementType CompType;
+  dxbc::PSV::SemanticKind SemanticKind;
   SmallVector<uint32_t> SemanticIndices;
   dxbc::PSV::InterpolationMode InterpMode =
       dxbc::PSV::InterpolationMode::Undefined;
-  uint32_t Rows = 1;
-  uint8_t Cols = 1;
+  uint32_t Rows;
+  uint8_t Cols;
   uint32_t StartRow = UnallocatedRow;
   uint8_t StartCol = UnallocatedCol;
   uint8_t UsageMask = 0;
