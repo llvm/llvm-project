@@ -425,7 +425,6 @@ static const char* GetCFNumberTypeStr(uint64_t i) {
 
 void CFNumberChecker::checkPreStmt(const CallExpr *CE,
                                          CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
   const FunctionDecl *FD = C.getCalleeDecl(CE);
   if (!FD)
     return;
