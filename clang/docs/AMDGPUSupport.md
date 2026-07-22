@@ -30,3 +30,30 @@ Please note that the specific architecture and feature names will vary depending
 
 Clang exposes AMDGPU hardware intrinsics as target-specific builtins with the
 `__builtin_amdgcn_` prefix. These are documented in {doc}`AMDGPUBuiltinReference`.
+
+## Target-Specific Types
+
+### Named Workgroup barrier Type
+
+The `__amdgpu_named_workgroup_barrier_t` type is used to represent the GFX12.5 named barriers.
+Example usage:
+
+```c
+__amdgpu_named_workgroup_barrier_t x;
+__amdgpu_named_workgroup_barrier_t arr[2]; // Arrays are also fine
+
+void foo(int a)
+{
+  __builtin_amdgcn_s_barrier_init(&x, a);
+}
+```
+
+When a class has a field of this type, the entire class is considered as a
+"named barrier wrapper". Named barrier wrappers, and any derived types, are subject to the
+following limitations:
+
+* They must be a standard-layout type (see `std:;is_standard_layout`).
+* They have at most one field.
+
+When a class has a field that is a named barrier wrapper, the same restrictions also
+apply and that class is also considered a named barrier wrapper.
