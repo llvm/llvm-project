@@ -31,10 +31,8 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) optsize {
 ; AES-NEXT:  [[ENTRY:.*:]]
 ; AES-NEXT:    [[CRC_CAST:%.*]] = trunc i16 [[CHECKSUM]] to i8
 ; AES-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i8 [[CRC_CAST]], [[MSG]]
-; AES-NEXT:    [[TCBITS_CAST:%.*]] = zext i8 [[XOR_CRC_DATA]] to i16
-; AES-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[TCBITS_CAST]], i16 511)
-; AES-NEXT:    [[QUOT_MASK:%.*]] = and i16 [[CLMUL_MU]], 255
-; AES-NEXT:    [[QUOT_CAST:%.*]] = zext i16 [[QUOT_MASK]] to i24
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i8 @llvm.clmul.i8(i8 [[XOR_CRC_DATA]], i8 -1)
+; AES-NEXT:    [[QUOT_CAST:%.*]] = zext i8 [[CLMUL_MU]] to i24
 ; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_CAST]], i24 81923)
 ; AES-NEXT:    [[CRC_RECAST:%.*]] = zext i16 [[CHECKSUM]] to i24
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_RECAST]], [[CLMUL_GP]]
@@ -97,10 +95,9 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) optsize {
 ; AES-SAME: i16 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0]] {
 ; AES-NEXT:  [[ENTRY:.*:]]
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i16 [[CHECKSUM]], [[MSG]]
-; AES-NEXT:    [[TCBITS_CAST:%.*]] = zext i16 [[XOR_CRC_DATA1]] to i32
-; AES-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[TCBITS_CAST]], i32 114687)
-; AES-NEXT:    [[QUOT_MASK:%.*]] = and i32 [[CLMUL_MU]], 65535
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_MASK]], i32 81923)
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[XOR_CRC_DATA1]], i16 -16385)
+; AES-NEXT:    [[QUOT_CAST:%.*]] = zext i16 [[CLMUL_MU]] to i32
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_CAST]], i32 81923)
 ; AES-NEXT:    [[CRC_RECAST:%.*]] = zext i16 [[CHECKSUM]] to i32
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_RECAST]], [[CLMUL_GP]]
 ; AES-NEXT:    [[CRC_LSHR2:%.*]] = lshr i32 [[XOR_CRC_MULT]], 16
@@ -163,10 +160,8 @@ define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) optsize {
 ; AES-NEXT:  [[ENTRY:.*:]]
 ; AES-NEXT:    [[CRC_CAST:%.*]] = zext i8 [[CHECKSUM]] to i16
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i16 [[CRC_CAST]], [[MSG]]
-; AES-NEXT:    [[TCBITS_CAST:%.*]] = zext i16 [[XOR_CRC_DATA1]] to i32
-; AES-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[TCBITS_CAST]], i32 24423)
-; AES-NEXT:    [[QUOT_MASK:%.*]] = and i32 [[CLMUL_MU]], 65535
-; AES-NEXT:    [[QUOT_CAST:%.*]] = trunc i32 [[QUOT_MASK]] to i24
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[XOR_CRC_DATA1]], i16 24423)
+; AES-NEXT:    [[QUOT_CAST:%.*]] = zext i16 [[CLMUL_MU]] to i24
 ; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_CAST]], i24 59)
 ; AES-NEXT:    [[CRC_RECAST:%.*]] = zext i8 [[CHECKSUM]] to i24
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_RECAST]], [[CLMUL_GP]]
@@ -494,10 +489,8 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) optsize {
 ; AES-NEXT:    [[CRC_CAST:%.*]] = trunc i32 [[CHECKSUM]] to i8
 ; AES-NEXT:    [[DATA_CAST:%.*]] = trunc i32 [[MSG]] to i8
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i8 [[CRC_CAST]], [[DATA_CAST]]
-; AES-NEXT:    [[TCBITS_CAST:%.*]] = zext i8 [[XOR_CRC_DATA1]] to i16
-; AES-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[TCBITS_CAST]], i16 273)
-; AES-NEXT:    [[QUOT_MASK:%.*]] = and i16 [[CLMUL_MU]], 255
-; AES-NEXT:    [[QUOT_CAST:%.*]] = zext i16 [[QUOT_MASK]] to i40
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i8 @llvm.clmul.i8(i8 [[XOR_CRC_DATA1]], i8 17)
+; AES-NEXT:    [[QUOT_CAST:%.*]] = zext i8 [[CLMUL_MU]] to i40
 ; AES-NEXT:    [[CLMUL_GP:%.*]] = call i40 @llvm.clmul.i40(i40 [[QUOT_CAST]], i40 67601)
 ; AES-NEXT:    [[CRC_RECAST:%.*]] = zext i32 [[CHECKSUM]] to i40
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i40 [[CRC_RECAST]], [[CLMUL_GP]]
@@ -561,10 +554,9 @@ define i8 @crc8.le.tc8.data32(i8 %checksum, i32 %msg) optsize {
 ; AES-NEXT:  [[ENTRY:.*:]]
 ; AES-NEXT:    [[DATA_CAST:%.*]] = trunc i32 [[MSG]] to i8
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i8 [[CHECKSUM]], [[DATA_CAST]]
-; AES-NEXT:    [[TCBITS_CAST:%.*]] = zext i8 [[XOR_CRC_DATA1]] to i16
-; AES-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[TCBITS_CAST]], i16 107)
-; AES-NEXT:    [[QUOT_MASK:%.*]] = and i16 [[CLMUL_MU]], 255
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i16 @llvm.clmul.i16(i16 [[QUOT_MASK]], i16 119)
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i8 @llvm.clmul.i8(i8 [[XOR_CRC_DATA1]], i8 107)
+; AES-NEXT:    [[QUOT_CAST:%.*]] = zext i8 [[CLMUL_MU]] to i16
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i16 @llvm.clmul.i16(i16 [[QUOT_CAST]], i16 119)
 ; AES-NEXT:    [[CRC_RECAST:%.*]] = zext i8 [[CHECKSUM]] to i16
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i16 [[CRC_RECAST]], [[CLMUL_GP]]
 ; AES-NEXT:    [[CRC_LSHR2:%.*]] = lshr i16 [[XOR_CRC_MULT]], 8
@@ -626,10 +618,9 @@ define i32 @crc32.le.tc32(i32 %checksum, i32 %msg) optsize {
 ; AES-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
 ; AES-NEXT:  [[ENTRY:.*:]]
 ; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CHECKSUM]], [[MSG]]
-; AES-NEXT:    [[TCBITS_CAST:%.*]] = zext i32 [[XOR_CRC_DATA1]] to i64
-; AES-NEXT:    [[CLMUL_MU:%.*]] = call i64 @llvm.clmul.i64(i64 [[TCBITS_CAST]], i64 4770502929)
-; AES-NEXT:    [[QUOT_MASK:%.*]] = and i64 [[CLMUL_MU]], 4294967295
-; AES-NEXT:    [[CLMUL_GP:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_MASK]], i64 67601)
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[XOR_CRC_DATA1]], i32 475535633)
+; AES-NEXT:    [[QUOT_CAST:%.*]] = zext i32 [[CLMUL_MU]] to i64
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_CAST]], i64 67601)
 ; AES-NEXT:    [[CRC_RECAST:%.*]] = zext i32 [[CHECKSUM]] to i64
 ; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i64 [[CRC_RECAST]], [[CLMUL_GP]]
 ; AES-NEXT:    [[CRC_LSHR2:%.*]] = lshr i64 [[XOR_CRC_MULT]], 32

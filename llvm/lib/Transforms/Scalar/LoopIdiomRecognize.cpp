@@ -1610,10 +1610,11 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   // bits, and the second clmul needs CRCBW+TC bits, so test the widest clmul.
   // TODO: If clmul exists on the target but not for the required width, it
   // might be possible to split into multiple iterations of reduction.
-  unsigned CRCBW = Info.LHS->getType()->getIntegerBitWidth();
+  unsigned ClmulMuBW = Info.IsBigEndian ? 2 * Info.TripCount : Info.TripCount;
+  unsigned ClmulGPBW =
+      Info.LHS->getType()->getIntegerBitWidth() + Info.TripCount;
   IntegerType *WidestClmulTy =
-      IntegerType::get(Info.LHS->getContext(),
-                       std::max(2 * Info.TripCount, CRCBW + Info.TripCount));
+      IntegerType::get(Info.LHS->getContext(), std::max(ClmulMuBW, ClmulGPBW));
   if (TTI->haveFastClmul(WidestClmulTy)) {
     optimizeCRCLoopUsingClmul(Info);
     return true;
@@ -1634,13 +1635,16 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   // is even used at all).
   unsigned TC = Info.TripCount;
   // Based on the clmul inputs, the first clmul needs 2*TC bits, and the second
-  // needs CRCBW+TC bits.
-  IntegerType *ClmulMuTy = IntegerType::get(Ctx, 2 * TC);
+  // needs CRCBW+TC bits. However, only the low TC bits of the first clmul are
+  // used in little-endian, so a clmul in TC bits suffices in that case.
+  IntegerType *ClmulMuTy =
+      IntegerType::get(Ctx, Info.IsBigEndian ? 2 * TC : TC);
   IntegerType *ClmulGPTy = IntegerType::get(Ctx, CRCBW + TC);
 
   // First, generate the constants required for GF(2) Barrett reduction.
   auto [Mu, FullGenPoly] = HashRecognize::genBarrettConstants(Info);
-  Value *MuConst = ConstantInt::get(Ctx, Mu.zext(ClmulMuTy->getBitWidth()));
+  Value *MuConst =
+      ConstantInt::get(Ctx, Mu.zextOrTrunc(ClmulMuTy->getBitWidth()));
   Value *GenPolyConst =
       ConstantInt::get(Ctx, FullGenPoly.zext(ClmulGPTy->getBitWidth()));
 
@@ -1705,9 +1709,8 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
       Intrinsic::clmul, ClmulMuInput, MuConst, /*FMFSource=*/{}, "clmul.mu");
 
   // Calculate floor(T1(x)/x^TC) for step 2.
-  Value *ClmulGPInput = Info.IsBigEndian
-                            ? Builder.CreateLShr(ClmulMu, TC, "quot.lshr")
-                            : LoTCBits(ClmulMu, "quot.mask");
+  Value *ClmulGPInput =
+      Info.IsBigEndian ? Builder.CreateLShr(ClmulMu, TC, "quot.lshr") : ClmulMu;
 
   // Step 2: T2(x) = floor(T1(x)/x^TC) * P(x)
   // Input is TC bits and P(x) is CRCBW+1 bits, so result will be CRCBW+TC bits.
