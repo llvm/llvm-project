@@ -39,6 +39,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <type_traits>
 
 namespace llvm {
 
@@ -55,6 +56,7 @@ class CycleRef {
 
   explicit CycleRef(unsigned Index) : Index(Index) {}
   template <typename ContextT> friend class GenericCycleInfo;
+  template <typename ContextT> friend class GenericCycleInfoCompute;
   friend struct DenseMapInfo<CycleRef>;
 
 public:
@@ -80,30 +82,17 @@ public:
   template <typename> friend class GenericCycleInfoCompute;
 
 private:
-  /// Sentinel for a cycle-index slot that refers to no cycle.
-  static constexpr unsigned NoCycle = ~0u;
-
   /// Internal, data-only storage for a cycle. Consumers name a cycle by a
   /// CycleRef handle and query it through GenericCycleInfo.
   class Cycle {
   public:
-    /// Preorder index of the parent cycle, or NoCycle for a top-level
-    /// cycle. Before flatten() this holds a creation-order index into
-    /// GenericCycleInfoCompute::AllCycles.
-    unsigned ParentIndex = NoCycle;
-
-    /// The entry block(s) of the cycle. The header is the only entry if this
-    /// is a loop.
-    SmallVector<BlockT *, 1> Entries;
+    /// The parent cycle; invalid for a top-level cycle.
+    CycleRef Parent;
 
     /// This cycle's blocks (its own and its nested cycles') occupy the
     /// half-open range [IdxBegin, IdxEnd) of BlockLayout, nested like an Euler
     /// tour of the cycle tree, so containment is an interval test (see
     /// contains()).
-    ///
-    /// During construction (before the forest is flattened), IdxEnd accumulates
-    /// the number of this cycle's own blocks (those whose innermost cycle is
-    /// this one).
     unsigned IdxBegin = 0, IdxEnd = 0;
 
     /// Depth of the cycle in the tree: top-level cycles are at depth 1 and each
@@ -115,31 +104,27 @@ private:
     /// [this, this + 1 + NumDescendants) of Cycles.
     unsigned NumDescendants = 0;
 
-    void appendEntry(BlockT *Block) { Entries.push_back(Block); }
+    /// The entry blocks (header first) are BlockLayout[EntryBegin,
+    /// EntryBegin+EntrySize). A reducible cycle has a single entry at IdxBegin.
+    /// An irreducible one appends its list past the Euler tour.
+    unsigned EntryBegin = 0, EntrySize = 0;
 
     /// Whether this cycle has a parent, i.e. is not top-level.
-    bool hasParent() const { return ParentIndex != NoCycle; }
-
-    Cycle() = default;
-    Cycle(const Cycle &) = delete;
-    Cycle &operator=(const Cycle &) = delete;
-    Cycle(Cycle &&) = delete;
-    Cycle &operator=(Cycle &&) = delete;
+    bool hasParent() const { return Parent.isValid(); }
   };
+  static_assert(std::is_trivially_destructible_v<Cycle>);
   using CycleT = Cycle;
 
   ContextT Context;
   unsigned BlockNumberEpoch;
 
-  /// Map each basic block number to the preorder index of its inner-most
-  /// containing cycle, or NoCycle if none. During construction this
-  /// transiently holds creation-order indices into
-  /// GenericCycleInfoCompute::AllCycles, which flatten() remaps to preorder
-  /// indices.
-  SmallVector<unsigned> BlockMap;
+  /// Map each basic block number to its inner-most containing cycle, or an
+  /// invalid handle if none.
+  SmallVector<CycleRef> BlockMap;
 
   /// Euler tour of the cycle forest: every cycle's blocks form a contiguous
-  /// slice [IdxBegin, IdxEnd) of this array, nested inside its parent's.
+  /// slice [IdxBegin, IdxEnd), nested inside its parent's. Entry lists for
+  /// irreducible cycles are appended past the tour (see EntryBegin).
   SmallVector<BlockT *, 8> BlockLayout;
 
   /// All cycles in forest preorder: every cycle is immediately followed by
@@ -173,7 +158,7 @@ private:
                GraphTraits<const FunctionT *>::getNumberEpoch(Fn) &&
            "CycleInfo used with outdated block number epoch");
   }
-  void addToBlockMap(BlockT *Block, CycleT *Cycle);
+  void addToBlockMap(BlockT *Block, CycleRef C);
 
 public:
   /// Iteration over child cycles, yielding handles. The first child (if any)
@@ -225,31 +210,36 @@ public:
     unsigned Number = GraphTraits<const BlockT *>::getNumber(Block);
     // A block added after compute() that no cycle contains (e.g. a critical
     // edge MachineSink split outside every cycle) has a number beyond BlockMap.
-    if (Number >= BlockMap.size() || BlockMap[Number] == NoCycle)
+    if (Number >= BlockMap.size())
       return CycleRef();
-    return CycleRef(BlockMap[Number]);
+    return BlockMap[Number];
   }
 
-  BlockT *getHeader(CycleRef C) const { return deref(C).Entries[0]; }
-  bool isReducible(CycleRef C) const { return deref(C).Entries.size() == 1; }
-  CycleRef getParentCycle(CycleRef C) const {
-    auto P = deref(C).ParentIndex;
-    return P == NoCycle ? CycleRef() : CycleRef(P);
+  BlockT *getHeader(CycleRef C) const {
+    return BlockLayout[deref(C).EntryBegin];
   }
+  bool isReducible(CycleRef C) const { return deref(C).EntrySize == 1; }
+  CycleRef getParentCycle(CycleRef C) const { return deref(C).Parent; }
   unsigned getDepth(CycleRef C) const { return deref(C).Depth; }
   size_t getNumBlocks(CycleRef C) const {
     const CycleT &Cyc = deref(C);
     return Cyc.IdxEnd - Cyc.IdxBegin;
   }
 
-  ArrayRef<BlockT *> getEntries(CycleRef C) const { return deref(C).Entries; }
-  bool isEntry(CycleRef C, const BlockT *Block) const {
-    return is_contained(deref(C).Entries, Block);
+  ArrayRef<BlockT *> getEntries(CycleRef C) const {
+    const CycleT &Cyc = deref(C);
+    return ArrayRef(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
   }
+  bool isEntry(CycleRef C, const BlockT *Block) const {
+    return is_contained(getEntries(C), Block);
+  }
+  // Append a one-element entry list past the Euler tour; storing Block at
+  // IdxBegin instead would disturb the block order.
   void setSingleEntry(CycleRef C, BlockT *Block) {
-    auto &Entries = deref(C).Entries;
-    Entries.clear();
-    Entries.push_back(Block);
+    CycleT &Cyc = deref(C);
+    Cyc.EntryBegin = BlockLayout.size();
+    BlockLayout.push_back(Block);
+    Cyc.EntrySize = 1;
   }
   /// Returns true iff \p Outer contains \p Inner. O(1). Non-strict.
   bool contains(CycleRef Outer, CycleRef Inner) const {
@@ -266,7 +256,7 @@ public:
   Printable printEntries(CycleRef C, const ContextT &Ctx) const {
     return Printable([this, C, &Ctx](raw_ostream &Out) {
       ListSeparator LS(" ");
-      for (auto *Entry : deref(C).Entries)
+      for (auto *Entry : getEntries(C))
         Out << LS << Ctx.print(Entry);
     });
   }

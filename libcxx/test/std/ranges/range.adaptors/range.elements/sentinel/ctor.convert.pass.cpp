@@ -60,9 +60,9 @@ static_assert(!std::is_constructible_v<std::ranges::sentinel_t<std::ranges::elem
                                        std::ranges::sentinel_t<const std::ranges::elements_view<Range, 0>>>);
 
 // !convertible_to<sentinel_t<V>, sentinel_t<Base>>
-static_assert(!std::is_constructible_v<
-              std::ranges::sentinel_t<const std::ranges::elements_view<NonConvertConstSentRange, 0>>,
-              std::ranges::sentinel_t<std::ranges::elements_view<NonConvertConstSentRange, 0>>>);
+static_assert(
+    !std::is_constructible_v<std::ranges::sentinel_t<const std::ranges::elements_view<NonConvertConstSentRange, 0>>,
+                             std::ranges::sentinel_t<std::ranges::elements_view<NonConvertConstSentRange, 0>>>);
 
 constexpr bool test() {
   // base is init correctly
