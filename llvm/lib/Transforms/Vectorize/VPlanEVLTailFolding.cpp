@@ -45,8 +45,7 @@ bool VPlanTransforms::simplifyKnownEVL(VPlan &Plan, ElementCount VF,
         continue;
 
       VPValue *Trunc = VPBuilder(&R).createScalarZExtOrTrunc(
-          AVL, Type::getInt32Ty(Plan.getContext()), AVLSCEV->getType(),
-          R.getDebugLoc());
+          AVL, Type::getInt32Ty(Plan.getContext()), R.getDebugLoc());
       if (Trunc != AVL) {
         auto *TruncR = cast<VPSingleDefRecipe>(Trunc);
         const DataLayout &DL = Plan.getDataLayout();
@@ -118,7 +117,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     EVLEndPtr->insertBefore(&CurRecipe);
     // Cast EVL (i32) to match the VF operand's type.
     VPValue *EVLAsVF = VPBuilder(EVLEndPtr).createScalarZExtOrTrunc(
-        &EVL, EVLEndPtr->getOperand(1)->getScalarType(), EVL.getScalarType(),
+        &EVL, EVLEndPtr->getOperand(1)->getScalarType(),
         DebugLoc::getUnknown());
     EVLEndPtr->setOperand(1, EVLAsVF);
     return EVLEndPtr;
@@ -155,15 +154,12 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                       LoadR->getScalarType(), {}, {}, DL);
   }
 
-  VPValue *Stride;
-  if (match(&CurRecipe, m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
-                            m_VPValue(Addr), m_VPValue(Stride),
-                            m_RemoveMask(HeaderMask, Mask),
-                            m_TruncOrSelf(m_Specific(&Plan->getVF()))))) {
-    if (!Mask)
-      Mask = Plan->getTrue();
+  if (match(&CurRecipe,
+            m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
+                m_VPValue(), m_VPValue(), m_RemoveMask(HeaderMask, Mask),
+                m_TruncOrSelf(m_Specific(&Plan->getVF()))))) {
     auto *NewLoad = cast<VPWidenMemIntrinsicRecipe>(&CurRecipe)->clone();
-    NewLoad->setOperand(2, Mask);
+    NewLoad->setOperand(2, Mask ? Mask : Plan->getTrue());
     NewLoad->setOperand(3, &EVL);
     return NewLoad;
   }
@@ -208,9 +204,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 
   if (match(&CurRecipe, m_LastActiveLane(m_Specific(HeaderMask)))) {
     Type *Ty = CurRecipe.getVPSingleValue()->getScalarType();
-    VPValue *ZExt =
-        VPBuilder(&CurRecipe)
-            .createScalarZExtOrTrunc(&EVL, Ty, EVL.getScalarType(), DL);
+    VPValue *ZExt = VPBuilder(&CurRecipe).createScalarZExtOrTrunc(&EVL, Ty, DL);
     return new VPInstruction(
         Instruction::Sub, {ZExt, Plan->getConstantInt(Ty, 1)},
         VPIRFlags::getDefaultFlags(Instruction::Sub), {}, DL);
@@ -353,7 +347,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   VPValue *EVLAsIdx =
       VPBuilder::getToInsertAfter(EVL.getDefiningRecipe())
           .createScalarZExtOrTrunc(&EVL, Plan.getVF().getScalarType(),
-                                   EVL.getScalarType(), DebugLoc::getUnknown());
+                                   DebugLoc::getUnknown());
 
   assert(all_of(Plan.getVF().users(),
                 [&Plan](VPUser *U) {
@@ -394,8 +388,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
     // Emit VPScalarCastRecipe in preheader if VF is not a 32 bits integer.
     VPBuilder Builder(LoopRegion->getPreheaderVPBB());
     MaxEVL = Builder.createScalarZExtOrTrunc(
-        MaxEVL, Type::getInt32Ty(Plan.getContext()), MaxEVL->getScalarType(),
-        DebugLoc::getUnknown());
+        MaxEVL, Type::getInt32Ty(Plan.getContext()), DebugLoc::getUnknown());
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
     VPValue *PrevEVL = Builder.createScalarPhi(
@@ -536,9 +529,8 @@ void VPlanTransforms::addExplicitVectorLength(
   Builder.setInsertPoint(CanonicalIVIncrement);
   VPValue *OpVPEVL = VPEVL;
 
-  auto *I32Ty = Type::getInt32Ty(Plan.getContext());
   OpVPEVL = Builder.createScalarZExtOrTrunc(
-      OpVPEVL, CanIVTy, I32Ty, CanonicalIVIncrement->getDebugLoc());
+      OpVPEVL, CanIVTy, CanonicalIVIncrement->getDebugLoc());
 
   auto *NextIter = Builder.createAdd(
       OpVPEVL, CurrentIteration, CanonicalIVIncrement->getDebugLoc(),

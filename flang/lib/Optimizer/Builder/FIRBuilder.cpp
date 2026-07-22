@@ -1726,7 +1726,7 @@ fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
   std::function<std::optional<std::int64_t>(mlir::Value)> getConstantValue =
       [&](mlir::Value value) -> std::optional<std::int64_t> {
     if (auto valInt = fir::getIntIfConstant(value))
-      return *valInt;
+      return valInt->trySExtValue();
     auto *definingOp = value.getDefiningOp();
     if (mlir::isa_and_nonnull<fir::ConvertOp>(definingOp)) {
       auto valOp = mlir::dyn_cast<fir::ConvertOp>(definingOp);

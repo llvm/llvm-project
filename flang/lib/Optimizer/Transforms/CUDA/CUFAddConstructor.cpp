@@ -302,13 +302,17 @@ struct CUFAddConstructor
     builder.setInsertionPointToStart(entryBlock);
 
     if (needAllocatorRegistration) {
-      // Symbol reference to CUFRegisterAllocator.
+      llvm::StringRef allocatorRegistrationFunctionName =
+          RTNAME_STRING(CUFRegisterAllocator);
+      if (!allocatorRegistrationFunction.empty())
+        allocatorRegistrationFunctionName = allocatorRegistrationFunction;
+      // Symbol reference to the allocator registration function.
       builder.setInsertionPointToEnd(mod.getBody());
       auto registerFuncOp = mlir::LLVM::LLVMFuncOp::create(
-          builder, loc, RTNAME_STRING(CUFRegisterAllocator), funcTy);
+          builder, loc, allocatorRegistrationFunctionName, funcTy);
       registerFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
       auto cufRegisterAllocatorRef = mlir::SymbolRefAttr::get(
-          mod.getContext(), RTNAME_STRING(CUFRegisterAllocator));
+          mod.getContext(), allocatorRegistrationFunctionName);
       builder.setInsertionPointToStart(entryBlock);
       mlir::LLVM::CallOp::create(builder, loc, funcTy, cufRegisterAllocatorRef);
     }

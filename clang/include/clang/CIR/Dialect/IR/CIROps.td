@@ -2200,15 +2200,25 @@ class CIR_WhileOpBase<string mnemonic> : CIR_LoopOpBase<mnemonic> {
 }
 
 def CIR_WhileOp : CIR_WhileOpBase<"while"> {
-  let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body);
-  let assemblyFormat = "$cond `do` $body attr-dict";
+  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind);
+  let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body,
+                        MaxSizedRegion<1>:$cleanup);
+  let assemblyFormat = [{
+    $cond `do` $body (`cleanup` $cleanupKind $cleanup^)? attr-dict
+  }];
 
   let description = [{
-    Represents a C/C++ while loop. It consists of two regions:
+    Represents a C/C++ while loop. It consists of two or three regions:
 
      - `cond`: single block region with the loop's condition. Should be
      terminated with a `cir.condition` operation.
      - `body`: contains the loop body and an arbitrary number of blocks.
+     - `cleanup`: optional region that runs on every per-iteration exit edge
+     (condition-false exit, end-of-iteration, break/continue, and EH unwinding
+     when the cleanup kind includes EH). This is used to destroy a condition
+     variable whose lifetime is a single iteration. When present, it carries a
+     cleanup kind matching `cir.cleanup.scope` (`normal` or `all`). Note that
+     a `DoWhileOp` cannot contain a `cleanup` region.
 
     Example:
 
@@ -2223,6 +2233,43 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
     ```
   }];
 
+  let builders = [
+    OpBuilder<(ins "BuilderCallbackRef":$condBuilder,
+                   "BuilderCallbackRef":$bodyBuilder,
+                   CArg<"BuilderCallbackRef", "nullptr">:$cleanupBuilder,
+                   CArg<"cir::CleanupKind", "cir::CleanupKind::All">:$cleanupKind), [{
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        $_builder.createBlock($_state.addRegion());
+        condBuilder($_builder, $_state.location);
+        $_builder.createBlock($_state.addRegion());
+        bodyBuilder($_builder, $_state.location);
+        mlir::Region *cleanupRegion = $_state.addRegion();
+        if (cleanupBuilder) {
+          $_state.addAttribute(
+              getCleanupKindAttrName($_state.name),
+              cir::CleanupKindAttr::get($_builder.getContext(), cleanupKind));
+          $_builder.createBlock(cleanupRegion);
+          cleanupBuilder($_builder, $_state.location);
+        }
+      }]>
+  ];
+
+  let extraClassDeclaration = [{
+    mlir::Region *maybeGetCleanup() {
+      return getCleanup().empty() ? nullptr : &getCleanup();
+    }
+    cir::CleanupKindAttr maybeGetCleanupKind() {
+      return getCleanupKindAttr();
+    }
+    llvm::SmallVector<mlir::Region *> getRegionsInExecutionOrder() {
+      llvm::SmallVector<mlir::Region *> regions{&getCond(), &getBody()};
+      if (mlir::Region *cleanup = maybeGetCleanup())
+        regions.push_back(cleanup);
+      return regions;
+    }
+  }];
+
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -2236,7 +2283,10 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
 
   let description = [{
     Represents a C/C++ do-while loop. Identical to `cir.while` but the
-    condition is evaluated after the body.
+    condition is evaluated after the body. Because a variable cannot be
+    declared in the condition of a do-while loop, this operation cannot
+    have a `cleanup` region. A cleanup scope should be created within the
+    body region for any variables within the loop that require cleanup.
 
     Example:
 
@@ -2261,12 +2311,18 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
 def CIR_ForOp : CIR_LoopOpBase<"for"> {
   let summary = "C/C++ for loop counterpart";
   let description = [{
-    Represents a C/C++ for loop. It consists of three regions:
+    Represents a C/C++ for loop. It consists of three or four regions:
 
      - `cond`: single block region with the loop's condition. Should be
      terminated with a `cir.condition` operation.
      - `body`: contains the loop body and an arbitrary number of blocks.
      - `step`: single block region with the loop's step.
+     - `cleanup`: optional region that runs on every per-iteration exit edge
+     (condition-false exit, end-of-iteration after the step, break/continue,
+     and EH unwinding when the cleanup kind includes EH). This is used to
+     destroy a condition variable whose lifetime is a single iteration. When
+     present, it carries a cleanup kind matching `cir.cleanup.scope` (`normal`
+     or `all`).
 
     Example:
 
@@ -2283,20 +2339,25 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     ```
   }];
 
+  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind);
   let regions = (region MinSizedRegion<1>:$cond,
                         MinSizedRegion<1>:$body,
-                        MinSizedRegion<1>:$step);
+                        MinSizedRegion<1>:$step,
+                        MaxSizedRegion<1>:$cleanup);
   let assemblyFormat = [{
     `:` `cond` $cond
     `body` $body
     `step` $step
+    (`cleanup` $cleanupKind $cleanup^)?
     attr-dict
   }];
 
   let builders = [
     OpBuilder<(ins "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$condBuilder,
                    "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
-                   "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$stepBuilder), [{
+                   "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$stepBuilder,
+                   CArg<"llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>", "nullptr">:$cleanupBuilder,
+                   CArg<"cir::CleanupKind", "cir::CleanupKind::All">:$cleanupKind), [{
         mlir::OpBuilder::InsertionGuard guard($_builder);
 
         // Build condition region.
@@ -2310,16 +2371,37 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
         // Build step region.
         $_builder.createBlock($_state.addRegion());
         stepBuilder($_builder, $_state.location);
+
+        // Build optional cleanup region.
+        mlir::Region *cleanupRegion = $_state.addRegion();
+        if (cleanupBuilder) {
+          $_state.addAttribute(
+              getCleanupKindAttrName($_state.name),
+              cir::CleanupKindAttr::get($_builder.getContext(), cleanupKind));
+          $_builder.createBlock(cleanupRegion);
+          cleanupBuilder($_builder, $_state.location);
+        }
       }]>
   ];
 
   let extraClassDeclaration = [{
     mlir::Region *maybeGetStep() { return &getStep(); }
+    mlir::Region *maybeGetCleanup() {
+      return getCleanup().empty() ? nullptr : &getCleanup();
+    }
+    cir::CleanupKindAttr maybeGetCleanupKind() {
+      return getCleanupKindAttr();
+    }
     llvm::SmallVector<mlir::Region *> getRegionsInExecutionOrder() {
-      return llvm::SmallVector<mlir::Region *, 3>{&getCond(), &getBody(), &getStep()};
+      llvm::SmallVector<mlir::Region *> regions{&getCond(), &getBody(),
+                                                &getStep()};
+      if (mlir::Region *cleanup = maybeGetCleanup())
+        regions.push_back(cleanup);
+      return regions;
     }
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 

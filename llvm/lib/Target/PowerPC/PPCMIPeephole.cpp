@@ -174,13 +174,7 @@ public:
            "TOC pointer used in a function using PC-Relative addressing!");
     if (skipFunction(MF.getFunction()))
       return false;
-    bool Changed = simplifyCode();
-#ifndef NDEBUG
-    if (Changed)
-      MF.verify(this, "Error in PowerPC MI Peephole optimization, compile with "
-                      "-mllvm -disable-ppc-peephole");
-#endif
-    return Changed;
+    return simplifyCode();
   }
 };
 
@@ -889,6 +883,8 @@ bool PPCMIPeephole::simplifyCode() {
             LLVM_DEBUG(dbgs() << "Changing splat immediate from " << SplatImm
                               << " to " << NewElem << " in instruction: ");
             LLVM_DEBUG(MI.dump());
+            if (!MRI->constrainRegClass(ShiftOp1, &PPC::VRRCRegClass))
+              llvm_unreachable("Can't fail because vrrc is subset of vsrc");
             addRegToUpdate(MI.getOperand(OpNo).getReg());
             addRegToUpdate(ShiftOp1);
             MI.getOperand(OpNo).setReg(ShiftOp1);

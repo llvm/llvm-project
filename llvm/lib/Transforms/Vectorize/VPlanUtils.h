@@ -18,6 +18,7 @@ class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 class PredicatedScalarEvolution;
+class VPBuilder;
 } // namespace llvm
 
 namespace llvm {
@@ -109,11 +110,15 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
   return Intrinsic::not_intrinsic;
 }
 
-/// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
-/// Returns an optional pair, where the first element indicates whether it is
-/// an intrinsic ID.
+/// Return the instruction opcode for the recipe defining \p V or 0 for
+/// unsupported recipes and VPValues not defined by a recipe.
+unsigned getOpcode(const VPValue *V);
+
+/// Get the instruction opcode or intrinsic ID for the recipe defining \p V.
+/// Returns an optional pair, where the first element indicates whether it is an
+/// intrinsic ID.
 std::optional<std::pair<bool, unsigned>>
-getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R);
+getOpcodeOrIntrinsicID(const VPValue *V);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
@@ -175,6 +180,23 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
+
+/// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
+/// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
+/// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is
+/// non-null, inserting recipes via \p Builder.
+VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, Instruction *TruncI,
+                    VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+                    VPBuilder &Builder);
+
+/// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
+/// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
+/// generates scalar values.
+VPValue *scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
+                                          VPlan &Plan, VPBuilder &Builder);
 
 /// Returns true if \p R is dead, i.e. none of its defined values are used and
 /// it has no side effects (with the exception of conditional assumes, which are

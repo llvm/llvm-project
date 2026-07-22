@@ -3002,6 +3002,22 @@ are listed below.
    ``aligned`` attribute, this option is ignored.
 ```
 
+```{eval-rst}
+.. option:: -fdefined-pointer-subtraction
+
+  The C and C++ standards require both operands of a pointer subtraction to
+  refer to elements of the same array object. Clang normally exploits this
+  rule when lowering pointer subtraction operations, for example by emitting
+  IR constructs such as ``sdiv exact`` that rely on the computed byte offset
+  being an exact multiple of the pointee size.
+
+  ``-fdefined-pointer-subtraction`` disables these assumptions and emits IR
+  that preserves the behavior of pointer subtraction even when the standard
+  requirements are violated. This is primarily intended for low-level code,
+  such as kernels and boot loaders, that performs pointer arithmetic over
+  externally defined memory layouts rather than ordinary C or C++ objects.
+```
+
 (strict_aliasing)=
 (strict-aliasing)=
 

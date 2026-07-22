@@ -2752,6 +2752,9 @@ public:
 
   ~VPWidenPHIRecipe() override = default;
 
+  /// This recipe generates a PHI.
+  unsigned getOpcode() const { return Instruction::PHI; }
+
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenPHISC)
 
   /// Generate the phi/select nodes.

@@ -1220,6 +1220,27 @@ void CodeGenModule::Release() {
       getModule().addModuleFlag(llvm::Module::Error, "amdgpu_printf_kind",
                                 MDStr);
     }
+
+    const TargetOptions &TargetOpts = getTarget().getTargetOpts();
+
+    if (TargetOpts.AMDGPUXnackState != TargetOptions::AMDGPUFeatureState::Any) {
+      // TODO: Avoid emitting the xnack flag on targets which do not support
+      // xnack configuration.
+      getModule().addModuleFlag(
+          llvm::Module::Error, "amdgpu.xnack",
+          llvm::ConstantInt::get(
+              Int32Ty, TargetOpts.AMDGPUXnackState ==
+                           TargetOptions::AMDGPUFeatureState::Enabled));
+    }
+
+    if (TargetOpts.AMDGPUSramEccState !=
+        TargetOptions::AMDGPUFeatureState::Any) {
+      getModule().addModuleFlag(
+          llvm::Module::Error, "amdgpu.sramecc",
+          llvm::ConstantInt::get(
+              Int32Ty, TargetOpts.AMDGPUSramEccState ==
+                           TargetOptions::AMDGPUFeatureState::Enabled));
+    }
   }
 
   // Emit a global array containing all external kernels or device variables
@@ -1495,24 +1516,6 @@ void CodeGenModule::Release() {
 
   if (CodeGenOpts.IndirectBranchCSPrefix)
     getModule().addModuleFlag(llvm::Module::Override, "indirect_branch_cs_prefix", 1);
-
-  // Add module metadata for return address signing (ignoring
-  // non-leaf/all) and stack tagging. These are actually turned on by function
-  // attributes, but we use module metadata to emit build attributes. This is
-  // needed for LTO, where the function attributes are inside bitcode
-  // serialised into a global variable by the time build attributes are
-  // emitted, so we can't access them. LTO objects could be compiled with
-  // different flags therefore module flags are set to "Min" behavior to achieve
-  // the same end result of the normal build where e.g BTI is off if any object
-  // doesn't support it.
-  if (Context.getTargetInfo().hasFeature("ptrauth") &&
-      LangOpts.getSignReturnAddressScope() !=
-          LangOptions::SignReturnAddressScopeKind::None)
-    getModule().addModuleFlag(llvm::Module::Override,
-                              "sign-return-address-buildattr", 1);
-  if (LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
-    getModule().addModuleFlag(llvm::Module::Override,
-                              "tag-stack-memory-buildattr", 1);
 
   if (T.isARM() || T.isThumb() || T.isAArch64()) {
     // Previously 1 is used and meant for the backed to derive the function
@@ -3461,10 +3464,11 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
                                        /*IgnoreAssumeLikeCalls=*/true,
                                        /*IgnoreLLVMUsed=*/false)) {
-    F->addMetadata(llvm::LLVMContext::MD_callgraph,
-                   *llvm::MDTuple::get(
-                       getLLVMContext(),
-                       {CreateMetadataIdentifierGeneralized(FD->getType())}));
+    F->addMetadata(
+        llvm::LLVMContext::MD_callgraph,
+        *llvm::MDTuple::get(
+            getLLVMContext(),
+            {CreateMetadataIdentifierForCallGraphType(FD->getType())}));
   }
 }
 
@@ -3496,15 +3500,11 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
 
 void CodeGenModule::createCalleeTypeMetadataForIcall(const QualType &QT,
                                                      llvm::CallBase *CB) {
-  // Only if needed for call graph section and only for indirect calls that are
-  // visible externally.
-  // TODO: Handle local linkage symbols so they are not left out of call graph
-  // reducing precision.
-  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall() ||
-      !isExternallyVisible(QT->getLinkage()))
+  // Only if needed for call graph section and only for indirect calls
+  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall())
     return;
 
-  llvm::Metadata *TypeIdMD = CreateMetadataIdentifierGeneralized(QT);
+  llvm::Metadata *TypeIdMD = CreateMetadataIdentifierForCallGraphType(QT);
   llvm::MDTuple *TypeTuple = llvm::MDTuple::get(getLLVMContext(), {TypeIdMD});
   llvm::MDTuple *MDN = llvm::MDNode::get(getLLVMContext(), {TypeTuple});
   CB->setMetadata(llvm::LLVMContext::MD_callee_type, MDN);
@@ -8577,9 +8577,8 @@ void CodeGenModule::EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
   }
 }
 
-llvm::Metadata *
-CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
-                                            StringRef Suffix) {
+llvm::Metadata *CodeGenModule::CreateMetadataIdentifierImpl(
+    QualType T, MetadataTypeMap &Map, StringRef Suffix, bool ForceString) {
   if (auto *FnType = T->getAs<FunctionProtoType>())
     T = getContext().getFunctionType(
         FnType->getReturnType(), FnType->getParamTypes(),
@@ -8589,7 +8588,7 @@ CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
   if (InternalId)
     return InternalId;
 
-  if (isExternallyVisible(T->getLinkage())) {
+  if (ForceString || isExternallyVisible(T->getLinkage())) {
     std::string OutName;
     llvm::raw_string_ostream Out(OutName);
     getCXXABI().getMangleContext().mangleCanonicalTypeName(
@@ -8629,7 +8628,13 @@ CodeGenModule::CreateMetadataIdentifierForVirtualMemPtrType(QualType T) {
 
 llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
   return CreateMetadataIdentifierImpl(T, GeneralizedMetadataIdMap,
-                                      ".generalized");
+                                      ".generalized", /*ForceString=*/false);
+}
+
+llvm::Metadata *
+CodeGenModule::CreateMetadataIdentifierForCallGraphType(QualType T) {
+  return CreateMetadataIdentifierImpl(T, CallGraphMetadataIdMap, "",
+                                      /*ForceString=*/true);
 }
 
 /// Returns whether this module needs the "all-vtables" type identifier.

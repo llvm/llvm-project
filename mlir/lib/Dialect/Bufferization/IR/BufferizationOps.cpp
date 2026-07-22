@@ -132,10 +132,11 @@ LogicalResult mlir::bufferization::foldToBufferToTensorPair(
   if (unrankedSrcType && rankedDestType)
     return failure();
 
-  // Unranked memref -> unranked memref cast
-  // Ranked memref -> unranked memref cast: No copy needed.
-  assert(memref::CastOp::areCastCompatible(srcType, destType) &&
-         "expected that types are cast compatible");
+  // Unranked/ranked memref -> unranked memref cast: No copy needed if the types
+  // are cast-compatible.
+  if (!memref::CastOp::areCastCompatible(srcType, destType))
+    return failure();
+
   rewriter.replaceOpWithNewOp<memref::CastOp>(toBuffer, destType,
                                               bufferToTensor.getBuffer());
   return success();

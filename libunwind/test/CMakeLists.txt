@@ -27,6 +27,7 @@ endforeach()
 
 pythonize_bool(HAVE_GETAUXVAL)
 pythonize_bool(HAVE_ELF_AUX_INFO)
+pythonize_bool(LIBUNWIND_ENABLE_ASSERTIONS)
 pythonize_bool(LIBUNWIND_ENABLE_CET)
 pythonize_bool(LIBUNWIND_ENABLE_GCS)
 pythonize_bool(LIBUNWIND_ENABLE_THREADS)
