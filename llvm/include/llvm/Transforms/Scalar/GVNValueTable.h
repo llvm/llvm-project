@@ -26,7 +26,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Transforms/Scalar/GVNValueTable.h"
 
 #include <cstdint>
 #include <optional>
@@ -47,8 +46,7 @@ class EarliestEscapeAnalysis;
 class ExtractValueInst;
 class Function;
 class FunctionPass;
-class GVNLegacyPass;
-class GVNPass;
+class GVNLeaderMap;
 class GetElementPtrInst;
 class ImplicitControlFlowTracking;
 class LoadInst;
@@ -115,11 +113,12 @@ private:
   uint32_t lookupOrAddCall(CallInst *C);
   uint32_t computeLoadStoreVN(Instruction *I);
   uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                            uint32_t Num, GVNPass &GVN);
+                            uint32_t Num, GVNLeaderMap &LeaderTable);
   bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
-                        const BasicBlock *PhiBlock, GVNPass &GVN);
+                        const BasicBlock *PhiBlock, GVNLeaderMap &LeaderTable);
   std::pair<uint32_t, bool> assignExpNewValueNum(Expression &Exp);
-  bool areAllValsInBB(uint32_t Num, const BasicBlock *BB, GVNPass &GVN);
+  bool areAllValsInBB(uint32_t Num, const BasicBlock *BB,
+                      GVNLeaderMap &LeaderTable);
   void addMemoryStateToExp(Instruction *I, Expression &Exp);
 
 public:
@@ -138,7 +137,7 @@ public:
   LLVM_ABI uint32_t lookupPtrToInt(Value *Ptr, Type *Ty);
   LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB,
                                  const BasicBlock *PhiBlock, uint32_t Num,
-                                 GVNPass &GVN);
+                                 GVNLeaderMap &LeaderTable);
   LLVM_ABI void eraseTranslateCacheEntry(uint32_t Num,
                                          const BasicBlock &CurrBlock);
   LLVM_ABI bool exists(Value *V) const;
