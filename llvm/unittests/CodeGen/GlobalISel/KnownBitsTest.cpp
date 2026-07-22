@@ -2261,6 +2261,129 @@ TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroFreezeShlOneByVar) {
       MRI->getVRegDef(CopyFreeze)->getOperand(1).getReg()));
 }
 
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroBuildVector) {
+  StringRef MIRString = R"(
+   %zero:_(s32) = G_CONSTANT i32 0
+   %one:_(s32) = G_CONSTANT i32 1
+   %two:_(s32) = G_CONSTANT i32 2
+
+   %all_nonzero:_(<2 x s32>) = G_BUILD_VECTOR %one, %two
+   %copy_all_nonzero:_(<2 x s32>) = COPY %all_nonzero
+
+   %may_be_zero:_(<2 x s32>) = G_BUILD_VECTOR %one, %zero
+   %copy_may_be_zero:_(<2 x s32>) = COPY %may_be_zero
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyMayBeZero = Copies[Copies.size() - 1];
+  Register CopyAllNonzero = Copies[Copies.size() - 2];
+  Register AllNonzero = MRI->getVRegDef(CopyAllNonzero)->getOperand(1).getReg();
+  Register MayBeZero = MRI->getVRegDef(CopyMayBeZero)->getOperand(1).getReg();
+  GISelValueTracking Info(*MF);
+
+  // The lanes have no common known-one bit, so this needs the structural
+  // per-element proof rather than the KnownBits fallback.
+  EXPECT_TRUE(Info.isKnownNeverZero(AllNonzero));
+  EXPECT_FALSE(Info.isKnownNeverZero(MayBeZero));
+  EXPECT_TRUE(Info.isKnownNeverZero(MayBeZero, APInt(2, 0b01)));
+  EXPECT_FALSE(Info.isKnownNeverZero(MayBeZero, APInt(2, 0b10)));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroExtractVectorElt) {
+  StringRef MIRString = R"(
+   %zero:_(s32) = G_CONSTANT i32 0
+   %one:_(s32) = G_CONSTANT i32 1
+   %two:_(s32) = G_CONSTANT i32 2
+   %all_nonzero:_(<2 x s32>) = G_BUILD_VECTOR %one, %two
+   %may_be_zero:_(<2 x s32>) = G_BUILD_VECTOR %one, %zero
+   %idx0:_(s64) = G_CONSTANT i64 0
+   %idx1:_(s64) = G_CONSTANT i64 1
+   %variable_idx:_(s64) = G_IMPLICIT_DEF
+
+   %constant_nonzero:_(s32) = G_EXTRACT_VECTOR_ELT %may_be_zero, %idx0
+   %copy_constant_nonzero:_(s32) = COPY %constant_nonzero
+
+   %constant_zero:_(s32) = G_EXTRACT_VECTOR_ELT %may_be_zero, %idx1
+   %copy_constant_zero:_(s32) = COPY %constant_zero
+
+   %variable_nonzero:_(s32) = G_EXTRACT_VECTOR_ELT %all_nonzero, %variable_idx
+   %copy_variable_nonzero:_(s32) = COPY %variable_nonzero
+
+   %variable_may_be_zero:_(s32) = G_EXTRACT_VECTOR_ELT %may_be_zero, %variable_idx
+   %copy_variable_may_be_zero:_(s32) = COPY %variable_may_be_zero
+
+   %wide_value:_(s64) = G_CONSTANT i64 4294967296
+   %wide_vec:_(<2 x s64>) = G_BUILD_VECTOR %wide_value, %wide_value
+   %width_mismatch:_(s32) = G_EXTRACT_VECTOR_ELT %wide_vec, %idx0
+   %copy_width_mismatch:_(s32) = COPY %width_mismatch
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  GISelValueTracking Info(*MF);
+  auto CopySource = [this](Register Copy) {
+    return MRI->getVRegDef(Copy)->getOperand(1).getReg();
+  };
+  EXPECT_TRUE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 5])));
+  EXPECT_FALSE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 4])));
+  EXPECT_TRUE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 3])));
+  EXPECT_FALSE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 2])));
+  EXPECT_FALSE(Info.isKnownNeverZero(CopySource(Copies[Copies.size() - 1])));
+}
+
+TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroShuffleVector) {
+  StringRef MIRString = R"(
+   %zero:_(s32) = G_CONSTANT i32 0
+   %one:_(s32) = G_CONSTANT i32 1
+   %two:_(s32) = G_CONSTANT i32 2
+   %four:_(s32) = G_CONSTANT i32 4
+   %eight:_(s32) = G_CONSTANT i32 8
+   %lhs:_(<2 x s32>) = G_BUILD_VECTOR %one, %two
+   %rhs:_(<2 x s32>) = G_BUILD_VECTOR %four, %eight
+   %with_zero:_(<2 x s32>) = G_BUILD_VECTOR %one, %zero
+
+   %lhs_only:_(<2 x s32>) = G_SHUFFLE_VECTOR %lhs, %rhs, shufflemask(0, 1)
+   %copy_lhs_only:_(<2 x s32>) = COPY %lhs_only
+
+   %rhs_only:_(<2 x s32>) = G_SHUFFLE_VECTOR %lhs, %rhs, shufflemask(2, 3)
+   %copy_rhs_only:_(<2 x s32>) = COPY %rhs_only
+
+   %mixed:_(<2 x s32>) = G_SHUFFLE_VECTOR %lhs, %rhs, shufflemask(0, 3)
+   %copy_mixed:_(<2 x s32>) = COPY %mixed
+
+   %partly_zero:_(<2 x s32>) = G_SHUFFLE_VECTOR %with_zero, %rhs, shufflemask(0, 1)
+   %copy_partly_zero:_(<2 x s32>) = COPY %partly_zero
+
+   %with_undef:_(<2 x s32>) = G_SHUFFLE_VECTOR %lhs, %rhs, shufflemask(0, undef)
+   %copy_with_undef:_(<2 x s32>) = COPY %with_undef
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  GISelValueTracking Info(*MF);
+  auto CopySource = [this](Register Copy) {
+    return MRI->getVRegDef(Copy)->getOperand(1).getReg();
+  };
+  Register LHSOnly = CopySource(Copies[Copies.size() - 5]);
+  Register RHSOnly = CopySource(Copies[Copies.size() - 4]);
+  Register Mixed = CopySource(Copies[Copies.size() - 3]);
+  Register PartlyZero = CopySource(Copies[Copies.size() - 2]);
+  Register WithUndef = CopySource(Copies[Copies.size() - 1]);
+
+  EXPECT_TRUE(Info.isKnownNeverZero(LHSOnly));
+  EXPECT_TRUE(Info.isKnownNeverZero(RHSOnly));
+  EXPECT_TRUE(Info.isKnownNeverZero(Mixed));
+  EXPECT_FALSE(Info.isKnownNeverZero(PartlyZero));
+  EXPECT_TRUE(Info.isKnownNeverZero(PartlyZero, APInt(2, 0b01)));
+  EXPECT_FALSE(Info.isKnownNeverZero(PartlyZero, APInt(2, 0b10)));
+  EXPECT_FALSE(Info.isKnownNeverZero(WithUndef));
+  EXPECT_TRUE(Info.isKnownNeverZero(WithUndef, APInt(2, 0b01)));
+}
+
 TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroFallbackKnownBits) {
   // G_AND has no dedicated case in the switch, so the proof must come from the
   // KnownBits fallback (which sees the bit-0 set by the inner G_OR).
