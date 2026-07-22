@@ -513,7 +513,8 @@ Error RawInstrProfReader<IntPtrT>::readHeader() {
   if (!hasFormat(*DataBuffer))
     return error(instrprof_error::bad_magic);
   if (DataBuffer->getBufferSize() < sizeof(RawInstrProf::Header))
-    return error(instrprof_error::bad_header);
+    return error(instrprof_error::bad_header,
+                 std::string("Profile file header is truncated"));
   auto *Header = reinterpret_cast<const RawInstrProf::Header *>(
       DataBuffer->getBufferStart());
   ShouldSwapBytes = Header->Magic != RawInstrProf::getMagic<IntPtrT>();
@@ -597,7 +598,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   const uint8_t *BinaryIdEnd = BinaryIdStart + BinaryIdSize;
   const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
   if (BinaryIdSize % sizeof(uint64_t) || BinaryIdEnd > BufferEnd)
-    return error(instrprof_error::bad_header);
+    return error(instrprof_error::bad_header,
+                 ("BinaryIdSize (" + Twine(BinaryIdSize) +
+                  ") is not a multiple of 8 or the profile is truncated")
+                     .str());
   ArrayRef<uint8_t> BinaryIdsBuffer(BinaryIdStart, BinaryIdSize);
   if (!BinaryIdsBuffer.empty()) {
     if (Error Err = readBinaryIdsInternal(*DataBuffer, BinaryIdsBuffer,
@@ -650,7 +654,25 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
 
   auto *Start = reinterpret_cast<const char *>(&Header);
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
-    return error(instrprof_error::bad_header);
+    return error(
+        instrprof_error::bad_header,
+        ("Profile file size (" + Twine(DataBuffer->getBufferSize()) +
+         " bytes) smaller than expected (at least " + Twine(ValueDataOffset) +
+         " bytes = " +
+         Twine(BinaryIdSize) + "(BinaryIdSize) + " +
+         Twine(DataSize) + "(DataSize) + " +
+         Twine(CountersSize) + "(CountersSize) + " +
+         Twine(NumBitmapBytes) + "(NumBitmapBytes) + " +
+         Twine(UniformCountersSectionSize) + "(UniformCountersSectionSize) + " +
+         Twine(NamesSize) + "(NamesSize) + " +
+         Twine(VTableSectionSize) + "(VTableSectionSize) + " +
+         Twine(VTableNameSize) + "(VTableNameSize) + " +
+         Twine(DataOffset - BinaryIdSize + PaddingBytesBeforeCounters +
+               PaddingBytesAfterCounters + PaddingBytesAfterBitmapBytes +
+               PaddingBytesAfterUniformCounters + PaddingBytesAfterNames +
+               PaddingBytesAfterVTableProfData + PaddingBytesAfterVTableNames) +
+         "(Padding))")
+            .str());
 
   if (BIDFetcher) {
     std::vector<object::BuildID> BinaryIDs;
@@ -1373,7 +1395,10 @@ Error IndexedInstrProfReader::readHeader() {
     uint64_t BinaryIdsSize =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     if (BinaryIdsSize % sizeof(uint64_t))
-      return error(instrprof_error::bad_header);
+      return error(instrprof_error::bad_header,
+                   ("BinaryIdSize (" + Twine(BinaryIdsSize) +
+                    ") is not a multiple of 8")
+                       .str());
     // Set the binary ids start.
     BinaryIdsBuffer = ArrayRef<uint8_t>(Ptr, BinaryIdsSize);
     if (Ptr > (const unsigned char *)DataBuffer->getBufferEnd())
