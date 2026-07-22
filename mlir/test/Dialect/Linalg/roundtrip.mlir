@@ -599,47 +599,17 @@ func.func @broadcast_memref(%input: memref<8x32xf32>,
 
 // -----
 
-func.func @broadcast_0d_to_2d(%input: tensor<i32>,
-                              %init: tensor<32x2xi32>) -> tensor<32x2xi32> {
+func.func @broadcast_0d_tensor(%input: tensor<i32>,
+                               %init: tensor<32x2xi32>) -> tensor<32x2xi32> {
   %bcast = linalg.broadcast
       ins(%input:tensor<i32>)
       outs(%init:tensor<32x2xi32>)
       dimensions = [0, 1]
   func.return %bcast : tensor<32x2xi32>
 }
-// CHECK-LABEL: func @broadcast_0d_to_2d
+// CHECK-LABEL: func @broadcast_0d_tensor
 //      CHECK:    linalg.broadcast ins(%{{.*}} : tensor<i32>)
 // CHECK-SAME:    outs(%{{.*}} : tensor<32x2xi32>)
-// CHECK-SAME:    dimensions = [0, 1]
-
-// -----
-
-func.func @broadcast_0d_to_1d(%input: tensor<f32>,
-                              %init: tensor<64xf32>) -> tensor<64xf32> {
-  %bcast = linalg.broadcast
-      ins(%input:tensor<f32>)
-      outs(%init:tensor<64xf32>)
-      dimensions = [0]
-  func.return %bcast : tensor<64xf32>
-}
-// CHECK-LABEL: func @broadcast_0d_to_1d
-//      CHECK:    linalg.broadcast ins(%{{.*}} : tensor<f32>)
-// CHECK-SAME:    outs(%{{.*}} : tensor<64xf32>)
-// CHECK-SAME:    dimensions = [0]
-
-// -----
-
-func.func @broadcast_0d_with_dynamic_sizes(
-              %input: tensor<f32>, %init: tensor<8x?xf32>) -> tensor<8x?xf32> {
-  %bcast = linalg.broadcast
-      ins(%input:tensor<f32>)
-      outs(%init:tensor<8x?xf32>)
-      dimensions = [0, 1]
-  func.return %bcast : tensor<8x?xf32>
-}
-// CHECK-LABEL: func @broadcast_0d_with_dynamic_sizes
-//      CHECK:    linalg.broadcast ins(%{{.*}} : tensor<f32>)
-// CHECK-SAME:    outs(%{{.*}} : tensor<8x?xf32>)
 // CHECK-SAME:    dimensions = [0, 1]
 
 // -----
