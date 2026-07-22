@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tests for the HLFIR extension points of the HLFIR-to-FIR pass pipeline.
+// Tests for the HLFIR extension points of the HLFIR-to-FIR pass pipeline, and
+// for the pipeline config callback registry plugins use to reach them.
 //
 // The callbacks run when the pipeline is built, so no IR is needed: building
 // the pipeline is enough to observe them.
@@ -125,6 +126,83 @@ TEST(HLFIRExtensionPoint, MarkersAreAtTheDocumentedPositions) {
   EXPECT_LT(earlyMarker, simplify) << pipeline;
   EXPECT_GT(lastMarker, simplify) << pipeline;
   EXPECT_LT(lastMarker, lowerIntrinsics) << pipeline;
+}
+
+// The registry is process-global and append-only, so a callback capturing a
+// local by reference would be re-invoked by a later test with the referent
+// destroyed. Tests record into this process-lifetime recorder instead, and each
+// asserts only on the markers it wrote, so they do not depend on test order.
+struct ConfigCallbackRecorder {
+  std::vector<std::string> order;
+  MLIRToLLVMPassPipelineConfig *seenConfig = nullptr;
+  bool epRan = false;
+
+  void reset() {
+    order.clear();
+    seenConfig = nullptr;
+    epRan = false;
+  }
+  /// Index of \p marker in `order`, or npos.
+  size_t indexOf(llvm::StringRef marker) const {
+    for (size_t i = 0, e = order.size(); i != e; ++i)
+      if (order[i] == marker)
+        return i;
+    return std::string::npos;
+  }
+};
+
+ConfigCallbackRecorder &recorder() {
+  static ConfigCallbackRecorder r;
+  return r;
+}
+
+TEST(PassPipelineConfigCallback, CallbacksRunInRegistrationOrderOnTheConfig) {
+  fir::registerPassPipelineConfigCallback(
+      [](MLIRToLLVMPassPipelineConfig &config) {
+        recorder().order.push_back("order-first");
+        recorder().seenConfig = &config;
+      });
+  fir::registerPassPipelineConfigCallback([](MLIRToLLVMPassPipelineConfig &) {
+    recorder().order.push_back("order-second");
+  });
+
+  recorder().reset();
+  MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+  fir::invokePassPipelineConfigCallbacks(config);
+
+  size_t first = recorder().indexOf("order-first");
+  size_t second = recorder().indexOf("order-second");
+  ASSERT_NE(first, std::string::npos);
+  ASSERT_NE(second, std::string::npos);
+  EXPECT_LT(first, second);
+  EXPECT_EQ(recorder().seenConfig, &config);
+}
+
+// The plugin shape: the config callback registers an extension point
+// callback, which then contributes a pass when the pipeline is built.
+TEST(PassPipelineConfigCallback, CanRegisterHLFIRExtensionPoints) {
+  fir::registerPassPipelineConfigCallback(
+      [](MLIRToLLVMPassPipelineConfig &config) {
+        config.registerHLFIROptEarlyEPCallbacks(
+            [](mlir::PassManager &pm, llvm::OptimizationLevel) {
+              recorder().epRan = true;
+              pm.addPass(std::make_unique<MarkerPass>());
+            });
+      });
+
+  recorder().reset();
+  mlir::MLIRContext context;
+  mlir::PassManager pm(&context, mlir::ModuleOp::getOperationName());
+  MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+  fir::invokePassPipelineConfigCallbacks(config);
+  fir::createHLFIRToFIRPassPipeline(pm, fir::EnableOpenMP::None, config);
+
+  std::string pipeline;
+  llvm::raw_string_ostream os(pipeline);
+  pm.printAsTextualPipeline(os);
+
+  EXPECT_TRUE(recorder().epRan);
+  EXPECT_NE(pipeline.find("ep-marker"), std::string::npos) << pipeline;
 }
 
 } // namespace
