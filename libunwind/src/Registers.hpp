@@ -1921,7 +1921,7 @@ public:
                                                         uint64_t signing_pc) {
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
 #ifndef __has_builtin
-#define __has_buitlin(x) 0
+#define __has_builtin(x) 0
 #endif
 #if __has_builtin(__builtin_ptrauth_auth_with_pc_and_resign)
     value = (uint64_t)ptrauth_auth_with_pc_and_resign(
