@@ -353,9 +353,15 @@ cc_library(
         ":Utility",
         ":Version",
         "//lldb/source/Plugins:PluginProcessGDBRemote",
-        "//lldb/source/Plugins:PluginProcessPOSIX",
         "//llvm:Support",
-    ],
+    ] + select({
+        "@platforms//os:windows": [
+            "//lldb/source/Plugins:PluginProcessWindowsCommon",
+        ],
+        "//conditions:default": [
+            "//lldb/source/Plugins:PluginProcessPOSIX",
+        ],
+    }),
 )
 
 gentbl_cc_library(
