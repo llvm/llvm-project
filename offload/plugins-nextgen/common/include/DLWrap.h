@@ -78,7 +78,7 @@
   static size_t size();                                                        \
   static const char *symbol(size_t); /* get symbol name in [0, size()) */      \
   static void **                                                               \
-  pointer(size_t); /* get pointer to function pointer in [0, size()) */        \
+      pointer(size_t); /* get pointer to function pointer in [0, size()) */    \
   }
 
 // DLWRAP_FINALIZE() implements the functions from DLWRAP_INITIALIZE
