@@ -17,11 +17,13 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
 
@@ -73,7 +75,12 @@ public:
     AU.addRequired<LiveRegMatrixWrapperLegacy>();
     // TODO: Update RCI with the additional reserved registers the pass sets.
     AU.addRequired<MachineRegisterClassInfoWrapperPass>();
-    AU.setPreservesAll();
+    AU.setPreservesCFG();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
+    AU.addPreserved<VirtRegMapWrapperLegacy>();
+    AU.addPreserved<LiveRegMatrixWrapperLegacy>();
+    AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -275,5 +282,10 @@ SIPreAllocateWWMRegsPass::run(MachineFunction &MF,
   auto *VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
   const auto &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   SIPreAllocateWWMRegs(LIS, Matrix, VRM, RCI).run(MF);
-  return PreservedAnalyses::all();
+  // The pass reserves WWM registers, invalidating RegisterClassInfo's
+  // allocation order, so it cannot be preserved (see the legacy
+  // getAnalysisUsage above).
+  PreservedAnalyses PA = PreservedAnalyses::all();
+  PA.abandon<MachineRegisterClassAnalysis>();
+  return PA;
 }
