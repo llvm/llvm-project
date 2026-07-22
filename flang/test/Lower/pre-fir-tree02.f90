@@ -290,7 +290,7 @@ subroutine sub2()
 2 continue
   i = i+1
 3 j = j+1
-! CHECK: ArithmeticIfStmt
+! CHECK: ArithmeticIfStmt{{.*}} -> {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
   if (j-i) 3, 4, 5
   ! CHECK: GotoStmt
 4  goto 6
@@ -301,12 +301,12 @@ subroutine sub2()
 ! WILLCHECK: AssignedGotoStmt
 !66  go to label (5, 6)
 
-! CHECK: ComputedGotoStmt
+! CHECK: ComputedGotoStmt{{.*}} -> {{[0-9]+}}, {{[0-9]+}}
   go to (5, 6), 1 + mod(i, 2)
 5 j = j + 1
 6 i = i + j/2
 
-  ! CHECK: <<DoConstruct!>>
+  ! CHECK: <<DoConstruct>>
   do1: do k=1,10
     ! CHECK: <<DoConstruct!>>
     do2: do l=5,20
@@ -317,7 +317,7 @@ subroutine sub2()
     end do do2
     ! CHECK: <<End DoConstruct!>>
   end do do1
-  ! CHECK: <<End DoConstruct!>>
+  ! CHECK: <<End DoConstruct>>
 
   ! CHECK: PauseStmt
   pause 7

@@ -555,7 +555,7 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) const {
 InstructionCost AArch64TTIImpl::getBranchMispredictPenalty() const {
   // MispredictPenalty is defined per-CPU in AArch64Sched*.td (e.g.,
   // AArch64SchedNeoverseV2.td).
-  return ST->getSchedModel().MispredictPenalty;
+  return ST->getMispredictionPenalty();
 }
 
 static bool isUnpackedVectorVT(EVT VecVT) {
@@ -1370,7 +1370,7 @@ struct SVEIntrinsicInfo {
   }
 
   unsigned getGoverningPredicateOperandIdx() const {
-    assert(hasGoverningPredicate() && "Propery not set!");
+    assert(hasGoverningPredicate() && "Property not set!");
     return GoverningPredicateIdx;
   }
 
@@ -1388,12 +1388,16 @@ struct SVEIntrinsicInfo {
   // simplification can be used to optimise an intrinsic's active lanes.
   //
 
+  //
+  // Intrinsic that produces the same result for active lanes.
+  //
+
   bool hasMatchingUndefIntrinsic() const {
     return UndefIntrinsic != Intrinsic::not_intrinsic;
   }
 
   Intrinsic::ID getMatchingUndefIntrinsic() const {
-    assert(hasMatchingUndefIntrinsic() && "Propery not set!");
+    assert(hasMatchingUndefIntrinsic() && "Property not set!");
     return UndefIntrinsic;
   }
 
@@ -1403,10 +1407,14 @@ struct SVEIntrinsicInfo {
     return *this;
   }
 
+  //
+  // Instruction where active lanes produce the same result.
+  //
+
   bool hasMatchingIROpode() const { return IROpcode != 0; }
 
   unsigned getMatchingIROpode() const {
-    assert(hasMatchingIROpode() && "Propery not set!");
+    assert(hasMatchingIROpode() && "Property not set!");
     return IROpcode;
   }
 
@@ -1425,7 +1433,7 @@ struct SVEIntrinsicInfo {
   }
 
   unsigned getOperandIdxInactiveLanesTakenFrom() const {
-    assert(inactiveLanesTakenFromOperand() && "Propery not set!");
+    assert(inactiveLanesTakenFromOperand() && "Property not set!");
     return OperandIdxForInactiveLanes;
   }
 
@@ -1477,7 +1485,7 @@ struct SVEIntrinsicInfo {
   }
 
   unsigned getOperandIdxWithNoActiveLanes() const {
-    assert(hasOperandWithNoActiveLanes() && "Propery not set!");
+    assert(hasOperandWithNoActiveLanes() && "Property not set!");
     return OperandIdxWithNoActiveLanes;
   }
 
@@ -5460,13 +5468,22 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       }
 
       // llvm.vector.deinterleaveN is lowered as a binary tree of deinterleave2
-      // operations. A binary tree producing Factor leaf vectors has
-      // (Factor -1) inner deinterleave2 nodes. Each deinterleave2 on a pair of
-      // SVE registers emits one uzp1 + one uzp2.
-      // Total shuffle cost: (Factor - 1) deinterleave2 operations, each
-      // processing LT.first legal vector parts,with one uzp shuffle per part.
-      auto LT = getTypeLegalizationCost(VecTy);
-      return MemCost + (Factor - 1) * LT.first;
+      // operations. The tree has Log2(Factor) levels, with Factor UZP/ZIP
+      // operations at each level, giving a total shuffle cost of
+      // Factor * Log2(Factor).
+      auto SubVecCost = getTypeLegalizationCost(SubVecTy);
+      auto ResultCost = getTypeLegalizationCost(VecTy);
+      llvm::InstructionCost LegalizationCost = SubVecCost.first;
+
+      // FIXME: A temporary increase to the cost in cases where the input
+      // element type is 4x the output type. Otherwise it produces an SVE tail
+      // loop which is significantly larger than the NEON equivalent.
+      if (Opcode == Instruction::Store && Factor == 4 &&
+          SubVecCost.second.getScalarSizeInBits() ==
+              (4 * ResultCost.second.getScalarSizeInBits()))
+        LegalizationCost *= 4;
+
+      return MemCost + (Factor * LegalizationCost) + (Factor * Log2_64(Factor));
     }
   }
 

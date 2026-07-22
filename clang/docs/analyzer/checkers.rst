@@ -3669,6 +3669,12 @@ Applies to: ``pthread_mutex_lock, pthread_rwlock_rdlock, pthread_rwlock_wrlock, 
 ``lck_rw_lock_shared, pthread_mutex_trylock, pthread_rwlock_tryrdlock, pthread_rwlock_tryrwlock, lck_mtx_try_lock,
 lck_rw_try_lock_exclusive, lck_rw_try_lock_shared, pthread_mutex_unlock, pthread_rwlock_unlock, lck_mtx_unlock, lck_rw_done``.
 
+**Options**
+
+* ``WarnOnLockOrderReversal`` (boolean). If set to true, the checker will warn
+  on non-LIFO unlock order (possible lock order reversal). Defaults to false
+  because detecting real lock order violations requires cross-path analysis of
+  acquisition order, which the analyzer's single-path engine does not support.
 
 .. code-block:: c
 
@@ -3679,6 +3685,8 @@ lck_rw_try_lock_exclusive, lck_rw_try_lock_shared, pthread_mutex_unlock, pthread
    pthread_mutex_lock(&mtx);
      // warn: this lock has already been acquired
  }
+
+ // The following warnings require WarnOnLockOrderReversal=true:
 
  lck_mtx_t lck1, lck2;
 

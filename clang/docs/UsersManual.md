@@ -2775,6 +2775,36 @@ are listed below.
 ```
 
 ```{eval-rst}
+.. option:: -mbranch-protection=features
+
+   Select the branch protection features to use for ARM and AArch64 targets.
+   ``features`` can be ``none``, ``standard``, or a ``+``-separated list of
+   ``bti``, ``gcs``, and ``pac-ret`` with optional ``pac-ret`` modifiers.
+
+   ``none`` is the default and turns off all types of branch protection.
+
+   ``standard`` turns on all branch protection features that are valid for the
+   target platform. If a feature has additional tuning options, ``standard``
+   sets them to their standard level.
+
+   ``pac-ret`` turns on return address signing to its standard level: signing
+   functions that save the return address to memory (non-leaf functions
+   practically always do this) using the A-key. On AArch64 Windows targets,
+   ``pac-ret`` uses the B-key by default.
+
+   ``+leaf`` extends the ``pac-ret`` signing to include leaf functions.
+
+   ``+b-key`` can be used to sign functions with the B-key instead of the A-key
+   on AArch64. ``b-key`` is accepted but ignored for ARM targets.
+
+   ``+pc`` enables the PAuth-LR form of return address signing.
+
+   ``bti`` turns on the Branch Target Identification mechanism.
+
+   ``gcs`` turns on Guarded Control Stack compatible code generation.
+```
+
+```{eval-rst}
 .. option:: -mcompact-branches=[values]
 
    Control the usage of compact branches for MIPSR6.
@@ -2970,6 +3000,22 @@ are listed below.
 
    If ``-falign-functions`` is specified, or if the function has an
    ``aligned`` attribute, this option is ignored.
+```
+
+```{eval-rst}
+.. option:: -fdefined-pointer-subtraction
+
+  The C and C++ standards require both operands of a pointer subtraction to
+  refer to elements of the same array object. Clang normally exploits this
+  rule when lowering pointer subtraction operations, for example by emitting
+  IR constructs such as ``sdiv exact`` that rely on the computed byte offset
+  being an exact multiple of the pointee size.
+
+  ``-fdefined-pointer-subtraction`` disables these assumptions and emits IR
+  that preserves the behavior of pointer subtraction even when the standard
+  requirements are violated. This is primarily intended for low-level code,
+  such as kernels and boot loaders, that performs pointer arithmetic over
+  externally defined memory layouts rather than ordinary C or C++ objects.
 ```
 
 (strict_aliasing)=
