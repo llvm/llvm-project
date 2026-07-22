@@ -757,7 +757,6 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
   assert(InputFileSyms.size() == F.syms.size());
   std::vector<SymbolResolution> Resols(F.syms.size());
   for (ld_plugin_symbol &Sym : F.syms) {
-    const InputFile::Symbol &InpSym = InputFileSyms[SymNum];
     SymbolResolution &R = Resols[SymNum++];
 
     ld_plugin_symbol_resolution Resolution =
@@ -812,7 +811,7 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
     freeSymName(Sym);
   }
 
-  auto resolver = [this, &f](StringRef sectionName) {
+  auto resolver = [](StringRef sectionName) {
     // If the symbol has a C identifier section name, we need to mark
     // it as visible to a regular object so that LTO will keep it around
     // to ensure the linker generates special __start_<secname> and
