@@ -45,6 +45,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/DeadBranchElimination.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
