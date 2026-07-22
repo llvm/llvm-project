@@ -1244,6 +1244,10 @@ public:
 } // namespace
 
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
+  if (auto *DH = M.getContext().getDiagHandlerPtr())
+    if (DH->HasErrors)
+      return PreservedAnalyses::all();
+
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   const ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
@@ -1263,6 +1267,10 @@ namespace {
 class DXILOpLoweringLegacy : public ModulePass {
 public:
   bool runOnModule(Module &M) override {
+    if (auto *DH = M.getContext().getDiagHandlerPtr())
+      if (DH->HasErrors)
+        return false;
+
     DXILResourceMap &DRM =
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceTypeMap &DRTM =

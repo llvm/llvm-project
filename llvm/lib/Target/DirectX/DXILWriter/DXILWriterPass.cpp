@@ -66,6 +66,9 @@ public:
   StringRef getPassName() const override { return "Bitcode Writer"; }
 
   bool runOnModule(Module &M) override {
+    if (auto *DH = M.getContext().getDiagHandlerPtr())
+      if (DH->HasErrors)
+        return false;
     const auto DIMap = DXILDebugInfoPass::run(M);
     WriteDXILToFile(M, OS, DIMap);
     return false;
@@ -237,6 +240,9 @@ public:
   StringRef getPassName() const override { return "DXIL Embedder"; }
 
   bool runOnModule(Module &M) override {
+    if (auto *DH = M.getContext().getDiagHandlerPtr())
+      if (DH->HasErrors)
+        return false;
     // Perform late legalization of lifetime intrinsics that would otherwise
     // fail the Module Verifier if performed in an earlier pass
     legalizeLifetimeIntrinsics(M);

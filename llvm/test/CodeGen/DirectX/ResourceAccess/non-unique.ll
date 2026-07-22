@@ -1,12 +1,15 @@
 ; RUN: not opt -S -dxil-resource-access -mtriple=dxil--shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; Test that a error message is generated for illegal resource accesses that do
-; not access a unique global resource.
+; not access a unique global resource. The offending load/store is replaced with
+; poison so the IR remains structurally valid for any pass that runs after the
+; error is diagnosed.
 
 ; CHECK: note: At resource access:  store i32 %7, ptr %8, align 4
 ; CHECK: note: Uses resource handle:  %1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.2)
 ; CHECK: note: Uses resource handle:  %2 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 2, i32 1, i32 0, ptr nonnull @.str.4)
 ; CHECK: error: Resource access is not guaranteed to map to a unique global resource
+; CHECK-NOT: store i32 {{.*}}, ptr %8
 
 %__cblayout_c = type <{ i32 }>
 

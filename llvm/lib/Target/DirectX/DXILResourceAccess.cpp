@@ -13,6 +13,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -744,6 +745,14 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
 
         if (!SameGlobalBinding) {
           diagnoseNonUniqueResourceAccess(&I, Handles);
+          // Replace any result of the load with poison and mark the
+          // load/store and its pointer operand dead. This keeps the IR
+          // structurally valid so that downstream passes do not crash on
+          // unresolved handle intrinsics left in the module.
+          if (!I.getType()->isVoidTy())
+            I.replaceAllUsesWith(PoisonValue::get(I.getType()));
+          DeadInsts.insert(&I);
+          DeadInsts.insert(PtrOp);
           continue;
         }
 
