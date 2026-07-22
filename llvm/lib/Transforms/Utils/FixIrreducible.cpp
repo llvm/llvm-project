@@ -180,15 +180,12 @@ INITIALIZE_PASS_END(FixIrreducible, "fix-irreducible",
 // fully inside the new loop. Reconnect these as children of the new loop.
 static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
                                 BasicBlock *OldHeader) {
-  auto &CandidateLoops = ParentLoop ? ParentLoop->getSubLoopsVector()
-                                    : LI.getTopLevelLoopsVector();
-  // Any candidate is a child iff its header is owned by the new loop. Move all
-  // the children to a new vector.
-  auto FirstChild = llvm::partition(CandidateLoops, [&](Loop *L) {
-    return NewLoop == L || !NewLoop->contains(L->getHeader());
-  });
-  SmallVector<Loop *, 8> ChildLoops(FirstChild, CandidateLoops.end());
-  CandidateLoops.erase(FirstChild, CandidateLoops.end());
+  // Any candidate (sibling of NewLoop, or top-level loop if there is no
+  // parent) is a child iff its header is owned by the new loop.
+  SmallVector<Loop *, 4> ChildLoops =
+      LI.takeChildrenIf(ParentLoop, [&](Loop *L) {
+        return NewLoop != L && NewLoop->contains(L->getHeader());
+      });
 
   for (Loop *Child : ChildLoops) {
     LLVM_DEBUG(dbgs() << "child loop: " << Child->getHeader()->getName()
@@ -203,18 +200,14 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
         LLVM_DEBUG(dbgs() << "moved block from child: " << BB->getName()
                           << "\n");
       }
-      std::vector<Loop *> GrandChildLoops;
-      std::swap(GrandChildLoops, Child->getSubLoopsVector());
-      for (auto *GrandChildLoop : GrandChildLoops) {
-        GrandChildLoop->setParentLoop(nullptr);
+      for (Loop *GrandChildLoop :
+           LI.takeChildrenIf(Child, [](const Loop *) { return true; }))
         NewLoop->addChildLoop(GrandChildLoop);
-      }
       LI.destroy(Child);
       LLVM_DEBUG(dbgs() << "subsumed child loop (common header)\n");
       continue;
     }
 
-    Child->setParentLoop(nullptr);
     NewLoop->addChildLoop(Child);
     LLVM_DEBUG(dbgs() << "added child loop to new loop\n");
   }
