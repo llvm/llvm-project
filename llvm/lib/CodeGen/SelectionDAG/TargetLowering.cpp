@@ -351,6 +351,15 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     LC1 = (VT == MVT::f32) ? RTLIB::UNE_F32 :
           (VT == MVT::f64) ? RTLIB::UNE_F64 :
           (VT == MVT::f128) ? RTLIB::UNE_F128 : RTLIB::UNE_PPCF128;
+    // Some ABIs (e.g. AEABI) only provide an ordered-equal compare; obtain
+    // not-equal (UNE = !OEQ) by inverting the result of that call.
+    if (getLibcallImpl(LC1) == RTLIB::Unsupported) {
+      LC1 = (VT == MVT::f32)    ? RTLIB::OEQ_F32
+            : (VT == MVT::f64)  ? RTLIB::OEQ_F64
+            : (VT == MVT::f128) ? RTLIB::OEQ_F128
+                                : RTLIB::OEQ_PPCF128;
+      ShouldInvertCC = true;
+    }
     break;
   case ISD::SETGE:
   case ISD::SETOGE:
