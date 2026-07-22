@@ -60,7 +60,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - `CompletionString.availability` now returns instances of `AvailabilityKind`.
   As a result, the `__str__` representation of its return values changed.
-  It now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`, like other libclang enums. 
+  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`. 
 
 ### OpenCL Potentially Breaking Changes
 
