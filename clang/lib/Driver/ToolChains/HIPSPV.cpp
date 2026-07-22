@@ -117,11 +117,23 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   // and gdb-oneapi use it to map device code back to source lines and local
   // variables; the translator's default OpenCL.DebugInfo.100 form is not
   // sufficient for that. Emitting the NonSemantic debug instructions requires
-  // the SPV_KHR_non_semantic_info extension. The translator accumulates
-  // --spirv-ext across occurrences, so this augments the list set above.
+  // the SPV_KHR_non_semantic_info extension.
+  //
+  // SPV_INTEL_optnone carries the optnone function attribute, which Clang
+  // attaches to every function at -O0, through to the consumer as the
+  // OptNoneEXT function control. Without it the attribute is silently dropped
+  // in translation and the device compiler is free to optimize the kernel, so a
+  // debugger reports arguments and locals as <optimized out> even though the
+  // debug info itself is present. At -O1 and above no optnone attribute exists
+  // and the extension has no effect. It is redundant for the +all list above
+  // but required for the restricted chipStar one.
+  //
+  // The translator accumulates --spirv-ext across occurrences, so this augments
+  // the list set above.
   if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
       A && !A->getOption().matches(options::OPT_g0)) {
-    TrArgs.push_back("--spirv-ext=+SPV_KHR_non_semantic_info");
+    TrArgs.push_back("--spirv-ext=+SPV_KHR_non_semantic_info"
+                     ",+SPV_INTEL_optnone");
     TrArgs.push_back("--spirv-debug-info-version=nonsemantic-shader-200");
   }
 

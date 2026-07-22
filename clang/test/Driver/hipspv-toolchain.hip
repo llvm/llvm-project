@@ -141,7 +141,7 @@
 
 //      DEBUG: {{".*llvm-spirv"}} "--spirv-max-version=1.2"
 // DEBUG-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
-// DEBUG-SAME: "--spirv-ext=+SPV_KHR_non_semantic_info"
+// DEBUG-SAME: "--spirv-ext=+SPV_KHR_non_semantic_info,+SPV_INTEL_optnone"
 // DEBUG-SAME: "--spirv-debug-info-version=nonsemantic-shader-200"
 
 // RUN: %clang -### --no-default-config -o %t.dummy.img \
@@ -151,4 +151,5 @@
 
 //      NODEBUG: {{".*llvm-spirv"}}
 // NODEBUG-NOT: SPV_KHR_non_semantic_info
+// NODEBUG-NOT: SPV_INTEL_optnone
 // NODEBUG-NOT: spirv-debug-info-version
