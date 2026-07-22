@@ -224,10 +224,19 @@ class TestCase(TestBase):
 
         # unicode16
         self.assertIn("= U+5678 U+1234\n", self.getFormatted("unicode16", "0x12345678"))
+        self.assertIn(
+            "= U+ABCD\n", self.getFormatted("unicode16", "(unsigned short)0xabcd")
+        )
 
         # unicode32
+        # Values in the valid code point range (up to U+10FFFF) use the "U+"
+        # notation with four to six uppercase hex digits; larger values are not
+        # code points and fall back to a plain hex display.
+        self.assertIn("= U+20E3\n", self.getFormatted("unicode32", "0x20e3"))
+        self.assertIn("= U+10FFFF\n", self.getFormatted("unicode32", "0x10FFFF"))
+        self.assertIn("= 0x00110000\n", self.getFormatted("unicode32", "0x110000"))
         self.assertIn(
-            "= U+0x89abcdef U+0x01234567\n",
+            "= 0x89abcdef 0x01234567\n",
             self.getFormatted("unicode32", "(__UINT64_TYPE__)0x123456789ABCDEFll"),
         )
 

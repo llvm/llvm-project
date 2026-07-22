@@ -25,9 +25,11 @@ bool llvm::emitPredicateDag(
     if (OpName == "not") {
       if (D->getNumArgs() != 1)
         PrintFatalError(Owner, "'not' takes exactly one operand");
-      OS << '!';
-      return emitPredicateDag(Owner, *D->getArg(0), /*ParenIfBinOp=*/true, OS,
-                              EmitLeaf);
+      OS << "!(";
+      bool Err = emitPredicateDag(Owner, *D->getArg(0), /*ParenIfBinOp=*/false,
+                                  OS, EmitLeaf);
+      OS << ')';
+      return Err;
     }
     if (OpName == "any_of" || OpName == "all_of") {
       if (D->getNumArgs() == 0)
