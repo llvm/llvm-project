@@ -2651,7 +2651,7 @@ void ACCCGToGPULowering::processPrivateLocal(
                                             subviewOffset, subviewSizes, ones);
 
   // Pointer-like casts cannot carry memref offsets. Shift the aligned pointer
-  // so downstream zero-offset views retain this thread's private slice.
+  // so later zero-offset views retain this thread's private slice.
   auto metadata =
       memref::ExtractStridedMetadataOp::create(rewriter, loc, subview);
   Value elementBytes = arith::ConstantIndexOp::create(
