@@ -1864,6 +1864,16 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
 
+  if (!objSym.isGlobal()) {
+    // Local symbols aren't inserted in the symbol table.
+    assert(!sym);
+    objSym.Name = ctx.uniqueSaver.save(objSym.getName());
+    sym = reinterpret_cast<Symbol *>(makeThreadLocalN<SymbolUnion>(1));
+    new (sym) Defined(ctx, &f, StringRef(), binding, visibility, type, 0, 0,
+                      nullptr);
+    return;
+  }
+
   if (!sym) {
     // Symbols can be duplicated in bitcode files because of '#include' and
     // linkonce_odr. Use uniqueSaver to save symbol names for de-duplication.
@@ -1926,6 +1936,8 @@ void BitcodeFile::parseLazy() {
   numSymbols = obj->symbols().size();
   symbols = std::make_unique<Symbol *[]>(numSymbols);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {
+    if (!irSym.isGlobal())
+      continue;
     // Symbols can be duplicated in bitcode files because of '#include' and
     // linkonce_odr. Use uniqueSaver to save symbol names for de-duplication.
     // Update objSym.Name to reference (via StringRef) the string saver's copy;

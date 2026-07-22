@@ -739,6 +739,8 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
 
+    if (!Sym.isGlobal())
+      continue;
     StringRef SymbolName = Sym.getName();
     // Keep copies of symbols if the client of LTO says so.
     if (GlobalResolutionSymbolSaver && !GlobalResolutions->contains(SymbolName))
