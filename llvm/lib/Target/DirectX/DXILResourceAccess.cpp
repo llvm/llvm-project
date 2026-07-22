@@ -791,6 +791,36 @@ static void hoistLoad(LoadInst *LI, PHINode *Phi,
   DeadInsts.insert(LI);
 }
 
+// Undo an InstCombine/SimplifyCFG store-sink that memory semantics cannot
+// prevent: the store's pointer is a phi of resource pointers (optionally behind
+// a GEP chain). Clone the store into each predecessor addressing that edge's
+// concrete resource.
+static void hoistStore(StoreInst *SI, PHINode *Phi,
+                       SmallSetVector<Instruction *, 16> &DeadInsts) {
+  unsigned NumEdges = Phi->getNumIncomingValues();
+
+  DeadInsts.insert(Phi);
+
+  for (unsigned Idx = 0; Idx < NumEdges; ++Idx) {
+    BasicBlock *BB = Phi->getIncomingBlock(Idx);
+
+    // Rematerialize the value and pointer operands on this edge so the store
+    // has dominating operands.
+    DenseMap<Value *, Value *> Materialized;
+    Value *ValInBB = materializeInPred(SI->getValueOperand(), Phi, Idx,
+                                       Materialized, DeadInsts);
+    Value *PtrInBB = materializeInPred(SI->getPointerOperand(), Phi, Idx,
+                                       Materialized, DeadInsts);
+
+    auto *NewStore = cast<StoreInst>(SI->clone());
+    NewStore->setOperand(0, ValInBB);
+    NewStore->setOperand(1, PtrInBB);
+    NewStore->insertBefore(BB->getTerminator()->getIterator());
+  }
+
+  DeadInsts.insert(SI);
+}
+
 // Try to legalize dx.resource.handlefrom.*.binding and dx.resource.getpointer
 // calls with their respective index values and propagate the index values to
 // be used at resource access.
@@ -833,6 +863,12 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
         if (auto *LI = dyn_cast<LoadInst>(&I))
           if (auto *Phi = FindPointerPhi(LI->getPointerOperand())) {
             hoistLoad(LI, Phi, DeadInsts);
+            continue;
+          }
+
+        if (auto *SI = dyn_cast<StoreInst>(&I))
+          if (auto *Phi = FindPointerPhi(SI->getPointerOperand())) {
+            hoistStore(SI, Phi, DeadInsts);
             continue;
           }
 
