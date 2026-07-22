@@ -1395,7 +1395,7 @@ void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
   static const llvm::DenseMap<int, const char *> Transformation = {{
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   {UnaryTransformType::Enum, "__" #Trait},
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   }};
   OS << Transformation.lookup(T->getUTTKind()) << '(';
   print(T->getBaseType(), OS, StringRef());
@@ -2016,6 +2016,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLIsCounter:
   case attr::HLSLResourceDimension:
   case attr::HLSLIsArray:
+  case attr::HLSLIsMultiSampled:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2197,6 +2198,8 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::is_counter]]";
   if (Attrs.IsArray)
     OS << " [[hlsl::is_array]]";
+  if (Attrs.IsMultiSampled)
+    OS << " [[hlsl::is_ms]]";
 
   QualType ContainedTy = T->getContainedType();
   if (!ContainedTy.isNull()) {

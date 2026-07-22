@@ -479,6 +479,10 @@ defm F16BF16ToFP6BF6ConversionScaleInsts : AMDGPUSubtargetFeature<"f16bf16-to-fp
   "Has f16bf16 to fp6bf6 conversion scale instructions"
 >;
 
+defm F32ToFP6BF6ConversionScaleInsts : AMDGPUSubtargetFeature<"f32-to-fp6bf6-cvt-scale-insts",
+  "Has f32 to fp6bf6 conversion scale instructions"
+>;
+
 defm F32ToF16BF16ConversionSRInsts : AMDGPUSubtargetFeature<"f32-to-f16bf16-cvt-sr-insts",
   "Has f32 to f16bf16 conversion scale instructions"
 >;
@@ -621,6 +625,10 @@ defm BF16ConversionInsts : AMDGPUSubtargetFeature<"bf16-cvt-insts",
 
 defm BF16PackedInsts : AMDGPUSubtargetFeature<"bf16-pk-insts",
   "Has bf16 packed instructions (fma, add, mul, max, min)"
+>;
+
+defm BF16InlineConstFromUpperFP32 : AMDGPUSubtargetFeature<"bf16-from-upper-fp32",
+  "bf16 inline constants are actually selected from upper 16-bits of a fp32"
 >;
 
 defm VOP3PInsts : AMDGPUSubtargetFeature<"vop3p",
@@ -2204,6 +2212,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
+   FeatureBF16InlineConstFromUpperFP32,
    FeatureCvtPkF16F32Inst,
    FeatureFmaMixBF16Insts,
    FeatureMin3Max3PKF16,
@@ -2350,6 +2359,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
+   FeatureBF16InlineConstFromUpperFP32,
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
@@ -2359,6 +2369,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureGloballyAddressableScratch,
    FeatureCvtPkF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+   FeatureF32ToFP6BF6ConversionScaleInsts,
    FeatureIEEEMinimumMaximumInsts,
    FeatureSWakeupBarrier,
    FeatureClusters,

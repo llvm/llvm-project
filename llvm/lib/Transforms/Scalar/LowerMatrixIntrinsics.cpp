@@ -2400,9 +2400,9 @@ public:
     for (auto [IncomingV, IncomingB] :
          llvm::zip_equal(Inst->incoming_values(), Inst->blocks())) {
       // getMatrix() may insert some instructions to help with reshaping. The
-      // safest place for those is at the top of the block after the rest of the
-      // PHI's. Even better, if we can put it in the incoming block.
-      Builder.SetInsertPoint(BlockIP);
+      // safest place for those is just before the terminator of the incoming
+      // block. If there's a valid insert point before the def, even better.
+      Builder.SetInsertPoint(IncomingB->getTerminator());
       if (auto *IncomingInst = dyn_cast<Instruction>(IncomingV))
         if (auto MaybeIP = IncomingInst->getInsertionPointAfterDef())
           Builder.SetInsertPoint(*MaybeIP);

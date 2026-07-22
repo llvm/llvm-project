@@ -255,16 +255,29 @@ struct CUFAddConstructor
     }
 
     bool needAllocatorRegistration = false;
-    mod.walk([&](fir::DeclareOp declOp) {
-      if (declOp.getFortranAttrs() &&
-          fir::bitEnumContainsAny(*declOp.getFortranAttrs(),
-                                  fir::FortranVariableFlagsEnum::allocatable |
-                                      fir::FortranVariableFlagsEnum::pointer)) {
+    mod.walk([&](cuf::AllocateOp) {
+      needAllocatorRegistration = true;
+      return mlir::WalkResult::interrupt();
+    });
+    if (!needAllocatorRegistration) {
+      mod.walk([&](cuf::DeallocateOp) {
         needAllocatorRegistration = true;
         return mlir::WalkResult::interrupt();
-      }
-      return mlir::WalkResult::advance();
-    });
+      });
+    }
+    if (!needAllocatorRegistration) {
+      mod.walk([&](fir::DeclareOp declOp) {
+        if (declOp.getFortranAttrs() &&
+            fir::bitEnumContainsAny(
+                *declOp.getFortranAttrs(),
+                fir::FortranVariableFlagsEnum::allocatable |
+                    fir::FortranVariableFlagsEnum::pointer)) {
+          needAllocatorRegistration = true;
+          return mlir::WalkResult::interrupt();
+        }
+        return mlir::WalkResult::advance();
+      });
+    }
     if (!needAllocatorRegistration) {
       mod.walk([&](fir::GlobalOp globalOp) {
         if (globalOp.getDataAttrAttr()) {
@@ -289,13 +302,17 @@ struct CUFAddConstructor
     builder.setInsertionPointToStart(entryBlock);
 
     if (needAllocatorRegistration) {
-      // Symbol reference to CUFRegisterAllocator.
+      llvm::StringRef allocatorRegistrationFunctionName =
+          RTNAME_STRING(CUFRegisterAllocator);
+      if (!allocatorRegistrationFunction.empty())
+        allocatorRegistrationFunctionName = allocatorRegistrationFunction;
+      // Symbol reference to the allocator registration function.
       builder.setInsertionPointToEnd(mod.getBody());
       auto registerFuncOp = mlir::LLVM::LLVMFuncOp::create(
-          builder, loc, RTNAME_STRING(CUFRegisterAllocator), funcTy);
+          builder, loc, allocatorRegistrationFunctionName, funcTy);
       registerFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
       auto cufRegisterAllocatorRef = mlir::SymbolRefAttr::get(
-          mod.getContext(), RTNAME_STRING(CUFRegisterAllocator));
+          mod.getContext(), allocatorRegistrationFunctionName);
       builder.setInsertionPointToStart(entryBlock);
       mlir::LLVM::CallOp::create(builder, loc, funcTy, cufRegisterAllocatorRef);
     }
