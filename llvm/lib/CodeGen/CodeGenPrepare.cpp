@@ -7613,19 +7613,19 @@ static bool collectSinkableChain(const TargetTransformInfo *TTI, Value *V,
   if (!isSafeToSpeculativelyExecute(I))
     return false;
 
-  bool HasExpensive =
+  bool HasExpensiveOp =
       isLatencyExpensiveToSpeculate(TTI, I, UseLatencySelectSink);
   for (Value *Op : I->operands()) {
     if (collectSinkableChain(TTI, Op, StartBlock, SharedCond, Chain, Depth - 1,
                              UseLatencySelectSink))
-      HasExpensive = true;
+      HasExpensiveOp = true;
   }
 
-  if (HasExpensive) {
+  if (HasExpensiveOp) {
     Chain.push_back(I);
     LLVM_DEBUG(dbgs() << "CGP: Collected instruction to sink: " << *I << "\n");
   }
-  return HasExpensive;
+  return HasExpensiveOp;
 }
 
 struct SelectSinkPlan {

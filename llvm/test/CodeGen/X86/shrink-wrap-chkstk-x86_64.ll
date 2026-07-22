@@ -9,24 +9,19 @@
 define void @fn1() nounwind uwtable {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl a(%rip), %eax
-; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %select.true.sink
-; CHECK-NEXT:    cltq
-; CHECK-NEXT:    imulq $715827883, %rax, %rax # imm = 0x2AAAAAAB
-; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    shrq $63, %rcx
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:  .LBB0_2: # %select.end
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $4128, %eax # imm = 0x1020
+; CHECK-NEXT:    movl $4136, %eax # imm = 0x1028
 ; CHECK-NEXT:    callq ___chkstk_ms
 ; CHECK-NEXT:    subq %rax, %rsp
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4144
-; CHECK-NEXT:    movl %eax, b(%rip)
+; CHECK-NEXT:    movslq a(%rip), %rax
+; CHECK-NEXT:    imulq $715827883, %rax, %rcx # imm = 0x2AAAAAAB
+; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    shrq $63, %rdx
+; CHECK-NEXT:    shrq $32, %rcx
+; CHECK-NEXT:    addl %edx, %ecx
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    cmovnel %eax, %ecx
+; CHECK-NEXT:    movl %ecx, b(%rip)
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    # kill: def $ecx killed $ecx killed $rcx
 ; CHECK-NEXT:    callq fn2
