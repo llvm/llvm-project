@@ -74,7 +74,7 @@ int assumingLowerOnlyUseIndex(int arg) {
     return 0;
 
   int a = ((int*)TwoAndHalfInts)[arg];
-  // expected-note@-1 {{Assuming index is non-negative{{$}}}}
+  // expected-note-re@-1 {{Assuming index is non-negative{{$}}}}
 
   int b = TenElements[arg + 10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
