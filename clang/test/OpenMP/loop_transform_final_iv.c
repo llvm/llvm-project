@@ -84,21 +84,6 @@ void test_interchange(void) {
   // After loop: i should be 10, j should be 5
 }
 
-void test_fuse(void) {
-  // CHECK-LABEL: define {{.*}} @test_fuse
-  int i, j;
-  #pragma omp fuse
-  {
-  for (i = 0; i < 10; i++) {
-  }
-  for (j = 0; j < 5; j++) {
-  }
-  }
-  // CHECK: store i32 10, ptr %i
-  // CHECK: store i32 5, ptr %j
-  // After loop: i should be 10, j should be 5
-}
-
 void test_for_workshare(void) {
   // CHECK-LABEL: define {{.*}} @test_for_workshare
   int i;

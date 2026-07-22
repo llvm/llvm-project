@@ -5601,6 +5601,7 @@ class OMPTileDirective final
   enum {
     PreInitsOffset = 0,
     TransformedStmtOffset,
+    FinalsOffset,
   };
 
   explicit OMPTileDirective(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -5617,6 +5618,10 @@ class OMPTileDirective final
     Data->getChildren()[TransformedStmtOffset] = S;
   }
 
+  void setFinals(Stmt *Finals) {
+    Data->getChildren()[FinalsOffset] = Finals;
+  }
+
 public:
   /// Create a new AST node representation for '#pragma omp tile'.
   ///
@@ -5630,11 +5635,13 @@ public:
   /// \param TransformedStmt The loop nest after tiling, or nullptr in
   ///                        dependent contexts.
   /// \param PreInits Helper preinits statements for the loop nest.
+  /// \param Finals Loop variable finalization statements.
   static OMPTileDirective *Create(const ASTContext &C, SourceLocation StartLoc,
                                   SourceLocation EndLoc,
                                   ArrayRef<OMPClause *> Clauses,
                                   unsigned NumLoops, Stmt *AssociatedStmt,
-                                  Stmt *TransformedStmt, Stmt *PreInits);
+                                  Stmt *TransformedStmt, Stmt *PreInits,
+                                  Stmt *Finals);
 
   /// Build an empty '#pragma omp tile' AST node for deserialization.
   ///
@@ -5662,6 +5669,9 @@ public:
   /// Return preinits statement.
   Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
 
+  /// Return finals statement (loop variable finalization).
+  Stmt *getFinals() const { return Data->getChildren()[FinalsOffset]; }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPTileDirectiveClass;
   }
@@ -5677,6 +5687,7 @@ class OMPStripeDirective final
   enum {
     PreInitsOffset = 0,
     TransformedStmtOffset,
+    FinalsOffset,
   };
 
   explicit OMPStripeDirective(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -5693,6 +5704,10 @@ class OMPStripeDirective final
     Data->getChildren()[TransformedStmtOffset] = S;
   }
 
+  void setFinals(Stmt *Finals) {
+    Data->getChildren()[FinalsOffset] = Finals;
+  }
+
 public:
   /// Create a new AST node representation for '#pragma omp stripe'.
   ///
@@ -5706,10 +5721,11 @@ public:
   /// \param TransformedStmt The loop nest after striping, or nullptr in
   ///                        dependent contexts.
   /// \param PreInits Helper preinits statements for the loop nest.
+  /// \param Finals Loop variable finalization statements.
   static OMPStripeDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
-         Stmt *TransformedStmt, Stmt *PreInits);
+         Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals);
 
   /// Build an empty '#pragma omp stripe' AST node for deserialization.
   ///
@@ -5736,6 +5752,9 @@ public:
   /// Return preinits statement.
   Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
 
+  /// Return finals statement (loop variable finalization).
+  Stmt *getFinals() const { return Data->getChildren()[FinalsOffset]; }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPStripeDirectiveClass;
   }
@@ -5756,6 +5775,7 @@ class OMPUnrollDirective final
   enum {
     PreInitsOffset = 0,
     TransformedStmtOffset,
+    FinalsOffset,
   };
 
   explicit OMPUnrollDirective(SourceLocation StartLoc, SourceLocation EndLoc)
@@ -5832,6 +5852,7 @@ class OMPReverseDirective final
   enum {
     PreInitsOffset = 0,
     TransformedStmtOffset,
+    FinalsOffset,
   };
 
   explicit OMPReverseDirective(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -5848,6 +5869,10 @@ class OMPReverseDirective final
     Data->getChildren()[TransformedStmtOffset] = S;
   }
 
+  void setFinals(Stmt *Finals) {
+    Data->getChildren()[FinalsOffset] = Finals;
+  }
+
 public:
   /// Create a new AST node representation for '#pragma omp reverse'.
   ///
@@ -5859,11 +5884,13 @@ public:
   /// \param TransformedStmt The loop nest after tiling, or nullptr in
   ///                        dependent contexts.
   /// \param PreInits   Helper preinits statements for the loop nest.
+  /// \param Finals     Loop variable finalization statements.
   static OMPReverseDirective *Create(const ASTContext &C,
                                      SourceLocation StartLoc,
                                      SourceLocation EndLoc,
                                      Stmt *AssociatedStmt, unsigned NumLoops,
-                                     Stmt *TransformedStmt, Stmt *PreInits);
+                                     Stmt *TransformedStmt, Stmt *PreInits,
+                                     Stmt *Finals);
 
   /// Build an empty '#pragma omp reverse' AST node for deserialization.
   ///
@@ -5880,6 +5907,9 @@ public:
 
   /// Return preinits statement.
   Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  /// Return finals statement.
+  Stmt *getFinals() const { return Data->getChildren()[FinalsOffset]; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPReverseDirectiveClass;
@@ -5903,6 +5933,7 @@ class OMPInterchangeDirective final
   enum {
     PreInitsOffset = 0,
     TransformedStmtOffset,
+    FinalsOffset,
   };
 
   explicit OMPInterchangeDirective(SourceLocation StartLoc,
@@ -5919,6 +5950,10 @@ class OMPInterchangeDirective final
     Data->getChildren()[TransformedStmtOffset] = S;
   }
 
+  void setFinals(Stmt *Finals) {
+    Data->getChildren()[FinalsOffset] = Finals;
+  }
+
 public:
   /// Create a new AST node representation for '#pragma omp interchange'.
   ///
@@ -5932,10 +5967,11 @@ public:
   /// \param TransformedStmt The loop nest after tiling, or nullptr in
   ///                        dependent contexts.
   /// \param PreInits  Helper preinits statements for the loop nest.
+  /// \param Finals    Loop variable finalization statements.
   static OMPInterchangeDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
-         Stmt *TransformedStmt, Stmt *PreInits);
+         Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals);
 
   /// Build an empty '#pragma omp interchange' AST node for deserialization.
   ///
@@ -5953,6 +5989,9 @@ public:
 
   /// Return preinits statement.
   Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  /// Return finals statement.
+  Stmt *getFinals() const { return Data->getChildren()[FinalsOffset]; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPInterchangeDirectiveClass;
@@ -6009,6 +6048,7 @@ class OMPFuseDirective final
   enum {
     PreInitsOffset = 0,
     TransformedStmtOffset,
+    FinalsOffset,
   };
 
   explicit OMPFuseDirective(SourceLocation StartLoc, SourceLocation EndLoc)
@@ -6021,6 +6061,10 @@ class OMPFuseDirective final
 
   void setTransformedStmt(Stmt *S) {
     Data->getChildren()[TransformedStmtOffset] = S;
+  }
+
+  void setFinals(Stmt *Finals) {
+    Data->getChildren()[FinalsOffset] = Finals;
   }
 
 public:
@@ -6038,10 +6082,12 @@ public:
   /// \param TransformedStmt The loop nest after fusion, or nullptr in
   ///                        dependent
   /// \param PreInits Helper preinits statements for the loop nest
+  /// \param Finals Loop variable finalization statements
   static OMPFuseDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<OMPClause *> Clauses, unsigned NumGeneratedTopLevelLoops,
-         Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits);
+         Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits,
+         Stmt *Finals);
 
   /// Build an empty '#pragma omp fuse' AST node for deserialization
   ///
@@ -6059,6 +6105,9 @@ public:
 
   /// Return preinits statement.
   Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  /// Return finals statement.
+  Stmt *getFinals() const { return Data->getChildren()[FinalsOffset]; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPFuseDirectiveClass;
