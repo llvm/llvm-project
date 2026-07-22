@@ -11926,7 +11926,7 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   assert((VT == MVT::f32 || VT == MVT::f64 ||
           ((VT == MVT::f128 || VT == MVT::ppcf128) && Subtarget.hasVSX() &&
            Subtarget.useCRBits())) &&
-         "invalid customzie type for IS_FPCLASS.");
+         "invalid customize type for IS_FPCLASS.");
   // Handle ppcf128 by extracting the higher part
   if (VT == MVT::ppcf128) {
     // The higher part determines the value class.
