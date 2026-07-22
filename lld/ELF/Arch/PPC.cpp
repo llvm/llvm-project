@@ -200,7 +200,8 @@ void PPC::initTargetSpecificSections() {
 
 void PPC::writeIplt(uint8_t *buf, const Symbol &sym,
                     uint64_t pltEntryAddr) const {
-  // In -pie or -shared mode we can't rely on r30 for indirect calls.
+  // In -pie or -shared mode we can't rely on r30 for indirect calls, nor for
+  // direct calls with a different TOC base to the resolver.
   writePPC32PltCallStub(ctx, buf, pltEntryAddr, sym.getGotPltVA(ctx), sym.file,
                         std::nullopt);
 }
