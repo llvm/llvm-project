@@ -1425,7 +1425,7 @@ The conversion back to the original address space can simply be done by discardi
 upper 32 bits of the generic pointer.
 
 As the LDS aperture is defined by its 16 most significant bits, we can theoretically
-support up to ``2 << 16`` synthetic apertures safely.
+support up to ``(1 << 16) - 1`` synthetic apertures safely.
 
 .. _amdgpu-memory-scopes:
 
