@@ -27,4 +27,4 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
                     error=True)
         self.expect("expression import Foundation")
         self.expect('expression Data([1, 2, 3])',
-                    substrs=["byte"])
+                    substrs=["3 bytes"])

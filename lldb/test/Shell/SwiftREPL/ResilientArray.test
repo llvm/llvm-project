@@ -11,6 +11,6 @@ import Foundation
 
 let x : [Data] = [Data([1, 2, 3]), Data([9])]
 // CHECK: {{x}}: [Foundation.Data] = 2 values {
-// CHECK-NEXT: byte
-// CHECK-NEXT: byte
+// CHECK-NEXT:  [0] = 3 bytes
+// CHECK-NEXT:  [1] = 1 byte
 // CHECK-NEXT: }

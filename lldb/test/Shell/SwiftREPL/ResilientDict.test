@@ -15,13 +15,13 @@ import Foundation
 let x : [Data:Int] = [Data([1, 2, 3]): 40, Data([9]): 230]
 // DICT-LABEL: {{x}}: [Foundation.Data : Int] = 2 key/value pairs {
 // DICT:      [{{[0-1]}}] = {
-// DICT:         byte
-// DICT:         value = 40
+// DICT:         key = 3 bytes
+// DICT-NEXT:    value = 40
 // DICT-NEXT:  }
 
 let y : [Data:Int] = [Data([1, 2, 3]): 40, Data([9]): 230]
 // DICT-LABEL: {{y}}: [Foundation.Data : Int] = 2 key/value pairs {
 // DICT:       [{{[0-1]}}] = {
-// DICT:          byte
-// DICT:          value = 230
+// DICT:          key = 1 byte
+// DICT-NEXT:     value = 230
 // DICT-NEXT:  }
