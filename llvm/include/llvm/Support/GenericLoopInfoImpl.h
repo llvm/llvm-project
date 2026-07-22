@@ -755,24 +755,27 @@ void LoopInfoBase<BlockT, LoopT>::verify(
   for (const LoopT *L : Loops)
     assert(L->LI == this && "Loop has a stale owning-LoopInfo back-pointer");
 
-  for (auto It : enumerate(BBMap)) {
-    LoopT *L = It.value();
-    unsigned Number = It.index();
-    if (!L)
-      continue;
-    assert(Loops.count(L) && "orphaned loop");
-    // We have no way to map block numbers back to blocks, so find it.
-    auto BBIt = find_if(L->Blocks, [&Number](BlockT *BB) {
-      return GraphTraits<BlockT *>::getNumber(BB) == Number;
-    });
-    BlockT *BB = BBIt != L->Blocks.end() ? *BBIt : nullptr;
-    assert(BB && "orphaned block");
-    // Check the map against the (independent) block lists: L is its innermost
-    // loop (not in a deeper loop). Using contains() here would derive from
-    // BBMap itself and check nothing.
-    for (LoopT *ChildLoop : *L)
-      assert(!llvm::is_contained(ChildLoop->getBlocks(), BB) &&
-             "BBMap should point to the innermost loop containing BB");
+  // Recompute the innermost loop of each block from the loops' block lists,
+  // which are maintained independently of BBMap. Using contains() here would
+  // derive from BBMap itself and check nothing.
+  SmallVector<const LoopT *> Innermost(BBMap.size());
+  SmallVector<const LoopT *, 8> Worklist(begin(), end());
+  while (!Worklist.empty()) {
+    const LoopT *L = Worklist.pop_back_val();
+    // A loop is visited before its children, so a child's blocks overwrite the
+    // entries written by its ancestors.
+    for (const BlockT *BB : L->getBlocks()) {
+      unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
+      assert(Number < Innermost.size() && "block missing from BBMap");
+      Innermost[Number] = L;
+    }
+    Worklist.append(L->begin(), L->end());
+  }
+
+  for (auto [Number, L] : enumerate(BBMap)) {
+    assert((!L || Loops.count(L)) && "orphaned loop");
+    assert(L == Innermost[Number] &&
+           "BBMap should point to the innermost loop containing the block");
   }
 
   // Recompute LoopInfo to verify loops structure.
