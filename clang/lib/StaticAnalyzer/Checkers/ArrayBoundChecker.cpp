@@ -99,7 +99,7 @@ public:
   int64_t asCharUnits() const { return AsCharUnits; }
 
   bool canExpress(std::optional<int64_t> Val) const {
-    return !Val || !(*Val % asCharUnits());
+    return asCharUnits() && (!Val || !(*Val % asCharUnits()));
   }
 
   std::string asExtentDesc() const {

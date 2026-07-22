@@ -409,3 +409,13 @@ int *nothingIsCertain(int x, int y) {
 
   return mem;
 }
+
+struct Empty {};
+struct Empty ZeroSizeElements[10];
+
+struct Empty zeroSizeElements(void) {
+  // FIXME: We probably shouldn't report this access.
+  return ZeroSizeElements[5];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'ZeroSizeElements'}}
+  // expected-note@-2 {{Access of 'ZeroSizeElements' at byte offset 0, while it holds only 0 byte}}
+}
