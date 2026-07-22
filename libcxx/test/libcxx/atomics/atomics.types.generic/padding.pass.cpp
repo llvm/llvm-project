@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
+// XFAIL: clang-21, apple-clang-21, clang-22
 
 // atomic_init is deprecated
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
@@ -147,11 +148,9 @@ void test() {
 }
 
 int main(int, char**) {
-// TODO(LLVM-23): Switch to XFAIL with clang-22
-#if __has_builtin(__builtin_clear_padding)
   test<WithTailPadding>();
   test<WithInternalPadding>();
   test<WithInternalAndTailPadding>();
-#endif
+
   return 0;
 }
