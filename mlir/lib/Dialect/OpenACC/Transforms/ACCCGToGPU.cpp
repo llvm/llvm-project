@@ -1289,8 +1289,11 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
       while (Operation *def = current.getDefiningOp()) {
         if (acc::PrivateLocalOp privateLocal =
                 dyn_cast<acc::PrivateLocalOp>(def)) {
-          return getPrivateMemScope(getPrivatizeOp(
-                     privateLocal, computeRegion)) == PrivateMemScope::Worker;
+          GPUParallelDimsAttr parDims = mlir::acc::getParDimsAttr(privateLocal);
+          if (!parDims)
+            parDims =
+                getPrivatizeOp(privateLocal, computeRegion).getParDimsAttr();
+          return parDims && parDims.hasOnlyThreadYLevel();
         }
         if (ViewLikeOpInterface viewLike = dyn_cast<ViewLikeOpInterface>(def)) {
           current = viewLike.getViewSource();
@@ -1317,7 +1320,9 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
                                  ArrayRef<GPUParallelDimAttr> parDims) {
         bool hasThreadY = llvm::any_of(
             parDims, [](auto parDim) { return parDim.isThreadY(); });
-        if (hasThreadY && isProvenWorkerPrivate(src)) {
+        bool hasBlock = llvm::any_of(
+            parDims, [](auto parDim) { return parDim.isAnyBlock(); });
+        if (hasThreadY && hasBlock && isProvenWorkerPrivate(src)) {
           info.hasActiveWorkerCombine = true;
         } else {
           info.hasExplicitInactiveCombine = true;
