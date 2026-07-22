@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -greedy-reverse-local-assignment=0 < %s | FileCheck -check-prefixes=FORWARDXNACK %s
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -greedy-reverse-local-assignment=1 < %s | FileCheck -check-prefixes=REVERSEXNACK %s
 
-; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -greedy-reverse-local-assignment=0 -mattr=-xnack < %s | FileCheck -check-prefix=NOXNACK %s
-; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -greedy-reverse-local-assignment=1 -mattr=-xnack < %s | FileCheck -check-prefix=NOXNACK %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -greedy-reverse-local-assignment=0 --amdgpu-xnack=false < %s | FileCheck -check-prefix=NOXNACK %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -greedy-reverse-local-assignment=1 --amdgpu-xnack=false < %s | FileCheck -check-prefix=NOXNACK %s
 
 ; Test the change in the behavior of the allocator with
 ; -greedy-reverse-local-reassignment enabled. This case shows a

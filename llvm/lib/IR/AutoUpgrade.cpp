@@ -6964,6 +6964,18 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
   }
 }
 
+// Old two-operand form: !{!"llvm.loop.distribute.enable", i1 X}. The new
+// single-operand form uses "llvm.loop.distribute.enable" for X = true and
+// "llvm.loop.distribute.disable" for X = false.
+static bool isOldDistributeEnable(const MDTuple *T) {
+  if (T->getNumOperands() != 2)
+    return false;
+  auto *Tag = dyn_cast_or_null<MDString>(T->getOperand(0));
+  if (!Tag || Tag->getString() != "llvm.loop.distribute.enable")
+    return false;
+  return mdconst::hasa<ConstantInt>(T->getOperand(1));
+}
+
 static bool isOldLoopArgument(Metadata *MD) {
   auto *T = dyn_cast_or_null<MDTuple>(MD);
   if (!T)
@@ -6973,7 +6985,9 @@ static bool isOldLoopArgument(Metadata *MD) {
   auto *S = dyn_cast_or_null<MDString>(T->getOperand(0));
   if (!S)
     return false;
-  return S->getString().starts_with("llvm.vectorizer.");
+  if (S->getString().starts_with("llvm.vectorizer."))
+    return true;
+  return isOldDistributeEnable(T);
 }
 
 static MDString *upgradeLoopTag(LLVMContext &C, StringRef OldTag) {
@@ -6997,17 +7011,28 @@ static Metadata *upgradeLoopArgument(Metadata *MD) {
   auto *OldTag = dyn_cast_or_null<MDString>(T->getOperand(0));
   if (!OldTag)
     return MD;
+
+  LLVMContext &C = T->getContext();
+
+  // Rewrite the old two-operand distribute form to the single-operand pair.
+  if (isOldDistributeEnable(T)) {
+    bool Enable = !mdconst::extract<ConstantInt>(T->getOperand(1))->isZero();
+    return MDTuple::get(
+        C, {MDString::get(C, Enable ? "llvm.loop.distribute.enable"
+                                    : "llvm.loop.distribute.disable")});
+  }
+
   if (!OldTag->getString().starts_with("llvm.vectorizer."))
     return MD;
 
   // This has an old tag.  Upgrade it.
   SmallVector<Metadata *, 8> Ops;
   Ops.reserve(T->getNumOperands());
-  Ops.push_back(upgradeLoopTag(T->getContext(), OldTag->getString()));
+  Ops.push_back(upgradeLoopTag(C, OldTag->getString()));
   for (unsigned I = 1, E = T->getNumOperands(); I != E; ++I)
     Ops.push_back(T->getOperand(I));
 
-  return MDTuple::get(T->getContext(), Ops);
+  return MDTuple::get(C, Ops);
 }
 
 MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
@@ -7018,6 +7043,22 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
   if (none_of(T->operands(), isOldLoopArgument))
     return &N;
 
+  // Fix the old two-operand llvm.loop.distribute.enable nodes in place: the
+  // Verifier rejects any MDNode carrying the distribute tag with more than one
+  // operand, so a leftover reference (from the distinct loop-ID) would still
+  // trigger a diagnostic. In-place mutation is safe on distinct MDNodes.
+  if (T->isDistinct()) {
+    for (unsigned I = 0, E = T->getNumOperands(); I < E; ++I) {
+      auto *OpT = dyn_cast_or_null<MDTuple>(T->getOperand(I));
+      if (OpT && isOldDistributeEnable(OpT))
+        T->replaceOperandWith(I, upgradeLoopArgument(OpT));
+    }
+    if (none_of(T->operands(), isOldLoopArgument))
+      return &N;
+  }
+
+  // Remaining old arguments (e.g. llvm.vectorizer.*) are handled via a wrapper
+  // attachment; the original distinct loop-ID is kept as the first operand.
   SmallVector<Metadata *, 8> Ops;
   Ops.reserve(T->getNumOperands());
   for (Metadata *MD : T->operands())

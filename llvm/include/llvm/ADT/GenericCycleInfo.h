@@ -28,210 +28,162 @@
 #ifndef LLVM_ADT_GENERICCYCLEINFO_H
 #define LLVM_ADT_GENERICCYCLEINFO_H
 
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
+#include <type_traits>
 
 namespace llvm {
 
 template <typename ContextT> class GenericCycleInfo;
 template <typename ContextT> class GenericCycleInfoCompute;
 
-/// A possibly irreducible generalization of a \ref Loop.
-template <typename ContextT> class GenericCycle {
-public:
-  using BlockT = typename ContextT::BlockT;
-  using FunctionT = typename ContextT::FunctionT;
-  template <typename> friend class GenericCycleInfo;
-  template <typename> friend class GenericCycleInfoCompute;
+/// Opaque handle to a cycle within a GenericCycleInfo that wraps the cycle's
+/// preorder index. Handles remain valid as long as the cycle forest is not
+/// recomputed; addBlockToCycle() adds a block but never adds, removes, or
+/// reorders cycles, so it leaves every handle valid.
+class CycleRef {
+  static constexpr unsigned InvalidIndex = ~0u;
+  unsigned Index = InvalidIndex;
 
-private:
-  /// The parent cycle. Is null for the root "cycle". Top-level cycles point
-  /// at the root.
-  GenericCycle *ParentCycle = nullptr;
-
-  /// The entry block(s) of the cycle. The header is the only entry if
-  /// this is a loop. Is empty for the root "cycle", to avoid
-  /// unnecessary memory use.
-  SmallVector<BlockT *, 1> Entries;
-
-  /// Child cycles, if any.
-  std::vector<std::unique_ptr<GenericCycle>> Children;
-
-  /// This cycle's blocks (its own and its nested cycles') occupy the half-open
-  /// range [IdxBegin, IdxEnd) of GenericCycleInfo::BlockLayout. The
-  /// ranges are nested like an Euler tour of the cycle tree, so containment is
-  /// an interval test (see contains()).
-  ///
-  /// During construction (before layoutBlocks), IdxEnd accumulates the number
-  /// of this cycle's own blocks (those whose innermost cycle is this one).
-  unsigned IdxBegin = 0, IdxEnd = 0;
-
-  /// Depth of the cycle in the tree. The root "cycle" is at depth 0.
-  ///
-  /// \note Depths are not necessarily contiguous. However, child loops always
-  ///       have strictly greater depth than their parents, and sibling loops
-  ///       always have the same depth.
-  unsigned Depth = 0;
-
-  /// Preorder number of this cycle in the forest, assigned by layoutBlocks.
-  /// Indexes per-cycle side tables in GenericCycleInfo.
-  unsigned ID = 0;
-
-  void appendEntry(BlockT *Block) { Entries.push_back(Block); }
-
-  GenericCycle(const GenericCycle &) = delete;
-  GenericCycle &operator=(const GenericCycle &) = delete;
-  GenericCycle(GenericCycle &&Rhs) = delete;
-  GenericCycle &operator=(GenericCycle &&Rhs) = delete;
+  explicit CycleRef(unsigned Index) : Index(Index) {}
+  template <typename ContextT> friend class GenericCycleInfo;
+  template <typename ContextT> friend class GenericCycleInfoCompute;
+  friend struct DenseMapInfo<CycleRef>;
 
 public:
-  GenericCycle() = default;
+  CycleRef() = default;
+  bool isValid() const { return Index != InvalidIndex; }
+  explicit operator bool() const { return isValid(); }
+  bool operator==(CycleRef O) const { return Index == O.Index; }
+  bool operator!=(CycleRef O) const { return Index != O.Index; }
+};
 
-  /// \brief Whether the cycle is a natural loop.
-  bool isReducible() const { return Entries.size() == 1; }
-
-  BlockT *getHeader() const { return Entries[0]; }
-
-  const SmallVectorImpl<BlockT *> & getEntries() const {
-    return Entries;
+template <> struct DenseMapInfo<CycleRef> {
+  static unsigned getHashValue(CycleRef C) {
+    return DenseMapInfo<unsigned>::getHashValue(C.Index);
   }
-
-  /// \brief Return whether \p Block is an entry block of the cycle.
-  bool isEntry(const BlockT *Block) const {
-    return is_contained(Entries, Block);
-  }
-
-  /// \brief Replace all entries with \p Block as single entry.
-  /// \p Block must be contained in the cycle.
-  void setSingleEntry(BlockT *Block) {
-    Entries.clear();
-    Entries.push_back(Block);
-  }
-
-  /// \brief Returns true iff this cycle contains \p C. O(1). Non-strict, i.e.
-  /// returns true if C is the same cycle.
-  bool contains(const GenericCycle *C) const {
-    return C && IdxBegin <= C->IdxBegin && C->IdxEnd <= IdxEnd;
-  }
-
-  const GenericCycle *getParentCycle() const { return ParentCycle; }
-  GenericCycle *getParentCycle() { return ParentCycle; }
-  unsigned getDepth() const { return Depth; }
-
-  size_t getNumBlocks() const { return IdxEnd - IdxBegin; }
-
-  /// Iteration over child cycles.
-  //@{
-  using const_child_iterator_base =
-      typename std::vector<std::unique_ptr<GenericCycle>>::const_iterator;
-  struct const_child_iterator
-      : iterator_adaptor_base<const_child_iterator, const_child_iterator_base,
-                              std::random_access_iterator_tag, GenericCycle *,
-                              std::ptrdiff_t, GenericCycle *, GenericCycle *> {
-    using Base =
-        iterator_adaptor_base<const_child_iterator, const_child_iterator_base,
-                              std::random_access_iterator_tag, GenericCycle *,
-                              std::ptrdiff_t, GenericCycle *, GenericCycle *>;
-
-    const_child_iterator() = default;
-    explicit const_child_iterator(const_child_iterator_base I) : Base(I) {}
-
-    const const_child_iterator_base &wrapped() { return Base::wrapped(); }
-    GenericCycle *operator*() const { return Base::I->get(); }
-  };
-
-  const_child_iterator child_begin() const {
-    return const_child_iterator{Children.begin()};
-  }
-  const_child_iterator child_end() const {
-    return const_child_iterator{Children.end()};
-  }
-  size_t getNumChildren() const { return Children.size(); }
-  iterator_range<const_child_iterator> children() const {
-    return llvm::make_range(const_child_iterator{Children.begin()},
-                            const_child_iterator{Children.end()});
-  }
-  //@}
-
-  /// Iteration over entry blocks.
-  //@{
-  using const_entry_iterator =
-      typename SmallVectorImpl<BlockT *>::const_iterator;
-  const_entry_iterator entry_begin() const { return Entries.begin(); }
-  const_entry_iterator entry_end() const { return Entries.end(); }
-  size_t getNumEntries() const { return Entries.size(); }
-  iterator_range<const_entry_iterator> entries() const {
-    return llvm::make_range(entry_begin(), entry_end());
-  }
-  using const_reverse_entry_iterator =
-      typename SmallVectorImpl<BlockT *>::const_reverse_iterator;
-  const_reverse_entry_iterator entry_rbegin() const { return Entries.rbegin(); }
-  const_reverse_entry_iterator entry_rend() const { return Entries.rend(); }
-  //@}
-
-  Printable printEntries(const ContextT &Ctx) const {
-    return Printable([this, &Ctx](raw_ostream &Out) {
-      ListSeparator LS(" ");
-      for (auto *Entry : Entries)
-        Out << LS << Ctx.print(Entry);
-    });
-  }
+  static bool isEqual(CycleRef A, CycleRef B) { return A.Index == B.Index; }
 };
 
 /// \brief Cycle information for a function.
 template <typename ContextT> class GenericCycleInfo {
 public:
   using BlockT = typename ContextT::BlockT;
-  using CycleT = GenericCycle<ContextT>;
   using FunctionT = typename ContextT::FunctionT;
   template <typename> friend class GenericCycleInfoCompute;
 
 private:
+  /// Internal, data-only storage for a cycle. Consumers name a cycle by a
+  /// CycleRef handle and query it through GenericCycleInfo.
+  class Cycle {
+  public:
+    /// The parent cycle; invalid for a top-level cycle.
+    CycleRef Parent;
+
+    /// This cycle's blocks (its own and its nested cycles') occupy the
+    /// half-open range [IdxBegin, IdxEnd) of BlockLayout, nested like an Euler
+    /// tour of the cycle tree, so containment is an interval test (see
+    /// contains()).
+    unsigned IdxBegin = 0, IdxEnd = 0;
+
+    /// Depth of the cycle in the tree: top-level cycles are at depth 1 and each
+    /// nested cycle is one deeper (getCycleDepth() returns 0 for blocks outside
+    /// any cycle). Sibling cycles share a depth.
+    unsigned Depth = 0;
+
+    /// Number of cycles nested inside this one: the subtree occupies
+    /// [this, this + 1 + NumDescendants) of Cycles.
+    unsigned NumDescendants = 0;
+
+    /// The entry blocks (header first) are BlockLayout[EntryBegin,
+    /// EntryBegin+EntrySize). A reducible cycle has a single entry at IdxBegin.
+    /// An irreducible one appends its list past the Euler tour.
+    unsigned EntryBegin = 0, EntrySize = 0;
+
+    /// Whether this cycle has a parent, i.e. is not top-level.
+    bool hasParent() const { return Parent.isValid(); }
+  };
+  static_assert(std::is_trivially_destructible_v<Cycle>);
+  using CycleT = Cycle;
+
   ContextT Context;
   unsigned BlockNumberEpoch;
 
-  /// Map basic block numbers to their inner-most containing cycle.
-  SmallVector<CycleT *> BlockMap;
+  /// Map each basic block number to its inner-most containing cycle, or an
+  /// invalid handle if none.
+  SmallVector<CycleRef> BlockMap;
 
   /// Euler tour of the cycle forest: every cycle's blocks form a contiguous
-  /// slice [IdxBegin, IdxEnd) of this array, nested inside its parent's.
+  /// slice [IdxBegin, IdxEnd), nested inside its parent's. Entry lists for
+  /// irreducible cycles are appended past the tour (see EntryBegin).
   SmallVector<BlockT *, 8> BlockLayout;
 
+  /// All cycles in forest preorder: every cycle is immediately followed by
+  /// its descendants, and skipping a top-level cycle's subtree lands on the
+  /// next top-level cycle.
+  std::unique_ptr<CycleT[]> Cycles;
   unsigned NumCycles = 0;
 
-  /// getExitBlocks caches, indexed by CycleT::ID. Empty until the first
-  /// query, then sized to NumCycles.
+  /// getExitBlocks caches, indexed by the cycle's preorder index. Empty until
+  /// the first query, then sized to NumCycles.
   mutable SmallVector<SmallVector<BlockT *, 0>, 0> ExitBlocksCaches;
 
-  /// Top-level cycles discovered by any DFS.
-  ///
-  /// Note: The implementation treats the nullptr as the parent of
-  /// every top-level cycle. See \ref contains for an example.
-  std::vector<std::unique_ptr<CycleT>> TopLevelCycles;
+  /// The preorder index of \p C, i.e. its offset in the Cycles array.
+  unsigned getCycleIndex(const CycleT &C) const { return &C - Cycles.get(); }
 
-  /// Move \p Child to \p NewParent by manipulating Children vectors.
-  ///
-  /// Note: This is an incomplete operation that does not update the depth of
-  /// the subtree.
-  void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
+  /// Resolve a handle to its stored cycle. The assert catches deref of an
+  /// invalid handle and (partially) of a handle from another CycleInfo.
+  CycleT &deref(CycleRef C) {
+    assert(C.Index < NumCycles);
+    return Cycles[C.Index];
+  }
+  const CycleT &deref(CycleRef C) const {
+    assert(C.Index < NumCycles);
+    return Cycles[C.Index];
+  }
+  /// The handle for a stored cycle.
+  CycleRef ref(const CycleT &C) const { return CycleRef(getCycleIndex(C)); }
 
   void verifyBlockNumberEpoch(const FunctionT *Fn) const {
     assert(BlockNumberEpoch ==
                GraphTraits<const FunctionT *>::getNumberEpoch(Fn) &&
            "CycleInfo used with outdated block number epoch");
   }
-  void addToBlockMap(BlockT *Block, CycleT *Cycle);
-
-  /// Build BlockLayout and every cycle's [IdxBegin, IdxEnd) slice
-  /// from the innermost-cycle map and the current cycle tree.
-  void layoutBlocks(ArrayRef<BlockT *> Order);
+  void addToBlockMap(BlockT *Block, CycleRef C);
 
 public:
+  /// Iteration over child cycles, yielding handles. The first child (if any)
+  /// immediately follows this cycle in the preorder array, and each next
+  /// sibling follows the previous child's subtree.
+  struct const_child_iterator
+      : iterator_facade_base<const_child_iterator, std::forward_iterator_tag,
+                             CycleRef, std::ptrdiff_t, CycleRef, CycleRef> {
+    const GenericCycleInfo *CI = nullptr;
+    unsigned Index = 0;
+
+    const_child_iterator() = default;
+    const_child_iterator(const GenericCycleInfo &CI, unsigned Index)
+        : CI(&CI), Index(Index) {}
+
+    CycleRef operator*() const { return CycleRef(Index); }
+    const_child_iterator &operator++() {
+      Index += 1 + CI->Cycles[Index].NumDescendants;
+      return *this;
+    }
+    bool operator==(const const_child_iterator &Other) const {
+      return Index == Other.Index;
+    }
+  };
+
   GenericCycleInfo() = default;
   GenericCycleInfo(GenericCycleInfo &&) = default;
   GenericCycleInfo &operator=(GenericCycleInfo &&) = default;
@@ -243,76 +195,134 @@ public:
   const FunctionT *getFunction() const { return Context.getFunction(); }
   const ContextT &getSSAContext() const { return Context; }
 
+  /// All cycles in forest preorder.
+  auto cycles() const {
+    return map_range(seq(0u, NumCycles),
+                     [](unsigned I) { return CycleRef(I); });
+  }
+
   /// \brief Find the innermost cycle containing \p Block.
   ///
-  /// \returns the innermost cycle containing \p Block or nullptr if
+  /// \returns the innermost cycle containing \p Block or an invalid handle if
   ///          it is not contained in any cycle.
-  CycleT *getCycle(const BlockT *Block) const {
+  CycleRef getCycle(const BlockT *Block) const {
     verifyBlockNumberEpoch(Block->getParent());
     unsigned Number = GraphTraits<const BlockT *>::getNumber(Block);
-    return Number < BlockMap.size() ? BlockMap[Number] : nullptr;
+    // A block added after compute() that no cycle contains (e.g. a critical
+    // edge MachineSink split outside every cycle) has a number beyond BlockMap.
+    if (Number >= BlockMap.size())
+      return CycleRef();
+    return BlockMap[Number];
+  }
+
+  BlockT *getHeader(CycleRef C) const {
+    return BlockLayout[deref(C).EntryBegin];
+  }
+  bool isReducible(CycleRef C) const { return deref(C).EntrySize == 1; }
+  CycleRef getParentCycle(CycleRef C) const { return deref(C).Parent; }
+  unsigned getDepth(CycleRef C) const { return deref(C).Depth; }
+  size_t getNumBlocks(CycleRef C) const {
+    const CycleT &Cyc = deref(C);
+    return Cyc.IdxEnd - Cyc.IdxBegin;
+  }
+
+  ArrayRef<BlockT *> getEntries(CycleRef C) const {
+    const CycleT &Cyc = deref(C);
+    return ArrayRef(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
+  }
+  bool isEntry(CycleRef C, const BlockT *Block) const {
+    return is_contained(getEntries(C), Block);
+  }
+  // Append a one-element entry list past the Euler tour; storing Block at
+  // IdxBegin instead would disturb the block order.
+  void setSingleEntry(CycleRef C, BlockT *Block) {
+    CycleT &Cyc = deref(C);
+    Cyc.EntryBegin = BlockLayout.size();
+    BlockLayout.push_back(Block);
+    Cyc.EntrySize = 1;
+  }
+  /// Returns true iff \p Outer contains \p Inner. O(1). Non-strict.
+  bool contains(CycleRef Outer, CycleRef Inner) const {
+    const CycleT &O = deref(Outer);
+    const CycleT &I = deref(Inner);
+    return O.IdxBegin <= I.IdxBegin && I.IdxEnd <= O.IdxEnd;
+  }
+  iterator_range<const_child_iterator> children(CycleRef C) const {
+    unsigned First = C.Index + 1;
+    return llvm::make_range(
+        const_child_iterator(*this, First),
+        const_child_iterator(*this, First + deref(C).NumDescendants));
+  }
+  Printable printEntries(CycleRef C, const ContextT &Ctx) const {
+    return Printable([this, C, &Ctx](raw_ostream &Out) {
+      ListSeparator LS(" ");
+      for (auto *Entry : getEntries(C))
+        Out << LS << Ctx.print(Entry);
+    });
   }
 
   /// \brief Return whether \p Block is contained in \p C. O(1).
-  bool contains(const CycleT &C, const BlockT *Block) const {
-    return C.contains(getCycle(Block));
+  bool contains(CycleRef C, const BlockT *Block) const {
+    CycleRef Inner = getCycle(Block);
+    return Inner.isValid() && contains(C, Inner);
   }
 
   /// \brief Return the blocks of \p C, including those of nested cycles.
-  ArrayRef<BlockT *> getBlocks(const CycleT &C) const {
-    return ArrayRef<BlockT *>(BlockLayout.begin() + C.IdxBegin,
-                              BlockLayout.begin() + C.IdxEnd);
+  ArrayRef<BlockT *> getBlocks(CycleRef C) const {
+    const CycleT &Cyc = deref(C);
+    return ArrayRef<BlockT *>(BlockLayout.begin() + Cyc.IdxBegin,
+                              BlockLayout.begin() + Cyc.IdxEnd);
   }
 
-  CycleT *getSmallestCommonCycle(CycleT *A, CycleT *B) const;
-  CycleT *getSmallestCommonCycle(BlockT *A, BlockT *B) const;
+  CycleRef getSmallestCommonCycle(CycleRef A, CycleRef B) const;
+  CycleRef getSmallestCommonCycle(BlockT *A, BlockT *B) const;
 
   /// \brief Return the depth of the innermost cycle containing \p Block, or 0
   /// if it is not contained in any cycle.
   unsigned getCycleDepth(const BlockT *Block) const {
-    CycleT *Cycle = getCycle(Block);
-    return Cycle ? Cycle->getDepth() : 0;
+    CycleRef C = getCycle(Block);
+    return C.isValid() ? getDepth(C) : 0;
   }
 
-  CycleT *getTopLevelParentCycle(const BlockT *Block) const {
-    CycleT *Cycle = getCycle(Block);
-    while (Cycle && Cycle->ParentCycle)
-      Cycle = Cycle->ParentCycle;
-    return Cycle;
+  CycleRef getTopLevelParentCycle(const BlockT *Block) const {
+    CycleRef C = getCycle(Block);
+    if (!C)
+      return C;
+    while (CycleRef P = getParentCycle(C))
+      C = P;
+    return C;
   }
 
   /// Return all of the successor blocks of \p C: the blocks outside of \p C
   /// which are branched to from within it.
-  void getExitBlocks(const CycleT &C,
-                     SmallVectorImpl<BlockT *> &TmpStorage) const;
+  void getExitBlocks(CycleRef C, SmallVectorImpl<BlockT *> &TmpStorage) const;
 
   /// Return all blocks of \p C that have a successor outside of \p C.
-  void getExitingBlocks(const CycleT &C,
+  void getExitingBlocks(CycleRef C,
                         SmallVectorImpl<BlockT *> &TmpStorage) const;
 
   /// Return the preheader block for \p C. Pre-header is well-defined for
   /// reducible cycle in docs/LoopTerminology.md as: the only one entering
   /// block and its only edge is to the entry block. Return null for
   /// irreducible cycles.
-  BlockT *getCyclePreheader(const CycleT &C) const;
+  BlockT *getCyclePreheader(CycleRef C) const;
 
   /// If \p C has exactly one entry with exactly one predecessor, return it,
   /// otherwise return nullptr.
-  BlockT *getCyclePredecessor(const CycleT &C) const;
+  BlockT *getCyclePredecessor(CycleRef C) const;
 
   /// Verify that \p C is actually a well-formed cycle in the CFG.
-  void verifyCycle(const CycleT &C) const;
+  void verifyCycle(CycleRef C) const;
 
   /// Verify the parent-child relations of \p C.
   ///
   /// Note that this does \em not check that \p C is really a cycle in the CFG.
-  void verifyCycleNest(const CycleT &C) const;
+  void verifyCycleNest(CycleRef C) const;
 
-  /// Assumes that \p Cycle is the innermost cycle containing \p Block.
-  /// \p Block will be appended to \p Cycle and all of its parent cycles.
-  /// \p Block will be added to BlockMap with \p Cycle and
-  /// BlockMapTopLevel with \p Cycle's top level parent cycle.
-  void addBlockToCycle(BlockT *Block, CycleT *Cycle);
+  /// Assumes that \p C is the innermost cycle containing \p Block.
+  /// \p Block will be appended to \p C and all of its parent cycles.
+  /// \p Block will be added to BlockMap with \p C.
+  void addBlockToCycle(BlockT *Block, CycleRef C);
 
   /// Methods for debug and self-test.
   //@{
@@ -320,37 +330,22 @@ public:
   void verify() const;
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
-  Printable print(const CycleT *Cycle) const;
+  Printable print(CycleRef C) const;
   //@}
 
   /// Iteration over top-level cycles.
   //@{
-  using const_toplevel_iterator_base =
-      typename std::vector<std::unique_ptr<CycleT>>::const_iterator;
-  struct const_toplevel_iterator
-      : iterator_adaptor_base<const_toplevel_iterator,
-                              const_toplevel_iterator_base> {
-    using Base = iterator_adaptor_base<const_toplevel_iterator,
-                                       const_toplevel_iterator_base>;
-
-    const_toplevel_iterator() = default;
-    explicit const_toplevel_iterator(const_toplevel_iterator_base I)
-        : Base(I) {}
-
-    const const_toplevel_iterator_base &wrapped() { return Base::wrapped(); }
-    CycleT *operator*() const { return Base::I->get(); }
-  };
+  using const_toplevel_iterator = const_child_iterator;
 
   const_toplevel_iterator toplevel_begin() const {
-    return const_toplevel_iterator{TopLevelCycles.begin()};
+    return const_toplevel_iterator(*this, 0);
   }
   const_toplevel_iterator toplevel_end() const {
-    return const_toplevel_iterator{TopLevelCycles.end()};
+    return const_toplevel_iterator(*this, NumCycles);
   }
 
   iterator_range<const_toplevel_iterator> toplevel_cycles() const {
-    return llvm::make_range(const_toplevel_iterator{TopLevelCycles.begin()},
-                            const_toplevel_iterator{TopLevelCycles.end()});
+    return llvm::make_range(toplevel_begin(), toplevel_end());
   }
   //@}
 };

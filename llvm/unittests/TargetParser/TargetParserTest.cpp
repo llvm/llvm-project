@@ -2828,6 +2828,115 @@ TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
             (AMDGPU::IsaVersion{0, 0, 0}));
 }
 
+TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
+  using AMDGPU::TargetID;
+  using AMDGPU::TargetIDSetting;
+
+  // A well-formed target id parses, canonicalizing the processor and features.
+  {
+    std::optional<TargetID> TID =
+        TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx90a");
+    ASSERT_TRUE(TID.has_value());
+    EXPECT_EQ(TID->getGPUKind(), AMDGPU::GK_GFX90A);
+    EXPECT_EQ(TID->getXnackSetting(), TargetIDSetting::Any);
+    EXPECT_EQ(TID->getSramEccSetting(), TargetIDSetting::Any);
+  }
+
+  // Explicit feature modifiers are applied.
+  {
+    std::optional<TargetID> TID = TargetID::parseTargetIDString(
+        "amdgcn-amd-amdhsa-unknown-gfx90a:xnack+:sramecc-");
+    ASSERT_TRUE(TID.has_value());
+    EXPECT_EQ(TID->getXnackSetting(), TargetIDSetting::On);
+    EXPECT_EQ(TID->getSramEccSetting(), TargetIDSetting::Off);
+  }
+
+  // The processor+features field may be empty; the ISA is taken from the
+  // triple subarch.
+  EXPECT_TRUE(TargetID::parseTargetIDString("amdgpu9.0a-amd-amdhsa-unknown-")
+                  .has_value());
+
+  // Structurally malformed strings (missing the processor+features field or a
+  // non-AMDGCN triple) are rejected.
+  EXPECT_FALSE(TargetID::parseTargetIDString("not-a-valid-target-id"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("x86_64-unknown-linux-gnu-gfx90a"));
+
+  // An unrecognized processor is rejected.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfxbogus"));
+
+  // A feature the processor does not support is rejected: gfx600 has neither
+  // xnack nor sramecc.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx600:xnack+"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx900:sramecc+"));
+
+  // xnack is only a valid modifier when the processor supports on/off modes.
+  // gfx1250 has xnack permanently enabled (FEATURE_XNACK without
+  // FEATURE_XNACK_ON_OFF_MODES), so an xnack modifier is rejected.
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx1250:xnack+"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx1250:xnack-"));
+
+  // A feature modifier with no "+"/"-" sign is rejected.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx908:xnack"));
+
+  // An unknown feature name is rejected, even alongside a valid one.
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx908:unknown+"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx908:sramecc+:unknown+"));
+
+  // A repeated feature is rejected.
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx908:xnack+:xnack+"));
+
+  // Empty processor and/or feature components must be handled without crashing.
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-:"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-::"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx900:"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx900::"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx900:xnack+:"));
+
+  // Constructing directly from a triple and processor+features string must also
+  // be crash-safe on empty components.
+  Triple AMDHSA("amdgcn-amd-amdhsa");
+  (void)TargetID(AMDHSA, ":");
+  (void)TargetID(AMDHSA, "::");
+  (void)TargetID(AMDHSA, "gfx900:");
+
+  // TargetID::parse validates a separate triple + processor/features string.
+  {
+    std::optional<TargetID> TID = TargetID::parse(AMDHSA, "gfx90a:xnack+");
+    ASSERT_TRUE(TID.has_value());
+    EXPECT_EQ(TID->getGPUKind(), AMDGPU::GK_GFX90A);
+    EXPECT_EQ(TID->getXnackSetting(), AMDGPU::TargetIDSetting::On);
+  }
+
+  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908:xnack+:sramecc-")
+                ->getCanonicalFeatureString(),
+            "gfx908:sramecc-:xnack+");
+  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908")->getCanonicalFeatureString(),
+            "gfx908");
+  EXPECT_EQ(TargetID::parse(Triple("amdgcn-amd-amdpal"), "gfx908:xnack-")
+                ->getCanonicalFeatureString(),
+            "gfx908:xnack-");
+  EXPECT_TRUE(TargetID::parse(AMDHSA, "").has_value());
+  EXPECT_FALSE(TargetID::parse(AMDHSA, "gfxbogus").has_value());
+  EXPECT_FALSE(TargetID::parse(AMDHSA, "gfx600:xnack+").has_value());
+  EXPECT_FALSE(TargetID::parse(AMDHSA, "gfx900:").has_value());
+  // A non-AMDGCN triple has no target-id features.
+  EXPECT_FALSE(
+      TargetID::parse(Triple("r600-unknown-unknown"), "cypress").has_value());
+}
+
 TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {
   using AMDGPU::TargetID;
   Triple AMDHSA("amdgcn-amd-amdhsa");

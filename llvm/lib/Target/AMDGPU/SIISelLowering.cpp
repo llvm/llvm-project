@@ -7989,10 +7989,6 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   MVT IntVT = MVT::getIntegerVT(ValSize);
   const GCNSubtarget *ST = TLI.getSubtarget();
 
-  if ((IsPermLane16 && !ST->hasPermlane16Insts()) ||
-      (IID == Intrinsic::amdgcn_mov_dpp8 && !ST->hasDPP8()))
-    return emitRemovedIntrinsicError(DAG, SL, VT);
-
   unsigned SplitSize = 32;
   if (IID == Intrinsic::amdgcn_update_dpp && (ValSize % 64 == 0) &&
       ST->hasDPALU_DPP() &&
@@ -10330,6 +10326,16 @@ static void packImage16bitOpsToDwords(SelectionDAG &DAG, SDValue Op,
   }
 }
 
+/// Emit a DiagnosticInfoUnsupported for an unsupported image intrinsic and
+/// return poison values of \p ResultTypes, preserving the chain if present.
+static SDValue diagnoseUnsupportedImage(SelectionDAG &DAG, SDValue Op,
+                                        ArrayRef<EVT> ResultTypes,
+                                        const SDLoc &DL, const Twine &Msg) {
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(), Msg, DL.getDebugLoc()));
+  return DAG.getErrorMergeValues(ResultTypes, Op.getOperand(0), DL);
+}
+
 SDValue SITargetLowering::lowerImage(SDValue Op,
                                      const AMDGPU::ImageDimIntrinsicInfo *Intr,
                                      SelectionDAG &DAG, bool WithChain) const {
@@ -10376,6 +10382,12 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
          IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16_NORTN ||
          IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16 ||
          IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16_NORTN);
+
+    if (!IsAtomicPacked16Bit && VData.getValueSizeInBits() != 32 &&
+        VData.getValueSizeInBits() != 64) {
+      return diagnoseUnsupportedImage(DAG, Op, OrigResultTypes, DL,
+                                      "unsupported image atomic data type");
+    }
 
     bool Is64Bit = VData.getValueSizeInBits() == 64;
     if (BaseOpcode->AtomicX2) {
@@ -10696,21 +10708,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx90a,
                                      NumVDataDwords, NumVAddrDwords);
       if (Opcode == -1) {
-        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-            DAG.getMachineFunction().getFunction(),
-            "requested image instruction is not supported on this GPU",
-            DL.getDebugLoc()));
-
-        unsigned Idx = 0;
-        SmallVector<SDValue, 3> RetValues(OrigResultTypes.size());
-        for (EVT VT : OrigResultTypes) {
-          if (VT == MVT::Other)
-            RetValues[Idx++] = Op.getOperand(0); // Chain
-          else
-            RetValues[Idx++] = DAG.getPOISON(VT);
-        }
-
-        return DAG.getMergeValues(RetValues, DL);
+        return diagnoseUnsupportedImage(
+            DAG, Op, OrigResultTypes, DL,
+            "requested image instruction is not supported on this GPU");
       }
     }
     if (Opcode == -1 &&
@@ -11000,17 +11000,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return emitRemovedIntrinsicError(DAG, DL, VT);
     return DAG.getNode(AMDGPUISD::RCP_LEGACY, DL, VT, Op.getOperand(1));
   case Intrinsic::amdgcn_fma_legacy:
-    if (!Subtarget->hasFmaLegacy32Insts())
-      return emitRemovedIntrinsicError(DAG, DL, VT);
-    return SDValue();
   case Intrinsic::amdgcn_sudot4:
   case Intrinsic::amdgcn_sudot8:
-    if (!Subtarget->hasDot8Insts())
-      return emitRemovedIntrinsicError(DAG, DL, VT);
-    return SDValue();
   case Intrinsic::amdgcn_tanh:
-    if (!Subtarget->hasTanhInsts())
-      return emitRemovedIntrinsicError(DAG, DL, VT);
     return SDValue();
   case Intrinsic::amdgcn_rsq_clamp: {
     if (Subtarget->getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
@@ -11193,9 +11185,20 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_fract:
     return DAG.getNode(AMDGPUISD::FRACT, DL, VT, Op.getOperand(1));
 
-  case Intrinsic::amdgcn_class:
-    return DAG.getNode(AMDGPUISD::FP_CLASS, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2));
+  case Intrinsic::amdgcn_class: {
+    SDValue Src = Op.getOperand(1);
+    EVT SrcVT = Src.getValueType();
+    bool IsLegal = SrcVT == MVT::f32 || SrcVT == MVT::f64 ||
+                   (SrcVT == MVT::f16 && Subtarget->has16BitInsts());
+    if (!IsLegal) {
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          DAG.getMachineFunction().getFunction(),
+          "llvm.amdgcn.class only supports f16, f32, and f64",
+          DL.getDebugLoc()));
+      return DAG.getPOISON(VT);
+    }
+    return DAG.getNode(AMDGPUISD::FP_CLASS, DL, VT, Src, Op.getOperand(2));
+  }
   case Intrinsic::amdgcn_div_fmas:
     return DAG.getNode(AMDGPUISD::DIV_FMAS, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(4));
@@ -11479,6 +11482,11 @@ SDValue SITargetLowering::lowerRawBufferAtomicIntrin(SDValue Op,
   SDLoc DL(Op);
 
   SDValue VData = Op.getOperand(2);
+  if (VData.getValueSizeInBits() != 32 && VData.getValueSizeInBits() != 64) {
+    SmallVector<EVT, 2> ResultTypes(Op->values());
+    return diagnoseUnsupportedImage(DAG, Op, ResultTypes, DL,
+                                    "unsupported buffer atomic data type");
+  }
   SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
   auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
   auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
@@ -11507,6 +11515,11 @@ SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
 
   SDValue VData = Op.getOperand(2);
+  if (VData.getValueSizeInBits() != 32 && VData.getValueSizeInBits() != 64) {
+    SmallVector<EVT, 2> ResultTypes(Op->values());
+    return diagnoseUnsupportedImage(DAG, Op, ResultTypes, DL,
+                                    "unsupported buffer atomic data type");
+  }
   SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
   auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
   auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
@@ -11820,6 +11833,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                          AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap: {
+    SDValue Src = Op.getOperand(2);
+    if (Src.getValueSizeInBits() != 32 && Src.getValueSizeInBits() != 64) {
+      SmallVector<EVT, 2> ResultTypes(Op->values());
+      return diagnoseUnsupportedImage(DAG, Op, ResultTypes, DL,
+                                      "unsupported buffer atomic data type");
+    }
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(4), DAG);
     auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
     auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
@@ -11844,6 +11863,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap: {
+    SDValue Src = Op.getOperand(2);
+    if (Src.getValueSizeInBits() != 32 && Src.getValueSizeInBits() != 64) {
+      SmallVector<EVT, 2> ResultTypes(Op->values());
+      return diagnoseUnsupportedImage(DAG, Op, ResultTypes, DL,
+                                      "unsupported buffer atomic data type");
+    }
     SDValue Rsrc = bufferRsrcPtrToVector(Op->getOperand(4), DAG);
     auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(6), DAG);
     auto SOffset = selectSOffset(Op.getOperand(7), DAG, Subtarget);
@@ -11879,11 +11904,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     assert(NodePtr.getValueType() == MVT::i64);
     assert(RayDir.getValueType() == MVT::v3f32);
-
-    if (!Subtarget->hasBVHDualAndBVH8Insts()) {
-      emitRemovedIntrinsicError(DAG, DL, Op.getValueType());
-      return SDValue();
-    }
 
     bool IsBVH8 = IntrID == Intrinsic::amdgcn_image_bvh8_intersect_ray;
     const unsigned NumVDataDwords = 10;
@@ -11924,11 +11944,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
            NodePtr.getValueType() == MVT::i64);
     assert(RayDir.getValueType() == MVT::v3f16 ||
            RayDir.getValueType() == MVT::v3f32);
-
-    if (!Subtarget->hasGFX10_AEncoding()) {
-      emitRemovedIntrinsicError(DAG, DL, Op.getValueType());
-      return SDValue();
-    }
 
     const bool IsGFX11 = AMDGPU::isGFX11(*Subtarget);
     const bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
@@ -12121,14 +12136,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                              Chain, Ptr, MII->getMemOperand());
   }
   case Intrinsic::amdgcn_av_load_b128: {
-    if (!Subtarget->hasFlatGlobalInsts()) {
-      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-          DAG.getMachineFunction().getFunction(),
-          "llvm.amdgcn.av.load.b128 not supported on subtarget",
-          DL.getDebugLoc()));
-      return DAG.getMergeValues(
-          {DAG.getPOISON(Op->getValueType(0)), Op->getOperand(0)}, DL);
-    }
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
     SDValue Ptr = Op->getOperand(2);
@@ -12318,11 +12325,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_exp_compr: {
-    if (!Subtarget->hasCompressedExport()) {
-      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-          DAG.getMachineFunction().getFunction(),
-          "intrinsic not supported on subtarget", DL.getDebugLoc()));
-    }
     SDValue Src0 = Op.getOperand(4);
     SDValue Src1 = Op.getOperand(5);
     // Hack around illegal type on SI by directly selecting it.
@@ -12852,13 +12854,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                          Ptr, MII->getMemOperand());
   }
   case Intrinsic::amdgcn_av_store_b128: {
-    if (!Subtarget->hasFlatGlobalInsts()) {
-      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-          DAG.getMachineFunction().getFunction(),
-          "llvm.amdgcn.av.store.b128 not supported on subtarget",
-          DL.getDebugLoc()));
-      return Op->getOperand(0); // return the input chain
-    }
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
     SDValue Ptr = Op->getOperand(2);

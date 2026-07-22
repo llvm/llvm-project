@@ -228,16 +228,16 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
       MachineInstr *SgprDef = MRI.getVRegDef(Op.getReg());
 
       // SgprDef defined inside cycle
-      MachineCycle *FromCycle = CI->getCycle(SgprDef->getParent());
-      if (FromCycle == nullptr)
+      CycleRef FromCycle = CI->getCycle(SgprDef->getParent());
+      if (!FromCycle)
         continue;
 
-      MachineCycle *ToCycle = CI->getCycle(SuccToSinkTo);
+      CycleRef ToCycle = CI->getCycle(SuccToSinkTo);
       // Check if there is a FromCycle that contains SgprDef's basic block but
       // does not contain SuccToSinkTo and also has divergent exit condition.
-      while (FromCycle && !FromCycle->contains(ToCycle)) {
+      while (FromCycle && !(ToCycle && CI->contains(FromCycle, ToCycle))) {
         SmallVector<MachineBasicBlock *, 1> ExitingBlocks;
-        CI->getExitingBlocks(*FromCycle, ExitingBlocks);
+        CI->getExitingBlocks(FromCycle, ExitingBlocks);
 
         // FromCycle has divergent exit condition.
         for (MachineBasicBlock *ExitingBlock : ExitingBlocks) {
@@ -245,7 +245,7 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
             return false;
         }
 
-        FromCycle = FromCycle->getParentCycle();
+        FromCycle = CI->getParentCycle(FromCycle);
       }
     }
   }
@@ -4798,7 +4798,7 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   case MCOI::OPERAND_GENERIC_4:
   case MCOI::OPERAND_GENERIC_5:
     // Just ignore anything else.
-    return true;
+    return false;
   default:
     llvm_unreachable("invalid operand type");
   }
