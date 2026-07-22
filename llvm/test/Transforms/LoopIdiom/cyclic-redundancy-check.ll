@@ -1272,10 +1272,9 @@ define i32 @crc.strategy.override.optsize(i32 %checksum, i32 %msg) optsize {
 ; CLMUL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
 ; CLMUL-NEXT:  [[ENTRY:.*:]]
 ; CLMUL-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CHECKSUM]], [[MSG]]
-; CLMUL-NEXT:    [[TCBITS_CAST:%.*]] = zext i32 [[XOR_CRC_DATA1]] to i64
-; CLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i64 @llvm.clmul.i64(i64 [[TCBITS_CAST]], i64 4770502929)
-; CLMUL-NEXT:    [[QUOT_MASK:%.*]] = and i64 [[CLMUL_MU]], 4294967295
-; CLMUL-NEXT:    [[CLMUL_GP:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_MASK]], i64 67601)
+; CLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[XOR_CRC_DATA1]], i32 475535633)
+; CLMUL-NEXT:    [[QUOT_CAST:%.*]] = zext i32 [[CLMUL_MU]] to i64
+; CLMUL-NEXT:    [[CLMUL_GP:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_CAST]], i64 67601)
 ; CLMUL-NEXT:    [[CRC_RECAST:%.*]] = zext i32 [[CHECKSUM]] to i64
 ; CLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i64 [[CRC_RECAST]], [[CLMUL_GP]]
 ; CLMUL-NEXT:    [[CRC_LSHR2:%.*]] = lshr i64 [[XOR_CRC_MULT]], 32

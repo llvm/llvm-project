@@ -1029,10 +1029,9 @@ define i32 @crc32.le.tc32(i32 %checksum, i32 %msg) {
 ; ZBC-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
 ; ZBC-NEXT:  [[ENTRY:.*:]]
 ; ZBC-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CHECKSUM]], [[MSG]]
-; ZBC-NEXT:    [[TCBITS_CAST:%.*]] = zext i32 [[XOR_CRC_DATA1]] to i64
-; ZBC-NEXT:    [[CLMUL_MU:%.*]] = call i64 @llvm.clmul.i64(i64 [[TCBITS_CAST]], i64 4770502929)
-; ZBC-NEXT:    [[QUOT_MASK:%.*]] = and i64 [[CLMUL_MU]], 4294967295
-; ZBC-NEXT:    [[CLMUL_GP:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_MASK]], i64 67601)
+; ZBC-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[XOR_CRC_DATA1]], i32 475535633)
+; ZBC-NEXT:    [[QUOT_CAST:%.*]] = zext i32 [[CLMUL_MU]] to i64
+; ZBC-NEXT:    [[CLMUL_GP:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_CAST]], i64 67601)
 ; ZBC-NEXT:    [[CRC_RECAST:%.*]] = zext i32 [[CHECKSUM]] to i64
 ; ZBC-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i64 [[CRC_RECAST]], [[CLMUL_GP]]
 ; ZBC-NEXT:    [[CRC_LSHR2:%.*]] = lshr i64 [[XOR_CRC_MULT]], 32
@@ -1119,10 +1118,9 @@ define i64 @crc64.le.tc64(i64 %checksum, i64 %msg) {
 ; ZBC-SAME: i64 [[CHECKSUM:%.*]], i64 [[MSG:%.*]]) #[[ATTR0]] {
 ; ZBC-NEXT:  [[ENTRY:.*:]]
 ; ZBC-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i64 [[CHECKSUM]], [[MSG]]
-; ZBC-NEXT:    [[TCBITS_CAST:%.*]] = zext i64 [[XOR_CRC_DATA1]] to i128
-; ZBC-NEXT:    [[CLMUL_MU:%.*]] = call i128 @llvm.clmul.i128(i128 [[TCBITS_CAST]], i128 28074037147910805777)
-; ZBC-NEXT:    [[QUOT_MASK:%.*]] = and i128 [[CLMUL_MU]], 18446744073709551615
-; ZBC-NEXT:    [[CLMUL_GP:%.*]] = call i128 @llvm.clmul.i128(i128 [[QUOT_MASK]], i128 67601)
+; ZBC-NEXT:    [[CLMUL_MU:%.*]] = call i64 @llvm.clmul.i64(i64 [[XOR_CRC_DATA1]], i64 -8819450999508297455)
+; ZBC-NEXT:    [[QUOT_CAST:%.*]] = zext i64 [[CLMUL_MU]] to i128
+; ZBC-NEXT:    [[CLMUL_GP:%.*]] = call i128 @llvm.clmul.i128(i128 [[QUOT_CAST]], i128 67601)
 ; ZBC-NEXT:    [[CRC_RECAST:%.*]] = zext i64 [[CHECKSUM]] to i128
 ; ZBC-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i128 [[CRC_RECAST]], [[CLMUL_GP]]
 ; ZBC-NEXT:    [[CRC_LSHR2:%.*]] = lshr i128 [[XOR_CRC_MULT]], 64

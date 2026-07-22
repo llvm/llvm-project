@@ -704,10 +704,9 @@ define i64 @crc64.le.tc64(i64 %checksum, i64 %msg) {
 ; PCLMUL-SAME: i64 [[CHECKSUM:%.*]], i64 [[MSG:%.*]]) #[[ATTR0]] {
 ; PCLMUL-NEXT:  [[ENTRY:.*:]]
 ; PCLMUL-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i64 [[CHECKSUM]], [[MSG]]
-; PCLMUL-NEXT:    [[TCBITS_CAST:%.*]] = zext i64 [[XOR_CRC_DATA1]] to i128
-; PCLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i128 @llvm.clmul.i128(i128 [[TCBITS_CAST]], i128 28074037147910805777)
-; PCLMUL-NEXT:    [[QUOT_MASK:%.*]] = and i128 [[CLMUL_MU]], 18446744073709551615
-; PCLMUL-NEXT:    [[CLMUL_GP:%.*]] = call i128 @llvm.clmul.i128(i128 [[QUOT_MASK]], i128 67601)
+; PCLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i64 @llvm.clmul.i64(i64 [[XOR_CRC_DATA1]], i64 -8819450999508297455)
+; PCLMUL-NEXT:    [[QUOT_CAST:%.*]] = zext i64 [[CLMUL_MU]] to i128
+; PCLMUL-NEXT:    [[CLMUL_GP:%.*]] = call i128 @llvm.clmul.i128(i128 [[QUOT_CAST]], i128 67601)
 ; PCLMUL-NEXT:    [[CRC_RECAST:%.*]] = zext i64 [[CHECKSUM]] to i128
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i128 [[CRC_RECAST]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_LSHR2:%.*]] = lshr i128 [[XOR_CRC_MULT]], 64
