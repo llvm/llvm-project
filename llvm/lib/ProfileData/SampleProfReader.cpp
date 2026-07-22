@@ -1307,8 +1307,14 @@ std::error_code SampleProfileReaderExtBinaryBase::readNameTableSec(
   return readNameTableSecLegacy(IsMD5, FixedLengthMD5);
 }
 
+// Read the Eytzinger layout for SecNameTable from an ExtBinary MD5 profile.
+//
+// The section consists of three sequential ULEB128 symbol counts (CS, Flat, and
+// Inlinees) followed by their corresponding arrays of 64-bit MD5 hash keys laid
+// out in Eytzinger order.
 std::error_code SampleProfileReaderExtBinaryBase::readNameTableSecEytzinger(
     bool IsMD5, bool FixedLengthMD5) {
+  assert(IsMD5 && "Eytzinger name tables require MD5 representation");
   if (!IsMD5)
     return sampleprof_error::malformed;
 
