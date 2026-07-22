@@ -682,7 +682,7 @@ public:
                                       NodeBuilder &Bldr, ExplodedNode *Pred);
 
   void handleUOExtension(ExplodedNode *N, const UnaryOperator *U,
-                         NodeBuilder &Bldr);
+                         ExplodedNodeSet &Dst);
 
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,
