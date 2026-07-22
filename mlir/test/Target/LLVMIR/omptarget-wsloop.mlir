@@ -31,7 +31,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   }
 }
 
-// CHECK: define void @[[FUNC0:.*]](ptr %[[ARG0:.*]])
+// CHECK: define hidden void @[[FUNC0:.*]](ptr %[[ARG0:.*]])
 // CHECK:   %[[STRUCTARG:.*]] = alloca { ptr }, align 8, addrspace(5)
 // CHECK:   %[[STRUCTARG_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[STRUCTARG]] to ptr
 // CHECK:   %[[GEP:.*]] = getelementptr { ptr }, ptr addrspace(5) %[[STRUCTARG]], i32 0, i32 0
@@ -45,7 +45,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:   %[[GEP3:.*]] = getelementptr [10 x i32], ptr %[[LOADGEP]], i32 0, i32 %[[TMP2:.*]]
 // CHECK:   store i32 %[[VAL0:.*]], ptr %[[GEP3]], align 4
 
-// CHECK: define void @[[FUNC_EMPTY_WSLOOP:.*]]()
+// CHECK: define hidden void @[[FUNC_EMPTY_WSLOOP:.*]]()
 // CHECK:   call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB2:[0-9]+]] to ptr), ptr @[[LOOP_EMPTY_BODY_FN:.*]], ptr null, i32 10, i32 %[[NUM_THREADS:.*]], i32 0, i8 0)
 
 // CHECK: define internal void @[[LOOP_EMPTY_BODY_FN]](i32 %[[LOOP_CNT:.*]])

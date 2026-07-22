@@ -90,6 +90,7 @@ add_header_library(
     libc.hdr.func.realloc
     libc.src.__support.common
     libc.src.__support.integer_to_string
+    libc.src.__support.macros.null_check
     libc.src.string.memory_utils.inline_memcpy
     libc.src.string.memory_utils.inline_memset
     libc.src.string.string_utils
@@ -237,6 +238,7 @@ add_header_library(
   HDRS
     simd.h
   DEPENDS
+    libc.src.__support.macros.optimization
     .utility
     .tuple
 )

@@ -103,6 +103,15 @@ llvm.func @fabs_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @arithmetic_fence_test
+llvm.func @arithmetic_fence_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.arithmetic.fence.f32
+  "llvm.intr.arithmetic.fence"(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.arithmetic.fence.v8f32
+  "llvm.intr.arithmetic.fence"(%arg1) : (vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @sqrt_test
 llvm.func @sqrt_test(%arg0: f32, %arg1: vector<8xf32>) {
   // CHECK: call float @llvm.sqrt.f32
@@ -1420,7 +1429,7 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
 // CHECK-DAG: declare float @llvm.fmuladd.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
-// CHECK-DAG: declare void @llvm.prefetch.p0(ptr readonly captures(none), i32 immarg, i32 immarg, i32 immarg)
+// CHECK-DAG: declare void @llvm.prefetch.p0(ptr readonly captures(none), i32 immarg range(i32 0, 2), i32 immarg range(i32 0, 4), i32 immarg range(i32 0, 2))
 // CHECK-DAG: declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 // CHECK-DAG: declare float @llvm.exp.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.exp.v8f32(<8 x float>) #0

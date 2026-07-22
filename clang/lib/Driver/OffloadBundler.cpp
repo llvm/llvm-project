@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/OffloadBundler.h"
-#include "clang/Basic/Cuda.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/TargetID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
@@ -1002,6 +1002,18 @@ OffloadBundlerConfig::OffloadBundlerConfig()
   }
 }
 
+// Returns the on-disk size recorded in the compressed offload bundle header at
+// the start of \p Blob, or std::nullopt if the header carries no size field.
+static std::optional<size_t> getCompressedBundleSize(StringRef Blob) {
+  Expected<CompressedOffloadBundle::CompressedBundleHeader> HeaderOrErr =
+      CompressedOffloadBundle::CompressedBundleHeader::tryParse(Blob);
+  if (!HeaderOrErr) {
+    consumeError(HeaderOrErr.takeError());
+    return std::nullopt;
+  }
+  return HeaderOrErr->FileSize;
+}
+
 // List bundle IDs. Return true if an error was found.
 Error OffloadBundler::ListBundleIDsInFile(
     StringRef InputFileName, const OffloadBundlerConfig &BundlerConfig) {
@@ -1023,15 +1035,25 @@ Error OffloadBundler::ListBundleIDsInFile(
         (**Contents).getBuffer().drop_front(Offset), "",
         /*RequiresNullTerminator=*/false);
 
+    size_t CurBundleEnd = StringRef::npos;
     if (identify_magic((*Buffer).getBuffer()) ==
         file_magic::offload_bundle_compressed) {
-      NextBundleStart = (*Buffer).getBuffer().find("CCOB", 4);
+      // Locate this bundle's end and the next bundle from the header size.
+      if (std::optional<size_t> Size =
+              getCompressedBundleSize((*Buffer).getBuffer())) {
+        CurBundleEnd = *Size;
+        NextBundleStart = (*Buffer).getBuffer().find("CCOB", *Size);
+      } else {
+        // Legacy bundle without a recorded size: fall back to magic scanning.
+        NextBundleStart = (*Buffer).getBuffer().find("CCOB", 4);
+        CurBundleEnd = NextBundleStart;
+      }
     } else
       NextBundleStart = StringRef::npos;
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
         MemoryBuffer::getMemBuffer(
-            (*Buffer).getBuffer().take_front(NextBundleStart),
+            (*Buffer).getBuffer().take_front(CurBundleEnd),
             InputFileName, // FileName,
             false);
     if (std::error_code EC = CodeOrErr.getError())
@@ -1273,19 +1295,30 @@ Error OffloadBundler::UnbundleFiles() {
         (**CodeOrErr).getBuffer().drop_front(Offset), "",
         /*RequiresNullTerminator=*/false);
 
+    size_t CurBundleEnd = StringRef::npos;
     if (identify_magic((*Buffer).getBuffer()) ==
         file_magic::offload_bundle_compressed) {
-      NextBundleStart = (*Buffer).getBuffer().find("CCOB", 4);
+      // Locate this bundle's end and the next bundle from the header size.
+      if (std::optional<size_t> Size =
+              getCompressedBundleSize((*Buffer).getBuffer())) {
+        CurBundleEnd = *Size;
+        NextBundleStart = (*Buffer).getBuffer().find("CCOB", *Size);
+      } else {
+        // Legacy bundle without a recorded size: fall back to magic scanning.
+        NextBundleStart = (*Buffer).getBuffer().find("CCOB", 4);
+        CurBundleEnd = NextBundleStart;
+      }
     } else if (identify_magic((*Buffer).getBuffer()) ==
                file_magic::offload_bundle) {
       NextBundleStart = (*Buffer).getBuffer().find(
           OFFLOAD_BUNDLER_MAGIC_STR, sizeof(OFFLOAD_BUNDLER_MAGIC_STR));
+      CurBundleEnd = NextBundleStart;
     } else
       NextBundleStart = StringRef::npos;
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> BlobOrErr =
         MemoryBuffer::getMemBuffer(
-            (*Buffer).getBuffer().take_front(NextBundleStart),
+            (*Buffer).getBuffer().take_front(CurBundleEnd),
             BundlerConfig.InputFileNames.front(),
             /*RequiresNullTerminator=*/false);
     if (std::error_code EC = BlobOrErr.getError())

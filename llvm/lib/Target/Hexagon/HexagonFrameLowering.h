@@ -26,7 +26,8 @@ class HexagonRegisterInfo;
 class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class HexagonFrameLowering : public TargetFrameLowering {
 public:

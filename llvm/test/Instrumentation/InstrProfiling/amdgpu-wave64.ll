@@ -1,7 +1,7 @@
 ;; Test that AMDGPU PGO instrumentation generates library calls for Wave64.
 ;; Wave64 targets (e.g., gfx908) should embed wave size 64 in profile data.
 
-; RUN: opt %s -mtriple=amdgcn-amd-amdhsa -passes=instrprof -S | FileCheck %s
+; RUN: opt %s -mtriple=amdgpu-amd-amdhsa -passes=instrprof -S | FileCheck %s
 
 @__hip_cuid_abcdef123 = addrspace(1) global i8 0
 @__profn_kernel_w64 = private constant [10 x i8] c"kernel_w64"
