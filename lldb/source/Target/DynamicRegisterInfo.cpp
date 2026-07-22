@@ -47,7 +47,6 @@ void DynamicRegisterInfo::MoveFrom(DynamicRegisterInfo &&info) {
   m_regs = std::move(info.m_regs);
   m_sets = std::move(info.m_sets);
   m_set_reg_nums = std::move(info.m_set_reg_nums);
-  m_set_names = std::move(info.m_set_names);
   m_value_regs_map = std::move(info.m_value_regs_map);
   m_invalidate_regs_map = std::move(info.m_invalidate_regs_map);
 
@@ -396,6 +395,9 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
     const ArchSpec &arch) {
   assert(!m_finalized);
 
+  llvm::StringMap<uint32_t> set_name_to_idx;
+  uint32_t next_idx = 0;
+
   for (auto it : llvm::enumerate(regs)) {
     uint32_t local_regnum = it.index();
     const DynamicRegisterInfo::Register &reg = it.value();
@@ -428,12 +430,22 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
 
     m_regs.push_back(reg_info);
 
-    uint32_t set = GetRegisterSetIndexByName(reg.set_name, true);
-    assert(set < m_sets.size());
-    assert(set < m_set_reg_nums.size());
-    assert(set < m_set_names.size());
-    m_set_reg_nums[set].push_back(local_regnum);
-  };
+    uint32_t set_idx;
+    if (!set_name_to_idx.contains(reg.set_name)) {
+      set_idx = next_idx;
+
+      set_name_to_idx.insert({reg.set_name, next_idx++});
+      m_set_reg_nums.resize(m_set_reg_nums.size() + 1);
+      RegisterSet new_set = {reg.set_name.GetCString(), nullptr, 0, nullptr};
+      m_sets.push_back(new_set);
+    } else {
+      set_idx = set_name_to_idx.lookup(reg.set_name);
+    }
+
+    assert(set_idx < m_sets.size());
+    assert(set_idx < m_set_reg_nums.size());
+    m_set_reg_nums[set_idx].push_back(local_regnum);
+  }
 
   Finalize(arch);
   return m_regs.size();
@@ -711,22 +723,6 @@ const RegisterSet *DynamicRegisterInfo::GetRegisterSet(uint32_t i) const {
 }
 
 uint32_t
-DynamicRegisterInfo::GetRegisterSetIndexByName(const ConstString &set_name,
-                                               bool can_create) {
-  name_collection::iterator pos, end = m_set_names.end();
-  for (pos = m_set_names.begin(); pos != end; ++pos) {
-    if (*pos == set_name)
-      return std::distance(m_set_names.begin(), pos);
-  }
-
-  m_set_names.push_back(set_name);
-  m_set_reg_nums.resize(m_set_reg_nums.size() + 1);
-  RegisterSet new_set = {set_name.AsCString(nullptr), nullptr, 0, nullptr};
-  m_sets.push_back(new_set);
-  return m_sets.size() - 1;
-}
-
-uint32_t
 DynamicRegisterInfo::ConvertRegisterKindToRegisterNumber(uint32_t kind,
                                                          uint32_t num) const {
   reg_collection::const_iterator pos, end = m_regs.end();
@@ -742,7 +738,6 @@ void DynamicRegisterInfo::Clear() {
   m_regs.clear();
   m_sets.clear();
   m_set_reg_nums.clear();
-  m_set_names.clear();
   m_value_regs_map.clear();
   m_invalidate_regs_map.clear();
   m_reg_data_byte_size = 0;
@@ -770,19 +765,19 @@ void DynamicRegisterInfo::Dump(Stream &s) const {
     if (m_regs[i].alt_name)
       s.Printf(", alt-name = %s", m_regs[i].alt_name);
     if (m_regs[i].value_regs) {
-      s.Printf(", value_regs = [ ");
+      s.PutCString(", value_regs = [ ");
       for (size_t j = 0; m_regs[i].value_regs[j] != LLDB_INVALID_REGNUM; ++j) {
         s.Printf("%s ", m_regs[m_regs[i].value_regs[j]].name);
       }
-      s.Printf("]");
+      s.PutCString("]");
     }
     if (m_regs[i].invalidate_regs) {
-      s.Printf(", invalidate_regs = [ ");
+      s.PutCString(", invalidate_regs = [ ");
       for (size_t j = 0; m_regs[i].invalidate_regs[j] != LLDB_INVALID_REGNUM;
            ++j) {
         s.Printf("%s ", m_regs[m_regs[i].invalidate_regs[j]].name);
       }
-      s.Printf("]");
+      s.PutCString("]");
     }
     s.EOL();
   }
@@ -796,7 +791,7 @@ void DynamicRegisterInfo::Dump(Stream &s) const {
     for (size_t idx = 0; idx < m_sets[i].num_registers; ++idx) {
       s.Printf("%s ", m_regs[m_sets[i].registers[idx]].name);
     }
-    s.Printf("]\n");
+    s.PutCString("]\n");
   }
 }
 

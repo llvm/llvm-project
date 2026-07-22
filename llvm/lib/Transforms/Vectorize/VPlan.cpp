@@ -279,6 +279,8 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
       CurrentParentLoop(CurrentParentLoop), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
+  assert(!isa<VPRegionValue>(Def) &&
+         "VPRegionValue must be materialized before VPTransformState::get");
   if (isa<VPIRValue, VPSymbolicValue>(Def))
     return Def->getUnderlyingValue();
 
@@ -311,6 +313,8 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 }
 
 Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
+  assert(!isa<VPRegionValue>(Def) &&
+         "VPRegionValue must be materialized before VPTransformState::get");
   if (NeedsScalar) {
     assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
             hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
@@ -1006,7 +1010,8 @@ void VPlan::execute(VPTransformState *State) {
 
     Loop *OrigLoop =
         State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
-    auto Blocks = OrigLoop->getBlocksVector();
+    SmallVector<BasicBlock *> Blocks(OrigLoop->block_begin(),
+                                     OrigLoop->block_end());
     Blocks.push_back(ScalarPh);
     while (!OrigLoop->isInnermost())
       State->LI->erase(*OrigLoop->begin());
@@ -1667,8 +1672,7 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
 
 VPSingleDefRecipe *
 VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
-                                          bool Reverse, bool FoldTail,
-                                          DebugLoc DL) {
+                                          bool Reverse, DebugLoc DL) {
   VPlan &Plan = getPlan();
   GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
   if (Reverse) {
@@ -1676,8 +1680,9 @@ VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
     // original scalar loop: drop the GEP no-wrap flags in this case. Otherwise
     // preserve existing flags without no-unsigned-wrap, as we will emit
     // negative indices.
-    GEPNoWrapFlags ReverseFlags =
-        FoldTail ? GEPNoWrapFlags::none() : Flags.withoutNoUnsignedWrap();
+    GEPNoWrapFlags ReverseFlags = Plan.hasTailFolded()
+                                      ? GEPNoWrapFlags::none()
+                                      : Flags.withoutNoUnsignedWrap();
     return tryInsertInstruction(new VPVectorEndPointerRecipe(
         Ptr, &Plan.getVF(), SourceElementTy, /*Stride=*/-1, ReverseFlags, DL));
   }

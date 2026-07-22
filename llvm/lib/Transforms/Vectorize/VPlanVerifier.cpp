@@ -334,6 +334,13 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         break;
       }
     }
+    if (const auto *DIV = dyn_cast<VPDerivedIVRecipe>(&R)) {
+      if (!DIV->getStartValue()->isDefinedOutsideLoopRegions()) {
+        errs() << "VPDerivedIVRecipe must have start value defined outside "
+                  "loop regions\n";
+        return false;
+      }
+    }
     if (const auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
       unsigned NumOps = ScalarIVSteps->getNumOperands();
       if (NumOps != 3 && NumOps != 4) {

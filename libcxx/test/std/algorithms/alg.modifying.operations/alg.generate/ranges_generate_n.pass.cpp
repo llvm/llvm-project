@@ -92,6 +92,20 @@ constexpr void test_iter() {
   test_one<Iter>(std::array{-10, -20, -30, -40, -50}, 3, gen, {1, 2, 3, -40, -50});
   // Longer sequence, n = 5.
   test_one<Iter>(std::array<int, 5>{}, 5, gen, {1, 2, 3, 4, 5});
+
+  { // A negative count is a no-op that returns the unchanged iterator.
+    // Regression test for https://llvm.org/PR193613.
+    std::array in{-10, -20, -30};
+    int called        = 0;
+    auto counting_gen = [&called] {
+      ++called;
+      return 42;
+    };
+    std::same_as<Iter> decltype(auto) result = std::ranges::generate_n(Iter(in.data()), -5, counting_gen);
+    assert(base(result) == in.data());
+    assert(called == 0);
+    assert((in == std::array{-10, -20, -30}));
+  }
 }
 
 constexpr void test_iterators() {
@@ -130,7 +144,6 @@ constexpr bool test() {
     assert(std::ranges::none_of(std::ranges::subrange(result, in.end()), &AssignedOnce::assigned));
     assert(gen_invocations == N2);
   }
-
 
   return true;
 }

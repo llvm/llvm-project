@@ -43,6 +43,7 @@
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_extent.h>
 #include <__type_traits/remove_reference.h>
+#include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -100,6 +101,12 @@ inline const bool __can_dereference = false;
 template <class _Tp>
 inline const bool __can_dereference<_Tp, decltype((void)*std::declval<_Tp>())> = true;
 
+template <class _Tp, class = void>
+inline const bool __can_add_pointer = false;
+
+template <class _Tp>
+inline const bool __can_add_pointer<_Tp, __void_t<_Tp*> > = true;
+
 #if defined(_LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI)
 #  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI __attribute__((__trivial_abi__))
 #else
@@ -108,12 +115,13 @@ inline const bool __can_dereference<_Tp, decltype((void)*std::declval<_Tp>())> =
 
 template <class _Tp, class _Dp = default_delete<_Tp> >
 class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI unique_ptr {
+  static_assert(__can_add_pointer<_Tp>, "unique_ptr<T, D> requires T* to be a valid type");
+  static_assert(!is_rvalue_reference<_Dp>::value, "the specified deleter type cannot be an rvalue reference");
+
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
   using pointer _LIBCPP_NODEBUG = __pointer<_Tp, deleter_type>;
-
-  static_assert(!is_rvalue_reference<deleter_type>::value, "the specified deleter type cannot be an rvalue reference");
 
   // A unique_ptr contains the following members which may be trivially relocatable:
   // - pointer : this may be trivially relocatable, so it's checked

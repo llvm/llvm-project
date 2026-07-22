@@ -555,7 +555,7 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) const {
 InstructionCost AArch64TTIImpl::getBranchMispredictPenalty() const {
   // MispredictPenalty is defined per-CPU in AArch64Sched*.td (e.g.,
   // AArch64SchedNeoverseV2.td).
-  return ST->getSchedModel().MispredictPenalty;
+  return ST->getMispredictionPenalty();
 }
 
 static bool isUnpackedVectorVT(EVT VecVT) {
@@ -2179,11 +2179,40 @@ static std::optional<Instruction *> instCombineXorSVECmpCC(InstCombiner &IC,
   return &II;
 }
 
+// zext(cmpne(ptrue, %v, 0))
+// -> umin(%pg, %v, 1)
+static std::optional<Instruction *> instCombineZExtSVECmpNE(InstCombiner &IC,
+                                                            IntrinsicInst &II) {
+  if (!isAllActivePredicate(II.getOperand(0)) ||
+      !match(II.getOperand(2), m_Zero()))
+    return std::nullopt;
+
+  for (auto *U : II.users()) {
+    if (match(U, m_ZExt(m_Specific(&II)))) {
+      auto *User = cast<Instruction>(U);
+      Type *Ty = II.getOperand(1)->getType();
+      if (User->getType() != Ty)
+        continue;
+      IC.Builder.SetInsertPoint(User);
+      Value *UMin = IC.Builder.CreateIntrinsic(
+          Intrinsic::aarch64_sve_umin, Ty,
+          {II.getOperand(0), II.getOperand(1), ConstantInt::get(Ty, 1)});
+      IC.replaceInstUsesWith(*User, UMin);
+      IC.eraseInstFromFunction(*User);
+      return &II;
+    }
+  }
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
 
   if (auto Res = instCombineXorSVECmpCC(IC, II))
+    return Res;
+
+  if (auto Res = instCombineZExtSVECmpNE(IC, II))
     return Res;
 
   if (!isAllActivePredicate(II.getArgOperand(0)))
@@ -5431,13 +5460,22 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       }
 
       // llvm.vector.deinterleaveN is lowered as a binary tree of deinterleave2
-      // operations. A binary tree producing Factor leaf vectors has
-      // (Factor -1) inner deinterleave2 nodes. Each deinterleave2 on a pair of
-      // SVE registers emits one uzp1 + one uzp2.
-      // Total shuffle cost: (Factor - 1) deinterleave2 operations, each
-      // processing LT.first legal vector parts,with one uzp shuffle per part.
-      auto LT = getTypeLegalizationCost(VecTy);
-      return MemCost + (Factor - 1) * LT.first;
+      // operations. The tree has Log2(Factor) levels, with Factor UZP/ZIP
+      // operations at each level, giving a total shuffle cost of
+      // Factor * Log2(Factor).
+      auto SubVecCost = getTypeLegalizationCost(SubVecTy);
+      auto ResultCost = getTypeLegalizationCost(VecTy);
+      llvm::InstructionCost LegalizationCost = SubVecCost.first;
+
+      // FIXME: A temporary increase to the cost in cases where the input
+      // element type is 4x the output type. Otherwise it produces an SVE tail
+      // loop which is significantly larger than the NEON equivalent.
+      if (Opcode == Instruction::Store && Factor == 4 &&
+          SubVecCost.second.getScalarSizeInBits() ==
+              (4 * ResultCost.second.getScalarSizeInBits()))
+        LegalizationCost *= 4;
+
+      return MemCost + (Factor * LegalizationCost) + (Factor * Log2_64(Factor));
     }
   }
 
