@@ -49,7 +49,6 @@ void FreeTrie::remove(Node *node) {
 
 void FreeTrie::replace_node(Node *node, Node *new_node) {
   LIBC_ASSERT(is_head(node) && "only head nodes contain trie links");
-  node->sanitize();
 
   if (node->parent) {
     Node *&parent_child =
