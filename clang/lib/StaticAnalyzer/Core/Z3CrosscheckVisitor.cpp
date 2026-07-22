@@ -75,14 +75,17 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
   for (const auto &[Sym, Range] : Constraints) {
     auto RangeIt = Range.begin();
 
-    llvm::SMTExprRef SMTConstraints = SMTConv::getRangeExpr(
-        RefutationSolver, Ctx, Sym, RangeIt->From(), RangeIt->To(),
-        /*InRange=*/true);
+    llvm::SMTExprRef SMTConstraints =
+        SMTConv::getRangeExpr(RefutationSolver, Ctx, Sym, RangeIt->From(),
+                              RangeIt->To(),
+                              /*InRange=*/true)
+            .value();
     while ((++RangeIt) != Range.end()) {
       SMTConstraints = RefutationSolver->mkOr(
           SMTConstraints, SMTConv::getRangeExpr(RefutationSolver, Ctx, Sym,
                                                 RangeIt->From(), RangeIt->To(),
-                                                /*InRange=*/true));
+                                                /*InRange=*/true)
+                              .value());
     }
     RefutationSolver->addConstraint(SMTConstraints);
   }

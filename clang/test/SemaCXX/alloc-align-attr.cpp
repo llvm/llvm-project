@@ -62,6 +62,7 @@ void foo() {
 
 void test_function_pointer(
     char *(*member)(char *) __attribute__((alloc_align(1)))); // expected-error {{'alloc_align' attribute argument may only refer to a function parameter of integer type}}
+    char * (*another_member)(int) __attribute___((alloc_align(1))); // ok
 
 struct Test;
 void test_member_function_pointer(

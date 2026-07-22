@@ -19,7 +19,7 @@ from typing import (
     cast,
 )
 
-from .dap_types import (
+from .types import (
     AttachArgs,
     Breakpoint,
     BreakpointEvent,
@@ -1578,20 +1578,27 @@ class DAPTestSession(Session):
             count=count,
             format=format,
         )
-        response = self.send_request(args).result()
+        response = self.send_request(args).result(
+            f"failed to get variables for reference: {variablesReference}"
+        )
         return response.body.variables
 
-    def thread_context_from(self, thread_ref: int | StoppedEvent) -> ThreadContext:
-        if isinstance(thread_ref, StoppedEvent):
+    def thread_context_from(
+        self, thread_ref: int | StoppedEvent | InvalidatedEvent
+    ) -> ThreadContext:
+        if isinstance(thread_ref, (StoppedEvent, InvalidatedEvent)):
             self.test_case.assertIsNotNone(thread_ref.body.threadId)
             thread_id = cast(int, thread_ref.body.threadId)
         elif isinstance(thread_ref, int):
             thread_id = thread_ref
         else:
-            self.test_case.fail(f"cannot get thread context from '{type(thread_ref)}'.")
+            ref_type_name = type(thread_ref).__name__
+            self.test_case.fail(f"cannot get thread context from '{ref_type_name}'.")
         return ThreadContext(thread_id, self)
 
-    def top_frame_from(self, thread_ref: int | StoppedEvent) -> FrameContext:
+    def top_frame_from(
+        self, thread_ref: int | StoppedEvent | InvalidatedEvent
+    ) -> FrameContext:
         """Top FrameContext of the currently stopped thread."""
         return self.thread_context_from(thread_ref).top_frame()
 
