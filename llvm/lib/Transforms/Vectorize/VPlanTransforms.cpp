@@ -5735,18 +5735,17 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 
       VPValue *StoredValue = nullptr;
       Type *DataTy = nullptr;
+      Intrinsic::ID IntrinID;
       if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(&R)) {
         StoredValue = StoreR->getStoredValue();
         DataTy = StoredValue->getScalarType();
+        IntrinID = Intrinsic::experimental_vp_strided_store;
       } else if (auto *LoadR = dyn_cast<VPWidenLoadRecipe>(&R)) {
         DataTy = LoadR->getScalarType();
+        IntrinID = Intrinsic::experimental_vp_strided_load;
       } else {
         continue;
       }
-
-      Intrinsic::ID IntrinID = StoredValue
-                                   ? Intrinsic::experimental_vp_strided_store
-                                   : Intrinsic::experimental_vp_strided_load;
 
       Align Alignment = MemR->getAlign();
       auto IsProfitable = [&](ElementCount VF) {
