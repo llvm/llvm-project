@@ -911,6 +911,7 @@ void testTypeConverterSourceMaterialization(MlirContext ctx) {
   mlirRewritePatternSetAdd(patterns,
                            mlirConversionPatternAsRewritePattern(pattern));
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
 
   MlirConversionTarget target = mlirConversionTargetCreate(ctx);
   mlirConversionTargetAddIllegalOp(
@@ -1002,6 +1003,7 @@ void testTypeConverterTargetMaterialization(MlirContext ctx) {
   mlirRewritePatternSetAdd(patterns,
                            mlirConversionPatternAsRewritePattern(pattern));
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
 
   MlirConversionTarget target = mlirConversionTargetCreate(ctx);
   mlirConversionTargetAddIllegalOp(
