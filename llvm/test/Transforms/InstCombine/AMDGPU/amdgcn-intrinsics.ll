@@ -93,7 +93,7 @@ define float @test_constant_fold_rcp_f32_denormal_result() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_denormal_result(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %val = call float @llvm.amdgcn.rcp.f32(float 0x47E0000000000000) nounwind readnone
+  %val = call float @llvm.amdgcn.rcp.f32(float 0x47E0000000000000)
   ret float %val
 }
 
@@ -104,7 +104,7 @@ define float @test_constant_fold_rcp_f32_denormal_input() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_denormal_input(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.rcp.f32(float 0x3800000000000000) nounwind readnone
+  %val = call float @llvm.amdgcn.rcp.f32(float 0x3800000000000000)
   ret float %val
 }
 
@@ -112,7 +112,7 @@ define float @test_constant_fold_rcp_f32_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_inf(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %val = call float @llvm.amdgcn.rcp.f32(float 0x7FF0000000000000) nounwind readnone
+  %val = call float @llvm.amdgcn.rcp.f32(float 0x7FF0000000000000)
   ret float %val
 }
 
@@ -120,7 +120,7 @@ define half @test_constant_fold_rcp_f16_denormal() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f16_denormal(
 ; CHECK-NEXT:    ret half 1.525880e-05
 ;
-  %val = call half @llvm.amdgcn.rcp.f16(half 0xH7BFF) nounwind readnone
+  %val = call half @llvm.amdgcn.rcp.f16(half 0xH7BFF)
   ret half %val
 }
 
@@ -128,7 +128,7 @@ define half @test_constant_fold_rcp_f16_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f16_43(
 ; CHECK-NEXT:    ret half 2.388000e-02
 ;
-  %val = call half @llvm.amdgcn.rcp.f16(half 0xH513C) nounwind readnone
+  %val = call half @llvm.amdgcn.rcp.f16(half 0xH513C)
   ret half %val
 }
 

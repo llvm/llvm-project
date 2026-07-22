@@ -5527,30 +5527,33 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   if (!CFP)
     return SDValue();
 
+  EVT VT = N->getValueType(0);
   APFloat Val = CFP->getValueAPF();
   const fltSemantics &Sem = Val.getSemantics();
-  bool IsCorrectlyRounded =
-      &Sem == &APFloat::IEEEhalf() || &Sem == &APFloat::BFloat();
+
+  // v_rcp_f16/bf16 are correctly rounded.
+  if (VT == MVT::f16 || VT == MVT::bf16)
+    return DCI.DAG.getConstantFP(APFloat::getOne(Sem) / Val, SDLoc(N), VT);
 
   // v_rcp_f32/f64 always flush a denormal input to zero (preserving sign)
   // before reciprocating.
-  if (!IsCorrectlyRounded && Val.isDenormal())
+  if (Val.isDenormal())
     Val = APFloat::getZero(Sem, Val.isNegative());
 
   APFloat One = APFloat::getOne(Sem);
   APFloat Result = One / Val;
 
   // v_rcp_f32/f64 always flush a denormal result to zero (preserving sign).
-  if (!IsCorrectlyRounded && Result.isDenormal())
+  if (Result.isDenormal())
     Result = APFloat::getZero(Sem, Result.isNegative());
 
-  // v_rcp_f16/bf16 are correctly rounded, but v_rcp_f32/f64 only approximate
-  // the reciprocal.
-  if (!IsCorrectlyRounded && !Result.isZero() && !Result.isInfinity() &&
-      !Result.isNaN() && !Result.isOne() && !Result.isMinusOne())
+  // v_rcp_f32/f64 only approximate the reciprocal, except for these special
+  // cases where the result is exact.
+  if (!Result.isZero() && !Result.isInfinity() && !Result.isNaN() &&
+      !Result.isOne() && !Result.isMinusOne())
     return SDValue();
 
-  return DCI.DAG.getConstantFP(Result, SDLoc(N), N->getValueType(0));
+  return DCI.DAG.getConstantFP(Result, SDLoc(N), VT);
 }
 
 bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
