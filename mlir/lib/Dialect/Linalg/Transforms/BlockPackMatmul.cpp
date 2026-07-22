@@ -184,8 +184,8 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
       mnkTiles.push_back(rewriter.getIndexAttr(factor));
       continue;
     }
-    Value cst = arith::ConstantIndexOp::create(rewriter, linalgOp.getLoc(),
-                                               factor);
+    Value cst =
+        arith::ConstantIndexOp::create(rewriter, linalgOp.getLoc(), factor);
     Value vscale = vector::VectorScaleOp::create(rewriter, linalgOp.getLoc(),
                                                  rewriter.getIndexType());
     mnkTiles.push_back(
@@ -348,8 +348,7 @@ struct LinalgBlockPackMatmul
       }
       // If all flags are false, clear the vector so blockPackMatmul can take
       // the cheaper static path.
-      if (llvm::none_of(options.scalableBlockFactors,
-                        [](bool b) { return b; }))
+      if (llvm::none_of(options.scalableBlockFactors, [](bool b) { return b; }))
         options.scalableBlockFactors.clear();
 
       options.allowPadding = allowPadding;
