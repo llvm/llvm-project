@@ -124,9 +124,6 @@
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Machine Register Class Info Analysis
-; CHECK-NEXT:       Machine Trace Metrics 
-; CHECK-NEXT:       Lazy Machine Block Frequency Analysis 
-; CHECK-NEXT:       Machine InstCombiner 
 ; CHECK-NEXT:       Machine Trace Metrics
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine InstCombiner
