@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++20
+// UNSUPPORTED: no-localization
 
 // constexpr explicit iterator(basic_istream_view& parent) noexcept;
 
