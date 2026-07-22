@@ -11,6 +11,7 @@
 #include "../readability/ElseAfterReturnCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/QualifiedAutoCheck.h"
+#include "AnalyzerUnusedProgramStateRefCheck.h"
 #include "FormatvStringCheck.h"
 #include "HeaderGuardCheck.h"
 #include "IncludeOrderCheck.h"
@@ -31,6 +32,8 @@ namespace {
 class LLVMModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AnalyzerUnusedProgramStateRefCheck>(
+        "llvm-analyzer-unused-program-state-ref");
     CheckFactories.registerCheck<readability::ElseAfterReturnCheck>(
         "llvm-else-after-return");
     CheckFactories.registerCheck<FormatvStringCheck>("llvm-formatv-string");

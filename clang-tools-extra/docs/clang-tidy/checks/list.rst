@@ -243,6 +243,7 @@ Clang-Tidy Checks
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
+   :doc:`llvm-analyzer-unused-program-state-ref <llvm/analyzer-unused-program-state-ref>`,
    :doc:`llvm-formatv-string <llvm/formatv-string>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"

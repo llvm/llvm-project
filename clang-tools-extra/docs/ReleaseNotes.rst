@@ -97,6 +97,13 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`llvm-analyzer-unused-program-state-ref
+  <clang-tidy/checks/llvm/analyzer-unused-program-state-ref>` check.
+
+  Finds unused local ``clang::ento::ProgramStateRef`` variables, which
+  ``-Wunused-variable`` does not diagnose because the type has a non-trivial
+  destructor.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
