@@ -1434,6 +1434,9 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
 
       // Calculate the restore cost.
       Candidate->calculateSpillRestoreCost();
+      // Add spill cost
+      int64_t newCost = Candidate->getSpillRestoreCost() + 1;
+      Candidate->setSpillRestoreCost(newCost);
       Candidate->setNextUseDistance(NextUseDist);
       LLVM_DEBUG(dbgs() << "Restore cost for register = "
                         << printReg(CandidateReg, TRI) << " = "
