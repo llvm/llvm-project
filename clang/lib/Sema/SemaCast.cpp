@@ -1505,9 +1505,6 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       //   A value of floating-point type can also be explicitly converted
       //   to ... the underlying type of the enumeration ([conv.fpint]), and
       //   subsequently to the enumeration type.
-      //
-      // [conv.fpint] forwards to [conv.bool] for conversion to bool, so
-      // handle that case with CK_FloatingToBoolean.
       Kind = DestIsFixedBoolean ? CK_FloatingToBoolean : CK_FloatingToIntegral;
       return TC_Success;
     }
