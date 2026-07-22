@@ -10,12 +10,16 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 ; Basic LE folds
 
 define <2 x i64> @t0_le_v2i64(<2 x i64> %x) {
-; CHECK-LABEL: @t0_le_v2i64(
-; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 0, i32 31, i32 0, i32 31>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
-; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+; LE-LABEL: @t0_le_v2i64(
+; LE-NEXT:    [[WIDE:%.*]] = ashr <2 x i64> [[X:%.*]], splat (i64 63)
+; LE-NEXT:    ret <2 x i64> [[WIDE]]
+;
+; BE-LABEL: @t0_le_v2i64(
+; BE-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
+; BE-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 0, i32 31, i32 0, i32 31>
+; BE-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; BE-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; BE-NEXT:    ret <2 x i64> [[WIDE]]
 ;
   %narrow = bitcast <2 x i64> %x to <4 x i32>
   %shifted = ashr <4 x i32> %narrow, <i32 0, i32 31, i32 0, i32 31>
@@ -25,12 +29,16 @@ define <2 x i64> @t0_le_v2i64(<2 x i64> %x) {
 }
 
 define <4 x i64> @t1_le_v4i64(<4 x i64> %x) {
-; CHECK-LABEL: @t1_le_v4i64(
-; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <4 x i64> [[X:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <8 x i32> [[NARROW]], <i32 0, i32 31, i32 0, i32 31, i32 0, i32 31, i32 0, i32 31>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i32> [[SHIFTED]], <8 x i32> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
-; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <8 x i32> [[SHUF]] to <4 x i64>
-; CHECK-NEXT:    ret <4 x i64> [[WIDE]]
+; LE-LABEL: @t1_le_v4i64(
+; LE-NEXT:    [[WIDE:%.*]] = ashr <4 x i64> [[X:%.*]], splat (i64 63)
+; LE-NEXT:    ret <4 x i64> [[WIDE]]
+;
+; BE-LABEL: @t1_le_v4i64(
+; BE-NEXT:    [[NARROW:%.*]] = bitcast <4 x i64> [[X:%.*]] to <8 x i32>
+; BE-NEXT:    [[SHIFTED:%.*]] = ashr <8 x i32> [[NARROW]], <i32 0, i32 31, i32 0, i32 31, i32 0, i32 31, i32 0, i32 31>
+; BE-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i32> [[SHIFTED]], <8 x i32> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+; BE-NEXT:    [[WIDE:%.*]] = bitcast <8 x i32> [[SHUF]] to <4 x i64>
+; BE-NEXT:    ret <4 x i64> [[WIDE]]
 ;
   %narrow = bitcast <4 x i64> %x to <8 x i32>
   %shifted = ashr <8 x i32> %narrow, <i32 0, i32 31, i32 0, i32 31, i32 0, i32 31, i32 0, i32 31>
@@ -40,12 +48,16 @@ define <4 x i64> @t1_le_v4i64(<4 x i64> %x) {
 }
 
 define <4 x i32> @t2_le_v4i32(<4 x i32> %x) {
-; CHECK-LABEL: @t2_le_v4i32(
-; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <4 x i32> [[X:%.*]] to <8 x i16>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <8 x i16> [[NARROW]], <i16 0, i16 15, i16 0, i16 15, i16 0, i16 15, i16 0, i16 15>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i16> [[SHIFTED]], <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
-; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <8 x i16> [[SHUF]] to <4 x i32>
-; CHECK-NEXT:    ret <4 x i32> [[WIDE]]
+; LE-LABEL: @t2_le_v4i32(
+; LE-NEXT:    [[WIDE:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 31)
+; LE-NEXT:    ret <4 x i32> [[WIDE]]
+;
+; BE-LABEL: @t2_le_v4i32(
+; BE-NEXT:    [[NARROW:%.*]] = bitcast <4 x i32> [[X:%.*]] to <8 x i16>
+; BE-NEXT:    [[SHIFTED:%.*]] = ashr <8 x i16> [[NARROW]], <i16 0, i16 15, i16 0, i16 15, i16 0, i16 15, i16 0, i16 15>
+; BE-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i16> [[SHIFTED]], <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+; BE-NEXT:    [[WIDE:%.*]] = bitcast <8 x i16> [[SHUF]] to <4 x i32>
+; BE-NEXT:    ret <4 x i32> [[WIDE]]
 ;
   %narrow = bitcast <4 x i32> %x to <8 x i16>
   %shifted = ashr <8 x i16> %narrow, <i16 0, i16 15, i16 0, i16 15, i16 0, i16 15, i16 0, i16 15>
@@ -57,12 +69,16 @@ define <4 x i32> @t2_le_v4i32(<4 x i32> %x) {
 ; Poison in discarded half is safe
 
 define <2 x i64> @t3_le_poison_low_shift_safe(<2 x i64> %x) {
-; CHECK-LABEL: @t3_le_poison_low_shift_safe(
-; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 poison, i32 31, i32 poison, i32 31>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
-; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+; LE-LABEL: @t3_le_poison_low_shift_safe(
+; LE-NEXT:    [[WIDE:%.*]] = ashr <2 x i64> [[X:%.*]], splat (i64 63)
+; LE-NEXT:    ret <2 x i64> [[WIDE]]
+;
+; BE-LABEL: @t3_le_poison_low_shift_safe(
+; BE-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
+; BE-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 poison, i32 31, i32 poison, i32 31>
+; BE-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; BE-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; BE-NEXT:    ret <2 x i64> [[WIDE]]
 ;
   %narrow = bitcast <2 x i64> %x to <4 x i32>
   %shifted = ashr <4 x i32> %narrow, <i32 poison, i32 31, i32 poison, i32 31>
@@ -150,12 +166,16 @@ define <2 x i64> @t8_le_poison_in_shuffle_mask(<2 x i64> %x) {
 ; Basic BE folds
 
 define <2 x i64> @t9_be_v2i64(<2 x i64> %x) {
-; CHECK-LABEL: @t9_be_v2i64(
-; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 31, i32 0, i32 31, i32 0>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
-; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+; LE-LABEL: @t9_be_v2i64(
+; LE-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
+; LE-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 31, i32 0, i32 31, i32 0>
+; LE-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+; LE-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; LE-NEXT:    ret <2 x i64> [[WIDE]]
+;
+; BE-LABEL: @t9_be_v2i64(
+; BE-NEXT:    [[WIDE:%.*]] = ashr <2 x i64> [[X:%.*]], splat (i64 63)
+; BE-NEXT:    ret <2 x i64> [[WIDE]]
 ;
   %narrow = bitcast <2 x i64> %x to <4 x i32>
   %shifted = ashr <4 x i32> %narrow, <i32 31, i32 0, i32 31, i32 0>
@@ -165,12 +185,16 @@ define <2 x i64> @t9_be_v2i64(<2 x i64> %x) {
 }
 
 define <2 x i64> @t10_be_poison_low_shift_safe(<2 x i64> %x) {
-; CHECK-LABEL: @t10_be_poison_low_shift_safe(
-; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 31, i32 poison, i32 31, i32 poison>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
-; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+; LE-LABEL: @t10_be_poison_low_shift_safe(
+; LE-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
+; LE-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 31, i32 poison, i32 31, i32 poison>
+; LE-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+; LE-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; LE-NEXT:    ret <2 x i64> [[WIDE]]
+;
+; BE-LABEL: @t10_be_poison_low_shift_safe(
+; BE-NEXT:    [[WIDE:%.*]] = ashr <2 x i64> [[X:%.*]], splat (i64 63)
+; BE-NEXT:    ret <2 x i64> [[WIDE]]
 ;
   %narrow = bitcast <2 x i64> %x to <4 x i32>
   %shifted = ashr <4 x i32> %narrow, <i32 31, i32 poison, i32 31, i32 poison>
@@ -182,12 +206,16 @@ define <2 x i64> @t10_be_poison_low_shift_safe(<2 x i64> %x) {
 ; BE negative tests
 
 define <2 x i64> @t11_le_pattern_under_be(<2 x i64> %x) {
-; CHECK-LABEL: @t11_le_pattern_under_be(
-; CHECK-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 0, i32 31, i32 0, i32 31>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
-; CHECK-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[WIDE]]
+; LE-LABEL: @t11_le_pattern_under_be(
+; LE-NEXT:    [[WIDE:%.*]] = ashr <2 x i64> [[X:%.*]], splat (i64 63)
+; LE-NEXT:    ret <2 x i64> [[WIDE]]
+;
+; BE-LABEL: @t11_le_pattern_under_be(
+; BE-NEXT:    [[NARROW:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
+; BE-NEXT:    [[SHIFTED:%.*]] = ashr <4 x i32> [[NARROW]], <i32 0, i32 31, i32 0, i32 31>
+; BE-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[SHIFTED]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; BE-NEXT:    [[WIDE:%.*]] = bitcast <4 x i32> [[SHUF]] to <2 x i64>
+; BE-NEXT:    ret <2 x i64> [[WIDE]]
 ;
   %narrow = bitcast <2 x i64> %x to <4 x i32>
   %shifted = ashr <4 x i32> %narrow, <i32 0, i32 31, i32 0, i32 31>
@@ -224,6 +252,3 @@ define <2 x i64> @t13_be_high_shift_poison(<2 x i64> %x) {
   %wide = bitcast <4 x i32> %shuf to <2 x i64>
   ret <2 x i64> %wide
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; BE: {{.*}}
-; LE: {{.*}}

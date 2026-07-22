@@ -3375,7 +3375,74 @@ static Value *foldCopySignIdioms(BitCastInst &CI,
 
   return Builder.CreateCopySign(Builder.CreateBitCast(Y, FTy), X);
 }
+/// Fold bitcast(shuffle(ashr(bitcast(X)))) to wide ashr.
+/// Recognize the pre-AVX512 X86 idiom for wide vector arithmetic right shift.
+static Instruction *
+foldBitcastShuffleAShrToWideAShr(BitCastInst &BC,
+                                 InstCombiner::BuilderTy &Builder) {
+  auto *DstTy = dyn_cast<FixedVectorType>(BC.getType());
+  auto *SrcTy = dyn_cast<FixedVectorType>(BC.getOperand(0)->getType());
+  if (!DstTy || !SrcTy)
+    return nullptr;
 
+  auto *DstEltTy = dyn_cast<IntegerType>(DstTy->getElementType());
+  auto *SrcEltTy = dyn_cast<IntegerType>(SrcTy->getElementType());
+  if (!DstEltTy || !SrcEltTy)
+    return nullptr;
+
+  unsigned N = DstTy->getNumElements();
+  unsigned W = DstEltTy->getBitWidth();
+  unsigned Half = W / 2;
+
+  if (SrcTy->getNumElements() != 2 * N || SrcEltTy->getBitWidth() != Half ||
+      W < 4)
+    return nullptr;
+
+  const DataLayout &DL = BC.getModule()->getDataLayout();
+  bool IsLittleEndian = DL.isLittleEndian();
+
+  Value *X;
+  Constant *ShiftVec;
+  ArrayRef<int> Mask;
+
+  if (!match(BC.getOperand(0),
+             m_Shuffle(m_AShr(m_BitCast(m_Value(X)), m_Constant(ShiftVec)),
+                       m_CombineOr(m_Poison(), m_Undef()), m_Mask(Mask))))
+    return nullptr;
+
+  if (X->getType() != DstTy)
+    return nullptr;
+
+  for (unsigned I = 0; I != N; ++I) {
+    unsigned Idx1 = 2 * I;
+    unsigned Idx2 = 2 * I + 1;
+
+    auto *Shift1 =
+        dyn_cast_or_null<ConstantInt>(ShiftVec->getAggregateElement(Idx1));
+    auto *Shift2 =
+        dyn_cast_or_null<ConstantInt>(ShiftVec->getAggregateElement(Idx2));
+
+    if (IsLittleEndian) {
+      // Little-endian: low half (Idx1) shifts by 0, high half (Idx2) shifts by
+      // Half-1
+      if (!Shift2 || Shift2->getZExtValue() != Half - 1)
+        return nullptr;
+      if (Mask[Idx1] != (int)Idx2 || Mask[Idx2] != (int)Idx2)
+        return nullptr;
+    } else {
+      // Big-endian: high half (Idx1) shifts by Half-1, low half (Idx2) shifts
+      // by 0
+      if (!Shift1 || Shift1->getZExtValue() != Half - 1)
+        return nullptr;
+      if (Mask[Idx1] != (int)Idx1 || Mask[Idx2] != (int)Idx1)
+        return nullptr;
+    }
+  }
+
+  Constant *SplatAmt = ConstantVector::getSplat(
+      ElementCount::getFixed(N), ConstantInt::get(DstEltTy, W - 1));
+  return BinaryOperator::CreateAShr(X, SplatAmt);
+}
 Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   // If the operands are integer typed then apply the integer transforms,
   // otherwise just apply the common ones.
@@ -3513,6 +3580,9 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     return I;
 
   if (Instruction *I = foldBitCastSelect(CI, Builder))
+    return I;
+
+  if (Instruction *I = foldBitcastShuffleAShrToWideAShr(CI, Builder))
     return I;
 
   if (Value *V = foldCopySignIdioms(CI, Builder, SQ.getWithInstruction(&CI)))
