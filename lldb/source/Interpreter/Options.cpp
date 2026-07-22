@@ -376,7 +376,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
     uint32_t num_option_sets = GetRequiredOptions().size();
     for (uint32_t opt_set = 0; opt_set < num_option_sets; ++opt_set) {
       if (opt_set > 0)
-        strm.Printf("\n");
+        strm.PutCString("\n");
       strm.Indent(name);
 
       // Different option sets may require different args.
@@ -432,7 +432,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
 
       if (args_str.GetSize() > 0) {
         if (cmd.WantsRawCommandString())
-          strm.Printf(" --");
+          strm.PutCString(" --");
         strm << " " << args_str.GetString();
       }
     }
@@ -447,7 +447,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
   }
 
   if (!only_print_args) {
-    strm.Printf("\n\n");
+    strm.PutCString("\n\n");
 
     // Now print out all the detailed information about the various options:
     // long form, short form and help text:
@@ -494,11 +494,11 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
         OutputFormattedUsageText(strm, opt_def, screen_width, use_color);
       if (!opt_def.enum_values.empty()) {
         strm.Indent();
-        strm.Printf("Values: ");
+        strm.PutCString("Values: ");
         bool is_first = true;
         for (const auto &enum_value : opt_def.enum_values) {
           if (is_first) {
-            strm.Printf("%s", enum_value.string_value);
+            strm.PutCString(enum_value.string_value);
             is_first = false;
           }
           else

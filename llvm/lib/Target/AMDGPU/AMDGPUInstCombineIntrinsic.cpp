@@ -96,13 +96,21 @@ static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat,
     }
   }
 
+  // Coordinates may arrive as extractelement((s|z|fp)ext Vec), Idx. The
+  // widening cast has one use per lane, so it is never sunk into the extract;
+  // strip the extract here so the cast check below is common to scalar and
+  // vector coords.
+  Value *CastCandidate;
+  if (!match(&V, m_ExtractElt(m_Value(CastCandidate), m_Value())))
+    CastCandidate = &V;
+
   Value *CastSrc;
-  bool IsExt = IsFloat ? match(&V, m_FPExt(PatternMatch::m_Value(CastSrc)))
-                       : match(&V, m_ZExt(PatternMatch::m_Value(CastSrc)));
+  bool IsExt = IsFloat ? match(CastCandidate, m_FPExt(m_Value(CastSrc)))
+                       : match(CastCandidate, m_ZExt(m_Value(CastSrc)));
   if (!IsExt && !IsFloat && AllowI16SExt)
-    IsExt = match(&V, m_SExt(PatternMatch::m_Value(CastSrc)));
+    IsExt = match(CastCandidate, m_SExt(m_Value(CastSrc)));
   if (IsExt) {
-    Type *CastSrcTy = CastSrc->getType();
+    Type *CastSrcTy = CastSrc->getType()->getScalarType();
     if (CastSrcTy->isHalfTy() || CastSrcTy->isIntegerTy(16))
       return true;
   }
@@ -115,6 +123,13 @@ static Value *convertTo16Bit(Value &V, InstCombiner::BuilderTy &Builder) {
   Type *VTy = V.getType();
   if (isa<FPExtInst, SExtInst, ZExtInst>(&V))
     return cast<Instruction>(&V)->getOperand(0);
+  // Vector form: extractelement((s|z|fp)ext Vec), Idx -> extractelement(Vec,
+  // Idx), taking the narrow lane directly so the widening cast can be removed.
+  Instruction *VecCast;
+  Value *Idx;
+  if (match(&V, m_ExtractElt(m_Instruction(VecCast), m_Value(Idx))) &&
+      isa<FPExtInst, SExtInst, ZExtInst>(VecCast))
+    return Builder.CreateExtractElement(VecCast->getOperand(0), Idx);
   if (VTy->isIntegerTy())
     return Builder.CreateIntCast(&V, Type::getInt16Ty(V.getContext()), false);
   if (VTy->isFloatingPointTy())
@@ -1141,15 +1156,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     if (const ConstantFP *C = dyn_cast<ConstantFP>(Src)) {
-      const APFloat &ArgVal = C->getValueAPF();
-      APFloat Val(ArgVal.getSemantics(), 1);
-      Val.divide(ArgVal, APFloat::rmNearestTiesToEven);
+      std::optional<APFloat> Val = AMDGPU::evaluateRcp(C->getValueAPF());
+      if (!Val)
+        break;
 
-      // This is more precise than the instruction may give.
-      //
-      // TODO: The instruction always flushes denormal results (except for f16),
-      // should this also?
-      return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), Val));
+      return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), *Val));
     }
 
     FastMathFlags FMF = cast<FPMathOperator>(II).getFastMathFlags();
@@ -1590,9 +1601,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                 : IC.Builder.CreateMinNum(Src0, Src1);
         break;
       case KnownIEEEMode::Off:
-        V = (ConstSrc2 && ConstSrc2->isNegInfinity())
-                ? IC.Builder.CreateMinimumNum(Src0, Src1)
-                : IC.Builder.CreateMaximumNum(Src0, Src1);
+        V = (ConstSrc2 && ConstSrc2->isPosInfinity())
+                ? IC.Builder.CreateMaximumNum(Src0, Src1)
+                : IC.Builder.CreateMinimumNum(Src0, Src1);
         break;
       case KnownIEEEMode::Unknown:
         break;

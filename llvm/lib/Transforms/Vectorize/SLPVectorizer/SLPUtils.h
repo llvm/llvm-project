@@ -20,12 +20,14 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/Intrinsics.h"
 
 #include <optional>
 #include <string>
 
 namespace llvm {
 class Constant;
+class DataLayout;
 class Instruction;
 class TargetLibraryInfo;
 class TargetTransformInfo;
@@ -247,6 +249,20 @@ MemoryLocation getLocation(Instruction *I);
 /// \returns True if the instruction is not a volatile or atomic load/store.
 bool isSimple(Instruction *I);
 
+/// Checks if the loads with scalar type \p ScalarTy and pointer operands
+/// \p PointerOps are each (optionally via a constant-offset GEP) a
+/// `select Cond, A, B` picking between the same two base pointers A/B on
+/// every lane - the shape a fully unrolled `x = cond ? A[i] : B[i]` takes. On
+/// success \p TrueBase / \p FalseBase are the candidate bases and
+/// \p Conditions holds each lane's `select` condition, used to build the
+/// blend mask. Lane \p Idx must be at `Base + Idx * sizeof(ScalarTy)`; only
+/// dense, natural lane order starting at the base is recognized (reordered or
+/// partial groups fall back to Gather/Scatter).
+bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
+                        const DataLayout &DL, Value *&TrueBase,
+                        Value *&FalseBase,
+                        SmallVectorImpl<Value *> &Conditions);
+
 /// Shuffles \p Mask in accordance with the given \p SubMask.
 /// \param ExtendingManyInputs Supports reshuffling of the mask with not only
 /// one but two input vectors.
@@ -272,6 +288,11 @@ SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, Type *ScalarTy,
 
 /// Replicates the given \p Val \p VF times.
 SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF);
+
+/// \returns the masked division/remainder intrinsic corresponding to \p
+/// Opcode. Disabled lanes of these intrinsics are poison rather than UB,
+/// unlike the plain opcode.
+Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
 
 } // namespace llvm::slpvectorizer
 
