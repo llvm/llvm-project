@@ -487,12 +487,50 @@ LogicalResult ReductionAccumulateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// PrivateLocalOp
+//===----------------------------------------------------------------------===//
+
+void PrivateLocalOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (getReductionOperatorAttr())
+    addOperandEffect<MemoryEffects::Write>(effects, getPrivatizedMutable());
+}
+
+LogicalResult PrivateLocalOp::verify() {
+  if (!getReductionOperatorAttr())
+    return success();
+  auto privateTy = cast<PrivateType>(getPrivatized().getType());
+  auto memrefTy = dyn_cast<MemRefType>(privateTy.getBaseTy());
+  if (!memrefTy || memrefTy.getRank() != 1 || !memrefTy.hasStaticShape())
+    return emitOpError(
+        "reduction_operator requires static rank-1 memref private storage");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionAccumulateArrayOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult ReductionAccumulateArrayOp::verify() {
   if (getParDims().getArray().empty())
     return emitOpError("par_dims must specify at least one parallel dimension");
+  if (getStorageParDims().getArray().empty())
+    return emitOpError(
+        "storage_par_dims must specify at least one parallel dimension");
+  bool hasThreadXStorage =
+      llvm::any_of(getStorageParDims().getArray(),
+                   [](GPUParallelDimAttr dim) { return dim.isThreadX(); });
+  bool hasThreadYReduction =
+      llvm::any_of(getParDims().getArray(),
+                   [](GPUParallelDimAttr dim) { return dim.isThreadY(); });
+  bool hasThreadYStorage =
+      llvm::any_of(getStorageParDims().getArray(),
+                   [](GPUParallelDimAttr dim) { return dim.isThreadY(); });
+  if (hasThreadXStorage && hasThreadYReduction && !hasThreadYStorage)
+    return emitOpError(
+        "thread_x-replicated storage_par_dims must include thread_y when "
+        "par_dims includes thread_y");
   return success();
 }
 

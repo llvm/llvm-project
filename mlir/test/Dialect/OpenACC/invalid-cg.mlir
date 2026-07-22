@@ -77,7 +77,7 @@ func.func @reduction_accumulate_empty_par_dims() {
 
 func.func @reduction_accumulate_array_invalid_operator(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
   acc.reduction_accumulate_array %private bounds(%bounds) <addi>
-      : memref<4xi32> {par_dims = #acc<par_dims[thread_x]>}
+      : memref<4xi32> {par_dims = #acc<par_dims[thread_x]>, storage_par_dims = #acc<par_dims[thread_x]>}
   // expected-error@-2 {{expected ::mlir::acc::ReductionOperator to be one of}}
   // expected-error@-3 {{failed to parse OpenACC_ReductionOperatorAttr}}
   return
@@ -88,7 +88,36 @@ func.func @reduction_accumulate_array_invalid_operator(%private: memref<4xi32>, 
 func.func @reduction_accumulate_array_empty_par_dims(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
   // expected-error@+1 {{par_dims must specify at least one parallel dimension}}
   acc.reduction_accumulate_array %private bounds(%bounds) <add>
-      : memref<4xi32> {par_dims = #acc<par_dims[]>}
+      : memref<4xi32> {par_dims = #acc<par_dims[]>, storage_par_dims = #acc<par_dims[thread_x]>}
+  return
+}
+
+// -----
+
+func.func @reduction_accumulate_array_empty_storage_par_dims(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
+  // expected-error@+1 {{storage_par_dims must specify at least one parallel dimension}}
+  acc.reduction_accumulate_array %private bounds(%bounds) <add>
+      : memref<4xi32> {par_dims = #acc<par_dims[thread_x]>, storage_par_dims = #acc<par_dims[]>}
+  return
+}
+
+// -----
+
+func.func @reduction_accumulate_array_partial_thread_storage(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
+  // expected-error@+1 {{thread_x-replicated storage_par_dims must include thread_y when par_dims includes thread_y}}
+  acc.reduction_accumulate_array %private bounds(%bounds) <add>
+      : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_x, thread_y]>, storage_par_dims = #acc<par_dims[block_x, thread_x]>}
+  return
+}
+
+// -----
+
+func.func @private_local_invalid_reduction_operator_shape() {
+  %private = acc.privatize : () -> !acc.private_type<memref<2x2xi32>>
+  // expected-error@+1 {{reduction_operator requires static rank-1 memref private storage}}
+  %local = acc.private_local %private {
+    reduction_operator = #acc.reduction_operator<add>
+  } : (!acc.private_type<memref<2x2xi32>>) -> memref<4xi32>
   return
 }
 

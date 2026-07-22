@@ -47,7 +47,7 @@ func.func @array_reduction(%arg0: memref<2xi32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       %b = acc.bounds extent(%c2 : index)
-      acc.reduction_accumulate_array %2 bounds(%b) <add> : memref<2xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+      acc.reduction_accumulate_array %2 bounds(%b) <add> : memref<2xi32> {par_dims = #acc<par_dims[block_x, thread_x]>, storage_par_dims = #acc<par_dims[block_x, thread_x]>}
       acc.reduction_combine_region %2 into %arg2 : memref<2xi32> {
         scf.for %i = %c0 to %c2 step %c1 {
           %3 = memref.load %2[%i] : memref<2xi32>
@@ -77,7 +77,7 @@ func.func @array_reduction_small_shared() {
     %shared = memref.alloc() : memref<2xi32>
     %bounds = acc.bounds extent(%c2 : index)
     acc.reduction_accumulate_array %shared bounds(%bounds) <add>
-        : memref<2xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+        : memref<2xi32> {par_dims = #acc<par_dims[block_x, thread_x]>, storage_par_dims = #acc<par_dims[block_x]>}
     memref.dealloc %shared : memref<2xi32>
     acc.yield
   } {origin = "acc.parallel"}
@@ -105,15 +105,14 @@ func.func @array_reduction_strided_extent() {
     %bounds = acc.bounds lowerbound(%c1_b : index) extent(%c3 : index)
         stride(%c2 : index)
     acc.reduction_accumulate_array %local bounds(%bounds) <add>
-        : memref<8xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+        : memref<8xi32> {par_dims = #acc<par_dims[block_x, thread_x]>, storage_par_dims = #acc<par_dims[block_x, thread_x]>}
     acc.yield
   } {origin = "acc.parallel"}
   return
 }
 
-// A dynamically-shaped accumulator (a strided view whose type conveys no size)
-// is classified per-thread from par_dims: a thread dimension means per-thread
-// storage, so lowering emits the per-element gpu.all_reduce.
+// A dynamically-shaped accumulator carries explicit per-thread
+// storage_par_dims, so lowering emits the per-element gpu.all_reduce.
 //
 // CHECK-LABEL: func.func @array_reduction_dynamic_par_dims
 // CHECK: scf.for
@@ -129,7 +128,7 @@ func.func @array_reduction_dynamic_par_dims(%buf: memref<?xi32>, %n: index) {
     %bounds = acc.bounds extent(%ext : index)
     acc.reduction_accumulate_array %view bounds(%bounds) <add>
         : memref<?xi32, strided<[1]>>
-        {par_dims = #acc<par_dims[block_x, thread_x]>}
+        {par_dims = #acc<par_dims[block_x, thread_x]>, storage_par_dims = #acc<par_dims[block_x, thread_x]>}
     acc.yield
   } {origin = "acc.parallel"}
   return

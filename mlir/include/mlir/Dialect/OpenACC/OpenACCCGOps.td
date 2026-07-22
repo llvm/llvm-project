@@ -195,15 +195,18 @@ def OpenACC_ReductionAccumulateArrayOp
     : OpenACC_Op<"reduction_accumulate_array", []> {
   let summary = "Accumulates elements of an array";
   let description = [{
-    Accumulates elements of an array across the specified parallel dimension 
-    given an acc.bounds op.
+    Accumulates elements of an array across the specified parallel dimensions
+    given an acc.bounds op. `storage_par_dims` records the parallel dimensions
+    across which the accumulator storage is replicated. This is decided before
+    target lowering and may differ from the reduction's `par_dims`.
   }];
   let arguments = (ins Arg<OpenACC_PointerLikeTypeInterface,
                            "Reduction variable to update",
                            [MemRead, MemWrite]>:$memref,
                        OpenACC_DataBoundsType:$bounds,
                        OpenACC_ReductionOperatorAttr:$reductionOperator,
-                       OpenACC_GPUParallelDimsAttr:$par_dims);
+                       OpenACC_GPUParallelDimsAttr:$par_dims,
+                       OpenACC_GPUParallelDimsAttr:$storage_par_dims);
   let assemblyFormat = [{
     $memref `bounds` `(` $bounds `)` $reductionOperator `:` type($memref) attr-dict
   }];
@@ -362,7 +365,8 @@ def OpenACC_UnwrapPrivateOp
 //===----------------------------------------------------------------------===//
 
 def OpenACC_PrivateLocalOp
-    : OpenACC_Op<"private_local", [NoMemoryEffect, AlwaysSpeculatable]> {
+    : OpenACC_Op<"private_local",
+          [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Materialize privatized storage for the current parallelism context";
   let description = [{
     Given a value of type `acc.private_type<T>`, materializes the underlying
@@ -375,8 +379,13 @@ def OpenACC_PrivateLocalOp
     still aliases the same underlying storage as `T`; in that case passes that
     consume this operation must treat the handle type and the result type as
     describing the same storage layout.
+
+    `reduction_operator`, when present, requests that a newly materialized
+    private array be initialized to the operator's identity.
   }];
-  let arguments = (ins OpenACC_PrivateType:$privatized);
+  let arguments = (ins OpenACC_PrivateType:$privatized,
+                       OptionalAttr<OpenACC_ReductionOperatorAttr>:
+                           $reduction_operator);
   let results = (outs AnyType:$output);
   let assemblyFormat = [{
     $privatized attr-dict `:` functional-type(operands, results)
@@ -387,6 +396,7 @@ def OpenACC_PrivateLocalOp
       $_state.addTypes(resultType);
     }]>
   ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

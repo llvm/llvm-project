@@ -336,10 +336,19 @@ func.func @reduction_accumulate_block_thread(%partial: i32, %private: memref<i32
 
 // CHECK-LABEL: func @reduction_accumulate_array
 func.func @reduction_accumulate_array(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
-  acc.reduction_accumulate_array %private bounds(%bounds) <add> : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+  acc.reduction_accumulate_array %private bounds(%bounds) <add> : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_x]>, storage_par_dims = #acc<par_dims[block_x, thread_x]>}
   return
 }
-// CHECK: acc.reduction_accumulate_array  %{{.*}} bounds(%{{.*}}) <add> : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+// CHECK: acc.reduction_accumulate_array  %{{.*}} bounds(%{{.*}}) <add> : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_x]>, storage_par_dims = #acc<par_dims[block_x, thread_x]>}
+
+// -----
+
+// CHECK-LABEL: func @reduction_accumulate_array_worker_storage
+func.func @reduction_accumulate_array_worker_storage(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
+  acc.reduction_accumulate_array %private bounds(%bounds) <add> : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_y, thread_x]>, storage_par_dims = #acc<par_dims[block_x, thread_y]>}
+  return
+}
+// CHECK: acc.reduction_accumulate_array  %{{.*}} bounds(%{{.*}}) <add> : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_y, thread_x]>, storage_par_dims = #acc<par_dims[block_x, thread_y]>}
 
 // -----
 

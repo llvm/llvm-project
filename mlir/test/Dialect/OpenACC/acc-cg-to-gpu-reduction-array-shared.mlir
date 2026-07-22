@@ -43,7 +43,7 @@ func.func @array_reduction_shared(%arg0: memref<8192xi32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       %b = acc.bounds extent(%c8192 : index)
-      acc.reduction_accumulate_array %2 bounds(%b) <add> : memref<8192xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+      acc.reduction_accumulate_array %2 bounds(%b) <add> : memref<8192xi32> {par_dims = #acc<par_dims[block_x, thread_x]>, storage_par_dims = #acc<par_dims[block_x]>}
       acc.reduction_combine_region %2 into %arg2 : memref<8192xi32> {
         scf.for %i = %c0 to %c8192 step %c1 {
           %3 = memref.load %2[%i] : memref<8192xi32>
