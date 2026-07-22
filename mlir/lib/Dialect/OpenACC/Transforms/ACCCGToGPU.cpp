@@ -1187,23 +1187,19 @@ getPrivateParDims(acc::PrivateLocalOp privateLocal,
   return getPrivatizeOp(privateLocal, computeRegion).getParDimsAttr();
 }
 
-/// True when \p memref is backed by storage owned exclusively by ThreadY.
-static bool isExclusivelyThreadYPrivate(Value memref,
-                                        acc::ComputeRegionOp computeRegion) {
-  Value current = memref;
-  while (Operation *def = current.getDefiningOp()) {
-    if (acc::PrivateLocalOp privateLocal = dyn_cast<acc::PrivateLocalOp>(def)) {
-      GPUParallelDimsAttr parDims =
-          getPrivateParDims(privateLocal, computeRegion);
-      return parDims && parDims.hasOnlyThreadYLevel();
-    }
-    if (ViewLikeOpInterface viewLike = dyn_cast<ViewLikeOpInterface>(def)) {
-      current = viewLike.getViewSource();
-      continue;
-    }
-    break;
-  }
-  return false;
+/// True when \p privateLocal has one private slot per ThreadY row.
+static bool isThreadYPrivate(acc::PrivateLocalOp privateLocal, bool allowBlock,
+                             acc::ComputeRegionOp computeRegion) {
+  if (!privateLocal)
+    return false;
+  GPUParallelDimsAttr parDims = getPrivateParDims(privateLocal, computeRegion);
+  if (!parDims)
+    return false;
+  return llvm::any_of(parDims.getArray(),
+                      [](auto dim) { return dim.isThreadY(); }) &&
+         llvm::all_of(parDims.getArray(), [=](auto dim) {
+           return dim.isThreadY() || (allowBlock && dim.isAnyBlock());
+         });
 }
 
 struct ThreadYBroadeningInfo {
@@ -1235,15 +1231,23 @@ static bool hasUnsafeEffectsWhenBroadening(Operation *op) {
 
 /// Records whether \p combineOp requires ThreadY to remain active.
 static void classifyThreadYCombine(ThreadYBroadeningInfo &info,
-                                   Operation *combineOp, Value src,
+                                   Operation *combineOp, Value src, Value dest,
                                    ArrayRef<GPUParallelDimAttr> parDims,
                                    acc::ComputeRegionOp computeRegion) {
   bool hasThreadY = llvm::any_of(
       parDims, [](GPUParallelDimAttr parDim) { return parDim.isThreadY(); });
   bool hasBlock = llvm::any_of(
       parDims, [](GPUParallelDimAttr parDim) { return parDim.isAnyBlock(); });
+  acc::PrivateLocalOp srcPrivate =
+      unwrapMemRefConversion(src).getDefiningOp<acc::PrivateLocalOp>();
+  acc::PrivateLocalOp destPrivate =
+      unwrapMemRefConversion(dest).getDefiningOp<acc::PrivateLocalOp>();
+  bool hasPrivateDest = isa<acc::ReductionCombineOp>(combineOp) && srcPrivate &&
+                        destPrivate &&
+                        getPrivatizeOp(srcPrivate, computeRegion) !=
+                            getPrivatizeOp(destPrivate, computeRegion);
   if (hasThreadY && hasBlock &&
-      isExclusivelyThreadYPrivate(src, computeRegion)) {
+      isThreadYPrivate(srcPrivate, hasPrivateDest, computeRegion)) {
     info.hasActiveWorkerCombine = true;
     return;
   }
@@ -1270,14 +1274,15 @@ analyzeThreadYBroadening(Block &predicateBlock,
     }
     if (acc::ReductionCombineOp combineOp =
             dyn_cast<acc::ReductionCombineOp>(nestedOp)) {
-      classifyThreadYCombine(info, combineOp, combineOp.getSrcMemref(),
-                             getReductionCombineParDims(combineOp),
-                             computeRegion);
+      classifyThreadYCombine(
+          info, combineOp, combineOp.getSrcMemref(), combineOp.getDestMemref(),
+          getReductionCombineParDims(combineOp), computeRegion);
       continue;
     }
     if (acc::ReductionCombineRegionOp combineRegionOp =
             dyn_cast<acc::ReductionCombineRegionOp>(nestedOp)) {
       classifyThreadYCombine(info, combineRegionOp, combineRegionOp.getSrcVar(),
+                             combineRegionOp.getDestVar(),
                              getReductionCombineParDims(combineRegionOp),
                              computeRegion);
       continue;
@@ -1923,7 +1928,7 @@ ACCCGToGPULowering::getPrivateMemScope(acc::PrivatizeOp privatizeOp) {
   }
   if (hasThreadX)
     return PrivateMemScope::Thread;
-  if (hasThreadY)
+  if (hasBlock && hasThreadY)
     return PrivateMemScope::Worker;
   if (hasBlock)
     return PrivateMemScope::Gang;
