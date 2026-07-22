@@ -316,18 +316,32 @@ void VPlanTransforms::LinearizeVPlan(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
 
+  // Return true if the successor of this block is conditional and don't flatten
+  // the control flow.
+  auto IsPredOfConditionalVPBB = [](VPBasicBlock *VPBB) {
+    return VPBB->isConditional() ||
+           any_of(VPBB->getSuccessors(), [](VPBlockBase *Succ) {
+             return cast<VPBasicBlock>(Succ)->isConditional();
+           });
+  };
+
   // Linearize the blocks of the loop into one serial chain.
   VPBlockBase *PrevVPBB = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    auto Successors = to_vector(VPBB->getSuccessors());
-    if (Successors.size() > 1)
-      VPBB->getTerminator()->eraseFromParent();
+    // Preserve the control flow for the conditional VPBB.
+    if (!IsPredOfConditionalVPBB(VPBB)) {
+      auto Successors = to_vector(VPBB->getSuccessors());
+      if (Successors.size() > 1)
+        VPBB->getTerminator()->eraseFromParent();
 
-    // Flatten the CFG in the loop. To do so, first disconnect VPBB from its
-    // successors. Then connect VPBB to the previously visited VPBB.
-    for (auto *Succ : Successors)
-      VPBlockUtils::disconnectBlocks(VPBB, Succ);
-    if (PrevVPBB)
+      // Flatten the CFG in the loop. To do so, first disconnect VPBB from its
+      // successors. Then connect VPBB to the previously visited VPBB.
+      for (auto *Succ : Successors)
+        VPBlockUtils::disconnectBlocks(VPBB, Succ);
+    }
+    // Don't connect VPBB to the previous visited VPBB when it share same
+    // predcessor of conditional VPBB.
+    if (PrevVPBB && !IsPredOfConditionalVPBB(cast<VPBasicBlock>(PrevVPBB)))
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
 
     PrevVPBB = VPBB;

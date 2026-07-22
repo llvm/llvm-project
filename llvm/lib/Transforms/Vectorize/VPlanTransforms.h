@@ -598,24 +598,23 @@ struct VPlanTransforms {
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
 
-  /// Try to convert the flattened control flow into a conditional vector basic
-  /// block. If there are no active bits in the mask, it will skip all masked
-  /// operations. This transformation will collect all masked operations
-  /// bottom-up from the masked stores and put all masked operations in a new
-  /// vector basic block. The original vector.loop will be split and the newly
-  /// created basic block will be inserted in between.
+  /// Try to keep the control flow before vplan linearization for conditional
+  /// vector basic block. If there are no active bits in the mask, it will skip
+  /// all masked operations in the block. This transformation will iterate all
+  /// VPBBs and try to find it contains masked store without live-out. Then keep
+  /// the cfg between predcessor of the conditional VPBB
   ///
   ///
   ///      [ ] <-- vector.loop
   ///      ^  |    %any.active.mask = any-of(%Mask)
-  ///     /   |    Branch-On-Count %any.active.mask, 0
+  ///     /   |    Branch-On-Cond %any.active.mask
   ///    /    |\
   ///   |  (F)| \ (T)
   ///   |     |  v
-  ///   |     |  [ ] <-- vector.if.bb (masked operations)
+  ///   |     |  [ ] <-- if.bb (masked operations)
   ///   |     |    |
   ///   |     |    v
-  ///   |     +-->[ ] <-- vector.loop.split
+  ///   |     +-->[ ] <-- continue.bb
   ///   |         |  |
   ///   +---------+  v
   ///               [ ] <-- middle.block

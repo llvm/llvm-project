@@ -3,7 +3,7 @@
 
 define void @conditional_store(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-LABEL: VPlan for loop in 'conditional_store'
-; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:  VPlan ' for UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
@@ -19,22 +19,22 @@ define void @conditional_store(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr ir<%addr>, vp<[[VP4]]>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%0> = load vp<[[VP5]]>
-; CHECK-NEXT:      WIDEN ir<%or.cond.not> = icmp eq ir<%0>, ir<%M>
-; CHECK-NEXT:      EMIT vp<%any.of.mask> = any-of ir<%or.cond.not>
-; CHECK-NEXT:      EMIT branch-on-cond vp<%any.of.mask>
-; CHECK-NEXT:    Successor(s): vector.if.bb, vector.body.split
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%arrayidx> = getelementptr inbounds ir<%addr>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%0> = load ir<%arrayidx>
+; CHECK-NEXT:      EMIT ir<%or.cond.not> = icmp eq ir<%0>, ir<%M>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = any-of ir<%or.cond.not>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP4]]>
+; CHECK-NEXT:    Successor(s): loop.if, loop.cont
 ; CHECK-EMPTY:
-; CHECK-NEXT:    vector.if.bb:
-; CHECK-NEXT:      WIDEN ir<%stored.val> = add ir<%0>, ir<1>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%arrayidx>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%stored.val>, ir<%or.cond.not>
-; CHECK-NEXT:    Successor(s): vector.body.split
+; CHECK-NEXT:    loop.if:
+; CHECK-NEXT:      EMIT ir<%stored.val> = add ir<%0>, ir<1>, ir<%or.cond.not>
+; CHECK-NEXT:      EMIT store ir<%stored.val>, ir<%arrayidx>, ir<%or.cond.not>
+; CHECK-NEXT:    Successor(s): loop.cont
 ; CHECK-EMPTY:
-; CHECK-NEXT:    vector.body.split:
+; CHECK-NEXT:    loop.cont:
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%exitcond.not> = icmp eq ir<%iv.next>, ir<%N>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -42,6 +42,7 @@ define void @conditional_store(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%N>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -50,7 +51,7 @@ define void @conditional_store(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -88,7 +89,7 @@ exit:
 ; Test for control flow along with live-out calculated in the conditional block.
 define i64 @conditional_liveout_and_store(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-LABEL: VPlan for loop in 'conditional_liveout_and_store'
-; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:  VPlan ' for UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
@@ -98,40 +99,43 @@ define i64 @conditional_liveout_and_store(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum> = phi (add) vp<[[VP3]]>, ir<%sum.next>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr ir<%addr>, vp<[[VP5]]>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%val> = load vp<[[VP6]]>
-; CHECK-NEXT:      WIDEN ir<%cond> = icmp eq ir<%val>, ir<%M>
-; CHECK-NEXT:      EMIT vp<%any.of.mask> = any-of ir<%cond>
-; CHECK-NEXT:      EMIT branch-on-cond vp<%any.of.mask>
-; CHECK-NEXT:    Successor(s): vector.if.bb, vector.body.split
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum> = phi (add) ir<0>, ir<%sum.next>
+; CHECK-NEXT:      EMIT ir<%arrayidx> = getelementptr inbounds ir<%addr>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%val> = load ir<%arrayidx>
+; CHECK-NEXT:      EMIT ir<%cond> = icmp eq ir<%val>, ir<%M>
+; CHECK-NEXT:      EMIT branch-on-cond ir<%cond>
+; CHECK-NEXT:    Successor(s): loop.if, loop.cont
 ; CHECK-EMPTY:
-; CHECK-NEXT:    vector.if.bb:
-; CHECK-NEXT:      WIDEN ir<%new_val> = add ir<%val>, ir<1>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%arrayidx>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%new_val>, ir<%cond>
-; CHECK-NEXT:    Successor(s): vector.body.split
+; CHECK-NEXT:    loop.if:
+; CHECK-NEXT:      EMIT ir<%new_val> = add ir<%val>, ir<1>, ir<%cond>
+; CHECK-NEXT:      EMIT store ir<%new_val>, ir<%arrayidx>, ir<%cond>
+; CHECK-NEXT:      EMIT ir<%sum.inc> = add ir<%sum>, ir<1>, ir<%cond>
+; CHECK-NEXT:    Successor(s): loop.cont
 ; CHECK-EMPTY:
-; CHECK-NEXT:    vector.body.split:
-; CHECK-NEXT:      WIDEN ir<%sum.inc> = add ir<%sum>, ir<1>
-; CHECK-NEXT:      BLEND ir<%sum.next> = ir<%sum> ir<%sum.inc>/ir<%cond>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:    loop.cont:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%cond>
+; CHECK-NEXT:      BLEND ir<%sum.next> = ir<%sum.inc>/ir<%cond> ir<%sum>/vp<[[VP4]]>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%exitcond> = icmp eq ir<%iv.next>, ir<%N>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add) ir<%sum.next>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = extract-last-part ir<%sum.next>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extract-last-lane vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-part ir<%sum.next>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-lane vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%N>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -141,8 +145,8 @@ define i64 @conditional_liveout_and_store(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -184,7 +188,7 @@ exit:
 ; Test for control flow with live-out calculated in both paths.
 define i64 @conditional_liveout_both_path(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-LABEL: VPlan for loop in 'conditional_liveout_both_path'
-; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:  VPlan ' for UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
@@ -194,41 +198,47 @@ define i64 @conditional_liveout_both_path(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%acc> = phi (add) vp<[[VP3]]>, ir<%acc.next>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr ir<%addr>, vp<[[VP5]]>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%val> = load vp<[[VP6]]>
-; CHECK-NEXT:      WIDEN ir<%cond> = icmp eq ir<%val>, ir<%M>
-; CHECK-NEXT:      WIDEN ir<%acc.else> = add ir<%acc>, ir<%val>
-; CHECK-NEXT:      WIDEN ir<%new_val> = add ir<%val>, ir<1>
-; CHECK-NEXT:      EMIT vp<%any.of.mask> = any-of ir<%cond>
-; CHECK-NEXT:      EMIT branch-on-cond vp<%any.of.mask>
-; CHECK-NEXT:    Successor(s): vector.if.bb, vector.body.split
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%acc> = phi (add) ir<0>, ir<%acc.next>
+; CHECK-NEXT:      EMIT ir<%arrayidx> = getelementptr inbounds ir<%addr>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%val> = load ir<%arrayidx>
+; CHECK-NEXT:      EMIT ir<%cond> = icmp eq ir<%val>, ir<%M>
+; CHECK-NEXT:      EMIT branch-on-cond ir<%cond>
+; CHECK-NEXT:    Successor(s): loop.if, loop.else
 ; CHECK-EMPTY:
-; CHECK-NEXT:    vector.if.bb:
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%arrayidx>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%new_val>, ir<%cond>
-; CHECK-NEXT:    Successor(s): vector.body.split
+; CHECK-NEXT:    loop.if:
+; CHECK-NEXT:      EMIT ir<%new_val> = add ir<%val>, ir<1>, ir<%cond>
+; CHECK-NEXT:      EMIT store ir<%new_val>, ir<%arrayidx>, ir<%cond>
+; CHECK-NEXT:      EMIT ir<%acc.if> = add ir<%acc>, ir<%new_val>, ir<%cond>
+; CHECK-NEXT:    Successor(s): loop.cont
 ; CHECK-EMPTY:
-; CHECK-NEXT:    vector.body.split:
-; CHECK-NEXT:      WIDEN ir<%acc.if> = add ir<%acc>, ir<%new_val>
-; CHECK-NEXT:      BLEND ir<%acc.next> = ir<%acc.else> ir<%acc.if>/ir<%cond>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:    loop.cont:
+; CHECK-NEXT:      BLEND ir<%acc.next> = ir<%acc.else>/vp<[[VP4:%[0-9]+]]> ir<%acc.if>/ir<%cond>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%exitcond> = icmp eq ir<%iv.next>, ir<%N>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:    loop.else:
+; CHECK-NEXT:      EMIT vp<[[VP4]]> = not ir<%cond>
+; CHECK-NEXT:      EMIT ir<%acc.else> = add ir<%acc>, ir<%val>, vp<[[VP4]]>
+; CHECK-NEXT:    Successor(s): loop.cont
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add) ir<%acc.next>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = extract-last-part ir<%acc.next>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extract-last-lane vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-part ir<%acc.next>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-lane vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%N>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -238,8 +248,8 @@ define i64 @conditional_liveout_both_path(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
