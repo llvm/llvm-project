@@ -10,11 +10,11 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class DanglingPtrDeref : public Checker<check::Location, check::PreCall> {
+class DanglingPtrDeref : public Checker<check::Location, check::PostCall> {
 public:
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
-  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N,
                            CheckerContext &C) const;
   const BugType BugMsg{this, "ReportDanglingPtrDeref", "LifetimeBound"};
@@ -50,12 +50,16 @@ void DanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   }
 }
 
-void DanglingPtrDeref::checkPreCall(const CallEvent &Call,
-                                    CheckerContext &C) const {
-
+void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
+                                     CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  for (unsigned I = 0; I < Call.getNumArgs(); I++) {
-    if (const MemRegion *ArgRegion = Call.getArgSVal(I).getAsRegion())
+  // Only check calls arguments if it is not inlined by the engine. In case a
+  // function is inlined checkLocation handles any dereference in its body.
+  if (C.wasInlined)
+    return;
+
+  for (unsigned Idx = 0; Idx < Call.getNumArgs(); Idx++) {
+    if (const MemRegion *ArgRegion = Call.getArgSVal(Idx).getAsRegion())
       if (lifetime_modeling::isDeallocated(State, ArgRegion))
         if (ExplodedNode *N = C.generateNonFatalErrorNode())
           reportUseAfterScope(ArgRegion, N, C);
@@ -67,7 +71,7 @@ void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
                                            CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
-      (llvm::Twine("Use of '") + Region->getBaseRegion()->getString() +
+      (llvm::Twine("Use of '") + Region->getString() +
        "' after its lifetime ended."),
       N);
   BR->addVisitor<DanglingPtrDerefBRVisitor>(Region);
@@ -95,8 +99,7 @@ DanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
       S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(
       Pos,
-      (llvm::Twine("'") + SourceRegion->getBaseRegion()->getString() +
-       "' is destroyed here")
+      (llvm::Twine("'") + SourceRegion->getString() + "' is destroyed here")
           .str(),
       true);
 }

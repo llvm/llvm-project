@@ -85,43 +85,30 @@ void test_case_seven() {
   // expected-note@-2    {{Use of 'i' after its lifetime ended}}
 }
 
-struct MyBuffer {
-  char buffer[8];
-};
-
-void member_subregion_dangling_deref() {
-  const char *p = nullptr;
+void passing_dangling_ptr_to_opaque_func() {
+  int *ptr = nullptr;
   {
-    struct MyBuffer tmp_buffer = {};
-    p = tmp_buffer.buffer;
+    int num = 5;
+    ptr = &num;
   }
-  // expected-note@-1 {{'tmp_buffer' is destroyed here}}
-  char c = *p;
-  // expected-warning@-1 {{Use of 'tmp_buffer' after its lifetime ended}}
-  // expected-note@-2    {{Use of 'tmp_buffer' after its lifetime ended}}
-  (void)c;
+  // expected-note@-1 {{'num' is destroyed here}}
+  escape(ptr);
+  // expected-warning@-1 {{Use of 'num' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'num' after its lifetime ended}}
 }
 
-void opaque(const char *);
+int deref_param(int *p) { return *p; }
+// expected-warning@-1 {{Use of 'num' after its lifetime ended}}
+// expected-note@-2    {{Use of 'num' after its lifetime ended}}
 
-void passing_dangling_to_call() {
-  const char *p = nullptr;
+void inlined_callee_single_report() {
+  int *ptr = nullptr;
   {
-    struct MyBuffer tmp_buffer = {};
-    p = tmp_buffer.buffer;
+    int num = 5;
+    ptr = &num;
   }
-  // expected-note@-1 {{'tmp_buffer' is destroyed here}}
-  opaque(p);
-  // expected-warning@-1 {{Use of 'tmp_buffer' after its lifetime ended}}
-  // expected-note@-2    {{Use of 'tmp_buffer' after its lifetime ended}}
-}
-
-void member_subregion_alive_deref() {
-  {
-    struct MyBuffer tmp_buffer = {};
-    const char *p = tmp_buffer.buffer;
-    opaque(p); //   no-warning
-    char c = *p; // no-warning
-    (void)c;
-  }
+  // expected-note@-1 {{'num' is destroyed here}}
+  int r = deref_param(ptr);
+  // expected-note@-1 {{Calling 'deref_param'}}
+  (void)r;
 }
