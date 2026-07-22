@@ -348,20 +348,42 @@ declare i1 @test_dummy(ptr %p1) #0
 ;  ret bfloat %r
 ;}
 
-;define bfloat @test_fptrunc_float(float %a) #0 {
-;  %r = fptrunc float %a to bfloat
-;  ret bfloat %r
-;}
+define bfloat @test_fptrunc_float(float %a) #0 {
+; CHECK-CVT-LABEL: test_fptrunc_float:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_fptrunc_float:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    bx lr
+  %r = fptrunc float %a to bfloat
+  ret bfloat %r
+}
 
 ;define bfloat @test_fptrunc_double(double %a) #0 {
 ;  %r = fptrunc double %a to bfloat
 ;  ret bfloat %r
 ;}
 
-;define bfloat @test_fptrunc_float_fast(float %a) #0 {
-;  %r = fptrunc fast float %a to bfloat
-;  ret bfloat %r
-;}
+define bfloat @test_fptrunc_float_fast(float %a) #0 {
+; CHECK-CVT-LABEL: test_fptrunc_float_fast:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_fptrunc_float_fast:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    bx lr
+  %r = fptrunc fast float %a to bfloat
+  ret bfloat %r
+}
 
 ;define bfloat @test_fptrunc_double_fast(double %a) #0 {
 ;  %r = fptrunc fast double %a to bfloat

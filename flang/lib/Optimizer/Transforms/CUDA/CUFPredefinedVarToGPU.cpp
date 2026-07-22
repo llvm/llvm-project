@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Pass/Pass.h"
 
 namespace fir {
@@ -101,11 +102,60 @@ processDeclareOp(mlir::OpBuilder &builder, mlir::Location loc,
 struct CUFPredefinedVarToGPU
     : public fir::impl::CUFPredefinedVarToGPUBase<CUFPredefinedVarToGPU> {
 
+  void rewritePredefinedVars(mlir::Region &region, mlir::Location loc) {
+    if (region.empty())
+      return;
+
+    bool hasPredefinedDeclares = false;
+    region.walk([&](fir::DeclareOp declareOp) {
+      llvm::StringRef uniqName = declareOp.getUniqName();
+      hasPredefinedDeclares |= uniqName == mangleBuiltin(threadidx) ||
+                               uniqName == mangleBuiltin(blockidx) ||
+                               uniqName == mangleBuiltin(blockdim) ||
+                               uniqName == mangleBuiltin(griddim);
+    });
+    if (!hasPredefinedDeclares)
+      return;
+
+    mlir::OpBuilder builder(region.getContext());
+    builder.setInsertionPointToStart(&region.front());
+    auto c1 = mlir::arith::ConstantOp::create(
+        builder, loc, builder.getI32Type(), builder.getI32IntegerAttr(1));
+    llvm::SmallVector<mlir::Value, 3> threadids, blockids, blockdims, griddims;
+    createForAllDimensions<mlir::NVVM::ThreadIdXOp, mlir::NVVM::ThreadIdYOp,
+                           mlir::NVVM::ThreadIdZOp>(builder, loc, c1, threadids,
+                                                    /*incrementByOne=*/true);
+    createForAllDimensions<mlir::NVVM::BlockIdXOp, mlir::NVVM::BlockIdYOp,
+                           mlir::NVVM::BlockIdZOp>(builder, loc, c1, blockids,
+                                                   /*incrementByOne=*/true);
+    createForAllDimensions<mlir::NVVM::GridDimXOp, mlir::NVVM::GridDimYOp,
+                           mlir::NVVM::GridDimZOp>(builder, loc, c1, griddims);
+    createForAllDimensions<mlir::NVVM::BlockDimXOp, mlir::NVVM::BlockDimYOp,
+                           mlir::NVVM::BlockDimZOp>(builder, loc, c1,
+                                                    blockdims);
+
+    llvm::SmallVector<mlir::Operation *> opsToDelete;
+    region.walk([&](fir::DeclareOp declareOp) {
+      processDeclareOp(builder, loc, declareOp, mangleBuiltin(threadidx),
+                       threadids, opsToDelete);
+      processDeclareOp(builder, loc, declareOp, mangleBuiltin(blockidx),
+                       blockids, opsToDelete);
+      processDeclareOp(builder, loc, declareOp, mangleBuiltin(blockdim),
+                       blockdims, opsToDelete);
+      processDeclareOp(builder, loc, declareOp, mangleBuiltin(griddim),
+                       griddims, opsToDelete);
+    });
+
+    for (auto *op : opsToDelete)
+      op->erase();
+  }
+
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     if (funcOp.getBody().empty())
       return;
 
+    bool rewrittenWholeFunction = false;
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
                 cuf::getProcAttrName())) {
@@ -113,42 +163,22 @@ struct CUFPredefinedVarToGPU
           cudaProcAttr.getValue() == cuf::ProcAttribute::Global ||
           cudaProcAttr.getValue() == cuf::ProcAttribute::GridGlobal ||
           cudaProcAttr.getValue() == cuf::ProcAttribute::HostDevice) {
-        mlir::Location loc = funcOp.getLoc();
-        mlir::OpBuilder builder(funcOp.getContext());
-        builder.setInsertionPointToStart(&funcOp.getBody().front());
-        auto c1 = mlir::arith::ConstantOp::create(
-            builder, loc, builder.getI32Type(), builder.getI32IntegerAttr(1));
-        llvm::SmallVector<mlir::Value, 3> threadids, blockids, blockdims,
-            griddims;
-        createForAllDimensions<mlir::NVVM::ThreadIdXOp, mlir::NVVM::ThreadIdYOp,
-                               mlir::NVVM::ThreadIdZOp>(
-            builder, loc, c1, threadids, /*incrementByOne=*/true);
-        createForAllDimensions<mlir::NVVM::BlockIdXOp, mlir::NVVM::BlockIdYOp,
-                               mlir::NVVM::BlockIdZOp>(
-            builder, loc, c1, blockids, /*incrementByOne=*/true);
-        createForAllDimensions<mlir::NVVM::GridDimXOp, mlir::NVVM::GridDimYOp,
-                               mlir::NVVM::GridDimZOp>(builder, loc, c1,
-                                                       griddims);
-        createForAllDimensions<mlir::NVVM::BlockDimXOp, mlir::NVVM::BlockDimYOp,
-                               mlir::NVVM::BlockDimZOp>(builder, loc, c1,
-                                                        blockdims);
-
-        llvm::SmallVector<mlir::Operation *> opsToDelete;
-        funcOp.walk([&](fir::DeclareOp declareOp) {
-          processDeclareOp(builder, loc, declareOp, mangleBuiltin(threadidx),
-                           threadids, opsToDelete);
-          processDeclareOp(builder, loc, declareOp, mangleBuiltin(blockidx),
-                           blockids, opsToDelete);
-          processDeclareOp(builder, loc, declareOp, mangleBuiltin(blockdim),
-                           blockdims, opsToDelete);
-          processDeclareOp(builder, loc, declareOp, mangleBuiltin(griddim),
-                           griddims, opsToDelete);
-        });
-
-        for (auto *op : opsToDelete)
-          op->erase();
+        rewritePredefinedVars(funcOp.getRegion(), funcOp.getLoc());
+        rewrittenWholeFunction = true;
       }
     }
+
+    if (rewrittenWholeFunction)
+      return;
+
+    // Host functions containing cuf.kernel or OpenACC compute regions can
+    // still carry predefined vars in the kernel body. Rewrite them in-place.
+    funcOp.walk([&](cuf::KernelOp kernelOp) {
+      rewritePredefinedVars(kernelOp.getRegion(), kernelOp.getLoc());
+    });
+    funcOp.walk([&](mlir::acc::ComputeRegionOpInterface computeOp) {
+      rewritePredefinedVars(computeOp->getRegion(0), computeOp->getLoc());
+    });
   }
 };
 

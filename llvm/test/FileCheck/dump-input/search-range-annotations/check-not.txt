@@ -4,8 +4,7 @@
 ; includes a GPU triple.  Line 62 and its context reveals we have an
 ; accidentally nested list.  Often the key to understanding a CHECK-NOT failure
 ; is where the directives before and after it matched because those establish
-; the search range.  FIXME: Of course, those lines will not be revealed until
-; braced search ranges are actually implemented.
+; the search range.
 
 RUN: rm -rf %t
 RUN: split-file %s %t
@@ -16,18 +15,30 @@ RUN:               -dump-input-filter=error 2>&1 | \
 RUN:   FileCheck %s -match-full-lines -check-prefix=DMP
 
      DMP:<<<<<<
-DMP-NEXT:       .
-DMP-NEXT:       .
-DMP-NEXT:       .
-DMP-NEXT:      42:  x86_64-amazon-linux 
-DMP-NEXT:      43:  x86_64-linux-android 
-DMP-NEXT:      44:  nvptx64-nvidia-cuda 
-DMP-NEXT:not:2      !~~~~~~~~~~~~~~~~~~   error: no match expected
-DMP-NEXT:      45:  i686-linux-gnu 
-DMP-NEXT:      46:  i686-pc-linux-gnu 
-DMP-NEXT:       .
-DMP-NEXT:       .
-DMP-NEXT:       .
+DMP-NEXT:         1: <triples kind="host"> 
+DMP-NEXT:check:1     ^~~~~~~~~~~~~~~~~~~~~
+DMP-NEXT:not:2'0                         {   search range start (exclusive)
+DMP-NEXT:         2:  x86_64-linux-gnu 
+DMP-NEXT:         3:  x86_64-unknown-linux-gnu 
+DMP-NEXT:         .
+DMP-NEXT:         .
+DMP-NEXT:         .
+DMP-NEXT:        42:  x86_64-amazon-linux 
+DMP-NEXT:        43:  x86_64-linux-android 
+DMP-NEXT:        44:  nvptx64-nvidia-cuda 
+DMP-NEXT:not:2'1      !~~~~~~~~~~~~~~~~~~   error: no match expected
+DMP-NEXT:        45:  i686-linux-gnu 
+DMP-NEXT:        46:  i686-pc-linux-gnu 
+DMP-NEXT:         .
+DMP-NEXT:         .
+DMP-NEXT:         .
+DMP-NEXT:        59:  i486-gnu 
+DMP-NEXT:        60:  i586-gnu 
+DMP-NEXT:        61:  i686-gnu 
+DMP-NEXT:not:2'2               } search range end (exclusive)
+DMP-NEXT:        62: </triples> 
+DMP-NEXT:check:3     ^~~~~~~~~~
+DMP-NEXT:        63: </triples> 
 DMP-NEXT:>>>>>>
 
 ;--- check.txt

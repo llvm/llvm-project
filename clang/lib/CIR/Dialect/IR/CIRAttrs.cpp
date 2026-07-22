@@ -214,18 +214,56 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (!sTy)
     return emitError() << "expected !cir.struct or !cir.union type";
 
+  // union record initializer is just a single element that has to match one of
+  // the fields in the union (the new active member).
+  if (sTy.isUnion()) {
+    if (members.size() != 1)
+      return emitError() << "union constant must have exactly one element, got "
+                         << members.size();
+    auto m = mlir::cast<mlir::TypedAttr>(members[0]);
+    if (!llvm::is_contained(sTy.getMembers(), m.getType()))
+      return emitError() << "union element type " << m.getType()
+                         << " is not a member of " << sTy;
+    return success();
+  }
+
   if (sTy.getMembers().size() != members.size())
     return emitError() << "number of elements must match";
 
-  unsigned attrIdx = 0;
-  for (auto &member : sTy.getMembers()) {
+  for (const auto &[attrIdx, member] : llvm::enumerate(sTy.getMembers())) {
     auto m = mlir::cast<mlir::TypedAttr>(members[attrIdx]);
+
+    // As a special case, we allow a flexible array member. This can only be the
+    // last element, the rest of the array type has to match (that is, the
+    // element type has to match), and the array member must be size zero.
+    if (attrIdx == sTy.getMembers().size() - 1) {
+      auto memArrayTy = dyn_cast<cir::ArrayType>(member);
+      if (memArrayTy && memArrayTy.getSize() == 0) {
+
+        // The FAM must only match another array type initializer.
+        if (!isa<cir::ArrayType>(m.getType()))
+          return emitError()
+                 << "element at index " << attrIdx << " has type "
+                 << m.getType() << " but the expected type for this element is "
+                 << member;
+
+        cir::ArrayType initArrayTy = cast<cir::ArrayType>(m.getType());
+        // The FAM only matches an equivalent array type.
+        if (initArrayTy.getElementType() != memArrayTy.getElementType())
+          return emitError()
+                 << "flexible array member at index " << attrIdx << " has type "
+                 << m.getType()
+                 << " which doesn't match the expected element type of member "
+                 << member;
+        continue;
+      }
+    }
+
     if (member != m.getType())
       return emitError() << "element at index " << attrIdx << " has type "
                          << m.getType()
                          << " but the expected type for this element is "
                          << member;
-    attrIdx++;
   }
 
   return success();
@@ -293,45 +331,30 @@ static void printDataMemberPath(AsmPrinter &p,
 // IntAttr definitions
 //===----------------------------------------------------------------------===//
 
-template <typename IntT>
-static bool isTooLargeForType(const mlir::APInt &value, IntT expectedValue) {
-  if constexpr (std::is_signed_v<IntT>) {
-    return value.getSExtValue() != expectedValue;
-  } else {
-    return value.getZExtValue() != expectedValue;
-  }
-}
-
-template <typename IntT>
-static mlir::ParseResult parseIntLiteralImpl(mlir::AsmParser &p,
-                                             llvm::APInt &value,
-                                             cir::IntTypeInterface ty) {
-  IntT ivalue;
-  const bool isSigned = ty.isSigned();
-  if (p.parseInteger(ivalue))
-    return p.emitError(p.getCurrentLocation(), "expected integer value");
-
-  value = mlir::APInt(ty.getWidth(), ivalue, isSigned, /*implicitTrunc=*/true);
-  if (isTooLargeForType(value, ivalue))
-    return p.emitError(p.getCurrentLocation(),
-                       "integer value too large for the given type");
-
-  return success();
-}
-
 mlir::ParseResult parseIntLiteral(mlir::AsmParser &parser, llvm::APInt &value,
                                   cir::IntTypeInterface ty) {
-  if (ty.isSigned())
-    return parseIntLiteralImpl<int64_t>(parser, value, ty);
-  return parseIntLiteralImpl<uint64_t>(parser, value, ty);
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  llvm::APInt parsed;
+  mlir::OptionalParseResult result = parser.parseOptionalInteger(parsed);
+  if (!result.has_value() || failed(*result))
+    return parser.emitError(loc, "expected integer value");
+
+  const unsigned width = ty.getWidth();
+  const bool fits =
+      ty.isSigned() ? parsed.getSignificantBits() <= width
+                    : !parsed.isNegative() && parsed.getActiveBits() <= width;
+  if (!fits)
+    return parser.emitError(loc, "integer value too large for the given type");
+
+  value = ty.isSigned() ? parsed.sextOrTrunc(width) : parsed.zextOrTrunc(width);
+  return success();
 }
 
 void printIntLiteral(mlir::AsmPrinter &p, llvm::APInt value,
                      cir::IntTypeInterface ty) {
-  if (ty.isSigned())
-    p << value.getSExtValue();
-  else
-    p << value.getZExtValue();
+  llvm::SmallString<40> str;
+  value.toString(str, /*radix=*/10, /*isSigned=*/ty.isSigned());
+  p << str;
 }
 
 LogicalResult IntAttr::verify(function_ref<InFlightDiagnostic()> emitError,

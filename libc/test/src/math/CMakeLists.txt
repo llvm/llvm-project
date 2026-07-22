@@ -257,6 +257,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lgammaf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    lgammaf16_test.cpp
+  DEPENDS
+    libc.src.math.lgammaf16
+)
+
+add_fp_unittest(
   tanpif16_test
   NEED_MPFR
   SUITE
@@ -1191,6 +1202,18 @@ add_fp_unittest(
     expf16_test.cpp
   DEPENDS
     libc.src.math.expf16
+)
+
+add_fp_unittest(
+  expbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    expbf16_test.cpp
+  DEPENDS
+    libc.src.math.expbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(

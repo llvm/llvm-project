@@ -18,9 +18,12 @@ import yaml
 
 from dex.test_script.Nodes import (
     Expect,
+    ExpectAll,
     FileLabels,
+    Label,
     Where,
     Then,
+    Step,
     setup_yaml_parser,
 )
 
@@ -138,6 +141,24 @@ class Scope:
             next_scope = next_scope.parent_scope
         return next_scope.file
 
+    def get_desired_frame_idx(self) -> Optional[int]:
+        if not (self.where and self.where.is_and):
+            return None
+        if self.where.at_frame_idx is not None:
+            return self.where.at_frame_idx
+        assert self.parent_scope
+        return self.parent_scope.get_desired_frame_idx()
+
+
+class ScriptLoadContext:
+    """Contains information about the context that the script was loaded from."""
+
+    def __init__(self, file: str, lines: List[str], start_line: int, stop_line: int):
+        self.file = file
+        self.lines = lines
+        self.start_line = start_line
+        self.stop_line = stop_line
+
 
 class DexterScript:
     def __init__(
@@ -146,10 +167,12 @@ class DexterScript:
         script_obj,
         scope: Scope,
         source_root_dir: Optional[str],
+        load_context: ScriptLoadContext,
     ):
         self.context = context
         self.script_obj = script_obj
         self.root_scope = scope
+        self.load_context = load_context
         self.label_dict = LabelDict()
         assert scope.file is not None
         self.base_dir = (
@@ -157,9 +180,41 @@ class DexterScript:
             if source_root_dir is not None
             else os.path.dirname(scope.file)
         )
+        self._validate()
+
+    def _validate(self):
+        def validate_expect(expect: Expect, expected_value, scope: Scope):
+            if isinstance(expect, ExpectAll) and expected_value is not None:
+                raise DexterScriptError(
+                    f"!expect/all node {expect} should not have an expected value."
+                )
+            if isinstance(expect, Step) and expected_value is not None:
+                if not (
+                    isinstance(expected_value, list)
+                    and all(isinstance(l, (int, Label)) for l in expected_value)
+                ):
+                    raise DexterScriptError(
+                        f"Expected value for !step node {expect} must be list of integers"
+                    )
+
+        def validate_where(where: Where, scope: Scope):
+            if where.is_and and not scope.where:
+                raise DexterScriptError(
+                    f"!and node must be contained by another state node."
+                )
+            if scope.get_desired_frame_idx() is not None:
+                if not where.is_and:
+                    raise DexterScriptError(
+                        f"!where node {where} cannot be contained by a node with at_frame_idx."
+                    )
+                if where.at_frame_idx:
+                    raise DexterScriptError(
+                        f"!and node {where} with at_frame_idx cannot be contained by another node with at_frame_idx."
+                    )
+
         # `visit_script` will validate the structure of the script, as it traverses the full script and raises an
         # exception if it sees anything unexpected.
-        self.visit_script()
+        self.visit_script(visit_expect=validate_expect, visit_where=validate_where)
 
     # If a truthy value is returned, abort further visiting and return that value.
     def _visit_script(
@@ -271,6 +326,7 @@ def get_script(context, file, loader, source_root_dir: Optional[str]) -> DexterS
                 try_load_yaml("\n".join(lines), loader),
                 root_scope,
                 source_root_dir,
+                ScriptLoadContext(file, lines, start_line=0, stop_line=len(lines)),
             )
         except (Error, yaml.YAMLError) as e:
             raise Error(f"File '{file}' was not a valid Dexter script:\n{e}")
@@ -293,6 +349,7 @@ def get_script(context, file, loader, source_root_dir: Optional[str]) -> DexterS
                 ),
                 root_scope,
                 source_root_dir,
+                ScriptLoadContext(file, lines, start_line, stop_line),
             )
         except (Error, yaml.YAMLError) as e:
             attempted_scripts.append((start_line, e))
@@ -330,3 +387,15 @@ def get_dexter_script(context, test_file, source_root_dir: Optional[str]):
 
         script.visit_script(visit_where=check_explicit_files)
         return script, source_files
+
+
+def write_dexter_script_file(script: DexterScript) -> str:
+    load_context = script.load_context
+    script_lines = script.dump().splitlines(True)
+    write_lines = (
+        load_context.lines[: load_context.start_line]
+        + script_lines
+        + ["...\n"]
+        + load_context.lines[load_context.stop_line :]
+    )
+    return "".join(write_lines)

@@ -44,7 +44,6 @@ if (NOT LLVM_USE_SANITIZER)
       mprotect_test.cpp
     DEPENDS
       libc.hdr.sys_mman_macros
-      libc.include.sys_mman
       libc.include.signal
       libc.src.errno.errno
       libc.src.sys.mman.mmap
@@ -158,6 +157,7 @@ add_libc_unittest(
     libc.src.sys.mman.munlock
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall
+    libc.hdr.sys_resource_macros
     libc.src.sys.resource.getrlimit
     libc.src.unistd.sysconf
     libc.src.__support.OSUtil.osutil
@@ -187,6 +187,11 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
+if(CMAKE_CROSSCOMPILING_EMULATOR)
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    message(STATUS "Skipping remap_file_pages_test under emulator.")
+  endif()
+else()
 add_libc_unittest(
   remap_file_pages_test
   SUITE
@@ -195,8 +200,7 @@ add_libc_unittest(
     remap_file_pages_test.cpp
   DEPENDS
     libc.hdr.sys_mman_macros
-    libc.include.sys_mman
-    libc.include.sys_stat
+    libc.hdr.sys_stat_macros
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
     libc.src.sys.mman.remap_file_pages
@@ -207,6 +211,7 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.sysconf
 )
+endif()
 
 add_libc_unittest(
   shm_test

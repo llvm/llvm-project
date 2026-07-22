@@ -462,6 +462,8 @@ add_subdirectory(threads)
 
 add_subdirectory(File)
 
+add_subdirectory(printf_core)
+
 add_subdirectory(HashTable)
 
 add_subdirectory(fixed_point)
@@ -472,6 +474,10 @@ add_subdirectory(wchar)
 add_subdirectory(wctype)
 
 add_subdirectory(math)
+add_subdirectory(builtins)
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
   add_subdirectory(mathvec)
+endif()
+if(LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(regex)
 endif()

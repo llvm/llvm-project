@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIROpenMPTransforms
+  HostOpFiltering.cpp
   MarkDeclareTarget.cpp
   OpenMPOffloadPrivatizationPrepare.cpp
   StackToShared.cpp

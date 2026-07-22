@@ -61,13 +61,21 @@
 // CHECK:     hlfir.assign %{{.*}} to %{{.*}}
 // CHECK:   }
 // CHECK: } else {
-// CHECK:   %[[EXPR:.*]] = hlfir.as_expr %{{.*}}
+// CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
 // CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
-// CHECK:     %{{.*}} = hlfir.apply %[[EXPR]], %{{.*}}
+// CHECK:     %{{.*}} = hlfir.designate %{{.*}} (%{{.*}})
+// CHECK:     %{{.*}} = fir.load %{{.*}}
+// CHECK:     %{{.*}} = hlfir.designate %[[TEMP]]#0 (%{{.*}})
+// CHECK:     hlfir.assign %{{.*}} to %{{.*}} temporary_lhs
+// CHECK:   }
+// CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:     %{{.*}} = hlfir.designate %[[TEMP]]#0 (%{{.*}})
+// CHECK:     %{{.*}} = fir.load %{{.*}}
 // CHECK:     %{{.*}} = hlfir.designate %{{.*}} (%{{.*}})
 // CHECK:     hlfir.assign %{{.*}} to %{{.*}}
 // CHECK:   }
-// CHECK:   hlfir.destroy %[[EXPR]]
+// CHECK:   fir.freemem %{{.*}}
 // CHECK: }
 
 func.func @_QPtestcase(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}, %arg2: !fir.ref<i32> {fir.bindc_name = "step"}) {

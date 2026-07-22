@@ -3,8 +3,7 @@
 ; 2-3.  Those lines are where the actual problem is because that is where the
 ; CHECK-NEXT/CHECK-SAME directive was expected to match but did not.  The line
 ; where CHECK-NEXT/CHECK-SAME actually matched, line 13, is typically less
-; useful information.  FIXME: Of course, the former lines will not be revealed
-; until braced search ranges are actually implemented.
+; useful information.
 
 RUN: rm -rf %t
 RUN: split-file %s %t
@@ -20,14 +19,22 @@ RUN:               -dump-input-filter=error 2>&1 | \
 RUN:   FileCheck %s -match-full-lines -check-prefixes=DMP,DMP_SAME
 
           DMP:<<<<<<
-     DMP-NEXT:        .
-     DMP-NEXT:        .
-     DMP-NEXT:        .
-     DMP-NEXT:       11: foo9 
-     DMP-NEXT:       12: foo10 
-     DMP-NEXT:       13: end 
-DMP_NEXT-NEXT:next:2     !~~   error: match on wrong line
-DMP_SAME-NEXT:same:2     !~~   error: match on wrong line
+     DMP-NEXT:          1: start 
+     DMP-NEXT:check:1      ^~~~~
+DMP_NEXT-NEXT:next:2'0         {   search range start (exclusive)
+DMP_SAME-NEXT:same:2'0         {   search range start (exclusive)
+     DMP-NEXT:          2: foo0 
+     DMP-NEXT:          3: foo1 
+     DMP-NEXT:          .
+     DMP-NEXT:          .
+     DMP-NEXT:          .
+     DMP-NEXT:         11: foo9 
+     DMP-NEXT:         12: foo10 
+     DMP-NEXT:         13: end 
+DMP_NEXT-NEXT:next:2'1     !~~   error: match on wrong line
+DMP_SAME-NEXT:same:2'1     !~~   error: match on wrong line
+DMP_NEXT-NEXT:next:2'2         } search range end (exclusive)
+DMP_SAME-NEXT:same:2'2         } search range end (exclusive)
      DMP-NEXT:>>>>>>
 
 ;--- next.txt

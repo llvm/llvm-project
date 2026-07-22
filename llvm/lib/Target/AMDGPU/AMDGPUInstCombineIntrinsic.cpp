@@ -65,11 +65,13 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
   return maxnum(Src0, Src1);
 }
 
-// Check if a value can be converted to a 16-bit value without losing
-// precision.
+// Check if a value can be converted to a 16-bit value without losing precision.
 // The value is expected to be either a float (IsFloat = true) or an unsigned
-// integer (IsFloat = false).
-static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat) {
+// integer (IsFloat = false). When AllowI16SExt is set, a sext from i16 is also
+// accepted: for unsigned addresses sext and zext only differ for a negative
+// i16, which is out of bounds anyway (see caller).
+static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat,
+                                    bool AllowI16SExt = false) {
   Type *VTy = V.getType();
   if (VTy->isHalfTy() || VTy->isIntegerTy(16)) {
     // The value is already 16-bit, so we don't want to convert to 16-bit again!
@@ -94,11 +96,21 @@ static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat) {
     }
   }
 
+  // Coordinates may arrive as extractelement((s|z|fp)ext Vec), Idx. The
+  // widening cast has one use per lane, so it is never sunk into the extract;
+  // strip the extract here so the cast check below is common to scalar and
+  // vector coords.
+  Value *CastCandidate;
+  if (!match(&V, m_ExtractElt(m_Value(CastCandidate), m_Value())))
+    CastCandidate = &V;
+
   Value *CastSrc;
-  bool IsExt = IsFloat ? match(&V, m_FPExt(PatternMatch::m_Value(CastSrc)))
-                       : match(&V, m_ZExt(PatternMatch::m_Value(CastSrc)));
+  bool IsExt = IsFloat ? match(CastCandidate, m_FPExt(m_Value(CastSrc)))
+                       : match(CastCandidate, m_ZExt(m_Value(CastSrc)));
+  if (!IsExt && !IsFloat && AllowI16SExt)
+    IsExt = match(CastCandidate, m_SExt(m_Value(CastSrc)));
   if (IsExt) {
-    Type *CastSrcTy = CastSrc->getType();
+    Type *CastSrcTy = CastSrc->getType()->getScalarType();
     if (CastSrcTy->isHalfTy() || CastSrcTy->isIntegerTy(16))
       return true;
   }
@@ -111,6 +123,13 @@ static Value *convertTo16Bit(Value &V, InstCombiner::BuilderTy &Builder) {
   Type *VTy = V.getType();
   if (isa<FPExtInst, SExtInst, ZExtInst>(&V))
     return cast<Instruction>(&V)->getOperand(0);
+  // Vector form: extractelement((s|z|fp)ext Vec), Idx -> extractelement(Vec,
+  // Idx), taking the narrow lane directly so the widening cast can be removed.
+  Instruction *VecCast;
+  Value *Idx;
+  if (match(&V, m_ExtractElt(m_Instruction(VecCast), m_Value(Idx))) &&
+      isa<FPExtInst, SExtInst, ZExtInst>(VecCast))
+    return Builder.CreateExtractElement(VecCast->getOperand(0), Idx);
   if (VTy->isIntegerTy())
     return Builder.CreateIntCast(&V, Type::getInt16Ty(V.getContext()), false);
   if (VTy->isFloatingPointTy())
@@ -333,11 +352,16 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
   // true means derivatives can be converted to 16 bit, coordinates not
   bool OnlyDerivatives = false;
 
+  // Sampler-less addresses are unsigned, so a sext from i16 folds to a16 like a
+  // zext: they only disagree for a negative i16 (>= 0x8000), which is out of
+  // bounds while the max image dimension is <= 0x8000.
+  bool AllowI16SExt = !HasSampler;
+
   for (unsigned OperandIndex = ImageDimIntr->GradientStart;
        OperandIndex < ImageDimIntr->VAddrEnd; OperandIndex++) {
     Value *Coord = II.getOperand(OperandIndex);
     // If the values are not derived from 16-bit values, we cannot optimize.
-    if (!canSafelyConvertTo16Bit(*Coord, HasSampler)) {
+    if (!canSafelyConvertTo16Bit(*Coord, HasSampler, AllowI16SExt)) {
       if (OperandIndex < ImageDimIntr->CoordStart ||
           ImageDimIntr->GradientStart == ImageDimIntr->CoordStart) {
         return std::nullopt;
@@ -1132,15 +1156,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     if (const ConstantFP *C = dyn_cast<ConstantFP>(Src)) {
-      const APFloat &ArgVal = C->getValueAPF();
-      APFloat Val(ArgVal.getSemantics(), 1);
-      Val.divide(ArgVal, APFloat::rmNearestTiesToEven);
+      std::optional<APFloat> Val = AMDGPU::evaluateRcp(C->getValueAPF());
+      if (!Val)
+        break;
 
-      // This is more precise than the instruction may give.
-      //
-      // TODO: The instruction always flushes denormal results (except for f16),
-      // should this also?
-      return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), Val));
+      return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), *Val));
     }
 
     FastMathFlags FMF = cast<FPMathOperator>(II).getFastMathFlags();
@@ -1581,9 +1601,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                 : IC.Builder.CreateMinNum(Src0, Src1);
         break;
       case KnownIEEEMode::Off:
-        V = (ConstSrc2 && ConstSrc2->isNegInfinity())
-                ? IC.Builder.CreateMinimumNum(Src0, Src1)
-                : IC.Builder.CreateMaximumNum(Src0, Src1);
+        V = (ConstSrc2 && ConstSrc2->isPosInfinity())
+                ? IC.Builder.CreateMaximumNum(Src0, Src1)
+                : IC.Builder.CreateMinimumNum(Src0, Src1);
         break;
       case KnownIEEEMode::Unknown:
         break;

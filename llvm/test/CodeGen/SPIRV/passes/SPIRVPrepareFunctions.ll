@@ -25,6 +25,14 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) {
   ret i32 %r
 }
 
+; Parameter attributes of the original intrinsic are propagated
+; to the generated SPIR-V.
+define void @memset_attrs(ptr %p, i8 %v, i32 %n) {
+; CHECK-LABEL: define void @memset_attrs(
+  call void @llvm.memset.p0.i32(ptr nocapture writeonly %p, i8 %v, i32 %n, i1 false)
+  ret void
+}
+
 ; The bswap helper is materialized with the standard shift/mask/or unrolling.
 ; CHECK-LABEL: define i32 @spirv.llvm_bswap_i32(i32 %0)
 ; CHECK-DAG:   shl i32 %0, 24
@@ -54,6 +62,12 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) {
 ; CHECK:       %[[#OR:]]  = or i32 %[[#A]], %[[#B]]
 ; CHECK:       ret i32 %[[#OR]]
 
+; The memset helper definition carries the destination attributes propagated
+; from the original @llvm.memset intrinsic.
+; CHECK-LABEL: define void @spirv.llvm_memset_p0_i32(
+; CHECK-SAME:    ptr writeonly {{.*}}captures(none) %dest,
+
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1)
 declare i32 @llvm.bswap.i32(i32)
 declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare i32 @llvm.fshr.i32(i32, i32, i32)

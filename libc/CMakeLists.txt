@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "libc")
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -72,6 +80,13 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
 set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Common compile options for all the tests.")
+set(LIBC_TEST_FLOAT_RANGE_COUNT "1231" CACHE STRING
+  "Number of values sampled by libc floating-point range tests.")
+if(NOT "${LIBC_TEST_FLOAT_RANGE_COUNT}" MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR
+    "Invalid LIBC_TEST_FLOAT_RANGE_COUNT: ${LIBC_TEST_FLOAT_RANGE_COUNT}. "
+    "Expected a positive integer.")
+endif()
 
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")

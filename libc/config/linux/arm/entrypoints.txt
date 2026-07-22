@@ -17,6 +17,16 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
+    # err.h entrypoints
+    libc.src.err.err
+    libc.src.err.verr
+    libc.src.err.errx
+    libc.src.err.verrx
+    libc.src.err.warn
+    libc.src.err.vwarn
+    libc.src.err.warnx
+    libc.src.err.vwarnx
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -228,6 +238,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.setjmp.setjmp
     libc.src.setjmp.siglongjmp
     libc.src.setjmp.sigsetjmp
+
+    # dirent.h entrypoints
+    libc.src.dirent.closedir
+    libc.src.dirent.dirfd
+    libc.src.dirent.opendir
+    libc.src.dirent.readdir
+    libc.src.dirent.fdopendir
   )
 endif()
 
@@ -240,6 +257,8 @@ endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.cabs
+    libc.src.complex.cabsf
     libc.src.complex.carg
     libc.src.complex.cargf
     libc.src.complex.creal
@@ -510,6 +529,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16

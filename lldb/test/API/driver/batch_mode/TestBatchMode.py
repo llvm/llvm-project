@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbpexpect import PExpectTest
 
 
+@skipIfWasm  # driver cannot launch a Wasm inferior
 class DriverBatchModeTest(PExpectTest):
     source = "main.c"
 

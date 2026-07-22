@@ -49,20 +49,16 @@ func.func @maximumf(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) -> vector<4xf3
 }
 
 // CHECK-LABEL: @minnumf
-// CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
 func.func @minnumf(%arg0 : f32, %arg1 : f32) -> f32 {
-  // CHECK: %[[F:.+]] = spirv.GL.FMin %[[LHS]], %[[RHS]]
+  // CHECK: spirv.GL.NMin %{{.*}}, %{{.*}} : f32
   %0 = arith.minnumf %arg0, %arg1 fastmath<fast> : f32
-  // CHECK: return %[[F]]
   return %0: f32
 }
 
 // CHECK-LABEL: @maxnumf
-// CHECK-SAME: %[[LHS:.+]]: vector<4xf32>, %[[RHS:.+]]: vector<4xf32>
 func.func @maxnumf(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) -> vector<4xf32> {
-  // CHECK: %[[F:.+]] = spirv.GL.FMax %[[LHS]], %[[RHS]]
+  // CHECK: spirv.GL.NMax %{{.*}}, %{{.*}} : vector<4xf32>
   %0 = arith.maxnumf %arg0, %arg1 fastmath<fast> : vector<4xf32>
-  // CHECK: return %[[F]]
   return %0: vector<4xf32>
 }
 

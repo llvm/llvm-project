@@ -866,3 +866,8 @@ def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_S_WU_INX $rs1, 
 def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_S_L_INX $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU_INX $rs1, FRM_DYN)>;
 } // Predicates = [HasStdExtZfinx, IsRV64]
+
+// Used by -fzero-call-used-regs to zero out registers.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoClearFPR32 : Pseudo<(outs FPR32:$rd), (ins), []>,
+                       PseudoInstExpansion<(FMV_W_X FPR32:$rd, X0)>;
