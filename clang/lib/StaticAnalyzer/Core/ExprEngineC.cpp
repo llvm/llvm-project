@@ -891,7 +891,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
   ExplodedNodeSet EvalSet;
 
   // Lambda for handling the case when the operand is returned unchanged.
-  auto MakeNodeForIdentityOp = [U, &Engine=Engine](ExplodedNode *N) {
+  auto MakeNodeForIdentityOp = [U, &Engine = Engine](ExplodedNode *N) {
     const Expr *Ex = U->getSubExpr()->IgnoreParens();
     SVal SV = N->getState()->getSVal(Ex, N->getStackFrame());
     return Engine.makeNodeWithBinding(N, U, SV);
