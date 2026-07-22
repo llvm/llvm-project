@@ -499,6 +499,14 @@ defm McastLoadInsts : AMDGPUSubtargetFeature<"mcast-load-insts",
   "Has multicast load instructions"
 >;
 
+defm AsyncLoadToLDSInsts : AMDGPUSubtargetFeature<"async-load-to-lds-insts",
+  "Has global async load to LDS instructions"
+>;
+
+defm AsyncStoreFromLDSInsts : AMDGPUSubtargetFeature<"async-store-from-lds-insts",
+  "Has global async store from LDS instructions"
+>;
+
 defm SWakeupImm : AMDGPUSubtargetFeature<"s-wakeup-imm",
   "s_wakeup takes an immediate operand"
 >;
@@ -2247,6 +2255,8 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
+   FeatureAsyncLoadToLDSInsts,
+   FeatureAsyncStoreFromLDSInsts,
    FeatureSmemPrefetchInsts,
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
