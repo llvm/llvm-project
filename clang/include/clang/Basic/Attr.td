@@ -5195,7 +5195,7 @@ def HLSLIsArray : TypeAttr {
   let Documentation = [InternalOnly];
 }
 
-def HLSLMultiSampled : TypeAttr {
+def HLSLIsMultiSampled : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_ms">];
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];

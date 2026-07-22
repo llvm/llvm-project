@@ -2016,7 +2016,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLIsCounter:
   case attr::HLSLResourceDimension:
   case attr::HLSLIsArray:
-  case attr::HLSLMultiSampled:
+  case attr::HLSLIsMultiSampled:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:

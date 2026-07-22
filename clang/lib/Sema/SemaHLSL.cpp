@@ -2161,7 +2161,7 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.IsArray = true;
       break;
-    case attr::HLSLMultiSampled:
+    case attr::HLSLIsMultiSampled:
       if (ResAttrs.IsMultiSampled) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
         return false;
@@ -2293,8 +2293,8 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     A = HLSLIsArrayAttr::Create(getASTContext(), ACI);
     break;
 
-  case ParsedAttr::AT_HLSLMultiSampled:
-    A = HLSLMultiSampledAttr::Create(getASTContext(), ACI);
+  case ParsedAttr::AT_HLSLIsMultiSampled:
+    A = HLSLIsMultiSampledAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
