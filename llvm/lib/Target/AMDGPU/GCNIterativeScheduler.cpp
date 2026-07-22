@@ -367,7 +367,7 @@ void GCNIterativeScheduler::scheduleBest(Region &R) {
   R.BestSchedule.reset();
 }
 
-void GCNIterativeScheduler::restoreFlags(MachineInstr &MI) {
+void GCNIterativeScheduler::restoreLivenessFlags(MachineInstr &MI) {
   assert(!MI.isDebugInstr());
 
   for (MachineOperand &Op : MI.all_defs())
@@ -380,10 +380,10 @@ void GCNIterativeScheduler::restoreFlags(MachineInstr &MI) {
   RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, &MI);
 }
 
-void GCNIterativeScheduler::restoreRegionFlags(const Region &R) {
+void GCNIterativeScheduler::restoreRegionLivenessFlags(const Region &R) {
   for (MachineBasicBlock::iterator I = R.Begin; I != R.End; ++I) {
     if (!I->isDebugInstr())
-      restoreFlags(*I);
+      restoreLivenessFlags(*I);
   }
 }
 
@@ -412,7 +412,7 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
         LIS->handleMove(*MI, true);
     }
     if (!MI->isDebugInstr())
-      restoreFlags(*MI);
+      restoreLivenessFlags(*MI);
     Top = std::next(MI->getIterator());
   }
   RegionBegin = getMachineInstr(Schedule.front());
@@ -633,7 +633,7 @@ void GCNIterativeScheduler::scheduleILP(
         LLVM_DEBUG(dbgs() << ", scheduling minimal register\n");
         scheduleBest(*R);
       } else {
-        restoreRegionFlags(*R);
+        restoreRegionLivenessFlags(*R);
       }
     } else {
       scheduleRegion(*R, ILPSchedule, RP);
