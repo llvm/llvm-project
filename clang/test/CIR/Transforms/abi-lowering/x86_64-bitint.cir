@@ -1,0 +1,230 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!b17i = !cir.int<s, 17, bitint>
+!ub17i = !cir.int<u, 17, bitint>
+!b32i = !cir.int<s, 32, bitint>
+!b33i = !cir.int<s, 33, bitint>
+!ub33i = !cir.int<u, 33, bitint>
+!b40i = !cir.int<s, 40, bitint>
+!b63i = !cir.int<s, 63, bitint>
+!b64i = !cir.int<s, 64, bitint>
+!b65i = !cir.int<s, 65, bitint>
+!ub65i = !cir.int<u, 65, bitint>
+!b127i = !cir.int<s, 127, bitint>
+!b128i = !cir.int<s, 128, bitint>
+!s8i = !cir.int<s, 8>
+!rec_S = !cir.struct<"S" {!b17i}>
+!rec_P = !cir.struct<"P" {!b65i}>
+!rec_W = !cir.struct<"W" {!b128i}>
+!rec_O = !cir.struct<"O" {!b128i, !s8i}>
+!rec_Arr = !cir.struct<"Arr" {!cir.array<!b65i x 2>}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<i128, dense<128>: vector<2xi64>>>
+} {
+
+  // Sub-register signed _BitInt: Extend, one argument with signext.
+  cir.func @ret_b17(%arg0: !b17i) -> !b17i {
+    cir.return %arg0 : !b17i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_b17(%arg0: !cir.int<s, 17, bitint> {llvm.signext}) -> (!cir.int<s, 17, bitint> {llvm.signext})
+
+  // Unsigned sub-register _BitInt: zeroext instead.
+  cir.func @ret_ub17(%arg0: !ub17i) -> !ub17i {
+    cir.return %arg0 : !ub17i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_ub17(%arg0: !cir.int<u, 17, bitint> {llvm.zeroext}) -> (!cir.int<u, 17, bitint> {llvm.zeroext})
+
+  // Too wide to extend, and already the width the classifier names: unchanged.
+  cir.func @ret_b32(%arg0: !b32i) -> !b32i {
+    cir.return %arg0 : !b32i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_b32(%arg0: !s32i_bitint) -> !s32i_bitint
+  // CHECK-NEXT: cir.return %arg0 : !s32i_bitint
+
+  // One bit wider is still one eightbyte, but the classifier names i64, so the
+  // value travels in that width and the narrower one is recovered from memory.
+  cir.func @ret_b33(%arg0: !b33i) -> !b33i {
+    cir.return %arg0 : !b33i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_b33(%arg0: !u64i) -> !u64i
+  // CHECK: cir.cast bitcast %{{.*}} : !cir.ptr<!u64i> -> !cir.ptr<!cir.int<s, 33, bitint>>
+
+  // Signedness does not change the eightbyte it travels in.
+  cir.func @ret_ub33(%arg0: !ub33i) -> !ub33i {
+    cir.return %arg0 : !ub33i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_ub33(%arg0: !u64i) -> !u64i
+
+  cir.func @ret_b40(%arg0: !b40i) -> !b40i {
+    cir.return %arg0 : !b40i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_b40(%arg0: !u64i) -> !u64i
+
+  // Widest width that still widens.  The 64-bit case below is already exact.
+  cir.func @ret_b63(%arg0: !b63i) -> !b63i {
+    cir.return %arg0 : !b63i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_b63(%arg0: !u64i) -> !u64i
+
+  // A _BitInt exactly filling one register is Direct, signature unchanged.
+  cir.func @ret_b64(%arg0: !b64i) -> !b64i {
+    cir.return %arg0 : !b64i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_b64(%arg0: !s64i_bitint) -> !s64i_bitint
+  // CHECK-NEXT: cir.return %arg0 : !s64i_bitint
+
+  // Two INTEGER eightbytes: Direct, coerced to a {i64, i64} pair the rewriter
+  // flattens into two i64 arguments.
+  cir.func @ret_b65(%arg0: !b65i) -> !b65i {
+    cir.return %arg0 : !b65i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_b65(%arg0: !u64i, %arg1: !u64i) -> !rec_anon_struct
+  // CHECK: cir.cast bitcast %{{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 65, bitint>>
+
+  // Unsigned flattens the same way.
+  cir.func @ret_ub65(%arg0: !ub65i) -> !ub65i {
+    cir.return %arg0 : !ub65i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_ub65(%arg0: !u64i, %arg1: !u64i) -> !rec_anon_struct
+
+  // Widest width still passed as a register pair.
+  cir.func @ret_b127(%arg0: !b127i) -> !b127i {
+    cir.return %arg0 : !b127i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_b127(%arg0: !u64i, %arg1: !u64i) -> !rec_anon_struct
+
+  // Exactly two eightbytes: coerces to a single i128 and passes unchanged.
+  cir.func @ret_b128(%arg0: !b128i) -> !b128i {
+    cir.return %arg0 : !b128i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_b128(%arg0: !s128i_bitint) -> !s128i_bitint
+  // CHECK-NEXT: cir.return %arg0 : !s128i_bitint
+
+  // The call site decomposes the argument and reassembles the returned pair.
+  cir.func @call_b65(%arg0: !b65i) -> !b65i {
+    %0 = cir.call @ret_b65(%arg0) : (!b65i) -> !b65i
+    cir.return %0 : !b65i
+  }
+
+  // CHECK: cir.func{{.*}} @call_b65(%arg0: !u64i, %arg1: !u64i) -> !rec_anon_struct
+  // CHECK: cir.call @ret_b65(%{{.*}}, %{{.*}}) : (!u64i, !u64i) -> !rec_anon_struct
+
+  // The call site widens the argument and narrows the result symmetrically.
+  cir.func @call_b40(%arg0: !b40i) -> !b40i {
+    %0 = cir.call @ret_b40(%arg0) : (!b40i) -> !b40i
+    cir.return %0 : !b40i
+  }
+
+  // CHECK: cir.func{{.*}} @call_b40(%arg0: !u64i) -> !u64i
+  // CHECK: cir.call @ret_b40(%{{.*}}) : (!u64i) -> !u64i
+
+  // A non-bit-precise integer of an intermediate width is left alone: only a
+  // bit-precise type rounds up to its storage width, so the coerce here
+  // matches the natural type.
+  cir.func @plain_i40(%arg0: !cir.int<s, 40>) -> !cir.int<s, 40> {
+    cir.return %arg0 : !cir.int<s, 40>
+  }
+
+  // CHECK: cir.func{{.*}} @plain_i40(%arg0: !cir.int<s, 40>) -> !cir.int<s, 40>
+
+  // A struct holding one sub-eightbyte _BitInt is a single INTEGER eightbyte:
+  // Direct, coerced to i32.
+  cir.func @coerce_s(%arg0: !rec_S) -> !rec_S {
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!rec_S>
+    cir.store %arg0, %0 : !rec_S, !cir.ptr<!rec_S>
+    %1 = cir.load %0 : !cir.ptr<!rec_S>, !rec_S
+    cir.return %1 : !rec_S
+  }
+
+  // CHECK: cir.func{{.*}} @coerce_s(%arg0: !s32i) -> !s32i
+  // CHECK: cir.cast bitcast %{{.*}} : !cir.ptr<!s32i> -> !cir.ptr<!rec_S>
+
+  // A struct holding a two-eightbyte _BitInt flattens into an i64 pair.
+  cir.func @take_p(%arg0: !rec_P) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_p(%arg0: !u64i, %arg1: !u64i)
+  // CHECK: cir.cast bitcast %{{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_P>
+
+  // A struct holding a _BitInt(128) coerces to a single i128.
+  cir.func @take_w(%arg0: !rec_W) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_w(%arg0: !s128i)
+  // CHECK: cir.cast bitcast %{{.*}} : !cir.ptr<!s128i> -> !cir.ptr<!rec_W>
+
+  // Adding a trailing byte pushes the struct past two eightbytes, so it passes
+  // indirectly as byval.
+  cir.func @take_o(%arg0: !rec_O) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_o(%arg0: !cir.ptr<!rec_O> {llvm.align = 8 : i64, llvm.byval = !rec_O, llvm.noalias, llvm.noundef})
+
+  // Returning that struct takes the sret path, with the 8-byte alignment
+  // _BitInt(128) carries rather than __int128's 16.
+  cir.func @ret_o() -> !rec_O {
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_O>
+    %1 = cir.const #cir.zero : !rec_O
+    cir.store %1, %0 : !rec_O, !cir.ptr<!rec_O>
+    %2 = cir.load %0 : !cir.ptr<!rec_O>, !rec_O
+    cir.return %2 : !rec_O
+  }
+
+  // CHECK: cir.func{{.*}} @ret_o(%arg0: !cir.ptr<!rec_O> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_O, llvm.writable})
+  // CHECK-NEXT: %[[Z:.*]] = cir.const #cir.zero : !rec_O
+  // CHECK-NEXT: cir.store %[[Z]], %arg0 : !rec_O, !cir.ptr<!rec_O>
+
+  // Each _BitInt(65) element occupies two eightbytes, so an array of two is 32
+  // bytes and the wrapping struct passes indirectly.
+  cir.func @take_arr(%arg0: !rec_Arr) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_arr(%arg0: !cir.ptr<!rec_Arr> {llvm.align = 8 : i64, llvm.byval = !rec_Arr, llvm.noalias, llvm.noundef})
+}
+
+// LLVM: define signext i17 @ret_b17(i17 signext %{{.+}})
+// LLVM: define zeroext i17 @ret_ub17(i17 zeroext %{{.+}})
+// LLVM: define i32 @ret_b32(i32 %{{.+}})
+// LLVM: define i64 @ret_b33(i64 %{{.+}})
+// LLVM: define i64 @ret_ub33(i64 %{{.+}})
+// LLVM: define i64 @ret_b40(i64 %{{.+}})
+// LLVM: define i64 @ret_b63(i64 %{{.+}})
+// LLVM: define i64 @ret_b64(i64 %{{.+}})
+// LLVM: define { i64, i64 } @ret_b65(i64 %{{.+}}, i64 %{{.+}})
+// LLVM: define { i64, i64 } @ret_ub65(i64 %{{.+}}, i64 %{{.+}})
+// LLVM: define { i64, i64 } @ret_b127(i64 %{{.+}}, i64 %{{.+}})
+// LLVM: define i128 @ret_b128(i128 %{{.+}})
+// LLVM: define { i64, i64 } @call_b65(i64 %{{.+}}, i64 %{{.+}})
+// LLVM: define i64 @call_b40(i64 %{{.+}})
+// LLVM: define i40 @plain_i40(i40 %{{.+}})
+// LLVM: define i32 @coerce_s(i32 %{{.+}})
+// LLVM: define void @take_p(i64 %{{.+}}, i64 %{{.+}})
+// LLVM: define void @take_w(i128 %{{.+}})
+// LLVM: define void @take_o(ptr noalias noundef byval(%struct.O) align 8 %{{.+}})
+// LLVM: define void @ret_o(ptr dead_on_unwind noalias writable sret(%struct.O) align 8 %{{.+}})
+// LLVM: define void @take_arr(ptr noalias noundef byval(%struct.Arr) align 8 %{{.+}})
