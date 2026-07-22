@@ -616,6 +616,8 @@ Sema::~Sema() {
   if (ExternalSemaSource *ExternalSema
         = dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
     ExternalSema->ForgetSema();
+  // FIXME: keep just a single ExternalSemaSource instead of 2 with a slightly
+  // different behavior.
   if (ExternalSource)
     ExternalSource->ForgetSema();
 
