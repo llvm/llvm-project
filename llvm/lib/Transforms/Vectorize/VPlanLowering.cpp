@@ -421,7 +421,6 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
                     Index, StepTy, DebugLoc::getCompilerGenerated())
               : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
                                          DebugLoc::getCompilerGenerated());
-  DebugLoc DL = R->getDebugLoc();
   VPIRFlags::WrapFlagsTy Flags = R->getNoWrapFlags();
   switch (R->getInductionKind()) {
   case InductionDescriptor::IK_IntInduction: {
@@ -429,13 +428,13 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
            "Index type does not match StartValue type");
     return R->replaceAllUsesWith(Builder.createAdd(
         Start,
-        Builder.createOverflowingOp(Instruction::Mul, {Index, Step}, Flags, DL),
-        DL, "", Flags));
+        Builder.createOverflowingOp(Instruction::Mul, {Index, Step}, Flags),
+        DebugLoc::getUnknown(), "", Flags));
   }
   case InductionDescriptor::IK_PtrInduction:
     return R->replaceAllUsesWith(Builder.createPtrAdd(
-        Start, Builder.createOverflowingOp(Instruction::Mul, {Index, Step},
-                                           Flags, DL)));
+        Start,
+        Builder.createOverflowingOp(Instruction::Mul, {Index, Step}, Flags)));
   case InductionDescriptor::IK_FpInduction: {
     assert(StepTy->isFloatingPointTy() && "Expected FP Step value");
     const FPMathOperator *FPBinOp = R->getFPBinOp();
@@ -446,7 +445,7 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
     FastMathFlags FMF = FPBinOp->getFastMathFlags();
     VPValue *FMul = Builder.createNaryOp(Instruction::FMul, {Step, Index}, FMF);
     return R->replaceAllUsesWith(
-        Builder.createNaryOp(FPBinOp->getOpcode(), {Start, FMul}, FMF, DL));
+        Builder.createNaryOp(FPBinOp->getOpcode(), {Start, FMul}, FMF));
   }
   case InductionDescriptor::IK_NoInduction:
     return;
