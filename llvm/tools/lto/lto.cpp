@@ -95,6 +95,9 @@ static enum class OptParsingState {
 
 static LLVMContext *LTOContext = nullptr;
 
+// Records -mllvm arguments parsed through the legacy debug-option APIs.
+static std::vector<std::string> ThinLTOMllvmArgs;
+
 struct LTOToolDiagnosticHandler : public DiagnosticHandler {
   bool handleDiagnostics(const DiagnosticInfo &DI) override {
     if (DI.getSeverity() != DS_Error) {
@@ -511,6 +514,7 @@ void lto_set_debug_options(const char *const *options, int number) {
   llvm::append_range(Options, ArrayRef(options, number));
 
   llvm::parseCommandLineOptions(Options);
+  llvm::append_range(ThinLTOMllvmArgs, Options);
   optionParsingState = OptParsingState::Early;
 }
 
@@ -596,7 +600,10 @@ void thinlto_codegen_add_module(thinlto_code_gen_t cg, const char *Identifier,
   unwrap(cg)->addModule(Identifier, StringRef(Data, Length));
 }
 
-void thinlto_codegen_process(thinlto_code_gen_t cg) { unwrap(cg)->run(); }
+void thinlto_codegen_process(thinlto_code_gen_t cg) {
+  unwrap(cg)->setMllvmArgs(ThinLTOMllvmArgs);
+  unwrap(cg)->run();
+}
 
 unsigned int thinlto_module_get_num_objects(thinlto_code_gen_t cg) {
   return unwrap(cg)->getProducedBinaries().size();
@@ -630,11 +637,14 @@ void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
 }
 
 void thinlto_debug_options(const char *const *options, int number) {
-  // if options were requested, set them
+  // If options were requested, parse and retain them.
   if (number && options) {
     std::vector<const char *> CodegenArgv(1, "libLTO");
     append_range(CodegenArgv, ArrayRef<const char *>(options, number));
     cl::ParseCommandLineOptions(CodegenArgv.size(), CodegenArgv.data());
+    // The parsed options modify process-global state, so retain every argument
+    // cumulatively in parsing order for subsequent ThinLTO cache keys.
+    ThinLTOMllvmArgs.insert(ThinLTOMllvmArgs.end(), options, options + number);
   }
 }
 
