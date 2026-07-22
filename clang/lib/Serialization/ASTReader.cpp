@@ -1844,6 +1844,8 @@ bool ASTReader::scanLoadedSLocEntries(
   Offsets.assign(N, 0);
   Files.assign(N, SLocFileIdentity{});
 
+  SmallString<0> PathBuf;
+  PathBuf.reserve(256);
   BitstreamCursor &Cursor = F.SLocEntryCursor;
   SavedStreamPosition SavedPosition(Cursor);
   for (unsigned I = 0; I != N; ++I) {
@@ -1868,12 +1870,14 @@ bool ASTReader::scanLoadedSLocEntries(
     }
     Offsets[I] = (uint32_t)Record[0];
     if (Code.get() == SM_SLOC_FILE_ENTRY) {
-      // File identity comes from serialized metadata, so no input file is
-      // touched on disk at load.
+      // Identity comes from serialized metadata, so no input file is touched on
+      // disk. Resolve the stored name to a path so two same-named files in
+      // different directories are not treated as one; this is string work only.
       InputFileInfo IFI = getInputFileInfo(F, Record[4]);
       if (IFI.isValid())
-        Files[I] = SLocFileIdentity{IFI.UnresolvedImportedFilename,
-                                    IFI.StoredSize, IFI.StoredTime};
+        Files[I] = SLocFileIdentity{
+            ResolveImportedPathAndAllocate(PathBuf, IFI.UnresolvedImportedFilename, F),
+            IFI.StoredSize, IFI.StoredTime};
     }
   }
   return true;

@@ -2400,10 +2400,11 @@ public:
                                                         unsigned Index);
 
   /// Identity of an input file, built from serialized metadata so we touch no
-  /// files at load. An empty Name means a non-file entry like a buffer or
-  /// expansion, and never deduplicates.
+  /// files at load. Name is the resolved path, so two files with the same
+  /// spelling in different directories stay distinct. An empty Name means a
+  /// non-file entry like a buffer or expansion, and never deduplicates.
   struct SLocFileIdentity {
-    StringRef Name;
+    std::string Name;
     off_t Size = 0;
     time_t Time = 0;
   };
