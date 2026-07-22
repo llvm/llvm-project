@@ -1188,6 +1188,20 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
 LogicalResult
 CopyOpPattern::matchAndRewrite(memref::CopyOp copyOp, OpAdaptor adaptor,
                                ConversionPatternRewriter &rewriter) const {
+  auto memrefType = cast<MemRefType>(copyOp.getSource().getType());
+  if (!memrefType.hasStaticShape())
+    return rewriter.notifyMatchFailure(copyOp, "unsupported dynamic shape");
+
+  for (MemRefType type :
+       {memrefType, cast<MemRefType>(copyOp.getTarget().getType())}) {
+    auto memorySpaceAttr =
+        dyn_cast_if_present<spirv::StorageClassAttr>(type.getMemorySpace());
+    if (memorySpaceAttr &&
+        memorySpaceAttr.getValue() == spirv::StorageClass::Image)
+      return rewriter.notifyMatchFailure(
+          copyOp, "cannot lower memref.copy in image storage class");
+  }
+
   // The converted operands are SPIR-V pointers to the source and target
   // storage. spirv.CopyMemory copies the whole pointed-to object, so it only
   // applies when both pointers point to the same fixed-size element type.
