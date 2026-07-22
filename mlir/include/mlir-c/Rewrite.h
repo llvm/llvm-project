@@ -588,12 +588,29 @@ MLIR_CAPI_EXPORTED MlirTypeConverter mlirTypeConverterCreate(void);
 MLIR_CAPI_EXPORTED void
 mlirTypeConverterDestroy(MlirTypeConverter typeConverter);
 
-/// Callback type for type conversion functions.
-/// Returns failure or sets convertedType to MlirType{NULL} to indicate failure.
-/// If failure is returned, the converter is allowed to try another
-/// conversion function to perform the conversion.
-typedef MlirLogicalResult (*MlirTypeConverterConversionCallback)(
-    MlirType type, MlirType *convertedType, void *userData);
+/// Outcome of a type conversion callback. Mirrors the three states of the
+/// underlying C++ `std::optional<LogicalResult>` conversion result.
+typedef enum MlirTypeConverterConversionStatus {
+  /// The type was converted successfully.
+  MlirTypeConverterConversionStatusSuccess = 0,
+  /// The conversion failed; no further conversion function will be tried.
+  MlirTypeConverterConversionStatusFailure = 1,
+  /// The conversion was declined; another registered conversion function may be
+  /// tried.
+  MlirTypeConverterConversionStatusDeclined = 2,
+} MlirTypeConverterConversionStatus;
+
+/// Callback type for type conversion functions. On success the callback sets
+/// `*convertedType` to the converted type and returns
+/// MlirTypeConverterConversionStatusSuccess. Returning
+/// MlirTypeConverterConversionStatusDeclined leaves the type unconverted and
+/// allows another registered conversion function to be tried; returning
+/// MlirTypeConverterConversionStatusFailure fails the conversion without trying
+/// any further function.
+typedef MlirTypeConverterConversionStatus (
+    *MlirTypeConverterConversionCallback)(MlirType type,
+                                          MlirType *convertedType,
+                                          void *userData);
 
 /// Add a type conversion function to the given TypeConverter.
 MLIR_CAPI_EXPORTED void
@@ -604,6 +621,29 @@ mlirTypeConverterAddConversion(MlirTypeConverter typeConverter,
 /// Convert the given type using the given TypeConverter.
 MLIR_CAPI_EXPORTED MlirType
 mlirTypeConverterConvertType(MlirTypeConverter typeConverter, MlirType type);
+
+/// Callback type for type materializations. Given a builder (passed as a
+/// rewriter), the desired output type, the input values, and a location, the
+/// callback must build a cast-like operation that produces a single value of
+/// `outputType` and return it. Returning a null MlirValue indicates failure, in
+/// which case another registered materialization may be attempted.
+typedef MlirValue (*MlirTypeConverterMaterializationCallback)(
+    MlirRewriterBase rewriter, MlirType outputType, intptr_t nInputs,
+    MlirValue *inputs, MlirLocation loc, void *userData);
+
+/// Register a source materialization with the given TypeConverter. This is
+/// invoked when a replacement value must be converted back to its original
+/// source type because some uses persist beyond the main conversion.
+MLIR_CAPI_EXPORTED void mlirTypeConverterAddSourceMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterMaterializationCallback callback, void *userData);
+
+/// Register a target materialization with the given TypeConverter. This is
+/// invoked when a value must be converted to a target type according to a
+/// pattern's type converter.
+MLIR_CAPI_EXPORTED void mlirTypeConverterAddTargetMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterMaterializationCallback callback, void *userData);
 
 //===----------------------------------------------------------------------===//
 /// ConversionPattern API

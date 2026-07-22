@@ -736,17 +736,28 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
 static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
                                     MemRefType baseTy,
                                     arith::AtomicRMWKind kind) {
-  assert(baseTy.getRank() == 1 && baseTy.hasStaticShape() &&
-         "per-thread array reduction accumulator must be static rank-1");
+  assert(baseTy.getRank() > 0 && baseTy.hasStaticShape() &&
+         "per-thread array reduction accumulator must be static ranked");
   Value ident = createIdentityValue(b, loc, baseTy.getElementType(), kind,
                                     /*useOnlyFiniteValue=*/true);
   Value lb = arith::ConstantIndexOp::create(b, loc, 0);
-  Value ub = arith::ConstantIndexOp::create(b, loc, baseTy.getShape()[0]);
   Value step = arith::ConstantIndexOp::create(b, loc, 1);
-  auto forOp = scf::ForOp::create(b, loc, lb, ub, step);
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(forOp.getBody()->getTerminator());
-  memref::StoreOp::create(b, loc, ident, alloca, forOp.getInductionVar());
+  SmallVector<Value> indices;
+  auto buildLoopNest = [&](auto &&self, unsigned dim) -> void {
+    if (dim == baseTy.getRank()) {
+      memref::StoreOp::create(b, loc, ident, alloca, indices);
+      return;
+    }
+
+    Value ub = arith::ConstantIndexOp::create(b, loc, baseTy.getShape()[dim]);
+    auto forOp = scf::ForOp::create(b, loc, lb, ub, step);
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPoint(forOp.getBody()->getTerminator());
+    indices.push_back(forOp.getInductionVar());
+    self(self, dim + 1);
+    indices.pop_back();
+  };
+  buildLoopNest(buildLoopNest, 0);
 }
 
 std::optional<int64_t>
@@ -2650,10 +2661,17 @@ void ACCCGToGPULowering::processPrivateLocal(
   Value subview = memref::SubViewOp::create(rewriter, loc, subviewType, view,
                                             subviewOffset, subviewSizes, ones);
 
-  // Cast subview to the target type, preserving the dynamic offset.
-  // Do NOT cast to a plain memref (offset: 0) - the LLVM optimizer
-  // would fold the gang offset to zero, making all gangs share memory.
-  Value result = castPointerLikeTypeIfNeeded(rewriter, loc, subview,
+  // Pointer-like casts cannot carry memref offsets. Shift the aligned pointer
+  // so later zero-offset views retain this thread's private slice.
+  auto metadata =
+      memref::ExtractStridedMetadataOp::create(rewriter, loc, subview);
+  Value elementBytes = arith::ConstantIndexOp::create(
+      rewriter, loc, getElementSizeInBytes(loc, baseTy.getElementType()));
+  Value byteOffset =
+      arith::MulIOp::create(rewriter, loc, metadata.getOffset(), elementBytes);
+  Value privateView = memref::ViewOp::create(rewriter, loc, baseTy, memBuffer,
+                                             byteOffset, innerDynSizes);
+  Value result = castPointerLikeTypeIfNeeded(rewriter, loc, privateView,
                                              privateLocal.getType());
   mapping.map(privateLocal.getResult(), result);
 }
@@ -3244,10 +3262,15 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
 
   Value memref = mapping.lookupOrDefault(op.getMemref());
   MemRefType memrefTy = dyn_cast<MemRefType>(memref.getType());
-  if (!memref)
+  if (!memrefTy) {
     (void)accSupport.emitNYI(loc, "reduction: non-MemRefTy accumulate array");
-  if (memrefTy.getRank() != 1)
-    (void)accSupport.emitNYI(loc, "reduction: multi-rank accumulate array");
+    return;
+  }
+  if (memrefTy.getRank() > 1 && !memrefTy.hasStaticShape()) {
+    (void)accSupport.emitNYI(loc,
+                             "reduction: dynamic multi-rank accumulate array");
+    return;
+  }
 
   FailureOr<arith::AtomicRMWKind> kindOr = getReductionKind(
       op.getReductionOperator(), memrefTy.getElementType(), loc);
@@ -3355,9 +3378,24 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(forOp.getBody()->getTerminator());
     Value iv = forOp.getInductionVar();
-    Value elem = memref::LoadOp::create(rewriter, loc, memref, ValueRange{iv});
-    createGPUAllReduceOp(loc, elem, memref, kind, op.getParDims(),
-                         ValueRange{iv},
+    SmallVector<Value> indices{iv};
+    if (memrefTy.getRank() > 1) {
+      assert(memrefTy.hasStaticShape() &&
+             "multi-rank array reduction accumulator must be static");
+      indices.resize(memrefTy.getRank());
+      Value linearIndex = iv;
+      for (int64_t dim = memrefTy.getRank() - 1; dim >= 0; --dim) {
+        Value dimSize = arith::ConstantIndexOp::create(
+            rewriter, loc, memrefTy.getDimSize(dim));
+        indices[dim] =
+            arith::RemUIOp::create(rewriter, loc, linearIndex, dimSize);
+        if (dim != 0)
+          linearIndex =
+              arith::DivUIOp::create(rewriter, loc, linearIndex, dimSize);
+      }
+    }
+    Value elem = memref::LoadOp::create(rewriter, loc, memref, indices);
+    createGPUAllReduceOp(loc, elem, memref, kind, op.getParDims(), indices,
                          /*isPerThreadPrivateTarget=*/true);
   }
 

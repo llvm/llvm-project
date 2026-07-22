@@ -1644,6 +1644,34 @@ mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
                            "numeric or logical type");
 }
 
+std::optional<std::int64_t>
+fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
+                                   mlir::Value stride) {
+  std::function<std::optional<std::int64_t>(mlir::Value)> getConstantValue =
+      [&](mlir::Value value) -> std::optional<std::int64_t> {
+    if (auto valInt = fir::getIntIfConstant(value))
+      return valInt->trySExtValue();
+    auto *definingOp = value.getDefiningOp();
+    if (mlir::isa_and_nonnull<fir::ConvertOp>(definingOp)) {
+      auto valOp = mlir::dyn_cast<fir::ConvertOp>(definingOp);
+      return getConstantValue(valOp.getValue());
+    }
+    return {};
+  };
+  if (auto lbInt = getConstantValue(lb)) {
+    if (auto ubInt = getConstantValue(ub)) {
+      if (auto strideInt = getConstantValue(stride)) {
+        if (*strideInt != 0) {
+          std::int64_t extent = 1 + (*ubInt - *lbInt) / *strideInt;
+          if (extent > 0)
+            return extent;
+        }
+      }
+    }
+  }
+  return {};
+}
+
 mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Value value,
                                          mlir::Value zero) {

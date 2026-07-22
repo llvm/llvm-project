@@ -39,6 +39,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <type_traits>
 
 namespace llvm {
 
@@ -88,10 +89,6 @@ private:
     /// The parent cycle; invalid for a top-level cycle.
     CycleRef Parent;
 
-    /// The entry block(s) of the cycle. The header is the only entry if this
-    /// is a loop.
-    SmallVector<BlockT *, 1> Entries;
-
     /// This cycle's blocks (its own and its nested cycles') occupy the
     /// half-open range [IdxBegin, IdxEnd) of BlockLayout, nested like an Euler
     /// tour of the cycle tree, so containment is an interval test (see
@@ -107,17 +104,15 @@ private:
     /// [this, this + 1 + NumDescendants) of Cycles.
     unsigned NumDescendants = 0;
 
-    void appendEntry(BlockT *Block) { Entries.push_back(Block); }
+    /// The entry blocks (header first) are BlockLayout[EntryBegin,
+    /// EntryBegin+EntrySize). A reducible cycle has a single entry at IdxBegin.
+    /// An irreducible one appends its list past the Euler tour.
+    unsigned EntryBegin = 0, EntrySize = 0;
 
     /// Whether this cycle has a parent, i.e. is not top-level.
     bool hasParent() const { return Parent.isValid(); }
-
-    Cycle() = default;
-    Cycle(const Cycle &) = delete;
-    Cycle &operator=(const Cycle &) = delete;
-    Cycle(Cycle &&) = delete;
-    Cycle &operator=(Cycle &&) = delete;
   };
+  static_assert(std::is_trivially_destructible_v<Cycle>);
   using CycleT = Cycle;
 
   ContextT Context;
@@ -128,7 +123,8 @@ private:
   SmallVector<CycleRef> BlockMap;
 
   /// Euler tour of the cycle forest: every cycle's blocks form a contiguous
-  /// slice [IdxBegin, IdxEnd) of this array, nested inside its parent's.
+  /// slice [IdxBegin, IdxEnd), nested inside its parent's. Entry lists for
+  /// irreducible cycles are appended past the tour (see EntryBegin).
   SmallVector<BlockT *, 8> BlockLayout;
 
   /// All cycles in forest preorder: every cycle is immediately followed by
@@ -219,8 +215,10 @@ public:
     return BlockMap[Number];
   }
 
-  BlockT *getHeader(CycleRef C) const { return deref(C).Entries[0]; }
-  bool isReducible(CycleRef C) const { return deref(C).Entries.size() == 1; }
+  BlockT *getHeader(CycleRef C) const {
+    return BlockLayout[deref(C).EntryBegin];
+  }
+  bool isReducible(CycleRef C) const { return deref(C).EntrySize == 1; }
   CycleRef getParentCycle(CycleRef C) const { return deref(C).Parent; }
   unsigned getDepth(CycleRef C) const { return deref(C).Depth; }
   size_t getNumBlocks(CycleRef C) const {
@@ -228,14 +226,20 @@ public:
     return Cyc.IdxEnd - Cyc.IdxBegin;
   }
 
-  ArrayRef<BlockT *> getEntries(CycleRef C) const { return deref(C).Entries; }
-  bool isEntry(CycleRef C, const BlockT *Block) const {
-    return is_contained(deref(C).Entries, Block);
+  ArrayRef<BlockT *> getEntries(CycleRef C) const {
+    const CycleT &Cyc = deref(C);
+    return ArrayRef(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
   }
+  bool isEntry(CycleRef C, const BlockT *Block) const {
+    return is_contained(getEntries(C), Block);
+  }
+  // Append a one-element entry list past the Euler tour; storing Block at
+  // IdxBegin instead would disturb the block order.
   void setSingleEntry(CycleRef C, BlockT *Block) {
-    auto &Entries = deref(C).Entries;
-    Entries.clear();
-    Entries.push_back(Block);
+    CycleT &Cyc = deref(C);
+    Cyc.EntryBegin = BlockLayout.size();
+    BlockLayout.push_back(Block);
+    Cyc.EntrySize = 1;
   }
   /// Returns true iff \p Outer contains \p Inner. O(1). Non-strict.
   bool contains(CycleRef Outer, CycleRef Inner) const {
@@ -252,7 +256,7 @@ public:
   Printable printEntries(CycleRef C, const ContextT &Ctx) const {
     return Printable([this, C, &Ctx](raw_ostream &Out) {
       ListSeparator LS(" ");
-      for (auto *Entry : deref(C).Entries)
+      for (auto *Entry : getEntries(C))
         Out << LS << Ctx.print(Entry);
     });
   }
