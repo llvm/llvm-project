@@ -4593,6 +4593,41 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
   return DiagnosedSilenceableFailure::success();
 }
 
+//===----------------------------------------------------------------------===//
+// LinAlgToAffine
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::LinAlgToAffineOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    ApplyToEachResultList &results, TransformState &state) {
+  if (! isa<GenericOp>(target)) {
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  rewriter.setInsertionPoint(target);
+
+  FailureOr<LinalgLoops> generic = linalgOpToAffineLoops(rewriter, target);
+  if (succeeded(generic)) {
+    assert(! generic->empty() && "expected at least one loop");
+
+    // "generic" contains all new "AffineForOp", while we need to topmost one.
+    // Since all linalg operators are perfectly nested loops, these operators
+    //   are totally ordered through the ancestor relation.
+    Operation* opFirst = *(generic->begin());
+    for (auto itop = generic->begin(); itop!=generic->end(); itop++) {
+      if ( (*itop)->isProperAncestor(opFirst)) {
+        opFirst = *itop;
+      }
+    }
+
+    rewriter.replaceOp(target, opFirst);
+
+    results.push_back(opFirst);
+    return DiagnosedSilenceableFailure::success();
+  }
+  return DiagnosedSilenceableFailure::definiteFailure();
+}
+
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOpsEnums.cpp.inc"
 
 #define GET_OP_CLASSES
