@@ -5731,40 +5731,39 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       auto *MD = cast<MetadataAsValue>(II->getArgOperand(1))->getMetadata();
       StringRef FormatStr = cast<MDString>(MD)->getString();
 
-      const fltSemantics *SrcSemanticsPtr =
+      const fltSemantics *SrcSemantics =
           APFloat::getArbitraryFPSemantics(FormatStr);
-      if (!SrcSemanticsPtr)
+      if (!SrcSemantics)
         break;
 
-      const fltSemantics SrcSemantics = *SrcSemanticsPtr;
       const fltSemantics DstSemantics =
           II->getType()->getScalarType()->getFltSemantics();
 
-      if (!APFloat::semanticsHasNaN(SrcSemantics))
+      if (!APFloat::semanticsHasNaN(*SrcSemantics))
         Known.knownNot(fcNan);
 
       // fcInf can only be cleared if the source format has no Inf encoding
-      // AND the dst max exp can accommodate src max exp.
-      if (!APFloat::semanticsHasInf(SrcSemantics) &&
-          APFloat::semanticsMaxExponent(SrcSemantics) <=
+      // and the dst max exp can accommodate src max exp.
+      if (!APFloat::semanticsHasInf(*SrcSemantics) &&
+          APFloat::semanticsMaxExponent(*SrcSemantics) <=
               APFloat::semanticsMaxExponent(DstSemantics))
         Known.knownNot(fcInf);
 
       // Check and clear for FNUZ formats which lacks negative zero
-      if (SrcSemantics.nanEncoding == fltNanEncoding::NegativeZero)
+      if (SrcSemantics->nanEncoding == fltNanEncoding::NegativeZero)
         Known.knownNot(fcNegZero);
 
       // Check and clear all neg flags for formats that do not have signed
       // representation.
-      if (!APFloat::semanticsHasSignedRepr(SrcSemantics))
+      if (!APFloat::semanticsHasSignedRepr(*SrcSemantics))
         Known.knownNot(fcNegative);
 
       // Check if format has no zero at all, Float8E8M0FNU
-      if (!APFloat::semanticsHasZero(SrcSemantics))
+      if (!APFloat::semanticsHasZero(*SrcSemantics))
         Known.knownNot(fcZero);
 
       // If src lands normally in dest, the result can never be subnormal.
-      if (APFloat::isRepresentableAsNormalIn(SrcSemantics, DstSemantics))
+      if (APFloat::isRepresentableAsNormalIn(*SrcSemantics, DstSemantics))
         Known.knownNot(fcSubnormal);
       break;
     }
