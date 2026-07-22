@@ -128,7 +128,7 @@ jobs:
               texlive-font-utils
           pip3 install --require-hashes --user -r ./llvm/docs/requirements.txt
 
-      - name: Build Documentation
+      - name: Build Documentation Test
         env:
           GITHUB_TOKEN: ${{ github.token }}
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
