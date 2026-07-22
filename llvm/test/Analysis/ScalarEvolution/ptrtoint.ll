@@ -684,3 +684,88 @@ bb13:                                             ; preds = %bb10, %bb8
 bb14:                                             ; preds = %bb
   ret void
 }
+
+define i64 @same_base_lt_204070(ptr %s, i64 %len, ptr %tbl) {
+; X64-LABEL: 'same_base_lt_204070'
+; X64-NEXT:  Classifying expressions for: @same_base_lt_204070
+; X64-NEXT:    %send = getelementptr inbounds i8, ptr %s, i64 %len
+; X64-NEXT:    --> (%len + %s) U: full-set S: full-set
+; X64-NEXT:    %matches = phi i64 [ %matches.next, %loop ], [ 0, %entry ]
+; X64-NEXT:    --> %matches U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X64-NEXT:    %iv = phi ptr [ %iv.next, %loop ], [ %s, %entry ]
+; X64-NEXT:    --> {%s,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %len + %s) LoopDispositions: { %loop: Computable }
+; X64-NEXT:    %iv.next = getelementptr inbounds nuw i8, ptr %iv, i64 1
+; X64-NEXT:    --> {(1 + %s),+,1}<nuw><%loop> U: full-set S: full-set Exits: (%len + %s) LoopDispositions: { %loop: Computable }
+; X64-NEXT:    %ch = load i8, ptr %iv, align 1
+; X64-NEXT:    --> %ch U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X64-NEXT:    %chz = zext i8 %ch to i64
+; X64-NEXT:    --> (zext i8 %ch to i64) U: [0,256) S: [0,256) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X64-NEXT:    %tblp = getelementptr inbounds nuw [2 x i8], ptr %tbl, i64 %chz
+; X64-NEXT:    --> ((2 * (zext i8 %ch to i64))<nuw><nsw> + %tbl)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X64-NEXT:    %v = load i16, ptr %tblp, align 2
+; X64-NEXT:    --> %v U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X64-NEXT:    %inc = zext i1 %ge to i64
+; X64-NEXT:    --> (zext i1 %ge to i64) U: [0,2) S: [0,2) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X64-NEXT:    %matches.next = add i64 %matches, %inc
+; X64-NEXT:    --> ((zext i1 %ge to i64) + %matches) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X64-NEXT:    %result = phi i64 [ 0, %entry ], [ %matches.next, %loop ]
+; X64-NEXT:    --> %result U: full-set S: full-set
+; X64-NEXT:  Determining loop execution counts for: @same_base_lt_204070
+; X64-NEXT:  Loop %loop: backedge-taken count is (-1 + %len)
+; X64-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; X64-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %len)
+; X64-NEXT:  Loop %loop: Trip multiple is 1
+;
+; X32-LABEL: 'same_base_lt_204070'
+; X32-NEXT:  Classifying expressions for: @same_base_lt_204070
+; X32-NEXT:    %send = getelementptr inbounds i8, ptr %s, i64 %len
+; X32-NEXT:    --> ((trunc i64 %len to i32) + %s) U: full-set S: full-set
+; X32-NEXT:    %matches = phi i64 [ %matches.next, %loop ], [ 0, %entry ]
+; X32-NEXT:    --> %matches U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %iv = phi ptr [ %iv.next, %loop ], [ %s, %entry ]
+; X32-NEXT:    --> {%s,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + (trunc i64 %len to i32) + %s) LoopDispositions: { %loop: Computable }
+; X32-NEXT:    %iv.next = getelementptr inbounds nuw i8, ptr %iv, i64 1
+; X32-NEXT:    --> {(1 + %s),+,1}<nuw><%loop> U: full-set S: full-set Exits: ((trunc i64 %len to i32) + %s) LoopDispositions: { %loop: Computable }
+; X32-NEXT:    %ch = load i8, ptr %iv, align 1
+; X32-NEXT:    --> %ch U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %chz = zext i8 %ch to i64
+; X32-NEXT:    --> (zext i8 %ch to i64) U: [0,256) S: [0,256) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %tblp = getelementptr inbounds nuw [2 x i8], ptr %tbl, i64 %chz
+; X32-NEXT:    --> ((2 * (zext i8 %ch to i32))<nuw><nsw> + %tbl)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %v = load i16, ptr %tblp, align 2
+; X32-NEXT:    --> %v U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %inc = zext i1 %ge to i64
+; X32-NEXT:    --> (zext i1 %ge to i64) U: [0,2) S: [0,2) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %matches.next = add i64 %matches, %inc
+; X32-NEXT:    --> ((zext i1 %ge to i64) + %matches) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %result = phi i64 [ 0, %entry ], [ %matches.next, %loop ]
+; X32-NEXT:    --> %result U: full-set S: full-set
+; X32-NEXT:  Determining loop execution counts for: @same_base_lt_204070
+; X32-NEXT:  Loop %loop: backedge-taken count is (-1 + (trunc i64 %len to i32))
+; X32-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; X32-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (trunc i64 %len to i32))
+; X32-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %send = getelementptr inbounds i8, ptr %s, i64 %len
+  %guard = icmp eq i64 %len, 0
+  br i1 %guard, label %exit, label %loop
+
+loop:
+  %matches = phi i64 [ %matches.next, %loop ], [ 0, %entry ]
+  %iv = phi ptr [ %iv.next, %loop ], [ %s, %entry ]
+  %iv.next = getelementptr inbounds nuw i8, ptr %iv, i64 1
+  %ch = load i8, ptr %iv, align 1
+  %chz = zext i8 %ch to i64
+  %tblp = getelementptr inbounds nuw [2 x i8], ptr %tbl, i64 %chz
+  %v = load i16, ptr %tblp, align 2
+  %ge = icmp sgt i16 %v, -1
+  %inc = zext i1 %ge to i64
+  %matches.next = add i64 %matches, %inc
+  %done = icmp ult ptr %iv.next, %send
+  br i1 %done, label %loop, label %exit
+
+exit:
+  %result = phi i64 [ 0, %entry ], [ %matches.next, %loop ]
+  ret i64 %result
+}

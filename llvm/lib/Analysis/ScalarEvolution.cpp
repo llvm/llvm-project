@@ -13531,6 +13531,16 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   bool NoWrap = ControlsOnlyExit && any(IV->getNoWrapFlags(WrapType));
   ICmpInst::Predicate Cond = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
 
+  // If this is a pointer IV with an unsigned comparison, it may lack the strict
+  // FlagNUW flag but possess the general FlagNW flag due to originating from an
+  // 'inbounds' GEP. If the exit target RHS shares the same pointer base block
+  // as the IV start, we can safely guarantee that an address space wrap-around
+  // will not occur before the loop terminates.
+  if (!NoWrap && !IsSigned && IV->getType()->isPointerTy() &&
+      (IV->getNoWrapFlags() & SCEV::FlagNW) != SCEV::FlagAnyWrap &&
+      getPointerBase(RHS) == getPointerBase(IV->getStart())) {
+    NoWrap = true;
+  }
   const SCEV *Stride = IV->getStepRecurrence(*this);
 
   bool PositiveStride = isKnownPositive(Stride);
@@ -13739,6 +13749,15 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
 
         if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart) ||
             isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
+          return true;
+
+        // For an unsigned pointer comparison, if the loop exit boundary target
+        // shares the exact same base memory allocation block as the starting
+        // pointer, the exit target is structurally guaranteed to be greater
+        // than or equal to the start pointer
+
+        if (!IsSigned && OrigStart->getType()->isPointerTy() &&
+            getPointerBase(OrigRHS) == getPointerBase(OrigStart))
           return true;
 
         // (RHS > Start - 1) implies RHS >= Start.
