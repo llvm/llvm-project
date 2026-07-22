@@ -1,0 +1,8 @@
+VERS1.0 {
+  global:
+
+    olK*;
+
+  local:
+    *;
+};
