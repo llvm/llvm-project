@@ -69,6 +69,7 @@ selects.config_setting_group(
         "@platforms//os:linux",
     ],
 )
+
 string_flag(
     name = "lzma",
     build_setting_default = "disable",
@@ -77,6 +78,7 @@ string_flag(
         "system",
     ],
 )
+
 config_setting(
     name = "system_lzma_enabled",
     flag_values = {":lzma": "system"},
