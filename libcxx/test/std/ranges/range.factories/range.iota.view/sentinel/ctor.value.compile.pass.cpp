@@ -15,8 +15,6 @@
 #include <ranges>
 #include <type_traits>
 
-#include "test_macros.h"
-
 #include "../types.h"
 
 using Sent = std::ranges::sentinel_t<std::ranges::iota_view<SomeInt, IntSentinelWith<SomeInt>>>;

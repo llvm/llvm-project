@@ -15,8 +15,6 @@
 #include <ranges>
 #include <type_traits>
 
-#include "test_macros.h"
-
 #include "../types.h"
 
 static_assert(!std::is_constructible_v<std::ranges::iterator_t<std::ranges::iota_view<int>>, int>);
