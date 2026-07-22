@@ -1323,6 +1323,7 @@ void testTypeConverter1ToNTargetMaterialization(MlirContext ctx) {
   mlirRewritePatternSetAdd(patterns,
                            mlirConversionPatternAsRewritePattern(pattern));
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
 
   MlirConversionTarget target = mlirConversionTargetCreate(ctx);
   mlirConversionTargetAddIllegalOp(
@@ -1394,6 +1395,7 @@ void testTypeConverter1ToNConversionDeclineRollback(MlirContext ctx) {
   mlirRewritePatternSetAdd(patterns,
                            mlirConversionPatternAsRewritePattern(pattern));
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
 
   MlirConversionTarget target = mlirConversionTargetCreate(ctx);
   mlirConversionTargetAddIllegalOp(
@@ -1463,6 +1465,7 @@ void testTypeConverter1ToNConversionFailure(MlirContext ctx) {
   mlirRewritePatternSetAdd(patterns,
                            mlirConversionPatternAsRewritePattern(pattern));
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
 
   MlirConversionTarget target = mlirConversionTargetCreate(ctx);
   mlirConversionTargetAddIllegalOp(
@@ -1531,6 +1534,7 @@ void testTypeConverter1ToNTargetMaterializationDecline(MlirContext ctx) {
   mlirRewritePatternSetAdd(patterns,
                            mlirConversionPatternAsRewritePattern(pattern));
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
 
   MlirConversionTarget target = mlirConversionTargetCreate(ctx);
   mlirConversionTargetAddIllegalOp(
@@ -1636,6 +1640,7 @@ void testTypeConverterMultiInputSourceMaterialization(MlirContext ctx) {
   mlirRewritePatternSetAdd(patterns,
                            mlirConversionPatternAsRewritePattern(pattern));
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
 
   MlirConversionTarget target = mlirConversionTargetCreate(ctx);
   mlirConversionTargetAddIllegalOp(
@@ -1733,6 +1738,7 @@ void testConversionReplaceOpWithMultipleRanges(MlirContext ctx) {
   mlirRewritePatternSetAdd(patterns,
                            mlirConversionPatternAsRewritePattern(pattern));
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
 
   MlirConversionTarget target = mlirConversionTargetCreate(ctx);
   mlirConversionTargetAddIllegalOp(
@@ -1795,6 +1801,7 @@ void testTypeConverter1ToNOperandRequires1ToNCallback(MlirContext ctx) {
   mlirRewritePatternSetAdd(patterns,
                            mlirConversionPatternAsRewritePattern(pattern));
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
 
   MlirConversionTarget target = mlirConversionTargetCreate(ctx);
   mlirConversionTargetAddIllegalOp(
@@ -1845,6 +1852,7 @@ void testTypeConverter1ToNConversionErasure(MlirContext ctx) {
   mlirRewritePatternSetAdd(patterns,
                            mlirConversionPatternAsRewritePattern(pattern));
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
 
   MlirConversionTarget target = mlirConversionTargetCreate(ctx);
   mlirConversionTargetAddIllegalOp(
