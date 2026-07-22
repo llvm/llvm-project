@@ -1197,13 +1197,6 @@ static void normalizeCosts(
                                    LogMaxSpillRestoreCost)
             : 0;
 
-    // // Outlier penalty for SpillRestoreCost (higher cost is worse for
-    // spilling). bool IsSpillRestoreCostOutlier =
-    //     C->getSpillRestoreCost() > MeanSpillRestoreCost + 2 *
-    //     StdDevSpillRestoreCost;
-    // if (IsSpillRestoreCostOutlier)
-    //   NormalizedSpillRestoreCost += OutlierBonus;
-
     C->setNormalizedSpillRestoreCost(NormalizedSpillRestoreCost);
 
     // Combined cost: prefer high next-use distance, low restore cost.
