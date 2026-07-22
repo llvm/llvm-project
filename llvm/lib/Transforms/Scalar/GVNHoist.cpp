@@ -33,6 +33,7 @@
 // 2. geps when corresponding load/store cannot be hoisted.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/GVNHoist.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -66,7 +67,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/GVNValueTable.h"
-#include "llvm/Transforms/Scalar/GVNHoist.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #include <algorithm>
