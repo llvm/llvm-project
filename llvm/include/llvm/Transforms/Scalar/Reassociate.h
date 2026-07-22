@@ -101,11 +101,7 @@ protected:
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  // Runs the reassociation algorithm. \p UI carries uniformity information when
-  // available (e.g. on targets with branch divergence) and may be null. Both
-  // the new and legacy pass managers funnel through here after acquiring the
-  // analysis in their respective ways.
-  LLVM_ABI PreservedAnalyses runImpl(Function &F, UniformityInfo *UI = nullptr);
+  LLVM_ABI PreservedAnalyses runImpl(Function &F, UniformityInfo &UI);
 
 private:
   void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);

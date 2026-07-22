@@ -2573,11 +2573,11 @@ PreservedAnalyses ReassociatePass::run(Function &F,
   // UniformityInfo is empty (and cheap) on targets without branch divergence,
   // so request it unconditionally.
   UniformityInfo &UI = AM.getResult<UniformityInfoAnalysis>(F);
-  return runImpl(F, &UI);
+  return runImpl(F, UI);
 }
 
-PreservedAnalyses ReassociatePass::runImpl(Function &F, UniformityInfo *UI) {
-  UA = UI;
+PreservedAnalyses ReassociatePass::runImpl(Function &F, UniformityInfo &UI) {
+  UA = &UI;
 
   // Get the functions basic blocks in Reverse Post Order. This order is used by
   // BuildRankMap to pre calculate ranks correctly. It also excludes dead basic
@@ -2676,7 +2676,7 @@ public:
     UniformityInfo &UI =
         getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 
-    PreservedAnalyses PA = Impl.runImpl(F, &UI);
+    PreservedAnalyses PA = Impl.runImpl(F, UI);
     return !PA.areAllPreserved();
   }
 
