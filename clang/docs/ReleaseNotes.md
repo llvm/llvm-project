@@ -60,7 +60,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Remove the deprecated `SPELLING_CACHE` alias.
   All usage should be migrated to use `CompletionChunk.SPELLING_CACHE` instead.
-  Note that this uses `CompletionChunkKind` as keys, instead of the enum values.
+  Note that this uses `CompletionChunkKind` enumeration as keys, instead of integer values.
 
 ### OpenCL Potentially Breaking Changes
 
