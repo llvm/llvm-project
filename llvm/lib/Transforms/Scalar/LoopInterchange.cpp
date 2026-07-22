@@ -2181,7 +2181,7 @@ void LoopInterchangeTransform::transform(
     WorkList.insert(cast<Instruction>(InnerIndexVar));
   MoveInstructions();
 
-  // Ensure the inner loop phi nodes have a separate basic block.
+  // Split the inner header so that it has a unique successor.
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
   SplitBlock(InnerLoopHeader, InnerLoopHeader->getFirstNonPHIIt(), DT, LI);
   LLVM_DEBUG(dbgs() << "splitting InnerLoopHeader done\n");
