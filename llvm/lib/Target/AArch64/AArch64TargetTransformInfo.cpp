@@ -12,6 +12,7 @@
 #include "AArch64SMEAttributes.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -4839,6 +4840,17 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
           const auto *Entry = CostTableLookup(DivTbl, ISD, VT.getSimpleVT());
           if (nullptr != Entry)
             return Entry->Cost;
+        }
+        // A non-power-of-2 count can't divide as a single whole-register op
+        // (an inactive lane's leftover value could be a zero divisor and
+        // trap), so the legalizer emits one div per whole register plus one
+        // per set bit of the remainder (e.g. <7 x i32> emits 3 divs, not 2).
+        if (auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+            FVTy && LT.second.isFixedLengthVector()) {
+          unsigned NumElts = FVTy->getNumElements();
+          unsigned RegElts = LT.second.getVectorNumElements();
+          if (RegElts > 0)
+            Cost = (NumElts / RegElts + popcount(NumElts % RegElts)) * 2;
         }
         // For 8/16-bit elements, the cost is higher because the type
         // requires promotion and possibly splitting:

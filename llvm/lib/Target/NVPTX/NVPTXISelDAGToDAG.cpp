@@ -163,9 +163,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryBFE(N))
       return;
     break;
-  case ISD::ADDRSPACECAST:
-    SelectAddrSpaceCast(N);
-    return;
   case ISD::CopyToReg: {
     if (N->getOperand(1).getValueType() == MVT::i128) {
       SelectV2I64toI128(N);
@@ -918,96 +915,6 @@ NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
                 OrderingToString(NVPTX::Ordering(FenceOrdering))));
   }
   return {InstructionOrdering, Scope};
-}
-
-void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
-  SDValue Src = N->getOperand(0);
-  AddrSpaceCastSDNode *CastN = cast<AddrSpaceCastSDNode>(N);
-  unsigned SrcAddrSpace = CastN->getSrcAddressSpace();
-  unsigned DstAddrSpace = CastN->getDestAddressSpace();
-  SDLoc DL(N);
-  assert(SrcAddrSpace != DstAddrSpace &&
-         "addrspacecast must be between different address spaces");
-
-  if (DstAddrSpace == ADDRESS_SPACE_GENERIC) {
-    // Specific to generic
-
-    if (TM.is64Bit() && TM.getPointerSizeInBits(SrcAddrSpace) == 32) {
-      SDValue CvtNone =
-          CurDAG->getTargetConstant(NVPTX::PTXCvtMode::NONE, DL, MVT::i32);
-      SDNode *Cvt = CurDAG->getMachineNode(NVPTX::CVT_u64_u32, DL, MVT::i64,
-                                           Src, CvtNone);
-      Src = SDValue(Cvt, 0);
-    }
-
-    unsigned Opc;
-    switch (SrcAddrSpace) {
-    default: report_fatal_error("Bad address space in addrspacecast");
-    case ADDRESS_SPACE_GLOBAL:
-      Opc = TM.is64Bit() ? NVPTX::cvta_global_64 : NVPTX::cvta_global;
-      break;
-    case ADDRESS_SPACE_SHARED:
-      Opc = TM.is64Bit() ? NVPTX::cvta_shared_64 : NVPTX::cvta_shared;
-      break;
-    case ADDRESS_SPACE_SHARED_CLUSTER:
-      if (!TM.is64Bit())
-        report_fatal_error(
-            "Shared cluster address space is only supported in 64-bit mode");
-      Opc = NVPTX::cvta_shared_cluster_64;
-      break;
-    case ADDRESS_SPACE_CONST:
-      Opc = TM.is64Bit() ? NVPTX::cvta_const_64 : NVPTX::cvta_const;
-      break;
-    case ADDRESS_SPACE_LOCAL:
-      Opc = TM.is64Bit() ? NVPTX::cvta_local_64 : NVPTX::cvta_local;
-      break;
-    case ADDRESS_SPACE_ENTRY_PARAM:
-      Opc = TM.is64Bit() ? NVPTX::cvta_param_64 : NVPTX::cvta_param;
-      break;
-    }
-    ReplaceNode(N, CurDAG->getMachineNode(Opc, DL, N->getValueType(0), Src));
-    return;
-  } else {
-    // Generic to specific
-    if (SrcAddrSpace != 0)
-      report_fatal_error("Cannot cast between two non-generic address spaces");
-    unsigned Opc;
-    switch (DstAddrSpace) {
-    default: report_fatal_error("Bad address space in addrspacecast");
-    case ADDRESS_SPACE_GLOBAL:
-      Opc = TM.is64Bit() ? NVPTX::cvta_to_global_64 : NVPTX::cvta_to_global;
-      break;
-    case ADDRESS_SPACE_SHARED:
-      Opc = TM.is64Bit() ? NVPTX::cvta_to_shared_64 : NVPTX::cvta_to_shared;
-      break;
-    case ADDRESS_SPACE_SHARED_CLUSTER:
-      if (!TM.is64Bit())
-        report_fatal_error(
-            "Shared cluster address space is only supported in 64-bit mode");
-      Opc = NVPTX::cvta_to_shared_cluster_64;
-      break;
-    case ADDRESS_SPACE_CONST:
-      Opc = TM.is64Bit() ? NVPTX::cvta_to_const_64 : NVPTX::cvta_to_const;
-      break;
-    case ADDRESS_SPACE_LOCAL:
-      Opc = TM.is64Bit() ? NVPTX::cvta_to_local_64 : NVPTX::cvta_to_local;
-      break;
-    case ADDRESS_SPACE_ENTRY_PARAM:
-      Opc = TM.is64Bit() ? NVPTX::cvta_to_param_64 : NVPTX::cvta_to_param;
-      break;
-    }
-
-    SDNode *CVTA = CurDAG->getMachineNode(Opc, DL, N->getValueType(0), Src);
-    if (TM.is64Bit() && TM.getPointerSizeInBits(DstAddrSpace) == 32) {
-      SDValue CvtNone =
-          CurDAG->getTargetConstant(NVPTX::PTXCvtMode::NONE, DL, MVT::i32);
-      CVTA = CurDAG->getMachineNode(NVPTX::CVT_u32_u64, DL, MVT::i32,
-                                    SDValue(CVTA, 0), CvtNone);
-    }
-
-    ReplaceNode(N, CVTA);
-    return;
-  }
 }
 
 // Helper function template to reduce amount of boilerplate code for
