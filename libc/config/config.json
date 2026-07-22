@@ -190,9 +190,9 @@
       "value": false,
       "doc": "Use the system assert macro for LIBC_ASSERT."
     },
-    "LIBC_COPT_ENABLE_SANITIZATION": {
-      "value": false,
-      "doc": "Enable sanitization checks in the library."
+    "LIBC_COPT_HARDENING_MODE": {
+      "value": "LIBC_HARDENING_MODE_NONE",
+      "doc": "Hardening mode for the library."
     }
   }
 }
