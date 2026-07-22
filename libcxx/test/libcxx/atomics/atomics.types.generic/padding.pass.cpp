@@ -88,9 +88,9 @@ template <class T>
 void test() {
   {
     // atomic();
+#if TEST_STD_VER >= 20
     std::atomic<T> a;
     assert_padding(a, 0);
-#if TEST_STD_VER >= 20
     T loaded = a.load();
     assert(loaded.i == 0);
     assert(loaded.c == '\0');
