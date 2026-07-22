@@ -2148,6 +2148,30 @@ struct PragmaFinalHandler : public PragmaHandler {
   }
 };
 
+/// "\#pragma clang glibcxx_version ..."
+///
+/// The syntax is
+/// \code
+///   #pragma clang glibcxx_version INTEGER
+/// \endcode
+struct PragmaGLIBCXXVersionHandler : PragmaHandler {
+  PragmaGLIBCXXVersionHandler() : PragmaHandler("glibcxx_version") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &Tok) override {
+    PP.Lex(Tok);
+    std::uint64_t Value;
+    if (Tok.is(tok::numeric_constant) &&
+        PP.parseSimpleIntegerLiteral(Tok, Value)) {
+      PP.setStdLibCxxVersion(Value);
+
+      if (PP.getPPCallbacks())
+        PP.getPPCallbacks()->PragmaGLIBCXXVersion(Introducer.Loc, Value);
+    } else {
+      PP.Diag(Tok.getLocation(),
+              diag::err_pp_pragma_glibcxx_version_requires_integer);
+    }
+  }
+};
 } // namespace
 
 /// RegisterBuiltinPragmas - Install the standard preprocessor pragmas:
@@ -2179,6 +2203,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   AddPragmaHandler("clang", new PragmaDeprecatedHandler());
   AddPragmaHandler("clang", new PragmaRestrictExpansionHandler());
   AddPragmaHandler("clang", new PragmaFinalHandler());
+  AddPragmaHandler("clang", new PragmaGLIBCXXVersionHandler());
 
   // #pragma clang module ...
   auto *ModuleHandler = new PragmaNamespace("module");

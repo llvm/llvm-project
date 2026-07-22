@@ -864,6 +864,9 @@ def err_pp_include_in_arc_cf_code_audited : Error<
 def err_pp_eof_in_arc_cf_code_audited : Error<
   "'#pragma clang arc_cf_code_audited' was not ended within this file">;
 
+def err_pp_pragma_glibcxx_version_requires_integer : Error<
+  "expected integer after '#pragma clang glibcxx_version'">;
+
 def warn_pp_date_time : Warning<
   "expansion of date or time macro is not reproducible">,
   ShowInSystemHeader, DefaultIgnore, InGroup<DiagGroup<"date-time">>;

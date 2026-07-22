@@ -4586,10 +4586,16 @@ static bool IsLibstdcxxStdFormatKind(Preprocessor &PP, VarDecl *Var) {
       !Var->getDeclContext()->isStdNamespace())
     return false;
 
-  // We don't check the libstdc++ version for this one since that doesn't work
-  // if a user preprocesses the input as a separate step (because __GLIBCXX__
-  // will not be defined).
-  return true;
+  // Checking old versions of libstdc++ is not needed because 15.1 is the first
+  // release in which users can access std::format_kind.
+  // We can use 20250520 as the final date, see the following commits.
+  // GCC releases/gcc-15 branch:
+  // https://gcc.gnu.org/g:fedf81ef7b98e5c9ac899b8641bb670746c51205
+  // https://gcc.gnu.org/g:53680c1aa92d9f78e8255fbf696c0ed36f160650
+  // GCC master branch:
+  // https://gcc.gnu.org/g:9361966d80f625c5accc25cbb439f0278dd8b278
+  // https://gcc.gnu.org/g:c65725eccbabf3b9b5965f27fff2d3b9f6c75930
+  return PP.NeedsStdLibCxxWorkaroundBefore(2025'05'20);
 }
 } // end anonymous namespace
 

@@ -1018,6 +1018,13 @@ std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
   return std::nullopt;
 }
 
+void Preprocessor::setStdLibCxxVersion(std::uint64_t Version) {
+  CXXStandardLibraryVersion = {
+      CXXStandardLibraryVersionInfo::LibStdCXX,
+      Version,
+  };
+}
+
 bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {
   assert(FixedVersion >= 2000'00'00 && FixedVersion <= 2100'00'00 &&
          "invalid value for __GLIBCXX__");

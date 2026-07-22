@@ -2818,6 +2818,7 @@ private:
 
 public:
   std::optional<std::uint64_t> getStdLibCxxVersion();
+  void setStdLibCxxVersion(std::uint64_t Version);
   bool NeedsStdLibCxxWorkaroundBefore(std::uint64_t FixedVersion);
 
 private:
