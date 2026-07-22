@@ -21,13 +21,18 @@ function(_get_common_test_compile_options output_var c_test flags)
   libc_add_definition(compile_options
                       "LIBC_TEST_FLOAT_RANGE_COUNT=${LIBC_TEST_FLOAT_RANGE_COUNT}")
 
-  # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
-  # will make those tests no-op to reduce the overall test time.
-  if(LIBC_TEST_SKIP_DEATH_TESTS)
-    if(LIBC_CMAKE_VERBOSE_LOGGING)
-      message(STATUS "LIBC_TEST_SKIP_DEATH_TESTS is set.  EXPECT_DEATH/ASSERT_DEATH are no-op.")
+  libc_add_definition(compile_options
+                      "LIBC_TEST_SUBPROCESS_TESTS=${LIBC_TEST_SUBPROCESS_TESTS}")
+
+  if(LIBC_TEST_SUBPROCESS_TESTS)
+    # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
+    # will make those tests no-op to reduce the overall test time.
+    if(LIBC_TEST_SKIP_DEATH_TESTS)
+      if(LIBC_CMAKE_VERBOSE_LOGGING)
+        message(STATUS "LIBC_TEST_SKIP_DEATH_TESTS is set.  EXPECT_DEATH/ASSERT_DEATH are no-op.")
+      endif()
+      list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
     endif()
-    list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
   endif()
 
   if(CMAKE_CROSSCOMPILING_EMULATOR)
