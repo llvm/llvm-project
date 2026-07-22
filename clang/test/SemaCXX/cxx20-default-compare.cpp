@@ -67,10 +67,6 @@ struct MutCheck : MutOnly {
 }
 
 namespace immediate_deletion_check  {
-// Explaining why a defaulted comparison operator is deleted can run while we
-// are parsing a later declaration, i.e. inside an enclosing delayed-diagnostics
-// scope. The access check for the deleted-ness computation must produce an
-// immediate answer rather than being delayed. Previously this crashed.
 struct HasPrivateSpaceship {
 private:
   std::strong_ordering operator<=>(const HasPrivateSpaceship &) const; // expected-note 2 {{declared private here}}

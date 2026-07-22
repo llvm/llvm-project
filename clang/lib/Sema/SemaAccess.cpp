@@ -1613,11 +1613,10 @@ bool Sema::isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
   // Suppress diagnostics.
   Entity.setDiag(Diag);
 
-  // Deletion checking can run while we are inside an enclosing
+  // We don't want to delay access checking even we are inside an enclosing
   // delayed-diagnostics scope (e.g. when parsing a later declaration whose
   // initializer requires explaining why a defaulted comparison operator is
-  // deleted). CheckAccess would then return AR_delayed, but the result must be
-  // known immediately here. Force an undelayed check, mirroring CheckEnableIf.
+  // deleted)
   llvm::scope_exit UndelayDiags(
       [&, CurrentState(DelayedDiagnostics.pushUndelayed())] {
         DelayedDiagnostics.popUndelayed(CurrentState);
