@@ -1391,9 +1391,9 @@ static void salvageDebugInfoFromEmptyBlock(const TargetInstrInfo *TII,
       copyDebugInfoToPredecessor(TII, MBB, *PredBB);
 }
 
-static bool AreConditionalsEqual(ArrayRef<MachineOperand> CurCond,
+static bool areConditionalsEqual(ArrayRef<MachineOperand> CurCond,
                                  ArrayRef<MachineOperand> PriorCond) {
-  return CurCond.size() > 0 &&
+  return !CurCond.empty() &&
          llvm::equal(CurCond, PriorCond,
                      [](const MachineOperand &LHS, const MachineOperand &RHS) {
                        return LHS.isIdenticalTo(RHS);
@@ -1564,7 +1564,7 @@ ReoptimizeBlock:
     // instruction that is exactly identical to the terminator in the previous
     // block, we can remove this block.
     if (MBB->size() == 1 && PrevBB.canFallThrough() && CurTBB == PriorTBB &&
-        AreConditionalsEqual(CurCond, PriorCond)) {
+        areConditionalsEqual(CurCond, PriorCond)) {
       // We remove the branch from the previous basic block rather than this
       // one in case there are other blocks that specifically branch to this
       // one.
