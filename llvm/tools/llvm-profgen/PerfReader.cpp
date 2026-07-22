@@ -169,6 +169,14 @@ void VirtualUnwinder::unwindReturn(UnwindState &State) {
   // Add extra frame as we unwind through the return
   const LBREntry &LBR = State.getCurrentLBR();
   uint64_t CallAddr = Binary->getCallAddrFromFrameAddr(LBR.Target);
+  if (!CallAddr) {
+    // The return target is not preceded by a call instruction. This can happen
+    // with a broken LBR trace or a return into a function whose frame-pointer
+    // chain wasn't set up. Stop unwinding the rest of the trace rather than
+    // creating a zero-address frame (mirrors the guard in extractCallstack).
+    State.setInvalid();
+    return;
+  }
   State.switchToFrame(CallAddr);
   State.pushFrame(LBR.Source);
   State.InstPtr.update(LBR.Source);
