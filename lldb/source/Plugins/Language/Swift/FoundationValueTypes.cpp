@@ -66,12 +66,9 @@ bool lldb_private::formatters::swift::Date_SummaryProvider(
   tm *tm_date = gmtime(&epoch);
   if (!tm_date)
     return false;
-  std::string buffer(1024, 0);
-  if (strftime(&buffer[0], 1023, "%Z", tm_date) == 0)
-    return false;
-  stream.Printf("%04d-%02d-%02d %02d:%02d:%02d %s", tm_date->tm_year + 1900,
+  stream.Printf("%04d-%02d-%02d %02d:%02d:%02d UTC", tm_date->tm_year + 1900,
                 tm_date->tm_mon + 1, tm_date->tm_mday, tm_date->tm_hour,
-                tm_date->tm_min, tm_date->tm_sec, buffer.c_str());
+                tm_date->tm_min, tm_date->tm_sec);
   return true;
 }
 
@@ -123,9 +120,18 @@ bool lldb_private::formatters::swift::SwiftURL_SummaryProvider(
   static ConstString g__baseURL("_baseURL");
   static ConstString g__parseInfo("_parseInfo");
   static ConstString g_urlString("urlString");
+  static ConstString g__info("_info");
+  static ConstString g_string("string");
 
+  // The relative URL string lives at a different path depending on which
+  // swift-foundation URL backing is in use:
+  //   _SwiftURL (RFC3986 parser):   _parseInfo.urlString
+  //   _URL      (Span-based, v2):   _info.string
+  // On non-Darwin platforms the backing is always _URL. Darwin can use either.
   ValueObjectSP rel_str_sp(
       valobj.GetChildAtNamePath({g__parseInfo, g_urlString}));
+  if (!rel_str_sp)
+    rel_str_sp = valobj.GetChildAtNamePath({g__info, g_string});
   if (!rel_str_sp)
     return false;
 

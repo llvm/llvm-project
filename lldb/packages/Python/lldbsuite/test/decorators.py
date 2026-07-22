@@ -1069,9 +1069,29 @@ def skipUnlessDarwin(func):
 
 
 def skipUnlessFoundation(func):
-    """Decorate the item to skip tests that should be skipped on any non-Foundation platform."""
+    """Decorate the item to skip tests that need full (Darwin) Foundation.
+
+    This is for tests that rely on Objective-C bridging / the Apple Foundation
+    framework (NSString/NSDictionary/NSNumber bridging, CoreFoundation types,
+    ObjC-backed value-type formatters). That capability only exists on Darwin.
+    For tests that only need the cross-platform Swift Foundation core (Data,
+    Date, URL, UUID, JSON coding, NSObject/NSRange from swift-corelibs
+    Foundation), use skipUnlessFoundationEssentials instead.
+    """
     # FIXME: This is just an alias for Darwin and is consistent with Swift's test suite.
     return skipUnlessDarwin(func)
+
+
+def skipUnlessFoundationEssentials(func):
+    """Decorate the item to skip tests unless a cross-platform Foundation exists.
+
+    FoundationEssentials (and the swift-corelibs Foundation overlay built on top
+    of it) ships in the Swift SDK on Darwin, Linux and Windows, so these tests
+    run on all three.
+    """
+    return skipUnlessPlatform(
+        lldbplatformutil.getDarwinOSTriples() + ["linux", "windows"]
+    )(func)
 
 
 def skipUnlessObjCInterop(func):

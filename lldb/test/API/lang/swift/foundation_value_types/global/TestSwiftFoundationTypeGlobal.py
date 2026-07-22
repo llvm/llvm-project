@@ -6,8 +6,9 @@ import os
 
 class TestSwiftFoundationValueTypeGlobal(TestBase):
     @skipEmbeddedSwift
+    @skipUnlessFoundationEssentials
+    @skipIfLinux  # https://github.com/swiftlang/llvm-project/issues/13465
     @swiftTest
-    @skipUnlessFoundation
     def test(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact())

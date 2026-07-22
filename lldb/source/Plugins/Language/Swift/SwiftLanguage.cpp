@@ -707,7 +707,7 @@ LoadFoundationValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       swift_category_sp,
       lldb_private::formatters::swift::SwiftURL_SummaryProvider,
       "URL summary provider",
-      ConstString("^Foundation(Essentials)?\\._SwiftURL$"),
+      ConstString("^Foundation(Essentials)?\\._(SwiftURL|URL)$"),
       TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true), true);
 
   lldb_private::formatters::AddStringSummary(
