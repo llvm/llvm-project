@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64CallLowering.h"
+#include "AArch64CallingConvention.h"
 #include "AArch64GlobalISelUtils.h"
 #include "AArch64ISelLowering.h"
 #include "AArch64MachineFunctionInfo.h"
