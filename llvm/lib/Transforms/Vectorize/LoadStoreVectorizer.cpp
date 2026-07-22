@@ -1298,8 +1298,10 @@ bool Vectorizer::isSafeToMove(
     if (!I->mayReadOrWriteMemory())
       continue;
 
-    // Loads can be reordered with other loads.
-    if (IsLoadChain && isa<LoadInst>(I))
+    // Loads can be reordered with other unordered loads.  Ordered atomics
+    // act as reordering barriers, via getModRefInfo below.
+    if (auto *LI = dyn_cast<LoadInst>(I);
+        IsLoadChain && LI && LI->isUnordered())
       continue;
 
     // Stores can be sunk below invariant loads.

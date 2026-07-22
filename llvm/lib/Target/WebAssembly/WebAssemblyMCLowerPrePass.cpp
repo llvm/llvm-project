@@ -36,7 +36,7 @@ class WebAssemblyMCLowerPreLegacy final : public ModulePass {
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
+    AU.setPreservesAll();
     ModulePass::getAnalysisUsage(AU);
   }
 
@@ -64,7 +64,7 @@ ModulePass *llvm::createWebAssemblyMCLowerPreLegacyPass() {
 //
 // The information stored here is essential for emitExternalDecls in the Wasm
 // AsmPrinter
-static bool mcLower(Module &M, MachineModuleInfo &MMI) {
+static void mcLower(Module &M, MachineModuleInfo &MMI) {
   MachineModuleInfoWasm &MMIW = MMI.getObjFileInfo<MachineModuleInfoWasm>();
 
   for (Function &F : M) {
@@ -89,20 +89,20 @@ static bool mcLower(Module &M, MachineModuleInfo &MMI) {
       }
     }
   }
-  return true;
 }
 
 bool WebAssemblyMCLowerPreLegacy::runOnModule(Module &M) {
   auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
   if (!MMIWP)
-    return true;
+    return false;
   MachineModuleInfo &MMI = MMIWP->getMMI();
-  return mcLower(M, MMI);
+  mcLower(M, MMI);
+  return false;
 }
 
 PreservedAnalyses WebAssemblyMCLowerPrePass::run(Module &M,
                                                  ModuleAnalysisManager &MAM) {
   MachineModuleInfo &MMI = MAM.getResult<MachineModuleAnalysis>(M).getMMI();
-  return mcLower(M, MMI) ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
-                         : PreservedAnalyses::all();
+  mcLower(M, MMI);
+  return PreservedAnalyses::all();
 }

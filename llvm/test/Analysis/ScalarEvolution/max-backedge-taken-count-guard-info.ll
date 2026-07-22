@@ -1656,3 +1656,46 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+; Two range-check idioms on the same variable.
+; The first constrains %N to [1, 101).
+; The second (`5 + %N u< 8`) has a raw range that wraps in the unsigned representation.
+;
+; Intersecting the wrapping raw range with %N already-known [1, 101) range
+; would narrow it to [1, 3) and tighten the trip count.
+define void @range_check_idiom_tighten_wrapping(i32 %N) {
+; CHECK-LABEL: 'range_check_idiom_tighten_wrapping'
+; CHECK-NEXT:  Classifying expressions for: @range_check_idiom_tighten_wrapping
+; CHECK-NEXT:    %N.off1 = add i32 %N, -1
+; CHECK-NEXT:    --> (-1 + %N) U: full-set S: full-set
+; CHECK-NEXT:    %N.off2 = add i32 %N, 5
+; CHECK-NEXT:    --> (5 + %N) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i32 [ 0, %next ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2) S: [0,2) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,3) S: [1,3) Exits: %N LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @range_check_idiom_tighten_wrapping
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %N.off1 = add i32 %N, -1
+  %chk1 = icmp ult i32 %N.off1, 100
+  br i1 %chk1, label %next, label %exit
+
+next:
+  %N.off2 = add i32 %N, 5
+  %chk2 = icmp ult i32 %N.off2, 8
+  br i1 %chk2, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %next ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
