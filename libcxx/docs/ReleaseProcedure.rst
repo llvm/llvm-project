@@ -51,8 +51,7 @@ After branching for an LLVM release:
 6. Update the set of runners targeted by the CI on the release branch to ``llvm-premerge-libcxx-release-runners``, and
    make sure that runner set is using the appropriate image. This ensures that the release branch CI keeps working even
    if the main branch starts using newer images.
-7. It takes a couple of days before the new LLVM ToT version is available on `<https://apt.llvm.org>`_ after a
-   branch is created. Once it is available, the pre-commit CI can be updated to use the new ToT version. In order
+7. Update the pre-commit CI to use the new ToT version of Clang available from Compiler Explorer. In order
    to make sure patches can be backported to the release branch, we don't remove the oldest compiler yet.
 
 Post release
