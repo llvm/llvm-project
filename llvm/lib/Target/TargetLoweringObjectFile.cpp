@@ -372,6 +372,9 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
 StringRef
 TargetLoweringObjectFile::getCustomSectionName(const GlobalObject *GO,
                                                const TargetMachine &TM) {
+  // Check if '#pragma clang section' name is applicable.
+  // Note that pragma directive overrides -ffunction-section, -fdata-section
+  // and so section name is exactly as user specified and not uniqued.
   const GlobalVariable *GV = dyn_cast<GlobalVariable>(GO);
   if (GV && GV->hasImplicitSection()) {
     SectionKind Kind = getKindForGlobal(GO, TM);
