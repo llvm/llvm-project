@@ -22,6 +22,7 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
@@ -1628,7 +1629,19 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
       std::unique_ptr<MemoryBuffer> Buf =
           MemoryBuffer::getMemBuffer(SR, "", false);
 
-      llvm::embedBufferInModule(*M, *Buf, ".debug_llvm_dyndbg", Align(8));
+      GlobalVariable *EmbeddedGV =
+          llvm::embedBufferInModule(*M, *Buf, ".debug_llvm_dyndbg", Align(8),
+                                    /*SectionExclude*/ false);
+      // Add ELF section properties metadata.
+      auto &C = M->getContext();
+      auto getU32Metadata = [&C](unsigned Val) {
+        return ConstantAsMetadata::get(ConstantInt::get(C, APInt(32, Val)));
+      };
+      EmbeddedGV->addMetadata(
+          LLVMContext::MD_elf_section_properties,
+          *MDTuple::get(C,
+                        {/*sh_type*/ getU32Metadata(ELF::SHT_LLVM_DYNDBG_ELF),
+                         /*sh_entsize*/ getU32Metadata(0)}));
     }
     SaveModule("dyndbg.2.outer", *M);
   }

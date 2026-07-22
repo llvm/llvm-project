@@ -9,4 +9,6 @@
 // the special casing in LLVM.
 int e() { return 0; }
 
-// CHECK: @llvm.embedded.object = private constant {{.*}}, section ".debug_llvm_dyndbg", align 8, !exclude
+// CHECK: @llvm.embedded.object = private constant {{.*}}, section ".debug_llvm_dyndbg", align 8,
+// CHECK-SAME: !elf_section_properties ![[elf_props:[0-9]+]], !metadata_section_kind
+// CHECK: ![[elf_props:[0-9]+]] = !{i32 1879002128, i32 0}
