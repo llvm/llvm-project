@@ -1900,7 +1900,7 @@ public:
                                               ptrauth_key_return_address,
                                               &_registers.__pc,
                                               ptrauth_key_return_address,
-                                              getSP());
+                                              _registers.__sp);
 #endif
     return value;
   }
@@ -1911,7 +1911,7 @@ public:
     // and LR can't be spoofed at the same time.
     value = (uint64_t)ptrauth_auth_and_resign((void *)value,
                                               ptrauth_key_return_address,
-                                              getSP(),
+                                              _registers.__sp,
                                               ptrauth_key_return_address,
                                               &_registers.__pc);
 #endif
@@ -1925,11 +1925,11 @@ public:
 #endif
 #if __has_builtin(__builtin_ptrauth_auth_with_pc_and_resign)
     value = (uint64_t)ptrauth_auth_with_pc_and_resign(
-        (void *)value, ptrauth_key_return_address, getSP(), signing_pc,
+        (void *)value, ptrauth_key_return_address, _registers.__sp, signing_pc,
         ptrauth_key_return_address, &_registers.__pc);
 #else
     register uint64_t x17 __asm("x17") = value;
-    register uint64_t x16 __asm("x16") = getSP();
+    register uint64_t x16 __asm("x16") = _registers.__sp;
     register uint64_t x15 __asm("x15") = signing_pc;
     uint64_t resignDisc = (uint64_t)&_registers.__pc;
     asm("autib171615\n\t"
