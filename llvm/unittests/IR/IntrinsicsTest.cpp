@@ -190,16 +190,14 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
   }
 }
 
-TEST(IntrinsicAttributes, SPIRVResourceImplicitDerivativeIntrinsicsAreConvergent) {
+TEST(IntrinsicAttributes,
+     SPIRVResourceImplicitDerivativeIntrinsicsAreConvergent) {
   using namespace Intrinsic;
   LLVMContext Context;
   static constexpr ID ConvergentResourceIntrinsics[] = {
-      spv_resource_sample,
-      spv_resource_sample_clamp,
-      spv_resource_samplebias,
-      spv_resource_samplebias_clamp,
-      spv_resource_calculate_lod,
-      spv_resource_calculate_lod_unclamped,
+      spv_resource_sample,        spv_resource_sample_clamp,
+      spv_resource_samplebias,    spv_resource_samplebias_clamp,
+      spv_resource_calculate_lod, spv_resource_calculate_lod_unclamped,
   };
   for (ID IntrID : ConvergentResourceIntrinsics) {
     AttributeSet AS = getFnAttributes(Context, IntrID);
@@ -207,7 +205,8 @@ TEST(IntrinsicAttributes, SPIRVResourceImplicitDerivativeIntrinsicsAreConvergent
         << "Intrinsic " << getName(IntrID) << " should be convergent";
   }
 
-  AttributeSet SampleGradAttrs = getFnAttributes(Context, spv_resource_samplegrad);
+  AttributeSet SampleGradAttrs =
+      getFnAttributes(Context, spv_resource_samplegrad);
   EXPECT_FALSE(SampleGradAttrs.hasAttribute(Attribute::Convergent))
       << "Intrinsic " << getName(spv_resource_samplegrad)
       << " should not be convergent";

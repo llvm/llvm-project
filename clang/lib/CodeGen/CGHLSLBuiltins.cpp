@@ -541,8 +541,8 @@ static CallInst *emitConvergentResourceIntrinsicCall(CodeGenFunction &CGF,
   ArgTys.reserve(Args.size());
   for (Value *Arg : Args)
     ArgTys.push_back(Arg->getType());
-  Function *IntrFn = Intrinsic::getOrInsertDeclaration(
-      &CGF.CGM.getModule(), ID, RetTy, ArgTys);
+  Function *IntrFn = Intrinsic::getOrInsertDeclaration(&CGF.CGM.getModule(), ID,
+                                                       RetTy, ArgTys);
   return CGF.EmitRuntimeCall(IntrFn, Args);
 }
 
