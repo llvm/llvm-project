@@ -6,7 +6,7 @@ define <3 x i64> @ahyes(i64 %position, i64 %value) {
 ; CHECK-LABEL: define <3 x i64> @ahyes(
 ; CHECK-SAME: i64 [[POSITION:%.*]], i64 [[VALUE:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[VALUE]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[VALUE]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i64> [[TMP1]], <i64 1, i64 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i64> poison, i64 [[VALUE]], i64 [[POSITION]]

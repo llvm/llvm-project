@@ -2061,6 +2061,16 @@ class RVPBinaryIntrinsic
   def int_riscv_pabd  : RVPBinaryIntrinsic;
   def int_riscv_pabdu : RVPBinaryIntrinsic;
 
+  // Packed Saturating and Rounding Shifts.
+  class RVPShiftIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pssha  : RVPShiftIntrinsic;
+  def int_riscv_psshar : RVPShiftIntrinsic;
+  def int_riscv_psshl  : RVPShiftIntrinsic;
+  def int_riscv_psshlr : RVPShiftIntrinsic;
+
   // Packed Exchanged Addition and Subtraction.
   def int_riscv_pas  : RVPBinaryIntrinsic;
   def int_riscv_psa  : RVPBinaryIntrinsic;
@@ -2095,6 +2105,13 @@ class RVPBinaryIntrinsic
                               [LLVMMatchType<0>, llvm_anyvector_ty,
                                LLVMMatchType<1>],
                               [IntrNoMem, IntrSpeculatable]>;
+
+  // Packed Saturating Absolute Value
+  class RVPUnaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_psabs : RVPUnaryIntrinsic;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//

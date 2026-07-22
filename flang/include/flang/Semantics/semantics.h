@@ -19,7 +19,6 @@
 #include "flang/Parser/message.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/LangOptions.h"
-#include <iosfwd>
 #include <set>
 #include <string>
 #include <vector>
