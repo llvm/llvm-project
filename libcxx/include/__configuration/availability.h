@@ -251,6 +251,18 @@
 #define _LIBCPP_AVAILABILITY_HAS_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24
 #define _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
 
+// This determines whether we assume that the internal std::__bad_variant_access_with_msg class
+// (which carries a message describing the cause of the failure in bad_variant_access::what())
+// provides a key function in the dylib. This allows centralizing its vtable and typeinfo instead
+// of having all TUs provide a weak definition that then gets deduplicated. When it is not available
+// in the dylib, what() is defined inline instead, so the descriptive message is provided regardless.
+#define _LIBCPP_AVAILABILITY_HAS_BAD_VARIANT_ACCESS_WITH_MSG_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_23
+// No attribute, since we've had bad_variant_access in the headers before
+
+// Controls whether the implementation for text_encoding::environment() is available
+#define _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23
+#define _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
+
 // This controls the availability of new implementation of std::atomic's
 // wait, notify_one and notify_all. The new implementation uses
 // the native atomic wait/notify operations on platforms that support them
