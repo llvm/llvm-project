@@ -5860,9 +5860,9 @@ static bool isAddSubZExt(SDValue N, SelectionDAG &DAG) {
 
 SDValue AArch64TargetLowering::LowerGET_ROUNDING(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  // The rounding mode is in bits 23:22 of the FPSCR.
+  // The rounding mode is in bits 23:22 of the FPCR.
   // The ARM rounding mode value to FLT_ROUNDS mapping is 0->1, 1->2, 2->3, 3->0
-  // The formula we use to implement this is (((FPSCR + 1 << 22) >> 22) & 3)
+  // The formula we use to implement this is (((FPCR + (1 << 22)) >> 22) & 3)
   // so that the shift + and get folded into a bitfield extract.
   SDLoc DL(Op);
 
@@ -5915,7 +5915,7 @@ SDValue AArch64TargetLowering::LowerSET_ROUNDING(SDValue Op,
   Chain = FPCR.getValue(1);
   FPCR = FPCR.getValue(0);
 
-  // Put new rounding mode into FPSCR[23:22].
+  // Put new rounding mode into FPCR[23:22].
   const int RMMask = ~(AArch64::Rounding::rmMask << AArch64::RoundingBitsPos);
   FPCR = DAG.getNode(ISD::AND, DL, MVT::i64, FPCR,
                      DAG.getConstant(RMMask, DL, MVT::i64));
@@ -5975,14 +5975,14 @@ SDValue AArch64TargetLowering::LowerRESET_FPMODE(SDValue Op,
   FPCR = FPCR.getValue(0);
 
   // Clear bits that are not reserved.
-  SDValue FPSCRMasked = DAG.getNode(
+  SDValue FPCRMasked = DAG.getNode(
       ISD::AND, DL, MVT::i64, FPCR,
       DAG.getConstant(AArch64::ReservedFPControlBits, DL, MVT::i64));
 
   // Set new value of FPCR.
   SDValue Ops2[] = {
       Chain, DAG.getTargetConstant(Intrinsic::aarch64_set_fpcr, DL, MVT::i64),
-      FPSCRMasked};
+      FPCRMasked};
   return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
 }
 
