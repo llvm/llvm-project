@@ -48,8 +48,11 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -58,6 +61,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -66,6 +70,12 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "dead-branch-elim"
+
+STATISTIC(NumBranchesFolded, "Number of provably dead branch edges folded");
+
+static cl::opt<unsigned> MaxRefineIterations(
+    "dbe-max-iterations", cl::init(8), cl::Hidden,
+    cl::desc("Maximum fixed-point iterations per function before giving up"));
 
 namespace {
 
@@ -83,8 +93,8 @@ struct BranchBody {
 /// can reason about. Everything else is seeded ProvenReachable so that
 /// functions without such branches are never cloned at all. Straight-line
 /// provably-dead branches are left to SCCP/SimplifyCFG.
-std::vector<BranchBody> collectBranchBodies(Function &F, LoopInfo &LI) {
-  std::vector<BranchBody> Bodies;
+SmallVector<BranchBody> collectBranchBodies(Function &F, LoopInfo &LI) {
+  SmallVector<BranchBody> Bodies;
   for (BasicBlock &BB : F) {
     auto *BI = dyn_cast<CondBrInst>(BB.getTerminator());
     if (!BI)
@@ -126,8 +136,8 @@ bool isEdgeProvenDead(ScalarEvolution &SE, CondBrInst *BI, unsigned SuccIdx) {
     // false side when it is provably always true. The proof may use
     // conditions of dominating branches (e.g. the loop guard in an unrotated
     // while loop), so anchor the query at the branch itself.
-    ICmpInst::Predicate P =
-        SuccIdx == 0 ? Cmp->getInversePredicate() : Cmp->getPredicate();
+    CmpPredicate P =
+        SuccIdx == 0 ? Cmp->getInverseCmpPredicate() : Cmp->getCmpPredicate();
     return SE.isKnownPredicateAt(P, L, R, BI);
   }
   return false;
@@ -152,7 +162,7 @@ FunctionAnalysisManager makePrivateFAM() {
 /// One fixed-point iteration: rebuild the clone with all Unknown bodies
 /// replaced by 'unreachable', re-run the analysis, and promote every body
 /// whose edge cannot be proven dead. Returns true if any status changed.
-bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
+bool refineOnce(Function &F, MutableArrayRef<BranchBody> Bodies) {
   ValueToValueMapTy VMap;
   Function *Clone = CloneFunction(&F, VMap);
   LLVMContext &Ctx = F.getContext();
@@ -180,7 +190,7 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
   SmallPtrSet<BasicBlock *, 32> Reachable;
   for (BasicBlock *BB : depth_first(&Clone->getEntryBlock()))
     Reachable.insert(BB);
-  std::vector<std::pair<BranchBody *, BasicBlock *>> ToCheck;
+  SmallVector<std::pair<BranchBody *, BasicBlock *>> ToCheck;
   for (BranchBody &B : Bodies)
     if (B.St == Status::Unknown) {
       auto *BB = cast<BasicBlock>(VMap[B.BranchBB]);
@@ -191,7 +201,7 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
   // Delete the unreachable blocks so PHI nodes in live blocks drop their
   // dead incoming values. DeleteDeadBlocks (unlike removeUnreachableBlocks)
   // never rewrites live terminators, so the branches under test survive.
-  std::vector<BasicBlock *> DeadBlocks;
+  SmallVector<BasicBlock *> DeadBlocks;
   for (BasicBlock &BB : *Clone)
     if (!Reachable.contains(&BB))
       DeadBlocks.push_back(&BB);
@@ -215,8 +225,8 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
         LLVM_DEBUG(dbgs() << "DBE: promote " << B->BranchBB->getName() << "/"
                           << B->SuccIdx << "\n");
       } else
-        LLVM_DEBUG(dbgs() << "DBE: still-dead " << B->BranchBB->getName()
-                          << "/" << B->SuccIdx << "\n");
+        LLVM_DEBUG(dbgs() << "DBE: still-dead " << B->BranchBB->getName() << "/"
+                          << B->SuccIdx << "\n");
     }
   }
 
@@ -226,16 +236,21 @@ bool refineOnce(Function &F, std::vector<BranchBody> &Bodies) {
 
 /// Redirect each dead branch to its other side, then delete whatever became
 /// unreachable. Returns true if anything changed.
-bool foldDeadBranches(Function &F, ArrayRef<BranchBody> Dead) {
+bool foldDeadBranches(Function &F, ArrayRef<BranchBody> Dead,
+                      OptimizationRemarkEmitter &ORE) {
   bool Changed = false;
   for (const BranchBody &B : Dead) {
     auto *BI = dyn_cast<CondBrInst>(B.BranchBB->getTerminator());
     if (!BI)
       continue; // Already folded together with a parent body.
     LLVM_DEBUG(dbgs() << "DBE: folding dead edge " << B.BranchBB->getName()
-                      << " -> "
-                      << BI->getSuccessor(B.SuccIdx)->getName() << " in "
-                      << F.getName() << "\n");
+                      << " -> " << BI->getSuccessor(B.SuccIdx)->getName()
+                      << " in " << F.getName() << "\n");
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "DeadBranchFolded", BI)
+             << "removed branch to provably unreachable code";
+    });
+    ++NumBranchesFolded;
     Value *Cond = BI->getCondition();
     BI->setCondition(ConstantInt::getBool(F.getContext(), B.SuccIdx == 1));
     ConstantFoldTerminator(B.BranchBB);
@@ -253,7 +268,7 @@ bool runOnFunction(Function &F) {
 
   DominatorTree DT(F);
   LoopInfo LI(DT);
-  std::vector<BranchBody> Bodies = collectBranchBodies(F, LI);
+  SmallVector<BranchBody> Bodies = collectBranchBodies(F, LI);
   if (Bodies.empty())
     return false;
 
@@ -261,17 +276,26 @@ bool runOnFunction(Function &F) {
     return any_of(Bodies,
                   [](const BranchBody &B) { return B.St == Status::Unknown; });
   };
-  while (HasUnknown() && refineOnce(F, Bodies))
-    ;
+  unsigned Iterations = 0;
+  bool StatusChanged = true;
+  while (HasUnknown() && StatusChanged) {
+    // The fold below is only sound at a verified fixed point: an iteration
+    // that promoted bodies invalidates the proofs of the remaining Unknown
+    // set. If the cap cuts the loop short, give up on this function.
+    if (++Iterations > MaxRefineIterations)
+      return false;
+    StatusChanged = refineOnce(F, Bodies);
+  }
 
-  std::vector<BranchBody> Dead;
+  SmallVector<BranchBody> Dead;
   for (BranchBody &B : Bodies)
     if (B.St == Status::Unknown)
       Dead.push_back(B);
   if (Dead.empty())
     return false;
 
-  return foldDeadBranches(F, Dead);
+  OptimizationRemarkEmitter ORE(&F);
+  return foldDeadBranches(F, Dead, ORE);
 }
 
 } // namespace
