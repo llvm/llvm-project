@@ -6,7 +6,8 @@ This script is a utility to update MIR based tests with new FileCheck
 patterns for GlobalISel Known Bits.
 
 The checks added by this script are similar to update_mir_test_checks, using
-the output of KnownBits and SignBits from -passes=print<gisel-value-tracking>.
+the output of KnownBits, SignBits, and IsKnownNeverZero from
+-passes=print<gisel-value-tracking>.
 """
 
 from __future__ import print_function
