@@ -789,7 +789,6 @@ ClangModulesDeclVendor::Create(Target &target) {
   const bool skipFunctionBodies = false;
   std::unique_ptr<clang::Parser> parser(new clang::Parser(
       instance->getPreprocessor(), instance->getSema(), skipFunctionBodies));
-  parser->Initialize();
 
   instance->getPreprocessor().EnterMainSourceFile();
   parser->ConsumeToken();
