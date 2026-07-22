@@ -28,32 +28,51 @@ using namespace mlir;
 
 namespace {
 
-// Checks if 'op' is contained inside any branching or looping structure.
+/// Returns true if `op` is contained inside any branching, region, or looping
+/// structure (such as scf.for, scf.if, or repetitive regions)
 static bool isInsideControlFlow(Operation *op) {
   return getEnclosingRepetitiveRegion(op) ||
          op->getParentOfType<LoopLikeOpInterface>() ||
          op->getParentOfType<RegionBranchOpInterface>();
 }
 
+/// Elevates a static `memref.alloc` operation to a top-level `memref.global` op
+/// if the allocation is not enclosed within any control flow constructs.
+///
+/// Converts:
+/// ```mlir
+/// %0 = memref.alloc() : memref<4x4xf32>
+/// memref.dealloc %0 : memref<4x4xf32>
+/// ```
+/// to:
+/// ```mlir
+/// memref.global "private" @global_alloc : memref<4x4xf32>
+/// ...
+/// %0 = memref.get_global @global_alloc : memref<4x4xf32>
+/// ```
 struct ElevateAllocsToGlobals : public OpRewritePattern<memref::AllocOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(memref::AllocOp allocOp,
                                 PatternRewriter &rewriter) const final {
-
     auto memrefType = allocOp.getType();
-    // memref.global requires statically shaped memrefs
+    // `memref.global` requires statically shaped memrefs with no dynamic sizes.
     if (!memrefType.hasStaticShape() || !allocOp.getDynamicSizes().empty())
       return failure();
 
+    // Avoid elevating allocations inside control flow (loops or conditionals),
+    // as converting them to a single static global would make multiple
+    // executions share the same buffer, changing semantics or causing race
+    // conditions.
     if (isInsideControlFlow(allocOp))
       return failure();
 
+    // Create the global variable at the nearest enclosing symbol table (e.g.
+    // module).
     memref::GlobalOp globalOp;
     {
       Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(allocOp);
-
       SymbolTable symbolTable(symbolTableOp);
 
       OpBuilder builder(rewriter.getContext());
@@ -66,6 +85,7 @@ public:
       symbolTable.insert(globalOp);
     }
 
+    // Remove any `memref.dealloc` operations using this allocation
     SmallVector<Operation *> deallocsToDelete;
     for (OpOperand &use : allocOp.getResult().getUses()) {
       Operation *user = use.getOwner();
@@ -75,6 +95,7 @@ public:
     for (Operation *dealloc : deallocsToDelete)
       rewriter.eraseOp(dealloc);
 
+    // Replace the original `memref.alloc` with `memref.get_global`.
     rewriter.replaceOpWithNewOp<memref::GetGlobalOp>(allocOp, memrefType,
                                                      globalOp.getName());
 
