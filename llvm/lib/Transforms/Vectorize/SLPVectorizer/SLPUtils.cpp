@@ -124,6 +124,10 @@ bool isSplat(ArrayRef<Value *> VL) {
   return FirstNonUndef != nullptr;
 }
 
+bool isFMAOrFMulAdd(Intrinsic::ID ID) {
+  return ID == Intrinsic::fma || ID == Intrinsic::fmuladd;
+}
+
 bool isCommutative(const Instruction *I, const Value *ValWithUses,
                    bool IsCopyable) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))

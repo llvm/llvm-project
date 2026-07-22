@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/Intrinsics.h"
 
 #include <optional>
 #include <string>
@@ -77,6 +78,9 @@ bool allConstant(ArrayRef<Value *> VL);
 /// \returns True if all of the values in \p VL are identical or some of them
 /// are UndefValue.
 bool isSplat(ArrayRef<Value *> VL);
+
+/// \returns True if \p ID is the llvm.fma or llvm.fmuladd intrinsic.
+bool isFMAOrFMulAdd(Intrinsic::ID ID);
 
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
 /// For BinaryOperator, it also checks if \p ValWithUses is used in specific
