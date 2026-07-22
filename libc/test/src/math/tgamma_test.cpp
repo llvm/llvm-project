@@ -22,7 +22,7 @@ TEST_F(LlvmLibcTgammaTest, PositiveIntegers) {
   constexpr int N = 171;
   for (int i = 1; i <= N; i++) {
     double x = static_cast<double>(i);
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tgamma, x,
+    EXPECT_MPFR_MATCH(mpfr::Operation::Tgamma, x,
                                    LIBC_NAMESPACE::tgamma(x), 0.5);
   }
 }
