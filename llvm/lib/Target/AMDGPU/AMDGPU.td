@@ -1080,6 +1080,10 @@ defm GetWaveIdInst : AMDGPUSubtargetFeature<"get-wave-id-inst",
   "Has s_get_waveid_in_workgroup instruction"
 >;
 
+defm PopsExitingWaveID : AMDGPUSubtargetFeature<"pops-exiting-wave-id",
+  "Has POPS_EXITING_WAVE_ID hardware register"
+>;
+
 defm SMemTimeInst : AMDGPUSubtargetFeature<"s-memtime-inst",
   "Has s_memtime instruction"
 >;
@@ -1751,7 +1755,8 @@ def FeatureISAVersion9_0_Consumer_Common : FeatureSet<
     [FeatureImageGather4D16Bug,
      FeatureDsSrc2Insts,
      FeatureExtendedImageInsts,
-     FeatureGDS])>;
+     FeatureGDS,
+     FeaturePopsExitingWaveID])>;
 
 def FeatureISAVersion9_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
@@ -1921,7 +1926,8 @@ def FeatureISAVersion10_Common : FeatureSet<
    FeatureBackOffBarrier,
    FeatureMsadInsts,
    FeatureMqsadPkInsts,
-   FeatureMqsadInsts]>;
+   FeatureMqsadInsts,
+   FeaturePopsExitingWaveID]>;
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
@@ -2652,13 +2658,6 @@ def isGFX9GFX10 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX11Insts))>;
-
-def HasPopsExitingWaveID :
-  Predicate<"(Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 ||"
-            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX10) &&"
-            "!Subtarget->hasMAIInsts()">,
-  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX11Insts),
-                      (not FeatureMAIInsts))>;
 
 def isGFX9GFX10GFX11 :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9 &&"
