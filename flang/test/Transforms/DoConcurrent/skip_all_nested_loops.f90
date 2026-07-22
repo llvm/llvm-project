@@ -48,9 +48,12 @@ end
 
 ! COMMON: omp.wsloop {
 ! COMMON: omp.loop_nest ({{[^[:space:]]+}}) {{.*}} {
-! COMMON:   fir.do_loop %[[J_IV:.*]] = {{.*}} to {{.*}} step {{.*}} : i32 {
-! HOST:       fir.store %[[J_IV]] to %[[ORIG_J_DECL]]#0
-! DEVICE:     fir.store %[[J_IV]] to %[[TARGET_J_DECL]]#0
+! HOST:     fir.store %[[HOST_J_LB:.*]] to %[[ORIG_J_DECL]]#0
+! HOST:     fir.do_loop %[[J_IV:.*]] = %[[HOST_J_LB]] to {{.*}} step %[[HOST_J_STEP:.*]] : i32 {
+! HOST-NOT:   fir.store %[[J_IV]] to %[[ORIG_J_DECL]]#0
+! DEVICE:   fir.store %[[DEVICE_J_LB:.*]] to %[[TARGET_J_DECL]]#0
+! DEVICE:   fir.do_loop %[[J_IV:.*]] = %[[DEVICE_J_LB]] to {{.*}} step %[[DEVICE_J_STEP:.*]] : i32 {
+! DEVICE-NOT: fir.store %[[J_IV]] to %[[TARGET_J_DECL]]#0
 
 ! COMMON:     fir.do_concurrent {
 ! COMMON:         %[[ORIG_K_ALLOC:.*]] = fir.alloca i32 {bindc_name = "k"}
@@ -60,6 +63,12 @@ end
 ! COMMON:           fir.store %[[K_IV_CONV]] to %[[ORIG_K_DECL]]#0
 ! COMMON:       }
 ! COMMON:     }
+! HOST:       %[[UPDATED_J:.*]] = fir.load %[[ORIG_J_DECL]]#0
+! HOST:       %[[NEXT_J:.*]] = arith.addi %[[UPDATED_J]], %[[HOST_J_STEP]] overflow<nsw> : i32
+! HOST:       fir.store %[[NEXT_J]] to %[[ORIG_J_DECL]]#0
+! DEVICE:     %[[UPDATED_J:.*]] = fir.load %[[TARGET_J_DECL]]#0
+! DEVICE:     %[[NEXT_J:.*]] = arith.addi %[[UPDATED_J]], %[[DEVICE_J_STEP]] overflow<nsw> : i32
+! DEVICE:     fir.store %[[NEXT_J]] to %[[TARGET_J_DECL]]#0
 ! COMMON:   }
 ! COMMON: omp.yield
 ! COMMON: }

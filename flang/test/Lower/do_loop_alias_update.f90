@@ -20,10 +20,10 @@ subroutine cray_pointer_loop
   do g = -2, -7, -2
     g5 = g5 + 5
     gpl6l = g - 3
+  ! CHECK: hlfir.assign {{.*}} to {{.*}} : f32, !fir.ptr<f32>
   ! CHECK: %[[UPDATED:.*]] = fir.load %[[G]]#0 : !fir.ref<i32>
   ! CHECK: %[[NEXT:.*]] = arith.addi %[[UPDATED]], %[[STEP]] overflow<nsw> : i32
   ! CHECK: fir.store %[[NEXT]] to %[[G]]#0 : !fir.ref<i32>
-  ! CHECK: fir.result
   ! CHECK: }
   end do
 end subroutine
@@ -44,10 +44,10 @@ subroutine pointer_alias_loop
   ! CHECK-NOT: fir.store %[[IV]] to %[[I]]#0
   do i = 1, 3
     p = i + 1
+  ! CHECK: hlfir.assign {{.*}} to {{.*}} : i32, !fir.ptr<i32>
   ! CHECK: %[[UPDATED:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: %[[NEXT:.*]] = arith.addi %[[UPDATED]], %[[STEP]] overflow<nsw> : i32
   ! CHECK: fir.store %[[NEXT]] to %[[I]]#0 : !fir.ref<i32>
-  ! CHECK: fir.result
   ! CHECK: }
   end do
 end subroutine
