@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
@@ -3819,6 +3821,36 @@ TEST(TripleTest, DefaultWCharSize) {
   EXPECT_EQ(2u, Triple("powerpc-ibm-aix").getDefaultWCharSize());
 
   EXPECT_EQ(1u, Triple("xcore-unknown-unknown").getDefaultWCharSize());
+}
+
+TEST(DataLayoutTest, NVPTX) {
+  Triple TT32 = Triple("nvptx-nvidia-cuda");
+  Triple TT64 = Triple("nvptx64-nvidia-cuda");
+
+  auto PointerLayoutSpecs = [](StringRef DataLayout) {
+    SmallVector<std::string, 8> Specs;
+    for (StringRef Spec : split(DataLayout, '-'))
+      if (Spec.starts_with("p"))
+        Specs.emplace_back(Spec);
+    return Specs;
+  };
+
+  // The 32-bit target uses a single 32-bit pointer specification and is
+  // unaffected by the ABI name.
+  EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("")),
+              testing::ElementsAre("p:32:32"));
+  EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("shortptr")),
+              testing::ElementsAre("p:32:32"));
+
+  // The default 64-bit target only shrinks Tensor Memory (addrspace:6).
+  EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("")),
+              testing::ElementsAre("p6:32:32"));
+
+  // In shortptr mode the extra address spaces become 32-bit. The pointer
+  // specifications must remain sorted by address space.
+  EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("shortptr")),
+              testing::ElementsAre("p3:32:32", "p4:32:32", "p5:32:32",
+                                   "p6:32:32", "p7:32:32", "p101:32:32"));
 }
 
 TEST(DataLayoutTest, CheriRISCV32) {

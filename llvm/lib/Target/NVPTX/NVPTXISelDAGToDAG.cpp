@@ -421,10 +421,9 @@ bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
 bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
   SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
-  SDNode *SetP = CurDAG->getMachineNode(
-      NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1,
-      {N->getOperand(0), N->getOperand(1), PTXCmpMode,
-       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
+  SDNode *SetP =
+      CurDAG->getMachineNode(NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1,
+                             {N->getOperand(0), N->getOperand(1), PTXCmpMode});
   ReplaceNode(N, SetP);
   return true;
 }
