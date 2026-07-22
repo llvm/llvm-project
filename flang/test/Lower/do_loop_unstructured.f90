@@ -112,8 +112,8 @@ end subroutine
 ! CHECK:   %[[LOOP_VAR_J_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_J_REF]]
 ! CHECK:   %[[LOOP_VAR_K_REF:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFnested_unstructuredEk"}
 ! CHECK:   %[[LOOP_VAR_K_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_K_REF]]
-! CHECK:   fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{[^ ]+}} = %{{.*}}) -> (i32) {
-! CHECK:     fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{[^ ]+}} = %{{.*}}) -> (i32) {
+! CHECK:   fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
+! CHECK:     fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
 ! CHECK:       scf.execute_region no_inline {
 ! CHECK:         cf.br ^[[HEADER_K:.*]]
 ! CHECK:       ^[[HEADER_K]]:
@@ -131,9 +131,7 @@ end subroutine
 ! CHECK:       ^[[EXIT_K]]:
 ! CHECK:         scf.yield
 ! CHECK:       }
-! CHECK:       fir.result %{{.*}} : i32
 ! CHECK:     }
-! CHECK:     fir.result %{{.*}} : i32
 ! CHECK:   }
 ! CHECK:   return
 
@@ -169,13 +167,23 @@ end subroutine
 ! CHECK:   %[[COND:.*]] = arith.cmpi sgt, %[[TRIP_VAR]], %[[ZERO]] : i32
 ! CHECK:   cf.cond_br %[[COND]], ^[[BODY:.*]], ^[[EXIT:.*]]
 ! CHECK: ^[[BODY]]:
-! CHECK:   %{{.*}} = fir.do_loop %[[J_INDEX:[^ ]*]] =
-! CHECK-SAME: %{{.*}} to %{{.*}} step %[[ST:[^ ]*]]
-! CHECK-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (i32) {
+! CHECK:   fir.do_loop %[[J_IV:[^ ]*]] =
+! CHECK-SAME: %[[J_LB:[^ ]*]] to %[[J_UB:[^ ]*]] step %[[J_ST:[^ ]*]] : i32 {
 ! CHECK:     fir.store %[[J_IV]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
-! CHECK:     %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
-! CHECK:     %[[LOOP_VAR_J_NEXT:.*]] = arith.addi %[[LOOP_VAR_J]], %{{[^ ]*}} overflow<nsw> : i32
 ! CHECK:   }
+! CHECK:   %[[J_LBIDX:.*]] = fir.convert %[[J_LB]] : (i32) -> index
+! CHECK:   %[[J_UBIDX:.*]] = fir.convert %[[J_UB]] : (i32) -> index
+! CHECK:   %[[J_STIDX:.*]] = fir.convert %[[J_ST]] : (i32) -> index
+! CHECK:   %[[J_C0:.*]] = arith.constant 0 : index
+! CHECK:   %[[J_DIFF:.*]] = arith.subi %[[J_UBIDX]], %[[J_LBIDX]] : index
+! CHECK:   %[[J_ADD:.*]] = arith.addi %[[J_DIFF]], %[[J_STIDX]] : index
+! CHECK:   %[[J_TRIP:.*]] = arith.divsi %[[J_ADD]], %[[J_STIDX]] : index
+! CHECK:   %[[J_CMP:.*]] = arith.cmpi slt, %[[J_TRIP]], %[[J_C0]] : index
+! CHECK:   %[[J_SEL:.*]] = arith.select %[[J_CMP]], %[[J_C0]], %[[J_TRIP]] : index
+! CHECK:   %[[J_MUL:.*]] = arith.muli %[[J_SEL]], %[[J_STIDX]] : index
+! CHECK:   %[[J_LASTIDX:.*]] = arith.addi %[[J_LBIDX]], %[[J_MUL]] : index
+! CHECK:   %[[J_LAST:.*]] = fir.convert %[[J_LASTIDX]] : (index) -> i32
+! CHECK:   fir.store %[[J_LAST]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[TRIP_VAR_I:.*]] = fir.load %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
 ! CHECK:   %[[C1_3:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[TRIP_VAR_I_NEXT:.*]] = arith.subi %[[TRIP_VAR_I]], %[[C1_3]] : i32
