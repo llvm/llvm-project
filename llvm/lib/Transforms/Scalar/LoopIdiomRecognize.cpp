@@ -1685,10 +1685,10 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   }
 
   // Approximate the cost of the clmul optimization as two clmuls plus a decent
-  // estimate of the other operations used.
+  // conservative estimate of the other operations used.
   InstructionCost NewCost = ClmulCost(2 * Info.TripCount) +
-                            ClmulCost(CRCBW + Info.TripCount) + XorCost +
-                            2 * ShiftCost + 2 * AndCost;
+                            ClmulCost(CRCBW + Info.TripCount) + 2 * XorCost +
+                            2 * ShiftCost + AndCost;
   LLVM_DEBUG(dbgs() << " NewCost(clmul)=" << NewCost);
 
   if (NewCost.isValid() && OldCost.isValid() && NewCost < OldCost) {
