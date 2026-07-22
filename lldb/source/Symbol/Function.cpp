@@ -269,7 +269,7 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
 
 Function::~Function() = default;
 
-bool Function::GetStartLineEntry(LineEntry &line_entry, uint32_t *index) {
+bool Function::GetStartLineTableEntry(LineEntry &line_entry, uint32_t *index) {
   LineTable *line_table = m_comp_unit ? m_comp_unit->GetLineTable() : nullptr;
   if (line_table == nullptr)
     return false;
@@ -282,8 +282,7 @@ bool Function::GetStartLineEntry(LineEntry &line_entry, uint32_t *index) {
     return true;
   }
 
-  // The entry point is not covered by a line row. Fall back to the first line
-  // entry that begins within the function.
+  // The entry point has no line row, so take the first row inside the function.
   AddressRange entry_range;
   if (!m_block.GetRangeContainingAddress(m_address, entry_range))
     return false;
@@ -324,7 +323,7 @@ void Function::GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
     line_no = m_type->GetDeclaration().GetLine();
   } else {
     LineEntry line_entry;
-    if (GetStartLineEntry(line_entry)) {
+    if (GetStartLineTableEntry(line_entry)) {
       line_no = line_entry.line;
       source_file_sp = line_entry.file_sp;
     }
@@ -612,7 +611,7 @@ uint32_t Function::GetPrologueByteSize() {
       LineEntry first_line_entry;
       uint32_t first_line_entry_idx = UINT32_MAX;
       bool found_first_line_entry =
-          GetStartLineEntry(first_line_entry, &first_line_entry_idx);
+          GetStartLineTableEntry(first_line_entry, &first_line_entry_idx);
 
       if (found_first_line_entry) {
         // Make sure the first line entry isn't already the end of the prologue
