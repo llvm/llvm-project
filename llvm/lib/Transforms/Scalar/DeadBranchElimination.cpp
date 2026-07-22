@@ -89,11 +89,11 @@ struct BranchBody {
   Status St = Status::Unknown;
 };
 
-/// Cloning and re-running ScalarEvolution is only worthwhile for the
-/// pattern this pass targets: a branch inside a loop whose condition SCEV
-/// can reason about. Everything else is seeded ProvenReachable so that
-/// functions without such branches are never cloned at all. Straight-line
-/// provably-dead branches are left to SCCP/SimplifyCFG.
+/// The fixed point is only worthwhile for the pattern this pass targets: a
+/// branch inside a loop whose condition SCEV can reason about. Everything
+/// else is seeded ProvenReachable so that functions without such branches
+/// are never analyzed at all. Straight-line provably-dead branches are left
+/// to SCCP/SimplifyCFG.
 SmallVector<BranchBody> collectBranchBodies(Function &F, LoopInfo &LI) {
   SmallVector<BranchBody> Bodies;
   for (BasicBlock &BB : F) {
@@ -123,9 +123,9 @@ bool hasCandidateShapedBranch(Function &F) {
   return false;
 }
 
-/// Does the clone prove that this branch edge is never taken? The bodies of
-/// all Unknown branches have already been replaced with 'unreachable', so
-/// the condition is evaluated on the cleaned-up code.
+/// Is this branch edge provably never taken? The assumption set is already
+/// applied (see AssumedDeadEdges), so the condition is evaluated as if all
+/// still-Unknown bodies were dead.
 bool isEdgeProvenDead(ScalarEvolution &SE, CondBrInst *BI, unsigned SuccIdx) {
   Value *Cond = BI->getCondition();
   if (auto *CI = dyn_cast<ConstantInt>(Cond))
@@ -399,8 +399,6 @@ bool runOnFunction(Function &F) {
 PreservedAnalyses DeadBranchEliminationPass::run(Module &M,
                                                  ModuleAnalysisManager &AM) {
   bool Changed = false;
-  // This is a module pass (it temporarily creates function clones), but it
-  // transforms functions independently.
   for (Function &F : M) {
     if (F.isDeclaration() || F.isPresplitCoroutine() || F.hasOptNone())
       continue;
