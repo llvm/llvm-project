@@ -8596,14 +8596,21 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   APInt Divisor = CN->getAPIntValue();
 
-  // We depend on the UREM by constant optimization in DAGCombiner that requires
-  // high multiply.
-  if (!isOperationLegalOrCustom(ISD::MULHU, HiLoVT) &&
+  // The generated half-width UREM is normally optimized using high multiply.
+  // If the wide UREM libcall is unavailable, a legal or custom half-width
+  // UDIVREM can lower it instead.
+  bool CanDecomposeUREMWithoutMulHi =
+      Opcode == ISD::UREM &&
+      getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
+          RTLIB::Unsupported &&
+      isOperationLegalOrCustom(ISD::UDIVREM, HiLoVT);
+  if (!CanDecomposeUREMWithoutMulHi &&
+      !isOperationLegalOrCustom(ISD::MULHU, HiLoVT) &&
       !isOperationLegalOrCustom(ISD::UMUL_LOHI, HiLoVT))
     return false;
 
-  // Don't expand if optimizing for size.
-  if (DAG.shouldOptForSize())
+  // Prefer the smaller libcall when one is available.
+  if (DAG.shouldOptForSize() && !CanDecomposeUREMWithoutMulHi)
     return false;
 
   // Early out for 0 or 1 divisors.
