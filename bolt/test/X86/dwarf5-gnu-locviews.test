@@ -1,0 +1,41 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-gnu-locviews-main.s -o %tmain.o
+# RUN: %clang %cflags -dwarf-5 %tmain.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
+
+## This test checks that re-writing of .debug_loclists preserves GCC location
+## views: DW_AT_GNU_locviews is updated to the new section offset and continues
+## to point at the view pairs that immediately precede the matching location
+## list. The input encodes two location lists (two and one view pairs), so the
+## post-BOLT view offset must be exactly 4 and 2 bytes before its loclist.
+
+# PRECHECK: version = 0x0005
+# PRECHECK: DW_TAG_variable
+# PRECHECK: DW_AT_GNU_locviews [DW_FORM_sec_offset]
+# PRECHECK-SAME: (0x[[#%.8x,IVIEW0:]])
+# PRECHECK: DW_AT_location [DW_FORM_loclistx]
+# PRECHECK-SAME: indexed (0x0)
+# PRECHECK-SAME: loclist = 0x[[#%.8x,IVIEW0+4]]
+# PRECHECK: DW_TAG_variable
+# PRECHECK: DW_AT_GNU_locviews [DW_FORM_sec_offset]
+# PRECHECK-SAME: (0x[[#%.8x,IVIEW1:]])
+# PRECHECK: DW_AT_location [DW_FORM_loclistx]
+# PRECHECK-SAME: indexed (0x1)
+# PRECHECK-SAME: loclist = 0x[[#%.8x,IVIEW1+2]]
+
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK: DW_AT_GNU_locviews [DW_FORM_sec_offset]
+# POSTCHECK-SAME: (0x[[#%.8x,VIEW0:]])
+# POSTCHECK: DW_AT_location [DW_FORM_loclistx]
+# POSTCHECK-SAME: indexed (0x0)
+# POSTCHECK-SAME: loclist = 0x[[#%.8x,VIEW0+4]]
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK: DW_AT_GNU_locviews [DW_FORM_sec_offset]
+# POSTCHECK-SAME: (0x[[#%.8x,VIEW1:]])
+# POSTCHECK: DW_AT_location [DW_FORM_loclistx]
+# POSTCHECK-SAME: indexed (0x1)
+# POSTCHECK-SAME: loclist = 0x[[#%.8x,VIEW1+2]]
