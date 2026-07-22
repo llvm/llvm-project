@@ -6207,10 +6207,6 @@ static unsigned getAlignedNumElements(unsigned MaxIdx, FixedVectorType *LoadTy,
                                       const TargetTransformInfo &TTI,
                                       const DataLayout &DL) {
   unsigned RawNumElements = MaxIdx + 1u;
-  // Preserve the default behavior for scalable-vector targets.
-  if (TTI.supportsScalableVectors())
-    return RawNumElements;
-
   Type *ElemTy = LoadTy->getElementType();
   // Skip alignment for illegal element types.
   if (!TTI.isTypeLegal(ElemTy))
