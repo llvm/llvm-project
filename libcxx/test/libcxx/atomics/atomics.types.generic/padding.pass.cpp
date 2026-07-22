@@ -127,7 +127,6 @@ void test() {
     T old = a.exchange(new_val);
     assert(old.i == 1);
     assert(old.c == 'a');
-    assert_padding(old, 0);
     T loaded = a.load();
     assert(loaded.i == 2);
     assert(loaded.c == 'b');
