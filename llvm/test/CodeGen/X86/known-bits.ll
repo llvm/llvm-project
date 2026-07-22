@@ -6,10 +6,10 @@ define void @knownbits_zext_in_reg(ptr) nounwind {
 ; CHECK-LABEL: knownbits_zext_in_reg:
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %CF237
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:    jmp .LBB0_1
 BB:

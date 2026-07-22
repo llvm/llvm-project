@@ -27,10 +27,10 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    js .LBB0_14
 ; CHECK-NEXT:  # %bb.12:
 ; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    testb %r8b, %r8b
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_13: # %a25b
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %r8b, %r8b
 ; CHECK-NEXT:    je .LBB0_13
 ; CHECK-NEXT:  .LBB0_14: # %b85
 ; CHECK-NEXT:    movb $1, %r8b
@@ -38,10 +38,10 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.15:
 ; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    testb %r8b, %r8b
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_16: # %a25b140
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %r8b, %r8b
 ; CHECK-NEXT:    je .LBB0_16
 ; CHECK-NEXT:  .LBB0_1: # %a29b
 ; CHECK-NEXT:    cmpl %esi, %edi

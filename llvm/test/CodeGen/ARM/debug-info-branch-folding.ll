@@ -3,6 +3,7 @@ target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-
 target triple = "thumbv7-apple-macosx10.6.7"
 
 ;CHECK: 	vadd.f32	q4, q8, q9
+;CHECK-NEXT: cmp	r0, #0
 ;CHECK-NEXT: LBB0_1
 
 ;CHECK:         @DEBUG_VALUE: x <- $q4{{$}}
