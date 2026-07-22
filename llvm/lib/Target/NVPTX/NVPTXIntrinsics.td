@@ -2757,8 +2757,8 @@ class addrspacecast_spaces<NVPTXAddressSpace src_space,
          " && ASC->getDestAddressSpace() == " # dst_space.Enum # ";">;
 
 
-multiclass NG_TO_G<NVPTXAddressSpace as, bit supports_32 = true,
-                   list<Predicate> preds = []> {
+multiclass CvtaFromInsts<NVPTXAddressSpace as, list<Predicate> preds,
+                         bit supports_32> {
   defvar asc_pat = addrspacecast_spaces<as, AddrSpaceGeneric>;
   let Predicates = preds in {
     if supports_32 then
@@ -2775,8 +2775,8 @@ multiclass NG_TO_G<NVPTXAddressSpace as, bit supports_32 = true,
   }
 }
 
-multiclass G_TO_NG<NVPTXAddressSpace as, bit supports_32 = true,
-                   list<Predicate> preds = []> {
+multiclass CvtaToInsts<NVPTXAddressSpace as, list<Predicate> preds,
+                       bit supports_32> {
   defvar asc_pat = addrspacecast_spaces<AddrSpaceGeneric, as>;
   let Predicates = preds in {
     if supports_32 then
@@ -2793,14 +2793,17 @@ multiclass G_TO_NG<NVPTXAddressSpace as, bit supports_32 = true,
   }
 }
 
-foreach space = [AddrSpaceLocal, AddrSpaceShared, AddrSpaceGlobal,
-                 AddrSpaceConst, AddrSpaceParam] in {
-  defm cvta_ # space.Name : NG_TO_G<space>;
-  defm cvta_to_ # space.Name : G_TO_NG<space>;
+multiclass CvtaInsts<NVPTXAddressSpace as, list<Predicate> preds = [],
+                     bit supports_32 = true> {
+  defm _ # as.Name : CvtaFromInsts<as, preds, supports_32>;
+  defm _to_ # as.Name : CvtaToInsts<as, preds, supports_32>;
 }
 
-defm cvta_shared_cluster : NG_TO_G<AddrSpaceSharedCluster, false, [hasClusters]>;
-defm cvta_to_shared_cluster : G_TO_NG<AddrSpaceSharedCluster, false, [hasClusters]>;
+foreach as = [AddrSpaceLocal, AddrSpaceShared, AddrSpaceGlobal, AddrSpaceConst] in
+  defm cvta : CvtaInsts<as>;
+
+defm cvta : CvtaInsts<AddrSpaceParam, [hasPTX<77>, hasSM<70>]>;
+defm cvta : CvtaInsts<AddrSpaceSharedCluster, [hasClusters], supports_32=false>;
 
 
 // nvvm.move intrinsicc

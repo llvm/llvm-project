@@ -119,7 +119,7 @@ def AddrSpaceGlobal  : NVPTXAddressSpace<"ADDRESS_SPACE_GLOBAL", "global">;
 def AddrSpaceConst   : NVPTXAddressSpace<"ADDRESS_SPACE_CONST", "const">;
 def AddrSpaceParam   : NVPTXAddressSpace<"ADDRESS_SPACE_ENTRY_PARAM", "param">;
 def AddrSpaceSharedCluster : NVPTXAddressSpace<"ADDRESS_SPACE_SHARED_CLUSTER",
-                                               "shared::cluster">;
+                                               "shared_cluster", ".shared::cluster">;
 
 //===----------------------------------------------------------------------===//
 // NVPTX Instruction Predicate Definitions
