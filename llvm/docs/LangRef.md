@@ -7789,6 +7789,26 @@ sections that the user does not want removed after linking.
 !0 = !{}
 ```
 
+#### '`metadata_section_kind`' Metadata
+
+`metadata_section_kind` metadata may be attached to a global variable to signify
+that its section should be treated as "metadata" by LLVM, meaning the the
+section will be generic by default without any flags, unless the section has a
+special name (e.g., `"llvm.metadata"`). Incompatible with `!exclude`; in
+practice, one may be ignored by LLVM. This option is only valid for global
+variables with an explicit section targeting ELF or COFF.
+
+By default this uses `SHT_PROGBITS` with no flags for ELF, and for COFF the
+section is not marked as readable or writable and it uses the section flag
+`IMAGE_SCN_MEM_DISCARDABLE`.
+
+```text
+@object = private constant [1 x i8] c"\00", section ".foo" !metadata_section_kind !0
+
+...
+!0 = !{}
+```
+
 #### '`unpredictable`' Metadata
 
 `unpredictable` metadata may be attached to any branch, select, or switch
