@@ -223,8 +223,6 @@ define <4 x i64> @test_demanded_elts_pclmulqdq_256_17(<4 x i64> %a0, <4 x i64> %
 define <4 x i64> @test_demanded_elts_pclmulqdq_512_sparse_17(<8 x i64> %a0, <8 x i64> %a1, <2 x i64> %dead0, <2 x i64> %dead1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_512_sparse_17:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinserti32x4 $3, %xmm2, %zmm0, %zmm0
-; CHECK-NEXT:    vinserti32x4 $3, %xmm3, %zmm1, %zmm1
 ; CHECK-NEXT:    vpclmulqdq $17, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
 ; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
