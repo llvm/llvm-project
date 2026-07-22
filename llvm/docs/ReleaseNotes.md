@@ -237,6 +237,34 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the Hexagon Backend
 
+* v79 and later targets get code generation support for XQFloat, an
+  extended-precision floating point format, along with an extraneous
+  conversion removal pass and a post-register-allocation compliance checker.
+* IEEE HVX floating point intrinsics are automatically translated to their
+  QFloat equivalents on v79+ targets.
+* `vselect` can now be lowered for HVX.
+* Partial reduction intrinsics are now supported.
+* HVX gained V128i1/V64i1/V32i1 predicate load and store support.
+* The Machine Combiner pass is enabled for Hexagon.
+* A new AggressiveRDF copy propagation pass extends RDF copy propagation
+  with super-register and sub-register handling.
+* The HexagonGlobalScheduler pass was added.
+* ShadowCallStack (`-fsanitize=shadow-call-stack`) is now supported, along
+  with a corresponding multilib.
+* Stack clash protection can use `probe-stack=inline-asm`.
+* KCFI is now supported.
+* The CFI indirect-call sanitizer is now supported.
+* `-ffixed-rXX` can reserve caller-saved registers r16-r28.
+* A new HVX caller-save remark pass diagnoses call sites that force HVX
+  register spills.
+* Several Hexagon IR and MIR passes now emit optimization remarks.
+* XRay custom and typed events are now supported.
+* JITLink gained an ELF backend for Hexagon.
+* The `.reloc` assembler directive is now supported.
+* HVX build-vector lowering now reuses word splats for repeated words.
+* Sign-extend-then-multiply patterns are now recognized and lowered to
+  `vmpyh`.
+
 ### Changes to the LoongArch Backend
 
 * DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`

@@ -1146,6 +1146,19 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### AVR Support
 
+#### Hexagon Support
+
+- `H2` and `QURT` are now recognized as operating systems in the Hexagon
+  target triple. The driver can build against Picolibc for H2, and a
+  `--cstdlib` flag selects Picolibc.
+- RTSan, TySan, and the CFI indirect-call sanitizer now support Hexagon.
+  `-fsanitize=type` is enabled for Hexagon Linux.
+- `-ffixed-rXX` can now reserve caller-saved registers r16-r28.
+- ShadowCallStack (`-fsanitize=shadow-call-stack`) is supported.
+- The driver passes LTO options through to the Hexagon linker invocation.
+- `_GNU_SOURCE` is predefined for Hexagon C++ compilations.
+- `__HVX_IEEE_FP__` is defined when `-mhvx-ieee-fp` is enabled.
+
 #### SystemZ Support
 
 - Add support for `#pragma export` for z/OS. This is a pragma used to export functions and variables
