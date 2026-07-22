@@ -330,6 +330,8 @@ public:
                            DenseMap<const MachineOperand *, UseDistancePair>
                                *RelevantUses = nullptr) const;
 
+  void updateInstrIds(const MachineInstr *MI) const;
+
   bool isReachable(const MachineBasicBlock *From,
                    const MachineBasicBlock *To) const;
 };
