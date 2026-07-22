@@ -4340,6 +4340,37 @@ SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
   return RegFlags;
 }
 
+// Check if a VReg Def is a Mov Imm using LIS
+static bool IsVRegDefImm(Register VReg, LaneBitmask LaneMask,
+                         const LiveIntervals &LIS, SlotIndex UseIdx) {
+  if (!LIS.hasInterval(VReg))
+    return false;
+
+  const LiveInterval &LI = LIS.getInterval(VReg);
+  if (!LI.hasSubRanges()) {
+    const VNInfo *VNI = LI.getVNInfoBefore(UseIdx);
+    if (!VNI || VNI->isUnused() || VNI->isPHIDef())
+      return false;
+
+    MachineInstr *DefMI = LIS.getInstructionFromIndex(VNI->def);
+    if (DefMI && DefMI->isMoveImmediate())
+      return true;
+
+    return false;
+  }
+
+  for (const LiveInterval::SubRange &SR : LI.subranges()) {
+    const VNInfo *VNI = SR.getVNInfoBefore(UseIdx);
+    if (!VNI || VNI->isUnused() || VNI->isPHIDef())
+      return false;
+
+    MachineInstr *DefMI = LIS.getInstructionFromIndex(VNI->def);
+    if (DefMI && DefMI->isMoveImmediate())
+      return true;
+  }
+  return false;
+}
+
 bool SIRegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
     const TargetRegisterClass *DstRC, unsigned DstSubReg,
@@ -4347,16 +4378,25 @@ bool SIRegisterInfo::shouldCoalesce(
   assert(MI->isCopy() && "Only expecting COPY instructions");
 
   // Do not coalesce if src is a constant while size of LI subrange sum is
-  // more than 200. Let RA decide if need to rematerialize
+  // more than 100. Let RA decide if need to rematerialize
   MachineFunction *MF = MI->getParent()->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  MachineInstr *Def = MRI.getUniqueVRegDef(MI->getOperand(1).getReg());
+  auto *TRI = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+  Register DstReg = MI->getOperand(0).getReg();
+  Register SrcReg = MI->getOperand(1).getReg();
 
-  LiveInterval &LISrc = LIS.getInterval(MI->getOperand(0).getReg());
-  LiveInterval &LIDst = LIS.getInterval(MI->getOperand(1).getReg());
-  if (Def && Def->isMoveImmediate() &&
-		  (LISrc.valnos.size() + LIDst.valnos.size() > 200))
-    return false;
+  if (SrcReg.isVirtual() && DstReg.isVirtual()) {
+    LaneBitmask LaneMask =
+        TRI->getSubRegIndexLaneMask(MI->getOperand(1).getSubReg());
+    SlotIndex MIIdx = LIS.getInstructionIndex(*MI);
+    if (IsVRegDefImm(SrcReg, LaneMask, LIS, MIIdx)) {
+      LiveInterval &LIDst = LIS.getInterval(SrcReg);
+      LiveInterval &LISrc = LIS.getInterval(DstReg);
+      if (LISrc.valnos.size() + LIDst.valnos.size() > 100) {
+        return false;
+      }
+    }
+  }
 
   return TargetRegisterInfo::shouldCoalesce(MI, SrcRC, SubReg, DstRC, DstSubReg,
                                             NewRC, LIS);
