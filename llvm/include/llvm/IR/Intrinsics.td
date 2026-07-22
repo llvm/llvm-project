@@ -844,7 +844,8 @@ class RequiresTargetFeatures<string features> {
 }
 
 /// RequiresCustomTargetFeatures - The required target features depend on the
-/// intrinsic's resolved overload type and are provided by the target.
+/// intrinsic's resolved overload type and are provided by the target. The
+/// target may reject an overload when no feature expression supports it.
 class RequiresCustomTargetFeatures : RequiresTargetFeatures<"$custom">;
 
 /// Utility class for intrinsics that

@@ -2894,14 +2894,11 @@ bool IRTranslator::translateUnsupportedIntrinsic(const CallBase &CB,
                                                  Intrinsic::ID ID,
                                                  MachineIRBuilder &MIRBuilder) {
   const Function &F = MF->getFunction();
-  StringRef RequiredFeatures =
+  std::optional<StringRef> RequiredFeatures =
       MF->getSubtarget().getRequiredTargetFeaturesForIntrinsic(
           ID, CB.getFunctionType());
-  const Function *IntrinsicFn = CB.getCalledFunction();
-  StringRef IntrinsicName =
-      IntrinsicFn ? IntrinsicFn->getName() : Intrinsic::getBaseName(ID);
   F.getContext().diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
-      F, ID, IntrinsicName, CB.getDebugLoc(), RequiredFeatures));
+      F, ID, CB.getFunctionType(), CB.getDebugLoc(), RequiredFeatures));
 
   // The diagnostic makes compilation fail. Define any results so GlobalISel
   // can finish without sending the unsupported intrinsic to instruction

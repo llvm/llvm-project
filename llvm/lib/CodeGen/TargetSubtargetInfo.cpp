@@ -50,16 +50,21 @@ bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID,
   if (RequiredFeatures != Intrinsic::CustomTargetFeatures)
     return isIntrinsicSupported(IntrinsicID);
 
-  RequiredFeatures = getRequiredTargetFeaturesForIntrinsic(IntrinsicID, FTy);
-  return RequiredFeatures.empty() ||
-         (RequiredFeatures != Intrinsic::CustomTargetFeatures &&
-          checkFeatureExpression(RequiredFeatures));
+  std::optional<StringRef> CustomRequiredFeatures =
+      getRequiredTargetFeaturesForIntrinsic(IntrinsicID, FTy);
+  return CustomRequiredFeatures &&
+         (CustomRequiredFeatures->empty() ||
+          checkFeatureExpression(*CustomRequiredFeatures));
 }
 
-StringRef TargetSubtargetInfo::getRequiredTargetFeaturesForIntrinsic(
+std::optional<StringRef>
+TargetSubtargetInfo::getRequiredTargetFeaturesForIntrinsic(
     unsigned IntrinsicID, const FunctionType *FTy) const {
-  return Intrinsic::getRequiredTargetFeatures(
+  StringRef RequiredFeatures = Intrinsic::getRequiredTargetFeatures(
       static_cast<Intrinsic::ID>(IntrinsicID));
+  if (RequiredFeatures == Intrinsic::CustomTargetFeatures)
+    return std::nullopt;
+  return RequiredFeatures;
 }
 
 bool TargetSubtargetInfo::enableAtomicExpand() const {

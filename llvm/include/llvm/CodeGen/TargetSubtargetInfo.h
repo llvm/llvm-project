@@ -26,6 +26,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -101,10 +102,12 @@ public:
   bool isIntrinsicSupported(unsigned IntrinsicID,
                             const FunctionType *FTy) const;
 
-  /// \returns the target features required by the target intrinsic
-  /// \p IntrinsicID with signature \p FTy. Targets override this for
-  /// intrinsics marked as requiring custom target features.
-  virtual StringRef
+  /// Returns the target features required by the target intrinsic
+  /// \p IntrinsicID with signature \p FTy. An empty expression means no
+  /// features are required; \c std::nullopt means no feature expression
+  /// supports the intrinsic. Targets override this for intrinsics marked as
+  /// requiring custom target features.
+  virtual std::optional<StringRef>
   getRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
                                         const FunctionType *FTy) const;
 

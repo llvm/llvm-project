@@ -57,12 +57,14 @@ static cl::opt<unsigned>
 
 GCNSubtarget::~GCNSubtarget() = default;
 
-StringRef GCNSubtarget::getRequiredTargetFeaturesForIntrinsic(
+std::optional<StringRef> GCNSubtarget::getRequiredTargetFeaturesForIntrinsic(
     unsigned IntrinsicID, const FunctionType *FTy) const {
   if (IntrinsicID == Intrinsic::amdgcn_ballot) {
-    if (FTy && FTy->getReturnType()->isIntegerTy(32))
+    if (!FTy)
+      return std::nullopt;
+    if (FTy->getReturnType()->isIntegerTy(32))
       return "wavefrontsize32";
-    return {};
+    return StringRef();
   }
 
   return TargetSubtargetInfo::getRequiredTargetFeaturesForIntrinsic(IntrinsicID,

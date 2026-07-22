@@ -5567,15 +5567,13 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   if (!DAG.getMachineFunction().getSubtarget().isIntrinsicSupported(
           Intrinsic, I.getFunctionType())) {
     SDLoc DL = getCurSDLoc();
-    StringRef RequiredFeatures = DAG.getMachineFunction()
-                                     .getSubtarget()
-                                     .getRequiredTargetFeaturesForIntrinsic(
-                                         Intrinsic, I.getFunctionType());
-    const Function *IntrinsicFn = I.getCalledFunction();
-    StringRef IntrinsicName = IntrinsicFn ? IntrinsicFn->getName()
-                                          : Intrinsic::getBaseName(IntrinsicID);
+    std::optional<StringRef> RequiredFeatures =
+        DAG.getMachineFunction()
+            .getSubtarget()
+            .getRequiredTargetFeaturesForIntrinsic(Intrinsic,
+                                                   I.getFunctionType());
     DAG.getContext()->diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
-        *I.getFunction(), IntrinsicID, IntrinsicName, DL.getDebugLoc(),
+        *I.getFunction(), IntrinsicID, I.getFunctionType(), DL.getDebugLoc(),
         RequiredFeatures));
 
     // The intrinsic is not available on this subtarget. Preserve the chain for
