@@ -271,15 +271,16 @@ define amdgpu_ps void @test14(ptr addrspace(1) %p1, ptr addrspace(3) %p2, ptr ad
   ; CHECK-NEXT:   [[GLOBAL_LOAD_UBYTE67:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[REG_SEQUENCE10]], 2, 0, implicit $exec :: (load (s8) from %ir.p7 + 2, addrspace 1)
   ; CHECK-NEXT:   FLAT_STORE_DWORD [[COPY26]], [[V_ADD_U32_e64_7]], 68, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array3, i64 68)`)
   ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE1:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.6, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.6, align 4, addrspace 5)
-  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE8]], %stack.12, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.12, align 4, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE10]], %stack.12, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.12, align 4, addrspace 5)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_UBYTE68:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[SI_SPILL_V64_RESTORE1]], 17, 0, implicit $exec :: (load (s8) from %ir.p4 + 17, addrspace 1)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_UBYTE69:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[SI_SPILL_V64_RESTORE1]], 18, 0, implicit $exec :: (load (s8) from %ir.p4 + 18, addrspace 1)
-  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE10]], %stack.13, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.13, align 4, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE6]], %stack.13, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.13, align 4, addrspace 5)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_UBYTE70:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[SI_SPILL_V64_RESTORE1]], 19, 0, implicit $exec :: (load (s8) from %ir.p4 + 19, addrspace 1)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_UBYTE71:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[SI_SPILL_V64_RESTORE1]], 12, 0, implicit $exec :: (load (s8) from %ir.p4 + 12, addrspace 1)
-  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE6]], %stack.14, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.14, align 4, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_V64_SAVE [[REG_SEQUENCE8]], %stack.14, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.14, align 4, addrspace 5)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_UBYTE72:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[SI_SPILL_V64_RESTORE1]], 13, 0, implicit $exec :: (load (s8) from %ir.p4 + 13, addrspace 1)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_UBYTE73:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[SI_SPILL_V64_RESTORE1]], 14, 0, implicit $exec :: (load (s8) from %ir.p4 + 14, addrspace 1)
+  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_LSHL_OR_B32_e64_40]], %stack.15, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.15, addrspace 5)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_UBYTE74:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[SI_SPILL_V64_RESTORE1]], 15, 0, implicit $exec :: (load (s8) from %ir.p4 + 15, addrspace 1)
   ; CHECK-NEXT:   [[GLOBAL_LOAD_UBYTE75:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[SI_SPILL_V64_RESTORE1]], 16, 0, implicit $exec :: (load (s8) from %ir.p4 + 16, addrspace 1)
   ; CHECK-NEXT:   [[FLAT_LOAD_DWORD7:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY26]], 4, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array3, i64 4)`)
@@ -291,7 +292,6 @@ define amdgpu_ps void @test14(ptr addrspace(1) %p1, ptr addrspace(3) %p2, ptr ad
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM5:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET5]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM6:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET6]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM7:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET7]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-  ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_LSHL_OR_B32_e64_40]], %stack.15, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.15, addrspace 5)
   ; CHECK-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM4]]
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_MUL_LO_U32_e64_7]], %stack.16, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.16, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_LSHL_OR_B32_e64_16]], %stack.17, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.17, addrspace 5)
@@ -504,7 +504,7 @@ define amdgpu_ps void @test14(ptr addrspace(1) %p1, ptr addrspace(3) %p2, ptr ad
   ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE3:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.7, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.7, align 4, addrspace 5)
   ; CHECK-NEXT:   GLOBAL_STORE_SHORT [[SI_SPILL_V64_RESTORE3]], [[V_MUL_LO_U32_e64_31]], 0, 0, implicit $exec :: (store (s16) into %ir.p8, addrspace 1)
   ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE15:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.10, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.10, addrspace 5)
-  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE4:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.14, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.14, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE4:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.13, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.13, align 4, addrspace 5)
   ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF [[V_CMP_GT_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
@@ -534,7 +534,7 @@ define amdgpu_ps void @test14(ptr addrspace(1) %p1, ptr addrspace(3) %p2, ptr ad
   ; CHECK-NEXT:   [[V_CMP_GE_U32_e64_8:%[0-9]+]]:sreg_32 = V_CMP_GE_U32_e64 [[V_ADD_U32_e64_32]], [[FLAT_LOAD_DWORD17]], implicit $exec
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[V_CMP_GE_U32_e64_8]], $exec_lo, implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY35:%[0-9]+]]:sreg_32 = COPY [[S_AND_B32_]]
-  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE5:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.13, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.13, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE5:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.12, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.12, align 4, addrspace 5)
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD [[SI_SPILL_V64_RESTORE5]], [[V_ADD_U32_e64_32]], 0, 0, implicit $exec :: (store (s32) into %ir.p7, addrspace 1)
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -558,7 +558,7 @@ define amdgpu_ps void @test14(ptr addrspace(1) %p1, ptr addrspace(3) %p2, ptr ad
   ; CHECK-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_34:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_MUL_LO_U32_e64_32]], [[SI_SPILL_V32_RESTORE5]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_MUL_LO_U32_e64_34:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 [[V_ADD_U32_e64_34]], [[SI_SPILL_V32_RESTORE5]], implicit $exec
-  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE7:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.12, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.12, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE7:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.14, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.14, align 4, addrspace 5)
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD [[SI_SPILL_V64_RESTORE7]], [[V_MUL_LO_U32_e64_34]], 0, 0, implicit $exec :: (store (s32) into %ir.p9, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:

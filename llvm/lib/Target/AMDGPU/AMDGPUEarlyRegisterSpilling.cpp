@@ -99,6 +99,7 @@ protected:
   SlotIndexes *Indexes;
   MachineDominatorTree *DT;
   const MachineLoopInfo *MLI;
+  AMDGPUNextUseAnalysis *NUA;
 
   /// Emit restore instruction where it is needed
   MachineInstr *emitRestore(Register SpillReg, MachineInstr *UseMI, int FI);
@@ -117,11 +118,12 @@ protected:
                           MachineRegisterInfo *MRI, const SIInstrInfo *TII,
                           MachineFrameInfo *FrameInfo, LiveIntervals *LIS,
                           SlotIndexes *Indexes, MachineDominatorTree *DT,
-                          const MachineLoopInfo *MLI)
+                          const MachineLoopInfo *MLI,
+                          AMDGPUNextUseAnalysis *NUA)
       : CandidateReg(CandidateReg), Mask(Mask),
         Dist(NextUseDistance::unreachable()), Plan(Plan), TRI(TRI), MRI(MRI),
         TII(TII), FrameInfo(FrameInfo), LIS(LIS), Indexes(Indexes), DT(DT),
-        MLI(MLI) {}
+        MLI(MLI), NUA(NUA) {}
 
 public:
   virtual ~SpillOrRestoreCandidate() = default;
@@ -159,10 +161,10 @@ public:
                  const SIInstrInfo *TII, MachineFrameInfo *FrameInfo,
                  LiveIntervals *LIS, SlotIndexes *Indexes,
                  MachineDominatorTree *DT, const MachineLoopInfo *MLI,
-                 MachineBasicBlock *SpillBlock,
+                 AMDGPUNextUseAnalysis *NUA, MachineBasicBlock *SpillBlock,
                  MachineBasicBlock::iterator WhereToSpill)
       : SpillOrRestoreCandidate(CandidateReg, Mask, Plan, TRI, MRI, TII,
-                                FrameInfo, LIS, Indexes, DT, MLI),
+                                FrameInfo, LIS, Indexes, DT, MLI, NUA),
         SpillBlock(SpillBlock), WhereToSpill(WhereToSpill) {}
 
   MachineBasicBlock *getSpillBlock() const { return SpillBlock; }
@@ -178,9 +180,10 @@ public:
                    const SIRegisterInfo *TRI, MachineRegisterInfo *MRI,
                    const SIInstrInfo *TII, MachineFrameInfo *FrameInfo,
                    LiveIntervals *LIS, SlotIndexes *Indexes,
-                   MachineDominatorTree *DT, const MachineLoopInfo *MLI)
+                   MachineDominatorTree *DT, const MachineLoopInfo *MLI,
+                   AMDGPUNextUseAnalysis *NUA)
       : SpillOrRestoreCandidate(CandidateReg, Mask, Plan, TRI, MRI, TII,
-                                FrameInfo, LIS, Indexes, DT, MLI) {}
+                                FrameInfo, LIS, Indexes, DT, MLI, NUA) {}
 
   void generateSpillRestoreInstrs(
       MachineInstr *CurMI,
@@ -348,25 +351,50 @@ void SpillCandidate::generateSpillRestoreInstrs(
   // Emit restore instructions for each group.
   emitRestoresForHead(RestoreInstrs, RestoreUses, FI, RestoreRegToDomGroup);
 
-  // Update the live interval analysis.
+  // Update the live interval analysis and NUA.
+  MachineBasicBlock *DefBlock = InstrOfCandidateReg->getParent();
+  SmallPtrSet<MachineBasicBlock *, 2> UpdatedBlockIds;
   updateIndexes(InstrOfCandidateReg, Indexes);
   updateIndexes(SpillInstruction, Indexes);
   updateLiveness(InstrOfCandidateReg, LIS);
   updateLiveness(SpillInstruction, LIS);
+  NUA->updateInstrIds(InstrOfCandidateReg);
+  UpdatedBlockIds.insert(DefBlock);
+  if (DefBlock != SpillBlock) {
+    NUA->updateInstrIds(SpillInstruction);
+    UpdatedBlockIds.insert(SpillBlock);
+  }
 
   if (InstrOfCandidateReg != CurMI) {
     updateIndexes(CurMI, Indexes);
     updateLiveness(CurMI, LIS);
+    auto ItC = UpdatedBlockIds.find(CurMBB);
+    if (ItC == UpdatedBlockIds.end()) {
+      NUA->updateInstrIds(CurMI);
+      UpdatedBlockIds.insert(CurMBB);
+    }
   }
 
   for (auto *R : RestoreInstrs) {
     updateIndexes(R, Indexes);
     updateLiveness(R, LIS);
+    MachineBasicBlock *RestoreBlock = R->getParent();
+    auto ItR = UpdatedBlockIds.find(RestoreBlock);
+    if (ItR == UpdatedBlockIds.end()) {
+      NUA->updateInstrIds(R);
+      UpdatedBlockIds.insert(RestoreBlock);
+    }
   }
 
   for (auto *Use : RestoreUses) {
     updateIndexes(Use, Indexes);
     updateLiveness(Use, LIS);
+    MachineBasicBlock *UseBlock = Use->getParent();
+    auto ItU = UpdatedBlockIds.find(UseBlock);
+    if (ItU == UpdatedBlockIds.end()) {
+      NUA->updateInstrIds(Use);
+      UpdatedBlockIds.insert(UseBlock);
+    }
   }
 
   LLVM_DEBUG(dbgs() << "Live interval after spilling for spilled register "
@@ -389,6 +417,7 @@ void RestoreCandidate::generateSpillRestoreInstrs(
            "This candidate cannot have more than one DomGroups.");
     DomGroup &DG = *GroupsOfUses.begin();
     MachineInstr *Head = DG.getHead();
+    MachineBasicBlock *HeadMBB = Head->getParent();
     MachineInstr *OrigRestore = DG.getRestore();
     assert(InstrOfCandidateReg == OrigRestore &&
            "It should be the same instruction.");
@@ -398,10 +427,13 @@ void RestoreCandidate::generateSpillRestoreInstrs(
     updateLiveness(OrigRestore, LIS);
     updateIndexes(Head, Indexes);
     updateLiveness(Head, LIS);
+    NUA->updateInstrIds(Head);
 
     if (OrigRestore != CurMI) {
       updateIndexes(CurMI, Indexes);
       updateLiveness(CurMI, LIS);
+      if (HeadMBB != CurMBB)
+        NUA->updateInstrIds(CurMI);
     }
 
     LLVM_DEBUG(dbgs() << "------------------------------------------------\n");
@@ -459,22 +491,43 @@ void RestoreCandidate::generateSpillRestoreInstrs(
     emitRestoresForHead(RestoreInstrs, RestoreUses, FI, RestoreRegToDomGroup);
 
     // Update the live interval analysis.
+    MachineBasicBlock *DefBlock = InstrOfCandidateReg->getParent();
+    SmallPtrSet<MachineBasicBlock *, 2> UpdatedBlockIds;
     updateIndexes(InstrOfCandidateReg, Indexes);
     updateLiveness(InstrOfCandidateReg, LIS);
+    NUA->updateInstrIds(InstrOfCandidateReg);
+    UpdatedBlockIds.insert(DefBlock);
 
     if (InstrOfCandidateReg != CurMI) {
       updateIndexes(CurMI, Indexes);
       updateLiveness(CurMI, LIS);
+      auto ItC = UpdatedBlockIds.find(CurMBB);
+      if (ItC == UpdatedBlockIds.end()) {
+        NUA->updateInstrIds(CurMI);
+        UpdatedBlockIds.insert(CurMBB);
+      }
     }
 
     for (auto *R : RestoreInstrs) {
       updateIndexes(R, Indexes);
       updateLiveness(R, LIS);
+      MachineBasicBlock *RestoreBlock = R->getParent();
+      auto ItR = UpdatedBlockIds.find(RestoreBlock);
+      if (ItR == UpdatedBlockIds.end()) {
+        NUA->updateInstrIds(R);
+        UpdatedBlockIds.insert(RestoreBlock);
+      }
     }
 
     for (auto *Use : RestoreUses) {
       updateIndexes(Use, Indexes);
       updateLiveness(Use, LIS);
+      MachineBasicBlock *UseBlock = Use->getParent();
+      auto ItU = UpdatedBlockIds.find(UseBlock);
+      if (ItU == UpdatedBlockIds.end()) {
+        NUA->updateInstrIds(Use);
+        UpdatedBlockIds.insert(UseBlock);
+      }
     }
   }
 }
@@ -1285,7 +1338,7 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
         auto Candidate = std::make_unique<RestoreCandidate>(
             OrigRestore->getOperand(0).getReg(), Mask,
             RestoreCandidate::CodeGenPlan::MoveRestoreInsideTheLoop, TRI, MRI,
-            TII, FrameInfo, LIS, Indexes, DT, MLI);
+            TII, FrameInfo, LIS, Indexes, DT, MLI, NUA);
 
         Candidate->addGroup(DG);
 
@@ -1317,7 +1370,7 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
         auto Candidate = std::make_unique<RestoreCandidate>(
             OrigRestore->getOperand(0).getReg(), Mask,
             RestoreCandidate::CodeGenPlan::EmitNewRestoreBeforeUse, TRI, MRI,
-            TII, FrameInfo, LIS, Indexes, DT, MLI);
+            TII, FrameInfo, LIS, Indexes, DT, MLI, NUA);
 
         for (DomGroup &G : GroupOfUses)
           Candidate->addGroup(G);
@@ -1419,7 +1472,7 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
              "There should not be a spill loop.");
       auto Candidate = std::make_unique<SpillCandidate>(
           CandidateReg, Mask, SpillCandidate::CodeGenPlan::EmitSpillRestore,
-          TRI, MRI, TII, FrameInfo, LIS, Indexes, DT, MLI, SpillBlock,
+          TRI, MRI, TII, FrameInfo, LIS, Indexes, DT, MLI, NUA, SpillBlock,
           WhereToSpill);
 
       for (DomGroup &G : GroupOfUses)
