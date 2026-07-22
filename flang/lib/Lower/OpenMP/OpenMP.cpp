@@ -19,6 +19,7 @@
 #include "Utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
@@ -56,6 +57,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringSwitch.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -6279,8 +6281,149 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPInteropConstruct &interopConstruct) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPInteropConstruct");
+  if (semaCtx.langOptions().OpenMPSimd)
+    return;
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.genLocation(interopConstruct.source);
+  mlir::MLIRContext *context = firOpBuilder.getContext();
+
+  List<Clause> clauses = makeClauses(interopConstruct.v.Clauses(), semaCtx);
+
+  // Process shared clauses (depend, nowait, device) that apply to all
+  // action clauses.
+  lower::StatementContext stmtCtx;
+  mlir::omp::DependClauseOps dependOps;
+  mlir::omp::NowaitClauseOps nowaitOps;
+  mlir::Value deviceValue;
+
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processDepend(symTable, stmtCtx, dependOps);
+  cp.processNowait(nowaitOps);
+
+  // Process device clause manually.
+  for (auto &clause : clauses) {
+    if (auto *deviceClause = std::get_if<clause::Device>(&clause.u)) {
+      const auto &deviceExpr = std::get<SomeExpr>(deviceClause->t);
+      deviceValue = fir::getBase(converter.genExprValue(deviceExpr, stmtCtx));
+    }
+  }
+
+  // Helper to get the address of an interop variable from an Object.
+  auto getInteropVarAddr = [&](const Object &object) -> mlir::Value {
+    const semantics::Symbol *sym = object.sym();
+    assert(sym && "interop variable must have a symbol");
+    mlir::Value addr = converter.getSymbolAddress(*sym);
+    assert(addr && "interop variable must have a valid address");
+    return addr;
+  };
+
+  // Process action clauses: init, destroy, use.
+  for (auto &clause : clauses) {
+    if (auto *initClause = std::get_if<clause::Init>(&clause.u)) {
+      auto &interopVar = std::get<clause::Init::InteropVar>(initClause->t);
+      auto &interopTypes = std::get<clause::Init::InteropTypes>(initClause->t);
+      auto &interopPref =
+          std::get<std::optional<clause::Init::InteropPreference>>(
+              initClause->t);
+
+      mlir::Value interopVarAddr = getInteropVarAddr(interopVar);
+
+      // Convert interop types to MLIR attributes. A single init clause may
+      // list both `target` and `targetsync`; keep them on one op and let the
+      // LLVM-IR translation collapse them into a single runtime init call,
+      // matching Clang.
+      llvm::SmallVector<mlir::Attribute> interopTypeAttrs;
+      for (auto itype : interopTypes) {
+        switch (itype) {
+        case clause::Init::InteropType::Target:
+          interopTypeAttrs.push_back(mlir::omp::InteropTypeAttr::get(
+              context, mlir::omp::InteropType::target));
+          break;
+        case clause::Init::InteropType::Targetsync:
+          interopTypeAttrs.push_back(mlir::omp::InteropTypeAttr::get(
+              context, mlir::omp::InteropType::targetsync));
+          break;
+        }
+      }
+      auto interopTypesAttr = mlir::ArrayAttr::get(context, interopTypeAttrs);
+
+      // Convert prefer_type to I64ArrayAttr if present.
+      mlir::ArrayAttr preferTypeAttr;
+      if (interopPref) {
+        llvm::SmallVector<int64_t> prefValues;
+        for (auto &pref : *interopPref) {
+          // Try to evaluate as a constant integer (e.g., omp_ifr_cuda).
+          if (auto constVal = evaluate::ToInt64(pref)) {
+            prefValues.push_back(*constVal);
+          } else if (auto str =
+                         evaluate::GetScalarConstantValue<evaluate::Ascii>(
+                             pref)) {
+            // Map standard OpenMP foreign-runtime identifier strings to
+            // their well-known integer values (OpenMP 5.1, Table 22.2).
+            auto frId = llvm::StringSwitch<std::optional<int64_t>>(
+                            llvm::StringRef(*str).lower())
+                            .Case("cuda", 1)
+                            .Case("cuda_driver", 2)
+                            .Case("opencl", 3)
+                            .Case("sycl", 4)
+                            .Case("hip", 5)
+                            .Case("level_zero", 6)
+                            .Case("hsa", 7)
+                            .Default(std::nullopt);
+            if (frId)
+              prefValues.push_back(*frId);
+            else
+              TODO(loc, "unknown foreign-runtime identifier in "
+                        "prefer_type");
+          } else {
+            TODO(loc, "non-constant prefer_type value in interop init");
+          }
+        }
+        if (!prefValues.empty())
+          preferTypeAttr = firOpBuilder.getI64ArrayAttr(prefValues);
+      }
+
+      // Emit a single InteropInitOp carrying all interop-types from this init
+      // clause. The translation to LLVM IR collapses them into one runtime
+      // call, matching Clang (one init clause -> one __tgt_interop_init).
+      mlir::omp::InteropInitOp::create(
+          firOpBuilder, loc, interopVarAddr, interopTypesAttr, preferTypeAttr,
+          deviceValue,
+          dependOps.dependKinds.empty()
+              ? nullptr
+              : firOpBuilder.getArrayAttr(dependOps.dependKinds),
+          dependOps.dependVars,
+          /*depend_iterated_kinds=*/nullptr,
+          /*depend_iterated=*/mlir::ValueRange{}, nowaitOps.nowait);
+
+    } else if (auto *destroyClause = std::get_if<clause::Destroy>(&clause.u)) {
+      assert(destroyClause->v &&
+             "destroy clause must have an interop variable");
+      if (destroyClause->v) {
+        mlir::Value interopVarAddr = getInteropVarAddr(*destroyClause->v);
+        mlir::omp::InteropDestroyOp::create(
+            firOpBuilder, loc, interopVarAddr, deviceValue,
+            dependOps.dependKinds.empty()
+                ? nullptr
+                : firOpBuilder.getArrayAttr(dependOps.dependKinds),
+            dependOps.dependVars,
+            /*depend_iterated_kinds=*/nullptr,
+            /*depend_iterated=*/mlir::ValueRange{}, nowaitOps.nowait);
+      }
+
+    } else if (auto *useClause = std::get_if<clause::Use>(&clause.u)) {
+      mlir::Value interopVarAddr = getInteropVarAddr(useClause->v);
+      mlir::omp::InteropUseOp::create(
+          firOpBuilder, loc, interopVarAddr, deviceValue,
+          dependOps.dependKinds.empty()
+              ? nullptr
+              : firOpBuilder.getArrayAttr(dependOps.dependKinds),
+          dependOps.dependVars,
+          /*depend_iterated_kinds=*/nullptr,
+          /*depend_iterated=*/mlir::ValueRange{}, nowaitOps.nowait);
+    }
+  }
 }
 
 static void

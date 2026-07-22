@@ -22553,7 +22553,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Op1 = N->getOperand(2);
     SDValue Op2 = N->getOperand(3);
 
-    // (WADDA lo, sra(lo, 31), rs1, 0) -> (WSUB lo, rs1)
+    // (WADDA lo, sra(lo, 31), rs1, 0) -> (WADD lo, rs1)
     if (isNullConstant(Op2) && isI32SignExtended(Op0Lo, Op0Hi)) {
       SDValue Result = DAG.getNode(
           RISCVISD::WADD, DL, DAG.getVTList(MVT::i32, MVT::i32), Op0Lo, Op1);
