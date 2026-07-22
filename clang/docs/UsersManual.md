@@ -932,7 +932,7 @@ directories, since the path is relative to a changing working directory.
 
 These environment variables are handy when you need to request the statistics
 report without changing your build scripts or alter the existing set of compiler
-options. Note that `-fproc-stat-report` take precedence over `CC_PRINT_PROC_STAT`
+options. Note that `-fproc-stat-report` takes precedence over `CC_PRINT_PROC_STAT`
 and `CC_PRINT_PROC_STAT_FILE`.
 
 ```console
@@ -1641,7 +1641,7 @@ floating-point math.  These include:
 
 * Floating-point math obeys regular algebraic rules for real numbers (e.g.
   `+` and `*` are associative, `x/y == x * (1/y)`, and
-  `(a + b) * c == a * c + b * c`),
+  `(a + b) * c == a * c + b * c)`,
 * No `NaN` or infinite values will be operands or results of
   floating-point operations,
 * `+0` and `-0` may be treated as interchangeable.
