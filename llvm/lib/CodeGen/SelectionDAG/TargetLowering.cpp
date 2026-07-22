@@ -788,6 +788,32 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     break;
   }
+  case ISD::SCALAR_TO_VECTOR: {
+    if (!IsLE || !VT.isFixedLengthVector() ||
+        !VT.getVectorElementType().isInteger())
+      break;
+
+    EVT DstEltVT = VT.getVectorElementType();
+    SDValue Scalar = Op.getOperand(0);
+    bool IsTruncate = Scalar.getOpcode() == ISD::TRUNCATE;
+    SDValue Extract = IsTruncate ? Scalar.getOperand(0) : Scalar;
+    if (Extract.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      break;
+
+    SDValue Vec = Extract.getOperand(0);
+    EVT VecVT = Vec.getValueType();
+    auto *Idx = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
+    if (!VecVT.isFixedLengthVector() ||
+        !VecVT.getVectorElementType().isInteger() ||
+        Extract.getValueType() != VecVT.getVectorElementType() ||
+        (IsTruncate && Scalar.getValueType() != DstEltVT) || !Idx ||
+        !Idx->isZero() ||
+        VecVT.getScalarSizeInBits() < VT.getScalarSizeInBits() ||
+        VecVT.getSizeInBits() != VT.getSizeInBits())
+      break;
+
+    return DAG.getBitcast(VT, Vec);
+  }
   case ISD::AND: {
     LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);

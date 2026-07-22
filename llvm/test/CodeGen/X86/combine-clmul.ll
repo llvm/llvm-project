@@ -43,8 +43,6 @@ define i32 @clmul_i32_chain(i32 %m) #0 {
 ; SCALAR-NEXT:    movd %edi, %xmm0
 ; SCALAR-NEXT:    movdqa %xmm0, %xmm1
 ; SCALAR-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SCALAR-NEXT:    movq %xmm1, %rax
-; SCALAR-NEXT:    movd %eax, %xmm1
 ; SCALAR-NEXT:    pclmulqdq $0, %xmm0, %xmm1
 ; SCALAR-NEXT:    movq %xmm1, %rax
 ; SCALAR-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -55,8 +53,6 @@ define i32 @clmul_i32_chain(i32 %m) #0 {
 ; SSE-PCLMUL-NEXT:    movd %edi, %xmm0
 ; SSE-PCLMUL-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
-; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
 ; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
 ; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
 ; SSE-PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -66,8 +62,6 @@ define i32 @clmul_i32_chain(i32 %m) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovd %edi, %xmm0
 ; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm0, %xmm1
-; AVX-NEXT:    vmovq %xmm1, %rax
-; AVX-NEXT:    vmovd %eax, %xmm1
 ; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -85,7 +79,6 @@ define i32 @clmul_i32_chain_shared(i32 %m, ptr %out) #0 {
 ; SCALAR-NEXT:    pclmulqdq $0, %xmm0, %xmm1
 ; SCALAR-NEXT:    movq %xmm1, %rax
 ; SCALAR-NEXT:    movl %eax, (%rsi)
-; SCALAR-NEXT:    movd %eax, %xmm1
 ; SCALAR-NEXT:    pclmulqdq $0, %xmm0, %xmm1
 ; SCALAR-NEXT:    movq %xmm1, %rax
 ; SCALAR-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -98,7 +91,6 @@ define i32 @clmul_i32_chain_shared(i32 %m, ptr %out) #0 {
 ; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
 ; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
 ; SSE-PCLMUL-NEXT:    movl %eax, (%rsi)
-; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
 ; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
 ; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
 ; SSE-PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -110,7 +102,6 @@ define i32 @clmul_i32_chain_shared(i32 %m, ptr %out) #0 {
 ; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm0, %xmm1
 ; AVX-NEXT:    vmovq %xmm1, %rax
 ; AVX-NEXT:    movl %eax, (%rsi)
-; AVX-NEXT:    vmovd %eax, %xmm1
 ; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
