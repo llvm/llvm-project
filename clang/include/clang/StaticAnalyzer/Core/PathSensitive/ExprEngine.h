@@ -681,9 +681,6 @@ public:
                                       QualType ExTy, const CastExpr *CastE,
                                       NodeBuilder &Bldr, ExplodedNode *Pred);
 
-  void handleUOExtension(ExplodedNode *N, const UnaryOperator *U,
-                         ExplodedNodeSet &Dst);
-
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,
                  SVal LHS, SVal RHS, QualType T) {
