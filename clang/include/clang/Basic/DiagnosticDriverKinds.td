@@ -441,6 +441,11 @@ def warn_drv_fraw_string_literals_in_cxx11 : Warning<
 
 def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
 
+def err_drv_no_compiler_rt_builtins_bc : Error<
+  "no compiler-rt builtins bitcode library '%0' found in the clang resource "
+  "directory; build compiler-rt with SPIR-V support or pass '--no-offloadlib' "
+  "to compile without it">;
+
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
 

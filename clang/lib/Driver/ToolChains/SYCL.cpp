@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
 #include "clang/Driver/CommonArgs.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
@@ -221,7 +223,12 @@ SYCLToolChain::getDeviceLibs(
                           true))
     return {};
 
-  // TODO: Link libclang_rt.builtins for spirv64 once the mechanism for
-  // consuming the compiler-rt static archive at compile time is settled.
-  return {};
+  SmallString<128> BCPath(getDriver().ResourceDir);
+  llvm::sys::path::append(BCPath, "lib", getTriple().str(),
+                          "libclang_rt.builtins.bc");
+  if (!llvm::sys::fs::exists(BCPath)) {
+    getDriver().Diag(clang::diag::err_drv_no_compiler_rt_builtins_bc) << BCPath;
+    return {};
+  }
+  return {{std::string(BCPath), /*ShouldInternalize=*/true}};
 }
