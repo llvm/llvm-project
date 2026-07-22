@@ -1196,6 +1196,43 @@ func.func @broadcast_size_1_extension_not_supported(
 
 // -----
 
+func.func @broadcast_duplicate_dims(
+    %input: tensor<i32>, %init: tensor<32x2xi32>) -> tensor<32x2xi32> {
+  // expected-error @+1 {{'linalg.broadcast' op dimensions should not contain duplicates}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<i32>)
+      outs(%init:tensor<32x2xi32>)
+      dimensions = [0, 0]
+  func.return %bcast : tensor<32x2xi32>
+}
+
+// -----
+
+func.func @broadcast_duplicate_dims_rank1(
+    %input: tensor<4xf32>, %init: tensor<4x8x16xf32>) -> tensor<4x8x16xf32> {
+  // expected-error @+1 {{'linalg.broadcast' op dimensions should not contain duplicates}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<4xf32>)
+      outs(%init:tensor<4x8x16xf32>)
+      dimensions = [1, 1]
+  func.return %bcast : tensor<4x8x16xf32>
+}
+
+// -----
+
+func.func @broadcast_duplicate_dims_rank2(
+    %input: tensor<4x8xf32>, %init: tensor<4x8x16x32xf32>)
+    -> tensor<4x8x16x32xf32> {
+  // expected-error @+1 {{'linalg.broadcast' op dimensions should not contain duplicates}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<4x8xf32>)
+      outs(%init:tensor<4x8x16x32xf32>)
+      dimensions = [3, 3]
+  func.return %bcast : tensor<4x8x16x32xf32>
+}
+
+// -----
+
 func.func @broadcast_no_operands1() {
   // expected-error @+1 {{'linalg.broadcast' op expected 2 operands, but found 0}}
   linalg.broadcast dimensions = [1]

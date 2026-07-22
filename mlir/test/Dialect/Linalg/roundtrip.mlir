@@ -599,6 +599,66 @@ func.func @broadcast_memref(%input: memref<8x32xf32>,
 
 // -----
 
+func.func @broadcast_0d_to_2d(%input: tensor<i32>,
+                              %init: tensor<32x2xi32>) -> tensor<32x2xi32> {
+  %bcast = linalg.broadcast
+      ins(%input:tensor<i32>)
+      outs(%init:tensor<32x2xi32>)
+      dimensions = [0, 1]
+  func.return %bcast : tensor<32x2xi32>
+}
+// CHECK-LABEL: func @broadcast_0d_to_2d
+//      CHECK:    linalg.broadcast ins(%{{.*}} : tensor<i32>)
+// CHECK-SAME:    outs(%{{.*}} : tensor<32x2xi32>)
+// CHECK-SAME:    dimensions = [0, 1]
+
+// -----
+
+func.func @broadcast_0d_to_1d(%input: tensor<f32>,
+                              %init: tensor<64xf32>) -> tensor<64xf32> {
+  %bcast = linalg.broadcast
+      ins(%input:tensor<f32>)
+      outs(%init:tensor<64xf32>)
+      dimensions = [0]
+  func.return %bcast : tensor<64xf32>
+}
+// CHECK-LABEL: func @broadcast_0d_to_1d
+//      CHECK:    linalg.broadcast ins(%{{.*}} : tensor<f32>)
+// CHECK-SAME:    outs(%{{.*}} : tensor<64xf32>)
+// CHECK-SAME:    dimensions = [0]
+
+// -----
+
+func.func @broadcast_0d_with_dynamic_sizes(
+              %input: tensor<f32>, %init: tensor<8x?xf32>) -> tensor<8x?xf32> {
+  %bcast = linalg.broadcast
+      ins(%input:tensor<f32>)
+      outs(%init:tensor<8x?xf32>)
+      dimensions = [0, 1]
+  func.return %bcast : tensor<8x?xf32>
+}
+// CHECK-LABEL: func @broadcast_0d_with_dynamic_sizes
+//      CHECK:    linalg.broadcast ins(%{{.*}} : tensor<f32>)
+// CHECK-SAME:    outs(%{{.*}} : tensor<8x?xf32>)
+// CHECK-SAME:    dimensions = [0, 1]
+
+// -----
+
+func.func @broadcast_0d_memref(%input: memref<f32>,
+                               %init: memref<8x16xf32>) {
+  linalg.broadcast
+      ins(%input:memref<f32>)
+      outs(%init:memref<8x16xf32>)
+      dimensions = [0, 1]
+  func.return
+}
+// CHECK-LABEL: func @broadcast_0d_memref
+//      CHECK:    linalg.broadcast ins(%{{.*}} : memref<f32>)
+// CHECK-SAME:    outs(%{{.*}} : memref<8x16xf32>)
+// CHECK-SAME:    dimensions = [0, 1]
+
+// -----
+
 func.func @map_arith_with_attr(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
                       %init: tensor<64xf32>) -> tensor<64xf32> {
   %add = linalg.map
