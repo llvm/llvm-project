@@ -60,8 +60,8 @@ ParseObjCFlags(FormatStringHandler &H, PrintfSpecifier &FS, const char *FlagBeg,
   StringRef Flag(FlagBeg, E - FlagBeg);
   // Currently there is only one flag.
   if (Flag.size() == 2 &&
-      FromSystemEncodingConverter.convertBasicChar(FlagBeg[0]) == 't' &&
-      FromSystemEncodingConverter.convertBasicChar(FlagBeg[1]) == 't') {
+      FromSystemEncodingConverter.convertBasicChar(FlagBeg[0]) == u8't' &&
+      FromSystemEncodingConverter.convertBasicChar(FlagBeg[1]) == u8't') {
     FS.setHasObjCTechnicalTerm(FlagBeg);
     return false;
   }
@@ -98,7 +98,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       H.HandleNullChar(I);
       return true;
     }
-    if (FromSystemEncodingConverter.convertBasicChar(c) == '%') {
+    if (FromSystemEncodingConverter.convertBasicChar(c) == u8'%') {
       Start = I++; // Record the start of the format specifier.
       break;
     }
@@ -126,7 +126,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
     return true;
   }
 
-  if (FromSystemEncodingConverter.convertBasicChar(*I) == '{') {
+  if (FromSystemEncodingConverter.convertBasicChar(*I) == u8'{') {
     ++I;
     unsigned char PrivacyFlags = 0;
     StringRef MatchedStr;
@@ -148,7 +148,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
         II = I;
         I += Matches[0].size();
 
-        while (FromSystemEncodingConverter.convertBasicChar(*II) == ' ')
+        while (FromSystemEncodingConverter.convertBasicChar(*II) == u8' ')
           ++II;
 
         // Set the privacy flag if the privacy annotation in the
@@ -191,7 +191,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
         I += CommaOrBracePos + 1;
       }
       // Continue until the closing brace is found.
-    } while (FromSystemEncodingConverter.convertBasicChar(*(I - 1)) == ',');
+    } while (FromSystemEncodingConverter.convertBasicChar(*(I - 1)) == u8',');
 
     // Set the privacy flag.
     switch (PrivacyFlags) {
@@ -263,7 +263,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   }
 
   // Look for the precision (if any).
-  if (FromSystemEncodingConverter.convertBasicChar(*I) == '.') {
+  if (FromSystemEncodingConverter.convertBasicChar(*I) == u8'.') {
     ++I;
     if (I == E) {
       if (Warn)
@@ -303,7 +303,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   // enables better recovery, and we don't know if
   // these flags are applicable until later.
   const char *ObjCModifierFlagsStart = nullptr, *ObjCModifierFlagsEnd = nullptr;
-  if (FromSystemEncodingConverter.convertBasicChar(*I) == '[') {
+  if (FromSystemEncodingConverter.convertBasicChar(*I) == u8'[') {
     ObjCModifierFlagsStart = I;
     ++I;
     auto flagStart = I;
@@ -315,7 +315,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
         return true;
       }
       // Did we find the closing ']'?
-      if (FromSystemEncodingConverter.convertBasicChar(*I) == ']') {
+      if (FromSystemEncodingConverter.convertBasicChar(*I) == u8']') {
         if (ParseObjCFlags(H, FS, flagStart, I, Warn,
                            FromSystemEncodingConverter))
           return true;
@@ -341,135 +341,135 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   default:
     break;
   // C99: 7.19.6.1 (section 8).
-  case '%':
+  case u8'%':
     k = ConversionSpecifier::PercentArg;
     break;
-  case 'A':
+  case u8'A':
     k = ConversionSpecifier::AArg;
     break;
-  case 'E':
+  case u8'E':
     k = ConversionSpecifier::EArg;
     break;
-  case 'F':
+  case u8'F':
     k = ConversionSpecifier::FArg;
     break;
-  case 'G':
+  case u8'G':
     k = ConversionSpecifier::GArg;
     break;
-  case 'X':
+  case u8'X':
     k = ConversionSpecifier::XArg;
     break;
-  case 'a':
+  case u8'a':
     k = ConversionSpecifier::aArg;
     break;
-  case 'c':
+  case u8'c':
     k = ConversionSpecifier::cArg;
     break;
-  case 'd':
+  case u8'd':
     k = ConversionSpecifier::dArg;
     break;
-  case 'e':
+  case u8'e':
     k = ConversionSpecifier::eArg;
     break;
-  case 'f':
+  case u8'f':
     k = ConversionSpecifier::fArg;
     break;
-  case 'g':
+  case u8'g':
     k = ConversionSpecifier::gArg;
     break;
-  case 'i':
+  case u8'i':
     k = ConversionSpecifier::iArg;
     break;
-  case 'n':
+  case u8'n':
     // Not handled, but reserved in OpenCL.
     if (!LO.OpenCL)
       k = ConversionSpecifier::nArg;
     break;
-  case 'o':
+  case u8'o':
     k = ConversionSpecifier::oArg;
     break;
-  case 'p':
+  case u8'p':
     k = ConversionSpecifier::pArg;
     break;
-  case 's':
+  case u8's':
     k = ConversionSpecifier::sArg;
     break;
-  case 'u':
+  case u8'u':
     k = ConversionSpecifier::uArg;
     break;
-  case 'x':
+  case u8'x':
     k = ConversionSpecifier::xArg;
     break;
   // C23.
-  case 'b':
+  case u8'b':
     if (isFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDbArg; // int followed by char *
     else
       k = ConversionSpecifier::bArg;
     break;
-  case 'B':
+  case u8'B':
     k = ConversionSpecifier::BArg;
     break;
   // POSIX specific.
-  case 'C':
+  case u8'C':
     k = ConversionSpecifier::CArg;
     break;
-  case 'S':
+  case u8'S':
     k = ConversionSpecifier::SArg;
     break;
   // Apple extension for os_log
-  case 'P':
+  case u8'P':
     k = ConversionSpecifier::PArg;
     break;
   // Objective-C.
-  case '@':
+  case u8'@':
     k = ConversionSpecifier::ObjCObjArg;
     break;
   // Glibc specific.
-  case 'm':
+  case u8'm':
     k = ConversionSpecifier::PrintErrno;
     break;
-  case 'r':
+  case u8'r':
     if (isFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDrArg; // int
     else if (LO.FixedPoint)
       k = ConversionSpecifier::rArg;
     break;
-  case 'y':
+  case u8'y':
     if (isFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDyArg; // int
     break;
   // Apple-specific.
-  case 'D':
+  case u8'D':
     if (isFreeBSDKPrintf)
       k = ConversionSpecifier::FreeBSDDArg; // void * followed by char *
     else if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::DArg;
     break;
-  case 'O':
+  case u8'O':
     if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::OArg;
     break;
-  case 'U':
+  case u8'U':
     if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::UArg;
     break;
   // MS specific.
-  case 'Z':
+  case u8'Z':
     if (Target.getTriple().isOSMSVCRT())
       k = ConversionSpecifier::ZArg;
     break;
   // ISO/IEC TR 18037 (fixed-point) specific.
   // NOTE: 'r' is handled up above since FreeBSD also supports %r.
-  case 'k':
+  case u8'k':
     if (LO.FixedPoint)
       k = ConversionSpecifier::kArg;
     break;
-  case 'K':
+  case u8'K':
     if (LO.FixedPoint)
       k = ConversionSpecifier::KArg;
     break;
-  case 'R':
+  case u8'R':
     if (LO.FixedPoint)
       k = ConversionSpecifier::RArg;
     break;
