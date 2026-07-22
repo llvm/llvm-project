@@ -1999,7 +1999,7 @@ Details:
   for all float expressions of type that is narrower than `double`.
 * `extended` The compiler uses `long double` as the floating-point evaluation
   method for all float expressions of type that is narrower than `long double`.
-  :::
+:::
 
 :::{option} -f[no-]protect-parens
 
