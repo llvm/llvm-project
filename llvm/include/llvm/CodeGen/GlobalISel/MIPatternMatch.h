@@ -91,6 +91,8 @@ template <typename ConstT> struct ConstantMatch {
   ConstT &CR;
   ConstantMatch(ConstT &C) : CR(C) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    if (Reg.isPhysical())
+      return false;
     if (auto MaybeCst = matchConstant<ConstT>(Reg, MRI)) {
       CR = *MaybeCst;
       return true;
