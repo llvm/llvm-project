@@ -759,66 +759,48 @@ static Value *materializeInPred(Value *V, PHINode *Phi, unsigned EdgeIdx,
   return Clone;
 }
 
-// Undo an InstCombine/SimplifyCFG load-sink that memory semantics cannot
-// prevent: the load's pointer is a phi of resource pointers (optionally behind
-// a GEP chain). Clone the load into each predecessor addressing that edge's
-// concrete resource and merge the results with a new phi.
-static void hoistLoad(LoadInst *LI, PHINode *Phi,
-                      SmallSetVector<Instruction *, 16> &DeadInsts) {
+// Undo an InstCombine/SimplifyCFG access-sink that memory semantics cannot
+// prevent: the access (a load or store) reaches a phi of resource pointers
+// (optionally behind a GEP chain) through PtrOp. Clone it into each predecessor
+// addressing that edge's concrete resource, rematerializing PtrOp (and ValOp,
+// for a store) per edge. A load's per-edge results are merged with a new phi.
+static void hoistResourceAccess(Instruction *Access, PHINode *Phi, Value *PtrOp,
+                                Value *ValOp,
+                                SmallSetVector<Instruction *, 16> &DeadInsts) {
   unsigned NumEdges = Phi->getNumIncomingValues();
 
-  // The old resource-pointer phi will be superseded by NewPhi
+  // The old resource-pointer phi will be superseded.
   DeadInsts.insert(Phi);
 
-  PHINode *NewPhi = PHINode::Create(LI->getType(), NumEdges, LI->getName(),
-                                    Phi->getIterator());
-  for (unsigned Idx = 0; Idx < NumEdges; ++Idx) {
-    BasicBlock *BB = Phi->getIncomingBlock(Idx);
-
-    // Rematerialize the pointer operand on this edge so the load has a
-    // dominating pointer.
-    DenseMap<Value *, Value *> Materialized;
-    Value *PtrInBB = materializeInPred(LI->getPointerOperand(), Phi, Idx,
-                                       Materialized, DeadInsts);
-
-    auto *NewLoad = cast<LoadInst>(LI->clone());
-    NewLoad->setOperand(0, PtrInBB);
-    NewLoad->insertBefore(BB->getTerminator()->getIterator());
-    NewPhi->addIncoming(NewLoad, BB);
-  }
-  LI->replaceAllUsesWith(NewPhi);
-
-  DeadInsts.insert(LI);
-}
-
-// Undo an InstCombine/SimplifyCFG store-sink that memory semantics cannot
-// prevent: the store's pointer is a phi of resource pointers (optionally behind
-// a GEP chain). Clone the store into each predecessor addressing that edge's
-// concrete resource.
-static void hoistStore(StoreInst *SI, PHINode *Phi,
-                       SmallSetVector<Instruction *, 16> &DeadInsts) {
-  unsigned NumEdges = Phi->getNumIncomingValues();
-
-  DeadInsts.insert(Phi);
+  // A load produces a value; merge the per-edge clones with a new phi. A store
+  // (which supplies ValOp) has no result to merge.
+  PHINode *NewPhi =
+      ValOp ? nullptr
+            : PHINode::Create(Access->getType(), NumEdges, Access->getName(),
+                              Phi->getIterator());
 
   for (unsigned Idx = 0; Idx < NumEdges; ++Idx) {
     BasicBlock *BB = Phi->getIncomingBlock(Idx);
 
-    // Rematerialize the value and pointer operands on this edge so the store
-    // has dominating operands.
+    // Rematerialize the operands on this edge so the access has dominating
+    // operands.
     DenseMap<Value *, Value *> Materialized;
-    Value *ValInBB = materializeInPred(SI->getValueOperand(), Phi, Idx,
-                                       Materialized, DeadInsts);
-    Value *PtrInBB = materializeInPred(SI->getPointerOperand(), Phi, Idx,
-                                       Materialized, DeadInsts);
+    auto *Clone = Access->clone();
+    Clone->replaceUsesOfWith(
+        PtrOp, materializeInPred(PtrOp, Phi, Idx, Materialized, DeadInsts));
+    if (ValOp)
+      Clone->replaceUsesOfWith(
+          ValOp, materializeInPred(ValOp, Phi, Idx, Materialized, DeadInsts));
+    Clone->insertBefore(BB->getTerminator()->getIterator());
 
-    auto *NewStore = cast<StoreInst>(SI->clone());
-    NewStore->setOperand(0, ValInBB);
-    NewStore->setOperand(1, PtrInBB);
-    NewStore->insertBefore(BB->getTerminator()->getIterator());
+    if (NewPhi)
+      NewPhi->addIncoming(Clone, BB);
   }
 
-  DeadInsts.insert(SI);
+  if (NewPhi)
+    Access->replaceAllUsesWith(NewPhi);
+
+  DeadInsts.insert(Access);
 }
 
 // Try to legalize dx.resource.handlefrom.*.binding and dx.resource.getpointer
@@ -862,13 +844,15 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
 
         if (auto *LI = dyn_cast<LoadInst>(&I))
           if (auto *Phi = FindPointerPhi(LI->getPointerOperand())) {
-            hoistLoad(LI, Phi, DeadInsts);
+            hoistResourceAccess(LI, Phi, LI->getPointerOperand(),
+                                /*ValOp=*/nullptr, DeadInsts);
             continue;
           }
 
         if (auto *SI = dyn_cast<StoreInst>(&I))
           if (auto *Phi = FindPointerPhi(SI->getPointerOperand())) {
-            hoistStore(SI, Phi, DeadInsts);
+            hoistResourceAccess(SI, Phi, SI->getPointerOperand(),
+                                SI->getValueOperand(), DeadInsts);
             continue;
           }
 
