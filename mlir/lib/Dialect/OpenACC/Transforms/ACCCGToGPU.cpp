@@ -1178,6 +1178,135 @@ static bool isRedundantChainAccumulate(acc::ReductionAccumulateOp op) {
   return false;
 }
 
+/// Returns the dimensions that own \p privateLocal.
+static GPUParallelDimsAttr
+getPrivateParDims(acc::PrivateLocalOp privateLocal,
+                  acc::ComputeRegionOp computeRegion) {
+  if (GPUParallelDimsAttr parDims = acc::getParDimsAttr(privateLocal))
+    return parDims;
+  return getPrivatizeOp(privateLocal, computeRegion).getParDimsAttr();
+}
+
+/// True when \p memref is backed by storage owned exclusively by ThreadY.
+static bool isExclusivelyThreadYPrivate(Value memref,
+                                        acc::ComputeRegionOp computeRegion) {
+  Value current = memref;
+  while (Operation *def = current.getDefiningOp()) {
+    if (acc::PrivateLocalOp privateLocal = dyn_cast<acc::PrivateLocalOp>(def)) {
+      GPUParallelDimsAttr parDims =
+          getPrivateParDims(privateLocal, computeRegion);
+      return parDims && parDims.hasOnlyThreadYLevel();
+    }
+    if (ViewLikeOpInterface viewLike = dyn_cast<ViewLikeOpInterface>(def)) {
+      current = viewLike.getViewSource();
+      continue;
+    }
+    break;
+  }
+  return false;
+}
+
+struct ThreadYBroadeningInfo {
+  bool hasActiveWorkerCombine = false;
+  bool hasExplicitInactiveCombine = false;
+  bool hasBroadeningConflict = false;
+  Operation *diagnosticOp = nullptr;
+
+  void merge(const ThreadYBroadeningInfo &other) {
+    hasActiveWorkerCombine |= other.hasActiveWorkerCombine;
+    hasExplicitInactiveCombine |= other.hasExplicitInactiveCombine;
+    hasBroadeningConflict |= other.hasBroadeningConflict;
+    if (!diagnosticOp)
+      diagnosticOp = other.diagnosticOp;
+  }
+};
+
+/// True when executing \p op on additional ThreadY rows may change behavior.
+static bool hasUnsafeEffectsWhenBroadening(Operation *op) {
+  if (auto effectOp = dyn_cast<MemoryEffectOpInterface>(op)) {
+    SmallVector<MemoryEffects::EffectInstance> effects;
+    effectOp.getEffects(effects);
+    return llvm::any_of(effects, [](const auto &effect) {
+      return !isa<MemoryEffects::Read>(effect.getEffect());
+    });
+  }
+  return !op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+}
+
+/// Records whether \p combineOp requires ThreadY to remain active.
+static void classifyThreadYCombine(ThreadYBroadeningInfo &info,
+                                   Operation *combineOp, Value src,
+                                   ArrayRef<GPUParallelDimAttr> parDims,
+                                   acc::ComputeRegionOp computeRegion) {
+  bool hasThreadY = llvm::any_of(
+      parDims, [](GPUParallelDimAttr parDim) { return parDim.isThreadY(); });
+  bool hasBlock = llvm::any_of(
+      parDims, [](GPUParallelDimAttr parDim) { return parDim.isAnyBlock(); });
+  if (hasThreadY && hasBlock &&
+      isExclusivelyThreadYPrivate(src, computeRegion)) {
+    info.hasActiveWorkerCombine = true;
+    return;
+  }
+
+  info.hasExplicitInactiveCombine = true;
+  if (!info.diagnosticOp)
+    info.diagnosticOp = combineOp;
+}
+
+/// Determines whether a predicate region can safely run on every ThreadY row.
+///
+/// A hierarchical block+ThreadY combine reads one partial value from each
+/// worker-private row, so ThreadY must remain active until that combine. Before
+/// broadening the predicate, recursively reject sibling combines that require
+/// ThreadY to be inactive and operations with side effects that would otherwise
+/// execute additional times. Nested predicate regions enforce their own
+/// compatibility; only their requirement for active ThreadY propagates out.
+static ThreadYBroadeningInfo
+analyzeThreadYBroadening(Block &predicateBlock,
+                         acc::ComputeRegionOp computeRegion) {
+  ThreadYBroadeningInfo info;
+  for (Operation &nestedOp : predicateBlock) {
+    if (acc::PredicateRegionOp nestedPredicate =
+            dyn_cast<acc::PredicateRegionOp>(nestedOp)) {
+      ThreadYBroadeningInfo nestedInfo = analyzeThreadYBroadening(
+          nestedPredicate.getRegion().front(), computeRegion);
+      info.hasActiveWorkerCombine |= nestedInfo.hasActiveWorkerCombine;
+      continue;
+    }
+    if (acc::ReductionCombineOp combineOp =
+            dyn_cast<acc::ReductionCombineOp>(nestedOp)) {
+      classifyThreadYCombine(info, combineOp, combineOp.getSrcMemref(),
+                             getReductionCombineParDims(combineOp),
+                             computeRegion);
+      continue;
+    }
+    if (acc::ReductionCombineRegionOp combineRegionOp =
+            dyn_cast<acc::ReductionCombineRegionOp>(nestedOp)) {
+      classifyThreadYCombine(info, combineRegionOp, combineRegionOp.getSrcVar(),
+                             getReductionCombineParDims(combineRegionOp),
+                             computeRegion);
+      continue;
+    }
+    if (nestedOp.getNumRegions() != 0) {
+      if (hasUnsafeEffectsWhenBroadening(&nestedOp)) {
+        info.hasBroadeningConflict = true;
+        if (!info.diagnosticOp)
+          info.diagnosticOp = &nestedOp;
+      }
+      for (Region &region : nestedOp.getRegions())
+        for (Block &nestedBlock : region)
+          info.merge(analyzeThreadYBroadening(nestedBlock, computeRegion));
+      continue;
+    }
+    if (hasUnsafeEffectsWhenBroadening(&nestedOp)) {
+      info.hasBroadeningConflict = true;
+      if (!info.diagnosticOp)
+        info.diagnosticOp = &nestedOp;
+    }
+  }
+  return info;
+}
+
 std::pair<SmallVector<mlir::acc::GPUParallelDimAttr>,
           SmallVector<mlir::acc::GPUParallelDimAttr>>
 ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
@@ -1251,13 +1380,10 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
     MemRefType baseTy = getPrivateBaseMemRefType(
         privTy.getBaseTy(), computeRegion->getParentOfType<ModuleOp>());
     if (!baseTy.hasStaticShape()) {
-      mlir::acc::GPUParallelDimsAttr ownParDims =
-          mlir::acc::getParDimsAttr(privateLocalOp);
-      if (!ownParDims)
-        ownParDims =
-            getPrivatizeOp(privateLocalOp, computeRegion).getParDimsAttr();
+      GPUParallelDimsAttr ownParDims =
+          getPrivateParDims(privateLocalOp, computeRegion);
       if (ownParDims)
-        for (mlir::acc::GPUParallelDimAttr parDim : ownParDims.getArray())
+        for (GPUParallelDimAttr parDim : ownParDims.getArray())
           mlir::acc::insertParDim(ancestorParDims, parDim);
     }
   }
@@ -1270,112 +1396,8 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
   mlir::acc::GPUParallelDimAttr lowestParDim =
       mlir::acc::GPUParallelDimAttr::threadXDim(ctx);
   if (block) {
-    struct ThreadYBroadeningInfo {
-      bool hasActiveWorkerCombine = false;
-      bool hasExplicitInactiveCombine = false;
-      bool hasBroadeningConflict = false;
-      Operation *diagnosticOp = nullptr;
-    };
-    auto mergeBroadeningInfo = [](ThreadYBroadeningInfo &dst,
-                                  const ThreadYBroadeningInfo &src) {
-      dst.hasActiveWorkerCombine |= src.hasActiveWorkerCombine;
-      dst.hasExplicitInactiveCombine |= src.hasExplicitInactiveCombine;
-      dst.hasBroadeningConflict |= src.hasBroadeningConflict;
-      if (!dst.diagnosticOp)
-        dst.diagnosticOp = src.diagnosticOp;
-    };
-    auto isProvenWorkerPrivate = [&](Value memref) {
-      Value current = memref;
-      while (Operation *def = current.getDefiningOp()) {
-        if (acc::PrivateLocalOp privateLocal =
-                dyn_cast<acc::PrivateLocalOp>(def)) {
-          GPUParallelDimsAttr parDims = mlir::acc::getParDimsAttr(privateLocal);
-          if (!parDims)
-            parDims =
-                getPrivatizeOp(privateLocal, computeRegion).getParDimsAttr();
-          return parDims && parDims.hasOnlyThreadYLevel();
-        }
-        if (ViewLikeOpInterface viewLike = dyn_cast<ViewLikeOpInterface>(def)) {
-          current = viewLike.getViewSource();
-          continue;
-        }
-        break;
-      }
-      return false;
-    };
-    auto hasUnsafeOwnEffects = [](Operation *op) {
-      if (auto effectOp = dyn_cast<MemoryEffectOpInterface>(op)) {
-        SmallVector<MemoryEffects::EffectInstance> effects;
-        effectOp.getEffects(effects);
-        return llvm::any_of(effects, [](const auto &effect) {
-          return !isa<MemoryEffects::Read>(effect.getEffect());
-        });
-      }
-      return !op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
-    };
-    auto analyzeThreadYBroadening =
-        [&](auto &&self, Block &predicateBlock) -> ThreadYBroadeningInfo {
-      ThreadYBroadeningInfo info;
-      auto classifyCombine = [&](Operation *combineOp, Value src,
-                                 ArrayRef<GPUParallelDimAttr> parDims) {
-        bool hasThreadY = llvm::any_of(
-            parDims, [](auto parDim) { return parDim.isThreadY(); });
-        bool hasBlock = llvm::any_of(
-            parDims, [](auto parDim) { return parDim.isAnyBlock(); });
-        if (hasThreadY && hasBlock && isProvenWorkerPrivate(src)) {
-          info.hasActiveWorkerCombine = true;
-        } else {
-          info.hasExplicitInactiveCombine = true;
-          if (!info.diagnosticOp)
-            info.diagnosticOp = combineOp;
-        }
-      };
-
-      for (Operation &nestedOp : predicateBlock) {
-        if (acc::PredicateRegionOp nestedPredicate =
-                dyn_cast<acc::PredicateRegionOp>(nestedOp)) {
-          ThreadYBroadeningInfo nestedInfo =
-              self(self, nestedPredicate.getRegion().front());
-          // A worker-active descendant must reach its own predicate. Other
-          // requirements are enforced within the nested predicate region.
-          info.hasActiveWorkerCombine |= nestedInfo.hasActiveWorkerCombine;
-          continue;
-        }
-        if (acc::ReductionCombineOp combineOp =
-                dyn_cast<acc::ReductionCombineOp>(nestedOp)) {
-          classifyCombine(combineOp, combineOp.getSrcMemref(),
-                          getReductionCombineParDims(combineOp));
-          continue;
-        }
-        if (acc::ReductionCombineRegionOp combineRegionOp =
-                dyn_cast<acc::ReductionCombineRegionOp>(nestedOp)) {
-          classifyCombine(combineRegionOp, combineRegionOp.getSrcVar(),
-                          getReductionCombineParDims(combineRegionOp));
-          continue;
-        }
-        if (nestedOp.getNumRegions() != 0) {
-          if (hasUnsafeOwnEffects(&nestedOp)) {
-            info.hasBroadeningConflict = true;
-            if (!info.diagnosticOp)
-              info.diagnosticOp = &nestedOp;
-          }
-          for (Region &region : nestedOp.getRegions()) {
-            for (Block &nestedBlock : region)
-              mergeBroadeningInfo(info, self(self, nestedBlock));
-          }
-          continue;
-        }
-        if (hasUnsafeOwnEffects(&nestedOp)) {
-          info.hasBroadeningConflict = true;
-          if (!info.diagnosticOp)
-            info.diagnosticOp = &nestedOp;
-        }
-      }
-      return info;
-    };
-
     ThreadYBroadeningInfo threadYInfo =
-        analyzeThreadYBroadening(analyzeThreadYBroadening, *block);
+        analyzeThreadYBroadening(*block, computeRegion);
 
     auto applyCombineParDims =
         [&](ArrayRef<mlir::acc::GPUParallelDimAttr> combineParDims) {
@@ -1389,11 +1411,8 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
       // predicated to a single lane.
       auto addPrivateStoreParDims = [&](Value target) {
         if (auto privateLocalOp = getPrivateLocalForMemref(target)) {
-          mlir::acc::GPUParallelDimsAttr parDimsAttr =
-              mlir::acc::getParDimsAttr(privateLocalOp);
-          if (!parDimsAttr)
-            parDimsAttr =
-                getPrivatizeOp(privateLocalOp, computeRegion).getParDimsAttr();
+          GPUParallelDimsAttr parDimsAttr =
+              getPrivateParDims(privateLocalOp, computeRegion);
           if (parDimsAttr)
             for (auto parDim : parDimsAttr.getArray())
               mlir::acc::insertParDim(ancestorParDims, parDim);
