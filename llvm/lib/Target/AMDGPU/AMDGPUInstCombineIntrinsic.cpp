@@ -1156,16 +1156,28 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     if (const ConstantFP *C = dyn_cast<ConstantFP>(Src)) {
-      const APFloat &ArgVal = C->getValueAPF();
-      APFloat Val(ArgVal.getSemantics(), 1);
+      APFloat ArgVal = C->getValueAPF();
+      const fltSemantics &Sem = ArgVal.getSemantics();
+      bool IsCorrectlyRounded =
+          &Sem == &APFloat::IEEEhalf() || &Sem == &APFloat::BFloat();
+
+      // v_rcp_f32/f64 always flush a denormal input to zero (preserving
+      // sign) before reciprocating.
+      if (!IsCorrectlyRounded && ArgVal.isDenormal())
+        ArgVal = APFloat::getZero(Sem, ArgVal.isNegative());
+
+      APFloat Val(Sem, 1);
       Val.divide(ArgVal, APFloat::rmNearestTiesToEven);
 
-      // v_rcp_f16 is correctly rounded, but v_rcp_f32/f64 only approximate the
-      // reciprocal, so the exact division above need not match the hardware.
-      // Only fold f32/f64 when the result is a value the instruction produces
-      // exactly: zero, infinity, NaN, or +/-1.
-      const fltSemantics &Sem = Val.getSemantics();
-      if (&Sem != &APFloat::IEEEhalf() && !Val.isZero() && !Val.isInfinity() &&
+      // v_rcp_f32/f64 always flush a denormal result to zero (preserving
+      // sign).
+      if (!IsCorrectlyRounded && Val.isDenormal())
+        Val = APFloat::getZero(Sem, Val.isNegative());
+
+      // v_rcp_f16/bf16 are correctly rounded, but v_rcp_f32/f64 only
+      // approximate the reciprocal, so the exact division above need not
+      // match the hardware.
+      if (!IsCorrectlyRounded && !Val.isZero() && !Val.isInfinity() &&
           !Val.isNaN() && !Val.isOne() && !Val.isMinusOne())
         break;
 

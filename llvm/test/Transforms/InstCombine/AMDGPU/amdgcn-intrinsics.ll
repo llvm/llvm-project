@@ -86,14 +86,25 @@ define float @test_constant_fold_rcp_f32_43_strictfp() nounwind strictfp {
   ret float %val
 }
 
-; 1.0 / 2^127 = 2^-127, a denormal f32 result. The instruction approximates
-; the reciprocal, so an inexact result like this is never folded.
-define float @test_constant_fold_rcp_f32_denormal() nounwind {
-; CHECK-LABEL: @test_constant_fold_rcp_f32_denormal(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float f0x7F000000) #[[ATTR18]]
-; CHECK-NEXT:    ret float [[VAL]]
+; 1.0 / 2^127 = 2^-127, a denormal f32 result. v_rcp_f32 always flushes a
+; denormal result to zero (preserving sign), so this folds to +0 rather than
+; the exact reciprocal.
+define float @test_constant_fold_rcp_f32_denormal_result() nounwind {
+; CHECK-LABEL: @test_constant_fold_rcp_f32_denormal_result(
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 0x47E0000000000000) nounwind readnone
+  ret float %val
+}
+
+; 2^-127 is a denormal f32 input. v_rcp_f32 always flushes a denormal input
+; to zero (preserving sign) before reciprocating, so this folds to
+; rcp(+0) = +Inf rather than the exact reciprocal of 2^-127.
+define float @test_constant_fold_rcp_f32_denormal_input() nounwind {
+; CHECK-LABEL: @test_constant_fold_rcp_f32_denormal_input(
+; CHECK-NEXT:    ret float +inf
+;
+  %val = call float @llvm.amdgcn.rcp.f32(float 0x3800000000000000) nounwind readnone
   ret float %val
 }
 

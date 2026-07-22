@@ -5527,10 +5527,30 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   if (!CFP)
     return SDValue();
 
-  // XXX - Should this flush denormals?
-  const APFloat &Val = CFP->getValueAPF();
-  APFloat One = APFloat::getOne(Val.getSemantics());
-  return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
+  APFloat Val = CFP->getValueAPF();
+  const fltSemantics &Sem = Val.getSemantics();
+  bool IsCorrectlyRounded =
+      &Sem == &APFloat::IEEEhalf() || &Sem == &APFloat::BFloat();
+
+  // v_rcp_f32/f64 always flush a denormal input to zero (preserving sign)
+  // before reciprocating.
+  if (!IsCorrectlyRounded && Val.isDenormal())
+    Val = APFloat::getZero(Sem, Val.isNegative());
+
+  APFloat One = APFloat::getOne(Sem);
+  APFloat Result = One / Val;
+
+  // v_rcp_f32/f64 always flush a denormal result to zero (preserving sign).
+  if (!IsCorrectlyRounded && Result.isDenormal())
+    Result = APFloat::getZero(Sem, Result.isNegative());
+
+  // v_rcp_f16/bf16 are correctly rounded, but v_rcp_f32/f64 only approximate
+  // the reciprocal.
+  if (!IsCorrectlyRounded && !Result.isZero() && !Result.isInfinity() &&
+      !Result.isNaN() && !Result.isOne() && !Result.isMinusOne())
+    return SDValue();
+
+  return DCI.DAG.getConstantFP(Result, SDLoc(N), N->getValueType(0));
 }
 
 bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
