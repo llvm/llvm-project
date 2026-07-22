@@ -510,9 +510,8 @@ def ACCRoutineLowering : Pass<"acc-routine-lowering", "mlir::ModuleOp"> {
     expressed by one acc.par_width derived from the routine's clauses (seq,
     vector, worker, gang). The pass does not use acc.kernel_environment. It
     sets acc.specialized_routine on the new function and updates the
-    acc.routine's func_name to point to it. For nohost routines, all uses of
-    the host symbol are replaced with the device symbol and the host function
-    is erased. Routines with bind(name) and external functions are skipped.
+    acc.routine's func_name to point to it. Routines with bind(name) and
+    external functions are skipped.
   }];
   let dependentDialects = [
     "mlir::acc::OpenACCDialect",
