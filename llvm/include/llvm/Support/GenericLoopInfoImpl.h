@@ -659,11 +659,12 @@ LoopT *LoopInfoBase<BlockT, LoopT>::getSmallestCommonLoop(LoopT *A,
   if (!A || !B)
     return nullptr;
 
-  // If lops A and B have different depth replace them with parent loop
+  // If loops A and B have different depth replace them with parent loop
   // until they have the same depth.
-  while (A->getLoopDepth() > B->getLoopDepth())
+  unsigned DepthA = A->getLoopDepth(), DepthB = B->getLoopDepth();
+  for (; DepthA > DepthB; --DepthA)
     A = A->getParentLoop();
-  while (B->getLoopDepth() > A->getLoopDepth())
+  for (; DepthB > DepthA; --DepthB)
     B = B->getParentLoop();
 
   // Loops A and B are at same depth but may be disjoint, replace them with
