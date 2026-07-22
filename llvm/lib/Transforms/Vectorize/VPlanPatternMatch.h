@@ -18,6 +18,7 @@
 #include "VPlan.h"
 #include "VPlanUtils.h"
 #include "llvm/Support/PatternMatchHelpers.h"
+#include <utility>
 
 using namespace llvm::PatternMatchHelpers;
 
@@ -27,24 +28,19 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
 }
 
-/// A match functor that can be used as a UnaryPredicate in functional
-/// algorithms like all_of.
-template <typename Val, typename Pattern> auto match_fn(const Pattern &P) {
-  return bind_back<match<Val, Pattern>>(P);
-}
-
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   auto *R = dyn_cast<VPRecipeBase>(U);
   return R && match(R, P);
 }
 
-/// Match functor for VPUser.
-template <typename Pattern> auto match_fn(const Pattern &P) {
-  return bind_back<match<Pattern>>(P);
-}
-
 template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
   return P.match(static_cast<const VPRecipeBase *>(R));
+}
+
+/// A match functor that can be used as a UnaryPredicate in functional
+/// algorithms like all_of.
+template <typename Pattern> auto match_fn(const Pattern &P) {
+  return [&P](auto *V) { return match(V, P); };
 }
 
 /// Match an arbitrary VPValue and ignore it.
@@ -252,20 +248,28 @@ struct Recipe_match {
       assert(((isa<VPInstruction>(R) &&
                cast<VPInstruction>(R)->getNumOperandsForOpcode() == -1u) ||
               (RepR && std::tuple_size_v<Ops_t> ==
-                           RepR->getNumOperands() - RepR->isPredicated())) &&
+                           RepR->getNumOperandsWithoutMask())) &&
              "non-variadic recipe with matched opcode does not have the "
              "expected number of operands");
       return false;
     }
 
     // If the recipe has more operands than expected, we only support matching
-    // masked VPInstructions where the number of operands of the matcher is the
-    // same as the number of operands excluding mask.
+    // masked VPInstructions or predicated VPReplicateRecipes, where the number
+    // of operands of the matcher matches the number of operands excluding the
+    // mask.
     if (R->getNumOperands() > std::tuple_size<Ops_t>::value) {
-      auto *VPI = dyn_cast<VPInstruction>(R);
-      if (!VPI || !VPI->isMasked() ||
-          VPI->getNumOperandsWithoutMask() != std::tuple_size<Ops_t>::value)
+      if (auto *VPI = dyn_cast<VPInstruction>(R)) {
+        if (!VPI->isMasked() ||
+            VPI->getNumOperandsWithoutMask() != std::tuple_size<Ops_t>::value)
+          return false;
+      } else if (auto *RepR = dyn_cast<VPReplicateRecipe>(R)) {
+        if (!RepR->isPredicated() ||
+            RepR->getNumOperandsWithoutMask() != std::tuple_size<Ops_t>::value)
+          return false;
+      } else {
         return false;
+      }
     }
 
     auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
@@ -374,6 +378,20 @@ m_BranchOnTwoConds(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnTwoConds>(Op0, Op1);
 }
 
+inline VPInstruction_match<VPInstruction::BranchOnCount> m_BranchOnCount() {
+  return m_VPInstruction<VPInstruction::BranchOnCount>();
+}
+
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<VPInstruction::BranchOnCount, Op0_t, Op1_t>
+m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
+}
+
+inline auto m_Branch() {
+  return m_CombineOr(m_BranchOnCond(), m_BranchOnCount(), m_BranchOnTwoConds());
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::Broadcast, Op0_t>
 m_Broadcast(const Op0_t &Op0) {
@@ -434,16 +452,6 @@ template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t, Op2_t>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1, Op2);
-}
-
-inline VPInstruction_match<VPInstruction::BranchOnCount> m_BranchOnCount() {
-  return m_VPInstruction<VPInstruction::BranchOnCount>();
-}
-
-template <typename Op0_t, typename Op1_t>
-inline VPInstruction_match<VPInstruction::BranchOnCount, Op0_t, Op1_t>
-m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
 }
 
 inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {
@@ -651,6 +659,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::URem, Op0_t, Op1_t>
 m_URem(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::URem, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::SRem, Op0_t, Op1_t>
+m_SRem(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::SRem, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// Match a binary AND operation.
@@ -867,6 +881,16 @@ struct canonical_iv_match {
 
 inline canonical_iv_match m_CanonicalIV() { return {}; }
 
+/// Match the abstract header mask of any loop region.
+struct header_mask_match {
+  template <typename ArgTy> bool match(const ArgTy *V) const {
+    const auto *RV = dyn_cast<VPRegionValue>(V);
+    return RV && RV->getDefiningRegion()->getHeaderMask() == RV;
+  }
+};
+
+inline header_mask_match m_HeaderMask() { return {}; }
+
 /// Match a canonical VPWidenIntOrFpInductionRecipe optionally capturing it.
 struct canonical_widen_iv_match {
   VPWidenIntOrFpInductionRecipe **Capture = nullptr;
@@ -980,7 +1004,8 @@ template <typename Opnd_t> struct Argument_match {
       if (R->getOpcode() == Instruction::Call)
         return Val.match(R->getOperand(OpI));
     if (const auto *R = dyn_cast<VPInstruction>(V))
-      if (R->getOpcode() == Instruction::Call)
+      if (R->getOpcode() == Instruction::Call ||
+          R->getOpcode() == VPInstruction::Intrinsic)
         return Val.match(R->getOperand(OpI));
     return false;
   }
@@ -1003,70 +1028,42 @@ struct IntrinsicID_match {
   }
 };
 
-/// Intrinsic matches are combinations of ID matchers, and argument
-/// matchers. Higher arity matcher are defined recursively in terms of and-ing
-/// them with lower arity matchers. Here's some convenient typedefs for up to
-/// several arguments, and more can be added as needed
-template <typename T0 = void, typename T1 = void, typename T2 = void,
-          typename T3 = void>
-struct m_Intrinsic_Ty;
-template <typename T0> struct m_Intrinsic_Ty<T0> {
-  using Ty = match_combine_and<IntrinsicID_match, Argument_match<T0>>;
-};
-template <typename T0, typename T1> struct m_Intrinsic_Ty<T0, T1> {
-  using Ty =
-      match_combine_and<typename m_Intrinsic_Ty<T0>::Ty, Argument_match<T1>>;
-};
-template <typename T0, typename T1, typename T2>
-struct m_Intrinsic_Ty<T0, T1, T2> {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1>::Ty,
-                               Argument_match<T2>>;
-};
-template <typename T0, typename T1, typename T2, typename T3>
-struct m_Intrinsic_Ty {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2>::Ty,
-                               Argument_match<T3>>;
-};
-
-/// Match intrinsic calls like this:
-/// m_Intrinsic<Intrinsic::fabs>(m_VPValue(X), ...)
-template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
-  return IntrinsicID_match(IntrID);
-}
-
 /// Match intrinsic calls with a runtime intrinsic ID.
 inline IntrinsicID_match m_Intrinsic(Intrinsic::ID IntrID) {
   return IntrinsicID_match(IntrID);
 }
 
-template <Intrinsic::ID IntrID, typename T0>
-inline typename m_Intrinsic_Ty<T0>::Ty m_Intrinsic(const T0 &Op0) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(), m_Argument<0>(Op0));
-}
+struct IntrinsicMatchImpl {
+  template <Intrinsic::ID IntrID, typename... Ts, size_t... Is>
+  static auto impl(std::index_sequence<Is...>, const Ts &...Ops) {
+    return m_CombineAnd(IntrinsicID_match(IntrID), m_Argument<Is>(Ops)...);
+  }
+};
 
-template <Intrinsic::ID IntrID, typename T0, typename T1>
-inline typename m_Intrinsic_Ty<T0, T1>::Ty m_Intrinsic(const T0 &Op0,
-                                                       const T1 &Op1) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0), m_Argument<1>(Op1));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2>
-inline typename m_Intrinsic_Ty<T0, T1, T2>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1), m_Argument<2>(Op2));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
-          typename T3>
-inline typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
+/// Match intrinsic calls like this:
+/// m_Intrinsic<Intrinsic::fabs>(m_VPValue(X), ...)
+template <Intrinsic::ID IntrID, typename... Ts>
+inline auto m_Intrinsic(const Ts &...Ops) {
+  return IntrinsicMatchImpl::impl<IntrID>(
+      std::make_index_sequence<sizeof...(Ts)>{}, Ops...);
 }
 
 template <Intrinsic::ID IntrID, typename... T>
 inline auto m_WidenIntrinsic(const T &...Ops) {
   return m_Isa<VPWidenIntrinsicRecipe>(m_Intrinsic<IntrID>(Ops...));
 }
+
+/// Match VPValues that represent live-ins: VPIRValues and (plain)
+/// VPSymbolicValues. VPRegionValues (which inherit from VPSymbolicValue) are
+/// not live-ins and are excluded.
+struct LiveIn_match {
+  template <typename ITy> bool match(ITy *V) const {
+    return isa<VPIRValue>(V) ||
+           (isa<VPSymbolicValue>(V) && !isa<VPRegionValue>(V));
+  }
+};
+
+inline auto m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
 
 inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
 
@@ -1148,18 +1145,18 @@ inline auto m_VPPhi(const Op0_t &Op0, const Op1_t &Op1) {
 /// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
 /// return nullptr;
 template <typename MatchT>
-static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
   auto It = find_if(V->users(), match_fn(P));
   return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
 }
 
 /// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
 /// return nullptr.
-template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
+template <unsigned Opcode> VPInstruction *findUserOf(VPValue *V) {
   return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
 }
 
-template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
+template <typename RecipeTy> RecipeTy *findUserOf(VPValue *V) {
   return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
 }
 } // namespace llvm::VPlanPatternMatch

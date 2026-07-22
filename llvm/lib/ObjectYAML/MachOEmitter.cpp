@@ -625,9 +625,12 @@ void MachOWriter::writeStringTable(raw_ostream &OS) {
 }
 
 void MachOWriter::writeDynamicSymbolTable(raw_ostream &OS) {
-  for (auto Data : Obj.LinkEdit.IndirectSymbols)
-    OS.write(reinterpret_cast<const char *>(&Data),
-             sizeof(yaml::Hex32::BaseType));
+  for (auto Data : Obj.LinkEdit.IndirectSymbols) {
+    uint32_t Value = Data;
+    if (Obj.IsLittleEndian != sys::IsLittleEndianHost)
+      MachO::swapStruct(Value);
+    OS.write(reinterpret_cast<const char *>(&Value), sizeof(uint32_t));
+  }
 }
 
 void MachOWriter::writeFunctionStarts(raw_ostream &OS) {

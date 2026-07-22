@@ -857,3 +857,123 @@ func.func @rootn_wrong_type_vec(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) ->
   %0 = spirv.CL.rootn %arg0, %arg1 : vector<3xf32>, vector<2xi32> -> vector<3xf32>
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.copysign
+//===----------------------------------------------------------------------===//
+
+func.func @copysign(%arg0 : f32, %arg1 : f32) -> () {
+  // CHECK: spirv.CL.copysign {{%.*}}, {{%.*}} : f32
+  %2 = spirv.CL.copysign %arg0, %arg1 : f32
+  return
+}
+
+// -----
+
+func.func @copysign(%arg0 : vector<4xf16>, %arg1 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.copysign {{%.*}}, {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.copysign %arg0, %arg1 : vector<4xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.expm1
+//===----------------------------------------------------------------------===//
+
+func.func @expm1(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.expm1 {{%.*}} : f32
+  %2 = spirv.CL.expm1 %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @expm1(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.expm1 {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.expm1 %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.fdim
+//===----------------------------------------------------------------------===//
+
+func.func @fdim(%arg0 : f32, %arg1 : f32) -> () {
+  // CHECK: spirv.CL.fdim {{%.*}}, {{%.*}} : f32
+  %2 = spirv.CL.fdim %arg0, %arg1 : f32
+  return
+}
+
+// -----
+
+func.func @fdim(%arg0 : vector<4xf16>, %arg1 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.fdim {{%.*}}, {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.fdim %arg0, %arg1 : vector<4xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.fmod
+//===----------------------------------------------------------------------===//
+
+func.func @fmod(%arg0 : f32, %arg1 : f32) -> () {
+  // CHECK: spirv.CL.fmod {{%.*}}, {{%.*}} : f32
+  %2 = spirv.CL.fmod %arg0, %arg1 : f32
+  return
+}
+
+// -----
+
+func.func @fmod(%arg0 : vector<4xf16>, %arg1 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.fmod {{%.*}}, {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.fmod %arg0, %arg1 : vector<4xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.hypot
+//===----------------------------------------------------------------------===//
+
+func.func @hypot(%arg0 : f32, %arg1 : f32) -> () {
+  // CHECK: spirv.CL.hypot {{%.*}}, {{%.*}} : f32
+  %2 = spirv.CL.hypot %arg0, %arg1 : f32
+  return
+}
+
+// -----
+
+func.func @hypot(%arg0 : vector<4xf16>, %arg1 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.hypot {{%.*}}, {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.hypot %arg0, %arg1 : vector<4xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.log1p
+//===----------------------------------------------------------------------===//
+
+func.func @log1p(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.log1p {{%.*}} : f32
+  %2 = spirv.CL.log1p %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @log1p(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.log1p {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.log1p %arg0 : vector<4xf16>
+  return
+}

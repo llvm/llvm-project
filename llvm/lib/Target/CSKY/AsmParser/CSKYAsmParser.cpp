@@ -675,11 +675,9 @@ bool CSKYAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     assert(MissingFeatures.any() && "Unknown missing features!");
     ListSeparator LS;
     std::string Msg = "instruction requires the following: ";
-    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {
-      if (MissingFeatures[i]) {
-        Msg += LS;
-        Msg += getSubtargetFeatureName(i);
-      }
+    for (unsigned Feature : MissingFeatures) {
+      Msg += LS;
+      Msg += getSubtargetFeatureName(Feature);
     }
     return Error(IDLoc, Msg);
   }
@@ -1622,7 +1620,7 @@ unsigned CSKYAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
   MCRegister Reg = Op.getReg();
 
-  if (CSKYMCRegisterClasses[CSKY::FPR32RegClassID].contains(Reg)) {
+  if (getCSKYMCRegisterClass(CSKY::FPR32RegClassID).contains(Reg)) {
     // As the parser couldn't differentiate an FPR64 from an FPR32, coerce the
     // register from FPR32 to FPR64 if necessary.
     if (Kind == MCK_FPR64 || Kind == MCK_sFPR64) {
@@ -1637,7 +1635,7 @@ unsigned CSKYAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     }
   }
 
-  if (CSKYMCRegisterClasses[CSKY::GPRRegClassID].contains(Reg)) {
+  if (getCSKYMCRegisterClass(CSKY::GPRRegClassID).contains(Reg)) {
     if (Kind == MCK_GPRPair) {
       Op.Reg.RegNum = MRI->getEncodingValue(Reg) + CSKY::R0_R1;
       return Match_Success;

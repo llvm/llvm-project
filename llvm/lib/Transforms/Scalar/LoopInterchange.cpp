@@ -627,7 +627,7 @@ public:
       : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT), LIL(LIL) {}
 
   /// Interchange OuterLoop and InnerLoop.
-  bool transform(ArrayRef<Instruction *> DropNoWrapInsts,
+  void transform(ArrayRef<Instruction *> DropNoWrapInsts,
                  ArrayRef<Instruction *> DropNoInfInsts);
   void reduction2Memory();
   void restructureLoops(Loop *NewInner, Loop *NewOuter,
@@ -636,8 +636,8 @@ public:
   void removeChildLoop(Loop *OuterLoop, Loop *InnerLoop);
 
 private:
-  bool adjustLoopLinks();
-  bool adjustLoopBranches();
+  void adjustLoopLinks();
+  void adjustLoopBranches();
 
   Loop *OuterLoop;
   Loop *InnerLoop;
@@ -1400,6 +1400,13 @@ bool LoopInterchangeLegality::currentLimitations() {
     }
   }
 
+  // Currently, we do not support loops where the inner loop header has
+  // duplicate successors.
+  SmallPtrSet<BasicBlock *, 2> InnerLoopHeaderSuccs;
+  for (BasicBlock *Succ : successors(InnerLoop->getHeader()))
+    if (!InnerLoopHeaderSuccs.insert(Succ).second)
+      return true;
+
   return false;
 }
 
@@ -2067,7 +2074,7 @@ void LoopInterchangeTransform::reduction2Memory() {
 
   LoopInterchangeLegality::InnerReduction SR = InnerReductions[0];
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
-  IRBuilder<> Builder(&*(InnerLoopHeader->getFirstNonPHIIt()));
+  IRBuilder<> Builder(InnerLoopHeader, InnerLoopHeader->getFirstNonPHIIt());
 
   // Check if it's the first iteration.
   LLVMContext &Context = InnerLoopHeader->getContext();
@@ -2096,10 +2103,9 @@ void LoopInterchangeTransform::reduction2Memory() {
   SR.LcssaStore->moveAfter(dyn_cast<Instruction>(SR.Next));
 }
 
-bool LoopInterchangeTransform::transform(
+void LoopInterchangeTransform::transform(
     ArrayRef<Instruction *> DropNoWrapInsts,
     ArrayRef<Instruction *> DropNoInfInsts) {
-  bool Transformed = false;
 
   ArrayRef<LoopInterchangeLegality::InnerReduction> InnerReductions =
       LIL.getInnerReductions();
@@ -2108,10 +2114,8 @@ bool LoopInterchangeTransform::transform(
 
   LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
   auto &InductionPHIs = LIL.getInnerLoopInductions();
-  if (InductionPHIs.empty()) {
-    LLVM_DEBUG(dbgs() << "Failed to find the point to split loop latch \n");
-    return false;
-  }
+  assert(!InductionPHIs.empty() &&
+         "Expected at least one induction variable in the inner loop");
 
   SmallVector<Instruction *, 8> InnerIndexVarList;
   for (PHINode *CurInductionPHI : InductionPHIs) {
@@ -2177,13 +2181,10 @@ bool LoopInterchangeTransform::transform(
     WorkList.insert(cast<Instruction>(InnerIndexVar));
   MoveInstructions();
 
-  // Ensure the inner loop phi nodes have a separate basic block.
+  // Split the inner header so that it has a unique successor.
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
-  if (&*InnerLoopHeader->getFirstNonPHIIt() !=
-      InnerLoopHeader->getTerminator()) {
-    SplitBlock(InnerLoopHeader, InnerLoopHeader->getFirstNonPHIIt(), DT, LI);
-    LLVM_DEBUG(dbgs() << "splitting InnerLoopHeader done\n");
-  }
+  SplitBlock(InnerLoopHeader, InnerLoopHeader->getFirstNonPHIIt(), DT, LI);
+  LLVM_DEBUG(dbgs() << "splitting InnerLoopHeader done\n");
 
   // Instructions in the original inner loop preheader may depend on values
   // defined in the outer loop header. Move them there, because the original
@@ -2207,11 +2208,7 @@ bool LoopInterchangeTransform::transform(
       I.moveBeforePreserving(OuterLoopHeader->getTerminator()->getIterator());
   }
 
-  Transformed |= adjustLoopLinks();
-  if (!Transformed) {
-    LLVM_DEBUG(dbgs() << "adjustLoopLinks failed\n");
-    return false;
-  }
+  adjustLoopLinks();
 
   // Finally, drop the nsw/nuw/ninf flags from the instructions for reduction
   // calculations.
@@ -2221,8 +2218,6 @@ bool LoopInterchangeTransform::transform(
   }
   for (Instruction *I : DropNoInfInsts)
     I->setHasNoInfs(false);
-
-  return true;
 }
 
 /// \brief Move all instructions except the terminator from FromBB right before
@@ -2429,7 +2424,7 @@ static void simplifyLCSSAPhis(Loop *OuterLoop, Loop *InnerLoop) {
   }
 }
 
-bool LoopInterchangeTransform::adjustLoopBranches() {
+void LoopInterchangeTransform::adjustLoopBranches() {
   LLVM_DEBUG(dbgs() << "adjustLoopBranches called\n");
   std::vector<DominatorTree::UpdateType> DTUpdates;
 
@@ -2472,20 +2467,18 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   Instruction *OuterLoopHeaderBI = OuterLoopHeader->getTerminator();
   Instruction *InnerLoopHeaderBI = InnerLoopHeader->getTerminator();
 
-  if (!OuterLoopPredecessor || !InnerLoopLatchPredecessor ||
-      !OuterLoopLatchBI || !InnerLoopLatchBI || !OuterLoopHeaderBI ||
-      !InnerLoopHeaderBI)
-    return false;
+  assert(OuterLoopPredecessor && InnerLoopLatchPredecessor &&
+         "Failed to find a unique predecessor");
+  assert(OuterLoopLatchBI && InnerLoopLatchBI &&
+         "Failed to find a conditional branch");
 
   Instruction *InnerLoopLatchPredecessorBI =
       InnerLoopLatchPredecessor->getTerminator();
   Instruction *OuterLoopPredecessorBI = OuterLoopPredecessor->getTerminator();
 
-  if (!OuterLoopPredecessorBI || !InnerLoopLatchPredecessorBI)
-    return false;
   BasicBlock *InnerLoopHeaderSuccessor = InnerLoopHeader->getUniqueSuccessor();
-  if (!InnerLoopHeaderSuccessor)
-    return false;
+  assert(InnerLoopHeaderSuccessor &&
+         "Failed to find a unique successor for the inner loop header");
 
   // Adjust Loop Preheader and headers.
   // The branches in the outer loop predecessor and the outer loop header can
@@ -2582,22 +2575,18 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
        make_range(OuterLoopHeader->begin(), std::prev(OuterLoopHeader->end())))
     MayNeedLCSSAPhis.push_back(&I);
   formLCSSAForInstructions(MayNeedLCSSAPhis, *DT, *LI, SE);
-
-  return true;
 }
 
-bool LoopInterchangeTransform::adjustLoopLinks() {
+void LoopInterchangeTransform::adjustLoopLinks() {
   // Adjust all branches in the inner and outer loop.
-  bool Changed = adjustLoopBranches();
-  if (Changed) {
-    // We have interchanged the preheaders so we need to interchange the data in
-    // the preheaders as well. This is because the content of the inner
-    // preheader was previously executed inside the outer loop.
-    BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
-    BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
-    swapBBContents(OuterLoopPreHeader, InnerLoopPreHeader);
-  }
-  return Changed;
+  adjustLoopBranches();
+
+  // We have interchanged the preheaders so we need to interchange the data in
+  // the preheaders as well. This is because the content of the inner
+  // preheader was previously executed inside the outer loop.
+  BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
+  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
+  swapBBContents(OuterLoopPreHeader, InnerLoopPreHeader);
 }
 
 PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,

@@ -18,7 +18,7 @@ body:             |
     ; P-EXT-LABEL: name: merge_copy_non_arg_reg
     ; P-EXT: liveins: $x28, $x29
     ; P-EXT-NEXT: {{  $}}
-    ; P-EXT-NEXT: $x6_x7 = PADD_DW $x28_x29, $x0_pair
+    ; P-EXT-NEXT: $x6_x7 = PADD_DW $x0_pair, $x28_x29
     ; P-EXT-NEXT: PseudoRET implicit $x6
     $x6 = COPY $x28
     $x7 = COPY $x29
@@ -40,7 +40,7 @@ body:             |
     ; P-EXT-LABEL: name: merge_copy_non_arg_reg_with_intervening_unrelated_copy
     ; P-EXT: liveins: $x12, $x28, $x29
     ; P-EXT-NEXT: {{  $}}
-    ; P-EXT-NEXT: $x6_x7 = PADD_DW $x28_x29, $x0_pair
+    ; P-EXT-NEXT: $x6_x7 = PADD_DW $x0_pair, $x28_x29
     ; P-EXT-NEXT: $x18 = ADDI $x12, 0
     ; P-EXT-NEXT: PseudoRET implicit $x6
     $x6 = COPY $x28

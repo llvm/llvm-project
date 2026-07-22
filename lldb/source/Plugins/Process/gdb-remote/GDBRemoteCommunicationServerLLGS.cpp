@@ -2971,6 +2971,10 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
 
     if (std::optional<unsigned> protection_key = region_info.GetProtectionKey())
       response.Printf("protection-key:%" PRIu32 ";", *protection_key);
+
+    LazyBool is_stack = region_info.IsStackMemory();
+    if (is_stack != eLazyBoolDontKnow)
+      response.Printf("type: %s", is_stack ? "stack" : "heap");
   }
 
   return SendPacketNoLock(response.GetString());
@@ -4507,6 +4511,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
             .Case("multiprocess+", Extension::multiprocess)
             .Case("fork-events+", Extension::fork)
             .Case("vfork-events+", Extension::vfork)
+            .Case("qXfer:libraries:read+", Extension::libraries)
+            .Case("qXfer:libraries-svr4:read+", Extension::libraries_svr4)
             .Default({});
 
   // We consume lldb's swbreak/hwbreak feature, but it doesn't change the

@@ -24,12 +24,18 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_TYPEDEF_CLASSES
 #include "flang/Optimizer/Dialect/FIROpsTypes.cpp.inc"
 
 using namespace fir;
+
+static llvm::cl::opt<bool> enableFirTypeAliases(
+    "enable-fir-type-aliases",
+    llvm::cl::desc("Enable MLIR type aliases for FIR derived types"),
+    llvm::cl::init(false), llvm::cl::Hidden);
 
 namespace {
 
@@ -78,6 +84,8 @@ bool verifySameLists(llvm::ArrayRef<RecordType::TypePair> a1,
 }
 
 static llvm::StringRef getVolatileKeyword() { return "volatile"; }
+
+static llvm::StringRef getCorankKeyword() { return "corank"; }
 
 static mlir::ParseResult parseOptionalCommaAndKeyword(mlir::AsmParser &parser,
                                                       mlir::StringRef keyword,
@@ -477,6 +485,12 @@ unsigned getBoxRank(mlir::Type boxTy) {
   return 0;
 }
 
+unsigned getBoxCorank(mlir::Type ty) {
+  return llvm::TypeSwitch<mlir::Type, unsigned>(ty)
+      .Case<fir::BoxType, fir::ClassType>([](auto t) { return t.getCorank(); })
+      .Default([](mlir::Type) { return 0; });
+}
+
 /// Return the ISO_C_BINDING intrinsic module value of type \p ty.
 int getTypeCode(mlir::Type ty, const fir::KindMapping &kindMap) {
   if (mlir::IntegerType intTy = mlir::dyn_cast<mlir::IntegerType>(ty)) {
@@ -693,15 +707,16 @@ static mlir::Type changeElementTypeImpl(mlir::Type type,
         mlir::Type newInnerType =
             changeElementTypeImpl(t.getEleTy(), newElementType, false, false);
         if (turnBoxIntoClass)
-          return fir::ClassType::get(newInnerType, t.isVolatile());
-        return fir::BoxType::get(newInnerType, t.isVolatile());
+          return fir::ClassType::get(newInnerType, t.isVolatile(),
+                                     t.getCorank());
+        return fir::BoxType::get(newInnerType, t.isVolatile(), t.getCorank());
       })
       .Case([&](fir::ClassType t) -> mlir::Type {
         mlir::Type newInnerType =
             changeElementTypeImpl(t.getEleTy(), newElementType, false, false);
         if (turnClassIntoBox)
-          return fir::BoxType::get(newInnerType, t.isVolatile());
-        return fir::ClassType::get(newInnerType, t.isVolatile());
+          return fir::BoxType::get(newInnerType, t.isVolatile(), t.getCorank());
+        return fir::ClassType::get(newInnerType, t.isVolatile(), t.getCorank());
       })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
@@ -792,31 +807,44 @@ static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
 // BoxType
 //===----------------------------------------------------------------------===//
 
-// `box` `<` type (`, volatile` $volatile^)? `>`
+// `box` `<` type (`, volatile` $volatile^)? (`, corank: corank` $corank^)? `>`
 mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
   mlir::Type eleTy;
   auto location = parser.getCurrentLocation();
   auto *context = parser.getContext();
   bool isVolatile = false;
+  int64_t corank = 0;
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
-  if (parseOptionalCommaAndKeyword(parser, getVolatileKeyword(), isVolatile))
-    return {};
+  if (mlir::succeeded(parser.parseOptionalComma())) {
+    // Fortran 2023 C871
+    // VOLATILE attribute shall not be specified for a coarray, so the
+    // "volatile" keyword cannot coexist with the "corank".
+    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword())))
+      isVolatile = true;
+    else if (mlir::succeeded(parser.parseKeyword(getCorankKeyword())))
+      if (mlir::succeeded(parser.parseOptionalColon()))
+        if (!mlir::succeeded(parser.parseInteger(corank)))
+          return {};
+  }
   if (parser.parseGreater())
     return {};
-  return parser.getChecked<fir::BoxType>(location, context, eleTy, isVolatile);
+  return parser.getChecked<fir::BoxType>(location, context, eleTy, isVolatile,
+                                         corank);
 }
 
 void fir::BoxType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getEleTy();
   if (isVolatile())
     printer << ", " << getVolatileKeyword();
+  if (getCorank())
+    printer << ", corank:" << getCorank();
   printer << '>';
 }
 
 llvm::LogicalResult
 fir::BoxType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                     mlir::Type eleTy, bool isVolatile) {
+                     mlir::Type eleTy, bool isVolatile, int64_t corank) {
   if (mlir::isa<fir::BaseBoxType>(eleTy))
     return emitError() << "invalid element type\n";
   // TODO
@@ -883,32 +911,44 @@ void fir::CharacterType::print(mlir::AsmPrinter &printer) const {
 // ClassType
 //===----------------------------------------------------------------------===//
 
-// `class` `<` type (`, volatile` $volatile^)? `>`
+// `class` `<` type (`, volatile` $volatile^)? (`, corank: corank` $corank^)?`>`
 mlir::Type fir::ClassType::parse(mlir::AsmParser &parser) {
   mlir::Type eleTy;
   auto location = parser.getCurrentLocation();
   auto *context = parser.getContext();
   bool isVolatile = false;
+  int64_t corank = 0;
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
-  if (parseOptionalCommaAndKeyword(parser, getVolatileKeyword(), isVolatile))
-    return {};
+  if (mlir::succeeded(parser.parseOptionalComma())) {
+    // Fortran 2023 C871
+    // VOLATILE attribute shall not be specified for a coarray, so the
+    // "volatile" keyword cannot coexist with the "corank".
+    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword())))
+      isVolatile = true;
+    else if (mlir::succeeded(parser.parseKeyword(getCorankKeyword())))
+      if (mlir::succeeded(parser.parseOptionalColon()))
+        if (!mlir::succeeded(parser.parseInteger(corank)))
+          return {};
+  }
   if (parser.parseGreater())
     return {};
-  return parser.getChecked<fir::ClassType>(location, context, eleTy,
-                                           isVolatile);
+  return parser.getChecked<fir::ClassType>(location, context, eleTy, isVolatile,
+                                           corank);
 }
 
 void fir::ClassType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getEleTy();
   if (isVolatile())
     printer << ", " << getVolatileKeyword();
+  if (getCorank())
+    printer << ", corank:" << getCorank();
   printer << '>';
 }
 
 llvm::LogicalResult
 fir::ClassType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                       mlir::Type eleTy, bool isVolatile) {
+                       mlir::Type eleTy, bool isVolatile, int64_t corank) {
   if (mlir::isa<fir::RecordType, fir::SequenceType, fir::HeapType,
                 fir::PointerType, mlir::NoneType, mlir::IntegerType,
                 mlir::FloatType, fir::CharacterType, fir::LogicalType,
@@ -1088,7 +1128,7 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
       char ch = '(';
       for (auto p : getLenParamList()) {
         printer << ch << p.first << ':';
-        p.second.print(printer.getStream());
+        printer.printType(p.second);
         ch = ',';
       }
       printer << ')';
@@ -1100,7 +1140,7 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
       char ch = '{';
       for (auto p : getTypeList()) {
         printer << ch << p.first << ':';
-        p.second.print(printer.getStream());
+        printer.printType(p.second);
         ch = ',';
       }
       printer << '}';
@@ -1111,6 +1151,18 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
     recordTypeVisited.erase(uniqueKey());
   }
   printer << '>';
+}
+
+mlir::OpAsmAliasResult fir::RecordType::getAlias(llvm::raw_ostream &os) const {
+  if (!enableFirTypeAliases)
+    return mlir::OpAsmAliasResult::NoAlias;
+  // Derived type names may contain "." that are forbidden in MLIR type
+  // alias. Replace them by a capital 'X' that cannot be found in user
+  // defined derived type and is also used as a replacement before generating
+  // llvm assembly.
+  for (char ch : getName())
+    os << (ch == '.' ? 'X' : ch);
+  return mlir::OpAsmAliasResult::OverridableAlias;
 }
 
 void fir::RecordType::finalize(llvm::ArrayRef<TypePair> lenPList,
@@ -1557,6 +1609,13 @@ bool BaseBoxType::isVolatile() const { return fir::isa_volatile_type(*this); }
 
 bool BaseBoxType::isArray() const {
   return llvm::isa<fir::SequenceType>(getElementOrSequenceType());
+}
+
+bool BaseBoxType::isCoarray() const {
+  return llvm::TypeSwitch<mlir::Type, bool>(*this)
+      .Case<fir::BoxType, fir::ClassType>(
+          [](auto t) { return t.getCorank() > 0; })
+      .Default([](mlir::Type) { return false; });
 }
 
 //===----------------------------------------------------------------------===//

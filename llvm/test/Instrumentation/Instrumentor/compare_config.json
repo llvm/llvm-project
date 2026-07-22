@@ -1,0 +1,33 @@
+{
+  "configuration": {
+    "runtime_prefix": "__instrumentor_"
+  },
+  "instruction_pre": {
+    "compare": {
+      "enabled": true,
+      "operand_type_id": true,
+      "operand_size": true,
+      "opcode": true,
+      "left": true,
+      "right": true,
+      "flags": true,
+      "id": true
+    }
+  },
+  "instruction_post": {
+    "compare": {
+      "enabled": true,
+      "operand_type_id": true,
+      "operand_size": true,
+      "opcode": true,
+      "left": true,
+      "right": true,
+      "result_type_id": true,
+      "result_size": true,
+      "result": true,
+      "result.replace": true,
+      "flags": true,
+      "id": true
+    }
+  }
+}

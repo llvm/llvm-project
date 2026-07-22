@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no remote environment support
 class SBEnvironmentAPICase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

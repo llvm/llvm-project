@@ -11,6 +11,8 @@
 #==============================================================================#
 # Temp files created by most text editors.
 *~
+# Emacs lock files
+.#*
 # Merge files created by git.
 *.orig
 # Reject files created by patch.
@@ -27,7 +29,7 @@
 /*/CMakeUserPresets.json
 
 # Nested build directory
-/build_*
+/build*
 
 #==============================================================================#
 # Explicit files to ignore (only matches one).
@@ -66,12 +68,6 @@ AGENTS.md
 .cursor
 .cursorignore
 .cursorindexingignore
-/.opencode/
-/.nvim/
-/.nvimlog
-/dhw-extension/
-/install*/
-/tmp/
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).

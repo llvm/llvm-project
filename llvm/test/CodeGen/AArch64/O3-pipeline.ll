@@ -36,6 +36,7 @@
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Canonicalize natural loops
+; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Lazy Branch Probability Analysis
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       Optimization Remark Emitter
@@ -52,9 +53,10 @@
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
 ; CHECK-NEXT:       Shadow Stack GC Lowering
 ; CHECK-NEXT:       Remove unreachable blocks from the CFG
-; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
+; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       Constant Hoisting
 ; CHECK-NEXT:       Replace intrinsics with calls to vector library
@@ -66,6 +68,7 @@
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
@@ -84,6 +87,9 @@
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       AArch64 Stack Tagging
+; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Loop Pass Manager
+; CHECK-NEXT:         SVE Shuffle Optimizations
 ; CHECK-NEXT:       Complex Deinterleaving Pass
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Memory SSA
@@ -92,10 +98,10 @@
 ; CHECK-NEXT:       Interleaved Access Pass
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Type Promotion
+; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
-; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Uniformity Analysis
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
@@ -111,7 +117,7 @@
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Analysis containing CSE Info
 ; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
@@ -126,6 +132,7 @@
 ; CHECK-NEXT:       RegBankSelect
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       InstructionSelect
 ; CHECK-NEXT:       ResetMachineFunction
@@ -171,6 +178,8 @@
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       AArch64 MI Peephole Optimization pass
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       AArch64 PTRUE Coalescing
 ; CHECK-NEXT:       AArch64 Dead register definitions
 ; CHECK-NEXT:       Detect Dead Lanes
 ; CHECK-NEXT:       Init Undef Pass
@@ -179,7 +188,6 @@
 ; CHECK-NEXT:       Live Variable Analysis
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Two-Address instruction pass
-; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Register Coalescer

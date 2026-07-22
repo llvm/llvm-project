@@ -564,14 +564,12 @@ void DebugLocWriter::init() {
   LocStream = std::make_unique<raw_svector_ostream>(*LocBuffer);
   // Writing out empty location list to which all references to empty location
   // lists will point.
-  if (!LocSectionOffset && DwarfVersion < 5) {
+  if (DwarfVersion < 5) {
     const char Zeroes[16] = {0};
     *LocStream << StringRef(Zeroes, 16);
-    LocSectionOffset += 16;
   }
 }
 
-uint32_t DebugLocWriter::LocSectionOffset = 0;
 void DebugLocWriter::addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
                              DebugLocationsVector &LocList) {
   if (LocList.empty()) {
@@ -581,7 +579,7 @@ void DebugLocWriter::addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
   }
   // Since there is a separate DebugLocWriter for each thread,
   // we don't need a lock to read the SectionOffset and update it.
-  const uint32_t EntryOffset = LocSectionOffset;
+  const uint32_t EntryOffset = LocBuffer->size();
 
   for (const DebugLocationEntry &Entry : LocList) {
     support::endian::write(*LocStream, static_cast<uint64_t>(Entry.LowPC),
@@ -592,13 +590,11 @@ void DebugLocWriter::addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
                            llvm::endianness::little);
     *LocStream << StringRef(reinterpret_cast<const char *>(Entry.Expr.data()),
                             Entry.Expr.size());
-    LocSectionOffset += 2 * 8 + 2 + Entry.Expr.size();
   }
   LocStream->write_zeros(16);
-  LocSectionOffset += 16;
-  LocListDebugInfoPatches.push_back({0xdeadbeee, EntryOffset}); // never seen
-                                                                // use
+  LocListDebugInfoPatches.push_back({0xdeadbeee, EntryOffset});
   replaceLocValbyForm(DIEBldr, Die, AttrInfo, AttrInfo.getForm(), EntryOffset);
+  LocListPatches.push_back({&Die, AttrInfo.getAttribute(), AttrInfo.getForm()});
 }
 
 std::unique_ptr<DebugBufferVector> DebugLocWriter::getBuffer() {
@@ -607,6 +603,27 @@ std::unique_ptr<DebugBufferVector> DebugLocWriter::getBuffer() {
 
 // DWARF 4: 2.6.2
 void DebugLocWriter::finalize(DIEBuilder &DIEBldr, DIE &Die) {}
+
+/// Rebases all pending location list offsets by adding \p Base,
+/// updating the corresponding attributes in each patched DIE.
+void DebugLocWriter::applyBase(DIEBuilder &DIEBldr, uint64_t Base) {
+  if (Base == 0) {
+    LocListPatches.clear();
+    return;
+  }
+  for (const LocListPatch &LP : LocListPatches) {
+    if (!LP.Die)
+      continue;
+    DIEValue Cur = LP.Die->findAttribute(LP.Attr);
+    if (!Cur.getType())
+      continue;
+    uint64_t OldVal = Cur.getDIEInteger().getValue();
+    if (OldVal == DebugLocWriter::EmptyListOffset)
+      continue;
+    DIEBldr.replaceValue(LP.Die, LP.Attr, LP.Form, DIEInteger(OldVal + Base));
+  }
+  LocListPatches.clear();
+}
 
 static void writeEmptyListDwarf5(raw_svector_ostream &Stream) {
   support::endian::write(Stream, static_cast<uint32_t>(4),
@@ -716,7 +733,6 @@ void DebugLoclistWriter::addList(DIEBuilder &DIEBldr, DIE &Die,
                        *LocBodyStream);
 }
 
-uint32_t DebugLoclistWriter::LoclistBaseOffset = 0;
 void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
   if (LocBodyBuffer->empty()) {
     DIEValue LocListBaseAttrInfo =
@@ -751,18 +767,17 @@ void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
   *LocStream << *LocBodyBuffer;
 
   if (!isSplitDwarf()) {
+    const uint64_t LocalBase = getDWARF5RngListLocListHeaderSize();
     DIEValue LocListBaseAttrInfo =
         Die.findAttribute(dwarf::DW_AT_loclists_base);
     if (LocListBaseAttrInfo.getType()) {
-      DIEBldr.replaceValue(
-          &Die, dwarf::DW_AT_loclists_base, LocListBaseAttrInfo.getForm(),
-          DIEInteger(LoclistBaseOffset + getDWARF5RngListLocListHeaderSize()));
+      DIEBldr.replaceValue(&Die, dwarf::DW_AT_loclists_base,
+                           LocListBaseAttrInfo.getForm(),
+                           DIEInteger(LocalBase));
     } else {
       DIEBldr.addValue(&Die, dwarf::DW_AT_loclists_base,
-                       dwarf::DW_FORM_sec_offset,
-                       DIEInteger(LoclistBaseOffset + Header->size()));
+                       dwarf::DW_FORM_sec_offset, DIEInteger(LocalBase));
     }
-    LoclistBaseOffset += LocBuffer->size();
   }
   clearList(RelativeLocListOffsets);
   clearList(*LocArrayBuffer);

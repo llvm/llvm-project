@@ -1,0 +1,166 @@
+---
+Name: WhereParametersSema
+Functions:
+- Name: makeWidget
+  Where:
+    Parameters:
+    - int
+  SwiftName: makeIntWidget(_:)
+- Name: makeWidget
+  Where:
+    Parameters:
+    - double
+  SwiftName: makeDoubleWidget(_:)
+- Name: makeWidget
+  Where:
+    Parameters: []
+  SwiftName: makeCurrentWidget()
+- Name: broadGlobal
+  SwiftPrivate: true
+- Name: coexistGlobal
+  SwiftPrivate: true
+- Name: coexistGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: coexistGlobalInt(_:)
+- Name: mismatchGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: shouldNotApplyGlobal(_:)
+- Name: aliasGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: aliasGlobal(_:)
+- Name: aliasPrecedenceGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: fallbackAliasPrecedenceGlobal(_:)
+- Name: aliasPrecedenceGlobal
+  Where:
+    Parameters:
+    - AliasInt
+  SwiftName: aliasPrecedenceGlobal(_:)
+- Name: multiAliasGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: multiAliasGlobal(_:)
+- Name: nullableGlobal
+  Where:
+    Parameters:
+    - 'char *'
+  SwiftName: nullableGlobal(_:)
+- Name: rawIntGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: rawIntGlobal(_:)
+- Name: constValueGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: constValueGlobal(_:)
+Namespaces:
+- Name: SelectorNamespace
+  Functions:
+  - Name: makeNamespaced
+    Where:
+      Parameters:
+      - int
+    SwiftName: makeNamespacedInt(_:)
+  - Name: makeNamespaced
+    Where:
+      Parameters:
+      - double
+    SwiftName: makeNamespacedDouble(_:)
+Tags:
+- Name: SelectorWidget
+  Methods:
+  - Name: setValue
+    Where:
+      Parameters:
+      - int
+    SwiftName: setIntValue(_:)
+  - Name: setValue
+    Where:
+      Parameters:
+      - double
+    SwiftName: setDoubleValue(_:)
+  - Name: setValue
+    Where:
+      Parameters: []
+    SwiftName: currentValue()
+  - Name: broad
+    SwiftPrivate: true
+  - Name: coexist
+    SwiftPrivate: true
+  - Name: coexist
+    Where:
+      Parameters:
+      - int
+    SwiftName: coexistInt(_:)
+  - Name: defaults
+    Where:
+      Parameters:
+      - int
+      - double
+    SwiftName: defaultsWithTwoParameters(_:_:)
+  - Name: configure
+    Where:
+      Parameters:
+      - int
+    SwiftName: configureInt(_:)
+  - Name: mismatch
+    Where:
+      Parameters:
+      - int
+    SwiftName: shouldNotApplyMethod(_:)
+  - Name: alias
+    Where:
+      Parameters:
+      - int
+    SwiftName: alias(_:)
+  - Name: aliasPrecedence
+    Where:
+      Parameters:
+      - int
+    SwiftName: fallbackAliasPrecedence(_:)
+  - Name: aliasPrecedence
+    Where:
+      Parameters:
+      - AliasInt
+    SwiftName: aliasPrecedence(_:)
+  - Name: multiAlias
+    Where:
+      Parameters:
+      - int
+    SwiftName: multiAlias(_:)
+  - Name: nullable
+    Where:
+      Parameters:
+      - 'char *'
+    SwiftName: nullable(_:)
+  - Name: rawInt
+    Where:
+      Parameters:
+      - int
+    SwiftName: rawInt(_:)
+  - Name: constValue
+    Where:
+      Parameters:
+      - int
+    SwiftName: constValue(_:)
+  - Name: operator+
+    Where:
+      Parameters:
+      - int
+    SwiftName: plusInt(_:)
+  - Name: operator+
+    Where:
+      Parameters:
+      - double
+    SwiftName: plusDouble(_:)

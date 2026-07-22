@@ -1835,6 +1835,18 @@ def ElementwiseClmul : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwisePext : Builtin {
+  let Spellings = ["__builtin_elementwise_pext"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwisePdep : Builtin {
+  let Spellings = ["__builtin_elementwise_pdep"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
 def ReduceMax : Builtin {
   let Spellings = ["__builtin_reduce_max"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
@@ -2503,6 +2515,30 @@ def ScopedAtomicFetchMax : AtomicBuiltin {
   let Prototype = "void(...)";
 }
 
+def ScopedAtomicFetchFMinimum : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_fminimum"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchFMaximum : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_fmaximum"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchFMinimumNum : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_fminimum_num"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchFMaximumNum : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_fmaximum_num"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ScopedAtomicAddFetch : AtomicBuiltin {
   let Spellings = ["__scoped_atomic_add_fetch"];
   let Attributes = [CustomTypeChecking];
@@ -2651,6 +2687,30 @@ def AtomicFetchMax : AtomicBuiltin {
 
 def AtomicFetchMin : AtomicBuiltin {
   let Spellings = ["__atomic_fetch_min"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchFMinimum : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_fminimum"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchFMaximum : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_fmaximum"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchFMinimumNum : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_fminimum_num"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchFMaximumNum : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_fmaximum_num"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -3798,6 +3858,14 @@ def VFork : LibBuiltin<"unistd.h"> {
   let Spellings = ["vfork"];
   let Attributes = [ReturnsTwice, IgnoreSignature];
   let Prototype = "pid_t()";
+}
+
+// POSIX sys/stat.h
+
+def Umask : LibBuiltin<"sys/stat.h"> {
+  let Spellings = ["umask"];
+  let Attributes = [IgnoreSignature, NoThrow];
+  let Prototype = ""; // mode_t(mode_t); mode_t is target-specific
 }
 
 // POSIX pthread.h
@@ -5013,6 +5081,12 @@ def PtrauthAuthAndResign : Builtin {
   let Prototype = "void*(void*,int,void*,int,void*)";
 }
 
+def PtrauthAuthWithPCAndResign : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth_with_pc_and_resign"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*,void*,int,void*)";
+}
+
 def PtrauthAuthLoadRelativeAndSign : Builtin {
   let Spellings = ["__builtin_ptrauth_auth_load_relative_and_sign"];
   let Attributes = [CustomTypeChecking, NoThrow];
@@ -5465,6 +5539,12 @@ def HLSLInterlockedAdd : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void (...)";
 }
 
+def HLSLInterlockedOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_or"];
+  let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
 def HLSLWaveActiveBallot : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_ballot"];
   let Attributes = [NoThrow, Const];
@@ -5836,6 +5916,25 @@ def MSVaCopy : Builtin {
   let Spellings = ["__builtin_ms_va_copy"];
   let Attributes = [NoThrow];
   let Prototype = "void(char*&, char*&)";
+}
+
+// z/OS-compatible va_list functions.
+def ZOSVaStart : Builtin {
+  let Spellings = ["__builtin_zos_va_start"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(char**, ...)";
+}
+
+def ZOSVaEnd : Builtin {
+  let Spellings = ["__builtin_zos_va_end"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(char**)";
+}
+
+def ZOSVaCopy : Builtin {
+  let Spellings = ["__builtin_zos_va_copy"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(char**, char**)";
 }
 
 // Arithmetic Fence: to prevent FP reordering and reassociation optimizations

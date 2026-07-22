@@ -24,13 +24,13 @@ void acc_data(int parmVar, int *ptrParmVar) {
 
 #pragma acc enter data copyin(readonly, alwaysin: parmVar) async(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) -> !cir.ptr<!s32i> {modifiers = #acc<data_clause_modifier readonly,alwaysin>, name = "parmVar", structured = false}
   // CHECK-NEXT: acc.enter_data async(%[[PARM_CAST]] : si32) dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data async(parmVar) copyin(readonly, alwaysin: parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) -> !cir.ptr<!s32i> {modifiers = #acc<data_clause_modifier readonly,alwaysin>, name = "parmVar", structured = false}
   // CHECK-NEXT: acc.enter_data async(%[[PARM_CAST]] : si32) dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
 
@@ -48,7 +48,7 @@ void acc_data(int parmVar, int *ptrParmVar) {
 
 #pragma acc enter data create(zero: parmVar) async(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) -> !cir.ptr<!s32i> {modifiers = #acc<data_clause_modifier zero>, name = "parmVar", structured = false}
   // CHECK-NEXT: acc.enter_data async(%[[PARM_CAST]] : si32) dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>)
 
@@ -62,7 +62,7 @@ void acc_data(int parmVar, int *ptrParmVar) {
 
 #pragma acc enter data attach(ptrParmVar) async(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[ATTACH1:.*]] = acc.attach varPtr(%[[PTRPARM]] : !cir.ptr<!cir.ptr<!s32i>>) async(%[[PARM_CAST]] : si32) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptrParmVar", structured = false}
   // CHECK-NEXT: acc.enter_data async(%[[PARM_CAST]] : si32) dataOperands(%[[ATTACH1]] : !cir.ptr<!cir.ptr<!s32i>>)
 
@@ -88,7 +88,7 @@ void acc_data(int parmVar, int *ptrParmVar) {
   // CHECK-NEXT: %[[CMP:.*]] = cir.cmp eq %[[PARM_LOAD]], %[[ONE_CONST]]
   // CHECK-NEXT: %[[CMP_CAST:.*]] = builtin.unrealized_conversion_cast %[[CMP]]
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) -> !cir.ptr<!s32i> {name = "parmVar", structured = false}
   // CHECK-NEXT: acc.enter_data if(%[[CMP_CAST]]) async(%[[PARM_CAST]] : si32) dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
 
@@ -98,27 +98,27 @@ void acc_data(int parmVar, int *ptrParmVar) {
 
 #pragma acc enter data wait(1) create(parmVar)
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_CONST]]
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_CONST]]
   // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "parmVar", structured = false}
   // CHECK-NEXT: acc.enter_data wait(%[[ONE_CAST]] : si32) dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data wait(parmVar, 1, 2) create(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_CONST]]
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_CONST]]
   // CHECK-NEXT: %[[TWO_CONST:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_CONST]]
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_CONST]]
   // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "parmVar", structured = false}
   // CHECK-NEXT: acc.enter_data wait(%[[PARM_CAST]], %[[ONE_CAST]], %[[TWO_CAST]] : si32, si32, si32) dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data wait(devnum: parmVar: 1, 2) create(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_CONST]]
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_CONST]]
   // CHECK-NEXT: %[[TWO_CONST:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_CONST]]
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_CONST]]
   // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "parmVar", structured = false}
   // CHECK-NEXT: acc.enter_data wait_devnum(%[[PARM_CAST]] : si32) wait(%[[ONE_CAST]], %[[TWO_CAST]] : si32, si32) dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>)
 

@@ -13,7 +13,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.program_mem
     %4 = llvm.addrspacecast %3 : !llvm.ptr<5> to !llvm.ptr
     llvm.store %1, %4 : i32, !llvm.ptr
     %map = omp.map.info var_ptr(%4 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    omp.target map_entries(%map -> %arg : !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%map -> %arg : !llvm.ptr) {
       omp.terminator
     }
     llvm.return
