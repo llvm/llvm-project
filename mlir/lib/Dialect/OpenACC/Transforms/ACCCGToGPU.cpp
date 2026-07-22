@@ -3259,12 +3259,6 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     (void)accSupport.emitNYI(loc, "reduction: non-MemRefTy accumulate array");
     return;
   }
-  if (memrefTy.getRank() > 1 && !memrefTy.hasStaticShape()) {
-    (void)accSupport.emitNYI(loc,
-                             "reduction: dynamic multi-rank accumulate array");
-    return;
-  }
-
   FailureOr<arith::AtomicRMWKind> kindOr = getReductionKind(
       op.getReductionOperator(), memrefTy.getElementType(), loc);
   if (failed(kindOr))
@@ -3373,13 +3367,15 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     Value iv = forOp.getInductionVar();
     SmallVector<Value> indices{iv};
     if (memrefTy.getRank() > 1) {
-      assert(memrefTy.hasStaticShape() &&
-             "multi-rank array reduction accumulator must be static");
       indices.resize(memrefTy.getRank());
       Value linearIndex = iv;
       for (int64_t dim = memrefTy.getRank() - 1; dim >= 0; --dim) {
-        Value dimSize = arith::ConstantIndexOp::create(
-            rewriter, loc, memrefTy.getDimSize(dim));
+        Value dimSize =
+            memrefTy.isDynamicDim(dim)
+                ? memref::DimOp::create(rewriter, loc, memref, dim).getResult()
+                : arith::ConstantIndexOp::create(rewriter, loc,
+                                                 memrefTy.getDimSize(dim))
+                      .getResult();
         indices[dim] =
             arith::RemUIOp::create(rewriter, loc, linearIndex, dimSize);
         if (dim != 0)
