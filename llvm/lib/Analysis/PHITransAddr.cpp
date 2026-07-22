@@ -204,6 +204,7 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
       if (CastInst *CastI = dyn_cast<CastInst>(U))
         if (CastI->getOpcode() == Cast->getOpcode() &&
             CastI->getType() == Cast->getType() &&
+            CastI->getParent()->getParent() == CurBB->getParent() &&
             (!DT || DT->dominates(CastI->getParent(), PredBB)))
           return CastI;
     }
