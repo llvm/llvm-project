@@ -33,7 +33,7 @@ Clang exposes AMDGPU hardware intrinsics as target-specific builtins with the
 
 ## Target-Specific Types
 
-### Named Workgroup barrier Type
+### Named Workgroup Barrier Type
 
 The `__amdgpu_named_workgroup_barrier_t` type is used to represent the GFX12.5 named barriers.
 Example usage:
@@ -48,12 +48,20 @@ void foo(int a)
 }
 ```
 
-When a class has a field of this type, the entire class is considered as a
-"named barrier wrapper". Named barrier wrappers, and any derived types, are subject to the
-following limitations:
+A "named barrier wrapper" is a class that contains exactly one field, which is either
+a single value or an array of values of one of the following types:
 
-* They must be a standard-layout type (see `std:;is_standard_layout`).
-* They have at most one field.
+* `__amdgpu_named_workgroup_barrier_t`.
+* Another "named barrier wrapper".
 
-When a class has a field that is a named barrier wrapper, the same restrictions also
-apply and that class is also considered a named barrier wrapper.
+Named barrier wrappers let users add helper methods around named barrier objects.
+
+In C++, a class that inherits from a named barrier wrapper is also considered a
+named barrier wrapper. Named barrier wrappers must be standard-layout types
+(see `std::is_standard_layout`).
+This means that named barrier wrappers:
+
+* May not have a virtual table: they cannot declare or inherit any virtual
+  functions, or inherit from a virtual base class.
+* May not have any extra fields, either declared by the class or inherited
+  from a base class.
