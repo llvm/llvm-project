@@ -4047,6 +4047,81 @@ checkClausesForDecompositionConflicts(Sema &SemaRef, OpenMPDirectiveKind DKind,
   return HasError;
 }
 
+namespace {
+/// Visitor to collect variables used in a statement.
+class VarUsageVisitor : public RecursiveASTVisitor<VarUsageVisitor> {
+  llvm::SmallPtrSet<const VarDecl *, 8> &UsedVars;
+  llvm::SmallPtrSet<const BindingDecl *, 8> &UsedBindings;
+
+public:
+  VarUsageVisitor(llvm::SmallPtrSet<const VarDecl *, 8> &UsedVars,
+                  llvm::SmallPtrSet<const BindingDecl *, 8> &UsedBindings)
+      : UsedVars(UsedVars), UsedBindings(UsedBindings) {}
+
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+      UsedVars.insert(cast<VarDecl>(VD->getCanonicalDecl()));
+    else if (auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
+      UsedBindings.insert(cast<BindingDecl>(BD->getCanonicalDecl()));
+    return true;
+  }
+};
+} // namespace
+
+/// Check if original variable is explicitly mapped but only bindings are used.
+/// Returns true if an error was found.
+static bool checkOriginalVarMappedButOnlyBindingsUsed(
+    Sema &SemaRef, ArrayRef<OMPClause *> Clauses, Stmt *Body) {
+  llvm::SmallDenseMap<const VarDecl *, SourceLocation, 4> MappedOrigVars;
+
+  for (OMPClause *C : Clauses) {
+    if (auto *MPC = dyn_cast<OMPMapClause>(C)) {
+      for (Expr *VE : MPC->varlist()) {
+        if (auto *DRE = dyn_cast<DeclRefExpr>(VE->IgnoreParenImpCasts())) {
+          if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+            MappedOrigVars[VD->getCanonicalDecl()] = VE->getExprLoc();
+          }
+        }
+      }
+    }
+  }
+  if (MappedOrigVars.empty())
+    return false;
+
+  llvm::SmallPtrSet<const VarDecl *, 8> UsedVars;
+  llvm::SmallPtrSet<const BindingDecl *, 8> UsedBindings;
+  VarUsageVisitor Visitor(UsedVars, UsedBindings);
+  Visitor.TraverseStmt(Body);
+  bool HasError = false;
+  for (const auto &Entry : MappedOrigVars) {
+    const VarDecl *OrigVar = Entry.first;
+    SourceLocation Loc = Entry.second;
+
+    // Check if this original variable has bindings that are used.
+    bool BindingsFromThisVarUsed = false;
+    for (const BindingDecl *BD : UsedBindings) {
+      if (auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl())) {
+        if (auto *OrigFromDD = DD->getOriginalVar().Var) {
+          if (OrigFromDD->getCanonicalDecl() == OrigVar) {
+            BindingsFromThisVarUsed = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // Error if: original is mapped, bindings are used, but original is not
+    // used.
+    if (BindingsFromThisVarUsed && !UsedVars.count(OrigVar)) {
+      SemaRef.Diag(Loc, diag::err_omp_original_var_mapped_bindings_only_used)
+          << OrigVar;
+      HasError = true;
+    }
+  }
+
+  return HasError;
+}
+
 static OpenMPMapClauseKind
 getMapClauseKindFromModifier(OpenMPDefaultmapClauseModifier M,
                              bool IsAggregateOrDeclareTarget,
@@ -11601,6 +11676,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsGenericLoopDirective(
                                             Clauses))
     return StmtError();
 
+   if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
+    return StmtError();
+
   CapturedStmt *CS =
       setBranchProtectedScope(SemaRef, OMPD_target_teams_loop, AStmt);
 
@@ -11664,6 +11742,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetParallelGenericLoopDirective(
 
   if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target_parallel_loop,
                                             Clauses))
+    return StmtError();
+
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
     return StmtError();
 
   // OpenMP 5.1 [2.11.7, loop construct, Restrictions]
@@ -13920,6 +14001,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetDirective(ArrayRef<OMPClause *> Clauses,
   if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target, Clauses))
     return StmtError();
 
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
+    return StmtError();
+
   CapturedStmt *CS = setBranchProtectedScope(SemaRef, OMPD_target, AStmt);
 
   // OpenMP [2.16, Nesting of Regions]
@@ -13979,6 +14063,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetParallelDirective(
                                             Clauses))
     return StmtError();
 
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
+    return StmtError();
+
   setBranchProtectedScope(SemaRef, OMPD_target_parallel, AStmt);
 
   return OMPTargetParallelDirective::Create(
@@ -13997,6 +14084,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetParallelForDirective(
 
   if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target_parallel_for,
                                             Clauses))
+    return StmtError();
+
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
     return StmtError();
 
   CapturedStmt *CS =
@@ -14752,6 +14842,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetParallelForSimdDirective(
           SemaRef, OMPD_target_parallel_for_simd, Clauses))
     return StmtError();
 
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
+    return StmtError();
+
   CapturedStmt *CS =
       setBranchProtectedScope(SemaRef, OMPD_target_parallel_for_simd, AStmt);
 
@@ -14785,6 +14878,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetSimdDirective(
     return StmtError();
 
   if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target_simd, Clauses))
+    return StmtError();
+
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(SemaRef, OMPD_target_simd, AStmt);
@@ -14966,6 +15062,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDirective(
                                             Clauses))
     return StmtError();
 
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
+    return StmtError();
+
   setBranchProtectedScope(SemaRef, OMPD_target_teams, AStmt);
 
   if (validateMultidimClauses(*this, Clauses, /*MayHaveBareClause=*/true))
@@ -14986,6 +15085,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeDirective(
 
   if (checkClausesForDecompositionConflicts(
           SemaRef, OMPD_target_teams_distribute, Clauses))
+    return StmtError();
+
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
     return StmtError();
 
   CapturedStmt *CS =
@@ -15021,6 +15123,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForDirective(
           SemaRef, OMPD_target_teams_distribute_parallel_for, Clauses))
     return StmtError();
 
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
+    return StmtError();
+
   CapturedStmt *CS = setBranchProtectedScope(
       SemaRef, OMPD_target_teams_distribute_parallel_for, AStmt);
 
@@ -15053,6 +15158,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
 
   if (checkClausesForDecompositionConflicts(
           SemaRef, OMPD_target_teams_distribute_parallel_for_simd, Clauses))
+    return StmtError();
+
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
@@ -15090,6 +15198,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeSimdDirective(
 
   if (checkClausesForDecompositionConflicts(
           SemaRef, OMPD_target_teams_distribute_simd, Clauses))
+    return StmtError();
+
+  if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
