@@ -60,6 +60,17 @@ public:
   virtual void AdjustBreakpointAddress(const Symbol &func,
                                        Address &addr) const {}
 
+  /// Return the address of the first executable instruction for the function
+  /// containing \a addr, given an address at or within its start.
+  ///
+  /// Some formats begin a function with bytes that are part of the function but
+  /// are not executable instructions, so an address at the raw function start
+  /// cannot hold a breakpoint and cannot be disassembled. This is specifically
+  /// used for WebAssembly, where a function begins with a local variable
+  /// declaration header.
+  virtual Address GetFirstInstructionAddress(Address addr) const {
+    return addr;
+  }
 
   /// Get \a load_addr as a callable code load address for this target
   ///
