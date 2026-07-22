@@ -1501,7 +1501,7 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       Kind = DestIsFixedBoolean ? CK_IntegralToBoolean : CK_IntegralCast;
       return TC_Success;
     } else if (SrcType->isRealFloatingType())   {
-      //C++26 [expr.static.cast]p8
+      // C++26 [expr.static.cast]p8
       //   A value of floating-point type can also be explicitly converted
       //   to ... the underlying type of the enumeration ([conv.fpint]), and
       //   subsequently to the enumeration type.

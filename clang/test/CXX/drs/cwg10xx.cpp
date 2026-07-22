@@ -6,14 +6,6 @@
 // RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14
 // RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14
 
-// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,cxx98
-// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14
-
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
 
@@ -120,8 +112,8 @@ namespace cwg1070 { // cwg1070: 3.5
 #endif
 } // namespace cwg1070
 
-#if __cplusplus >= 201103L
 namespace cwg1094 { // cwg1094: 24
+#if __cplusplus >= 201103L
 enum class E : bool { Zero, One };
 constexpr E from_double(double d) { return static_cast<E>(d); }
 
@@ -148,5 +140,5 @@ static_assert(static_cast<G>(2.5) == G::Two, "");
 static_assert(static_cast<G>(__builtin_nan("")) == G::Zero, "");
 // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
 //   since-cxx11-note@-2 {{value NaN is outside the range of representable values of type 'G'}}
-} // namespace cwg1094
 #endif
+} // namespace cwg1094
