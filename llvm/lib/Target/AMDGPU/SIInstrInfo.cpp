@@ -10022,7 +10022,10 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     for (int I = 0, E = MI.getNumExplicitOperands(); I != E; ++I) {
       const MachineOperand &Op = MI.getOperand(I);
       const MCOperandInfo &OpInfo = Desc.operands()[I];
-      if (!Op.isReg() && !isInlineConstant(Op, OpInfo)) {
+      // Only source operands can be encoded as a trailing literal; skip
+      // packed immediate fields such as the offset/cpol of MUBUF instructions.
+      if (!Op.isReg() && AMDGPU::isSISrcOperand(OpInfo) &&
+          !isInlineConstant(Op, OpInfo)) {
         HasLiteral = true;
         if (ST.has64BitLiterals()) {
           switch (OpInfo.OperandType) {
