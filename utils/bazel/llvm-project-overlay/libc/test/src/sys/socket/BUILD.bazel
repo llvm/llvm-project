@@ -224,8 +224,10 @@ libc_test(
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
         "//libc:pipe",
+        "//libc:send",
         "//libc:sockatmark",
         "//libc:socketpair",
+        "//libc/test/UnitTest:test_logger",
     ],
 )
 

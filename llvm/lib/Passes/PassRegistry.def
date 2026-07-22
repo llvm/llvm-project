@@ -479,6 +479,7 @@ FUNCTION_PASS("kernel-info", KernelInfoPrinter(TM))
 FUNCTION_PASS("lcssa", LCSSAPass())
 FUNCTION_PASS("libcalls-shrinkwrap", LibCallsShrinkWrapPass())
 FUNCTION_PASS("load-store-vectorizer", LoadStoreVectorizerPass())
+FUNCTION_PASS("logical-sroa", LogicalSROAPass())
 FUNCTION_PASS("loop-data-prefetch", LoopDataPrefetchPass())
 FUNCTION_PASS("loop-distribute", LoopDistributePass())
 FUNCTION_PASS("loop-fusion", LoopFusePass())
@@ -642,7 +643,7 @@ FUNCTION_PASS_WITH_PARAMS(
     parseLoopUnrollOptions,
     "O0;O1;O2;O3;full-unroll-max=N;no-partial;partial;no-peeling;peeling;"
     "no-profile-peeling;profile-peeling;no-runtime;runtime;no-upperbound;"
-    "upperbound")
+    "upperbound;prepare-for-lto")
 FUNCTION_PASS_WITH_PARAMS(
     "loop-vectorize", "LoopVectorizePass",
     [](LoopVectorizeOptions Opts) { return LoopVectorizePass(Opts); },

@@ -40,6 +40,7 @@ Implemented Papers
 
 - P2546R5: Debugging support (`Github <https://llvm.org/PR105392>`__)
 - P2810R4: ``is_debugger_present`` is_replaceable(`Github <https://llvm.org/PR105422>`__)
+- P0493R5: Atomic minimum/maximum (`Github <https://llvm.org/PR105418>`__)
 
 Improvements and New Features
 -----------------------------

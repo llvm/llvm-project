@@ -28,13 +28,7 @@ llvm::ThreadPoolStrategy parallel::strategy;
 
 #if LLVM_ENABLE_THREADS
 
-#ifdef _WIN32
 static thread_local unsigned threadIndex = UINT_MAX;
-
-unsigned parallel::getThreadIndex() { GET_THREAD_INDEX_IMPL; }
-#else
-thread_local unsigned parallel::threadIndex = UINT_MAX;
-#endif
 
 namespace {
 

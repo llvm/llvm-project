@@ -111,9 +111,11 @@ private:
                                   const MachineInstr &UseI, int UseOpIdx) const;
 
 public:
-  GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-               const GCNTargetMachine &TM, bool BufferOOBRelaxed = false,
-               bool TBufferOOBRelaxed = false);
+  GCNSubtarget(
+      const Triple &TT, StringRef GPU, StringRef FS, const GCNTargetMachine &TM,
+      bool BufferOOBRelaxed = false, bool TBufferOOBRelaxed = false,
+      AMDGPU::TargetIDSetting XnackSetting = AMDGPU::TargetIDSetting::Any,
+      AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
   ~GCNSubtarget() override;
 
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
@@ -343,7 +345,9 @@ public:
     return HasUnalignedScratchAccess && HasUnalignedAccessMode;
   }
 
-  bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
+  bool isXNACKEnabled() const {
+    return enableXNACK() || TargetID.isXnackOnOrAny();
+  }
 
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
