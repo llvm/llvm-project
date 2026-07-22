@@ -161,6 +161,8 @@ namespace {
 
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
 
+    void VisitBinComma(BinaryOperator *Node);
+
 #define ABSTRACT_STMT(CLASS)
 #define STMT(CLASS, PARENT) \
     void Visit##CLASS(CLASS *Node);
@@ -1916,6 +1918,12 @@ void StmtPrinter::VisitCompoundLiteralExpr(CompoundLiteralExpr *Node) {
 void StmtPrinter::VisitImplicitCastExpr(ImplicitCastExpr *Node) {
   // No need to print anything, simply forward to the subexpression.
   PrintExpr(Node->getSubExpr());
+}
+
+void StmtPrinter::VisitBinComma(BinaryOperator *Node) {
+  PrintExpr(Node->getLHS());
+  OS << BinaryOperator::getOpcodeStr(Node->getOpcode()) << " ";
+  PrintExpr(Node->getRHS());
 }
 
 void StmtPrinter::VisitBinaryOperator(BinaryOperator *Node) {
