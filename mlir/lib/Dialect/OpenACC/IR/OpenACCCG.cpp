@@ -16,6 +16,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -502,9 +503,14 @@ LogicalResult PrivateLocalOp::verify() {
     return success();
   auto privateTy = cast<PrivateType>(getPrivatized().getType());
   auto memrefTy = dyn_cast<MemRefType>(privateTy.getBaseTy());
-  if (!memrefTy || memrefTy.getRank() != 1 || !memrefTy.hasStaticShape())
+  if (!memrefTy || memrefTy.getRank() != 1)
     return emitOpError(
-        "reduction_operator requires static rank-1 memref private storage");
+        "reduction_operator requires rank-1 memref private storage");
+  if (auto outputMemrefTy = dyn_cast<MemRefType>(getOutput().getType());
+      outputMemrefTy && !memref::CastOp::areCastCompatible(
+                            TypeRange{memrefTy}, TypeRange{outputMemrefTy}))
+    return emitOpError(
+        "reduction_operator requires compatible private and output storage");
   return success();
 }
 
@@ -515,17 +521,17 @@ LogicalResult PrivateLocalOp::verify() {
 LogicalResult ReductionAccumulateArrayOp::verify() {
   if (getParDims().getArray().empty())
     return emitOpError("par_dims must specify at least one parallel dimension");
-  if (getStorageParDims().getArray().empty())
-    return emitOpError(
-        "storage_par_dims must specify at least one parallel dimension");
+  GPUParallelDimsAttr storageParDims = getStorageParDimsAttr();
+  if (!storageParDims)
+    return success();
   bool hasThreadXStorage =
-      llvm::any_of(getStorageParDims().getArray(),
+      llvm::any_of(storageParDims.getArray(),
                    [](GPUParallelDimAttr dim) { return dim.isThreadX(); });
   bool hasThreadYReduction =
       llvm::any_of(getParDims().getArray(),
                    [](GPUParallelDimAttr dim) { return dim.isThreadY(); });
   bool hasThreadYStorage =
-      llvm::any_of(getStorageParDims().getArray(),
+      llvm::any_of(storageParDims.getArray(),
                    [](GPUParallelDimAttr dim) { return dim.isThreadY(); });
   if (hasThreadXStorage && hasThreadYReduction && !hasThreadYStorage)
     return emitOpError(

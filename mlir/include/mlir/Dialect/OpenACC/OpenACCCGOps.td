@@ -206,7 +206,8 @@ def OpenACC_ReductionAccumulateArrayOp
                        OpenACC_DataBoundsType:$bounds,
                        OpenACC_ReductionOperatorAttr:$reductionOperator,
                        OpenACC_GPUParallelDimsAttr:$par_dims,
-                       OpenACC_GPUParallelDimsAttr:$storage_par_dims);
+                       OptionalAttr<OpenACC_GPUParallelDimsAttr>:
+                           $storage_par_dims);
   let assemblyFormat = [{
     $memref `bounds` `(` $bounds `)` $reductionOperator `:` type($memref) attr-dict
   }];

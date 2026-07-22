@@ -661,12 +661,16 @@ static void initPrivateArrayAccum(OpBuilder &b, Location loc, Value storage,
                                   MemRefType baseTy, arith::AtomicRMWKind kind,
                                   bool hasThreadXStorage,
                                   llvm::function_ref<void()> emitRowBarrier) {
-  assert(baseTy.getRank() == 1 && baseTy.hasStaticShape() &&
-         "private array reduction accumulator must be static rank-1");
+  assert(baseTy.getRank() == 1 &&
+         "private array reduction accumulator must be rank-1");
   Value ident = createIdentityValue(b, loc, baseTy.getElementType(), kind,
                                     /*useOnlyFiniteValue=*/true);
   Value lb = arith::ConstantIndexOp::create(b, loc, 0);
-  Value ub = arith::ConstantIndexOp::create(b, loc, baseTy.getShape()[0]);
+  Value ub;
+  if (baseTy.isDynamicDim(0))
+    ub = memref::DimOp::create(b, loc, storage, 0);
+  else
+    ub = arith::ConstantIndexOp::create(b, loc, baseTy.getShape()[0]);
   Value step = arith::ConstantIndexOp::create(b, loc, 1);
   auto emitInitLoop = [&]() {
     auto forOp = scf::ForOp::create(b, loc, lb, ub, step);
@@ -3240,7 +3244,10 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
   bool hasThreadStorage = false;
   bool hasThreadXStorage = false;
   bool hasBlockStorage = false;
-  for (mlir::acc::GPUParallelDimAttr dim : op.getStorageParDims().getArray()) {
+  mlir::acc::GPUParallelDimsAttr storageParDims =
+      op.getStorageParDimsAttr() ? op.getStorageParDimsAttr()
+                                 : op.getParDimsAttr();
+  for (mlir::acc::GPUParallelDimAttr dim : storageParDims.getArray()) {
     hasThreadStorage |= dim.isAnyThread();
     hasThreadXStorage |= dim.isThreadX();
     hasBlockStorage |= dim.isAnyBlock();

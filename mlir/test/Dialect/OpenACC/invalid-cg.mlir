@@ -94,8 +94,7 @@ func.func @reduction_accumulate_array_empty_par_dims(%private: memref<4xi32>, %b
 
 // -----
 
-func.func @reduction_accumulate_array_empty_storage_par_dims(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
-  // expected-error@+1 {{storage_par_dims must specify at least one parallel dimension}}
+func.func @reduction_accumulate_array_unreplicated_storage(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
   acc.reduction_accumulate_array %private bounds(%bounds) <add>
       : memref<4xi32> {par_dims = #acc<par_dims[thread_x]>, storage_par_dims = #acc<par_dims[]>}
   return
@@ -114,10 +113,21 @@ func.func @reduction_accumulate_array_partial_thread_storage(%private: memref<4x
 
 func.func @private_local_invalid_reduction_operator_shape() {
   %private = acc.privatize : () -> !acc.private_type<memref<2x2xi32>>
-  // expected-error@+1 {{reduction_operator requires static rank-1 memref private storage}}
+  // expected-error@+1 {{reduction_operator requires rank-1 memref private storage}}
   %local = acc.private_local %private {
     reduction_operator = #acc.reduction_operator<add>
   } : (!acc.private_type<memref<2x2xi32>>) -> memref<4xi32>
+  return
+}
+
+// -----
+
+func.func @private_local_incompatible_reduction_storage() {
+  %private = acc.privatize : () -> !acc.private_type<memref<4xi32>>
+  // expected-error@+1 {{reduction_operator requires compatible private and output storage}}
+  %local = acc.private_local %private {
+    reduction_operator = #acc.reduction_operator<add>
+  } : (!acc.private_type<memref<4xi32>>) -> memref<4xf32>
   return
 }
 

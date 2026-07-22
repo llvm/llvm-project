@@ -51,6 +51,26 @@ func.func @threadprivate_array_reduction() {
   return
 }
 
+// CHECK-LABEL: func.func @dynamic_threadprivate_array_reduction
+// CHECK:       gpu.launch
+// CHECK:         %[[PRIVATE:.*]] = memref.subview
+// CHECK:         %[[EXTENT:.*]] = memref.dim %[[PRIVATE]]
+// CHECK:         scf.for %[[IV:.*]] = %{{.*}} to %[[EXTENT]] step %{{.*}} {
+// CHECK:           memref.store {{.*}}, %[[PRIVATE]][%[[IV]]]
+
+func.func @dynamic_threadprivate_array_reduction(%n: index) {
+  %priv = acc.privatize(%n) [#acc<par_dims[thread_x]>]
+      : (index) -> !acc.private_type<memref<?xi32>>
+  acc.compute_region ins(%priv_in = %priv) :
+      (!acc.private_type<memref<?xi32>>) {
+    %local = acc.private_local %priv_in
+        {reduction_operator = #acc.reduction_operator<add>}
+        : (!acc.private_type<memref<?xi32>>) -> memref<?xi32>
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
 // CHECK-LABEL: func.func @workerprivate_array_reduction
 // CHECK:       gpu.launch
 // CHECK:         %[[TX:.*]] = gpu.thread_id x
