@@ -5734,7 +5734,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
         continue;
 
       VPValue *StoredValue = nullptr;
-      Type *DataTy = nullptr;
+      Type *DataTy;
       Intrinsic::ID IntrinID;
       if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(&R)) {
         StoredValue = StoreR->getStoredValue();
