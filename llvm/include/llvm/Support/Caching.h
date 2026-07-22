@@ -49,7 +49,7 @@ public:
   }
 
   virtual Error commit(std::unique_ptr<MemoryBuffer> MemBuf) {
-    return Error::success();
+    return commit();
   }
 
   bool Committed = false;
@@ -59,7 +59,6 @@ public:
     if (!Committed)
       report_fatal_error("CachedFileStream was not committed.\n");
   }
-  virtual AddBufferFn GetAddBuffer() { return AddBufferFn(); }
 };
 
 /// This type defines the callback to add a file that is generated on the fly.

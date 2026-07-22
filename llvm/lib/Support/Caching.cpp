@@ -143,7 +143,6 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         AddBuffer(Task, ModuleName, std::move(*MBOrErr));
         return Error::success();
       }
-      virtual AddBufferFn GetAddBuffer() override { return AddBuffer; }
     };
 
     // This class is responsible for renaming/moving existing file into a
