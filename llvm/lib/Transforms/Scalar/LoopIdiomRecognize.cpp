@@ -152,7 +152,7 @@ bool DisableLIRP::HashRecognize;
 static cl::opt<bool, true>
     DisableLIRPHashRecognize("disable-" DEBUG_TYPE "-hashrecognize",
                              cl::desc("Proceed with loop idiom recognize pass, "
-                                      "but do not optimize CRC loops."),
+                                      "but do not do hash-recognize analysis."),
                              cl::location(DisableLIRP::HashRecognize),
                              cl::init(false), cl::ReallyHidden);
 
@@ -168,6 +168,7 @@ static cl::opt<bool> ForceMemsetPatternIntrinsic(
     cl::Hidden);
 
 enum class CRCStrategyKind {
+  Disable,
   Auto,
   Table,
   Clmul,
@@ -176,7 +177,9 @@ static cl::opt<CRCStrategyKind> CRCStrategy(
     DEBUG_TYPE "-crc-strategy",
     cl::desc("Preferred strategy for optimizing CRC loops"),
     cl::init(CRCStrategyKind::Auto), cl::Hidden,
-    cl::values(clEnumValN(CRCStrategyKind::Auto, "auto",
+    cl::values(clEnumValN(CRCStrategyKind::Disable, "disable",
+                          "Do not optimize CRC loops"),
+               clEnumValN(CRCStrategyKind::Auto, "auto",
                           "Use costing to determine strategy"),
                clEnumValN(CRCStrategyKind::Table, "table",
                           "Use a Sarwate table when possible"),
@@ -417,7 +420,7 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   }
 
   // Attempt to optimize a CRC loop if one is detected by HashRecognize.
-  if (!DisableLIRP::HashRecognize)
+  if (!DisableLIRP::HashRecognize && CRCStrategy != CRCStrategyKind::Disable)
     if (auto Res = HashRecognize(*CurLoop, *SE).getResult())
       MadeChange |= optimizeCRCLoop(*Res);
 
