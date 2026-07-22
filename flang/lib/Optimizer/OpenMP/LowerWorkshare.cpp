@@ -18,6 +18,7 @@
 
 #include <flang/Optimizer/Analysis/AliasAnalysis.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
+#include <flang/Optimizer/Builder/MutableBox.h>
 #include <flang/Optimizer/Builder/Runtime/Assign.h>
 #include <flang/Optimizer/Builder/Todo.h>
 #include <flang/Optimizer/Dialect/FIROps.h>
@@ -44,6 +45,7 @@
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 
+#include <functional>
 #include <variant>
 
 namespace flangomp {
@@ -442,6 +444,25 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     // dereference.
     SmallPtrSet<Value, 4> hoistedCopyprivateAllocas;
 
+    // Look through trivial wrappers (fir.declare/hlfir.declare/fir.convert) so
+    // a write to a wrapped value still counts as a write to the hoisted alloca.
+    auto writesHoistedCopyprivateAlloca = [&](Value v) -> bool {
+      while (v) {
+        if (hoistedCopyprivateAllocas.contains(v))
+          return true;
+        Operation *def = v.getDefiningOp();
+        if (auto declare = dyn_cast_or_null<fir::DeclareOp>(def))
+          v = declare.getMemref();
+        else if (auto declare = dyn_cast_or_null<hlfir::DeclareOp>(def))
+          v = declare.getMemref();
+        else if (auto convert = dyn_cast_or_null<fir::ConvertOp>(def))
+          v = convert.getValue();
+        else
+          break;
+      }
+      return false;
+    };
+
     for (Operation &op : llvm::make_range(sr.begin, sr.end)) {
       if (isSafeToParallelize(&op)) {
         singleBuilder.clone(op, singleMapping);
@@ -457,8 +478,11 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
                 llvm::any_of(effects, [&](const auto &eff) {
                   return isa<MemoryEffects::Write>(eff.getEffect()) &&
                          (!eff.getValue() ||
-                          hoistedCopyprivateAllocas.contains(eff.getValue()));
+                          writesHoistedCopyprivateAlloca(eff.getValue()));
                 });
+          } else {
+            // No memory-effects interface: conservatively assume it writes.
+            writesToCopyprivateAlloca = true;
           }
         }
         if (!writesToCopyprivateAlloca &&
@@ -484,16 +508,32 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
         }
       } else if (auto alloca = dyn_cast<fir::AllocaOp>(&op)) {
         if (alloca.isDynamic()) {
-          // Dynamic allocas (e.g. firstprivate arrays with runtime extent
-          // or characters with runtime length) are hoisted so each thread
-          // gets its own allocation, providing true firstprivate semantics.
-          // The data is broadcast via copyprivate using a box that carries
-          // shape/length information. The copyprivate copy function uses
-          // _FortranAAssign to copy the actual data between threads.
+          // Clone the extent/length operands (e.g. fir.box_dims) into the
+          // alloca block first so they are defined before the hoisted alloca
+          // that uses them as its size.
+          IRMapping allocaMapping;
+          std::function<void(Value)> ensureAvailable = [&](Value v) {
+            if (di.properlyDominates(v, &*sr.begin) ||
+                allocaMapping.contains(v))
+              return;
+            if (Operation *def = v.getDefiningOp()) {
+              for (Value opnd : def->getOperands())
+                ensureAvailable(opnd);
+              allocaBuilder.clone(*def, allocaMapping);
+            }
+          };
+          // Hoist dynamic allocas so each thread gets its own allocation
+          // (data broadcast via a copyprivate box using _FortranAAssign).
+          for (Value opnd : alloca->getOperands())
+            ensureAvailable(opnd);
           auto hoisted =
-              cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, singleMapping));
+              cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, allocaMapping));
           rootMapping.map(&*alloca, &*hoisted);
           rootMapping.map(alloca.getResult(), hoisted.getResult());
+          // Users cloned into the single block must also see the hoisted
+          // alloca rather than the (soon to be erased) original.
+          singleMapping.map(&*alloca, &*hoisted);
+          singleMapping.map(alloca.getResult(), hoisted.getResult());
 
           if (isTransitivelyUsedOutside(alloca.getResult(), sr)) {
             // Create a box slot for copyprivate to broadcast the data.
@@ -523,7 +563,24 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
               cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, singleMapping));
           rootMapping.map(&*alloca, &*hoisted);
           rootMapping.map(alloca.getResult(), hoisted.getResult());
-          copyPrivate.push_back(hoisted);
+
+          // Non-dynamic box alloca (e.g. an allocatable): shallow-copying the
+          // descriptor makes threads share storage, so deep-copy the data.
+          Type eleTy = cast<fir::ReferenceType>(alloca.getType()).getEleTy();
+          if (fir::isAllocatableType(eleTy) &&
+              isTransitivelyUsedOutside(alloca.getResult(), sr)) {
+            // Unallocated descriptor so the runtime assignment allocates fresh
+            // per-thread storage.
+            fir::FirOpBuilder firAllocaBuilder(allocaBuilder, m);
+            Value emptyBox = fir::factory::createUnallocatedBox(
+                firAllocaBuilder, loc, eleTy, /*nonDeferredParams=*/{});
+            fir::StoreOp::create(firAllocaBuilder, loc, emptyBox,
+                                 hoisted.getResult());
+            copyPrivate.push_back(hoisted.getResult());
+            boxDataCopyVars.insert(hoisted.getResult());
+          } else {
+            copyPrivate.push_back(hoisted);
+          }
           hoistedCopyprivateAllocas.insert(alloca.getResult());
           allParallelized = false;
         }

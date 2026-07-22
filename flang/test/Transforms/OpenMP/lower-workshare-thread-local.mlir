@@ -561,3 +561,280 @@ func.func @dynamic_alloca_firstprivate_array(%n: index, %src: !fir.ref<!fir.arra
 // CHECK: omp.barrier
 // CHECK: omp.terminator
 // CHECK: return
+
+// -----
+
+// Copyprivate lowering of "!$omp parallel workshare firstprivate" list items.
+// A list item whose per-thread private copy must carry data (allocatable,
+// dynamic-length character) needs a deep copy (the data, via _FortranAAssign),
+// not just a shallow descriptor copy that would make all threads share storage.
+
+// Fortran (allocatable deep copy):
+//   integer, allocatable :: p(:)   ! allocated
+//   !$omp parallel workshare firstprivate(p)
+//     dst = p
+//   !$omp end parallel workshare
+// The private copy is a non-dynamic alloca of a box (!fir.box<!fir.heap<...>>).
+// Each thread's descriptor is initialized to an unallocated box and the data is
+// deep-copied with _FortranAAssign, not shallow-copied as a descriptor.
+
+// CHECK-LABEL:   func.func private @_workshare_copy_data_box_heap_Uxi32(
+// CHECK:           fir.call @_FortranAAssign
+// CHECK:           return
+
+// CHECK-LABEL:   func.func @firstprivate_allocatable_deep_copy(
+// CHECK-SAME:      %[[N:.*]]: index,
+// CHECK-SAME:      %[[DST:.*]]: !fir.ref<!fir.array<?xi32>>)
+func.func @firstprivate_allocatable_deep_copy(%n: index, %dst: !fir.ref<!fir.array<?xi32>>) {
+  omp.parallel {
+    omp.workshare {
+      %p = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "p", pinned}
+      %decl = fir.declare %p {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "p"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+      "test.init"(%decl) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> ()
+      %c1 = arith.constant 1 : index
+      omp.workshare.loop_wrapper {
+        omp.loop_nest (%i) : index = (%c1) to (%n) inclusive step (%c1) {
+          %box = fir.load %decl : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+          %addr = fir.box_addr %box : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+          %shape = fir.shape %n : (index) -> !fir.shape<1>
+          %elem = fir.array_coor %addr(%shape) %i : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+          %val = fir.load %elem : !fir.ref<i32>
+          %dst_elem = fir.array_coor %dst(%shape) %i : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+          fir.store %val to %dst_elem : !fir.ref<i32>
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK:           omp.parallel {
+
+// The private box descriptor is hoisted so each thread gets its own.
+// CHECK:             %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+// CHECK-SAME:        bindc_name = "p"
+// CHECK-SAME:        pinned
+
+// Each thread's descriptor is initialized to an unallocated box so that the
+// deep copy (_FortranAAssign) allocates fresh per-thread storage.
+// CHECK:             %[[NULL:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+// CHECK:             %[[EMPTY:.*]] = fir.embox %[[NULL]]
+// CHECK:             fir.store %[[EMPTY]] to %[[BOX]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+
+// Data is broadcast with the data-copying function, not a shallow descriptor copy.
+// CHECK:             omp.single copyprivate(%[[BOX]] -> @_workshare_copy_data_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
+// CHECK:               fir.declare %[[BOX]]
+// CHECK:               "test.init"
+// CHECK:               omp.terminator
+// CHECK:             }
+
+// -----
+
+// Fortran (dynamic character):
+//   character(len=n) :: c
+//   !$omp parallel workshare firstprivate(c)
+//     ... = c
+//   !$omp end parallel workshare
+// The private copy is a dynamic alloca whose length is a runtime value: it is
+// hoisted and the data is deep-copied via a box slot carrying the length typeparam.
+
+// CHECK-LABEL:   func.func private @_workshare_copy_data_box_c8xU(
+// CHECK:           fir.call @_FortranAAssign
+// CHECK:           return
+
+// CHECK-LABEL:   func.func @firstprivate_dynamic_character(
+func.func @firstprivate_dynamic_character(%len: index, %n: index, %dst: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
+  omp.parallel {
+    omp.workshare {
+      %c = fir.alloca !fir.char<1,?>(%len : index) {bindc_name = "c", pinned}
+      %decl = fir.declare %c typeparams %len {uniq_name = "c"} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.ref<!fir.char<1,?>>
+      "test.init"(%decl) : (!fir.ref<!fir.char<1,?>>) -> ()
+      %c1 = arith.constant 1 : index
+      omp.workshare.loop_wrapper {
+        omp.loop_nest (%i) : index = (%c1) to (%n) inclusive step (%c1) {
+          "test.use"(%decl) : (!fir.ref<!fir.char<1,?>>) -> ()
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK:           omp.parallel {
+
+// The dynamic-length character alloca is hoisted (per-thread allocation).
+// CHECK:             %[[CHAR:.*]] = fir.alloca !fir.char<1,?>(%[[LEN:.*]] : index)
+// CHECK-SAME:        bindc_name = "c"
+// CHECK-SAME:        pinned
+
+// A box slot carrying the length typeparam is used for the copyprivate broadcast.
+// CHECK:             %[[BOX_SLOT:.*]] = fir.alloca !fir.box<!fir.char<1,?>>
+// CHECK:             %[[CBOX:.*]] = fir.embox %[[CHAR]] typeparams %[[LEN]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+// CHECK:             fir.store %[[CBOX]] to %[[BOX_SLOT]] : !fir.ref<!fir.box<!fir.char<1,?>>>
+
+// CHECK:             omp.single copyprivate(%[[BOX_SLOT]] -> @_workshare_copy_data_box_c8xU : !fir.ref<!fir.box<!fir.char<1,?>>>) {
+// CHECK:               fir.declare %[[CHAR]] typeparams %[[LEN]]
+// CHECK:               "test.init"
+// CHECK:               omp.terminator
+// CHECK:             }
+
+// -----
+
+// Fortran (const character):
+//   character(len=8) :: c
+//   c = "abcdefgh"
+//   !$omp parallel workshare firstprivate(c)
+//     ... = c
+//   !$omp end parallel workshare
+// The private copy is a non-dynamic, non-box alloca of a value-typed
+// !fir.char<1,8>, so a simple load/store copy of the whole value is correct.
+
+// CHECK-LABEL:   func.func private @_workshare_copy_c8x8(
+// CHECK:           fir.load
+// CHECK:           fir.store
+// CHECK:           return
+
+// CHECK-LABEL:   func.func @firstprivate_const_character(
+func.func @firstprivate_const_character(%n: index, %dst: !fir.ref<!fir.array<?x!fir.char<1,8>>>) {
+  omp.parallel {
+    omp.workshare {
+      %c8 = arith.constant 8 : index
+      %c = fir.alloca !fir.char<1,8> {bindc_name = "c", pinned}
+      %decl = fir.declare %c typeparams %c8 {uniq_name = "c"} : (!fir.ref<!fir.char<1,8>>, index) -> !fir.ref<!fir.char<1,8>>
+      "test.init"(%decl) : (!fir.ref<!fir.char<1,8>>) -> ()
+      %c1 = arith.constant 1 : index
+      omp.workshare.loop_wrapper {
+        omp.loop_nest (%i) : index = (%c1) to (%n) inclusive step (%c1) {
+          "test.use"(%decl) : (!fir.ref<!fir.char<1,8>>) -> ()
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK:           omp.parallel {
+
+// The constant-length character alloca is hoisted and a shallow value copy is used.
+// CHECK:             %[[CHAR:.*]] = fir.alloca !fir.char<1,8>
+// CHECK-SAME:        bindc_name = "c"
+// CHECK-SAME:        pinned
+// CHECK:             omp.single copyprivate(%[[CHAR]] -> @_workshare_copy_c8x8 : !fir.ref<!fir.char<1,8>>) {
+// CHECK:               fir.declare %[[CHAR]]
+// CHECK:               "test.init"
+// CHECK:               omp.terminator
+// CHECK:             }
+
+// -----
+
+// Fortran (unused allocatable):
+//   integer, allocatable :: p(:)   ! not read inside the region
+//   !$omp parallel workshare firstprivate(p)
+//     a = a + 1
+//   !$omp end parallel workshare
+// The private box is not used outside the omp.single region, so only a shallow
+// descriptor copy is emitted; there is no _FortranAAssign data broadcast.
+
+// CHECK-LABEL:   func.func private @_workshare_copy_box_heap_Uxi32(
+// CHECK:           fir.load
+// CHECK:           fir.store
+// CHECK:           return
+
+// CHECK-LABEL:   func.func @firstprivate_allocatable_unused(
+func.func @firstprivate_allocatable_unused(%n: index) {
+  omp.parallel {
+    omp.workshare {
+      %p = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "p", pinned}
+      %decl = fir.declare %p {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "p"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+      "test.init"(%decl) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> ()
+      %c1 = arith.constant 1 : index
+      omp.workshare.loop_wrapper {
+        omp.loop_nest (%i) : index = (%c1) to (%n) inclusive step (%c1) {
+          "test.noop"() : () -> ()
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK:           omp.parallel {
+// CHECK:             %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+// CHECK-SAME:        bindc_name = "p"
+// CHECK-SAME:        pinned
+// Shallow descriptor copy (no _FortranAAssign) since the value is not used
+// outside the single region.
+// CHECK:             omp.single copyprivate(%[[BOX]] -> @_workshare_copy_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
+// CHECK:               fir.declare %[[BOX]]
+// CHECK:               "test.init"
+// CHECK:               omp.terminator
+// CHECK:             }
+
+// -----
+
+// Fortran (assumed-shape deep copy):
+//   integer :: z(:)   ! assumed-shape
+//   !$omp parallel workshare firstprivate(z)
+//     dst = z + 1
+//   !$omp end parallel workshare
+// The firstprivate copy's extent comes from fir.box_dims of the incoming
+// descriptor, computed inside the region. The dynamic alloca is hoisted ahead
+// of omp.single, so its extent-defining ops must be cloned into the alloca
+// block too; otherwise the alloca's extent operand would not dominate it.
+
+// CHECK-LABEL:   func.func @firstprivate_assumed_shape(
+// CHECK-SAME:      %[[BOX:.*]]: !fir.box<!fir.array<?xi32>>,
+// CHECK-SAME:      %[[DST:.*]]: !fir.ref<!fir.array<?xi32>>)
+func.func @firstprivate_assumed_shape(%arg0: !fir.box<!fir.array<?xi32>>, %dst: !fir.ref<!fir.array<?xi32>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  omp.parallel {
+    omp.workshare {
+      %dims:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+      %z = fir.alloca !fir.array<?xi32>, %dims#1 {bindc_name = "z", pinned}
+      %shape = fir.shape %dims#1 : (index) -> !fir.shape<1>
+      %decl = fir.declare %z(%shape) {uniq_name = "z"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xi32>>
+      "test.init"(%decl, %arg0) : (!fir.ref<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>) -> ()
+      omp.workshare.loop_wrapper {
+        omp.loop_nest (%i) : index = (%c1) to (%dims#1) inclusive step (%c1) {
+          %elem = fir.array_coor %decl(%shape) %i : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+          %val = fir.load %elem : !fir.ref<i32>
+          %dst_elem = fir.array_coor %dst(%shape) %i : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+          fir.store %val to %dst_elem : !fir.ref<i32>
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK:           omp.parallel {
+
+// box_dims (the extent computation) is cloned into the alloca block, right
+// before the dynamic alloca that uses it, so the extent dominates the alloca.
+// CHECK:             %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]]
+// CHECK:             %[[Z:.*]] = fir.alloca !fir.array<?xi32>, %[[DIMS]]#1
+// CHECK-SAME:        bindc_name = "z"
+// CHECK-SAME:        pinned
+// CHECK:             %[[BOX_SLOT:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
+// CHECK:             fir.embox %[[Z]]
+// CHECK:             omp.single copyprivate(%[[BOX_SLOT]] -> @_workshare_copy_data_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>>) {
+// CHECK:               fir.declare %[[Z]]
+// CHECK:               "test.init"
+// CHECK:               omp.terminator
+// CHECK:             }

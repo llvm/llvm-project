@@ -273,8 +273,10 @@ end subroutine
 ! FIR:             %[[COPY_BOX_SLOT:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! FIR:             %[[COPY_HEAP_SLOT:.*]] = fir.alloca !fir.heap<!fir.array<?xi32>>
 
-! Copyprivate with three slots for broadcasting firstprivate data
-! FIR:             omp.single copyprivate(%[[FP_BOX_SLOT]] -> @_workshare_copy_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[COPY_BOX_SLOT]] -> @_workshare_copy_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[COPY_HEAP_SLOT]] -> @_workshare_copy_heap_Uxi32 : !fir.ref<!fir.heap<!fir.array<?xi32>>>) {
+! Copyprivate with three slots for broadcasting firstprivate data. The
+! firstprivate descriptor uses a data-copying function (_FortranAAssign) so
+! each thread gets its own deep copy instead of a shallow descriptor copy.
+! FIR:             omp.single copyprivate(%[[FP_BOX_SLOT]] -> @_workshare_copy_data_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[COPY_BOX_SLOT]] -> @_workshare_copy_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[COPY_HEAP_SLOT]] -> @_workshare_copy_heap_Uxi32 : !fir.ref<!fir.heap<!fir.array<?xi32>>>) {
 
 ! Check original allocation status and allocate firstprivate copy
 ! FIR:               %[[ORIG_BOX0:.*]] = fir.load %[[ORIG_P]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
