@@ -59,6 +59,35 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
+NativeRegisterContextLinux_arm64::RegisterSetType
+NativeRegisterContextLinux_arm64::GetInvalidationMask(
+    const RegisterSetType set) const {
+  switch (set) {
+  case RegisterSetType::FPMR:
+  case RegisterSetType::GPR:
+  case RegisterSetType::GCS:
+  case RegisterSetType::MTE:
+  case RegisterSetType::PAC:
+  case RegisterSetType::POE:
+  case RegisterSetType::TLS:
+    return set;
+  case RegisterSetType::SVE_HEADER:
+  case RegisterSetType::SVE:
+  case RegisterSetType::FPR:
+    return RegisterSetType::SVE_HEADER | RegisterSetType::SVE |
+           // SVE registers overlap FP registers in hardware.
+           RegisterSetType::FPR;
+  case RegisterSetType::ZA_HEADER:
+  case RegisterSetType::ZA:
+  case RegisterSetType::ZT:
+    // In the Linux ptrace ABI, writes that enable ZA or ZT result in
+    // both ZA and ZT being enabled.
+    return RegisterSetType::ZA_HEADER | RegisterSetType::ZA |
+           RegisterSetType::ZT;
+  llvm_unreachable("Unhandled register set");
+  }
+}
+
 // A NativeRegisterContext is constructed per thread, but all threads' registers
 // will contain the same fields. Therefore this mutex prevents each instance
 // competing with the other, and subsequent instances from having to detect the
