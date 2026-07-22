@@ -633,12 +633,15 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
 
       if (!ac.byVal) {
         // byref: CIRGen spills every by-value parameter into a local alloca
-        // with a single store before any other use.  Rewire that alloca to
-        // the incoming pointer and drop the store, mirroring insertSRetStores
-        // for non-trivially-copyable aggregates (e.g. libstdc++ SSO
-        // std::string, where a byte-copy would leave `_M_p` aliasing the
-        // source's `_M_local_buf`).  DCE may have removed a dead spill;
-        // tolerate that by only retyping the block argument.
+        // with a single store before any other use, and CallConvLowering runs
+        // on that CIRGen output before any alloca-promoting/splitting pass, so
+        // the block argument still has exactly that one use here.  Rewire the
+        // alloca to the incoming pointer and drop the store so the body
+        // operates on the caller's storage in place.  A byte-copy would be
+        // wrong for non-trivially-copyable aggregates (e.g. libstdc++ SSO
+        // std::string, where it would leave `_M_p` aliasing the source's
+        // `_M_local_buf`).  DCE may have removed a dead spill; tolerate that by
+        // only retyping the block argument.
         cir::StoreOp paramStore;
         cir::AllocaOp destAlloca;
         if (!blockArg.use_empty()) {
@@ -655,6 +658,7 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
         if (paramStore)
           paramStore->erase();
 
+        // Update the block argument to point to its original type.
         blockArg.setType(ptrTy);
 
         if (destAlloca) {
