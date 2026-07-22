@@ -28,9 +28,7 @@ entry:
   br i1 %take.select, label %select.bb, label %merge
 
 select.bb:
-  %selected = select i1 %choose.g1,
-  i64 ptrtoint (ptr @g1 to i64),
-  i64 ptrtoint (ptr @g2 to i64)
+  %selected = select i1 %choose.g1, i64 ptrtoint (ptr @g1 to i64), i64 ptrtoint (ptr @g2 to i64)
   br label %merge
 
 merge:
