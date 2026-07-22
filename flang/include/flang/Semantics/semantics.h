@@ -287,6 +287,7 @@ public:
 
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
+  bool IsValidScope(parser::CharBlock);
   void UpdateScopeIndex(Scope &, parser::CharBlock);
   void DumpScopeIndex(llvm::raw_ostream &) const;
 

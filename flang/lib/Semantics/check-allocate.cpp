@@ -267,10 +267,13 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
         }
       }
       if (info.gotSource) { // C1594(6) - SOURCE= restrictions when pure
-        const Scope &scope{context.FindScope(at)};
-        if (FindPureProcedureContaining(scope)) {
-          parser::ContextualMessages messages{at, &context.messages()};
-          CheckCopyabilityInPureScope(messages, *expr, scope);
+        parser::CharBlock scopeAt{parser::FindSourceLocation(allocateStmt)};
+        if (!context.AnyFatalError() || context.IsValidScope(scopeAt)) {
+          const Scope &scope{context.FindScope(scopeAt)};
+          if (FindPureProcedureContaining(scope)) {
+            parser::ContextualMessages messages{at, &context.messages()};
+            CheckCopyabilityInPureScope(messages, *expr, scope);
+          }
         }
       }
       auto maybeShape{evaluate::GetShape(context.foldingContext(), *expr)};
