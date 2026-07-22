@@ -14,6 +14,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -447,6 +448,21 @@ public:
   ///     The line number.
   void GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
                               uint32_t &line_no);
+
+  /// Get the line table entry for the function's entry point.
+  ///
+  /// When the entry address is not covered by a line row, this returns the
+  /// first line entry that begins within the function's range instead.
+  ///
+  /// \param[out] line_entry
+  ///     The resulting line entry.
+  ///
+  /// \param[out] index
+  ///     If non-null, set to the index of the line entry in the line table.
+  ///
+  /// \return
+  ///     True if a line entry was found, false otherwise.
+  bool GetStartLineEntry(LineEntry &line_entry, uint32_t *index = nullptr);
 
   using SourceRange = Range<uint32_t, uint32_t>;
   /// Find the file and line number range of the function.
