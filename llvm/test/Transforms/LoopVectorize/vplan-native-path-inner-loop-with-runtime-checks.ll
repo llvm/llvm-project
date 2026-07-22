@@ -20,11 +20,12 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[SMAX6:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP6]], i64 1000)
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[SMAX6]], 4
 ; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
-; CHECK-NEXT:    [[SMAX8:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP6]], i64 1000)
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[SMAX8]], [[TMP0]]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP0]], 1
+; CHECK-NEXT:    [[SMAX8:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP13]], i64 1000)
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[SMAX8]], [[TMP0]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP8]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
@@ -61,12 +62,12 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP20]], i64 0
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP20]], i64 1
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i64> [[TMP20]], i64 2
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP20]], i64 3
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP20]], i64 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i64> [[TMP20]], i64 2
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP20]], i64 3
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP27]]
 ; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP31]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP26]], align 8, !alias.scope [[META3]]
@@ -74,12 +75,12 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP28]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = or disjoint <4 x i64> [[TMP20]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i64> [[TMP29]], i64 0
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP29]], i64 1
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i64> [[TMP29]], i64 2
-; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i64> [[TMP29]], i64 3
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP30]]
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP29]], i64 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP32]]
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i64> [[TMP29]], i64 2
 ; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP34]]
+; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i64> [[TMP29]], i64 3
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP36]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP41]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP35]], align 8, !alias.scope [[META3]]

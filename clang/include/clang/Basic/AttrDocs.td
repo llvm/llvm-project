@@ -4701,10 +4701,13 @@ have their lifetimes extended.
 
 def LifetimeCaptureByDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "lifetime_capture_by, lifetime_capture_by_this, lifetime_capture_by_global, lifetime_capture_by_unknown";
   let Content = [{
-Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a
-function parameter or implicit object parameter indicates that the capturing
-entity ``X`` may refer to the object referred by that parameter.
+Similar to `lifetimebound`_, the ``lifetime_capture_by`` attribute family on a
+function parameter or implicit object parameter indicates that a capturing
+entity may refer to the object referred to by that parameter. The capturing
+entity can be named in ``lifetime_capture_by(X)`` or selected by one of the
+standalone special forms listed below.
 
 Below is a list of types of the parameters and what they're considered to refer to:
 
@@ -4736,7 +4739,7 @@ temporary object.
     addToSet(local, s); // Ok.
   }
 
-The capturing entity ``X`` can be one of the following:
+The capturing entity can be one of the following:
 
 - Another (named) function parameter.
 
@@ -4746,28 +4749,30 @@ The capturing entity ``X`` can be one of the following:
       s.insert(a);
     }
 
-- ``this`` (in case of member functions).
+- ``this`` (in case of member functions), written as
+  ``lifetime_capture_by_this``.
 
   .. code-block:: c++
 
     class S {
-      void addToSet(std::string_view a [[clang::lifetime_capture_by(this)]]) {
+      void addToSet(std::string_view a [[clang::lifetime_capture_by_this]]) {
         s.insert(a);
       }
       std::set<std::string_view> s;
     };
 
-  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
+  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by_this]]` is just an alias of `[[clang::lifetimebound]]`.
 
-- `global`, `unknown`.
+- ``global`` and ``unknown``, written as ``lifetime_capture_by_global`` and
+  ``lifetime_capture_by_unknown`` respectively.
 
   .. code-block:: c++
 
     std::set<std::string_view> s;
-    void addToSet(std::string_view a [[clang::lifetime_capture_by(global)]]) {
+    void addToSet(std::string_view a [[clang::lifetime_capture_by_global]]) {
       s.insert(a);
     }
-    void addSomewhere(std::string_view a [[clang::lifetime_capture_by(unknown)]]);
+    void addSomewhere(std::string_view a [[clang::lifetime_capture_by_unknown]]);
 
 The attribute can be applied to the implicit ``this`` parameter of a member
 function by writing the attribute after the function type:
@@ -4780,7 +4785,7 @@ function by writing the attribute after the function type:
     }
   };
 
-The attribute supports specifying more than one capturing entities:
+The parameter-list form supports specifying more than one capturing entity:
 
 .. code-block:: c++
 
@@ -4790,6 +4795,13 @@ The attribute supports specifying more than one capturing entities:
     s1.insert(a);
     s2.insert(a);
   }
+
+Distinct ``lifetime_capture_by`` forms can also be combined on the same
+declaration, but each form can appear at most once. For example,
+``[[clang::lifetime_capture_by(s), clang::lifetime_capture_by_this]]`` is
+allowed, but two ``[[clang::lifetime_capture_by(...)]]`` attributes or two
+``[[clang::lifetime_capture_by_this]]`` attributes on the same declaration are
+rejected.
 
 Limitation: The capturing entity ``X`` is not used by the analysis and is
 used for documentation purposes only. This is because the analysis is
@@ -5214,6 +5226,8 @@ As ``global_device`` and ``global_host`` are a subset of
 ``global_device`` and ``global_host`` address spaces to
 ``__global/opencl_global`` address spaces (following ISO/IEC TR 18037 5.1.3
 "Address space nesting and rules for pointers").
+
+These attributes are deprecated and may be removed in a future version of Clang.
   }];
 }
 
@@ -7646,7 +7660,7 @@ already being compiled with GNU inline semantics as the implied default. It is
 unspecified which macro is defined in a C++ compilation.
 
 GNU inline semantics are the default behavior with ``-std=gnu89``,
-``-std=c89``, ``-std=c94``, or ``-fgnu89-inline``.
+``-std=c89``, ``-fgnu89-inline``, or ``-std=iso9899:199409``.
   }];
 }
 
@@ -9172,6 +9186,33 @@ point."
 }];
 }
 
+def AnnotateDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `annotate` attribute is used to add annotations to declarations or statements,
+typically for use by static analysis tools that are not integrated into the
+core Clang compiler (e.g., Clang-Tidy checks or out-of-tree Clang-based tools).
+It is a counterpart to the `annotate_type` attribute, which serves the same
+purpose, but for types.
+
+The attribute takes a mandatory string literal argument specifying the
+annotation category and an arbitrary number of optional arguments that provide
+additional information specific to the annotation category. The optional
+arguments must be constant expressions of arbitrary type.
+
+For example:
+
+.. code-block:: c++
+
+  [[clang::annotate("category1", "foo", 1)]] void func(int val [[clang::annotate("category2")]]) {
+    [[clang::annotate("category3")]] if (val) {
+
+    }
+  }
+
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -9766,9 +9807,10 @@ Heap Allocation Elision more aggressively.
 When a coroutine function returns such a type, a direct call expression therein
 that returns a prvalue of a type attributed ``[[clang::coro_await_elidable]]``
 is said to be under a safe elide context if one of the following is true:
+
 - it is the immediate right-hand side operand to a co_await expression.
 - it is an argument to a ``[[clang::coro_await_elidable_argument]]`` parameter
-or parameter pack of another direct call expression under a safe elide context.
+  or parameter pack of another direct call expression under a safe elide context.
 
 Do note that the safe elide context applies only to the call expression itself,
 and the context does not transitively include any of its subexpressions unless
@@ -10173,7 +10215,7 @@ call. The attribute accepts two optional arguments: the first argument is the
 position of the expected sentinel value, starting from the last parameter. The
 second argument describes whether the last fixed parameter is treated as a
 valid sentinel value when set to '1'.
-All arguments described above defaults to '0' when elided.
+All arguments described above default to '0' when elided.
 The attribute is also supported with blocks and in Objective-C.
 
 .. code-block:: c
@@ -10187,7 +10229,7 @@ The attribute is also supported with blocks and in Objective-C.
     foo("Another", "example", NULL);
     foo("Missing", "sentinel"); // Not OK
 
-    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last positon
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last position
     bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
     bar(1, 2, 3, 4, NULL);      // Not OK
 

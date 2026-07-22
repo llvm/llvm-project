@@ -10,7 +10,6 @@
 
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "llvm/Frontend/OpenMP/ConstructDecompositionT.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/Compiler.h"
 

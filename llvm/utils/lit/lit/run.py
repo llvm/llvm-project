@@ -3,8 +3,7 @@ import os
 import platform
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from concurrent.futures import TimeoutError as FuturesTimeoutError
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from concurrent.futures.process import BrokenProcessPool
 import concurrent.futures.process
 
@@ -16,6 +15,18 @@ import lit.worker
 # This is defined in the multiprocessing module implementation.
 # See: https://github.com/python/cpython/blob/6bc65c30ff1fd0b581a2c93416496fc720bc442c/Lib/concurrent/futures/process.py#L669-L672
 WINDOWS_MAX_WORKERS_PER_POOL = 60
+
+# Cap on outstanding futures, as a multiple of the worker count. Submitting
+# every test up front deadlocks Python <= 3.11.5: each submit() writes one
+# byte to executor's wakeup pipe while holding its shutdown lock, and the
+# executor manager thread needs that same lock to drain the pipe. Once 1<<14
+# undrained writes accumulate, submit() blocks holding the lock the manager
+# needs (https://github.com/python/cpython/issues/105829). Bounding the
+# outstanding futures bounds the undrained writes, so the pipe can never fill.
+# The window must exceed workers + call-queue fetch (workers + 1) to keep
+# every worker busy.
+# TODO: Drop this workaround once lit's minimum Python version is >= 3.12
+SUBMISSION_WINDOW_PER_WORKER = 4
 
 
 def _ceilDiv(a, b):
@@ -114,6 +125,9 @@ class Run:
                         lit.util.killProcessAndChildren(pid)
                     else:
                         proc.kill()
+            for ex in executors:
+                for proc in list((ex._processes or {}).values()):
+                    proc.join()  # reap: SIGKILL already delivered
             # TODO: Python>=3.14 adds ex.kill_workers(), which stops the workers cleanly
             # without corrupting the queues. However kill_workers() won't reap the
             # llc / FileCheck grandchildren the workers spawned.
@@ -163,32 +177,105 @@ class Run:
         ]
 
         future_to_test = {}
-        for i, test in enumerate(self.tests):
-            ex = executors[i % len(executors)]
-            future_to_test[ex.submit(lit.worker.execute, test)] = test
 
         try:
-            self._wait_for(future_to_test, deadline)
+            self._dispatch_and_wait(executors, future_to_test, deadline)
         except BaseException:
             self._abort_executors(executors, future_to_test)
             raise
         else:
             for ex in executors:
+                # On macOS, Queue.join_thread() inside shutdown(wait=True)
+                # deadlocks: join_executor_internals() calls it before
+                # p.join(), but macOS requires the inverse order.
+                # cancel_join_thread() makes join_thread() a no-op;
+                # the feeder still delivers sentinels before the write end
+                # closes.
+                if hasattr(ex, "_call_queue") and ex._call_queue is not None:
+                    ex._call_queue.cancel_join_thread()
                 ex.shutdown(wait=True)
 
-    def _wait_for(self, future_to_test, deadline):
+    def _dispatch_and_wait(self, executors, future_to_test, deadline):
+        """Submits tests to executors and collects results as they complete.
+
+        Bounds the number of futures outstanding at any time to at most
+        window (see SUBMISSION_WINDOW_PER_WORKER), submitting exactly one
+        new test for each one that completes. Submitting every test up
+        front floods the executor's wakeup pipe and can deadlock submit()
+        against the executor's manager thread on Python <= 3.11.5
+        (https://github.com/python/cpython/issues/105829)
+
+        Mutates future_to_test in place: adds an entry for every test
+        submitted, and removes it once that test's result has been
+        collected. On return, or if this call raises, future_to_test
+        holds exactly the futures that have not yet been collected, which
+        the caller's abort path relies on.
+
+        Args:
+            executors: The ProcessPoolExecutor pool(s) tests are dispatched to.
+            future_to_test: A dict mapping each in-flight Future to its
+              corresponding Test. Populated and drained by this call.
+            deadline: The absolute time (as returned by time.time()) after
+              which the call raises TimeoutError.
+
+        Raises:
+            TimeoutError: deadline passed with the tests still outstanding.
+            MaxFailuresError: The number of failed tests reached self.max_failures.
+            WorkerCrashError: A worker process died unexpectedly (e.g.
+              segfault, OOM-kill) instead of returning a result.
+        """
         try:
-            for future in as_completed(future_to_test, timeout=deadline - time.time()):
-                remote_test = future.result()
-                local_test = future_to_test[future]
-                self._update_test(local_test, remote_test)
-                self.progress_callback(remote_test)
-                if remote_test.isFailure():
-                    self.failures += 1
-                    if self.failures == self.max_failures:
-                        raise MaxFailuresError()
-        except FuturesTimeoutError:
-            raise TimeoutError()
+            window = int(
+                os.getenv(
+                    "LIT_SUBMISSION_WINDOW",
+                    SUBMISSION_WINDOW_PER_WORKER * self.workers,
+                )
+            ) or len(self.tests)
+            tests_iter = enumerate(self.tests)
+            pending = set()
+            future_to_index = {}
+
+            def submit_next():
+                """Submits the next not-yet-submitted test, if any.
+
+                Returns:
+                    True if a test was submitted, False if none remained.
+                """
+                for i, test in tests_iter:
+                    ex = executors[i % len(executors)]
+                    future = ex.submit(lit.worker.execute, test)
+                    future_to_test[future] = test
+                    future_to_index[future] = i
+                    pending.add(future)
+                    return True
+                return False
+
+            while len(pending) < window and submit_next():
+                pass
+
+            while pending:
+                done, pending = wait(
+                    pending,
+                    timeout=deadline - time.time(),
+                    return_when=FIRST_COMPLETED,
+                )
+                if not done:
+                    raise TimeoutError()
+                for future in sorted(done, key=lambda f: future_to_index[f]):
+                    del future_to_index[future]
+                    remote_test = future.result()
+                    local_test = future_to_test.pop(future)
+                    self._update_test(local_test, remote_test)
+                    self.progress_callback(remote_test)
+                    if remote_test.isFailure():
+                        self.failures += 1
+                        # max_failures is None or a positive int, never 0
+                        # (cl_arguments.py's _positive_int enforces i > 0),
+                        # so this equality check can't misfire on failures=0.
+                        if self.failures == self.max_failures:
+                            raise MaxFailuresError()
+                    submit_next()
+
         except BrokenProcessPool as e:
             raise WorkerCrashError(str(e))
 

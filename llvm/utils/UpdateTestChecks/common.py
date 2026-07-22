@@ -40,6 +40,7 @@ SUPPORTED_ANALYSES = {
     "Dependence Analysis",
     "Delinearization",
     "Loop Access Analysis",
+    "Loop Cache Analysis",
     "Scalar Evolution Analysis",
     "Scalar Evolution Division",
 }

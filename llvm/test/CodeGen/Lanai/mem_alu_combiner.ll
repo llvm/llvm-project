@@ -1,5 +1,8 @@
 ; RUN: llc < %s -mtriple=lanai | FileCheck %s
+; RUN: llc -enable-new-pm < %s -mtriple=lanai | FileCheck %s
 ; RUN: llc < %s -mtriple=lanai -disable-lanai-mem-alu-combiner | \
+; RUN:   FileCheck %s -check-prefix=CHECK-DIS
+; RUN: llc < %s -enable-new-pm -mtriple=lanai -disable-lanai-mem-alu-combiner | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-DIS
 
 ; CHECK-LABEL: sum,

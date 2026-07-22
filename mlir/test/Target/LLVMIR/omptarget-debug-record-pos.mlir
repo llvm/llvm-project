@@ -25,7 +25,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr loc(#loc2)
     llvm.intr.dbg.declare #var1 = %2 : !llvm.ptr loc(#loc2)
     %4 = omp.map.info var_ptr(%2 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "x"} loc(#loc2)
-    omp.target map_entries(%4 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%4 -> %arg0 : !llvm.ptr) {
       %5 = llvm.mlir.constant(1.000000e+00 : f32) : f32 loc(#loc3)
       llvm.intr.dbg.declare #var2 = %arg0 : !llvm.ptr loc(#loc3)
       %6 = llvm.load %arg0 : !llvm.ptr -> f32 loc(#loc3)

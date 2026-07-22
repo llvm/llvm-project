@@ -1717,6 +1717,9 @@ def Vector_LoadOp : Vector_Op<"load", [
     %result = vector.load %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     Representation-wise, the 'vector.load' operation permits out-of-bounds
     reads. Support and implementation of out-of-bounds vector loads is
     target-specific. No assumptions should be made on the value of elements
@@ -1835,6 +1838,9 @@ def Vector_StoreOp : Vector_Op<"store", [
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     Representation-wise, the 'vector.store' operation permits out-of-bounds
     writes. Support and implementation of out-of-bounds vector stores are
     target-specific. No assumptions should be made on the memory written out of
@@ -1940,6 +1946,9 @@ def Vector_MaskedLoadOp :
        : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -2035,6 +2044,9 @@ def Vector_MaskedStoreOp :
       : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
     ```
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -2129,6 +2141,9 @@ def Vector_GatherOp :
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a gather.
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     gather operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -2221,6 +2236,9 @@ def Vector_ScatterOp
     hardware ISA support for a scatter. The semantics of the operation closely
     correspond to those of the `llvm.masked.scatter`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
+
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     scatter operation. It must be a positive power of 2. The operation must access
@@ -2478,6 +2496,9 @@ def Vector_ShapeCastOp :
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
+    // Return true if this Op is effectively a vector.broadcast (i.e. the input
+    // and output shapes satisfy the vector.broadcast constraints).
+    bool isBroadcastLike();
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
   let hasFolder = 1;
@@ -3019,6 +3040,10 @@ def Vector_ScanOp :
 // VectorStepOp
 //===----------------------------------------------------------------------===//
 
+def VectorStepElementType : Type<
+  CPred<"::llvm::isa<::mlir::IndexType>($_self) || ($_self.isSignlessInteger() && $_self.getIntOrFloatBitWidth() >= 8)">,
+  "index or signless integer of at least 8 bits">;
+
 def Vector_StepOp : Vector_Op<"step", [
     Pure,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
@@ -3026,20 +3051,25 @@ def Vector_StepOp : Vector_Op<"step", [
   ]> {
   let summary = "A linear sequence of values from 0 to N";
   let description = [{
-    A `step` operation produces an index vector, i.e. a 1-D vector of values of
-    index type that represents a linear sequence from 0 to N-1, where N is the
-    number of elements in the `result` vector.
+    A `step` operation produces a 1-D vector representing a linear sequence from
+    0 to N-1, where N is the number of elements in the `result` vector.
+
+    The result element type must be `index` or a signless integer of at least 8
+    bits. If the sequence value exceeds the allowed limit for the element type
+    then the result for that lane is truncated.
 
     Supports fixed-width and scalable vectors.
 
     Examples:
 
     ```mlir
-    %0 = vector.step : vector<4xindex> ; [0, 1, 2, 3]
-    %1 = vector.step : vector<[4]xindex> ; [0, 1, .., <vscale * 4 - 1>]
+    %0 = vector.step : vector<4xindex>   // [0, 1, 2, 3]
+    %1 = vector.step : vector<4xi32>     // [0, 1, 2, 3]
+    %2 = vector.step : vector<258xi8>    // [0, 1, .., 255, 0, 1]
+    %3 = vector.step : vector<[4]xindex> // [0, 1, .., <vscale * 4 - 1>]
     ```
   }];
-  let results = (outs VectorOfRankAndType<[1], [Index]>:$result);
+  let results = (outs VectorOfRankAndType<[1], [VectorStepElementType]>:$result);
   let assemblyFormat = "attr-dict `:` type($result)";
   let hasCanonicalizer = 1;
 }

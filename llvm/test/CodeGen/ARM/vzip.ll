@@ -22,9 +22,9 @@ define <16 x i8> @vzipi8_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vzipi8_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d17, [r0]
-; CHECK-NEXT:    vzip.8 d17, d16
-; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vzip.8 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %A
@@ -54,9 +54,9 @@ define <8 x i16> @vzipi16_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vzipi16_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d17, [r0]
-; CHECK-NEXT:    vzip.16 d17, d16
-; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vzip.16 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i16>, ptr %A
@@ -222,9 +222,9 @@ define <16 x i8> @vzipi8_undef_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vzipi8_undef_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d17, [r0]
-; CHECK-NEXT:    vzip.8 d17, d16
-; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vzip.8 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %A

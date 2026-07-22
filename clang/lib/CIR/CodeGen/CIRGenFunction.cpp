@@ -604,47 +604,41 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   }
 }
 
-void CIRGenFunction::resolveBlockAddresses() {
-  for (cir::BlockAddressOp &blockAddress : cgm.unresolvedBlockAddressToLabel) {
-    cir::LabelOp labelOp =
-        cgm.lookupBlockAddressInfo(blockAddress.getBlockAddrInfo());
-    assert(labelOp && "expected cir.labelOp to already be emitted");
-    cgm.updateResolvedBlockAddress(blockAddress, labelOp);
-  }
-  cgm.unresolvedBlockAddressToLabel.clear();
-}
-
 void CIRGenFunction::finishIndirectBranch() {
+  // The block is created on the first `goto *expr`, so if it is absent the
+  // function has no indirect goto and nothing needs wiring -- a label whose
+  // address is merely taken still emits its address constant on its own.
   if (!indirectGotoBlock)
     return;
-  llvm::SmallVector<mlir::Block *> succesors;
+
+  // Every label is emitted by now, so each address-taken label resolves to its
+  // LabelOp.  A label may be named more than once (a dispatch table can list it
+  // twice), but a block only needs to appear once in the successor list, so
+  // duplicates are dropped.
+  llvm::SmallVector<mlir::Block *> successors;
   llvm::SmallVector<mlir::ValueRange> rangeOperands;
+  llvm::SmallPtrSet<mlir::Block *, 8> seen;
+  for (cir::BlockAddrInfoAttr info : indirectGotoTargets) {
+    cir::LabelOp labelOp = cgm.lookupBlockAddressInfo(info);
+    assert(labelOp && "expected cir.label to be emitted for block address");
+    mlir::Block *dest = labelOp->getBlock();
+    if (!seen.insert(dest).second)
+      continue;
+    successors.push_back(dest);
+    rangeOperands.push_back(dest->getArguments());
+  }
+
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(indirectGotoBlock);
-  for (auto &[blockAdd, labelOp] : cgm.blockAddressToLabel) {
-    succesors.push_back(labelOp->getBlock());
-    rangeOperands.push_back(labelOp->getBlock()->getArguments());
-  }
   cir::IndirectBrOp::create(builder, builder.getUnknownLoc(),
                             indirectGotoBlock->getArgument(0), false,
-                            rangeOperands, succesors);
-  cgm.blockAddressToLabel.clear();
+                            rangeOperands, successors);
+  indirectGotoTargets.clear();
 }
 
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {
-  // Resolve block address-to-label mappings, then emit the indirect branch
-  // with the corresponding targets.
-  resolveBlockAddresses();
+  // Emit the indirect branch with all resolved label destinations.
   finishIndirectBranch();
-
-  // If a label address was taken but no indirect goto was used, we can't remove
-  // the block argument here. Instead, we mark the 'indirectbr' op
-  // as poison so that the cleanup can be deferred to lowering, since the
-  // verifier doesn't allow the 'indirectbr' target address to be null.
-  if (indirectGotoBlock && indirectGotoBlock->hasNoPredecessors()) {
-    auto indrBr = cast<cir::IndirectBrOp>(indirectGotoBlock->front());
-    indrBr.setPoison(true);
-  }
 
   // Pop any cleanups that might have been associated with the
   // parameters.  Do this in whatever block we're currently in; it's
@@ -819,7 +813,7 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
           ctorType == Ctor_Complete) &&
          "can only generate complete ctor for this ABI");
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), ctor);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), ctor);
 
   if (ctorType == Ctor_Complete && isConstructorDelegationValid(ctor) &&
       cgm.getTarget().getCXXABI().hasConstructorVariants()) {
@@ -876,7 +870,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(curGD.getDecl());
   CXXDtorType dtorType = curGD.getDtorType();
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), dtor);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), dtor);
 
   // For an abstract class, non-base destructors are never used (and can't
   // be emitted in general, because vbase dtors may not have been validated
@@ -1385,7 +1379,15 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // TODO: there are other patterns besides zero that we can usefully memset,
   // like -1, which happens to be the pattern used by member-pointers.
   if (!cgm.getTypes().isZeroInitializable(ty)) {
-    cgm.errorNYI(loc, "type is not zero initializable");
+    // Only the pointer-to-data-member case is tested here; emitNullConstant
+    // owns the NYIs for shapes it cannot build (virtual bases, non-zero-init
+    // arrays).
+    assert((ty->isMemberDataPointerType() || ty->isRecordType()) &&
+           "emitNullInitialization: only pointer-to-data-member (directly or "
+           "within a record) null initialization is implemented");
+    mlir::Value nullVal = cgm.emitNullConstant(ty, loc);
+    builder.createStore(loc, nullVal, destPtr);
+    return;
   }
 
   // In LLVM Codegen: otherwise, just memset the whole thing to zero using

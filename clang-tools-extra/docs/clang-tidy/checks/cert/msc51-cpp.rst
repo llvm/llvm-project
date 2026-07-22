@@ -10,4 +10,4 @@ for more information.
 
 This check corresponds to the CERT C++ Coding Standard rule
 `MSC51-CPP. Ensure your random number generator is properly seeded
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC51-CPP.+Ensure+your+random+number+generator+is+properly+seeded>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/miscellaneous-msc/msc51-cpp/>`_.

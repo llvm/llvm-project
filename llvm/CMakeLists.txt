@@ -1,5 +1,12 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 include(CMakeDependentOption)
 
@@ -239,12 +246,12 @@ endif()
 option(LIBC_GPU_BUILD "Enable the 'libc' project targeting the GPU" OFF)
 if(LIBC_GPU_BUILD)
   if(LLVM_RUNTIME_TARGETS)
-    list(APPEND LLVM_RUNTIME_TARGETS "nvptx64-nvidia-cuda" "amdgcn-amd-amdhsa")
+    list(APPEND LLVM_RUNTIME_TARGETS "nvptx64-nvidia-cuda" "amdgpu-amd-amdhsa")
   else()
-    set(LLVM_RUNTIME_TARGETS "default;nvptx64-nvidia-cuda;amdgcn-amd-amdhsa")
+    set(LLVM_RUNTIME_TARGETS "default;nvptx64-nvidia-cuda;amdgpu-amd-amdhsa")
   endif()
   list(APPEND RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES "libc")
-  list(APPEND RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "libc")
+  list(APPEND RUNTIMES_amdgpu-amd-amdhsa_LLVM_ENABLE_RUNTIMES "libc")
 endif()
 
 # Set up Arm64X build of the OpenMP runtime
@@ -265,12 +272,12 @@ endif()
 
 foreach(_name ${LLVM_RUNTIME_TARGETS})
   if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-    if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda" OR "${_name}" STREQUAL "spirv64-intel-unknown")
+    if("${_name}" STREQUAL "amdgpu-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda" OR "${_name}" STREQUAL "spirv64-intel-unknown")
       set(LLVM_LIBC_GPU_BUILD ON)
     endif()
   endif()
 endforeach()
-if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
+if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgpu-amd-amdhsa" OR
    "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda" OR
    "${LIBC_TARGET_TRIPLE}" STREQUAL "spirv64-intel-unknown")
   set(LLVM_LIBC_GPU_BUILD ON)
@@ -1070,7 +1077,7 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
 set(LLVM_SPROFDATA_FILE "" CACHE FILEPATH
   "Sampling profiling data file to use when compiling in order to improve runtime performance.")
 
-if(LLVM_INCLUDE_TESTS)
+if(LLVM_INCLUDE_TESTS OR LLVM_ENABLE_SPHINX)
   # All LLVM Python files should be compatible down to this minimum version.
   set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
 else()
