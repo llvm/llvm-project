@@ -2012,7 +2012,6 @@ void CIRFlattenCFGPass::runOnOperation() {
 
   mlir::PatternRewriter rewriter(&getContext());
 
-
   bool changed;
   do {
     changed = false;
