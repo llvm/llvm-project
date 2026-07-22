@@ -3526,7 +3526,8 @@ Error OpenMPIRBuilder::emitReductionListCopy(
 Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
     const LocationDescription &Loc, ArrayRef<ReductionInfo> ReductionInfos,
     AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
-  InsertPointTy SavedIP = Builder.saveIP();
+  // Restores the insertion point and the debug location on the way out.
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(), {Builder.getPtrTy(), Builder.getInt32Ty()},
@@ -3540,6 +3541,9 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   WcFunc->addParamAttr(1, Attribute::NoUndef);
   BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", WcFunc);
   Builder.SetInsertPoint(EntryBB);
+  // The helper has no debug info of its own; a location left over from the
+  // caller would be scoped to the caller's subprogram.
+  Builder.SetCurrentDebugLocation(DebugLoc());
 
   // ReduceList: thread local Reduce list.
   // At the stage of the computation when this function is called, partially
@@ -3646,7 +3650,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
 
       // kmpc_barrier.
       InsertPointOrErrorTy BarrierIP1 =
-          createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
+          createBarrier(LocationDescription(Builder.saveIP(), DebugLoc()),
                         omp::Directive::OMPD_unknown,
                         /* ForceSimpleCall */ false,
                         /* CheckCancelFlag */ true);
@@ -3705,7 +3709,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
       // endif
       emitBlock(MergeBB, Builder.GetInsertBlock()->getParent());
       InsertPointOrErrorTy BarrierIP2 =
-          createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
+          createBarrier(LocationDescription(Builder.saveIP(), DebugLoc()),
                         omp::Directive::OMPD_unknown,
                         /* ForceSimpleCall */ false,
                         /* CheckCancelFlag */ true);
@@ -3778,7 +3782,6 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   }
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(SavedIP);
 
   return WcFunc;
 }
@@ -3786,6 +3789,8 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
 Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
+  // Restores the insertion point and the debug location on the way out.
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy =
       FunctionType::get(Builder.getVoidTy(),
@@ -3806,6 +3811,9 @@ Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
   SarFunc->addParamAttr(3, Attribute::SExt);
   BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", SarFunc);
   Builder.SetInsertPoint(EntryBB);
+  // The helper has no debug info of its own; a location left over from the
+  // caller would be scoped to the caller's subprogram.
+  Builder.SetCurrentDebugLocation(DebugLoc());
 
   // Thread local Reduce list used to host the values of data to be reduced.
   Argument *ReduceListArg = SarFunc->getArg(0);
