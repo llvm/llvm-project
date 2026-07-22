@@ -65,11 +65,14 @@ public:
     LIBC_INLINE void sanitize() const {
       FreeList::Node::sanitize();
       if (lower)
-        LIBC_SANITIZATION_CHECK(lower->parent == this);
+        LIBC_HEAP_INTEGRITY_CHECK(lower->parent == this,
+                                  "FreeTrie lower child corruption detected");
       if (upper)
-        LIBC_SANITIZATION_CHECK(upper->parent == this);
+        LIBC_HEAP_INTEGRITY_CHECK(upper->parent == this,
+                                  "FreeTrie upper child corruption detected");
       if (parent)
-        LIBC_SANITIZATION_CHECK(parent->lower == this || parent->upper == this);
+        LIBC_HEAP_INTEGRITY_CHECK(parent->lower == this || parent->upper == this,
+                                  "FreeTrie parent pointer corruption detected");
     }
   };
 

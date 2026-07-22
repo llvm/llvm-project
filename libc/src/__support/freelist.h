@@ -44,8 +44,10 @@ public:
 
   protected:
     LIBC_INLINE void sanitize() const {
-      LIBC_SANITIZATION_CHECK(next->prev == this);
-      LIBC_SANITIZATION_CHECK(prev->next == this);
+      LIBC_HEAP_INTEGRITY_CHECK(next->prev == this,
+                                "FreeList node corruption detected");
+      LIBC_HEAP_INTEGRITY_CHECK(prev->next == this,
+                                "FreeList node corruption detected");
     }
 
   private:

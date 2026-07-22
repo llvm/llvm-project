@@ -17,21 +17,18 @@
 #include "src/__support/macros/properties/os.h"
 
 #ifdef LIBC_FULL_BUILD
+#include "src/__support/OSUtil/exit.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/integer_to_string.h"
-#include "src/stdlib/abort_utils.h"
 #endif
 
 //===----------------------------------------------------------------------===//
 // _LIBC_ASSERT(COND, MSG) (always-on assert regardless of NDEBUG)
 //===----------------------------------------------------------------------===//
 #ifndef LIBC_FULL_BUILD
-#if LIBC_TARGET_OS_IS_LINUX
+#ifdef LIBC_TARGET_OS_IS_LINUX
 // __assert_fail is in LSB, hence we should always be able to use it here.
-extern "C" [[gnu::noreturn]] void __assert_fail(const char *assertion,
-                                                const char *filename,
-                                                uint32_t line,
-                                                const char *funcname);
+#include <assert.h>
 #define _LIBC_ASSERT(COND, MSG)                                                \
   do {                                                                         \
     if (LIBC_UNLIKELY(!(COND)))                                                \
@@ -46,9 +43,10 @@ extern "C" [[gnu::noreturn]] void __assert_fail(const char *assertion,
   } while (false)
 #endif // LIBC_TARGET_OS_IS_LINUX
 #else
-// Call abort on assertion as it is required by standards like LSB. Calling exit
-// also confuses the debugger as exiting will not trigger debugger's
-// catch-unwind behavior by default.
+// FIXME: Calling abort on assertion is actually required by standards like LSB.
+// Calling exit also confuses the debugger as exiting will not trigger
+// debugger's stop-on-signal behavior by default. Currently, adding abort will
+// result in cyclic dependency.
 #define _LIBC_ASSERT(COND, MSG)                                                \
   do {                                                                         \
     if (LIBC_UNLIKELY(!(COND))) {                                              \
@@ -56,7 +54,7 @@ extern "C" [[gnu::noreturn]] void __assert_fail(const char *assertion,
           __LINE__) ": Assertion failed: '" MSG "' in function: '");           \
       LIBC_NAMESPACE::write_to_stderr(__PRETTY_FUNCTION__);                    \
       LIBC_NAMESPACE::write_to_stderr("'\n");                                  \
-      LIBC_NAMESPACE::abort_utils::abort();                                    \
+      LIBC_NAMESPACE::internal::exit(0xFF);                                    \
     }                                                                          \
   } while (false)
 #endif // LIBC_FULL_BUILD
@@ -64,7 +62,6 @@ extern "C" [[gnu::noreturn]] void __assert_fail(const char *assertion,
 //===----------------------------------------------------------------------===//
 // LIBC_ASSERT(COND) (NDEBUG guarded assertion)
 //===----------------------------------------------------------------------===//
-
 #if defined(LIBC_COPT_USE_C_ASSERT) || !defined(LIBC_FULL_BUILD)
 
 // The build is configured to just use the public <assert.h> API
@@ -122,5 +119,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
 #define LIBC_HEAP_INTEGRITY_CHECK(COND, MSG) _LIBC_ASSERT(COND, MSG)
 #elif LIBC_COPT_HARDENING_MODE == LIBC_HARDENING_MODE_DEBUG
 #define LIBC_HEAP_INTEGRITY_CHECK(COND, MSG) _LIBC_ASSERT(COND, MSG)
+#else
+#error "Unsupported hardening mode"
 #endif
 #endif // LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
