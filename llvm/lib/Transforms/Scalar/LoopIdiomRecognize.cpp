@@ -1605,9 +1605,8 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     return true;
   }
 
-  // The clmul optimization should only be applied if clmul with the required
-  // bit width is a fast operation on the target. The first clmul needs 2*TC
-  // bits, and the second clmul needs CRCBW+TC bits, so test the widest clmul.
+  // The clmul optimization should be applied if it is fast and likely to lower
+  // in a way that keeps code small.
   // TODO: If clmul exists on the target but not for the required width, it
   // might be possible to split into multiple iterations of reduction.
   unsigned ClmulMuBW = Info.IsBigEndian ? 2 * Info.TripCount : Info.TripCount;
@@ -1650,14 +1649,6 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
-  auto LoTCBits = [TC, &Builder, &Ctx](Value *Op, const Twine &Name) {
-    unsigned OpBW = Op->getType()->getIntegerBitWidth();
-    if (OpBW <= TC)
-      return Op;
-    auto *Mask = ConstantInt::get(Ctx, APInt::getLowBitsSet(OpBW, TC));
-    return Builder.CreateAnd(Op, Mask, Name);
-  };
-
   // If a shift needs to occur in the setup for the first clmul with MuConst, it
   // will be by abs(TC - CRCBW). To ensure that the shift can work without
   // losing information or creating poison, give it CRCBW + TC bits.
@@ -1699,7 +1690,11 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
 
   // Zero out any bits above (TC-1) for calculation since the original loop
   // doesn't use them in the significant bit checks.
-  ClmulMuInput = LoTCBits(ClmulMuInput, "crc.tcbits");
+  if (SetupTy->getBitWidth() > TC) {
+    auto *Mask =
+        ConstantInt::get(Ctx, APInt::getLowBitsSet(SetupTy->getBitWidth(), TC));
+    ClmulMuInput = Builder.CreateAnd(ClmulMuInput, Mask, "crc.tcbits");
+  }
 
   // Step 1: T1(x) = floor(R(x)/x^CRCBW) * mu
   // Input is TC bits and mu is TC+1 bits, so result will be 2*TC bits.
