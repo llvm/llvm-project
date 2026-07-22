@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
+#include "SLPVectorizer/SLPCompatibilityAnalysis.h"
 #include "SLPVectorizer/SLPCostAnalysis.h"
 #include "SLPVectorizer/SLPUtils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -531,372 +532,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
               : TargetTransformInfo::SK_PermuteSingleSrc;
 }
 
-/// \returns true if \p Opcode is allowed as part of the main/alternate
-/// instruction for SLP vectorization.
-///
-/// Example of unsupported opcode is SDIV that can potentially cause UB if the
-/// "shuffled out" lane would result in division by zero.
-static bool isValidForAlternation(unsigned Opcode) {
-  return !Instruction::isIntDivRem(Opcode);
-}
-
 namespace {
-
-/// Helper class that determines VL can use the same opcode.
-/// Alternate instruction is supported. In addition, it supports interchangeable
-/// instruction. An interchangeable instruction is an instruction that can be
-/// converted to another instruction with same semantics. For example, x << 1 is
-/// equal to x * 2. x * 1 is equal to x | 0.
-class BinOpSameOpcodeHelper {
-  using MaskType = std::uint_fast32_t;
-  /// Sort SupportedOp because it is used by binary_search.
-  constexpr static unsigned SupportedOp[] = {
-      Instruction::Add, Instruction::FAdd, Instruction::Sub,  Instruction::FSub,
-      Instruction::Mul, Instruction::Shl,  Instruction::AShr, Instruction::And,
-      Instruction::Or,  Instruction::Xor};
-  static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
-                "SupportedOp is not sorted.");
-  enum : MaskType {
-    ShlBIT = 1,
-    AShrBIT = 1 << 1,
-    MulBIT = 1 << 2,
-    AddBIT = 1 << 3,
-    SubBIT = 1 << 4,
-    AndBIT = 1 << 5,
-    OrBIT = 1 << 6,
-    XorBIT = 1 << 7,
-    FAddBIT = 1 << 8,
-    FSubBIT = 1 << 9,
-    MainOpBIT = 1 << 10,
-    LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
-  };
-  /// Return a non-nullptr if either operand of I is a ConstantInt (for the
-  /// integer opcodes) or a ConstantFP (for FAdd/FSub).
-  /// The second return value represents the operand position. We check the
-  /// right-hand side first (1). If the right hand side is not a constant and
-  /// the instruction is neither Sub, FSub, Shl, nor AShr, we then check the
-  /// left hand side (0).
-  static std::pair<Constant *, unsigned>
-  isBinOpWithConstant(const Instruction *I) {
-    [[maybe_unused]] unsigned Opcode = I->getOpcode();
-    assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
-    (void)SupportedOp;
-    auto *BinOp = cast<BinaryOperator>(I);
-    auto GetConstant = [](Value *V) -> Constant * {
-      if (auto *CI = dyn_cast<ConstantInt>(V))
-        return CI;
-      return dyn_cast<ConstantFP>(V);
-    };
-    if (Constant *C = GetConstant(BinOp->getOperand(1)))
-      return {C, 1};
-    if (!isCommutative(I))
-      return {nullptr, 0};
-    if (Constant *C = GetConstant(BinOp->getOperand(0)))
-      return {C, 0};
-    return {nullptr, 0};
-  }
-  struct InterchangeableInfo {
-    const Instruction *I = nullptr;
-    /// The bit it sets represents whether MainOp can be converted to.
-    MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
-                    MulBIT | AShrBIT | ShlBIT | FSubBIT | FAddBIT;
-    /// We cannot create an interchangeable instruction that does not exist in
-    /// VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
-    /// but << does not exist in VL. In the end, we convert VL to [x * 1, y *
-    /// 1]. SeenBefore is used to know what operations have been seen before.
-    MaskType SeenBefore = 0;
-    InterchangeableInfo(const Instruction *I) : I(I) {}
-    /// Return false allows BinOpSameOpcodeHelper to find an alternate
-    /// instruction. Directly setting the mask will destroy the mask state,
-    /// preventing us from determining which instruction it should convert to.
-    bool trySet(MaskType OpcodeInMaskForm, MaskType InterchangeableMask) {
-      if (Mask & InterchangeableMask) {
-        SeenBefore |= OpcodeInMaskForm;
-        Mask &= InterchangeableMask;
-        return true;
-      }
-      return false;
-    }
-    bool equal(unsigned Opcode) {
-      return Opcode == I->getOpcode() && trySet(MainOpBIT, MainOpBIT);
-    }
-    unsigned getOpcode() const {
-      MaskType Candidate = Mask & SeenBefore;
-      if (Candidate & MainOpBIT)
-        return I->getOpcode();
-      if (Candidate & ShlBIT)
-        return Instruction::Shl;
-      if (Candidate & AShrBIT)
-        return Instruction::AShr;
-      if (Candidate & MulBIT)
-        return Instruction::Mul;
-      if (Candidate & AddBIT)
-        return Instruction::Add;
-      if (Candidate & SubBIT)
-        return Instruction::Sub;
-      if (Candidate & FAddBIT)
-        return Instruction::FAdd;
-      if (Candidate & FSubBIT)
-        return Instruction::FSub;
-      if (Candidate & AndBIT)
-        return Instruction::And;
-      if (Candidate & OrBIT)
-        return Instruction::Or;
-      if (Candidate & XorBIT)
-        return Instruction::Xor;
-      llvm_unreachable("Cannot find interchangeable instruction.");
-    }
-
-    bool hasDefinedOpcode() const { return (Mask & SeenBefore) > 0; }
-
-    /// Return true if the instruction can be converted to \p Opcode.
-    bool hasCandidateOpcode(unsigned Opcode) const {
-      MaskType Candidate = Mask & SeenBefore;
-      switch (Opcode) {
-      case Instruction::Shl:
-        return Candidate & ShlBIT;
-      case Instruction::AShr:
-        return Candidate & AShrBIT;
-      case Instruction::Mul:
-        return Candidate & MulBIT;
-      case Instruction::Add:
-        return Candidate & AddBIT;
-      case Instruction::Sub:
-        return Candidate & SubBIT;
-      case Instruction::And:
-        return Candidate & AndBIT;
-      case Instruction::Or:
-        return Candidate & OrBIT;
-      case Instruction::Xor:
-        return Candidate & XorBIT;
-      case Instruction::FAdd:
-        return Candidate & FAddBIT;
-      case Instruction::FSub:
-        return Candidate & FSubBIT;
-      case Instruction::LShr:
-      case Instruction::FMul:
-      case Instruction::SDiv:
-      case Instruction::UDiv:
-      case Instruction::FDiv:
-      case Instruction::SRem:
-      case Instruction::URem:
-      case Instruction::FRem:
-        return false;
-      default:
-        break;
-      }
-      llvm_unreachable("Cannot find interchangeable instruction.");
-    }
-
-    SmallVector<Value *> getOperand(const Instruction *To) const {
-      unsigned ToOpcode = To->getOpcode();
-      unsigned FromOpcode = I->getOpcode();
-      if (FromOpcode == ToOpcode)
-        return SmallVector<Value *>(I->operands());
-      assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
-      auto [C, Pos] = isBinOpWithConstant(I);
-      Type *RHSType = I->getOperand(Pos)->getType();
-      Constant *RHS;
-      if (auto *CFP = dyn_cast<ConstantFP>(C)) {
-        // fsub(x, c) == fadd(x, -c) for every FP constant c, since IEEE 754
-        // defines subtraction as addition of the negated operand.
-        assert(is_contained({Instruction::FAdd, Instruction::FSub}, ToOpcode) &&
-               "Cannot convert the instruction.");
-        RHS = ConstantFP::get(RHSType, -CFP->getValueAPF());
-      } else {
-        auto *CI = cast<ConstantInt>(C);
-        const APInt &FromCIValue = CI->getValue();
-        unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
-        switch (FromOpcode) {
-        case Instruction::Shl:
-          if (ToOpcode == Instruction::Add && FromCIValue.isOne())
-            return {I->getOperand(0), I->getOperand(0)};
-          if (ToOpcode == Instruction::Mul) {
-            RHS = ConstantInt::get(
-                RHSType, APInt::getOneBitSet(FromCIValueBitWidth,
-                                             FromCIValue.getZExtValue()));
-          } else {
-            assert(FromCIValue.isZero() && "Cannot convert the instruction.");
-            RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                                 /*AllowRHSConstant=*/true);
-          }
-          break;
-        case Instruction::Mul:
-          assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
-          if (ToOpcode == Instruction::Shl) {
-            RHS = ConstantInt::get(
-                RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
-          } else {
-            assert(FromCIValue.isOne() && "Cannot convert the instruction.");
-            RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                                 /*AllowRHSConstant=*/true);
-          }
-          break;
-        case Instruction::Add:
-        case Instruction::Sub:
-          if (FromCIValue.isZero()) {
-            RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                                 /*AllowRHSConstant=*/true);
-          } else {
-            assert(
-                is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
-                "Cannot convert the instruction.");
-            APInt NegatedVal = APInt(FromCIValue);
-            NegatedVal.negate();
-            RHS = ConstantInt::get(RHSType, NegatedVal);
-          }
-          break;
-        case Instruction::And:
-          assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
-          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                               /*AllowRHSConstant=*/true);
-          break;
-        default:
-          assert(FromCIValue.isZero() && "Cannot convert the instruction.");
-          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                               /*AllowRHSConstant=*/true);
-          break;
-        }
-      }
-      Value *LHS = I->getOperand(1 - Pos);
-      // If the target opcode is non-commutative (e.g., shl, sub),
-      // force the variable to the left and the constant to the right.
-      if (Pos == 1 || !Instruction::isCommutative(ToOpcode))
-        return SmallVector<Value *>({LHS, RHS});
-
-      return SmallVector<Value *>({RHS, LHS});
-    }
-  };
-  InterchangeableInfo MainOp;
-  InterchangeableInfo AltOp;
-  bool isValidForAlternation(const Instruction *I) const {
-    return ::isValidForAlternation(MainOp.I->getOpcode()) &&
-           ::isValidForAlternation(I->getOpcode());
-  }
-  bool initializeAltOp(const Instruction *I) {
-    if (AltOp.I)
-      return true;
-    if (!isValidForAlternation(I))
-      return false;
-    AltOp.I = I;
-    return true;
-  }
-
-public:
-  BinOpSameOpcodeHelper(const Instruction *MainOp,
-                        const Instruction *AltOp = nullptr)
-      : MainOp(MainOp), AltOp(AltOp) {}
-  bool add(const Instruction *I) {
-    assert(isa<BinaryOperator>(I) &&
-           "BinOpSameOpcodeHelper only accepts BinaryOperator.");
-    unsigned Opcode = I->getOpcode();
-    MaskType OpcodeInMaskForm;
-    // Prefer Shl, AShr, Mul, Add, Sub, And, Or, Xor, FAdd and FSub over
-    // MainOp.
-    switch (Opcode) {
-    case Instruction::Shl:
-      OpcodeInMaskForm = ShlBIT;
-      break;
-    case Instruction::AShr:
-      OpcodeInMaskForm = AShrBIT;
-      break;
-    case Instruction::Mul:
-      OpcodeInMaskForm = MulBIT;
-      break;
-    case Instruction::Add:
-      OpcodeInMaskForm = AddBIT;
-      break;
-    case Instruction::Sub:
-      OpcodeInMaskForm = SubBIT;
-      break;
-    case Instruction::And:
-      OpcodeInMaskForm = AndBIT;
-      break;
-    case Instruction::Or:
-      OpcodeInMaskForm = OrBIT;
-      break;
-    case Instruction::Xor:
-      OpcodeInMaskForm = XorBIT;
-      break;
-    case Instruction::FAdd:
-      OpcodeInMaskForm = FAddBIT;
-      break;
-    case Instruction::FSub:
-      OpcodeInMaskForm = FSubBIT;
-      break;
-    default:
-      return MainOp.equal(Opcode) ||
-             (initializeAltOp(I) && AltOp.equal(Opcode));
-    }
-    MaskType InterchangeableMask = OpcodeInMaskForm;
-    auto [C, Pos] = isBinOpWithConstant(I);
-    if (auto *CI = dyn_cast_or_null<ConstantInt>(C)) {
-      constexpr MaskType CanBeAll =
-          XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
-      const APInt &CIValue = CI->getValue();
-      switch (Opcode) {
-      case Instruction::Shl:
-        if (CIValue.ult(CIValue.getBitWidth()))
-          InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
-        if (CIValue.isOne())
-          InterchangeableMask |= AddBIT;
-        break;
-      case Instruction::Mul:
-        if (CIValue.isOne()) {
-          InterchangeableMask = CanBeAll;
-          break;
-        }
-        if (CIValue.isPowerOf2())
-          InterchangeableMask = MulBIT | ShlBIT;
-        break;
-      case Instruction::Add:
-      case Instruction::Sub:
-        InterchangeableMask = CIValue.isZero() ? CanBeAll : SubBIT | AddBIT;
-        break;
-      case Instruction::And:
-        if (CIValue.isAllOnes())
-          InterchangeableMask = CanBeAll;
-        break;
-      case Instruction::Xor:
-        if (CIValue.isZero())
-          InterchangeableMask = XorBIT | OrBIT | SubBIT | AddBIT;
-        break;
-      default:
-        if (CIValue.isZero())
-          InterchangeableMask = CanBeAll;
-        break;
-      }
-    } else if (C && Pos == 1) {
-      // FAdd/FSub with a constant RHS: negating the constant always
-      // converts one into the other, so no value check is needed. A
-      // constant LHS (Pos == 0, e.g. "0.0 - x") is excluded: unlike a
-      // constant RHS, it cannot be moved to the other opcode without also
-      // swapping the variable operand, which would misalign it against
-      // lanes that keep their native opcode (their variable operand stays
-      // on the other side).
-      InterchangeableMask = FSubBIT | FAddBIT;
-    }
-    return MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
-           (initializeAltOp(I) &&
-            AltOp.trySet(OpcodeInMaskForm, InterchangeableMask));
-  }
-  unsigned getMainOpcode() const { return MainOp.getOpcode(); }
-  bool hasDefinedMainOpcode() const { return MainOp.hasDefinedOpcode(); }
-  /// Checks if the list of potential opcodes includes \p Opcode.
-  bool hasCandidateOpcode(unsigned Opcode) const {
-    return MainOp.hasCandidateOpcode(Opcode);
-  }
-  bool hasAltOp() const { return AltOp.I; }
-  unsigned getAltOpcode() const {
-    return hasAltOp() ? AltOp.getOpcode() : getMainOpcode();
-  }
-  bool hasDefinedAltOpcode() const {
-    return !hasAltOp() || AltOp.hasDefinedOpcode();
-  }
-  SmallVector<Value *> getOperand(const Instruction *I) const {
-    return MainOp.getOperand(I);
-  }
-};
 
 /// Main data required for vectorization of instructions.
 class InstructionsState {
@@ -3434,12 +3070,15 @@ private:
       Instruction *I,
       const SmallDenseSet<Value *> *VectorizedVals = nullptr) const;
 
-  /// Estimates the number of scalar instructions in the tree.
-  unsigned getNumScalarInsts() const;
+  /// Estimates the number of scalar instructions in the tree, each weighted by
+  /// its loop-nest trip count (nest-invariant entries are dropped when
+  /// \p TreeLoop is non-null).
+  uint64_t getNumScalarInsts(bool HasTreeLoop);
 
   /// Estimates the number of vector instructions (including buildvectors,
-  /// shuffles, and extracts) that the tree will produce.
-  unsigned getNumVectorInsts() const;
+  /// shuffles, and extracts) the tree produces, weighted like
+  /// getNumScalarInsts().
+  uint64_t getNumVectorInsts(bool HasTreeLoop);
 
   /// Return information about the vector formed for the specified index
   /// of a vector of (the same) instruction.
@@ -3488,6 +3127,10 @@ private:
   /// scale when per-lane information is unavailable or the feature is off.
   uint64_t getGatherNodeEffectiveScale(const TreeEntry &TE,
                                        Instruction *U = nullptr);
+
+  /// \returns the loop-nest execution scale of \p TE.
+  uint64_t getEntryEffectiveScale(const TreeEntry &TE,
+                                  Instruction *U = nullptr);
 
   /// Get the loop nest for the given loop \p L.
   ArrayRef<const Loop *> getLoopNest(const Loop *L);
@@ -13505,12 +13148,25 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI);
 
-unsigned BoUpSLP::getNumScalarInsts() const {
-  unsigned Count = 0;
+uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
+  uint64_t Total = 0;
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     const TreeEntry &TE = *Ptr;
     if (DeletedNodes.contains(&TE))
       continue;
+    // CombinedVectorize entries (e.g. the fmul child of an FMulAdd, or the
+    // cmp child of a MinMax select) are absorbed into the parent on both
+    // scalar and vector sides. The backend fuses fadd+fmul -> fma and
+    // select+cmp -> smin/smax even for scalar code, so skip to avoid
+    // double-counting. Checked before the scale lookup below: some of
+    // these entries started out as constant-only gather nodes and have no
+    // valid instruction state to key the loop-nest scale off of.
+    if (TE.State == TreeEntry::CombinedVectorize)
+      continue;
+    uint64_t Scale = getEntryEffectiveScale(TE);
+    if (HasTreeLoop && Scale <= 1)
+      continue;
+    unsigned Count = 0;
     if (TE.isGather() || TransformedToGatherNodes.contains(&TE)) {
       // Count extractelement scalars in gathers - they exist in the scalar
       // code regardless of vectorization. ExtractElement instructions
@@ -13518,15 +13174,9 @@ unsigned BoUpSLP::getNumScalarInsts() const {
       for (Value *V : TE.Scalars)
         if (isa<ExtractElementInst>(V))
           ++Count;
+      Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
       continue;
     }
-    // CombinedVectorize entries (e.g. the fmul child of an FMulAdd, or the
-    // cmp child of a MinMax select) are absorbed into the parent on both
-    // scalar and vector sides. The backend fuses fadd+fmul → fma and
-    // select+cmp → smin/smax even for scalar code, so skip to avoid
-    // double-counting.
-    if (TE.State == TreeEntry::CombinedVectorize)
-      continue;
     // Each vectorize entry represents a bundle of scalar instructions.
     // Count per-entry without cross-entry deduplication, since shared
     // scalars across entries still represent separate work in scalar code.
@@ -13548,7 +13198,7 @@ unsigned BoUpSLP::getNumScalarInsts() const {
     }
     // Even when the whole node is not combined, individual scalar
     // instructions may be fused by the backend. Each fused pair (e.g.
-    // fadd+fmul → fma, select+cmp → smin/smax) becomes a single scalar
+    // fadd+fmul -> fma, select+cmp -> smin/smax) becomes a single scalar
     // instruction, absorbing the operand instruction. Subtract 1 for each
     // such match to avoid over-counting the scalar side.
     if (TE.CombinedOp == TreeEntry::NotCombinedOp && TE.hasState()) {
@@ -13582,22 +13232,27 @@ unsigned BoUpSLP::getNumScalarInsts() const {
         }
       }
     }
+    Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
   }
-  return Count;
+  return Total;
 }
 
-unsigned BoUpSLP::getNumVectorInsts() const {
-  unsigned Count = 0;
-  SmallPtrSet<Value *, 4> GatherExtractSourceVecs;
+uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
+  uint64_t Total = 0;
+  // Source vector -> max scale among the gather entries sharing it, so the
+  // combined shufflevector is still weighted like an in-loop entry below.
+  SmallDenseMap<Value *, uint64_t, 4> GatherExtractSourceVecs;
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     const TreeEntry &TE = *Ptr;
     if (DeletedNodes.contains(&TE))
       continue;
     if (TE.State == TreeEntry::CombinedVectorize)
       continue;
-    bool IsGatherOrTransformed =
-        TE.isGather() || TransformedToGatherNodes.contains(&TE);
-    if (IsGatherOrTransformed) {
+    uint64_t Scale = getEntryEffectiveScale(TE);
+    if (HasTreeLoop && Scale <= 1)
+      continue;
+    unsigned Count = 0;
+    if (TE.isGather() || TransformedToGatherNodes.contains(&TE)) {
       if (TE.hasState()) {
         if (const TreeEntry *E =
                 getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
@@ -13607,7 +13262,7 @@ unsigned BoUpSLP::getNumVectorInsts() const {
         if (const TreeEntry *E =
                 getSameValuesTreeEntry(TE.getMainOp(), RevScalars);
             E && E->getVectorFactor() == TE.getVectorFactor()) {
-          ++Count;
+          Total = SaturatingAdd(Total, Scale);
           continue;
         }
       }
@@ -13617,14 +13272,19 @@ unsigned BoUpSLP::getNumVectorInsts() const {
       if (all_of(TE.Scalars,
                  IsaPred<ExtractElementInst, UndefValue, Constant>)) {
         for (Value *V : TE.Scalars)
-          if (auto *EE = dyn_cast<ExtractElementInst>(V))
-            GatherExtractSourceVecs.insert(EE->getVectorOperand());
+          if (auto *EE = dyn_cast<ExtractElementInst>(V)) {
+            uint64_t &VecScale =
+                GatherExtractSourceVecs.try_emplace(EE->getVectorOperand(), 0)
+                    .first->second;
+            VecScale = std::max(VecScale, Scale);
+          }
       } else {
         for (Value *V : TE.Scalars) {
           if (!isConstant(V))
             ++Count;
         }
       }
+      Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
       continue;
     }
     // InsertElement/ExtractElement vectorize entries don't produce real
@@ -13640,6 +13300,7 @@ unsigned BoUpSLP::getNumVectorInsts() const {
         Count += 2;
       if (!TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty())
         ++Count;
+      Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
       continue;
     }
     if (TE.State == TreeEntry::SplitVectorize)
@@ -13648,8 +13309,10 @@ unsigned BoUpSLP::getNumVectorInsts() const {
       ++Count;
     if (!TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty())
       ++Count;
+    Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
   }
-  Count += GatherExtractSourceVecs.size();
+  for (const auto &VecAndScale : GatherExtractSourceVecs)
+    Total = SaturatingAdd(Total, VecAndScale.second);
   // Count extract instructions from ExternalUses, skipping insertelements
   // (those get folded into shuffles, not real extracts).
   SmallPtrSet<Value *, 8> CountedExtracts;
@@ -13662,9 +13325,9 @@ unsigned BoUpSLP::getNumVectorInsts() const {
       continue;
     if (!CountedExtracts.insert(EU.Scalar).second)
       continue;
-    ++Count;
+    ++Total;
   }
-  return Count;
+  return Total;
 }
 
 void BoUpSLP::TreeEntry::buildAltOpShuffleMask(
@@ -16441,6 +16104,12 @@ uint64_t BoUpSLP::getGatherNodeEffectiveScale(const TreeEntry &TE,
   return std::clamp<uint64_t>(Avg, 1, BaseScale);
 }
 
+uint64_t BoUpSLP::getEntryEffectiveScale(const TreeEntry &TE, Instruction *U) {
+  if (TE.isGather() || TE.State == TreeEntry::SplitVectorize)
+    return getGatherNodeEffectiveScale(TE, U);
+  return getScaleToLoopIterations(TE);
+}
+
 InstructionCost
 BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
                                   Type *VecTy, Type *FinalVecTy,
@@ -18977,8 +18646,6 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     // per-lane refined scale that accounts for LICM-hoistable insertelements
     // when an operand is invariant in the current loop nest but defined in
     // an outer loop. This prevents over-costing cross-loop-nest buildvectors.
-    const bool IsGatherLike =
-        TE.isGather() || TE.State == TreeEntry::SplitVectorize;
     if (!CostIsFree && !TE.isGather() && TE.hasState()) {
       if (PrevVecParent == TE.getMainOp()->getParent()) {
         Scale = PrevScale;
@@ -18987,10 +18654,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       }
     }
     if (!CostIsFree && !Scale) {
-      Scale =
-          IsGatherLike
-              ? getGatherNodeEffectiveScale(TE, TE.Idx == 0 ? RdxRoot : nullptr)
-              : getScaleToLoopIterations(TE);
+      Scale = getEntryEffectiveScale(TE, TE.Idx == 0 ? RdxRoot : nullptr);
       C *= Scale;
       EntryToScale.try_emplace(&TE, Scale);
       if (!TE.isGather() && TE.hasState()) {
@@ -19369,12 +19033,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         continue;
       }
       uint64_t Scale = EntryToScale.lookup(TE.get());
-      if (!Scale) {
-        const bool IsGatherLike =
-            TE->isGather() || TE->State == TreeEntry::SplitVectorize;
-        Scale = IsGatherLike ? getGatherNodeEffectiveScale(*TE.get())
-                             : getScaleToLoopIterations(*TE.get());
-      }
+      if (!Scale)
+        Scale = getEntryEffectiveScale(*TE);
       C *= Scale;
       NodesCosts.try_emplace(TE.get(), C);
     }
@@ -19458,8 +19118,14 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       (!SLPReVec ||
        !isa<VectorType>(
            VectorizableTree.front()->Scalars.front()->getType()))) {
-    unsigned NumScalar = getNumScalarInsts();
-    unsigned NumVector = getNumVectorInsts();
+    // Loop containing the tree root; null for flat code or disabled
+    // loop-aware modeling. Shared by both calls below.
+    const Loop *TreeLoop = nullptr;
+    if (LoopAwareTripCount != 0 && VectorizableTree.front()->hasState())
+      TreeLoop =
+          LI->getLoopFor(VectorizableTree.front()->getMainOp()->getParent());
+    uint64_t NumScalar = getNumScalarInsts(TreeLoop);
+    uint64_t NumVector = getNumVectorInsts(TreeLoop);
     LLVM_DEBUG(dbgs() << "SLP: Inst count check: vector=" << NumVector
                       << " scalar=" << NumScalar << "\n");
     if (NumVector > NumScalar && !BypassesInstCountCheck()) {

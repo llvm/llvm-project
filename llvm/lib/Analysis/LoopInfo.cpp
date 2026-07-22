@@ -449,6 +449,30 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
   return true;
 }
 
+// Check whether the use \p U of a value defined in block \p BB (which is part
+// of loop \p L) does not require a live-out phi, i.e. whether it is contained
+// in the loop for LCSSA purposes.
+static bool loopContainsUser(const Loop &L, const BasicBlock &BB, const Use &U,
+                             const DominatorTree &DT) {
+  const Instruction *UI = cast<Instruction>(U.getUser());
+  const BasicBlock *UserBB = UI->getParent();
+
+  // For practical purposes, we consider that the use in a PHI
+  // occurs in the respective predecessor block. For more info,
+  // see the `phi` doc in LangRef and the LCSSA doc.
+  if (const PHINode *P = dyn_cast<PHINode>(UI))
+    UserBB = P->getIncomingBlock(U);
+
+  // Check the current block, as a fast-path, before checking whether
+  // the use is anywhere in the loop.  Most values are used in the same
+  // block they are defined in.  Also, blocks not reachable from the
+  // entry are special; uses in them don't need to go through PHIs.
+  if (UserBB != &BB && !L.contains(UserBB) && DT.isReachableFromEntry(UserBB))
+    return false;
+
+  return true;
+}
+
 // Check that 'BB' doesn't have any uses outside of the 'L'
 static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
                                const DominatorTree &DT, bool IgnoreTokens) {
@@ -460,21 +484,7 @@ static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
       continue;
 
     for (const Use &U : I.uses()) {
-      const Instruction *UI = cast<Instruction>(U.getUser());
-      const BasicBlock *UserBB = UI->getParent();
-
-      // For practical purposes, we consider that the use in a PHI
-      // occurs in the respective predecessor block. For more info,
-      // see the `phi` doc in LangRef and the LCSSA doc.
-      if (const PHINode *P = dyn_cast<PHINode>(UI))
-        UserBB = P->getIncomingBlock(U);
-
-      // Check the current block, as a fast-path, before checking whether
-      // the use is anywhere in the loop.  Most values are used in the same
-      // block they are defined in.  Also, blocks not reachable from the
-      // entry are special; uses in them don't need to go through PHIs.
-      if (UserBB != &BB && !L.contains(UserBB) &&
-          DT.isReachableFromEntry(UserBB))
+      if (!loopContainsUser(L, BB, U, DT))
         return false;
     }
   }

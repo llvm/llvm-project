@@ -6418,9 +6418,13 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return Error(IDRange.Start, "directive requires gfx8+", IDRange);
       if (!isUInt<1>(Val))
         return OutOfRangeError(ValRange);
-      if (Val != getTargetStreamer().getTargetID()->isXnackOnOrAny())
-        return getParser().Error(IDRange.Start, ".amdhsa_reserve_xnack_mask does not match target id",
-                                 IDRange);
+      bool XnackOn = getTargetStreamer().getTargetID()->isXnackOnOrAny() ||
+                     getSTI().hasFeature(AMDGPU::FeatureXNACK);
+      if (Val != XnackOn) {
+        return getParser().Error(
+            IDRange.Start,
+            ".amdhsa_reserve_xnack_mask does not match target id", IDRange);
+      }
     } else if (ID == ".amdhsa_float_round_mode_32") {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_32, ExprVal,
