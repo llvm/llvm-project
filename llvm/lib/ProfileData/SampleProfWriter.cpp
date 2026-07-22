@@ -429,8 +429,10 @@ namespace {
 // - ULEB128 count of Context-Sensitive (CS) top-level profile symbol keys
 // - ULEB128 count of Flat top-level profile symbol keys
 // - ULEB128 count of Inlinee and auxiliary profile symbol keys
-// - Array of 64-bit little-endian MD5 hash keys for CS profiles in Eytzinger order
-// - Array of 64-bit little-endian MD5 hash keys for Flat profiles in Eytzinger order
+// - Array of 64-bit little-endian MD5 hash keys for CS profiles in Eytzinger
+//   order
+// - Array of 64-bit little-endian MD5 hash keys for Flat profiles in Eytzinger
+//   order
 // - Array of 64-bit little-endian MD5 hash keys for Inlinees in Eytzinger order
 class EytzingerNameTable {
   using TableT = llvm::EytzingerTable<support::ulittle64_t>;
