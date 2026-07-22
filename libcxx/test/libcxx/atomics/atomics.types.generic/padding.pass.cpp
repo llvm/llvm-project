@@ -23,6 +23,8 @@
 #include <cstring>
 #include <type_traits>
 
+#include "test_macros.h"
+
 struct WithTailPadding {
   int i;
   char c;
@@ -87,10 +89,12 @@ void test() {
   {
     // atomic();
     std::atomic<T> a;
+    assert_padding(a, 0);
+#if TEST_STD_VER >= 20
     T loaded = a.load();
     assert(loaded.i == 0);
     assert(loaded.c == '\0');
-    assert_padding(a, 0);
+#endif
   }
 
   {
