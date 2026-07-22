@@ -13,8 +13,7 @@
 #include <optional>
 #include <string>
 
-#include "lldb/Utility/ConstString.h"
-
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -416,10 +415,10 @@ protected:
   enum class Absolute : uint8_t { Calculate, Yes, No };
 
   /// The unique'd directory path.
-  ConstString m_directory;
+  llvm::SmallString<256> m_directory;
 
   /// The unique'd filename path.
-  ConstString m_filename;
+  llvm::SmallString<32> m_filename;
 
   /// Cache whether this path is absolute.
   mutable Absolute m_absolute = Absolute::Calculate;
