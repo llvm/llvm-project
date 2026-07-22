@@ -29,9 +29,9 @@ contains
 end module
 
 ! The reduction is materialized with a name qualified by the declaring scope
-! (module m, subroutine s), and the clause binds to it.
+! (module m, subroutine s) and the reduction type, and the clause binds to it.
 
-! CHECK: omp.declare_reduction @[[RED:_QQMmFsop.myadd.]] : !fir.ref<!fir.type<{{.*}}>>
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.myadd\.[A-Za-z0-9_.]*]] : !fir.ref<!fir.type<{{.*}}>>
 
 ! CHECK-LABEL: func.func @_QMmPs
 ! CHECK: omp.wsloop {{.*}}reduction(byref @[[RED]] %{{.*}} -> %{{.*}} : !fir.ref<!fir.type<{{.*}}>>)

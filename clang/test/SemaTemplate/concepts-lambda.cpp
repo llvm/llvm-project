@@ -56,9 +56,7 @@ namespace GH57971 {
   function_ptr ptr = f<void>;
 }
 
-// GH58368: A lambda defined in a concept requires we store
-// the concept as a part of the lambda context.
-namespace LambdaInConcept {
+namespace GH58368 {
 using size_t = unsigned long;
 
 template<size_t...Ts>
@@ -162,13 +160,10 @@ static_assert(E<int>);  // previously Asserted.
 namespace DIsFalse {
 template<auto Q> concept C = requires { Q.template operator()<float>(); }; // #GH60642-C
 template<class> concept D = false;
-// FIXME: Crashes because it produces a template type parameter with invalid depth
-#if 0
 static_assert(C<[]<D>{}>);
 // expected-error@-1{{static assertion failed}}
 // expected-note@-2{{does not satisfy 'C'}}
 // expected-note@-5{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
-#endif
 template<class> concept E = C<[]<D>{}>;
 static_assert(E<int>);
 // expected-error@-1{{static assertion failed}}
@@ -406,4 +401,95 @@ void f()
 void test() {
     f<42>();
 }
+}
+
+namespace GH199209 {
+
+template <class T> auto declval() -> T &&;
+struct Id {
+  template <class T> using f = T;
+};
+template <class... Ts> concept Ok = (__is_same(Ts, Ts) && ...);
+template <bool> struct I;
+template <class F, class... Ts>
+using minvoke = I<Ok<Ts...>>::template f<F>::template f<Ts...>;
+template <> struct I<true> {
+  template <template <class...> class F, class... Ts>
+  using g = F<Ts...>;
+  template <class F> using f = F;
+};
+template <template <class...> class F> struct Q {
+  template <class... Ts> using f = I<Ok<Ts...>>::template g<F, Ts...>;
+};
+template <class S> concept has_env = requires { declval<S>().get_env(); };
+struct Desc {
+  template <class F> using f = minvoke<F, int>;
+};
+template <class... C> auto captures(C...) {
+  return []<class Cv>(Cv) -> int requires Ok<minvoke<Cv, C>...> {};
+}
+template <class D> using captures_t = decltype(captures(declval<D>));
+template <class D> struct Sexpr {
+  minvoke<D, Q<captures_t>> impl;
+  auto get_env() -> decltype(impl(Id()));
+};
+static_assert(has_env<Sexpr<Desc>>);
+
+}
+
+namespace GH193944 {
+
+template<auto L, typename... Ts>
+concept pass_a_concept_inside_a_lambda = requires { L.template operator()<Ts...>(); }; // #requires_pass_a_concept_inside_a_lambda
+
+template<auto Pred, typename... Ts>
+concept PredicateFor_bad = pass_a_concept_inside_a_lambda<[]<typename... Xs> // #pass_a_concept_inside_a_lambda
+                                          requires(__is_same(decltype(Pred.template operator()<Xs>()), bool) and ...)
+                                      {},
+                                      Ts...>;
+
+template<auto Pred, typename... Ts>
+    requires PredicateFor_bad<Pred, Ts...> // #PredicateFor_bad
+constexpr const unsigned count_if_v_bad =
+        [] { return (Pred.template operator()<Ts>() + ... + 0); }();
+
+constexpr const auto L = []<typename T>
+{ return __is_same(T, long); };
+
+constexpr const auto L2 = []<typename T>
+{ return 114514; };
+
+static_assert(count_if_v_bad<L, double, int, long, void> == 1);
+
+static_assert(count_if_v_bad<L2, double> == 1);
+// expected-error@-1 {{constraints not satisfied}}
+// expected-note@#PredicateFor_bad {{evaluated to false}}
+// expected-note@#pass_a_concept_inside_a_lambda {{evaluated to false}}
+// expected-note@#requires_pass_a_concept_inside_a_lambda {{no matching member function}}
+
+template <typename ...Ts>
+concept test = ((sizeof(Ts) < 2) && ...);
+
+template<auto L, typename... Ts>
+concept pass_a_concept_inside_a_lambda_2 = requires {
+  L.template operator()<Ts...>(Ts()...);  // #requires_pass_a_concept_inside_a_lambda_2
+};
+
+template<auto Pred, typename... Ts>
+concept PredicateFor_bad_2 = pass_a_concept_inside_a_lambda_2<[]<typename... Xs> // #pass_a_concept_inside_a_lambda_2
+                                          requires(__is_same(decltype(Pred.template operator()<Xs>()), bool) and ...)
+                                      (test auto...){},
+                                      Ts...>;
+
+template<auto Pred, typename... Ts>
+    requires PredicateFor_bad_2<Pred, Ts...> // #PredicateFor_bad_2
+constexpr const unsigned count_if_v_bad_2 = 111;
+
+static_assert(count_if_v_bad_2<L, double> == 111);
+// expected-error@-1 {{constraints not satisfied}}
+// expected-note@#PredicateFor_bad_2 {{false}}
+// expected-note@#pass_a_concept_inside_a_lambda_2 {{false}}
+// expected-note@#requires_pass_a_concept_inside_a_lambda_2 {{no matching member function}}
+static_assert(count_if_v_bad_2<L, char> == 111);
+
 }
