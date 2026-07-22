@@ -20,7 +20,6 @@
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_void.h>
 #include <__type_traits/is_volatile.h>
 #include <__utility/forward.h>
 
@@ -50,21 +49,8 @@ public:
 };
 #endif // _LIBCPP_STD_VER <= 17
 
-template <bool, class _Unique>
-struct __non_trivially_default_constructible_if {};
-
-template <class _Unique>
-struct __non_trivially_default_constructible_if<true, _Unique> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __non_trivially_default_constructible_if() {}
-};
-
 template <class _Tp>
-class allocator
-// TODO(LLVM 24): Remove the opt-out
-#ifdef _LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR
-    : __non_trivially_default_constructible_if<!is_void<_Tp>::value, allocator<_Tp> >
-#endif
-{
+class allocator {
   static_assert(!is_const<_Tp>::value, "std::allocator does not support const types");
   static_assert(!is_volatile<_Tp>::value, "std::allocator does not support volatile types");
 
