@@ -4682,34 +4682,34 @@ let TargetPrefix = "x86" in {
 
   // VPMOVSSDB - Symmetric signed saturation DWord to Byte
   def int_x86_avx10_mask_pmovss_db_128 :
-      ClangBuiltin<"__builtin_ia32_pmovssdb128_mask">,
+      ClangBuiltin<"__builtin_ia32_vpmovssdb128_mask">,
       DefaultAttrsIntrinsic<[llvm_v16i8_ty],
                             [llvm_v4i32_ty, llvm_v16i8_ty, llvm_i8_ty],
                             [IntrNoMem]>;
   def int_x86_avx10_mask_pmovss_db_256 :
-      ClangBuiltin<"__builtin_ia32_pmovssdb256_mask">,
+      ClangBuiltin<"__builtin_ia32_vpmovssdb256_mask">,
       DefaultAttrsIntrinsic<[llvm_v16i8_ty],
                             [llvm_v8i32_ty, llvm_v16i8_ty, llvm_i8_ty],
                             [IntrNoMem]>;
   def int_x86_avx10_mask_pmovss_db_512 :
-      ClangBuiltin<"__builtin_ia32_pmovssdb512_mask">,
+      ClangBuiltin<"__builtin_ia32_vpmovssdb512_mask">,
       DefaultAttrsIntrinsic<[llvm_v16i8_ty],
                             [llvm_v16i32_ty, llvm_v16i8_ty, llvm_i16_ty],
                             [IntrNoMem]>;
 
   // VPMOVSSDB memory store intrinsics
   def int_x86_avx10_mask_pmovss_db_mem_128 :
-      ClangBuiltin<"__builtin_ia32_pmovssdb128mem_mask">,
+      ClangBuiltin<"__builtin_ia32_vpmovssdb128mem_mask">,
       DefaultAttrsIntrinsic<[],
                             [llvm_ptr_ty, llvm_v4i32_ty, llvm_i8_ty],
                             [IntrArgMemOnly]>;
   def int_x86_avx10_mask_pmovss_db_mem_256 :
-      ClangBuiltin<"__builtin_ia32_pmovssdb256mem_mask">,
+      ClangBuiltin<"__builtin_ia32_vpmovssdb256mem_mask">,
       DefaultAttrsIntrinsic<[],
                             [llvm_ptr_ty, llvm_v8i32_ty, llvm_i8_ty],
                             [IntrArgMemOnly]>;
   def int_x86_avx10_mask_pmovss_db_mem_512 :
-      ClangBuiltin<"__builtin_ia32_pmovssdb512mem_mask">,
+      ClangBuiltin<"__builtin_ia32_vpmovssdb512mem_mask">,
       DefaultAttrsIntrinsic<[],
                             [llvm_ptr_ty, llvm_v16i32_ty, llvm_i16_ty],
                             [IntrArgMemOnly]>;

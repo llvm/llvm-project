@@ -2188,7 +2188,7 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    values; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_cvtss_epi32_epi8(__m128i __A) {
-  return (__m128i)__builtin_ia32_pmovssdb128_mask(
+  return (__m128i)__builtin_ia32_vpmovssdb128_mask(
       (__v4si)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)-1);
 }
 
@@ -2209,7 +2209,7 @@ _mm_cvtss_epi32_epi8(__m128i __A) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m128i __A) {
-  return (__m128i)__builtin_ia32_pmovssdb128_mask((__v4si)__A, (__v16qi)__W,
+  return (__m128i)__builtin_ia32_vpmovssdb128_mask((__v4si)__A, (__v16qi)__W,
                                                   __U);
 }
 
@@ -2228,7 +2228,7 @@ _mm_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m128i __A) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtss_epi32_epi8(__mmask8 __U, __m128i __A) {
-  return (__m128i)__builtin_ia32_pmovssdb128_mask(
+  return (__m128i)__builtin_ia32_vpmovssdb128_mask(
       (__v4si)__A, (__v16qi)_mm_setzero_si128(), __U);
 }
 
@@ -2247,7 +2247,7 @@ _mm_maskz_cvtss_epi32_epi8(__mmask8 __U, __m128i __A) {
 ///    values; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvtss_epi32_epi8(__m256i __A) {
-  return (__m128i)__builtin_ia32_pmovssdb256_mask(
+  return (__m128i)__builtin_ia32_vpmovssdb256_mask(
       (__v8si)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)-1);
 }
 
@@ -2268,7 +2268,7 @@ _mm256_cvtss_epi32_epi8(__m256i __A) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m256i __A) {
-  return (__m128i)__builtin_ia32_pmovssdb256_mask((__v8si)__A, (__v16qi)__W,
+  return (__m128i)__builtin_ia32_vpmovssdb256_mask((__v8si)__A, (__v16qi)__W,
                                                   __U);
 }
 
@@ -2287,7 +2287,7 @@ _mm256_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m256i __A) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtss_epi32_epi8(__mmask8 __U, __m256i __A) {
-  return (__m128i)__builtin_ia32_pmovssdb256_mask(
+  return (__m128i)__builtin_ia32_vpmovssdb256_mask(
       (__v8si)__A, (__v16qi)_mm_setzero_si128(), __U);
 }
 
@@ -2307,7 +2307,7 @@ _mm256_maskz_cvtss_epi32_epi8(__mmask8 __U, __m256i __A) {
 ///    A 128-bit vector of [4 x i32].
 static __inline__ void __DEFAULT_FN_ATTRS128
 _mm_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask8 __M, __m128i __A) {
-  __builtin_ia32_pmovssdb128mem_mask((__v16qi *)__P, (__v4si)__A, __M);
+  __builtin_ia32_vpmovssdb128mem_mask((__v16qi *)__P, (__v4si)__A, __M);
 }
 
 /// Truncate packed 32-bit integers in \a __A to packed 8-bit integers with
@@ -2326,7 +2326,7 @@ _mm_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask8 __M, __m128i __A) {
 ///    A 256-bit vector of [8 x i32].
 static __inline__ void __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask8 __M, __m256i __A) {
-  __builtin_ia32_pmovssdb256mem_mask((__v16qi *)__P, (__v8si)__A, __M);
+  __builtin_ia32_vpmovssdb256mem_mask((__v16qi *)__P, (__v8si)__A, __M);
 }
 
 #undef __DEFAULT_FN_ATTRS128

@@ -2623,23 +2623,23 @@ let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
 
 // VPMOVSSDB - Symmetric signed saturation DWord to Byte
 let Features = "avx10v2aux", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def pmovssdb128_mask : X86Builtin<"_Vector<16, char>(_Vector<4, int>, _Vector<16, char>, unsigned char)">;
+  def vpmovssdb128_mask : X86Builtin<"_Vector<16, char>(_Vector<4, int>, _Vector<16, char>, unsigned char)">;
 }
 let Features = "avx10v2aux", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def pmovssdb256_mask : X86Builtin<"_Vector<16, char>(_Vector<8, int>, _Vector<16, char>, unsigned char)">;
+  def vpmovssdb256_mask : X86Builtin<"_Vector<16, char>(_Vector<8, int>, _Vector<16, char>, unsigned char)">;
 }
 let Features = "avx10v2aux", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def pmovssdb512_mask : X86Builtin<"_Vector<16, char>(_Vector<16, int>, _Vector<16, char>, unsigned short)">;
+  def vpmovssdb512_mask : X86Builtin<"_Vector<16, char>(_Vector<16, int>, _Vector<16, char>, unsigned short)">;
 }
 // VPMOVSSDB memory store
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovssdb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<4, int>, unsigned char)">;
+  def vpmovssdb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<4, int>, unsigned char)">;
 }
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovssdb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, int>, unsigned char)">;
+  def vpmovssdb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, int>, unsigned char)">;
 }
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovssdb512mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<16, int>, unsigned short)">;
+  def vpmovssdb512mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<16, int>, unsigned short)">;
 }
 
 let Features = "avx512bw", Attributes = [NoThrow, RequiredVectorWidth<512>] in {

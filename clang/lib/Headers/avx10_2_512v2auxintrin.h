@@ -1114,7 +1114,7 @@ _mm512_maskz_cvthf6_hf8(__mmask64 __U, __m512i __A) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
 _mm512_cvtss_epi32_epi8(__m512i __A) {
-  return (__m128i)__builtin_ia32_pmovssdb512_mask(
+  return (__m128i)__builtin_ia32_vpmovssdb512_mask(
       (__v16si)__A, (__v16qi)_mm_setzero_si128(), (__mmask16)-1);
 }
 
@@ -1135,7 +1135,7 @@ _mm512_cvtss_epi32_epi8(__m512i __A) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
 _mm512_mask_cvtss_epi32_epi8(__m128i __W, __mmask16 __U, __m512i __A) {
-  return (__m128i)__builtin_ia32_pmovssdb512_mask((__v16si)__A, (__v16qi)__W,
+  return (__m128i)__builtin_ia32_vpmovssdb512_mask((__v16si)__A, (__v16qi)__W,
                                                   __U);
 }
 
@@ -1154,7 +1154,7 @@ _mm512_mask_cvtss_epi32_epi8(__m128i __W, __mmask16 __U, __m512i __A) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
 _mm512_maskz_cvtss_epi32_epi8(__mmask16 __U, __m512i __A) {
-  return (__m128i)__builtin_ia32_pmovssdb512_mask(
+  return (__m128i)__builtin_ia32_vpmovssdb512_mask(
       (__v16si)__A, (__v16qi)_mm_setzero_si128(), __U);
 }
 
@@ -1174,7 +1174,7 @@ _mm512_maskz_cvtss_epi32_epi8(__mmask16 __U, __m512i __A) {
 ///    A 512-bit vector of [16 x i32].
 static __inline__ void __DEFAULT_FN_ATTRS512
 _mm512_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask16 __M, __m512i __A) {
-  __builtin_ia32_pmovssdb512mem_mask((__v16qi *)__P, (__v16si)__A, __M);
+  __builtin_ia32_vpmovssdb512mem_mask((__v16qi *)__P, (__v16si)__A, __M);
 }
 
 #undef __DEFAULT_FN_ATTRS512
