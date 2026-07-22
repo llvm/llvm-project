@@ -37,12 +37,12 @@ struct __needs_clear_padding
            _Not<is_same<_Tp, double> > > {};
 
 template <class _Tp, __enable_if_t<!__needs_clear_padding<__remove_cvref_t<_Tp> >::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) noexcept {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) _NOEXCEPT {
   return __obj;
 }
 
 template <class _Tp, __enable_if_t<__needs_clear_padding<__remove_cvref_t<_Tp> >::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) noexcept {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp& __clear_padding_if_needed(_Tp& __obj) _NOEXCEPT {
   return __builtin_is_constant_evaluated() ? __obj : (__builtin_clear_padding(std::addressof(__obj)), __obj);
 }
 
