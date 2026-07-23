@@ -1072,9 +1072,9 @@ protected:
       } else {
           size = target->GetArchitecture().GetAddressByteSize();
           result.AppendWarning(
-              "Cannot infer watchpoint size from expression. "
-              "Defaulting to pointer size. \n"
-              "Use -s option to specify size explicitly.");
+              "Cannot infer watchpoint size from expression.\n"
+              "Defaulting to pointer size.\n"
+              "Use -s option to specify size explicitly");
       }
 #endif
     }
