@@ -6069,7 +6069,8 @@ bool APFloatBase::isValidArbitraryFPFormat(StringRef Format) {
 
 const fltSemantics *APFloatBase::getArbitraryFPSemantics(StringRef Format) {
   // TODO: extend to remaining arbitrary FP types: Float8E4M3, Float8E3M4,
-  // Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ, Float8E8M0FNU.
+  // Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ, Float8E8M0FNU,
+  // Float8E5M3FNU.
   return StringSwitch<const fltSemantics *>(Format)
       .Case("Float8E5M2", &semFloat8E5M2)
       .Case("Float8E4M3FN", &semFloat8E4M3FN)

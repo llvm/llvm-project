@@ -1061,11 +1061,11 @@ TEST(APFloatTest, IsSmallestNormalized) {
       EXPECT_FALSE(APFloat::getSNaN(Semantics).isSmallestNormalized());
     }
 
-    EXPECT_FALSE(APFloat::getLargest(Semantics, false).isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getLargest(Semantics).isSmallestNormalized());
     if (Semantics.hasSignedRepr)
       EXPECT_FALSE(APFloat::getLargest(Semantics, true).isSmallestNormalized());
 
-    EXPECT_FALSE(APFloat::getSmallest(Semantics, false).isSmallestNormalized());
+    EXPECT_FALSE(APFloat::getSmallest(Semantics).isSmallestNormalized());
     if (Semantics.hasSignedRepr)
       EXPECT_FALSE(
           APFloat::getSmallest(Semantics, true).isSmallestNormalized());
@@ -1077,7 +1077,17 @@ TEST(APFloatTest, IsSmallestNormalized) {
     EXPECT_TRUE(PosSmallestNormalized.isSmallestNormalized());
     EXPECT_EQ(fcPosNormal, PosSmallestNormalized.classify());
 
-    auto SmallestNormalized = [&](APFloat *Val) {
+    SmallVector<std::optional<APFloat>> Vals = {PosSmallestNormalized};
+
+    std::optional<APFloat> NegSmallestNormalized;
+    if (Semantics.hasSignedRepr) {
+      NegSmallestNormalized = APFloat::getSmallestNormalized(Semantics, true);
+      EXPECT_TRUE(NegSmallestNormalized->isSmallestNormalized());
+      EXPECT_EQ(fcNegNormal, NegSmallestNormalized->classify());
+      Vals.push_back(NegSmallestNormalized);
+    }
+
+    for (auto& Val : Vals) {
       bool OldSign = Val->isNegative();
 
       // Step down, make sure it's still not smallest normalized.
@@ -1095,15 +1105,6 @@ TEST(APFloatTest, IsSmallestNormalized) {
       EXPECT_EQ(APFloat::opOK, Val->next(true));
       EXPECT_FALSE(Val->isSmallestNormalized());
       EXPECT_EQ(OldSign, Val->isNegative());
-    };
-
-    SmallestNormalized(&PosSmallestNormalized);
-    if (Semantics.hasSignedRepr) {
-      APFloat NegSmallestNormalized =
-          APFloat::getSmallestNormalized(Semantics, true);
-      EXPECT_TRUE(NegSmallestNormalized.isSmallestNormalized());
-      EXPECT_EQ(fcNegNormal, NegSmallestNormalized.classify());
-      SmallestNormalized(&NegSmallestNormalized);
     }
   }
 }
@@ -9597,14 +9598,14 @@ TEST(APFloatTest, getExactLog2) {
     if (APFloat::semanticsHasNaN(Semantics)) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
-      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, false).getExactLog2());
+      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2());
       EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2());
       if (Semantics.hasSignedRepr) {
         EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2());
         EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2());
       }
 
-      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, false).getExactLog2Abs());
+      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2Abs());
       EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2Abs());
       if (Semantics.hasSignedRepr) {
         EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2Abs());
@@ -9909,10 +9910,6 @@ TEST(APFloatTest, Float8E5M3FNUValues) {
   test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p14");
   EXPECT_EQ(0x1.0p14, test.convertToDouble());
 
-  // tests the fix in makeLargest()
-  test = APFloat::getLargest(APFloat::Float8E5M3FNU());
-  EXPECT_EQ(0x1.cp16, test.convertToDouble());
-
   // tests overflow to nan
   APFloat nan = APFloat(APFloat::Float8E5M3FNU(), "nan");
   test = APFloat(APFloat::Float8E5M3FNU(), "0x1.e0p+16");
@@ -9938,10 +9935,6 @@ TEST(APFloatTest, Float8E5M3FNUValues) {
   test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-14");
   EXPECT_EQ(0x1.0p-14, test.convertToDouble());
   EXPECT_TRUE(test.isSmallestNormalized());
-
-  // Smallest value
-  test = APFloat::getSmallest(APFloat::Float8E5M3FNU());
-  EXPECT_EQ(0x1.0p-17, test.convertToDouble());
 
   // Value below the smallest, but clamped to the smallest
   test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-18");
@@ -9999,17 +9992,6 @@ TEST(APFloatTest, Float8E5M3FNUGetInf) {
   APFloat t = APFloat::getInf(APFloat::Float8E5M3FNU());
   EXPECT_TRUE(t.isNaN());
   EXPECT_FALSE(t.isInfinity());
-}
-
-TEST(APFloatTest, Float8E5M3FNUSmallest) {
-  APFloat test(APFloat::getSmallest(APFloat::Float8E5M3FNU()));
-  EXPECT_EQ(0x1.0p-17, test.convertToDouble());
-
-  EXPECT_TRUE(test.isSmallest());
-  EXPECT_EQ(fcPosSubnormal, test.classify());
-
-  test = APFloat::getAllOnesValue(APFloat::Float8E5M3FNU());
-  EXPECT_TRUE(test.isNaN());
 }
 
 TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
@@ -10091,9 +10073,6 @@ TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
 }
 
 TEST(APFloatTest, Float8E5M3FNUExhaustive) {
-  // Test each of the 256 Float8E5M3FNU values.
-  // Layout: 5 exponent bits + 3 mantissa bits, bias = 15, NaN = 0xFF
-  // (all-ones).
   for (int i = 0; i < 256; i++) {
     APFloat test(APFloat::Float8E5M3FNU(), APInt(8, i));
     SCOPED_TRACE("i=" + std::to_string(i));
