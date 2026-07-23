@@ -281,6 +281,7 @@ cc_library(
 
 llvm_driver_cc_binary(
     name = "lld",
+    features = ["-layering_check"],
     deps = [":lld-lib"],
 )
 
