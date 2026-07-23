@@ -11,12 +11,10 @@
 define i64 @test_or_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; CHECK-LABEL: test_or_sub_on_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    subq %rcx, %r8
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    ccmpaeq {dfv=} %rcx, %rdx
-; CHECK-NEXT:    cmovbeq %r8, %rax
+; CHECK-NEXT:    subq %rcx, %rdx
+; CHECK-NEXT:    ccmpbeq {dfv=cf} %rsi, %rdi
+; CHECK-NEXT:    cmovaeq %rdx, %rax
 ; CHECK-NEXT:    retq
   %cmp.match = icmp ugt i64 %c, %d
   %cmp.other = icmp ult i64 %a, %b
@@ -30,12 +28,10 @@ define i64 @test_or_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 define i64 @test_and_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; CHECK-LABEL: test_and_sub_on_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    subq %rcx, %r8
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    ccmpbq {dfv=cf} %rcx, %rdx
-; CHECK-NEXT:    cmovbeq %r8, %rax
+; CHECK-NEXT:    subq %rcx, %rdx
+; CHECK-NEXT:    ccmpaq {dfv=} %rsi, %rdi
+; CHECK-NEXT:    cmovaeq %rdx, %rax
 ; CHECK-NEXT:    retq
   %cmp.match = icmp ugt i64 %c, %d
   %cmp.other = icmp ult i64 %a, %b
@@ -50,13 +46,12 @@ define i64 @test_and_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 define i64 @test_two_ors_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) nounwind {
 ; CHECK-LABEL: test_two_ors_sub_on_lhs:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    subq %r8, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq %rdx, %rsi
+; CHECK-NEXT:    ccmpbeq {dfv=cf} %rdx, %rsi
 ; CHECK-NEXT:    ccmpaeq {dfv=cf} %rsi, %rdi
-; CHECK-NEXT:    ccmpaeq {dfv=} %r8, %rdx
-; CHECK-NEXT:    cmovbeq %rcx, %rax
+; CHECK-NEXT:    cmovaeq %rcx, %rax
 ; CHECK-NEXT:    retq
   %cmp.match = icmp ugt i64 %c, %e
   %cmp.other1 = icmp ult i64 %a, %b
