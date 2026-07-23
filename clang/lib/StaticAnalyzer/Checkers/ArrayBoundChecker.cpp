@@ -245,7 +245,7 @@ public:
 } // anonymous namespace
 
 /// Return true if information about the value of \p SV can put constraints
-/// on some symbol which is interesting within the bug report \p BR
+/// on some symbol which is interesting within the bug report \p BR.
 /// In particular, this returns true when \p SV is interesting within \p BR;
 /// but it also returns true if \p SV is an expression that contains integer
 /// constants and a single symbolic operand which is interesting (in \p BR).
