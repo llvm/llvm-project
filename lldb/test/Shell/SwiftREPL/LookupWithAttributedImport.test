@@ -4,7 +4,7 @@
 
 // RUN: rm -rf %t
 // RUN: mkdir %t
-// RUN: %target-swiftc -emit-library %S/Inputs/Test.swift -module-name Test -emit-module-path %t/Test.swiftmodule -o %t/libTest%target-shared-library-suffix -Onone -g  -enable-testing
+// RUN: %target-swiftc -emit-library %S/Inputs/Test.swift -module-name Test -emit-module-path %t/Test.swiftmodule -o %t/%target-shared-library-prefixTest%target-shared-library-suffix -Onone -g  -enable-testing
 
 // RUN: %lldb --repl="-I%t -L%t -lTest" < %s 2>&1 | FileCheck %s
 

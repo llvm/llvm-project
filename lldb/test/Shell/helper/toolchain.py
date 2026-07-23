@@ -252,8 +252,17 @@ def use_support_substitutions(config):
     else:
         host_flags += ["-pthread"]
 
-    config.target_shared_library_suffix = (
-        ".dylib" if platform.system() in ["Darwin"] else ".so"
+    if platform.system() == "Darwin":
+        config.target_shared_library_prefix = "lib"
+        config.target_shared_library_suffix = ".dylib"
+    elif platform.system() == "Windows":
+        config.target_shared_library_prefix = ""
+        config.target_shared_library_suffix = ".dll"
+    else:
+        config.target_shared_library_prefix = "lib"
+        config.target_shared_library_suffix = ".so"
+    config.substitutions.append(
+        ("%target-shared-library-prefix", config.target_shared_library_prefix)
     )
     config.substitutions.append(
         ("%target-shared-library-suffix", config.target_shared_library_suffix)
