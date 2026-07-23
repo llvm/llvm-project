@@ -483,8 +483,6 @@ _storebe_i64(void * __P, long long __D) {
 
 #include <amxavx512intrin.h>
 
-#include <amxtf32intrin.h>
-
 #include <avx512vp2intersectintrin.h>
 
 #include <avx512vlvp2intersectintrin.h>

@@ -149,11 +149,15 @@ public:
   /// Checks if the frame is a root frame - return should quit the interpreter.
   bool isRoot() const { return !Func; }
 
-  /// Returns the PC of the frame's code start.
-  CodePtr getPC() const { return Func->getCodeBegin(); }
-
   /// Returns the return address of the frame.
   CodePtr getRetPC() const { return RetPC; }
+  /// Returns the return address of the opcode in the caller frame.
+  CodePtr getRetOpPC() const {
+    // All the Call ops we have take a Function* and an unsigned.
+    if (RetPC)
+      return RetPC - align(sizeof(void *)) - align(sizeof(unsigned));
+    return RetPC;
+  }
 
   /// Map a location to a source.
   SourceInfo getSource(CodePtr PC) const;
@@ -162,6 +166,7 @@ public:
   SourceRange getRange(CodePtr PC) const;
 
   unsigned getDepth() const { return Depth; }
+  unsigned getArgSize() const { return ArgSize; }
 
   bool isStdFunction() const;
 

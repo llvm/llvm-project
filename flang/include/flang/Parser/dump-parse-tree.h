@@ -556,6 +556,15 @@ public:
   NODE_ENUM(OmpAlwaysModifier, Value)
   NODE(parser, OmpAppendArgsClause)
   NODE(OmpAppendArgsClause, OmpAppendOp)
+  NODE(parser, OmpLoopModifier)
+
+  static std::string GetNodeName(const llvm::omp::LoopModifier &x) {
+    return llvm::Twine(
+        "llvm::omp::LoopModifier = ", llvm::omp::getLoopModifierName(x))
+        .str();
+  }
+  NODE(parser, OmpApplyClause)
+  NODE(OmpApplyClause, Modifier)
   NODE(parser, OmpArgument)
   NODE(parser, OmpArgumentList)
   NODE(parser, OmpAssumeDirective)

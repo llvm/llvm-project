@@ -10,7 +10,6 @@
 
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/expression.h"
-#include "flang/Support/Fortran.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include <tuple>

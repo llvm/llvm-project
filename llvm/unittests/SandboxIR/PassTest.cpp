@@ -323,6 +323,22 @@ define void @f() {
   EXPECT_EQ(Str,
             "foo(aux1)<abc>bar<nested1(aux2)<nested2<nested3()>>>foo(aux3)<>");
 
+  // A pass with an aux argument followed by another pass in a flat pipeline.
+  std::string AuxArgStr;
+  auto CreatePassWithAuxArg =
+      [&AuxArgStr](llvm::StringRef Name, llvm::StringRef Args,
+                   llvm::StringRef AuxArg) -> std::unique_ptr<FunctionPass> {
+    if (Name == "foo")
+      return std::make_unique<FooPass>(AuxArgStr, Args, AuxArg);
+    if (Name == "bar")
+      return std::make_unique<BarPass>(AuxArgStr, Args, AuxArg);
+    return nullptr;
+  };
+  FunctionPassManager FPMWithAuxArg("test-fpm");
+  FPMWithAuxArg.setPassPipeline("foo(aux1),bar", CreatePassWithAuxArg);
+  FPMWithAuxArg.runOnFunction(*F, Analyses::emptyForTesting());
+  EXPECT_EQ(AuxArgStr, "foo(aux1)<>bar<>");
+
   // A second call to setPassPipeline will trigger an assertion in debug mode.
 #ifndef NDEBUG
   EXPECT_DEATH(FPM.setPassPipeline("bar,bar,foo", CreatePass),
