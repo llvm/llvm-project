@@ -17970,6 +17970,29 @@ static bool canLowerSRLToRoundingShiftForVT(SDValue Shift, EVT ResVT,
   return true;
 }
 
+static bool isNegatedSplatShiftAmount(SDValue Op, SelectionDAG &DAG) {
+  SDValue Splat = DAG.getSplatValue(Op);
+  if (!Splat)
+    return false;
+
+  while (true) {
+    switch (Splat.getOpcode()) {
+    case ISD::ANY_EXTEND:
+    case ISD::SIGN_EXTEND:
+    case ISD::ZERO_EXTEND:
+    case ISD::TRUNCATE:
+    case ISD::AssertSext:
+    case ISD::AssertZext:
+    case ISD::SIGN_EXTEND_INREG:
+      Splat = Splat.getOperand(0);
+      continue;
+    default:
+      return Splat.getOpcode() == ISD::SUB &&
+             isNullConstant(Splat.getOperand(0));
+    }
+  }
+}
+
 SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
                                                       SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -18006,15 +18029,21 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
                            DAG.getTargetConstant(ShiftValue, DL, MVT::i32));
     }
 
+    bool IsImmediateRShift =
+        isVShiftRImm(Op.getOperand(1), VT, false, Cnt) && Cnt < EltSize;
+    bool OverrideNEON = !Subtarget->isNeonAvailable() ||
+                        (!IsImmediateRShift &&
+                         !isNegatedSplatShiftAmount(Op.getOperand(1), DAG));
+
     if (VT.isScalableVector() ||
-        useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())) {
+        useSVEForFixedLengthVectorVT(VT, OverrideNEON)) {
       unsigned Opc = Op.getOpcode() == ISD::SRA ? AArch64ISD::SRA_PRED
                                                 : AArch64ISD::SRL_PRED;
       return LowerToPredicatedOp(Op, DAG, Opc);
     }
 
     // Right shift immediate
-    if (isVShiftRImm(Op.getOperand(1), VT, false, Cnt) && Cnt < EltSize) {
+    if (IsImmediateRShift) {
       unsigned Opc =
           (Op.getOpcode() == ISD::SRA) ? AArch64ISD::VASHR : AArch64ISD::VLSHR;
       return DAG.getNode(Opc, DL, VT, Op.getOperand(0),

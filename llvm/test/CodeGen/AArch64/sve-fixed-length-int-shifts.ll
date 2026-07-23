@@ -9,23 +9,27 @@ target triple = "aarch64-unknown-linux-gnu"
 ; ASHR
 ;
 
-; Don't use SVE for 64-bit vectors.
 define <8 x i8> @ashr_v8i8(<8 x i8> %op1, <8 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ashr_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.8b, v1.8b
-; CHECK-NEXT:    sshl v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    asr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = ashr <8 x i8> %op1, %op2
   ret <8 x i8> %res
 }
 
-; Don't use SVE for 128-bit vectors.
 define <16 x i8> @ashr_v16i8(<16 x i8> %op1, <16 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ashr_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.16b, v1.16b
-; CHECK-NEXT:    sshl v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    asr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = ashr <16 x i8> %op1, %op2
   ret <16 x i8> %res
@@ -109,23 +113,27 @@ define void @ashr_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
-; Don't use SVE for 64-bit vectors.
 define <4 x i16> @ashr_v4i16(<4 x i16> %op1, <4 x i16> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ashr_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.4h, v1.4h
-; CHECK-NEXT:    sshl v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = ashr <4 x i16> %op1, %op2
   ret <4 x i16> %res
 }
 
-; Don't use SVE for 128-bit vectors.
 define <8 x i16> @ashr_v8i16(<8 x i16> %op1, <8 x i16> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ashr_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.8h, v1.8h
-; CHECK-NEXT:    sshl v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = ashr <8 x i16> %op1, %op2
   ret <8 x i16> %res
@@ -209,23 +217,27 @@ define void @ashr_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
-; Don't use SVE for 64-bit vectors.
 define <2 x i32> @ashr_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ashr_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.2s, v1.2s
-; CHECK-NEXT:    sshl v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = ashr <2 x i32> %op1, %op2
   ret <2 x i32> %res
 }
 
-; Don't use SVE for 128-bit vectors.
 define <4 x i32> @ashr_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ashr_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.4s, v1.4s
-; CHECK-NEXT:    sshl v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = ashr <4 x i32> %op1, %op2
   ret <4 x i32> %res
@@ -309,23 +321,27 @@ define void @ashr_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
-; Don't use SVE for 64-bit vectors.
 define <1 x i64> @ashr_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ashr_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg d1, d1
-; CHECK-NEXT:    sshl d0, d0, d1
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = ashr <1 x i64> %op1, %op2
   ret <1 x i64> %res
 }
 
-; Don't use SVE for 128-bit vectors.
 define <2 x i64> @ashr_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ashr_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.2d, v1.2d
-; CHECK-NEXT:    sshl v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = ashr <2 x i64> %op1, %op2
   ret <2 x i64> %res
@@ -413,23 +429,27 @@ define void @ashr_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; LSHR
 ;
 
-; Don't use SVE for 64-bit vectors.
 define <8 x i8> @lshr_v8i8(<8 x i8> %op1, <8 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: lshr_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.8b, v1.8b
-; CHECK-NEXT:    ushl v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    lsr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = lshr <8 x i8> %op1, %op2
   ret <8 x i8> %res
 }
 
-; Don't use SVE for 128-bit vectors.
 define <16 x i8> @lshr_v16i8(<16 x i8> %op1, <16 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: lshr_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.16b, v1.16b
-; CHECK-NEXT:    ushl v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    lsr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = lshr <16 x i8> %op1, %op2
   ret <16 x i8> %res
@@ -513,23 +533,27 @@ define void @lshr_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
-; Don't use SVE for 64-bit vectors.
 define <4 x i16> @lshr_v4i16(<4 x i16> %op1, <4 x i16> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: lshr_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.4h, v1.4h
-; CHECK-NEXT:    ushl v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    lsr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = lshr <4 x i16> %op1, %op2
   ret <4 x i16> %res
 }
 
-; Don't use SVE for 128-bit vectors.
 define <8 x i16> @lshr_v8i16(<8 x i16> %op1, <8 x i16> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: lshr_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.8h, v1.8h
-; CHECK-NEXT:    ushl v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    lsr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = lshr <8 x i16> %op1, %op2
   ret <8 x i16> %res
@@ -613,23 +637,27 @@ define void @lshr_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
-; Don't use SVE for 64-bit vectors.
 define <2 x i32> @lshr_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: lshr_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.2s, v1.2s
-; CHECK-NEXT:    ushl v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = lshr <2 x i32> %op1, %op2
   ret <2 x i32> %res
 }
 
-; Don't use SVE for 128-bit vectors.
 define <4 x i32> @lshr_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: lshr_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.4s, v1.4s
-; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = lshr <4 x i32> %op1, %op2
   ret <4 x i32> %res
@@ -713,23 +741,27 @@ define void @lshr_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
-; Don't use SVE for 64-bit vectors.
 define <1 x i64> @lshr_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: lshr_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg d1, d1
-; CHECK-NEXT:    ushl d0, d0, d1
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = lshr <1 x i64> %op1, %op2
   ret <1 x i64> %res
 }
 
-; Don't use SVE for 128-bit vectors.
 define <2 x i64> @lshr_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: lshr_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.2d, v1.2d
-; CHECK-NEXT:    ushl v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = lshr <2 x i64> %op1, %op2
   ret <2 x i64> %res
