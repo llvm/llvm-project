@@ -93,8 +93,7 @@ AST_MATCHER_P(StringLiteral, mentionsBoundType, std::string, BindingID) {
 // specialization and whose previously-bound DerivedID node is one of that
 // specialization's type template arguments, i.e. the CRTP pattern
 // `class Derived : Base<Derived>`.
-AST_MATCHER_P2(Expr, isCRTPCast, std::string, BaseID, std::string,
-               DerivedID) {
+AST_MATCHER_P2(Expr, isCRTPCast, std::string, BaseID, std::string, DerivedID) {
   return Builder->removeBindings([this](const BoundNodesMap &Nodes) {
     const auto *Base = Nodes.getNodeAs<CXXRecordDecl>(this->BaseID);
     const auto *Derived = Nodes.getNodeAs<CXXRecordDecl>(this->DerivedID);
