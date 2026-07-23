@@ -2891,11 +2891,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     Function->setLocalExternDecl();
 
   DeclContext *LexicalDC = Owner;
-  if (!isFriend && D->isOutOfLine() && !D->isLocalExternDecl()) {
-    assert(D->getDeclContext()->isFileContext());
+  if (!isFriend && D->isOutOfLine() && !D->isLocalExternDecl() &&
+      D->getDeclContext()->isFileContext()) {
     LexicalDC = D->getDeclContext();
-  }
-  else if (D->isLocalExternDecl()) {
+  } else if (D->isLocalExternDecl()) {
     LexicalDC = SemaRef.CurContext;
   }
 
