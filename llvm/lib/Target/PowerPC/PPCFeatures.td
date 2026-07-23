@@ -75,6 +75,10 @@ def FeatureCRBits    : SubtargetFeature<"crbits", "UseCRBits", "true",
 def FeatureFPU       : SubtargetFeature<"fpu","HasFPU","true",
                                         "Enable classic FPU instructions",
                                         [FeatureHardFloat]>;
+def FeaturePairedSingles : SubtargetFeature<"paired-singles", "HasPairedSingles",
+                                            "true",
+                                            "Enable 750CL Paired-Singles instructions",
+                                            [FeatureFPU]>;
 def FeatureAltivec   : SubtargetFeature<"altivec","HasAltivec", "true",
                                         "Enable Altivec instructions",
                                         [FeatureFPU]>;
@@ -386,6 +390,7 @@ def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">;
 def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">;
 def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">;
 def IsE500  : Predicate<"Subtarget->isE500()">;
+def HasPairedSingles : Predicate<"Subtarget->hasPairedSingles()">;
 def HasSPE  : Predicate<"Subtarget->hasSPE()">;
 def HasICBT : Predicate<"Subtarget->hasICBT()">;
 def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
