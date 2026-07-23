@@ -400,33 +400,38 @@ Of the current targets we have:
 
 ### Hardware Breakpoints and Watchpoints
 
-Breakpoints can be implemented in software by replacing an instruction with a
-software breakpoint instruction.
+Code breakpoints can be implemented in software by replacing an instruction with
+a software breakpoint instruction.
 
 However, if you want to only stop in certain situations (a single address space,
-a single execution mode, and so on), hardware breakpoints will be much faster.
+a single execution mode, and so on), code breakpoints implemented in hardware
+will be much faster.
 
-Doing this in software means you have to return into the debugger to filter
+Doing it in software means you have to return into the debugger to filter
 every stop event. Which is slow even when locally debugging. Put the debug
 server on the end of a high latency connection and the slow down is multiplied.
 
-In addition, hardware breakpoints can be set in read-only memory. Which is
-important for code executing out of ROM, common on embedded targets.
+In addition, hardware code breakpoints can be set in read-only memory. Which is
+important for code executing out of ROM, which is common on embedded targets.
+
+Watchpoints are used to wait for a specific type of access to a specific range
+of memory. Doing this in software is possible but very invasive so use hardware
+watchpoints if you can.
+
+For comparison, one way to implement a software watchpoint is to unmap the
+memory around a location and then filter the memory faults to find the access
+you are looking for. This requires a lot of traffic between debugger and debug
+server, and needs to be implemented for every supported operating system.
+
+Whereas a hardware watchpoint is usually a few registers programmed with
+hardware specific values, and most operating systems expose those registers
+directly to userspace.
 
 :::{note}
-LLDB still has to be taught how to program hardware breakpoints, and this work
-has not been done completely for all targets. This generally comes down to
-demand. If it would be faster but the use case is rare, it is unlikely to be
-supported.
+Hardware often has many more features than LLDB makes use of. What we make use
+of is decided by how useful it will be to how many users and how understandable
+it will be presented in the LLDB interface.
 :::
-
-Watchpoints pretty much have to be implemented in hardware because the software
-equivalent is much more invasive. For example you could unmap the memory
-containing the watched location, then filter the memory faults to find the ones
-you care about.
-
-However this requires a lot of traffic between debugger and debug server, and
-needs to be implemented for every supported operating system.
 
 ### Accurate Breakpoints and Watchpoints
 
