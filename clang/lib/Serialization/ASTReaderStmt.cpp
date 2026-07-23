@@ -1574,6 +1574,7 @@ void ASTStmtReader::VisitObjCSelectorExpr(ObjCSelectorExpr *E) {
   VisitExpr(E);
   E->setSelector(Record.readSelector());
   E->setAtLoc(readSourceLocation());
+  E->setSelectorLoc(readSourceLocation());
   E->setRParenLoc(readSourceLocation());
 }
 

@@ -3205,7 +3205,7 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
     return ExprError(Diag(Tok, diag::err_expected_lparen_after) << "@selector");
 
   SmallVector<const IdentifierInfo *, 12> KeyIdents;
-  SourceLocation sLoc;
+  SourceLocation SelectorNameLoc;
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
@@ -3219,7 +3219,7 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
     return ExprError();
   }
 
-  IdentifierInfo *SelIdent = ParseObjCSelectorPiece(sLoc);
+  IdentifierInfo *SelIdent = ParseObjCSelectorPiece(SelectorNameLoc);
   if (!SelIdent &&  // missing selector name.
       Tok.isNot(tok::colon) && Tok.isNot(tok::coloncolon))
     return ExprError(Diag(Tok, diag::err_expected) << tok::identifier);
@@ -3259,8 +3259,8 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
   T.consumeClose();
   Selector Sel = PP.getSelectorTable().getSelector(nColons, &KeyIdents[0]);
   return Actions.ObjC().ParseObjCSelectorExpression(
-      Sel, AtLoc, SelectorLoc, T.getOpenLocation(), T.getCloseLocation(),
-      !HasOptionalParen);
+      Sel, AtLoc, SelectorLoc, SelectorNameLoc, T.getOpenLocation(),
+      T.getCloseLocation(), !HasOptionalParen);
 }
 
 void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
