@@ -629,8 +629,8 @@ static Value *accumulateGEPOffset(GetElementPtrInst *GEP,
   unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
   SmallMapVector<Value *, APInt, 4> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
-  bool Success = GEP->collectOffset(DL, BitWidth, VariableOffsets,
-                                    ConstantOffset);
+  bool Success =
+      GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset);
   assert(Success && "Unhandled GEP structure for resource access");
   (void)Success;
 
@@ -639,8 +639,8 @@ static Value *accumulateGEPOffset(GetElementPtrInst *GEP,
   for (auto &[V, Scale] : VariableOffsets) {
     Value *Index = Builder.CreateZExtOrTrunc(V, I32);
     if (!Scale.isOne())
-      Index = Builder.CreateMul(Index,
-                                ConstantInt::get(I32, Scale.getSExtValue()));
+      Index =
+          Builder.CreateMul(Index, ConstantInt::get(I32, Scale.getSExtValue()));
     Offset = Builder.CreateAdd(Offset, Index);
   }
   return Offset;
@@ -678,9 +678,10 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
 
     IRBuilder<> Builder(GEP);
     Value *GEPOffset = accumulateGEPOffset(GEP, Builder);
-    AccessIdx.OffsetIdx = AccessIdx.hasOffsetIdx()
-                              ? Builder.CreateAdd(AccessIdx.OffsetIdx, GEPOffset)
-                              : GEPOffset;
+    AccessIdx.OffsetIdx =
+        AccessIdx.hasOffsetIdx()
+            ? Builder.CreateAdd(AccessIdx.OffsetIdx, GEPOffset)
+            : GEPOffset;
 
     DeadInsts.insert(GEP);
     return AccessIdx;
@@ -793,7 +794,8 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
   // that later access lowering still sees it.
   Value *Result = GetPtr;
   if (AccessIdx.hasOffsetIdx())
-    Result = Builder.CreateGEP(Builder.getInt8Ty(), GetPtr, AccessIdx.OffsetIdx);
+    Result =
+        Builder.CreateGEP(Builder.getInt8Ty(), GetPtr, AccessIdx.OffsetIdx);
 
   Ptr->replaceAllUsesWith(Result);
   DeadInsts.insert(Ptr);
