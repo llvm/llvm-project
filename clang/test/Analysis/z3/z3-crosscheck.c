@@ -89,3 +89,14 @@ void e() {
   int f;
   a(f); // expected-warning {{1st function call argument is an uninitialized value [core.CallAndMessage]}}
 }
+
+// don't crash, and also produce a core.NullDereference finding
+_Atomic int b;
+int x;
+void k(void) {
+  int *p = 0;
+  b = x;
+  if (b == 0) {
+    *p = 1; // expected-warning {{Dereference of null pointer (loaded from variable 'p') [core.NullDereference]}}
+  }
+}
