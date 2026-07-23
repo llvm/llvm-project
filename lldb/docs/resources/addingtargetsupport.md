@@ -363,8 +363,8 @@ allow users to access each one separately.
 For example, AArch64's SME extension adds a "streaming mode". SVE registers
 exist in the normal mode and the streaming mode. However programs only ever use
 one or the other, and the values are cleared when the mode is switched. So there
-is no reason to let users write to the inactive mode's registers, and so we just
-present 1 set with the normal naming.
+is no reason to let users write to the inactive mode's registers and we just
+show 1 set with the normal naming. That set always refers to the active mode.
 
 However if you have overlapping sets that can hold their own values, you may
 want to make the normal register name the active set, and have a way to address
