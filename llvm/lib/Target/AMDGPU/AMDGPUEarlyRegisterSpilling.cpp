@@ -1350,6 +1350,10 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
                           << Candidate->getSpillRestoreCost() << "\n");
         FinalCandidates.push_back(std::move(Candidate));
       } else {
+
+        if (DG.size() == 1)
+          continue;
+
         SetVectorType UsesDominatedByCurMI;
         for (MachineInstr *U : DG.getUses()) {
           MachineBasicBlock *UMBB = U->getParent();
