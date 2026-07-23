@@ -48,7 +48,6 @@
 /// %exec = S_OR_B64 %exec, %sgpr0     // Re-enable saved exec mask bits
 //===----------------------------------------------------------------------===//
 
-#include "SICustomBranchBundles.h"
 #include "SILowerControlFlow.h"
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
@@ -224,6 +223,15 @@ static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI) {
   return true;
 }
 
+static void moveInsAfterPhis(MachineInstr &MI) {
+  MachineBasicBlock::iterator It, End;
+  for (It = std::next(MI.getIterator()), End = MI.getParent()->end();
+       It != End && It->getOpcode() == AMDGPU::PHI; ++It)
+    ;
+  
+  MI.moveBefore(&*It);
+}
+
 void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -335,7 +343,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   if (LV)
     LV->replaceKillInstruction(SrcReg, MI, *OrSaveExec);
 
-  moveInsBeforePhis(*OrSaveExec);
+  moveInsAfterPhis(*OrSaveExec);
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
@@ -830,7 +838,7 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
     }
   }
 
-  bool Changed = makeEverySuccessorBeBranchTarget(MF);
+  bool Changed = false;
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin();
        BI != MF.end(); BI = NextBB) {
@@ -876,21 +884,12 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
   }
 
   for (MachineInstr *MI : LoweredEndCf)
-    moveInsBeforePhis(*MI);
+    moveInsAfterPhis(*MI);
 
   RecomputeRegs.clear();
   LoweredEndCf.clear();
   LoweredIf.clear();
   KillBlocks.clear();
-
-#if 1
-  if (Changed)
-    for (MachineBasicBlock &MBB : MF)
-      for (MachineInstr &MI : MBB)
-        if (MI.isBundled())
-          MI.unbundleFromSucc();
-#endif
-  //llvm::finalizeBundles(MF);
 
   return Changed;
 }

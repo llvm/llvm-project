@@ -265,6 +265,9 @@ extern char &AMDGPUPreloadKernelArgumentsLegacyID;
 void initializeSIRestoreNormalEpilogLegacyPass(PassRegistry &);
 extern char &SIRestoreNormalEpilogLegacyID;
 
+void initializeAMDGPUNextUseAnalysisWrapperPass(PassRegistry &);
+extern char &AMDGPUNextUseAnalysisID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
