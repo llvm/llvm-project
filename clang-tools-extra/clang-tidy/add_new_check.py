@@ -570,6 +570,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
             with open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
                 content = doc.read()
             redirect = re.search(r"http-equiv=refresh.*?URL=([^\"'\s]+)", content)
+            # Preserve any anchor in checkers.html as part of the redirect target.
             target = "" if not redirect else redirect.group(1)
             autofix = ""
             ref_begin = ""
