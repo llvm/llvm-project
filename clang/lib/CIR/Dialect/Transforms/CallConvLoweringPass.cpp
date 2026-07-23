@@ -115,13 +115,13 @@ static bool isSupportedType(mlir::Type ty) {
     // Unions and packed / padded records each need classification this bridge
     // does not implement (a union widen fixup and pad-aware eightbyte
     // classification), so reject them here and report NYI rather than
-    // misclassify.  Empty-for-ABI records classify as Ignore, which is also
-    // deferred: a C empty struct is a zero-field record, and CIRGen lays out
-    // an empty C++ class as a single padded byte (caught by the padded check).
+    // misclassify.  A zero-field record (a C empty struct) classifies as
+    // Ignore and is dropped from the lowered signature.  CIRGen lays out an
+    // empty C++ class as a single padded byte, which the padded check rejects.
     // A real one-byte struct such as `{char[1]}` has a field and is not
     // padded, so it is classified normally.
     if (recTy.isUnion() || !recTy.isComplete() || recTy.getPacked() ||
-        recTy.getPadded() || recTy.getMembers().empty())
+        recTy.getPadded())
       return false;
     return llvm::all_of(recTy.getMembers(),
                         [](mlir::Type m) { return isSupportedType(m); });
@@ -257,8 +257,8 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// Indirect: an aggregate that does not fit in registers is passed via a
 /// pointer (sret for returns, byval for arguments).
 ///
-/// Ignore: a void return has no register or stack slot.  (Empty-for-ABI
-/// records are rejected by isSupportedType, so they never reach here.)
+/// Ignore: a void return has no register or stack slot, and a zero-field
+/// (empty) record is dropped from the signature.
 static std::optional<ArgClassification>
 convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                   mlir::Type origTy) {

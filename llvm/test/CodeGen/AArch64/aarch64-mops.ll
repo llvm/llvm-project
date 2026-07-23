@@ -2074,25 +2074,21 @@ define void @memmove_7(ptr %dst, ptr %src, i32 %value) {
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_7:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w8, [x1]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    strb w10, [x0, #6]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    strh w9, [x0, #4]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    str w8, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldur w8, [x1, #3]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w9, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stur w8, [x0, #3]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str w9, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memmove_7:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    ldr w8, [x1]
-; SDAG-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
-; SDAG-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
-; SDAG-MOPS-O2-NEXT:    strb w10, [x0, #6]
-; SDAG-MOPS-O2-NEXT:    strh w9, [x0, #4]
-; SDAG-MOPS-O2-NEXT:    str w8, [x0]
+; SDAG-MOPS-O2-NEXT:    ldur w8, [x1, #3]
+; SDAG-MOPS-O2-NEXT:    ldr w9, [x1]
+; SDAG-MOPS-O2-NEXT:    stur w8, [x0, #3]
+; SDAG-MOPS-O2-NEXT:    str w9, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
-  call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 true)
+  call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 false)
   ret void
 }
 
@@ -2139,21 +2135,25 @@ define void @memmove_7_volatile(ptr %dst, ptr %src, i32 %value) {
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_7_volatile:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldur w8, [x1, #3]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w9, [x1]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stur w8, [x0, #3]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    str w9, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w8, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strb w10, [x0, #6]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strh w9, [x0, #4]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str w8, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memmove_7_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    ldur w8, [x1, #3]
-; SDAG-MOPS-O2-NEXT:    ldr w9, [x1]
-; SDAG-MOPS-O2-NEXT:    stur w8, [x0, #3]
-; SDAG-MOPS-O2-NEXT:    str w9, [x0]
+; SDAG-MOPS-O2-NEXT:    ldr w8, [x1]
+; SDAG-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
+; SDAG-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
+; SDAG-MOPS-O2-NEXT:    strb w10, [x0, #6]
+; SDAG-MOPS-O2-NEXT:    strh w9, [x0, #4]
+; SDAG-MOPS-O2-NEXT:    str w8, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
-  call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 false)
+  call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 true)
   ret void
 }
 

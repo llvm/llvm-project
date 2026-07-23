@@ -28,34 +28,21 @@ namespace fir {
 
 namespace {
 
-/// Find the earliest use of any of the declare results, returning the
-/// operation before which the cuf.alloc group should be placed.
-///
-/// Uses inside nested regions (fir.if, fir.do_loop, etc.) are resolved to
-/// the parent op in the entry block.  When all real uses reside in a single
-/// successor block of the entry block, the target is placed in that block
-/// (just before the earliest use there) so the alloc is deferred past any
-/// setup code that precedes the branch.
-///
-/// Stores to fir.llvm_ptr destinations (host-association tuple slots) are
-/// skipped as "uses" and collected in \p hostAssocStores so the caller can
-/// move them along with the sunk group.
-static mlir::Operation *
-findDelayTarget(fir::DeclareOp declareOp, mlir::Block *entryBlock,
-                llvm::SmallVectorImpl<fir::StoreOp> &hostAssocStores) {
+/// Find the earliest use of the descriptor and return the op before which the
+/// cuf.alloc group should be placed. Uses in nested regions (fir.if,
+/// fir.do_loop, ...) resolve to the enclosing entry-block op; uses confined to
+/// a single successor block resolve to that block.
+static mlir::Operation *findDelayTarget(fir::DeclareOp declareOp,
+                                        mlir::Block *entryBlock) {
   mlir::Operation *earliest = nullptr;
   mlir::Region *funcRegion = entryBlock->getParent();
 
-  // Track successor-block uses: which blocks, and the earliest op in each.
+  // Uses per successor block, with the earliest op in each.
   llvm::SmallDenseMap<mlir::Block *, mlir::Operation *> successorEarliest;
 
-  auto updateEarliest = [&](mlir::Operation *user) {
-    if (auto store = mlir::dyn_cast<fir::StoreOp>(user)) {
-      if (mlir::isa<fir::LLVMPointerType>(store.getMemref().getType())) {
-        hostAssocStores.push_back(store);
-        return;
-      }
-    }
+  // Resolve a use in a nested region or successor block to a target in/after
+  // the entry block.
+  auto recordRealUse = [&](mlir::Operation *user) {
     mlir::Operation *target = user;
     while (target->getBlock() != entryBlock) {
       // User in another block of the same function.
@@ -77,7 +64,7 @@ findDelayTarget(fir::DeclareOp declareOp, mlir::Block *entryBlock,
 
   for (mlir::Value result : declareOp->getResults()) {
     for (mlir::Operation *user : result.getUsers())
-      updateEarliest(user);
+      recordRealUse(user);
   }
 
   if (earliest)
@@ -110,9 +97,8 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
           boxAllocOps.push_back(allocOp);
 
     for (cuf::AllocOp allocOp : boxAllocOps) {
-      // Find the fir.declare and fir.store that use this cuf.alloc.
-      // Bail out if the alloc has any unexpected users to avoid breaking
-      // dominance for patterns we don't track.
+      // Find the fir.declare and fir.store using this cuf.alloc; bail on any
+      // unexpected user.
       fir::DeclareOp declareOp = nullptr;
       fir::StoreOp storeOp = nullptr;
       bool hasUnknownUser = false;
@@ -127,23 +113,19 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
       if (!declareOp || hasUnknownUser)
         continue;
 
-      llvm::SmallVector<fir::StoreOp> hostAssocStores;
-      mlir::Operation *delayTarget =
-          findDelayTarget(declareOp, &entryBlock, hostAssocStores);
+      mlir::Operation *delayTarget = findDelayTarget(declareOp, &entryBlock);
       if (!delayTarget)
         continue;
 
-      // Don't move if target is in the same block and at or before current pos.
+      // Skip if the target is at or before the alloc, or is the declare.
       if (delayTarget->getBlock() == allocOp->getBlock() &&
           (delayTarget->isBeforeInBlock(allocOp) || delayTarget == allocOp))
         continue;
-      // Don't move to the declare itself.
       if (delayTarget == declareOp)
         continue;
 
-      // Move {cuf.alloc, fir.store, fir.declare} before the delay target.
-      // The embox/zero_bits/shape/constants stay at their original positions
-      // since they still dominate the new locations.
+      // Sink {cuf.alloc, fir.store, fir.declare} before the target; the
+      // embox/shape/constants stay put and still dominate the new position.
       allocOp->moveBefore(delayTarget);
       if (storeOp)
         storeOp->moveAfter(allocOp);
@@ -151,13 +133,6 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
         declareOp->moveAfter(storeOp);
       else
         declareOp->moveAfter(allocOp);
-
-      // Move host-association tuple stores after the declare.
-      mlir::Operation *insertAfter = declareOp;
-      for (fir::StoreOp hostStore : hostAssocStores) {
-        hostStore->moveAfter(insertAfter);
-        insertAfter = hostStore;
-      }
     }
   }
 };
