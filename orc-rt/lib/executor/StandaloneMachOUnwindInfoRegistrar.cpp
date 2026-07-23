@@ -40,7 +40,7 @@ extern "C" int __unw_remove_find_dynamic_unwind_sections(
 std::mutex LibunwindRegistrationMtx;
 size_t LibunwindRegistrationCount;
 
-} // anonymous namespace
+} // namespace
 
 namespace orc_rt {
 

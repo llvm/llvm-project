@@ -469,12 +469,24 @@ struct BufferDeallocationSimplificationPass
                  RetainedMemrefAliasingAlwaysDeallocatedMemref>(&getContext(),
                                                                 analysis);
 
-    populateDeallocOpCanonicalizationPatterns(patterns, &getContext());
     // We don't want that the block structure changes invalidating the
     // `BufferOriginAnalysis` so we apply the rewrites with `Normal` level of
-    // region simplification
+    // region simplification and disable folding.
     if (failed(applyPatternsGreedily(
             getOperation(), std::move(patterns),
+            GreedyRewriteConfig()
+                .setRegionSimplificationLevel(GreedySimplifyRegionLevel::Normal)
+                .enableFolding(false))))
+      signalPassFailure();
+
+    // We run canonicalization separately so it can benefit from
+    // folding, which was disabled previously to avoid invalidating
+    // `BufferOriginAnalysis`.
+    RewritePatternSet canonicalizationPatterns(&getContext());
+    populateDeallocOpCanonicalizationPatterns(canonicalizationPatterns,
+                                              &getContext());
+    if (failed(applyPatternsGreedily(
+            getOperation(), std::move(canonicalizationPatterns),
             GreedyRewriteConfig().setRegionSimplificationLevel(
                 GreedySimplifyRegionLevel::Normal))))
       signalPassFailure();
