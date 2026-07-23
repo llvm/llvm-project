@@ -19,9 +19,11 @@
 #include "src/__support/CPP/tuple.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/utility/integer_sequence.h"
+#include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
 #include <stddef.h>
 
@@ -206,11 +208,6 @@ LIBC_INLINE constexpr static simd<T, N> max(simd<T, N> x, simd<T, N> y) {
 template <typename T, size_t N>
 LIBC_INLINE constexpr static simd<T, N> abs(simd<T, N> x) {
   return __builtin_elementwise_abs(x);
-}
-template <typename T, size_t N>
-LIBC_INLINE constexpr static simd<T, N> fma(simd<T, N> x, simd<T, N> y,
-                                            simd<T, N> z) {
-  return __builtin_elementwise_fma(x, y, z);
 }
 template <typename T, size_t N>
 LIBC_INLINE constexpr static simd<T, N> ceil(simd<T, N> x) {
@@ -415,6 +412,27 @@ LIBC_INLINE static cpp::simd<T, N> map(cpp::simd<T, N> v, F f) {
 // TODO: where expressions, scalar overloads, ABI types.
 
 } // namespace cpp
+
+namespace fputil {
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
+template <size_t N>
+LIBC_INLINE constexpr cpp::simd<float, N> multiply_add(cpp::simd<float, N> x,
+                                                       cpp::simd<float, N> y,
+                                                       cpp::simd<float, N> z) {
+  return __builtin_elementwise_fma(x, y, z);
+}
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+template <size_t N>
+LIBC_INLINE constexpr cpp::simd<double, N>
+multiply_add(cpp::simd<double, N> x, cpp::simd<double, N> y,
+             cpp::simd<double, N> z) {
+  return __builtin_elementwise_fma(x, y, z);
+}
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+} // namespace fputil
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_HAS_VECTOR_TYPE
