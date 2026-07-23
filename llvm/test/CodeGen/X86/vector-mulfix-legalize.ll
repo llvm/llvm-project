@@ -43,57 +43,91 @@ define <4 x i16> @umulfix(<4 x i16> %a) {
 define <4 x i16> @smulfixsat(<4 x i16> %a) {
 ; CHECK-LABEL: smulfixsat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pextrw $2, %xmm0, %eax
-; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    leal (%rax,%rax,2), %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    shrl $16, %edx
-; CHECK-NEXT:    shldw $1, %cx, %dx
-; CHECK-NEXT:    sarl $16, %ecx
-; CHECK-NEXT:    cmpl $16384, %ecx # imm = 0x4000
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movq {{.*#+}} xmm2 = [1,2,3,4,0,0,0,0]
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    pmullw %xmm2, %xmm1
+; CHECK-NEXT:    psrlw $15, %xmm1
+; CHECK-NEXT:    pmulhw %xmm2, %xmm0
+; CHECK-NEXT:    pextrw $7, %xmm0, %eax
+; CHECK-NEXT:    pextrw $6, %xmm0, %ecx
+; CHECK-NEXT:    pextrw $5, %xmm0, %edx
+; CHECK-NEXT:    pextrw $4, %xmm0, %esi
+; CHECK-NEXT:    pextrw $3, %xmm0, %edi
+; CHECK-NEXT:    pextrw $2, %xmm0, %r8d
+; CHECK-NEXT:    pextrw $1, %xmm0, %r9d
+; CHECK-NEXT:    movd %xmm0, %r10d
+; CHECK-NEXT:    paddw %xmm0, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pextrw $7, %xmm0, %ebx
+; CHECK-NEXT:    movswl %ax, %r11d
+; CHECK-NEXT:    cmpl $16384, %r11d # imm = 0x4000
 ; CHECK-NEXT:    movl $32767, %eax # imm = 0x7FFF
-; CHECK-NEXT:    cmovgel %eax, %edx
+; CHECK-NEXT:    cmovgel %eax, %ebx
+; CHECK-NEXT:    cmpl $-16384, %r11d # imm = 0xC000
+; CHECK-NEXT:    movl $32768, %r11d # imm = 0x8000
+; CHECK-NEXT:    cmovll %r11d, %ebx
+; CHECK-NEXT:    movd %ebx, %xmm3
+; CHECK-NEXT:    pextrw $6, %xmm0, %ebx
+; CHECK-NEXT:    movswl %cx, %ecx
+; CHECK-NEXT:    cmpl $16384, %ecx # imm = 0x4000
+; CHECK-NEXT:    cmovgel %eax, %ebx
 ; CHECK-NEXT:    cmpl $-16384, %ecx # imm = 0xC000
-; CHECK-NEXT:    movl $32768, %ecx # imm = 0x8000
-; CHECK-NEXT:    cmovll %ecx, %edx
-; CHECK-NEXT:    pextrw $1, %xmm0, %esi
-; CHECK-NEXT:    leal (%rsi,%rsi), %edi
-; CHECK-NEXT:    movswl %si, %r8d
-; CHECK-NEXT:    movl %r8d, %esi
-; CHECK-NEXT:    shrl $16, %esi
-; CHECK-NEXT:    shldw $1, %di, %si
-; CHECK-NEXT:    sarl $16, %r8d
-; CHECK-NEXT:    cmpl $16384, %r8d # imm = 0x4000
-; CHECK-NEXT:    cmovgel %eax, %esi
-; CHECK-NEXT:    cmpl $-16384, %r8d # imm = 0xC000
-; CHECK-NEXT:    cmovll %ecx, %esi
-; CHECK-NEXT:    movd %xmm0, %edi
-; CHECK-NEXT:    movswl %di, %edi
-; CHECK-NEXT:    movl %edi, %r8d
-; CHECK-NEXT:    shrl $16, %r8d
-; CHECK-NEXT:    shldw $1, %di, %r8w
-; CHECK-NEXT:    sarl $16, %edi
-; CHECK-NEXT:    cmpl $16384, %edi # imm = 0x4000
-; CHECK-NEXT:    cmovgel %eax, %r8d
-; CHECK-NEXT:    cmpl $-16384, %edi # imm = 0xC000
-; CHECK-NEXT:    cmovll %ecx, %r8d
-; CHECK-NEXT:    movzwl %r8w, %edi
-; CHECK-NEXT:    movd %edi, %xmm1
-; CHECK-NEXT:    pinsrw $1, %esi, %xmm1
-; CHECK-NEXT:    pinsrw $2, %edx, %xmm1
-; CHECK-NEXT:    pextrw $3, %xmm0, %edx
+; CHECK-NEXT:    cmovll %r11d, %ebx
+; CHECK-NEXT:    movd %ebx, %xmm2
+; CHECK-NEXT:    pextrw $5, %xmm0, %ecx
 ; CHECK-NEXT:    movswl %dx, %edx
-; CHECK-NEXT:    leal (,%rdx,4), %esi
-; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    shrl $16, %esi
-; CHECK-NEXT:    shldw $1, %di, %si
-; CHECK-NEXT:    sarl $14, %edx
 ; CHECK-NEXT:    cmpl $16384, %edx # imm = 0x4000
-; CHECK-NEXT:    cmovgel %eax, %esi
+; CHECK-NEXT:    cmovgel %eax, %ecx
 ; CHECK-NEXT:    cmpl $-16384, %edx # imm = 0xC000
-; CHECK-NEXT:    cmovll %ecx, %esi
-; CHECK-NEXT:    pinsrw $3, %esi, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    cmovll %r11d, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm4
+; CHECK-NEXT:    pextrw $4, %xmm0, %ecx
+; CHECK-NEXT:    movswl %si, %edx
+; CHECK-NEXT:    cmpl $16384, %edx # imm = 0x4000
+; CHECK-NEXT:    cmovgel %eax, %ecx
+; CHECK-NEXT:    cmpl $-16384, %edx # imm = 0xC000
+; CHECK-NEXT:    cmovll %r11d, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm1
+; CHECK-NEXT:    pextrw $3, %xmm0, %ecx
+; CHECK-NEXT:    movswl %di, %edx
+; CHECK-NEXT:    cmpl $16384, %edx # imm = 0x4000
+; CHECK-NEXT:    cmovgel %eax, %ecx
+; CHECK-NEXT:    cmpl $-16384, %edx # imm = 0xC000
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; CHECK-NEXT:    cmovll %r11d, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm3
+; CHECK-NEXT:    pextrw $2, %xmm0, %ecx
+; CHECK-NEXT:    movswl %r8w, %edx
+; CHECK-NEXT:    cmpl $16384, %edx # imm = 0x4000
+; CHECK-NEXT:    cmovgel %eax, %ecx
+; CHECK-NEXT:    cmpl $-16384, %edx # imm = 0xC000
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1],xmm1[2],xmm4[2],xmm1[3],xmm4[3]
+; CHECK-NEXT:    cmovll %r11d, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm4
+; CHECK-NEXT:    pextrw $1, %xmm0, %ecx
+; CHECK-NEXT:    movswl %r9w, %edx
+; CHECK-NEXT:    cmpl $16384, %edx # imm = 0x4000
+; CHECK-NEXT:    cmovgel %eax, %ecx
+; CHECK-NEXT:    cmpl $-16384, %edx # imm = 0xC000
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    cmovll %r11d, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm2
+; CHECK-NEXT:    movd %xmm0, %ecx
+; CHECK-NEXT:    movswl %r10w, %edx
+; CHECK-NEXT:    cmpl $16384, %edx # imm = 0x4000
+; CHECK-NEXT:    cmovgel %eax, %ecx
+; CHECK-NEXT:    cmpl $-16384, %edx # imm = 0xC000
+; CHECK-NEXT:    cmovll %r11d, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %t = call <4 x i16> @llvm.smul.fix.sat.v4i16(<4 x i16> <i16 1, i16 2, i16 3, i16 4>, <4 x i16> %a, i32 15)
   ret <4 x i16> %t
@@ -103,43 +137,61 @@ define <4 x i16> @smulfixsat(<4 x i16> %a) {
 define <4 x i16> @umulfixsat(<4 x i16> %a) {
 ; CHECK-LABEL: umulfixsat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pextrw $2, %xmm0, %eax
-; CHECK-NEXT:    leal (%rax,%rax,2), %eax
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shldw $1, %dx, %cx
-; CHECK-NEXT:    cmpl $32768, %eax # imm = 0x8000
+; CHECK-NEXT:    movq {{.*#+}} xmm2 = [1,2,3,4,0,0,0,0]
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    pmullw %xmm2, %xmm1
+; CHECK-NEXT:    psrlw $15, %xmm1
+; CHECK-NEXT:    pmulhuw %xmm2, %xmm0
+; CHECK-NEXT:    pextrw $7, %xmm0, %eax
+; CHECK-NEXT:    pextrw $6, %xmm0, %ecx
+; CHECK-NEXT:    pextrw $5, %xmm0, %edx
+; CHECK-NEXT:    pextrw $4, %xmm0, %esi
+; CHECK-NEXT:    pextrw $3, %xmm0, %edi
+; CHECK-NEXT:    pextrw $2, %xmm0, %r8d
+; CHECK-NEXT:    pextrw $1, %xmm0, %r9d
+; CHECK-NEXT:    paddw %xmm0, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pextrw $7, %xmm0, %r10d
+; CHECK-NEXT:    testw %ax, %ax
 ; CHECK-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; CHECK-NEXT:    cmovael %eax, %ecx
-; CHECK-NEXT:    pextrw $1, %xmm0, %edx
-; CHECK-NEXT:    addl %edx, %edx
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    shrl $16, %edx
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    shldw $1, %si, %di
-; CHECK-NEXT:    cmpl $32768, %edx # imm = 0x8000
-; CHECK-NEXT:    cmovael %eax, %edi
-; CHECK-NEXT:    movd %xmm0, %edx
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    shldw $1, %dx, %si
-; CHECK-NEXT:    movl $32768, %edx # imm = 0x8000
-; CHECK-NEXT:    negl %edx
-; CHECK-NEXT:    cmovael %eax, %esi
-; CHECK-NEXT:    movzwl %si, %edx
-; CHECK-NEXT:    movd %edx, %xmm1
-; CHECK-NEXT:    pinsrw $1, %edi, %xmm1
-; CHECK-NEXT:    pinsrw $2, %ecx, %xmm1
+; CHECK-NEXT:    cmovsl %eax, %r10d
+; CHECK-NEXT:    movd %r10d, %xmm1
+; CHECK-NEXT:    testw %cx, %cx
+; CHECK-NEXT:    pextrw $6, %xmm0, %ecx
+; CHECK-NEXT:    cmovsl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm2
+; CHECK-NEXT:    testw %dx, %dx
+; CHECK-NEXT:    pextrw $5, %xmm0, %ecx
+; CHECK-NEXT:    cmovsl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm3
+; CHECK-NEXT:    testw %si, %si
+; CHECK-NEXT:    pextrw $4, %xmm0, %ecx
+; CHECK-NEXT:    cmovsl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm4
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; CHECK-NEXT:    testw %di, %di
 ; CHECK-NEXT:    pextrw $3, %xmm0, %ecx
-; CHECK-NEXT:    shll $2, %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    shrl $16, %ecx
-; CHECK-NEXT:    movl %ecx, %esi
-; CHECK-NEXT:    shldw $1, %dx, %si
-; CHECK-NEXT:    cmpl $32768, %ecx # imm = 0x8000
-; CHECK-NEXT:    cmovael %eax, %esi
-; CHECK-NEXT:    pinsrw $3, %esi, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    cmovsl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm1
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
+; CHECK-NEXT:    testw %r8w, %r8w
+; CHECK-NEXT:    pextrw $2, %xmm0, %ecx
+; CHECK-NEXT:    cmovsl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm2
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; CHECK-NEXT:    pextrw $1, %xmm0, %ecx
+; CHECK-NEXT:    testw %r9w, %r9w
+; CHECK-NEXT:    cmovsl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm1
+; CHECK-NEXT:    movd %xmm0, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    testw %dx, %dx
+; CHECK-NEXT:    cmovsl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
 ; CHECK-NEXT:    retq
   %t = call <4 x i16> @llvm.umul.fix.sat.v4i16(<4 x i16> <i16 1, i16 2, i16 3, i16 4>, <4 x i16> %a, i32 15)
   ret <4 x i16> %t
