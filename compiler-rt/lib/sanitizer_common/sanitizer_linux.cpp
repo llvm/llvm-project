@@ -17,6 +17,7 @@
     SANITIZER_SOLARIS || SANITIZER_HAIKU
 
 #  include "sanitizer_common.h"
+#  include "sanitizer_dl.h"
 #  include "sanitizer_flags.h"
 #  include "sanitizer_getauxval.h"
 #  include "sanitizer_internal_defs.h"
@@ -1403,7 +1404,7 @@ void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr)) {
   typedef ElfW(Phdr) Elf_Phdr;
   typedef ElfW(Ehdr) Elf_Ehdr;
 #    endif  // !SANITIZER_FREEBSD
-  char *base = (char *)map->l_addr;
+  char* base = DladdrElfHeaderBase((void*)map->l_ld, (char*)map->l_addr);
   Elf_Ehdr *ehdr = (Elf_Ehdr *)base;
   char *phdrs = base + ehdr->e_phoff;
   char *phdrs_end = phdrs + ehdr->e_phnum * ehdr->e_phentsize;

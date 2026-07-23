@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # wasm inferiors are built with -fno-exceptions
 class CPPBreakpointTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().

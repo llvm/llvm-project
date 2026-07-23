@@ -4,8 +4,6 @@
 declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
 declare float @llvm.vector.reduce.fadd.f32.v8f32(float, <8 x float>)
 declare float @llvm.vector.reduce.fmul.f32.nxv4f32(float, <vscale x 4 x float>)
-declare float @llvm.vector.reduce.fmin.f32.v4f32(float, <4 x float>)
-declare float @llvm.vector.reduce.fmax.f32.nxv4f32(float, <vscale x 4 x float>)
 declare void @use_f32(float)
 
 declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)

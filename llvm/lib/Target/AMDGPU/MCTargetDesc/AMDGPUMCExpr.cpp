@@ -30,6 +30,9 @@ AMDGPUMCExpr::AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args,
     : Kind(Kind), Ctx(Ctx) {
   assert(Args.size() >= 1 && "Needs a minimum of one expression.");
   assert(Kind != AGVK_None && "Cannot construct AMDGPUMCExpr of kind none.");
+  assert((getNumExpectedArgs(Kind) == 0 ||
+          Args.size() == getNumExpectedArgs(Kind)) &&
+         "wrong number of operands for AMDGPUMCExpr kind.");
 
   // Allocating the variadic arguments through the same allocation mechanism
   // that the object itself is allocated with so they end up in the same memory.
@@ -48,6 +51,30 @@ const AMDGPUMCExpr *AMDGPUMCExpr::create(VariantKind Kind,
                                          ArrayRef<const MCExpr *> Args,
                                          MCContext &Ctx) {
   return new (Ctx) AMDGPUMCExpr(Kind, Args, Ctx);
+}
+
+unsigned AMDGPUMCExpr::getNumExpectedArgs(VariantKind Kind) {
+  switch (Kind) {
+  case AGVK_None:
+    llvm_unreachable("AGVK_None is not a valid AMDGPUMCExpr kind.");
+  case AGVK_Or:
+  case AGVK_Max:
+  case AGVK_Min:
+    // Variadic (parser requires >= 1).
+    return 0;
+  case AGVK_Lit:
+  case AGVK_Lit64:
+  case AGVK_InstPrefSize:
+    return 1;
+  case AGVK_TotalNumVGPRs:
+  case AGVK_AlignTo:
+    return 2;
+  case AGVK_ExtraSGPRs:
+    return 3;
+  case AGVK_Occupancy:
+    return 9;
+  }
+  llvm_unreachable("unknown AMDGPUMCExpr kind.");
 }
 
 const MCExpr *AMDGPUMCExpr::getSubExpr(size_t Index) const {
@@ -166,24 +193,28 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
 
 bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
                                      const MCAssembler *Asm) const {
-  uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, Generation,
-      NumSGPRs, NumVGPRs;
+  uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, NumSGPRs,
+      NumVGPRs, SGPRTotal, SGPRGranule, SGPRTrapReserve;
 
-  bool Success = evaluateMCExprs(
-      Args.slice(0, 5), Asm,
-      {MaxWaves, Granule, TargetTotalNumVGPRs, Generation, InitOccupancy});
+  // Leading operands are known constants (wave/VGPR caps + the SGPR budget
+  // total/granule/trap reserve baked in by createOccupancy); only NumSGPRs and
+  // NumVGPRs can still be symbolic. The SGPR budget makes the SGPR-limited
+  // occupancy match getMaxNumSGPRs().
+  bool Success =
+      evaluateMCExprs(Args.slice(0, 7), Asm,
+                      {MaxWaves, Granule, TargetTotalNumVGPRs, InitOccupancy,
+                       SGPRTotal, SGPRGranule, SGPRTrapReserve});
 
-  assert(Success && "Arguments 1 to 5 for Occupancy should be known constants");
+  assert(Success && "Arguments 1 to 7 for Occupancy should be known constants");
 
-  if (!Success || !evaluateMCExprs(Args.slice(5, 2), Asm, {NumSGPRs, NumVGPRs}))
+  if (!Success || !evaluateMCExprs(Args.slice(7, 2), Asm, {NumSGPRs, NumVGPRs}))
     return false;
 
   unsigned Occupancy = InitOccupancy;
   if (NumSGPRs)
-    Occupancy = std::min(
-        Occupancy, IsaInfo::getOccupancyWithNumSGPRs(
-                       NumSGPRs, MaxWaves,
-                       static_cast<AMDGPUSubtarget::Generation>(Generation)));
+    Occupancy = std::min(Occupancy, IsaInfo::getOccupancyWithNumSGPRs(
+                                        NumSGPRs, MaxWaves, SGPRTotal,
+                                        SGPRGranule, SGPRTrapReserve));
   if (NumVGPRs)
     Occupancy = std::min(Occupancy,
                          IsaInfo::getNumWavesPerEUWithNumVGPRs(

@@ -1,5 +1,5 @@
-; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca < %s | FileCheck -check-prefix=IR %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=ASM %s
+; RUN: opt -S -mtriple=amdgpu-unknown-unknown -passes=amdgpu-promote-alloca < %s | FileCheck -check-prefix=IR %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=ASM %s
 
 
 @global_array0 = internal unnamed_addr addrspace(3) global [750 x [10 x i32]] poison, align 4

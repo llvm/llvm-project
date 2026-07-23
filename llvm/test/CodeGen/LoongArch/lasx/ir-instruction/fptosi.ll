@@ -32,14 +32,28 @@ define void @fptosi_v4f64_v4i32(ptr %res, ptr %in){
 ; CHECK-LABEL: fptosi_v4f64_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvftintrz.l.d $xr0, $xr0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 238
-; CHECK-NEXT:    xvpickev.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvftintrz.w.d $xr0, $xr0, $xr0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 8
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x double>, ptr %in
   %v1 = fptosi <4 x double> %v0 to <4 x i32>
   store <4 x i32> %v1, ptr %res
+  ret void
+}
+
+define void @fptosi_v8f64_v8i32(ptr %res, ptr %in){
+; CHECK-LABEL: fptosi_v8f64_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a1, 32
+; CHECK-NEXT:    xvftintrz.w.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <8 x double>, ptr %in
+  %v1 = fptosi <8 x double> %v0 to <8 x i32>
+  store <8 x i32> %v1, ptr %res
   ret void
 }
 

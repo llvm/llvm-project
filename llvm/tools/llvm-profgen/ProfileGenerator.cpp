@@ -1296,8 +1296,7 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
   // Extract the top frame probes by looking up each address among the range in
   // the Address2ProbeMap
   extractProbesFromRange(RangeCounter, ProbeCounter);
-  std::unordered_map<MCDecodedPseudoProbeInlineTree *,
-                     std::unordered_set<FunctionSamples *>>
+  DenseMap<MCDecodedPseudoProbeInlineTree *, SmallPtrSet<FunctionSamples *, 0>>
       FrameSamples;
   for (const auto &PI : ProbeCounter) {
     const MCDecodedPseudoProbe *Probe = PI.first;

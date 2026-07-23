@@ -99,3 +99,68 @@ outer.latch:
 exit:
   ret void
 }
+
+; We only support outer loop header PHIs if they are induction variables or if
+; they have exactly two incoming values. In common cases, we can reduce the
+; number of incoming values to two by inserting a preheader block, but in this
+; case we cannot do that because one of the predecessors branches to the outer
+; loop header via an indirectbr instruction. Previously, this test case caused
+; an assertion failure.
+;
+define void @indirectbr_to_outer_header(i1 %c, i32 %x, i32 %y, ptr %A) {
+; CHECK-LABEL: define void @indirectbr_to_outer_header(
+; CHECK-SAME: i1 [[C:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]], ptr [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[ENTRY_0:.*]], label %[[ENTRY_1:.*]]
+; CHECK:       [[ENTRY_0]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[ENTRY_1]]:
+; CHECK-NEXT:    indirectbr ptr blockaddress(@indirectbr_to_outer_header, %[[OUTER_HEADER]]), [label %[[OUTER_HEADER]]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY_0]] ], [ 0, %[[ENTRY_1]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[X]], %[[ENTRY_0]] ], [ [[Y]], %[[ENTRY_1]] ], [ [[SEL]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    br label %[[INNER:.*]]
+; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[J_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [256 x i32], ptr [[A]], i64 [[J]], i64 [[I]]
+; CHECK-NEXT:    store i32 [[SEL]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_NEXT]], 256
+; CHECK-NEXT:    br i1 [[EC_J]], label %[[OUTER_LATCH]], label %[[INNER]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 256
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[OUTER_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %entry.0, label %entry.1
+
+entry.0:
+  br label %outer.header
+
+entry.1:
+  indirectbr ptr blockaddress(@indirectbr_to_outer_header, %outer.header), [ label %outer.header ]
+
+outer.header:
+  %i = phi i64 [ 0, %entry.0 ], [ 0, %entry.1 ], [ %i.next, %outer.latch ]
+  %sel = phi i32 [ %x, %entry.0 ], [ %y, %entry.1 ], [ %sel, %outer.latch ]
+  br label %inner
+
+inner:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner ]
+  %gep = getelementptr inbounds [256 x i32], ptr %A, i64 %j, i64 %i
+  store i32 %sel, ptr %gep
+  %j.next = add i64 %j, 1
+  %ec.j = icmp eq i64 %j.next, 256
+  br i1 %ec.j, label %outer.latch, label %inner
+
+outer.latch:
+  %i.next = add i64 %i, 1
+  %ec.i = icmp eq i64 %i.next, 256
+  br i1 %ec.i, label %exit, label %outer.header
+
+exit:
+  ret void
+}

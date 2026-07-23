@@ -12,6 +12,7 @@
 #include "CallContext.h"
 #include "ErrorHandling.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -120,7 +121,7 @@ struct FuncRange {
 // we will switch to Dwarf CFI based tracker
 struct PrologEpilogTracker {
   // A set of prolog and epilog addresses. Used by virtual unwinding.
-  std::unordered_set<uint64_t> PrologEpilogSet;
+  DenseSet<uint64_t> PrologEpilogSet;
   ProfiledBinary *Binary;
   PrologEpilogTracker(ProfiledBinary *Bin) : Binary(Bin){};
 
@@ -137,7 +138,7 @@ struct PrologEpilogTracker {
   }
 
   // Take the last two addresses before the return address as epilog
-  void inferEpilogAddresses(std::unordered_set<uint64_t> &RetAddrs) {
+  void inferEpilogAddresses(DenseSet<uint64_t> &RetAddrs) {
     for (auto Addr : RetAddrs) {
       PrologEpilogSet.insert(Addr);
       InstructionPointer IP(Binary, Addr);
@@ -241,7 +242,7 @@ class ProfiledBinary {
 
   // Lookup BinaryFunctions using the function name's MD5 hash. Needed if the
   // profile is using MD5.
-  std::unordered_map<uint64_t, BinaryFunction *> HashBinaryFunctions;
+  DenseMap<uint64_t, BinaryFunction *> HashBinaryFunctions;
 
   // A list of binary functions that have samples.
   SmallPtrSet<const BinaryFunction *, 0> ProfiledFunctions;
@@ -255,7 +256,7 @@ class ProfiledBinary {
       AlternativeFunctionGUIDs;
 
   // Mapping of profiled binary function to its pseudo probe name
-  std::unordered_map<const BinaryFunction *, StringRef> PseudoProbeNames;
+  DenseMap<const BinaryFunction *, StringRef> PseudoProbeNames;
 
   // These maps are for temporary use of warning diagnosis.
   DenseSet<int64_t> AddrsWithMultipleSymbols;
@@ -270,26 +271,29 @@ class ProfiledBinary {
   std::map<uint64_t, FuncRange> StartAddrToFuncRangeMap;
 
   // Address to context location map. Used to expand the context.
+  // getCachedFrameLocationStack returns references to the mapped values while
+  // later queries insert, so the values' addresses must be stable: keep
+  // std::unordered_map.
   std::unordered_map<uint64_t, SampleContextFrameVector> AddressToLocStackMap;
 
   // Address to instruction size map. Also used for quick Address lookup.
-  std::unordered_map<uint64_t, uint64_t> AddressToInstSizeMap;
+  DenseMap<uint64_t, uint64_t> AddressToInstSizeMap;
 
   // An array of Addresses of all instructions sorted in increasing order. The
   // sorting is needed to fast advance to the next forward/backward instruction.
   std::vector<uint64_t> CodeAddressVec;
   // A set of call instruction addresses. Used by virtual unwinding.
-  std::unordered_set<uint64_t> CallAddressSet;
+  DenseSet<uint64_t> CallAddressSet;
   // A set of return instruction addresses. Used by virtual unwinding.
-  std::unordered_set<uint64_t> RetAddressSet;
+  DenseSet<uint64_t> RetAddressSet;
   // An ordered set of unconditional branch instruction addresses.
   std::set<uint64_t> UncondBranchAddrSet;
   // A set of branch instruction addresses.
-  std::unordered_set<uint64_t> BranchAddressSet;
+  DenseSet<uint64_t> BranchAddressSet;
   // A set of indirect branch instruction addresses.
-  std::unordered_set<uint64_t> IndirectBranchAddressSet;
+  DenseSet<uint64_t> IndirectBranchAddressSet;
   // A set of branch target addresses (destinations of branches/calls).
-  std::unordered_set<uint64_t> BranchTargetAddressSet;
+  DenseSet<uint64_t> BranchTargetAddressSet;
 
   // Estimate and track function prolog and epilog ranges.
   PrologEpilogTracker ProEpilogTracker;

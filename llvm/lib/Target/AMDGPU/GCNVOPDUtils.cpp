@@ -34,6 +34,67 @@ using namespace llvm;
 
 #define DEBUG_TYPE "gcn-vopd-utils"
 
+// Check if physical register from src<SrcIdx> operand of MI<CompIdx> matches
+// register class constraints in corresponding VOPDOpc operand with name
+// src/vsrc<SrcIdx><CompIdx>.
+static bool isValidVOPDSrc(const SIInstrInfo &TII, int VOPDOpc,
+                           unsigned CompIdx, unsigned SrcIdx,
+                           Register PhysSrcReg) {
+  using namespace AMDGPU;
+  int OpIdx = -1;
+  const bool IsX = CompIdx == VOPD::X;
+  switch (SrcIdx) {
+  case 0:
+    OpIdx = getNamedOperandIdx(VOPDOpc, IsX ? OpName::src0X : OpName::src0Y);
+    break;
+  case 1:
+    OpIdx = getNamedOperandIdx(VOPDOpc, IsX ? OpName::vsrc1X : OpName::vsrc1Y);
+    break;
+  case 2:
+    OpIdx = getNamedOperandIdx(VOPDOpc, IsX ? OpName::vsrc2X : OpName::vsrc2Y);
+    if (OpIdx == -1)
+      OpIdx = getNamedOperandIdx(VOPDOpc, IsX ? OpName::src2X : OpName::src2Y);
+    break;
+  default:
+    llvm_unreachable("unexpected VOPD source index");
+  }
+
+  assert(OpIdx != -1);
+  return TII.getRegClass(TII.get(VOPDOpc), OpIdx)->contains(PhysSrcReg);
+}
+
+static const MachineOperand &getNamedOp(const MachineInstr &MI,
+                                        AMDGPU::OpName Name) {
+  return MI.getOperand(getNamedOperandIdx(MI.getOpcode(), Name));
+}
+
+// Check if MI is a VOP3P instruction with operands that satisfy the constraints
+// for mapping it to a VOP2/VOPD opcode: no modifiers, no clamp, src1 and src2
+// are registers (src0 can be register or literal), and src2 is same as dst.
+static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  if (Opc != AMDGPU::V_DOT2_F32_F16 && Opc != AMDGPU::V_DOT2_F32_BF16)
+    return false;
+  // src0 can be register or literal
+  if (getNamedOp(MI, AMDGPU::OpName::src0_modifiers).getImm() !=
+      SISrcMods::OP_SEL_1)
+    return false;
+  if (getNamedOp(MI, AMDGPU::OpName::src1_modifiers).getImm() !=
+      SISrcMods::OP_SEL_1)
+    return false;
+  if (!getNamedOp(MI, AMDGPU::OpName::src1).isReg())
+    return false;
+  if (getNamedOp(MI, AMDGPU::OpName::src2_modifiers).getImm() !=
+      SISrcMods::OP_SEL_1)
+    return false;
+  if (!getNamedOp(MI, AMDGPU::OpName::src2).isReg())
+    return false;
+  if (getNamedOp(MI, AMDGPU::OpName::clamp).getImm() != 0)
+    return false;
+  return getNamedOp(MI, AMDGPU::OpName::vdst).getReg() ==
+         getNamedOp(MI, AMDGPU::OpName::src2).getReg();
+}
+
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                                    const MachineInstr &MIX,
                                    const MachineInstr &MIY, bool IsVOPD3,
@@ -45,7 +106,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   if (IsVOPD3 && !ST.hasVOPD3())
     return false;
-  if (!IsVOPD3 && (TII.isVOP3(MIX) || TII.isVOP3(MIY)))
+  if (!IsVOPD3 && ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(MIX)) ||
+                   (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(MIY))))
     return false;
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;
@@ -63,13 +125,11 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   };
   SmallSet<Register, 4> UniqueScalarRegs;
 
-  auto getVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
-    const MachineInstr &MI = (OpcodeIdx == VOPD::X) ? MIX : MIY;
-    const MachineOperand &Operand = MI.getOperand(OperandIdx);
-    if (Operand.isReg() && TRI->isVectorRegister(MRI, Operand.getReg()))
-      return Operand.getReg();
-    return Register();
-  };
+  unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
+  unsigned XOpc = AMDGPU::getVOPDOpcode(MIX.getOpcode(), IsVOPD3);
+  unsigned YOpc = AMDGPU::getVOPDOpcode(MIY.getOpcode(), IsVOPD3);
+  int VOPDOpc = AMDGPU::getVOPDFull(XOpc, YOpc, EncodingFamily, IsVOPD3);
+  assert(VOPDOpc != -1);
 
   auto InstInfo = AMDGPU::getVOPDInstInfo(MIX.getDesc(), MIY.getDesc());
 
@@ -78,42 +138,56 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
     const MachineOperand &Src0 = *TII.getNamedOperand(MI, AMDGPU::OpName::src0);
     if (Src0.isReg()) {
-      if (!TRI->isVectorRegister(MRI, Src0.getReg())) {
+      if (!isValidVOPDSrc(TII, VOPDOpc, CompIdx, 0, Src0.getReg()))
+        return false;
+      if (!TRI->isVectorRegister(MRI, Src0.getReg()))
         UniqueScalarRegs.insert(Src0.getReg());
-      }
     } else if (!TII.isInlineConstant(Src0)) {
       if (IsVOPD3)
         return false;
       addLiteral(Src0);
     }
 
+    // V_FMAMK_F32 (src1) and V_FMAAK_F32 (src2) have a mandatory literal.
+    // VOPD3 instructions don't set MandatoryLiteralIdx.
     if (InstInfo[CompIdx].hasMandatoryLiteral()) {
-      if (IsVOPD3)
-        return false;
-
       auto CompOprIdx = InstInfo[CompIdx].getMandatoryLiteralCompOperandIndex();
       addLiteral(MI.getOperand(CompOprIdx));
     }
+
+    // VOPD only. Affects V_CNDMASK_B32_e32.
     if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
       UniqueScalarRegs.insert(AMDGPU::VCC_LO);
 
+    if (const MachineOperand *Src1 =
+            TII.getNamedOperand(MI, AMDGPU::OpName::src1)) {
+      if (Src1->isReg()) {
+        if (!isValidVOPDSrc(TII, VOPDOpc, CompIdx, 1, Src1->getReg()))
+          return false;
+        assert(TRI->isVectorRegister(MRI, Src1->getReg()));
+      } else if (IsVOPD3) {
+        return false;
+      }
+    }
+
     if (IsVOPD3) {
-      for (auto OpName : {AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
-        const MachineOperand *Src = TII.getNamedOperand(MI, OpName);
-        if (!Src)
-          continue;
-        if (OpName == AMDGPU::OpName::src2) {
-          if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::bitop3))
-            continue;
-          if (MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64) {
-            UniqueScalarRegs.insert(Src->getReg());
-            continue;
+      if (const MachineOperand *Src2 =
+              TII.getNamedOperand(MI, AMDGPU::OpName::src2)) {
+        if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::bitop3)) {
+          // BITOP3 can be converted to DUAL_BITOP2 when src2 is zero.
+          if (!Src2->isImm() || Src2->getImm())
+            return false;
+        } else {
+          if (!Src2->isReg())
+            return false;
+          if (!isValidVOPDSrc(TII, VOPDOpc, CompIdx, 2, Src2->getReg()))
+            return false;
+          if (!TRI->isVectorRegister(MRI, Src2->getReg())) {
+            assert(MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64);
+            UniqueScalarRegs.insert(Src2->getReg());
           }
         }
-        if (!Src->isReg() || !TRI->isVGPR(MRI, Src->getReg()))
-          return false;
       }
-
       for (auto OpName : {AMDGPU::OpName::clamp, AMDGPU::OpName::omod,
                           AMDGPU::OpName::op_sel}) {
         if (TII.hasModifiersSet(MI, OpName))
@@ -137,32 +211,24 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
     return false;
 
+  auto getVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
+    const MachineInstr &MI = (OpcodeIdx == VOPD::X) ? MIX : MIY;
+    const MachineOperand &Operand = MI.getOperand(OperandIdx);
+    if (Operand.isReg() && TRI->isVectorRegister(MRI, Operand.getReg()))
+      return Operand.getReg();
+    return Register();
+  };
+
   // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
   // source-cache.
   bool SkipSrc = (ST.hasGFX11_7Insts() || ST.hasGFX12Insts()) &&
                  MIX.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  MIY.getOpcode() == AMDGPU::V_MOV_B32_e32;
 
+  // Check VGPR bank constraints for operand registers across both instructions.
   if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
                                  IsVOPD3))
     return false;
-
-  if (IsVOPD3) {
-    // BITOP3 can be converted to DUAL_BITOP2 only if src2 is zero.
-    // MIX check is only relevant to scheduling?
-    if (AMDGPU::hasNamedOperand(MIX.getOpcode(), AMDGPU::OpName::bitop3)) {
-      const MachineOperand &Src2 =
-          *TII.getNamedOperand(MIX, AMDGPU::OpName::src2);
-      if (!Src2.isImm() || Src2.getImm())
-        return false;
-    }
-    if (AMDGPU::hasNamedOperand(MIY.getOpcode(), AMDGPU::OpName::bitop3)) {
-      const MachineOperand &Src2 =
-          *TII.getNamedOperand(MIY, AMDGPU::OpName::src2);
-      if (!Src2.isImm() || Src2.getImm())
-        return false;
-    }
-  }
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << MIX
                     << "\n\tY: " << MIY << "\n");
@@ -266,10 +332,14 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
 
 /// Collect all load (dependents if \p Forward else dependencies) that connect
 /// to the \p Head SU.
-static void collectLoads(SmallVector<SUnit *> &Loads, BitVector &Visited,
-                         SUnit &Head, bool Forward) {
-  if (Head.isBoundaryNode() || Visited.test(Head.NodeNum))
+/// \p Visited should allocate enough bits for the number of SUnits, but its
+/// value can otherwise be uninitialized.
+static void collectLoads(SmallPtrSet<SUnit *, 8> &Loads, BitVector &Visited,
+                         SUnit &Head, bool Forward, bool StopAtLoads) {
+  if (Head.isBoundaryNode())
     return;
+
+  Visited.reset();
 
   SmallVector<SUnit *> Stack;
   Stack.push_back(&Head);
@@ -277,49 +347,76 @@ static void collectLoads(SmallVector<SUnit *> &Loads, BitVector &Visited,
     SUnit *SU = Stack.pop_back_val();
     const SmallVector<SDep, 4> &Deps = Forward ? SU->Succs : SU->Preds;
     for (const SDep &Edge : Deps) {
-      if (Edge.getKind() != SDep::Data)
+      if (StopAtLoads && Edge.getKind() != SDep::Data)
         continue;
       SUnit *Dep = Edge.getSUnit();
       if (Dep->isBoundaryNode() || Visited.test(Dep->NodeNum))
         continue;
-      if (Dep->isInstr() && Dep->getInstr()->mayLoad())
-        Loads.push_back(Dep);
-      else
-        Stack.push_back(Dep);
-
       Visited.set(Dep->NodeNum);
+
+      if (Dep->isInstr() && Dep->getInstr()->mayLoad()) {
+        Loads.insert(Dep);
+        if (StopAtLoads)
+          continue;
+      }
+      Stack.push_back(Dep);
     }
   }
 }
 
 /// Checks whether fusing SU \p I with SU \p J would force the loads preceding
 /// \p J to complete before loads depending on \p I.
-static bool loadsMayOverlap(ScheduleDAGInstrs *DAG, [[maybe_unused]] SUnit &I,
-                            const BitVector &IVisited,
-                            const SmallVector<SUnit *> &ILoadSuccs,
-                            [[maybe_unused]] SUnit &J,
-                            const BitVector &JVisited,
-                            const SmallVector<SUnit *> &JLoadPreds) {
+///
+/// \p ILoadSuccs should hold all first load successors of \p I (via
+/// collectLoads with StopAtLoads=true). For set bits in \p LoadPredsComputed,
+/// the corresponding set in \p LoadPredsCache should hold all transitive load
+/// dependencies (via collectLoads with StopAtLoads=false). The \p Scratch
+/// bitvector should allocate enough bits for the number of SUnits.
+static bool loadsMayOverlap(
+    [[maybe_unused]] SUnit &I, const SmallPtrSet<SUnit *, 8> &ILoadSuccs,
+    SUnit &J, BitVector &LoadPredsComputed,
+    SmallVector<SmallPtrSet<SUnit *, 8>> &LoadPredsCache, BitVector &Scratch) {
+
+  if (ILoadSuccs.empty())
+    return false;
+
+  SmallPtrSet<SUnit *, 8> &JLoadPreds = LoadPredsCache[J.NodeNum];
+  if (!LoadPredsComputed.test(J.NodeNum)) {
+    collectLoads(JLoadPreds, Scratch, J, /*Forward=*/false,
+                 /*StopAtLoads=*/true);
+    LoadPredsComputed.set(J.NodeNum);
+  }
   if (JLoadPreds.empty())
     return false;
 
-  for (SUnit *Succ : ILoadSuccs)
-    for (SUnit *Pred : JLoadPreds)
-      if (!DAG->IsReachable(Succ, Pred)) {
-        LLVM_DEBUG({
-          dbgs() << "Will not pair SU(" << I.NodeNum << ") with SU("
-                 << J.NodeNum << ")\n";
-          if (Pred == Succ)
-            dbgs() << "  Fusion would introduce a cyclic dependency "
-                      "with SU("
-                   << Pred->NodeNum << ")\n";
-          else
-            dbgs() << "  Fusion may force SU(" << Pred->NodeNum
-                   << ") to complete its load before dispatching SU("
-                   << Succ->NodeNum << ")\n";
-        });
+  for (SUnit *ILoad : ILoadSuccs) {
+    SmallPtrSet<SUnit *, 8> &ILoadDeps = LoadPredsCache[ILoad->NodeNum];
+    if (!LoadPredsComputed.test(ILoad->NodeNum)) {
+      collectLoads(ILoadDeps, Scratch, *ILoad, /*Forward=*/false,
+                   /*StopAtLoads=*/false);
+      LoadPredsComputed.set(ILoad->NodeNum);
+    }
+
+    for (SUnit *JLoad : JLoadPreds) {
+      if (ILoad == JLoad) {
+        LLVM_DEBUG(
+            dbgs() << "Will not pair SU(" << I.NodeNum << ") with SU("
+                   << J.NodeNum << ")\n"
+                   << "  Fusion would introduce a cyclic dependency with SU("
+                   << ILoad->NodeNum << ")\n");
         return true;
       }
+
+      if (!ILoadDeps.contains(JLoad)) {
+        LLVM_DEBUG(dbgs() << "Will not pair SU(" << I.NodeNum << ") with SU("
+                          << J.NodeNum << ")\n"
+                          << "  Fusion may force SU(" << JLoad->NodeNum
+                          << ") to complete its load before dispatching SU("
+                          << ILoad->NodeNum << ")\n");
+        return true;
+      }
+    }
+  }
   return false;
 }
 
@@ -355,21 +452,24 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     }
 
     IIdx = 0;
-    BitVector IVisited(DAG->SUnits.size());
-    SmallVector<SUnit *> ILoadSuccs;
+    SmallPtrSet<SUnit *, 8> ILoadSuccs;
 
-    BitVector JVisited(DAG->SUnits.size());
-    BitVector JLoadPredsComputed(DAG->SUnits.size());
-    SmallVector<SmallVector<SUnit *>> JLoadPredsCache(DAG->SUnits.size());
+    // Cache collected load predecessors.
+    // For VOPDCapable nodes, this caches collectLoads with StopAtLoads=true
+    // For loads, this caches collectLoads with StopAtLoads=false
+    BitVector LoadPredsComputed(DAG->SUnits.size());
+    SmallVector<SmallPtrSet<SUnit *, 8>> LoadPredsCache(DAG->SUnits.size());
+
+    BitVector Scratch(DAG->SUnits.size());
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
          ++ISUI, ++IIdx) {
       if (!VOPDCapable[IIdx])
         continue;
       const MachineInstr *IMI = ISUI->getInstr();
 
-      IVisited.reset();
       ILoadSuccs.clear();
-      collectLoads(ILoadSuccs, IVisited, *ISUI, /*Forward=*/true);
+      collectLoads(ILoadSuccs, Scratch, *ISUI, /*Forward=*/true,
+                   /*StopAtLoads=*/true);
 
       unsigned JIdx = IIdx + 1;
       for (auto JSUI = ISUI + 1; JSUI != E; ++JSUI, ++JIdx) {
@@ -380,17 +480,9 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
             !shouldScheduleAdjacent(TII, ST, IMI, *JMI))
           continue;
 
-        if (!ILoadSuccs.empty()) {
-          SmallVector<SUnit *> &JLoadPreds = JLoadPredsCache[JIdx];
-          if (!JLoadPredsComputed.test(JIdx)) {
-            JVisited.reset();
-            collectLoads(JLoadPreds, JVisited, *JSUI, /*Forward=*/false);
-            JLoadPredsComputed.set(JIdx);
-          }
-          if (loadsMayOverlap(DAG, *ISUI, IVisited, ILoadSuccs, *JSUI, JVisited,
-                              JLoadPreds))
-            continue;
-        }
+        if (loadsMayOverlap(*ISUI, ILoadSuccs, *JSUI, LoadPredsComputed,
+                            LoadPredsCache, Scratch))
+          continue;
 
         if (fuseInstructionPair(*DAG, *ISUI, *JSUI)) {
           // Clear to prevent future checks/fusing

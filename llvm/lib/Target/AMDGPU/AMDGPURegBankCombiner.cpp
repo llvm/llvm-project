@@ -297,7 +297,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
   if (!matchMed<GFCstOrSplatGFCstMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
 
-  if (!K0->Value.isPosZero() || !K1->Value.isExactlyValue(1.0))
+  if (!K0->Value.isPosZero() || !K1->Value.isOne())
     return false;
 
   // For IEEE=false perform combine only when it's safe to assume that there are
@@ -566,9 +566,22 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
 bool AMDGPURegBankCombinerImpl::applyD16Load(
     unsigned D16Opc, MachineInstr &DstMI, MachineInstr *SmallLoad,
     Register SrcReg32ToOverwriteD16) const {
-  B.buildInstr(D16Opc, {DstMI.getOperand(0).getReg()},
+  Register DstReg = DstMI.getOperand(0).getReg();
+  LLT SrcTy = MRI.getType(SrcReg32ToOverwriteD16);
+
+  // Dst and Src for D16 load need to have same type.
+  Register D16Dst =
+      SrcTy == MRI.getType(DstReg)
+          ? DstReg
+          : MRI.createVirtualRegister({MRI.getRegBank(DstReg), SrcTy});
+
+  B.buildInstr(D16Opc, {D16Dst},
                {SmallLoad->getOperand(1).getReg(), SrcReg32ToOverwriteD16})
       .setMemRefs(SmallLoad->memoperands());
+
+  if (D16Dst != DstReg)
+    B.buildBitcast(DstReg, D16Dst);
+
   DstMI.eraseFromParent();
   return true;
 }
@@ -596,8 +609,8 @@ bool AMDGPURegBankCombinerImpl::isClampZeroToOne(MachineInstr *K0,
   if (isFCst(K0) && isFCst(K1)) {
     const ConstantFP *KO_FPImm = K0->getOperand(1).getFPImm();
     const ConstantFP *K1_FPImm = K1->getOperand(1).getFPImm();
-    return (KO_FPImm->isPosZero() && K1_FPImm->isExactlyValue(1.0)) ||
-           (KO_FPImm->isExactlyValue(1.0) && K1_FPImm->isPosZero());
+    return (KO_FPImm->isPosZero() && K1_FPImm->isOne()) ||
+           (KO_FPImm->isOne() && K1_FPImm->isPosZero());
   }
   return false;
 }

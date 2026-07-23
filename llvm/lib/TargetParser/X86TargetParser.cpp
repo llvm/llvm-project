@@ -12,6 +12,7 @@
 
 #include "llvm/TargetParser/X86TargetParser.h"
 #include "llvm/ADT/Bitset.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <numeric>
 
@@ -23,24 +24,11 @@ namespace {
 using FeatureBitset = Bitset<X86::CPU_FEATURE_MAX>;
 
 struct ProcInfo {
-  StringLiteral Name;
   X86::CPUKind Kind;
   unsigned KeyFeature;
   FeatureBitset Features;
   char Mangling;
   bool OnlyForCPUDispatchSpecific;
-};
-
-struct FeatureInfo {
-  StringLiteral NameWithPlus;
-  FeatureBitset ImpliedFeatures;
-
-  StringRef getName(bool WithPlus = false) const {
-    assert(NameWithPlus[0] == '+' && "Expected string to start with '+'");
-    if (WithPlus)
-      return NameWithPlus;
-    return NameWithPlus.drop_front();
-  }
 };
 
 } // end anonymous namespace
@@ -143,7 +131,7 @@ constexpr FeatureBitset FeaturesDiamondRapids =
     FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
     FeaturePPX | FeatureNDD | FeatureNF | FeatureJMPABS | FeatureMOVRS |
-    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32;
+    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -257,7 +245,7 @@ static constexpr FeatureBitset FeaturesZNVER5 =
 
 static constexpr FeatureBitset FeaturesZNVER6 =
     FeaturesZNVER5 | FeatureAVXVNNIINT8 | FeatureAVX512FP16 | FeatureAVXIFMA |
-    FeatureAVXNECONVERT;
+    FeatureAVXNECONVERT | FeatureAVX512BMM;
 
 // Hygon architecture processors.
 constexpr FeatureBitset FeaturesC86_4G_M4 =
@@ -281,6 +269,9 @@ static constexpr FeatureBitset FeaturesC86_4G_M7 =
     FeatureCMOV | FeatureGFNI | FeatureVAES | FeatureVPCLMULQDQ |
     FeatureWBNOINVD;
 
+static constexpr FeatureBitset FeaturesC86_4G_M8 =
+    FeaturesC86_4G_M7 | FeatureSHSTK;
+
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:
 // 1. Copy the mangling from the original CPU_SPEICIFC MACROs. If no, assign
@@ -290,204 +281,206 @@ static constexpr FeatureBitset FeaturesC86_4G_M7 =
 // FIXME: Remove OnlyForCPUDispatchSpecific after all CPUs here support both
 // cpu_dispatch/specific() feature and -march, -mtune, and so on.
 // clang-format off
-constexpr ProcInfo Processors[] = {
+constexpr EnumStringDef<ProcInfo> ProcessorDefs[] = {
  // Empty processor. Include X87 and CMPXCHG8 for backwards compatibility.
-  { {""}, CK_None, ~0U, FeatureX87 | FeatureCMPXCHG8B, '\0', false },
-  { {"generic"}, CK_None, ~0U, FeatureX87 | FeatureCMPXCHG8B | Feature64BIT, 'A', true },
+  { {""}, {CK_None, ~0U, FeatureX87 | FeatureCMPXCHG8B, '\0', false} },
+  { {"generic"}, {CK_None, ~0U, FeatureX87 | FeatureCMPXCHG8B | Feature64BIT, 'A', true} },
   // i386-generation processors.
-  { {"i386"}, CK_i386, ~0U, FeatureX87, '\0', false },
+  { {"i386"}, {CK_i386, ~0U, FeatureX87, '\0', false} },
   // i486-generation processors.
-  { {"i486"}, CK_i486, ~0U, FeatureX87, '\0', false },
-  { {"winchip-c6"}, CK_WinChipC6, ~0U, FeaturesPentiumMMX, '\0', false },
-  { {"winchip2"}, CK_WinChip2, ~0U, FeaturesPentiumMMX | FeaturePRFCHW, '\0', false },
-  { {"c3"}, CK_C3, ~0U, FeaturesPentiumMMX | FeaturePRFCHW, '\0', false },
+  { {"i486"}, {CK_i486, ~0U, FeatureX87, '\0', false} },
+  { {"winchip-c6"}, {CK_WinChipC6, ~0U, FeaturesPentiumMMX, '\0', false} },
+  { {"winchip2"}, {CK_WinChip2, ~0U, FeaturesPentiumMMX | FeaturePRFCHW, '\0', false} },
+  { {"c3"}, {CK_C3, ~0U, FeaturesPentiumMMX | FeaturePRFCHW, '\0', false} },
   // i586-generation processors, P5 microarchitecture based.
-  { {"i586"}, CK_i586, ~0U, FeatureX87 | FeatureCMPXCHG8B, '\0', false },
-  { {"pentium"}, CK_Pentium, ~0U, FeatureX87 | FeatureCMPXCHG8B, 'B', false },
-  { {"pentium-mmx"}, CK_PentiumMMX, ~0U, FeaturesPentiumMMX, '\0', false },
-  { {"pentium_mmx"}, CK_PentiumMMX, ~0U, FeaturesPentiumMMX, 'D', true },
+  { {"i586"}, {CK_i586, ~0U, FeatureX87 | FeatureCMPXCHG8B, '\0', false} },
+  { {"pentium"}, {CK_Pentium, ~0U, FeatureX87 | FeatureCMPXCHG8B, 'B', false} },
+  { {"pentium-mmx"}, {CK_PentiumMMX, ~0U, FeaturesPentiumMMX, '\0', false} },
+  { {"pentium_mmx"}, {CK_PentiumMMX, ~0U, FeaturesPentiumMMX, 'D', true} },
   // i686-generation processors, P6 / Pentium M microarchitecture based.
-  { {"pentiumpro"}, CK_PentiumPro, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, 'C', false },
-  { {"pentium_pro"}, CK_PentiumPro, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, 'C', true },
-  { {"i686"}, CK_i686, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, '\0', false },
-  { {"pentium2"}, CK_Pentium2, ~0U, FeaturesPentium2, 'E', false },
-  { {"pentium_ii"}, CK_Pentium2, ~0U, FeaturesPentium2, 'E', true },
-  { {"pentium3"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', false },
-  { {"pentium3m"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', false },
-  { {"pentium_iii"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', true },
-  { {"pentium_iii_no_xmm_regs"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', true },
-  { {"pentium-m"}, CK_PentiumM, ~0U, FeaturesPentium4, '\0', false },
-  { {"pentium_m"}, CK_PentiumM, ~0U, FeaturesPentium4, 'K', true },
-  { {"c3-2"}, CK_C3_2, ~0U, FeaturesPentium3, '\0', false },
-  { {"yonah"}, CK_Yonah, ~0U, FeaturesPrescott, 'L', false },
+  { {"pentiumpro"}, {CK_PentiumPro, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, 'C', false} },
+  { {"pentium_pro"}, {CK_PentiumPro, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, 'C', true} },
+  { {"i686"}, {CK_i686, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, '\0', false} },
+  { {"pentium2"}, {CK_Pentium2, ~0U, FeaturesPentium2, 'E', false} },
+  { {"pentium_ii"}, {CK_Pentium2, ~0U, FeaturesPentium2, 'E', true} },
+  { {"pentium3"}, {CK_Pentium3, ~0U, FeaturesPentium3, 'H', false} },
+  { {"pentium3m"}, {CK_Pentium3, ~0U, FeaturesPentium3, 'H', false} },
+  { {"pentium_iii"}, {CK_Pentium3, ~0U, FeaturesPentium3, 'H', true} },
+  { {"pentium_iii_no_xmm_regs"}, {CK_Pentium3, ~0U, FeaturesPentium3, 'H', true} },
+  { {"pentium-m"}, {CK_PentiumM, ~0U, FeaturesPentium4, '\0', false} },
+  { {"pentium_m"}, {CK_PentiumM, ~0U, FeaturesPentium4, 'K', true} },
+  { {"c3-2"}, {CK_C3_2, ~0U, FeaturesPentium3, '\0', false} },
+  { {"yonah"}, {CK_Yonah, ~0U, FeaturesPrescott, 'L', false} },
   // Netburst microarchitecture based processors.
-  { {"pentium4"}, CK_Pentium4, ~0U, FeaturesPentium4, 'J', false },
-  { {"pentium4m"}, CK_Pentium4, ~0U, FeaturesPentium4, 'J', false },
-  { {"pentium_4"}, CK_Pentium4, ~0U, FeaturesPentium4, 'J', true },
-  { {"pentium_4_sse3"}, CK_Prescott, ~0U, FeaturesPrescott, 'L', true },
-  { {"prescott"}, CK_Prescott, ~0U, FeaturesPrescott, 'L', false },
-  { {"nocona"}, CK_Nocona, ~0U, FeaturesNocona, 'L', false },
+  { {"pentium4"}, {CK_Pentium4, ~0U, FeaturesPentium4, 'J', false} },
+  { {"pentium4m"}, {CK_Pentium4, ~0U, FeaturesPentium4, 'J', false} },
+  { {"pentium_4"}, {CK_Pentium4, ~0U, FeaturesPentium4, 'J', true} },
+  { {"pentium_4_sse3"}, {CK_Prescott, ~0U, FeaturesPrescott, 'L', true} },
+  { {"prescott"}, {CK_Prescott, ~0U, FeaturesPrescott, 'L', false} },
+  { {"nocona"}, {CK_Nocona, ~0U, FeaturesNocona, 'L', false} },
   // Core microarchitecture based processors.
-  { {"core2"}, CK_Core2, FEATURE_SSSE3, FeaturesCore2, 'M', false },
-  { {"core_2_duo_ssse3"}, CK_Core2, ~0U, FeaturesCore2, 'M', true },
-  { {"penryn"}, CK_Penryn, ~0U, FeaturesPenryn, 'N', false },
-  { {"core_2_duo_sse4_1"}, CK_Penryn, ~0U, FeaturesPenryn, 'N', true },
+  { {"core2"}, {CK_Core2, FEATURE_SSSE3, FeaturesCore2, 'M', false} },
+  { {"core_2_duo_ssse3"}, {CK_Core2, ~0U, FeaturesCore2, 'M', true} },
+  { {"penryn"}, {CK_Penryn, ~0U, FeaturesPenryn, 'N', false} },
+  { {"core_2_duo_sse4_1"}, {CK_Penryn, ~0U, FeaturesPenryn, 'N', true} },
   // Atom processors
-  { {"bonnell"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell, 'O', false },
-  { {"atom"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell, 'O', false },
-  { {"silvermont"}, CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont, 'c', false },
-  { {"slm"}, CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont, 'c', false },
-  { {"atom_sse4_2"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'c', true },
-  { {"atom_sse4_2_movbe"}, CK_Goldmont, FEATURE_SSE4_2, FeaturesGoldmont, 'd', true },
-  { {"goldmont"}, CK_Goldmont, FEATURE_SSE4_2, FeaturesGoldmont, 'i', false },
-  { {"goldmont-plus"}, CK_GoldmontPlus, FEATURE_SSE4_2, FeaturesGoldmontPlus, '\0', false },
-  { {"goldmont_plus"}, CK_GoldmontPlus, FEATURE_SSE4_2, FeaturesGoldmontPlus, 'd', true },
-  { {"tremont"}, CK_Tremont, FEATURE_SSE4_2, FeaturesTremont, 'd', false },
+  { {"bonnell"}, {CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell, 'O', false} },
+  { {"atom"}, {CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell, 'O', false} },
+  { {"silvermont"}, {CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont, 'c', false} },
+  { {"slm"}, {CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont, 'c', false} },
+  { {"atom_sse4_2"}, {CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'c', true} },
+  { {"atom_sse4_2_movbe"}, {CK_Goldmont, FEATURE_SSE4_2, FeaturesGoldmont, 'd', true} },
+  { {"goldmont"}, {CK_Goldmont, FEATURE_SSE4_2, FeaturesGoldmont, 'i', false} },
+  { {"goldmont-plus"}, {CK_GoldmontPlus, FEATURE_SSE4_2, FeaturesGoldmontPlus, '\0', false} },
+  { {"goldmont_plus"}, {CK_GoldmontPlus, FEATURE_SSE4_2, FeaturesGoldmontPlus, 'd', true} },
+  { {"tremont"}, {CK_Tremont, FEATURE_SSE4_2, FeaturesTremont, 'd', false} },
   // Nehalem microarchitecture based processors.
-  { {"nehalem"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', false },
-  { {"core_i7_sse4_2"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', true },
-  { {"corei7"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', false },
+  { {"nehalem"}, {CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', false} },
+  { {"core_i7_sse4_2"}, {CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', true} },
+  { {"corei7"}, {CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', false} },
   // Westmere microarchitecture based processors.
-  { {"westmere"}, CK_Westmere, FEATURE_PCLMUL, FeaturesWestmere, 'Q', false },
-  { {"core_aes_pclmulqdq"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'Q', true },
+  { {"westmere"}, {CK_Westmere, FEATURE_PCLMUL, FeaturesWestmere, 'Q', false} },
+  { {"core_aes_pclmulqdq"}, {CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'Q', true} },
   // Sandy Bridge microarchitecture based processors.
-  { {"sandybridge"}, CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge, 'R', false },
-  { {"core_2nd_gen_avx"}, CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge, 'R', true },
-  { {"corei7-avx"}, CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge, '\0', false },
+  { {"sandybridge"}, {CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge, 'R', false} },
+  { {"core_2nd_gen_avx"}, {CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge, 'R', true} },
+  { {"corei7-avx"}, {CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge, '\0', false} },
   // Ivy Bridge microarchitecture based processors.
-  { {"ivybridge"}, CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge, 'S', false },
-  { {"core_3rd_gen_avx"}, CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge, 'S', true },
-  { {"core-avx-i"}, CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge, '\0', false },
+  { {"ivybridge"}, {CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge, 'S', false} },
+  { {"core_3rd_gen_avx"}, {CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge, 'S', true} },
+  { {"core-avx-i"}, {CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge, '\0', false} },
   // Haswell microarchitecture based processors.
-  { {"haswell"}, CK_Haswell, FEATURE_AVX2, FeaturesHaswell, 'V', false },
-  { {"core-avx2"}, CK_Haswell, FEATURE_AVX2, FeaturesHaswell, '\0', false },
-  { {"core_4th_gen_avx"}, CK_Haswell, FEATURE_AVX2, FeaturesHaswell, 'V', true },
-  { {"core_4th_gen_avx_tsx"}, CK_Haswell, FEATURE_AVX2, FeaturesHaswell, 'W', true },
+  { {"haswell"}, {CK_Haswell, FEATURE_AVX2, FeaturesHaswell, 'V', false} },
+  { {"core-avx2"}, {CK_Haswell, FEATURE_AVX2, FeaturesHaswell, '\0', false} },
+  { {"core_4th_gen_avx"}, {CK_Haswell, FEATURE_AVX2, FeaturesHaswell, 'V', true} },
+  { {"core_4th_gen_avx_tsx"}, {CK_Haswell, FEATURE_AVX2, FeaturesHaswell, 'W', true} },
   // Broadwell microarchitecture based processors.
-  { {"broadwell"}, CK_Broadwell, FEATURE_AVX2, FeaturesBroadwell, 'X', false },
-  { {"core_5th_gen_avx"}, CK_Broadwell, FEATURE_AVX2, FeaturesBroadwell, 'X', true },
-  { {"core_5th_gen_avx_tsx"}, CK_Broadwell, FEATURE_AVX2, FeaturesBroadwell, 'Y', true },
+  { {"broadwell"}, {CK_Broadwell, FEATURE_AVX2, FeaturesBroadwell, 'X', false} },
+  { {"core_5th_gen_avx"}, {CK_Broadwell, FEATURE_AVX2, FeaturesBroadwell, 'X', true} },
+  { {"core_5th_gen_avx_tsx"}, {CK_Broadwell, FEATURE_AVX2, FeaturesBroadwell, 'Y', true} },
   // Skylake client microarchitecture based processors.
-  { {"skylake"}, CK_SkylakeClient, FEATURE_AVX2, FeaturesSkylakeClient, 'b', false },
+  { {"skylake"}, {CK_SkylakeClient, FEATURE_AVX2, FeaturesSkylakeClient, 'b', false} },
   // Skylake server microarchitecture based processors.
-  { {"skylake-avx512"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, '\0', false },
-  { {"skx"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, 'a', false },
-  { {"skylake_avx512"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, 'a', true },
+  { {"skylake-avx512"}, {CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, '\0', false} },
+  { {"skx"}, {CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, 'a', false} },
+  { {"skylake_avx512"}, {CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, 'a', true} },
   // Cascadelake Server microarchitecture based processors.
-  { {"cascadelake"}, CK_Cascadelake, FEATURE_AVX512VNNI, FeaturesCascadeLake, 'o', false },
+  { {"cascadelake"}, {CK_Cascadelake, FEATURE_AVX512VNNI, FeaturesCascadeLake, 'o', false} },
   // Cooperlake Server microarchitecture based processors.
-  { {"cooperlake"}, CK_Cooperlake, FEATURE_AVX512BF16, FeaturesCooperLake, 'f', false },
+  { {"cooperlake"}, {CK_Cooperlake, FEATURE_AVX512BF16, FeaturesCooperLake, 'f', false} },
   // Cannonlake client microarchitecture based processors.
-  { {"cannonlake"}, CK_Cannonlake, FEATURE_AVX512VBMI, FeaturesCannonlake, 'e', false },
+  { {"cannonlake"}, {CK_Cannonlake, FEATURE_AVX512VBMI, FeaturesCannonlake, 'e', false} },
   // Icelake client microarchitecture based processors.
-  { {"icelake-client"}, CK_IcelakeClient, FEATURE_AVX512VBMI2, FeaturesICLClient, '\0', false },
-  { {"icelake_client"}, CK_IcelakeClient, FEATURE_AVX512VBMI2, FeaturesICLClient, 'k', true },
+  { {"icelake-client"}, {CK_IcelakeClient, FEATURE_AVX512VBMI2, FeaturesICLClient, '\0', false} },
+  { {"icelake_client"}, {CK_IcelakeClient, FEATURE_AVX512VBMI2, FeaturesICLClient, 'k', true} },
   // Rocketlake microarchitecture based processors.
-  { {"rocketlake"}, CK_Rocketlake, FEATURE_AVX512VBMI2, FeaturesRocketlake, 'k', false },
+  { {"rocketlake"}, {CK_Rocketlake, FEATURE_AVX512VBMI2, FeaturesRocketlake, 'k', false} },
   // Icelake server microarchitecture based processors.
-  { {"icelake-server"}, CK_IcelakeServer, FEATURE_AVX512VBMI2, FeaturesICLServer, '\0', false },
-  { {"icelake_server"}, CK_IcelakeServer, FEATURE_AVX512VBMI2, FeaturesICLServer, 'k', true },
+  { {"icelake-server"}, {CK_IcelakeServer, FEATURE_AVX512VBMI2, FeaturesICLServer, '\0', false} },
+  { {"icelake_server"}, {CK_IcelakeServer, FEATURE_AVX512VBMI2, FeaturesICLServer, 'k', true} },
   // Tigerlake microarchitecture based processors.
-  { {"tigerlake"}, CK_Tigerlake, FEATURE_AVX512VP2INTERSECT, FeaturesTigerlake, 'l', false },
+  { {"tigerlake"}, {CK_Tigerlake, FEATURE_AVX512VP2INTERSECT, FeaturesTigerlake, 'l', false} },
   // Sapphire Rapids microarchitecture based processors.
-  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false },
+  { {"sapphirerapids"}, {CK_SapphireRapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false} },
   // Alderlake microarchitecture based processors.
-  { {"alderlake"}, CK_Alderlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
+  { {"alderlake"}, {CK_Alderlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false} },
   // Raptorlake microarchitecture based processors.
-  { {"raptorlake"}, CK_Raptorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
+  { {"raptorlake"}, {CK_Raptorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false} },
   // Meteorlake microarchitecture based processors.
-  { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
+  { {"meteorlake"}, {CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false} },
   // Arrowlake microarchitecture based processors.
-  { {"arrowlake"}, CK_Arrowlake, FEATURE_AVX2, FeaturesArrowlake, 'p', false },
-  { {"arrowlake-s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, '\0', false },
-  { {"arrowlake_s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, 'p', true },
+  { {"arrowlake"}, {CK_Arrowlake, FEATURE_AVX2, FeaturesArrowlake, 'p', false} },
+  { {"arrowlake-s"}, {CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, '\0', false} },
+  { {"arrowlake_s"}, {CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, 'p', true} },
   // Lunarlake microarchitecture based processors.
-  { {"lunarlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesArrowlakeS, 'p', false },
+  { {"lunarlake"}, {CK_Lunarlake, FEATURE_AVX2, FeaturesArrowlakeS, 'p', false} },
   // Gracemont microarchitecture based processors.
-  { {"gracemont"}, CK_Gracemont, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
+  { {"gracemont"}, {CK_Gracemont, FEATURE_AVX2, FeaturesAlderlake, 'p', false} },
   // Pantherlake microarchitecture based processors.
-  { {"pantherlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesPantherlake, 'p', false },
-  { {"wildcatlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesPantherlake, 'p', false },
+  { {"pantherlake"}, {CK_Lunarlake, FEATURE_AVX2, FeaturesPantherlake, 'p', false} },
+  { {"wildcatlake"}, {CK_Lunarlake, FEATURE_AVX2, FeaturesPantherlake, 'p', false} },
   // Novalake microarchitecture based processors.
-  { {"novalake"}, CK_Novalake, FEATURE_AVX2, FeaturesNovalake, 'r', false },
+  { {"novalake"}, {CK_Novalake, FEATURE_AVX2, FeaturesNovalake, 'r', false} },
   // Sierraforest microarchitecture based processors.
-  { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
+  { {"sierraforest"}, {CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, 'p', false} },
   // Grandridge microarchitecture based processors.
-  { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
+  { {"grandridge"}, {CK_Grandridge, FEATURE_AVX2, FeaturesSierraforest, 'p', false} },
   // Granite Rapids microarchitecture based processors.
-  { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512FP16, FeaturesGraniteRapids, 'n', false },
+  { {"graniterapids"}, {CK_Graniterapids, FEATURE_AVX512FP16, FeaturesGraniteRapids, 'n', false} },
   // Granite Rapids D microarchitecture based processors.
-  { {"graniterapids-d"}, CK_GraniterapidsD, FEATURE_AVX512FP16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, '\0', false },
-  { {"graniterapids_d"}, CK_GraniterapidsD, FEATURE_AVX512FP16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, 'n', true },
+  { {"graniterapids-d"}, {CK_GraniterapidsD, FEATURE_AVX512FP16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, '\0', false} },
+  { {"graniterapids_d"}, {CK_GraniterapidsD, FEATURE_AVX512FP16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, 'n', true} },
   // Emerald Rapids microarchitecture based processors.
-  { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false },
+  { {"emeraldrapids"}, {CK_Emeraldrapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false} },
   // Clearwaterforest microarchitecture based processors.
-  { {"clearwaterforest"}, CK_Lunarlake, FEATURE_AVX2, FeaturesClearwaterforest, 'p', false },
+  { {"clearwaterforest"}, {CK_Lunarlake, FEATURE_AVX2, FeaturesClearwaterforest, 'p', false} },
   // Diamond Rapids microarchitecture based processors.
-  { {"diamondrapids"}, CK_Diamondrapids, FEATURE_AVX10_2, FeaturesDiamondRapids, 'z', false },
+  { {"diamondrapids"}, {CK_Diamondrapids, FEATURE_AVX10_2, FeaturesDiamondRapids, 'z', false} },
   // Knights Landing processor.
-  { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false },
-  { {"mic_avx512"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true },
+  { {"knl"}, {CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false} },
+  { {"mic_avx512"}, {CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true} },
   // Knights Mill processor.
-  { {"knm"}, CK_KNM, FEATURE_AVX5124FMAPS, FeaturesKNM, 'j', false },
+  { {"knm"}, {CK_KNM, FEATURE_AVX5124FMAPS, FeaturesKNM, 'j', false} },
   // Lakemont microarchitecture based processors.
-  { {"lakemont"}, CK_Lakemont, ~0U, FeatureCMPXCHG8B, '\0', false },
+  { {"lakemont"}, {CK_Lakemont, ~0U, FeatureCMPXCHG8B, '\0', false} },
   // K6 architecture processors.
-  { {"k6"}, CK_K6, ~0U, FeaturesK6, '\0', false },
-  { {"k6-2"}, CK_K6_2, ~0U, FeaturesK6 | FeaturePRFCHW, '\0', false },
-  { {"k6-3"}, CK_K6_3, ~0U, FeaturesK6 | FeaturePRFCHW, '\0', false },
+  { {"k6"}, {CK_K6, ~0U, FeaturesK6, '\0', false} },
+  { {"k6-2"}, {CK_K6_2, ~0U, FeaturesK6 | FeaturePRFCHW, '\0', false} },
+  { {"k6-3"}, {CK_K6_3, ~0U, FeaturesK6 | FeaturePRFCHW, '\0', false} },
   // K7 architecture processors.
-  { {"athlon"}, CK_Athlon, ~0U, FeaturesAthlon, '\0', false },
-  { {"athlon-tbird"}, CK_Athlon, ~0U, FeaturesAthlon, '\0', false },
-  { {"athlon-xp"}, CK_AthlonXP, ~0U, FeaturesAthlonXP, '\0', false },
-  { {"athlon-mp"}, CK_AthlonXP, ~0U, FeaturesAthlonXP, '\0', false },
-  { {"athlon-4"}, CK_AthlonXP, ~0U, FeaturesAthlonXP, '\0', false },
+  { {"athlon"}, {CK_Athlon, ~0U, FeaturesAthlon, '\0', false} },
+  { {"athlon-tbird"}, {CK_Athlon, ~0U, FeaturesAthlon, '\0', false} },
+  { {"athlon-xp"}, {CK_AthlonXP, ~0U, FeaturesAthlonXP, '\0', false} },
+  { {"athlon-mp"}, {CK_AthlonXP, ~0U, FeaturesAthlonXP, '\0', false} },
+  { {"athlon-4"}, {CK_AthlonXP, ~0U, FeaturesAthlonXP, '\0', false} },
   // K8 architecture processors.
-  { {"k8"}, CK_K8, ~0U, FeaturesK8, '\0', false },
-  { {"athlon64"}, CK_K8, ~0U, FeaturesK8, '\0', false },
-  { {"athlon-fx"}, CK_K8, ~0U, FeaturesK8, '\0', false },
-  { {"opteron"}, CK_K8, ~0U, FeaturesK8, '\0', false },
-  { {"k8-sse3"}, CK_K8SSE3, ~0U, FeaturesK8SSE3, '\0', false },
-  { {"athlon64-sse3"}, CK_K8SSE3, ~0U, FeaturesK8SSE3, '\0', false },
-  { {"opteron-sse3"}, CK_K8SSE3, ~0U, FeaturesK8SSE3, '\0', false },
-  { {"amdfam10"}, CK_AMDFAM10, FEATURE_SSE4_A, FeaturesAMDFAM10, '\0', false },
-  { {"barcelona"}, CK_AMDFAM10, FEATURE_SSE4_A, FeaturesAMDFAM10, '\0', false },
+  { {"k8"}, {CK_K8, ~0U, FeaturesK8, '\0', false} },
+  { {"athlon64"}, {CK_K8, ~0U, FeaturesK8, '\0', false} },
+  { {"athlon-fx"}, {CK_K8, ~0U, FeaturesK8, '\0', false} },
+  { {"opteron"}, {CK_K8, ~0U, FeaturesK8, '\0', false} },
+  { {"k8-sse3"}, {CK_K8SSE3, ~0U, FeaturesK8SSE3, '\0', false} },
+  { {"athlon64-sse3"}, {CK_K8SSE3, ~0U, FeaturesK8SSE3, '\0', false} },
+  { {"opteron-sse3"}, {CK_K8SSE3, ~0U, FeaturesK8SSE3, '\0', false} },
+  { {"amdfam10"}, {CK_AMDFAM10, FEATURE_SSE4_A, FeaturesAMDFAM10, '\0', false} },
+  { {"barcelona"}, {CK_AMDFAM10, FEATURE_SSE4_A, FeaturesAMDFAM10, '\0', false} },
   // Bobcat architecture processors.
-  { {"btver1"}, CK_BTVER1, FEATURE_SSE4_A, FeaturesBTVER1, '\0', false },
-  { {"btver2"}, CK_BTVER2, FEATURE_BMI, FeaturesBTVER2, '\0', false },
+  { {"btver1"}, {CK_BTVER1, FEATURE_SSE4_A, FeaturesBTVER1, '\0', false} },
+  { {"btver2"}, {CK_BTVER2, FEATURE_BMI, FeaturesBTVER2, '\0', false} },
   // Bulldozer architecture processors.
-  { {"bdver1"}, CK_BDVER1, FEATURE_XOP, FeaturesBDVER1, '\0', false },
-  { {"bdver2"}, CK_BDVER2, FEATURE_FMA, FeaturesBDVER2, '\0', false },
-  { {"bdver3"}, CK_BDVER3, FEATURE_FMA, FeaturesBDVER3, '\0', false },
-  { {"bdver4"}, CK_BDVER4, FEATURE_AVX2, FeaturesBDVER4, '\0', false },
+  { {"bdver1"}, {CK_BDVER1, FEATURE_XOP, FeaturesBDVER1, '\0', false} },
+  { {"bdver2"}, {CK_BDVER2, FEATURE_FMA, FeaturesBDVER2, '\0', false} },
+  { {"bdver3"}, {CK_BDVER3, FEATURE_FMA, FeaturesBDVER3, '\0', false} },
+  { {"bdver4"}, {CK_BDVER4, FEATURE_AVX2, FeaturesBDVER4, '\0', false} },
   // Zen architecture processors.
-  { {"znver1"}, CK_ZNVER1, FEATURE_AVX2, FeaturesZNVER1, '\0', false },
-  { {"znver2"}, CK_ZNVER2, FEATURE_AVX2, FeaturesZNVER2, '\0', false },
-  { {"znver3"}, CK_ZNVER3, FEATURE_AVX2, FeaturesZNVER3, '\0', false },
-  { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4, '\0', false },
-  { {"znver5"}, CK_ZNVER5, FEATURE_AVX512VP2INTERSECT, FeaturesZNVER5, '\0', false },
-  { {"znver6"}, CK_ZNVER6, FEATURE_AVX512FP16, FeaturesZNVER6, '\0', false },
+  { {"znver1"}, {CK_ZNVER1, FEATURE_AVX2, FeaturesZNVER1, '\0', false} },
+  { {"znver2"}, {CK_ZNVER2, FEATURE_AVX2, FeaturesZNVER2, '\0', false} },
+  { {"znver3"}, {CK_ZNVER3, FEATURE_AVX2, FeaturesZNVER3, '\0', false} },
+  { {"znver4"}, {CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4, '\0', false} },
+  { {"znver5"}, {CK_ZNVER5, FEATURE_AVX512VP2INTERSECT, FeaturesZNVER5, '\0', false} },
+  { {"znver6"}, {CK_ZNVER6, FEATURE_AVX512FP16, FeaturesZNVER6, '\0', false} },
   // Hygon processors.
-  { {"c86-4g-m4"}, CK_C86_4G_M4, FEATURE_AVX2, FeaturesC86_4G_M4 , '\0', false },
-  { {"c86-4g-m6"}, CK_C86_4G_M6, FEATURE_AVX2, FeaturesC86_4G_M6 , '\0', false },
-  { {"c86-4g-m7"}, CK_C86_4G_M7, FEATURE_AVX512VBMI2, FeaturesC86_4G_M7 , '\0', false },
+  { {"c86-4g-m4"}, {CK_C86_4G_M4, FEATURE_AVX2, FeaturesC86_4G_M4 , '\0', false} },
+  { {"c86-4g-m6"}, {CK_C86_4G_M6, FEATURE_AVX2, FeaturesC86_4G_M6 , '\0', false} },
+  { {"c86-4g-m7"}, {CK_C86_4G_M7, FEATURE_AVX512VBMI2, FeaturesC86_4G_M7 , '\0', false} },
+  { {"c86-4g-m8"}, {CK_C86_4G_M8, FEATURE_AVX512VBMI2, FeaturesC86_4G_M8 , '\0', false} },
   // Generic 64-bit processor.
-  { {"x86-64"}, CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false },
-  { {"x86-64-v2"}, CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false },
-  { {"x86-64-v3"}, CK_x86_64_v3, FEATURE_AVX2, FeaturesX86_64_V3, '\0', false },
-  { {"x86-64-v4"}, CK_x86_64_v4, FEATURE_AVX512VL, FeaturesX86_64_V4, '\0', false },
+  { {"x86-64"}, {CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false} },
+  { {"x86-64-v2"}, {CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false} },
+  { {"x86-64-v3"}, {CK_x86_64_v3, FEATURE_AVX2, FeaturesX86_64_V3, '\0', false} },
+  { {"x86-64-v4"}, {CK_x86_64_v4, FEATURE_AVX512VL, FeaturesX86_64_V4, '\0', false} },
   // Geode processors.
-  { {"geode"}, CK_Geode, ~0U, FeaturesGeode, '\0', false },
+  { {"geode"}, {CK_Geode, ~0U, FeaturesGeode, '\0', false} },
 };
 // clang-format on
+constexpr auto Processors = BUILD_ENUM_STRINGS(ProcessorDefs);
 
 constexpr const char *NoTuneList[] = {"x86-64-v2", "x86-64-v3", "x86-64-v4"};
 
 X86::CPUKind llvm::X86::parseArchX86(StringRef CPU, bool Only64Bit) {
   for (const auto &P : Processors)
-    if (!P.OnlyForCPUDispatchSpecific && P.Name == CPU &&
-        (P.Features[FEATURE_64BIT] || !Only64Bit))
-      return P.Kind;
+    if (!P.value().OnlyForCPUDispatchSpecific && P.name() == CPU &&
+        (P.value().Features[FEATURE_64BIT] || !Only64Bit))
+      return P.value().Kind;
 
   return CK_None;
 }
@@ -501,27 +494,28 @@ X86::CPUKind llvm::X86::parseTuneCPU(StringRef CPU, bool Only64Bit) {
 void llvm::X86::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values,
                                      bool Only64Bit) {
   for (const auto &P : Processors)
-    if (!P.OnlyForCPUDispatchSpecific && !P.Name.empty() &&
-        (P.Features[FEATURE_64BIT] || !Only64Bit))
-      Values.emplace_back(P.Name);
+    if (!P.value().OnlyForCPUDispatchSpecific && !P.name().empty() &&
+        (P.value().Features[FEATURE_64BIT] || !Only64Bit))
+      Values.emplace_back(P.name());
 }
 
 void llvm::X86::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values,
                                      bool Only64Bit) {
-  for (const ProcInfo &P : Processors)
-    if (!P.OnlyForCPUDispatchSpecific && !P.Name.empty() &&
-        (P.Features[FEATURE_64BIT] || !Only64Bit) &&
-        !llvm::is_contained(NoTuneList, P.Name))
-      Values.emplace_back(P.Name);
+  for (const auto &P : Processors)
+    if (!P.value().OnlyForCPUDispatchSpecific && !P.name().empty() &&
+        (P.value().Features[FEATURE_64BIT] || !Only64Bit) &&
+        !llvm::is_contained(NoTuneList, P.name()))
+      Values.emplace_back(P.name());
 }
 
 ProcessorFeatures llvm::X86::getKeyFeature(X86::CPUKind Kind) {
   // FIXME: Can we avoid a linear search here? The table might be sorted by
   // CPUKind so we could binary search?
   for (const auto &P : Processors) {
-    if (P.Kind == Kind) {
-      assert(P.KeyFeature != ~0U && "Processor does not have a key feature.");
-      return static_cast<ProcessorFeatures>(P.KeyFeature);
+    if (P.value().Kind == Kind) {
+      assert(P.value().KeyFeature != ~0U &&
+             "Processor does not have a key feature.");
+      return static_cast<ProcessorFeatures>(P.value().KeyFeature);
     }
   }
 
@@ -622,6 +616,7 @@ constexpr FeatureBitset ImpliedFeaturesAVX512VL = FeatureAVX512F;
 
 constexpr FeatureBitset ImpliedFeaturesAVX512BF16 = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512BITALG = FeatureAVX512BW;
+constexpr FeatureBitset ImpliedFeaturesAVX512BMM = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512IFMA = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VNNI = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VPOPCNTDQ = FeatureAVX512F;
@@ -649,7 +644,6 @@ constexpr FeatureBitset ImpliedFeaturesAMX_FP8 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
     FeatureAMX_TILE | FeatureAVX10_2;
-constexpr FeatureBitset ImpliedFeaturesAMX_TF32 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 
 constexpr FeatureBitset ImpliedFeaturesPREFETCHI = {};
@@ -694,28 +688,31 @@ constexpr FeatureBitset ImpliedFeaturesAPXF =
 
 constexpr FeatureBitset ImpliedFeaturesMOVRS = {};
 
-constexpr FeatureInfo FeatureInfos[] = {
+constexpr EnumStringDef<FeatureBitset> FeatureInfoDefs[] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
 #include "llvm/TargetParser/X86TargetParser.def"
 };
+constexpr auto FeatureInfos = BUILD_ENUM_STRINGS(FeatureInfoDefs);
 
 void llvm::X86::getFeaturesForCPU(StringRef CPU,
                                   SmallVectorImpl<StringRef> &EnabledFeatures,
                                   bool NeedPlus) {
-  auto I = llvm::find_if(Processors,
-                         [&](const ProcInfo &P) { return P.Name == CPU; });
+  auto I =
+      llvm::find_if(Processors, [&](const auto &P) { return P.name() == CPU; });
   assert(I != std::end(Processors) && "Processor not found!");
 
-  FeatureBitset Bits = I->Features;
+  FeatureBitset Bits = I->value().Features;
 
   // Remove the 64-bit feature which we only use to validate if a CPU can
   // be used with 64-bit mode.
   Bits &= ~Feature64BIT;
 
   // Add the string version of all set bits.
-  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
-    if (Bits[i] && !FeatureInfos[i].getName(NeedPlus).empty())
-      EnabledFeatures.push_back(FeatureInfos[i].getName(NeedPlus));
+  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i) {
+    StringRef Name = FeatureInfos[i].name().drop_front(!NeedPlus);
+    if (Bits[i] && !Name.empty())
+      EnabledFeatures.push_back(Name);
+  }
 }
 
 // For each feature that is (transitively) implied by this feature, set it.
@@ -730,7 +727,7 @@ static void getImpliedEnabledFeatures(FeatureBitset &Bits,
     Prev = Bits;
     for (unsigned i = CPU_FEATURE_MAX; i;)
       if (Bits[--i])
-        Bits |= FeatureInfos[i].ImpliedFeatures;
+        Bits |= FeatureInfos[i].value();
   } while (Prev != Bits);
 }
 
@@ -744,7 +741,7 @@ static void getImpliedDisabledFeatures(FeatureBitset &Bits, unsigned Value) {
   do {
     Prev = Bits;
     for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
-      if ((FeatureInfos[i].ImpliedFeatures & Bits).any())
+      if ((FeatureInfos[i].value() & Bits).any())
         Bits.set(i);
   } while (Prev != Bits);
 }
@@ -752,8 +749,8 @@ static void getImpliedDisabledFeatures(FeatureBitset &Bits, unsigned Value) {
 void llvm::X86::updateImpliedFeatures(
     StringRef Feature, bool Enabled,
     StringMap<bool> &Features) {
-  auto I = llvm::find_if(FeatureInfos, [&](const FeatureInfo &FI) {
-    return FI.getName() == Feature;
+  auto I = llvm::find_if(FeatureInfos, [&](const auto &FI) {
+    return FI.name().drop_front() == Feature;
   });
   if (I == std::end(FeatureInfos)) {
     // FIXME: This shouldn't happen, but may not have all features in the table
@@ -763,28 +760,31 @@ void llvm::X86::updateImpliedFeatures(
 
   FeatureBitset ImpliedBits;
   if (Enabled)
-    getImpliedEnabledFeatures(ImpliedBits, I->ImpliedFeatures);
+    getImpliedEnabledFeatures(ImpliedBits, I->value());
   else
     getImpliedDisabledFeatures(ImpliedBits,
                                std::distance(std::begin(FeatureInfos), I));
 
   // Update the map entry for all implied features.
-  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
-    if (ImpliedBits[i] && !FeatureInfos[i].getName().empty())
-      Features[FeatureInfos[i].getName()] = Enabled;
+  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i) {
+    StringRef Name = FeatureInfos[i].name().drop_front();
+    if (ImpliedBits[i] && !Name.empty())
+      Features[Name] = Enabled;
+  }
 }
 
 char llvm::X86::getCPUDispatchMangling(StringRef CPU) {
-  auto I = llvm::find_if(Processors,
-                         [&](const ProcInfo &P) { return P.Name == CPU; });
+  auto I =
+      llvm::find_if(Processors, [&](const auto &P) { return P.name() == CPU; });
   assert(I != std::end(Processors) && "Processor not found!");
-  assert(I->Mangling != '\0' && "Processor dooesn't support function multiversion!");
-  return I->Mangling;
+  assert(I->value().Mangling != '\0' &&
+         "Processor dooesn't support function multiversion!");
+  return I->value().Mangling;
 }
 
 bool llvm::X86::validateCPUSpecificCPUDispatch(StringRef Name) {
   auto I = llvm::find_if(Processors,
-                         [&](const ProcInfo &P) { return P.Name == Name; });
+                         [&](const auto &P) { return P.name() == Name; });
   return I != std::end(Processors);
 }
 
@@ -793,6 +793,7 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   // Processor features and mapping to processor feature value.
   std::array<uint32_t, 4> FeatureMask{};
   for (StringRef FeatureStr : FeatureStrs) {
+    // ABI_VALUE is used to match values in compiler-rt/libgcc
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, ABI_VALUE)
 #define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE)                    \

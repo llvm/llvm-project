@@ -32,6 +32,10 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
+namespace unittests {
+struct UnittestsHelper;
+}
+
 namespace detail {
 
 class DeviceImpl;
@@ -147,6 +151,13 @@ private:
   std::vector<DeviceImplUPtr> MRootDevices;
 
   std::shared_ptr<ContextImpl> MDefaultContext;
+
+  // Single initialization of platforms and devices doesn't allow to implement
+  // unittests for this behavior. This flag and friend class allows to force
+  // device & platform rediscovery at the next getPlatforms() call if the cache
+  // is empty.
+  static bool rediscoverIfEmpty;
+  friend struct ::sycl::unittests::UnittestsHelper;
 };
 
 } // namespace detail

@@ -60,6 +60,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -161,6 +162,7 @@ public:
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -378,8 +380,8 @@ void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
   bool SkipAnding = false;
   if (MI.getOperand(1).isReg()) {
     if (MachineInstr *Def = MRI->getUniqueVRegDef(MI.getOperand(1).getReg())) {
-      SkipAnding = Def->getParent() == MI.getParent()
-          && SIInstrInfo::isVALU(*Def);
+      SkipAnding = Def->getParent() == MI.getParent() &&
+                   SIInstrInfo::isVALU(*Def, /*AllowLDSDMA=*/true);
     }
   }
 

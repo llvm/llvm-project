@@ -314,7 +314,8 @@ void XtensaInstPrinter::printOffset8m8_AsmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
-    assert(isUInt<8> && "Invalid argument, value must be in range [0,255]");
+    assert(isUInt<8>(Value) &&
+           "Invalid argument, value must be in range [0,255]");
     O << Value;
   } else
     printOperand(MI, OpNum, O);

@@ -721,9 +721,9 @@ void applySimplifyUADDO(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register CondBit = MRI.cloneVirtualRegister(Op0Wide);
   B.buildAnd(
       CondBit, AddDst,
-      B.buildConstant(LLT::scalar(32), OpTySize == 8 ? 1 << 8 : 1 << 16));
+      B.buildConstant(LLT::integer(32), OpTySize == 8 ? 1 << 8 : 1 << 16));
   B.buildICmp(CmpInst::ICMP_NE, ResStatus, CondBit,
-              B.buildConstant(LLT::scalar(32), 0));
+              B.buildConstant(LLT::integer(32), 0));
 
   // Update ZEXts users of the result value. Because all uses are in the
   // no-overflow case, we know that the top bits are 0 and we can ignore ZExts.
@@ -788,26 +788,6 @@ AArch64PreLegalizerCombinerImpl::AArch64PreLegalizerCombinerImpl(
 bool AArch64PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   if (tryCombineAllImpl(MI))
     return true;
-
-  unsigned Opc = MI.getOpcode();
-  switch (Opc) {
-  case TargetOpcode::G_MEMCPY_INLINE:
-    return Helper.tryEmitMemcpyInline(MI);
-  case TargetOpcode::G_MEMCPY:
-  case TargetOpcode::G_MEMMOVE:
-  case TargetOpcode::G_MEMSET: {
-    // If we're at -O0 set a maxlen of 32 to inline, otherwise let the other
-    // heuristics decide.
-    unsigned MaxLen = CInfo.EnableOpt ? 0 : 32;
-    // Try to inline memcpy type calls if optimizations are enabled.
-    if (Helper.tryCombineMemCpyFamily(MI, MaxLen))
-      return true;
-    if (Opc == TargetOpcode::G_MEMSET)
-      return llvm::AArch64GISelUtils::tryEmitBZero(MI, B, Libcalls,
-                                                   CInfo.EnableMinSize);
-    return false;
-  }
-  }
 
   return false;
 }
@@ -938,7 +918,7 @@ AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   auto &MAMProxy =
       MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
-  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+  const ModuleLibcallLoweringInfo *LibcallResult =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(
           *MF.getFunction().getParent());
   if (!LibcallResult)
