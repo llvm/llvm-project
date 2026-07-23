@@ -139,6 +139,10 @@ features cannot lower the translation-unit ABI level;
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
 
+- Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
+  the C++ standard library selected by the driver and the include directories
+  added for it.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -364,6 +368,10 @@ features cannot lower the translation-unit ABI level;
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
   argument instead of asserting. (#GH210714)
 
+- Fixed a crash when computing the implicit deletion of a defaulted comparison
+  operator required an access check that ran while an enclosing declaration
+  was still being parsed. (#GH210692)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -373,6 +381,7 @@ features cannot lower the translation-unit ABI level;
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
+- Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 
 ### OpenACC Specific Changes
 
