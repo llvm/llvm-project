@@ -151,9 +151,12 @@ def testDialectLoadInMultipleContexts():
         ContextLoadDialect.load()
         try:
             ContextLoadDialect.load()
-        except RuntimeError as e:
+        except DialectAlreadyLoadedError as e:
+            assert isinstance(e, RuntimeError)
             # CHECK: same context: Dialect 'ext_context_load' has already been loaded in the current context.
             print("same context:", e)
+        else:
+            raise AssertionError("expected DialectAlreadyLoadedError")
 
         # CHECK: first context: ContextLoadOp, ContextLoadAttr, ContextLoadType
         # CHECK: "first context"
@@ -170,9 +173,11 @@ def testDialectLoadInMultipleContexts():
     with first_context, Location.unknown():
         try:
             ContextLoadDialect.load()
-        except RuntimeError as e:
+        except DialectAlreadyLoadedError as e:
             # CHECK: same context again: Dialect 'ext_context_load' has already been loaded in the current context.
             print("same context again:", e)
+        else:
+            raise AssertionError("expected DialectAlreadyLoadedError")
 
 
 # CHECK: TEST: testExtDialect

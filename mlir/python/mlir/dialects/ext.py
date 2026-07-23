@@ -29,6 +29,7 @@ ir = _cext.ir
 
 __all__ = [
     "Dialect",
+    "DialectAlreadyLoadedError",
     "Operation",
     "Operand",
     "Result",
@@ -45,6 +46,10 @@ __all__ = [
 Operand = ir.Value
 Result = ir.OpResult
 Region = ir.Region
+
+
+class DialectAlreadyLoadedError(RuntimeError):
+    """Raised when a dialect is loaded more than once in the current context."""
 
 
 def construct_instance(origin, args):
@@ -959,7 +964,7 @@ class Dialect(ir.Dialect):
     @classmethod
     def load(cls) -> None:
         if ir.Context.current.is_dialect_loaded(cls.DIALECT_NAMESPACE):
-            raise RuntimeError(
+            raise DialectAlreadyLoadedError(
                 f"Dialect '{cls.DIALECT_NAMESPACE}' has already been loaded in the current context."
             )
 
