@@ -557,13 +557,21 @@ Error L0ProgramTy::getSymbolMetadata(const char *Name, void **AddrPtr,
   void *SymbolAddr = nullptr;
   ze_result_t RC;
   for (auto Module : Modules) {
+    auto SetResults = [&](void *Addr, size_t Size) {
+      if (AddrPtr)
+        *AddrPtr = Addr;
+      if (SizePtr)
+        *SizePtr = Size;
+    };
     CALL_ZE(RC, zeModuleGetGlobalPointer, Module, Name, &SymbolSize,
             &SymbolAddr);
     if (RC == ZE_RESULT_SUCCESS && SymbolAddr) {
-      if (AddrPtr)
-        *AddrPtr = SymbolAddr;
-      if (SizePtr)
-        *SizePtr = SymbolSize;
+      SetResults(SymbolAddr, SymbolSize);
+      return Plugin::success();
+    }
+    CALL_ZE(RC, zeModuleGetFunctionPointer, Module, Name, &SymbolAddr);
+    if (RC == ZE_RESULT_SUCCESS && SymbolAddr) {
+      SetResults(SymbolAddr, 0);
       return Plugin::success();
     }
   }
