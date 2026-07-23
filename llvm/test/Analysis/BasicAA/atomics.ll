@@ -139,16 +139,19 @@ define void @alloca_no_escape_aliasing() {
   ret void
 }
 
+; A cross-thread sync op may be ordered against peer-thread accesses to a
+; caller-owned pointer argument, so %a is ModRef here even though it does not
+; escape this function.
 ; CHECK-LABEL: Function: noalias_no_escape:
-; CHECK:  NoModRef:  Ptr: i32* %a	<->  fence release
+; CHECK:  Both ModRef:  Ptr: i32* %a	<->  fence release
 ; CHECK:  Both ModRef:  Ptr: i32* %x	<->  fence release
-; CHECK:  NoModRef:  Ptr: i32* %a	<->  %1 = atomicrmw add ptr %x, i32 1 acq_rel, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %a	<->  %1 = atomicrmw add ptr %x, i32 1 acq_rel, align 4
 ; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %1 = atomicrmw add ptr %x, i32 1 acq_rel, align 4
-; CHECK:  NoModRef:  Ptr: i32* %a	<->  %2 = cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %a	<->  %2 = cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic, align 4
 ; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %2 = cmpxchg ptr %x, i32 0, i32 1 acq_rel monotonic, align 4
-; CHECK:  NoModRef:  Ptr: i32* %a	<->  %3 = load atomic i32, ptr %x acquire, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %a	<->  %3 = load atomic i32, ptr %x acquire, align 4
 ; CHECK:  Both ModRef:  Ptr: i32* %x	<->  %3 = load atomic i32, ptr %x acquire, align 4
-; CHECK:  NoModRef:  Ptr: i32* %a	<->  store atomic i32 0, ptr %x release, align 4
+; CHECK:  Both ModRef:  Ptr: i32* %a	<->  store atomic i32 0, ptr %x release, align 4
 ; CHECK:  Both ModRef:  Ptr: i32* %x	<->  store atomic i32 0, ptr %x release, align 4
 define void @noalias_no_escape(ptr noalias %a, ptr %x) {
   store i32 0, ptr %a

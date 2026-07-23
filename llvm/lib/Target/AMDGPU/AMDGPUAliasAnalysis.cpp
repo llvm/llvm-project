@@ -114,3 +114,17 @@ ModRefInfo AMDGPUAAResult::getModRefInfoMask(const MemoryLocation &Loc,
 
   return ModRefInfo::ModRef;
 }
+
+ModRefInfo AMDGPUAAResult::getModRefInfoForSyncOp(const MemoryLocation &Loc,
+                                                  AAQueryInfo &AAQI) {
+  // Private (scratch) memory is per-workitem and unreachable by peer threads.
+  // Check every underlying object so an addrspacecast is not read as private.
+  if (!Loc.Ptr)
+    return ModRefInfo::ModRef;
+  SmallVector<const Value *, 4> Objects;
+  getUnderlyingObjects(Loc.Ptr, Objects);
+  for (const Value *Obj : Objects)
+    if (Obj->getType()->getPointerAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
+      return ModRefInfo::ModRef;
+  return ModRefInfo::NoModRef;
+}

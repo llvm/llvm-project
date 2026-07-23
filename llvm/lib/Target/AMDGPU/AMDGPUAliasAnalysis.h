@@ -41,6 +41,8 @@ public:
                     AAQueryInfo &AAQI, const Instruction *CtxI);
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals);
+  ModRefInfo getModRefInfoForSyncOp(const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

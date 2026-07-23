@@ -459,9 +459,22 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
 //===----------------------------------------------------------------------===//
 
 ModRefInfo llvm::getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
-                                AAQueryInfo &AAQI) {
+                                AAQueryInfo &AAQI, SyncScope::ID SSID) {
   if (!Loc.Ptr)
     return ModRefInfo::ModRef;
+
+  // A non-byval pointer argument may alias memory that peer threads access, so
+  // a cross-thread synchronizing operation can order those accesses even if the
+  // pointee does not escape. Such an argument is not exempt; a target can
+  // restore the exemption for thread-private spaces via getModRefInfoForSyncOp.
+  if (SSID != SyncScope::SingleThread) {
+    SmallVector<const Value *, 4> Objects;
+    getUnderlyingObjects(Loc.Ptr, Objects);
+    for (const Value *Object : Objects)
+      if (const auto *Arg = dyn_cast<Argument>(Object))
+        if (!Arg->hasByValAttr())
+          return AA->getModRefInfoMask(Loc);
+  }
 
   // If the location is *never* captured, it cannot be affected by
   // synchronizing operations. However, we cannot ignore locations that are
@@ -484,6 +497,20 @@ ModRefInfo llvm::getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
   return MR & AA->getModRefInfoMask(Loc);
 }
 
+ModRefInfo AAResults::getModRefInfoForSyncOp(const MemoryLocation &Loc,
+                                             AAQueryInfo &AAQI,
+                                             SyncScope::ID SSID) {
+  // Let each alias analysis refine the sync effect (e.g. a target that knows an
+  // address space is thread-private), then intersect with the generic result.
+  ModRefInfo Result = ModRefInfo::ModRef;
+  for (const auto &AA : AAs) {
+    Result &= AA->getModRefInfoForSyncOp(Loc, AAQI);
+    if (isNoModRef(Result))
+      return ModRefInfo::NoModRef;
+  }
+  return Result & getSyncEffects(this, Loc, AAQI, SSID);
+}
+
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
@@ -494,7 +521,7 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
     if (AR == AliasResult::NoAlias) {
       // Synchronization effects may affect locations that do not alias.
       if (isStrongerThanMonotonic(L->getOrdering()))
-        return getSyncEffects(this, Loc, AAQI);
+        return getModRefInfoForSyncOp(Loc, AAQI, L->getSyncScopeID());
       return ModRefInfo::NoModRef;
     }
   }
@@ -517,7 +544,7 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
     if (AR == AliasResult::NoAlias) {
       // Synchronization effects may affect locations that do not alias.
       if (isStrongerThanMonotonic(S->getOrdering()))
-        return getSyncEffects(this, Loc, AAQI);
+        return getModRefInfoForSyncOp(Loc, AAQI, S->getSyncScopeID());
       return ModRefInfo::NoModRef;
     }
 
@@ -550,7 +577,7 @@ ModRefInfo AAResults::getModRefInfo(const FenceInst *F,
         return ModRefInfo::NoModRef;
     }
 
-    return Result & getSyncEffects(this, Loc, AAQI);
+    return Result & getModRefInfoForSyncOp(Loc, AAQI, F->getSyncScopeID());
   }
 
   return ModRefInfo::ModRef;
@@ -611,7 +638,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
     if (AR == AliasResult::NoAlias) {
       // Synchronization effects may affect locations that do not alias.
       if (isStrongerThanMonotonic(CX->getMergedOrdering()))
-        return getSyncEffects(this, Loc, AAQI);
+        return getModRefInfoForSyncOp(Loc, AAQI, CX->getSyncScopeID());
       return ModRefInfo::NoModRef;
     }
   }
@@ -629,7 +656,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
     if (AR == AliasResult::NoAlias) {
       // Synchronization effects may affect locations that do not alias.
       if (isStrongerThanMonotonic(RMW->getOrdering()))
-        return getSyncEffects(this, Loc, AAQI);
+        return getModRefInfoForSyncOp(Loc, AAQI, RMW->getSyncScopeID());
       return ModRefInfo::NoModRef;
     }
   }

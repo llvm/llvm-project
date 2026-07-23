@@ -42,6 +42,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
@@ -606,6 +607,9 @@ public:
   LLVM_ABI ModRefInfo getModRefInfo(const FenceInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfoForSyncOp(const MemoryLocation &Loc,
+                                             AAQueryInfo &AAQI,
+                                             SyncScope::ID SSID);
   LLVM_ABI ModRefInfo getModRefInfo(const AtomicCmpXchgInst *CX,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);
@@ -813,6 +817,12 @@ public:
                                    const MemoryLocation &Loc,
                                    AAQueryInfo &AAQI) = 0;
 
+  /// Refine the mod/ref of a synchronizing operation on \p Loc, which it does
+  /// not access directly. Lets a target return NoModRef for address spaces that
+  /// peer threads cannot reach.
+  virtual ModRefInfo getModRefInfoForSyncOp(const MemoryLocation &Loc,
+                                            AAQueryInfo &AAQI) = 0;
+
   /// @}
 };
 
@@ -869,6 +879,11 @@ public:
   ModRefInfo getModRefInfo(const FenceInst *F, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI) override {
     return Result.getModRefInfo(F, Loc, AAQI);
+  }
+
+  ModRefInfo getModRefInfoForSyncOp(const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) override {
+    return Result.getModRefInfoForSyncOp(Loc, AAQI);
   }
 };
 
@@ -933,6 +948,11 @@ public:
                            AAQueryInfo &AAQI) {
     return ModRefInfo::ModRef;
   }
+
+  ModRefInfo getModRefInfoForSyncOp(const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
+    return ModRefInfo::ModRef;
+  }
 };
 
 /// Return true if this pointer is returned by a noalias function.
@@ -988,9 +1008,14 @@ LLVM_ABI bool isWritableObject(const Value *Object,
                                bool &ExplicitlyDereferenceableOnly);
 
 /// Get ModRefInfo for a synchronizing operation, such as a fence or stronger
-/// than monotonic atomic load/store.
+/// than monotonic atomic load/store. \p SSID is the operation's sync scope: a
+/// cross-thread scope can order accesses that peer threads perform to
+/// caller-owned memory, so the never-escaping exemption is not applied to a
+/// non-byval pointer argument there. This is target-independent; a target may
+/// restore precision for thread-private address spaces via
+/// AAResults::getModRefInfoForSyncOp.
 LLVM_ABI ModRefInfo getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
-                                   AAQueryInfo &AAQI);
+                                   AAQueryInfo &AAQI, SyncScope::ID SSID);
 
 /// A manager for alias analyses.
 ///

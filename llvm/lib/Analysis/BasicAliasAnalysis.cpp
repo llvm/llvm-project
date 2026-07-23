@@ -972,7 +972,9 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   ModRefInfo SyncMR = ModRefInfo::NoModRef;
   if (isModAndRefSet(OtherMR) && Call->maySynchronize() &&
       Call->isInlineAsm()) {
-    SyncMR = getSyncEffects(&AAQI.AAR, Loc, AAQI);
+    // A call has no explicit sync scope; assume the widest (cross-thread)
+    // scope so the exemption is not applied to caller-provided arguments.
+    SyncMR = getSyncEffects(&AAQI.AAR, Loc, AAQI, SyncScope::System);
     if (isModAndRefSet(SyncMR))
       return SyncMR;
   }
