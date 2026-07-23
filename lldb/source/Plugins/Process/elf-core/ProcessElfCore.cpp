@@ -288,10 +288,10 @@ Status ProcessElfCore::DoLoadCore() {
           exe_module_sp =
               Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
                   exe_module_spec, load_addr, size);
-          if (exe_module_spec.GetPlatformFileSpec())
-            exe_module_sp->SetPlatformFileSpec(
-                exe_module_spec.GetPlatformFileSpec());
         }
+        if (exe_module_spec.GetPlatformFileSpec())
+          exe_module_sp->SetPlatformFileSpec(
+              exe_module_spec.GetPlatformFileSpec());
       }
       if (exe_module_sp)
         GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
@@ -402,8 +402,24 @@ bool ProcessElfCore::FindModuleUUID(ModuleSpec &spec) {
   }
   // If we didn't find a file spec from the load address, fall back to using
   // the file spec.
-  if (path.empty())
+  if (path.empty()) {
+    // No path found in NT_FILE info.
     path = spec.GetFileSpec().GetPath();
+  } else {
+    // We got a path from the NT_FILE info.
+    if (spec.GetFileSpec()) {
+      // The module spec had a path, see if the NT_FILE path differs from the
+      // spec path and if so set the platform file spec. This is typically
+      // the resolved path where the spec path can be a symlink. Having both
+      // paths in the module spec and eventually in the module will help
+      // clients match files up more effectively.
+      if (spec.GetFileSpec().GetPath() != path)
+        spec.GetPlatformFileSpec().SetPath(path);
+    } else {
+      // The module spec doesn't have a path, fill it in in the spec.
+      spec.GetFileSpec().SetPath(path);
+    }
+  }
 
   auto it = m_uuids.find(path);
   if (it != m_uuids.end()) {
@@ -1238,13 +1254,35 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
   info.Clear();
   info.SetProcessID(GetID());
   info.SetArchitecture(GetArchitecture());
+  ModuleSpec exe_module_spec;
+  bool added_executable = false;
   lldb::ModuleSP module_sp = GetTarget().GetExecutableModule();
+  const bool add_exe_file_as_first_arg = true;
   if (module_sp) {
-    const bool add_exe_file_as_first_arg = false;
     info.SetExecutableFile(GetTarget().GetExecutableModule()->GetFileSpec(),
                            add_exe_file_as_first_arg);
+    added_executable = true;
+  } else {
+    ModuleSpec exe_module_spec;
+    if (GetMainExecutableModuleSpec(exe_module_spec)) {
+      if (exe_module_spec.GetFileSpec()) {
+        info.SetExecutableFile(exe_module_spec.GetFileSpec(),
+                               add_exe_file_as_first_arg);
+        added_executable = true;
+      }
+    }
   }
-  info.SetArguments(m_process_args.as_args(), /*first_arg_is_executable=*/true);
+  Args process_args = m_process_args.as_args();
+  bool first_arg_is_executable = true;
+  if (added_executable) {
+    // Strip the executable name from the process args as it can be a symlink
+    // that doesn't match the executable we would have created from a call to
+    // GetMainExecutableModuleSpec(...).
+    first_arg_is_executable = false;
+    info.SetArg0(process_args.GetArgumentAtIndex(0));
+    process_args.DeleteArgumentAtIndex(0);
+  }
+  info.SetArguments(process_args, first_arg_is_executable);
   return true;
 }
 

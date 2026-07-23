@@ -1673,3 +1673,26 @@ lldb_private::ModuleSpecList Module::GetSeparateDebugInfoFiles() {
 
   return symfile->GetSeparateDebugInfoFiles();
 }
+
+ModuleSpec Module::GetModuleSpec(const lldb::ProcessSP &process_sp) {
+  ModuleSpec spec;
+  spec.GetFileSpec() = m_file;
+  spec.GetPlatformFileSpec() = m_platform_file;
+  spec.GetObjectName() = m_object_name;
+  spec.SetObjectOffset(m_object_offset);
+  spec.GetUUID() = m_uuid;
+  spec.GetArchitecture() = m_arch;
+  // Set the load address of the module if possible.
+  if (GetMemoryModuleAddress().has_value()) {
+    spec.SetLoadAddress(GetMemoryModuleAddress().value());
+  } else if (process_sp) {
+    ObjectFile *objfile_ptr = GetObjectFile();
+    if (objfile_ptr) {
+      Address base_addr = objfile_ptr->GetBaseAddress();
+      addr_t load_addr = base_addr.GetLoadAddress(&process_sp->GetTarget());
+      if (load_addr != LLDB_INVALID_ADDRESS)
+        spec.SetLoadAddress(load_addr);
+    }
+  }
+  return spec;
+}
