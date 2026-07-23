@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
@@ -75,6 +76,7 @@ public:
     AU.setPreservesCFG();
     AU.addPreservedID(MachineLoopInfoID);
     AU.addPreservedID(MachineDominatorsID);
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -672,7 +674,6 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
   case X86::PTDPFP16PSV:
-  case X86::PTMMULTF32PSV:
   case X86::PTDPBF8PSV:
   case X86::PTDPBHF8PSV:
   case X86::PTDPHBF8PSV:
@@ -691,7 +692,6 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
-    case X86::PTMMULTF32PSV: Opc = X86::TMMULTF32PS; break;
     case X86::PTDPBF8PSV: Opc = X86::TDPBF8PS; break;
     case X86::PTDPBHF8PSV: Opc = X86::TDPBHF8PS; break;
     case X86::PTDPHBF8PSV: Opc = X86::TDPHBF8PS; break;
