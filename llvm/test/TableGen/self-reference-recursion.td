@@ -1,5 +1,4 @@
 // RUN: not llvm-tblgen %s 2>&1 | FileCheck %s
-// XFAIL: vg_leak
 
 class A<string self> {
   int x = !cast<A>(self).x;

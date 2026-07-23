@@ -19,8 +19,8 @@ BitfieldStruct overlapping_init = { 3, 2, 1 };
 // This is unintuitive. The bitfields are initialized using a struct of constants
 // that maps to the bitfields but splits the value into bytes.
 
-// CIR: cir.global external @overlapping_init = #cir.const_record<{#cir.int<35> : !u8i, #cir.int<0> : !u8i, #cir.int<4> : !u8i, #cir.int<0> : !u8i}> : !rec_anon_struct
-// LLVM: @overlapping_init = global { i8, i8, i8, i8 } { i8 35, i8 0, i8 4, i8 0 }
+// CIR: cir.global external @overlapping_init = #cir.const_record<{#cir.int<262179> : !u32i}> : !rec_BitfieldStruct
+// LLVM: @overlapping_init = global %struct.BitfieldStruct { i32 262179 }
 // OGCG: @overlapping_init = global { i8, i8, i8, i8 } { i8 35, i8 0, i8 4, i8 0 }
 
 struct S {
@@ -50,14 +50,14 @@ struct StructWithFieldInitFromConst {
 
 StructWithFieldInitFromConst swfifc = {};
 
-// CIR: cir.global external @swfifc = #cir.zero : !rec_anon_struct
-// LLVM: @swfifc = global { i8, i8, i32 } zeroinitializer, align 4
+// CIR: cir.global external @swfifc = #cir.zero : !rec_StructWithFieldInitFromConst
+// LLVM: @swfifc = global %struct.StructWithFieldInitFromConst zeroinitializer, align 4
 // OGCG: @swfifc = global { i8, i8, i32 } zeroinitializer, align 4
 
 StructWithFieldInitFromConst swfifc2 = { 2 };
 
-// CIR: cir.global external @swfifc2 = #cir.const_record<{#cir.int<2> : !u8i, #cir.int<0> : !u8i, #cir.int<2> : !s32i}> : !rec_anon_struct
-// LLVM: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
+// CIR: cir.global external @swfifc2 = #cir.const_record<{#cir.int<2> : !u16i, #cir.int<2> : !s32i}> : !rec_StructWithFieldInitFromConst
+// LLVM: @swfifc2 = global %struct.StructWithFieldInitFromConst { i16 2, i32 2 }, align 4
 // OGCG: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
 
 
@@ -89,8 +89,8 @@ void init() {
 // LLVM: define{{.*}} void @_Z4initv()
 // LLVM:   %[[S1:.*]] = alloca %struct.S
 // LLVM:   %[[S2:.*]] = alloca %struct.S
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[S1]], ptr @[[INIT_S1:.*]], i64 12, i1 false)
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[S2]], ptr @[[INIT_S2:.*]], i64 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[S1]], ptr align 4 @[[INIT_S1:.*]], i64 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[S2]], ptr align 4 @[[INIT_S2:.*]], i64 12, i1 false)
 
 // OGCG: @__const._Z4initv.s1 = private unnamed_addr constant %struct.S { i32 1, i32 2, i32 3 }
 // OGCG: @__const._Z4initv.s2 = private unnamed_addr constant %struct.S { i32 4, i32 5, i32 0 }

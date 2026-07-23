@@ -17,6 +17,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -32,6 +33,14 @@ LLVM_ABI Directive getCompoundConstruct(ArrayRef<Directive> Parts);
 LLVM_ABI bool isLeafConstruct(Directive D);
 LLVM_ABI bool isCompositeConstruct(Directive D);
 LLVM_ABI bool isCombinedConstruct(Directive D);
+
+static constexpr inline auto clauses() {
+  return llvm::enum_seq_inclusive(Clause::First_, Clause::Last_);
+}
+
+static constexpr inline auto directives() {
+  return llvm::enum_seq_inclusive(Directive::First_, Directive::Last_);
+}
 
 /// Can clause C have an iterator-modifier.
 static constexpr inline bool canHaveIterator(Clause C) {

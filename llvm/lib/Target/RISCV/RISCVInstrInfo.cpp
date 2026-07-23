@@ -522,6 +522,15 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Extracting from X0_Pair may create copies from DUMMY_REG_PAIR_WITH_X0.
+  if (SrcReg == RISCV::DUMMY_REG_PAIR_WITH_X0 &&
+      RISCV::GPRRegClass.contains(DstReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
+        .addReg(RISCV::X0)
+        .addImm(0);
+    return;
+  }
+
   if (RISCV::GPRF16RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR16INX), DstReg)
         .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
@@ -3139,6 +3148,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_RTZARG:
           Ok = Imm == RISCVFPRndMode::RTZ;
+          break;
+        case RISCVOp::OPERAND_SMTVType:
+          Ok = XSMTVTypeMode::isValidSMTVTypeMode(Imm);
+          break;
+        case RISCVOp::OPERAND_SMTI8:
+          Ok = Imm == XSMTVTypeMode::SMT_I8;
           break;
         case RISCVOp::OPERAND_COND_CODE:
           Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;

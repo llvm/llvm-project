@@ -1,7 +1,7 @@
 ! Check that acc.terminator is not inserted in data construct
 
-! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
-! RUN: bbc -fopenacc -fcuda -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -fopenacc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -fopenacc -fcuda -emit-hlfir %s -o - | FileCheck %s
 
 program main
   use, intrinsic :: iso_c_binding
@@ -48,7 +48,8 @@ end program
 ! CHECK: acc.host_data
 ! CHECK: acc.terminator
 ! CHECK: fir.call @_FortranAStopStatement
-! CHECK: fir.unreachable
+! CHECK-NEXT: fir.unreachable
+! CHECK: scf.yield
 ! CHECK: acc.parallel
 ! CHECK-COUNT-3: acc.yield
 ! CHECK: acc.terminator
