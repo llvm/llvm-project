@@ -280,13 +280,13 @@ jobs:
           fetch-depth: 2
       - name: Install Ninja, CMake, and sccache
         run: |
-          brew install ninja cmake
-          brew postinstall python@3.14
+          brew install ninja cmake python@3.14
           command -v sccache >/dev/null || brew install sccache
       - name: Set up Python venv
         run: |
-          python3 -m venv "${RUNNER_TEMP}/venv"
+          "$(brew --prefix python@3.14)/bin/python3.14" -m venv "${RUNNER_TEMP}/venv"
           echo "${RUNNER_TEMP}/venv/bin" >> "$GITHUB_PATH"
+          "${RUNNER_TEMP}/venv/bin/python3" -m pip install -q --upgrade pip
       - name: Build and Test
         timeout-minutes: 240
         env:
