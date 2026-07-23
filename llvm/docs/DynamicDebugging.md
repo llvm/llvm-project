@@ -32,7 +32,7 @@ High level nested object design:
 * Declarations corresponding to the originally external and now-promoted globals in the outer module are added to the inner module. All global references (function and data) in the inner module refer to the outer module.
 * After linking, the inner ELF is still essentially an ET_REL object. It’s the debugger’s job to extract, load, and apply relocations for the inner ELF.
 
-This diagram illustrates the result of compiling a simple source example
+This diagram illustrates the result of compiling a simple source example:
 
 ![Example object layout diagram](DynDbgObjLayout.png)
 
