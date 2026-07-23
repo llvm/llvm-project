@@ -51,7 +51,7 @@ jobs:
   # inputs can be provided.
   release-man-pages-validate-input:
     name: Release Man Pages Validate Input
-     if: >-
+    if: >-
       github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     environment:

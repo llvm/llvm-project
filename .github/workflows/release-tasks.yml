@@ -8,11 +8,6 @@ on:
     tags:
       # The regex support here is limited, so just match everything that starts with llvmorg- and filter later.
       - 'llvmorg-*'
-  pull_request:
-    paths:
-      - '.github/workflows/release-tasks.yml'
-
-concurrency:
 
 jobs:
   validate-tag:
@@ -22,34 +17,11 @@ jobs:
     outputs:
       release-version: ${{ steps.validate-tag.outputs.release-version }}
     steps:
-      - name: Get Tag
-        if: github.event_name == 'pull_request'
-        id: get-tag
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
-            const query = `query($owner:String!, $name:String!, $label:String!) {
-              repository(owner:$owner, name:$name){
-                releases(first: 1, orderBy: {field: CREATED_AT, direction: DESC}) {
-                  nodes {
-                    tagName
-                  }
-                }
-            const variables = {
-              owner: context.repo.owner,
-              name: context.repo.repo,
-            }
-            const result = await github.graphql(query, variables)
-            console.log(result)
-            return result[0].tagName
-        
       - name: Validate Tag
         id: validate-tag
-        env:
-          TAG_NAME: ${{ case( github.event_name == 'pull_request', steps.get-tag.outputs.result, github.ref_name }}
         run: |
-          echo "$TAG_NAME" | grep -e '^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
-          release_version=$(echo "$TAG_NAME" | sed 's/llvmorg-//g')
+          echo "$GITHUB_REF_NAME" | grep -e '^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
+          release_version=$(echo "$GITHUB_REF_NAME" | sed 's/llvmorg-//g')
           echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
 
   release-create:
