@@ -42,10 +42,10 @@ void AnalyzerUnusedProgramStateRefCheck::registerMatchers(MatchFinder *Finder) {
                          .bind(VarID),
                      this);
 
-  Finder->addMatcher(
-      decompositionDecl(hasAnyBinding(bindingDecl(hasType(ProgramStateRefType))))
-          .bind(DecompID),
-      this);
+  Finder->addMatcher(decompositionDecl(hasAnyBinding(bindingDecl(
+                                           hasType(ProgramStateRefType))))
+                         .bind(DecompID),
+                     this);
 }
 
 void AnalyzerUnusedProgramStateRefCheck::check(
