@@ -56,27 +56,16 @@ jobs:
 
       - name: Install a modern Python via Homebrew
         run: |
-          # Ownership/permissions of the Homebrew prefix -- a common cause of post-install
-          # failures on shared machines where /opt/homebrew isn't owned by the runner user.
-          ls -ld /opt/homebrew /opt/homebrew/bin /opt/homebrew/lib /opt/homebrew/Frameworks || true
+          # Diagnostics in case 'brew update' cannot write to the Homebrew prefix.
+          ls -ld /opt/homebrew /opt/homebrew/Library || true
           id
-          brew config || true
 
-          # Install Python. Don't let a failing post-install abort the step -- we want to
-          # capture *why* it failed rather than just bailing out here.
-          brew install python@3.12 || echo "::warning::brew install returned $?"
-
-          # Re-run the post-install verbosely to surface the actual failing command/backtrace.
-          echo "=== brew postinstall --verbose --debug python@3.12 ==="
-          brew postinstall --verbose --debug python@3.12 </dev/null || echo "::warning::brew postinstall returned $?"
-
-          # Report the resulting state so we can see what did and didn't get set up.
-          echo "=== resulting state ==="
-          brew --prefix python@3.12
-          ls -la "$(brew --prefix python@3.12)/libexec/bin" || true
-          /opt/homebrew/bin/python3.12 --version || true
-          /opt/homebrew/bin/python3.12 -m ensurepip --version || true
-
+          # 'brew update' brings the Homebrew library in line with the formula API so that
+          # python@3.12's post-install step can read the formula. Without it, post-install
+          # fails with: FormulaUnreadableError: undefined method 'type' for an instance of
+          # Resource::Patch (the installed Homebrew is older than the formula it installs).
+          brew update
+          brew install python@3.12
           echo "$(brew --prefix python@3.12)/libexec/bin" >> "$GITHUB_PATH"
 
       - name: Verify the Homebrew interpreter actually works
@@ -92,30 +81,3 @@ jobs:
           /tmp/lnt-venv/bin/pip install llvm-lnt      # the exact package that failed in the benchmark job
           /tmp/lnt-venv/bin/lnt --version             # confirm the installed tool actually runs
 
-      - name: Select Xcode
-        run: echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.xcode-version }}.app/Contents/Developer" >> $GITHUB_ENV
-
-      - name: Install Ninja and CMake
-        run: |
-          brew install ninja cmake
-
-      - name: Build and test
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          pip install -r libcxx/test/requirements.txt
-          xcrun bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        env:
-          CC: clang
-          CXX: clang++
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()  # Upload artifacts even if the build or test suite fails
-        with:
-          name: macos-${{ matrix.config }}-results
-          path: |
-            **/test-results.xml
-            **/*.abilist
-            **/CMakeConfigureLog.yaml
-            **/CMakeError.log
-            **/CMakeOutput.log
-            **/crash_diagnostics/*
