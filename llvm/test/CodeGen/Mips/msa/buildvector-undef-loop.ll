@@ -23,7 +23,7 @@ define void @nonsplatvalue_v4f32(float %a, float %b, float %c, float %d) nounwin
 ; MIPS64R5-NEXT:    daddiu $1, $1, %lo(v4f32)
 ; MIPS64R5-NEXT:    jr $ra
 ; MIPS64R5-NEXT:    st.w $w0, 0($1)
-  %v0 = insertelement <4 x float> undef, float %a, i64 0
+  %v0 = insertelement <4 x float> poison, float %a, i64 0
   %v1 = insertelement <4 x float> %v0, float %b, i32 1
   %v2 = insertelement <4 x float> %v1, float %c, i32 2
   %v3 = insertelement <4 x float> %v2, float %d, i32 3
