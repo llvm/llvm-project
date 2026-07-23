@@ -134,9 +134,19 @@ public:
     if (Present.count() != H->Size)
       return make_error<RawError>(raw_error_code::corrupt_file,
                                   "Present bit vector does not match size!");
+    if (!Present.empty() &&
+        static_cast<uint32_t>(Present.find_last()) >= H->Capacity)
+      return make_error<RawError>(
+          raw_error_code::corrupt_file,
+          "Present bit vector contains out-of-bounds index!");
 
     if (auto EC = readSparseBitVector(Stream, Deleted))
       return EC;
+    if (!Deleted.empty() &&
+        static_cast<uint32_t>(Deleted.find_last()) >= H->Capacity)
+      return make_error<RawError>(
+          raw_error_code::corrupt_file,
+          "Deleted bit vector contains out-of-bounds index!");
     if (Present.intersects(Deleted))
       return make_error<RawError>(raw_error_code::corrupt_file,
                                   "Present bit vector intersects deleted!");

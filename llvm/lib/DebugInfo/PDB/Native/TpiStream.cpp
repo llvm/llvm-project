@@ -152,7 +152,7 @@ void TpiStream::buildHashMap() {
   TypeIndex TIE{Header->TypeIndexEnd};
   while (TIB < TIE) {
     uint32_t HV = HashValues[TIB.toArrayIndex()];
-    HashMap[HV].push_back(TIB++);
+    HashMap[HV % Header->NumHashBuckets].push_back(TIB++);
   }
 }
 

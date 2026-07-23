@@ -403,6 +403,13 @@ TypeStreamMerger::remapIndices(const CVType &OriginalType,
   uint8_t *DestContent = Storage.data() + sizeof(RecordPrefix);
 
   for (auto &Ref : Refs) {
+    // Ref.Count can come from a field inside the record, so it may not match
+    // the actual data length. Skip the record if the run of TypeIndex values
+    // would extend past Storage.
+    uint64_t Begin = sizeof(RecordPrefix) + static_cast<uint64_t>(Ref.Offset);
+    if (Begin + static_cast<uint64_t>(Ref.Count) * sizeof(TypeIndex) >
+        Storage.size())
+      return {};
     TypeIndex *DestTIs =
         reinterpret_cast<TypeIndex *>(DestContent + Ref.Offset);
 

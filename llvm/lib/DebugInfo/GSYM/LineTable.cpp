@@ -63,6 +63,10 @@ static llvm::Error parse(GsymDataExtractor &Data, uint64_t BaseAddr,
         "0x%8.8" PRIx64 ": missing LineTable MaxDelta", Offset);
   int64_t MaxDelta = Data.getSLEB128(&Offset);
   int64_t LineRange = MaxDelta - MinDelta + 1;
+  if (LineRange <= 0)
+    return createStringError(std::errc::io_error,
+                             "0x%8.8" PRIx64 ": invalid LineTable LineRange",
+                             Offset);
   if (!Data.isValidOffset(Offset))
     return createStringError(std::errc::io_error,
         "0x%8.8" PRIx64 ": missing LineTable FirstLine", Offset);

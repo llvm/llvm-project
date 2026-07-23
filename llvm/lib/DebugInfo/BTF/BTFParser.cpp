@@ -352,6 +352,11 @@ Error BTFParser::parseRelocInfo(ParseContext &Ctx, DataExtractor &Extractor,
     uint32_t NumInfo = Extractor.getU32(C);
     StringRef SecName = findString(SecNameOff);
     std::optional<SectionRef> Sec = Ctx.findSection(SecName);
+    if (!C)
+      return Err(".BTF.ext", C);
+    if (!Sec)
+      return Err("") << "can't find section '" << SecName
+                     << "' while parsing .BTF.ext field reloc info";
     BTFRelocVector &Relocs = SectionRelocs[Sec->getIndex()];
     for (uint32_t I = 0; C && I < NumInfo; ++I) {
       uint64_t RecStart = C.tell();
