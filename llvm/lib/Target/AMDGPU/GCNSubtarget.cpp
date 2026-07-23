@@ -12,14 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNSubtarget.h"
+#include "AMDGPU.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -28,6 +31,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <algorithm>
+#include <limits>
 
 using namespace llvm;
 
@@ -52,6 +56,131 @@ static cl::opt<unsigned>
     NSAThreshold("amdgpu-nsa-threshold",
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
                  cl::init(2), cl::Hidden);
+
+template <typename PredicateT>
+static bool hasBundledMI(const MachineInstr &MI, PredicateT Pred) {
+  if (Pred(MI))
+    return true;
+
+  if (MI.getOpcode() != TargetOpcode::BUNDLE)
+    return false;
+
+  MachineBasicBlock::const_instr_iterator It = MI.getIterator();
+  for (++It; It != MI.getParent()->instr_end() && It->isBundledWithPred();
+       ++It) {
+    if (Pred(*It))
+      return true;
+  }
+
+  return false;
+}
+
+static bool isPostRADSReadFragmentProducer(const MachineInstr &MI) {
+  return hasBundledMI(MI, [](const MachineInstr &BundledMI) {
+    switch (BundledMI.getOpcode()) {
+    case AMDGPU::DS_READ_B128:
+    case AMDGPU::DS_READ_B128_gfx9:
+      return true;
+    default:
+      return false;
+    }
+  });
+}
+
+static bool isPostRAMFMAFragmentConsumer(const MachineInstr &MI) {
+  return hasBundledMI(MI, [](const MachineInstr &BundledMI) {
+    return BundledMI.getOpcode() ==
+           AMDGPU::V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64;
+  });
+}
+
+static bool isMFMAFragmentPipelineInstr(const SUnit &SU) {
+  const MachineInstr *MI = SU.getInstr();
+  return MI && (isPostRADSReadFragmentProducer(*MI) ||
+                isPostRAMFMAFragmentConsumer(*MI));
+}
+
+namespace {
+
+class MFMAFragmentPostRASchedOrderMutation : public ScheduleDAGMutation {
+  static bool hasPipelineDataPred(const SUnit &SU) {
+    return llvm::any_of(SU.Preds, [](const SDep &Pred) {
+      return Pred.getKind() == SDep::Data && Pred.getSUnit() &&
+             isMFMAFragmentPipelineInstr(*Pred.getSUnit());
+    });
+  }
+
+  static unsigned getFirstPipelineDataSucc(const SUnit &SU) {
+    unsigned FirstSucc = std::numeric_limits<unsigned>::max();
+    for (const SDep &Succ : SU.Succs)
+      if (Succ.getKind() == SDep::Data && Succ.getSUnit() &&
+          isMFMAFragmentPipelineInstr(*Succ.getSUnit()))
+        FirstSucc = std::min(FirstSucc, Succ.getSUnit()->NodeNum);
+    return FirstSucc;
+  }
+
+  static bool isPipelineProducer(const SUnit &SU) {
+    return getFirstPipelineDataSucc(SU) !=
+               std::numeric_limits<unsigned>::max() &&
+           !hasPipelineDataPred(SU);
+  }
+
+public:
+  void apply(ScheduleDAGInstrs *DAG) override {
+    bool HasFragmentPipeline = llvm::any_of(DAG->SUnits, [](const SUnit &SU) {
+      const MachineInstr *MI = SU.getInstr();
+      if (!MI || !isPostRADSReadFragmentProducer(*MI))
+        return false;
+      return llvm::any_of(SU.Succs, [](const SDep &Succ) {
+        return Succ.getKind() == SDep::Data && Succ.getSUnit()->getInstr() &&
+               isPostRAMFMAFragmentConsumer(*Succ.getSUnit()->getInstr());
+      });
+    });
+    if (!HasFragmentPipeline)
+      return;
+
+    SmallVector<SUnit *, 16> OrderedSUs;
+    SmallVector<SUnit *, 8> ProducerRun;
+
+    auto FlushProducerRun = [&]() {
+      // Pre-RA scheduling can place several producers together. Order only
+      // such a run by its earliest pipeline consumer; retain NodeNum as a
+      // deterministic tie-break. Consumers otherwise keep their pre-RA order.
+      llvm::stable_sort(ProducerRun, [](const SUnit *LHS, const SUnit *RHS) {
+        unsigned LHSFirstSucc = getFirstPipelineDataSucc(*LHS);
+        unsigned RHSFirstSucc = getFirstPipelineDataSucc(*RHS);
+        return std::tie(LHSFirstSucc, LHS->NodeNum) <
+               std::tie(RHSFirstSucc, RHS->NodeNum);
+      });
+      OrderedSUs.append(ProducerRun);
+      ProducerRun.clear();
+    };
+
+    for (SUnit &SU : DAG->SUnits) {
+      if (!isMFMAFragmentPipelineInstr(SU))
+        continue;
+      if (isPipelineProducer(SU)) {
+        ProducerRun.push_back(&SU);
+        continue;
+      }
+      FlushProducerRun();
+      OrderedSUs.push_back(&SU);
+    }
+    FlushProducerRun();
+
+    // Keep post-RA scheduling from undoing the selected DS_READ/MFMA sequence.
+    // Artificial edges affect scheduling order only and add no data latency.
+    for (auto [Prev, SU] : llvm::zip(OrderedSUs, llvm::drop_begin(OrderedSUs)))
+      DAG->addEdge(SU, SDep(Prev, SDep::Artificial));
+  }
+};
+
+} // end anonymous namespace
+
+std::unique_ptr<ScheduleDAGMutation>
+llvm::createMFMAFragmentPostRASchedOrderDAGMutation() {
+  return std::make_unique<MFMAFragmentPostRASchedOrderMutation>();
+}
 
 GCNSubtarget::~GCNSubtarget() = default;
 

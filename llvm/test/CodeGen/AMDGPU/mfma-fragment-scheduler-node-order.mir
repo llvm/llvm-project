@@ -1,0 +1,144 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler \
+# RUN:   -verify-misched -amdgpu-enable-mfma-fragment-scheduler=true -o - %s \
+# RUN:   | FileCheck %s
+
+# These functions have the same dependency graph but different textual orders.
+# The fragment producer score uses the NodeNum of the earliest MFMA successor
+# as its final preference. Since NodeNum follows MIR order, that tie-break makes
+# the enabled schedules differ. Keep this test separate from the primary
+# pipeline test: this one documents the current deterministic tie-break, not a
+# preferred latency-hiding schedule.
+
+--- |
+  define amdgpu_kernel void @node_order_clustered() {
+    ret void
+  }
+
+  define amdgpu_kernel void @node_order_adjacent() {
+    ret void
+  }
+...
+
+---
+name: node_order_clustered
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: node_order_clustered
+    ; CHECK: [[DS_BASE0:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DS_BASE1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INDEX0:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INDEX1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ACC:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[FILLER_BASE:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: SCHED_BARRIER 0
+    ; CHECK-NEXT: [[DS0:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DS_BASE0]], 0, 0, implicit $exec
+    ; CHECK-NEXT: [[DS1:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DS_BASE0]], 16, 0, implicit $exec
+    ; CHECK-NEXT: [[DS2:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DS_BASE1]], 32, 0, implicit $exec
+    ; CHECK-NEXT: [[SHL0:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 1, [[INDEX0]], implicit $exec
+    ; CHECK-NEXT: [[ADDR0:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64, [[SHL0]], implicit $exec
+    ; CHECK-NEXT: [[DS3:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR0]], 48, 0, implicit $exec
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 1, [[INDEX1]], implicit $exec
+    ; CHECK-NEXT: [[ADDR1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64, [[SHL1]], implicit $exec
+    ; CHECK-NEXT: [[FILLER0:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 1, [[FILLER_BASE]], implicit $exec
+    ; CHECK-NEXT: [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS1]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[DS4:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR1]], 64, 0, implicit $exec
+    ; CHECK-NEXT: [[DS5:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR0]], 80, 0, implicit $exec
+    ; CHECK-NEXT: [[FILLER1:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 3, [[FILLER0]], implicit $exec
+    ; CHECK-NEXT: [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS2]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[DS6:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR1]], 96, 0, implicit $exec
+    ; CHECK-NEXT: [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS3]], [[DS0]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS3]], [[DS4]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS4]], [[DS2]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: dead [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS5]], [[DS6]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[FILLER1]]
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vreg_512_align2 = IMPLICIT_DEF
+    %30:vgpr_32 = IMPLICIT_DEF
+    SCHED_BARRIER 0
+    %10:av_128_align2 = DS_READ_B128_gfx9 %0, 0, 0, implicit $exec
+    %11:av_128_align2 = DS_READ_B128_gfx9 %0, 16, 0, implicit $exec
+    %12:av_128_align2 = DS_READ_B128_gfx9 %1, 32, 0, implicit $exec
+    %20:vgpr_32 = V_LSHLREV_B32_e32 1, %2, implicit $exec
+    %21:vgpr_32 = V_ADD_U32_e32 64, %20, implicit $exec
+    %22:vgpr_32 = V_LSHLREV_B32_e32 1, %3, implicit $exec
+    %23:vgpr_32 = V_ADD_U32_e32 64, %22, implicit $exec
+    %13:av_128_align2 = DS_READ_B128_gfx9 %21, 48, 0, implicit $exec
+    %14:av_128_align2 = DS_READ_B128_gfx9 %23, 64, 0, implicit $exec
+    %15:av_128_align2 = DS_READ_B128_gfx9 %21, 80, 0, implicit $exec
+    %16:av_128_align2 = DS_READ_B128_gfx9 %23, 96, 0, implicit $exec
+    %31:vgpr_32 = V_ADD_U32_e32 1, %30, implicit $exec
+    %32:vgpr_32 = V_XOR_B32_e32 3, %31, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %11, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %12, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %10, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %14, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %14, %12, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %15, %16, %4, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %32
+...
+
+---
+name: node_order_adjacent
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: node_order_adjacent
+    ; CHECK: [[DS_BASE0:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DS_BASE1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INDEX0:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INDEX1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ACC:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[FILLER_BASE:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: SCHED_BARRIER 0
+    ; CHECK-NEXT: [[DS0:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DS_BASE0]], 0, 0, implicit $exec
+    ; CHECK-NEXT: [[DS1:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DS_BASE0]], 16, 0, implicit $exec
+    ; CHECK-NEXT: [[DS2:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DS_BASE1]], 32, 0, implicit $exec
+    ; CHECK-NEXT: [[SHL0:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 1, [[INDEX0]], implicit $exec
+    ; CHECK-NEXT: [[ADDR0:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64, [[SHL0]], implicit $exec
+    ; CHECK-NEXT: [[DS3:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR0]], 48, 0, implicit $exec
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 1, [[INDEX1]], implicit $exec
+    ; CHECK-NEXT: [[ADDR1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64, [[SHL1]], implicit $exec
+    ; CHECK-NEXT: [[FILLER0:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 1, [[FILLER_BASE]], implicit $exec
+    ; CHECK-NEXT: [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS1]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[DS4:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR1]], 64, 0, implicit $exec
+    ; CHECK-NEXT: [[DS5:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR0]], 80, 0, implicit $exec
+    ; CHECK-NEXT: [[FILLER1:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 3, [[FILLER0]], implicit $exec
+    ; CHECK-NEXT: [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS2]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[DS6:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR1]], 96, 0, implicit $exec
+    ; CHECK-NEXT: [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS3]], [[DS0]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS3]], [[DS4]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS4]], [[DS2]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: dead [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS5]], [[DS6]], [[ACC]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[FILLER1]]
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vreg_512_align2 = IMPLICIT_DEF
+    %30:vgpr_32 = IMPLICIT_DEF
+    SCHED_BARRIER 0
+    %20:vgpr_32 = V_LSHLREV_B32_e32 1, %2, implicit $exec
+    %21:vgpr_32 = V_ADD_U32_e32 64, %20, implicit $exec
+    %22:vgpr_32 = V_LSHLREV_B32_e32 1, %3, implicit $exec
+    %23:vgpr_32 = V_ADD_U32_e32 64, %22, implicit $exec
+    %10:av_128_align2 = DS_READ_B128_gfx9 %0, 0, 0, implicit $exec
+    %11:av_128_align2 = DS_READ_B128_gfx9 %0, 16, 0, implicit $exec
+    %31:vgpr_32 = V_ADD_U32_e32 1, %30, implicit $exec
+    %32:vgpr_32 = V_XOR_B32_e32 3, %31, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %11, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %12:av_128_align2 = DS_READ_B128_gfx9 %1, 32, 0, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %12, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %13:av_128_align2 = DS_READ_B128_gfx9 %21, 48, 0, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %10, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %14:av_128_align2 = DS_READ_B128_gfx9 %23, 64, 0, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %14, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %14, %12, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %15:av_128_align2 = DS_READ_B128_gfx9 %21, 80, 0, implicit $exec
+    %16:av_128_align2 = DS_READ_B128_gfx9 %23, 96, 0, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %15, %16, %4, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %32
+...

@@ -1,0 +1,381 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -verify-misched -o - %s | FileCheck --check-prefix=ENABLED %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -verify-misched -amdgpu-enable-mfma-fragment-scheduler=false -o - %s | FileCheck --check-prefix=DISABLED %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -verify-misched -amdgpu-enable-mfma-fragment-scheduler=true -o - %s | FileCheck --check-prefix=ENABLED %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -verify-misched -amdgpu-enable-mfma-fragment-scheduler=true -o - %s | FileCheck --check-prefix=EXTRA-ENABLED %s
+--- |
+  define amdgpu_kernel void @fragment_pipeline_clustered() {
+    ret void
+  }
+
+  define amdgpu_kernel void @fragment_pipeline_adjacent() {
+    ret void
+  }
+
+  define amdgpu_kernel void @fragment_pipeline_extra_long() {
+    ret void
+  }
+
+  define amdgpu_kernel void @fragment_pipeline_long() {
+    ret void
+  }
+
+...
+
+---
+name: fragment_pipeline_clustered
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; This input deliberately places every DS_READ before every MFMA. The
+    ; enabled scheduler prioritizes the four fragments that feed the first
+    ; three MFMAs, uses address calculations as opening fillers, and preserves
+    ; an additional ready DS_READ microcluster before MFMA1. The filler chain
+    ; defined by MFMA1 then contributes to hiding the remaining fragment
+    ; latency before MFMA2.
+
+
+    ; DISABLED-LABEL: name: fragment_pipeline_clustered
+    ; DISABLED:       SCHED_BARRIER 0
+    ; DISABLED-NEXT:  [[DS0:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 0,
+    ; DISABLED-NEXT:  [[DS1:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 16,
+    ; DISABLED-NEXT:  [[ACC:%[0-9]+]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS1]], [[ACC]],
+    ; DISABLED-NEXT:  [[DS2:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 32,
+    ; DISABLED-NEXT:  [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS2]], [[ACC]],
+    ; DISABLED-NEXT:  [[DS3:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 48,
+    ; DISABLED-NEXT:  [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS3]], [[DS0]], [[ACC]],
+
+    ; ENABLED-LABEL: name: fragment_pipeline_clustered
+    ; ENABLED:       SCHED_BARRIER 0
+    ; ENABLED-NEXT:  [[DS0:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 0,
+    ; ENABLED-NEXT:  [[DS1:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 16,
+    ; ENABLED-NEXT:  [[DS2:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 32,
+    ; ENABLED-NEXT:  [[DS3:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 48,
+    ; ENABLED-NEXT:  [[SHL0:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32
+    ; ENABLED-NEXT:  [[ADDR0:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64, [[SHL0]],
+    ; ENABLED-NEXT:  [[SHL1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32
+    ; ENABLED-NEXT:  [[ADDR1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64, [[SHL1]],
+    ; ENABLED-NEXT:  [[ACC:%[0-9]+]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS1]], [[ACC]],
+    ; ENABLED-NEXT:  [[DS4:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR0]], 64,
+    ; ENABLED-NEXT:  [[DS5:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR1]], 80,
+    ; ENABLED-NEXT:  [[FILLER0:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 1,
+    ; ENABLED-NEXT:  [[FILLER1:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 3, [[FILLER0]],
+    ; ENABLED-NEXT:  [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS2]], [[ACC]],
+    ; ENABLED-NEXT:  [[DS6:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR0]], 96,
+    ; ENABLED:       [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS3]], [[DS0]], [[ACC]],
+    ; ENABLED-NEXT:  [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS3]], [[DS4]], [[ACC]],
+    ; ENABLED-NEXT:  [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS4]], [[DS2]], [[ACC]],
+    ; ENABLED-NEXT:  dead [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS5]], [[DS6]], [[ACC]],
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vreg_512_align2 = IMPLICIT_DEF
+    SCHED_BARRIER 0
+    %10:av_128_align2 = DS_READ_B128_gfx9 %0, 0, 0, implicit $exec
+    %11:av_128_align2 = DS_READ_B128_gfx9 %0, 16, 0, implicit $exec
+    %12:av_128_align2 = DS_READ_B128_gfx9 %1, 32, 0, implicit $exec
+    %20:vgpr_32 = V_LSHLREV_B32_e32 1, %2, implicit $exec
+    %21:vgpr_32 = V_ADD_U32_e32 64, %20, implicit $exec
+    %22:vgpr_32 = V_LSHLREV_B32_e32 1, %3, implicit $exec
+    %23:vgpr_32 = V_ADD_U32_e32 64, %22, implicit $exec
+    %13:av_128_align2 = DS_READ_B128_gfx9 %1, 48, 0, implicit $exec
+    %14:av_128_align2 = DS_READ_B128_gfx9 %23, 64, 0, implicit $exec
+    %15:av_128_align2 = DS_READ_B128_gfx9 %21, 80, 0, implicit $exec
+    %16:av_128_align2 = DS_READ_B128_gfx9 %23, 96, 0, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %11, %4, 0, 0, 0, implicit-def %30:vgpr_32, implicit $mode, implicit $exec
+    %31:vgpr_32 = V_ADD_U32_e32 1, %30, implicit $exec
+    %32:vgpr_32 = V_XOR_B32_e32 3, %31, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %12, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %10, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %14, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %14, %12, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %15, %16, %4, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %32
+...
+
+---
+name: fragment_pipeline_adjacent
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; This input deliberately places each MFMA next to the DS_READ operands
+    ; that make it available, providing little opportunity to hide LDS latency.
+    ; It has the same dependency graph as fragment_pipeline_clustered. The
+    ; enabled scheduler still constructs a four-fragment opener with address
+    ; fillers, then moves the next three DS_READs into a microcluster after
+    ; MFMA1 instead of retaining the input's DS/MFMA adjacency.
+
+
+    ; DISABLED-LABEL: name: fragment_pipeline_adjacent
+    ; DISABLED:       SCHED_BARRIER 0
+    ; DISABLED-NEXT:  [[DS0:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 0,
+    ; DISABLED-NEXT:  [[DS1:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 16,
+    ; DISABLED-NEXT:  [[ACC:%[0-9]+]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS1]], [[ACC]],
+    ; DISABLED-NEXT:  [[DS2:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 32,
+    ; DISABLED-NEXT:  [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS2]], [[ACC]],
+    ; DISABLED-NEXT:  [[DS3:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 48,
+    ; DISABLED-NEXT:  [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS3]], [[DS0]], [[ACC]],
+
+    ; ENABLED-LABEL: name: fragment_pipeline_adjacent
+    ; ENABLED:       SCHED_BARRIER 0
+    ; ENABLED-NEXT:  [[DS0:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 0,
+    ; ENABLED-NEXT:  [[DS1:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 16,
+    ; ENABLED-NEXT:  [[DS2:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 32,
+    ; ENABLED-NEXT:  [[DS3:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 48,
+    ; ENABLED-NEXT:  [[SHL0:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32
+    ; ENABLED-NEXT:  [[ADDR0:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64, [[SHL0]],
+    ; ENABLED-NEXT:  [[SHL1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32
+    ; ENABLED-NEXT:  [[ADDR1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64, [[SHL1]],
+    ; ENABLED-NEXT:  [[ACC:%[0-9]+]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS1]], [[ACC]],
+    ; ENABLED-NEXT:  [[DS4:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR0]], 64,
+    ; ENABLED-NEXT:  [[DS5:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR1]], 80,
+    ; ENABLED-NEXT:  [[FILLER0:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 1,
+    ; ENABLED-NEXT:  [[FILLER1:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 3, [[FILLER0]],
+    ; ENABLED-NEXT:  [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS0]], [[DS2]], [[ACC]],
+    ; ENABLED-NEXT:  [[DS6:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[ADDR0]], 96,
+    ; ENABLED:       [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS3]], [[DS0]], [[ACC]],
+    ; ENABLED-NEXT:  [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS3]], [[DS4]], [[ACC]],
+    ; ENABLED-NEXT:  [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS4]], [[DS2]], [[ACC]],
+    ; ENABLED-NEXT:  dead [[ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[DS5]], [[DS6]], [[ACC]],
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vreg_512_align2 = IMPLICIT_DEF
+    SCHED_BARRIER 0
+    %20:vgpr_32 = V_LSHLREV_B32_e32 1, %2, implicit $exec
+    %21:vgpr_32 = V_ADD_U32_e32 64, %20, implicit $exec
+    %22:vgpr_32 = V_LSHLREV_B32_e32 1, %3, implicit $exec
+    %23:vgpr_32 = V_ADD_U32_e32 64, %22, implicit $exec
+    %10:av_128_align2 = DS_READ_B128_gfx9 %0, 0, 0, implicit $exec
+    %11:av_128_align2 = DS_READ_B128_gfx9 %0, 16, 0, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %11, %4, 0, 0, 0, implicit-def %30:vgpr_32, implicit $mode, implicit $exec
+    %12:av_128_align2 = DS_READ_B128_gfx9 %1, 32, 0, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %12, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %13:av_128_align2 = DS_READ_B128_gfx9 %1, 48, 0, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %10, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %14:av_128_align2 = DS_READ_B128_gfx9 %23, 64, 0, implicit $exec
+    %31:vgpr_32 = V_ADD_U32_e32 1, %30, implicit $exec
+    %32:vgpr_32 = V_XOR_B32_e32 3, %31, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %14, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %14, %12, %4, 0, 0, 0, implicit $mode, implicit $exec
+    %15:av_128_align2 = DS_READ_B128_gfx9 %21, 80, 0, implicit $exec
+    %16:av_128_align2 = DS_READ_B128_gfx9 %23, 96, 0, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %15, %16, %4, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %32
+...
+
+---
+name: fragment_pipeline_extra_long
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; All DS addresses are ready up front. The checks record a four-read
+    ; opener, the one-MFMA ramp-up group, repeated DS/DS/MFMA/MFMA steady-state
+    ; groups, and a relaxed MFMA-only epilogue.
+    ; EXTRA-ENABLED-LABEL: name: fragment_pipeline_extra_long
+    ; EXTRA-ENABLED:       SCHED_BARRIER 0
+    ; EXTRA-ENABLED-NEXT:  [[XL_D0:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 0,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D1:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 16,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D2:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 32,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D3:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 48,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC:%[0-9]+]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D0]], [[XL_D1]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_D4:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 64,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D5:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 80,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D0]], [[XL_D2]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_D6:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 96,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D7:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 112,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D3]], [[XL_D0]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D3]], [[XL_D4]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_D8:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 128,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D9:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 144,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D4]], [[XL_D2]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D5]], [[XL_D6]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_D10:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 160,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D11:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 176,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D5]], [[XL_D7]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D8]], [[XL_D5]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_D12:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 192,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D13:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 208,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D8]], [[XL_D9]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D9]], [[XL_D7]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_D14:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 224,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D15:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 240,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D10]], [[XL_D11]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D10]], [[XL_D12]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_D16:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 256,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D17:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 272,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D13]], [[XL_D10]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D13]], [[XL_D14]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_D18:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 288,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D19:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 304,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D14]], [[XL_D12]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D15]], [[XL_D16]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_D20:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 320,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D21:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 336,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D15]], [[XL_D17]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D18]], [[XL_D15]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_D22:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 352,
+    ; EXTRA-ENABLED-NEXT:  [[XL_D23:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 368,
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D18]], [[XL_D19]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D19]], [[XL_D17]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D20]], [[XL_D21]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D20]], [[XL_D22]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  dead [[XL_ACC]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[XL_D23]], [[XL_D20]], [[XL_ACC]],
+    ; EXTRA-ENABLED-NEXT:  S_ENDPGM 0
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    SCHED_BARRIER 0
+    %10:av_128_align2 = DS_READ_B128_gfx9 %0, 0, 0, implicit $exec
+    %11:av_128_align2 = DS_READ_B128_gfx9 %0, 16, 0, implicit $exec
+    %12:av_128_align2 = DS_READ_B128_gfx9 %0, 32, 0, implicit $exec
+    %13:av_128_align2 = DS_READ_B128_gfx9 %0, 48, 0, implicit $exec
+    %14:av_128_align2 = DS_READ_B128_gfx9 %0, 64, 0, implicit $exec
+    %15:av_128_align2 = DS_READ_B128_gfx9 %0, 80, 0, implicit $exec
+    %16:av_128_align2 = DS_READ_B128_gfx9 %0, 96, 0, implicit $exec
+    %17:av_128_align2 = DS_READ_B128_gfx9 %0, 112, 0, implicit $exec
+    %18:av_128_align2 = DS_READ_B128_gfx9 %0, 128, 0, implicit $exec
+    %19:av_128_align2 = DS_READ_B128_gfx9 %0, 144, 0, implicit $exec
+    %20:av_128_align2 = DS_READ_B128_gfx9 %0, 160, 0, implicit $exec
+    %21:av_128_align2 = DS_READ_B128_gfx9 %0, 176, 0, implicit $exec
+    %22:av_128_align2 = DS_READ_B128_gfx9 %0, 192, 0, implicit $exec
+    %23:av_128_align2 = DS_READ_B128_gfx9 %0, 208, 0, implicit $exec
+    %24:av_128_align2 = DS_READ_B128_gfx9 %0, 224, 0, implicit $exec
+    %25:av_128_align2 = DS_READ_B128_gfx9 %0, 240, 0, implicit $exec
+    %26:av_128_align2 = DS_READ_B128_gfx9 %0, 256, 0, implicit $exec
+    %27:av_128_align2 = DS_READ_B128_gfx9 %0, 272, 0, implicit $exec
+    %28:av_128_align2 = DS_READ_B128_gfx9 %0, 288, 0, implicit $exec
+    %29:av_128_align2 = DS_READ_B128_gfx9 %0, 304, 0, implicit $exec
+    %30:av_128_align2 = DS_READ_B128_gfx9 %0, 320, 0, implicit $exec
+    %31:av_128_align2 = DS_READ_B128_gfx9 %0, 336, 0, implicit $exec
+    %32:av_128_align2 = DS_READ_B128_gfx9 %0, 352, 0, implicit $exec
+    %33:av_128_align2 = DS_READ_B128_gfx9 %0, 368, 0, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %11, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %12, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %10, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %14, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %14, %12, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %15, %16, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %15, %17, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %18, %15, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %18, %19, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %19, %17, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %20, %21, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %20, %22, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %23, %20, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %23, %24, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %24, %22, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %25, %26, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %25, %27, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %28, %25, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %28, %29, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %29, %27, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %30, %31, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %30, %32, %1, 0, 0, 0, implicit $mode, implicit $exec
+    dead %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %33, %30, %1, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+
+
+---
+name: fragment_pipeline_long
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; The disabled scheduler repeatedly places an MFMA next to the DS_READ
+    ; that completes its operand pair.
+    ; DISABLED-LABEL: name: fragment_pipeline_long
+    ; DISABLED:       [[D0:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 0,
+    ; DISABLED-NEXT:  [[D1:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 16,
+    ; DISABLED-NEXT:  [[A:%[0-9]+]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[D0]], [[D1]], [[A]],
+    ; DISABLED:       [[D5:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 80,
+    ; DISABLED-NEXT:  [[D6:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 96,
+    ; DISABLED-NEXT:  [[A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[D5]], [[D6]], [[A]],
+    ; DISABLED:       [[D10:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 160,
+    ; DISABLED-NEXT:  [[D11:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 176,
+    ; DISABLED-NEXT:  [[A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[D10]], [[D11]], [[A]],
+
+    ; ENABLED-LABEL: name: fragment_pipeline_long
+    ; ENABLED:       SCHED_BARRIER 0
+    ; ENABLED-NEXT:  [[L_D0:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 0,
+    ; ENABLED-NEXT:  [[L_D1:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 16,
+    ; ENABLED-NEXT:  [[L_D2:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 32,
+    ; ENABLED-NEXT:  [[L_D3:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 48,
+    ; ENABLED-NEXT:  [[L_XOR:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32
+    ; ENABLED-NEXT:  [[L_ADDR4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 96, [[L_XOR]],
+    ; ENABLED-NEXT:  [[L_SHL:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32
+    ; ENABLED-NEXT:  [[L_ADDR5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64, [[L_SHL]],
+    ; ENABLED-NEXT:  [[L_A:%[0-9]+]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D0]], [[L_D1]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_D4:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[L_ADDR4]], 64,
+    ; ENABLED-NEXT:  [[L_D5:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[L_ADDR5]], 80,
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D0]], [[L_D2]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_D6:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 96,
+    ; ENABLED-NEXT:  [[L_D7:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 112,
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D3]], [[L_D0]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D3]], [[L_D4]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_D8:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 128,
+    ; ENABLED-NEXT:  [[L_D9:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 {{%[0-9]+}}, 144,
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D4]], [[L_D2]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D5]], [[L_D6]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_NEXT_ADDR:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64,
+    ; ENABLED-NEXT:  [[L_D10:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[L_NEXT_ADDR]], 160,
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D5]], [[L_D7]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_D11:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[L_NEXT_ADDR]], 176,
+    ; ENABLED-NEXT:  [[L_D12:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[L_NEXT_ADDR]], 192,
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D8]], [[L_D5]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D8]], [[L_D9]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D9]], [[L_D7]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_D13:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[L_NEXT_ADDR]], 208,
+    ; ENABLED-NEXT:  [[L_D14:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[L_NEXT_ADDR]], 224,
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D10]], [[L_D11]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D10]], [[L_D12]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D13]], [[L_D10]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D13]], [[L_D14]], [[L_A]],
+    ; ENABLED-NEXT:  dead [[L_A]]:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 [[L_D14]], [[L_D12]], [[L_A]],
+    ; ENABLED-NEXT:  [[L_FILL0:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64,
+    ; ENABLED-NEXT:  dead [[L_FILL1:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 3, [[L_FILL0]],
+    ; ENABLED-NEXT:  S_ENDPGM 0
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %40:vgpr_32 = IMPLICIT_DEF
+    %41:vgpr_32 = IMPLICIT_DEF
+    SCHED_BARRIER 0
+    %10:av_128_align2 = DS_READ_B128_gfx9 %0, 0, 0, implicit $exec
+    %11:av_128_align2 = DS_READ_B128_gfx9 %0, 16, 0, implicit $exec
+    %12:av_128_align2 = DS_READ_B128_gfx9 %0, 32, 0, implicit $exec
+    %42:vgpr_32 = V_LSHLREV_B32_e32 1, %40, implicit $exec
+    %43:vgpr_32 = V_ADD_U32_e32 64, %42, implicit $exec
+    %44:vgpr_32 = V_XOR_B32_e32 3, %41, implicit $exec
+    %45:vgpr_32 = V_ADD_U32_e32 96, %44, implicit $exec
+    %13:av_128_align2 = DS_READ_B128_gfx9 %0, 48, 0, implicit $exec
+    %14:av_128_align2 = DS_READ_B128_gfx9 %45, 64, 0, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %11, %1, 0, 0, 0, implicit-def %30:vgpr_32, implicit $mode, implicit $exec
+    %31:vgpr_32 = V_ADD_U32_e32 64, %30, implicit $exec
+    %34:vgpr_32 = V_XOR_B32_e32 3, %31, implicit $exec
+    %15:av_128_align2 = DS_READ_B128_gfx9 %43, 80, 0, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %10, %12, %1, 0, 0, 0, implicit-def %35:vgpr_32, implicit $mode, implicit $exec
+    %16:av_128_align2 = DS_READ_B128_gfx9 %35, 96, 0, implicit $exec
+    %17:av_128_align2 = DS_READ_B128_gfx9 %35, 112, 0, implicit $exec
+    %18:av_128_align2 = DS_READ_B128_gfx9 %35, 128, 0, implicit $exec
+    %19:av_128_align2 = DS_READ_B128_gfx9 %35, 144, 0, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %10, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %13, %14, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %14, %12, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %15, %16, %1, 0, 0, 0, implicit-def %32:vgpr_32, implicit $mode, implicit $exec
+    %33:vgpr_32 = V_ADD_U32_e32 64, %32, implicit $exec
+    %20:av_128_align2 = DS_READ_B128_gfx9 %33, 160, 0, implicit $exec
+    %21:av_128_align2 = DS_READ_B128_gfx9 %33, 176, 0, implicit $exec
+    %22:av_128_align2 = DS_READ_B128_gfx9 %33, 192, 0, implicit $exec
+    %23:av_128_align2 = DS_READ_B128_gfx9 %33, 208, 0, implicit $exec
+    %24:av_128_align2 = DS_READ_B128_gfx9 %33, 224, 0, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %15, %17, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %18, %15, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %18, %19, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %19, %17, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %20, %21, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %20, %22, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %23, %20, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %23, %24, %1, 0, 0, 0, implicit $mode, implicit $exec
+    dead %1:vreg_512_align2 = V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64 %24, %22, %1, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
