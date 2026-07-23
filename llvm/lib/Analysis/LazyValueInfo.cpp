@@ -2042,7 +2042,22 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CxtI,
 ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
                                                    bool UndefAllowed) {
   ValueLatticeElement Result = getOrCreateImpl().getValueAtUse(U);
-  return Result.asConstantRange(U->getType(), UndefAllowed);
+  ConstantRange R = Result.asConstantRange(U->getType(), UndefAllowed);
+
+  // If the used value flows into a single user, refine the result using the
+  // range that hold at that user.
+  auto *UserI = cast<Instruction>(U.getUser());
+  if (isa<PHINode>(UserI) ||
+      !isSafeToSpeculativelyExecuteWithVariableReplaced(UserI))
+    return R;
+
+  auto *SingleUser =
+      cast_or_null<Instruction>(UserI->getUniqueUndroppableUser());
+  if (!SingleUser || isa<PHINode>(SingleUser) ||
+      SingleUser->getParent() == UserI->getParent())
+    return R;
+
+  return R.intersectWith(getConstantRange(U, SingleUser, UndefAllowed));
 }
 
 /// Determine whether the specified value is known to be a

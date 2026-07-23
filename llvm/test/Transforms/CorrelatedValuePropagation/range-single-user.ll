@@ -8,7 +8,7 @@ define i8 @refine_add_single_cross_block_user(i8 %a) {
 ; CHECK-LABEL: define i8 @refine_add_single_cross_block_user(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], 3
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[A]], 3
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
