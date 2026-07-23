@@ -22,8 +22,6 @@
 %struct.S = type { i8, i32, i8 }
 
 declare void @use(i32)
-declare void @llvm.lifetime.start.p0(ptr captures(none))
-declare void @llvm.lifetime.end.p0(ptr captures(none))
 
 ; Without lifetime markers a recurrent PHI at the loop header is unavoidable.
 define void @without_lifetime(i32 %val, i1 %c1, i1 %c2) {
@@ -82,6 +80,8 @@ exit:
 ; With lifetime markers the back-edge PHI is unnecessary: lifetime.start
 ; at the top of the loop makes the alloca's content undef at that point,
 ; so the skip path should yield undef rather than carrying a stale value.
+; No recurrent PHI should be created at the loop header.
+; The only PHI is at the read block, merging %val (init) with undef (skip).
 define void @with_lifetime(i32 %val, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define void @with_lifetime(
 ; CHECK-SAME: i32 [[VAL:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
@@ -102,8 +102,6 @@ define void @with_lifetime(i32 %val, i1 %c1, i1 %c2) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
-; No recurrent PHI should be created at the loop header.
-; The only PHI is at the read block, merging %val (init) with undef (skip).
 entry:
   %s = alloca %struct.S, align 4
   br label %loop
