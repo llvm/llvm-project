@@ -127,9 +127,8 @@ declare void @use.i64(i64)
 define void @smax_clamp_removed_at_unguarded_def(i64 %x) {
 ; CHECK-LABEL: @smax_clamp_removed_at_unguarded_def(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = call i64 @llvm.smax.i64(i64 [[X1:%.*]], i64 -2)
-; CHECK-NEXT:    [[MN:%.*]] = call i64 @llvm.smin.i64(i64 [[X]], i64 1)
-; CHECK-NEXT:    [[GUARD:%.*]] = icmp sgt i64 [[X1]], -3
+; CHECK-NEXT:    [[MN:%.*]] = call i64 @llvm.smin.i64(i64 [[X:%.*]], i64 1)
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp sgt i64 [[X]], -3
 ; CHECK-NEXT:    br i1 [[GUARD]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    call void @use.i64(i64 [[MN]])

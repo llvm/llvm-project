@@ -706,7 +706,7 @@ define i64 @sdiv_partially_dominated_redundant_pair(i64 %x) {
 ; CHECK-LABEL: @sdiv_partially_dominated_redundant_pair(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[X:%.*]]
-; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i64 [[SUB]], 24
+; CHECK-NEXT:    [[DIV1:%.*]] = udiv i64 [[SUB]], 24
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i64 [[SUB]], 47
 ; CHECK-NEXT:    br i1 [[C1]], label [[BODY:%.*]], label [[EXIT:%.*]]
 ; CHECK:       body:
@@ -742,7 +742,9 @@ define i64 @sdiv_narrowed_breaks_divrem_pairing(ptr %p) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[X]], 1000
-; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sdiv i32 [[X]], 1000
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], 1000
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i16 [[DIV1]] to i32
 ; CHECK-NEXT:    [[OFF:%.*]] = add i32 [[X]], -4000
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[OFF]], -4999
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[USE:%.*]]
