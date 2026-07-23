@@ -8839,8 +8839,7 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
 /// recognized ADDSUB idiom with ADDSUB operation is that such replacement
 /// is illegal sometimes. E.g. 512-bit ADDSUB is not available, while 512-bit
 /// FMADDSUB is.
-static bool isFMAddSubOrFMSubAdd(const X86Subtarget &Subtarget,
-                                 SelectionDAG &DAG, SDValue &Opnd0,
+static bool isFMAddSubOrFMSubAdd(const X86Subtarget &Subtarget, SDValue &Opnd0,
                                  SDValue &Opnd1, SDValue &Opnd2,
                                  unsigned ExpectedUses,
                                  bool AllowSubAddOrAddSubContract) {
@@ -8883,7 +8882,7 @@ static SDValue lowerToAddSubOrFMAddSub(const BuildVectorSDNode *BV,
 
   // Try to generate X86ISD::FMADDSUB node here.
   SDValue Opnd2;
-  if (isFMAddSubOrFMSubAdd(Subtarget, DAG, Opnd0, Opnd1, Opnd2, NumExtracts,
+  if (isFMAddSubOrFMSubAdd(Subtarget, Opnd0, Opnd1, Opnd2, NumExtracts,
                            HasAllowContract)) {
     unsigned Opc = IsSubAdd ? X86ISD::FMSUBADD : X86ISD::FMADDSUB;
     return DAG.getNode(Opc, DL, VT, Opnd0, Opnd1, Opnd2);
@@ -44244,7 +44243,7 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N, const SDLoc &DL,
 
   // Try to generate X86ISD::FMADDSUB node here.
   SDValue Opnd2;
-  if (isFMAddSubOrFMSubAdd(Subtarget, DAG, Opnd0, Opnd1, Opnd2, 2,
+  if (isFMAddSubOrFMSubAdd(Subtarget, Opnd0, Opnd1, Opnd2, 2,
                            HasAllowContract)) {
     unsigned Opc = IsSubAdd ? X86ISD::FMSUBADD : X86ISD::FMADDSUB;
     return DAG.getNode(Opc, DL, VT, Opnd0, Opnd1, Opnd2);
