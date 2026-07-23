@@ -125,6 +125,15 @@ bool isSplat(ArrayRef<Value *> VL) {
   return FirstNonUndef != nullptr;
 }
 
+Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS) {
+  if (LHS == RHS)
+    return RHS;
+  if ((LHS == Intrinsic::fma || LHS == Intrinsic::fmuladd) &&
+      (RHS == Intrinsic::fma || RHS == Intrinsic::fmuladd))
+    return Intrinsic::fma;
+  return Intrinsic::not_intrinsic;
+}
+
 bool isCommutative(const Instruction *I, const Value *ValWithUses,
                    bool IsCopyable) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
