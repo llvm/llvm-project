@@ -7940,6 +7940,9 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
   SDValue Src = N->getOperand(1);
   SDLoc SL(N);
 
+  unsigned WavefrontSize = TLI.getSubtarget()->getWavefrontSize();
+  EVT CCVT = EVT::getIntegerVT(*DAG.getContext(), WavefrontSize);
+
   if (Src.getOpcode() == ISD::SETCC) {
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
@@ -7949,7 +7952,11 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
       Op1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Op1);
     }
     // (ballot (ISD::SETCC ...)) -> (AMDGPUISD::SETCC ...)
-    return DAG.getNode(AMDGPUISD::SETCC, SL, VT, Op0, Op1, Src.getOperand(2));
+    SDValue SetCC =
+        DAG.getNode(AMDGPUISD::SETCC, SL, CCVT, Op0, Op1, Src.getOperand(2));
+    if (VT.bitsEq(CCVT))
+      return SetCC;
+    return DAG.getZExtOrTrunc(SetCC, SL, VT);
   }
   if (const ConstantSDNode *Arg = dyn_cast<ConstantSDNode>(Src)) {
     // (ballot 0) -> 0
@@ -7972,9 +7979,12 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
 
   // (ballot (i1 $src)) -> (AMDGPUISD::SETCC (i32 (zext $src)) (i32 0)
   // ISD::SETNE)
-  return DAG.getNode(
-      AMDGPUISD::SETCC, SL, VT, DAG.getZExtOrTrunc(Src, SL, MVT::i32),
+  SDValue SetCC = DAG.getNode(
+      AMDGPUISD::SETCC, SL, CCVT, DAG.getZExtOrTrunc(Src, SL, MVT::i32),
       DAG.getConstant(0, SL, MVT::i32), DAG.getCondCode(ISD::SETNE));
+  if (VT.bitsEq(CCVT))
+    return SetCC;
+  return DAG.getZExtOrTrunc(SetCC, SL, VT);
 }
 
 static SDValue emitRemovedIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,

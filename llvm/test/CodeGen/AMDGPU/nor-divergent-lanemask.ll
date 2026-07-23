@@ -78,15 +78,16 @@ define amdgpu_ps i64 @test_or_two_uses(i64 inreg %a, i64 inreg %b) {
 ; SDAG-W32-LABEL: test_or_two_uses:
 ; SDAG-W32:       ; %bb.0:
 ; SDAG-W32-NEXT:    s_or_b32 s0, s0, s2
-; SDAG-W32-NEXT:    s_mov_b32 s3, 0
+; SDAG-W32-NEXT:    s_mov_b32 s1, 0
 ; SDAG-W32-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; SDAG-W32-NEXT:    s_xor_b32 s0, s0, -1
-; SDAG-W32-NEXT:    s_mov_b32 s1, s3
+; SDAG-W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SDAG-W32-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
-; SDAG-W32-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SDAG-W32-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
+; SDAG-W32-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; SDAG-W32-NEXT:    v_cmp_ne_u32_e64 s2, 0, v1
 ; SDAG-W32-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; SDAG-W32-NEXT:    s_mov_b32 s1, 0
 ; SDAG-W32-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-W32-LABEL: test_or_two_uses:

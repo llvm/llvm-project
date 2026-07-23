@@ -1729,16 +1729,19 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
   const unsigned BallotSize = MRI->getType(DstReg).getSizeInBits();
   const unsigned WaveSize = STI.getWavefrontSize();
 
-  // In the common case, the return type matches the wave size.
-  // However we also support emitting i64 ballots in wave32 mode.
-  if (BallotSize != WaveSize && (BallotSize != 64 || WaveSize != 32))
+  // The mask is always computed at the wavefront width and then truncated or
+  // zero-extended to the requested return type. Only i32 and i64 ballots are
+  // supported.
+  if ((BallotSize != 32 && BallotSize != 64) ||
+      (WaveSize != 32 && WaveSize != 64))
     return false;
 
   std::optional<ValueAndVReg> Arg =
       getIConstantVRegValWithLookThrough(SrcReg, *MRI);
 
   Register Dst = DstReg;
-  // i64 ballot on Wave32: new Dst(i32) for WaveSize ballot.
+  // When the return type does not match the wave size, compute the mask into a
+  // temporary of the wavefront width first.
   if (BallotSize != WaveSize) {
     Dst = MRI->createVirtualRegister(TRI.getBoolRC());
   }
@@ -1773,8 +1776,8 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
     }
   }
 
-  // i64 ballot on Wave32: zero-extend i32 ballot to i64.
-  if (BallotSize != WaveSize) {
+  if (BallotSize > WaveSize) {
+    // i64 ballot on Wave32: zero-extend the i32 mask to i64.
     Register HiReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_MOV_B32), HiReg).addImm(0);
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
@@ -1782,6 +1785,12 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
         .addImm(AMDGPU::sub0)
         .addReg(HiReg)
         .addImm(AMDGPU::sub1);
+  } else if (BallotSize < WaveSize) {
+    // i32 ballot on Wave64: truncate the i64 mask to its low i32.
+    if (!RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_32RegClass, *MRI))
+      return false;
+    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg)
+        .addReg(Dst, {}, AMDGPU::sub0);
   }
 
   I.eraseFromParent();
