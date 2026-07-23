@@ -1,4 +1,4 @@
-; RUN: opt -passes=always-inline,verify %s -S | FileCheck %s
+; RUN: opt -passes=always-inline %s -S | FileCheck %s
 
 ; Check strictfp alwaysinline callee isn't inlined into non-strictfp caller.
 
