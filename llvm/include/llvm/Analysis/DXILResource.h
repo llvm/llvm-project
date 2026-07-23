@@ -410,6 +410,7 @@ private:
 public:
   bool GloballyCoherent = false;
   ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
+  bool HasAtomic64Use = false;
 
   ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
                uint32_t Size, TargetExtType *HandleTy, StringRef Name = "",
@@ -516,6 +517,8 @@ class DXILResourceMap {
   void populateResourceInfos(Module &M, DXILResourceTypeMap &DRTM);
   /// Analyze and populate the directions of the resource counters.
   void populateCounterDirections(Module &M);
+  /// Detect 64-bit atomic uses of resources and set `HasAtomic64Use`.
+  void populateAtomicUses(Module &M);
 
   /// Resolves a resource handle into a vector of ResourceInfos that
   /// represent the possible unique creations of the handle. Certain cases are

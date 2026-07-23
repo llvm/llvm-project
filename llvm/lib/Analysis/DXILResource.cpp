@@ -14,6 +14,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -804,6 +805,7 @@ void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
      << "    Size: " << Binding.Size << "\n";
 
   OS << "  Globally Coherent: " << GloballyCoherent << "\n";
+  OS << "  Has Atomic64 Use: " << HasAtomic64Use << "\n";
   OS << "  Counter Direction: ";
 
   switch (CounterDirection) {
@@ -984,9 +986,58 @@ void DXILResourceMap::populateCounterDirections(Module &M) {
   }
 }
 
+void DXILResourceMap::populateAtomicUses(Module &M) {
+  auto FindResourceHandle = [](Value *Ptr) -> Value * {
+    Ptr = Ptr->stripPointerCasts();
+    while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+      Ptr = GEP->getPointerOperand()->stripPointerCasts();
+    auto *II = dyn_cast<IntrinsicInst>(Ptr);
+    if (II && II->getIntrinsicID() == Intrinsic::dx_resource_getpointer)
+      return II->getArgOperand(0);
+    return nullptr;
+  };
+
+  auto MarkHasAtomic64UseFromHandle = [this](Value *Handle) {
+    if (!Handle)
+      return;
+    for (ResourceInfo *RI : findByUse(Handle))
+      RI->HasAtomic64Use = true;
+  };
+
+  // Detect on `atomicrmw`/`cmpxchg` before `DXILResourceAccess` lowers them.
+  for (Function &F : M.functions()) {
+    for (Instruction &I : instructions(F)) {
+      if (auto *AI = dyn_cast<AtomicRMWInst>(&I)) {
+        if (!AI->getValOperand()->getType()->isIntegerTy(64))
+          continue;
+        MarkHasAtomic64UseFromHandle(
+            FindResourceHandle(AI->getPointerOperand()));
+      } else if (auto *CX = dyn_cast<AtomicCmpXchgInst>(&I)) {
+        if (!CX->getNewValOperand()->getType()->isIntegerTy(64))
+          continue;
+        MarkHasAtomic64UseFromHandle(
+            FindResourceHandle(CX->getPointerOperand()));
+      }
+    }
+  }
+
+  // Also handle the post-lowering `llvm.dx.resource.atomic.binop` form.
+  for (Function &F : M.functions()) {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_atomic_binop)
+      continue;
+    for (User *U : F.users()) {
+      auto *CI = dyn_cast<CallInst>(U);
+      if (!CI || !CI->getType()->isIntegerTy(64))
+        continue;
+      MarkHasAtomic64UseFromHandle(CI->getArgOperand(0));
+    }
+  }
+}
+
 void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
   populateResourceInfos(M, DRTM);
   populateCounterDirections(M);
+  populateAtomicUses(M);
 }
 
 void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
