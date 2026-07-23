@@ -1,46 +1,47 @@
-BOLT
-====
+# BOLT
 
-.. toctree::
-   :hidden:
+```{toctree}
+:hidden: true
 
-   BOLTAArch64OptimizationStatus
+BOLTAArch64OptimizationStatus
+```
 
 BOLT is a post-link optimizer developed to speed up large applications.
 It achieves the improvements by optimizing application’s code layout
 based on execution profile gathered by sampling profiler, such as Linux
-``perf`` tool. An overview of the ideas implemented in BOLT along with a
-discussion of its potential and current results is available in `CGO’19
-paper <https://research.fb.com/publications/bolt-a-practical-binary-optimizer-for-data-centers-and-beyond/>`__.
+`perf` tool. An overview of the ideas implemented in BOLT along with a
+discussion of its potential and current results is available in [CGO’19
+paper](https://research.fb.com/publications/bolt-a-practical-binary-optimizer-for-data-centers-and-beyond/).
 
-User Guides
-===========
+# User Guides
 
-.. toctree::
-   :maxdepth: 1
+```{toctree}
+:maxdepth: 1
 
-   GettingStarted
-   OptimizingClang
-   OptimizingLinux
-   Heatmaps
+GettingStarted
+OptimizingClang
+OptimizingLinux
+Heatmaps
+```
 
-Reference
-=========
+# Reference
 
-.. toctree::
-   :maxdepth: 1
+```{toctree}
+:maxdepth: 1
 
-   CommandLineArgumentReference
-   profiles
-   BOLTAArch64OptimizationStatus
+CommandLineArgumentReference
+profiles
+BOLTAArch64OptimizationStatus
+```
 
-Design Documentation
-====================
+# Design Documentation
 
-.. toctree::
-   :maxdepth: 1
+```{toctree}
+:maxdepth: 1
 
-   BAT
-   BinaryAnalysis
-   PointerAuthDesign
-   RuntimeLibrary
+BAT
+BinaryAnalysis
+PointerAuthDesign
+RuntimeLibrary
+```
+

@@ -1088,6 +1088,11 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       }
     }
   }
+  Value *X;
+  if (DestWidth == 1 &&
+      (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) &&
+      match(Src, m_Exact(m_Shr(m_Value(X), m_Value()))))
+    return new ICmpInst(ICmpInst::ICMP_NE, X, Constant::getNullValue(SrcTy));
 
   // See if we can simplify any instructions used by the input whose sole
   // purpose is to compute bits we don't care about.
@@ -1097,7 +1102,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   if (DestWidth == 1) {
     Value *Zero = Constant::getNullValue(SrcTy);
 
-    Value *X;
     const APInt *C1;
     Constant *C2;
     if (match(Src, m_OneUse(m_Shr(m_Shl(m_Power2(C1), m_Value(X)),
