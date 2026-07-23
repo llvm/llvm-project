@@ -23,13 +23,17 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/TemporaryStorage.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
+#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <unordered_set>
@@ -687,6 +691,59 @@ static hlfir::YieldOp getYield(mlir::Region &region) {
   return yield;
 }
 
+static bool isCUDADeviceDataAttr(mlir::Attribute attr) {
+  if (auto dataAttr = mlir::dyn_cast_if_present<cuf::DataAttributeAttr>(attr))
+    return dataAttr.getValue() == cuf::DataAttribute::Device;
+  return false;
+}
+
+static bool hasCUDADeviceDataAttr(mlir::BlockArgument blockArg) {
+  mlir::Block *owner = blockArg.getOwner();
+  if (!owner)
+    return false;
+  mlir::Operation *parentOp = owner->getParentOp();
+  if (!parentOp)
+    return false;
+  auto funcLike = mlir::dyn_cast<mlir::FunctionOpInterface>(parentOp);
+  if (!funcLike || blockArg.getArgNumber() >= funcLike.getNumArguments())
+    return false;
+  unsigned argNumber = blockArg.getArgNumber();
+  return isCUDADeviceDataAttr(
+             funcLike.getArgAttr(argNumber, cuf::getDataAttrName())) ||
+         isCUDADeviceDataAttr(
+             funcLike.getArgAttr(argNumber, cuf::dataAttrName));
+}
+
+static bool isCUDADeviceData(mlir::Value value) {
+  llvm::SmallPtrSet<void *, 8> visited;
+  mlir::Value current = value;
+  while (current) {
+    if (!visited.insert(current.getAsOpaquePointer()).second)
+      return false;
+
+    if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(current))
+      return hasCUDADeviceDataAttr(blockArg);
+
+    mlir::Operation *defOp = current.getDefiningOp();
+    if (!defOp)
+      return false;
+
+    if (cuf::hasDataAttr(defOp, cuf::DataAttribute::Device))
+      return true;
+
+    if (auto result = mlir::dyn_cast<mlir::OpResult>(current))
+      if (auto viewOp =
+              mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp))
+        if (mlir::Value source = viewOp.getViewSource(result)) {
+          current = source;
+          continue;
+        }
+
+    return false;
+  }
+  return false;
+}
+
 OrderedAssignmentRewriter::ValueAndCleanUp
 OrderedAssignmentRewriter::generateYieldedEntity(
     mlir::Region &region, std::optional<mlir::Type> castToType) {
@@ -1066,6 +1123,14 @@ getAssignIfLeftHandSideRegion(mlir::Region &region) {
   return nullptr;
 }
 
+static hlfir::RegionAssignOp
+getAssignIfRightHandSideRegion(mlir::Region &region) {
+  auto assign = mlir::dyn_cast<hlfir::RegionAssignOp>(region.getParentOp());
+  if (assign && (&assign.getRhsRegion() == &region))
+    return assign;
+  return nullptr;
+}
+
 static bool isPointerAssignmentRHS(mlir::Region &region) {
   auto assign = mlir::dyn_cast<hlfir::RegionAssignOp>(region.getParentOp());
   return assign && assign.isPointerAssignment() &&
@@ -1197,6 +1262,14 @@ void OrderedAssignmentRewriter::generateSaveEntity(
   if (isPointerAssignmentRHS(region)) {
     assert(!willUseSavedEntityInSameRun &&
            "rhs cannot be used in the loop nest where it is saved");
+    return saveNonVectorSubscriptedAddress(savedEntity);
+  }
+  if (hlfir::RegionAssignOp regionAssignOp =
+          getAssignIfRightHandSideRegion(region);
+      regionAssignOp && !regionAssignOp.getUserDefinedAssignment().empty() &&
+      isCUDADeviceData(getYield(region).getEntity())) {
+    // Avoid materializing a host-side value copy of CUDA device data. The
+    // address is preserved instead, matching CUDA data-transfer semantics.
     return saveNonVectorSubscriptedAddress(savedEntity);
   }
 
