@@ -278,9 +278,9 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 2
-      - name: Install Ninja, CMake, and sccache
+      - name: Install Ninja, CMake, Python, and sccache
         run: |
-          brew install ninja cmake
+          brew install ninja cmake python
           command -v sccache >/dev/null || brew install sccache
       - name: Build and Test
         timeout-minutes: 240
