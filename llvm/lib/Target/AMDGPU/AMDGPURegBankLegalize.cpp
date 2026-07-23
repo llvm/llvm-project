@@ -172,19 +172,40 @@ Register AMDGPURegBankLegalizeCombiner::tryMatchUnmergeDefs(
   return UnMerge->getSourceReg();
 }
 
-// Check if all merge sources are readanylanes and return the readanylane
-// sources if they are.
+// Return the vgpr sources for a merge that can be rebuilt entirely in the vgpr
+// bank. A source is either the vgpr operand of a readanylane, or, for a plain
+// uniform (sgpr) source, a fresh vgpr copy of it. This is only worthwhile (and
+// only returns a non-empty result) when at least one source is a readanylane,
+// so rebuilding the merge in vgpr removes that vgpr -> sgpr read.
 SmallVector<Register> AMDGPURegBankLegalizeCombiner::tryMatchMergeReadAnyLane(
     GMergeLikeInstr *Merge) {
-  SmallVector<Register> ReadAnyLaneSrcs;
-  for (unsigned i = 0; i < Merge->getNumSources(); ++i) {
+  SmallVector<Register> Srcs;
+  SmallVector<bool> NeedsCopyToVgpr;
+  bool FoundReadAnyLane = false;
+  for (unsigned I = 0; I < Merge->getNumSources(); ++I) {
     Register Src;
-    if (!mi_match(Merge->getSourceReg(i), MRI,
-                  m_GAMDGPUReadAnyLane(m_Reg(Src))))
-      return {};
-    ReadAnyLaneSrcs.push_back(Src);
+    if (mi_match(Merge->getSourceReg(I), MRI,
+                 m_GAMDGPUReadAnyLane(m_Reg(Src)))) {
+      Srcs.push_back(Src);
+      NeedsCopyToVgpr.push_back(false);
+      FoundReadAnyLane = true;
+      continue;
+    }
+    Srcs.push_back(Merge->getSourceReg(I));
+    NeedsCopyToVgpr.push_back(true);
   }
-  return ReadAnyLaneSrcs;
+
+  if (!FoundReadAnyLane)
+    return {};
+
+  // Materialize vgpr copies for the uniform (non-readanylane) sources so the
+  // whole merge can live in the vgpr bank.
+  for (unsigned I = 0; I < Srcs.size(); ++I) {
+    if (NeedsCopyToVgpr[I])
+      Srcs[I] = B.buildCopy({VgprRB, MRI.getType(Srcs[I])}, Srcs[I]).getReg(0);
+  }
+
+  return Srcs;
 }
 
 SmallVector<Register>
@@ -402,8 +423,8 @@ void AMDGPURegBankLegalizeCombiner::tryCombineS1AnyExt(MachineInstr &MI) {
 // Search through MRI for virtual registers with sgpr register bank and S1 LLT.
 [[maybe_unused]] static Register getAnySgprS1(const MachineRegisterInfo &MRI) {
   const LLT S1 = LLT::scalar(1);
-  for (unsigned i = 0; i < MRI.getNumVirtRegs(); ++i) {
-    Register Reg = Register::index2VirtReg(i);
+  for (unsigned I = 0; I < MRI.getNumVirtRegs(); ++I) {
+    Register Reg = Register::index2VirtReg(I);
     if (MRI.def_empty(Reg) || MRI.getType(Reg) != S1)
       continue;
 
