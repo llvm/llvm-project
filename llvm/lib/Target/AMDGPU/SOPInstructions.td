@@ -207,14 +207,6 @@ class DivergentBinFrag<SDPatternOperator Op> : PatFrag <
   let GISelPredicateCode = [{return true;}];
 }
 
-class DivergentOperandsBinFrag<SDPatternOperator Op> : PatFrag <
-  (ops node:$src0, node:$src1),
-  (Op $src0, $src1),
-  [{ return N->getOperand(0)->isDivergent() &&
-            N->getOperand(1)->isDivergent(); }]> {
-  let GISelPredicateCode = [{return true;}];
-}
-
 
 let isMoveImm = 1 in {
   let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
