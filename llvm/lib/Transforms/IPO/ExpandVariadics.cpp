@@ -849,7 +849,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   NewCB->setDebugLoc(DebugLoc());
 
   // DeadArgElim and ArgPromotion copy exactly this metadata
-  NewCB->copyMetadata(*CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+  NewCB->copyProfileAndDebugMetadata(*CB);
 
   CB->replaceAllUsesWith(NewCB);
   CB->eraseFromParent();

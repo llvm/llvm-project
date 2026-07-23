@@ -2161,6 +2161,13 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.IsArray = true;
       break;
+    case attr::HLSLIsMultiSampled:
+      if (ResAttrs.IsMultiSampled) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
+      ResAttrs.IsMultiSampled = true;
+      break;
     case attr::HLSLIsCounter:
       if (ResAttrs.IsCounter) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
@@ -2284,6 +2291,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
 
   case ParsedAttr::AT_HLSLIsArray:
     A = HLSLIsArrayAttr::Create(getASTContext(), ACI);
+    break;
+
+  case ParsedAttr::AT_HLSLIsMultiSampled:
+    A = HLSLIsMultiSampledAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -3402,7 +3413,7 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar, vector, or matrix */ 6 << /* no int */ 0
+           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
            << /* half or float */ 2 << PassedType;
   return false;
 }
@@ -3493,8 +3504,8 @@ static bool CheckUnsignedIntRepresentation(Sema *S, SourceLocation Loc,
                                            clang::QualType PassedType) {
   if (!PassedType->hasUnsignedIntegerRepresentation())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar, vector, or matrix */ 6
-           << /* unsigned int */ 3 << /* no fp */ 0 << PassedType;
+           << ArgOrdinal << /* scalar or vector of */ 5 << /* unsigned int */ 3
+           << /* no fp */ 0 << PassedType;
   return false;
 }
 
@@ -4325,8 +4336,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
              ->hasFloatingRepresentation()) // half or float or double
       return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                           diag::err_builtin_invalid_arg_type)
-             << /* ordinal */ 1 << /* scalar, vector, or matrix */ 6
-             << /* no int */ 0 << /* fp */ 1 << TheCall->getArg(0)->getType();
+             << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
+             << /* fp */ 1 << TheCall->getArg(0)->getType();
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     break;

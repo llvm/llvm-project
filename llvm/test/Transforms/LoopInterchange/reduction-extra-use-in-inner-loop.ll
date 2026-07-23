@@ -191,13 +191,15 @@ define i8 @extra_reduction_use_in_inner2(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP2:%.*]], %[[MIDDLE_LATCH_SPLIT:.*]] ], [ 0, %[[MIDDLE_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUM_MIDDLE:%.*]] = phi i8 [ [[SUM_MIDDLE_LCSSA:%.*]], %[[MIDDLE_LATCH_SPLIT]] ], [ [[SUM_OUTER]], %[[MIDDLE_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
-; CHECK:       [[INNER_PREHEADER]]:
+; CHECK:       [[MIDDLE_HEADER_SPLIT:.*]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
-; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ], [ 0, %[[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[SUM_INNER:%.*]] = phi i8 [ [[SUM_INNER_NEXT:%.*]], %[[INNER_SPLIT]] ], [ [[SUM_MIDDLE]], %[[INNER_PREHEADER]] ]
+; CHECK:       [[INNER_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER_SPLIT1:.*]]
 ; CHECK:       [[INNER_SPLIT1]]:
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ], [ 0, %[[INNER_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM_INNER:%.*]] = phi i8 [ [[SUM_INNER_NEXT:%.*]], %[[INNER_SPLIT]] ], [ [[SUM_MIDDLE]], %[[INNER_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[MIDDLE_HEADER_SPLIT]]
+; CHECK:       [[INNER]]:
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr [2 x [2 x i8]], ptr [[A]], i64 [[K]], i64 [[J]], i64 [[I]]
 ; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[GEP_A]], align 1
 ; CHECK-NEXT:    [[SUM_INNER_NEXT]] = add i8 [[SUM_INNER]], [[A]]
@@ -209,7 +211,7 @@ define i8 @extra_reduction_use_in_inner2(ptr noalias %A, ptr noalias %B) {
 ; CHECK:       [[INNER_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[K]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 2
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_LATCH_SPLIT]], label %[[INNER]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_LATCH_SPLIT]], label %[[INNER_SPLIT1]]
 ; CHECK:       [[MIDDLE_LATCH]]:
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_NEXT]], 2
