@@ -307,7 +307,7 @@ non-exhaustive list of features and their impacts on porting LLDB.
 ### Hardware Single Step
 
 If the target lacks this feature, you will have to implement software single
-stepping. Which is much more complex and involves emulating any instruction that
+stepping. This is much more complex and involves emulating any instruction that
 could modify the program counter.
 
 ### Instruction Bundles and Sequences
@@ -341,10 +341,18 @@ registers scale and what to derive their size from.
 
 ### Registers That Come And Go At Runtime
 
-Anything like AArch64's Scalable Matrix Extension (SME) `ZA` register. This
-register can be switched off when not in use. At the moment we do not show
-this accurately. When the register is off, we show the user a fake zero
-value instead of hiding the register.
+If you have registers that are not present for the entire program runtime you
+will need to decide how to present that.
+
+The one example we support right now is AArch64's Scalable Matrix Extension
+(SME) `ZA` register. This register can be switched off when not in use.
+We handle this by showing a fake zero value at these times, with a separate
+mode bit in another register so users can tell a real zero from a fake zero.
+
+The more fundemental and the more numerous the registers are, the more
+likely you are to confuse users by showing them even when they are unusable.
+For instance if you have two execution modes that use separate register sets,
+showing both all the time makes it hard to tell what mode you are in.
 
 ### Execution Modes That Change Instruction Encoding
 
