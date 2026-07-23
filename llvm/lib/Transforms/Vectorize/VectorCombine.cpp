@@ -3712,17 +3712,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   for (unsigned M = 0, E = Ty->getNumElements(); M < E; ++M)
     Start[M] = lookThroughShuffles(&I, M);
 
-  SmallVector<std::pair<SmallVector<InstLane>, Use *>> Worklist;
-  Worklist.push_back(std::make_pair(Start, &*I.use_begin()));
+  SmallVector<std::pair<SmallVector<InstLane>, Use *>> Candidates;
+  Candidates.push_back(std::make_pair(Start, &*I.use_begin()));
   DenseSet<std::pair<Value *, Use *>> IdentityLeafs, SplatLeafs, ConcatLeafs;
   unsigned NumVisited = 0;
   bool TraversedElCountChangingBitcast = false;
 
-  while (!Worklist.empty()) {
+  while (!Candidates.empty()) {
     if (++NumVisited > MaxInstrsToScan)
       return false;
 
-    auto ItemFrom = Worklist.pop_back_val();
+    auto ItemFrom = Candidates.pop_back_val();
     auto Item = ItemFrom.first;
     auto From = ItemFrom.second;
     auto [FrontV, FrontLane] = Item.front();
@@ -3810,15 +3810,15 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         if (auto *BO = dyn_cast<BinaryOperator>(FrontV);
             BO && BO->isIntDivRem())
           return false;
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                              &cast<Instruction>(FrontV)->getOperandUse(0));
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
-                              &cast<Instruction>(FrontV)->getOperandUse(1));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                &cast<Instruction>(FrontV)->getOperandUse(0));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
+                                &cast<Instruction>(FrontV)->getOperandUse(1));
         continue;
       } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst, FPToSIInst,
                      FPToUIInst, SIToFPInst, UIToFPInst>(FrontV)) {
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                              &cast<Instruction>(FrontV)->getOperandUse(0));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                &cast<Instruction>(FrontV)->getOperandUse(0));
         continue;
       } else if (auto *BitCast = dyn_cast<BitCastInst>(FrontV)) {
         auto *BCDstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
@@ -3828,8 +3828,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
           ElementCount SrcEC = BCSrcTy->getElementCount();
           if (DstEC == SrcEC) {
             // Same element count - simple pass-through.
-            Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                                  &BitCast->getOperandUse(0));
+            Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                    &BitCast->getOperandUse(0));
             continue;
           }
           unsigned DstElts = DstEC.getFixedValue();
@@ -3871,7 +3871,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             }
             if (Valid) {
               TraversedElCountChangingBitcast = true;
-              Worklist.emplace_back(NItem, &BitCast->getOperandUse(0));
+              Candidates.emplace_back(NItem, &BitCast->getOperandUse(0));
               continue;
             }
           } else if (SrcElts > DstElts && SrcElts % DstElts == 0) {
@@ -3889,17 +3889,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
                 NItem.push_back(lookThroughShuffles(Op, Lane * R + J));
             }
             TraversedElCountChangingBitcast = true;
-            Worklist.emplace_back(NItem, &BitCast->getOperandUse(0));
+            Candidates.emplace_back(NItem, &BitCast->getOperandUse(0));
             continue;
           }
         }
       } else if (auto *Sel = dyn_cast<SelectInst>(FrontV)) {
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                              &Sel->getOperandUse(0));
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
-                              &Sel->getOperandUse(1));
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 2),
-                              &Sel->getOperandUse(2));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                &Sel->getOperandUse(0));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
+                                &Sel->getOperandUse(1));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 2),
+                                &Sel->getOperandUse(2));
         continue;
       } else if (auto *II = dyn_cast<IntrinsicInst>(FrontV);
                  II && isTriviallyVectorizable(II->getIntrinsicID()) &&
@@ -3916,8 +3916,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
               return false;
             continue;
           }
-          Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, Op),
-                                &cast<Instruction>(FrontV)->getOperandUse(Op));
+          Candidates.emplace_back(
+              generateInstLaneVectorFromOperand(Item, Op),
+              &cast<Instruction>(FrontV)->getOperandUse(Op));
         }
         continue;
       }
