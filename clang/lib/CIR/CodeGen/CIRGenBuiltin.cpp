@@ -163,11 +163,12 @@ static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
 
 /// Utility to insert an atomic instruction based on Intrinsic::ID
 /// and the expression node.
-static mlir::Value makeBinaryAtomicValue(
-    CIRGenFunction &cgf, cir::AtomicFetchKind kind, const CallExpr *expr,
-    mlir::Type *originalArgType = nullptr,
-    mlir::Value *emittedArgValue = nullptr,
-    cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent) {
+mlir::Value CIRGenFunction::makeBinaryAtomicValue(cir::AtomicFetchKind kind,
+                                                  const CallExpr *expr,
+                                                  mlir::Type *originalArgType,
+                                                  mlir::Value *emittedArgValue,
+                                                  cir::MemOrder ordering) {
+  CIRGenFunction &cgf = *this;
 
   QualType type = expr->getType();
   QualType ptrType = expr->getArg(0)->getType();
@@ -224,7 +225,7 @@ static mlir::Value makeBinaryAtomicValue(
 static RValue emitBinaryAtomic(CIRGenFunction &cgf,
                                cir::AtomicFetchKind atomicOpkind,
                                const CallExpr *e) {
-  return RValue::get(makeBinaryAtomicValue(cgf, atomicOpkind, e));
+  return RValue::get(cgf.makeBinaryAtomicValue(atomicOpkind, e));
 }
 
 template <typename BinOp>
@@ -234,8 +235,8 @@ static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
   mlir::Value emittedArgValue;
   mlir::Type originalArgType;
   clang::QualType typ = e->getType();
-  mlir::Value result = makeBinaryAtomicValue(
-      cgf, atomicOpkind, e, &originalArgType, &emittedArgValue);
+  mlir::Value result = cgf.makeBinaryAtomicValue(
+      atomicOpkind, e, &originalArgType, &emittedArgValue);
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
   result = BinOp::create(builder, result.getLoc(), result, emittedArgValue);
 
@@ -391,6 +392,22 @@ static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   mlir::Type ty = cgf.convertType(e.getType());
   auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
 
+  return RValue::get(call->getResult(0));
+}
+
+template <typename Op>
+static RValue emitTernaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
+                                                   const CallExpr &e) {
+  mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
+  mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
+  mlir::Value arg2 = cgf.emitScalarExpr(e.getArg(2));
+
+  mlir::Location loc = cgf.getLoc(e.getExprLoc());
+  mlir::Type ty = cgf.convertType(e.getType());
+
+  assert(!cir::MissingFeatures::fpConstraints());
+
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2);
   return RValue::get(call->getResult(0));
 }
 
@@ -648,7 +665,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fmal:
   case Builtin::BI__builtin_fmaf128:
   case Builtin::BI__builtin_elementwise_fma:
-    return errorBuiltinNYI(cgf, e, builtinID);
+    return emitTernaryMaybeConstrainedFPBuiltin<cir::FMAOp>(cgf, *e);
   case Builtin::BIfmax:
   case Builtin::BIfmaxf:
   case Builtin::BIfmaxl:
@@ -1059,6 +1076,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   // C stdarg builtins.
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
+  case Builtin::BI__builtin_c23_va_start:
   case Builtin::BI__va_start: {
     mlir::Value vaList = builtinID == Builtin::BI__va_start
                              ? emitScalarExpr(e->getArg(0))

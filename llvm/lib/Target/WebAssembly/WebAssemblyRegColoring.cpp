@@ -226,13 +226,6 @@ static bool regColoring(MachineFunction &MF, LiveIntervals *Liveness,
            << "********** Function: " << MF.getName() << '\n';
   });
 
-  // If there are calls to setjmp or sigsetjmp, don't perform coloring. Virtual
-  // registers could be modified before the longjmp is executed, resulting in
-  // the wrong value being used afterwards.
-  // TODO: Does WebAssembly need to care about setjmp for register coloring?
-  if (MF.exposesReturnsTwice())
-    return false;
-
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
 
@@ -331,6 +324,13 @@ static bool regColoring(MachineFunction &MF, LiveIntervals *Liveness,
 }
 
 bool WebAssemblyRegColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
+  // If there are calls to setjmp or sigsetjmp, don't perform coloring. Virtual
+  // registers could be modified before the longjmp is executed, resulting in
+  // the wrong value being used afterwards.
+  // TODO: Does WebAssembly need to care about setjmp for register coloring?
+  if (MF.exposesReturnsTwice())
+    return false;
+
   LiveIntervals *Liveness = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   const MachineBlockFrequencyInfo *MBFI =
       &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
@@ -340,11 +340,13 @@ bool WebAssemblyRegColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 WebAssemblyRegColoringPass::run(MachineFunction &MF,
                                 MachineFunctionAnalysisManager &MFAM) {
-  // TODO(boomanaiden154): We duplicate this check from above to avoid computing
-  // analyses if we do not need to. We should remove it when remove support for
-  // the LegacyPM and are able to simplify things.
+  // If there are calls to setjmp or sigsetjmp, don't perform coloring. Virtual
+  // registers could be modified before the longjmp is executed, resulting in
+  // the wrong value being used afterwards.
+  // TODO: Does WebAssembly need to care about setjmp for register coloring?
   if (MF.exposesReturnsTwice())
     return PreservedAnalyses::all();
+
   LiveIntervals *Liveness = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
   const MachineBlockFrequencyInfo *MBFI =
       &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
