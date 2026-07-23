@@ -25516,19 +25516,29 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
 ///                    inverting the conditions on the SETCC leaves.
 /// \param MustBeFirst Set to true if this sub-tree needs to be negated but
 ///                    cannot be negated naturally, so it must be emitted first.
+/// \param PreferFirst Set to true if processing this sub-tree first may result
+///                    in more efficient code (e.g. because the flags of a
+///                    corresponding SUB node can be reused).
 /// \param WillNegate  True when the result of this sub-expression must be
 ///                    negated (i.e. the outer expression is an OR).
-static bool canEmitConjunctionForCCMP(SDValue Val, bool &CanNegate,
-                                      bool &MustBeFirst, bool WillNegate,
+static bool canEmitConjunctionForCCMP(SelectionDAG &DAG, SDValue Val,
+                                      bool &CanNegate, bool &MustBeFirst,
+                                      bool &PreferFirst, bool WillNegate,
                                       unsigned Depth = 0) {
   if (!Val.hasOneUse())
     return false;
   unsigned Opcode = Val.getOpcode();
   if (Opcode == ISD::SETCC) {
-    if (!Val.getOperand(0).getSimpleValueType().isInteger())
+    EVT VT = Val.getOperand(0).getValueType();
+    if (!VT.isInteger())
       return false;
     CanNegate = true;
     MustBeFirst = false;
+    // Designate this operation as a preferred first operation if the flags of a
+    // corresponding SUB node can be reused. The root comparison is emitted as a
+    // plain CMP, which can share EFLAGS with an existing SUB; a CCMP cannot.
+    PreferFirst = DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT),
+                                    {Val.getOperand(0), Val.getOperand(1)});
     return true;
   }
   // Protect against exponential runtime and stack overflow.
@@ -25538,13 +25548,13 @@ static bool canEmitConjunctionForCCMP(SDValue Val, bool &CanNegate,
     bool IsOR = Opcode == ISD::OR;
     SDValue O0 = Val.getOperand(0);
     SDValue O1 = Val.getOperand(1);
-    bool CanNegateL, MustBeFirstL;
-    if (!canEmitConjunctionForCCMP(O0, CanNegateL, MustBeFirstL, IsOR,
-                                   Depth + 1))
+    bool CanNegateL, MustBeFirstL, PreferFirstL;
+    if (!canEmitConjunctionForCCMP(DAG, O0, CanNegateL, MustBeFirstL,
+                                   PreferFirstL, IsOR, Depth + 1))
       return false;
-    bool CanNegateR, MustBeFirstR;
-    if (!canEmitConjunctionForCCMP(O1, CanNegateR, MustBeFirstR, IsOR,
-                                   Depth + 1))
+    bool CanNegateR, MustBeFirstR, PreferFirstR;
+    if (!canEmitConjunctionForCCMP(DAG, O1, CanNegateR, MustBeFirstR,
+                                   PreferFirstR, IsOR, Depth + 1))
       return false;
 
     if (MustBeFirstL && MustBeFirstR)
@@ -25565,6 +25575,7 @@ static bool canEmitConjunctionForCCMP(SDValue Val, bool &CanNegate,
       CanNegate = false;
       MustBeFirst = MustBeFirstL || MustBeFirstR;
     }
+    PreferFirst = PreferFirstL || PreferFirstR;
     return true;
   }
   return false;
@@ -25618,19 +25629,25 @@ static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
   bool IsOR = Opcode == ISD::OR;
 
   SDValue LHS = Val.getOperand(0);
-  bool CanNegateL, MustBeFirstL;
-  bool ValidL = canEmitConjunctionForCCMP(LHS, CanNegateL, MustBeFirstL, IsOR);
+  bool CanNegateL, MustBeFirstL, PreferFirstL;
+  bool ValidL = canEmitConjunctionForCCMP(DAG, LHS, CanNegateL, MustBeFirstL,
+                                          PreferFirstL, IsOR);
   assert(ValidL && "Valid conjunction/disjunction tree");
   (void)ValidL;
 
   SDValue RHS = Val.getOperand(1);
-  bool CanNegateR, MustBeFirstR;
-  bool ValidR = canEmitConjunctionForCCMP(RHS, CanNegateR, MustBeFirstR, IsOR);
+  bool CanNegateR, MustBeFirstR, PreferFirstR;
+  bool ValidR = canEmitConjunctionForCCMP(DAG, RHS, CanNegateR, MustBeFirstR,
+                                          PreferFirstR, IsOR);
   assert(ValidR && "Valid conjunction/disjunction tree");
   (void)ValidR;
 
-  // Swap the sub-tree that must come first to the right side.
-  if (MustBeFirstL) {
+  bool ShouldFirstL = PreferFirstL && !PreferFirstR && !MustBeFirstR;
+
+  // Swap the sub-tree that must or should come first to the right side. The
+  // right sub-tree is emitted first below, and the deepest right-most SETCC
+  // becomes the root plain CMP whose flags a matching SUB node can reuse.
+  if (MustBeFirstL || ShouldFirstL) {
     assert(!MustBeFirstR && "Valid conjunction/disjunction tree");
     std::swap(LHS, RHS);
     std::swap(CanNegateL, CanNegateR);
@@ -25680,8 +25697,9 @@ static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
 static SDValue emitConjunctionForCCMP(SDValue Val, X86::CondCode &OutCC,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
-  bool DummyCanNegate, DummyMustBeFirst;
-  if (!canEmitConjunctionForCCMP(Val, DummyCanNegate, DummyMustBeFirst, false))
+  bool DummyCanNegate, DummyMustBeFirst, DummyPreferFirst;
+  if (!canEmitConjunctionForCCMP(DAG, Val, DummyCanNegate, DummyMustBeFirst,
+                                 DummyPreferFirst, false))
     return SDValue();
   return emitConjunctionForCCMPRec(Val, OutCC, /*Negate=*/false, SDValue(),
                                    X86::COND_INVALID, DAG, Subtarget);
