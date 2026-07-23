@@ -6797,13 +6797,6 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   APInt StartByteOffset(1, 0), FirstLoadByteOffset(1, 0);
   LoadInst *FirstLI = nullptr;
   GEPNoWrapFlags NewGEPFlags = GEPNoWrapFlags::none();
-  auto GetLaneByteOffset = [ElementSizeBytes](uint64_t Lane,
-                                              unsigned IndexBits) {
-    return APInt(IndexBits, Lane, /*isSigned=*/false,
-                 /*implicitTrunc=*/true) *
-           APInt(IndexBits, ElementSizeBytes, /*isSigned=*/false,
-                 /*implicitTrunc=*/true);
-  };
   SmallPtrSet<LoadInst *, 4> Loads;
   for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
     // Step 1: Trace this result lane through shuffle users to find the source
@@ -6839,7 +6832,7 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
     APInt LoadByteOffsetAP(IndexBits, LoadByteOffset, /*isSigned=*/true);
     APInt SourceByteOffset =
         LoadByteOffsetAP +
-        GetLaneByteOffset(static_cast<uint64_t>(IL.second), IndexBits);
+        static_cast<uint64_t>(IL.second) * ElementSizeBytes;
     if (Lane == 0) {
       CommonBase = Base;
       StartByteOffset = SourceByteOffset;
@@ -6860,8 +6853,7 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
       if (IndexBits != StartByteOffset.getBitWidth())
         return false;
 
-      APInt ExpectedByteOffset =
-          StartByteOffset + GetLaneByteOffset(Lane, IndexBits);
+      APInt ExpectedByteOffset = StartByteOffset + Lane * ElementSizeBytes;
       if (SourceByteOffset != ExpectedByteOffset)
         return false;
     }
