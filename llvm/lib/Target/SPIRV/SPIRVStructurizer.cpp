@@ -28,6 +28,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+#include <optional>
 #include <stack>
 
 using namespace llvm;
@@ -35,14 +36,6 @@ using namespace SPIRV;
 
 using BlockSet = SmallPtrSet<BasicBlock *, 0>;
 using Edge = std::pair<BasicBlock *, BasicBlock *>;
-
-// Helper function to do a partial order visit from the block |Start|, calling
-// |Op| on each visited node.
-static void partialOrderVisit(BasicBlock &Start,
-                              std::function<bool(BasicBlock *)> Op) {
-  PartialOrderingVisitor V(*Start.getParent());
-  V.partialOrderVisit(Start, std::move(Op));
-}
 
 // Returns the exact convergence region in the tree defined by `Node` for which
 // `BB` is the header, nullptr otherwise.
@@ -313,12 +306,14 @@ class SPIRVStructurizerImpl {
     LoopInfo &LI;
     DomTreeBuilder::BBDomTree DT;
     DomTreeBuilder::BBPostDomTree PDT;
+    std::optional<PartialOrderingVisitor> POV;
 
     Splitter(Function &F, LoopInfo &LI) : F(F), LI(LI) { invalidate(); }
 
     void invalidate() {
       PDT.recalculate(F);
       DT.recalculate(F);
+      POV.emplace(F);
     }
 
     // Returns the list of blocks that belong to a SPIR-V loop construct,
@@ -327,7 +322,7 @@ class SPIRVStructurizerImpl {
                                                      BasicBlock *Merge) {
       assert(DT.dominates(Header, Merge));
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Header, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
         if (BB == Merge)
           return false;
         if (DT.dominates(Merge, BB) || !DT.dominates(Header, BB))
@@ -353,7 +348,7 @@ class SPIRVStructurizerImpl {
       }
 
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Node->Header, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Node->Header, [&](BasicBlock *BB) {
         if (OutsideBlocks.count(BB) != 0)
           return false;
         if (DT.dominates(Node->Merge, BB) || !DT.dominates(Node->Header, BB))
@@ -370,7 +365,7 @@ class SPIRVStructurizerImpl {
       assert(DT.dominates(Header, Merge));
 
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Header, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
         // the blocks structurally dominated by a switch header,
         if (!DT.dominates(Header, BB))
           return false;
@@ -390,7 +385,7 @@ class SPIRVStructurizerImpl {
       assert(DT.dominates(Target, Merge));
 
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Target, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Target, [&](BasicBlock *BB) {
         // the blocks structurally dominated by an OpSwitch Target or Default
         // block
         if (!DT.dominates(Target, BB))
@@ -932,6 +927,16 @@ class SPIRVStructurizerImpl {
       auto It = SI->case_begin();
       while (It != SI->case_end()) {
         BasicBlock *Target = It->getCaseSuccessor();
+
+        // Don't Split. Just remove cases branching to the default destination
+        // to prevent spurious extra successors thus preserving single-exit
+        // convergence regions (i.e. if a merged exit is default & a case).
+        if (Target == SI->getDefaultDest()) {
+          Modified = true;
+          It = SI->removeCase(It);
+          continue;
+        }
+
         if (Seen.count(Target) == 0) {
           Seen.insert(Target);
           ++It;

@@ -52,6 +52,8 @@ jobs:
             install-macos-dependencies: false
       fail-fast: false
     runs-on: ${{ matrix.runner }}
+    env:
+      COMPILER: ${{ matrix.cxx }}
     steps:
       - name: Checkout the LLVM monorepo
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -76,7 +78,7 @@ jobs:
         run: |
           cmake --version
           ninja --version
-          ${{ matrix.cxx }} --version
+          "${COMPILER}" --version
 
       - name: Run the benchmarks
         env:
@@ -91,7 +93,7 @@ jobs:
           libcxx/utils/ci/lnt/run-benchmarks                            \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
             --machine ${{ matrix.lnt-machine }}                         \
-            --compiler ${{ matrix.cxx }}                                \
+            --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"

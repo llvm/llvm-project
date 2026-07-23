@@ -9,7 +9,7 @@ declare <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1), i32 
 define amdgpu_ps void @cluster_load_b32_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
 ; GFX1250-LABEL: cluster_load_b32_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v4
@@ -28,7 +28,7 @@ entry:
 define amdgpu_ps void @cluster_load_b32_vaddr_imm_mask(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: cluster_load_b32_vaddr_imm_mask:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 m0, 7
@@ -46,7 +46,7 @@ entry:
 define amdgpu_ps void @cluster_load_b32_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask) {
 ; GFX1250-LABEL: cluster_load_b32_saddr:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
@@ -65,7 +65,7 @@ entry:
 define amdgpu_ps void @cluster_load_monitor_b32_saddr_scale_offset(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask, i32 %idx) {
 ; GFX1250-LABEL: cluster_load_monitor_b32_saddr_scale_offset:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 m0, s2
@@ -84,7 +84,7 @@ entry:
 define amdgpu_ps void @cluster_load_b64_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
 ; GFX1250-LABEL: cluster_load_b64_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v4
@@ -103,7 +103,7 @@ entry:
 define amdgpu_ps void @cluster_load_b64_vaddr_imm_mask(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: cluster_load_b64_vaddr_imm_mask:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 m0, 0x10007
@@ -121,7 +121,7 @@ entry:
 define amdgpu_ps void @cluster_load_b64_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask) {
 ; GFX1250-LABEL: cluster_load_b64_saddr:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
@@ -140,7 +140,7 @@ entry:
 define amdgpu_ps void @cluster_load_monitor_b64_saddr_scale_offset(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask, i32 %idx) {
 ; GFX1250-LABEL: cluster_load_monitor_b64_saddr_scale_offset:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 m0, s2
@@ -159,7 +159,7 @@ entry:
 define amdgpu_ps void @cluster_load_b128_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
 ; GFX1250-LABEL: cluster_load_b128_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v4
@@ -178,7 +178,7 @@ entry:
 define amdgpu_ps void @cluster_load_b128_vaddr_imm_mask(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: cluster_load_b128_vaddr_imm_mask:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 m0, 15
@@ -196,7 +196,7 @@ entry:
 define amdgpu_ps void @cluster_load_b128_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask) {
 ; GFX1250-LABEL: cluster_load_b128_saddr:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
@@ -214,7 +214,7 @@ entry:
 define amdgpu_ps void @cluster_load_b32_saddr_vmask(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use, i32 %mask) {
 ; GFX1250-LABEL: cluster_load_b32_saddr_vmask:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s2, v2
@@ -234,7 +234,7 @@ entry:
 define amdgpu_ps void @cluster_load_b64_saddr_vmask(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use, i32 %mask) {
 ; GFX1250-LABEL: cluster_load_b64_saddr_vmask:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s2, v2
@@ -254,7 +254,7 @@ entry:
 define amdgpu_ps void @cluster_load_b128_saddr_vmask(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use, i32 %mask) {
 ; GFX1250-LABEL: cluster_load_b128_saddr_vmask:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s2, v2
