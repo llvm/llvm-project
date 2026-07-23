@@ -116,18 +116,20 @@ void inlined_callee_single_report() {
 struct MyBuffer {
   char buffer[8];
 };
+struct MyStruct { int x; };
+struct Inner { int x; };
+struct Outer { struct Inner inner; };
 
-void member_subregion_dangling_deref() {
+char member_subregion_dangling_deref() {
   const char *p = nullptr;
   {
     struct MyBuffer tmp_buffer = {};
     p = tmp_buffer.buffer;
   }
   // expected-note@-1 {{'tmp_buffer.buffer[0]' is destroyed here}}
-  char c = *p;
+  return *p; 
   // expected-warning@-1 {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
   // expected-note@-2    {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
-  (void)c;
 }
 
 void opaque(const char *);
@@ -144,13 +146,12 @@ void passing_dangling_to_call() {
   // expected-note@-2    {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
 }
 
-void member_subregion_alive_deref() {
+char member_subregion_alive_deref() {
   {
     struct MyBuffer tmp_buffer = {};
     const char *p = tmp_buffer.buffer;
     opaque(p); //   no-warning
-    char c = *p; // no-warning
-    (void)c;
+    return *p; //   no-warning
   }
 }
 
@@ -164,4 +165,52 @@ void arr_elem_subreg_dangling_deref() {
   *ptr = 7;
   // expected-warning@-1 {{Use of 'local_arr[1]' after its lifetime ended}}
   // expected-note@-2    {{Use of 'local_arr[1]' after its lifetime ended}}
+}
+
+char member_array_elem__dangling_deref() {
+  const char *p = nullptr;
+  {
+    struct MyBuffer tmp_buffer = {};
+    p = tmp_buffer.buffer + 3;
+  }
+  // expected-note@-1 {{'tmp_buffer.buffer[3]' is destroyed here}}
+  return *p;
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[3]' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'tmp_buffer.buffer[3]' after its lifetime ended}}
+}
+
+int struct_field_dangling_deref() {
+  int *p = nullptr;
+  {
+    struct MyStruct s = {};
+    p = &s.x;
+  }
+  // expected-note@-1 {{'s.x' is destroyed here}}
+  return *p;
+  // expected-warning@-1 {{Use of 's.x' after its lifetime ended}}
+  // expected-note@-2    {{Use of 's.x' after its lifetime ended}}
+}
+
+int struct_array_element_dangling_deref() {
+  int *p = nullptr;
+  {
+    struct MyStruct arr[4] = {};
+    p = &arr[2].x;
+  }
+  // expected-note@-1 {{'arr[2].x' is destroyed here}}
+  return *p;
+  // expected-warning@-1 {{Use of 'arr[2].x' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'arr[2].x' after its lifetime ended}}
+}
+
+int nested_field_dangling_deref() {
+  int *p = nullptr;
+  {
+    struct Outer o = {};
+    p = &o.inner.x;
+  }
+  // expected-note@-1 {{'o.inner.x' is destroyed here}}
+  return *p;
+  // expected-warning@-1 {{Use of 'o.inner.x' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'o.inner.x' after its lifetime ended}}
 }

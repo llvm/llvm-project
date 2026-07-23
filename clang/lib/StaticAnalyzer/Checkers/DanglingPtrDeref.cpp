@@ -107,8 +107,7 @@ DanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
       S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(
       Pos,
-      (llvm::Twine() + getRegionName(SourceRegion) + " is destroyed here")
-          .str(),
+      (getRegionName(SourceRegion) + llvm::Twine(" is destroyed here")).str(),
       true);
 }
 
