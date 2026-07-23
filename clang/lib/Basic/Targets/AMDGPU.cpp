@@ -28,34 +28,34 @@ namespace targets {
 // getPointerWidthV().
 
 const LangASMap AMDGPUTargetInfo::AMDGPUAddrSpaceMap = {
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // Default
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global
-    llvm::AMDGPUAS::LOCAL_ADDRESS,    // opencl_local
-    llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
-    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
-    llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
-    llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_device
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_host
-    llvm::AMDGPUAS::LOCAL_ADDRESS,    // sycl_local
-    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // sycl_private
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_sptr
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_uptr
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
-    llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
+    {LangAS::Default, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::opencl_global, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::opencl_local, llvm::AMDGPUAS::LOCAL_ADDRESS},
+    {LangAS::opencl_constant, llvm::AMDGPUAS::CONSTANT_ADDRESS},
+    {LangAS::opencl_private, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::opencl_generic, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::opencl_global_device, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::opencl_global_host, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::cuda_device, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::cuda_constant, llvm::AMDGPUAS::CONSTANT_ADDRESS},
+    {LangAS::cuda_shared, llvm::AMDGPUAS::LOCAL_ADDRESS},
+    {LangAS::sycl_global, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::sycl_global_device, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::sycl_global_host, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::sycl_local, llvm::AMDGPUAS::LOCAL_ADDRESS},
+    {LangAS::sycl_private, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::ptr32_sptr, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::ptr32_uptr, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::ptr64, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::hlsl_groupshared, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::hlsl_constant, llvm::AMDGPUAS::CONSTANT_ADDRESS},
     // FIXME(pr/122103): hlsl_private -> PRIVATE is wrong, but at least this
     // will break loudly.
-    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_device
-    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_input
-    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_output
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_push_constant
+    {LangAS::hlsl_private, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::hlsl_device, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::hlsl_input, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::hlsl_output, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::hlsl_push_constant, llvm::AMDGPUAS::GLOBAL_ADDRESS},
 };
 
 } // namespace targets
@@ -229,6 +229,16 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
       ReadOnlyFeatures.insert(F);
   }
   HalfArgsAndReturns = true;
+
+  if (Opts.AMDGPUXnackState != TargetOptions::AMDGPUFeatureState::Any) {
+    OffloadArchFeatures["xnack"] =
+        Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Enabled;
+  }
+
+  if (Opts.AMDGPUSramEccState != TargetOptions::AMDGPUFeatureState::Any) {
+    OffloadArchFeatures["sramecc"] =
+        Opts.AMDGPUSramEccState == TargetOptions::AMDGPUFeatureState::Enabled;
+  }
 }
 
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,

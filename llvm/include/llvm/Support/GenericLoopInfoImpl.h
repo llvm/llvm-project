@@ -92,8 +92,8 @@ std::pair<BlockT *, bool> getExitBlockHelper(const LoopBase<BlockT, LoopT> *L,
 }
 
 template <class BlockT, class LoopT>
-bool LoopBase<BlockT, LoopT>::hasNoExitBlocks() const {
-  auto RC = getExitBlockHelper(this, false);
+bool LoopInfoBase<BlockT, LoopT>::hasNoExitBlocks(const LoopT &L) const {
+  auto RC = getExitBlockHelper(&L, false);
   if (RC.second)
     // found multiple exit blocks
     return false;
@@ -160,24 +160,24 @@ BlockT *LoopBase<BlockT, LoopT>::getUniqueExitBlock() const {
 }
 
 template <class BlockT, class LoopT>
-BlockT *LoopBase<BlockT, LoopT>::getUniqueLatchExitBlock() const {
-  BlockT *Latch = getLoopLatch();
+BlockT *
+LoopInfoBase<BlockT, LoopT>::getUniqueLatchExitBlock(const LoopT &L) const {
+  BlockT *Latch = L.getLoopLatch();
   assert(Latch && "Latch block must exists");
-  auto IsExitBlock = [this](BlockT *BB, bool AllowRepeats) -> BlockT * {
+  auto IsExitBlock = [&L](BlockT *BB, bool AllowRepeats) -> BlockT * {
     assert(!AllowRepeats && "Unexpected parameter value.");
-    return !contains(BB) ? BB : nullptr;
+    return !L.contains(BB) ? BB : nullptr;
   };
   return find_singleton<BlockT>(children<BlockT *>(Latch), IsExitBlock);
 }
 
 /// getExitEdges - Return all pairs of (_inside_block_,_outside_block_).
 template <class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::getExitEdges(
-    SmallVectorImpl<Edge> &ExitEdges) const {
-  assert(!isInvalid() && "Loop not in a valid state!");
-  for (const auto BB : blocks())
+void LoopInfoBase<BlockT, LoopT>::getExitEdges(
+    const LoopT &L, SmallVectorImpl<Edge> &ExitEdges) const {
+  for (const auto BB : L.blocks())
     for (auto *Succ : children<BlockT *>(BB))
-      if (!contains(Succ))
+      if (!L.contains(Succ))
         // Not in current loop? It must be an exit block.
         ExitEdges.emplace_back(BB, Succ);
 }
@@ -495,7 +495,7 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
       // Discover a subloop of this loop.
       Subloop->setParentLoop(L);
       ++NumSubloops;
-      NumBlocks += Subloop->getBlocksVector().capacity();
+      NumBlocks += Subloop->getBlocksCapacity();
       PredBB = Subloop->getHeader();
       // Continue traversal along predecessors that are not loop-back edges from
       // within this subloop tree itself. Note that a predecessor may directly
@@ -507,7 +507,7 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
       }
     }
   }
-  L->getSubLoopsVector().reserve(NumSubloops);
+  L->reserveSubLoops(NumSubloops);
   L->reserveBlocks(NumBlocks);
 }
 
@@ -544,15 +544,14 @@ void PopulateLoopsDFS<BlockT, LoopT>::insertIntoLoop(BlockT *Block) {
     // We reach this point once per subloop after processing all the blocks in
     // the subloop.
     if (!Subloop->isOutermost())
-      Subloop->getParentLoop()->getSubLoopsVector().push_back(Subloop);
+      Subloop->getParentLoop()->SubLoops.push_back(Subloop);
     else
       LI->addTopLevelLoop(Subloop);
 
     // For convenience, Blocks and Subloops are inserted in postorder. Reverse
     // the lists, except for the loop header, which is always at the beginning.
     Subloop->reverseBlock(1);
-    std::reverse(Subloop->getSubLoopsVector().begin(),
-                 Subloop->getSubLoopsVector().end());
+    std::reverse(Subloop->SubLoops.begin(), Subloop->SubLoops.end());
 
     Subloop = Subloop->getParentLoop();
   }
@@ -660,11 +659,12 @@ LoopT *LoopInfoBase<BlockT, LoopT>::getSmallestCommonLoop(LoopT *A,
   if (!A || !B)
     return nullptr;
 
-  // If lops A and B have different depth replace them with parent loop
+  // If loops A and B have different depth replace them with parent loop
   // until they have the same depth.
-  while (A->getLoopDepth() > B->getLoopDepth())
+  unsigned DepthA = A->getLoopDepth(), DepthB = B->getLoopDepth();
+  for (; DepthA > DepthB; --DepthA)
     A = A->getParentLoop();
-  while (B->getLoopDepth() > A->getLoopDepth())
+  for (; DepthB > DepthA; --DepthB)
     B = B->getParentLoop();
 
   // Loops A and B are at same depth but may be disjoint, replace them with

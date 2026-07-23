@@ -3032,26 +3032,6 @@ class CompletionChunkKind(BaseEnumeration):
     Describes a single piece of text within a code-completion string.
     """
 
-    def __str__(self) -> str:
-        """
-        Converts enum value to string in the old camelCase format.
-        This is a temporary measure that will be changed in the future release
-        to return string in ALL_CAPS format, like for other enums.
-        """
-
-        warnings.warn(
-            "String representation of 'CompletionChunkKind' will be "
-            "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
-            "match other enums. 'CompletionChunkKind's can be "
-            "compared to one another without conversion to string.",
-            DeprecationWarning,
-        )
-        # Remove underscores
-        components = self.name.split("_")
-        # Upper-camel case each split component
-        components = [component.lower().capitalize() for component in components]
-        return "".join(components)
-
     OPTIONAL = 0
     TYPED_TEXT = 1
     TEXT = 2
@@ -3183,57 +3163,6 @@ class CompletionChunk:
         if not res:
             return None
         return CompletionString(res)
-
-    __deprecation_message = (
-        "'CompletionChunk.{}' will be removed in a future release. "
-        "All uses of 'CompletionChunk.{}' should be replaced by checking "
-        "if 'CompletionChunk.kind` is equal to 'CompletionChunkKind.{}'."
-    )
-
-    def isKindOptional(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindOptional",
-            "isKindOptional",
-            "OPTIONAL",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.OPTIONAL
-
-    def isKindTypedText(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindTypedText",
-            "isKindTypedText",
-            "TYPED_TEXT",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.TYPED_TEXT
-
-    def isKindPlaceHolder(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindPlaceHolder",
-            "isKindPlaceHolder",
-            "PLACEHOLDER",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.PLACEHOLDER
-
-    def isKindInformative(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindInformative",
-            "isKindInformative",
-            "INFORMATIVE",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.INFORMATIVE
-
-    def isKindResultType(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindResultType",
-            "isKindResultType",
-            "RESULT_TYPE",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.RESULT_TYPE
 
 
 SPELLING_CACHE = CompletionChunk.SpellingCacheAlias()
