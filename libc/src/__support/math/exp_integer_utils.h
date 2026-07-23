@@ -35,23 +35,25 @@ namespace math {
 
 namespace integer_only {
 
-// round(1/log(2), D, RN)
-LIBC_INLINE_VAR constexpr double INV_LN2 = 0x1.71547652b82fep+0;
+// print(2+round(1/log(2), 64, RN));
+// LSB(INV_LN2) = 2^-63
+LIBC_INLINE_VAR constexpr Frac64 INV_LN2 = Frac64(0xb8aa'3b29'5c17'f0bc);
 
-// TODO: Remez eval
-// TODO: test around and see what at what degree the accuracy is "acceptable"
-LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[6] = {};
-
-LIBC_INLINE constexpr float
-expf_range_reduction([[maybe_unused]] const float &x) {
-  // TODO: declare the range reduction params and this function
-  return 0.0f;
-}
-
-LIBC_INLINE constexpr float expf_eval() {
-  // TODO: declare params and this function
-  return 0.0f;
-}
+// 1-ULP
+// 64-bit polynomial approximation of 2^x coefficients generated with Sollya:
+// > P = fpminimax(2^x, 6, [|1, 64...|], [0, 1], absolute, fixed);
+// Store the fractional part of the coefficients below
+// > dirtyinfnorm(2^x - P(x), [0, 1]);
+// 0x1.9d39...p-29
+// ULPs of coeffs = 2^-64
+LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
+    Frac64(0xb172'14ea'215c'7750), // x
+    Frac64(0x3d7f'b5e7'4e78'9f2b), // x^2
+    Frac64(0x0e34'15ac'7481'5dee), // x^3
+    Frac64(0x027a'7e40'a2eb'6584), // x^4
+    Frac64(0x0051'56c0'9d53'15f3), // x^5
+    Frac64(0x000e'4a74'a170'46e8), // x^6
+};
 
 } // namespace integer_only
 

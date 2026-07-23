@@ -13,7 +13,8 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/frac128.h"
+#include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/frac64.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/exp_integer_utils.h"
@@ -29,25 +30,26 @@ LIBC_INLINE float expf(float x) {
   FPBits xbits(x);
 
   bool is_neg = xbits.is_neg();
-  uint16_t x_e = xbits.get_biased_exponent();
-  // uint64_t x_u = xbits.get_mantissa();
+  uint32_t x_bits_abs = xbits.uintval() & 0x7fff'ffffU;
 
-  // Exceptional values
-  // TODO: optimize the branching order
-  if (LIBC_UNLIKELY(xbits.is_zero())) {
-    // e^0 = 1 (exact), for both +/-0
-    return 1.0f;
-  }
+  // When |x| >= 89, |x| < 2^-25, or x is NaN
+  if (LIBC_UNLIKELY(x_bits_abs >= 0x42b2'0000U || x_bits_abs <= 0x3380'0000U)) {
+    // |x| < 2^-24
+    // e^x ~ 1 + x
+    if (xbits.get_biased_exponent() <= 103) {
+      return 1.0f + x;
+    }
 
-  // x is inf or NaN
-  if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
-    // e^NaN = NaN
-    if (xbits.is_signaling_nan()) {
+    if (LIBC_UNLIKELY(xbits.is_nan())) {
       // Per conversation with lntue, we don't need to raise exception here,
       // as we're assuming no FPUs/fenv in this kind of environment
+      if (xbits.is_signaling_nan()) {
+        // silencing
+        return FPBits::quiet_nan().get_val();
+      }
 
-      // silencing
-      return FPBits::quiet_nan().get_val();
+      // quiet NaN
+      return x;
     }
 
     // e^-inf = 0
@@ -56,21 +58,85 @@ LIBC_INLINE float expf(float x) {
       return is_neg ? 0.0f : FPBits::inf().get_val();
     }
 
-    // x is a quiet NaN
-    return x;
+    // Large finite positive --> overflow
+    if (!is_neg) {
+      return FPBits::inf().get_val();
+    }
+
+    // x < log(2^-150) or NaN (NaN is already handled above)
+    if (xbits.uintval() >= 0xc2cf'f1b5U) {
+      return 0.0f;
+    }
   }
 
-  // strats:
-  // 1. u32 fast path + u64 accurate path
-  // 2. dropping u32 altogether, just single u64 accurate path
-  // aim for minimal code size
-  // (speed/acc still important)
+  // Main calculations
 
-  // TODO: execute the normal exp here
-  // TODO: evaluate ULPs, relative errors, etc.
-  // We're doing round-to-nearest only in this pass
+  uint16_t x_e = xbits.get_biased_exponent();
+  uint64_t x_u = xbits.get_mantissa();
 
-  return 0.0f;
+  // Range reduction
+  // The algorithm near the end of this function estimates 2^r,
+  // where r is the fractional part of x * log2(e) and is in [0, 1].
+  // See EXPF_COEFFS for more details on the approximation polynomial used.
+
+  // add leading bit = 1
+  x_u |= uint64_t(1) << FPBits::FRACTION_LEN;
+
+  // shift to top 32 bit --> decimal point at hidden bit that we've added
+  x_u <<= 32;
+
+  int x_e_unbiased = static_cast<int>(x_e) - FPBits::EXP_BIAS;
+
+  // shift for the decimal point to be at the hidden bit
+  if (x_e_unbiased > 0) {
+    x_u <<= x_e_unbiased;
+  } else if (x_e_unbiased < 0) {
+    x_u >>= -x_e_unbiased;
+  }
+
+  // LSB(x_u_frac) = 2^-55
+  Frac64 x_u_frac(x_u);
+
+  // LSB(x_ln2) = 2^-54
+  Frac64 x_ln2 = x_u_frac * INV_LN2;
+
+  constexpr uint64_t FRAC_MASK = (uint64_t(1) << 54) - 1;
+  uint64_t x_ln2_bit = x_ln2.val[0];
+
+  uint64_t e_y, l2y_r;
+  uint32_t e_y_unbiased;
+
+  if (is_neg) {
+    e_y = (x_ln2_bit + FRAC_MASK) & ~FRAC_MASK;
+    l2y_r = e_y - x_ln2_bit;
+    e_y_unbiased = (FPBits::EXP_BIAS << 23) - static_cast<uint32_t>(e_y >> 31);
+  } else {
+    e_y = x_ln2_bit & ~FRAC_MASK;
+    l2y_r = x_ln2_bit - e_y;
+    e_y_unbiased = (FPBits::EXP_BIAS << 23) + static_cast<uint32_t>(e_y >> 31);
+  }
+
+  // LSB(l2y_r_frac) = LSB(l2y_r) * 2^-10 = 2^-64
+  Frac64 l2y_r_frac(l2y_r << 10);
+
+  // p = 2^l2y_r_frac - 1
+  Frac64 p = fputil::polyeval(l2y_r_frac, EXPF_COEFFS[0], EXPF_COEFFS[1],
+                              EXPF_COEFFS[2], EXPF_COEFFS[3], EXPF_COEFFS[4],
+                              EXPF_COEFFS[5]);
+  // TODO: handle denorm, underflow, overflow, boundary cases
+  // We're currently focusing on rounding to nearest only
+
+  // RN 23 bits --> shift for the LSB to be 2^-24 --> +1, shift for another
+  // bit
+  // Can be rounded up
+  // + e_y_unbiased
+
+  uint32_t result = (static_cast<uint32_t>(p.val[0] >> 40) + 1);
+  result >>= 1;
+
+  result += e_y_unbiased;
+
+  return cpp::bit_cast<float>(result);
 }
 
 } // namespace integer_only
