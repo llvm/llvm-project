@@ -5276,16 +5276,17 @@ private:
   // consuming it in an assignment must be a synchronizing data transfer rather
   // than a plain host assignment. A whole-allocatable left-hand side is
   // excluded: it has reallocation semantics and is performed on the host.
-  bool isCUDAFunctionResultTransfer(
-      const Fortran::evaluate::Assignment &assign) {
+  bool
+  isCUDAFunctionResultTransfer(const Fortran::evaluate::Assignment &assign) {
     if (Fortran::evaluate::IsAllocatableDesignator(assign.lhs))
       return false;
     const Fortran::evaluate::ProcedureRef *procRef =
         Fortran::evaluate::UnwrapProcedureRef(assign.rhs);
     if (!procRef)
       return false;
-    auto procedure = Fortran::evaluate::characteristics::Procedure::Characterize(
-        procRef->proc(), getFoldingContext(), /*emitError=*/false);
+    auto procedure =
+        Fortran::evaluate::characteristics::Procedure::Characterize(
+            procRef->proc(), getFoldingContext(), /*emitError=*/false);
     if (!procedure || !procedure->functionResult ||
         !procedure->functionResult->cudaDataAttr)
       return false;
@@ -5489,10 +5490,9 @@ private:
         getFoldingContext().languageFeatures().IsEnabled(
             Fortran::common::LanguageFeature::DoConcurrentOffload));
 
-    bool isCUDATransfer =
-        (IsCUDADataTransfer(assign.lhs, assign.rhs) ||
-         isCUDAFunctionResultTransfer(assign)) &&
-        !isInDeviceContext;
+    bool isCUDATransfer = (IsCUDADataTransfer(assign.lhs, assign.rhs) ||
+                           isCUDAFunctionResultTransfer(assign)) &&
+                          !isInDeviceContext;
     bool hasCUDAImplicitTransfer =
         isCUDATransfer &&
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
