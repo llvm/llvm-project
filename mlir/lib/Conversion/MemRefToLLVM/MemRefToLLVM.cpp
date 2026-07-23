@@ -981,7 +981,8 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
         adaptor.getIndices(), getLoadStoreNoWrapFlags(type));
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
-        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
+        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal(),
+        /*isInvariant=*/loadOp.getInvariant());
     return success();
   }
 };

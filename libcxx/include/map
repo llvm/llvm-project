@@ -84,12 +84,12 @@ public:
     constexpr map(initializer_list<value_type> il, const key_compare& comp, const allocator_type& a);
     template <class InputIterator>
         constexpr map(InputIterator first, InputIterator last, const allocator_type& a)
-            : map(first, last, Compare(), a) {}                                                               // C++14
+            : map(first, last, Compare(), a) {}
     template<container-compatible-range<value_type> R>
       constexpr map(from_range_t, R&& rg, const Allocator& a))
         : map(from_range, std::forward<R>(rg), Compare(), a) { }                                              // C++23
     constexpr map(initializer_list<value_type> il, const allocator_type& a)
-        : map(il, Compare(), a) {}                                                                            // C++14
+        : map(il, Compare(), a) {}
    constexpr ~map();
 
     constexpr map& operator=(const map& m);
@@ -368,12 +368,12 @@ public:
              const allocator_type& a);
     template <class InputIterator>
         multimap(InputIterator first, InputIterator last, const allocator_type& a)
-            : multimap(first, last, Compare(), a) {} // C++14
+            : multimap(first, last, Compare(), a) {}
     template<container-compatible-range<value_type> R>
       multimap(from_range_t, R&& rg, const Allocator& a))
         : multimap(from_range, std::forward<R>(rg), Compare(), a) { } // C++23
     multimap(initializer_list<value_type> il, const allocator_type& a)
-        : multimap(il, Compare(), a) {} // C++14
+        : multimap(il, Compare(), a) {}
     ~multimap();
 
     multimap& operator=(const multimap& m);
@@ -1035,12 +1035,10 @@ public:
   }
 #  endif
 
-#  if _LIBCPP_STD_VER >= 14
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX26 map(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
       : map(__f, __l, key_compare(), __a) {}
-#  endif
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
@@ -1073,10 +1071,8 @@ public:
     insert(__il.begin(), __il.end());
   }
 
-#    if _LIBCPP_STD_VER >= 14
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 map(initializer_list<value_type> __il, const allocator_type& __a)
       : map(__il, key_compare(), __a) {}
-#    endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 map& operator=(initializer_list<value_type> __il) {
     clear();
@@ -1155,7 +1151,7 @@ public:
   template <class _Arg,
             __enable_if_t<__is_transparently_comparable_v<_Compare, key_type, __remove_cvref_t<_Arg> >, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& at(_Arg&& __arg) {
-    auto [_, __child] = __tree_.__find_equal(__arg);
+    auto [__dummy, __child] = __tree_.__find_equal(__arg);
     if (__child == nullptr)
       std::__throw_out_of_range("map::at:  key not found");
     return std::__static_fancy_pointer_cast<__node_pointer>(__child)->__get_value().second;
@@ -1164,7 +1160,7 @@ public:
   template <class _Arg,
             __enable_if_t<__is_transparently_comparable_v<_Compare, key_type, __remove_cvref_t<_Arg> >, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const mapped_type& at(_Arg&& __arg) const {
-    auto [_, __child] = __tree_.__find_equal(__arg);
+    auto [__dummy, __child] = __tree_.__find_equal(__arg);
     if (__child == nullptr)
       std::__throw_out_of_range("map::at:  key not found");
     return std::__static_fancy_pointer_cast<__node_pointer>(__child)->__get_value().second;
@@ -1581,7 +1577,7 @@ struct __specialized_algorithm<_Algorithm::__for_each, __single_range<map<_Key, 
 
   template <class _Map, class _Func, class _Proj>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto operator()(_Map&& __map, _Func __func, _Proj __proj) {
-    auto [_, __func2] = __specialized_algorithm<_Algorithm::__for_each, __single_range<typename __map::__base>>()(
+    auto [__dummy, __func2] = __specialized_algorithm<_Algorithm::__for_each, __single_range<typename __map::__base>>()(
         __map.__tree_, std::move(__func), std::move(__proj));
     return std::make_pair(__map.end(), std::move(__func2));
   }
@@ -1632,7 +1628,7 @@ _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k) {
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) {
-  auto [_, __child] = __tree_.__find_equal(__k);
+  auto [__dummy, __child] = __tree_.__find_equal(__k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
   return std::__static_fancy_pointer_cast<__node_pointer>(__child)->__get_value().second;
@@ -1640,7 +1636,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(cons
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 const _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) const {
-  auto [_, __child] = __tree_.__find_equal(__k);
+  auto [__dummy, __child] = __tree_.__find_equal(__k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
   return std::__static_fancy_pointer_cast<__node_pointer>(__child)->__get_value().second;
@@ -1817,12 +1813,10 @@ public:
   }
 #  endif
 
-#  if _LIBCPP_STD_VER >= 14
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX26 multimap(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
       : multimap(__f, __l, key_compare(), __a) {}
-#  endif
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
@@ -1856,11 +1850,9 @@ public:
     insert(__il.begin(), __il.end());
   }
 
-#    if _LIBCPP_STD_VER >= 14
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 multimap(initializer_list<value_type> __il, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  multimap(initializer_list<value_type> __il, const allocator_type& __a)
       : multimap(__il, key_compare(), __a) {}
-#    endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 multimap& operator=(initializer_list<value_type> __il) {
     clear();
@@ -2247,7 +2239,7 @@ struct __specialized_algorithm<_Algorithm::__for_each, __single_range<multimap<_
 
   template <class _Map, class _Func, class _Proj>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto operator()(_Map&& __map, _Func __func, _Proj __proj) {
-    auto [_, __func2] = __specialized_algorithm<_Algorithm::__for_each, __single_range<typename __map::__base>>()(
+    auto [__dummy, __func2] = __specialized_algorithm<_Algorithm::__for_each, __single_range<typename __map::__base>>()(
         __map.__tree_, std::move(__func), std::move(__proj));
     return std::make_pair(__map.end(), std::move(__func2));
   }

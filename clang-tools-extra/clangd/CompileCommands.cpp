@@ -560,8 +560,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
         dlog("  {0} #={1} *={2} Mode={3}", R.Text, R.ExactArgs, R.PrefixArgs,
              int(R.Modes));
     }
-    dlog("Table spellings={0} rules={1} string-bytes={2}", Result->size(),
-         RuleCount, Result->getAllocator().getBytesAllocated());
+    dlog("Table spellings={0} rules={1} allocator-bytes={2}", Result->size(),
+         RuleCount, Result->getAllocator().getTotalMemory());
 #endif
     // The static table will never be destroyed.
     return Result.release();

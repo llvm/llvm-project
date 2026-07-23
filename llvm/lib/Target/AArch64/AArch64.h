@@ -71,14 +71,13 @@ FunctionPass *createAArch64BranchTargetsPass();
 FunctionPass *createAArch64CodeLayoutOptPass();
 FunctionPass *createAArch64MIPeepholeOptLegacyPass();
 FunctionPass *createAArch64PostCoalescerPass();
-
+FunctionPass *createAArch64PTrueCoalescingLegacyPass();
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
 FunctionPass *createAArch64CollectLOHPass();
 FunctionPass *createSMEPeepholeOptPass();
 FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
-FunctionPass *createAArch64SRLTDefineSuperRegsPass();
-ModulePass *createSVEIntrinsicOptsPass();
+FunctionPass *createAArch64SRLTDefineSuperRegsLegacyPass();
 Pass *createSVEShuffleOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
@@ -181,6 +180,7 @@ void initializeAArch64LoadStoreOptLegacyPass(PassRegistry &);
 void initializeAArch64LowerHomogeneousPrologEpilogLegacyPass(PassRegistry &);
 void initializeAArch64CodeLayoutOptPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
+void initializeAArch64PTrueCoalescingLegacyPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PostCoalescerLegacyPass(PassRegistry &);
 void initializeAArch64PostLegalizerCombinerLegacyPass(PassRegistry &);
@@ -201,8 +201,7 @@ void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
 void initializeLDTLSCleanupPass(PassRegistry &);
 void initializeSMEPeepholeOptPass(PassRegistry &);
 void initializeMachineSMEABIPass(PassRegistry &);
-void initializeAArch64SRLTDefineSuperRegsPass(PassRegistry &);
-void initializeSVEIntrinsicOptsPass(PassRegistry &);
+void initializeAArch64SRLTDefineSuperRegsLegacyPass(PassRegistry &);
 void initializeSVEShuffleOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
 
@@ -306,6 +305,13 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AArch64PTrueCoalescingPass
+    : public OptionalPassInfoMixin<AArch64PTrueCoalescingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 class AArch64ConditionOptimizerPass
     : public OptionalPassInfoMixin<AArch64ConditionOptimizerPass> {
 public:
@@ -352,6 +358,13 @@ public:
 
 class AArch64ConditionalComparesPass
     : public OptionalPassInfoMixin<AArch64ConditionalComparesPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64SRLTDefineSuperRegsPass
+    : public OptionalPassInfoMixin<AArch64SRLTDefineSuperRegsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

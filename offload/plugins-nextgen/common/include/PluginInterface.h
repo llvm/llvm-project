@@ -98,7 +98,8 @@ inline Error error(error::ErrorCode Code, Error &&OtherError,
 /// the plugin-specific code.
 /// TODO: Refactor this, must be defined individually by each plugin.
 template <typename... ArgsTy>
-static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
+[[maybe_unused]] static Error check(int32_t ErrorCode, const char *ErrFmt,
+                                    ArgsTy... Args);
 } // namespace Plugin
 
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
@@ -375,6 +376,9 @@ class DeviceImageTy {
   /// The managed image data.
   std::unique_ptr<MemoryBuffer> Image;
 
+  /// An optional buffer for an IR image.
+  std::unique_ptr<MemoryBuffer> DeviceIRImage;
+
   /// Reference to the device this image is loaded on.
   GenericDeviceTy &Device;
 
@@ -401,6 +405,21 @@ public:
   MemoryBufferRef getMemoryBuffer() const {
     return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
                            "Image");
+  }
+
+  /// Get a memory buffer reference to the whole IR image.
+  MemoryBufferRef getIRImageMemoryBuffer() const {
+    if (DeviceIRImage)
+      return MemoryBufferRef(*DeviceIRImage);
+
+    return MemoryBufferRef();
+  }
+
+  bool hasIRImage() const { return DeviceIRImage != nullptr; }
+
+  /// Set the IR image.
+  void setIRImage(std::unique_ptr<MemoryBuffer> ImageBuffer) {
+    DeviceIRImage = std::move(ImageBuffer);
   }
 };
 
@@ -954,7 +973,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error memoryVAUnMap(void *VAddr, size_t Size);
 
   /// Allocate data on the device or involving the device.
-  Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind);
+  Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind,
+                             size_t Alignment);
 
   /// Deallocate data from the device or involving the device.
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind);
@@ -1041,6 +1061,17 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error dataFillImpl(void *TgtPtr, const void *PatternPtr,
                              int64_t PatternSize, int64_t Size,
                              AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
+  /// Prefetch a batch of memory ranges. Mems[i] has size Sizes[i].
+  /// ToHost = true migrates towards the host, false towards the device.
+  /// Backends without prefetch support treat the call as a no-op.
+  Error dataPrefetch(size_t Count, const void **Mems, const size_t *Sizes,
+                     bool ToHost, __tgt_async_info *AsyncInfo);
+  virtual Error dataPrefetchImpl(size_t Count, const void **Mems,
+                                 const size_t *Sizes, bool ToHost,
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper) {
+    return Plugin::success();
+  }
 
   /// Run the kernel associated with \p EntryPtr
   Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,

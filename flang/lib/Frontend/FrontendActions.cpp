@@ -59,7 +59,6 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
-#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -72,7 +71,6 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
-#include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
@@ -984,18 +982,26 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
         opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, llvm::PGOOptions::IRUse, CSAction,
         llvm::PGOOptions::ColdFuncOpt::Default, opts.DebugInfoForProfiling);
-  } else if (opts.DebugInfoForProfiling) {
-    // -fdebug-info-for-profiling
-    pgoOpt = llvm::PGOOptions("", "", "", /*MemoryProfile=*/"",
-                              llvm::PGOOptions::NoAction,
-                              llvm::PGOOptions::NoCSAction,
-                              llvm::PGOOptions::ColdFuncOpt::Default, true);
   } else if (!opts.SampleProfileFile.empty()) {
     pgoOpt = llvm::PGOOptions(
         opts.SampleProfileFile, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, llvm::PGOOptions::SampleUse,
         llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
-        opts.DebugInfoForProfiling, /*PseudoProbeForProfiling=*/false);
+        opts.DebugInfoForProfiling, opts.PseudoProbeForProfiling);
+  } else if (opts.PseudoProbeForProfiling) {
+    pgoOpt = llvm::PGOOptions(
+        /*ProfileFile=*/"", /*CSProfileGenFile=*/"",
+        /*ProfileRemappingFile=*/"",
+        /*MemoryProfile=*/"", llvm::PGOOptions::NoAction,
+        llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
+        opts.DebugInfoForProfiling, /*PseudoProbeForProfiling=*/true);
+  } else if (opts.DebugInfoForProfiling) {
+    pgoOpt = llvm::PGOOptions(/*ProfileFile=*/"", /*CSProfileGenFile=*/"",
+                              /*ProfileRemappingFile=*/"", /*MemoryProfile=*/"",
+                              llvm::PGOOptions::NoAction,
+                              llvm::PGOOptions::NoCSAction,
+                              llvm::PGOOptions::ColdFuncOpt::Default,
+                              /*DebugInfoForProfiling=*/true);
   }
 
   llvm::StandardInstrumentations si(llvmModule->getContext(),

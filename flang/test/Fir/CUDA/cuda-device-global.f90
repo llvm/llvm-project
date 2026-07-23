@@ -5,13 +5,17 @@
 
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module} {
   fir.global @_QMmtestsEn(dense<[3, 4, 5, 6, 7]> : tensor<5xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<5xi32>
+  fir.global internal @_QMmtestsEinternal(dense<[1, 2]> : tensor<2xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<2xi32>
+  fir.global linkonce_odr @_QMmtestsElinkonce(dense<[8, 9]> : tensor<2xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<2xi32>
 
   gpu.module @cuda_device_mod {
   }
 }
 
 // CHECK: gpu.module @cuda_device_mo
-// CHECK-NEXT: fir.global @_QMmtestsEn(dense<[3, 4, 5, 6, 7]> : tensor<5xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<5xi32>
+// CHECK-DAG: fir.global @_QMmtestsEn(dense<[3, 4, 5, 6, 7]> : tensor<5xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<5xi32>
+// CHECK-DAG: fir.global @_QMmtestsEinternal(dense<[1, 2]> : tensor<2xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<2xi32>
+// CHECK-DAG: fir.global linkonce_odr @_QMmtestsElinkonce(dense<[8, 9]> : tensor<2xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<2xi32>
 
 // -----
 

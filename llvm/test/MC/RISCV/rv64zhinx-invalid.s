@@ -5,9 +5,9 @@ flh fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following
 
 # Invalid instructions
 fsh a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
-fmv.x.h t2, a2 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
-fmv.h.x a5, t5 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
+fmv.x.h t2, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fmv.h.x a5, t5 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # FP registers where integer regs are expected
-fcvt.h.l a2, ft2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
-fcvt.h.lu a3, ft3 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+fcvt.h.l a2, ft2 # CHECK: :[[@LINE]]:14: error: register must be a GPR
+fcvt.h.lu a3, ft3 # CHECK: :[[@LINE]]:15: error: register must be a GPR

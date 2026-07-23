@@ -68,6 +68,12 @@ add_header(in_addr_t HDR in_addr_t.h)
 add_header(in_port_t HDR in_port_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(struct_in_addr HDR struct_in_addr.h DEPENDS .in_addr_t)
 add_header(struct_in6_addr HDR struct_in6_addr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(struct_ipv6_mreq HDR struct_ipv6_mreq.h DEPENDS .struct_in6_addr)
+add_header(struct_ip_mreq HDR struct_ip_mreq.h DEPENDS .struct_in_addr)
+add_header(struct_ip_mreq_source HDR struct_ip_mreq_source.h DEPENDS .struct_in_addr)
+add_header(struct_ip_mreqn HDR struct_ip_mreqn.h DEPENDS .struct_in_addr)
+add_header(struct_ip_msfilter HDR struct_ip_msfilter.h DEPENDS libc.include.llvm-libc-macros.stdint_macros .struct_in_addr)
+add_header(struct_ip_opts HDR struct_ip_opts.h DEPENDS .struct_in_addr)
 add_header(ino_t HDR ino_t.h)
 add_header(key_t HDR key_t.h)
 add_header(mbstate_t HDR mbstate_t.h)
@@ -75,6 +81,7 @@ add_header(mode_t HDR mode_t.h)
 add_header(mtx_t HDR mtx_t.h DEPENDS .__futex_word .__mutex_type)
 add_header(nfds_t HDR nfds_t.h)
 add_header(nl_catd HDR nl_catd.h)
+add_header(nl_item HDR nl_item.h)
 add_header(nlink_t HDR nlink_t.h)
 add_header(off_t HDR off_t.h)
 add_header(once_flag HDR once_flag.h DEPENDS .__futex_word)
@@ -219,7 +226,24 @@ add_header(
     libc.include.llvm-libc-macros.stdint_macros
 )
 add_header(struct_sockaddr_storage HDR struct_sockaddr_storage.h DEPENDS .sa_family_t)
+add_header(
+  struct_group_req
+  HDR
+    struct_group_req.h
+  DEPENDS
+    .struct_sockaddr_storage
+    libc.include.llvm-libc-macros.stdint_macros
+)
+add_header(
+  struct_group_source_req
+  HDR
+    struct_group_source_req.h
+  DEPENDS
+    .struct_sockaddr_storage
+    libc.include.llvm-libc-macros.stdint_macros
+)
 add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
+add_header(struct_ifreq HDR struct_ifreq.h DEPENDS libc.include.llvm-libc-macros.net_if_macros .struct_sockaddr)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
 add_header(struct_linger HDR struct_linger.h)
 add_header(struct_cmsghdr HDR struct_cmsghdr.h DEPENDS .size_t)
