@@ -545,8 +545,6 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
 void ExprEngine::VisitCompoundLiteralExpr(const CompoundLiteralExpr *CL,
                                           ExplodedNode *Pred,
                                           ExplodedNodeSet &Dst) {
-  NodeBuilder B(Pred, Dst, *currBldrCtx);
-
   ProgramStateRef State = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
@@ -564,7 +562,7 @@ void ExprEngine::VisitCompoundLiteralExpr(const CompoundLiteralExpr *CL,
       V = CLLoc;
   }
 
-  B.generateNode(CL, Pred, State->BindExpr(CL, SF, V));
+  Dst.insert(Engine.makeNodeWithBinding(Pred, CL, V, State));
 }
 
 void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
