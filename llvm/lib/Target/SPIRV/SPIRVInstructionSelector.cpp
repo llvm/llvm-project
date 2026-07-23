@@ -329,8 +329,8 @@ private:
                                       MachineInstr &I) const;
 
   bool selectQuadShuffle(Register ResVReg, SPIRVTypeInst ResType,
-                             MachineInstr &I, unsigned Opcode,
-                             unsigned Direction) const;
+                         MachineInstr &I, unsigned Opcode,
+                         unsigned Direction) const;
 
   bool selectConst(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
@@ -3862,12 +3862,13 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScan(
 }
 
 /// Selects a quad shuffle operation (broadcast or swap) based on the provided
-/// opcode and direction. Direction is ignored if opcode is OpGroupNonUniformQuadBroadcast.
+/// opcode and direction. Direction is ignored if opcode is
+/// OpGroupNonUniformQuadBroadcast.
 bool SPIRVInstructionSelector::selectQuadShuffle(Register ResVReg,
-                                                     SPIRVTypeInst ResType,
-                                                     MachineInstr &I,
-                                                     unsigned Opcode,
-                                                     unsigned Direction) const {
+                                                 SPIRVTypeInst ResType,
+                                                 MachineInstr &I,
+                                                 unsigned Opcode,
+                                                 unsigned Direction) const {
   assert(Opcode == SPIRV::OpGroupNonUniformQuadBroadcast ||
          Opcode == SPIRV::OpGroupNonUniformQuadSwap);
   assert(I.getOperand(2).isReg());
@@ -3884,7 +3885,8 @@ bool SPIRVInstructionSelector::selectQuadShuffle(Register ResVReg,
     IndexOrDirectionReg = I.getOperand(3).getReg();
   } else {
     assert(I.getNumOperands() == 3);
-    IndexOrDirectionReg = GR.getOrCreateConstInt(Direction, I, IntTy, TII, ZeroAsNull);
+    IndexOrDirectionReg =
+        GR.getOrCreateConstInt(Direction, I, IntTy, TII, ZeroAsNull);
   }
   BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
@@ -5514,22 +5516,22 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_quad_read_lane_at:
     return selectQuadShuffle(ResVReg, ResType, I,
-                                 SPIRV::OpGroupNonUniformQuadBroadcast,
-                                 /*Direction*/ 0);
+                             SPIRV::OpGroupNonUniformQuadBroadcast,
+                             /*Direction*/ 0);
   case Intrinsic::spv_quad_read_across_x: {
     return selectQuadShuffle(ResVReg, ResType, I,
-                                 SPIRV::OpGroupNonUniformQuadSwap,
-                                 /*Direction*/ 0);
+                             SPIRV::OpGroupNonUniformQuadSwap,
+                             /*Direction*/ 0);
   }
   case Intrinsic::spv_quad_read_across_y: {
     return selectQuadShuffle(ResVReg, ResType, I,
-                                 SPIRV::OpGroupNonUniformQuadSwap,
-                                 /*Direction*/ 1);
+                             SPIRV::OpGroupNonUniformQuadSwap,
+                             /*Direction*/ 1);
   }
   case Intrinsic::spv_quad_read_across_diagonal: {
     return selectQuadShuffle(ResVReg, ResType, I,
-                                 SPIRV::OpGroupNonUniformQuadSwap,
-                                 /*Direction*/ 2);
+                             SPIRV::OpGroupNonUniformQuadSwap,
+                             /*Direction*/ 2);
   }
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
