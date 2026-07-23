@@ -5,7 +5,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestSwiftGenericFunction(lldbtest.TestBase):
-    @expectedFailureWindows  # https://github.com/swiftlang/llvm-project/issues/13444
     @skipEmbeddedSwift
     @swiftTest
     def test(self):
