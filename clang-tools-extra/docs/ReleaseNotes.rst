@@ -97,6 +97,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-container-bounds-check-overflow
+  <clang-tidy/checks/bugprone/container-bounds-check-overflow>` check.
+
+  Finds potential overflow in unsigned integer addition before comparison
+  with a container's ``size()`` method.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
