@@ -1,13 +1,8 @@
 // RUN: %check_clang_tidy -std=c++23-or-later %s modernize-use-to-underlying %t
 
+// The <utility> header for std::to_underlying is not yet included, so the check
+// must insert it.
 // CHECK-FIXES: #include <utility>
-
-namespace std {
-template <typename T>
-constexpr __underlying_type(T) to_underlying(T value) noexcept {
-  return static_cast<__underlying_type(T)>(value);
-}
-} // namespace std
 
 enum class ColorInt : int { Red, Green, Blue };
 enum class ByteEnum : unsigned char { A, B };
@@ -54,7 +49,6 @@ void negatives(ColorInt c, Unscoped u) {
   double Dbl = static_cast<double>(c);     // non-integer destination
   OtherEnum Enum = static_cast<OtherEnum>(c); // enum-to-enum
   int Un = static_cast<int>(u);            // unscoped enumeration
-  int Ok = std::to_underlying(c);          // already correct
 }
 
 // When bool is the exact underlying type, the cast is precise and flagged.

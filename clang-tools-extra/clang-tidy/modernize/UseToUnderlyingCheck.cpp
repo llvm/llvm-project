@@ -42,17 +42,17 @@ UseToUnderlyingCheck::UseToUnderlyingCheck(StringRef Name,
       ImpreciseCasts(Options.get("ImpreciseCasts", ImpreciseCastsKind::Warn)),
       ReplacementFunction(
           Options.get("ReplacementFunction", "std::to_underlying")),
+      ReplacementFunctionHeader(Options.get("ReplacementFunctionHeader", "")),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()),
-      MaybeHeaderToInclude(Options.get("ReplacementFunctionHeader")) {
+                      areDiagsSelfContained()) {
   if (ReplacementFunction == "std::to_underlying") {
-    if (!MaybeHeaderToInclude)
-      MaybeHeaderToInclude = "<utility>";
-    else if (*MaybeHeaderToInclude != "<utility>")
+    if (ReplacementFunctionHeader.empty())
+      ReplacementFunctionHeader = "<utility>";
+    else if (ReplacementFunctionHeader != "<utility>")
       configurationDiag("'std::to_underlying' is declared in '<utility>', but "
                         "'ReplacementFunctionHeader' is set to '%0'")
-          << *MaybeHeaderToInclude;
+          << ReplacementFunctionHeader;
   }
 }
 
@@ -76,8 +76,7 @@ void UseToUnderlyingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ImpreciseCasts", ImpreciseCasts);
   Options.store(Opts, "ReplacementFunction", ReplacementFunction);
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
-  if (MaybeHeaderToInclude)
-    Options.store(Opts, "ReplacementFunctionHeader", *MaybeHeaderToInclude);
+  Options.store(Opts, "ReplacementFunctionHeader", ReplacementFunctionHeader);
 }
 
 void UseToUnderlyingCheck::registerMatchers(MatchFinder *Finder) {
@@ -149,11 +148,11 @@ void UseToUnderlyingCheck::check(const MatchFinder::MatchResult &Result) {
     Diag << tooling::fixit::createReplacement(*Operand, Call);
   }
 
-  if (MaybeHeaderToInclude)
+  if (!ReplacementFunctionHeader.empty())
     Diag << IncludeInserter.createIncludeInsertion(
         Result.SourceManager->getFileID(
             Result.SourceManager->getExpansionLoc(Cast->getBeginLoc())),
-        *MaybeHeaderToInclude);
+        ReplacementFunctionHeader);
 }
 
 } // namespace clang::tidy::modernize

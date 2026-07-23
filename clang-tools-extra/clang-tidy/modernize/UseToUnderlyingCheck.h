@@ -51,8 +51,8 @@ public:
 private:
   const ImpreciseCastsKind ImpreciseCasts;
   const StringRef ReplacementFunction;
+  StringRef ReplacementFunctionHeader;
   utils::IncludeInserter IncludeInserter;
-  std::optional<StringRef> MaybeHeaderToInclude;
 };
 
 } // namespace clang::tidy::modernize

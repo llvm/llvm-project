@@ -59,17 +59,14 @@ Options
    underlying type) are handled. Precise casts are always diagnosed and fixed
    regardless of this option. Possible values:
 
-   `Ignore`
-     Do not diagnose imprecise casts.
+   - `Ignore`: Do not diagnose imprecise casts.
 
-   `Warn` *(default)*
-     Diagnose imprecise casts but do not offer a fix-it. Neither automatic
-     rewrite is applied because both change the meaning of the code in ways
-     that may not be intended.
+   - `Warn` *(default)*: Diagnose imprecise casts but do not offer a fix-it.
+     Neither automatic rewrite is applied because both change the meaning of the
+     code in ways that may not be intended.
 
-   `PreserveType`
-     Wrap the operand in a call to the replacement function, keeping the
-     original destination type:
+   - `PreserveType`: Wrap the operand in a call to the replacement function,
+     keeping the original destination type:
 
      .. code-block:: c++
 
@@ -77,11 +74,10 @@ Options
        // becomes:
        long l = static_cast<long>(std::to_underlying(E{}));
 
-   `UseUnderlyingType`
-     Replace the whole cast with a call to the replacement function. This
-     **changes the type** of the expression from the destination type to the
-     underlying type, so use it only when the wider or differently-signed
-     destination type was itself unintended:
+   - `UseUnderlyingType`: Replace the whole cast with a call to the replacement
+     function. This **changes the type** of the expression from the destination
+     type to the underlying type, so use it only when the wider or
+     differently-signed destination type was itself unintended:
 
      .. code-block:: c++
 
@@ -92,9 +88,9 @@ Options
 .. option:: ReplacementFunction
 
    The fully qualified name of the function used in the replacement. Defaults to
-   ``std::to_underlying``. Set this to use a hand-rolled equivalent (for example
-   ``llvm::to_underlying``) when targeting a language standard before C++23. When
-   the value is ``std::to_underlying``, the check only runs in C++23 or later;
+   `std::to_underlying`. Set this to use a hand-rolled equivalent (for example
+   `llvm::to_underlying`) when targeting a language standard before C++23. When
+   the value is `std::to_underlying`, the check only runs in C++23 or later;
    with any other value it runs from C++11 onwards.
 
 .. option:: ReplacementFunctionHeader
