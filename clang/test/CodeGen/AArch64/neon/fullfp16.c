@@ -60,7 +60,7 @@ float16_t test_vsubh_f16(float16_t a, float16_t b) {
 }
 
 //===------------------------------------------------------===//
-// 2.5.9.1.  Multiplication
+// 2.5.1.9.1.  Multiplication
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vmulh_f16(
 float16_t test_vmulh_f16(float16_t a, float16_t b) {
@@ -355,4 +355,17 @@ float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
 // LLVM:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half [[C]], half [[A]])
 // LLVM:  ret half [[ADD]]
   return vfmsh_f16(a, b, c);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.9.2  Multiply extended 
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vmulxh_f16
+float16_t test_vmulxh_f16(float16_t a, float16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fmulx"
+
+// LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]])
+// LLVM:  [[MUL:%.*]] = call half @llvm.aarch64.neon.fmulx.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MUL]]
+  return vmulxh_f16(a, b);
 }

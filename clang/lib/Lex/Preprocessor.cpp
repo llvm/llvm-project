@@ -103,8 +103,7 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
   OwnsHeaderSearch = OwnsHeaders;
 
   // Only record check points if we might highlight diagnostic snippets.
-  RecordCheckPoints = getDiagnostics().getDiagnosticOptions().getShowColors() !=
-                      ShowColorsKind::Off;
+  RecordCheckPoints = getDiagnostics().getShowColors();
 
   // Default to discarding comments.
   KeepComments = false;
@@ -1353,6 +1352,8 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
       return false;
   } else if (!Result.isAtPhysicalStartOfLine())
     return false;
+
+  assert(CurPPLexer && "CurPPLexer must not be null");
 
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);

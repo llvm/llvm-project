@@ -1395,7 +1395,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SUB,                MVT::i16, Custom);
     setOperationAction(ISD::SUB,                MVT::i32, Custom);
   }
-
+  if (Subtarget.hasNDD()) {
+    // Enable custom lowering for scalar USUBSAT to optimize usub.sat(X,1)
+    // with cmp+adc when NDD is available.
+    setOperationAction(ISD::USUBSAT, MVT::i8, Custom);
+    setOperationAction(ISD::USUBSAT, MVT::i16, Custom);
+    setOperationAction(ISD::USUBSAT, MVT::i32, Custom);
+    setOperationAction(ISD::USUBSAT, MVT::i64, Custom);
+  }
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE41()) {
     for (MVT RoundedTy : {MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64}) {
       setOperationAction(ISD::FFLOOR,            RoundedTy,  Legal);
@@ -2375,6 +2382,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (Subtarget.hasBMM()) {
+      setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
+
       for (auto VT : {MVT::v16i8, MVT::v32i8, MVT::v64i8})
         setOperationAction(ISD::BITREVERSE, VT, Legal);
     }
@@ -8179,6 +8191,13 @@ static bool isFoldableUseOfShuffle(SDNode *N) {
   return false;
 }
 
+static bool isFoldableAsShuffle(SDValue V) {
+  while (V.getOpcode() == ISD::BITCAST ||
+         V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+    V = V.getOperand(0);
+  return isTargetShuffle(V.getOpcode());
+}
+
 // If the node has a single use by a VSELECT then AVX512 targets may be able to
 // fold as a predicated instruction.
 static bool isMaskableNode(SDValue V, const X86Subtarget &Subtarget) {
@@ -8820,8 +8839,7 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
 /// recognized ADDSUB idiom with ADDSUB operation is that such replacement
 /// is illegal sometimes. E.g. 512-bit ADDSUB is not available, while 512-bit
 /// FMADDSUB is.
-static bool isFMAddSubOrFMSubAdd(const X86Subtarget &Subtarget,
-                                 SelectionDAG &DAG, SDValue &Opnd0,
+static bool isFMAddSubOrFMSubAdd(const X86Subtarget &Subtarget, SDValue &Opnd0,
                                  SDValue &Opnd1, SDValue &Opnd2,
                                  unsigned ExpectedUses,
                                  bool AllowSubAddOrAddSubContract) {
@@ -8864,7 +8882,7 @@ static SDValue lowerToAddSubOrFMAddSub(const BuildVectorSDNode *BV,
 
   // Try to generate X86ISD::FMADDSUB node here.
   SDValue Opnd2;
-  if (isFMAddSubOrFMSubAdd(Subtarget, DAG, Opnd0, Opnd1, Opnd2, NumExtracts,
+  if (isFMAddSubOrFMSubAdd(Subtarget, Opnd0, Opnd1, Opnd2, NumExtracts,
                            HasAllowContract)) {
     unsigned Opc = IsSubAdd ? X86ISD::FMSUBADD : X86ISD::FMADDSUB;
     return DAG.getNode(Opc, DL, VT, Opnd0, Opnd1, Opnd2);
@@ -25489,52 +25507,113 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
   return SDValue();
 }
 
-// Return true if Val is an integer ISD::SETCC or an AND/OR tree thereof,
-// suitable for lowering to a CCMP chain.
-static bool canEmitConjunctionForCCMP(SDValue Val) {
-  unsigned Opc = Val.getOpcode();
-  if (Opc == ISD::SETCC)
-    return Val.getOperand(0).getSimpleValueType().isInteger();
-  if (Opc == ISD::AND && Val.hasOneUse())
-    return canEmitConjunctionForCCMP(Val.getOperand(0)) &&
-           canEmitConjunctionForCCMP(Val.getOperand(1));
-  // For OR, at least one operand must be a leaf SETCC so the DCF of the right
-  // CCMP is unambiguous.
-  if (Opc == ISD::OR && Val.hasOneUse())
-    return (Val.getOperand(0).getOpcode() == ISD::SETCC ||
-            Val.getOperand(1).getOpcode() == ISD::SETCC) &&
-           canEmitConjunctionForCCMP(Val.getOperand(0)) &&
-           canEmitConjunctionForCCMP(Val.getOperand(1));
+/// Returns true if \p Val is a tree of integer AND/OR/SETCC operations that
+/// can be expressed as a CCMP conjunction. This mirrors AArch64's
+/// canEmitConjunction and tracks the negation bookkeeping required to lower
+/// arbitrarily nested AND/OR trees (e.g. AND(cc, OR(cc, cc))) correctly.
+/// \param CanNegate   Set to true if the whole sub-tree can be negated just by
+///                    inverting the conditions on the SETCC leaves.
+/// \param MustBeFirst Set to true if this sub-tree needs to be negated but
+///                    cannot be negated naturally, so it must be emitted first.
+/// \param PreferFirst Set to true if processing this sub-tree first may result
+///                    in more efficient code (e.g. because the flags of a
+///                    corresponding SUB node can be reused).
+/// \param WillNegate  True when the result of this sub-expression must be
+///                    negated (i.e. the outer expression is an OR).
+static bool canEmitConjunctionForCCMP(SelectionDAG &DAG, SDValue Val,
+                                      bool &CanNegate, bool &MustBeFirst,
+                                      bool &PreferFirst, bool WillNegate,
+                                      unsigned Depth = 0) {
+  if (!Val.hasOneUse())
+    return false;
+  unsigned Opcode = Val.getOpcode();
+  if (Opcode == ISD::SETCC) {
+    EVT VT = Val.getOperand(0).getValueType();
+    if (!VT.isInteger())
+      return false;
+    CanNegate = true;
+    MustBeFirst = false;
+    // Designate this operation as a preferred first operation if the flags of a
+    // corresponding SUB node can be reused. The root comparison is emitted as a
+    // plain CMP, which can share EFLAGS with an existing SUB; a CCMP cannot.
+    PreferFirst = DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT),
+                                    {Val.getOperand(0), Val.getOperand(1)});
+    return true;
+  }
+  // Protect against exponential runtime and stack overflow.
+  if (Depth > 6)
+    return false;
+  if (Opcode == ISD::AND || Opcode == ISD::OR) {
+    bool IsOR = Opcode == ISD::OR;
+    SDValue O0 = Val.getOperand(0);
+    SDValue O1 = Val.getOperand(1);
+    bool CanNegateL, MustBeFirstL, PreferFirstL;
+    if (!canEmitConjunctionForCCMP(DAG, O0, CanNegateL, MustBeFirstL,
+                                   PreferFirstL, IsOR, Depth + 1))
+      return false;
+    bool CanNegateR, MustBeFirstR, PreferFirstR;
+    if (!canEmitConjunctionForCCMP(DAG, O1, CanNegateR, MustBeFirstR,
+                                   PreferFirstR, IsOR, Depth + 1))
+      return false;
+
+    if (MustBeFirstL && MustBeFirstR)
+      return false;
+
+    if (IsOR) {
+      // For an OR we need to be able to naturally negate at least one side or
+      // we cannot do the transformation at all.
+      if (!CanNegateL && !CanNegateR)
+        return false;
+      // If the OR's result will be negated and both leaves can be negated
+      // naturally, then this sub-tree as a whole negates naturally.
+      CanNegate = WillNegate && CanNegateL && CanNegateR;
+      MustBeFirst = !CanNegate;
+    } else {
+      assert(Opcode == ISD::AND && "Must be OR or AND");
+      // We cannot naturally negate an AND operation.
+      CanNegate = false;
+      MustBeFirst = MustBeFirstL || MustBeFirstR;
+    }
+    PreferFirst = PreferFirstL || PreferFirstR;
+    return true;
+  }
   return false;
 }
 
-// Recursively emit a CCMP chain for an AND/OR tree of integer SETCCs.
-//   CCOp:      incoming flags value (null for the first/root comparison)
-//   Predicate: condition under which CCOp was produced (COND_INVALID at root)
-//   OutCC:     set to the condition code to test after the whole chain
-// Returns the flags-producing node (SUB or CCMP).
-//
-// AND(cc1, cc2): emit cc1 first; CCMP(cc2) fires when cc1 is true.
-//   SrcCC = cc1,  DCF forces cc2 false when cc1 is false.
-// OR(cc1, cc2):  emit cc1 first; CCMP(cc2) fires when cc1 is false.
-//   SrcCC = ~cc1, DCF forces cc2 true when cc1 is true.
+/// Emit a conjunction or disjunction tree as a CMP followed by a chain of
+/// CCMP operations. Mirrors AArch64's emitConjunctionRec.
+///   CCOp:      incoming flags value (null for the first/root comparison)
+///   Predicate: condition under which CCOp was produced (COND_INVALID at root)
+///   Negate:    true if this sub-tree should be negated by inverting the
+///              conditions on its SETCC leaves
+///   OutCC:     set to the condition code to test after the whole chain
+/// Returns the flags-producing node (CMP/SUB or CCMP).
 static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
-                                         SDValue CCOp, X86::CondCode Predicate,
+                                         bool Negate, SDValue CCOp,
+                                         X86::CondCode Predicate,
                                          SelectionDAG &DAG,
                                          const X86Subtarget &Subtarget) {
   SDLoc DL(Val);
 
-  if (Val.getOpcode() == ISD::SETCC) {
+  unsigned Opcode = Val.getOpcode();
+  if (Opcode == ISD::SETCC) {
     SDValue LHS = Val.getOperand(0), RHS = Val.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Val.getOperand(2))->get();
+    if (Negate)
+      CC = ISD::getSetCCInverse(CC, LHS.getValueType());
     X86::CondCode X86CC = TranslateX86CC(CC, DL, /*IsFP=*/false, LHS, RHS, DAG);
     assert(X86CC != X86::COND_INVALID);
     OutCC = X86CC;
 
     SDValue Flags = EmitCmp(LHS, RHS, X86CC, DL, DAG, Subtarget);
+    // Produce a normal comparison if we are first in the chain.
     if (!CCOp)
       return Flags;
 
+    // Otherwise produce a CCMP. The CCMP executes (and updates EFLAGS) only
+    // when Predicate holds; when it is skipped it forces the default condition
+    // flags, which must make OutCC evaluate to false. That default is encoded
+    // from the opposite of X86CC.
     SDNode *FlagsNode = Flags.getNode();
     X86::CondCode DCFCode = X86::GetOppositeBranchCondition(X86CC);
     SDValue CFlags = DAG.getTargetConstant(
@@ -25544,47 +25623,85 @@ static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
                        {FlagsNode->getOperand(0), FlagsNode->getOperand(1),
                         CFlags, SrcCC, CCOp});
   }
+  assert(Val.hasOneUse() && "Valid conjunction/disjunction tree");
 
-  bool IsOR = Val.getOpcode() == ISD::OR;
-  SDValue LHS = Val.getOperand(0), RHS = Val.getOperand(1);
+  bool IsOR = Opcode == ISD::OR;
 
-  // For OR, the right subtree must be a leaf SETCC so its DCF unambiguously
-  // forces the outcome true when skipped. OR is commutative, so swap if needed.
-  if (IsOR && RHS.getOpcode() != ISD::SETCC)
+  SDValue LHS = Val.getOperand(0);
+  bool CanNegateL, MustBeFirstL, PreferFirstL;
+  bool ValidL = canEmitConjunctionForCCMP(DAG, LHS, CanNegateL, MustBeFirstL,
+                                          PreferFirstL, IsOR);
+  assert(ValidL && "Valid conjunction/disjunction tree");
+  (void)ValidL;
+
+  SDValue RHS = Val.getOperand(1);
+  bool CanNegateR, MustBeFirstR, PreferFirstR;
+  bool ValidR = canEmitConjunctionForCCMP(DAG, RHS, CanNegateR, MustBeFirstR,
+                                          PreferFirstR, IsOR);
+  assert(ValidR && "Valid conjunction/disjunction tree");
+  (void)ValidR;
+
+  bool ShouldFirstL = PreferFirstL && !PreferFirstR && !MustBeFirstR;
+
+  // Swap the sub-tree that must or should come first to the right side. The
+  // right sub-tree is emitted first below, and the deepest right-most SETCC
+  // becomes the root plain CMP whose flags a matching SUB node can reuse.
+  if (MustBeFirstL || ShouldFirstL) {
+    assert(!MustBeFirstR && "Valid conjunction/disjunction tree");
     std::swap(LHS, RHS);
-
-  // Emit the left subtree first (provides CCOp for the right subtree's CCMP).
-  X86::CondCode LHSCC;
-  SDValue CmpL =
-      emitConjunctionForCCMPRec(LHS, LHSCC, CCOp, Predicate, DAG, Subtarget);
-
-  // For AND: right CCMP fires when left is true,  SrcCC = LHSCC.
-  // For OR:  right CCMP fires when left is false, SrcCC = !LHSCC.
-  X86::CondCode NextPred =
-      IsOR ? X86::GetOppositeBranchCondition(LHSCC) : LHSCC;
-
-  SDValue CmpR =
-      emitConjunctionForCCMPRec(RHS, OutCC, CmpL, NextPred, DAG, Subtarget);
-
-  // For OR, patch the DCF of the right leaf's CCMP to force OutCC TRUE when
-  // the CCMP is skipped (i.e. when the left condition was already true).
-  if (IsOR && CmpR.getOpcode() == X86ISD::CCMP) {
-    SDValue CFlags = DAG.getTargetConstant(
-        X86::getCCMPCondFlagsFromCondCode(OutCC), DL, MVT::i8);
-    CmpR = DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
-                       {CmpR.getOperand(0), CmpR.getOperand(1), CFlags,
-                        CmpR.getOperand(3), CmpR.getOperand(4)});
+    std::swap(CanNegateL, CanNegateR);
+    std::swap(MustBeFirstL, MustBeFirstR);
   }
-  return CmpR;
+
+  bool NegateR, NegateAfterR, NegateL, NegateAfterAll;
+  if (IsOR) {
+    // Swap the sub-tree that we can negate naturally to the left.
+    if (!CanNegateL) {
+      assert(CanNegateR && "at least one side must be negatable");
+      assert(!MustBeFirstR && "invalid conjunction/disjunction tree");
+      assert(!Negate);
+      std::swap(LHS, RHS);
+      NegateR = false;
+      NegateAfterR = true;
+    } else {
+      // Negate the left sub-tree if possible, otherwise negate the result.
+      NegateR = CanNegateR;
+      NegateAfterR = !CanNegateR;
+    }
+    NegateL = true;
+    NegateAfterAll = !Negate;
+  } else {
+    assert(Opcode == ISD::AND && "Valid conjunction/disjunction tree");
+    assert(!Negate && "Valid conjunction/disjunction tree");
+    NegateL = false;
+    NegateR = false;
+    NegateAfterR = false;
+    NegateAfterAll = false;
+  }
+
+  // Emit sub-trees. The right sub-tree is emitted first so its flags feed the
+  // left sub-tree's CCMP chain.
+  X86::CondCode RHSCC;
+  SDValue CmpR = emitConjunctionForCCMPRec(RHS, RHSCC, NegateR, CCOp, Predicate,
+                                           DAG, Subtarget);
+  if (NegateAfterR)
+    RHSCC = X86::GetOppositeBranchCondition(RHSCC);
+  SDValue CmpL = emitConjunctionForCCMPRec(LHS, OutCC, NegateL, CmpR, RHSCC,
+                                           DAG, Subtarget);
+  if (NegateAfterAll)
+    OutCC = X86::GetOppositeBranchCondition(OutCC);
+  return CmpL;
 }
 
 static SDValue emitConjunctionForCCMP(SDValue Val, X86::CondCode &OutCC,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
-  if (!canEmitConjunctionForCCMP(Val))
+  bool DummyCanNegate, DummyMustBeFirst, DummyPreferFirst;
+  if (!canEmitConjunctionForCCMP(DAG, Val, DummyCanNegate, DummyMustBeFirst,
+                                 DummyPreferFirst, false))
     return SDValue();
-  return emitConjunctionForCCMPRec(Val, OutCC, SDValue(), X86::COND_INVALID,
-                                   DAG, Subtarget);
+  return emitConjunctionForCCMPRec(Val, OutCC, /*Negate=*/false, SDValue(),
+                                   X86::COND_INVALID, DAG, Subtarget);
 }
 
 SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
@@ -29626,7 +29743,6 @@ static SDValue lowerAddSub(SDValue Op, SelectionDAG &DAG,
                            const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
   SDLoc DL(Op);
-
   if (VT == MVT::i16 || VT == MVT::i32)
     return lowerAddSubToHorizontalOp(Op, DL, DAG, Subtarget);
 
@@ -29645,6 +29761,22 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
   SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
   unsigned Opcode = Op.getOpcode();
   SDLoc DL(Op);
+
+  if (Opcode == ISD::USUBSAT && !VT.isVector() && Subtarget.hasNDD()) {
+
+    if (isOneConstant(Y)) {
+      // usub.sat(X,1) == (X==0 ? 0 : X-1). Lower to cmp+adc with NDD.
+      SDValue Sub = DAG.getNode(X86ISD::SUB, DL, DAG.getVTList(VT, MVT::i32), X,
+                                DAG.getConstant(1, DL, VT));
+      SDValue EFLAGS = Sub.getValue(1);
+      SDValue MinusOne = DAG.getAllOnesConstant(DL, VT);
+      return DAG.getNode(X86ISD::ADC, DL, DAG.getVTList(VT, MVT::i32), X,
+                         MinusOne, EFLAGS);
+    }
+
+    // Scalar USUBSAT was previously Expand. Don't fall through to vector path.
+    return SDValue();
+  }
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8 ||
       (VT.is256BitVector() && !Subtarget.hasInt256())) {
@@ -33500,8 +33632,8 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   if (Subtarget.hasXOP() && !VT.is512BitVector())
     return LowerBITREVERSE_XOP(Op, DAG);
 
-  assert((Subtarget.hasSSSE3() || Subtarget.hasGFNI()) &&
-         "SSSE3 or GFNI required for BITREVERSE");
+  assert((Subtarget.hasSSSE3() || Subtarget.hasGFNI() || Subtarget.hasBMM()) &&
+         "SSSE3, GFNI, or BMM required for BITREVERSE");
 
   SDValue In = Op.getOperand(0);
   SDLoc DL(Op);
@@ -44111,7 +44243,7 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N, const SDLoc &DL,
 
   // Try to generate X86ISD::FMADDSUB node here.
   SDValue Opnd2;
-  if (isFMAddSubOrFMSubAdd(Subtarget, DAG, Opnd0, Opnd1, Opnd2, 2,
+  if (isFMAddSubOrFMSubAdd(Subtarget, Opnd0, Opnd1, Opnd2, 2,
                            HasAllowContract)) {
     unsigned Opc = IsSubAdd ? X86ISD::FMSUBADD : X86ISD::FMADDSUB;
     return DAG.getNode(Opc, DL, VT, Opnd0, Opnd1, Opnd2);
@@ -50902,6 +51034,38 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
         sd_match(Cond, m_SetCC(m_Specific(N1), m_SpecificInt(EltSizeInBits),
                                m_SpecificCondCode(ISD::SETUGE)))) {
       return DAG.getNode(X86ISD::VSRLV, DL, VT, N01, N1);
+    }
+  }
+
+  // VectorCombine may have folded:
+  // icmp_eq(vecreduce_or(splatsign(x)),0) --> icmp_sgt(vecreduce_umax(x),-1)
+  // which DAG folds to: srl(vecreduce_umax(x),bw-1).
+  // This attempts to reconstruct the signbit reduction.
+  if (sd_match(N1, m_SpecificInt(EltSizeInBits - 1))) {
+    SDValue X = N0;
+    ISD::CondCode CC = ISD::SETNE;
+    if (sd_match(N0, m_Not(m_Value(X))))
+      CC = ISD::SETEQ;
+    if (X.getOpcode() == ISD::VECREDUCE_UMAX) {
+      SDValue V = X.getOperand(0);
+      EVT VecVT = V.getValueType();
+      if (DAG.getTargetLoweringInfo().isTypeLegal(VecVT) &&
+          VecVT.getScalarSizeInBits() >= 8) {
+        if (VecVT.is512BitVector()) {
+          auto [Lo, Hi] = DAG.SplitVector(V, DL);
+          V = DAG.getNode(ISD::OR, DL, Lo.getValueType(), Lo, Hi);
+          VecVT = V.getValueType();
+        }
+        if (VecVT == MVT::v16i16) {
+          auto [Lo, Hi] = DAG.SplitVector(V, DL);
+          V = DAG.getNode(X86ISD::PACKSS, DL, MVT::v16i8, Lo, Hi);
+        } else if (VecVT == MVT::v8i16) {
+          V = DAG.getNode(X86ISD::PACKSS, DL, MVT::v16i8, V, V);
+        }
+        V = getPMOVMSKB(DL, V, DAG, Subtarget);
+        V = DAG.getSetCC(DL, MVT::i8, V, DAG.getConstant(0, DL, MVT::i32), CC);
+        return DAG.getZExtOrTrunc(V, DL, VT);
+      }
     }
   }
 
@@ -59793,22 +59957,6 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Peephole for 512-bit VPDPBSSD on non-VLX targets.
-  // TODO: Should this be part of matchPMADDWD/matchPMADDWD_2?
-  if (Subtarget.hasVNNI() && Subtarget.useAVX512Regs() && VT == MVT::v16i32) {
-    SDValue Accum, Lo0, Lo1, Hi0, Hi1;
-    if (sd_match(N, m_Add(m_Value(Accum),
-                          m_Node(ISD::CONCAT_VECTORS,
-                                 m_BinOp(X86ISD::VPMADDWD, m_Value(Lo0),
-                                         m_Value(Lo1)),
-                                 m_BinOp(X86ISD::VPMADDWD, m_Value(Hi0),
-                                         m_Value(Hi1)))))) {
-      return DAG.getNode(X86ISD::VPDPWSSD, DL, VT, Accum,
-                         concatSubVectors(Lo0, Hi0, DAG, DL),
-                         concatSubVectors(Lo1, Hi1, DAG, DL));
-    }
-  }
-
   // Fold ADD(ADC(Y,0,W),X) -> ADC(X,Y,W)
   if (Op0.getOpcode() == X86ISD::ADC && Op0->hasOneUse() &&
       X86::isZeroNode(Op0.getOperand(1))) {
@@ -61541,9 +61689,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
                          SubVectorOps[0], DAG.getVectorIdxConstant(0, dl));
 
     // Attempt to recursively combine to a shuffle.
-    if (all_of(SubVectorOps, [](SDValue SubOp) {
-          return isTargetShuffle(peekThroughBitcasts(SubOp).getOpcode());
-        })) {
+    if (all_of(SubVectorOps, isFoldableAsShuffle)) {
       SDValue Op(N, 0);
       if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
         return Res;
@@ -61596,16 +61742,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  auto peekThroughBitcastsAndExtracts = [](SDValue V) {
-    while (V.getOpcode() == ISD::BITCAST ||
-           V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
-      V = V.getOperand(0);
-    return V;
-  };
-
   // Attempt to recursively combine to a shuffle.
-  if (isTargetShuffle(peekThroughBitcasts(Vec).getOpcode()) &&
-      isTargetShuffle(peekThroughBitcastsAndExtracts(SubVec).getOpcode())) {
+  if (isFoldableAsShuffle(Vec) && isFoldableAsShuffle(SubVec)) {
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;

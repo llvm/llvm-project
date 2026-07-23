@@ -558,6 +558,7 @@ namespace {
     SDValue visitMSCATTER(SDNode *N);
     SDValue visitMHISTOGRAM(SDNode *N);
     SDValue visitPARTIAL_REDUCE_MLA(SDNode *N);
+    SDValue visitLOOP_DEPENDENCE_MASK(SDNode *N);
     SDValue visitVPGATHER(SDNode *N);
     SDValue visitVPSCATTER(SDNode *N);
     SDValue visitVP_STRIDED_LOAD(SDNode *N);
@@ -2116,6 +2117,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::PARTIAL_REDUCE_SUMLA:
   case ISD::PARTIAL_REDUCE_FMLA:
                                 return visitPARTIAL_REDUCE_MLA(N);
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+                                return visitLOOP_DEPENDENCE_MASK(N);
   case ISD::VECTOR_COMPRESS:    return visitVECTOR_COMPRESS(N);
   case ISD::LIFETIME_END:       return visitLIFETIME_END(N);
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
@@ -4560,8 +4564,10 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       // fold (sub Sym+c1, Sym+c2) -> c1-c2
       if (GlobalAddressSDNode *GB = dyn_cast<GlobalAddressSDNode>(N1))
         if (GA->getGlobal() == GB->getGlobal())
-          return DAG.getConstant((uint64_t)GA->getOffset() - GB->getOffset(),
-                                 DL, VT);
+          return DAG.getConstant(
+              APInt(VT.getScalarSizeInBits(), GA->getOffset() - GB->getOffset(),
+                    /*isSigned=*/false, /*implicitTrunc=*/true),
+              DL, VT);
     }
 
   // sub X, (sextinreg Y i1) -> add X, (and Y 1)
@@ -6306,6 +6312,58 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
       DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(N0), NewVT, N0.getOperand(0),
                   DAG.getValueType(NewVT.getScalarType()));
   return DAG.getZExtOrTrunc(Sat, SDLoc(N0), N3.getValueType());
+}
+
+// Fold a NaN-guard select of fp_to_sint/fp_to_uint into the saturating
+// variant, which returns 0 for NaN.
+static SDValue performNanGuardFpToSatCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Match an isnan-guarded select, requiring the compare to be single-use.
+  // The guarded value is fp_to_sint/fp_to_uint of X, optionally masked by an
+  // AND:
+  //   select (setcc X, 0.0, uno), 0, (fp_to_sint/uint X)
+  //   select (setcc X, 0.0, ord), (fp_to_sint/uint X), 0
+  //   select (setcc X, 0.0, uno), 0, (and (fp_to_sint/uint X), M)
+  //   select (setcc X, 0.0, ord), (and (fp_to_sint/uint X), M), 0
+  SDValue X, GuardedVal;
+  if (!sd_match(N,
+                m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
+                                              m_SpecificCondCode(ISD::SETUO))),
+                             m_Zero(), m_Value(GuardedVal))) &&
+      !sd_match(N,
+                m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
+                                              m_SpecificCondCode(ISD::SETO))),
+                             m_Value(GuardedVal), m_Zero())))
+    return SDValue();
+
+  // The guarded value must be fp_to_sint/fp_to_uint of the same X, optionally
+  // masked by a (commutative) AND.
+  SDValue Mask;
+  unsigned NewOpc;
+  if (sd_match(GuardedVal, m_FPToSI(m_Specific(X))) ||
+      sd_match(GuardedVal, m_And(m_FPToSI(m_Specific(X)), m_Value(Mask))))
+    NewOpc = ISD::FP_TO_SINT_SAT;
+  else if (sd_match(GuardedVal, m_FPToUI(m_Specific(X))) ||
+           sd_match(GuardedVal, m_And(m_FPToUI(m_Specific(X)), m_Value(Mask))))
+    NewOpc = ISD::FP_TO_UINT_SAT;
+  else
+    return SDValue();
+
+  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(NewOpc,
+                                                        X.getValueType(), VT))
+    return SDValue();
+
+  SDValue Sat =
+      DAG.getNode(NewOpc, DL, VT, X, DAG.getValueType(VT.getScalarType()));
+  if (Mask) {
+    // For NaN inputs the saturating conversion yields 0, so (and 0, Mask) must
+    // stay 0 to match the original select. A poison Mask would make it poison,
+    // so freeze Mask to guarantee a defined value.
+    Sat = DAG.getNode(ISD::AND, DL, VT, Sat, DAG.getFreeze(Mask));
+  }
+  return Sat;
 }
 
 SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
@@ -9598,7 +9656,8 @@ using SDByteProvider = ByteProvider<SDNode *>;
 static std::optional<SDByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                       std::optional<uint64_t> VectorIndex,
-                      unsigned StartingIndex = 0) {
+                      unsigned StartingIndex = 0,
+                      MutableArrayRef<uint8_t> ByteMask = {}) {
 
   // Typical i64 by i8 pattern requires recursion up to 8 calls depth
   if (Depth == 10)
@@ -9624,12 +9683,12 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
 
   switch (Op.getOpcode()) {
   case ISD::OR: {
-    auto LHS =
-        calculateByteProvider(Op->getOperand(0), Index, Depth + 1, VectorIndex);
+    auto LHS = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
+                                     VectorIndex, StartingIndex, ByteMask);
     if (!LHS)
       return std::nullopt;
-    auto RHS =
-        calculateByteProvider(Op->getOperand(1), Index, Depth + 1, VectorIndex);
+    auto RHS = calculateByteProvider(Op->getOperand(1), Index, Depth + 1,
+                                     VectorIndex, StartingIndex, ByteMask);
     if (!RHS)
       return std::nullopt;
 
@@ -9656,7 +9715,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     return Index < ByteShift
                ? SDByteProvider::getConstantZero()
                : calculateByteProvider(Op->getOperand(0), Index - ByteShift,
-                                       Depth + 1, VectorIndex, Index);
+                                       Depth + 1, VectorIndex, Index, ByteMask);
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -9673,11 +9732,38 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                        SDByteProvider::getConstantZero())
                  : std::nullopt;
     return calculateByteProvider(NarrowOp, Index, Depth + 1, VectorIndex,
-                                 StartingIndex);
+                                 StartingIndex, ByteMask);
   }
   case ISD::BSWAP:
     return calculateByteProvider(Op->getOperand(0), ByteWidth - Index - 1,
-                                 Depth + 1, VectorIndex, StartingIndex);
+                                 Depth + 1, VectorIndex, StartingIndex,
+                                 ByteMask);
+  case ISD::AND: {
+    // Constants are canonicalized to the RHS of AND, so only operand 1 needs
+    // to be checked.
+    auto *MaskOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    if (!MaskOp)
+      return std::nullopt;
+
+    uint8_t MaskByte =
+        MaskOp->getAPIntValue().extractBitsAsZExtValue(8, Index * 8);
+
+    if (MaskByte == 0x00)
+      return SDByteProvider::getConstantZero();
+
+    auto Result = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
+                                        VectorIndex, StartingIndex, ByteMask);
+    if (!Result)
+      return std::nullopt;
+
+    // Only record the mask if this byte is actually provided (not zero).
+    // A ConstantZero result may be discarded by the OR handler in favor of
+    // the other operand, so writing the mask here would corrupt ByteMask.
+    if (MaskByte != 0xFF && !ByteMask.empty() && !Result->isConstantZero())
+      ByteMask[StartingIndex] &= MaskByte;
+
+    return Result;
+  }
   case ISD::EXTRACT_VECTOR_ELT: {
     auto OffsetOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!OffsetOp)
@@ -9707,7 +9793,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
       return std::nullopt;
 
     return calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                 VectorIndex, StartingIndex);
+                                 VectorIndex, StartingIndex, ByteMask);
   }
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
@@ -10058,11 +10144,12 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // Check if all the bytes of the OR we are looking at are loaded from the same
   // base address. Collect bytes offsets from Base address in ByteOffsets.
   SmallVector<int64_t, 8> ByteOffsets(ByteWidth);
+  SmallVector<uint8_t, 8> ByteMasks(ByteWidth, 0xFF);
   unsigned ZeroExtendedBytes = 0;
   for (int i = ByteWidth - 1; i >= 0; --i) {
     auto P =
         calculateByteProvider(SDValue(N, 0), i, 0, /*VectorIndex*/ std::nullopt,
-                              /*StartingIndex*/ i);
+                              /*StartingIndex*/ i, ByteMasks);
     if (!P)
       return SDValue();
 
@@ -10198,15 +10285,36 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   for (LoadSDNode *L : Loads)
     DAG.makeEquivalentMemoryOrdering(L, NewLoad);
 
-  if (!NeedsBswap)
+  // Apply combined mask if any bytes were partially masked by AND operations.
+  bool HasPartialMask = false;
+  uint64_t CombinedMask = 0;
+  for (unsigned i = 0; i < ByteWidth; ++i) {
+    CombinedMask |= (uint64_t)ByteMasks[i] << (i * 8);
+    if (ByteMasks[i] != 0xFF)
+      HasPartialMask = true;
+  }
+
+  if (!NeedsBswap) {
+    if (HasPartialMask)
+      NewLoad = DAG.getNode(ISD::AND, SDLoc(N), VT, NewLoad,
+                            DAG.getConstant(CombinedMask, SDLoc(N), VT));
     return NewLoad;
+  }
 
   SDValue ShiftedLoad =
       NeedsZext ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
                               DAG.getShiftAmountConstant(ZeroExtendedBytes * 8,
                                                          VT, SDLoc(N)))
                 : NewLoad;
-  return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
+  SDValue Result = DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
+
+  // The mask is built in final-result byte order (ByteMasks[i] corresponds to
+  // byte i of the result), so it is correct to apply after the bswap.
+  if (HasPartialMask)
+    Result = DAG.getNode(ISD::AND, SDLoc(N), VT, Result,
+                         DAG.getConstant(CombinedMask, SDLoc(N), VT));
+
+  return Result;
 }
 
 // If the target has andn, bsl, or a similar bit-select instruction,
@@ -13395,6 +13503,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       }
     }
 
+    if (SDValue S = performNanGuardFpToSatCombine(N, DAG))
+      return S;
+
     if (TLI.isOperationLegal(ISD::SELECT_CC, VT) ||
         (!LegalOperations &&
          TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT))) {
@@ -14133,6 +14244,19 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
                : DAG.getNode(NewOpcode, DL, AccVT, Acc, UnextOp1, Constant);
 }
 
+SDValue DAGCombiner::visitLOOP_DEPENDENCE_MASK(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  unsigned LaneOffset = N->getConstantOperandVal(3);
+
+  // The first lane is always active, so v1i1 => true.
+  if (LaneOffset == 0 &&
+      VT.getVectorElementCount() == ElementCount::getFixed(1))
+    return DAG.getBoolConstant(true, DL, VT, VT);
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
   auto *SLD = cast<VPStridedLoadSDNode>(N);
   EVT EltVT = SLD->getValueType(0).getVectorElementType();
@@ -14415,6 +14539,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     if (SDValue S = PerformMinMaxFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
       return S;
     if (SDValue S = PerformUMinFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
+      return S;
+    if (SDValue S = performNanGuardFpToSatCombine(N, DAG))
       return S;
 
     // If this select has a condition (setcc) with narrower operands than the
@@ -27195,6 +27321,89 @@ static SDValue combineConcatVectorOfShuffleAndItsOperands(
   return DAG.getVectorShuffle(VT, dl, ShufOps[0], ShufOps[1], Mask);
 }
 
+// concat(shuffle(loadA, loadB, mask0), shuffle(loadA, loadB, mask1))
+// -> shuffle(loadAB, poison, concat(mask0, mask1))
+// only if loadA and loadB can be proven consecutive.
+static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
+                                             const TargetLowering &TLI,
+                                             bool LegalOperations) {
+  SDValue A, B;
+  ArrayRef<int> M0, M1;
+  if (!sd_match(N,
+                m_Node(ISD::CONCAT_VECTORS,
+                       m_OneUse(m_Shuffle(m_NUses<2>(m_Value(A)),
+                                          m_NUses<2>(m_Value(B)), m_Mask(M0))),
+                       m_OneUse(m_Shuffle(m_Deferred(A), m_Deferred(B),
+                                          m_Mask(M1))))))
+    return SDValue();
+  auto *LoadA = dyn_cast<LoadSDNode>(A.getNode());
+  auto *LoadB = dyn_cast<LoadSDNode>(B.getNode());
+  if (!LoadA || !LoadB || !ISD::isNON_EXTLoad(LoadA) ||
+      !ISD::isNON_EXTLoad(LoadB))
+    return SDValue();
+
+  // Check if the address spaces of both loads are the same.
+  if (LoadA->getAddressSpace() != LoadB->getAddressSpace())
+    return SDValue();
+
+  // Check if the loads are consecutive.
+  LoadSDNode *Base = nullptr;
+  if (DAG.areNonVolatileConsecutiveLoads(
+          LoadB, LoadA, LoadB->getMemoryVT().getStoreSize(), /*Dist=*/1)) {
+    Base = LoadA;
+  } else if (DAG.areNonVolatileConsecutiveLoads(
+                 LoadA, LoadB, LoadA->getMemoryVT().getStoreSize(),
+                 /*Dist=*/1)) {
+    Base = LoadB;
+  } else {
+    return SDValue(); // not adjacent
+  }
+
+  unsigned Fast = 0;
+  Align NewAlign = Base->getAlign();
+  EVT WideVT =
+      LoadA->getMemoryVT().getDoubleNumVectorElementsVT(*DAG.getContext());
+  if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), WideVT,
+                              Base->getAddressSpace(), NewAlign,
+                              Base->getMemOperand()->getFlags(), &Fast) ||
+      !Fast)
+    return SDValue();
+
+  // Create a shuffle of the wide load.
+  SmallVector<int, 32> Mask;
+  if (Base == LoadA) {
+    llvm::append_range(Mask, M0);
+    llvm::append_range(Mask, M1);
+  } else {
+    SmallVector<int, 16> C0(M0), C1(M1);
+    ShuffleVectorSDNode::commuteMask(C0);
+    ShuffleVectorSDNode::commuteMask(C1);
+    llvm::append_range(Mask, C0);
+    llvm::append_range(Mask, C1);
+  }
+
+  // Check if the wide load, new shuffle and it's mask is legal.
+  if (LegalOperations &&
+      (!TLI.isOperationLegal(ISD::LOAD, WideVT) ||
+       !TLI.isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, WideVT) ||
+       !TLI.isShuffleMaskLegal(Mask, WideVT)))
+    return SDValue();
+
+  // Create a wide load of twice the size of the original load.
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *WideMMO = MF.getMachineMemOperand(
+      Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
+  SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
+                                 Base->getBasePtr(), WideMMO);
+  // Redirect old chain users to the new chain.
+  DAG.makeEquivalentMemoryOrdering(LoadA, WideLoad);
+  DAG.makeEquivalentMemoryOrdering(LoadB, WideLoad);
+
+  // Create a new shuffle with the new mask.
+  return DAG.getVectorShuffle(WideVT, SDLoc(N), WideLoad, DAG.getPOISON(WideVT),
+                              Mask);
+}
+
 static SDValue combineConcatVectorOfSplats(SDNode *N, SelectionDAG &DAG,
                                            const TargetLowering &TLI,
                                            bool LegalTypes,
@@ -27366,6 +27575,9 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
 
   if (SDValue V = combineConcatVectorOfShuffleAndItsOperands(
           N, DAG, TLI, LegalTypes, LegalOperations))
+    return V;
+
+  if (SDValue V = combineConcatVectorOfShuffles(N, DAG, TLI, LegalOperations))
     return V;
 
   // Type legalization of vectors and DAG canonicalization of SHUFFLE_VECTOR
@@ -27891,6 +28103,15 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
         V.hasOneUse())
       if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
         return DAG.getSplatVector(NVT, DL, V.getOperand(0));
+
+  // ty1 extract_vector(ty2 get_active_lane_mask(X, Y), 0) --> ty1
+  // get_active_lane_mask(X, Y)
+  if (ExtIdx == 0 && V.getOpcode() == ISD::GET_ACTIVE_LANE_MASK &&
+      V.hasOneUse() &&
+      (!LegalOperations ||
+       TLI.isOperationLegal(ISD::GET_ACTIVE_LANE_MASK, NVT)))
+    return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, NVT, V.getOperand(0),
+                       V.getOperand(1));
 
   // extract_subvector(insert_subvector(x,y,c1),c2)
   //  --> extract_subvector(y,c2-c1)

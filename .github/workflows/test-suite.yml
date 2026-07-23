@@ -21,7 +21,7 @@ jobs:
       name: main-branch-only
       deployment: false
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -82,7 +82,7 @@ jobs:
           EOF
           exit 1
       - name: Checkout pull request
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ fromJSON(steps.get-pr.outputs.result).merge_commit_sha }}
           repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
@@ -90,7 +90,7 @@ jobs:
           path: llvm-project
           persist-credentials: false
       - name: Checkout llvm/llvm-test-suite
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: llvm/llvm-test-suite
           path: llvm-test-suite
@@ -144,14 +144,14 @@ jobs:
           ./utils/tdiff.py -a build.x86-64-v3-O3-base -b build.x86-64-v3-O3-head -s all > diffs/x86-64-v3-O3.diff || true
         working-directory: llvm-test-suite
       - name: Upload diffs
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         id: upload-diffs
         with:
           name: diffs
           path: llvm-test-suite/diffs
       - name: Upload results
         id: upload-results
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: results
           path: llvm-test-suite/results*.json
@@ -195,7 +195,7 @@ jobs:
           PR_NUMBER: ${{ fromJSON(steps.get-pr.outputs.result).number }}
         run: echo $PR_NUMBER > pr_number
       - name: Upload comment and PR number
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: workflow-args

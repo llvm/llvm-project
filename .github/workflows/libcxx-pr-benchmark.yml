@@ -28,7 +28,7 @@ jobs:
       name: main-branch-only
       deployment: false
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -48,43 +48,38 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: '3.14'
-
-      - name: Setup virtual environment
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python -m pip install pygithub==2.8.1
-
       - name: Extract information from the PR
         id: vars
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
-        run: |
-          source .venv/bin/activate
-          cat <<EOF | python >> ${GITHUB_OUTPUT}
-          import github
-          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
-          pr = repo.get_pull(${{ github.event.issue.number }})
-          print(f"pr_base={pr.base.sha}")
-          print(f"pr_head={pr.head.sha}")
-          EOF
-          BENCHMARKS=$(echo "$COMMENT_BODY" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
-          echo "benchmarks=${BENCHMARKS}" >> ${GITHUB_OUTPUT}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            core.setOutput('pr_base', pr.data.base.sha);
+            core.setOutput('pr_head', pr.data.head.sha);
+            const match = context.payload.comment.body.match(/\/libcxx-bot benchmark (.+)/);
+            core.setOutput('benchmarks', match ? match[1] : '');
 
       - name: Update comment with link to the run
-        run: |
-          source .venv/bin/activate
-          cat <<EOF | python
-          import github
-          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
-          pr = repo.get_pull(${{ github.event.issue.number }})
-          comment = pr.get_issue_comment(${{ github.event.comment.id }})
-          add_text = "> _Running benchmarks in ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}_"
-          comment.edit('\n\n'.join([comment.body, add_text]))
-          EOF
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { data: comment } = await github.rest.issues.getComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+            });
+            const run_url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const note = `> _Running benchmarks in ${run_url}_`;
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              body: [comment.body, note].join('\n\n'),
+            });
     outputs:
       pr_base: ${{ steps.vars.outputs.pr_base }}
       pr_head: ${{ steps.vars.outputs.pr_head }}
@@ -96,13 +91,11 @@ jobs:
         include:
           - platform: macOS 26.5 arm64
             runner: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
-            cc: clang
             cxx: clang++
             install-python: false
             install-macos-dependencies: true
           - platform: Linux x86_64
-            runner: llvm-premerge-libcxx-next-runners
-            cc: clang-22
+            runner: llvm-premerge-libcxx-runners
             cxx: clang++-22
             install-python: true
             install-macos-dependencies: false
@@ -113,10 +106,13 @@ jobs:
     needs:
       - extract-info
     env:
-      CC: ${{ matrix.cc }}
-      CXX: ${{ matrix.cxx }}
+      BENCHMARKS: ${{ needs.extract-info.outputs.benchmarks }}
+      COMPILER: ${{ matrix.cxx }}
+      PLATFORM: ${{ matrix.platform }}
+      PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
+      PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           ref: ${{ needs.extract-info.outputs.pr_head }}
@@ -125,7 +121,7 @@ jobs:
 
       - name: Install Python
         if: ${{ matrix.install-python }}
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.14'
 
@@ -139,37 +135,31 @@ jobs:
           python3 -m venv .venv
           source .venv/bin/activate
           python -m pip install -r libcxx/utils/requirements.txt
-          python -m pip install pygithub==2.8.1
 
       - name: Build the baseline and the candidate
-        env:
-          PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
-          PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
         run: |
           source .venv/bin/activate
           baseline_commit=$(git merge-base $PR_BASE $PR_HEAD)
-          ./libcxx/utils/build-at-commit --commit ${baseline_commit} --install-dir install/baseline -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
-          ./libcxx/utils/build-at-commit --commit $PR_HEAD --install-dir install/candidate -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          ./libcxx/utils/build-at-commit --commit ${baseline_commit} --install-dir install/baseline -- -DCMAKE_CXX_COMPILER="${COMPILER}" -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          ./libcxx/utils/build-at-commit --commit $PR_HEAD --install-dir install/candidate -- -DCMAKE_CXX_COMPILER="${COMPILER}" -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
       - name: Run baseline and candidate interleaved
-        env:
-          BENCHMARKS: ${{ needs.extract-info.outputs.benchmarks }}
         run: |
           source .venv/bin/activate
           # Run 3 times so we can pick the median, and interleave to mitigate the impact of environmental noise
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee candidate.lnt
 
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
 
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
 
       - name: Compare baseline and candidate runs
@@ -178,30 +168,50 @@ jobs:
           ./libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt | tee results.txt
 
       - name: Update comment with results
-        run: |
-          source .venv/bin/activate
-          cat <<EOF | python
-          import github
-          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
-          pr = repo.get_pull(${{ github.event.issue.number }})
-          comment = pr.get_issue_comment(${{ github.event.comment.id }})
-          with open('results.txt', 'r') as f:
-            benchmark_results = f.read()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const results = fs.readFileSync('results.txt', 'utf8');
+            const { data: comment } = await github.rest.issues.getComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+            });
+            const details = [
+              '<details>',
+              '<summary>',
+              `Benchmark results for ${process.env.PLATFORM}:`,
+              '</summary>',
+              '',
+              '```',
+              results,
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              body: [comment.body, details].join('\n\n'),
+            });
 
-          new_comment_text = f"""
-          {comment.body}
-
-          <details>
-          <summary>
-          Benchmark results for ${{ matrix.platform }}:
-          </summary>
-
-          \`\`\`
-          {benchmark_results}
-          \`\`\`
-
-          </details>
-          """
-
-          comment.edit(new_comment_text)
-          EOF
+      - name: Report failure in the comment
+        if: failure()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { data: comment } = await github.rest.issues.getComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+            });
+            const run_url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const note = `> _:x: Benchmarks for ${process.env.PLATFORM} failed. See ${run_url} for details._`;
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              body: [comment.body, note].join('\n\n'),
+            });

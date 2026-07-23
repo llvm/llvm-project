@@ -473,10 +473,10 @@ def __builtin_amdgcn_s_ttracedata_imm : AMDGPUBuiltin<"void(_Constant short)", [
 // Postfix l indicates the 1st argument is i64.
 // Postfix h indicates the 4/5-th arguments are half4.
 //===----------------------------------------------------------------------===//
-def __builtin_amdgcn_image_bvh_intersect_ray : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(unsigned int, float, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, unsigned int>)", [Const], "gfx10-insts">;
-def __builtin_amdgcn_image_bvh_intersect_ray_h : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(unsigned int, float, _ExtVector<4, float>, _ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, unsigned int>)", [Const], "gfx10-insts">;
-def __builtin_amdgcn_image_bvh_intersect_ray_l : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(uint64_t, float, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, unsigned int>)", [Const], "gfx10-insts">;
-def __builtin_amdgcn_image_bvh_intersect_ray_lh : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(uint64_t, float, _ExtVector<4, float>, _ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, unsigned int>)", [Const], "gfx10-insts">;
+def __builtin_amdgcn_image_bvh_intersect_ray : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(unsigned int, float, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, unsigned int>)", [Const], "bvh-ray-tracing-insts">;
+def __builtin_amdgcn_image_bvh_intersect_ray_h : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(unsigned int, float, _ExtVector<4, float>, _ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, unsigned int>)", [Const], "bvh-ray-tracing-insts">;
+def __builtin_amdgcn_image_bvh_intersect_ray_l : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(uint64_t, float, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, float>, _ExtVector<4, unsigned int>)", [Const], "bvh-ray-tracing-insts">;
+def __builtin_amdgcn_image_bvh_intersect_ray_lh : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(uint64_t, float, _ExtVector<4, float>, _ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, unsigned int>)", [Const], "bvh-ray-tracing-insts">;
 
 
 //===----------------------------------------------------------------------===//
@@ -995,14 +995,14 @@ def __builtin_amdgcn_cluster_load_async_to_lds_b8 : AMDGPUBuiltin<"void(char add
 def __builtin_amdgcn_cluster_load_async_to_lds_b32 : AMDGPUBuiltin<"void(int address_space<1> *, int address_space<3> *, _Constant int, _Constant int, int)", [Const], "mcast-load-insts,wavefrontsize32">;
 def __builtin_amdgcn_cluster_load_async_to_lds_b64 : AMDGPUBuiltin<"void(_ExtVector<2, int> address_space<1> *, _ExtVector<2, int> address_space<3> *, _Constant int, _Constant int, int)", [Const], "mcast-load-insts,wavefrontsize32">;
 def __builtin_amdgcn_cluster_load_async_to_lds_b128 : AMDGPUBuiltin<"void(_ExtVector<4, int> address_space<1> *, _ExtVector<4, int> address_space<3> *, _Constant int, _Constant int, int)", [Const], "mcast-load-insts,wavefrontsize32">;
-def __builtin_amdgcn_global_load_async_to_lds_b8 : AMDGPUBuiltin<"void(char address_space<1> *, char address_space<3> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_load_async_to_lds_b32 : AMDGPUBuiltin<"void(int address_space<1> *, int address_space<3> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_load_async_to_lds_b64 : AMDGPUBuiltin<"void(_ExtVector<2, int> address_space<1> *, _ExtVector<2, int> address_space<3> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_load_async_to_lds_b128 : AMDGPUBuiltin<"void(_ExtVector<4, int> address_space<1> *, _ExtVector<4, int> address_space<3> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_store_async_from_lds_b8 : AMDGPUBuiltin<"void(char address_space<1> *, char address_space<3> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_store_async_from_lds_b32 : AMDGPUBuiltin<"void(int address_space<1> *, int address_space<3> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_store_async_from_lds_b64 : AMDGPUBuiltin<"void(_ExtVector<2, int> address_space<1> *, _ExtVector<2, int> address_space<3> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_store_async_from_lds_b128 : AMDGPUBuiltin<"void(_ExtVector<4, int> address_space<1> *, _ExtVector<4, int> address_space<3> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_global_load_async_to_lds_b8 : AMDGPUBuiltin<"void(char address_space<1> *, char address_space<3> *, _Constant int, _Constant int)", [Const], "async-load-to-lds-insts,wavefrontsize32">;
+def __builtin_amdgcn_global_load_async_to_lds_b32 : AMDGPUBuiltin<"void(int address_space<1> *, int address_space<3> *, _Constant int, _Constant int)", [Const], "async-load-to-lds-insts,wavefrontsize32">;
+def __builtin_amdgcn_global_load_async_to_lds_b64 : AMDGPUBuiltin<"void(_ExtVector<2, int> address_space<1> *, _ExtVector<2, int> address_space<3> *, _Constant int, _Constant int)", [Const], "async-load-to-lds-insts,wavefrontsize32">;
+def __builtin_amdgcn_global_load_async_to_lds_b128 : AMDGPUBuiltin<"void(_ExtVector<4, int> address_space<1> *, _ExtVector<4, int> address_space<3> *, _Constant int, _Constant int)", [Const], "async-load-to-lds-insts,wavefrontsize32">;
+def __builtin_amdgcn_global_store_async_from_lds_b8 : AMDGPUBuiltin<"void(char address_space<1> *, char address_space<3> *, _Constant int, _Constant int)", [Const], "async-store-from-lds-insts">;
+def __builtin_amdgcn_global_store_async_from_lds_b32 : AMDGPUBuiltin<"void(int address_space<1> *, int address_space<3> *, _Constant int, _Constant int)", [Const], "async-store-from-lds-insts">;
+def __builtin_amdgcn_global_store_async_from_lds_b64 : AMDGPUBuiltin<"void(_ExtVector<2, int> address_space<1> *, _ExtVector<2, int> address_space<3> *, _Constant int, _Constant int)", [Const], "async-store-from-lds-insts">;
+def __builtin_amdgcn_global_store_async_from_lds_b128 : AMDGPUBuiltin<"void(_ExtVector<4, int> address_space<1> *, _ExtVector<4, int> address_space<3> *, _Constant int, _Constant int)", [Const], "async-store-from-lds-insts">;
 def __builtin_amdgcn_ds_atomic_async_barrier_arrive_b64 : AMDGPUBuiltin<"void(long int address_space<3> *)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64 : AMDGPUBuiltin<"long int(long int address_space<3> *, long int)", [Const], "gfx1250-insts">;
 
@@ -1273,6 +1273,18 @@ def __builtin_amdgcn_cooperative_atomic_store_16x8B : AMDGPUBuiltin<"void(_ExtVe
 
 def __builtin_amdgcn_cooperative_atomic_load_8x16B : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> *, _Constant int, char const *)", [Const], "gfx1250-insts,wavefrontsize32">;
 def __builtin_amdgcn_cooperative_atomic_store_8x16B : AMDGPUBuiltin<"void(_ExtVector<4, int> *, _ExtVector<4, int>, _Constant int, char const *)", [Const], "gfx1250-insts,wavefrontsize32">;
+
+//===----------------------------------------------------------------------===//
+// GFX13+ only builtins.
+//===----------------------------------------------------------------------===//
+def __builtin_amdgcn_cvt_scalef32_pk32_bf6_f32 : AMDGPUBuiltin<"_Vector<6, unsigned int>(_Vector<32, float>, float)", [Const], "f32-to-fp6bf6-cvt-scale-insts"> {
+  let Documentation = [DocCvtScaleF32Pk32BF6F32];
+  let ArgNames = ["src", "scale"];
+}
+def __builtin_amdgcn_cvt_scalef32_pk32_fp6_f32 : AMDGPUBuiltin<"_Vector<6, unsigned int>(_Vector<32, float>, float)", [Const], "f32-to-fp6bf6-cvt-scale-insts"> {
+  let Documentation = [DocCvtScaleF32Pk32FP6F32];
+  let ArgNames = ["src", "scale"];
+}
 
 //===----------------------------------------------------------------------===//
 // Image builtins

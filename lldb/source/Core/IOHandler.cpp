@@ -134,9 +134,9 @@ IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
   StreamString prompt_stream;
   prompt_stream.PutCString(prompt);
   if (m_default_response)
-    prompt_stream.Printf(": [Y/n] ");
+    prompt_stream.PutCString(": [Y/n] ");
   else
-    prompt_stream.Printf(": [y/N] ");
+    prompt_stream.PutCString(": [y/N] ");
 
   SetPrompt(prompt_stream.GetString());
 }
@@ -359,7 +359,7 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
     if (prompt && prompt[0]) {
       if (m_output_sp) {
         LockedStreamFile locked_stream = m_output_sp->Lock();
-        locked_stream.Printf("%s", prompt);
+        locked_stream.PutCString(prompt);
       }
     }
   }

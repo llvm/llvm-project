@@ -1414,7 +1414,7 @@ getDeviceInput(const ArgList &Args) {
     OffloadFile::TargetID Target = Binary;
     SmallVector<OffloadFile::TargetID> CompatibleTargets;
     for (const auto &[ID, Input] : InputFiles)
-      if (Target == ID || object::areTargetsCompatible(Target, ID))
+      if (object::areTargetsEquivalent(Target, ID))
         CompatibleTargets.emplace_back(ID);
 
     // Seed a new image when no existing target can provide for this input.
@@ -1443,7 +1443,8 @@ getDeviceInput(const ArgList &Args) {
 
     SmallVector<OffloadFile::TargetID> CompatibleTargets = {Binary};
     for (const auto &[ID, Input] : InputFiles)
-      if (object::areTargetsCompatible(Binary, ID))
+      if (OffloadFile::TargetID(Binary) != ID &&
+          object::areTargetsCompatible(Binary, ID))
         CompatibleTargets.emplace_back(ID);
 
     for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
