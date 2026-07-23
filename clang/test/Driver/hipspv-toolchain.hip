@@ -93,7 +93,7 @@
 
 //      CHIPSTAR: {{".*clang.*"}} "-cc1" "-triple" "spirv64-unknown-chipstar"
 // CHIPSTAR-SAME: "-emit-obj"
-// CHIPSTAR-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
+// CHIPSTAR-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add,+SPV_KHR_non_semantic_info,+SPV_INTEL_optnone"
 // CHIPSTAR-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
 // RUN: %clang -### --no-default-config -o %t.dummy.img \
@@ -110,7 +110,7 @@
 
 //      CHIPSTAR-SUBARCH: {{".*clang.*"}} "-cc1" "-triple" "spirv64v1.3-unknown-chipstar"
 // CHIPSTAR-SUBARCH-SAME: "-emit-obj"
-// CHIPSTAR-SUBARCH-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
+// CHIPSTAR-SUBARCH-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add,+SPV_KHR_non_semantic_info,+SPV_INTEL_optnone"
 // CHIPSTAR-SUBARCH-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
 // -fno-integrated-objemitter selects the external llvm-spirv translator.
@@ -125,6 +125,8 @@
 
 //      CHIPSTAR-XTOR: {{".*llvm-spirv.*"}} "--spirv-max-version=1.2"
 // CHIPSTAR-XTOR-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
+// CHIPSTAR-XTOR-SAME: "--spirv-ext=+SPV_KHR_non_semantic_info,+SPV_INTEL_optnone"
+// CHIPSTAR-XTOR-SAME: "--spirv-debug-info-version=nonsemantic-shader-200"
 // CHIPSTAR-XTOR-SAME: [[LOWER_BC]] "-o" "{{.*img}}"
 
 // Check unknown linker options are ignored - such as ones that are targeted at
@@ -155,25 +157,11 @@
 // VERSIONED: {{.*}}llvm-spirv-[[VERSION]]
 
 //-----------------------------------------------------------------------------
-// Check that -g preserves device debug info by requesting the
-// NonSemantic.Shader.DebugInfo form (and the extension it depends on) from the
-// translator, and that no debug flags are emitted without -g.
+// The debug-info flags are passed regardless of -g (covered by the
+// CHIPSTAR-XTOR checks above): in RDC-mode links this job runs in a clang
+// invoked by clang-linker-wrapper where the original -g is not visible, but
+// debug info travels in the bitcode and the flags are no-ops without it.
 // RUN: %clang -### --no-default-config -g -o %t.dummy.img \
 // RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
 // RUN:   --hip-path="%S/Inputs/hipspv" -fno-integrated-objemitter \
-// RUN: 2>&1 | FileCheck %s --check-prefix=DEBUG
-
-//      DEBUG: {{".*llvm-spirv"}} "--spirv-max-version=1.2"
-// DEBUG-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_KHR_bit_instructions,+SPV_EXT_shader_atomic_float_add"
-// DEBUG-SAME: "--spirv-ext=+SPV_KHR_non_semantic_info,+SPV_INTEL_optnone"
-// DEBUG-SAME: "--spirv-debug-info-version=nonsemantic-shader-200"
-
-// RUN: %clang -### --no-default-config -o %t.dummy.img \
-// RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
-// RUN:   --hip-path="%S/Inputs/hipspv" -fno-integrated-objemitter \
-// RUN: 2>&1 | FileCheck %s --check-prefix=NODEBUG
-
-//      NODEBUG: {{".*llvm-spirv"}}
-// NODEBUG-NOT: SPV_KHR_non_semantic_info
-// NODEBUG-NOT: SPV_INTEL_optnone
-// NODEBUG-NOT: spirv-debug-info-version
+// RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR-XTOR -DHIP_PATH=%S/Inputs/hipspv

@@ -121,14 +121,17 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
                        ",+SPV_KHR_bit_instructions"
                        ",+SPV_EXT_shader_atomic_float_add");
 
-      // Preserve debug info requested via -g (see the comment on the
-      // equivalent block in the non-chipStar path below).
-      if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
-          A && !A->getOption().matches(options::OPT_g0)) {
-        TrArgs.push_back("--spirv-ext=+SPV_KHR_non_semantic_info"
-                         ",+SPV_INTEL_optnone");
-        TrArgs.push_back("--spirv-debug-info-version=nonsemantic-shader-200");
-      }
+      // Preserve debug info in the NonSemantic.Shader.DebugInfo form (see the
+      // comment on the equivalent block in the non-chipStar path below).
+      // These flags are passed unconditionally instead of gating on -g: in
+      // RDC-mode links this job runs in a clang invoked by
+      // clang-linker-wrapper where the original -g is not visible, but the
+      // debug info itself travels in the bitcode. The flags only allow
+      // extensions and select the debug info form; with debug-info-free
+      // bitcode the output is unchanged.
+      TrArgs.push_back("--spirv-ext=+SPV_KHR_non_semantic_info"
+                       ",+SPV_INTEL_optnone");
+      TrArgs.push_back("--spirv-debug-info-version=nonsemantic-shader-200");
 
       InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
       SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
@@ -151,12 +154,17 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     Cc1Args.push_back("-emit-obj");
 
     // SPIR-V extensions the chipStar runtime relies on. Keep in sync with the
-    // llvm-spirv translator path above.
+    // llvm-spirv translator path above. SPV_KHR_non_semantic_info and
+    // SPV_INTEL_optnone let the backend emit NonSemantic.Shader.DebugInfo and
+    // the OptNoneINTEL function control when the bitcode carries debug info /
+    // optnone attributes (the backend's debug handler is a no-op otherwise).
     Cc1Args.push_back("-mllvm");
     Cc1Args.push_back("-spirv-ext=+SPV_INTEL_function_pointers"
                       ",+SPV_INTEL_subgroups"
                       ",+SPV_KHR_bit_instructions"
-                      ",+SPV_EXT_shader_atomic_float_add");
+                      ",+SPV_EXT_shader_atomic_float_add"
+                      ",+SPV_KHR_non_semantic_info"
+                      ",+SPV_INTEL_optnone");
 
     Cc1Args.push_back(TempFile);
     Cc1Args.push_back("-o");
