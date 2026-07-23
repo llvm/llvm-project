@@ -337,10 +337,7 @@ struct VPCostContext {
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
                 const VFSelectionContext &Config,
-                TargetTransformInfo::TargetCostKind CostKind,
-                PredicatedScalarEvolution &PSE, const Loop *L)
-      : TTI(TTI), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM), Config(Config),
-        CostKind(CostKind), PSE(PSE), L(L) {}
+                PredicatedScalarEvolution &PSE, const Loop *L);
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.

@@ -1871,6 +1871,14 @@ bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
   return ExtendedVal == *C;
 }
 
+VPCostContext::VPCostContext(const TargetTransformInfo &TTI,
+                             const TargetLibraryInfo &TLI, const VPlan &Plan,
+                             LoopVectorizationCostModel &CM,
+                             const VFSelectionContext &Config,
+                             PredicatedScalarEvolution &PSE, const Loop *L)
+    : TTI(TTI), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM), Config(Config),
+      CostKind(Config.CostKind), PSE(PSE), L(L) {}
+
 TargetTransformInfo::OperandValueInfo
 VPCostContext::getOperandInfo(VPValue *V) const {
   if (auto *IRV = dyn_cast<VPIRValue>(V))

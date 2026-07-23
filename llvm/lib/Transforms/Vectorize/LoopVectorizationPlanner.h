@@ -792,11 +792,6 @@ public:
   /// of FP operations.
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const;
 
-  /// Returns true if the target machine supports masked loads or stores
-  /// for \p I's data type and alignment. The caller must ensure the access is
-  /// consecutive or part of an interleave group.
-  bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
-
   /// Returns true if the target machine supports a masked load (if \p IsLoad)
   /// or masked store of scalar type \p ScalarTy with \p Alignment in address
   /// space \p AddressSpace. The caller must ensure the access is consecutive or

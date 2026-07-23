@@ -5414,7 +5414,6 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
   VPlanTransforms::runPass(
       "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
         Instruction *I = VPI->getUnderlyingInstr();
-
         bool IsLoad = VPI->getOpcode() == Instruction::Load;
         VPValue *Ptr = VPI->getOperand(!IsLoad);
         Type *ScalarTy =
@@ -5427,27 +5426,18 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
         // A predicated access can only be widened (rather than scalarized) if
         // the target supports a masked load/store for it.
-        if (RecipeBuilder.isPredicatedInst(I)) {
-          unsigned AddressSpace =
-              cast<PointerType>(Ptr->getScalarType())->getAddressSpace();
-          Align Alignment = getLoadStoreAlignment(I);
-          if (!LoopVectorizationPlanner::getDecisionAndClampRange(
-                  [&](ElementCount VF) {
-                    return CostCtx.Config.isLegalMaskedLoadOrStore(
-                        IsLoad, ScalarTy, Alignment, AddressSpace);
-                  },
-                  Range))
-            return false;
-        }
-
-        // TODO: Determine dereferenceability directly in VPlan.
-        VPValue *Mask =
-            RecipeBuilder.isPredicatedInst(I) ? VPI->getMask() : nullptr;
+        // TODO: Determine if a load/store needs predication directly in VPlan.
+        bool IsPredicated = RecipeBuilder.isPredicatedInst(I);
+        if (IsPredicated && !CostCtx.Config.isLegalMaskedLoadOrStore(
+                                IsLoad, ScalarTy, getLoadStoreAlignment(I),
+                                getLoadStoreAddressSpace(I)))
+          return false;
 
         VPBuilder Builder(VPI);
         VPSingleDefRecipe *VectorPtr = Builder.createConsecutiveVectorPointer(
             Ptr, ScalarTy, Reverse, VPI->getDebugLoc());
 
+        VPValue *Mask = IsPredicated ? VPI->getMask() : nullptr;
         // Reverse the mask so it matches the reversed access order.
         if (Reverse && Mask)
           Mask = Builder.createNaryOp(VPInstruction::Reverse, Mask,

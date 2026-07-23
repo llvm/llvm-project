@@ -134,14 +134,6 @@ void LoopVectorizationUtils::reportVectorization(OptimizationRemarkEmitter *ORE,
   });
 }
 
-bool VFSelectionContext::isLegalMaskedLoadOrStore(Instruction *I,
-                                                  ElementCount VF) const {
-  assert(isa<LoadInst>(I) || isa<StoreInst>(I));
-  return isLegalMaskedLoadOrStore(isa<LoadInst>(I), getLoadStoreType(I),
-                                  getLoadStoreAlignment(I),
-                                  getLoadStoreAddressSpace(I));
-}
-
 bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
                                                   Align Alignment,
                                                   unsigned AddressSpace) const {
