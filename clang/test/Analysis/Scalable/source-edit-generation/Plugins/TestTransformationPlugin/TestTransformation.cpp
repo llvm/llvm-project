@@ -94,7 +94,10 @@ namespace clang::ssaf {
 volatile int SSAFTestTransformationAnchorSource = 0;
 } // namespace clang::ssaf
 
+// This global causes issue (rdar://182623740) in stage2 with ASan-instrumented
+// clang.
 static TransformationRegistry::Add<TestTransformation>
+    __attribute__((no_sanitize("address")))
     RegisterTestTransformation("test-transformation",
                                "Test transformation for the SSAF "
                                "source-edit-generation lit suite");
