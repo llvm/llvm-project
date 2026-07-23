@@ -73,7 +73,6 @@
 ; CHECK-NEXT:   fusion-shifted-zextw             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   fusion-shxadd-load               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
 ; CHECK-NEXT:   fusion-xqci-mov-longlogical      - Enable MOV + long logical operation macrofusion.
-; CHECK-NEXT:   fusion-xqci-mov-mov              - Enable Move + Move macrofusion.
 ; CHECK-NEXT:   fusion-xqci-movimm-alu           - Enable MOVIMM + ALU operations macrofusion.
 ; CHECK-NEXT:   fusion-xqci-movimm-jump          - Enable MOVIMM + Jump macrofusion.
 ; CHECK-NEXT:   fusion-xqci-movimm-ldst          - Enable MOVIMM + long Load/Store macrofusion.

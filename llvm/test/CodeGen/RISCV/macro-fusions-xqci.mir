@@ -4,7 +4,7 @@
 # RUN:   -mattr=+xqcilia,+xqcili,+xqcilo,+zmmul,+fusion-xqci-movimm-alu \
 # RUN:   -mattr=+fusion-xqci-movimm-mul,+fusion-xqci-movimm-ldst \
 # RUN:   -mattr=+fusion-xqci-movimm-jump \
-# RUN:   -mattr=+fusion-xqci-movimm-longlogical,+fusion-xqci-mov-mov \
+# RUN:   -mattr=+fusion-xqci-movimm-longlogical \
 # RUN:   -mattr=+fusion-xqci-mov-longlogical \
 # RUN:   | FileCheck %s
 
@@ -86,39 +86,6 @@ body:             |
     %2:gprnox0 = QC_E_XORAI %2, 0
     $x10 = COPY %3
     $x11 = COPY %2
-    PseudoRET
-...
-
-# CHECK: mov_mov1_xqci:%bb.0
-# CHECK: Macro fuse: {{.*}}ADDI - ADDI
-name: mov_mov1_xqci
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10
-    %0:gpr = COPY $x10
-    %1:gpr = ADDI $x0, 5
-    %2:gpr = MUL  %0, %0
-    %3:gpr = ADDI %1, 0
-    %4:gpr = SUB  %2, %3
-    $x11 = COPY %3
-    $x12 = COPY %4
-    PseudoRET
-...
-
-# CHECK: mov_mov2_xqci:%bb.0
-# CHECK: Macro fuse: {{.*}}ADDI - ADDI
-name: mov_mov2_xqci
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10
-    %1:gpr = COPY $x10
-    %2:gpr = ADDI %1, 0
-    %3:gpr = XORI %1, 2
-    %4:gpr = ADDI %2, 0
-    $x10 = COPY %3
-    $x11 = COPY %4
     PseudoRET
 ...
 

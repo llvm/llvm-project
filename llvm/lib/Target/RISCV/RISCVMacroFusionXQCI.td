@@ -107,32 +107,6 @@ def TuneMOVIMMLongLogicalXciFusion
                  ]>,
                  CheckOpcode<LongLogicalXqciOp>>;
 
-// Fuse two adjacent moves.
-def TuneMOVIMMMovXqciFusion
-  : SimpleFusion<"xqci-mov-mov", "HasMovMovXqciFusion",
-                 "Enable Move + Move macrofusion",
-                 CheckAny<[
-                   CheckAll<[
-                     CheckOpcode<[ADDI]>,
-                     CheckRegOperand<1, X0>
-                   ]>,
-                   CheckAll<[
-                     CheckOpcode<[ADDI]>,
-                     CheckIsImmOperand<2>,
-                     CheckImmOperand<2, 0>
-                   ]>,
-                   CheckOpcode<LoadImmOp>,
-                 ]>,
-                 CheckAny<[
-                   CheckAll<[
-                     CheckOpcode<[ADDI]>,
-                     CheckIsImmOperand<2>,
-                     CheckImmOperand<2, 0>
-                   ]>,
-                   CheckOpcode<LoadImmOp>
-                 ]>
-                 >;
-
 // Fuse move followed by long logical operation.
 def TuneMovALUXqciFusion
   : FirstRdEqSecondRdFusion<"xqci-mov-longlogical", "HasMovALUXqciFusion",
