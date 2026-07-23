@@ -2019,10 +2019,8 @@ tryCombineFromSVBoolBinOp(InstCombiner &IC, IntrinsicInst &II) {
   auto m_ConvertToSVBool = [](auto P) {
     return m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(P);
   };
-  auto CreateConvertFromSVBool = [&IC](Type *Ty, Value *V) {
-    unsigned IID = Intrinsic::aarch64_sve_convert_from_svbool;
-    return IC.Builder.CreateIntrinsic(IID, Ty, V);
-  };
+  constexpr Intrinsic::ID ConvertFromSVBool =
+      Intrinsic::aarch64_sve_convert_from_svbool;
 
   Type *Ty = II.getType();
   Value *NarrowLHS, *RHS;
@@ -2030,7 +2028,7 @@ tryCombineFromSVBoolBinOp(InstCombiner &IC, IntrinsicInst &II) {
   if (match(II.getOperand(0),
             m_c_LogicalAnd(m_ConvertToSVBool(m_SpecificType(Ty, NarrowLHS)),
                            m_Value(RHS)))) {
-    Value *NarrowRHS = CreateConvertFromSVBool(Ty, RHS);
+    Value *NarrowRHS = IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, RHS);
     Value *NarrowAnd = IC.Builder.CreateLogicalAnd(NarrowLHS, NarrowRHS);
     return IC.replaceInstUsesWith(II, NarrowAnd);
   }
@@ -2062,12 +2060,14 @@ tryCombineFromSVBoolBinOp(InstCombiner &IC, IntrinsicInst &II) {
     return std::nullopt;
 
   SmallVector<Value *> NarrowedBinOpArgs = {PredOp};
-  Value *NarrowBinOpOp1 = CreateConvertFromSVBool(Ty, BinOpOp1);
+  Value *NarrowBinOpOp1 =
+      IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, BinOpOp1);
   NarrowedBinOpArgs.push_back(NarrowBinOpOp1);
   if (BinOpOp1 == BinOpOp2)
     NarrowedBinOpArgs.push_back(NarrowBinOpOp1);
   else
-    NarrowedBinOpArgs.push_back(CreateConvertFromSVBool(Ty, BinOpOp2));
+    NarrowedBinOpArgs.push_back(
+        IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, BinOpOp2));
 
   Value *NarrowedBinOp =
       IC.Builder.CreateIntrinsic(IntrinsicID, Ty, NarrowedBinOpArgs);
