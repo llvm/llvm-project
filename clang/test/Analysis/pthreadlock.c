@@ -20,22 +20,23 @@ lck_rw_t rw;
 
 void clang_analyzer_warnIfReached(void);
 long global_var;
+// The self-contradictory constraint below used to reach the lock call with an
+// internally inconsistent state and crash PthreadLockChecker on an assertion.
+// RangedConstraintManager now honors the concrete simplification of
+// `(global_var & 137) & 8` (== 0 when `(global_var & 137) == 2`), so the dead
+// branch is pruned before the lock and neither function warns or crashes.
 void noCrash(void) {
-  // Produce a complicated self-contradictory constraint
   if (((global_var & 137) == 2) &&
       ((global_var & 137) & 8)) {
-    // This branch is actually dead, but the analyzer does not realize that yet.
-    clang_analyzer_warnIfReached();
+    clang_analyzer_warnIfReached(); // no-warning (dead branch, pruned)
     pthread_mutex_lock(&mtx1); // no-warning
   }
 }
 
 void noCrashTryLock(void) {
-  // Produce a complicated self-contradictory constraint
   if (((global_var & 137) == 2) &&
       ((global_var & 137) & 8)) {
-    // This branch is actually dead, but the analyzer does not realize that yet.
-    clang_analyzer_warnIfReached();
+    clang_analyzer_warnIfReached(); // no-warning (dead branch, pruned)
     pthread_mutex_trylock(&mtx1); // no-warning
   }
 }

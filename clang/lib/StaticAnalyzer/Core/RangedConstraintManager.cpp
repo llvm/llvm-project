@@ -20,10 +20,46 @@ namespace ento {
 
 RangedConstraintManager::~RangedConstraintManager() {}
 
+// Is `Assumption` (i.e. "the condition is non-zero") consistent with a symbol
+// that simplified to the concrete integer `V`? Mirrors the nonloc::ConcreteInt
+// handling in SimpleConstraintManager::assumeAux.
+static bool isConcreteFeasible(const llvm::APSInt &V, bool Assumption) {
+  return (V != 0) ? Assumption : !Assumption;
+}
+
 ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
                                                    SymbolRef Sym,
                                                    bool Assumption) {
-  Sym = simplify(State, Sym);
+  SVal SimplifiedVal = simplifyToSVal(State, Sym);
+  // Note: a loc::ConcreteInt is not possible here. This callsite is only ever
+  // reached with non-loc-typed symbols (SimpleConstraintManager::assumeAux's
+  // nonloc::SymbolVal case and assumeSymRel's comparison-to-zero rewrite), and
+  // simplifyToSVal() -> makeSymbolVal() only produces a Loc for pointer-typed
+  // symbols -- so the fold can only ever be a nonloc::ConcreteInt.
+  if (auto CI = SimplifiedVal.getAs<nonloc::ConcreteInt>()) {
+    // The symbol folds to a concrete integer. If the assumption contradicts it
+    // the path is infeasible and must be pruned; otherwise a self-contradictory
+    // state would stay feasible and could crash checkers downstream.
+    if (!isConcreteFeasible(*CI->getValue(), Assumption))
+      return nullptr;
+    // When the fold is consistent we deliberately do NOT return early: we fall
+    // through and record the constraint on the *original* symbol. That is not a
+    // no-op -- it is how the symbol-simplification fixpoint migrates a
+    // constraint onto a just-simplified symbol. Concretely, in
+    // symbol-simplification-fixpoint-two-iterations.cpp, once `b == 0` rewrites
+    // `c + b` (constrained to 0) into the bare symbol `c`, the classes merge and
+    // reAssume() calls assume(c, false); here `c` folds to the concrete 0, and
+    // falling through to assumeSymUnsupported()/assumeSymEQ() records `c == 0`.
+    // That recorded fact is what lets the *next* iteration rewrite `a + c` into
+    // `a`. Returning State here skips the recording and the class stays stuck at
+    // `(a + c) != d`, regressing that test. (EquivalenceClass::simplify ->
+    // reAssume -> State->assume is the loop this participates in.)
+  } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
+    // A symbolic fold replaces the symbol so we reason about the simpler form.
+    // Any other SVal shape (Unknown, ...) keeps the original symbol -- matching
+    // the pre-existing behavior of the old simplify() helper.
+    Sym = SimplifiedSym;
+  }
 
   // Handle SymbolData.
   if (isa<SymbolData>(Sym))
@@ -102,7 +138,28 @@ ProgramStateRef RangedConstraintManager::assumeSymInclusiveRange(
     ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
     const llvm::APSInt &To, bool InRange) {
 
-  Sym = simplify(State, Sym);
+  SVal SimplifiedVal = simplifyToSVal(State, Sym);
+  // Note: unlike assumeSym(), this callsite can receive a pointer-typed Sym
+  // (assumeInclusiveRangeInternal's nonloc::LocAsInteger case, e.g. a case-range
+  // switch over `(intptr_t)ptr`), so simplifyToSVal() could in principle yield a
+  // loc::ConcreteInt. In practice it never does: that fold requires the pointer
+  // pinned to a single concrete address, and once it is, `(intptr_t)ptr` folds
+  // eagerly to a nonloc::ConcreteInt and is handled before ever reaching a
+  // symbol here. Hence only the nonloc::ConcreteInt case needs handling.
+  if (auto CI = SimplifiedVal.getAs<nonloc::ConcreteInt>()) {
+    // The symbol folds to a concrete integer. Prune the path only when the
+    // concrete value proves it infeasible (mirroring
+    // SimpleConstraintManager::assumeInclusiveRangeInternal; APSInt comparison
+    // handles differing widths/signedness, so no explicit conversion needed).
+    // If it is consistent, fall through so the existing machinery still runs
+    // (see the note in assumeSym for why the fall-through is load-bearing).
+    const llvm::APSInt &V = *CI->getValue();
+    bool IsInRange = V >= From && V <= To;
+    if (IsInRange != InRange)
+      return nullptr;
+  } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
+    Sym = SimplifiedSym;
+  }
 
   // Get the type used for calculating wraparound.
   BasicValueFactory &BVF = getBasicVals();
@@ -132,7 +189,22 @@ ProgramStateRef RangedConstraintManager::assumeSymInclusiveRange(
 ProgramStateRef
 RangedConstraintManager::assumeSymUnsupported(ProgramStateRef State,
                                               SymbolRef Sym, bool Assumption) {
-  Sym = simplify(State, Sym);
+  SVal SimplifiedVal = simplifyToSVal(State, Sym);
+  // Note: like assumeSym(), this never receives a pointer-typed Sym -- its
+  // callers (assumeSym()'s fall-through and assumeAux()'s !canReasonAbout
+  // branch, where getAsSymbol() yields the integer-typed bitwise/comparison
+  // expression) only pass non-loc symbols -- so the fold is always a
+  // nonloc::ConcreteInt.
+  if (auto CI = SimplifiedVal.getAs<nonloc::ConcreteInt>()) {
+    // Prune only when the concrete fold contradicts the assumption. When it is
+    // consistent we fall through and record the constraint on the original
+    // symbol (assumeSymNE/EQ below) rather than returning early; see the note
+    // in assumeSym for why the fall-through is load-bearing.
+    if (!isConcreteFeasible(*CI->getValue(), Assumption))
+      return nullptr;
+  } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
+    Sym = SimplifiedSym;
+  }
 
   BasicValueFactory &BVF = getBasicVals();
   QualType T = Sym->getType();
@@ -235,13 +307,6 @@ void RangedConstraintManager::computeAdjustment(SymbolRef &Sym,
 SVal simplifyToSVal(ProgramStateRef State, SymbolRef Sym) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   return SVB.simplifySVal(State, SVB.makeSymbolVal(Sym));
-}
-
-SymbolRef simplify(ProgramStateRef State, SymbolRef Sym) {
-  SVal SimplifiedVal = simplifyToSVal(State, Sym);
-  if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol())
-    return SimplifiedSym;
-  return Sym;
 }
 
 } // end of namespace ento

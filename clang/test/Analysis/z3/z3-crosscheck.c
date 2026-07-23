@@ -4,15 +4,16 @@
 
 void clang_analyzer_dump(float);
 
+// `(x & 1) && ((x & 1) ^ 1)` is self-contradictory: the second conjunct is
+// `1 ^ 1 == 0` whenever the first holds.  The range-based constraint manager
+// now folds the concrete simplification of `(x & 1) ^ 1` and prunes the dead
+// branch on its own, so the null dereference is unreachable in *both*
+// configurations -- the Z3 cross-check is no longer needed to refute it.
 int foo(int x)
 {
   int *z = 0;
   if ((x & 1) && ((x & 1) ^ 1))
-#ifdef NO_CROSSCHECK
-      return *z; // expected-warning {{Dereference of null pointer (loaded from variable 'z')}}
-#else
-      return *z; // no-warning
-#endif
+      return *z; // no-warning (dead branch pruned by the range solver)
   return 0;
 }
 
@@ -22,11 +23,7 @@ int unary(int x, long l)
   int y = l;
   if ((x & 1) && ((x & 1) ^ 1))
     if (-y)
-#ifdef NO_CROSSCHECK
-        return *z; // expected-warning {{Dereference of null pointer (loaded from variable 'z')}}
-#else
-        return *z; // no-warning
-#endif
+        return *z; // no-warning (dead branch pruned by the range solver)
   return 0;
 }
 
