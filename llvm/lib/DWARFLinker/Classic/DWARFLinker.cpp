@@ -644,6 +644,62 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
   if (!RelocAdjustment)
     return Flags;
 
+  // If a linker pass shrunk this subprogram post-link (e.g. an aggressive
+  // ICF mode that replaced its body with a small branch-only stub), the
+  // debug-map size will be strictly smaller than the DIE's compile-time
+  // size. Keeping the DIE would produce:
+  //   (a) "DIEs have overlapping address ranges" -- the additive PC shift
+  //       preserves the original size, so the emitted DIE claims a range
+  //       that overlaps the next symbol's stub, and
+  //   (b) "DIE address ranges are not contained in its parent's ranges"
+  //       for inlined_subroutine children (which still describe
+  //       instructions in the pre-fold body).
+  // Drop the entire subprogram DIE tree in that case: treat it as though
+  // the symbol were absent from the debug map. The debug map / symbol
+  // table still records the name->address mapping for stack symbolication;
+  // we drop only the compile-time debug tree that no longer describes
+  // real code. We still register the clamped range with
+  // `Unit.addFunctionRange` so aranges and .debug_frame FDEs cover the
+  // actual bytes present in the linked binary.
+  //
+  // Opt-in via `--drop-icf-shrunk-subprograms`. Off by default: several
+  // existing tests intentionally hand-author debug-map YAMLs with sizes
+  // smaller than the DIE's compile-time size and expect the DIE to still
+  // be emitted, so unconditionally dropping would be a behavior change.
+  if (Options.DropIcfShrunkSubprograms &&
+      DIE.getTag() == dwarf::DW_TAG_subprogram) {
+    if (std::optional<uint64_t> HighPc = DIE.getHighPC(*LowPc)) {
+      if (std::optional<uint64_t> BinSize =
+              RelocMgr.getSubprogramBinarySize(DIE)) {
+        if (*BinSize > 0 && *HighPc >= *LowPc &&
+            *BinSize < (*HighPc - *LowPc)) {
+          if (Options.Verbose) {
+            outs() << "Dropping ICF-shrunk subprogram DIE (compile-time size 0x"
+                   << Twine::utohexstr(*HighPc - *LowPc)
+                   << ", debug-map size 0x" << Twine::utohexstr(*BinSize)
+                   << "):";
+            DIDumpOptions DumpOpts;
+            DumpOpts.ChildRecurseDepth = 0;
+            DumpOpts.Verbose = true;
+            DIE.dump(outs(), 8 /* Indent */, DumpOpts);
+          }
+          Unit.addFunctionRange(*LowPc, *LowPc + *BinSize, *RelocAdjustment);
+          // Return without TF_Keep. This drops the subprogram DIE from *this*
+          // walk, but a subsequent lookForChildDIEsToKeep pass still visits
+          // the children -- an individually-kept child (for example a static
+          // local under --keep-function-for-static) will force Info.Keep=true
+          // on this subprogram through lookForParentDIEsToKeep. In that
+          // follow-up path we never set MyInfo.InDebugMap, so cloning takes
+          // the `!Info.InDebugMap` branch further down (which OR-s in
+          // TF_SkipPC) and strips low_pc/high_pc/ranges. The emitted DIE
+          // therefore carries no PC info and cannot overlap the next symbol,
+          // but it is not literally pruned.
+          return Flags;
+        }
+      }
+    }
+  }
+
   MyInfo.AddrAdjust = *RelocAdjustment;
   MyInfo.InDebugMap = true;
 

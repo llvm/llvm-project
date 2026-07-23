@@ -36,6 +36,19 @@ def keep_func_for_static: F<"keep-function-for-static">,
   HelpText<"Make a static variable keep the enclosing function even if it would have been omitted otherwise.">,
   Group<grp_general>;
 
+def drop_icf_shrunk_subprograms: F<"drop-icf-shrunk-subprograms">,
+  HelpText<"Drop DW_TAG_subprogram DIEs whose debug-map size is strictly "
+           "smaller than the DIE's compile-time high_pc - low_pc. Intended "
+           "for use with linkers that perform aggressive ICF that folds a "
+           "function body into a smaller branch-only stub (e.g. lld's "
+           "--icf=fbsafe_thunks), where keeping the DIE at its original size "
+           "would trigger the DWARF verifier's 'DIEs have overlapping address "
+           "ranges' check. The dropped DIE's aranges / .debug_frame entries "
+           "are still emitted at the smaller (actual) size."
+           " Currently supported only with --linker classic; combining with "
+           "--linker parallel is a hard error.">,
+  Group<grp_general>;
+
 def statistics: F<"statistics">,
   HelpText<"Print statistics about the contribution of each object file to "
            "the linked debug info. This prints a table after linking with the "

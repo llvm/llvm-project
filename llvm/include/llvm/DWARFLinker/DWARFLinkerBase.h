@@ -122,6 +122,10 @@ public:
   virtual void setUpdateIndexTablesOnly(bool Update) = 0;
   /// Set whether to keep the enclosing function for a static variable.
   virtual void setKeepFunctionForStatic(bool KeepFunctionForStatic) = 0;
+  /// Set whether to drop DW_TAG_subprogram DIEs whose debug-map size is
+  /// strictly smaller than the DIE's compile-time high_pc - low_pc.
+  /// Default is a no-op; override on linkers that support the check.
+  virtual void setDropIcfShrunkSubprograms(bool DropIcfShrunkSubprograms) {}
   /// Use specified number of threads for parallel files linking.
   virtual void setNumThreads(unsigned NumThreads) = 0;
   /// Add kind of accelerator tables to be generated.

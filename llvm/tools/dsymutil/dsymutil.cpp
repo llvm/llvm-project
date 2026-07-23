@@ -348,6 +348,8 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.Fat64 = Args.hasArg(OPT_fat64);
   Options.LinkOpts.KeepFunctionForStatic =
       Args.hasArg(OPT_keep_func_for_static);
+  Options.LinkOpts.DropIcfShrunkSubprograms =
+      Args.hasArg(OPT_drop_icf_shrunk_subprograms);
   Options.LinkOpts.AllowSectionHeaderOffsetOverflow =
       Args.hasArg(OPT_allow_section_header_offset_overflow);
 
@@ -374,6 +376,13 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   } else {
     return DWARFLinkerType.takeError();
   }
+
+  if (Options.LinkOpts.DropIcfShrunkSubprograms &&
+      Options.LinkOpts.DWARFLinkerType != DsymutilDWARFLinkerType::Classic)
+    return make_error<StringError>(
+        "--drop-icf-shrunk-subprograms is currently supported only with "
+        "--linker classic.",
+        inconvertibleErrorCode());
 
   if (Expected<std::vector<std::string>> InputFiles =
           getInputs(Args, Options.LinkOpts.Update)) {
