@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILResourceAccess.h"
-#include "DXILOpBuilder.h"
 #include "DirectX.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -25,6 +23,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
@@ -232,26 +231,27 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
   llvm_unreachable("Unhandled case in switch");
 }
 
-static std::optional<unsigned> getAtomicBinOpCode(AtomicRMWInst::BinOp BinOp) {
+static std::optional<dxil::AtomicBinOpCode>
+getAtomicBinOpCode(AtomicRMWInst::BinOp BinOp) {
   switch (BinOp) {
   case AtomicRMWInst::Add:
-    return 0;
+    return dxil::AtomicBinOpCode::Add;
   case AtomicRMWInst::And:
-    return 1;
+    return dxil::AtomicBinOpCode::And;
   case AtomicRMWInst::Or:
-    return 2;
+    return dxil::AtomicBinOpCode::Or;
   case AtomicRMWInst::Xor:
-    return 3;
+    return dxil::AtomicBinOpCode::Xor;
   case AtomicRMWInst::Min:
-    return 4;
+    return dxil::AtomicBinOpCode::IMin;
   case AtomicRMWInst::Max:
-    return 5;
+    return dxil::AtomicBinOpCode::IMax;
   case AtomicRMWInst::UMin:
-    return 6;
+    return dxil::AtomicBinOpCode::UMin;
   case AtomicRMWInst::UMax:
-    return 7;
+    return dxil::AtomicBinOpCode::UMax;
   case AtomicRMWInst::Xchg:
-    return 8;
+    return dxil::AtomicBinOpCode::Exchange;
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::FAdd:
@@ -273,16 +273,13 @@ static std::optional<unsigned> getAtomicBinOpCode(AtomicRMWInst::BinOp BinOp) {
 }
 
 static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
-                              dxil::ResourceTypeInfo &RTI,
-                              std::optional<dxil::DXILOpBuilder> &OpBuilder) {
-  std::optional<unsigned> BinOpCode = getAtomicBinOpCode(AI->getOperation());
+                              dxil::ResourceTypeInfo &RTI) {
+  std::optional<dxil::AtomicBinOpCode> BinOpCode =
+      getAtomicBinOpCode(AI->getOperation());
   if (!BinOpCode) {
     reportFatalUsageError("DXIL resource atomicrmw operation not implemented");
     return;
   }
-
-  if (!OpBuilder)
-    OpBuilder.emplace(*AI->getModule());
 
   const DataLayout &DL = AI->getDataLayout();
   IRBuilder<> Builder(AI);
@@ -302,43 +299,25 @@ static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
     Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
   }
 
-  auto *BinOp = Builder.getInt32(*BinOpCode);
+  Value *BinOp = Builder.getInt32(static_cast<uint32_t>(*BinOpCode));
 
-  // Cast the target-extension typed handle to `%dx.types.Handle` so we can
-  // emit the DXIL op directly. DXILOpLowering::cleanupHandleCasts will
-  // reconcile this cast once the handle-defining intrinsic has been lowered.
-  Value *Handle = Builder.CreateIntrinsic(OpBuilder->getHandleType(),
-                                          Intrinsic::dx_resource_casthandle,
-                                          {II->getOperand(0)});
+  // Emit the target-independent intrinsic; DXILOpLowering lowers it to the
+  // DXIL `AtomicBinOp` op and handles the target-ext-typed handle cast via
+  // its `createTmpHandleCast` bookkeeping.
+  Value *Result = Builder.CreateIntrinsic(
+      AI->getType(), Intrinsic::dx_resource_atomic_binop,
+      {II->getOperand(0), BinOp, Index, Offset, AI->getValOperand()});
 
-  std::array<Value *, 6> Args{
-      Handle, BinOp, Index, Offset, Builder.getInt32(0), AI->getValOperand()};
-
-  OpBuilder->getIRB().SetInsertPoint(AI);
-  Expected<CallInst *> OpCall = OpBuilder->tryCreateOp(
-      dxil::OpCode::AtomicBinOp, Args, AI->getName(), AI->getType());
-  if (Error E = OpCall.takeError()) {
-    std::string Message(toString(std::move(E)));
-    AI->getContext().diagnose(DiagnosticInfoUnsupported(
-        *AI->getFunction(), Message, AI->getDebugLoc()));
-    // RAUW with poison so the caller's subsequent eraseFromParent() doesn't
-    // leave dangling uses of the AtomicRMWInst.
-    AI->replaceAllUsesWith(PoisonValue::get(AI->getType()));
-    return;
-  }
-
-  AI->replaceAllUsesWith(*OpCall);
+  AI->replaceAllUsesWith(Result);
 }
 
-static void
-createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
-                           dxil::ResourceTypeInfo &RTI,
-                           std::optional<dxil::DXILOpBuilder> &OpBuilder) {
+static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
+                                       dxil::ResourceTypeInfo &RTI) {
   switch (RTI.getResourceKind()) {
   case dxil::ResourceKind::TypedBuffer:
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createAtomicBinOp(II, AI, RTI, OpBuilder);
+    return createAtomicBinOp(II, AI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
   case dxil::ResourceKind::Texture2DMS:
@@ -902,8 +881,7 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
   return MadeChanges;
 }
 
-static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI,
-                          std::optional<dxil::DXILOpBuilder> &OpBuilder) {
+static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
   SmallVector<User *> Worklist;
   for (User *U : II->users())
     Worklist.push_back(U);
@@ -927,7 +905,7 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI,
       createLoadIntrinsic(II, LI, RTI);
       DeadInsts.push_back(LI);
     } else if (auto *AI = dyn_cast<AtomicRMWInst>(U)) {
-      createAtomicBinOpIntrinsic(II, AI, RTI, OpBuilder);
+      createAtomicBinOpIntrinsic(II, AI, RTI);
       DeadInsts.push_back(AI);
     } else
       llvm_unreachable("Unhandled instruction - pointer escaped?");
@@ -940,9 +918,6 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI,
 }
 
 static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
-  // Constructed lazily on the first atomicrmw so that non-atomic resource
-  // access still works on triples without a DXIL version.
-  std::optional<dxil::DXILOpBuilder> OpBuilder;
   SmallVector<std::pair<IntrinsicInst *, dxil::ResourceTypeInfo>> Resources;
   for (BasicBlock &BB : make_early_inc_range(F))
     for (Instruction &I : BB)
@@ -958,7 +933,7 @@ static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
         }
 
   for (auto &[II, RI] : Resources)
-    replaceAccess(II, RI, OpBuilder);
+    replaceAccess(II, RI);
 
   return !Resources.empty();
 }
