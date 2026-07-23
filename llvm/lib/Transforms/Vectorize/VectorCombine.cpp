@@ -398,39 +398,35 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     // Poison unused lanes, then gather the scalar chunks into the low lanes.
     Mask.assign(MinVecNumElts, PoisonMaskElem);
     std::iota(Mask.begin(), Mask.begin() + NumScalarChunks, OffsetEltIndex);
+
+    // The chunked path always shuffles from a non-zero source lane:
+    //   %chunks = shufflevector <8 x i16> %wide.i16, <8 x i16> poison,
+    //       <8 x i32> <i32 1, i32 2, i32 poison, i32 poison,
+    //                   i32 poison, i32 poison, i32 poison, i32 poison>
+    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy,
+                                  MinVecTy, Mask, CostKind);
+
+    // Account for the bitcast after the unaligned chunk shuffle:
+    //   %result = bitcast <8 x i16> %chunks to <4 x i32>
+    NewCost += TTI.getCastInstrCost(Instruction::BitCast, Ty, MinVecTy,
+                                    TargetTransformInfo::CastContextHint::None,
+                                    CostKind);
   } else {
     // Poison unused lanes, select the scalar into lane zero, and resize the
     // vector if needed.
     unsigned OutputNumElts = Ty->getNumElements();
     Mask.assign(OutputNumElts, PoisonMaskElem);
     Mask[0] = OffsetEltIndex;
-  }
 
-  // Assume an offset-zero shuffle is free because codegen can use the loaded
-  // vector directly.
-  if (OffsetEltIndex) {
-    if (UseChunkedLoad) {
-      // Account for the chunk shuffle in the unaligned example:
-      //   %chunks = shufflevector <8 x i16> %wide.i16, <8 x i16> poison,
-      //       <8 x i32> <i32 1, i32 2, i32 poison, i32 poison,
-      //                   i32 poison, i32 poison, i32 poison, i32 poison>
-      NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy,
-                                    MinVecTy, Mask, CostKind);
-    } else {
+    // Assume an offset-zero shuffle is free because codegen can use the loaded
+    // vector directly.
+    if (OffsetEltIndex) {
       // Account for the shuffle in the scalar-aligned example:
       //   %aligned = shufflevector <4 x i32> %wide.i32, <4 x i32> poison,
       //       <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
       NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, MinVecTy,
                                     Mask, CostKind);
     }
-  }
-
-  if (UseChunkedLoad) {
-    // Account for the bitcast after the unaligned chunk shuffle:
-    //   %result = bitcast <8 x i16> %chunks to <4 x i32>
-    NewCost += TTI.getCastInstrCost(Instruction::BitCast, Ty, MinVecTy,
-                                    TargetTransformInfo::CastContextHint::None,
-                                    CostKind);
   }
 
   // We can aggressively convert to the vector form because the backend can
