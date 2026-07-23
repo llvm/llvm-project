@@ -37,22 +37,20 @@ define internal void @test_transpose_f32_2x3() {
 ; CHECK: %[[AccessChain6:[0-9]+]] = OpAccessChain %[[_ptr_Float_ID]] %[[private_v6f32]] %[[int_5:[0-9]+]]
 ; CHECK: %[[Load6:[0-9]+]] = OpLoad %[[Float_ID]] %[[AccessChain6]]
 ;
-; -- Construct intermediate vectors
+; -- Construct an intermediate vector and immediately extract the transposed element
 ; CHECK: %[[Construct1:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load1]] %[[Load2]] %[[Load3]] %[[Load4]]
-; CHECK: %[[Construct2:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load1]] %[[Load2]] %[[Load3]] %[[Load4]]
-; CHECK: %[[Construct3:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load5]] %[[Load6]] {{.*}} {{.*}}
-; CHECK: %[[Construct4:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load1]] %[[Load2]] %[[Load3]] %[[Load4]]
-; CHECK: %[[Construct5:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load1]] %[[Load2]] %[[Load3]] %[[Load4]]
-; CHECK: %[[Construct6:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load5]] %[[Load6]] {{.*}} {{.*}}
-  %1 = load <6 x float>, ptr addrspace(10) @private_v6f32
-
-; -- Extract elements for transposition
 ; CHECK: %[[Extract1:[0-9]+]] = OpCompositeExtract %[[Float_ID]] %[[Construct1]] 0
+; CHECK: %[[Construct2:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load1]] %[[Load2]] %[[Load3]] %[[Load4]]
 ; CHECK: %[[Extract2:[0-9]+]] = OpCompositeExtract %[[Float_ID]] %[[Construct2]] 2
+; CHECK: %[[Construct3:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load5]] %[[Load6]] {{.*}} {{.*}}
 ; CHECK: %[[Extract3:[0-9]+]] = OpCompositeExtract %[[Float_ID]] %[[Construct3]] 0
+; CHECK: %[[Construct4:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load1]] %[[Load2]] %[[Load3]] %[[Load4]]
 ; CHECK: %[[Extract4:[0-9]+]] = OpCompositeExtract %[[Float_ID]] %[[Construct4]] 1
+; CHECK: %[[Construct5:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load1]] %[[Load2]] %[[Load3]] %[[Load4]]
 ; CHECK: %[[Extract5:[0-9]+]] = OpCompositeExtract %[[Float_ID]] %[[Construct5]] 3
+; CHECK: %[[Construct6:[0-9]+]] = OpCompositeConstruct %[[V4F32_ID]] %[[Load5]] %[[Load6]] {{.*}} {{.*}}
 ; CHECK: %[[Extract6:[0-9]+]] = OpCompositeExtract %[[Float_ID]] %[[Construct6]] 1
+  %1 = load <6 x float>, ptr addrspace(10) @private_v6f32
   %2 = call <6 x float> @llvm.matrix.transpose.v6f32.i32(<6 x float> %1, i32 2, i32 3)
 
 ; -- Store output 3x2 matrix elements
