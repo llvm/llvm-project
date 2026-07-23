@@ -1,0 +1,43 @@
+add_header_library(
+  langinfo_utils
+  HDRS
+    langinfo_utils.h
+  DEPENDS
+    libc.hdr.langinfo_macros
+    libc.hdr.types.locale_t
+    libc.hdr.types.nl_item
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.locale.locale
+)
+
+add_entrypoint_object(
+  nl_langinfo_l
+  SRCS
+    nl_langinfo_l.cpp
+  HDRS
+    nl_langinfo_l.h
+  DEPENDS
+    .langinfo_utils
+    libc.hdr.types.locale_t
+    libc.hdr.types.nl_item
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  nl_langinfo
+  SRCS
+    nl_langinfo.cpp
+  HDRS
+    nl_langinfo.h
+  DEPENDS
+    .langinfo_utils
+    libc.hdr.locale_macros
+    libc.hdr.types.locale_t
+    libc.hdr.types.nl_item
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.locale.locale
+)
