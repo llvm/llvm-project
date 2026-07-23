@@ -2556,6 +2556,31 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   return ExceptionHandling::None;
 }
 
+static FloatABI::ABIType getARMDefaultFloatABI(const Triple &T) {
+  Triple::EnvironmentType Env = T.getEnvironment();
+  bool IsHard =
+      Env == Triple::GNUEABIHF || Env == Triple::GNUEABIHFT64 ||
+      Env == Triple::MuslEABIHF || Env == Triple::EABIHF ||
+      (T.isOSBinFormatMachO() && T.getSubArch() == Triple::ARMSubArch_v7em) ||
+      T.isOSWindows() || ARM::computeTargetABI(T, "") == ARM::ARM_ABI_AAPCS16;
+  return IsHard ? FloatABI::Hard : FloatABI::Soft;
+}
+
+FloatABI::ABIType Triple::getDefaultFloatABI() const {
+  if (isARM() || isThumb())
+    return getARMDefaultFloatABI(*this);
+
+  // MIPS defaults to hard float, except on FreeBSD which uses soft float.
+  if (isMIPS())
+    return isOSFreeBSD() ? FloatABI::Soft : FloatABI::Hard;
+
+  if (isCSKY() || isAVR() || getArch() == msp430)
+    return FloatABI::Soft;
+
+  // Most targets use hard float unless soft float is explicitly requested.
+  return FloatABI::Hard;
+}
+
 // HLSL triple environment orders are relied on in the front end
 static_assert(Triple::Vertex - Triple::Pixel == 1,
               "incorrect HLSL stage order");
