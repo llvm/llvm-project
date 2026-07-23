@@ -1,91 +1,272 @@
 // RUN: mlir-opt %s -linalg-block-pack-matmul="block-factors=[32],[16],[64] allow-padding=1" \
-// RUN: -canonicalize -split-input-file | FileCheck %s --check-prefix=SCALABLE
+// RUN: -canonicalize -cse -split-input-file | FileCheck %s --check-prefix=SCALABLE
 
 // RUN: mlir-opt %s -linalg-block-pack-matmul="block-factors=[32],[16],[64] allow-padding=0" \
-// RUN: -canonicalize -split-input-file | FileCheck %s --check-prefix=SCALABLE-NOPAD
+// RUN: -canonicalize -cse -split-input-file | FileCheck %s --check-prefix=SCALABLE-NOPAD
 
 // RUN: mlir-opt %s -linalg-block-pack-matmul="block-factors=32,16,[64] allow-padding=1" \
-// RUN: -canonicalize -split-input-file | FileCheck %s --check-prefix=MIXED
+// RUN: -canonicalize -cse -split-input-file | FileCheck %s --check-prefix=MIXED
 
-// -----
-
-// All-scalable block factors, static input shapes, allow-padding=1.
-// Inner tile sizes and outer dimensions are all dynamic (vscale-relative).
-
-func.func @block_matmul_scalable_static(
+// M=128, N=128, K=128
+func.func @block_matmul_static(
     %A: tensor<128x128xf32>, %B: tensor<128x128xf32>, %C: tensor<128x128xf32>) -> tensor<128x128xf32> {
   %0 = linalg.matmul ins(%A, %B : tensor<128x128xf32>, tensor<128x128xf32>)
                      outs(%C : tensor<128x128xf32>) -> tensor<128x128xf32>
   return %0 : tensor<128x128xf32>
 }
 
-// SCALABLE-LABEL: func @block_matmul_scalable_static(
+// SCALABLE-LABEL: func @block_matmul_static(
+// SCALABLE-DAG: %[[VS:.+]] = vector.vscale
 // SCALABLE-DAG: %[[C32:.+]] = arith.constant 32 : index
 // SCALABLE-DAG: %[[C16:.+]] = arith.constant 16 : index
 // SCALABLE-DAG: %[[C64:.+]] = arith.constant 64 : index
-// SCALABLE-DAG: %[[MB:.+]] = arith.muli %{{.+}}, %[[C32]] : index
-// SCALABLE-DAG: %[[NB:.+]] = arith.muli %{{.+}}, %[[C16]] : index
-// SCALABLE-DAG: %[[KB:.+]] = arith.muli %{{.+}}, %[[C64]] : index
-// SCALABLE: linalg.pack %{{.+}} outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [%[[MB]], %[[KB]]]
-// SCALABLE: linalg.pack %{{.+}} outer_dims_perm = [1, 0] inner_dims_pos = [1, 0] inner_tiles = [%[[NB]], %[[KB]]]
-// SCALABLE: linalg.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [%[[MB]], %[[NB]]]
-// SCALABLE: linalg.generic
-// SCALABLE: linalg.unpack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [%[[MB]], %[[NB]]]
+// SCALABLE-DAG: %[[M_VS:.+]] = arith.muli %[[VS]], %[[C32]] : index
+// SCALABLE-DAG: %[[N_VS:.+]] = arith.muli %[[VS]], %[[C16]] : index
+// SCALABLE-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[N_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
+// SCALABLE: linalg.unpack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
 
-// Scalable factors with allow-padding=0: transform does not apply.
-// SCALABLE-NOPAD-LABEL: func @block_matmul_scalable_static(
+// SCALABLE-NOPAD-LABEL: func @block_matmul_static(
 // SCALABLE-NOPAD-NOT: linalg.pack
-// SCALABLE-NOPAD: linalg.matmul
+// SCALABLE-NOPAD: linalg.matmul ins(%{{.*}}, %{{.*}} : tensor<128x128xf32>, tensor<128x128xf32>)
+// SCALABLE-NOPAD-SAME: outs(%{{.*}} : tensor<128x128xf32>) -> tensor<128x128xf32>
 // SCALABLE-NOPAD-NOT: linalg.unpack
 
-// -----
+// MIXED-LABEL: func @block_matmul_static(
+// MIXED-DAG: %[[VS:.+]] = vector.vscale
+// MIXED-DAG: %[[C64:.+]] = arith.constant 64 : index
+// MIXED-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [16, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, 16]
+// MIXED: linalg.unpack
+// MIXED-SAME: inner_tiles = [32, 16]
 
-// All-scalable block factors, dynamic input shapes, allow-padding=1.
-// Both outer tile counts and inner tile sizes are fully dynamic.
-
-func.func @block_matmul_scalable_dynamic(
+// M=?, N=?, K=?
+func.func @matmul_dynamic(
     %A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.matmul ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>)
                      outs(%C : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
 
-// SCALABLE-LABEL: func @block_matmul_scalable_dynamic(
+// SCALABLE-LABEL: func @matmul_dynamic(
+// SCALABLE-DAG: %[[VS:.+]] = vector.vscale
 // SCALABLE-DAG: %[[C32:.+]] = arith.constant 32 : index
 // SCALABLE-DAG: %[[C16:.+]] = arith.constant 16 : index
 // SCALABLE-DAG: %[[C64:.+]] = arith.constant 64 : index
-// SCALABLE-DAG: %[[MB:.+]] = arith.muli %{{.+}}, %[[C32]] : index
-// SCALABLE-DAG: %[[NB:.+]] = arith.muli %{{.+}}, %[[C16]] : index
-// SCALABLE-DAG: %[[KB:.+]] = arith.muli %{{.+}}, %[[C64]] : index
-// SCALABLE: linalg.pack %{{.+}} outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [%[[MB]], %[[KB]]]
-// SCALABLE: linalg.pack %{{.+}} outer_dims_perm = [1, 0] inner_dims_pos = [1, 0] inner_tiles = [%[[NB]], %[[KB]]]
-// SCALABLE: linalg.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [%[[MB]], %[[NB]]]
-// SCALABLE: linalg.generic
-// SCALABLE: linalg.unpack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [%[[MB]], %[[NB]]]
+// SCALABLE-DAG: %[[M_VS:.+]] = arith.muli %[[VS]], %[[C32]] : index
+// SCALABLE-DAG: %[[N_VS:.+]] = arith.muli %[[VS]], %[[C16]] : index
+// SCALABLE-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[N_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
+// SCALABLE: linalg.unpack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
 
-// SCALABLE-NOPAD-LABEL: func @block_matmul_scalable_dynamic(
+// SCALABLE-NOPAD-LABEL: func @matmul_dynamic(
 // SCALABLE-NOPAD-NOT: linalg.pack
-// SCALABLE-NOPAD: linalg.matmul
+// SCALABLE-NOPAD: linalg.matmul ins(%{{.*}}, %{{.*}} : tensor<?x?xf32>, tensor<?x?xf32>)
+// SCALABLE-NOPAD-SAME: outs(%{{.*}} : tensor<?x?xf32>) -> tensor<?x?xf32>
 // SCALABLE-NOPAD-NOT: linalg.unpack
 
-// -----
+// MIXED-LABEL: func @matmul_dynamic(
+// MIXED-DAG: %[[VS:.+]] = vector.vscale
+// MIXED-DAG: %[[C64:.+]] = arith.constant 64 : index
+// MIXED-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [16, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, 16]
+// MIXED: linalg.unpack
+// MIXED-SAME: inner_tiles = [32, 16]
 
-// Mixed block factors (mb=32, nb=16 static; kb=[64] scalable), static input.
-// Only the K-dimension inner tile is scalable; mb and nb remain static.
-
-func.func @block_matmul_mixed_static(
-    %A: tensor<128x128xf32>, %B: tensor<128x128xf32>, %C: tensor<128x128xf32>) -> tensor<128x128xf32> {
-  %0 = linalg.matmul ins(%A, %B : tensor<128x128xf32>, tensor<128x128xf32>)
-                     outs(%C : tensor<128x128xf32>) -> tensor<128x128xf32>
-  return %0 : tensor<128x128xf32>
+// M=?, N=128, K=32
+func.func @matmul_mixed_static_dynamic(
+    %A: tensor<?x32xf32>, %B: tensor<32x128xf32>, %C: tensor<?x128xf32>) -> tensor<?x128xf32> {
+  %0 = linalg.matmul ins(%A, %B : tensor<?x32xf32>, tensor<32x128xf32>)
+                     outs(%C : tensor<?x128xf32>) -> tensor<?x128xf32>
+  return %0 : tensor<?x128xf32>
 }
 
-// MIXED-LABEL: func @block_matmul_mixed_static(
-// MIXED-DAG: %[[C64:.+]] = arith.constant 64 : index
-// MIXED-DAG: %[[KB:.+]] = arith.muli %{{.+}}, %[[C64]] : index
-// MIXED: linalg.pack %{{.+}} outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [32, %[[KB]]]
-// MIXED: linalg.pack %{{.+}} outer_dims_perm = [1, 0] inner_dims_pos = [1, 0] inner_tiles = [16, %[[KB]]]
-// MIXED: linalg.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [32, 16]
-// MIXED: linalg.generic
-// MIXED: linalg.unpack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [32, 16]
+// SCALABLE-LABEL: func @matmul_mixed_static_dynamic(
+// SCALABLE-DAG: %[[VS:.+]] = vector.vscale
+// SCALABLE-DAG: %[[C32:.+]] = arith.constant 32 : index
+// SCALABLE-DAG: %[[C16:.+]] = arith.constant 16 : index
+// SCALABLE-DAG: %[[C64:.+]] = arith.constant 64 : index
+// SCALABLE-DAG: %[[M_VS:.+]] = arith.muli %[[VS]], %[[C32]] : index
+// SCALABLE-DAG: %[[N_VS:.+]] = arith.muli %[[VS]], %[[C16]] : index
+// SCALABLE-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[N_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
+// SCALABLE: linalg.unpack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
 
+// SCALABLE-NOPAD-LABEL: func @matmul_mixed_static_dynamic(
+// SCALABLE-NOPAD-NOT: linalg.pack
+// SCALABLE-NOPAD: linalg.matmul ins(%{{.*}}, %{{.*}} : tensor<?x32xf32>, tensor<32x128xf32>)
+// SCALABLE-NOPAD-SAME: outs(%{{.*}} : tensor<?x128xf32>) -> tensor<?x128xf32>
+// SCALABLE-NOPAD-NOT: linalg.unpack
+
+// MIXED-LABEL: func @matmul_mixed_static_dynamic(
+// MIXED-DAG: %[[VS:.+]] = vector.vscale
+// MIXED-DAG: %[[C64:.+]] = arith.constant 64 : index
+// MIXED-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [16, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, 16]
+// MIXED: linalg.unpack
+// MIXED-SAME: inner_tiles = [32, 16]
+
+// B=4, M=128, N=128, K=128
+func.func @batch_matmul_static(
+    %A: tensor<4x128x128xf32>, %B: tensor<4x128x128xf32>, %C: tensor<4x128x128xf32>) -> tensor<4x128x128xf32> {
+  %0 = linalg.batch_matmul ins(%A, %B : tensor<4x128x128xf32>, tensor<4x128x128xf32>)
+                           outs(%C : tensor<4x128x128xf32>) -> tensor<4x128x128xf32>
+  return %0 : tensor<4x128x128xf32>
+}
+
+// SCALABLE-LABEL: func @batch_matmul_static(
+// SCALABLE-DAG: %[[VS:.+]] = vector.vscale
+// SCALABLE-DAG: %[[C32:.+]] = arith.constant 32 : index
+// SCALABLE-DAG: %[[C16:.+]] = arith.constant 16 : index
+// SCALABLE-DAG: %[[C64:.+]] = arith.constant 64 : index
+// SCALABLE-DAG: %[[M_VS:.+]] = arith.muli %[[VS]], %[[C32]] : index
+// SCALABLE-DAG: %[[N_VS:.+]] = arith.muli %[[VS]], %[[C16]] : index
+// SCALABLE-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[N_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
+// SCALABLE: linalg.unpack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
+
+// SCALABLE-NOPAD-LABEL: func @batch_matmul_static(
+// SCALABLE-NOPAD-NOT: linalg.pack
+// SCALABLE-NOPAD: linalg.batch_matmul ins(%{{.*}}, %{{.*}} : tensor<4x128x128xf32>, tensor<4x128x128xf32>)
+// SCALABLE-NOPAD-SAME: outs(%{{.*}} : tensor<4x128x128xf32>) -> tensor<4x128x128xf32>
+// SCALABLE-NOPAD-NOT: linalg.unpack
+
+// MIXED-LABEL: func @batch_matmul_static(
+// MIXED-DAG: %[[VS:.+]] = vector.vscale
+// MIXED-DAG: %[[C64:.+]] = arith.constant 64 : index
+// MIXED-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [16, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, 16]
+// MIXED: linalg.unpack
+// MIXED-SAME: inner_tiles = [32, 16]
+
+// B=?, M=?, N=?, K=?
+func.func @batch_matmul_dynamic(
+    %A: tensor<?x?x?xf32>, %B: tensor<?x?x?xf32>, %C: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = linalg.batch_matmul ins(%A, %B : tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+                           outs(%C : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+
+// SCALABLE-LABEL: func @batch_matmul_dynamic(
+// SCALABLE-DAG: %[[VS:.+]] = vector.vscale
+// SCALABLE-DAG: %[[C32:.+]] = arith.constant 32 : index
+// SCALABLE-DAG: %[[C16:.+]] = arith.constant 16 : index
+// SCALABLE-DAG: %[[C64:.+]] = arith.constant 64 : index
+// SCALABLE-DAG: %[[M_VS:.+]] = arith.muli %[[VS]], %[[C32]] : index
+// SCALABLE-DAG: %[[N_VS:.+]] = arith.muli %[[VS]], %[[C16]] : index
+// SCALABLE-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[N_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
+// SCALABLE: linalg.unpack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
+
+// SCALABLE-NOPAD-LABEL: func @batch_matmul_dynamic(
+// SCALABLE-NOPAD-NOT: linalg.pack
+// SCALABLE-NOPAD: linalg.batch_matmul ins(%{{.*}}, %{{.*}} : tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+// SCALABLE-NOPAD-SAME: outs(%{{.*}} : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// SCALABLE-NOPAD-NOT: linalg.unpack
+
+// MIXED-LABEL: func @batch_matmul_dynamic(
+// MIXED-DAG: %[[VS:.+]] = vector.vscale
+// MIXED-DAG: %[[C64:.+]] = arith.constant 64 : index
+// MIXED-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [16, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, 16]
+// MIXED: linalg.unpack
+// MIXED-SAME: inner_tiles = [32, 16]
+
+// B=?, M=?, N=128, K=32
+func.func @batch_matmul_mixed_static_dynamic(
+    %A: tensor<?x?x32xf32>, %B: tensor<?x32x128xf32>, %C: tensor<?x?x128xf32>) -> tensor<?x?x128xf32> {
+  %0 = linalg.batch_matmul ins(%A, %B : tensor<?x?x32xf32>, tensor<?x32x128xf32>)
+                           outs(%C : tensor<?x?x128xf32>) -> tensor<?x?x128xf32>
+  return %0 : tensor<?x?x128xf32>
+}
+
+// SCALABLE-LABEL: func @batch_matmul_mixed_static_dynamic(
+// SCALABLE-DAG: %[[VS:.+]] = vector.vscale
+// SCALABLE-DAG: %[[C32:.+]] = arith.constant 32 : index
+// SCALABLE-DAG: %[[C16:.+]] = arith.constant 16 : index
+// SCALABLE-DAG: %[[C64:.+]] = arith.constant 64 : index
+// SCALABLE-DAG: %[[M_VS:.+]] = arith.muli %[[VS]], %[[C32]] : index
+// SCALABLE-DAG: %[[N_VS:.+]] = arith.muli %[[VS]], %[[C16]] : index
+// SCALABLE-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[N_VS]], %[[K_VS]]]
+// SCALABLE: linalg.pack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
+// SCALABLE: linalg.unpack
+// SCALABLE-SAME: inner_tiles = [%[[M_VS]], %[[N_VS]]]
+
+// SCALABLE-NOPAD-LABEL: func @batch_matmul_mixed_static_dynamic(
+// SCALABLE-NOPAD-NOT: linalg.pack
+// SCALABLE-NOPAD: linalg.batch_matmul ins(%{{.*}}, %{{.*}} : tensor<?x?x32xf32>, tensor<?x32x128xf32>)
+// SCALABLE-NOPAD-SAME: outs(%{{.*}} : tensor<?x?x128xf32>) -> tensor<?x?x128xf32>
+// SCALABLE-NOPAD-NOT: linalg.unpack
+
+// MIXED-LABEL: func @batch_matmul_mixed_static_dynamic(
+// MIXED-DAG: %[[VS:.+]] = vector.vscale
+// MIXED-DAG: %[[C64:.+]] = arith.constant 64 : index
+// MIXED-DAG: %[[K_VS:.+]] = arith.muli %[[VS]], %[[C64]] : index
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [16, %[[K_VS]]]
+// MIXED: linalg.pack
+// MIXED-SAME: inner_tiles = [32, 16]
+// MIXED: linalg.unpack
+// MIXED-SAME: inner_tiles = [32, 16]
