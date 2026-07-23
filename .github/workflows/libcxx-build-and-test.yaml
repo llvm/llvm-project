@@ -54,24 +54,23 @@ jobs:
           echo "AGENT_TOOLSDIRECTORY=$AGENT_TOOLSDIRECTORY"
           echo "system python3: $(command -v python3) -> $(python3 --version 2>&1)"
 
-      - name: Create the hostedtoolcache directory (setup-python macOS requirement)
+      - name: Install a modern Python via Homebrew
         run: |
-          mkdir -p /Users/runner/hostedtoolcache
-          ls -ld /Users/runner/hostedtoolcache
+          brew install python@3.12
+          echo "$(brew --prefix python@3.12)/libexec/bin" >> "$GITHUB_PATH"
 
-      - name: Install Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: '3.14'
-
-      - name: Verify the setup-python interpreter actually works
+      - name: Verify the Homebrew interpreter actually works
         run: |
           echo "which python3: $(command -v python3)"
           python3 --version
           python3 -c 'import sys, ssl, sqlite3; print("exe:", sys.executable)'   # dyld/ssl smoke test
-          python3 -m venv /tmp/probe-venv
-          /tmp/probe-venv/bin/pip install --upgrade pip
-          /tmp/probe-venv/bin/pip install llvm-lnt                               # the exact benchmark failure
+
+      - name: Install llvm-lnt in a virtualenv
+        run: |
+          python3 -m venv /tmp/lnt-venv
+          /tmp/lnt-venv/bin/pip install --upgrade pip
+          /tmp/lnt-venv/bin/pip install llvm-lnt      # the exact package that failed in the benchmark job
+          /tmp/lnt-venv/bin/lnt --version             # confirm the installed tool actually runs
 
       - name: Select Xcode
         run: echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.xcode-version }}.app/Contents/Developer" >> $GITHUB_ENV
