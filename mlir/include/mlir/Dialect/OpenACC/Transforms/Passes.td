@@ -561,7 +561,11 @@ def ACCCGToGPU : InterfacePass<"acc-cg-to-gpu", "mlir::FunctionOpInterface"> {
         "16384",
         "Maximum thread-private stack allocation in bytes.">,
     Option<"subgroupSize", "subgroup-size", "int64_t", "32",
-        "Subgroup size used for block-dimension alignment and reductions.">
+        "Subgroup size used for block-dimension alignment and reductions.">,
+    Option<"alignThreadXReductions", "align-thread-x-reductions", "bool",
+        "true",
+        "Align ThreadX reduction launches to the subgroup size even when "
+        "ThreadY and ThreadZ widths are one.">
   ];
   let dependentDialects = [
     "mlir::arith::ArithDialect",
