@@ -605,6 +605,30 @@ FTN_GET_SUBMEMSPACE(omp_memspace_handle_t KMP_DEREF memspace,
 #endif
 }
 
+// The C (KMP_FTN_PLAIN) versions of the dynamic groupprivate information
+// routines are defined in kmp_csupport.cpp, so only the Fortran entry points
+// are generated here. The offset and access_group arguments are optional in
+// Fortran and are passed as null pointers when omitted. These stubs report that
+// no dynamic groupprivate block exists.
+#if KMP_FTN_ENTRIES != KMP_FTN_PLAIN
+void *FTN_STDCALL FTN_GET_DYN_GPRIVATE_PTR(size_t *, omp_access_t *) {
+  return NULL;
+}
+
+void *FTN_STDCALL FTN_GET_DYN_GPRIVATE_NOFB_PTR(size_t *, omp_access_t *) {
+  return NULL;
+}
+
+size_t FTN_STDCALL FTN_GET_DYN_GPRIVATE_SIZE(omp_access_t *) { return 0; }
+
+omp_memspace_handle_t FTN_STDCALL
+FTN_GET_DYN_GPRIVATE_MEMSPACE(omp_access_t *) {
+  return omp_null_mem_space;
+}
+
+size_t FTN_STDCALL FTN_GET_GPRIVATE_LIMIT(int *, omp_access_t *) { return 0; }
+#endif // KMP_FTN_ENTRIES != KMP_FTN_PLAIN
+
 /* OpenMP 5.0 affinity format support */
 #ifndef KMP_STUB
 static void __kmp_fortran_strncpy_truncate(char *buffer, size_t buf_size,
