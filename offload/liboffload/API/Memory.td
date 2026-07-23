@@ -33,6 +33,28 @@ def ol_memory_register_flag_t : Enum {
   ];
 }
 
+def olMemAlloc : Function {
+  let desc = "Creates a memory allocation on the specified device.";
+  let details = [
+      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory.",
+      "This function can only be used to create device or managed allocations. To create a host allocation use `olMemAllocHost`."
+  ];
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
+    Param<"ol_alloc_type_t", "Type", "type of the allocation. Must be either `OL_ALLOC_TYPE_DEVICE` or `OL_ALLOC_TYPE_MANAGED`", PARAM_IN>,
+    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
+    Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`Size == 0`"
+    ]>,
+    Return<"OL_ERRC_INVALID_ENUMERATION", [
+      "`Type == OL_ALLOC_TYPE_HOST`"
+    ]>
+  ];
+}
+
 def olMemAllocHost : Function {
   let desc = "Creates a host memory allocation accessible from the specified device.";
   let details = [
@@ -50,94 +72,39 @@ def olMemAllocHost : Function {
   ];
 }
 
-def olMemAllocManaged : Function {
-  let desc = "Creates a managed (unified) memory allocation on the specified device.";
+def olMemAllocAligned : Function {
+  let desc = "Creates a memory allocation on the specified device with the specified alignment.";
   let details = [
-      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory.",
+      "This function can only be used to create device or managed allocations. To create a host allocation use `olMemAllocAlignedHost`."
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
+    Param<"ol_alloc_type_t", "Type", "type of the allocation. Must be either `OL_ALLOC_TYPE_DEVICE` or `OL_ALLOC_TYPE_MANAGED`", PARAM_IN>,
     Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
+    Param<"size_t", "Alignment",
+               "alignment of the allocation in bytes. Must be non-zero and a power of two",
+               PARAM_IN>,
     Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
   ];
   let returns = [
     Return<"OL_ERRC_INVALID_SIZE", [
       "`Size == 0`"
-    ]>
-  ];
-}
-
-def olMemAllocDevice : Function {
-  let desc = "Creates a device memory allocation on the specified device.";
-  let details = [
-      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
-  ];
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
-    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
-    Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
-  ];
-  let returns = [
-    Return<"OL_ERRC_INVALID_SIZE", [
-      "`Size == 0`"
-    ]>
+    ]>,
+    Return<"OL_ERRC_INVALID_ARGUMENT", [
+      "`Alignment == 0`"
+    ]>,
+    Return<"OL_ERRC_INVALID_ARGUMENT", [
+      "`(Alignment & (Alignment - 1)) != 0`"
+    ]>,
+    Return<"OL_ERRC_INVALID_ENUMERATION", [
+      "`Type == OL_ALLOC_TYPE_HOST`"
+    ]>,
   ];
 }
 
 def olMemAllocAlignedHost : Function {
   let desc = "Creates a host memory allocation with the specified alignment.";
-  let details = [
-      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
-  ];
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
-    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
-    Param<"size_t", "Alignment",
-               "alignment of the allocation in bytes. Must be non-zero and a power of two",
-               PARAM_IN>,
-    Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
-  ];
-  let returns = [
-    Return<"OL_ERRC_INVALID_SIZE", [
-      "`Size == 0`"
-    ]>,
-    Return<"OL_ERRC_INVALID_ARGUMENT", [
-      "`Alignment == 0`"
-    ]>,
-    Return<"OL_ERRC_INVALID_ARGUMENT", [
-      "`(Alignment & (Alignment - 1)) != 0`"
-    ]>,
-  ];
-}
-
-def olMemAllocAlignedManaged : Function {
-  let desc = "Creates a managed (unified) memory allocation with the specified alignment.";
-  let details = [
-      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
-  ];
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
-    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
-    Param<"size_t", "Alignment",
-               "alignment of the allocation in bytes. Must be non-zero and a power of two",
-               PARAM_IN>,
-    Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
-  ];
-  let returns = [
-    Return<"OL_ERRC_INVALID_SIZE", [
-      "`Size == 0`"
-    ]>,
-    Return<"OL_ERRC_INVALID_ARGUMENT", [
-      "`Alignment == 0`"
-    ]>,
-    Return<"OL_ERRC_INVALID_ARGUMENT", [
-      "`(Alignment & (Alignment - 1)) != 0`"
-    ]>,
-  ];
-}
-
-def olMemAllocAlignedDevice : Function {
-  let desc = "Creates a device memory allocation with the specified alignment.";
   let details = [
       "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
   ];
