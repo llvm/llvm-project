@@ -20705,6 +20705,10 @@ static SDValue performVFMADD_VLCombine(SDNode *N,
 static SDValue performVEXT_VLCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const RISCVSubtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  assert((Opcode == RISCVISD::VSEXT_VL || Opcode == RISCVISD::VZEXT_VL) &&
+         "Unexpected opcode");
+
   SDValue Inner = N->getOperand(0);
   SDValue Mask = N->getOperand(1);
   SDValue VL = N->getOperand(2);
@@ -20713,8 +20717,8 @@ static SDValue performVEXT_VLCombine(SDNode *N,
   // where vext_vl is either vsext_vl or vzext_vl.
   using namespace SDPatternMatch;
   SDValue Src;
-  if (!sd_match(Inner, m_OneUse(m_Node(N->getOpcode(), m_Value(Src),
-                                       m_Specific(Mask), m_Specific(VL)))))
+  if (!sd_match(Inner, m_OneUse(m_Node(Opcode, m_Value(Src), m_Specific(Mask),
+                                       m_Specific(VL)))))
     return SDValue();
 
   MVT SrcVT = Src.getSimpleValueType();
@@ -20725,7 +20729,7 @@ static SDValue performVEXT_VLCombine(SDNode *N,
   if (Factor != 2 && Factor != 4 && Factor != 8)
     return SDValue();
 
-  return DCI.DAG.getNode(N->getOpcode(), SDLoc(N), DstVT, Src, Mask, VL);
+  return DCI.DAG.getNode(Opcode, SDLoc(N), DstVT, Src, Mask, VL);
 }
 
 static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
