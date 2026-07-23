@@ -542,11 +542,10 @@ public:
                       LoopInfo *LI, DominatorTree *DT,
                       const TargetTransformInfo *TTI, AssumptionCache *AC,
                       ElementCount VecWidth, unsigned UnrollFactor,
-                      LoopVectorizationCostModel *CM,
                       GeneratedRTChecks &RTChecks, VPlan &Plan)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TTI(TTI), AC(AC),
         VF(VecWidth), UF(UnrollFactor), Builder(PSE.getSE()->getContext()),
-        Cost(CM), RTChecks(RTChecks), Plan(Plan),
+        RTChecks(RTChecks), Plan(Plan),
         VectorPHVPBB(cast<VPBasicBlock>(
             Plan.getVectorLoopRegion()->getSinglePredecessor())) {}
 
@@ -606,9 +605,6 @@ protected:
 
   // --- Vectorization state ---
 
-  /// The profitablity analysis.
-  LoopVectorizationCostModel *Cost;
-
   /// Structure to hold information about generated runtime checks, responsible
   /// for cleaning the checks, if vectorization turns out unprofitable.
   GeneratedRTChecks &RTChecks;
@@ -657,11 +653,10 @@ public:
                                  const TargetTransformInfo *TTI,
                                  AssumptionCache *AC,
                                  EpilogueLoopVectorizationInfo &EPI,
-                                 LoopVectorizationCostModel *CM,
                                  GeneratedRTChecks &Checks, VPlan &Plan,
                                  ElementCount VecWidth, unsigned UnrollFactor)
       : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, VecWidth,
-                            UnrollFactor, CM, Checks, Plan),
+                            UnrollFactor, Checks, Plan),
         EPI(EPI) {}
 
   /// Holds and updates state information required to vectorize the main loop
@@ -683,9 +678,8 @@ public:
                              const TargetTransformInfo *TTI,
                              AssumptionCache *AC,
                              EpilogueLoopVectorizationInfo &EPI,
-                             LoopVectorizationCostModel *CM,
                              GeneratedRTChecks &Check, VPlan &Plan)
-      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI, CM,
+      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI,
                                        Check, Plan, EPI.MainLoopVF,
                                        EPI.MainLoopUF) {}
 
@@ -704,9 +698,8 @@ public:
                                  const TargetTransformInfo *TTI,
                                  AssumptionCache *AC,
                                  EpilogueLoopVectorizationInfo &EPI,
-                                 LoopVectorizationCostModel *CM,
                                  GeneratedRTChecks &Checks, VPlan &Plan)
-      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI, CM,
+      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI,
                                        Checks, Plan, EPI.EpilogueVF,
                                        EPI.EpilogueUF) {}
   /// Implements the interface for creating a vectorized skeleton using the
@@ -8295,8 +8288,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                    L->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                    PSE);
 
-    EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TTI, AC, EPI, &CM,
-                                       Checks, BestMainPlan);
+    EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TTI, AC, EPI, Checks,
+                                       BestMainPlan);
     auto ExpandedSCEVs = LVP.executePlan(
         EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan, MainILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop);
@@ -8322,7 +8315,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
     // Second pass vectorizes the epilogue and adjusts the control flow
     // edges from the first pass.
-    EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TTI, AC, EPI, &CM,
+    EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TTI, AC, EPI,
                                              Checks, BestEpiPlan);
     SmallVector<Instruction *> InstsToMove = preparePlanForEpilogueVectorLoop(
         BestMainPlan, BestEpiPlan, L, ExpandedSCEVs, EPI, LVP, Config,
@@ -8335,7 +8328,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                               ResumeValues);
     ++LoopsEpilogueVectorized;
   } else {
-    InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, IC, &CM, Checks,
+    InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks,
                            BestPlan);
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                  VF.MinProfitableTripCount);
