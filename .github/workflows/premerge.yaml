@@ -287,6 +287,8 @@ jobs:
         env:
           SCCACHE_BUCKET: sccache-bucket
           SCCACHE_REGION: us-west-2
+          PROJECTS: ${{ needs.premerge-compute-macos.outputs.macos-projects }}
+          CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-check-targets }}
           CLANG_TOOLCHAIN_PROGRAM_TIMEOUT: 120
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
