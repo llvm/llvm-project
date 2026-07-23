@@ -20,3 +20,23 @@ define internal <2 x i32> @elementwise_load(ptr %p) {
   %value = load atomic elementwise <2 x i32>, ptr %p monotonic, align 4
   ret <2 x i32> %value
 }
+
+define internal <2 x i32> @whole_vector_atomicrmw(ptr %p, <2 x i32> %value) {
+; CHECK-LABEL: define internal <2 x i32> @whole_vector_atomicrmw(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[VALUE:%.*]]) {
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[P]], <2 x i32> [[VALUE]] monotonic, align 8
+; CHECK-NEXT:    ret <2 x i32> [[OLD]]
+;
+  %old = atomicrmw add ptr %p, <2 x i32> %value monotonic, align 8
+  ret <2 x i32> %old
+}
+
+define internal <2 x i32> @elementwise_atomicrmw(ptr %p, <2 x i32> %value) {
+; CHECK-LABEL: define internal <2 x i32> @elementwise_atomicrmw(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[VALUE:%.*]]) {
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw elementwise add ptr [[P]], <2 x i32> [[VALUE]] monotonic, align 8
+; CHECK-NEXT:    ret <2 x i32> [[OLD]]
+;
+  %old = atomicrmw elementwise add ptr %p, <2 x i32> %value monotonic, align 8
+  ret <2 x i32> %old
+}

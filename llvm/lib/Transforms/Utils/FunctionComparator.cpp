@@ -800,6 +800,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res = cmpNumbers(RMWI->isVolatile(),
                              cast<AtomicRMWInst>(R)->isVolatile()))
       return Res;
+    if (int Res = cmpNumbers(RMWI->isElementwise(),
+                             cast<AtomicRMWInst>(R)->isElementwise()))
+      return Res;
     if (int Res = cmpOrderings(RMWI->getOrdering(),
                                cast<AtomicRMWInst>(R)->getOrdering()))
       return Res;
