@@ -8716,103 +8716,6 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
   return false;
 }
 
-/// Returns true iff \p BV builds a vector with the result equivalent to
-/// the result of ADDSUB/SUBADD operation.
-/// If true is returned then the operands of ADDSUB = Opnd0 +- Opnd1
-/// (SUBADD = Opnd0 -+ Opnd1) operation are written to the parameters
-/// \p Opnd0 and \p Opnd1.
-static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
-                             const X86Subtarget &Subtarget, SelectionDAG &DAG,
-                             SDValue &Opnd0, SDValue &Opnd1,
-                             unsigned &NumExtracts, bool &IsSubAdd,
-                             bool &HasAllowContract) {
-  using namespace SDPatternMatch;
-
-  MVT VT = BV->getSimpleValueType(0);
-  if (!Subtarget.hasSSE3() || !VT.isFloatingPoint())
-    return false;
-
-  unsigned NumElts = VT.getVectorNumElements();
-  SDValue InVec0 = DAG.getUNDEF(VT);
-  SDValue InVec1 = DAG.getUNDEF(VT);
-
-  NumExtracts = 0;
-  HasAllowContract = NumElts != 0;
-
-  // Odd-numbered elements in the input build vector are obtained from
-  // adding/subtracting two integer/float elements.
-  // Even-numbered elements in the input build vector are obtained from
-  // subtracting/adding two integer/float elements.
-  unsigned Opc[2] = {0, 0};
-  for (unsigned i = 0, e = NumElts; i != e; ++i) {
-    SDValue Op = BV->getOperand(i);
-
-    // Skip 'undef' values.
-    unsigned Opcode = Op.getOpcode();
-    if (Opcode == ISD::UNDEF)
-      continue;
-
-    // Early exit if we found an unexpected opcode.
-    if (Opcode != ISD::FADD && Opcode != ISD::FSUB)
-      return false;
-
-    SDValue Op0 = Op.getOperand(0);
-    SDValue Op1 = Op.getOperand(1);
-
-    // Try to match the following pattern:
-    // (BINOP (extract_vector_elt A, i), (extract_vector_elt B, i))
-    // Early exit if we cannot match that sequence.
-    if (!sd_match(Op0, m_ExtractElt(m_SpecificVT(VT), m_SpecificInt(i))) ||
-        !sd_match(Op1, m_ExtractElt(m_SpecificVT(VT), m_SpecificInt(i))))
-      return false;
-
-    // We found a valid add/sub node, make sure its the same opcode as previous
-    // elements for this parity.
-    if (Opc[i % 2] != 0 && Opc[i % 2] != Opcode)
-      return false;
-    Opc[i % 2] = Opcode;
-
-    // Update InVec0 and InVec1.
-    if (InVec0.isUndef())
-      InVec0 = Op0.getOperand(0);
-    if (InVec1.isUndef())
-      InVec1 = Op1.getOperand(0);
-
-    // Make sure that operands in input to each add/sub node always
-    // come from a same pair of vectors.
-    if (InVec0 != Op0.getOperand(0)) {
-      if (Opcode == ISD::FSUB)
-        return false;
-
-      // FADD is commutable. Try to commute the operands
-      // and then test again.
-      std::swap(Op0, Op1);
-      if (InVec0 != Op0.getOperand(0))
-        return false;
-    }
-
-    if (InVec1 != Op1.getOperand(0))
-      return false;
-
-    // Increment the number of extractions done.
-    ++NumExtracts;
-    HasAllowContract &= Op->getFlags().hasAllowContract();
-  }
-
-  // Ensure we have found an opcode for both parities and that they are
-  // different. Don't try to fold this build_vector into an ADDSUB/SUBADD if the
-  // inputs are undef.
-  if (!Opc[0] || !Opc[1] || Opc[0] == Opc[1] ||
-      InVec0.isUndef() || InVec1.isUndef())
-    return false;
-
-  IsSubAdd = Opc[0] == ISD::FADD;
-
-  Opnd0 = InVec0;
-  Opnd1 = InVec1;
-  return true;
-}
-
 /// Returns true if is possible to fold MUL and an idiom that has already been
 /// recognized as ADDSUB/SUBADD(\p Opnd0, \p Opnd1) into
 /// FMADDSUB/FMSUBADD(x, y, \p Opnd1). If (and only if) true is returned, the
@@ -8861,51 +8764,6 @@ static bool isFMAddSubOrFMSubAdd(const X86Subtarget &Subtarget, SDValue &Opnd0,
   Opnd0 = Opnd0.getOperand(0);
 
   return true;
-}
-
-/// Try to fold a build_vector that performs an 'addsub' or 'fmaddsub' or
-/// 'fsubadd' operation accordingly to X86ISD::ADDSUB or X86ISD::FMADDSUB or
-/// X86ISD::FMSUBADD node.
-static SDValue lowerToAddSubOrFMAddSub(const BuildVectorSDNode *BV,
-                                       const SDLoc &DL,
-                                       const X86Subtarget &Subtarget,
-                                       SelectionDAG &DAG) {
-  SDValue Opnd0, Opnd1;
-  unsigned NumExtracts;
-  bool IsSubAdd;
-  bool HasAllowContract;
-  if (!isAddSubOrSubAdd(BV, Subtarget, DAG, Opnd0, Opnd1, NumExtracts, IsSubAdd,
-                        HasAllowContract))
-    return SDValue();
-
-  MVT VT = BV->getSimpleValueType(0);
-
-  // Try to generate X86ISD::FMADDSUB node here.
-  SDValue Opnd2;
-  if (isFMAddSubOrFMSubAdd(Subtarget, Opnd0, Opnd1, Opnd2, NumExtracts,
-                           HasAllowContract)) {
-    unsigned Opc = IsSubAdd ? X86ISD::FMSUBADD : X86ISD::FMADDSUB;
-    return DAG.getNode(Opc, DL, VT, Opnd0, Opnd1, Opnd2);
-  }
-
-  // We only support ADDSUB.
-  if (IsSubAdd)
-    return SDValue();
-
-  // There are no known X86 targets with 512-bit ADDSUB instructions!
-  // Convert to blend(fsub,fadd).
-  if (VT.is512BitVector()) {
-    SmallVector<int> Mask;
-    for (int I = 0, E = VT.getVectorNumElements(); I != E; I += 2) {
-        Mask.push_back(I);
-        Mask.push_back(I + E + 1);
-    }
-    SDValue Sub = DAG.getNode(ISD::FSUB, DL, VT, Opnd0, Opnd1);
-    SDValue Add = DAG.getNode(ISD::FADD, DL, VT, Opnd0, Opnd1);
-    return DAG.getVectorShuffle(VT, DL, Sub, Add, Mask);
-  }
-
-  return DAG.getNode(X86ISD::ADDSUB, DL, VT, Opnd0, Opnd1);
 }
 
 static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
@@ -9563,8 +9421,6 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  if (SDValue AddSub = lowerToAddSubOrFMAddSub(BV, dl, Subtarget, DAG))
-    return AddSub;
   if (SDValue Broadcast = lowerBuildVectorAsBroadcast(BV, dl, Subtarget, DAG))
     return Broadcast;
   if (SDValue BitOp = lowerBuildVectorToBitOp(BV, dl, Subtarget, DAG))
