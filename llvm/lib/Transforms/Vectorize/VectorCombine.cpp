@@ -305,7 +305,9 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // An aligned scalar occupies one vector element. Unaligned accesses below
   // split it into smaller chunks and update this count.
   unsigned NumScalarChunks = 1;
-  bool NeedCast = false;
+  // For an unaligned scalar, load and shuffle GCD-sized integer chunks, then
+  // bitcast the chunk vector to the requested result type.
+  bool UseChunkedLoad = false;
 
   // Check the widened access with minimal alignment. The actual load alignment
   // is derived after choosing a safe pointer.
@@ -351,7 +353,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
         return false;
 
       MinVecTy = ChunkVecTy;
-      NeedCast = true;
+      UseChunkedLoad = true;
     }
 
     APInt OffsetEltIndexAP = Offset.udiv(ChunkSizeInBytes);
@@ -392,7 +394,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   SmallVector<int> Mask;
   assert(OffsetEltIndex + NumScalarChunks <= MinVecNumElts &&
          "Address offset too big");
-  if (NeedCast) {
+  if (UseChunkedLoad) {
     // Poison unused lanes, then gather the scalar chunks into the low lanes.
     Mask.assign(MinVecNumElts, PoisonMaskElem);
     std::iota(Mask.begin(), Mask.begin() + NumScalarChunks, OffsetEltIndex);
@@ -407,7 +409,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // Assume an offset-zero shuffle is free because codegen can use the loaded
   // vector directly.
   if (OffsetEltIndex) {
-    if (NeedCast) {
+    if (UseChunkedLoad) {
       // Account for the chunk shuffle in the unaligned example:
       //   %chunks = shufflevector <8 x i16> %wide.i16, <8 x i16> poison,
       //       <8 x i32> <i32 1, i32 2, i32 poison, i32 poison,
@@ -423,7 +425,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     }
   }
 
-  if (NeedCast) {
+  if (UseChunkedLoad) {
     // Account for the bitcast after the unaligned chunk shuffle:
     //   %result = bitcast <8 x i16> %chunks to <4 x i32>
     NewCost += TTI.getCastInstrCost(Instruction::BitCast, Ty, MinVecTy,
@@ -445,7 +447,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Result = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
   Worklist.pushValue(Result);
   Result = Builder.CreateShuffleVector(Result, Mask);
-  if (NeedCast) {
+  if (UseChunkedLoad) {
     Worklist.pushValue(Result);
     Result = Builder.CreateBitOrPointerCast(Result, I.getType());
   }
