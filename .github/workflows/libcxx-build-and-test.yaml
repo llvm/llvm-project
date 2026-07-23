@@ -56,7 +56,27 @@ jobs:
 
       - name: Install a modern Python via Homebrew
         run: |
-          brew install python@3.12
+          # Ownership/permissions of the Homebrew prefix -- a common cause of post-install
+          # failures on shared machines where /opt/homebrew isn't owned by the runner user.
+          ls -ld /opt/homebrew /opt/homebrew/bin /opt/homebrew/lib /opt/homebrew/Frameworks || true
+          id
+          brew config || true
+
+          # Install Python. Don't let a failing post-install abort the step -- we want to
+          # capture *why* it failed rather than just bailing out here.
+          brew install python@3.12 || echo "::warning::brew install returned $?"
+
+          # Re-run the post-install verbosely to surface the actual failing command/backtrace.
+          echo "=== brew postinstall --verbose --debug python@3.12 ==="
+          brew postinstall --verbose --debug python@3.12 </dev/null || echo "::warning::brew postinstall returned $?"
+
+          # Report the resulting state so we can see what did and didn't get set up.
+          echo "=== resulting state ==="
+          brew --prefix python@3.12
+          ls -la "$(brew --prefix python@3.12)/libexec/bin" || true
+          /opt/homebrew/bin/python3.12 --version || true
+          /opt/homebrew/bin/python3.12 -m ensurepip --version || true
+
           echo "$(brew --prefix python@3.12)/libexec/bin" >> "$GITHUB_PATH"
 
       - name: Verify the Homebrew interpreter actually works
