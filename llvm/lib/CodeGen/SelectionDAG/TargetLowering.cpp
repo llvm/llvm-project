@@ -351,6 +351,15 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     LC1 = (VT == MVT::f32) ? RTLIB::UNE_F32 :
           (VT == MVT::f64) ? RTLIB::UNE_F64 :
           (VT == MVT::f128) ? RTLIB::UNE_F128 : RTLIB::UNE_PPCF128;
+    // Some ABIs (e.g. AEABI) only provide an ordered-equal compare; obtain
+    // not-equal (UNE = !OEQ) by inverting the result of that call.
+    if (getLibcallImpl(LC1) == RTLIB::Unsupported) {
+      LC1 = (VT == MVT::f32)    ? RTLIB::OEQ_F32
+            : (VT == MVT::f64)  ? RTLIB::OEQ_F64
+            : (VT == MVT::f128) ? RTLIB::OEQ_F128
+                                : RTLIB::OEQ_PPCF128;
+      ShouldInvertCC = true;
+    }
     break;
   case ISD::SETGE:
   case ISD::SETOGE:
@@ -8596,14 +8605,21 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   APInt Divisor = CN->getAPIntValue();
 
-  // We depend on the UREM by constant optimization in DAGCombiner that requires
-  // high multiply.
-  if (!isOperationLegalOrCustom(ISD::MULHU, HiLoVT) &&
+  // The generated half-width UREM is normally optimized using high multiply.
+  // If the wide UREM libcall is unavailable, a legal or custom half-width
+  // UDIVREM can lower it instead.
+  bool CanDecomposeUREMWithoutMulHi =
+      Opcode == ISD::UREM &&
+      getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
+          RTLIB::Unsupported &&
+      isOperationLegalOrCustom(ISD::UDIVREM, HiLoVT);
+  if (!CanDecomposeUREMWithoutMulHi &&
+      !isOperationLegalOrCustom(ISD::MULHU, HiLoVT) &&
       !isOperationLegalOrCustom(ISD::UMUL_LOHI, HiLoVT))
     return false;
 
-  // Don't expand if optimizing for size.
-  if (DAG.shouldOptForSize())
+  // Prefer the smaller libcall when one is available.
+  if (DAG.shouldOptForSize() && !CanDecomposeUREMWithoutMulHi)
     return false;
 
   // Early out for 0 or 1 divisors.

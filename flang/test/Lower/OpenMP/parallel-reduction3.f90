@@ -1,5 +1,5 @@
-! RUN: bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
 ! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>> {{.*}} alloc {
 ! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
