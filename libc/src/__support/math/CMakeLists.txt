@@ -3065,15 +3065,13 @@ add_header_library(
   HDRS
     expf_integer_eval.h
   DEPENDS
-    # TODO: strip the below deps down if able to
     .exp_constants
     .exp_integer_utils
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
-    libc.src.__support.frac128
+    libc.src.__support.frac64
 )
 
 add_header_library(
@@ -4120,14 +4118,12 @@ add_header_library(
   HDRS
     exp_integer_utils.h
   DEPENDS
-    # TODO: strip the below deps down if able to
     .exp_constants
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
-    libc.src.__support.frac128
+    libc.src.__support.frac64
 )
 
 add_header_library(
