@@ -50,13 +50,19 @@ int nested_label(int x) {
 // CIR:   %[[T:.*]] = cir.load align(8)
 // CIR:   cir.indirect_goto %[[T]] : !cir.ptr<!void>
 
+// CIR emits the store block first, then branches to the indirectbr block.
 // LLVMCIR-LABEL: define dso_local i32 @nested_label
 // LLVMCIR:   store ptr blockaddress(@nested_label, %[[INNER:.*]]), ptr %{{.*}}, align 8
+// LLVMCIR:   br label %[[IBR:.*]]
+// LLVMCIR: [[IBR]]:
 // LLVMCIR:   indirectbr ptr %{{.*}}, [label %[[INNER]]]
 
+// OGCG emits the indirectbr block first; the store block branches back up to it.
 // OGCG-LABEL: define dso_local i32 @nested_label
 // OGCG:   indirectbr ptr %{{.*}}, [label %[[INNER:.*]]]
+// OGCG: [[STORE:.*]]:
 // OGCG:   store ptr blockaddress(@nested_label, %[[INNER]]), ptr %{{.*}}, align 8
+// OGCG:   br label %{{.*}}
 
 // A `goto *p` inside a loop body.
 int goto_in_loop(int n) {
