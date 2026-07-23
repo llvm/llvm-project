@@ -1429,8 +1429,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p0)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[PTRTOINT]](s64)
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[TRUNC]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[PTRTOINT]](s64)
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[TRUNC]](i32)
     ; CHECK-NEXT: $vgpr0 = COPY [[INTTOPTR]](p3)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(p3) = G_EXTRACT %0, 0
