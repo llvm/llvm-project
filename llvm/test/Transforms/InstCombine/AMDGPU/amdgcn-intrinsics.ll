@@ -5,6 +5,7 @@
 ; llvm.amdgcn.rcp
 ; --------------------------------------------------------------------
 
+declare half @llvm.amdgcn.rcp.f16(half) nounwind readnone
 declare float @llvm.amdgcn.rcp.f32(float) nounwind readnone
 declare double @llvm.amdgcn.rcp.f64(double) nounwind readnone
 
@@ -42,7 +43,8 @@ define double @test_constant_fold_rcp_f64_1() nounwind {
 
 define float @test_constant_fold_rcp_f32_half() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_half(
-; CHECK-NEXT:    ret float 2.000000e+00
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 5.000000e-01) #[[ATTR18:[0-9]+]]
+; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 0.5) nounwind readnone
   ret float %val
@@ -50,7 +52,8 @@ define float @test_constant_fold_rcp_f32_half() nounwind {
 
 define double @test_constant_fold_rcp_f64_half() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f64_half(
-; CHECK-NEXT:    ret double 2.000000e+00
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.rcp.f64(double 5.000000e-01) #[[ATTR18]]
+; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.rcp.f64(double 0.5) nounwind readnone
   ret double %val
@@ -58,7 +61,8 @@ define double @test_constant_fold_rcp_f64_half() nounwind {
 
 define float @test_constant_fold_rcp_f32_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43(
-; CHECK-NEXT:    ret float f0x3CBE82FA
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #[[ATTR18]]
+; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) nounwind readnone
   ret float %val
@@ -66,7 +70,8 @@ define float @test_constant_fold_rcp_f32_43() nounwind {
 
 define double @test_constant_fold_rcp_f64_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f64_43(
-; CHECK-NEXT:    ret double f0x3F97D05F417D05F4
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) #[[ATTR18]]
+; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) nounwind readnone
   ret double %val
@@ -74,11 +79,57 @@ define double @test_constant_fold_rcp_f64_43() nounwind {
 
 define float @test_constant_fold_rcp_f32_43_strictfp() nounwind strictfp {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #[[ATTR18:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #[[ATTR19:[0-9]+]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) strictfp nounwind readnone
   ret float %val
+}
+
+; 1.0 / 2^127 = 2^-127, a denormal f32 result. v_rcp_f32 always flushes a
+; denormal result to zero (preserving sign), so this folds to +0 rather than
+; the exact reciprocal.
+define float @test_constant_fold_rcp_f32_denormal_result() nounwind {
+; CHECK-LABEL: @test_constant_fold_rcp_f32_denormal_result(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %val = call float @llvm.amdgcn.rcp.f32(float 0x47E0000000000000)
+  ret float %val
+}
+
+; 2^-127 is a denormal f32 input. v_rcp_f32 always flushes a denormal input
+; to zero (preserving sign) before reciprocating, so this folds to
+; rcp(+0) = +Inf rather than the exact reciprocal of 2^-127.
+define float @test_constant_fold_rcp_f32_denormal_input() nounwind {
+; CHECK-LABEL: @test_constant_fold_rcp_f32_denormal_input(
+; CHECK-NEXT:    ret float +inf
+;
+  %val = call float @llvm.amdgcn.rcp.f32(float 0x3800000000000000)
+  ret float %val
+}
+
+define float @test_constant_fold_rcp_f32_inf() nounwind {
+; CHECK-LABEL: @test_constant_fold_rcp_f32_inf(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %val = call float @llvm.amdgcn.rcp.f32(float 0x7FF0000000000000)
+  ret float %val
+}
+
+define half @test_constant_fold_rcp_f16_denormal() nounwind {
+; CHECK-LABEL: @test_constant_fold_rcp_f16_denormal(
+; CHECK-NEXT:    ret half 1.525880e-05
+;
+  %val = call half @llvm.amdgcn.rcp.f16(half 0xH7BFF)
+  ret half %val
+}
+
+define half @test_constant_fold_rcp_f16_43() nounwind {
+; CHECK-LABEL: @test_constant_fold_rcp_f16_43(
+; CHECK-NEXT:    ret half 2.388000e-02
+;
+  %val = call half @llvm.amdgcn.rcp.f16(half 0xH513C)
+  ret half %val
 }
 
 ; --------------------------------------------------------------------
@@ -139,7 +190,7 @@ define half @test_constant_fold_sqrt_f16_0() nounwind {
 
 define float @test_constant_fold_sqrt_f32_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f32_0(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float 0.000000e+00) #[[ATTR19:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float 0.000000e+00) #[[ATTR18]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.sqrt.f32(float 0.0) nounwind readnone
@@ -148,7 +199,7 @@ define float @test_constant_fold_sqrt_f32_0() nounwind {
 
 define double @test_constant_fold_sqrt_f64_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f64_0(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0.000000e+00) #[[ATTR19]]
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0.000000e+00) #[[ATTR18]]
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double 0.0) nounwind readnone
@@ -165,7 +216,7 @@ define half @test_constant_fold_sqrt_f16_neg0() nounwind {
 
 define float @test_constant_fold_sqrt_f32_neg0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f32_neg0(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float -0.000000e+00) #[[ATTR19]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float -0.000000e+00) #[[ATTR18]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.sqrt.f32(float -0.0) nounwind readnone
@@ -174,7 +225,7 @@ define float @test_constant_fold_sqrt_f32_neg0() nounwind {
 
 define double @test_constant_fold_sqrt_f64_neg0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f64_neg0(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double -0.000000e+00) #[[ATTR19]]
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double -0.000000e+00) #[[ATTR18]]
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double -0.0) nounwind readnone
