@@ -1480,14 +1480,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_interlocked_add: {
     // Emit `atomicrmw` directly for both DXIL and SPIR-V — the backends pick
-    // up the raw instruction (DXIL via DXILResourceAccess for resource
-    // pointers, SPIR-V via selectAtomicRMW). No intermediate intrinsic.
+    // up the raw instruction (DXIL routes it via `dx.resource.atomic.binop`
+    // in DXILResourceAccess for resource pointers, SPIR-V lowers via
+    // selectAtomicRMW). No intermediate intrinsic.
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Add);
   }
   case Builtin::BI__builtin_hlsl_interlocked_or: {
-    return handleInterlockedOp(*this, E,
-                               CGM.getHLSLRuntime().getInterlockedOrIntrinsic(),
-                               "hlsl.interlocked.or");
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Or);
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
