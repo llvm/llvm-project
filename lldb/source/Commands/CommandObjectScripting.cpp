@@ -18,7 +18,10 @@
 #include "lldb/Interpreter/Interfaces/ScriptedInterfaceUsages.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Args.h"
+
+#include "llvm/ADT/StringMap.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -138,11 +141,22 @@ public:
       : CommandObjectParsed(
             interpreter, "scripting extension list",
             "List all the available scripting extension templates. ",
-            "scripting template list [--language <scripting-language> --]") {}
+            "scripting extension list [--language <scripting-language> --] "
+            "[--json --] [<extension-name> ...]") {
+    AddSimpleArgumentList(eArgTypeScriptedExtension, eArgRepeatStar);
+  }
 
   ~CommandObjectScriptingExtensionList() override = default;
 
   Options *GetOptions() override { return &m_options; }
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eScriptedExtensionCompletion, request,
+        nullptr);
+  }
 
   class CommandOptions : public Options {
   public:
@@ -162,6 +176,9 @@ public:
           error = Status::FromErrorStringWithFormatv(
               "unrecognized value for language '{0}'", option_arg);
         break;
+      case 'j':
+        m_json_format = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -171,6 +188,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_language = lldb::eScriptLanguageDefault;
+      m_json_format = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -178,53 +196,169 @@ public:
     }
 
     lldb::ScriptLanguage m_language = lldb::eScriptLanguageDefault;
+    bool m_json_format = false;
   };
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
+    llvm::StringMap<std::vector<size_t>> grouped_by_extension;
+    for (size_t i = 0; i < PluginManager::GetNumScriptedInterfaces(); i++) {
+      lldb::ScriptedExtension extension =
+          PluginManager::GetScriptedInterfaceExtensionAtIndex(i);
+      if (extension == eScriptedExtensionInvalid)
+        continue;
+
+      llvm::StringLiteral extension_name =
+          ScriptInterpreter::ExtensionToString(extension);
+      if (grouped_by_extension.contains(extension_name))
+        grouped_by_extension[extension_name].push_back(i);
+      else
+        grouped_by_extension[extension_name] = {i};
+    }
+
+    if (command.GetArgumentCount() > 0) {
+      llvm::StringMap<std::vector<size_t>> filtered;
+      for (const Args::ArgEntry &arg : command.entries()) {
+        lldb::ScriptedExtension extension =
+            ScriptInterpreter::StringToExtension(arg.ref());
+        if (extension == eScriptedExtensionInvalid) {
+          result.AppendErrorWithFormat("no scripted extension named '%s'",
+                                       arg.c_str());
+          return;
+        }
+        llvm::StringLiteral extension_name =
+            ScriptInterpreter::ExtensionToString(extension);
+        auto it = grouped_by_extension.find(extension_name);
+        if (it != grouped_by_extension.end())
+          filtered[extension_name] = it->second;
+      }
+      grouped_by_extension = std::move(filtered);
+    }
+
+    if (m_options.m_json_format)
+      OutputJsonFormat(grouped_by_extension, result);
+    else
+      OutputTextFormat(grouped_by_extension, result);
+  }
+
+private:
+  std::vector<std::string>
+  GetLanguagesForExtension(const std::vector<size_t> &indices) {
+    std::vector<std::string> languages;
+    for (const size_t idx : indices) {
+      lldb::ScriptLanguage lang =
+          PluginManager::GetScriptedInterfaceLanguageAtIndex(idx);
+      if (lang != m_options.m_language)
+        continue;
+      languages.push_back(ScriptInterpreter::LanguageToString(lang));
+    }
+    return languages;
+  }
+
+  void OutputJsonFormat(
+      const llvm::StringMap<std::vector<size_t>> &grouped_by_extension,
+      CommandReturnObject &result) {
+    llvm::json::Array extensions;
+    for (const auto &extension_pair : grouped_by_extension) {
+      // llvm::json::Value's StringRef constructor does not copy the
+      // underlying characters, so every string handed to the JSON structure
+      // below must be an owned std::string -- otherwise it dangles by the
+      // time the object tree is serialized at the end of this function.
+      llvm::json::Array languages;
+      for (const std::string &lang :
+           GetLanguagesForExtension(extension_pair.second))
+        languages.push_back(lang);
+      if (languages.empty())
+        continue;
+
+      llvm::StringRef desc =
+          PluginManager::GetScriptedInterfaceDescriptionAtIndex(
+              extension_pair.second[0]);
+      ScriptedInterfaceUsages usages =
+          PluginManager::GetScriptedInterfaceUsagesAtIndex(
+              extension_pair.second[0]);
+
+      llvm::json::Array api_usages;
+      for (llvm::StringRef usage : usages.GetSBAPIUsages())
+        api_usages.push_back(usage.str());
+
+      llvm::json::Array cmd_usages;
+      for (llvm::StringRef usage : usages.GetCommandInterpreterUsages())
+        cmd_usages.push_back(usage.str());
+
+      extensions.push_back(llvm::json::Object{
+          {"name", extension_pair.first().str()},
+          {"description", desc.str()},
+          {"languages", std::move(languages)},
+          {"api_usages", std::move(api_usages)},
+          {"command_interpreter_usages", std::move(cmd_usages)},
+      });
+    }
+
+    std::string str;
+    llvm::raw_string_ostream os(str);
+    os << llvm::formatv("{0:2}", llvm::json::Value(std::move(extensions)));
+    result.AppendMessage(str);
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+
+  void OutputTextFormat(
+      const llvm::StringMap<std::vector<size_t>> &grouped_by_extension,
+      CommandReturnObject &result) {
     Stream &s = result.GetOutputStream();
+    const bool use_color = s.AsRawOstream().colors_enabled();
+    auto ansi_code = [use_color](llvm::StringRef code) {
+      return ansi::FormatAnsiTerminalCodes(code, use_color);
+    };
+    const std::string label_color = ansi_code("${ansi.fg.green}${ansi.bold}");
+    const std::string name_color = ansi_code("${ansi.fg.cyan}${ansi.bold}");
+    const std::string sep_color = ansi_code("${ansi.faint}");
+    const std::string reset = ansi_code("${ansi.normal}");
+    const std::string separator(
+        std::min<uint64_t>(GetDebugger().GetTerminalWidth(), 80), '-');
+
     s.Printf("Available scripted extension templates:");
 
-    auto print_field = [&s](llvm::StringRef key, llvm::StringRef value) {
-      if (!value.empty()) {
-        s.IndentMore();
-        s.Indent();
-        s << key << ": " << value << '\n';
-        s.IndentLess();
-      }
+    auto print_field = [&](llvm::StringRef key, llvm::StringRef value,
+                           const std::string &value_color = std::string()) {
+      if (value.empty())
+        return;
+      s.IndentMore();
+      s.Indent();
+      s << label_color << key << ": " << reset;
+      if (!value_color.empty())
+        s << value_color << value << reset;
+      else
+        s << value;
+      s << '\n';
+      s.IndentLess();
     };
 
     size_t num_listed_interface = 0;
-    size_t num_extensions = PluginManager::GetNumScriptedInterfaces();
-    for (size_t i = 0; i < num_extensions; i++) {
-      llvm::StringRef plugin_name =
-          PluginManager::GetScriptedInterfaceNameAtIndex(i);
-      if (plugin_name.empty())
-        break;
-
-      lldb::ScriptLanguage lang =
-          PluginManager::GetScriptedInterfaceLanguageAtIndex(i);
-      if (lang != m_options.m_language)
+    for (const auto &extension_pair : grouped_by_extension) {
+      std::vector<std::string> languages =
+          GetLanguagesForExtension(extension_pair.second);
+      if (languages.empty())
         continue;
-
-      if (!num_listed_interface)
-        s.EOL();
-
       num_listed_interface++;
 
+      s.EOL();
+      s << sep_color << separator << reset;
+      s.EOL();
+
       llvm::StringRef desc =
-          PluginManager::GetScriptedInterfaceDescriptionAtIndex(i);
+          PluginManager::GetScriptedInterfaceDescriptionAtIndex(
+              extension_pair.second[0]);
       ScriptedInterfaceUsages usages =
-          PluginManager::GetScriptedInterfaceUsagesAtIndex(i);
+          PluginManager::GetScriptedInterfaceUsagesAtIndex(
+              extension_pair.second[0]);
 
-      print_field("Name", plugin_name);
-      print_field("Language", ScriptInterpreter::LanguageToString(lang));
+      print_field("Name", extension_pair.first(), name_color);
       print_field("Description", desc);
-      usages.Dump(s, ScriptedInterfaceUsages::UsageKind::API);
-      usages.Dump(s, ScriptedInterfaceUsages::UsageKind::CommandInterpreter);
-
-      if (i != num_extensions - 1)
-        s.EOL();
+      print_field("Language", llvm::join(languages, ""));
+      usages.Dump(s, ScriptedInterfaceUsages::UsageKind::API, use_color);
+      usages.Dump(s, ScriptedInterfaceUsages::UsageKind::CommandInterpreter,
+                  use_color);
     }
 
     if (!num_listed_interface)

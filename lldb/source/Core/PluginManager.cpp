@@ -2126,6 +2126,19 @@ PluginManager::GetScriptedInterfaceUsagesAtIndex(uint32_t idx) {
   return {};
 }
 
+void PluginManager::AutoCompleteScriptedExtension(llvm::StringRef name,
+                                                  CompletionRequest &request) {
+  for (size_t idx = 0; idx < GetNumScriptedInterfaces(); idx++) {
+    if (auto instance =
+            GetScriptedInterfaceInstances().GetInstanceAtIndex(idx)) {
+      llvm::StringLiteral extension_name =
+          ScriptInterpreter::ExtensionToString(instance->extension);
+      if (extension_name.starts_with(name))
+        request.AddCompletion(extension_name);
+    }
+  }
+}
+
 #pragma mark REPL
 
 struct REPLInstance : public PluginInstance<REPLCreateInstance> {
