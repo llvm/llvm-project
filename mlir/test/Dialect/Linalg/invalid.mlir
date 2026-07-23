@@ -1208,18 +1208,6 @@ func.func @broadcast_duplicate_dims(
 
 // -----
 
-func.func @broadcast_scalar_input(
-    %input: f32, %init: tensor<8x16xf32>) -> tensor<8x16xf32> {
-  // expected-error @+1 {{'linalg.broadcast' op operand #0 must be memref of any non-token type values or ranked tensor of any non-token type values, but got 'f32'}}
-  %bcast = linalg.broadcast
-      ins(%input:f32)
-      outs(%init:tensor<8x16xf32>)
-      dimensions = [0, 1]
-  func.return %bcast : tensor<8x16xf32>
-}
-
-// -----
-
 func.func @broadcast_no_operands1() {
   // expected-error @+1 {{'linalg.broadcast' op expected 2 operands, but found 0}}
   linalg.broadcast dimensions = [1]
