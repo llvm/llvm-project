@@ -18159,8 +18159,7 @@ static void DiagnoseDependentFriendNotMember(Sema &S, SourceLocation Loc,
   }
 
   if (NNS.getAsRecordDecl()) {
-    S.Diag(Loc, diag::err_dependent_friend_not_member_of_template_spec)
-        << NNS;
+    S.Diag(Loc, diag::err_dependent_friend_not_member_of_template_spec) << NNS;
   } else {
     S.Diag(Loc, diag::err_dependent_friend_not_member);
   }
@@ -18562,9 +18561,8 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   DeclarationNameInfo NameInfo = GetNameForDeclarator(D);
   assert(NameInfo.getName());
 
-  if (SS.isValid() &&
-      DiagnosePackIndexingInFriendNNS(
-          NameInfo.getLoc(), SS.getWithLocInContext(Context)))
+  if (SS.isValid() && DiagnosePackIndexingInFriendNNS(
+                          NameInfo.getLoc(), SS.getWithLocInContext(Context)))
     return nullptr;
 
   // Check for unexpanded parameter packs.
