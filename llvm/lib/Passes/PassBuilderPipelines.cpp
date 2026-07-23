@@ -1529,6 +1529,15 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                                              ThinOrFullLTOPhase LTOPhase) {
   ModulePassManager MPM;
 
+  // A second dead-branch-elimination run, now that inlining has exposed
+  // checks whose circular dependencies span function boundaries (e.g. a
+  // container's grow-on-full check after its accessors were inlined). Such
+  // branches survive to this point because their bodies contain calls, which
+  // SimplifyCFG cannot speculate into selects. Running before the loop
+  // passes lets the vectorizer see the cleaned loops.
+  if (EnableDeadBranchElimination)
+    MPM.addPass(DeadBranchEliminationPass());
+
   // Run partial inlining pass to partially inline functions that have
   // large bodies.
   if (RunPartialInlining)

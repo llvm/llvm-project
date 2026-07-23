@@ -226,6 +226,7 @@
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
+; CHECK-O-NEXT: Running pass: DeadBranchEliminationPass
 ; CHECK-DEFAULT-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-LTO-NOT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
