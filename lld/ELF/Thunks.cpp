@@ -1328,6 +1328,7 @@ void elf::writePPC32PltCallStub(Ctx &ctx, uint8_t *buf, uint64_t p,
   }
   uint32_t offset;
   uint32_t reg;
+  uint64_t written = 0;
   if (!addend) {
     // We're a (position-independent) IPLT entry, so cannot assume anything
     // about what value the caller left in r30 as this could be an indirect
@@ -1338,8 +1339,7 @@ void elf::writePPC32PltCallStub(Ctx &ctx, uint8_t *buf, uint64_t p,
     write32(ctx, buf + 12, 0x7c0803a6); //    mtlr r0
     offset = gotPltVA - p - 8;
     reg = 11;
-    buf += 16;
-    p += 16;
+    written = 16;
   } else if (*addend >= 0x8000) {
     // The stub loads an address relative to r30 (.got2+Addend). Addend is
     // almost always 0x8000. The address of .got2 is different in another object
@@ -1356,17 +1356,17 @@ void elf::writePPC32PltCallStub(Ctx &ctx, uint8_t *buf, uint64_t p,
   }
   uint16_t ha = (offset + 0x8000) >> 16, l = (uint16_t)offset;
   if (ha == 0) {
-    write32(ctx, buf + 0,
-            0x81600000 | (reg << 16) | l); // lwz r11,l(r[11|30])
-    write32(ctx, buf + 4, 0x7d6903a6);     // mtctr r11
-    write32(ctx, buf + 8, 0x4e800420);     // bctr
-    write32(ctx, buf + 12, 0x60000000);    // nop
+    write32(ctx, buf + written + 0,
+            0x81600000 | (reg << 16) | l);        // lwz r11,l(r[11|30])
+    write32(ctx, buf + written + 4, 0x7d6903a6);  // mtctr r11
+    write32(ctx, buf + written + 8, 0x4e800420);  // bctr
+    write32(ctx, buf + written + 12, 0x60000000); // nop
   } else {
-    write32(ctx, buf + 0,
-            0x3d600000 | (reg << 16) | ha); // addis r11,r[11|30],ha
-    write32(ctx, buf + 4, 0x816b0000 | l);  // lwz r11,l(r11)
-    write32(ctx, buf + 8, 0x7d6903a6);      // mtctr r11
-    write32(ctx, buf + 12, 0x4e800420);     // bctr
+    write32(ctx, buf + written + 0,
+            0x3d600000 | (reg << 16) | ha);          // addis r11,r[11|30],ha
+    write32(ctx, buf + written + 4, 0x816b0000 | l); // lwz r11,l(r11)
+    write32(ctx, buf + written + 8, 0x7d6903a6);     // mtctr r11
+    write32(ctx, buf + written + 12, 0x4e800420);    // bctr
   }
 }
 
