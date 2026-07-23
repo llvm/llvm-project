@@ -81,19 +81,12 @@ class TestDAP_disassemble(DAPTestCaseBase):
             "Disassemble request should return the exact requested number of instructions.",
         )
 
-        frame_instruction_index = next(
-            (
-                i
-                for i, inst in enumerate(instructions)
-                if inst.address == instruction_pointer_ref
-            ),
-            -1,
-        )
+        # The requested instruction pointer should land exactly at
+        # `backwards_instructions` entries into the returned instructions.
         self.assertEqual(
-            frame_instruction_index,
-            backwards_instructions,
-            f"requested instruction should be preceded by {backwards_instructions} "
-            f"instructions. Actual index: {frame_instruction_index}",
+            instructions[backwards_instructions].address,
+            instruction_pointer_ref,
+            f"expected instruction pointer at index {backwards_instructions}",
         )
 
         session.set_source_breakpoints(source, [])
