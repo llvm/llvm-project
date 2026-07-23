@@ -208,6 +208,7 @@
 ; SPIRV-Opt-NEXT:      Machine Common Subexpression Elimination
 ; SPIRV-Opt-NEXT:      MachinePostDominator Tree Construction
 ; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
+; SPIRV-Opt-NEXT:      Machine Register Class Info Analysis
 ; SPIRV-Opt-NEXT:      Machine code sinking
 ; SPIRV-Opt-NEXT:      Peephole Optimizations
 ; SPIRV-Opt-NEXT:      Remove dead machine instructions
