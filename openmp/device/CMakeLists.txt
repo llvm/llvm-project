@@ -44,8 +44,8 @@ endif()
 # propagation. That said, we will run the vectorizer again after the runtime
 # has been linked into the user program.
 list(APPEND compile_options "SHELL: -mllvm -vectorize-slp=false")
-if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
-   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn")
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgpu|^amdgcn" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgpu|^amdgcn")
   set(target_name "amdgpu")
   list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
 elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx" OR

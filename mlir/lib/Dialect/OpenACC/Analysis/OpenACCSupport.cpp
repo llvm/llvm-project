@@ -13,6 +13,7 @@
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsType.h"
 
 namespace mlir {
 namespace acc {
@@ -34,12 +35,6 @@ std::string OpenACCSupport::getRecipeName(RecipeKind kind, Type type,
     emitNYI(var ? var.getLoc() : UnknownLoc::get(type.getContext()),
             "variable privatization (incomplete recipe name handling)");
   return recipeName;
-}
-
-InFlightDiagnostic OpenACCSupport::emitNYI(Location loc, const Twine &message) {
-  if (impl)
-    return impl->emitNYI(loc, message);
-  return mlir::emitError(loc, "not yet implemented: " + message);
 }
 
 remark::detail::InFlightRemark

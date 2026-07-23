@@ -83,6 +83,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  err
+  ../libc/include/err.yaml
+  err.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   features
   ../libc/include/features.yaml
   features.h
@@ -201,6 +209,16 @@ add_header_macro(
   sysexits.h
   DEPENDS
     .llvm-libc-macros.sysexits_macros
+)
+
+add_header_macro(
+  alloca
+  ../libc/include/alloca.yaml
+  alloca.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.alloca_macros
+    .llvm-libc-types.size_t
 )
 
 add_header_macro(
@@ -539,6 +557,7 @@ add_header_macro(
   elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
+    .llvm-libc-macros.sys_auxv_macros
     .llvm-libc-types.Elf32_Addr
     .llvm-libc-types.Elf32_Chdr
     .llvm-libc-types.Elf32_Dyn
@@ -895,6 +914,18 @@ add_header_macro(
     .llvm-libc-types.siginfo_t
 )
 
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
+
+add_header_macro(
+  net_if
+  ../libc/include/net/if.yaml
+  net/if.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.net_if_macros
+    .llvm-libc-types.struct_ifreq
+)
+
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
 
@@ -908,6 +939,8 @@ add_header_macro(
     .llvm-libc-types.in_addr_t
     .llvm-libc-types.in_port_t
     .llvm-libc-types.sa_family_t
+    .llvm-libc-types.struct_group_req
+    .llvm-libc-types.struct_group_source_req
     .llvm-libc-types.struct_sockaddr_in
     .llvm-libc-types.struct_sockaddr_in6
     .llvm-libc-types.struct_in_addr
@@ -1036,6 +1069,17 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.nl_types_macros
     .llvm-libc-types.nl_catd
+  )
+
+add_header_macro(
+  langinfo
+  ../libc/include/langinfo.yaml
+  langinfo.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.langinfo_macros
+    .llvm-libc-types.nl_item
+    .llvm-libc-types.locale_t
   )
 
 # UEFI spec references "Uefi.h" so we use that name for compatibility

@@ -61,26 +61,30 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    add x16, sp, #16
-; CHECK-NEXT:    mov x17, x30
 
+; COMPAT-NEXT:   mov x17, x30
 ; COMPAT-NEXT:   adrp x15, .Ltmp0
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp0
 ; COMPAT-NEXT:   hint #39
 ; COMPAT-NEXT:   hint #12
+; COMPAT-NEXT:   mov x30, x17
 
+; V83A-NEXT:     mov x17, x30
 ; V83A-NEXT:     adrp x15, .Ltmp0
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp0
 ; V83A-NEXT:     hint #39
 ; V83A-NEXT:     autia1716
+; V83A-NEXT:     mov x30, x17
 
+; V9A-NEXT:      mov x17, x30
 ; V9A-NEXT:      adrp x15, .Ltmp0
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp0
 ; V9A-NEXT:      autia171615
+; V9A-NEXT:      mov x30, x17
 
-; PAUTH-NEXT:    autia1716
+; PAUTH-NEXT:    autia x30, x16
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
-; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    b callee_stack_args
   musttail call swifttailcc void @callee_stack_args(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
@@ -136,26 +140,30 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    add x16, sp, #16
-; CHECK-NEXT:    mov x17, x30
 
+; COMPAT-NEXT:   mov x17, x30
 ; COMPAT-NEXT:   adrp x15, .Ltmp1
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp1
 ; COMPAT-NEXT:   hint #39
 ; COMPAT-NEXT:   hint #14
+; COMPAT-NEXT:   mov x30, x17
 
+; V83A-NEXT:     mov x17, x30
 ; V83A-NEXT:     adrp x15, .Ltmp1
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp1
 ; V83A-NEXT:     hint #39
 ; V83A-NEXT:     autib1716
+; V83A-NEXT:     mov x30, x17
 
+; V9A-NEXT:      mov x17, x30
 ; V9A-NEXT:      adrp x15, .Ltmp1
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp1
 ; V9A-NEXT:      autib171615
+; V9A-NEXT:      mov x30, x17
 
-; PAUTH-NEXT:    autib1716
+; PAUTH-NEXT:    autib x30, x16
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
-; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    b callee_stack_args
   musttail call swifttailcc void @callee_stack_args(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
@@ -330,26 +338,30 @@ define swifttailcc void @indirect_tail_call_fpdiff_a_key(ptr swiftasync %ctx, pt
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    add x16, sp, #16
-; CHECK-NEXT:    mov x17, x30
 
+; COMPAT-NEXT:   mov x17, x30
 ; COMPAT-NEXT:   adrp x15, .Ltmp4
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp4
 ; COMPAT-NEXT:   hint #39
 ; COMPAT-NEXT:   hint #12
+; COMPAT-NEXT:   mov x30, x17
 
+; V83A-NEXT:     mov x17, x30
 ; V83A-NEXT:     adrp x15, .Ltmp4
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp4
 ; V83A-NEXT:     hint #39
 ; V83A-NEXT:     autia1716
+; V83A-NEXT:     mov x30, x17
 
+; V9A-NEXT:      mov x17, x30
 ; V9A-NEXT:      adrp x15, .Ltmp4
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp4
 ; V9A-NEXT:      autia171615
+; V9A-NEXT:      mov x30, x17
 
-; PAUTH-NEXT:    autia1716
+; PAUTH-NEXT:    autia x30, x16
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
-; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    br x8
   musttail call swifttailcc void %callee(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
@@ -406,26 +418,30 @@ define swifttailcc void @indirect_tail_call_fpdiff_b_key(ptr swiftasync %ctx, pt
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    add x16, sp, #16
-; CHECK-NEXT:    mov x17, x30
 
+; COMPAT-NEXT:   mov x17, x30
 ; COMPAT-NEXT:   adrp x15, .Ltmp5
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp5
 ; COMPAT-NEXT:   hint #39
 ; COMPAT-NEXT:   hint #14
+; COMPAT-NEXT:   mov x30, x17
 
+; V83A-NEXT:     mov x17, x30
 ; V83A-NEXT:     adrp x15, .Ltmp5
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp5
 ; V83A-NEXT:     hint #39
 ; V83A-NEXT:     autib1716
+; V83A-NEXT:     mov x30, x17
 
+; V9A-NEXT:      mov x17, x30
 ; V9A-NEXT:      adrp x15, .Ltmp5
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp5
 ; V9A-NEXT:      autib171615
+; V9A-NEXT:      mov x30, x17
 
-; PAUTH-NEXT:    autib1716
+; PAUTH-NEXT:    autib x30, x16
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
-; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    br x8
   musttail call swifttailcc void %callee(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void

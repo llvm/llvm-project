@@ -381,6 +381,14 @@ def GetPtrVirtBasePop : Opcode {
   // RecordDecl of base class.
   let Args = [ArgRecordDecl];
 }
+def GetPtrVirtBase : Opcode {
+  // RecordDecl of base class.
+  let Args = [ArgRecordDecl];
+}
+
+def IsBaseClass : SuccessOpcode;
+
+
 // [] -> [Pointer]
 def GetPtrThisBase : Opcode {
   // Offset of field, which is a base.
@@ -457,7 +465,7 @@ def SetLocal : AccessOpcode {
   let NeedsOpPC = 0;
 }
 
-def EndLifetimePop : Opcode;
+def PseudoDtor : Opcode;
 def EndLifetime : Opcode;
 def MarkDestroyed : Opcode;
 def StartThisLifetime : Opcode {

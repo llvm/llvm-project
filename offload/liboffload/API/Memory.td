@@ -157,7 +157,7 @@ def olMemcpy : Function {
 def olMemFill : Function {
   let desc = "Fill memory with copies of the given pattern";
   let details = [
-    "Filling with patterns larger than 4 bytes may be less performant",
+    "Filling with patterns of a different size than 1, 2 or 4 bytes may be less performant",
     "The destination pointer and queue must be associated with the same device",
     "The fill size must be a multiple of the pattern size",
   ];
@@ -213,4 +213,45 @@ def olMemUnregister : Function {
     Param<"ol_memory_register_flags_t", "Flags", "flags controlling various aspects of unregistration", PARAM_IN>,
   ];
   let returns = [];
+}
+
+def ol_mem_migration_flags_t : Typedef {
+  let desc = "Memory migration flags, indicating the direction data is migrated in.";
+  let value = "uint32_t";
+}
+
+def ol_mem_migration_flag_t : Enum {
+  let desc = "Memory migration flags, indicating the direction data is migrated in.";
+  let is_bit_field = 1;
+  let etors = [
+    Etor<"HOST_TO_DEVICE", "Migrate data from the host to the device">,
+    Etor<"DEVICE_TO_HOST", "Migrate data from the device to the host">,
+  ];
+}
+
+def olMemPrefetch : Function {
+  let desc = "Enqueue a command to migrate USM memory between the host and a device.";
+  let details = [
+      "Prefetch is a hint that migrates a USM allocation between the host and a device "
+      "so subsequent accesses on the target side are faster. The contents of the memory "
+      "are unchanged - only its physical location may change.",
+      "Prefetching may not be supported for all devices or allocation types. If it is not "
+      "supported the prefetch is ignored and the call still returns success.",
+  ];
+  let params = [
+    Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+    Param<"size_t", "Count", "number of entries in `Mems` and `Sizes`. Zero is allowed and is a no-op.", PARAM_IN>,
+    Param<"const void**", "Mems", "array of `Count` pointers, each pointing into a USM allocation to be prefetched. May be NULL if `Count` is 0.", PARAM_IN_OPTIONAL>,
+    Param<"const size_t*", "Sizes", "array of `Count` sizes in bytes. A zero entry is allowed and is a no-op for that element. May be NULL if `Count` is 0.", PARAM_IN_OPTIONAL>,
+    Param<"ol_mem_migration_flags_t", "Flags", "direction of the migration; exactly one of the OL_MEM_MIGRATION_FLAG_* values", PARAM_IN>,
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_NULL_POINTER", [
+      "`Count > 0 && Mems == NULL`",
+      "`Count > 0 && Sizes == NULL`"
+    ]>,
+    Return<"OL_ERRC_INVALID_ENUMERATION", [
+      "`(Flags & ~(OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE | OL_MEM_MIGRATION_FLAG_DEVICE_TO_HOST)) != 0`"
+    ]>,
+  ];
 }

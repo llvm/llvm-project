@@ -135,7 +135,7 @@ void undefined(Foo auto); // expected-error {{unknown type name 'Foo'}}
 
 struct AStruct {};
 
-void a_struct(AStruct auto); // expected-error {{cannot combine with previous 'type-name' declaration specifier}}
+void a_struct(AStruct auto); // expected-error {{'auto' cannot be combined with a type specifier}}
 }
 
 #if __cplusplus >= 202002L
