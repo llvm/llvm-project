@@ -2994,7 +2994,7 @@ public:
   void HandlePragmaIncludeAlias(Token &Tok);
   void HandlePragmaModuleBuild(Token &Tok);
   void HandlePragmaHdrstop(Token &Tok);
-  void HandlePragmaSetPPState(PragmaIntroducer Introducer, Token& Tok);
+  void HandlePragmaSetPPState(PragmaIntroducer Introducer, Token &Tok);
   IdentifierInfo *ParsePragmaPushOrPopMacro(Token &Tok);
 
   /// Check whether this is a macro name that can be used as an argument to
