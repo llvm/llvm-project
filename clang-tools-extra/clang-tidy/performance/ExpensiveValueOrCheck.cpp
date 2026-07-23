@@ -71,7 +71,7 @@ static std::optional<FixItHint> buildFixIt(const CXXMemberCallExpr *Call,
 
   const std::string Replacement =
       ("(" + ObjText + " ? *" + ObjText + " : " + ArgText + ")").str();
-  return FixItHint::CreateReplacement(Call->getSourceRange(), Replacement);
+  return tooling::fixit::createReplacement(*Call, Replacement);
 }
 
 ExpensiveValueOrCheck::ExpensiveValueOrCheck(StringRef Name,
