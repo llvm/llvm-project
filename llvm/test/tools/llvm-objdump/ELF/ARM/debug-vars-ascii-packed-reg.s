@@ -37,6 +37,10 @@
 ##      markers behind that, producing the multi-marker pile-up the
 ##      buffer-and-flush model is least graceful about.
 
+## Empty/single instruction function do not render variable-liveness columns
+## and need at least two instructions for (ThisAddr, NextAddr) transition to
+## draw live-in/live-out markers.
+
 # RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj -o %t.o
 # RUN: llvm-objdump %t.o -d --debug-vars=ascii | FileCheck %s
 
@@ -48,71 +52,30 @@
 # CHECK-NOT: <unknown register 2454065>%r1
 
 	.text
-	.syntax unified
-	.eabi_attribute	67, "2.09"
-	.eabi_attribute	6, 10
-	.eabi_attribute	7, 65
-	.eabi_attribute	8, 1
-	.eabi_attribute	9, 2
-	.fpu	vfpv3
-	.eabi_attribute	34, 0
-	.eabi_attribute	17, 1
-	.eabi_attribute	20, 1
-	.eabi_attribute	21, 1
-	.eabi_attribute	23, 3
-	.eabi_attribute	24, 1
-	.eabi_attribute	25, 1
-	.eabi_attribute	38, 1
-	.eabi_attribute	18, 4
-	.eabi_attribute	26, 2
-	.eabi_attribute	14, 0
-	.file	"test.c"
-	.globl	foo
-	.p2align	2
-	.type	foo,%function
-	.code	32
+	.arch	armv8-a
 foo:
 .Lfunc_begin0:
-	.file	1 "test.c"
-	.loc	1 1 0
-	.fnstart
-	.cfi_sections .debug_frame
-	.cfi_startproc
-	.loc	1 2 10 prologue_end
 	ldr	r0, [r0]
-.Ltmp0:
-	.loc	1 2 3 is_stmt 0
 	bx	lr
-.Ltmp1:
 .Lfunc_end0:
-	.size	foo, .Lfunc_end0-foo
-	.cfi_endproc
-	.cantunwind
-	.fnend
 
 	.section	.debug_str,"MS",%progbits,1
-.Linfo_string0:
-	.asciz	"clang"
-.Linfo_string1:
+.Lstr_test:
 	.asciz	"test.c"
-.Linfo_string2:
-	.asciz	"."
-.Linfo_string3:
+.Lstr_foo:
 	.asciz	"foo"
-.Linfo_string4:
-	.asciz	"int"
-.Linfo_string5:
+.Lstr_x:
 	.asciz	"x"
-.Linfo_string6:
+.Lstr_y:
 	.asciz	"y"
-.Linfo_string7:
+.Lstr_z:
 	.asciz	"z"
-.Linfo_string8:
+.Lstr_w:
 	.asciz	"w"
 
 	.section	.debug_loc,"",%progbits
 .Ldebug_loc0:
-	.long	.Lfunc_begin0-.Lfunc_begin0
+	.long	0
 	.long	.Lfunc_end0-.Lfunc_begin0
 	.short	5
 	.byte	0x90              @ DW_OP_regx
@@ -120,7 +83,7 @@ foo:
 	.long	0
 	.long	0
 .Ldebug_loc1:
-	.long	.Lfunc_begin0-.Lfunc_begin0
+	.long	0
 	.long	.Lfunc_end0-.Lfunc_begin0
 	.short	6
 	.byte	0x90              @ DW_OP_regx
@@ -129,7 +92,7 @@ foo:
 	.long	0
 	.long	0
 .Ldebug_loc2:
-	.long	.Lfunc_begin0-.Lfunc_begin0
+	.long	0
 	.long	.Lfunc_end0-.Lfunc_begin0
 	.short	2
 	.byte	0x90              @ DW_OP_regx
@@ -137,7 +100,7 @@ foo:
 	.long	0
 	.long	0
 .Ldebug_loc3:
-	.long	.Lfunc_begin0-.Lfunc_begin0
+	.long	0
 	.long	.Lfunc_end0-.Lfunc_begin0
 	.short	10
 	.byte	0x90              @ DW_OP_regx
@@ -148,77 +111,24 @@ foo:
 	.long	0
 
 	.section	.debug_abbrev,"",%progbits
-	.byte	1
-	.byte	17
-	.byte	1
-	.byte	37
-	.byte	14
-	.byte	19
-	.byte	5
-	.byte	3
-	.byte	14
-	.byte	16
-	.byte	23
-	.byte	27
-	.byte	14
-	.ascii	"\264B"
-	.byte	25
-	.byte	17
-	.byte	1
-	.byte	18
-	.byte	6
-	.byte	0
-	.byte	0
-	.byte	2
-	.byte	46
-	.byte	1
-	.byte	17
-	.byte	1
-	.byte	18
-	.byte	6
-	.byte	64
-	.byte	24
-	.byte	3
-	.byte	14
-	.byte	58
-	.byte	11
-	.byte	59
-	.byte	11
-	.byte	39
-	.byte	25
-	.byte	73
-	.byte	19
-	.byte	63
-	.byte	25
-	.byte	0
-	.byte	0
-	.byte	3
-	.byte	5
-	.byte	0
-	.byte	2
-	.byte	23
-	.byte	3
-	.byte	14
-	.byte	58
-	.byte	11
-	.byte	59
-	.byte	11
-	.byte	73
-	.byte	19
-	.byte	0
-	.byte	0
-	.byte	4
-	.byte	36
-	.byte	0
-	.byte	3
-	.byte	14
-	.byte	62
-	.byte	11
-	.byte	11
-	.byte	11
-	.byte	0
-	.byte	0
-	.byte	0
+	@ abbrev 1: DW_TAG_compile_unit, children=yes
+	.byte	1, 17, 1
+	.byte	3, 14              @ DW_AT_name, DW_FORM_strp
+	.byte	17, 1              @ DW_AT_low_pc, DW_FORM_addr
+	.byte	18, 6              @ DW_AT_high_pc, DW_FORM_data4
+	.byte	0, 0
+	@ abbrev 2: DW_TAG_subprogram, children=yes
+	.byte	2, 46, 1
+	.byte	17, 1              @ DW_AT_low_pc, DW_FORM_addr
+	.byte	18, 6              @ DW_AT_high_pc, DW_FORM_data4
+	.byte	3, 14              @ DW_AT_name, DW_FORM_strp
+	.byte	0, 0
+	@ abbrev 3: DW_TAG_variable, no children
+	.byte	3, 52, 0
+	.byte	2, 23              @ DW_AT_location, DW_FORM_sec_offset
+	.byte	3, 14              @ DW_AT_name, DW_FORM_strp
+	.byte	0, 0
+	.byte	0                  @ end of abbrev table
 
 	.section	.debug_info,"",%progbits
 .Lcu_begin0:
@@ -230,11 +140,7 @@ foo:
 
 	@ abbrev 1: DW_TAG_compile_unit
 	.byte	1
-	.long	.Linfo_string0
-	.short	12
-	.long	.Linfo_string1
-	.long	.Lline_table_start0
-	.long	.Linfo_string2
+	.long	.Lstr_test
 	.long	.Lfunc_begin0
 	.long	.Lfunc_end0-.Lfunc_begin0
 
@@ -242,61 +148,28 @@ foo:
 	.byte	2
 	.long	.Lfunc_begin0
 	.long	.Lfunc_end0-.Lfunc_begin0
-	.byte	1
-	.byte	91
-	.long	.Linfo_string3
-	.byte	1
-	.byte	1
-	.long	.Lint_die - .Lcu_begin0
+	.long	.Lstr_foo
 
 	@ abbrev 3: DW_TAG_variable "x"
 	.byte	3
 	.long	.Ldebug_loc0
-	.long	.Linfo_string5
-	.byte	1
-	.byte	1
-	.long	.Lint_die - .Lcu_begin0
+	.long	.Lstr_x
 
 	@ abbrev 3: DW_TAG_variable "y"
 	.byte	3
 	.long	.Ldebug_loc1
-	.long	.Linfo_string6
-	.byte	1
-	.byte	1
-	.long	.Lint_die - .Lcu_begin0
+	.long	.Lstr_y
 
 	@ abbrev 3: DW_TAG_variable "z"
 	.byte	3
 	.long	.Ldebug_loc2
-	.long	.Linfo_string7
-	.byte	1
-	.byte	1
-	.long	.Lint_die - .Lcu_begin0
+	.long	.Lstr_z
 
 	@ abbrev 3: DW_TAG_variable "w"
 	.byte	3
 	.long	.Ldebug_loc3
-	.long	.Linfo_string8
-	.byte	1
-	.byte	1
-	.long	.Lint_die - .Lcu_begin0
+	.long	.Lstr_w
 
-	.byte	0                 @ end of subprogram children
-
-.Lint_die:
-	@ abbrev 4: DW_TAG_base_type "int"
-	.byte	4
-	.long	.Linfo_string4
-	.byte	5
-	.byte	4
-
-	.byte	0                 @ end of CU
+	.byte	0                  @ end of subprogram children
+	.byte	0                  @ end of CU
 .Lcu_end0:
-
-	.section	.debug_ranges,"",%progbits
-	.section	.debug_macinfo,"",%progbits
-.Lcu_macro_begin0:
-	.byte	0
-
-	.section	.debug_line,"",%progbits
-.Lline_table_start0:
