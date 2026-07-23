@@ -295,9 +295,10 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
       return false;
 
     // If we load MinVecNumElts, will our target element still be loaded?
-    OffsetEltIndex = Offset.udiv(ScalarSizeInBytes).getZExtValue();
-    if (OffsetEltIndex >= MinVecNumElts)
+    APInt OffsetEltIndexAP = Offset.udiv(ScalarSizeInBytes);
+    if (OffsetEltIndexAP.uge(MinVecNumElts))
       return false;
+    OffsetEltIndex = OffsetEltIndexAP.getZExtValue();
 
     if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load,
                                      SQ.AC, SQ.DT))

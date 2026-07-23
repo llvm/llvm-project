@@ -265,6 +265,16 @@ def psabs_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>)">;
 def psabs_i8x8 : RISCVBuiltin<"_Vector<8, signed char>(_Vector<8, signed char>)">;
 def psabs_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>)">;
 
+// Packed "Q-format" Multiplication (32-bit)
+def pmulq_i16x2  : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
+def pmulqr_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
+
+// Packed "Q-format" Multiplication (64-bit)
+def pmulq_i16x4  : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>)">;
+def pmulqr_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>)">;
+def pmulq_i32x2  : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
+def pmulqr_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
+
 } // Features = "experimental-p"
 
 //===----------------------------------------------------------------------===//
