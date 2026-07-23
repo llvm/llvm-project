@@ -2000,6 +2000,41 @@ void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
           patterns.getContext());
 }
 
+namespace {
+// An implementation of RewriterBase::Listener that determines whether the IR
+// has been modified since the last time it was 'reset'. At the moment, this is
+// the only use for something like this, but we might wish to move this
+// somewhere if someone else needs similar functionality in the future.
+class MLIRChangedListener final : public mlir::RewriterBase::Listener {
+  bool hasChanged = false;
+
+public:
+  void reset() { hasChanged = false; }
+
+  bool changed() const { return hasChanged; }
+
+  void notifyBlockErased(Block *) override { hasChanged = true; }
+  void notifyOperationModified(Operation *) override { hasChanged = true; }
+  void notifyOperationReplaced(Operation *, Operation *) override {
+    hasChanged = true;
+  }
+  void notifyOperationReplaced(Operation *, ValueRange) override {
+    hasChanged = true;
+  }
+  void notifyOperationErased(Operation *) override { hasChanged = true; }
+
+  // notifyPatternBegin, notifyPatternEnd, notifyMatchFailure all skipped, since
+  // they don't modify.
+  void notifyOperationInserted(Operation *,
+                               mlir::IRRewriter::InsertPoint) override {
+    hasChanged = true;
+  }
+  void notifyBlockInserted(Block *, Region *, Region::iterator) override {
+    hasChanged = true;
+  }
+};
+} // namespace
+
 void CIRFlattenCFGPass::runOnOperation() {
   RewritePatternSet patternList(&getContext());
   populateFlattenCFGPatterns(patternList);
@@ -2011,10 +2046,12 @@ void CIRFlattenCFGPass::runOnOperation() {
   applicator.applyDefaultCostModel();
 
   mlir::PatternRewriter rewriter(&getContext());
+  MLIRChangedListener changedListener;
+  rewriter.setListener(&changedListener);
 
-  bool changed;
   do {
-    changed = false;
+    changedListener.reset();
+
     // Collect flatten candidates post-order so an inner op is handled before
     // its parent; op pointers stay valid across the block splits / region
     // inlines the patterns perform (a pattern only erases the matched op and
@@ -2029,14 +2066,9 @@ void CIRFlattenCFGPass::runOnOperation() {
 
     for (mlir::Operation *op : ops) {
       rewriter.setInsertionPoint(op);
-      if (mlir::succeeded(applicator.matchAndRewrite(op, rewriter))) {
-        // A vast majority of these don't modify the structured ops.  However,
-        // if they do, we have to try again. Store whether we've made any
-        // modifications and try again until we stop changing anything.
-        changed = true;
-      }
+      (void)applicator.matchAndRewrite(op, rewriter);
     }
-  } while (changed);
+  } while (changedListener.changed());
 }
 
 } // namespace
