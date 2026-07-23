@@ -173,7 +173,7 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   // any ops to avoid modifying IR before returning notifyMatchFailure.
   if (!options->allowPadding && hasScalable)
     return rewriter.notifyMatchFailure(
-        linalgOp, "scalable block factors require allow-padding=true");
+        linalgOp, "scalable block factors require padding");
 
   // Build OpFoldResult tile sizes. Scalable dimensions are emitted as
   // arith.constant N : index multiplied by vector.vscale.
