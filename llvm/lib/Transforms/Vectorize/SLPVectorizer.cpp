@@ -423,6 +423,51 @@ getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
   return (Sz / RegVF) * RegVF;
 }
 
+/// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, returns the
+/// padded full-register vector type if padding is structurally possible, or
+/// nullptr if the vector already fills a register or the opcode is not
+/// div/rem. Does not check profitability; see getMaskedDivRemCost for that.
+static FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
+                                            unsigned Opcode, Type *ScalarTy,
+                                            unsigned NumElts) {
+  if (!Instruction::isIntDivRem(Opcode) || has_single_bit(NumElts))
+    return nullptr;
+  unsigned PaddedNumElts =
+      getFullVectorNumberOfElements(TTI, ScalarTy, NumElts);
+  if (PaddedNumElts == NumElts)
+    return nullptr;
+  return cast<FixedVectorType>(getWidenedType(ScalarTy, PaddedNumElts));
+}
+
+/// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
+/// padding to a full register and using the masked div/rem intrinsic is
+/// cheaper than the direct vector op. Returns the cost of the masked
+/// alternative, or an invalid cost if it is not applicable or not cheaper.
+static InstructionCost
+getMaskedDivRemCost(const TargetTransformInfo &TTI, unsigned Opcode,
+                    Type *ScalarTy, unsigned NumElts,
+                    TTI::TargetCostKind CostKind,
+                    FixedVectorType **PaddedTy = nullptr) {
+  FixedVectorType *PaddedVecTy =
+      getMaskedDivRemType(TTI, Opcode, ScalarTy, NumElts);
+  if (!PaddedVecTy)
+    return InstructionCost::getInvalid();
+  // One mask bit per element of the padded vector, not per padded lane.
+  auto *MaskTy =
+      FixedVectorType::get(IntegerType::getInt1Ty(ScalarTy->getContext()),
+                           PaddedVecTy->getNumElements());
+  InstructionCost DirectCost = TTI.getArithmeticInstrCost(
+      Opcode, getWidenedType(ScalarTy, NumElts), CostKind);
+  IntrinsicCostAttributes ICA(getMaskedDivRemIntrinsic(Opcode), PaddedVecTy,
+                              {PaddedVecTy, PaddedVecTy, MaskTy});
+  InstructionCost MaskedCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+  if (!MaskedCost.isValid() || MaskedCost >= DirectCost)
+    return InstructionCost::getInvalid();
+  if (PaddedTy)
+    *PaddedTy = PaddedVecTy;
+  return MaskedCost;
+}
+
 /// Checks if the vector of instructions can be represented as a shuffle, like:
 /// %x0 = extractelement <4 x i8> %x, i32 0
 /// %x3 = extractelement <4 x i8> %x, i32 3
@@ -17223,6 +17268,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             return CommonCost;
         }
       }
+      // Masked path ignores Op1Info/Op2Info like its codegen does; keep it
+      // out of the operand-aware cost comparison below.
+      if (InstructionCost MaskedCost = getMaskedDivRemCost(
+              *TTI, ShuffleOrOp, ScalarTy, VL.size(), CostKind);
+          MaskedCost.isValid())
+        return MaskedCost + CommonCost;
       unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
@@ -23427,9 +23478,36 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           RHS = Builder.CreateIntCast(RHS, VecTy, GetOperandSignedness(1));
       }
 
-      Value *V = Builder.CreateBinOp(
-          static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
-          RHS);
+      // Structural padding does not imply profitability; re-check the cost
+      // here so codegen matches the earlier cost-based decision.
+      Value *V = nullptr;
+      unsigned NumElts = E->Scalars.size();
+      FixedVectorType *PaddedVecTy = nullptr;
+      if (getMaskedDivRemCost(*TTI, ShuffleOrOp, ScalarTy, NumElts,
+                              TTI::TCK_RecipThroughput, &PaddedVecTy)
+              .isValid()) {
+        assert(PaddedVecTy && "Expected padded type for masked div/rem.");
+        // Scale the lane count up to elements for REVEC, where each lane
+        // is itself a vector.
+        unsigned NumActiveElts = NumElts * getNumElements(ScalarTy);
+        Value *WidenedLHS =
+            createInsertVector(Builder, PoisonValue::get(PaddedVecTy), LHS, 0);
+        Value *WidenedRHS =
+            createInsertVector(Builder, PoisonValue::get(PaddedVecTy), RHS, 0);
+        SmallVector<Constant *> MaskValues(
+            PaddedVecTy->getNumElements(),
+            ConstantInt::getFalse(Builder.getContext()));
+        std::fill_n(MaskValues.begin(), NumActiveElts,
+                    ConstantInt::getTrue(Builder.getContext()));
+        Value *DivRemMask = ConstantVector::get(MaskValues);
+        Value *MaskedV = Builder.CreateIntrinsic(
+            getMaskedDivRemIntrinsic(ShuffleOrOp), {PaddedVecTy},
+            {WidenedLHS, WidenedRHS, DivRemMask});
+        V = createExtractVector(Builder, MaskedV, NumActiveElts, 0);
+      }
+      if (!V)
+        V = Builder.CreateBinOp(
+            static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS, RHS);
       V = PropagateIRFlags(V);
 
       V = FinalShuffle(V, E);

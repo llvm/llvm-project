@@ -5439,9 +5439,8 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
             return ReplaceWith(VPI, LoadR);
 
           // Reverse the loaded values back into program order.
-          Builder.insert(LoadR);
-          auto *ReverseR = Builder.createNaryOp(VPInstruction::Reverse, LoadR, {},
-                                             {}, VPI->getDebugLoc());
+          auto *ReverseR = Builder.createNaryOp(VPInstruction::Reverse, LoadR,
+                                                VPI->getDebugLoc());
           return ReplaceWith(VPI, ReverseR);
         }
 

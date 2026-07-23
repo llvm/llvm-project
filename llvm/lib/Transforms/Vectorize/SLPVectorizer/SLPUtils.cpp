@@ -652,4 +652,19 @@ SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF) {
   return NewVal;
 }
 
+Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::UDiv:
+    return Intrinsic::masked_udiv;
+  case Instruction::SDiv:
+    return Intrinsic::masked_sdiv;
+  case Instruction::URem:
+    return Intrinsic::masked_urem;
+  case Instruction::SRem:
+    return Intrinsic::masked_srem;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+}
+
 } // namespace llvm::slpvectorizer

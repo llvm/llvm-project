@@ -2530,6 +2530,15 @@ let append Predicates = [IsRV32] in {
   def : PatGprPair<riscv_psabs, PSABS_DB, v8i8>;
   def : PatGprPair<riscv_psabs, PSABS_DH, v4i16>;
 
+  // Packed sign extend patterns
+  // Sign extend inreg patterns using psext. sext_invec is lowered to
+  // zext_invec+sext_inreg.
+  def : Pat<(v2i16 (sext_inreg GPR:$rs1, v2i8)), (PSEXT_H_B GPR:$rs1)>;
+  def : Pat<(v4i16 (sext_inreg GPRPair:$rs1, v4i8)), (PSEXT_DH_B GPRPair:$rs1)>;
+  def : Pat<(v2i32 (sext_inreg GPRPair:$rs1, v2i8)), (PSEXT_DW_B GPRPair:$rs1)>;
+  def : Pat<(v2i32 (sext_inreg GPRPair:$rs1, v2i16)),
+            (PSEXT_DW_H GPRPair:$rs1)>;
+
   // 16-bit bswap patterns
   def : Pat<(v4i16 (bswap GPRPair:$rs)),
             (PPAIROE_DB GPRPair:$rs, GPRPair:$rs)>;
@@ -2766,6 +2775,13 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v2i32 (vselect (v2i32 GPR:$mask), GPR:$true_v, GPR:$false_v)),
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 
+  // Packed sign extend patterns
+  // Sign extend inreg patterns using psext. sext_invec is lowered to
+  // zext_invec+sext_inreg.
+  def : Pat<(v4i16 (sext_inreg GPR:$rs1, v4i8)), (PSEXT_H_B GPR:$rs1)>;
+  def : Pat<(v2i32 (sext_inreg GPR:$rs1, v2i8)), (PSEXT_W_B GPR:$rs1)>;
+  def : Pat<(v2i32 (sext_inreg GPR:$rs1, v2i16)), (PSEXT_W_H GPR:$rs1)>;
+
   // 32-bit bswap patterns
   def : Pat<(v2i32 (bswap GPR:$rs)),
             (PPAIROE_W (REV8_RV64 GPR:$rs), (REV8_RV64 GPR:$rs))>;
@@ -2862,10 +2878,5 @@ let append Predicates = [IsRV64] in {
             (PPAIRE_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_ppairo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PPAIRO_H GPR:$rs1, GPR:$rs2)>;
-
-  // Sign extend inreg patterns using psext. sext_invec is lowered to
-  // zext_invec+sext_inreg.
-  def : Pat<(v4i16 (sext_inreg GPR:$rs1, v4i8)), (PSEXT_H_B GPR:$rs1)>;
-  def : Pat<(v2i32 (sext_inreg GPR:$rs1, v2i16)), (PSEXT_W_H GPR:$rs1)>;
 } // append Predicates = [IsRV64]
 } // Predicates = [HasStdExtP]
