@@ -1169,13 +1169,13 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     mlir::acc::ReductionOperator mlirOp =
         getReductionOperator(op, reductionTy, converter);
 
-    if (designator) {
-      Fortran::semantics::SomeExpr someExpr = *designator;
-      if (Fortran::lower::detail::getRef<Fortran::evaluate::Component>(
-              someExpr)) {
-        TODO(operandLocation,
-             "OpenACC reduction with component reference not yet supported");
-      }
+    // getRef<Component> only matches a bare component reference (e.g. x%s).
+    // For a component array section (e.g. x%a(1:16)) the DataRef is an
+    // ArrayRef whose base is the Component, so use the same helper
+    // genDataOperandOperations relies on to detect both shapes.
+    if (extractComponentFromDesignator(designator)) {
+      TODO(operandLocation,
+           "OpenACC reduction with component reference not yet supported");
     }
 
     auto op = createDataEntryOp<mlir::acc::ReductionOp>(
