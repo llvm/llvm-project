@@ -333,19 +333,19 @@ void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
     return getContext().reportError(
         getStartTokLoc(), "disabling .bundle_align_mode is not supported");
   MCAssembler &Assembler = getAssembler();
-  if (Assembler.getBundleAlignSize() != 0 &&
-      Assembler.getBundleAlignSize() != Alignment.value()) {
+  if (Assembler.isBundlingEnabled() &&
+      Assembler.getBundleAlign() != Alignment) {
     getContext().reportError(getStartTokLoc(),
                              ".bundle_align_mode cannot be changed once set");
     return;
   }
-  if (Assembler.getBundleAlignSize() == 0 &&
+  if (!Assembler.isBundlingEnabled() &&
       Assembler.getBackend().allowAutoPadding())
     getContext().reportError(
         getStartTokLoc(),
         ".bundle_align_mode is incompatible with branch alignment");
   setAllowAutoPadding(true);
-  Assembler.setBundleAlignSize(Alignment.value());
+  Assembler.setBundleAlign(Alignment);
 }
 
 void MCELFStreamer::emitBundleLock(bool AlignToEnd,
@@ -366,9 +366,8 @@ void MCELFStreamer::emitBundleLock(bool AlignToEnd,
   }
   Sec.setIsBundleLocked(true);
 
-  auto AlignBoundary = Asm.getBundleAlignSize();
   BundleBA =
-      newSpecialFragment<MCBoundaryAlignFragment>(Align(AlignBoundary), STI);
+      newSpecialFragment<MCBoundaryAlignFragment>(Asm.getBundleAlign(), STI);
   BundleBA->setAlignToEnd(AlignToEnd);
 }
 
@@ -406,14 +405,13 @@ void MCELFStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
   }
   BundleBA = nullptr;
 
-  if (AlignedSize > getAssembler().getBundleAlignSize())
+  if (AlignedSize > getAssembler().getBundleAlign().value())
     getContext().reportError(getStartTokLoc(),
                              "fragment can't be larger than a bundle size");
 
   newFragment();
 
-  CF->getParent()->ensureMinAlignment(
-      Align(getAssembler().getBundleAlignSize()));
+  CF->getParent()->ensureMinAlignment(getAssembler().getBundleAlign());
 }
 
 void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *Sym,

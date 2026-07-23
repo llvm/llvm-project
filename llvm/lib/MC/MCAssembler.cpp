@@ -401,15 +401,16 @@ static void writeControlledNops(raw_ostream &OS, const MCAssembler &Asm,
                                 uint64_t NumBytes, uint64_t FragmentOffset,
                                 uint64_t MaxNopSize,
                                 const MCSubtargetInfo *STI) {
-  uint64_t NumBytesEmitted = 0;
-  while (NumBytesEmitted < NumBytes) {
-    uint64_t NumBytesToEmit = std::min(NumBytes - NumBytesEmitted, MaxNopSize);
+  uint64_t NumBytesToEmit = 0;
+  for (uint64_t NumBytesEmitted = 0; NumBytesEmitted < NumBytes;
+       NumBytesEmitted += NumBytesToEmit) {
+    NumBytesToEmit = std::min(NumBytes - NumBytesEmitted, MaxNopSize);
 
     if (Asm.isBundlingEnabled()) {
-      unsigned BundleAlignSize = Asm.getBundleAlignSize();
+      uint64_t BundleSize = Asm.getBundleAlign().value();
       uint64_t OffsetInBundle =
-          (FragmentOffset + NumBytesEmitted) & (BundleAlignSize - 1);
-      uint64_t SpaceInBundle = BundleAlignSize - OffsetInBundle;
+          (FragmentOffset + NumBytesEmitted) & (BundleSize - 1);
+      uint64_t SpaceInBundle = BundleSize - OffsetInBundle;
       NumBytesToEmit = std::min(NumBytesToEmit, SpaceInBundle);
     }
 
@@ -421,8 +422,6 @@ static void writeControlledNops(raw_ostream &OS, const MCAssembler &Asm,
           Twine(NumBytesToEmit) + " bytes");
       return;
     }
-
-    NumBytesEmitted += NumBytesToEmit;
   }
 }
 
@@ -1017,20 +1016,17 @@ MCAssembler::computeBoundaryAlignSize(const MCBoundaryAlignFragment &BF) {
 
   Align BoundaryAlignment = BF.getAlignment();
 
-  uint64_t NewSize = 0;
-  if (!isBundlingEnabled()) {
-    NewSize = needPadding(AlignedOffset, AlignedSize, BoundaryAlignment)
-                  ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
-                  : 0U;
-  } else if (BF.isAlignToEnd()) {
-    NewSize = offsetToAlignment(AlignedOffset + AlignedSize, BoundaryAlignment);
-  } else {
-    // For bundle alignment, we only pad instructions that cross the boundary.
-    NewSize = mayCrossBoundary(AlignedOffset, AlignedSize, BoundaryAlignment)
-                  ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
-                  : 0U;
-  }
-  return NewSize;
+  if (!isBundlingEnabled())
+    return needPadding(AlignedOffset, AlignedSize, BoundaryAlignment)
+               ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
+               : 0U;
+  if (BF.isAlignToEnd())
+    return offsetToAlignment(AlignedOffset + AlignedSize, BoundaryAlignment);
+
+  // For bundle alignment, we only pad instructions that cross the boundary.
+  return mayCrossBoundary(AlignedOffset, AlignedSize, BoundaryAlignment)
+             ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
+             : 0U;
 }
 
 void MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {

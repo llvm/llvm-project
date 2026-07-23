@@ -490,7 +490,7 @@ void X86AsmBackend::emitInstructionBeginBundle(MCObjectStreamer &OS) {
     return;
   }
   PendingBA = OS.newSpecialFragment<MCBoundaryAlignFragment>(
-      Align(Asm->getBundleAlignSize()), STI);
+      Asm->getBundleAlign(), STI);
   // We can set LastFragment now, before the instruction is emitted, as bundling
   // emits one fragment per instruction. Deferring setLastFragment to
   // post-emitInstruction would risk capturing a fragment that a subsequent
@@ -514,7 +514,7 @@ void X86AsmBackend::emitInstructionEndBundle(MCObjectStreamer &OS) {
   assert(PendingBA && "MCBoundaryAlignFragment is expected for every "
                       "instruction if it is not bundle-locked");
 
-  CF->getParent()->ensureMinAlignment(Align(Asm->getBundleAlignSize()));
+  CF->getParent()->ensureMinAlignment(Asm->getBundleAlign());
 
   // Update ReuseBA for the next BeginBundle.
   ReuseBA = isPrefix(PrevInstOpcode, *MCII);
@@ -806,9 +806,8 @@ bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
   if (Asm->isBundlingEnabled() && Resolved) {
     // This ensures remaining short branches have sufficient headroom to survive
     // any intra-bundle shift caused by prefix padding in dividePadInBundle.
-    auto BundleAlignSize = Asm->getBundleAlignSize();
-    return (!isInt<8>(Value + BundleAlignSize) ||
-            !isInt<8>(Value - BundleAlignSize)) ||
+    uint64_t BundleSize = Asm->getBundleAlign().value();
+    return (!isInt<8>(Value + BundleSize) || !isInt<8>(Value - BundleSize)) ||
            Target.getSpecifier();
   }
   // If resolved, relax if the value is too big for a (signed) i8.
@@ -965,7 +964,7 @@ bool X86AsmBackend::dividePadInBundle(const MCAssembler &Asm,
 
   unsigned StartOffset = Asm.getFragmentOffset(*LastF);
   unsigned EndOffset = StartOffset + RemainingSize;
-  auto BoundaryAlignment = Align(Asm.getBundleAlignSize());
+  Align BoundaryAlignment = Asm.getBundleAlign();
   bool CrossBoundary = (StartOffset >> Log2(BoundaryAlignment)) !=
                        ((EndOffset - 1) >> Log2(BoundaryAlignment));
 
@@ -979,7 +978,7 @@ bool X86AsmBackend::dividePadInBundle(const MCAssembler &Asm,
     // such may cause fixup errors because instructions can shift by more than
     // a bundle-size and labels may become unreachable. Until we come up with a
     // better logic, we limits the optimization scope to a single bundle.
-    RemainingSize -= EndOffset % Asm.getBundleAlignSize();
+    RemainingSize -= EndOffset % BoundaryAlignment.value();
   }
   assert(RemainingSize > 0);
 
@@ -1014,7 +1013,7 @@ bool X86AsmBackend::dividePadInBundle(const MCAssembler &Asm,
     }
   };
 
-  unsigned TailSize = EndOffset % Asm.getBundleAlignSize();
+  unsigned TailSize = EndOffset % BoundaryAlignment.value();
   if (!CrossBoundary && RemainingSize > 0 && TailSize != 0) {
     padInstsForward(RemainingSize);
   } else if (CrossBoundary && TailSize > 0) {
@@ -1047,7 +1046,7 @@ bool X86AsmBackend::optimizeBundleNops(const MCAssembler &Asm) const {
         }
       }
 
-      if (Asm.getFragmentOffset(F) % Asm.getBundleAlignSize() == 0)
+      if (isAligned(Asm.getBundleAlign(), Asm.getFragmentOffset(F)))
         Bundle.clear(); // start a new bundle
       Bundle.push_back(&F);
     }
