@@ -1,40 +1,32 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
 
-module submodules_03_one
-   integer :: one_i
+module parent_mod_9
    interface
-      subroutine inside_one()
+      module subroutine inside_one()
       end subroutine
    end interface
  end module
 
- submodule (submodules_03_one) submodules_03_sub_one
+ submodule (parent_mod_9) sub_9
  contains
-   !PORTABILITY: Subprogram 'inside_one' in this submodule hides an external interface from its parent module; did you mean 'MODULE SUBROUTINE'? [-Wportability]
+   !PORTABILITY: Subprogram 'inside_one' in this submodule is missing the MODULE prefix to implement the module procedure interface from its parent; did you mean 'MODULE SUBROUTINE'? [-Wportability]
    subroutine inside_one()
-   one_i = 6
    end subroutine
  end submodule
 
- module submodules_03_two
-   integer :: two_i
+! Same check for a function.
+module parent_mod_9f
    interface
-      subroutine inside_one()
-      end subroutine
+      module integer function inside_func()
+      end function
    end interface
  end module
 
- submodule (submodules_03_two) sub_one
-   contains
-   !PORTABILITY: Subprogram 'inside_one' in this submodule hides an external interface from its parent module; did you mean 'MODULE SUBROUTINE'? [-Wportability]
-   subroutine inside_one()
-   two_i = 6
-   end subroutine
+ submodule (parent_mod_9f) sub_9f
+ contains
+   !PORTABILITY: Subprogram 'inside_func' in this submodule is missing the MODULE prefix to implement the module procedure interface from its parent; did you mean 'MODULE FUNCTION'? [-Wportability]
+   integer function inside_func()
+     inside_func = 0
+   end function
  end submodule
-
- program p
- use submodules_03_one
- use submodules_03_two
- call inside_one()
- end program
  
