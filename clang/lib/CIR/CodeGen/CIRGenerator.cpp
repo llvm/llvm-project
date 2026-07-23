@@ -45,11 +45,15 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   this->astContext = &astContext;
 
   mlirContext = std::make_unique<mlir::MLIRContext>();
-  // Disable MLIR multithreading: clang::DiagnosticsEngine is not thread-safe,
-  // and the per-context handler installed by CIRGenAction reports diagnostics
-  // straight through it. CIR's pass pipeline is short enough that we don't
-  // miss meaningful parallelism here.
-  mlirContext->disableMultithreading();
+  // MLIR multithreading stays enabled. clang::DiagnosticsEngine is not
+  // thread-safe, but the CIRDiagnosticHandler installed by CIRGenAction is
+  // never invoked concurrently: when passes run in parallel, the MLIR pass
+  // manager installs an mlir::ParallelDiagnosticHandler (see
+  // mlir/IR/Threading.h) that buffers per-thread diagnostics and re-emits them,
+  // deterministically ordered, on a single thread when it is destroyed. Those
+  // re-emitted diagnostics only then reach the (lower priority)
+  // CIRDiagnosticHandler, serially, so the DiagnosticsEngine is only ever
+  // touched from one thread.
   cir::registerAllDialects(*mlirContext);
   mlirContext->loadDialect<mlir::DLTIDialect, cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
