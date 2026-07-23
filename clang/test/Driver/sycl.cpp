@@ -32,5 +32,5 @@
 // CHECK-NO-OFFLOADLIB-NOT: warning: unknown argument ignored in clang-cl: '--no-offloadlib'
 
 // Verify that -fsycl with a C input is an error (enforced in the frontend).
-// RUN: not %clang -fsycl -x c %s 2>&1 | FileCheck %s --check-prefix=CHECK-C-INPUT
+// RUN: not %clang -fsycl -resource-dir %S/Inputs/spirv64-sycl -x c %s 2>&1 | FileCheck %s --check-prefix=CHECK-C-INPUT
 // CHECK-C-INPUT: error: invalid argument 'C' not allowed with '-fsycl'

@@ -222,6 +222,9 @@ SYCLToolChain::getDeviceLibs(
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
     return {};
+  // -nolibsycl suppresses all SYCL library injection including device libs.
+  if (DriverArgs.hasArg(options::OPT_nolibsycl))
+    return {};
 
   SmallString<128> BCPath(getDriver().ResourceDir);
   llvm::sys::path::append(BCPath, "lib", getTriple().str(),

@@ -61,7 +61,7 @@
 // CHECK-IGNORE: "/IGNORE:4078"
 
 /// Test 9: -nolibsycl skips library dependency and CRT check
-// RUN: %clang_cl -### -fsycl -nolibsycl /MT \
+// RUN: %clang_cl -### -fsycl -nolibsycl -resource-dir %S/Inputs/spirv64-sycl /MT \
 // RUN:   --target=x86_64-pc-windows-msvc -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-NOLIBSYCL %s
 // CHECK-NOLIBSYCL-NOT: error:
