@@ -748,6 +748,28 @@ void MCStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
   CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
+void MCStreamer::emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                                       SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createSetRAState(Label, State, PACSym, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                                       SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createSetRAState(Label, State, Offset, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
 void MCStreamer::emitCFIReturnColumn(int64_t Register) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)

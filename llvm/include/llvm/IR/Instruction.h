@@ -499,6 +499,11 @@ public:
   LLVM_ABI void copyMetadata(const Instruction &SrcInst,
                              ArrayRef<unsigned> WL = ArrayRef<unsigned>());
 
+  /// Copy debug, profile, and memprof metadata from \p SrcInst to this
+  /// instruction without copying alias-analysis or type-dependent metadata.
+  /// TODO: Include additional metadata in the future if appropriate.
+  LLVM_ABI void copyProfileAndDebugMetadata(const Instruction &SrcInst);
+
   /// Erase all metadata that matches the predicate.
   LLVM_ABI void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
 

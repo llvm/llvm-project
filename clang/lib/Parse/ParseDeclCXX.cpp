@@ -1241,7 +1241,7 @@ DeclSpec::TST Parser::TypeTransformTokToDeclSpec() {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   case tok::kw___##Trait:                                                      \
     return DeclSpec::TST_##Trait;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   default:
     llvm_unreachable("passed in an unhandled type transformation built-in");
   }
@@ -1604,7 +1604,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       !Tok.isAnnotation() && Tok.getIdentifierInfo() &&
       Tok.isOneOf(
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
           tok::kw___is_abstract,
           tok::kw___is_aggregate,
           tok::kw___is_arithmetic,

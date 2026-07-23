@@ -2716,6 +2716,8 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateDecl(VarTemplateDecl *D) {
   }
 
   Owner->addDecl(Inst);
+  SemaRef.InstantiateAttrsForDecl(TemplateArgs, D, Inst, LateAttrs,
+                                  StartingScope);
 
   if (!PrevVarTemplate) {
     // Queue up any out-of-line partial specializations of this member

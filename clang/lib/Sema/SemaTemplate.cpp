@@ -2284,8 +2284,10 @@ DeclResult Sema::CheckClassTemplate(
 
   ProcessDeclAttributeList(S, NewClass, Attr);
 
-  if (PrevClassTemplate)
+  if (PrevClassTemplate) {
+    mergeDeclAttributes(NewTemplate, PrevClassTemplate);
     mergeDeclAttributes(NewClass, PrevClassTemplate->getTemplatedDecl());
+  }
 
   AddPushedVisibilityAttribute(NewClass);
   inferGslOwnerPointerAttribute(NewClass);

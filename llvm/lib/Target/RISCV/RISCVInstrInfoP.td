@@ -1830,6 +1830,8 @@ def riscv_wsuba : RVSDNode<"WSUBA", SDT_RISCVWideningAddSubAccumulate>;
 
 def riscv_waddu : RVSDNode<"WADDU", SDTIntBinHiLoOp, [SDNPCommutative]>;
 def riscv_wsubu : RVSDNode<"WSUBU", SDTIntBinHiLoOp>;
+def riscv_wadd  : RVSDNode<"WADD",  SDTIntBinHiLoOp, [SDNPCommutative]>;
+def riscv_wsub  : RVSDNode<"WSUB",  SDTIntBinHiLoOp>;
 
 def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
 
@@ -1868,6 +1870,7 @@ def SDT_RISCVPPairEven : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                               SDTCisSameAs<0, 1>,
                                               SDTCisSameAs<0, 2>]>;
 def riscv_ppaire : RVSDNode<"PPAIRE", SDT_RISCVPPairEven>;
+def riscv_ppairo : RVSDNode<"PPAIRO", SDT_RISCVPPairEven>;
 def SDT_RISCVPackedBinary : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                  SDTCisSameAs<0, 1>,
                                                  SDTCisSameAs<0, 2>]>;
@@ -1881,6 +1884,10 @@ def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
 def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
+
+// "Q-format" multiplication
+def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp>;
+def riscv_mulqr : RVSDNode<"MULQR", SDTIntBinOp>;
 
 def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
@@ -2095,6 +2102,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<riscv_mulhru, PMULHRU_H, XLenVecI16VT>;
   def : PatGprGpr<riscv_mulhrsu, PMULHRSU_H, XLenVecI16VT>;
 
+  // 16-bit "Q-format" multiplication patterns
+  def : PatGprGpr<riscv_mulq, PMULQ_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_mulqr, PMULQR_H, XLenVecI16VT>;
+
   // 8-bit logical shift left/right patterns
   def : PatGprImm<riscv_pshl, PSLLI_B, uimm3, XLenVecI8VT>;
   def : PatGprImm<riscv_psrl, PSRLI_B, uimm3, XLenVecI8VT>;
@@ -2205,6 +2216,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<riscv_mulhru, MULHRU, i32>;
   def : PatGprGpr<riscv_mulhrsu, MULHRSU, i32>;
 
+  // 32-bit "Q-format" multiplication patterns
+  def : PatGprGpr<riscv_mulq, MULQ, i32>;
+  def : PatGprGpr<riscv_mulqr, MULQR, i32>;
+
   // Halfword multiply patterns where one operand is a sext.h or zext.h and
   // the other is a sext.h or zext.h or is known to be sign/zero-extended. We
   // prefer plain mul when both operands are known to be sign/zero-extended.
@@ -2302,6 +2317,20 @@ let append Predicates = [IsRV32] in {
             (WZIP8P GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_pwzip (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (WZIP16P GPR:$rs1, GPR:$rs2)>;
+
+  // Packed pair: pair the even/odd-position elements of rs1 and rs2.
+  def : Pat<(v4i8 (riscv_ppaire (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8 (riscv_ppairo (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (PPAIRO_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v8i8 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIRE_DB GPRPair:$rs1, GPRPair:$rs2)>;
+  def : Pat<(v8i8 (riscv_ppairo GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIRO_DB GPRPair:$rs1, GPRPair:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIRE_DH GPRPair:$rs1, GPRPair:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppairo GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIRO_DH GPRPair:$rs1, GPRPair:$rs2)>;
 
   // Sign-extend patterns using pwadd with zero
   def : Pat<(v4i16 (sext (v4i8 GPR:$rs))), (PWADD_B GPR:$rs, (v4i8 X0))>;
@@ -2513,6 +2542,15 @@ let append Predicates = [IsRV32] in {
   def : PatGprPair<riscv_psabs, PSABS_DB, v8i8>;
   def : PatGprPair<riscv_psabs, PSABS_DH, v4i16>;
 
+  // Packed sign extend patterns
+  // Sign extend inreg patterns using psext. sext_invec is lowered to
+  // zext_invec+sext_inreg.
+  def : Pat<(v2i16 (sext_inreg GPR:$rs1, v2i8)), (PSEXT_H_B GPR:$rs1)>;
+  def : Pat<(v4i16 (sext_inreg GPRPair:$rs1, v4i8)), (PSEXT_DH_B GPRPair:$rs1)>;
+  def : Pat<(v2i32 (sext_inreg GPRPair:$rs1, v2i8)), (PSEXT_DW_B GPRPair:$rs1)>;
+  def : Pat<(v2i32 (sext_inreg GPRPair:$rs1, v2i16)),
+            (PSEXT_DW_H GPRPair:$rs1)>;
+
   // 16-bit bswap patterns
   def : Pat<(v4i16 (bswap GPRPair:$rs)),
             (PPAIROE_DB GPRPair:$rs, GPRPair:$rs)>;
@@ -2558,9 +2596,6 @@ let append Predicates = [IsRV32] in {
 
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (BuildGPRPair GPR:$a, GPR:$b)>;
-
-  def : Pat<(v8i8 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
-            (PPAIRE_DB GPRPair:$rs1, GPRPair:$rs2)>;
 
   // Concat vector patterns
   def : Pat<(v8i8 (concat_vectors (v4i8 GPR:$a), (v4i8 GPR:$b))),
@@ -2676,6 +2711,10 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<riscv_mulhru, PMULHRU_W, v2i32>;
   def : PatGprGpr<riscv_mulhrsu, PMULHRSU_W, v2i32>;
 
+  // 32-bit "Q-format" multiplication patterns
+  def : PatGprGpr<riscv_mulq, PMULQ_W, v2i32>;
+  def : PatGprGpr<riscv_mulqr, PMULQR_W, v2i32>;
+
   // 8/16/32-bit multiply low patterns
   // FIXME custom lower
   def : Pat<(v8i8 (mul GPR:$rs1, GPR:$rs2)),
@@ -2751,6 +2790,13 @@ let append Predicates = [IsRV64] in {
   // 32-bit vselect patterns
   def : Pat<(v2i32 (vselect (v2i32 GPR:$mask), GPR:$true_v, GPR:$false_v)),
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
+
+  // Packed sign extend patterns
+  // Sign extend inreg patterns using psext. sext_invec is lowered to
+  // zext_invec+sext_inreg.
+  def : Pat<(v4i16 (sext_inreg GPR:$rs1, v4i8)), (PSEXT_H_B GPR:$rs1)>;
+  def : Pat<(v2i32 (sext_inreg GPR:$rs1, v2i8)), (PSEXT_W_B GPR:$rs1)>;
+  def : Pat<(v2i32 (sext_inreg GPR:$rs1, v2i16)), (PSEXT_W_H GPR:$rs1)>;
 
   // 32-bit bswap patterns
   def : Pat<(v2i32 (bswap GPR:$rs)),
@@ -2838,9 +2884,15 @@ let append Predicates = [IsRV64] in {
             (ZIP8P GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_pzip (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (ZIP16P GPR:$rs1, GPR:$rs2)>;
-  // Sign extend inreg patterns using psext. sext_invec is lowered to
-  // zext_invec+sext_inreg.
-  def : Pat<(v4i16 (sext_inreg GPR:$rs1, v4i8)), (PSEXT_H_B GPR:$rs1)>;
-  def : Pat<(v2i32 (sext_inreg GPR:$rs1, v2i16)), (PSEXT_W_H GPR:$rs1)>;
+
+  // Packed pair: pair the even/odd-position elements of rs1 and rs2.
+  def : Pat<(v8i8 (riscv_ppaire (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v8i8 (riscv_ppairo (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PPAIRO_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppaire (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PPAIRE_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppairo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PPAIRO_H GPR:$rs1, GPR:$rs2)>;
 } // append Predicates = [IsRV64]
 } // Predicates = [HasStdExtP]

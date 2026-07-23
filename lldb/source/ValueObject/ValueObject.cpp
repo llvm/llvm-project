@@ -983,7 +983,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       if ((bytes_read = data.GetByteSize()) > 0) {
         total_bytes_read = bytes_read;
         for (size_t offset = 0; offset < bytes_read; offset++)
-          s.Printf("%c", *data.PeekData(offset, 1));
+          s.PutChar(*data.PeekData(offset, 1));
         if (capped_data)
           was_capped = true;
       }
@@ -1015,7 +1015,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
           len = cstr_len;
 
         for (size_t offset = 0; offset < bytes_read; offset++)
-          s.Printf("%c", *data.PeekData(offset, 1));
+          s.PutChar(*data.PeekData(offset, 1));
 
         if (len < k_max_buf_size)
           break;
