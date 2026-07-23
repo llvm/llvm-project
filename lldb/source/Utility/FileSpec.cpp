@@ -418,7 +418,6 @@ llvm::StringRef FileSpec::GetFileNameStrippingExtension() const {
 // Return the size in bytes that this object takes in memory. This returns the
 // size in bytes of this object, not any shared string values it may refer to.
 size_t FileSpec::MemorySize() const {
-  // TODO: This is kinda sus.
   return m_filename.size() + m_directory.size();
 }
 

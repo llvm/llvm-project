@@ -405,6 +405,9 @@ public:
   std::vector<llvm::StringRef> GetComponents() const;
 
 protected:
+  static constexpr size_t directory_size = 256;
+  static constexpr size_t filename_size = 32;
+
   // Convenience method for setting the file without changing the style.
   void SetFile(llvm::StringRef path);
 
@@ -415,10 +418,10 @@ protected:
   enum class Absolute : uint8_t { Calculate, Yes, No };
 
   /// The unique'd directory path.
-  llvm::SmallString<256> m_directory;
+  llvm::SmallString<directory_size> m_directory;
 
   /// The unique'd filename path.
-  llvm::SmallString<32> m_filename;
+  llvm::SmallString<filename_size> m_filename;
 
   /// Cache whether this path is absolute.
   mutable Absolute m_absolute = Absolute::Calculate;
