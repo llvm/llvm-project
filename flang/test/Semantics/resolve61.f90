@@ -132,6 +132,7 @@ subroutine p14
   block
     asynchronous :: r
     !ERROR: PARAMETER attribute not allowed on 'r'
+    !ERROR: 'r' may not have both the ASYNCHRONOUS and PARAMETER attributes
     parameter (r = 1.0)
   end block
 end

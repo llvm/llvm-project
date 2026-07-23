@@ -16,15 +16,17 @@ module m1
   end type
 contains
 
+
   ! C852
   subroutine s0
     !ERROR: 'p1' may not have both the POINTER and TARGET attributes
     real, pointer :: p1, p3
-    !ERROR: 'p2' may not have both the POINTER and ALLOCATABLE attributes
     allocatable :: p2
     !ERROR: 'sin' may not have both the POINTER and INTRINSIC attributes
     real, intrinsic, pointer :: sin
+    !ERROR: 'p1' may not have both the POINTER and TARGET attributes
     target :: p1
+    !ERROR: 'p2' may not have both the POINTER and ALLOCATABLE attributes
     pointer :: p2
     !ERROR: 'a' may not have the POINTER attribute because it is a coarray
     real, pointer :: a(:)[*]
