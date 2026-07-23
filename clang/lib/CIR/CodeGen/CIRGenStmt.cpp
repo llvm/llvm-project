@@ -1328,7 +1328,8 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
       emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
     }
   } else {
-    cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
+    assert(rv.isComplex() && "Unknown rvalue kind?");
+    builder.createStore(loc, rv.getComplexValue(), returnValue);
   }
 
   // Classic codegen emits a branch through any cleanups before continuing to
