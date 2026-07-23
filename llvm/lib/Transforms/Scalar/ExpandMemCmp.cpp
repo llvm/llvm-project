@@ -172,9 +172,10 @@ static bool isAccessAllowed(const CallInst *CI, const TargetTransformInfo &TTI,
                             Align CommonAlign, unsigned LoadSize,
                             uint64_t Offset) {
   // The access is naturally aligned when the known alignment is at least the
-  // load width. LoadSize is not necessarily a power of two here: RISC-V vector
-  // memcmp adds non-power-of-two load sizes, so compare against the raw width
-  // rather than constructing an Align, which would require a power of two.
+  // load width. LoadSize is not necessarily a power of two here: some targets
+  // like RISC-V add non-power-of-two load sizes for vector memcmp, so compare
+  // against the raw width rather than constructing an Align, which would
+  // require a power of two.
   Align AccessAlign = commonAlignment(CommonAlign, Offset);
   if (AccessAlign.value() >= LoadSize)
     return true;
