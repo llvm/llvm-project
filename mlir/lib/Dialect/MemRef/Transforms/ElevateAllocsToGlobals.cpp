@@ -13,8 +13,10 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
@@ -68,22 +70,21 @@ public:
     if (isInsideControlFlow(allocOp))
       return failure();
 
-    // Create the global variable at the nearest enclosing symbol table (e.g.
-    // module).
-    memref::GlobalOp globalOp;
-    {
-      Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(allocOp);
-      SymbolTable symbolTable(symbolTableOp);
+    // Create the global variable at the nearest enclosing symbol table defining
+    // op if it's a ModuleOp.
+    auto moduleOp = llvm::dyn_cast_or_null<ModuleOp>(
+        SymbolTable::getNearestSymbolTable(allocOp));
+    if (!moduleOp)
+      return failure();
 
-      OpBuilder builder(rewriter.getContext());
-      StringAttr globalName = rewriter.getStringAttr("global_alloc");
-      globalOp = memref::GlobalOp::create(builder, allocOp.getLoc(), globalName,
-                                          rewriter.getStringAttr("private"),
-                                          memrefType, rewriter.getUnitAttr(),
-                                          false, allocOp.getAlignmentAttr());
+    OpBuilder detachedBuilder(rewriter.getContext());
+    StringAttr globalName = rewriter.getStringAttr("global_alloc");
+    memref::GlobalOp globalOp = memref::GlobalOp::create(
+        detachedBuilder, allocOp.getLoc(), globalName,
+        rewriter.getStringAttr("private"), memrefType, rewriter.getUnitAttr(),
+        false, allocOp.getAlignmentAttr());
 
-      symbolTable.insert(globalOp);
-    }
+    SymbolTable(moduleOp).insert(globalOp);
 
     // Remove any `memref.dealloc` operations using this allocation
     SmallVector<Operation *> deallocsToDelete;

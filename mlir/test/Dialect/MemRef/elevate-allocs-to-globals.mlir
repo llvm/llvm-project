@@ -104,3 +104,48 @@ func.func @alloc_in_control_flow_ignored(%cond: i1, %val: f32, %idx: index) {
 // CHECK: scf.if
 // CHECK-NEXT: %[[MEM:.*]] = memref.alloc() : memref<10xf32>
 // CHECK-NEXT: memref.store %{{.*}}, %[[MEM]]
+
+// -----
+
+/// Test that a static memref.alloc inside a non-ModuleOp symbol table is
+/// ignored and not elevated to a global.
+
+gpu.module @gpu_mod {
+  gpu.func @kernel() {
+    %0 = memref.alloc() : memref<10xf32>
+    memref.dealloc %0 : memref<10xf32>
+    gpu.return
+  }
+}
+
+// CHECK-LABEL: gpu.module @gpu_mod
+// CHECK: gpu.func @kernel
+// CHECK-NEXT: %[[MEM:.*]] = memref.alloc() : memref<10xf32>
+// CHECK-NEXT: memref.dealloc %[[MEM]] : memref<10xf32>
+// CHECK-NOT: memref.global
+
+// -----
+
+/// Test that in a function with allocs both inside and outside of control flow,
+/// only the alloc outside of control flow is elevated to a global.
+
+func.func @mixed_control_flow_allocs(%cond: i1, %val: f32, %idx: index) {
+  %outside = memref.alloc() : memref<10xf32>
+  memref.store %val, %outside[%idx] : memref<10xf32>
+  scf.if %cond {
+    %inside = memref.alloc() : memref<20xf32>
+    memref.store %val, %inside[%idx] : memref<20xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @mixed_control_flow_allocs(
+// CHECK-SAME: %[[COND:.*]]: i1, %[[VAL:.*]]: f32, %[[IDX:.*]]: index) {
+// CHECK-NEXT: %[[OUTSIDE:.*]] = memref.get_global @global_alloc : memref<10xf32>
+// CHECK-NEXT: memref.store %[[VAL]], %[[OUTSIDE]][%[[IDX]]] : memref<10xf32>
+// CHECK-NEXT: scf.if %[[COND]] {
+// CHECK-NEXT:   %[[INSIDE:.*]] = memref.alloc() : memref<20xf32>
+// CHECK-NEXT:   memref.store %[[VAL]], %[[INSIDE]][%[[IDX]]] : memref<20xf32>
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+// CHECK: memref.global "private" @global_alloc : memref<10xf32> = uninitialized
