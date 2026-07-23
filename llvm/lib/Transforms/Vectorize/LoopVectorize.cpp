@@ -5929,7 +5929,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (CM.maskPartialAliasing()) {
     assert(BestVPlan.hasTailFolded() && "Expected tail folding to be enabled");
     RUN_VPLAN_PASS(VPlanTransforms::materializeAliasMaskCheckBlock, BestVPlan,
-                   *CM.Legal->getRuntimePointerChecking()->getDiffChecks(),
+                   *Legal->getRuntimePointerChecking()->getDiffChecks(),
                    HasBranchWeights);
     ++LoopsPartialAliasVectorized;
   }
