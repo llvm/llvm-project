@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
@@ -194,10 +195,10 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
   // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Depend on LiveIntervals and perform some optimizations on it.
-    // TODO(boomanaiden154): WebAssemblyOptimizeLiveIntervals
+    addMachineFunctionPass(WebAssemblyOptimizeLiveIntervalsPass(), PMW);
 
     // Prepare memory intrinsic calls for register stackifying.
-    // TODO(boomanaiden154): WebAssemblyMemIntrinsicResults
+    addMachineFunctionPass(WebAssemblyMemIntrinsicResultsPass(), PMW);
   }
 
   // Mark registers as representing wasm's value stack. This is a key
@@ -205,42 +206,39 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
   // MemIntrinsicResults above) very late, so that it sees as much code as
   // possible, including code emitted by PEI and expanded by late tail
   // duplication.
-  // TODO(boomanaiden154): WebAssemblyRegStackify
+  addMachineFunctionPass(WebAssemblyRegStackifyPass(getOptLevel()), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Run the register coloring pass to reduce the total number of registers.
     // This runs after stackification so that it doesn't consider registers
     // that become stackified.
-    // TODO(boomanaiden154): WebAssemblyRegColoring
+    addMachineFunctionPass(WebAssemblyRegColoringPass(), PMW);
   }
 
   // Sort the blocks of the CFG into topological order, a prerequisite for
   // BLOCK and LOOP markers.
-  // TODO(boomanaiden154): WebAssemblyCFGSort
+  addMachineFunctionPass(WebAssemblyCFGSortPass(), PMW);
 
   // Insert BLOCK and LOOP markers.
-  // TODO(boomanaiden154): WebAssemblyCFGStackify
+  addMachineFunctionPass(WebAssemblyCFGStackifyPass(), PMW);
 
   // Insert explicit local.get and local.set operators.
-  if (!WasmDisableExplicitLocals) {
-    // TODO(boomanaiden154): WebAssemblyExplicitLocals
-  }
+  if (!WasmDisableExplicitLocals)
+    addMachineFunctionPass(WebAssemblyExplicitLocalsPass(), PMW);
 
   // Lower br_unless into br_if.
-  // TODO(boomanaiden154): WebAssemblyLowerBrUnless
+  addMachineFunctionPass(WebAssemblyLowerBrUnlessPass(), PMW);
 
   // Perform the very last peephole optimizations on the code.
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): WebAssemblyPeephole
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(WebAssemblyPeepholePass(), PMW);
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
-  // TODO(boomanaiden154): WebAssemblyRegNumbering
+  addMachineFunctionPass(WebAssemblyRegNumberingPass(), PMW);
 
   // Fix debug_values whose defs have been stackified.
-  if (!WasmDisableExplicitLocals) {
-    // TODO(boomanaiden154): WebAssemblyDebugFixup
-  }
+  if (!WasmDisableExplicitLocals)
+    addMachineFunctionPass(WebAssemblyDebugFixupPass(), PMW);
 
   // Collect information to prepare for MC lowering / asm printing.
   // TODO(boomanaiden154): WebAssemblyMCLowerPrePass

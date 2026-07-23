@@ -1,4 +1,4 @@
-//===-- Platform specific defines for the unittest library ------*- C++ -*-===//
+//===-- VPlanDominatorTree.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_UNITTEST_PLATFORMDEFS_H
-#define LLVM_LIBC_TEST_UNITTEST_PLATFORMDEFS_H
+#include "VPlanDominatorTree.h"
+#include "llvm/Analysis/DominanceFrontierImpl.h"
 
-#if !defined(_WIN32)
-#define ENABLE_SUBPROCESS_TESTS
-#endif
+using namespace llvm;
 
-#endif // LLVM_LIBC_TEST_UNITTEST_PLATFORMDEFS_H
+VPPostDominanceFrontier::VPPostDominanceFrontier(const DomTreeT &VPDT) {
+  analyze(VPDT);
+}

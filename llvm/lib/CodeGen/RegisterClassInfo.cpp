@@ -204,25 +204,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
 /// nonoverlapping reserved registers. However, computing the allocation order
 /// for all register classes would be too expensive.
 unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
-  const TargetRegisterClass *RC = nullptr;
-  unsigned NumRCUnits = 0;
-  for (const TargetRegisterClass &C : TRI->regclasses()) {
-    const int *PSetID = TRI->getRegClassPressureSets(&C);
-    for (; *PSetID != -1; ++PSetID) {
-      if ((unsigned)*PSetID == Idx)
-        break;
-    }
-    if (*PSetID == -1)
-      continue;
-
-    // Found a register class that counts against this pressure set.
-    // For efficiency, only compute the set order for the largest set.
-    unsigned NUnits = TRI->getRegClassWeight(&C).WeightLimit;
-    if (!RC || NUnits > NumRCUnits) {
-      RC = &C;
-      NumRCUnits = NUnits;
-    }
-  }
+  const TargetRegisterClass *RC = TRI->getLargestRegClassForRegPressureSet(Idx);
   assert(RC && "Failed to find register class");
   compute(RC);
   unsigned NAllocatableRegs = getNumAllocatableRegs(RC);
