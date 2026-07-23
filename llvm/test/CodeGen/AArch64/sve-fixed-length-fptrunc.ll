@@ -4,10 +4,10 @@
 define <8 x bfloat> @fptrunc_v8bf16(<8 x float> %a) #0 {
 ; CHECK-LABEL: fptrunc_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
@@ -20,10 +20,10 @@ define <8 x bfloat> @fptrunc_v8bf16(<8 x float> %a) #0 {
 define <8 x half> @fptrunc_v8f16(<8 x float> %a) #0 {
 ; CHECK-LABEL: fptrunc_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h

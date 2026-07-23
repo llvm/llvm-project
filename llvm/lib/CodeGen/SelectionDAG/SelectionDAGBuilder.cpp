@@ -457,6 +457,11 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
        return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
      } else if (ValueVT.bitsLT(PartEVT)) {
        const uint64_t ValueSize = ValueVT.getFixedSizeInBits();
+       if (!PartEVT.isInteger()) {
+         EVT PartIntVT =
+             EVT::getIntegerVT(*DAG.getContext(), PartEVT.getSizeInBits());
+         Val = DAG.getNode(ISD::BITCAST, DL, PartIntVT, Val);
+       }
        EVT IntermediateType = EVT::getIntegerVT(*DAG.getContext(), ValueSize);
        // Drop the extra bits.
        Val = DAG.getNode(ISD::TRUNCATE, DL, IntermediateType, Val);

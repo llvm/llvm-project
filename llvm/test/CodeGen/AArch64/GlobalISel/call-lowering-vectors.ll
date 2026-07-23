@@ -58,8 +58,8 @@ define void @test_return_v3f32() {
   ; CHECK-NEXT:   $s0 = COPY [[DEF]](f32)
   ; CHECK-NEXT:   BL @bar, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit-def $q0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32), [[UV2:%[0-9]+]]:_(f32), [[UV3:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST]](<4 x f32>)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x f32>) = G_BUILD_VECTOR [[UV]](f32), [[UV1]](f32), [[UV2]](f32)
   ; CHECK-NEXT:   RET_ReallyLR
