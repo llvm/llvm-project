@@ -312,9 +312,7 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
   uint64_t TSFlags = Desc.TSFlags;
 
   // Determine where the memory operand starts, if present.
-  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
-  if (MemoryOperand != -1)
-    MemoryOperand += X86II::getOperandBias(Desc);
+  int MemoryOperand = X86II::getMemoryOperandIdx(Desc);
 
   MCRegister SegmentReg;
   if (MemoryOperand >= 0) {
