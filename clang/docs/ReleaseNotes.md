@@ -334,6 +334,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
   argument instead of asserting. (#GH210714)
 
+- Fixed a crash when computing the implicit deletion of a defaulted comparison
+  operator required an access check that ran while an enclosing declaration
+  was still being parsed. (#GH210692)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
