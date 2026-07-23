@@ -555,20 +555,75 @@ define <2 x float> @preserve_load_metadata_for_single_attributed_load(ptr %p) {
   ret <2 x float> %r
 }
 
-define <2 x i1> @drop_load_metadata_for_multiple_attributed_loads(ptr %p) {
-; CHECK-LABEL: define <2 x i1> @drop_load_metadata_for_multiple_attributed_loads(
+define <3 x i32> @drop_load_metadata_for_multiple_loads(ptr %p) {
+; CHECK-LABEL: define <3 x i32> @drop_load_metadata_for_multiple_loads(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = load <3 x i32>, ptr [[P]], align 8
+; CHECK-NEXT:    ret <3 x i32> [[R]]
+;
+  %l0 = load <2 x i32>, ptr %p, align 8, !invariant.load !6
+  %p1 = getelementptr i8, ptr %p, i64 8
+  %l1 = load <2 x i32>, ptr %p1, align 8
+  %r = shufflevector <2 x i32> %l0, <2 x i32> %l1, <3 x i32> <i32 0, i32 1, i32 2>
+  ret <3 x i32> %r
+}
+
+define <2 x i1> @merge_range_and_noundef_metadata(ptr %p) {
+; CHECK-LABEL: define <2 x i1> @merge_range_and_noundef_metadata(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[R:%.*]] = load <2 x i8>, ptr [[TMP1]], align 1{{$}}
+; CHECK-NEXT:    [[R:%.*]] = load <2 x i8>, ptr [[TMP1]], align 1, !range [[RNG6:![0-9]+]], !noundef [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[R]], splat (i8 2)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %l0 = load <2 x i8>, ptr %p, align 2, !range !6
+  %l0 = load <2 x i8>, ptr %p, align 2, !range !7, !noundef !6
   %p1 = getelementptr i8, ptr %p, i64 2
-  %l1 = load <2 x i8>, ptr %p1, align 2, !range !7
+  %l1 = load <2 x i8>, ptr %p1, align 2, !range !8, !noundef !6
   %r = shufflevector <2 x i8> %l0, <2 x i8> %l1, <2 x i32> <i32 1, i32 2>
   %cmp = icmp ult <2 x i8> %r, <i8 2, i8 2>
   ret <2 x i1> %cmp
+}
+
+define <2 x i1> @drop_noncommon_range_and_noundef_metadata(ptr %p) {
+; CHECK-LABEL: define <2 x i1> @drop_noncommon_range_and_noundef_metadata(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = load <2 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[R]], splat (i8 2)
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %l0 = load <2 x i8>, ptr %p, align 2, !range !7, !noundef !6
+  %p1 = getelementptr i8, ptr %p, i64 2
+  %l1 = load <2 x i8>, ptr %p1, align 2, !range !9
+  %r = shufflevector <2 x i8> %l0, <2 x i8> %l1, <2 x i32> <i32 1, i32 2>
+  %cmp = icmp ult <2 x i8> %r, <i8 2, i8 2>
+  ret <2 x i1> %cmp
+}
+
+define <3 x float> @intersect_nofpclass_metadata(ptr %p) {
+; CHECK-LABEL: define <3 x float> @intersect_nofpclass_metadata(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, ptr [[P]], align 8, !nofpclass [[META8:![0-9]+]]
+; CHECK-NEXT:    ret <3 x float> [[R]]
+;
+  %l0 = load <2 x float>, ptr %p, align 8, !nofpclass !10
+  %p1 = getelementptr i8, ptr %p, i64 8
+  %l1 = load <2 x float>, ptr %p1, align 8, !nofpclass !11
+  %r = shufflevector <2 x float> %l0, <2 x float> %l1, <3 x i32> <i32 0, i32 1, i32 2>
+  ret <3 x float> %r
+}
+
+define <3 x float> @drop_noncommon_nofpclass_metadata(ptr %p) {
+; CHECK-LABEL: define <3 x float> @drop_noncommon_nofpclass_metadata(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, ptr [[P]], align 8
+; CHECK-NEXT:    ret <3 x float> [[R]]
+;
+  %l0 = load <2 x float>, ptr %p, align 8, !nofpclass !11
+  %p1 = getelementptr i8, ptr %p, i64 8
+  %l1 = load <2 x float>, ptr %p1, align 8, !nofpclass !12
+  %r = shufflevector <2 x float> %l0, <2 x float> %l1, <3 x i32> <i32 0, i32 1, i32 2>
+  ret <3 x float> %r
 }
 
 define <2 x float> @negative_load_in_different_block(ptr %p, i1 %c) {
@@ -601,8 +656,13 @@ other:
 !3 = !{!4}
 !4 = distinct !{!4, !5}
 !5 = distinct !{!5}
-!6 = !{i8 0, i8 2}
-!7 = !{i8 2, i8 4}
+!6 = !{}
+!7 = !{i8 0, i8 2}
+!8 = !{i8 2, i8 4}
+!9 = !{i8 2, i8 0}
+!10 = !{i32 519}
+!11 = !{i32 3}
+!12 = !{i32 516}
 ;.
 ; CHECK: [[FLOAT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"float", [[META2:![0-9]+]], i64 0}
@@ -610,4 +670,7 @@ other:
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]]}
 ; CHECK: [[META5]] = distinct !{[[META5]]}
+; CHECK: [[RNG6]] = !{i8 0, i8 4}
+; CHECK: [[META7]] = !{}
+; CHECK: [[META8]] = !{i32 3}
 ;.

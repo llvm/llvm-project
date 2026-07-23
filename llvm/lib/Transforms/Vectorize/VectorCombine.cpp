@@ -6880,6 +6880,24 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   if (Loads.size() == 1)
     copyMetadataForLoad(*NewLoad, *FirstLI);
 
+  // Preserve value restrictions that hold for every source load. A range
+  // must cover every source range, while noundef and excluded FP classes
+  // must be common to all sources.
+  MDNode *NoundefMD = FirstLI->getMetadata(LLVMContext::MD_noundef);
+  MDNode *RangeMD = FirstLI->getMetadata(LLVMContext::MD_range);
+  MDNode *NoFPClassMD = FirstLI->getMetadata(LLVMContext::MD_nofpclass);
+  for (LoadInst *LI : Loads) {
+    if (!LI->hasMetadata(LLVMContext::MD_noundef))
+      NoundefMD = nullptr;
+    RangeMD = MDNode::getMostGenericRange(
+        RangeMD, LI->getMetadata(LLVMContext::MD_range));
+    NoFPClassMD = MDNode::getMostGenericNoFPClass(
+        NoFPClassMD, LI->getMetadata(LLVMContext::MD_nofpclass));
+  }
+  NewLoad->setMetadata(LLVMContext::MD_noundef, NoundefMD);
+  NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
+  NewLoad->setMetadata(LLVMContext::MD_nofpclass, NoFPClassMD);
+
   replaceValue(I, *NewLoad);
   return true;
 }
