@@ -1030,6 +1030,15 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::Add:
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Nand: {
+    // We can not implement a vector Add/Sub with a scalar Add/Sub, but
+    // we can implement a vector Nand with a scalar Nand.
+    if (PMV.ValueType->isVectorTy() &&
+        (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub)) {
+      Value *Loaded_Extract = extractMaskedValue(Builder, Loaded, PMV);
+      Value *NewVal = buildAtomicRMWValue(Op, Builder, Loaded_Extract, Inc);
+      return insertMaskedValue(Builder, Loaded, NewVal, PMV);
+    }
+
     // The other arithmetic ops need to be masked into place.
     Value *NewVal = buildAtomicRMWValue(Op, Builder, Loaded, Shifted_Inc);
     Value *NewVal_Masked = Builder.CreateAnd(NewVal, PMV.Mask);
@@ -1092,8 +1101,9 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
                        AI->getAlign(), TLI->getMinCmpXchgSizeInBits() / 8);
 
   Value *ValOperand_Shifted = nullptr;
-  if (Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Add ||
-      Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Nand) {
+  if (Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Nand ||
+      (!PMV.ValueType->isVectorTy() &&
+       (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub))) {
     Value *ValOp = Builder.CreateBitCast(AI->getValOperand(), PMV.IntValueType);
     ValOperand_Shifted =
         Builder.CreateShl(Builder.CreateZExt(ValOp, PMV.WordType), PMV.ShiftAmt,
@@ -1136,9 +1146,15 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
       createMaskInstrs(Builder, AI, AI->getType(), AI->getPointerOperand(),
                        AI->getAlign(), TLI->getMinCmpXchgSizeInBits() / 8);
 
+  Value *ValOp = AI->getValOperand();
+  if (ValOp->getType()->isVectorTy())
+    // For vectors, bitcast to the integer type before extending. Note that
+    // or/xor/and on vectors are equivalent to the same operation on an integer
+    // that spans the vector, so we can use the integer type for the operation.
+    ValOp = Builder.CreateBitCast(ValOp, PMV.IntValueType);
   Value *ValOperand_Shifted =
-      Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), PMV.WordType),
-                        PMV.ShiftAmt, "ValOperand_Shifted");
+      Builder.CreateShl(Builder.CreateZExt(ValOp, PMV.WordType), PMV.ShiftAmt,
+                        "ValOperand_Shifted");
 
   Value *NewOperand;
 
