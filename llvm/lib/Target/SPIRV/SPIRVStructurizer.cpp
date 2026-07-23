@@ -303,12 +303,11 @@ class SPIRVStructurizerImpl {
   // the boundary of multiple constructs.
   struct Splitter {
     Function &F;
-    LoopInfo &LI;
     DomTreeBuilder::BBDomTree DT;
     DomTreeBuilder::BBPostDomTree PDT;
     std::optional<PartialOrderingVisitor> POV;
 
-    Splitter(Function &F, LoopInfo &LI) : F(F), LI(LI) { invalidate(); }
+    Splitter(Function &F) : F(F) { invalidate(); }
 
     void invalidate() {
       PDT.recalculate(F);
@@ -868,7 +867,7 @@ class SPIRVStructurizerImpl {
   }
 
   bool splitCriticalEdges(Function &F) {
-    Splitter S(F, LI);
+    Splitter S(F);
 
     DivergentConstruct Root;
     BlockSet Visited;
