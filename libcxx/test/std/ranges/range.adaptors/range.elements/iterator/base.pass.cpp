@@ -80,8 +80,8 @@ constexpr bool test() {
       constexpr bool operator==(const MoveOnlyIter&) const { return true; }
     };
 
-    std::ranges::elements_view<std::ranges::subrange<MoveOnlyIter, Sent>, 0>{
-        std::ranges::subrange mev{MoveOnlyIter{{}, MoveOnly{5}}, Sent{}}};
+    std::ranges::elements_view<std::ranges::subrange<MoveOnlyIter, Sent>, 0> mev{
+        std::ranges::subrange{MoveOnlyIter{{}, MoveOnly{5}}, Sent{}}};
     auto it = mev.begin();
 
     decltype(auto) base = std::move(it).base();

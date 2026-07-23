@@ -26,5 +26,7 @@ struct Range : std::ranges::view_base {
   Sent end();
 };
 
-static_assert(!std::is_constructible_v<std::ranges::sentinel_t<std::ranges::elements_view<Range, 0>>, Sent>);
-static_assert(!std::is_convertible_v<Sent, std::ranges::sentinel_t<std::ranges::elements_view<Range, 0>>>);
+using ElementsView = std::ranges::elements_view<Range, 0>;
+
+static_assert(!std::is_constructible_v<std::ranges::sentinel_t<ElementsView>, Sent>);
+static_assert(!std::is_convertible_v<Sent, std::ranges::sentinel_t<ElementsView>>);
