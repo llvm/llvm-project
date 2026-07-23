@@ -159,6 +159,8 @@ define amdgpu_kernel void @loop_with_generic_bound() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[END:%.*]] = load ptr, ptr addrspace(1) @generic_end, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[END]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[TMP2]] to ptr
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi ptr addrspace(3) [ @array, %[[ENTRY]] ], [ [[I2:%.*]], %[[LOOP]] ]
@@ -166,7 +168,7 @@ define amdgpu_kernel void @loop_with_generic_bound() #0 {
 ; CHECK-NEXT:    call void @use(float [[V]])
 ; CHECK-NEXT:    [[I2]] = getelementptr float, ptr addrspace(3) [[I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(3) [[I2]] to ptr
-; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq ptr [[TMP0]], [[END]]
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq ptr [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
