@@ -136,3 +136,6 @@ undefined t; // expected-error {{unknown type name 'undefined'}}
 #line 1 "foo\""
 // expected-warning@#UNTERMINATED {{missing terminating '"' character}}
 // expected-warning@#UNTERMINATED {{extra tokens at end of #line directive}}
+
+#line 1 <> // expected-error {{invalid filename for #line directive}}
+#line 1 <foo> // expected-error {{invalid filename for #line directive}}
