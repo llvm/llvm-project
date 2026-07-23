@@ -66,6 +66,7 @@ When setting a file/line breakpoint for a non-inlined function the Debugger shou
 When setting a file/line breakpoint for an inlined function the Debugger should:
 * Find the possible parent functions for the inlined function using the inliners map.
 * Repeat the process for non-inlined functions for every possible parent function.
+* Note: if the breakpoint is set on an inlined function while stopped inside the parent function it will not be possible to step into the unoptimized version (ideally the debugger falls back to optimized code debugging).
 
 Function breakpoints can use similar mechanisms as file/line breakpoints, where the address lookup is done using symbol information instead. Address breakpoints do not need any special handling.
 
