@@ -884,7 +884,8 @@ class LoopVectorizationPlanner {
   ///
   /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
   /// been retired.
-  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
+  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU,
+                       LoopVectorizationCostModel &EnabledCM) const;
 
   /// Precompute costs for certain instructions using the legacy cost model. The
   /// function is used to bring up the VPlan-based cost model to initially avoid
@@ -905,7 +906,14 @@ public:
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
-  void plan(ElementCount UserVF, unsigned UserIC, bool IsEpilogueTFEnabled);
+  void plan(ElementCount UserVF, unsigned UserIC);
+
+  /// Build VPlans for the specified \p EpilogueUserVF and \p IC if they are
+  /// non-zero or all applicable candidate VFs otherwise. If vectorization and
+  /// tail-folding should be avoided up-front, no plans are generated.
+  bool planForEpilogueTF(ElementCount UserVF, unsigned UserIC,
+                         ElementCount EpilogueUserVF,
+                         LoopVectorizationCostModel &EpilogueCM);
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
@@ -940,7 +948,6 @@ public:
   DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
-              bool IsEpilogueTFEnabled,
               EpilogueVectorizationKind EpilogueVecKind =
                   EpilogueVectorizationKind::None);
 
@@ -966,10 +973,8 @@ public:
   /// VF narrowed to the chosen factor. The returned plan is a duplicate.
   /// Returns nullptr if epilogue vectorization is not supported or not
   /// profitable for the loop.
-  std::unique_ptr<VPlan> selectBestEpiloguePlan(VPlan &MainPlan,
-                                                ElementCount MainLoopVF,
-                                                unsigned IC,
-                                                bool IsEpilogueTFEnabled);
+  std::unique_ptr<VPlan>
+  selectBestEpiloguePlan(VPlan &MainPlan, ElementCount MainLoopVF, unsigned IC);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
@@ -1007,7 +1012,7 @@ private:
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
   /// be built.
-  VPlanPtr tryToBuildVPlan1(bool IsEpilogueTFEnabled);
+  VPlanPtr tryToBuildVPlan1(LoopVectorizationCostModel &EnabledCM);
 
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
@@ -1017,13 +1022,14 @@ private:
   /// maximum VF for which no plan could be built. Each VPlan is built starting
   /// from a copy of \p InitialPlan, which is a plain CFG VPlan wrapping the
   /// original scalar loop.
-  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
+  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range,
+                           LoopVectorizationCostModel &EnabledCM);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// based on \p VPlan1 and according to the information gathered by Legal
   /// when it checked if it is legal to vectorize the loop.
   void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF,
-                   bool IsEpilogueTFEnabled);
+                   LoopVectorizationCostModel &EnabledCM);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
