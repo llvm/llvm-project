@@ -1148,8 +1148,6 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
-    bool isWholeSymbol =
-        !designator || Fortran::evaluate::UnwrapWholeSymbolDataRef(*designator);
     fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
@@ -1195,7 +1193,10 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     reductionOperands.push_back(op.getAccVar());
     // Track the symbol and its corresponding mlir::Value if requested so that
     // accesses inside the compute/loop regions use the acc.reduction variable.
-    if (dataMap && isWholeSymbol)
+    // Remap even for array-section reductions: otherwise element accesses
+    // inside the region keep referring to the original array instead of the
+    // private reduction copy.
+    if (dataMap)
       dataMap->emplaceSymbol(op.getAccVar(),
                              Fortran::semantics::SymbolRef(symbol));
   }
