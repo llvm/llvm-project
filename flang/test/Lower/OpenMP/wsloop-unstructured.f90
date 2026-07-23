@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir -fopenmp -o - %s | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-hlfir -fopenmp -o - %s | FileCheck %s
 
 subroutine sub(imax, jmax, x, y)
   integer, intent(in) :: imax, jmax

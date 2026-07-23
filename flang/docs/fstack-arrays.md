@@ -49,7 +49,6 @@ Flang allocates most arrays on the stack by default, but there are a few cases
 where temporary arrays are allocated on the heap:
 - `flang/lib/Optimizer/Transforms/ArrayValueCopy.cpp`
 - `flang/lib/Optimizer/Transforms/MemoryAllocation.cpp`
-- `flang/lib/Lower/ConvertExpr.cpp`
 - `flang/lib/Lower/IntrinsicCall.cpp`
 - `flang/lib/Lower/ConvertVariable.cpp`
 
@@ -70,34 +69,6 @@ x(3,4) = x(1,2)
 #### `MemoryAllocation.cpp`
 The default options for the Memory Allocation transformation ensure that no
 array allocations, no matter how large, are moved from the stack to the heap.
-
-#### `ConvertExpr.cpp`
-`ConvertExpr.cpp` allocates many array temporaries on the heap:
-  - Passing array arguments by value or when they need re-shaping
-  - Lowering elemental array expressions
-  - Lowering mask expressions
-  - Array constructors
-
-The last two of these cases are **not** covered by the current stack arrays pass
-design.
-
-The FIR code generated for mask expressions (the WHERE construct) sets a
-boolean variable to indicate whether a heap allocation was necessary. The
-allocation is only freed if the variable indicates that the allocation was
-performed to begin with. The proposed dataflow analysis is not intelligent
-enough to statically determine that the boolean variable will always be true
-when the allocation is performed. Beyond this, the control flow in the generated
-FIR code passes the allocated memory through `fir.result`, resulting in a
-different SSA value to be allocated and freed, causing the analysis not to
-realise that the allocated memory is freed. The most convenient solution here
-would be to generate less complicated FIR code, as the existing codegen has
-known bugs: https://github.com/llvm/llvm-project/issues/56921,
-https://github.com/llvm/llvm-project/issues/59803.
-
-Code generated for array constructors uses `realloc()` to grow the allocated
-buffer because the size of the resulting array cannot always be determined
-ahead of running the constructor. This makes this temporary unsuitable
-for allocation on the stack.
 
 #### `IntrinsicCall.cpp`
 The existing design is for the runtime to do the allocation and the lowering

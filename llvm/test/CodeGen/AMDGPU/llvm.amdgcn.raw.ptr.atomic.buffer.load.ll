@@ -31,7 +31,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_ptr_load_i32(ptr addrspace(8) %
 ;
 ; GFX12-LABEL: raw_ptr_atomic_buffer_ptr_load_i32:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    global_wb
+; GFX12-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -120,7 +120,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_off(ptr addrspace(8) %
 ;
 ; GFX12-LABEL: raw_ptr_atomic_buffer_load_i32_off:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    global_wb
+; GFX12-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -208,7 +208,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_soff(ptr addrspace(8) 
 ;
 ; GFX12-LABEL: raw_ptr_atomic_buffer_load_i32_soff:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    global_wb
+; GFX12-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -299,7 +299,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_dlc(ptr addrspace(8) %
 ;
 ; GFX12-LABEL: raw_ptr_atomic_buffer_load_i32_dlc:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    global_wb
+; GFX12-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -389,7 +389,7 @@ define amdgpu_kernel void @raw_nonptr_atomic_buffer_load_i32(ptr addrspace(8) %p
 ;
 ; GFX12-LABEL: raw_nonptr_atomic_buffer_load_i32:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    global_wb
+; GFX12-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -481,7 +481,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i64(ptr addrspace(8) %ptr)
 ;
 ; GFX12-SDAG-TRUE16-LABEL: raw_ptr_atomic_buffer_load_i64:
 ; GFX12-SDAG-TRUE16:       ; %bb.0: ; %bb
-; GFX12-SDAG-TRUE16-NEXT:    global_wb
+; GFX12-SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-SDAG-TRUE16-NEXT:    v_nop
 ; GFX12-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -504,7 +504,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i64(ptr addrspace(8) %ptr)
 ;
 ; GFX12-SDAG-FAKE16-LABEL: raw_ptr_atomic_buffer_load_i64:
 ; GFX12-SDAG-FAKE16:       ; %bb.0: ; %bb
-; GFX12-SDAG-FAKE16-NEXT:    global_wb
+; GFX12-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-SDAG-FAKE16-NEXT:    v_nop
 ; GFX12-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-SDAG-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -527,7 +527,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i64(ptr addrspace(8) %ptr)
 ;
 ; GFX12-GISEL-TRUE16-LABEL: raw_ptr_atomic_buffer_load_i64:
 ; GFX12-GISEL-TRUE16:       ; %bb.0: ; %bb
-; GFX12-GISEL-TRUE16-NEXT:    global_wb
+; GFX12-GISEL-TRUE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-GISEL-TRUE16-NEXT:    v_nop
 ; GFX12-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -550,7 +550,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i64(ptr addrspace(8) %ptr)
 ;
 ; GFX12-GISEL-FAKE16-LABEL: raw_ptr_atomic_buffer_load_i64:
 ; GFX12-GISEL-FAKE16:       ; %bb.0: ; %bb
-; GFX12-GISEL-FAKE16-NEXT:    global_wb
+; GFX12-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-GISEL-FAKE16-NEXT:    v_nop
 ; GFX12-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-GISEL-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -603,7 +603,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v2i16(ptr addrspace(8) %pt
 ;
 ; GFX12-LABEL: raw_ptr_atomic_buffer_load_v2i16:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    global_wb
+; GFX12-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -778,7 +778,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ;
 ; GFX12-SDAG-TRUE16-LABEL: raw_ptr_atomic_buffer_load_v4i16:
 ; GFX12-SDAG-TRUE16:       ; %bb.0: ; %bb
-; GFX12-SDAG-TRUE16-NEXT:    global_wb
+; GFX12-SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-SDAG-TRUE16-NEXT:    v_nop
 ; GFX12-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -801,7 +801,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ;
 ; GFX12-SDAG-FAKE16-LABEL: raw_ptr_atomic_buffer_load_v4i16:
 ; GFX12-SDAG-FAKE16:       ; %bb.0: ; %bb
-; GFX12-SDAG-FAKE16-NEXT:    global_wb
+; GFX12-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-SDAG-FAKE16-NEXT:    v_nop
 ; GFX12-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-SDAG-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -826,7 +826,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ;
 ; GFX12-GISEL-TRUE16-LABEL: raw_ptr_atomic_buffer_load_v4i16:
 ; GFX12-GISEL-TRUE16:       ; %bb.0: ; %bb
-; GFX12-GISEL-TRUE16-NEXT:    global_wb
+; GFX12-GISEL-TRUE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-GISEL-TRUE16-NEXT:    v_nop
 ; GFX12-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -851,7 +851,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %pt
 ;
 ; GFX12-GISEL-FAKE16-LABEL: raw_ptr_atomic_buffer_load_v4i16:
 ; GFX12-GISEL-FAKE16:       ; %bb.0: ; %bb
-; GFX12-GISEL-FAKE16-NEXT:    global_wb
+; GFX12-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-GISEL-FAKE16-NEXT:    v_nop
 ; GFX12-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-GISEL-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -907,7 +907,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i32(ptr addrspace(8) %pt
 ;
 ; GFX12-LABEL: raw_ptr_atomic_buffer_load_v4i32:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    global_wb
+; GFX12-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
@@ -999,7 +999,7 @@ define amdgpu_kernel void @raw_ptr_atomic_buffer_load_ptr(ptr addrspace(8) %ptr)
 ;
 ; GFX12-LABEL: raw_ptr_atomic_buffer_load_ptr:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    global_wb
+; GFX12-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv

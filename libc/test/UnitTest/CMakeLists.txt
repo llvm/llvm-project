@@ -97,7 +97,7 @@ add_unittest_framework_library(
 )
 
 set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
-if(${LIBC_TARGET_OS} STREQUAL "linux" OR ${LIBC_TARGET_OS} STREQUAL "darwin")
+if (LIBC_TEST_SUBPROCESS_TESTS)
   list(APPEND libc_death_test_srcs ExecuteFunctionUnix.cpp)
 endif()
 
