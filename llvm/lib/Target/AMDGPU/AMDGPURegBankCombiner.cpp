@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Target/TargetMachine.h"
@@ -102,6 +103,8 @@ public:
                             MinMaxToMinMax3MatchInfo &MatchInfo) const;
   void applyMinMaxToMinMax3(MachineInstr &MI,
                             MinMaxToMinMax3MatchInfo &MatchInfo) const;
+
+  bool matchRedundantReadAnyLane(MachineInstr &MI, Register &Match) const;
 
 private:
   SIModeRegisterDefaults getMode() const;
@@ -572,6 +575,36 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
   }
 
   MatchInfo = {AMDGPUOpc, R0, R1, R2};
+  return true;
+}
+
+// Reading any lane of a value that is uniform across all lanes returns that
+// same value. G_AMDGPU_READANYLANE (selected as v_readfirstlane_b32) is emitted
+// by RegBankLegalize to move a uniform value from a vgpr into an sgpr. When the
+// source is itself already uniform (an sgpr value that was merely copied into a
+// vgpr), the read is a redundant sgpr -> vgpr -> sgpr round trip and the result
+// can be replaced with the original sgpr value.
+bool AMDGPURegBankCombinerImpl::matchRedundantReadAnyLane(
+    MachineInstr &MI, Register &Match) const {
+  assert(MI.getOpcode() == AMDGPU::G_AMDGPU_READANYLANE);
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  // Look through copies to the value actually being read.
+  Register SrcNoCopy = getSrcRegIgnoringCopies(Src, MRI);
+  if (!SrcNoCopy.isValid())
+    return false;
+
+  // Only fold when the read value is uniform (lives in the sgpr bank).
+  const RegisterBank *RB = MRI.getRegBankOrNull(SrcNoCopy);
+  if (!RB || RB->getID() != AMDGPU::SGPRRegBankID)
+    return false;
+
+  // Copies preserve the type, but be defensive so we never change it.
+  if (MRI.getType(SrcNoCopy) != MRI.getType(Dst))
+    return false;
+
+  Match = SrcNoCopy;
   return true;
 }
 

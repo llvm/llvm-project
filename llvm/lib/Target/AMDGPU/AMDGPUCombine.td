@@ -173,6 +173,14 @@ class minmax_to_minmax3_opcodes<Instruction minmaxOpcode> : GICombineRule<
          [{ return matchMinMaxToMinMax3(*${min_or_max}, ${matchinfo}); }]),
   (apply [{ applyMinMaxToMinMax3(*${min_or_max}, ${matchinfo}); }])>;
 
+// Fold a redundant G_AMDGPU_READANYLANE (v_readfirstlane_b32) whose source is
+// already uniform, i.e. an sgpr -> vgpr -> sgpr round trip.
+def redundant_readanylane : GICombineRule<
+  (defs root:$readanylane, register_matchinfo:$matchinfo),
+  (match (G_AMDGPU_READANYLANE $dst, $src):$readanylane,
+         [{ return matchRedundantReadAnyLane(*${readanylane}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${readanylane}, ${matchinfo}); }])>;
+
 def smax_to_minmax3 : minmax_to_minmax3_opcodes<G_SMAX>;
 def smin_to_minmax3 : minmax_to_minmax3_opcodes<G_SMIN>;
 def umax_to_minmax3 : minmax_to_minmax3_opcodes<G_UMAX>;
@@ -270,5 +278,6 @@ def AMDGPURegBankCombiner : GICombiner<
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
    d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3,
    umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3,
-   fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3]> {
+   fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3,
+   redundant_readanylane]> {
 }
