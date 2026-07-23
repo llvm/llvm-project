@@ -47,12 +47,14 @@ System Version and Architecture
 
 All self-hosted macOS runners run the same version of macOS. However, that version
 is determined by the image used on the runners, which is not controllable from
-the workflow file. These runners will be kept at a reasonably recent version of
-macOS, however jobs running on that infrastructure should not make assumptions
-about the macOS version and should strive to be robust to OS version changes.
+the workflow file. These runners will be kept at the latest released (non-beta)
+version of macOS, however jobs running on that infrastructure should not make
+assumptions about the macOS version and should strive to be robust to OS version
+changes.
 
 All the self-hosted macOS runners run on Apple Silicon, however the exact chip
-version can differ from runner to runner.
+version can differ from runner to runner. It is not currently possible to target
+a specific chip version.
 
 Minimize Short-Lived Jobs
 -------------------------
@@ -66,10 +68,11 @@ required.
 Selecting the Xcode Version
 ---------------------------
 
-The macOS runners come with several versions of Xcode installed. You can select the version
-of Xcode by pointing ``DEVELOPER_DIR`` to it. The toolchain (``clang``, ``xcrun``, the SDKs,
-and so on) is then taken from that Xcode. This can be done in an early step that writes the
-variable to ``$GITHUB_ENV`` so that it applies to all subsequent steps:
+The macOS runners come with several versions of Xcode installed: the two latest releases of
+Xcode and the latest beta. You can select the version of Xcode by pointing ``DEVELOPER_DIR``
+to it. The toolchain (``clang``, ``xcrun``, the SDKs, and so on) is then taken from that
+Xcode. This can be done in an early step that writes the variable to ``$GITHUB_ENV`` so that
+it applies to all subsequent steps:
 
 .. code-block:: yaml
 
@@ -88,12 +91,15 @@ Installing Tools via Homebrew
 
 When a job needs a tool that is not already present on the runner, install it with Homebrew.
 Homebrew installs into a prefix owned by the runner account, so it does not require ``sudo``,
-and it provides self-contained tools. For example:
+and it provides self-contained tools. Also make sure you update Homebrew before installing.
+For example:
 
 .. code-block:: yaml
 
   - name: Install dependencies
-    run: brew install ninja cmake
+    run: |
+      brew update
+      brew install ninja cmake
 
 Version-specific formulae (for example ``python@3.12``) can be used when a job
 needs a particular version of a tool.
