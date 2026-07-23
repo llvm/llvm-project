@@ -179,20 +179,20 @@ namespace cwg2858 { // cwg2858: 19
 template<typename... Ts>
 struct A {
   friend void Ts...[0]::f();
-  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used to name a friend}}
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
   template<typename U>
   friend void Ts...[0]::g();
-  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used to name a friend}}
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
 
   friend struct Ts...[0]::B;
-  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used to name a friend}}
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
   template<typename U>
   friend struct Ts...[0]::C;
-  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used to name a friend}}
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
 
   template<typename U>
   friend struct Ts...[0]::template B<U>::C;
-  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used to name a friend}}
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
 };
 
 #endif

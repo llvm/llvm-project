@@ -30,6 +30,7 @@ struct E { template<class T> class Nested; };
 template<class... Ts> // expected-note {{template parameter is declared here}}
 struct VS {
   friend Ts...;
+  friend Ts...[0];
 
   friend class Ts...; // expected-error {{declaration of 'Ts' shadows template parameter}}
   // expected-error@-1 {{pack expansion does not contain any unexpanded parameter packs}}
@@ -64,7 +65,7 @@ struct VS {
 
   template<class T>
   friend class Ts...[0]::Nested...;
-  // expected-error@-1 {{a pack indexing specifier cannot be used to name a friend}}
+  // expected-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
 };
 
 namespace length_mismatch {

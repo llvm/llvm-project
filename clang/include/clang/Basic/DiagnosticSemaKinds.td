@@ -1944,7 +1944,8 @@ def err_friend_template_decl_multiple_specifiers: Error<
 def friend_template_decl_malformed_pack_expansion : Error<
   "friend declaration expands pack %0 that is declared it its own template parameter list">;
 def err_pack_indexing_in_friend : Error<
-  "a pack indexing specifier cannot be used to name a friend">;
+  "a pack indexing specifier cannot be used in a nested name specifier of a "
+  "friend declaration">;
 def err_dependent_friend_not_member_of_template_spec : Error<
   "%0 does not name a class template">;
 def err_dependent_friend_not_member : Error<
