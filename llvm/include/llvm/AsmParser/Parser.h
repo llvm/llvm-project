@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ToolInterface.h"
 #include <memory>
 #include <optional>
 
@@ -46,9 +47,13 @@ typedef llvm::function_ref<std::optional<std::string>(StringRef, StringRef)>
 /// \param Context Context in which to allocate globals info.
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
-LLVM_ABI std::unique_ptr<Module>
-parseAssemblyFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
-                  SlotMapping *Slots = nullptr);
+/// \param StdinSource Read from a different source instead of STDIN, for
+///                    in-process tool execution. This is provided to the tool's
+///                    run function, for example by the daemon driver.
+LLVM_ABI std::unique_ptr<Module> parseAssemblyFile(
+    StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
+    SlotMapping *Slots = nullptr,
+    const StandardInputSource &StdinSource = StandardInputSource::fromStdin());
 
 /// The function is a secondary interface to the LLVM Assembly Parser. It parses
 /// an ASCII string that (presumably) contains LLVM Assembly code. It returns a
@@ -86,17 +91,24 @@ struct ParsedModuleAndIndex {
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
 /// \param DataLayoutCallback Override datalayout in the llvm assembly.
+/// \param StdinSource Read from a different source instead of STDIN, for
+///                    in-process tool execution. This is provided to the tool's
+///                    run function, for example by the daemon driver.
 LLVM_ABI ParsedModuleAndIndex parseAssemblyFileWithIndex(
     StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
-      return std::nullopt;
-    });
+    DataLayoutCallbackTy DataLayoutCallback =
+        [](StringRef, StringRef) { return std::nullopt; },
+    const StandardInputSource &StdinSource = StandardInputSource::fromStdin());
 
 /// Only for use in llvm-as for testing; this does not produce a valid module.
+/// \param StdinSource Read from a different source instead of STDIN, for
+///                    in-process tool execution. This is provided to the tool's
+///                    run function, for example by the daemon driver.
 LLVM_ABI ParsedModuleAndIndex parseAssemblyFileWithIndexNoUpgradeDebugInfo(
     StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
-    SlotMapping *Slots, DataLayoutCallbackTy DataLayoutCallback);
+    SlotMapping *Slots, DataLayoutCallbackTy DataLayoutCallback,
+    const StandardInputSource &StdinSource = StandardInputSource::fromStdin());
 
 /// This function is a main interface to the LLVM Assembly Parser. It parses
 /// an ASCII file that (presumably) contains LLVM Assembly code for a module
@@ -106,8 +118,12 @@ LLVM_ABI ParsedModuleAndIndex parseAssemblyFileWithIndexNoUpgradeDebugInfo(
 /// Parse LLVM Assembly Index from a file
 /// \param Filename The name of the file to parse
 /// \param Err Error result info.
-LLVM_ABI std::unique_ptr<ModuleSummaryIndex>
-parseSummaryIndexAssemblyFile(StringRef Filename, SMDiagnostic &Err);
+/// \param StdinSource Read from a different source instead of STDIN, for
+///                    in-process tool execution. This is provided to the tool's
+///                    run function, for example by the daemon driver.
+LLVM_ABI std::unique_ptr<ModuleSummaryIndex> parseSummaryIndexAssemblyFile(
+    StringRef Filename, SMDiagnostic &Err,
+    const StandardInputSource &StdinSource = StandardInputSource::fromStdin());
 
 /// The function is a secondary interface to the LLVM Assembly Parser. It parses
 /// an ASCII string that (presumably) contains LLVM Assembly code for a module
