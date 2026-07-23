@@ -12350,10 +12350,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       };
       SDValue Rs1 = Op.getOperand(1);
       SDValue Rs2 = Op.getOperand(2);
-      SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, Extract(Rs1, 0),
-                               Extract(Rs2, 0));
-      SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, Extract(Rs1, 1),
-                               Extract(Rs2, 1));
+      SDValue Lo =
+          DAG.getNode(Opc, DL, MVT::i32, Extract(Rs1, 0), Extract(Rs2, 0));
+      SDValue Hi =
+          DAG.getNode(Opc, DL, MVT::i32, Extract(Rs1, 1), Extract(Rs2, 1));
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
 
