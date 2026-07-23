@@ -487,13 +487,13 @@ static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
   return SV ? getConcreteValue(*SV) : std::nullopt;
 }
 
-static const char *getAdjective(const bounds::CheckResult &R) {
+static StringRef getAdjective(const bounds::CheckResult &R) {
   return (R.mayUnderflow()
               ? (R.mayOverflow() ? "a negative or overflowing" : "a negative")
               : (R.mayOverflow() ? "an overflowing" : "a valid"));
 }
 
-static const char *getPreposition(const bounds::CheckResult &R) {
+static StringRef getPreposition(const bounds::CheckResult &R) {
   return (R.mayUnderflow() ? (R.mayOverflow() ? "around" : "preceding")
                            : (R.mayOverflow() ? "after the end of" : "within"));
 }
@@ -513,7 +513,7 @@ static BugDescription describeInvalidAccess(bounds::CheckResult Res,
     SU = SizeUnit::bytes();
   }
 
-  const char *OffsetOrIndex = SU.isBytes() ? "byte offset" : "index";
+  StringRef OffsetOrIndex = SU.isBytes() ? "byte offset" : "index";
 
   SmallString<256> Buf;
   llvm::raw_svector_ostream Out(Buf);
@@ -553,7 +553,7 @@ static BugDescription describeInvalidAccess(bounds::CheckResult Res,
 }
 
 static BugDescription describeTaintBug(StringRef RegName,
-                                       const char *OffsetName,
+                                       StringRef OffsetName,
                                        bool AlsoMentionUnderflow) {
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
@@ -694,7 +694,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       // Diagnostic detail: saying "tainted offset" is always correct, but
       // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
       // nicer to say "tainted index".
-      const char *OffsetName = "offset";
+      StringRef OffsetName = "offset";
       if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
         if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
           OffsetName = "index";
