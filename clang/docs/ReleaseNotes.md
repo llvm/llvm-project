@@ -371,8 +371,6 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 
-- Fixed a crash when parsing invalid C++ declarations that combine `auto` with
-  an anonymous tag definition. (#GH210014)
 
 ### OpenACC Specific Changes
 
