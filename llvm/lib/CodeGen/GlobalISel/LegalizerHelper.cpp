@@ -8764,7 +8764,6 @@ LegalizerHelper::lowerFPExtAndTruncMem(MachineInstr &MI) {
          "Only G_FPEXT and G_FPTRUNC are expected");
 
   auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
-
   MachinePointerInfo PtrInfo;
   unsigned StoreOpc;
   unsigned LoadOpc;
