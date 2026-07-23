@@ -139,9 +139,7 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
 
 // Template to check if a symbol was loaded successfully.
 // Returns true for symbols that were not wrapped by dlwrap.
-template <auto Fn> bool loaded() {
-  return true;
-}
+template <auto Fn> bool loaded() { return true; }
 
 } // namespace dlwrap
 
