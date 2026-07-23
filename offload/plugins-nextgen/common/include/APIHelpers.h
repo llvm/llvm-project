@@ -20,12 +20,15 @@
 // if the symbol is missing. For direct linking (dlwrap::IsDlOpened<&name> ==
 // false), we need to check if linker could find the symbol. For symbols loaded
 // using dlsym we use dlwrap::loaded<name>().
-#define API_HELPER_OPTIONAL(return_type, name, ...)                            \
+#define API_HELPER_OPTIONAL(return_type, name, ...)                           \
   extern "C" return_type name(__VA_ARGS__) __attribute__((weak));              \
   template <> inline bool api_helper::canCall<name>() {                        \
-    if constexpr (dlwrap::IsDlOpened<&name>)                                   \
-      return dlwrap::loaded<name>();                                           \
-    return name != nullptr;                                                    \
+    if (name == nullptr)                                                       \
+      /* Not loaded weak symbol */                                             \
+      return false;                                                          \
+    /* Symbols from dlwrap are never nullptr, but `loaded` might return false  \
+     */                                                                        \
+    return dlwrap::loaded<name>();                                             \
   }
 
 namespace api_helper {

@@ -137,12 +137,11 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
   static_assert(Requested == Required, "Arity Error");
 }
 
-// Template to check if a symbol was loaded successfully
-template <auto Fn> bool loaded();
-
-// Template to check if a symbol is provided by dlwrap
-// By default all symbols resolve to false
-template <auto Fn> constexpr bool IsDlOpened = false;
+// Template to check if a symbol was loaded successfully.
+// Returns true for symbols that were not wrapped by dlwrap.
+template <auto Fn> bool loaded() {
+  return true;
+}
 
 } // namespace dlwrap
 
@@ -167,7 +166,6 @@ template <auto Fn> constexpr bool IsDlOpened = false;
   DLWRAP_INC();                                                                \
   DLWRAP_SYMBOL(SYMBOL, DLWRAP_ID() - 1);                                      \
   namespace dlwrap {                                                           \
-  template <> inline constexpr bool IsDlOpened<&::SYMBOL> = true;              \
   struct SYMBOL##_Trait : public dlwrap::trait<decltype(&SYMBOL)> {            \
     using T = dlwrap::trait<decltype(&SYMBOL)>;                                \
     static T::FunctionType get() {                                             \
