@@ -66,6 +66,12 @@ ret
 // CHECK-NEXT: addq %r14, %r11
 // CHECK-NEXT: jmpq *%r11
 
+rep ret
+// CHECK:      popq %r11
+// CHECK-NEXT: andl $-32, %r11d
+// CHECK-NEXT: addq %r14, %r11
+// CHECK-NEXT: jmpq *%r11
+
 retq $16
 // CHECK:      popq %r11
 // CHECK-NEXT: addq $16, %rsp
