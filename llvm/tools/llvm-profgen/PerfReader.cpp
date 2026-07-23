@@ -1179,11 +1179,12 @@ bool PerfScriptReader::isLBRSample(StringRef Line, bool CheckLineStart) {
   SmallVector<StringRef, 32> Records;
   if (!CheckLineStart)
     Line = Line.trim();
+  // Line might start with IP or only contain brstack. Check first two records
+  // and fail if no record exists.
   Line.split(Records, " ", 2, CheckLineStart);
-  if (Records.size() < 2)
-    return false;
-  if (Records[1].starts_with("0x") && Records[1].contains('/'))
-    return true;
+  for (const StringRef &Record : Records)
+    if (Record.starts_with("0x") && Record.contains('/'))
+      return true;
   return false;
 }
 

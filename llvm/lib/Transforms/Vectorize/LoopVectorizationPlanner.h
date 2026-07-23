@@ -536,6 +536,27 @@ public:
         VectorIntrinsicID, CallArguments, Ty, Alignment, MD, DL));
   }
 
+  /// Create a recipe widening \p Load, loading from \p Addr with \p Mask (may
+  /// be null).
+  VPWidenLoadRecipe *createWidenLoad(LoadInst &Load, VPValue *Addr,
+                                     VPValue *Mask, bool Consecutive,
+                                     const VPIRMetadata &Metadata,
+                                     DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPWidenLoadRecipe(Load, Addr, Mask, Consecutive, Metadata, DL));
+  }
+
+  /// Create a recipe widening \p Store, storing \p StoredVal to \p Addr with
+  /// \p Mask (may be null).
+  VPWidenStoreRecipe *createWidenStore(StoreInst &Store, VPValue *Addr,
+                                       VPValue *StoredVal, VPValue *Mask,
+                                       bool Consecutive,
+                                       const VPIRMetadata &Metadata,
+                                       DebugLoc DL) {
+    return tryInsertInstruction(new VPWidenStoreRecipe(
+        Store, Addr, StoredVal, Mask, Consecutive, Metadata, DL));
+  }
+
   //===--------------------------------------------------------------------===//
   // RAII helpers.
   //===--------------------------------------------------------------------===//
