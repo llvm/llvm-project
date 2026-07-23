@@ -15,23 +15,17 @@
 #define LLVM_TRANSFORMS_UTILS_LOOPSPLITUTILS_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <memory>
 
 namespace llvm {
 
-class BasicBlock;
 class DominatorTree;
-class ICmpInst;
-class Instruction;
-class Loop;
-class LoopInfo;
-class PHINode;
 class SCEV;
-class SCEVAddRecExpr;
+class SCEVExpander;
 class ScalarEvolution;
-class Value;
 
 /// Splits a counted loop into a chain of per-partition sub-loops.
 ///
@@ -56,7 +50,7 @@ public:
   LLVM_ABI bool isLegal();
 
   /// Return the loop's induction variable. Valid only after isLegal() succeeds.
-  LLVM_ABI PHINode *getInductionVariable() const;
+  PHINode *getInductionVariable() const { return L->getInductionVariable(*SE); }
 
   /// Append an inclusive partition range [Start, End] in iteration order.
   /// Partitions must tile the whole space: first Start = induction start, each
@@ -88,8 +82,7 @@ public:
   /// \p PartitionIndex (0-based). Partition 0 maps values to themselves; a
   /// later partition returns the clone, or null if not cloned. Valid only after
   /// split().
-  LLVM_ABI Value *getPartitionValue(const Value *V,
-                                    unsigned PartitionIndex) const;
+  LLVM_ABI Value *getPartitionValue(Value *V, unsigned PartitionIndex) const;
 
   /// Return the original-to-clone value map for the partition at
   /// \p PartitionIndex, for callers that want to remap many values. Null for
@@ -140,7 +133,7 @@ private:
   /// Collect loop-carried and live-out values and split off the final exit.
   void collectEscapingValues(SplitState &S);
   /// Expand each partition's start and clamped end into the entry guard.
-  void expandPartitionBounds(SplitState &S);
+  void expandPartitionBounds(SplitState &S, SCEVExpander &Expander);
   /// Pass 1: clone each later partition's sub-loop and create its guard/exit.
   void clonePartitions(SplitState &S);
   /// Pass 2: emit each guard, clamp each latch, and chain the partitions.

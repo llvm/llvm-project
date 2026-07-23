@@ -52,6 +52,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -69,6 +70,7 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::SCEVPatternMatch;
 
 #define DEBUG_TYPE "loop-split-utils"
 
@@ -91,6 +93,9 @@ struct LoopSplitUtils::SplitState {
   /// loop-carried (feeds a later partition), live-out (used after the loop), or
   /// both.
   struct EscapingValue {
+    EscapingValue() = default;
+    EscapingValue(Value *Def) : Def(Def) {}
+
     /// The value as it exists in partition 0 (the original).
     Value *Def = nullptr;
     /// The carried header PHI in partition 0, or null if \c Def needs no
@@ -108,18 +113,12 @@ struct LoopSplitUtils::SplitState {
   /// Values that must survive across partitions (carried and/or live-out).
   SmallVector<EscapingValue, 8> Escaping;
 
-  EscapingValue &addEscaping(Value *Def) {
-    Escaping.emplace_back();
-    Escaping.back().Def = Def;
-    return Escaping.back();
-  }
+  EscapingValue &addEscaping(Value *Def) { return Escaping.emplace_back(Def); }
 };
 
 // Record a new partition with the given inclusive iteration range.
 void LoopSplitUtils::addPartition(const SCEV *Start, const SCEV *End) {
-  PartitionInfo &P = Partitions.emplace_back();
-  P.StartExpr = Start;
-  P.EndExpr = End;
+  Partitions.emplace_back(PartitionInfo{Start, End});
 }
 
 // Mark a partition so split() emits no entry guard for it.
@@ -138,22 +137,16 @@ LoopSplitUtils::getPartitionValueMap(unsigned PartitionIndex) const {
 }
 
 // Look up the counterpart of an original value in a given partition.
-Value *LoopSplitUtils::getPartitionValue(const Value *V,
+Value *LoopSplitUtils::getPartitionValue(Value *V,
                                          unsigned PartitionIndex) const {
   assert(PartitionIndex < getNumPartitions() && "partition index out of range");
   // Partition 0 reuses the original loop: every value maps to itself.
   if (PartitionIndex == 0)
-    return const_cast<Value *>(V);
+    return V;
   const ValueToValueMapTy *VMap = getPartitionValueMap(PartitionIndex);
   if (!VMap)
     return nullptr;
   return VMap->lookup(V);
-}
-
-// Return the loop's induction variable; recomputed from the loop rather than
-// cached (see LoopSplitUtils.h).
-PHINode *LoopSplitUtils::getInductionVariable() const {
-  return L->getInductionVariable(*SE);
 }
 
 // Find the induction variable and the latch operand it is compared against;
@@ -170,13 +163,15 @@ static const SCEVAddRecExpr *analyzeInduction(Loop *L, ScalarEvolution *SE,
   PHINode *Induction = L->getInductionVariable(*SE);
   if (!Induction)
     return nullptr;
-  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Induction));
-  if (!AR || !AR->isAffine())
+  const SCEV *IndSCEV = SE->getSCEV(Induction);
+  // Match an affine add-recurrence and capture its constant step; accept a unit
+  // step in either direction: +1 (ascending) or -1 (descending).
+  const SCEVConstant *Step;
+  if (!match(IndSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEVConstant(Step))))
     return nullptr;
-  // Accept a unit step in either direction: +1 (ascending) or -1 (descending).
-  const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
-  if (!Step || !(Step->getValue()->isOne() || Step->getValue()->isMinusOne()))
+  if (!Step->getValue()->isOne() && !Step->getValue()->isMinusOne())
     return nullptr;
+  const auto *AR = cast<SCEVAddRecExpr>(IndSCEV);
 
   // The induction's "next" value (i + 1), produced in the latch.
   auto *StepInst = dyn_cast<Instruction>(
@@ -261,11 +256,6 @@ bool LoopSplitUtils::isLegal() {
 // Transform
 //===----------------------------------------------------------------------===//
 
-// Clone of \p V from \p VMap, or \p V itself if it was not cloned.
-static Value *remapValue(ValueToValueMapTy &VMap, Value *V) {
-  return VMap.lookup_or(V, V);
-}
-
 // Latch "keep iterating" predicate (ascending </<=, descending >/>=); inclusive
 // when the latch compares the step value, strict when it compares the PHI.
 static ICmpInst::Predicate continuePredicate(bool Signed, bool Descending,
@@ -314,10 +304,18 @@ bool LoopSplitUtils::split() {
 
   collectEscapingValues(S);
   buildEntryGuard(S.OrigPreheader, S.EntryGuard, DT, LI);
-  expandPartitionBounds(S);
+
+  // Keep the expander (and its cleaner) alive for the whole transform: the
+  // bounds it materializes are consumed by the later phases. If we bail before
+  // committing, the cleaner reclaims the expanded instructions; on success we
+  // mark them used so they are kept.
+  SCEVExpander Expander(*SE, "ls");
+  SCEVExpanderCleaner ExpanderCleaner(Expander);
+  expandPartitionBounds(S, Expander);
   clonePartitions(S);
   chainPartitions(S);
   reconstructSSA(S);
+  ExpanderCleaner.markResultUsed();
   return true;
 }
 
@@ -399,10 +397,10 @@ static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
 
 // Materialize each partition's start and clamped end in the entry guard and
 // flag the partitions that are provably empty at compile time.
-void LoopSplitUtils::expandPartitionBounds(SplitState &S) {
+void LoopSplitUtils::expandPartitionBounds(SplitState &S,
+                                           SCEVExpander &Expander) {
   Type *IndTy = S.Induction->getType();
   Instruction *EntryGuardTerm = S.EntryGuard->getTerminator();
-  SCEVExpander Expander(*SE, "ls");
 
   // Expand all partition bounds in the entry guard, which dominates the whole
   // chain (a skipped partition bypasses the original preheader).
@@ -472,8 +470,8 @@ void LoopSplitUtils::clonePartitions(SplitState &S) {
       S.OuterLoop->addBasicBlockToLoop(Guardi, *LI);
     }
     // Placeholder terminators; both are re-pointed at the merge in pass 2.
-    IRBuilder<>(Exiti).CreateBr(S.FinalExit);
-    IRBuilder<>(Guardi).CreateBr(S.FinalExit);
+    UncondBrInst::Create(S.FinalExit, Exiti);
+    UncondBrInst::Create(S.FinalExit, Guardi);
 
     // Seed the clone's induction PHI with this partition's start value.
     auto *ClonedInduction = cast<PHINode>(VMap[S.Induction]);
@@ -483,10 +481,10 @@ void LoopSplitUtils::clonePartitions(SplitState &S) {
     P.Preheader = PHi;
     P.Exit = Exiti;
     P.SubLoop = PL;
-    P.LatchIndOp = remapValue(VMap, LatchIndOperand);
+    P.LatchIndOp = VMap.lookup_or(LatchIndOperand, LatchIndOperand);
 
     for (auto &EV : S.Escaping) {
-      EV.PerPartitionDef[I] = remapValue(VMap, EV.Def);
+      EV.PerPartitionDef[I] = VMap.lookup_or(EV.Def, EV.Def);
       if (EV.CarriedHeaderPHI)
         EV.PerPartitionPHI[I] = cast<PHINode>(VMap[EV.CarriedHeaderPHI]);
     }
