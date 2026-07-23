@@ -75,10 +75,10 @@ extern int z;
 # 44 "A.c"
 # 49 "A.c"
 
-// CHECK: # 50 "a\\n.c"
+// CHECK: # 50 "a\n.c"
 # 50 "a\n.c"
 
-// CHECK: # 1 "c:\\moo\\zar\\haz.h"
+// CHECK: # 1 "c:\moo\zar\haz.h"
 #line 1 "c:\moo\zar\haz.h"
 
 // CHECK # 1 "original\x12source.c"
