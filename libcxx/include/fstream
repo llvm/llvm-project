@@ -341,43 +341,7 @@ private:
   state_type __st_;
   state_type __st_last_;
   ios_base::openmode __om_;
-  // There have been no file operations yet, which allows setting unbuffered
-  // I/O mode.
-  static const ios_base::openmode __no_io_operations = ios_base::trunc;
-  // Unbuffered I/O mode has been requested.
-  static const ios_base::openmode __use_unbuffered_io = ios_base::ate;
-  // Used to track the currently used mode and track whether the output should
-  // be unbuffered.
-  // [filebuf.virtuals]/12
-  //   If setbuf(0, 0) is called on a stream before any I/O has occurred on
-  //   that stream, the stream becomes unbuffered. Otherwise the results are
-  //   implementation-defined.
-  // This allows calling setbuf(0, 0)
-  // - before opening a file,
-  // - after opening a file, before
-  //   - a read
-  //   - a write
-  //   - a seek.
-  // Note that opening a file with ios_base::ate does a seek operation.
-  // Normally underflow, overflow, and sync change this flag to ios_base::in,
-  // ios_base_out, or 0.
-  //
-  // The ios_base::trunc and ios_base::ate flags are not used in __cm_. They
-  // are used to track the state of the unbuffered request. For readability
-  // they have the aliases __no_io_operations and __use_unbuffered_io
-  // respectively.
-  //
-  // The __no_io_operations and __use_unbuffered_io flags are used in the
-  // following way:
-  // - __no_io_operations is set upon construction to indicate the unbuffered
-  //   state can be set.
-  // - When requesting unbuffered output:
-  //   - If the file is open it sets the mode.
-  //   - Else places a request by adding the __use_unbuffered_io flag.
-  // - When a file is opened it checks whether both __no_io_operations and
-  //   __use_unbuffered_io are set. If so switches to unbuffered mode.
-  // - All file I/O operations change the mode effectively clearing the
-  //   __no_io_operations and __use_unbuffered_io flags.
+  // Used to track the currently used mode.
   ios_base::openmode __cm_;
   bool __owns_eb_;
   bool __owns_ib_;
@@ -400,11 +364,6 @@ private:
       return nullptr;
 
     __om_ = __mode;
-    if (__cm_ == (__no_io_operations | __use_unbuffered_io)) {
-      std::setbuf(__file_, nullptr);
-      __cm_ = 0;
-    }
-
     if (__mode & ios_base::ate) {
       __cm_ = 0;
       if (fseek(__file_, 0, SEEK_END)) {
@@ -415,18 +374,6 @@ private:
     }
 
     return this;
-  }
-
-  // If the file is already open, switch to unbuffered mode. Otherwise, record
-  // the request to use unbuffered mode so that we use that mode when we
-  // eventually open the file.
-  _LIBCPP_HIDE_FROM_ABI void __request_unbuffered_mode() {
-    if (__file_) {
-      std::setbuf(__file_, nullptr);
-      __cm_ = 0;
-    } else {
-      __cm_ = __no_io_operations | __use_unbuffered_io;
-    }
   }
 
   _LIBCPP_HIDE_FROM_ABI typename traits_type::int_type __overflow_failed() {
@@ -451,7 +398,7 @@ basic_filebuf<_CharT, _Traits>::basic_filebuf()
       __st_(),
       __st_last_(),
       __om_(0),
-      __cm_(__no_io_operations),
+      __cm_(),
       __owns_eb_(false),
       __owns_ib_(false),
       __always_noconv_(false) {
@@ -742,7 +689,12 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char*
   if (!__mdstr)
     return nullptr;
 
-  return __do_open(std::fopen(__s, __mdstr), __mode);
+  if (FILE* __file = std::fopen(__s, __mdstr)) {
+    // We already buffer at the C++ level - no need to buffer in the C stream as well
+    std::setbuf(__file, nullptr);
+    return __do_open(__file, __mode);
+  }
+  return nullptr;
 }
 
 template <class _CharT, class _Traits>
@@ -793,7 +745,7 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::close() {
     // since the user may re-open the stream.
     this->setg(nullptr, nullptr, nullptr);
     this->setp(nullptr, nullptr);
-    __cm_ = __no_io_operations;
+    __cm_ = 0;
   }
   return __rt;
 }
@@ -949,9 +901,7 @@ template <class _CharT, class _Traits>
 basic_streambuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::setbuf(char_type* __s, streamsize __n) {
   this->setg(nullptr, nullptr, nullptr);
   this->setp(nullptr, nullptr);
-  // Calling setbuf(nullptr, 0) before any i/o operation switches the stream to unbuffered mode
-  if (__cm_ == __no_io_operations && __s == nullptr && __n == 0)
-    __request_unbuffered_mode();
+  __cm_ = 0;
   if (__owns_eb_)
     delete[] __extbuf_;
   if (__owns_ib_)
