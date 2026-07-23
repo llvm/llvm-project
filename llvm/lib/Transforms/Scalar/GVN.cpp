@@ -2017,9 +2017,47 @@ bool GVNPass::performLoopLoadPRE(LoadInst *Load,
   if (LoadPtr->canBeFreed())
     return false;
 
-  // TODO: Support critical edge splitting if blocker has more than 1 successor.
+  // eliminatePartiallyRedundantLoad() inserts the reload at the end of the
+  // chosen in-loop block. When that block has a single successor there is no
+  // critical edge and the reload can go there directly. When it has several
+  // successors but stays in the loop on all of them, the reload still only
+  // runs inside the loop, so LoopBlock is fine. The only problematic case is a
+  // successor that leaves the loop: inserting in LoopBlock would then run the
+  // reload on the exit edge too. Redirect it onto the in-loop edge by splitting
+  // that critical edge so the reload only runs on the path back to the header.
+  BasicBlock *InsertBlock = LoopBlock;
+  if (LoopBlock->getTerminator()->getNumSuccessors() != 1) {
+    BasicBlock *InLoopSucc = nullptr;
+    bool MultipleInLoopSucc = false;
+    bool ExitsLoop = false;
+    for (BasicBlock *Succ : successors(LoopBlock)) {
+      if (!L->contains(Succ)) {
+        ExitsLoop = true;
+        continue;
+      }
+      if (InLoopSucc)
+        MultipleInLoopSucc = true;
+      else
+        InLoopSucc = Succ;
+    }
+
+    if (ExitsLoop) {
+      // A single edge split cannot keep the reload off the exit path when
+      // there is more than one in-loop successor, and there must be one to
+      // split.
+      if (MultipleInLoopSucc || !InLoopSucc)
+        return false;
+
+      // splitCriticalEdges() returns nullptr when the edge cannot be split
+      // (e.g. an indirectbr terminator or an EH-pad successor).
+      InsertBlock = splitCriticalEdges(LoopBlock, InLoopSucc);
+      if (!InsertBlock)
+        return false;
+    }
+  }
+
   MapVector<BasicBlock *, Value *> AvailableLoads;
-  AvailableLoads[LoopBlock] = LoadPtr;
+  AvailableLoads[InsertBlock] = LoadPtr;
   AvailableLoads[Preheader] = LoadPtr;
 
   LLVM_DEBUG(dbgs() << "GVN REMOVING PRE LOOP LOAD: " << *Load << '\n');
