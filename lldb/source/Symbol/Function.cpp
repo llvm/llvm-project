@@ -282,28 +282,19 @@ bool Function::GetStartLineTableEntry(LineEntry &line_entry, uint32_t *index) {
     return true;
   }
 
-  // The entry point has no line row, so take the first row inside the function.
+  // The entry point has no line row (e.g. a WebAssembly function's
+  // locals-declaration header), so take the first row inside the function.
   AddressRange entry_range;
   if (!m_block.GetRangeContainingAddress(m_address, entry_range))
     return false;
-  const addr_t func_start_addr = m_address.GetFileAddress();
-  const addr_t func_end_addr =
-      entry_range.GetBaseAddress().GetFileAddress() + entry_range.GetByteSize();
-  const uint32_t line_table_size = line_table->GetSize();
-  for (uint32_t idx = 0; idx < line_table_size; ++idx) {
-    LineEntry entry;
-    bool success = line_table->GetLineEntryAtIndex(idx, entry);
-    assert(success && "idx is within the line table size");
-    UNUSED_IF_ASSERT_DISABLED(success);
-    const addr_t entry_addr = entry.range.GetBaseAddress().GetFileAddress();
-    if (entry_addr >= func_start_addr && entry_addr < func_end_addr) {
-      line_entry = entry;
-      if (index)
-        *index = idx;
-      return true;
-    }
-  }
-  return false;
+  auto [first, last] = line_table->GetLineEntryIndexRange(entry_range);
+  if (first == last)
+    return false;
+  if (!line_table->GetLineEntryAtIndex(first, line_entry))
+    return false;
+  if (index)
+    *index = first;
+  return true;
 }
 
 void Function::GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
