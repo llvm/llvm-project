@@ -1846,8 +1846,7 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
       if (SubReg == 0 || !MO.readsReg())
         continue;
 
-      SlotIndex ReadIdx =
-          LIS->getInstructionIndex(MI).getRegSlot(true);
+      SlotIndex ReadIdx = LIS->getInstructionIndex(MI).getRegSlot(true);
       if (DstLI.hasSubRanges()) {
         addUndefFlag(DstLI, ReadIdx, MO, SubReg);
       } else if (!DstLI.Query(ReadIdx).valueIn()) {
