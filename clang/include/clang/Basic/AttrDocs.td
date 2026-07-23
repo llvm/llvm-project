@@ -1215,8 +1215,8 @@ whose underlying type has a function prototype.
 
 The parameter is given by its index in the list of formal parameters; the first
 parameter has index 1 unless the function is a C++ non-static member function,
-in which case the first parameter has index 2 to account for the implicit
-``this`` parameter.
+in which case the first parameter has index 2 to account for the implicit ``this``
+parameter.
 
 .. code-block:: c++
 
