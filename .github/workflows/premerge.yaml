@@ -278,10 +278,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 2
-      - name: Install Ninja, CMake, Python, and sccache
+      - name: Install Ninja, CMake, and sccache
         run: |
-          brew install ninja cmake python
+          brew install ninja cmake
           command -v sccache >/dev/null || brew install sccache
+      - name: Set up Python venv
+        run: |
+          python3 -m venv "${RUNNER_TEMP}/venv"
+          echo "${RUNNER_TEMP}/venv/bin" >> "$GITHUB_PATH"
       - name: Build and Test
         timeout-minutes: 240
         env:
@@ -297,7 +301,7 @@ jobs:
           mkdir -p artifacts
           SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server
 
-          ./.ci/monolithic-macos.sh "${{ needs.premerge-compute-macos.outputs.macos-projects }}" "${{ needs.premerge-compute-macos.outputs.macos-check-targets }}"
+          ./.ci/monolithic-macos.sh "${PROJECTS}" "${CHECK_TARGETS}"
       - name: Upload Artifacts
         # In some cases, Github will fail to upload the artifact. We want to
         # continue anyways as a failed artifact upload is an infra failure, not
