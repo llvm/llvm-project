@@ -1,5 +1,4 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(acc-cg-to-gpu))" | FileCheck %s
-// RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(acc-cg-to-gpu{align-thread-x-reductions=false}))" | FileCheck %s --check-prefix=PARTIAL
 
 // A per-thread array accumulator (memref.alloca) for a block+thread reduction is
 // reduced element-by-element across the parallel dimensions with gpu.all_reduce -
@@ -257,12 +256,12 @@ func.func @rank_two_partial_bounds_strided_layout() {
   return
 }
 
-// PARTIAL-LABEL: func.func @partial_thread_x_reduction
-// PARTIAL: %[[C16:.*]] = arith.constant 16 : index
-// PARTIAL-NOT: arith.constant 31 : index
-// PARTIAL: gpu.launch
-// PARTIAL-SAME: threads({{.*}}) in (%{{.*}} = %[[C16]],
-// PARTIAL: gpu.all_reduce add
+// CHECK-LABEL: func.func @partial_thread_x_reduction
+// CHECK: %[[C16:.*]] = arith.constant 16 : index
+// CHECK-NOT: arith.constant 31 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C16]],
+// CHECK: gpu.all_reduce add
 func.func @partial_thread_x_reduction() {
   %c1 = arith.constant 1 : index
   %c16 = arith.constant 16 : index
@@ -279,10 +278,10 @@ func.func @partial_thread_x_reduction() {
   return
 }
 
-// PARTIAL-LABEL: func.func @thread_y_reduction_still_aligned
-// PARTIAL: %[[C32:.*]] = arith.constant 32 : index
-// PARTIAL: gpu.launch
-// PARTIAL-SAME: threads({{.*}}) in (%{{.*}} = %[[C32]],
+// CHECK-LABEL: func.func @thread_y_reduction_still_aligned
+// CHECK: %[[C32:.*]] = arith.constant 32 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C32]],
 func.func @thread_y_reduction_still_aligned() {
   %c1 = arith.constant 1 : index
   %c16 = arith.constant 16 : index
@@ -302,10 +301,10 @@ func.func @thread_y_reduction_still_aligned() {
 // A ThreadX-only reduction still needs aligned rows when ThreadY is greater
 // than one, because a physical subgroup must not contain multiple logical rows.
 //
-// PARTIAL-LABEL: func.func @thread_x_reduction_with_thread_y_width
-// PARTIAL: %[[C32_ROWS:.*]] = arith.constant 32 : index
-// PARTIAL: gpu.launch
-// PARTIAL-SAME: threads({{.*}}) in (%{{.*}} = %[[C32_ROWS]],
+// CHECK-LABEL: func.func @thread_x_reduction_with_thread_y_width
+// CHECK: %[[C32_ROWS:.*]] = arith.constant 32 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C32_ROWS]],
 func.func @thread_x_reduction_with_thread_y_width() {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -326,11 +325,11 @@ func.func @thread_x_reduction_with_thread_y_width() {
 
 // ThreadZ rows have the same subgroup-packing constraint as ThreadY rows.
 //
-// PARTIAL-LABEL: func.func @thread_x_reduction_with_thread_z_width
-// PARTIAL: %[[C352_Z_ROWS:.*]] = arith.constant 352 : index
-// PARTIAL: %[[C2_Z_ROWS:.*]] = arith.constant 2 : index
-// PARTIAL: gpu.launch
-// PARTIAL-SAME: threads({{.*}}) in (%{{.*}} = %[[C352_Z_ROWS]], %{{.*}} = %{{.*}}, %{{.*}} = %[[C2_Z_ROWS]])
+// CHECK-LABEL: func.func @thread_x_reduction_with_thread_z_width
+// CHECK: %[[C352_Z_ROWS:.*]] = arith.constant 352 : index
+// CHECK: %[[C2_Z_ROWS:.*]] = arith.constant 2 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C352_Z_ROWS]], %{{.*}} = %{{.*}}, %{{.*}} = %[[C2_Z_ROWS]])
 func.func @thread_x_reduction_with_thread_z_width() {
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index

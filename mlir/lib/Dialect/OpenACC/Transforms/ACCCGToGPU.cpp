@@ -1019,7 +1019,6 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     // - Per-row workgroup barriers require blockDim.x aligned to subgroupSize
     bool isShuffleEnabled = false;
     bool alignThreadXReduction =
-        options.alignThreadXReductions ||
         getConstantIntValue(launch.getBlockSizeY()) != 1 ||
         getConstantIntValue(launch.getBlockSizeZ()) != 1;
 
@@ -3858,7 +3857,6 @@ public:
     options.maxWorkgroupSharedMemory = maxWorkgroupSharedMemory;
     options.maxThreadPrivateStack = maxThreadPrivateStack;
     options.subgroupSize = subgroupSize;
-    options.alignThreadXReductions = alignThreadXReductions;
 
     // Try to get cached parent analysis first, fall back to local analysis.
     std::optional<std::reference_wrapper<acc::OpenACCSupport>> cachedAnalysis =
