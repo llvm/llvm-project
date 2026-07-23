@@ -1645,9 +1645,9 @@ public:
   /// `tileOrderControlFn` is set, returns the preferred slice according to the
   /// callback. Otherwise pops from the front (FIFO). The worklist must be
   /// non-empty.
-  tensor::ExtractSliceOp popNext(
-    const scf::SCFTileAndFuseOptions::TileOrderControlFnTy
-        &tileOrderControlFn);
+  tensor::ExtractSliceOp
+  popNext(const scf::SCFTileAndFuseOptions::TileOrderControlFnTy
+              &tileOrderControlFn);
 
   /// The worklist for this transformation keeps track of the slices to visit
   /// next for fusion.
@@ -1716,21 +1716,21 @@ void SliceTrackingListener::notifyOperationReplaced(Operation *op,
 }
 
 tensor::ExtractSliceOp SliceTrackingListener::popNext(
-  const scf::SCFTileAndFuseOptions::TileOrderControlFnTy
-      &tileOrderControlFn) {
-assert(!worklist.empty() && "expected non-empty worklist");
-if (!tileOrderControlFn) {
-  auto slice = worklist.front();
-  worklist.pop_front();
+    const scf::SCFTileAndFuseOptions::TileOrderControlFnTy
+        &tileOrderControlFn) {
+  assert(!worklist.empty() && "expected non-empty worklist");
+  if (!tileOrderControlFn) {
+    auto slice = worklist.front();
+    worklist.pop_front();
+    return slice;
+  }
+  auto it = llvm::min_element(
+      worklist, [&](tensor::ExtractSliceOp lhs, tensor::ExtractSliceOp rhs) {
+        return tileOrderControlFn(lhs, rhs);
+      });
+  auto slice = *it;
+  worklist.erase(it);
   return slice;
-}
-auto it = llvm::min_element(worklist, [&](tensor::ExtractSliceOp lhs,
-                                          tensor::ExtractSliceOp rhs) {
-  return tileOrderControlFn(lhs, rhs);
-});
-auto slice = *it;
-worklist.erase(it);
-return slice;
 }
 
 //===----------------------------------------------------------------------===//

@@ -60,13 +60,12 @@ static llvm::SmallDenseSet<Operation *> collectTiledAndFusedOps(Operation *op) {
 /// Apply a tile and fuse transformation to all payload ops and store both the
 /// tiled operation as well as the created tile loops.
 template <typename Range>
-static LogicalResult
-applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
-                      Range &&payloadOps, unsigned numLoops,
-                      scf::SCFTilingOptions tilingOptions,
-                      TransformResults &transformResults,
-                      scf::SCFTileAndFuseOptions::TileOrderControlFnTy
-                          tileOrderControlFn = nullptr) {
+static LogicalResult applyTileAndFuseToAll(
+    RewriterBase &rewriter, Operation *transformOp, Range &&payloadOps,
+    unsigned numLoops, scf::SCFTilingOptions tilingOptions,
+    TransformResults &transformResults,
+    scf::SCFTileAndFuseOptions::TileOrderControlFnTy tileOrderControlFn =
+        nullptr) {
   SmallVector<Operation *> tiledOps;
   SmallVector<SmallVector<Operation *>> loopOps(numLoops);
 
