@@ -103,7 +103,7 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyAsmPrinterPass(PR);
   initializeWebAssemblySetP2AlignOperandsLegacyPass(PR);
   initializeWebAssemblyReplacePhysRegsLegacyPass(PR);
-  initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
+  initializeWebAssemblyOptimizeLiveIntervalsLegacyPass(PR);
   initializeWebAssemblyMemIntrinsicResultsPass(PR);
   initializeWebAssemblyRegStackifyPass(PR);
   initializeWebAssemblyRegColoringPass(PR);
@@ -461,7 +461,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Depend on LiveIntervals and perform some optimizations on it.
-    addPass(createWebAssemblyOptimizeLiveIntervals());
+    addPass(createWebAssemblyOptimizeLiveIntervalsLegacyPass());
 
     // Prepare memory intrinsic calls for register stackifying.
     addPass(createWebAssemblyMemIntrinsicResults());

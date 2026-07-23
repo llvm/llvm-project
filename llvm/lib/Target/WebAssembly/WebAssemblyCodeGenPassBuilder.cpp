@@ -194,7 +194,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
   // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Depend on LiveIntervals and perform some optimizations on it.
-    // TODO(boomanaiden154): WebAssemblyOptimizeLiveIntervals
+    addMachineFunctionPass(WebAssemblyOptimizeLiveIntervalsPass(), PMW);
 
     // Prepare memory intrinsic calls for register stackifying.
     // TODO(boomanaiden154): WebAssemblyMemIntrinsicResults
