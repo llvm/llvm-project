@@ -2069,12 +2069,12 @@ tryCombineFromSVBoolBinOp(InstCombiner &IC, IntrinsicInst &II) {
 
   Value *NarrowBinOpOp1 =
       IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, BinOpOp1);
-  Value *NarrowedBinOp2 =
-      BinOpOp1 == BinOpOp2
-          ? NarrowBinOpOp1
-          : IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, BinOpOp2);
+  Value *NarrowBinOpOp2 = NarrowBinOpOp1;
+  if (BinOpOp1 != BinOpOp2)
+    NarrowBinOpOp2 =
+        IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, BinOpOp2);
   Value *NarrowedBinOp = IC.Builder.CreateIntrinsic(
-      BinOpIID, Ty, {NarrowBinOpPred, NarrowBinOpOp1, NarrowedBinOp2});
+      BinOpIID, Ty, {NarrowBinOpPred, NarrowBinOpOp1, NarrowBinOpOp2});
   return IC.replaceInstUsesWith(II, NarrowedBinOp);
 }
 
