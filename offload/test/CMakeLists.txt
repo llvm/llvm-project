@@ -61,11 +61,16 @@ configure_lit_site_cfg(
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.cfg.py)
 
+set(ADD_CHECK_OFFLOAD_ARGS "")
+if(NOT OFFLOAD_RUN_UNITTESTS_BY_DEFAULT)
+  set(ADD_CHECK_OFFLOAD_ARGS "EXCLUDE_FROM_CHECK_ALL")
+endif()
+
 add_offload_testsuite(check-offload
   "Running offload tests"
   ${LIBOMPTARGET_LIT_TESTSUITES}
   ${CMAKE_CURRENT_BINARY_DIR}/unit
-  EXCLUDE_FROM_CHECK_ALL
+  ${ADD_CHECK_OFFLOAD_ARGS}
   DEPENDS ${OFFLOAD_TOOLS} omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
           LLVMOffload OffloadUnitTests
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})

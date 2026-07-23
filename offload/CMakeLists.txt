@@ -64,6 +64,7 @@ if(WIN32)
 endif()
 
 option(OFFLOAD_INCLUDE_TESTS "Generate and build offload tests." ${LLVM_INCLUDE_TESTS})
+option(OFFLOAD_RUN_UNITTESTS_BY_DEFAULT "Run offload unit tests as part of check-all." OFF)
 
 # Add path for custom modules
 list(INSERT CMAKE_MODULE_PATH 0
