@@ -246,12 +246,12 @@ LLVM_LIBC_HEADERS = [
     for info in LLVM_LIBC_HEADERS
 ]
 
-# needed for startup and VDSO. Doesn't get placed in /include so is handled separately.
+# needed for startup and VDSO.
 libc_generated_header(
-    name = "hdr_elf_proxy_h",
-    hdr = "staging/hdr/elf_proxy.h",
+    name = "include_proxy_elf_proxy_h",
+    hdr = "staging/include/proxy/elf_proxy.h",
     proxy = True,
-    yaml_template = "include/elf.yaml",
+    yaml_template = "include/proxy/elf_proxy.yaml",
 )
 
 # Static headers that need to be in staging/include
@@ -286,7 +286,7 @@ STATIC_AND_CONDITIONAL_HEADERS = STATIC_HEADERS + ["include/llvm-libc-macros/_LI
 
 cc_library(
     name = "public_headers",
-    hdrs = [header.target_name for header in LLVM_LIBC_HEADERS],
+    hdrs = [header.target_name for header in LLVM_LIBC_HEADERS] + [":include_proxy_elf_proxy_h"],
     includes = ["staging/include"],
     textual_hdrs = ["staging/" + f for f in STATIC_AND_CONDITIONAL_HEADERS],
     deps = [
@@ -617,9 +617,7 @@ libc_support_library(
 
 libc_support_library(
     name = "hdr_elf_proxy",
-    hdrs = ["staging/hdr/elf_proxy.h"],
-    includes = ["staging"],
-    deps = [":hdr_elf_proxy_h"],
+    hdrs = ["hdr/elf_proxy.h"],
 )
 
 libc_support_library(
