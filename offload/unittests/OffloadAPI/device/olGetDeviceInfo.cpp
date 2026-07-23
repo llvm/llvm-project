@@ -201,12 +201,19 @@ OL_DEVICE_INFO_TEST_VALUE_GT(NativeVectorWidthFloat, uint32_t,
                              OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT, 0);
 OL_DEVICE_INFO_TEST_VALUE_GT(NativeVectorWidthDouble, uint32_t,
                              OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE, 0);
+OL_DEVICE_INFO_TEST_SUCCESS(SingleFPSupport, bool,
+                            OL_DEVICE_INFO_SINGLE_FP_SUPPORT);
+OL_DEVICE_INFO_TEST_SUCCESS(DoubleFPSupport, bool,
+                            OL_DEVICE_INFO_DOUBLE_FP_SUPPORT);
+OL_DEVICE_INFO_TEST_SUCCESS(HalfFPSupport, bool,
+                            OL_DEVICE_INFO_HALF_FP_SUPPORT);
 OL_DEVICE_INFO_TEST_SUCCESS(NativeVectorWidthHalf, uint32_t,
                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF);
 OL_DEVICE_INFO_TEST_VALUE_GT(MaxClockFrequency, uint32_t,
                              OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY, 0);
 OL_DEVICE_INFO_TEST_VALUE_GT(MemoryClockRate, uint32_t,
                              OL_DEVICE_INFO_MEMORY_CLOCK_RATE, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(NumLanes, uint32_t, OL_DEVICE_INFO_NUM_LANES, 0);
 OL_DEVICE_INFO_TEST_VALUE_GT(AddressBits, uint32_t, OL_DEVICE_INFO_ADDRESS_BITS,
                              0);
 OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(MaxMemAllocSize, uint64_t,

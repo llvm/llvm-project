@@ -138,6 +138,10 @@ public:
   /// value.
   void SetGenericValue(SBScriptObject value);
 
+#ifndef SWIG
+  void CopyImpl(lldb_private::StructuredDataImpl &new_impl);
+#endif
+
 protected:
   friend class SBAttachInfo;
   friend class SBCommandReturnObject;
@@ -156,6 +160,7 @@ protected:
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
   friend class SBCommandInterpreter;
+  friend class SBInstruction;
 
   SBStructuredData(const lldb_private::StructuredDataImpl &impl);
 

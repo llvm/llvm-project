@@ -49,11 +49,11 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[TMP6]] = add <16 x i32> [[VEC_PHI4]], [[WIDE_LOAD7]]
 ; CHECK-NEXT:    [[TMP7]] = add <16 x i32> [[VEC_PHI5]], [[WIDE_LOAD8]]
 ; CHECK-NEXT:    [[TMP8]] = add <16 x i32> [[VEC_PHI6]], [[WIDE_LOAD9]]
-; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <16 x i32> [[TMP7]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <16 x i32> [[TMP8]], [[BIN_RDX10]]
@@ -76,11 +76,11 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX14]]
 ; CHECK-NEXT:    [[WIDE_LOAD16:%.*]] = load <8 x i32>, ptr [[TMP12]], align 8, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP13]] = add <8 x i32> [[VEC_PHI15]], [[WIDE_LOAD16]]
-; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT17]] = add nuw i64 [[INDEX14]], 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT17]], [[N_VEC13]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META6]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP13]])
 ; CHECK-NEXT:    [[CMP_N18:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC13]]
 ; CHECK-NEXT:    br i1 [[CMP_N18]], label %[[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
@@ -106,7 +106,7 @@ entry:
   %ntrunc = trunc i64 %n to i32
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
   %t0 = phi i32 [ %t3, %for.body ], [ 0, %entry ]
   %t1 = getelementptr inbounds i32, ptr %b, i64 %i
@@ -117,7 +117,7 @@ for.body:                                         ; preds = %for.body, %entry
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   %t4 = phi i32 [ %t3, %for.body ]
   ret i32 %t4
 }
@@ -185,25 +185,25 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x i32>, ptr [[TMP4]], align 8, !alias.scope [[META11]], !noalias [[META14]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD15]], [[BROADCAST_SPLAT15]]
 ; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT13]], ptr [[TMP4]], align 4, !alias.scope [[META11]], !noalias [[META14]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP5]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF16:.*]], label %[[PRED_STORE_CONTINUE17:.*]]
 ; CHECK:       [[PRED_STORE_IF16]]:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE17]]
 ; CHECK:       [[PRED_STORE_CONTINUE17]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP5]], i32 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP5]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF18:.*]], label %[[PRED_STORE_CONTINUE19:.*]]
 ; CHECK:       [[PRED_STORE_IF18]]:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE19]]
 ; CHECK:       [[PRED_STORE_CONTINUE19]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP5]], i32 3
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP5]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF20:.*]], label %[[PRED_STORE_CONTINUE21]]
 ; CHECK:       [[PRED_STORE_IF20]]:
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META14]]
@@ -239,7 +239,7 @@ entry:
   %ntrunc = trunc i64 %n to i32
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i64 [ %i.next, %latch ], [ 0, %entry ]
   %t1 = getelementptr inbounds i32, ptr %b, i64 %i
   %t2 = load i32, ptr %t1, align 8
@@ -256,7 +256,7 @@ latch:
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -369,7 +369,7 @@ entry:
   %ntrunc = trunc i64 %n to i32
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %i = phi i64 [ %i.next, %latch ], [ 0, %entry ]
   %t1 = getelementptr inbounds i32, ptr %b, i64 %i
   %t2 = load i32, ptr %t1, align 8
@@ -388,7 +388,7 @@ latch:
   %cond = icmp slt i64 %i.next, %n
   br i1 %cond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 

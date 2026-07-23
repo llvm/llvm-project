@@ -11,17 +11,18 @@
 
 #include "DAP.h"
 #include "DAPError.h"
-#include "DAPLog.h"
+#include "JSONUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include <memory>
 #include <optional>
 #include <type_traits>
-#include <variant>
 #include <vector>
 
 template <typename T> struct is_optional : std::false_type {};
@@ -64,6 +65,10 @@ protected:
   /// LLDB_DAP_WELCOME_MESSAGE is defined.
   void PrintWelcomeMessage() const;
 
+  /// Prints an introduction to the debug console and information about the
+  /// debug session.
+  void PrintIntroductionMessage() const;
+
   // Takes a LaunchRequest object and launches the process, also handling
   // runInTerminal if applicable. It doesn't do any of the additional
   // initialization and bookkeeping stuff that is needed for `request_launch`.
@@ -76,17 +81,21 @@ protected:
 
   /// @}
 
-  DAP &dap;
-};
+  /// Builds an error response from the given error.
+  void BuildErrorResponse(llvm::Error, protocol::Response &) const;
 
-/// FIXME: Migrate callers to typed RequestHandler for improved type handling.
-class LegacyRequestHandler : public BaseRequestHandler {
-  using BaseRequestHandler::BaseRequestHandler;
-  virtual void operator()(const llvm::json::Object &request) const = 0;
-  void operator()(const protocol::Request &request) const override {
-    auto req = toJSON(request);
-    (*this)(*req.getAsObject());
-  }
+  /// Sends an error response from the current handler.
+  void SendError(llvm::Error, protocol::Response &) const;
+
+  /// Sends a successful response, with an optional body from the current
+  /// handler.
+  void SendSuccess(protocol::Response &,
+                   std::optional<llvm::json::Value> = std::nullopt) const;
+
+  /// Send a response to the client.
+  void Send(protocol::Response &response) const;
+
+  DAP &dap;
 };
 
 template <typename Args>
@@ -133,42 +142,27 @@ class RequestHandler : public BaseRequestHandler {
     response.command = request.command;
 
     llvm::Expected<Args> arguments = parseArgs<Args>(request);
-    if (llvm::Error err = arguments.takeError()) {
-      HandleErrorResponse(std::move(err), response);
-      dap.Send(response);
-      return;
-    }
+    if (llvm::Error err = arguments.takeError())
+      return SendError(std::move(err), response);
 
     if constexpr (std::is_same_v<Resp, llvm::Error>) {
-      if (llvm::Error err = Run(*arguments)) {
-        HandleErrorResponse(std::move(err), response);
-      } else {
-        response.success = true;
-      }
+      if (llvm::Error err = Run(*arguments))
+        SendError(std::move(err), response);
+      else
+        SendSuccess(response);
     } else {
       Resp body = Run(*arguments);
-      if (llvm::Error err = body.takeError()) {
-        HandleErrorResponse(std::move(err), response);
-      } else {
-        response.success = true;
-        response.body = std::move(*body);
-      }
+      if (llvm::Error err = body.takeError())
+        SendError(std::move(err), response);
+      else
+        SendSuccess(response, std::move(*body));
     }
-
-    // Mark the request as 'cancelled' if the debugger was interrupted while
-    // evaluating this handler.
-    if (dap.debugger.InterruptRequested()) {
-      dap.debugger.CancelInterruptRequest();
-      response.success = false;
-      response.message = protocol::eResponseMessageCancelled;
-      response.body = std::nullopt;
-    }
-
-    dap.Send(response);
 
     PostRun();
   };
 
+protected:
+  /// Run the request handler.
   virtual Resp Run(const Args &) const = 0;
 
   /// A hook for a request handler to run additional operations after the
@@ -177,48 +171,49 @@ class RequestHandler : public BaseRequestHandler {
   /// *NOTE*: PostRun will be invoked even if the `Run` operation returned an
   /// error.
   virtual void PostRun() const {};
+};
 
-  void HandleErrorResponse(llvm::Error err,
-                           protocol::Response &response) const {
-    response.success = false;
-    llvm::handleAllErrors(
-        std::move(err),
-        [&](const NotStoppedError &err) {
-          response.message = lldb_dap::protocol::eResponseMessageNotStopped;
-        },
-        [&](const DAPError &err) {
-          protocol::ErrorMessage error_message;
-          error_message.sendTelemetry = false;
-          error_message.format = err.getMessage();
-          error_message.showUser = err.getShowUser();
-          error_message.id = err.convertToErrorCode().value();
-          error_message.url = err.getURL();
-          error_message.urlLabel = err.getURLLabel();
-          protocol::ErrorResponseBody body;
-          body.error = error_message;
-          response.body = body;
-        },
-        [&](const llvm::ErrorInfoBase &err) {
-          protocol::ErrorMessage error_message;
-          error_message.showUser = true;
-          error_message.sendTelemetry = false;
-          error_message.format = err.message();
-          error_message.id = err.convertToErrorCode().value();
-          protocol::ErrorResponseBody body;
-          body.error = error_message;
-          response.body = body;
-        });
-  }
+/// A specialized base class for attach and launch requests that delays sending
+/// the response until 'configurationDone' is received.
+template <typename Args, typename Resp>
+class DelayedResponseRequestHandler : public BaseRequestHandler {
+  using BaseRequestHandler::BaseRequestHandler;
+
+  void operator()(const protocol::Request &request) const override {
+    // Only support void responses for now.
+    static_assert(std::is_same_v<Resp, llvm::Error>);
+
+    protocol::Response response;
+    response.request_seq = request.seq;
+    response.command = request.command;
+
+    llvm::Expected<Args> arguments = parseArgs<Args>(request);
+    if (llvm::Error err = arguments.takeError())
+      return SendError(std::move(err), response);
+
+    BuildErrorResponse(Run(*arguments), response);
+
+    dap.on_configuration_done = [this, response]() mutable { Send(response); };
+
+    // The 'configurationDone' request is not sent until after 'initialized'
+    // triggers the breakpoints being sent and 'configurationDone' is the last
+    // message in the chain.
+    dap.SendJSON(CreateInitializedEventObject(dap.target));
+  };
+
+protected:
+  /// Run the request handler.
+  virtual Resp Run(const Args &) const = 0;
 };
 
 class AttachRequestHandler
-    : public RequestHandler<protocol::AttachRequestArguments,
-                            protocol::AttachResponse> {
+    : public DelayedResponseRequestHandler<protocol::AttachRequestArguments,
+                                           protocol::AttachResponse> {
 public:
-  using RequestHandler::RequestHandler;
+  using DelayedResponseRequestHandler::DelayedResponseRequestHandler;
   static llvm::StringLiteral GetCommand() { return "attach"; }
-  llvm::Error Run(const protocol::AttachRequestArguments &args) const override;
-  void PostRun() const override;
+  protocol::AttachResponse
+  Run(const protocol::AttachRequestArguments &args) const override;
 };
 
 class BreakpointLocationsRequestHandler
@@ -277,6 +272,7 @@ public:
   }
   protocol::ConfigurationDoneResponse
   Run(const protocol::ConfigurationDoneArguments &) const override;
+  void PostRun() const override;
 };
 
 class DisconnectRequestHandler
@@ -301,7 +297,8 @@ public:
   llvm::Expected<protocol::EvaluateResponseBody>
   Run(const protocol::EvaluateArguments &) const override;
   FeatureSet GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureEvaluateForHovers};
+    return {protocol::eAdapterFeatureEvaluateForHovers,
+            protocol::eAdapterFeatureClipboardContext};
   }
 };
 
@@ -330,21 +327,23 @@ public:
 };
 
 class LaunchRequestHandler
-    : public RequestHandler<protocol::LaunchRequestArguments,
-                            protocol::LaunchResponse> {
+    : public DelayedResponseRequestHandler<protocol::LaunchRequestArguments,
+                                           protocol::LaunchResponse> {
 public:
-  using RequestHandler::RequestHandler;
+  using DelayedResponseRequestHandler::DelayedResponseRequestHandler;
   static llvm::StringLiteral GetCommand() { return "launch"; }
-  llvm::Error
+  protocol::LaunchResponse
   Run(const protocol::LaunchRequestArguments &arguments) const override;
-  void PostRun() const override;
 };
 
-class RestartRequestHandler : public LegacyRequestHandler {
+class RestartRequestHandler
+    : public RequestHandler<std::optional<protocol::RestartArguments>,
+                            protocol::RestartResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "restart"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error
+  Run(const std::optional<protocol::RestartArguments> &args) const override;
 };
 
 class NextRequestHandler
@@ -472,11 +471,16 @@ public:
   Run(const protocol::SetInstructionBreakpointsArguments &args) const override;
 };
 
-class CompileUnitsRequestHandler : public LegacyRequestHandler {
+class CompileUnitsRequestHandler
+    : public RequestHandler<
+          std::optional<protocol::CompileUnitsArguments>,
+          llvm::Expected<protocol::CompileUnitsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "compileUnits"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::CompileUnitsResponseBody>
+  Run(const std::optional<protocol::CompileUnitsArguments> &args)
+      const override;
 };
 
 class ModulesRequestHandler final
@@ -534,11 +538,14 @@ public:
   Run(const protocol::SourceArguments &args) const override;
 };
 
-class StackTraceRequestHandler : public LegacyRequestHandler {
+class StackTraceRequestHandler
+    : public RequestHandler<protocol::StackTraceArguments,
+                            llvm::Expected<protocol::StackTraceResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "stackTrace"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::StackTraceResponseBody>
+  Run(const protocol::StackTraceArguments &args) const override;
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureDelayedStackTraceLoading};
   }
@@ -564,11 +571,14 @@ public:
   Run(const protocol::VariablesArguments &) const override;
 };
 
-class LocationsRequestHandler : public LegacyRequestHandler {
+class LocationsRequestHandler
+    : public RequestHandler<protocol::LocationsArguments,
+                            llvm::Expected<protocol::LocationsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "locations"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::LocationsResponseBody>
+  Run(const protocol::LocationsArguments &) const override;
 };
 
 class DisassembleRequestHandler final
@@ -622,17 +632,17 @@ public:
   Run(const protocol::ModuleSymbolsArguments &args) const override;
 };
 
-/// A request used in testing to get the details on all breakpoints that are
-/// currently set in the target. This helps us to test "setBreakpoints" and
-/// "setFunctionBreakpoints" requests to verify we have the correct set of
-/// breakpoints currently set in LLDB.
-class TestGetTargetBreakpointsRequestHandler : public LegacyRequestHandler {
+class TestGetTargetBreakpointsRequestHandler
+    : public RequestHandler<
+          protocol::TestGetTargetBreakpointsArguments,
+          llvm::Expected<protocol::TestGetTargetBreakpointsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() {
     return "_testGetTargetBreakpoints";
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::TestGetTargetBreakpointsResponseBody>
+  Run(const protocol::TestGetTargetBreakpointsArguments &args) const override;
 };
 
 class WriteMemoryRequestHandler final
@@ -646,6 +656,15 @@ public:
   }
   llvm::Expected<protocol::WriteMemoryResponseBody>
   Run(const protocol::WriteMemoryArguments &args) const override;
+};
+
+class UnknownRequestHandler final
+    : public RequestHandler<protocol::UnknownArguments,
+                            protocol::UnknownResponseBody> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "unknown"; }
+  llvm::Error Run(const protocol::UnknownArguments &args) const override;
 };
 
 } // namespace lldb_dap

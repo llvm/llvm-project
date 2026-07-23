@@ -1,5 +1,6 @@
 import("//llvm/tools/binutils_symlinks.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 tablegen("TapiOpts") {
@@ -11,7 +12,7 @@ if (llvm_install_binutils_symlinks) {
   symlink_or_copy("readtapi") {
     deps = [ ":llvm-readtapi" ]
     source = "llvm-readtapi"
-    output = "$root_out_dir/bin/readtapi"
+    output = "$llvm_current_bindir/readtapi"
   }
 }
 
@@ -23,7 +24,7 @@ group("symlinks") {
   }
 }
 
-executable("llvm-readtapi") {
+driver_executable("llvm-readtapi") {
   deps = [
     ":TapiOpts",
     "//llvm/lib/BinaryFormat",

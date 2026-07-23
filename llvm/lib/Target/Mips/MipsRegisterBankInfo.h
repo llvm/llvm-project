@@ -113,6 +113,10 @@ private:
     return false;
   }
 
+  bool isInteger_64(InstType InstTy, unsigned OpSize) const {
+    return InstTy == InstType::Integer && OpSize == 64;
+  }
+
   /// Some generic instructions have operands that can be mapped to either fprb
   /// or gprb e.g. for G_LOAD we consider only operand 0 as ambiguous, operand 1
   /// is always gprb since it is a pointer.

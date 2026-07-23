@@ -434,7 +434,6 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
       std::string Buf;
       raw_string_ostream OS(Buf);
       logAllUnhandledErrors(MaybeObj.takeError(), OS);
-      OS.flush();
       ErrorAndExit("unable to create object file: '" + Buf + "'");
     }
 
@@ -570,7 +569,6 @@ static int executeInput() {
         std::string Buf;
         raw_string_ostream OS(Buf);
         logAllUnhandledErrors(MaybeObj.takeError(), OS);
-        OS.flush();
         ErrorAndExit("unable to create object file: '" + Buf + "'");
       }
 
@@ -807,7 +805,7 @@ static int linkAndVerify() {
   if (!MAI)
     ErrorAndExit("Unable to create target asm info!");
 
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, *MAI, *MRI, *STI);
 
   std::unique_ptr<MCDisassembler> Disassembler(
     TheTarget->createMCDisassembler(*STI, Ctx));
@@ -976,7 +974,6 @@ static int linkAndVerify() {
       std::string Buf;
       raw_string_ostream OS(Buf);
       logAllUnhandledErrors(MaybeObj.takeError(), OS);
-      OS.flush();
       ErrorAndExit("unable to create object file: '" + Buf + "'");
     }
 

@@ -25,8 +25,8 @@ RISCV::Specifier RISCV::parseSpecifierName(StringRef name) {
       .Case("lo", RISCV::S_LO)
       .Case("hi", ELF::R_RISCV_HI20)
       .Case("pcrel_lo", RISCV::S_PCREL_LO)
-      .Case("pcrel_hi", ELF::R_RISCV_PCREL_HI20)
-      .Case("got_pcrel_hi", ELF::R_RISCV_GOT_HI20)
+      .Case("pcrel_hi", RISCV::S_PCREL_HI)
+      .Case("got_pcrel_hi", RISCV::S_GOT_HI)
       .Case("tprel_lo", RISCV::S_TPREL_LO)
       .Case("tprel_hi", ELF::R_RISCV_TPREL_HI20)
       .Case("tprel_add", ELF::R_RISCV_TPREL_ADD)
@@ -37,6 +37,7 @@ RISCV::Specifier RISCV::parseSpecifierName(StringRef name) {
       .Case("tlsdesc_add_lo", ELF::R_RISCV_TLSDESC_ADD_LO12)
       .Case("tlsdesc_call", ELF::R_RISCV_TLSDESC_CALL)
       .Case("qc.abs20", RISCV::S_QC_ABS20)
+      .Case("qc.access", RISCV::S_QC_ACCESS)
       // Used in data directives
       .Case("pltpcrel", ELF::R_RISCV_PLT32)
       .Case("gotpcrel", ELF::R_RISCV_GOT32_PCREL)
@@ -53,9 +54,9 @@ StringRef RISCV::getSpecifierName(Specifier S) {
     return "hi";
   case RISCV::S_PCREL_LO:
     return "pcrel_lo";
-  case ELF::R_RISCV_PCREL_HI20:
+  case RISCV::S_PCREL_HI:
     return "pcrel_hi";
-  case ELF::R_RISCV_GOT_HI20:
+  case RISCV::S_GOT_HI:
     return "got_pcrel_hi";
   case RISCV::S_TPREL_LO:
     return "tprel_lo";
@@ -75,7 +76,7 @@ StringRef RISCV::getSpecifierName(Specifier S) {
     return "tlsdesc_call";
   case ELF::R_RISCV_TLS_GD_HI20:
     return "tls_gd_pcrel_hi";
-  case ELF::R_RISCV_CALL_PLT:
+  case RISCV::S_CALL_PLT:
     return "call_plt";
   case ELF::R_RISCV_32_PCREL:
     return "32_pcrel";
@@ -85,6 +86,8 @@ StringRef RISCV::getSpecifierName(Specifier S) {
     return "pltpcrel";
   case RISCV::S_QC_ABS20:
     return "qc.abs20";
+  case RISCV::S_QC_ACCESS:
+    return "qc.access";
   }
   llvm_unreachable("Invalid ELF symbol kind");
 }

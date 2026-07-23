@@ -12,7 +12,7 @@
 ; outer loop induction variable, i.e., triangular loops.
 ;
 ; CHECK: Loop structure not understood by pass
-; CHECK: Not interchanging loops. Cannot prove legality.
+; CHECK: Cannot prove legality, not interchanging loops 'for1.header' and 'for2'
 ;
 define void @interchange_01(i64 %k) {
 entry:
@@ -50,7 +50,7 @@ for.end12:
 ; outer loop induction variable, i.e., triangular loops.
 ;
 ; CHECK: Loop structure not understood by pass
-; CHECK: Not interchanging loops. Cannot prove legality.
+; CHECK: Cannot prove legality, not interchanging loops 'for1.header' and 'for2'
 ;
 define void @interchange_02(i64 %k) {
 entry:
@@ -87,7 +87,7 @@ for.end12:
 ; Inner loop induction variable exit condition depends on the
 ; outer loop induction variable, i.e., triangular loops.
 ; CHECK: Loop structure not understood by pass
-; CHECK: Not interchanging loops. Cannot prove legality.
+; CHECK: Cannot prove legality, not interchanging loops 'for1.header' and 'for2'
 ;
 define void @interchange_03(i64 %k) {
 entry:

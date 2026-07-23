@@ -6,7 +6,10 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class ForwardDeclarationTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self, dictionary=None):
         """Display *bar_ptr when stopped on a function with forward declaration of struct bar."""
         self.build(dictionary=dictionary)

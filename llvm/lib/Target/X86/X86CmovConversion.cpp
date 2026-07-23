@@ -56,6 +56,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -106,21 +107,17 @@ static cl::opt<bool> ForceAll(
 namespace {
 
 /// Converts X86 cmov instructions into branches when profitable.
-class X86CmovConverterPass : public MachineFunctionPass {
+class X86CmovConversionImpl {
 public:
-  X86CmovConverterPass() : MachineFunctionPass(ID) { }
+  X86CmovConversionImpl(MachineLoopInfo *MLI) : MLI(MLI) {}
 
-  StringRef getPassName() const override { return "X86 cmov Conversion"; }
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  /// Pass identification, replacement for typeid.
-  static char ID;
+  bool runOnMachineFunction(MachineFunction &MF);
 
 private:
   MachineRegisterInfo *MRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
+  const TargetSubtargetInfo *STI = nullptr;
   MachineLoopInfo *MLI = nullptr;
   TargetSchedModel TSchedModel;
 
@@ -153,18 +150,29 @@ private:
   void convertCmovInstsToBranches(SmallVectorImpl<MachineInstr *> &Group) const;
 };
 
+class X86CmovConversionLegacy : public MachineFunctionPass {
+public:
+  X86CmovConversionLegacy() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override { return "X86 cmov Conversion"; }
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  /// Pass identification, replacement for typeid.
+  static char ID;
+};
+
 } // end anonymous namespace
 
-char X86CmovConverterPass::ID = 0;
+char X86CmovConversionLegacy::ID = 0;
 
-void X86CmovConverterPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void X86CmovConversionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
   AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
 }
 
-bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
+bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
   if (!EnableCmovConverter)
     return false;
 
@@ -172,16 +180,15 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   if (!getCGPassBuilderOption().DisableSelectOptimize)
     return false;
 
-  LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
+  LLVM_DEBUG(dbgs() << "********** " << DEBUG_TYPE << " : " << MF.getName()
                     << "**********\n");
 
   bool Changed = false;
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  STI = &MF.getSubtarget();
   MRI = &MF.getRegInfo();
-  TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
-  TSchedModel.init(&STI);
+  TII = STI->getInstrInfo();
+  TRI = STI->getRegisterInfo();
+  TSchedModel.init(STI);
 
   // Before we handle the more subtle cases of register-register CMOVs inside
   // of potentially hot loops, we want to quickly remove all CMOVs (ForceAll) or
@@ -263,7 +270,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-bool X86CmovConverterPass::collectCmovCandidates(
+bool X86CmovConversionImpl::collectCmovCandidates(
     ArrayRef<MachineBasicBlock *> Blocks, CmovGroups &CmovInstGroups,
     bool IncludeLoads) {
   //===--------------------------------------------------------------------===//
@@ -389,7 +396,7 @@ static unsigned getDepthOfOptCmov(unsigned TrueOpDepth, unsigned FalseOpDepth) {
       divideCeil(FalseOpDepth * 3 + TrueOpDepth, 4));
 }
 
-bool X86CmovConverterPass::checkForProfitableCmovCandidates(
+bool X86CmovConversionImpl::checkForProfitableCmovCandidates(
     ArrayRef<MachineBasicBlock *> Blocks, CmovGroups &CmovInstGroups) {
   struct DepthInfo {
     /// Depth of original loop.
@@ -542,7 +549,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
   //   To be conservative, the gain of such CMOV transformation should cover at
   //   at least 25% of branch-misprediction-penalty.
   //===--------------------------------------------------------------------===//
-  unsigned MispredictPenalty = TSchedModel.getMCSchedModel()->MispredictPenalty;
+  unsigned MispredictPenalty = STI->getMispredictionPenalty();
   CmovGroups TempGroups;
   std::swap(TempGroups, CmovInstGroups);
   for (auto &Group : TempGroups) {
@@ -623,7 +630,7 @@ static void packCmovGroup(MachineInstr *First, MachineInstr *Last) {
     MBB->insertAfter(Last, MI->removeFromParent());
 }
 
-void X86CmovConverterPass::convertCmovInstsToBranches(
+void X86CmovConversionImpl::convertCmovInstsToBranches(
     SmallVectorImpl<MachineInstr *> &Group) const {
   assert(!Group.empty() && "No CMOV instructions to convert");
   ++NumOfOptimizedCmovGroups;
@@ -884,12 +891,30 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
   }
 }
 
-INITIALIZE_PASS_BEGIN(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
-                      false, false)
+INITIALIZE_PASS_BEGIN(X86CmovConversionLegacy, DEBUG_TYPE,
+                      "X86 cmov Conversion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
+INITIALIZE_PASS_END(X86CmovConversionLegacy, DEBUG_TYPE, "X86 cmov Conversion",
                     false, false)
 
-FunctionPass *llvm::createX86CmovConverterPass() {
-  return new X86CmovConverterPass();
+FunctionPass *llvm::createX86CmovConversionLegacyPass() {
+  return new X86CmovConversionLegacy();
+}
+
+bool X86CmovConversionLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  X86CmovConversionImpl Impl(MLI);
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86CmovConversionPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  MachineLoopInfo *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  X86CmovConversionImpl Impl(MLI);
+  bool Changed = Impl.runOnMachineFunction(MF);
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                 : PreservedAnalyses::all();
 }

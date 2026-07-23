@@ -62,9 +62,9 @@ body:             |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $sp
-    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p0)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[PTRTOINT]], [[AND]]
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[SUB]](s64)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[COPY1]](p0)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[PTRTOINT]], [[AND]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[SUB]](i64)
     ; CHECK-NEXT: $sp = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: $x0 = COPY [[COPY2]](p0)
@@ -109,11 +109,11 @@ body:             |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $sp
-    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p0)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[PTRTOINT]], [[AND]]
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 -32
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[SUB]], [[C3]]
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND1]](s64)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[COPY1]](p0)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[PTRTOINT]], [[AND]]
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 -32
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[SUB]], [[C3]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND1]](i64)
     ; CHECK-NEXT: $sp = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: $x0 = COPY [[COPY2]](p0)
@@ -158,9 +158,9 @@ body:             |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $sp
-    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p0)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[PTRTOINT]], [[AND]]
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[SUB]](s64)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[COPY1]](p0)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[PTRTOINT]], [[AND]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[SUB]](i64)
     ; CHECK-NEXT: $sp = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: $x0 = COPY [[COPY2]](p0)
@@ -205,9 +205,9 @@ body:             |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $sp
-    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p0)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[PTRTOINT]], [[AND]]
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:gpr64common(p0) = G_INTTOPTR [[SUB]](s64)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[COPY1]](p0)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[PTRTOINT]], [[AND]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:gpr64common(p0) = G_INTTOPTR [[SUB]](i64)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: PROBED_STACKALLOC_DYN [[INTTOPTR]](p0), implicit-def $sp, implicit-def $nzcv, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY2]](p0)
@@ -252,11 +252,11 @@ body:             |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $sp
-    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p0)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[PTRTOINT]], [[AND]]
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 -32
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[SUB]], [[C3]]
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:gpr64common(p0) = G_INTTOPTR [[AND1]](s64)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[COPY1]](p0)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[PTRTOINT]], [[AND]]
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i64) = G_CONSTANT i64 -32
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[SUB]], [[C3]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:gpr64common(p0) = G_INTTOPTR [[AND1]](i64)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: PROBED_STACKALLOC_DYN [[INTTOPTR]](p0), implicit-def $sp, implicit-def $nzcv, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY2]](p0)
@@ -301,9 +301,9 @@ body:             |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $sp
-    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p0)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[PTRTOINT]], [[AND]]
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:gpr64common(p0) = G_INTTOPTR [[SUB]](s64)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[COPY1]](p0)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[PTRTOINT]], [[AND]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:gpr64common(p0) = G_INTTOPTR [[SUB]](i64)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: PROBED_STACKALLOC_DYN [[INTTOPTR]](p0), implicit-def $sp, implicit-def $nzcv, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY2]](p0)

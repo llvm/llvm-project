@@ -49,7 +49,7 @@ define void @test2(ptr %P) {
 
 define void @store_at_gep_off_null_inbounds(i64 %offset) {
 ; CHECK-LABEL: @store_at_gep_off_null_inbounds(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr null, i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [4 x i8], ptr null, i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    store i32 poison, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -60,7 +60,7 @@ define void @store_at_gep_off_null_inbounds(i64 %offset) {
 
 define void @store_at_gep_off_null_not_inbounds(i64 %offset) {
 ; CHECK-LABEL: @store_at_gep_off_null_not_inbounds(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr null, i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [4 x i8], ptr null, i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    store i32 poison, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -71,7 +71,7 @@ define void @store_at_gep_off_null_not_inbounds(i64 %offset) {
 
 define void @store_at_gep_off_no_null_opt(i64 %offset) #0 {
 ; CHECK-LABEL: @store_at_gep_off_no_null_opt(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr null, i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [4 x i8], ptr null, i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    store i32 24, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -170,7 +170,7 @@ define void @test6(i32 %n, ptr %a, ptr %gi) nounwind uwtable ssp {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[STOREMERGE]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[GI]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[TMP0]], 1
@@ -396,6 +396,117 @@ define void @store_select_with_null_gep(i1 %cond, ptr %p, i64 %off) {
   %sel = select i1 %cond, ptr %p, ptr null
   %gep = getelementptr i8, ptr %sel, i64 %off
   store i32 0, ptr %gep, align 4
+  ret void
+}
+
+define void @store_const_b8(ptr %p) {
+; CHECK-LABEL: @store_const_b8(
+; CHECK-NEXT:    store i8 1, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  store b8 1, ptr %p
+  ret void
+}
+
+define void @store_const_v4b8_zero(ptr %p) {
+; CHECK-LABEL: @store_const_v4b8_zero(
+; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store <4 x b8> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @store_const_v4b8_splat(ptr %p) {
+; CHECK-LABEL: @store_const_v4b8_splat(
+; CHECK-NEXT:    store <4 x i8> splat (i8 5), ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store <4 x b8> splat (b8 5), ptr %p
+  ret void
+}
+
+define void @store_const_v4b8_mixed(ptr %p) {
+; CHECK-LABEL: @store_const_v4b8_mixed(
+; CHECK-NEXT:    store <4 x i8> <i8 1, i8 poison, i8 3, i8 undef>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store <4 x b8> <b8 1, b8 poison, b8 3, b8 undef>, ptr %p
+  ret void
+}
+
+define void @store_const_v4b8_data(ptr %p) {
+; CHECK-LABEL: @store_const_v4b8_data(
+; CHECK-NEXT:    store <4 x i8> <i8 1, i8 2, i8 3, i8 4>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store <4 x b8> <b8 1, b8 2, b8 3, b8 4>, ptr %p
+  ret void
+}
+
+define void @store_const_nxv4b8_splat(ptr %p) {
+; CHECK-LABEL: @store_const_nxv4b8_splat(
+; CHECK-NEXT:    store <vscale x 4 x i8> splat (i8 5), ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store <vscale x 4 x b8> splat (b8 5), ptr %p
+  ret void
+}
+
+define void @store_const_nxv4b8_zero(ptr %p) {
+; CHECK-LABEL: @store_const_nxv4b8_zero(
+; CHECK-NEXT:    store <vscale x 4 x i8> zeroinitializer, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store <vscale x 4 x b8> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @store_const_b8_atomic(ptr %p) {
+; CHECK-LABEL: @store_const_b8_atomic(
+; CHECK-NEXT:    store atomic i8 42, ptr [[P:%.*]] unordered, align 1
+; CHECK-NEXT:    ret void
+;
+  store atomic b8 42, ptr %p unordered, align 1
+  ret void
+}
+
+define void @store_const_v4b8_atomic(ptr %p) {
+; CHECK-LABEL: @store_const_v4b8_atomic(
+; CHECK-NEXT:    store atomic <4 x i8> splat (i8 5), ptr [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic <4 x b8> splat (b8 5), ptr %p unordered, align 4
+  ret void
+}
+
+define void @store_const_b5(ptr %p) {
+; CHECK-LABEL: @store_const_b5(
+; CHECK-NEXT:    store i5 5, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  store b5 5, ptr %p, align 1
+  ret void
+}
+
+; Byte constants cannot represent pointer provenance.
+; Make sure we do not fold the bitcast and change the store type.
+define void @store_const_b64_from_ptr(ptr %p) {
+; CHECK-LABEL: @store_const_b64_from_ptr(
+; CHECK-NEXT:    store b64 bitcast (ptr @Unknown to b64), ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  store b64 bitcast (ptr @Unknown to b64), ptr %p
+  ret void
+}
+
+; Only constants should be folded.
+define void @store_nonconst_b8(b8 %v, ptr %p) {
+; CHECK-LABEL: @store_nonconst_b8(
+; CHECK-NEXT:    store b8 [[V:%.*]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  store b8 %v, ptr %p
   ret void
 }
 

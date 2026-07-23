@@ -1,9 +1,9 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Testing for pointer constant, along with :
 ! C751 A component shall not have both the ALLOCATABLE and POINTER attributes.
-! C752 If the CONTIGUOUS attribute is specified, the component shall be an 
+! C752 If the CONTIGUOUS attribute is specified, the component shall be an
 !   array with the POINTER attribute.
-! C753 The * char-length option is permitted only if the component is of type 
+! C753 The * char-length option is permitted only if the component is of type
 !   character.
 subroutine s()
   !ERROR: 'nullint' may not have both the POINTER and PARAMETER attributes

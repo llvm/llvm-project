@@ -203,7 +203,7 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[TMP43:.+]] = load i32, ptr %[[DOTTILE_0_IV_I]], align 4
 // IR-NEXT:    %[[INC:.+]] = add i32 %[[TMP43]], 1
 // IR-NEXT:    store i32 %[[INC]], ptr %[[DOTTILE_0_IV_I]], align 4
-// IR-NEXT:    br label %[[FOR_COND34]], !llvm.loop ![[LOOP3:[0-9]+]]
+// IR-NEXT:    br label %[[FOR_COND34]], !llvm.loop ![[LOOP2:[0-9]+]]
 // IR-EMPTY:
 // IR-NEXT:  [[FOR_END]]:
 // IR-NEXT:    br label %[[FOR_INC48:.+]]
@@ -212,7 +212,7 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[TMP44:.+]] = load i32, ptr %[[DOTTILE_0_IV__FLOOR_0_IV_I]], align 4
 // IR-NEXT:    %[[INC49:.+]] = add i32 %[[TMP44]], 1
 // IR-NEXT:    store i32 %[[INC49]], ptr %[[DOTTILE_0_IV__FLOOR_0_IV_I]], align 4
-// IR-NEXT:    br label %[[FOR_COND]], !llvm.loop ![[LOOP5:[0-9]+]]
+// IR-NEXT:    br label %[[FOR_COND]], !llvm.loop ![[LOOP4:[0-9]+]]
 // IR-EMPTY:
 // IR-NEXT:  [[FOR_END50]]:
 // IR-NEXT:    br label %[[OMP_BODY_CONTINUE:.+]]
@@ -249,9 +249,8 @@ extern "C" void func(int start, int end, int step) {
 
 #endif /* HEADER */
 
-// IR: ![[META0:[0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// IR: ![[META1:[0-9]+]] = !{i32 7, !"openmp", i32 51}
-// IR: ![[META2:[0-9]+]] =
-// IR: ![[LOOP3]] = distinct !{![[LOOP3]], ![[LOOPPROP4:[0-9]+]]}
-// IR: ![[LOOPPROP4]] = !{!"llvm.loop.mustprogress"}
-// IR: ![[LOOP5]] = distinct !{![[LOOP5]], ![[LOOPPROP4]]}
+// IR: ![[META0:[0-9]+]] = !{i32 7, !"openmp", i32 51}
+// IR: ![[META1:[0-9]+]] =
+// IR: ![[LOOP2]] = distinct !{![[LOOP2]], ![[LOOPPROP3:[0-9]+]]}
+// IR: ![[LOOPPROP3]] = !{!"llvm.loop.mustprogress"}
+// IR: ![[LOOP4]] = distinct !{![[LOOP4]], ![[LOOPPROP3]]}

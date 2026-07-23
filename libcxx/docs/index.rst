@@ -45,13 +45,14 @@ Getting Started with libc++
    Modules
    Hardening
    ReleaseProcedure
+   PostMeetingProcedure
    Status/Cxx17
    Status/Cxx20
    Status/Cxx23
-   Status/Cxx2c
+   Status/Cxx26
+   Status/Cxx29
    Status/Format
    Status/Parallelism
-   Status/PSTL
 
 
 .. toctree::
@@ -70,7 +71,7 @@ user base of over 1 billion daily active users.
 
 Since its inception, libc++ has focused on delivering high performance, standards-conformance, and portability. It has
 been extensively tested and optimized, making it robust and production ready. libc++ fully implements C++11 and C++14,
-with C++17, C++20, C++23, and C++26 features being actively developed and making steady progress.
+with C++17, C++20, C++23, C++26, and C++29 features being actively developed and making steady progress.
 
 libc++ is continuously integrated and tested on a wide range of platforms and configurations, ensuring its reliability
 and compatibility across various systems. The library's extensive test suite and rigorous quality assurance process have
@@ -132,9 +133,9 @@ velocity, libc++ drops support for older compilers as newer ones are released.
 ============ =================== ========================== =====================
 Compiler     Versions            Restrictions               Support policy
 ============ =================== ========================== =====================
-Clang        20, 21, 22-git                                 latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
-AppleClang   26.0                                           latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
-Open XL      17.1.3 (AIX)                                   latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
+Clang        21, 22, 23-git                                 latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
+AppleClang   26.4                                           latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
+Open XL      17.1.4 (AIX)                                   latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
 GCC          15                  In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
 ============ =================== ========================== =====================
 
@@ -143,7 +144,7 @@ Libc++ also supports common platforms and architectures:
 ===================== ========================= ============================
 Target platform       Target architecture       Notes
 ===================== ========================= ============================
-macOS 10.13+          i386, x86_64, arm64
+macOS 11.0+           i386, x86_64, arm64       Deployment target lower bound is the minimum between what Chrome resp. the last stable `Xcode release <https://developer.apple.com/support/xcode>`_ support
 FreeBSD 12+           i386, x86_64, arm
 Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
 Android 5.0+          i386, x86_64, arm, arm64
@@ -165,6 +166,11 @@ we don't make any guarantees. If you would like your compiler and/or platform
 to be formally supported and listed here, please work with the libc++ team to set
 up testing for your configuration.
 
+.. _HeaderSupportPolicy:
+
+Libc++ maintains backwards compatibility with programs compiled against older
+versions of the headers. The library can currently be configured by vendors to
+support headers from LLVM 2.8 or any later major release.
 
 C++ Standards Conformance
 =========================
@@ -179,7 +185,8 @@ this release is described in the pages below:
 * :ref:`C++17 - In Progress <cxx17-status>`
 * :ref:`C++20 - In Progress <cxx20-status>`
 * :ref:`C++23 - In Progress <cxx23-status>`
-* :ref:`C++2c - In Progress <cxx2c-status>`
+* :ref:`C++26 - In Progress <cxx26-status>`
+* :ref:`C++29 - In Progress <cxx29-status>`
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
 

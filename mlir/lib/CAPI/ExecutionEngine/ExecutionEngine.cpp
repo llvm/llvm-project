@@ -38,8 +38,6 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
 
   auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
   if (!tmBuilderOrError) {
-    llvm::errs() << "Failed to create a JITTargetMachineBuilder for the host "
-                    "because: \n";
     consumeError(tmBuilderOrError.takeError());
     return MlirExecutionEngine{nullptr};
   }
@@ -47,7 +45,6 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
     tmBuilderOrError->setRelocationModel(llvm::Reloc::PIC_);
   auto tmOrError = tmBuilderOrError->createTargetMachine();
   if (!tmOrError) {
-    llvm::errs() << "Failed to create a TargetMachine for the host because: \n";
     consumeError(tmOrError.takeError());
     return MlirExecutionEngine{nullptr};
   }
@@ -68,7 +65,6 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   auto jitOrError = ExecutionEngine::create(unwrap(op), jitOptions,
                                             std::move(tmOrError.get()));
   if (!jitOrError) {
-    llvm::errs() << "Failed to create an ExecutionEngine because: \n";
     consumeError(jitOrError.takeError());
     return MlirExecutionEngine{nullptr};
   }

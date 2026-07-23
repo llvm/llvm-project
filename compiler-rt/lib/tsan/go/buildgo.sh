@@ -88,6 +88,7 @@ if [ "$GOOS" = "linux" ]; then
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_linux.cpp
+		../../sanitizer_common/sanitizer_dl.cpp
 		../../sanitizer_common/sanitizer_posix.cpp
 		../../sanitizer_common/sanitizer_posix_libcdep.cpp
 		../../sanitizer_common/sanitizer_procmaps_common.cpp
@@ -133,6 +134,7 @@ elif [ "$GOOS" = "freebsd" ]; then
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_linux.cpp
+		../../sanitizer_common/sanitizer_dl.cpp
 		../../sanitizer_common/sanitizer_posix.cpp
 		../../sanitizer_common/sanitizer_posix_libcdep.cpp
 		../../sanitizer_common/sanitizer_procmaps_bsd.cpp
@@ -153,6 +155,7 @@ elif [ "$GOOS" = "netbsd" ]; then
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_linux.cpp
+		../../sanitizer_common/sanitizer_dl.cpp
 		../../sanitizer_common/sanitizer_posix.cpp
 		../../sanitizer_common/sanitizer_posix_libcdep.cpp
 		../../sanitizer_common/sanitizer_procmaps_bsd.cpp
@@ -165,7 +168,7 @@ elif [ "$GOOS" = "netbsd" ]; then
 	"
 elif [ "$GOOS" = "darwin" ]; then
 	OSCFLAGS="-fPIC -Wno-unused-const-variable -Wno-unknown-warning-option -mmacosx-version-min=10.7"
-	OSLDFLAGS="-lpthread -fPIC -fpie -mmacosx-version-min=10.7"
+	OSLDFLAGS="-lpthread -fPIC -fpie -mmacosx-version-min=10.7 -Wl,-U,__dyld_get_dyld_header"
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_mac.cpp

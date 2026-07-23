@@ -1,0 +1,11 @@
+add_mlir_unittest(MLIRLinalgTests
+  InferConvolutionDimsTest.cpp
+)
+mlir_target_link_libraries(MLIRLinalgTests
+  PRIVATE
+  MLIRIR
+  MLIRArithDialect
+  MLIRFuncDialect
+  MLIRLinalgDialect
+  MLIRTensorDialect
+)

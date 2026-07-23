@@ -11,8 +11,6 @@
 // REQUIRES: locale.zh_CN.UTF-8
 // XFAIL: no-wide-characters
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // <locale>
 
 // class time_get_byname<charT, InputIterator>
@@ -21,8 +19,11 @@
 // get_monthname(iter_type s, iter_type end, ios_base& str,
 //               ios_base::iostate& err, tm* t) const;
 
-#include <locale>
 #include <cassert>
+#include <ctime>
+#include <ios>
+#include <locale>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -76,7 +77,11 @@ int main(int, char**)
     }
     {
         const my_facet f(LOCALE_zh_CN_UTF_8, 1);
+#if defined(__APPLE__) || defined(__FreeBSD__)
+        const wchar_t in[] = L"6\x6708";
+#else
         const wchar_t in[] = L"\x516D\x6708";
+#endif
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_monthname(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);

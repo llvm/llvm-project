@@ -14,7 +14,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 
 def LoopOpInterface : OpInterface<"LoopOpInterface", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   DeclareOpInterfaceMethods<LoopLikeOpInterface>
 ]> {
   let description = [{
@@ -44,6 +44,30 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/"return nullptr;"
+    >,
+    InterfaceMethod<[{
+        Returns a pointer to the loop's per-iteration cleanup region, or
+        nullptr if the loop has no (non-empty) cleanup region. When present,
+        this region runs on every per-iteration exit edge (condition-false
+        exit, end-of-iteration, break/continue, and EH unwinding when the
+        cleanup kind includes EH).
+      }],
+      /*retTy=*/"mlir::Region *",
+      /*methodName=*/"maybeGetCleanup",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return nullptr;"
+    >,
+    InterfaceMethod<[{
+        Returns the cleanup-kind attribute for the loop's per-iteration
+        cleanup region, or a null attribute if the loop has no cleanup kind
+        (e.g. do-while, or a for/while without a cleanup region).
+      }],
+      /*retTy=*/"::cir::CleanupKindAttr",
+      /*methodName=*/"maybeGetCleanupKind",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return {};"
     >,
     InterfaceMethod<[{
         Returns the first region to be executed in the loop.
@@ -88,6 +112,10 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
     static void getLoopOpSuccessorRegions(
         ::cir::LoopOpInterface op, ::mlir::RegionBranchPoint point,
         ::mlir::SmallVectorImpl<::mlir::RegionSuccessor> &regions);
+    /// Generic method to retrieve the successor inputs of a LoopOpInterface
+    /// operation.
+    static ::mlir::ValueRange getLoopOpSuccessorInputs(
+        ::cir::LoopOpInterface op, ::mlir::RegionSuccessor successor);
   }];
 
   let verify = [{

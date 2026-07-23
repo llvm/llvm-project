@@ -32,6 +32,25 @@ Error splitCompactUnwindBlocks(LinkGraph &G, Section &CompactUnwindSection,
 /// CRTP base for compact unwind traits classes. Automatically provides derived
 /// constants.
 ///
+/// Derived classes should implement the following properties and methods:
+///
+///   Endianness:
+///
+///     constexpr static endianness Endianness = ...;
+///
+///   Encoding mask for offset to DWARF section for records that need DWARF:
+///
+///     constexpr static uint32_t DWARFSectionOffsetMask = ...;
+///
+///   Predicate for checking whether encoding needs DWARF:
+///
+///     static bool encodingSpecifiesDWARF(uint32_t Encoding) { ... }
+///
+///   Predicate for checking whether record can be merged with a previous
+///   record with the same encoding:
+///
+///     static bool encodingCanBeMerged(uint32_t Encoding) { ... }
+///
 /// FIXME: Passing PtrSize as a template parameter is a hack to work around a
 ///        bug in older MSVC compilers (until at least MSVC 15) where constexpr
 ///        fields in the CRTP impl class were not visible to the base class.
@@ -464,10 +483,9 @@ private:
       auto &Next = NonUniqued[I];
       auto &Last = Records.back();
 
-      bool NextNeedsDWARF = CURecTraits::encodingSpecifiesDWARF(Next.Encoding);
-      bool CannotBeMerged = CURecTraits::encodingCannotBeMerged(Next.Encoding);
-      if (NextNeedsDWARF || (Next.Encoding != Last.Encoding) ||
-          CannotBeMerged || Next.LSDA || Last.LSDA)
+      bool CanBeMerged = CURecTraits::encodingCanBeMerged(Next.Encoding);
+      if (!CanBeMerged || (Next.Encoding != Last.Encoding) || Next.LSDA ||
+          Last.LSDA)
         Records.push_back(Next);
     }
 

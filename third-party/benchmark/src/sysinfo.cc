@@ -12,13 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#if defined(_MSC_VER)
-// FIXME: This must be defined before any other includes to disable deprecation
-// warnings for use of codecvt from C++17. We should remove our reliance on
-// the deprecated functionality instead.
-#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
-#endif
-
 #include "internal_macros.h"
 
 #ifdef BENCHMARK_OS_WINDOWS
@@ -61,6 +54,10 @@
 #include <pthread.h>
 #endif
 
+#if defined(BENCHMARK_OS_LINUX)
+#include <sys/personality.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <bitset>
@@ -83,7 +80,6 @@
 #include "benchmark/benchmark.h"
 #include "check.h"
 #include "cycleclock.h"
-#include "internal_macros.h"
 #include "log.h"
 #include "string_util.h"
 #include "timers.h"
@@ -91,7 +87,7 @@
 namespace benchmark {
 namespace {
 
-void PrintImp(std::ostream& out) { out << std::endl; }
+void PrintImp(std::ostream& out) { out << '\n'; }
 
 template <class First, class... Rest>
 void PrintImp(std::ostream& out, First&& f, Rest&&... rest) {
@@ -102,6 +98,7 @@ void PrintImp(std::ostream& out, First&& f, Rest&&... rest) {
 template <class... Args>
 BENCHMARK_NORETURN void PrintErrorAndDie(Args&&... args) {
   PrintImp(std::cerr, std::forward<Args>(args)...);
+  std::cerr << std::flush;
   std::exit(EXIT_FAILURE);
 }
 
@@ -127,7 +124,7 @@ struct ValueUnion {
 
   explicit ValueUnion(std::size_t buff_size)
       : size(sizeof(DataT) + buff_size),
-        buff(::new (std::malloc(size)) DataT(), &std::free) {}
+        buff(::new(std::malloc(size)) DataT(), &std::free) {}
 
   ValueUnion(ValueUnion&& other) = default;
 
@@ -219,14 +216,18 @@ template <class ArgT>
 bool ReadFromFile(std::string const& fname, ArgT* arg) {
   *arg = ArgT();
   std::ifstream f(fname.c_str());
-  if (!f.is_open()) return false;
+  if (!f.is_open()) {
+    return false;
+  }
   f >> *arg;
   return f.good();
 }
 
 CPUInfo::Scaling CpuScaling(int num_cpus) {
   // We don't have a valid CPU count, so don't even bother.
-  if (num_cpus <= 0) return CPUInfo::Scaling::UNKNOWN;
+  if (num_cpus <= 0) {
+    return CPUInfo::Scaling::UNKNOWN;
+  }
 #if defined(BENCHMARK_OS_QNX)
   return CPUInfo::Scaling::UNKNOWN;
 #elif !defined(BENCHMARK_OS_WINDOWS)
@@ -237,8 +238,9 @@ CPUInfo::Scaling CpuScaling(int num_cpus) {
   for (int cpu = 0; cpu < num_cpus; ++cpu) {
     std::string governor_file =
         StrCat("/sys/devices/system/cpu/cpu", cpu, "/cpufreq/scaling_governor");
-    if (ReadFromFile(governor_file, &res) && res != "performance")
+    if (ReadFromFile(governor_file, &res) && res != "performance") {
       return CPUInfo::Scaling::ENABLED;
+    }
   }
   return CPUInfo::Scaling::DISABLED;
 #else
@@ -253,7 +255,7 @@ int CountSetBitsInCPUMap(std::string val) {
     CPUMask mask(benchmark::stoul(part, nullptr, 16));
     return static_cast<int>(mask.count());
   };
-  std::size_t pos;
+  std::size_t pos = 0;
   int total = 0;
   while ((pos = val.find(',')) != std::string::npos) {
     total += CountBits(val.substr(0, pos));
@@ -274,28 +276,35 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesFromKVFS() {
     CPUInfo::CacheInfo info;
     std::string fpath = StrCat(dir, "index", idx++, "/");
     std::ifstream f(StrCat(fpath, "size").c_str());
-    if (!f.is_open()) break;
+    if (!f.is_open()) {
+      break;
+    }
     std::string suffix;
     f >> info.size;
-    if (f.fail())
+    if (f.fail()) {
       PrintErrorAndDie("Failed while reading file '", fpath, "size'");
+    }
     if (f.good()) {
       f >> suffix;
-      if (f.bad())
+      if (f.bad()) {
         PrintErrorAndDie(
             "Invalid cache size format: failed to read size suffix");
-      else if (f && suffix != "K")
+      } else if (f && suffix != "K") {
         PrintErrorAndDie("Invalid cache size format: Expected bytes ", suffix);
-      else if (suffix == "K")
+      } else if (suffix == "K") {
         info.size *= 1024;
+      }
     }
-    if (!ReadFromFile(StrCat(fpath, "type"), &info.type))
+    if (!ReadFromFile(StrCat(fpath, "type"), &info.type)) {
       PrintErrorAndDie("Failed to read from file ", fpath, "type");
-    if (!ReadFromFile(StrCat(fpath, "level"), &info.level))
+    }
+    if (!ReadFromFile(StrCat(fpath, "level"), &info.level)) {
       PrintErrorAndDie("Failed to read from file ", fpath, "level");
+    }
     std::string map_str;
-    if (!ReadFromFile(StrCat(fpath, "shared_cpu_map"), &map_str))
+    if (!ReadFromFile(StrCat(fpath, "shared_cpu_map"), &map_str)) {
       PrintErrorAndDie("Failed to read from file ", fpath, "shared_cpu_map");
+    }
     info.num_sharing = CountSetBitsInCPUMap(map_str);
     res.push_back(info);
   }
@@ -340,15 +349,18 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
   using UPtr = std::unique_ptr<PInfo, decltype(&std::free)>;
   GetLogicalProcessorInformation(nullptr, &buffer_size);
   UPtr buff(static_cast<PInfo*>(std::malloc(buffer_size)), &std::free);
-  if (!GetLogicalProcessorInformation(buff.get(), &buffer_size))
+  if (!GetLogicalProcessorInformation(buff.get(), &buffer_size)) {
     PrintErrorAndDie("Failed during call to GetLogicalProcessorInformation: ",
                      GetLastError());
+  }
 
   PInfo* it = buff.get();
   PInfo* end = buff.get() + (buffer_size / sizeof(PInfo));
 
   for (; it != end; ++it) {
-    if (it->Relationship != RelationCache) continue;
+    if (it->Relationship != RelationCache) {
+      continue;
+    }
     using BitSet = std::bitset<sizeof(ULONG_PTR) * CHAR_BIT>;
     BitSet b(it->ProcessorMask);
     // To prevent duplicates, only consider caches where CPU 0 is specified
@@ -357,8 +369,14 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
     CPUInfo::CacheInfo C;
     C.num_sharing = static_cast<int>(b.count());
     C.level = cache.Level;
-    C.size = cache.Size;
+    C.size = static_cast<int>(cache.Size);
+    C.type = "Unknown";
     switch (cache.Type) {
+// Windows SDK version >= 10.0.26100.0
+#ifdef NTDDI_WIN11_GE
+      case CacheUnknown:
+        break;
+#endif
       case CacheUnified:
         C.type = "Unified";
         break;
@@ -370,9 +388,6 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
         break;
       case CacheTrace:
         C.type = "Trace";
-        break;
-      default:
-        C.type = "Unknown";
         break;
     }
     res.push_back(C);
@@ -424,7 +439,7 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizes() {
   return GetCacheSizesWindows();
 #elif defined(BENCHMARK_OS_QNX)
   return GetCacheSizesQNX();
-#elif defined(BENCHMARK_OS_QURT)
+#elif defined(BENCHMARK_OS_QURT) || defined(__EMSCRIPTEN__)
   return std::vector<CPUInfo::CacheInfo>();
 #else
   return GetCacheSizesFromKVFS();
@@ -446,7 +461,7 @@ std::string GetSystemName() {
                                 DWCOUNT, NULL, 0, NULL, NULL);
   str.resize(len);
   WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, hostname, DWCOUNT, &str[0],
-                      str.size(), NULL, NULL);
+                      static_cast<int>(str.size()), NULL, NULL);
 #endif
   return str;
 #elif defined(BENCHMARK_OS_QURT)
@@ -478,9 +493,19 @@ std::string GetSystemName() {
 #endif  // def HOST_NAME_MAX
   char hostname[HOST_NAME_MAX];
   int retVal = gethostname(hostname, HOST_NAME_MAX);
-  if (retVal != 0) return std::string("");
-  return std::string(hostname);
+  return retVal != 0 ? std::string() : std::string(hostname);
 #endif  // Catch-all POSIX block.
+}
+
+SystemInfo::ASLR GetASLR() {
+#ifdef BENCHMARK_OS_LINUX
+  const auto curr_personality = personality(0xffffffff);
+  return (curr_personality & ADDR_NO_RANDOMIZE) ? SystemInfo::ASLR::DISABLED
+                                                : SystemInfo::ASLR::ENABLED;
+#else
+  // FIXME: support detecting ASLR on other OS.
+  return SystemInfo::ASLR::UNKNOWN;
+#endif
 }
 
 int GetNumCPUsImpl() {
@@ -499,8 +524,9 @@ int GetNumCPUsImpl() {
   if (qurt_sysenv_get_max_hw_threads(&hardware_threads) != QURT_EOK) {
     hardware_threads.max_hthreads = 1;
   }
-  return hardware_threads.max_hthreads;
+  return static_cast<int>(hardware_threads.max_hthreads);
 #elif defined(BENCHMARK_HAS_SYSCTL)
+  // *BSD, macOS
   int num_cpu = -1;
   constexpr auto* hwncpu =
 #if defined BENCHMARK_OS_MACOSX
@@ -513,6 +539,7 @@ int GetNumCPUsImpl() {
   if (GetSysctl(hwncpu, &num_cpu)) return num_cpu;
   PrintErrorAndDie("Err: ", strerror(errno));
 #elif defined(_SC_NPROCESSORS_ONLN)
+  // Linux, Solaris, AIX, Haiku, WASM, etc.
   // Returns -1 in case of a failure.
   int num_cpu = static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
   if (num_cpu < 0) {
@@ -520,6 +547,9 @@ int GetNumCPUsImpl() {
                      strerror(errno));
   }
   return num_cpu;
+#else
+  // Fallback, no other API exists.
+  return -1;
 #endif
   BENCHMARK_UNREACHABLE();
 }
@@ -528,7 +558,7 @@ int GetNumCPUs() {
   int num_cpus = GetNumCPUsImpl();
   if (num_cpus < 1) {
     std::cerr << "Unable to extract number of CPUs.\n";
-    /* There is at least one CPU which we run on. */
+    // There must be at least one CPU on which we're running.
     num_cpus = 1;
   }
   return num_cpus;
@@ -537,22 +567,28 @@ int GetNumCPUs() {
 class ThreadAffinityGuard final {
  public:
   ThreadAffinityGuard() : reset_affinity(SetAffinity()) {
-    if (!reset_affinity)
+    if (!reset_affinity) {
       std::cerr << "***WARNING*** Failed to set thread affinity. Estimated CPU "
-                   "frequency may be incorrect."
-                << std::endl;
+                   "frequency may be incorrect.\n";
+    }
   }
 
   ~ThreadAffinityGuard() {
-    if (!reset_affinity) return;
+    if (!reset_affinity) {
+      return;
+    }
 
 #if defined(BENCHMARK_HAS_PTHREAD_AFFINITY)
     int ret = pthread_setaffinity_np(self, sizeof(previous_affinity),
                                      &previous_affinity);
-    if (ret == 0) return;
+    if (ret == 0) {
+      return;
+    }
 #elif defined(BENCHMARK_OS_WINDOWS_WIN32)
     DWORD_PTR ret = SetThreadAffinityMask(self, previous_affinity);
-    if (ret != 0) return;
+    if (ret != 0) {
+      return;
+    }
 #endif  // def BENCHMARK_HAS_PTHREAD_AFFINITY
     PrintErrorAndDie("Failed to reset thread affinity");
   }
@@ -565,26 +601,32 @@ class ThreadAffinityGuard final {
  private:
   bool SetAffinity() {
 #if defined(BENCHMARK_HAS_PTHREAD_AFFINITY)
-    int ret;
+    int ret = 0;
     self = pthread_self();
     ret = pthread_getaffinity_np(self, sizeof(previous_affinity),
                                  &previous_affinity);
-    if (ret != 0) return false;
+    if (ret != 0) {
+      return false;
+    }
 
     cpu_set_t affinity;
     memcpy(&affinity, &previous_affinity, sizeof(affinity));
 
     bool is_first_cpu = true;
 
-    for (int i = 0; i < CPU_SETSIZE; ++i)
+    for (int i = 0; i < CPU_SETSIZE; ++i) {
       if (CPU_ISSET(i, &affinity)) {
-        if (is_first_cpu)
+        if (is_first_cpu) {
           is_first_cpu = false;
-        else
+        } else {
           CPU_CLR(i, &affinity);
+        }
       }
+    }
 
-    if (is_first_cpu) return false;
+    if (is_first_cpu) {
+      return false;
+    }
 
     ret = pthread_setaffinity_np(self, sizeof(affinity), &affinity);
     return ret == 0;
@@ -599,8 +641,8 @@ class ThreadAffinityGuard final {
   }
 
 #if defined(BENCHMARK_HAS_PTHREAD_AFFINITY)
-  pthread_t self;
-  cpu_set_t previous_affinity;
+  pthread_t self{};
+  cpu_set_t previous_affinity{};
 #elif defined(BENCHMARK_OS_WINDOWS_WIN32)
   HANDLE self;
   DWORD_PTR previous_affinity;
@@ -614,7 +656,7 @@ double GetCPUCyclesPerSecond(CPUInfo::Scaling scaling) {
   (void)scaling;
 
 #if defined BENCHMARK_OS_LINUX || defined BENCHMARK_OS_CYGWIN
-  long freq;
+  long freq = 0;
 
   // If the kernel is exporting the tsc frequency use that. There are issues
   // where cpuinfo_max_freq cannot be relied on because the BIOS may be
@@ -649,7 +691,9 @@ double GetCPUCyclesPerSecond(CPUInfo::Scaling scaling) {
   }
 
   auto StartsWithKey = [](std::string const& Value, std::string const& Key) {
-    if (Key.size() > Value.size()) return false;
+    if (Key.size() > Value.size()) {
+      return false;
+    }
     auto Cmp = [&](char X, char Y) {
       return std::tolower(X) == std::tolower(Y);
     };
@@ -658,22 +702,30 @@ double GetCPUCyclesPerSecond(CPUInfo::Scaling scaling) {
 
   std::string ln;
   while (std::getline(f, ln)) {
-    if (ln.empty()) continue;
+    if (ln.empty()) {
+      continue;
+    }
     std::size_t split_idx = ln.find(':');
     std::string value;
-    if (split_idx != std::string::npos) value = ln.substr(split_idx + 1);
+    if (split_idx != std::string::npos) {
+      value = ln.substr(split_idx + 1);
+    }
     // When parsing the "cpu MHz" and "bogomips" (fallback) entries, we only
     // accept positive values. Some environments (virtual machines) report zero,
     // which would cause infinite looping in WallTime_Init.
     if (StartsWithKey(ln, "cpu MHz")) {
       if (!value.empty()) {
         double cycles_per_second = benchmark::stod(value) * 1000000.0;
-        if (cycles_per_second > 0) return cycles_per_second;
+        if (cycles_per_second > 0) {
+          return cycles_per_second;
+        }
       }
     } else if (StartsWithKey(ln, "bogomips")) {
       if (!value.empty()) {
         bogo_clock = benchmark::stod(value) * 1000000.0;
-        if (bogo_clock < 0.0) bogo_clock = error_value;
+        if (bogo_clock < 0.0) {
+          bogo_clock = error_value;
+        }
       }
     }
   }
@@ -689,7 +741,9 @@ double GetCPUCyclesPerSecond(CPUInfo::Scaling scaling) {
   // If we found the bogomips clock, but nothing better, we'll use it (but
   // we're not happy about it); otherwise, fallback to the rough estimation
   // below.
-  if (bogo_clock >= 0.0) return bogo_clock;
+  if (bogo_clock >= 0.0) {
+    return bogo_clock;
+  }
 
 #elif defined BENCHMARK_HAS_SYSCTL
   constexpr auto* freqStr =
@@ -704,9 +758,13 @@ double GetCPUCyclesPerSecond(CPUInfo::Scaling scaling) {
 #endif
   unsigned long long hz = 0;
 #if defined BENCHMARK_OS_OPENBSD
-  if (GetSysctl(freqStr, &hz)) return static_cast<double>(hz * 1000000);
+  if (GetSysctl(freqStr, &hz)) {
+    return static_cast<double>(hz * 1000000);
+  }
 #else
-  if (GetSysctl(freqStr, &hz)) return hz;
+  if (GetSysctl(freqStr, &hz)) {
+    return static_cast<double>(hz);
+  }
 #endif
   fprintf(stderr, "Unable to determine clock rate from sysctl: %s: %s\n",
           freqStr, strerror(errno));
@@ -722,9 +780,10 @@ double GetCPUCyclesPerSecond(CPUInfo::Scaling scaling) {
       SUCCEEDED(
           SHGetValueA(HKEY_LOCAL_MACHINE,
                       "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-                      "~MHz", nullptr, &data, &data_size)))
+                      "~MHz", nullptr, &data, &data_size))) {
     return static_cast<double>(static_cast<int64_t>(data) *
                                static_cast<int64_t>(1000 * 1000));  // was mhz
+  }
 #elif defined(BENCHMARK_OS_SOLARIS)
   kstat_ctl_t* kc = kstat_open();
   if (!kc) {
@@ -806,11 +865,11 @@ std::vector<double> GetLoadAvg() {
     !(defined(__ANDROID__) && __ANDROID_API__ < 29)
   static constexpr int kMaxSamples = 3;
   std::vector<double> res(kMaxSamples, 0.0);
-  const int nelem = getloadavg(res.data(), kMaxSamples);
+  const auto nelem = getloadavg(res.data(), kMaxSamples);
   if (nelem < 1) {
     res.clear();
   } else {
-    res.resize(nelem);
+    res.resize(static_cast<size_t>(nelem));
   }
   return res;
 #else
@@ -837,5 +896,5 @@ const SystemInfo& SystemInfo::Get() {
   return *info;
 }
 
-SystemInfo::SystemInfo() : name(GetSystemName()) {}
+SystemInfo::SystemInfo() : name(GetSystemName()), ASLRStatus(GetASLR()) {}
 }  // end namespace benchmark

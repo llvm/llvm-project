@@ -3,7 +3,7 @@
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 ; RUN: llc -mtriple=riscv64 -mattr=+xmipscmov -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-CCMOV %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+xqcicm,+xqcics,+xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 define i32 @bare_select(i1 %a, i32 %b, i32 %c) nounwind {

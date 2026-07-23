@@ -1,9 +1,9 @@
-<!--===- docs/ImplementingASemanticCheck.md 
-  
+<!--===- docs/ImplementingASemanticCheck.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 # How to implement a Sematic Check in Flang
 
@@ -16,7 +16,7 @@ local:
 I recently added a semantic check to the Flang compiler front end.  This document
 describes my thought process and the resulting implementation.
 
-For more information about the compiler, start with the 
+For more information about the compiler, start with the
 [compiler overview](Overview.md).
 
 ## Problem definition
@@ -24,7 +24,7 @@ For more information about the compiler, start with the
 In the 2018 Fortran standard, section 11.1.7.4.3, paragraph 2, states that:
 
 ```
-Except for the incrementation of the DO variable that occurs in step (3), the DO variable 
+Except for the incrementation of the DO variable that occurs in step (3), the DO variable
 shall neither be redefined nor become undefined while the DO construct is active.
 ```
 One of the ways that DO variables might be redefined is if they are passed to
@@ -91,7 +91,7 @@ Here's the relevant fragment of the parse tree produced by the compiler:
 | | | | | | | ActualArgSpec
 | | | | | | | | ActualArg -> Expr = 'ivar'
 | | | | | | | | | Designator -> DataRef -> Name = 'ivar'
-| | | EndDoStmt -> 
+| | | EndDoStmt ->
 ```
 
 Note that this fragment of the tree only shows four `parser::Expr` nodes,
@@ -106,7 +106,7 @@ constant 216 in the statement:
 I then considered what I needed to do.  I needed to detect situations where an
 active DO variable was passed to a dummy argument with `INTENT(OUT)` or
 `INTENT(INOUT)`.  Once I detected such a situation, I needed to produce a
-message that highlighted the erroneous source code.  
+message that highlighted the erroneous source code.
 
 ### Deciding where to add the code to the compiler
 This new semantic check would depend on several types of information -- the
@@ -172,8 +172,8 @@ The first function is intended for dummy arguments of `INTENT(INOUT)` and
 the second for `INTENT(OUT)`.
 
 Thus I needed three pieces of
-information -- 
-1. the source location of the erroneous text, 
+information --
+1. the source location of the erroneous text,
 2. the `INTENT` of the associated dummy argument, and
 3. the relevant symbol passed as the actual argument.
 
@@ -219,7 +219,7 @@ node to an `evaluate::ProcedureRef` node.  But I knew that there was an
 existing framework used in DO construct semantic checking that traversed an
 `evaluate::Expr` node collecting `semantics::Symbol` nodes.  I guessed that I'd
 be able to use a similar framework to traverse an `evaluate::Expr`  node to
-find all of the `evaluate::ActualArgument` nodes.  
+find all of the `evaluate::ActualArgument` nodes.
 
 Note that the compiler has multiple types called `Expr`.  One is in the
 `parser` namespace.  `parser::Expr` is defined in the file
@@ -257,7 +257,7 @@ would have the second piece of information I needed.
 
 ### Determining if the actual argument is a variable
 I also guessed that I could determine if the `evaluate::ActualArgument`
-consisted of a variable.  
+consisted of a variable.
 
 Once I had a symbol for the variable, I could call one of the functions:
 ```C++
@@ -277,7 +277,7 @@ argument was an active DO variable.
 I started my implementation by adding a visitor for `parser::Expr` nodes.
 Since this analysis is part of DO construct checking, I did this in
 `lib/Semantics/check-do.cpp`.  I added a print statement to the visitor to
-verify that my new code was actually getting executed.  
+verify that my new code was actually getting executed.
 
 In `lib/Semantics/check-do.h`, I added the declaration for the visitor:
 
@@ -529,7 +529,7 @@ So far, so good.
 The third and last piece of information I needed was to determine if a variable
 was being passed as an actual argument.  In such cases, I wanted to get the
 symbol table node (`semantics::Symbol`) for the variable.  My starting point was the
-`evaluate::ActualArgument` node.  
+`evaluate::ActualArgument` node.
 
 I was unsure of how to do this, so I browsed through existing code to look for
 how it treated `evaluate::ActualArgument` objects.  Since most of the code that deals with the `evaluate` namespace is in the lib/Evaluate directory, I looked there.  I ran `grep` on all of the `.cpp` files looking for
@@ -554,7 +554,7 @@ get an `evaluate::Expr<SomeType>` on which I could perform further analysis.
 I also knew that the header file `include/flang/Evaluate/tools.h` held many
 utility functions for dealing with `evaluate::Expr` objects.  I was hoping to
 find something that would determine if an `evaluate::Expr` was a variable.  So
-I searched for `IsVariable` and got a hit immediately.  
+I searched for `IsVariable` and got a hit immediately.
 ```C++
   template<typename A> bool IsVariable(const A &x) {
     if (auto known{IsVariableHelper{}(x)}) {
@@ -614,13 +614,13 @@ work:
       }
     }
   }
-```  
+```
 
 Note the line that prints out the symbol table entry for the variable:
 
 ```C++
           std::cout << "Found a whole variable: " << *var << "\n";
-```  
+```
 
 The compiler defines the "<<" operator for `semantics::Symbol`, which is handy
 for analyzing the compiler's behavior.
@@ -665,12 +665,12 @@ compiler code accordingly:
           common::Intent intent{argRef->dummyIntent()};
           switch (intent) {
             case common::Intent::In: std::cout << "INTENT(IN)\n"; break;
-            case common::Intent::Out: 
-              std::cout << "INTENT(OUT)\n"; 
+            case common::Intent::Out:
+              std::cout << "INTENT(OUT)\n";
               context_.CheckDoVarRedefine(parsedExpr.source, *var);
               break;
-            case common::Intent::InOut: 
-              std::cout << "INTENT(INOUT)\n"; 
+            case common::Intent::InOut:
+              std::cout << "INTENT(INOUT)\n";
               context_.WarnDoVarRedefine(parsedExpr.source, *var);
               break;
             default: std::cout << "default INTENT\n";
@@ -679,7 +679,7 @@ compiler code accordingly:
       }
     }
   }
-```  
+```
 
 I then ran this code on my test case, and miraculously, got the following
 output:
@@ -712,7 +712,7 @@ Even sweeter.
 At this point, my implementation seemed to be working.  But I was concerned
 about the limitations of my test case.  So I augmented it to include arguments
 other than `INTENT(OUT)` and more complex expressions.  Luckily, my
-augmented test did not reveal any new problems.   
+augmented test did not reveal any new problems.
 
 Here's the test I ended up with:
 
@@ -731,7 +731,7 @@ Here's the test I ended up with:
       jvar = intentOutFunc(ivar)
     end do
 
-    ! Error for passing a DO variable to an INTENT(OUT) dummy, more complex 
+    ! Error for passing a DO variable to an INTENT(OUT) dummy, more complex
     ! expression
     do ivar = 1, 10
       jvar = 83 + intentInFunc(intentOutFunc(ivar))
@@ -781,10 +781,10 @@ to make sure that the names were clear.  Here's what I ended up with:
         if (const Symbol * var{evaluate::UnwrapWholeSymbolDataRef(*argExpr)}) {
           common::Intent intent{argRef->dummyIntent()};
           switch (intent) {
-            case common::Intent::Out: 
+            case common::Intent::Out:
               context_.CheckDoVarRedefine(parsedExpr.source, *var);
               break;
-            case common::Intent::InOut: 
+            case common::Intent::InOut:
               context_.WarnDoVarRedefine(parsedExpr.source, *var);
               break;
             default:; // INTENT(IN) or default intent
@@ -795,7 +795,7 @@ to make sure that the names were clear.  Here's what I ended up with:
   }
 ```
 
-I then created a pull request to get review comments.  
+I then created a pull request to get review comments.
 
 ## Responding to pull request comments
 I got feedback suggesting that I use an `if` statement rather than a

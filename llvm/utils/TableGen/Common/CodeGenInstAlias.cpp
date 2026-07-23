@@ -47,8 +47,12 @@ matchSimpleOperand(const Init *Arg, const StringInit *ArgName, const Record *Op,
     if (const auto *ArgDef = dyn_cast<DefInit>(Arg)) {
       const Record *ArgRec = ArgDef->getDef();
 
-      // Match 'RegClass:$name' or 'RegOp:$name'.
+      // Match 'RegClass:$name', 'RegOp:$name', or RegisterByHwMode.
       if (const Record *ArgRC = T.getInitValueAsRegClassLike(Arg)) {
+        if (ArgRec->isSubClassOf("RegisterByHwMode")) {
+          // Note: constraints are validated in RegisterByHwMode ctor later.
+          return ResultOperand::createRegister(ArgRec);
+        }
         if (ArgRC->isSubClassOf("RegisterClass")) {
           if (!OpRC->isSubClassOf("RegisterClass") ||
               !T.getRegisterClass(OpRC, Loc).hasSubClass(

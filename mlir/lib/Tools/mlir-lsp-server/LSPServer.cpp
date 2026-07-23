@@ -130,6 +130,17 @@ struct LSPServer {
 
 void LSPServer::onInitialize(const InitializeParams &params,
                              Callback<llvm::json::Value> reply) {
+  // Configure the workspace root if it was provided.
+  if (params.rootUri) {
+    llvm::Expected<URIForFile> rootURI = URIForFile::fromURI(*params.rootUri);
+    if (rootURI)
+      server.setWorkspaceRoot(rootURI->file());
+    else
+      consumeError(rootURI.takeError());
+  } else if (params.rootPath) {
+    server.setWorkspaceRoot(*params.rootPath);
+  }
+
   // Send a response with the capabilities of this server.
   llvm::json::Object serverCaps{
       {"textDocumentSync",

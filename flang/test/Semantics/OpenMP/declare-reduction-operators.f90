@@ -34,7 +34,7 @@ module m1
 !$omp declare reduction(.mul.:t1:omp_out=omp_out.mul.omp_in)
 !$omp declare reduction(.fluffy.:t1:omp_out=omp_out.fluffy.omp_in)
 !CHECK: op.fluffy., PUBLIC: UserReductionDetails TYPE(t1)
-!CHECK: op.mul., PUBLIC: UserReductionDetails TYPE(t1)   
+!CHECK: op.mul., PUBLIC: UserReductionDetails TYPE(t1)
 contains
   function my_mul(x, y)
     type (t1), intent (in) :: x, y
@@ -80,6 +80,6 @@ program test_vector
   do i = 1, 100
      v2(i) = v2(i) + v1(i)  ! Invokes add_vectors
   end do
-  
+
   print *, 'v2 components:', v2%x, v2%y, v2%z
 end program test_vector

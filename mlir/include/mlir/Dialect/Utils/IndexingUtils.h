@@ -63,7 +63,7 @@ int64_t computeProduct(ArrayRef<int64_t> basis);
 /// Return the number of elements of basis (i.e. the max linear index).
 /// Return `0` if `basis` is empty.
 ///
-/// `basis` elements are asserted to be non-negative.
+/// `basis` elements are asserted to be positive.
 ///
 /// Return `0` if `basis` is empty.
 inline int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis) {
@@ -72,16 +72,16 @@ inline int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis) {
 
 /// Return the linearized index of 'offsets' w.r.t. 'basis'.
 ///
-/// `basis` elements are asserted to be non-negative.
+/// `basis` elements are asserted to be positive.
 int64_t linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis);
 
 /// Given the strides together with a linear index in the dimension space,
 /// return the vector-space offsets in each dimension for a de-linearized index.
-/// `strides` elements are asserted to be non-negative.
+/// `strides` elements are asserted to be positive.
 ///
 /// Let `li = linearIndex`, assuming `strides` are `[s0, .. sn]`, return the
 /// vector of int64_t
-///   `[li % s0, (li / s0) % s1, ..., (li / s0 / .. / sn-1) % sn]`
+///   `[li / s0, (li % s0) / s1, ..., (li % s0 % .. % sn-1) / sn]`
 SmallVector<int64_t> delinearize(int64_t linearIndex,
                                  ArrayRef<int64_t> strides);
 
@@ -89,7 +89,7 @@ SmallVector<int64_t> delinearize(int64_t linearIndex,
 /// dimensions of `shape`. This represents how many times `subShape` fits
 /// within `shape`. If integral division is not possible, return std::nullopt.
 /// The trailing `subShape.size()` entries of both shapes are assumed (and
-/// enforced) to only contain non-negative values.
+/// enforced) to only contain positive values.
 ///
 /// Examples:
 ///   - shapeRatio({3, 5, 8}, {2, 5, 2}) returns {3, 2, 1}.
@@ -181,7 +181,7 @@ AffineExpr linearize(MLIRContext *ctx, ArrayRef<AffineExpr> offsets,
 ///
 /// Let `li = linearIndex`, assuming `strides` are `[s0, .. sn]`, return the
 /// vector of AffineExpr
-///   `[li % s0, (li / s0) % s1, ..., (li / s0 / .. / sn-1) % sn]`
+///   `[li / s0, (li % s0) / s1, ..., (li % s0 % .. % sn-1) / sn]`
 ///
 /// It is the caller's responsibility to pass proper AffineExpr kind that result
 /// in valid AffineExpr (i.e. cannot multiply 2 AffineDimExpr or divide by an

@@ -155,7 +155,7 @@ public:
     /// Sets an alternate mode of operation. Current effects are:
     /// - Using the current working directory as the working directory for
     ///   fallback commands
-    bool StrongWorkspaceMode;
+    bool StrongWorkspaceMode = false;
 
     /// The resource directory is used to find internal headers, overriding
     /// defaults and -resource-dir compiler flag).
@@ -190,6 +190,9 @@ public:
 
     // If true, parse emplace-like functions in the preamble.
     bool PreambleParseForwardingFunctions = true;
+
+    // If true, skip preamble build.
+    bool SkipPreambleBuild = false;
 
     /// Whether include fixer insertions for Objective-C code should use #import
     /// instead of #include.
@@ -482,6 +485,8 @@ private:
   }
   const ThreadsafeFS &TFS;
 
+  void adjustParseInputs(ParseInputs &Inputs, PathRef File) const;
+
   Path ResourceDir;
   // The index used to look up symbols. This could be:
   //   - null (all index functionality is optional)
@@ -508,6 +513,8 @@ private:
 
   bool PreambleParseForwardingFunctions = true;
 
+  bool SkipPreambleBuild = false;
+
   bool ImportInsertions = false;
 
   bool PublishInactiveRegions = false;
@@ -528,6 +535,7 @@ private:
   DraftStore DraftMgr;
 
   std::unique_ptr<ThreadsafeFS> DirtyFS;
+  std::function<Context(PathRef)> ContextProvider;
 };
 
 } // namespace clangd

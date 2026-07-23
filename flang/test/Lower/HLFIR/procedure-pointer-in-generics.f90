@@ -12,10 +12,6 @@ module m_gen
     end function
   end interface
 end
-!CHECK-LABEL:   fir.global @_QMm_genEfoo : !fir.boxproc<(!fir.ref<f32>) -> f32> {
-!CHECK:           %[[VAL_0:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
-!CHECK:           %[[VAL_1:.*]] = fir.emboxproc %[[VAL_0]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
-!CHECK:           fir.has_value %[[VAL_1]] : !fir.boxproc<(!fir.ref<f32>) -> f32>
 
 subroutine test1()
   use m_gen
@@ -44,3 +40,7 @@ end subroutine
 !CHECK:           %[[VAL_5:.*]] = fir.emboxproc %[[VAL_4]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<() -> ()>
 !CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 !CHECK:           fir.store %[[VAL_6]] to %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
+!CHECK-LABEL:   fir.global @_QMm_genEfoo : !fir.boxproc<(!fir.ref<f32>) -> f32> {
+!CHECK:           %[[VAL_0:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
+!CHECK:           %[[VAL_1:.*]] = fir.emboxproc %[[VAL_0]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
+!CHECK:           fir.has_value %[[VAL_1]] : !fir.boxproc<(!fir.ref<f32>) -> f32>

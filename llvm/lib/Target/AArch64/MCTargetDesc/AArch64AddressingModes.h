@@ -48,6 +48,19 @@ enum ShiftExtendType {
   SXTX,
 };
 
+/// isSignExtendShiftType - Returns true if \p Type is sign extending.
+static inline bool isSignExtendShiftType(AArch64_AM::ShiftExtendType Type) {
+  switch (Type) {
+  case AArch64_AM::SXTB:
+  case AArch64_AM::SXTH:
+  case AArch64_AM::SXTW:
+  case AArch64_AM::SXTX:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// getShiftName - Get the string encoding for the shift type.
 static inline const char *getShiftExtendName(AArch64_AM::ShiftExtendType ST) {
   switch (ST) {
@@ -335,6 +348,28 @@ static inline bool isValidDecodeLogicalImmediate(uint64_t val,
     return false;
 
   return true;
+}
+
+/// isLegalArithImmed - \returns true if \p C is a legal immediate operand for
+/// an arithmetic instruction.
+constexpr bool isLegalArithImmed(const uint64_t C) {
+  return (C >> 12 == 0) || ((C & 0xFFFULL) == 0 && C >> 24 == 0);
+}
+
+/// getArithImmedShift - assumes \p C is a legal immediate for arithmetic
+/// instructions and \returns the required shift for this immediate.
+constexpr unsigned getArithImmedShift(const uint64_t C) {
+  assert(isLegalArithImmed(C) &&
+         "Tried to get the shift amount for an illegal immediate");
+  return C >> 12 == 0 ? 0 : 12;
+}
+
+/// isLegalCmpImmed - \returns true if \p C is a legal immediate operand for a
+/// comparison instruction.
+static inline bool isLegalCmpImmed(const APInt &C) {
+  // Works for negative immediates too, as it can be written as an ADDS
+  // instruction with a negated immediate.
+  return isLegalArithImmed(C.abs().getZExtValue());
 }
 
 //===----------------------------------------------------------------------===//
@@ -769,7 +804,7 @@ static inline uint64_t decodeAdvSIMDModImmType12(uint8_t Imm) {
   if (Imm & 0x04) EncVal |= 0x0004000000000000ULL;
   if (Imm & 0x02) EncVal |= 0x0002000000000000ULL;
   if (Imm & 0x01) EncVal |= 0x0001000000000000ULL;
-  return (EncVal << 32) | EncVal;
+  return EncVal;
 }
 
 /// Returns true if Imm is the concatenation of a repeating pattern of type T.
@@ -899,6 +934,34 @@ static inline bool isSVECpyDupImm(int SizeInBits, int64_t Val, int32_t &Imm,
     break;
   }
   return false;
+}
+
+static inline bool isSVELogicalImm(unsigned SizeInBits, uint64_t ImmVal,
+                                   uint64_t &Encoding) {
+  // Shift mask depending on type size.
+  switch (SizeInBits) {
+  case 8:
+    ImmVal &= 0xFF;
+    ImmVal |= ImmVal << 8;
+    ImmVal |= ImmVal << 16;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 16:
+    ImmVal &= 0xFFFF;
+    ImmVal |= ImmVal << 16;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 32:
+    ImmVal &= 0xFFFFFFFF;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 64:
+    break;
+  default:
+    llvm_unreachable("Unexpected size");
+  }
+
+  return processLogicalImmediate(ImmVal, 64, Encoding);
 }
 
 } // end namespace AArch64_AM

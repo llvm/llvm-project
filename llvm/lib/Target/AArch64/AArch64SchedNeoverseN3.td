@@ -19,7 +19,8 @@ def NeoverseN3Model : SchedMachineModel {
     let CompleteModel         =   1;
 
     list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-        [HasSVE2p1, HasSVEB16B16, HasPAuthLR, HasCPA, HasCSSC]);
+                                                      SVE2p1Unsupported.F,
+        [HasSVE2p1, HasSVEB16B16, HasPAuthLR, HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1715,7 +1716,7 @@ def : InstRW<[N3Write_0or2c_1M], (instregex "^PTRUES_[BHSD]")>;
 def : InstRW<[N3Write_2c_1M], (instregex "^PFIRST_B$", "^PNEXT_[BHSD]$")>;
 
 // Predicate test
-def : InstRW<[N3Write_1c_1M], (instrs PTEST_PP)>;
+def : InstRW<[N3Write_1c_1M], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[N3Write_2c_1M], (instregex "^TRN[12]_PPP_[BHSDQ]$")>;
@@ -1752,7 +1753,7 @@ def : InstRW<[N3Write_2c_1V],
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
                         "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
@@ -1814,7 +1815,8 @@ def : InstRW<[N3Write_4c_1V1], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
 def : InstRW<[N3Write_4c_2V0], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
-def : InstRW<[N3Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$")>;
+def : InstRW<[N3Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$",
+                                         "^(EON|NAND|NOR)_ZZZ$")>;
 
 // Count/reverse bits
 def : InstRW<[N3Write_2c_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;

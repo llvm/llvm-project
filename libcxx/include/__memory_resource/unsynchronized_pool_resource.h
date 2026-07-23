@@ -22,6 +22,7 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace pmr {
 
@@ -76,7 +77,7 @@ public:
 
   void release();
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
 
   [[__gnu__::__pure__]] pool_options options() const;
 
@@ -99,6 +100,7 @@ private:
 
 } // namespace pmr
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

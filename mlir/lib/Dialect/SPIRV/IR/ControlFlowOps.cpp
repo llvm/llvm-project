@@ -138,7 +138,7 @@ LogicalResult BranchConditionalOp::verify() {
       return emitOpError("must have exactly two branch weights");
     }
     if (llvm::all_of(*weights, [](Attribute attr) {
-          return llvm::cast<IntegerAttr>(attr).getValue().isZero();
+          return cast<IntegerAttr>(attr).getValue().isZero();
         }))
       return emitOpError("branch weights cannot both be zero");
   }
@@ -266,12 +266,14 @@ LogicalResult SwitchOp::verify() {
   if (!literals && targets.empty())
     return success();
 
-  Type selectorType = getSelector().getType();
-  Type literalType = literals->getType().getElementType();
-  if (literalType != selectorType)
-    return emitOpError() << "'selector' type (" << selectorType
-                         << ") should match literals type (" << literalType
-                         << ")";
+  if (literals) {
+    Type selectorType = getSelector().getType();
+    Type literalType = literals->getType().getElementType();
+    if (literalType != selectorType)
+      return emitOpError() << "'selector' type (" << selectorType
+                           << ") should match literals type (" << literalType
+                           << ")";
+  }
 
   if (literals && literals->size() != static_cast<int64_t>(targets.size()))
     return emitOpError() << "number of literals (" << literals->size()
@@ -360,6 +362,14 @@ static bool hasOtherMerge(Region &region) {
   });
 }
 
+/// Returns true if types yielded by `spirv.mlir.merge` in the region match
+/// those returned by the `op`.
+static bool returnTypesMatch(Region &region, Operation *op) {
+  auto mergeOps = region.getOps<spirv::MergeOp>();
+  Operation *mergeOp = llvm::getSingleElement(mergeOps);
+  return llvm::equal(mergeOp->getOperandTypes(), op->getResultTypes());
+}
+
 LogicalResult LoopOp::verifyRegions() {
   auto *op = getOperation();
 
@@ -445,6 +455,10 @@ LogicalResult LoopOp::verifyRegions() {
     }
   }
 
+  if (!returnTypesMatch(region, op))
+    return emitOpError(
+        "result types do not match types yielded with `spirv.mlir.merge`");
+
   return success();
 }
 
@@ -504,8 +518,8 @@ LogicalResult ReturnValueOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult SelectOp::verify() {
-  if (auto conditionTy = llvm::dyn_cast<VectorType>(getCondition().getType())) {
-    auto resultVectorTy = llvm::dyn_cast<VectorType>(getResult().getType());
+  if (auto conditionTy = dyn_cast<VectorType>(getCondition().getType())) {
+    auto resultVectorTy = dyn_cast<VectorType>(getResult().getType());
     if (!resultVectorTy) {
       return emitOpError("result expected to be of vector type when "
                          "condition is of vector type");
@@ -608,6 +622,10 @@ LogicalResult SelectionOp::verifyRegions() {
 
   if (region.hasOneBlock())
     return emitOpError("must have a selection header block");
+
+  if (!returnTypesMatch(region, op))
+    return emitOpError(
+        "result types do not match types yielded with `spirv.mlir.merge`");
 
   return success();
 }

@@ -10,7 +10,10 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
+@skipIfWasm  # no expression evaluation
 class TestRerunExpr(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     # FIXME: on Windows rebuilding the binary isn't enough to unload it
     #        on progrem restart. One will have to try hard to evict
     #        the module from the ModuleList (possibly including a call to

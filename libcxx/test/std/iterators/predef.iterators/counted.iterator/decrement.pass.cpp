@@ -13,6 +13,7 @@
 // constexpr counted_iterator operator--(int)
 //  requires bidirectional_iterator<I>;
 
+#include <cassert>
 #include <iterator>
 
 #include "test_macros.h"

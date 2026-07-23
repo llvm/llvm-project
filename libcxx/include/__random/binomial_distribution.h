@@ -10,6 +10,7 @@
 #define _LIBCPP___RANDOM_BINOMIAL_DISTRIBUTION_H
 
 #include <__config>
+#include <__math/gamma.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
 #include <cmath>
@@ -44,8 +45,8 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __t = 1, double __p = 0.5);
 
-    _LIBCPP_HIDE_FROM_ABI result_type t() const { return __t_; }
-    _LIBCPP_HIDE_FROM_ABI double p() const { return __p_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type t() const { return __t_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_; }
 
     friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__t_ == __y.__t_ && __x.__p_ == __y.__p_;
@@ -73,21 +74,21 @@ public:
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI result_type t() const { return __p_.t(); }
-  _LIBCPP_HIDE_FROM_ABI double p() const { return __p_.p(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type t() const { return __p_.t(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_.p(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
   _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return t(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return t(); }
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(const binomial_distribution& __x, const binomial_distribution& __y) {
     return __x.__p_ == __y.__p_;
@@ -97,33 +98,13 @@ public:
   }
 };
 
-// Some libc declares the math functions to be `noexcept`.
-#if _LIBCPP_GLIBC_PREREQ(2, 8) || defined(__LLVM_LIBC__)
-#  define _LIBCPP_LGAMMA_R_NOEXCEPT _NOEXCEPT
-#else
-#  define _LIBCPP_LGAMMA_R_NOEXCEPT
-#endif
-
-#if !defined(_LIBCPP_MSVCRT_LIKE)
-extern "C" double lgamma_r(double, int*) _LIBCPP_LGAMMA_R_NOEXCEPT;
-#endif
-
-inline _LIBCPP_HIDE_FROM_ABI double __libcpp_lgamma(double __d) {
-#if defined(_LIBCPP_MSVCRT_LIKE)
-  return lgamma(__d);
-#else
-  int __sign;
-  return lgamma_r(__d, &__sign);
-#endif
-}
-
 template <class _IntType>
 binomial_distribution<_IntType>::param_type::param_type(result_type __t, double __p) : __t_(__t), __p_(__p) {
   if (0 < __p_ && __p_ < 1) {
     __r0_ = static_cast<result_type>((__t_ + 1) * __p_);
-    __pr_ = std::exp(
-        std::__libcpp_lgamma(__t_ + 1.) - std::__libcpp_lgamma(__r0_ + 1.) - std::__libcpp_lgamma(__t_ - __r0_ + 1.) +
-        __r0_ * std::log(__p_) + (__t_ - __r0_) * std::log(1 - __p_));
+    __pr_ =
+        std::exp(__math::__lgamma_r(__t_ + 1.) - __math::__lgamma_r(__r0_ + 1.) -
+                 __math::__lgamma_r(__t_ - __r0_ + 1.) + __r0_ * std::log(__p_) + (__t_ - __r0_) * std::log(1 - __p_));
     __odds_ratio_ = __p_ / (1 - __p_);
   }
 }

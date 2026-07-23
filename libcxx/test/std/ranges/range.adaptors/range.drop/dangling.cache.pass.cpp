@@ -14,6 +14,7 @@
 
 #include <ranges>
 
+#include <cassert>
 #include <cstddef>
 #include <cstring>
 

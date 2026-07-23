@@ -1,0 +1,21 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+cir.func @must_be_inside_coroutine() { 
+  cir.coro.body { // expected-error {{enclosing function must be a coroutine}}
+
+  }
+}
+
+cir.func coroutine @must_have_one_coro_body(%arg0 : !cir.bool) {  // expected-error {{coroutine function must have exactly one cir.body op}}
+  cir.coro.body {
+    cir.await(user, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.yield
+    }, resume : {
+      cir.yield
+    },)
+  }
+  cir.coro.body {
+  }
+}

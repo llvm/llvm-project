@@ -14,8 +14,8 @@
 
 __m128i test_mm_mask_compress_epi16(__m128i __S, __mmask8 __U, __m128i __D) {
   // CIR-LABEL: test_mm_mask_compress_epi16
-  // %[[MASK8:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
-  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.compress" %{{.+}}, %{{.+}}, %[[MASK8]]: (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !cir.int<u, 1>>) -> !cir.vector<8 x !s16i>
+  // %[[MASK8:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.compress" %{{.+}}, %{{.+}}, %[[MASK8]]: (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !cir.int<s, 1>>) -> !cir.vector<8 x !s16i>
   // %[[CAST:.+]] = cir.cast bitcast %[[RES]] : !cir.vector<8 x !s16i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_mask_compress_epi16
@@ -33,8 +33,8 @@ __m128i test_mm_mask_compress_epi16(__m128i __S, __mmask8 __U, __m128i __D) {
 
 __m128i test_mm_maskz_compress_epi16(__mmask8 __U, __m128i __D) {
   // CIR-LABEL: test_mm_maskz_compress_epi16
-  // %[[MASK8:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
-  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.compress" %{{.+}}, %{{.+}}, %[[MASK8]]: (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !cir.int<u, 1>>) -> !cir.vector<8 x !s16i>
+  // %[[MASK8:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.compress" %{{.+}}, %{{.+}}, %[[MASK8]]: (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !cir.int<s, 1>>) -> !cir.vector<8 x !s16i>
   // %[[CAST:.+]] = cir.cast bitcast %[[RES]] : !cir.vector<8 x !s16i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_maskz_compress_epi16
@@ -52,8 +52,8 @@ __m128i test_mm_maskz_compress_epi16(__mmask8 __U, __m128i __D) {
 
 __m128i test_mm_mask_compress_epi8(__m128i __S, __mmask16 __U, __m128i __D) {
   // CIR-LABEL: test_mm_mask_compress_epi8
-  // %[[MASK16:.+]] = cir.cast bitcast %{{.+}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
-  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.compress" %{{.+}}, %{{.+}}, %[[MASK16]]: (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !cir.int<u, 1>>) -> !cir.vector<16 x !s8i>
+  // %[[MASK16:.+]] = cir.cast bitcast %{{.+}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
+  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.compress" %{{.+}}, %{{.+}}, %[[MASK16]]: (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !cir.int<s, 1>>) -> !cir.vector<16 x !s8i>
   // %[[CAST:.+]] = cir.cast bitcast %[[RES]] : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_mask_compress_epi8
@@ -73,8 +73,8 @@ __m128i test_mm_maskz_compress_epi8(__mmask16 __U, __m128i __D) {
   // CIR-LABEL: test_mm_maskz_compress_epi8
   // %[[ZERO:.+]] = cir.call @_mm_setzero_si128() : () -> !cir.vector<2 x !s64i>
   // %[[CAST1:.+]] = cir.cast bitcast %[[ZERO]] : !cir.vector<2 x !s64i> -> !cir.vector<16 x !s8i>
-  // %[[MASK16:.+]] = cir.cast bitcast %{{.+}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
-  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.compress" %{{.+}}, %[[CAST1]], %[[MASK16]]: (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !cir.int<u, 1>>) -> !cir.vector<16 x !s8i>
+  // %[[MASK16:.+]] = cir.cast bitcast %{{.+}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
+  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.compress" %{{.+}}, %[[CAST1]], %[[MASK16]]: (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !cir.int<s, 1>>) -> !cir.vector<16 x !s8i>
   // %[[CAST2:.+]] = cir.cast bitcast %[[RES]] : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_maskz_compress_epi8
@@ -96,8 +96,8 @@ __m128i test_mm_maskz_compress_epi8(__mmask16 __U, __m128i __D) {
 
 __m128i test_mm_mask_expand_epi16(__m128i __S, __mmask8 __U, __m128i __D) {
   // CIR-LABEL: test_mm_mask_expand_epi16
-  // %[[MASK16:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
-  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.expand" %{{.+}}, %{{.+}}, %[[MASK16]]: (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !cir.int<u, 1>>) -> !cir.vector<8 x !s16i>
+  // %[[MASK16:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.expand" %{{.+}}, %{{.+}}, %[[MASK16]]: (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !cir.int<s, 1>>) -> !cir.vector<8 x !s16i>
   // %[[CAST:.+]] = cir.cast bitcast %[[RES]] : !cir.vector<8 x !s16i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_mask_expand_epi16
@@ -115,8 +115,8 @@ __m128i test_mm_mask_expand_epi16(__m128i __S, __mmask8 __U, __m128i __D) {
 
 __m128i test_mm_maskz_expand_epi16(__mmask8 __U, __m128i __D) {
   // CIR-LABEL: test_mm_maskz_expand_epi16
-  // %[[MASK:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
-  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.expand" %{{.+}}, %{{.+}}, %[[MASK]]: (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !cir.int<u, 1>>) -> !cir.vector<8 x !s16i>
+  // %[[MASK:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.expand" %{{.+}}, %{{.+}}, %[[MASK]]: (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !cir.int<s, 1>>) -> !cir.vector<8 x !s16i>
   // %[[CAST:.+]] = cir.cast bitcast %[[RES]] : !cir.vector<8 x !s16i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_maskz_expand_epi16
@@ -134,8 +134,8 @@ __m128i test_mm_maskz_expand_epi16(__mmask8 __U, __m128i __D) {
 
 __m128i test_mm_mask_expand_epi8(__m128i __S, __mmask16 __U, __m128i __D) {
   // CIR-LABEL: test_mm_mask_expand_epi8
-  // %[[MASK:.+]] = cir.cast bitcast %{{.+}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
-  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.expand" %{{.+}}, %{{.+}}, %[[MASK]]: (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !cir.int<u, 1>>) -> !cir.vector<16 x !s8i>
+  // %[[MASK:.+]] = cir.cast bitcast %{{.+}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
+  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.expand" %{{.+}}, %{{.+}}, %[[MASK]]: (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !cir.int<s, 1>>) -> !cir.vector<16 x !s8i>
   // %[[CAST:.+]] = cir.cast bitcast %[[RES]] : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_mask_expand_epi8
@@ -153,8 +153,8 @@ __m128i test_mm_mask_expand_epi8(__m128i __S, __mmask16 __U, __m128i __D) {
 
 __m128i test_mm_maskz_expand_epi8(__mmask16 __U, __m128i __D) {
   // CIR-LABEL: test_mm_maskz_expand_epi8
-  // %[[MASK:.+]] = cir.cast bitcast %{{.+}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
-  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.expand" %{{.+}}, %{{.+}}, %[[MASK]]: (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !cir.int<u, 1>>) -> !cir.vector<16 x !s8i>
+  // %[[MASK:.+]] = cir.cast bitcast %{{.+}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
+  // %[[RES:.+]] = cir.call_llvm_intrinsic "x86.avx512.mask.expand" %{{.+}}, %{{.+}}, %[[MASK]]: (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !cir.int<s, 1>>) -> !cir.vector<16 x !s8i>
   // %[[CAST:.+]] = cir.cast bitcast %[[RES]] : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_maskz_expand_epi8

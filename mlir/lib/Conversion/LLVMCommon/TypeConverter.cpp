@@ -161,7 +161,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
         return success();
       }
       recursiveStack.push_back(type);
-      auto popConversionCallStack = llvm::make_scope_exit(
+      llvm::scope_exit popConversionCallStack(
           [&recursiveStack]() { recursiveStack.pop_back(); });
 
       SmallVector<Type> convertedElemTypes;
@@ -770,7 +770,8 @@ SmallVector<Value, 4> LLVMTypeConverter::promoteOperands(
         MemRefDescriptor desc(llvmOperand.front());
         promotedOperands.push_back(desc.alignedPtr(builder, loc));
         continue;
-      } else if (isa<UnrankedMemRefType>(operand.getType())) {
+      }
+      if (isa<UnrankedMemRefType>(operand.getType())) {
         llvm_unreachable("Unranked memrefs are not supported");
       }
     } else {

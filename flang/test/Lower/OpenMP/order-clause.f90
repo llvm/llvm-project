@@ -1,6 +1,8 @@
 ! This test checks lowering of OpenMP order clause.
 
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+! To prevent testing for unrelated clauses like implicit linear clause and focusing on the
+! clauses of interest here, the OpenMP version is 6.0
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
 
 !CHECK-LABEL:   func.func @_QPsimd_order() {
 subroutine simd_order
@@ -36,15 +38,15 @@ end subroutine do_order
 
 !CHECK-LABEL:   func.func @_QPdo_simd_order() {
 subroutine do_simd_order
-   !CHECK: omp.wsloop order(reproducible:concurrent)
+   !CHECK: omp.wsloop order(reproducible:concurrent) {
    !$omp do simd order(concurrent)
    do i = 1, 10
    end do
-   !CHECK: omp.wsloop order(reproducible:concurrent)
+   !CHECK: omp.wsloop order(reproducible:concurrent) {
    !$omp do simd order(reproducible:concurrent)
    do i = 1, 10
    end do
-   !CHECK: omp.wsloop order(unconstrained:concurrent)
+   !CHECK: omp.wsloop order(unconstrained:concurrent) {
    !$omp do simd order(unconstrained:concurrent)
    do i = 1, 10
    end do
@@ -53,7 +55,7 @@ end subroutine do_simd_order
 !CHECK-LABEL:   func.func @_QPdo_simd_order_parallel() {
 subroutine do_simd_order_parallel
    !CHECK: omp.parallel {
-   !CHECK: omp.wsloop order(reproducible:concurrent)
+   !CHECK: omp.wsloop order(reproducible:concurrent) {
    !$omp parallel do simd order(reproducible:concurrent)
    do i = 1, 10
    end do

@@ -13,6 +13,7 @@
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRVPass.h"
 
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
@@ -35,6 +36,17 @@ class ConvertFuncToSPIRVPass
 void ConvertFuncToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
   Operation *op = getOperation();
+
+  // This pass requires the target function to be nested inside a block so
+  // that the dialect conversion framework can properly replace or move it.
+  // Running it on a detached top-level op (e.g., via --no-implicit-module) is
+  // unsupported; wrap the input in a module op first.
+  if (!op->getBlock() && isa<func::FuncOp>(op)) {
+    op->emitError("'") << getArgument()
+                       << "' pass requires the target operation to be nested "
+                          "in a block; consider wrapping the input in a module";
+    return signalPassFailure();
+  }
 
   auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
   std::unique_ptr<ConversionTarget> target =

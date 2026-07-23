@@ -51,7 +51,7 @@ inline bool isV8EligibleForIT(const InstrType *Instr) {
     // Outside of an IT block, these set CPSR.
     return IsCPSRDead(Instr);
   case ARM::tADDrSPi:
-  case ARM::tCMNz:
+  case ARM::tCMN:
   case ARM::tCMPi8:
   case ARM::tCMPr:
   case ARM::tLDRBi:

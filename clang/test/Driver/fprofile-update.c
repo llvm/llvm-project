@@ -18,5 +18,5 @@
 // RUN: %clang -### %s --target=powerpc-unknown-aix -fprofile-generate -fprofile-update=prefer-atomic 2>&1 | FileCheck %s --check-prefix=AIX
 // RUN: %clang -### %s --target=powerpc-unknown-aix -fprofile-generate 2>&1 | FileCheck %s --check-prefix=AIX-NOATOMIC
 // RUN: %clang -### %s --target=powerpc-unknown-aix -fprofile-generate -fprofile-update=single 2>&1 | FileCheck %s --check-prefix=AIX-NOATOMIC
-// AIX: "-latomic"
-// AIX-NOATOMIC-NOT: "-latomic"
+// AIX: "-lcompiler_rt"
+// AIX-NOATOMIC-NOT: "-lcompiler_rt"

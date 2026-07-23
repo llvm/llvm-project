@@ -69,6 +69,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasFrsqrte = false;
   bool HasFrsqrtes = false;
   bool HasP10Vector = false;
+  bool HasFutureVector = false;
   bool HasPCRelativeMemops = false;
   bool HasQuadwordAtomics = false;
   bool UseLongCalls = false;
@@ -97,7 +98,7 @@ public:
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     bool CPUKnown = isValidCPUName(Name);
     if (CPUKnown) {
       CPU = Name;
@@ -198,6 +199,12 @@ public:
                          bool Enabled) const override;
 
   bool supportsTargetAttributeTune() const override { return true; }
+
+  ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+
+  bool isValidFeatureName(StringRef Name) const override;
+
+  llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
@@ -368,7 +375,7 @@ public:
   bool supportsCpuSupports() const override {
     llvm::Triple Triple = getTriple();
     // AIX 7.2 is the minimum requirement to support __builtin_cpu_supports().
-    return Triple.isOSGlibc() ||
+    return Triple.isOSGlibc() || Triple.isMusl() ||
            (Triple.isOSAIX() &&
             !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
   }
@@ -376,7 +383,7 @@ public:
   bool supportsCpuIs() const override {
     llvm::Triple Triple = getTriple();
     // AIX 7.2 is the minimum requirement to support __builtin_cpu_is().
-    return Triple.isOSGlibc() ||
+    return Triple.isOSGlibc() || Triple.isMusl() ||
            (Triple.isOSAIX() &&
             !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
   }

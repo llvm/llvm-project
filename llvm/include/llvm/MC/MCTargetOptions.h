@@ -21,7 +21,16 @@ namespace llvm {
 enum class EmitDwarfUnwindType {
   Always,          // Always emit dwarf unwind
   NoCompactUnwind, // Only emit if compact unwind isn't available
+  DwarfOnly,       // Force compact unwind to reference DWARF
   Default,         // Default behavior is based on the target
+};
+
+// For ELF targets, whether to adjust relocations referencing eligible local
+// symbols to use section symbols.
+enum class RelocSectionSymType {
+  All,      // For all eligible local symbols (default)
+  Internal, // For .L symbols
+  None,     // Never use section symbols
 };
 
 class StringRef;
@@ -61,6 +70,9 @@ public:
   bool X86RelaxRelocations = true;
 
   bool X86Sse2Avx = false;
+
+  // For ELF relocations, controls section symbol conversion.
+  RelocSectionSymType RelocSectionSym = RelocSectionSymType::All;
 
   std::optional<unsigned> OutputAsmVariant;
 
@@ -107,6 +119,12 @@ public:
 
   // Whether or not to use full register names on PowerPC.
   bool PPCUseFullRegisterNames : 1;
+
+  // Force 8-byte (sdata8) pointer encodings for ELF exception-handling.
+  // On x86_64 this affects the .eh_frame FDE CFI plus the personality, LSDA,
+  // and TType encodings; on AArch64/PPC64 only the FDE CFI encoding changes
+  // (personality/LSDA/TType already default to sdata8).
+  bool LargeEHEncoding = false;
 
   LLVM_ABI MCTargetOptions();
 

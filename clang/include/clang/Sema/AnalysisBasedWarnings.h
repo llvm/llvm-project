@@ -14,9 +14,8 @@
 #define LLVM_CLANG_SEMA_ANALYSISBASEDWARNINGS_H
 
 #include "clang/AST/Decl.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
 #include <memory>
 
 namespace clang {
@@ -101,6 +100,11 @@ private:
   /// a single function.
   unsigned MaxUninitAnalysisBlockVisitsPerFunction;
 
+  /// Statistics collected during lifetime safety analysis.
+  /// These are accumulated across all analyzed functions and printed
+  /// when -print-stats is enabled.
+  clang::lifetimes::LifetimeSafetyStats LSStats;
+
   /// @}
 
 public:
@@ -112,6 +116,11 @@ public:
 
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);
+
+  // Run analysis-based warnings on an implicitly-defined function body (e.g. a
+  // defaulted/implicit default constructor). Such functions never reach the
+  // normal IssueWarnings path.
+  void IssueWarningsForImplicitFunction(const Decl *D);
 
   void registerVarDeclWarning(VarDecl *VD, PossiblyUnreachableDiag PUD);
 

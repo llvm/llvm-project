@@ -647,6 +647,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("gt", tgtok::XGt)
           .Case("if", tgtok::XIf)
           .Case("cond", tgtok::XCond)
+          .Case("switch", tgtok::XSwitch)
           .Case("isa", tgtok::XIsA)
           .Case("head", tgtok::XHead)
           .Case("tail", tgtok::XTail)
@@ -676,16 +677,15 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("listsplat", tgtok::XListSplat)
           .Case("listremove", tgtok::XListRemove)
           .Case("range", tgtok::XRange)
+          .Case("sort", tgtok::XSort)
           .Case("strconcat", tgtok::XStrConcat)
           .Case("initialized", tgtok::XInitialized)
           .Case("interleave", tgtok::XInterleave)
           .Case("instances", tgtok::XInstances)
           .Case("substr", tgtok::XSubstr)
           .Case("find", tgtok::XFind)
-          .Cases({"setdagop", "setop"},
-                 tgtok::XSetDagOp) // !setop is deprecated.
-          .Cases({"getdagop", "getop"},
-                 tgtok::XGetDagOp) // !getop is deprecated.
+          .Case("setdagop", tgtok::XSetDagOp)
+          .Case("getdagop", tgtok::XGetDagOp)
           .Case("setdagopname", tgtok::XSetDagOpName)
           .Case("getdagopname", tgtok::XGetDagOpName)
           .Case("getdagarg", tgtok::XGetDagArg)

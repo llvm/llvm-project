@@ -25,13 +25,20 @@ static void warnAboutLeftoverTransformations(Loop *L,
                                              OptimizationRemarkEmitter *ORE) {
   if (hasUnrollTransformation(L) == TM_ForcedByUser) {
     LLVM_DEBUG(dbgs() << "Leftover unroll transformation\n");
+
+    // Determine whether this loop originated from the vectorizer so we can
+    // produce more informative remarks.
+    StringRef LoopKind = getLoopVectorizeKindPrefix(L);
+
     ORE->emit(
         DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
                                           "FailedRequestedUnrolling",
                                           L->getStartLoc(), L->getHeader())
-        << "loop not unrolled: the optimizer was unable to perform the "
-           "requested transformation; the transformation might be disabled or "
-           "specified as part of an unsupported transformation ordering");
+        << LoopKind.str() +
+               "loop not unrolled: the optimizer was unable to perform the "
+               "requested transformation; the transformation might be disabled "
+               "or "
+               "specified as part of an unsupported transformation ordering");
   }
 
   if (hasUnrollAndJamTransformation(L) == TM_ForcedByUser) {

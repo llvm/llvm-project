@@ -5,6 +5,14 @@
 #===============================================================================
 
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "libc++abi")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
@@ -64,6 +72,9 @@ option(LIBCXXABI_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of wi
 option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
   "Build libc++abi with an externalized threading API.
   This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON." OFF)
+set(LIBCXXABI_AVAILABILITY_MINIMUM_HEADER_VERSION "2" CACHE STRING
+  "Minimum version of the libc++ headers that are allowed to be used by binaries linked against the libc++ library. This
+   version must correspond to the major version of an LLVM release.")
 option(LIBCXXABI_ENABLE_FORGIVING_DYNAMIC_CAST
 "Make dynamic_cast more forgiving when type_info's mistakenly have hidden \
 visibility, and thus multiple type_infos can exist for a single type. \
@@ -86,6 +97,19 @@ set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
 option(LIBCXXABI_INSTALL_HEADERS "Install the libc++abi headers." ON)
 option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
 
+# On platforms that don't support shared library targets
+# (e.g. CMAKE_SYSTEM_NAME of "Generic", used for GPU and other
+# baremetal targets), the shared library target is not built at
+# all. The global TARGET_SUPPORTS_SHARED_LIBS property is left
+# undefined on platforms that do support shared libraries, and only
+# set to FALSE on those that don't.  See
+# https://gitlab.kitware.com/cmake/cmake/-/issues/25759.
+get_property(LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if(NOT DEFINED LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS OR LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS)
+  set(LIBCXXABI_SUPPORTS_SHARED_LIBRARY ON)
+else()
+  set(LIBCXXABI_SUPPORTS_SHARED_LIBRARY OFF)
+endif()
 set(LIBCXXABI_SHARED_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the shared libc++abi runtime library.")
 set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the static libc++abi runtime library.")
 
@@ -182,6 +206,7 @@ set(CMAKE_MODULE_PATH
 set(LIBCXXABI_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
     "Path where built libc++abi runtime libraries should be installed.")
 
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXXABI_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBCXXABI_LIBDIR_SUBDIR)
@@ -321,6 +346,7 @@ add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
 # libcxxabi needs to, for various reasons, include the libcpp headers as if
 # it is being built as part of libcxx.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
+add_definitions(-D_LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION=${LIBCXXABI_AVAILABILITY_MINIMUM_HEADER_VERSION})
 
 # Get feature flags.
 add_compile_flags_if_supported(-fstrict-aliasing)

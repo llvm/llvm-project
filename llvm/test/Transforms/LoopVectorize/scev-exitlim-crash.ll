@@ -15,7 +15,7 @@ define void @fn1() #0 {
 entry:
   br label %for.cond
 
-for.cond:                                         ; preds = %for.cond, %entry
+for.cond:
   %i.0 = phi i32 [ poison, %entry ], [ %inc, %for.cond ]
   %cmp = icmp slt i32 %i.0, 0
   %fsub = fsub double 0.0e+00, 0.0e+00
@@ -24,16 +24,16 @@ for.cond:                                         ; preds = %for.cond, %entry
   %inc = add nsw i32 %i.0, 1
   br i1 %cmp, label %for.cond, label %for.cond4.preheader
 
-for.cond4.preheader:                              ; preds = %for.cond
+for.cond4.preheader:
   %call.lcssa = phi i32 [ %call, %for.cond ]
   %cmp514 = icmp sgt i32 %call.lcssa, 0
   br i1 %cmp514, label %for.cond7.preheader.lr.ph, label %for.end26
 
-for.cond7.preheader.lr.ph:                        ; preds = %for.cond4.preheader
+for.cond7.preheader.lr.ph:
   %0 = load ptr, ptr @e, align 8, !tbaa !4
   br label %for.cond7.preheader
 
-for.cond7.preheader:                              ; preds = %for.cond7.preheader.lr.ph, %for.inc23
+for.cond7.preheader:
   %y.017 = phi i32 [ 0, %for.cond7.preheader.lr.ph ], [ %inc24, %for.inc23 ]
   %i.116 = phi i32 [ 0, %for.cond7.preheader.lr.ph ], [ %i.2.lcssa, %for.inc23 ]
   %n.015 = phi i32 [ poison, %for.cond7.preheader.lr.ph ], [ %inc25, %for.inc23 ]
@@ -41,11 +41,11 @@ for.cond7.preheader:                              ; preds = %for.cond7.preheader
   %tobool11 = icmp eq i32 %1, 0
   br i1 %tobool11, label %for.inc23, label %for.body8.lr.ph
 
-for.body8.lr.ph:                                  ; preds = %for.cond7.preheader
+for.body8.lr.ph:
   %add9 = add i32 %n.015, 1
   br label %for.body8
 
-for.body8:                                        ; preds = %for.body8.lr.ph, %for.inc19
+for.body8:
   %indvars.iv19 = phi i64 [ 0, %for.body8.lr.ph ], [ %indvars.iv.next20, %for.inc19 ]
   %i.213 = phi i32 [ %i.116, %for.body8.lr.ph ], [ 0, %for.inc19 ]
   %2 = trunc i64 %indvars.iv19 to i32
@@ -56,11 +56,11 @@ for.body8:                                        ; preds = %for.body8.lr.ph, %f
   %tobool129 = icmp eq i32 %i.213, 0
   br i1 %tobool129, label %for.inc19, label %for.body13.lr.ph
 
-for.body13.lr.ph:                                 ; preds = %for.body8
+for.body13.lr.ph:
   %3 = sext i32 %i.213 to i64
   br label %for.body13
 
-for.body13:                                       ; preds = %for.body13.lr.ph, %for.body13
+for.body13:
   %indvars.iv = phi i64 [ %3, %for.body13.lr.ph ], [ %indvars.iv.next, %for.body13 ]
   %add.ptr.sum = add i64 %idx.ext, %indvars.iv
   %arrayidx = getelementptr inbounds i32, ptr @a, i64 %add.ptr.sum
@@ -72,10 +72,10 @@ for.body13:                                       ; preds = %for.body13.lr.ph, %
   %tobool12 = icmp eq i32 %5, 0
   br i1 %tobool12, label %for.cond11.for.inc19_crit_edge, label %for.body13
 
-for.cond11.for.inc19_crit_edge:                   ; preds = %for.body13
+for.cond11.for.inc19_crit_edge:
   br label %for.inc19
 
-for.inc19:                                        ; preds = %for.cond11.for.inc19_crit_edge, %for.body8
+for.inc19:
   %6 = load i32, ptr @c, align 4, !tbaa !5
   %inc20 = add nsw i32 %6, 1
   store i32 %inc20, ptr @c, align 4, !tbaa !5
@@ -84,22 +84,22 @@ for.inc19:                                        ; preds = %for.cond11.for.inc1
   %tobool = icmp eq i32 %7, 0
   br i1 %tobool, label %for.cond7.for.inc23_crit_edge, label %for.body8
 
-for.cond7.for.inc23_crit_edge:                    ; preds = %for.inc19
+for.cond7.for.inc23_crit_edge:
   %add.ptr.lcssa = phi ptr [ %add.ptr, %for.inc19 ]
   store ptr %add.ptr.lcssa, ptr @d, align 8, !tbaa !4
   br label %for.inc23
 
-for.inc23:                                        ; preds = %for.cond7.for.inc23_crit_edge, %for.cond7.preheader
+for.inc23:
   %i.2.lcssa = phi i32 [ 0, %for.cond7.for.inc23_crit_edge ], [ %i.116, %for.cond7.preheader ]
   %inc24 = add nsw i32 %y.017, 1
   %inc25 = add nsw i32 %n.015, 1
   %exitcond = icmp ne i32 %inc24, %call.lcssa
   br i1 %exitcond, label %for.cond7.preheader, label %for.cond4.for.end26_crit_edge
 
-for.cond4.for.end26_crit_edge:                    ; preds = %for.inc23
+for.cond4.for.end26_crit_edge:
   br label %for.end26
 
-for.end26:                                        ; preds = %for.cond4.for.end26_crit_edge, %for.cond4.preheader
+for.end26:
   ret void
 }
 declare i32 @fn2(double) #1

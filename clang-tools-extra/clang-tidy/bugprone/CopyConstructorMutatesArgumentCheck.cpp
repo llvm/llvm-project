@@ -14,9 +14,9 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-static constexpr llvm::StringLiteral SourceDeclName = "ChangedPVD";
-static constexpr llvm::StringLiteral MutatingOperatorName = "MutatingOp";
-static constexpr llvm::StringLiteral MutatingCallName = "MutatingCall";
+static constexpr StringRef SourceDeclName = "ChangedPVD";
+static constexpr StringRef MutatingOperatorName = "MutatingOp";
+static constexpr StringRef MutatingCallName = "MutatingCall";
 
 void CopyConstructorMutatesArgumentCheck::registerMatchers(
     MatchFinder *Finder) {

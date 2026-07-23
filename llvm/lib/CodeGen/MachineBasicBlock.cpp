@@ -132,6 +132,7 @@ void ilist_callback_traits<MachineBasicBlock>::addNodeToList(
     MachineBasicBlock *N) {
   MachineFunction &MF = *N->getParent();
   N->Number = MF.addToMBBNumbering(N);
+  N->AnalysisNumber = MF.assignAnalysisNumber();
 
   // Make sure the instructions have their operands in the reginfo lists.
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -143,6 +144,7 @@ void ilist_callback_traits<MachineBasicBlock>::removeNodeFromList(
     MachineBasicBlock *N) {
   N->getParent()->removeFromMBBNumbering(N->Number);
   N->Number = -1;
+  N->AnalysisNumber = -1;
 }
 
 /// When we add an instruction to a basic block list, we update its parent
@@ -551,6 +553,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "ehfunclet-entry";
       hasAttributes = true;
     }
+    if (isEHScopeEntry()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "ehscope-entry";
+      hasAttributes = true;
+    }
     if (getAlignment() != Align(1)) {
       os << (hasAttributes ? ", " : " (");
       os << "align " << getAlignment().value();
@@ -596,6 +603,7 @@ void MachineBasicBlock::printAsOperand(raw_ostream &OS,
 }
 
 void MachineBasicBlock::removeLiveIn(MCRegister Reg, LaneBitmask LaneMask) {
+  assert(Reg.isPhysical());
   LiveInVector::iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   if (I == LiveIns.end())
@@ -634,6 +642,7 @@ MachineBasicBlock::removeLiveIn(MachineBasicBlock::livein_iterator I) {
 }
 
 bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
+  assert(Reg.isPhysical());
   livein_iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   return I != livein_end() && (I->LaneMask & LaneMask).any();
@@ -927,9 +936,12 @@ void MachineBasicBlock::addPredecessor(MachineBasicBlock *Pred) {
 }
 
 void MachineBasicBlock::removePredecessor(MachineBasicBlock *Pred) {
-  pred_iterator I = find(Predecessors, Pred);
-  assert(I != Predecessors.end() && "Pred is not a predecessor of this block!");
-  Predecessors.erase(I);
+  // This is often called on many predecessors in reverse order.
+  // Do a reverse search and removal to avoid quadratic behavior in such cases.
+  auto RI = llvm::find(reverse(Predecessors), Pred);
+  assert(RI != Predecessors.rend() &&
+         "Pred is not a predecessor of this block!");
+  Predecessors.erase(std::prev(RI.base()));
 }
 
 void MachineBasicBlock::transferSuccessors(MachineBasicBlock *FromMBB) {
@@ -1684,6 +1696,7 @@ MachineBasicBlock::LivenessQueryResult
 MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
                                            MCRegister Reg, const_iterator Before,
                                            unsigned Neighborhood) const {
+  assert(Reg.isPhysical());
   unsigned N = Neighborhood;
 
   // Try searching forwards from Before, looking for reads or defs.

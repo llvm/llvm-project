@@ -140,7 +140,7 @@ exception_cleanup_func(_Unwind_Reason_Code reason, _Unwind_Exception* unwind_exc
     __cxa_decrement_exception_refcount(unwind_exception + 1);
 }
 
-static _LIBCXXABI_NORETURN void failed_throw(__cxa_exception* exception_header) {
+[[noreturn]] static void failed_throw(__cxa_exception* exception_header) {
 //  Section 2.5.3 says:
 //      * For purposes of this ABI, several things are considered exception handlers:
 //      ** A terminate() call due to a throw.
@@ -228,7 +228,7 @@ __cxa_exception* __cxa_init_primary_exception(void* object, std::type_info* tinf
 }
 
 //  This function shall allocate a __cxa_dependent_exception and
-//  return a pointer to it. (Really to the object, not past its' end).
+//  return a pointer to it. (Really to the object, not past its end).
 //  Otherwise, it will work like __cxa_allocate_exception.
 void * __cxa_allocate_dependent_exception () {
     size_t actual_size = sizeof(__cxa_dependent_exception);

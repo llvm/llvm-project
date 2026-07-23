@@ -12,7 +12,6 @@
 #include <cstring>
 #include <vector>
 
-#include "Plugins/Language/ClangCommon/ClangHighlighter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
@@ -20,8 +19,6 @@
 namespace lldb_private {
 
 class ObjCLanguage : public Language {
-  ClangHighlighter m_highlighter;
-
 public:
   class ObjCMethodName {
   public:
@@ -140,7 +137,7 @@ public:
   //  variant_names[3] => "-[NSString myStringWithCString:]"
   // Also returns the FunctionNameType of each possible name.
   std::vector<Language::MethodNameVariant>
-  GetMethodNameVariants(ConstString method_name) const override;
+  GetMethodNameVariants(llvm::StringRef method_name) const override;
 
   std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const override;
@@ -163,8 +160,6 @@ public:
   llvm::StringRef GetNilReferenceSummaryString() override { return "nil"; }
 
   bool IsSourceFile(llvm::StringRef file_path) const override;
-
-  const Highlighter *GetHighlighter() const override { return &m_highlighter; }
 
   // Static Functions
   static void Initialize();
@@ -189,7 +184,7 @@ public:
       return false;
   }
 
-  llvm::StringRef GetInstanceVariableName() override { return "self"; }
+  llvm::StringRef GetInstanceName() override { return "self"; }
 
   virtual std::optional<bool>
   GetBooleanFromString(llvm::StringRef str) const override;

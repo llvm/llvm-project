@@ -80,9 +80,8 @@ void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {
     Text.consume_back("()");
     const int TextLength = Text.size();
 
-    if (WarnOnly) {
+    if (WarnOnly)
       return;
-    }
 
     if (!C) {
       Diag << FixItHint::CreateInsertion(BeginLoc.getLocWithOffset(TextLength),

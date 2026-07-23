@@ -109,9 +109,9 @@ TEST_F(ValueLatticeTest, getCompareIntegers) {
   EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_EQ, I1Ty, LV1, DL)->isOneValue());
   EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SGE, I1Ty, LV1, DL)->isOneValue());
   EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SLE, I1Ty, LV1, DL)->isOneValue());
-  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_NE, I1Ty, LV1, DL)->isZeroValue());
-  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SLT, I1Ty, LV1, DL)->isZeroValue());
-  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SGT, I1Ty, LV1, DL)->isZeroValue());
+  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_NE, I1Ty, LV1, DL)->isNullValue());
+  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SLT, I1Ty, LV1, DL)->isNullValue());
+  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SGT, I1Ty, LV1, DL)->isNullValue());
 
   auto LV2 =
       ValueLatticeElement::getRange({APInt(32, 10, true), APInt(32, 20, true)});
@@ -119,9 +119,9 @@ TEST_F(ValueLatticeTest, getCompareIntegers) {
   EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SLT, I1Ty, LV2, DL)->isOneValue());
   EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SLE, I1Ty, LV2, DL)->isOneValue());
   EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_NE, I1Ty, LV2, DL)->isOneValue());
-  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_EQ, I1Ty, LV2, DL)->isZeroValue());
-  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SGE, I1Ty, LV2, DL)->isZeroValue());
-  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SGT, I1Ty, LV2, DL)->isZeroValue());
+  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_EQ, I1Ty, LV2, DL)->isNullValue());
+  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SGE, I1Ty, LV2, DL)->isNullValue());
+  EXPECT_TRUE(LV1.getCompare(CmpInst::ICMP_SGT, I1Ty, LV2, DL)->isNullValue());
 
   auto LV3 =
       ValueLatticeElement::getRange({APInt(32, 15, true), APInt(32, 19, true)});
@@ -155,9 +155,9 @@ TEST_F(ValueLatticeTest, getCompareFloat) {
   EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_OEQ, I1Ty, LV2, DL)->isOneValue());
   EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_OGE, I1Ty, LV2, DL)->isOneValue());
   EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_OLE, I1Ty, LV2, DL)->isOneValue());
-  EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_ONE, I1Ty, LV2, DL)->isZeroValue());
-  EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_OLT, I1Ty, LV2, DL)->isZeroValue());
-  EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_OGT, I1Ty, LV2, DL)->isZeroValue());
+  EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_ONE, I1Ty, LV2, DL)->isNullValue());
+  EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_OLT, I1Ty, LV2, DL)->isNullValue());
+  EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_OGT, I1Ty, LV2, DL)->isNullValue());
 
   EXPECT_TRUE(
       LV1.mergeIn(ValueLatticeElement::get(ConstantFP::get(FloatTy, 2.2))));

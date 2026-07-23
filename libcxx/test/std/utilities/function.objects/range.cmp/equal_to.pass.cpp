@@ -28,8 +28,10 @@ struct NotEqualityComparable {
 };
 
 static_assert(!std::is_invocable_v<std::ranges::equal_to, NotEqualityComparable, NotEqualityComparable>);
-static_assert(!std::is_invocable_v<std::ranges::equal_to, int, MoveOnly>);
 static_assert(std::is_invocable_v<std::ranges::equal_to, explicit_operators, explicit_operators>);
+
+// P2404
+static_assert(std::is_invocable_v<std::ranges::equal_to, int, MoveOnly>);
 
 static_assert(requires { typename std::ranges::equal_to::is_transparent; });
 

@@ -23,6 +23,7 @@
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -95,6 +96,9 @@ CallBacksToRun() {
 
 // Signal-safe.
 void sys::RunSignalHandlers() {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
   for (CallbackAndCookie &RunMe : CallBacksToRun()) {
     auto Expected = CallbackAndCookie::Status::Initialized;
     auto Desired = CallbackAndCookie::Status::Executing;
@@ -297,6 +301,10 @@ void sys::symbolizeAddresses(AddressSet &Addresses,
                              SymbolizedAddressMap &SymbolizedAddresses) {
   assert(!DisableSymbolicationFlag && !getenv(DisableSymbolizationEnv) &&
          "Debugify origin stacktraces require symbolization to be enabled.");
+
+  // This function deals with temporary files for the purposes of symbolization
+  // only, not formal compiler output.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Convert Set of Addresses to ordered list.
   SmallVector<void *, 0> AddressList(Addresses.begin(), Addresses.end());

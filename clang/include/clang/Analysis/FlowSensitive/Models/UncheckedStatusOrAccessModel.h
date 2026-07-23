@@ -37,6 +37,7 @@ clang::ast_matchers::DeclarationMatcher statusClass();
 // Match declaration of `absl::internal_statusor::OperatorBase`.
 clang::ast_matchers::DeclarationMatcher statusOrOperatorBaseClass();
 clang::ast_matchers::TypeMatcher statusOrType();
+clang::ast_matchers::TypeMatcher statusType();
 
 // Get RecordStorageLocation for the `Status` contained in the `StatusOr`
 RecordStorageLocation &locForStatus(RecordStorageLocation &StatusOrLoc);

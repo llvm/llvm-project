@@ -20,7 +20,7 @@ struct OuterStruct {
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:13:7 local %s | FileCheck --check-prefix=CHECK-VEC-TYPE %s
 // CHECK-VEC-TYPE: "parentContexts":[{"kind":"c++.typealias","name":"my_vec","usr":"c:@my_vec"}]
-// CHECK-VEC-TYPE: "declarationFragments":[{"kind":"keyword","spelling":"typedef"},{"kind":"text","spelling":" "},{"kind":"typeIdentifier","preciseIdentifier":"c:@ST>1#T@basic_vector","spelling":"basic_vector"},{"kind":"text","spelling":"<"},{"kind":"typeIdentifier","preciseIdentifier":"c:I","spelling":"int"},{"kind":"text","spelling":"> "},{"kind":"identifier","spelling":"my_vec"},{"kind":"text","spelling":";"}]
+// CHECK-VEC-TYPE: "declarationFragments":[{"kind":"keyword","spelling":"using"},{"kind":"text","spelling":" "},{"kind":"identifier","spelling":"my_vec"},{"kind":"text","spelling":" = "},{"kind":"typeIdentifier","preciseIdentifier":"c:@ST>1#T@basic_vector","spelling":"basic_vector"},{"kind":"text","spelling":"<"},{"kind":"typeIdentifier","preciseIdentifier":"c:I","spelling":"int"},{"kind":"text","spelling":">;"}]
 // CHECK-VEC-TYPE: "identifier":{"interfaceLanguage":"c++","precise":"c:@my_vec"}
 // CHECK-VEC-TYPE: "kind":{"displayName":"Type Alias","identifier":"c++.typealias"}
 // CHECK-VEC-TYPE: "title":"my_vec"

@@ -160,6 +160,15 @@ lldb_private::GetStoppedExecutionContext(
 
   auto thread_sp = exe_ctx_ref_ptr->GetThreadSP();
   auto frame_sp = exe_ctx_ref_ptr->GetFrameSP();
+
+  if (!frame_sp && exe_ctx_ref_ptr->m_frame_list_id) {
+    return llvm::createStringError(
+        "attempted to create a StoppedExecutionContext but "
+        "ScriptedFrameProvider (name = %s - id = %u) is no longer available",
+        exe_ctx_ref_ptr->m_frame_list_id->first.GetName().str().c_str(),
+        exe_ctx_ref_ptr->m_frame_list_id->second);
+  }
+
   return StoppedExecutionContext(target_sp, process_sp, thread_sp, frame_sp,
                                  std::move(api_lock), std::move(stop_locker));
 }
@@ -466,12 +475,25 @@ operator=(const ExecutionContext &exe_ctx) {
   else
     m_tid = LLDB_INVALID_THREAD_ID;
   lldb::StackFrameSP frame_sp(exe_ctx.GetFrameSP());
-  if (frame_sp) {
-    m_stack_id = frame_sp->GetStackID();
-    m_frame_list_wp = frame_sp->GetContainingStackFrameList();
+
+  if (frame_sp && thread_sp) {
+    lldb::frame_list_id_t frame_list_id =
+        frame_sp->GetContainingStackFrameListIdentifier();
+    auto frame_list_descriptor_or_err =
+        thread_sp->GetScriptedFrameProviderDescriptorForID(frame_list_id);
+    if (frame_list_descriptor_or_err) {
+      m_stack_id = frame_sp->GetStackID();
+      m_frame_list_id = {*frame_list_descriptor_or_err, frame_list_id};
+    } else {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Process),
+                     frame_list_descriptor_or_err.takeError(),
+                     "Failed to fetch scripted frame provider descriptor: {0}");
+      m_stack_id.Clear();
+      m_frame_list_id.reset();
+    }
   } else {
     m_stack_id.Clear();
-    m_frame_list_wp.reset();
+    m_frame_list_id.reset();
   }
   return *this;
 }
@@ -512,11 +534,25 @@ void ExecutionContextRef::SetThreadSP(const lldb::ThreadSP &thread_sp) {
 }
 
 void ExecutionContextRef::SetFrameSP(const lldb::StackFrameSP &frame_sp) {
-  if (frame_sp) {
+  if (!frame_sp) {
+    Clear();
+    return;
+  }
+
+  lldb::ThreadSP thread_sp = frame_sp->GetThread();
+  lldb::frame_list_id_t frame_list_id =
+      frame_sp->GetContainingStackFrameListIdentifier();
+  auto frame_list_descriptor_or_err =
+      thread_sp->GetScriptedFrameProviderDescriptorForID(frame_list_id);
+
+  if (frame_list_descriptor_or_err) {
     m_stack_id = frame_sp->GetStackID();
-    m_frame_list_wp = frame_sp->GetContainingStackFrameList();
-    SetThreadSP(frame_sp->GetThread());
+    m_frame_list_id = {*frame_list_descriptor_or_err, frame_list_id};
+    SetThreadSP(thread_sp);
   } else {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Process),
+                   frame_list_descriptor_or_err.takeError(),
+                   "Failed to fetch scripted frame provider descriptor: {0}");
     ClearFrame();
     ClearThread();
     m_process_wp.reset();
@@ -641,21 +677,23 @@ lldb::ThreadSP ExecutionContextRef::GetThreadSP() const {
 }
 
 lldb::StackFrameSP ExecutionContextRef::GetFrameSP() const {
-  if (m_stack_id.IsValid()) {
-    // Try the remembered frame list first to avoid circular dependencies
-    // during frame provider initialization.
-    if (auto frame_list_sp = m_frame_list_wp.lock()) {
+  lldb::ThreadSP thread_sp(GetThreadSP());
+  if (!thread_sp || !m_stack_id.IsValid())
+    return lldb::StackFrameSP();
+
+  // Try the remembered frame list first to avoid circular dependencies
+  // during frame provider initialization.
+  if (m_frame_list_id) {
+    if (auto frame_list_sp =
+            thread_sp->GetFrameListByIdentifier(m_frame_list_id->second)) {
       if (auto frame_sp = frame_list_sp->GetFrameWithStackID(m_stack_id))
         return frame_sp;
     }
-
-    // Fallback: ask the thread, which might re-trigger the frame provider
-    // initialization.
-    lldb::ThreadSP thread_sp(GetThreadSP());
-    if (thread_sp)
-      return thread_sp->GetFrameWithStackID(m_stack_id);
   }
-  return lldb::StackFrameSP();
+
+  // Fallback: ask the thread, which might re-trigger the frame provider
+  // initialization.
+  return thread_sp->GetFrameWithStackID(m_stack_id);
 }
 
 ExecutionContext

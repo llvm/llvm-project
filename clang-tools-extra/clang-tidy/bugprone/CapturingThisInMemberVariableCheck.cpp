@@ -85,7 +85,7 @@ void CapturingThisInMemberVariableCheck::storeOptions(
 void CapturingThisInMemberVariableCheck::registerMatchers(MatchFinder *Finder) {
   auto IsStdFunctionField =
       fieldDecl(hasType(cxxRecordDecl(
-                    matchers::matchesAnyListedName(FunctionWrapperTypes))))
+                    matchers::matchesAnyListedRegexName(FunctionWrapperTypes))))
           .bind("field");
   auto CaptureThis = lambdaCapture(anyOf(
       // [this]
@@ -96,10 +96,10 @@ void CapturingThisInMemberVariableCheck::registerMatchers(MatchFinder *Finder) {
       lambdaExpr(hasAnyCapture(CaptureThis)).bind("lambda");
 
   auto IsBindCapturingThis =
-      callExpr(
-          callee(functionDecl(matchers::matchesAnyListedName(BindFunctions))
-                     .bind("callee")),
-          hasAnyArgument(cxxThisExpr()))
+      callExpr(callee(functionDecl(
+                          matchers::matchesAnyListedRegexName(BindFunctions))
+                          .bind("callee")),
+               hasAnyArgument(cxxThisExpr()))
           .bind("bind");
 
   auto IsInitWithLambdaOrBind =

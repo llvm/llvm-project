@@ -545,6 +545,12 @@ public:
   /// This method erases all operations in a block.
   virtual void eraseBlock(Block *block);
 
+  /// Erase the specified results of the given operation. Results cannot be
+  /// erased directly, so the implementation creates a new replacement
+  /// operation and erases the original operation. The new operation is
+  /// returned.
+  Operation *eraseOpResults(Operation *op, const BitVector &eraseIndices);
+
   /// Inline the operations of block 'source' into block 'dest' before the given
   /// position. The source block will be deleted and must have no uses.
   /// 'argValues' is used to replace the block arguments of 'source'.
@@ -872,7 +878,9 @@ public:
                                   ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(debugLabels, arg, args...), ...);
+    (addImpl<Ts>(debugLabels, std::forward<ConstructorArg>(arg),
+                 std::forward<ConstructorArgs>(args)...),
+     ...);
     return *this;
   }
 
@@ -938,7 +946,9 @@ public:
   RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/{}, arg, args...), ...);
+    (addImpl<Ts>(/*debugLabels=*/{}, std::forward<ConstructorArg>(arg),
+                 std::forward<ConstructorArgs>(args)...),
+     ...);
     return *this;
   }
 

@@ -93,9 +93,14 @@ uint32_t ICallPromotionAnalysis::getProfitablePromotionCandidates(
 
 MutableArrayRef<InstrProfValueData>
 ICallPromotionAnalysis::getPromotionCandidatesForInstruction(
-    const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates) {
+    const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates,
+    unsigned MaxNumValueData) {
+  // Use the max of the values specified by -icp-max-prom and the provided
+  // MaxNumValueData parameter.
+  if (MaxNumPromotions > MaxNumValueData)
+    MaxNumValueData = MaxNumPromotions;
   ValueDataArray = getValueProfDataFromInst(*I, IPVK_IndirectCallTarget,
-                                            MaxNumPromotions, TotalCount);
+                                            MaxNumValueData, TotalCount);
   if (ValueDataArray.empty()) {
     NumCandidates = 0;
     return MutableArrayRef<InstrProfValueData>();

@@ -13,5 +13,5 @@ mlir_tablegen(LinalgTransformOpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(LinalgTransformOpsEnums.cpp.inc -gen-enum-defs)
 add_mlir_dialect_tablegen_target(MLIRLinalgTransformEnumsIncGen)
 
-add_mlir_doc(LinalgMatchOps LinalgStructuredMatchOps Dialects/ -gen-op-doc)
-add_mlir_doc(LinalgTransformOps LinalgStructuredTransformOps Dialects/ -gen-op-doc)
+add_mlir_doc(LinalgMatchOps LinalgStructuredMatchOps Dialects/ -gen-op-doc -dialect=transform)
+add_mlir_doc(LinalgTransformOps LinalgStructuredTransformOps Dialects/ -gen-op-doc -dialect=transform)

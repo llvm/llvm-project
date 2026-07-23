@@ -484,6 +484,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(
       std::make_unique<ReorderFunctions>(PrintReorderedFunctions));
 
+  // Produce the list of functions for the output file in a sorted order.
+  Manager.registerPass(std::make_unique<PopulateOutputFunctions>());
+
   // This is the second run of the SplitFunctions pass required by certain
   // splitting strategies (e.g. cdsplit). Running the SplitFunctions pass again
   // after ReorderFunctions allows the finalized function order to be utilized
@@ -514,6 +517,11 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
       opts::SimplifyConditionalTailCalls);
 
   Manager.registerPass(std::make_unique<Peepholes>(PrintPeepholes));
+
+  // Assign each function an output section before AlignerPass and LongJmpPass,
+  // so those passes can attribute per-section code alignment and tentative
+  // layout to the final .text / .text.cold sections.
+  Manager.registerPass(std::make_unique<AssignSections>());
 
   Manager.registerPass(std::make_unique<AlignerPass>());
 
@@ -551,9 +559,6 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(
       std::make_unique<RetpolineInsertion>(PrintRetpolineInsertion));
-
-  // Assign each function an output section.
-  Manager.registerPass(std::make_unique<AssignSections>());
 
   // This pass turns tail calls into jumps which makes them invisible to
   // function reordering. It's unsafe to use any CFG or instruction analysis

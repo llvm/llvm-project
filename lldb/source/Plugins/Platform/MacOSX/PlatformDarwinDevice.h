@@ -26,17 +26,29 @@ public:
 protected:
   virtual Status GetSharedModuleWithLocalCache(
       const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr,
+      lldb_private::Process *process);
 
   struct SDKDirectoryInfo {
-    SDKDirectoryInfo(const FileSpec &sdk_dir_spec);
+    SDKDirectoryInfo(const FileSpec &sdk_dir_spec, llvm::StringRef dirname_str);
     FileSpec directory;
     ConstString build;
     llvm::VersionTuple version;
-    bool user_cached;
   };
 
   typedef std::vector<SDKDirectoryInfo> SDKDirectoryInfoCollection;
+
+  /// Look for expanded shared cache directories under the given dir.
+  /// Expanded shared cache directories found under the given dir will
+  /// be added to \a m_sdk_directory_infos.
+  ///
+  /// \param[in] dir
+  ///     Directory to search under.
+  ///
+  /// \param[in] log_msg_descriptor
+  ///     Text to describe the origin of this directory, in logging.
+  void AddSharedCacheDirectory(llvm::StringRef dir,
+                               llvm::StringRef log_msg_descriptor);
 
   bool UpdateSDKDirectoryInfosIfNeeded();
 
@@ -44,9 +56,9 @@ protected:
   const SDKDirectoryInfo *GetSDKDirectoryForCurrentOSVersion();
 
   static FileSystem::EnumerateDirectoryResult
-  GetContainedFilesIntoVectorOfStringsCallback(void *baton,
-                                               llvm::sys::fs::file_type ft,
-                                               llvm::StringRef path);
+  GetContainedFilesIntoVectorOfFileSpecsCallback(void *baton,
+                                                 llvm::sys::fs::file_type ft,
+                                                 llvm::StringRef path);
 
   const char *GetDeviceSupportDirectory();
   const char *GetDeviceSupportDirectoryForOSVersion();

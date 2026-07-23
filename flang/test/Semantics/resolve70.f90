@@ -9,7 +9,7 @@
 !
 ! C796 (R756) The derived-type-spec shall not specify an abstract type (7.5.7).
 !
-! C705 (R703) In a declaration-type-spec that uses the CLASS keyword, 
+! C705 (R703) In a declaration-type-spec that uses the CLASS keyword,
 ! derived-type-spec shall specify an extensible type (7.5.7).
 subroutine s()
   type, abstract :: abstractType

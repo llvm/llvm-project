@@ -44,5 +44,5 @@ program main
 !CHECK: OtherConstruct scope:
 !CHECK: omp_orig size=4 offset=0: ObjectEntity type: INTEGER(4)
 !CHECK: omp_priv size=4 offset=4: ObjectEntity type: INTEGER(4)
-  
+
 end program main

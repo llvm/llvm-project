@@ -13,8 +13,9 @@ define i32 @foo(i32 %x) section ".tcm_text" {
 ; ENABLE-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 6
 ; ENABLE-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; ENABLE:       switch.lookup:
-; ENABLE-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw i32, ptr @switch.table.foo, i32 [[X]]
-; ENABLE-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; ENABLE-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw i8, ptr @switch.table.foo, i32 [[X]]
+; ENABLE-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
+; ENABLE-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; ENABLE-NEXT:    br label [[RETURN]]
 ; ENABLE:       return:
 ; ENABLE-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 19, [[ENTRY:%.*]] ]
@@ -43,7 +44,7 @@ define i32 @foo(i32 %x) section ".tcm_text" {
 ; DISABLE:       sw.default:
 ; DISABLE-NEXT:    br label [[RETURN]]
 ; DISABLE:       return:
-; DISABLE-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 19, [[SW_DEFAULT]] ], [ 20, [[SW_BB1]] ], [ 14, [[SW_BB2]] ], [ 22, [[SW_BB3]] ], [ 12, [[SW_BB4]] ], [ 33, [[SW_BB5]] ], [ 9, [[ENTRY:%.*]] ]
+; DISABLE-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 19, [[SW_DEFAULT]] ], [ 33, [[SW_BB5]] ], [ 20, [[SW_BB1]] ], [ 14, [[SW_BB2]] ], [ 22, [[SW_BB3]] ], [ 12, [[SW_BB4]] ], [ 9, [[ENTRY:%.*]] ]
 ; DISABLE-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:

@@ -8,7 +8,6 @@ add_clang_library(clangTidyGoogleModule STATIC
   AvoidThrowingObjCExceptionCheck.cpp
   AvoidUnderscoreInGoogletestNameCheck.cpp
   DefaultArgumentsCheck.cpp
-  ExplicitConstructorCheck.cpp
   ExplicitMakePairCheck.cpp
   FloatTypesCheck.cpp
   FunctionNamingCheck.cpp
@@ -18,12 +17,12 @@ add_clang_library(clangTidyGoogleModule STATIC
   IntegerTypesCheck.cpp
   OverloadedUnaryAndCheck.cpp
   TodoCommentCheck.cpp
-  UnnamedNamespaceInHeaderCheck.cpp
   UpgradeGoogletestCaseCheck.cpp
   UsingNamespaceDirectiveCheck.cpp
 
   LINK_LIBS
   clangTidy
+  clangTidyMiscModule
   clangTidyModernizeModule
   clangTidyReadabilityModule
   clangTidyUtils

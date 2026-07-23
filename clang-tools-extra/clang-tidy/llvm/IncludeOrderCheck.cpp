@@ -12,8 +12,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
 
-#include <map>
-
 namespace clang::tidy::llvm_check {
 
 namespace {
@@ -42,7 +40,7 @@ private:
   };
 
   using FileIncludes = std::vector<IncludeDirective>;
-  std::map<clang::FileID, FileIncludes> IncludeDirectives;
+  llvm::DenseMap<FileID, FileIncludes> IncludeDirectives;
   bool LookForMainModule = true;
 
   ClangTidyCheck &Check;

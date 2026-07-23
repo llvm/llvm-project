@@ -46,7 +46,7 @@ RWBuffer<float> UAV_Array[10] : register(u10, space6);
 // CHECK: HLSLResourceBindingAttr {{.*}} "c5" "space0"
 float f : register(c5);
 
-// CHECK: VarDecl {{.*}} intv 'hlsl_constant int4':'vector<int hlsl_constant, 4>'
+// CHECK: VarDecl {{.*}} intv 'hlsl_constant int4':'vector<int, 4> hlsl_constant'
 // CHECK: HLSLResourceBindingAttr {{.*}} "c2" "space0"
 int4 intv : register(c2);
 

@@ -25,6 +25,7 @@ class LLVM_LIBRARY_VISIBILITY LoongArchTargetInfo : public TargetInfo {
 protected:
   std::string ABI;
   std::string CPU;
+  bool HasFeature32S;
   bool HasFeatureD;
   bool HasFeatureF;
   bool HasFeatureLSX;
@@ -39,6 +40,7 @@ protected:
 public:
   LoongArchTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
+    HasFeature32S = false;
     HasFeatureD = false;
     HasFeatureF = false;
     HasFeatureLSX = false;
@@ -63,7 +65,7 @@ public:
     BitIntMaxAlign = 128;
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (!isValidCPUName(Name))
       return false;
     CPU = Name;
@@ -104,8 +106,6 @@ public:
   bool hasBitIntType() const override { return true; }
 
   bool hasBFloat16Type() const override { return true; }
-
-  bool useFP16ConversionIntrinsics() const override { return false; }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;

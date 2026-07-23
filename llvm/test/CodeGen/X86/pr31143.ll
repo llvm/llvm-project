@@ -13,7 +13,7 @@ for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %v = load float, ptr %arrayidx, align 4
-  %floor = call float @floorf(float %v)
+  %floor = call float @llvm.floor.f32(float %v)
   %sub = fsub float %floor, %v
   %v1 = insertelement <4 x float> undef, float %sub, i32 0
   %br = shufflevector <4 x float> %v1, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
@@ -40,7 +40,7 @@ for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %a, i64 %indvars.iv
   %v = load double, ptr %arrayidx, align 4
-  %floor = call double @floor(double %v)
+  %floor = call double @llvm.floor.f64(double %v)
   %sub = fsub double %floor, %v
   %v1 = insertelement <2 x double> undef, double %sub, i32 0
   %br = shufflevector <2 x double> %v1, <2 x double> undef, <2 x i32> <i32 0, i32 0>
@@ -54,7 +54,7 @@ for.end:
   ret void
 }
 
-declare float @floorf(float) nounwind readnone
+declare float @llvm.floor.f32(float) nounwind readnone
 
-declare double @floor(double) nounwind readnone
+declare double @llvm.floor.f64(double) nounwind readnone
 

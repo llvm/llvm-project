@@ -1,5 +1,5 @@
 // RUN: %libomptarget-compile-generic -fopenmp-version=51 -g
-// RUN: env LIBOMPTARGET_INFO=64 %libomptarget-run-fail-generic 2>&1 \
+// RUN: env LIBOMPTARGET_INFO=64 %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
 
 // FIXME: Fails due to optimized debugging in 'ptxas'
@@ -20,7 +20,8 @@ int main() {
 // counterpart
 #pragma omp target data use_device_addr(x)
     {
-      // CHECK-NOT: device addr=0x[[#%x,HOST_ADDR:]]
+      // Even when the lookup fails, x should retain its host address.
+      // CHECK: device addr=0x[[#HOST_ADDR]]
       fprintf(stderr, "device addr=%p\n", x);
     }
   }

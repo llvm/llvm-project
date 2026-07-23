@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -88,9 +89,7 @@ namespace {
   { ARM::t2ASRri, ARM::tASRri,  0,             5,   0,   1,   0,  0,0, 1,0,1 },
   { ARM::t2ASRrr, 0,            ARM::tASRrr,   0,   0,   0,   1,  0,0, 1,0,1 },
   { ARM::t2BICrr, 0,            ARM::tBIC,     0,   0,   0,   1,  0,0, 1,0,0 },
-  //FIXME: Disable CMN, as CCodes are backwards from compare expectations
-  //{ ARM::t2CMNrr, ARM::tCMN,  0,             0,   0,   1,   0,  2,0, 0,0,0 },
-  { ARM::t2CMNzrr, ARM::tCMNz,  0,             0,   0,   1,   0,  2,0, 0,0,0 },
+  { ARM::t2CMNrr, ARM::tCMN,    0,             0,   0,   1,   0,  2,0, 0,0,0 },
   { ARM::t2CMPri, ARM::tCMPi8,  0,             8,   0,   1,   0,  2,0, 0,0,0 },
   { ARM::t2CMPrr, ARM::tCMPhir, 0,             0,   0,   0,   0,  2,0, 0,1,0 },
   { ARM::t2EORrr, 0,            ARM::tEOR,     0,   0,   0,   1,  0,0, 1,0,0 },
@@ -172,6 +171,11 @@ namespace {
 
     StringRef getPassName() const override {
       return THUMB2_SIZE_REDUCE_NAME;
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:
@@ -477,7 +481,7 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
                    .addReg(Rn)
                    .addImm(PredImm)
                    .addReg(PredReg)
-                   .addReg(Rt, IsStore ? 0 : RegState::Define);
+                   .addReg(Rt, getDefRegState(!IsStore));
 
     // Transfer memoperands.
     MIB.setMemRefs(MI->memoperands());
@@ -1012,7 +1016,7 @@ bool Thumb2SizeReduce::ReduceMI(MachineBasicBlock &MBB, MachineInstr *MI,
                                 bool LiveCPSR, bool IsSelfLoop,
                                 bool SkipPrologueEpilogue) {
   unsigned Opcode = MI->getOpcode();
-  DenseMap<unsigned, unsigned>::iterator OPI = ReduceOpcodeMap.find(Opcode);
+  auto OPI = ReduceOpcodeMap.find(Opcode);
   if (OPI == ReduceOpcodeMap.end())
     return false;
   if (SkipPrologueEpilogue && (MI->getFlag(MachineInstr::FrameSetup) ||
@@ -1150,7 +1154,7 @@ bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
   // predecessors.
   ReversePostOrderTraversal<MachineFunction*> RPOT(&MF);
   bool Modified = false;
-  bool NeedsWinCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  bool NeedsWinCFI = MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
                      MF.getFunction().needsUnwindTableEntry();
   for (MachineBasicBlock *MBB : RPOT)
     Modified |= ReduceMBB(*MBB, /*SkipPrologueEpilogue=*/NeedsWinCFI);

@@ -44,7 +44,8 @@
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -81,7 +82,9 @@ namespace {
 class AMDGPURewriteOutArguments : public FunctionPass {
 private:
   const DataLayout *DL = nullptr;
-  MemoryDependenceResults *MDA = nullptr;
+  MemorySSA *MSSA = nullptr;
+  MemorySSAUpdater *MSSAU = nullptr;
+  AAResults *AA = nullptr;
 
   Type *getStoredType(Value &Arg) const;
   Type *getOutArgumentType(Argument &Arg) const;
@@ -92,7 +95,8 @@ public:
   AMDGPURewriteOutArguments() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MemoryDependenceWrapperPass>();
+    AU.addRequired<MemorySSAWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -104,7 +108,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(AMDGPURewriteOutArguments, DEBUG_TYPE,
                       "AMDGPU Rewrite Out Arguments", false, false)
-INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(AMDGPURewriteOutArguments, DEBUG_TYPE,
                     "AMDGPU Rewrite Out Arguments", false, false)
 
@@ -170,6 +174,49 @@ bool AMDGPURewriteOutArguments::doInitialization(Module &M) {
   return false;
 }
 
+static StoreInst *findStoreForOutArgument(BasicBlock *BB, Argument *OutArg,
+                                          MemorySSA &MSSA,
+                                          BatchAAResults &BAA) {
+  MemoryLocation ArgLoc = MemoryLocation::getBeforeOrAfter(OutArg);
+  const auto *Accesses = MSSA.getBlockAccesses(BB);
+  if (!Accesses)
+    return nullptr;
+
+  for (const MemoryAccess &Access : reverse(*Accesses)) {
+    const auto *UseOrDef = dyn_cast<MemoryUseOrDef>(&Access);
+    if (!UseOrDef)
+      continue;
+
+    Instruction *I = UseOrDef->getMemoryInst();
+
+    // Return the must-alias store to the out argument.
+    if (auto *Store = dyn_cast<StoreInst>(I))
+      if (Store->getPointerOperand() == OutArg)
+        return Store;
+
+    if (auto *FI = dyn_cast<FenceInst>(I))
+      if (FI->getOrdering() == AtomicOrdering::Release)
+        continue;
+
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      if (LI->isAtomic()) {
+        // May-alias reads with monotonic ordering are ignored.
+        if (isStrongerThan(LI->getOrdering(), AtomicOrdering::Monotonic))
+          return nullptr;
+        continue;
+      }
+    }
+
+    // Any other memory access that writes the location prevents the
+    // rewrite.
+    // FIXME: should handle aliasing reads too.
+    if (isModSet(BAA.getModRefInfo(I, ArgLoc)))
+      return nullptr;
+  }
+
+  return nullptr;
+}
+
 bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
@@ -179,10 +226,11 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
       AMDGPU::isEntryFunctionCC(F.getCallingConv()))
     return false;
 
-  MDA = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
-
   unsigned ReturnNumRegs = 0;
-  SmallDenseMap<int, Type *, 4> OutArgIndexes;
+  // Maps an out-argument number to its field index in the return struct.
+  // Fields are in processing order, which the retry loop below can reorder
+  // relative to argument order, so the index must be tracked, not recomputed.
+  SmallDenseMap<unsigned, unsigned, 4> OutArgIndexes;
   SmallVector<Type *, 4> ReturnTypes;
   Type *RetTy = F.getReturnType();
   if (!RetTy->isVoidTy()) {
@@ -219,6 +267,13 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (Returns.empty())
     return false;
 
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+
+  BatchAAResults BatchAA(*AA);
+  MemorySSAUpdater MSSAUpdater(MSSA);
+  MSSAU = &MSSAUpdater;
+
   bool Changing;
 
   do {
@@ -226,11 +281,10 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
     // Keep retrying if we are able to successfully eliminate an argument. This
     // helps with cases with multiple arguments which may alias, such as in a
-    // sincos implementation. If we have 2 stores to arguments, on the first
-    // attempt the MDA query will succeed for the second store but not the
-    // first. On the second iteration we've removed that out clobbering argument
-    // (by effectively moving it into another function) and will find the second
-    // argument is OK to move.
+    // sincos implementation. With 2 stores to may-aliasing arguments, MDA
+    // returns the second store for the first argument too; the identity guard
+    // below rejects it, and a later iteration folds the first argument once the
+    // second store has been removed.
     for (const auto &Pair : OutArgs) {
       bool ThisReplaceable = true;
       SmallVector<std::pair<ReturnInst *, StoreInst *>, 4> ReplaceableStores;
@@ -252,12 +306,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
       for (ReturnInst *RI : Returns) {
         BasicBlock *BB = RI->getParent();
 
-        MemDepResult Q = MDA->getPointerDependencyFrom(
-            MemoryLocation::getBeforeOrAfter(OutArg), true, BB->end(), BB, RI);
-        StoreInst *SI = nullptr;
-        if (Q.isDef())
-          SI = dyn_cast<StoreInst>(Q.getInst());
-
+        StoreInst *SI = findStoreForOutArgument(BB, OutArg, *MSSA, BatchAA);
         if (SI) {
           LLVM_DEBUG(dbgs() << "Found out argument store: " << *SI << '\n');
           ReplaceableStores.emplace_back(RI, SI);
@@ -284,12 +333,13 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
         }
 
         ValVec.emplace_back(OutArg, ReplVal);
+        MSSAU->removeMemoryAccess(Store.second);
         Store.second->eraseFromParent();
       }
 
       if (ThisReplaceable) {
+        OutArgIndexes.insert({OutArg->getArgNo(), ReturnTypes.size()});
         ReturnTypes.push_back(ArgTy);
-        OutArgIndexes.insert({OutArg->getArgNo(), ArgTy});
         ++NumOutArgumentsReplaced;
         Changing = true;
       }
@@ -334,15 +384,17 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     IRBuilder<> B(RI);
     B.SetCurrentDebugLocation(RI->getDebugLoc());
 
-    int RetIdx = 0;
     Value *NewRetVal = PoisonValue::get(NewRetTy);
 
     Value *RetVal = RI->getReturnValue();
     if (RetVal)
-      NewRetVal = B.CreateInsertValue(NewRetVal, RetVal, RetIdx++);
+      NewRetVal = B.CreateInsertValue(NewRetVal, RetVal, 0);
 
-    for (std::pair<Argument *, Value *> ReturnPoint : Replacement.second)
-      NewRetVal = B.CreateInsertValue(NewRetVal, ReturnPoint.second, RetIdx++);
+    // Use OutArgIndexes so body and stub agree on the field for each argument.
+    for (std::pair<Argument *, Value *> ReturnPoint : Replacement.second) {
+      unsigned FieldIdx = OutArgIndexes.lookup(ReturnPoint.first->getArgNo());
+      NewRetVal = B.CreateInsertValue(NewRetVal, ReturnPoint.second, FieldIdx);
+    }
 
     if (RetVal)
       RI->setOperand(0, NewRetVal);
@@ -367,17 +419,17 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   IRBuilder<> B(StubBB);
   CallInst *StubCall = B.CreateCall(NewFunc, StubCallArgs);
 
-  int RetIdx = RetTy->isVoidTy() ? 0 : 1;
   for (Argument &Arg : F.args()) {
     auto It = OutArgIndexes.find(Arg.getArgNo());
     if (It == OutArgIndexes.end())
       continue;
 
-    Type *EltTy = It->second;
+    unsigned FieldIdx = It->second;
+    Type *EltTy = NewRetTy->getElementType(FieldIdx);
     const auto Align =
         DL->getValueOrABITypeAlignment(Arg.getParamAlign(), EltTy);
 
-    Value *Val = B.CreateExtractValue(StubCall, RetIdx++);
+    Value *Val = B.CreateExtractValue(StubCall, FieldIdx);
     B.CreateAlignedStore(Val, &Arg, Align);
   }
 

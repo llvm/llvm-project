@@ -287,17 +287,15 @@ void MacroToEnumCallbacks::checkName(const Token &MacroNameTok) {
 void MacroToEnumCallbacks::rememberExpressionName(const Token &Tok) {
   const std::string Id = getTokenName(Tok).str();
   auto Pos = llvm::lower_bound(ExpressionNames, Id);
-  if (Pos == ExpressionNames.end() || *Pos != Id) {
+  if (Pos == ExpressionNames.end() || *Pos != Id)
     ExpressionNames.insert(Pos, Id);
-  }
 }
 
 void MacroToEnumCallbacks::rememberExpressionTokens(
     ArrayRef<Token> MacroTokens) {
-  for (const Token Tok : MacroTokens) {
+  for (const Token Tok : MacroTokens)
     if (Tok.isAnyIdentifier())
       rememberExpressionName(Tok);
-  }
 }
 
 void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,
@@ -472,11 +470,15 @@ void MacroToEnumCallbacks::warnMacroEnum(const EnumMacro &Macro) const {
 void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {
   SourceLocation Begin =
       MacroList.front().Directive->getMacroInfo()->getDefinitionLoc();
+  const StringRef LineEnding =
+      SM.getBufferData(SM.getFileID(Begin)).detectEOL();
+
   Begin = SM.translateLineCol(SM.getFileID(Begin),
                               SM.getSpellingLineNumber(Begin), 1);
   const DiagnosticBuilder Diagnostic =
       Check->diag(Begin, "replace macro with enum")
-      << FixItHint::CreateInsertion(Begin, "enum {\n");
+      << FixItHint::CreateInsertion(Begin,
+                                    (llvm::Twine("enum {") + LineEnding).str());
 
   for (size_t I = 0U; I < MacroList.size(); ++I) {
     const EnumMacro &Macro = MacroList[I];
@@ -505,7 +507,8 @@ void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {
       LangOpts);
   End = SM.translateLineCol(SM.getFileID(End),
                             SM.getSpellingLineNumber(End) + 1, 1);
-  Diagnostic << FixItHint::CreateInsertion(End, "};\n");
+  Diagnostic << FixItHint::CreateInsertion(
+      End, (llvm::Twine("};") + LineEnding).str());
 }
 
 void MacroToEnumCheck::registerPPCallbacks(const SourceManager &SM,

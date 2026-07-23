@@ -467,3 +467,54 @@ define void @foo(i32 %v0) {
   auto *NewInt32Ty = sandboxir::IntegerType::get(Ctx, 32u);
   EXPECT_EQ(NewInt32Ty, Int32Ty);
 }
+
+TEST_F(SandboxTypeTest, ByteType) {
+  parseIR(C, R"IR(
+define void @foo() {
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  // Check get().
+  auto *Byte8Ty = sandboxir::ByteType::get(Ctx, 8u);
+  EXPECT_TRUE(isa<sandboxir::ByteType>(Byte8Ty));
+  // Check getBitWidth().
+  EXPECT_EQ(Byte8Ty->getBitWidth(), 8u);
+  // Check getMask().
+  EXPECT_EQ(Byte8Ty->getMask(), APInt(8, 0xFF));
+  // Check classof().
+  auto *Byte16Ty = sandboxir::ByteType::get(Ctx, 16u);
+  EXPECT_TRUE(isa<sandboxir::ByteType>(Byte16Ty));
+  EXPECT_EQ(Byte16Ty->getBitWidth(), 16u);
+  EXPECT_EQ(Byte16Ty->getMask(), APInt(16, 0xFFFF));
+  // Check Type::getByteNTy().
+  EXPECT_EQ(sandboxir::Type::getByteNTy(Ctx, 8u), Byte8Ty);
+  EXPECT_EQ(sandboxir::Type::getByteNTy(Ctx, 16u), Byte16Ty);
+  // Check Type::getByte1Ty().
+  EXPECT_EQ(sandboxir::Type::getByte1Ty(Ctx)->getBitWidth(), 1u);
+  // Check Type::getByte8Ty().
+  EXPECT_EQ(sandboxir::Type::getByte8Ty(Ctx), Byte8Ty);
+  // Check Type::getByte16Ty().
+  EXPECT_EQ(sandboxir::Type::getByte16Ty(Ctx), Byte16Ty);
+  // Check Type::getByte32Ty().
+  EXPECT_EQ(sandboxir::Type::getByte32Ty(Ctx)->getBitWidth(), 32u);
+  // Check Type::getByte64Ty().
+  EXPECT_EQ(sandboxir::Type::getByte64Ty(Ctx)->getBitWidth(), 64u);
+  // Check Type::getByte128Ty().
+  EXPECT_EQ(sandboxir::Type::getByte128Ty(Ctx)->getBitWidth(), 128u);
+  // Check Type::getIntFromByteType().
+  auto *Int8Ty = sandboxir::Type::getIntFromByteType(Byte8Ty);
+  EXPECT_TRUE(isa<sandboxir::IntegerType>(Int8Ty));
+  EXPECT_EQ(Int8Ty->getScalarSizeInBits(), 8u);
+  // Check Type::getByteFromIntType().
+  auto *FromIntTy = sandboxir::Type::getByteFromIntType(Int8Ty);
+  EXPECT_TRUE(isa<sandboxir::ByteType>(FromIntTy));
+  EXPECT_EQ(FromIntTy, Byte8Ty);
+  // Check isByteTy().
+  EXPECT_TRUE(Byte8Ty->isByteTy());
+  EXPECT_FALSE(Int8Ty->isByteTy());
+  // Check isByteTy(Bitwidth).
+  EXPECT_TRUE(Byte8Ty->isByteTy(8u));
+  EXPECT_FALSE(Byte8Ty->isByteTy(16u));
+  EXPECT_FALSE(Int8Ty->isByteTy(8u));
+}

@@ -13,7 +13,7 @@
 define void @test_zero_coefficient(ptr noalias %A, i64 %k) {
 ; CHECK-LABEL: 'test_zero_coefficient'
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx, align 1 --> Dst: store i8 42, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    da analyze - output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: %k ne) 0
 ;
