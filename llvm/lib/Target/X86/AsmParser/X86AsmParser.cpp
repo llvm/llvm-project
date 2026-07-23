@@ -700,8 +700,6 @@ private:
       case IES_OFFSET:
         State = IES_PLUS;
         IC.pushOperator(IC_PLUS);
-        NegativeAdditiveTerm = false;
-        NegativeAdditiveTermLoc = SMLoc();
         if (TmpReg) {
           // A pending scale forces this to be the IndexReg; otherwise a free
           // BaseReg takes it as an unscaled base.
@@ -713,6 +711,10 @@ private:
               return regsUseUpError(ErrMsg);
             IndexReg = TmpReg;
             TmpReg = MCRegister::NoRegister;
+            if (NegativeAdditiveTerm) {
+              ErrMsg = "Scale can't be negative";
+              return true;
+            }
             if (TmpScale.has_value() && checkScale(TmpScale.value(), ErrMsg)) {
               return true;
             }
@@ -721,6 +723,8 @@ private:
         }
         break;
       }
+      NegativeAdditiveTerm = false;
+      NegativeAdditiveTermLoc = SMLoc();
       // A '+' ends the current additive term, so clear the pending scale.
       TmpScale.reset();
       PrevState = CurrState;
@@ -757,36 +761,37 @@ private:
       case IES_INIT:
       case IES_OFFSET:
         State = IES_MINUS;
+        NegativeAdditiveTerm = true;
+        NegativeAdditiveTermLoc = MinusLoc;
         // push minus operator if it is not a negate operator
         if (CurrState == IES_REGISTER || CurrState == IES_RPAREN ||
             CurrState == IES_INTEGER || CurrState == IES_RBRAC ||
             CurrState == IES_OFFSET) {
           IC.pushOperator(IC_MINUS);
-          NegativeAdditiveTerm = true;
-          NegativeAdditiveTermLoc = MinusLoc;
+          if (TmpReg) {
+            // A pending scale forces this to be the IndexReg; otherwise a free
+            // BaseReg takes it as an unscaled base.
+            if (!BaseReg && !TmpScale.has_value()) {
+              BaseReg = TmpReg;
+              TmpReg = MCRegister::NoRegister;
+            } else {
+              if (IndexReg)
+                return regsUseUpError(ErrMsg);
+              IndexReg = TmpReg;
+              TmpReg = MCRegister::NoRegister;
+              if (TmpScale.has_value() &&
+                  checkScale(TmpScale.value(), ErrMsg)) {
+                return true;
+              }
+              Scale = TmpScale.value_or(0);
+            }
+          }
         } else if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
           // We have negate operator for Scale: it's illegal
           ErrMsg = "Scale can't be negative";
           return true;
         } else
           IC.pushOperator(IC_NEG);
-        if (TmpReg) {
-          // A pending scale forces this to be the IndexReg; otherwise a free
-          // BaseReg takes it as an unscaled base.
-          if (!BaseReg && !TmpScale.has_value()) {
-            BaseReg = TmpReg;
-            TmpReg = MCRegister::NoRegister;
-          } else {
-            if (IndexReg)
-              return regsUseUpError(ErrMsg);
-            IndexReg = TmpReg;
-            TmpReg = MCRegister::NoRegister;
-            if (TmpScale.has_value() && checkScale(TmpScale.value(), ErrMsg)) {
-              return true;
-            }
-            Scale = TmpScale.value_or(0);
-          }
-        }
         break;
       }
       // A '-' ends the current additive term, so clear the pending scale.
@@ -943,6 +948,10 @@ private:
           TmpScale = TmpInt;
         }
         // Once an index register is pending, check if TmpScale is valid.
+        if (TmpReg && NegativeAdditiveTerm) {
+          ErrMsg = "Scale can't be negative";
+          return true;
+        }
         if (TmpReg && checkScale(TmpScale.value(), ErrMsg))
           return true;
         IC.pushOperand(IC_IMM, TmpInt);
@@ -1028,9 +1037,11 @@ private:
         assert(!BracCount && "BracCount should be zero on parsing's start");
         State = IES_LBRAC;
         // Entering a new memory expression; clear the pending scale.
-        TmpScale.reset();
         break;
       }
+      NegativeAdditiveTerm = false;
+      NegativeAdditiveTermLoc = SMLoc();
+      TmpScale.reset();
       MemExpr = true;
       BracketUsed = true;
       BracCount++;
