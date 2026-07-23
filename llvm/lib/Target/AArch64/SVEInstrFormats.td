@@ -31,6 +31,25 @@ class NEONType<ValueType VT> {
     v4bf16: nxv8bf16,
     v8bf16: nxv8bf16,
     untyped);
+
+  SubRegIndex ZPRsubreg = !switch(VT,
+    v8i8: dsub,
+    v16i8: zsub,
+    v4i16: dsub,
+    v8i16: zsub,
+    v2i32: dsub,
+    v4i32: zsub,
+    v1i64: dsub,
+    v2i64: zsub,
+    v4f16: dsub,
+    v8f16: zsub,
+    v2f32: dsub,
+    v4f32: zsub,
+    v1f64: dsub,
+    v2f64: zsub,
+    v4bf16: dsub,
+    v8bf16: zsub,
+    ?);
 }
 
 // Helper class to hold conversions of legal scalable vector types.

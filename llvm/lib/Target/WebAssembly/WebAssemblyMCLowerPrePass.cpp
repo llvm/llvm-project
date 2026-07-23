@@ -17,8 +17,10 @@
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Module.h"
@@ -36,7 +38,7 @@ class WebAssemblyMCLowerPreLegacy final : public ModulePass {
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
+    AU.setPreservesAll();
     ModulePass::getAnalysisUsage(AU);
   }
 
@@ -64,11 +66,12 @@ ModulePass *llvm::createWebAssemblyMCLowerPreLegacyPass() {
 //
 // The information stored here is essential for emitExternalDecls in the Wasm
 // AsmPrinter
-static bool mcLower(Module &M, MachineModuleInfo &MMI) {
+static void mcLower(Module &M, MachineModuleInfo &MMI,
+                    llvm::function_ref<MachineFunction *(Function *)> GetMF) {
   MachineModuleInfoWasm &MMIW = MMI.getObjFileInfo<MachineModuleInfoWasm>();
 
   for (Function &F : M) {
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF = GetMF(&F);
     if (!MF)
       continue;
 
@@ -89,20 +92,28 @@ static bool mcLower(Module &M, MachineModuleInfo &MMI) {
       }
     }
   }
-  return true;
 }
 
 bool WebAssemblyMCLowerPreLegacy::runOnModule(Module &M) {
   auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
   if (!MMIWP)
-    return true;
+    return false;
   MachineModuleInfo &MMI = MMIWP->getMMI();
-  return mcLower(M, MMI);
+  mcLower(M, MMI, [MMIWP](Function *F) {
+    return MMIWP->getMMI().getMachineFunction(*F);
+  });
+  return false;
 }
 
 PreservedAnalyses WebAssemblyMCLowerPrePass::run(Module &M,
                                                  ModuleAnalysisManager &MAM) {
   MachineModuleInfo &MMI = MAM.getResult<MachineModuleAnalysis>(M).getMMI();
-  return mcLower(M, MMI) ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
-                         : PreservedAnalyses::all();
+  mcLower(M, MMI, [&](Function *F) {
+    MachineFunctionAnalysis::Result *MFA =
+        MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
+            .getManager()
+            .getCachedResult<MachineFunctionAnalysis>(*F);
+    return MFA ? &MFA->getMF() : nullptr;
+  });
+  return PreservedAnalyses::all();
 }
