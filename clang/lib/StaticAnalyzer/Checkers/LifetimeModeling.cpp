@@ -49,7 +49,6 @@ static bool isDanglingStackSource(const MemRegion *Source,
     // to outlive the object being destroyed.
     if (llvm::any_of(C.stackframes(), [&](const StackFrame &Frame) {
           return isa<CXXDestructorDecl>(Frame.getDecl());
-          return true;
         }))
       return false;
 
