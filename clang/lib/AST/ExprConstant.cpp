@@ -2710,6 +2710,31 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
   return true;
 }
 
+/// Check if the given floating-point library call result is allowed for
+/// constant evaluation.
+static bool checkFloatingPointLibraryCall(EvalInfo &Info, const Expr *E,
+                                          const APFloat &Result,
+                                          APFloat::opStatus St) {
+  // Per [library.c]p3, a C standard library function call is not a core
+  // constant expression if it raises a floating-point exception other than
+  // FE_INEXACT.
+  if (St & (APFloat::opInvalidOp | APFloat::opOverflow |
+            APFloat::opUnderflow | APFloat::opDivByZero)) {
+    if (!Info.checkingPotentialConstantExpression())
+      Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << Result.isNaN();
+    return false;
+  }
+
+  return checkFloatingPointResult(Info, E, St);
+}
+
+static APFloat::opStatus quietSignalingNaN(APFloat &Result) {
+  if (!Result.isSignaling())
+    return APFloat::opOK;
+  Result = Result.makeQuiet();
+  return APFloat::opInvalidOp;
+}
+
 static APFloat::opStatus getScalbnStatus(const APFloat &Arg,
                                          const APFloat &Result, int Exp) {
   // APFloat::scalbn returns only the scaled value, so derive the status needed
@@ -16932,7 +16957,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
     if (FloatVal.isZero() || FloatVal.isNaN() || FloatVal.isInfinity()) {
-      if (!checkFloatingPointResult(Info, E, APFloat::opInvalidOp))
+      if (!checkFloatingPointLibraryCall(Info, E, FloatVal,
+                                         APFloat::opInvalidOp))
         return false;
     }
 
@@ -20131,7 +20157,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
     // roundToIntegral handles special values (NaN, INF) per IEEE 754.
     APFloat::opStatus St = Result.roundToIntegral(RM);
-    return checkFloatingPointResult(Info, E, St);
+    return checkFloatingPointLibraryCall(Info, E, Result, St);
   }
 
   case Builtin::BI__builtin_fdim:
@@ -20142,18 +20168,19 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
-    if (Result.compare(RHS) == APFloat::cmpGreaterThan) {
-      llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
-      APFloat::opStatus St = Result.subtract(RHS, RM);
-      return checkFloatingPointResult(Info, E, St);
-    } else if (Result.isNaN()) {
-      // Result is already the NaN with its payload preserved.
+    APFloat::opStatus St = APFloat::opOK;
+    if (Result.isNaN()) {
+      St = quietSignalingNaN(Result);
     } else if (RHS.isNaN()) {
       Result = RHS;
+      St = quietSignalingNaN(Result);
+    } else if (Result.compare(RHS) == APFloat::cmpGreaterThan) {
+      llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
+      St = Result.subtract(RHS, RM);
     } else {
       Result = APFloat::getZero(Result.getSemantics());
     }
-    return true;
+    return checkFloatingPointLibraryCall(Info, E, Result, St);
   }
 
   case Builtin::BI__builtin_fma:
@@ -20170,7 +20197,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
     // fusedMultiplyAdd handles special values (NaN, INF) per IEEE 754.
     APFloat::opStatus St = Result.fusedMultiplyAdd(RHS, Third, RM);
-    return checkFloatingPointResult(Info, E, St);
+    return checkFloatingPointLibraryCall(Info, E, Result, St);
   }
 
   case Builtin::BI__builtin_fmod:
@@ -20184,7 +20211,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     // mod handles special values (NaN, INF) per IEEE 754.
     APFloat::opStatus St = Result.mod(RHS);
-    return checkFloatingPointResult(Info, E, St);
+    return checkFloatingPointLibraryCall(Info, E, Result, St);
   }
 
   case Builtin::BI__builtin_remainder:
@@ -20197,7 +20224,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     // remainder handles special values (NaN, INF) per IEEE 754.
     APFloat::opStatus St = Result.remainder(RHS);
-    return checkFloatingPointResult(Info, E, St);
+    return checkFloatingPointLibraryCall(Info, E, Result, St);
   }
 
   case Builtin::BI__builtin_nextafter:
@@ -20213,15 +20240,21 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
 
-    if (Result.isNaN())
-      return true;
+    if (Result.isNaN()) {
+      APFloat::opStatus St = quietSignalingNaN(Result);
+      return checkFloatingPointLibraryCall(Info, E, Result, St);
+    }
 
     if (RHS.isNaN()) {
       bool LoseInfo = false;
       Result = RHS;
+      APFloat::opStatus St =
+          RHS.isSignaling() ? APFloat::opInvalidOp : APFloat::opOK;
       Result.convert(Info.Ctx.getFloatTypeSemantics(E->getType()),
                      APFloat::rmNearestTiesToEven, &LoseInfo);
-      return true;
+      if (Result.isSignaling())
+        Result = Result.makeQuiet();
+      return checkFloatingPointLibraryCall(Info, E, Result, St);
     }
 
     APFloat ResultCopy = Result;
@@ -20238,7 +20271,14 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     Result.next(Res == APFloat::cmpGreaterThan);
-    return true;
+    APFloat::opStatus St = APFloat::opOK;
+    if (Result.isInfinity())
+      St = static_cast<APFloat::opStatus>(APFloat::opOverflow |
+                                          APFloat::opInexact);
+    else if (Result.isDenormal() || Result.isZero())
+      St = static_cast<APFloat::opStatus>(APFloat::opUnderflow |
+                                          APFloat::opInexact);
+    return checkFloatingPointLibraryCall(Info, E, Result, St);
   }
 
   case Builtin::BI__builtin_scalbn:
@@ -20264,7 +20304,12 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     int ExpVal = (int)Exp.getExtValue();
     Result = scalbn(Result, ExpVal, RM);
     APFloat::opStatus St = getScalbnStatus(Arg, Result, ExpVal);
-    return checkFloatingPointResult(Info, E, St);
+    if (Arg.isSignaling()) {
+      if (Result.isSignaling())
+        Result = Result.makeQuiet();
+      St = static_cast<APFloat::opStatus>(St | APFloat::opInvalidOp);
+    }
+    return checkFloatingPointLibraryCall(Info, E, Result, St);
   }
 
   case Builtin::BI__builtin_frexp:
@@ -20278,8 +20323,11 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
 
     int Exp = 0;
+    APFloat::opStatus St = quietSignalingNaN(Result);
     // frexp handles special values (NaN, INF) per IEEE 754.
     Result = frexp(Result, Exp, APFloat::rmNearestTiesToEven);
+    if (!checkFloatingPointLibraryCall(Info, E, Result, St))
+      return false;
 
     QualType PointeeType = E->getArg(1)->getType()->getPointeeType();
     APValue APV{APSInt(Info.Ctx.getTypeSize(PointeeType), false)};
@@ -20298,8 +20346,11 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
         !EvaluatePointer(E->getArg(1), IptrLVal, Info))
       return false;
 
+    APFloat::opStatus St = quietSignalingNaN(Result);
     APFloat Integral = Result;
     Integral.roundToIntegral(APFloat::rmTowardZero);
+    if (!checkFloatingPointLibraryCall(Info, E, Result, St))
+      return false;
 
     QualType PointeeType = E->getArg(1)->getType()->getPointeeType();
     APValue APV{Integral};
@@ -20324,27 +20375,44 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
         !EvaluatePointer(E->getArg(2), QuoLVal, Info))
       return false;
 
+    unsigned QuoWidth =
+        Info.Ctx.getTypeSize(E->getArg(2)->getType()->getPointeeType());
+    APSInt QuoInt(QuoWidth, false);
+
     APFloat Q = Result;
     Q.divide(RHS, APFloat::rmNearestTiesToEven);
     Q.roundToIntegral(APFloat::rmNearestTiesToEven);
+    if (Q.isFinite()) {
+      bool Negative = Q.isNegative();
+      Q.clearSign();
 
-    APSInt QuoInt(
-        Info.Ctx.getTypeSize(E->getArg(2)->getType()->getPointeeType()), false);
-    bool IsExact = false;
+      unsigned QuoBits = QuoWidth > 1 ? QuoWidth - 1 : QuoWidth;
+      APFloat Mod(Q.getSemantics());
+      APInt ModInt(QuoWidth, 1);
+      ModInt <<= QuoBits;
+      Mod.convertFromAPInt(ModInt, /*IsSigned=*/false,
+                           APFloat::rmNearestTiesToEven);
+      Q.mod(Mod);
 
-    APFloat::opStatus ConvSt =
-        Q.convertToInteger(QuoInt, APFloat::rmTowardZero, &IsExact);
-    if (ConvSt & APFloat::opInvalidOp)
-      QuoInt = 0;
+      bool IsExact = false;
+      if (!(Q.convertToInteger(QuoInt, APFloat::rmTowardZero, &IsExact) &
+            APFloat::opInvalidOp) &&
+          Negative)
+        QuoInt = -QuoInt;
+    }
+
+    // remainder handles special values (NaN, INF) per IEEE 754.
+    APFloat R = Result;
+    APFloat::opStatus St = R.remainder(RHS);
+    if (!checkFloatingPointLibraryCall(Info, E, R, St))
+      return false;
 
     APValue APV{QuoInt};
     if (!handleAssignment(Info, E, QuoLVal,
                           E->getArg(2)->getType()->getPointeeType(), APV))
       return false;
-
-    // remainder handles special values (NaN, INF) per IEEE 754.
-    APFloat::opStatus St = Result.remainder(RHS);
-    return checkFloatingPointResult(Info, E, St);
+    Result = R;
+    return true;
   }
 
   case Builtin::BI__builtin_elementwise_fma: {

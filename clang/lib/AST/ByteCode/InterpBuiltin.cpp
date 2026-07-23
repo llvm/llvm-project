@@ -199,6 +199,9 @@ static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
   return Result;
 }
 
+/// Checks whether the APFloat status produced by evaluating a builtin allows
+/// the call to be folded, and emits the appropriate constant-evaluation or
+/// strict floating-point diagnostic otherwise.
 static bool CheckFloatResult(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                              const APFloat &Result, APFloat::opStatus Status) {
   FPOptions FPO = Call->getFPFeaturesInEffect(S.getLangOpts());
@@ -221,8 +224,8 @@ static bool CheckFloatResult(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     }
   }
 
-  // If any of the following exceptions were raised, the operation is not a
-  // constant expression.
+  // Per [library.c]p3, if any of the following exceptions were raised, the
+  // operation is not a constant expression.
   if (Status & (APFloat::opInvalidOp | APFloat::opOverflow |
                 APFloat::opUnderflow | APFloat::opDivByZero)) {
     if (!S.checkingPotentialConstantExpression()) {
@@ -242,6 +245,13 @@ static bool CheckBuiltinStore(InterpState &S, CodePtr OpPC,
   if (!Ptr.isBlockPointer())
     return Invalid(S, OpPC);
   return CheckStore(S, OpPC, Ptr);
+}
+
+static APFloat::opStatus QuietSignalingNaN(APFloat &Result) {
+  if (!Result.isSignaling())
+    return APFloat::opOK;
+  Result = Result.makeQuiet();
+  return APFloat::opInvalidOp;
 }
 
 static APFloat::opStatus getScalbnStatus(const APFloat &Arg,
@@ -858,20 +868,23 @@ static bool interp__builtin_fdim(InterpState &S, CodePtr OpPC,
   APFloat R = RHS.getAPFloat();
   APFloat Result(L.getSemantics());
 
+  APFloat::opStatus Status = APFloat::opOK;
   if (L.isNaN()) {
     Result = L;
+    Status = QuietSignalingNaN(Result);
   } else if (R.isNaN()) {
     Result = R;
+    Status = QuietSignalingNaN(Result);
   } else if (L.compare(R) == APFloat::cmpGreaterThan) {
     llvm::RoundingMode RM = getRoundingMode(
         Call->getFPFeaturesInEffect(S.getLangOpts()), S.inConstantContext());
-    APFloat::opStatus Status = L.subtract(R, RM);
-    if (!CheckFloatResult(S, OpPC, Call, L, Status))
-      return false;
+    Status = L.subtract(R, RM);
     Result = L;
   } else {
     Result = APFloat::getZero(L.getSemantics());
   }
+  if (!CheckFloatResult(S, OpPC, Call, Result, Status))
+    return false;
 
   Floating F = S.allocFloat(Result.getSemantics());
   F.copy(Result);
@@ -909,8 +922,12 @@ static bool interp__builtin_frexp(InterpState &S, CodePtr OpPC,
   const Floating &Val = S.Stk.pop<Floating>();
 
   int Exp = 0;
+  APFloat F = Val.getAPFloat();
+  APFloat::opStatus Status = QuietSignalingNaN(F);
   // frexp handles special values (NaN, INF) per IEEE 754.
-  APFloat F = frexp(Val.getAPFloat(), Exp, APFloat::rmNearestTiesToEven);
+  F = frexp(F, Exp, APFloat::rmNearestTiesToEven);
+  if (!CheckFloatResult(S, OpPC, Call, F, Status))
+    return false;
 
   if (!CheckBuiltinStore(S, OpPC, Ptr))
     return false;
@@ -931,10 +948,14 @@ static bool interp__builtin_modf(InterpState &S, CodePtr OpPC,
                                  const CallExpr *Call) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   const Floating &Val = S.Stk.pop<Floating>();
-  const APFloat &F = Val.getAPFloat();
+  APFloat F = Val.getAPFloat();
+  APFloat::opStatus Status = QuietSignalingNaN(F);
 
   APFloat Integral = F;
   Integral.roundToIntegral(APFloat::rmTowardZero);
+
+  if (!CheckFloatResult(S, OpPC, Call, F, Status))
+    return false;
 
   if (!CheckBuiltinStore(S, OpPC, Ptr))
     return false;
@@ -998,7 +1019,13 @@ static bool interp__builtin_nextafter(InterpState &S, CodePtr OpPC,
   const APFloat &R = RHS.getAPFloat();
 
   if (L.isNaN()) {
-    S.Stk.push<Floating>(LHS);
+    APFloat Result = L;
+    APFloat::opStatus Status = QuietSignalingNaN(Result);
+    if (!CheckFloatResult(S, OpPC, Call, Result, Status))
+      return false;
+    Floating F = S.allocFloat(Result.getSemantics());
+    F.copy(Result);
+    S.Stk.push<Floating>(F);
     return true;
   }
 
@@ -1007,7 +1034,13 @@ static bool interp__builtin_nextafter(InterpState &S, CodePtr OpPC,
   if (R.isNaN()) {
     bool LoseInfo = false;
     APFloat NaN = R;
+    APFloat::opStatus Status =
+        R.isSignaling() ? APFloat::opInvalidOp : APFloat::opOK;
     NaN.convert(L.getSemantics(), APFloat::rmNearestTiesToEven, &LoseInfo);
+    if (NaN.isSignaling())
+      NaN = NaN.makeQuiet();
+    if (!CheckFloatResult(S, OpPC, Call, NaN, Status))
+      return false;
     Floating Result = S.allocFloat(NaN.getSemantics());
     Result.copy(NaN);
     S.Stk.push<Floating>(Result);
@@ -1062,6 +1095,11 @@ static bool interp__builtin_scalbn(InterpState &S, CodePtr OpPC,
   int ExpVal = (int)Exp.getExtValue();
   APFloat Scaled = scalbn(ValF, ExpVal, RM);
   APFloat::opStatus Status = getScalbnStatus(ValF, Scaled, ExpVal);
+  if (ValF.isSignaling()) {
+    if (Scaled.isSignaling())
+      Scaled = Scaled.makeQuiet();
+    Status = static_cast<APFloat::opStatus>(Status | APFloat::opInvalidOp);
+  }
   if (!CheckFloatResult(S, OpPC, Call, Scaled, Status))
     return false;
 
@@ -1075,7 +1113,16 @@ static bool interp__builtin_ilogb(InterpState &S, CodePtr OpPC,
                                   const InterpFrame *Frame,
                                   const CallExpr *Call) {
   const Floating &Val = S.Stk.pop<Floating>();
-  pushInteger(S, ilogb(Val.getAPFloat()), Call->getType());
+  const APFloat &F = Val.getAPFloat();
+
+  APFloat::opStatus Status = APFloat::opOK;
+  if (F.isZero() || F.isNaN() || F.isInfinity())
+    Status = APFloat::opInvalidOp;
+
+  if (!CheckFloatResult(S, OpPC, Call, F, Status))
+    return false;
+
+  pushInteger(S, ilogb(F), Call->getType());
   return true;
 }
 
@@ -1086,30 +1133,44 @@ static bool interp__builtin_remquo(InterpState &S, CodePtr OpPC,
   const Floating &RHS = S.Stk.pop<Floating>();
   const Floating &LHS = S.Stk.pop<Floating>();
 
+  QualType QuoType = Call->getArg(2)->getType()->getPointeeType();
+  unsigned QuoWidth = S.getASTContext().getTypeSize(QuoType);
+  APSInt QuoInt(QuoWidth, /*IsUnsigned=*/false);
+
   APFloat Q = LHS.getAPFloat();
   Q.divide(RHS.getAPFloat(), APFloat::rmNearestTiesToEven);
   Q.roundToIntegral(APFloat::rmNearestTiesToEven);
+  if (Q.isFinite()) {
+    bool Negative = Q.isNegative();
+    Q.clearSign();
 
-  if (Ptr.isDummy())
-    return false;
+    unsigned QuoBits = QuoWidth > 1 ? QuoWidth - 1 : QuoWidth;
+    APFloat Mod(Q.getSemantics());
+    APInt ModInt(QuoWidth, 1);
+    ModInt <<= QuoBits;
+    Mod.convertFromAPInt(ModInt, /*IsSigned=*/false,
+                         APFloat::rmNearestTiesToEven);
+    Q.mod(Mod);
 
-  QualType QuoType = Call->getArg(2)->getType()->getPointeeType();
-  APSInt QuoInt(S.getASTContext().getTypeSize(QuoType), /*IsUnsigned=*/false);
-  bool IsExact = false;
-  APFloat::opStatus ConvSt =
-      Q.convertToInteger(QuoInt, APFloat::rmTowardZero, &IsExact);
-  if (ConvSt & APFloat::opInvalidOp)
-    QuoInt = 0;
-
-  PrimType QuoT = *S.getContext().classify(QuoType);
-  assignIntegral(S, Ptr, QuoT, QuoInt);
-  Ptr.initialize();
+    bool IsExact = false;
+    if (!(Q.convertToInteger(QuoInt, APFloat::rmTowardZero, &IsExact) &
+          APFloat::opInvalidOp) &&
+        Negative)
+      QuoInt = -QuoInt;
+  }
 
   APFloat R = LHS.getAPFloat();
   // remainder handles special values (NaN, INF) per IEEE 754.
   APFloat::opStatus Status = R.remainder(RHS.getAPFloat());
   if (!CheckFloatResult(S, OpPC, Call, R, Status))
     return false;
+
+  if (!CheckBuiltinStore(S, OpPC, Ptr))
+    return false;
+
+  PrimType QuoT = *S.getContext().classify(QuoType);
+  assignIntegral(S, Ptr, QuoT, QuoInt);
+  Ptr.initialize();
 
   Floating Result = S.allocFloat(R.getSemantics());
   Result.copy(R);
