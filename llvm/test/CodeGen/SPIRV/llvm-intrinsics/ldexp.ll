@@ -1,5 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#ExtInstSetId:]] = OpExtInstImport "OpenCL.std"
 ; CHECK-DAG: %[[#Half:]] = OpTypeFloat 16
@@ -7,6 +9,7 @@
 ; CHECK-DAG: %[[#Double:]] = OpTypeFloat 64
 ; CHECK-DAG: %[[#Int32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Float4:]] = OpTypeVector %[[#Float]] 4
+; CHECK-DAG: %[[#Int4:]] = OpTypeVector %[[#Int32]] 4
 
 define spir_func void @test_ldexp(ptr %xh, ptr %xf, ptr %xd, ptr %xv,
                                   half %h, float %f, double %d, <4 x float> %vf,
@@ -23,7 +26,8 @@ entry:
 ; CHECK: %[[#]] = OpExtInst %[[#Half]] %[[#ExtInstSetId]] ldexp
 ; CHECK: %[[#]] = OpExtInst %[[#Float]] %[[#ExtInstSetId]] ldexp
 ; CHECK: %[[#]] = OpExtInst %[[#Double]] %[[#ExtInstSetId]] ldexp
-; CHECK: %[[#]] = OpExtInst %[[#Float4]] %[[#ExtInstSetId]] ldexp
+; CHECK: %[[#Splat:]] = OpCompositeConstruct %[[#Int4]]
+; CHECK: %[[#]] = OpExtInst %[[#Float4]] %[[#ExtInstSetId]] ldexp %[[#]] %[[#Splat]]
   ret void
 }
 
