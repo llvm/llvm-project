@@ -4171,9 +4171,15 @@ void Parser::ParseDeclarationSpecifiers(
         if (!getLangOpts().CPlusPlus && MayBeTypeSpecifier()) {
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
-        } else
+        } else {
+          if (getLangOpts().CPlusPlus11 &&
+              NextToken().isOneOf(tok::kw_class, tok::kw_struct,
+                                  tok::kw___interface, tok::kw_union,
+                                  tok::kw_enum))
+            Diag(Loc, diag::ext_auto_storage_class);
           isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto, Loc, PrevSpec,
                                          DiagID, Policy);
+        }
       } else
         isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                            PrevSpec, DiagID, Policy);

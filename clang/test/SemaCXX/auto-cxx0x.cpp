@@ -14,7 +14,8 @@ void f() {
 struct PR209000 {
 } auto; // expected-error {{'auto' cannot be combined with a type specifier}}
 
-auto union { // expected-error {{cannot combine with previous 'auto' declaration specifier}}
+auto union { // expected-warning {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}} \
+             // expected-error {{cannot combine with previous 'auto' declaration specifier}}
 } foo<>(); // expected-error {{no template named 'foo'}} \
            // expected-error {{expected unqualified-id}}
 
