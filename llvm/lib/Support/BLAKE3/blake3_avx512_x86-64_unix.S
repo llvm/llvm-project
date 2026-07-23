@@ -2668,7 +2668,11 @@ blake3_compress_xof_avx512:
 blake3_xof_many_avx512:
 _blake3_xof_many_avx512:
         _CET_ENDBR
+#ifdef _ILP32
+        mov    r10d,DWORD PTR [rsp+0x8]
+#else
         mov    r10,QWORD PTR [rsp+0x8]
+#endif
         cmp    r10,0x1
         ja     2f
         vmovdqu xmm0,XMMWORD PTR [rdi]
