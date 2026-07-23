@@ -38,11 +38,16 @@ jmpq *%fs:(%rdi)
 // CHECK-NEXT: addq %r14, %r11
 // CHECK-NEXT: jmpq *%r11
 
-// The notrack prefix is dropped; LFI masks the target instead.
 notrack jmpq *%rax
 // CHECK:      andl $-32, %eax
 // CHECK-NEXT: addq %r14, %rax
-// CHECK-NEXT: jmpq *%rax
+// CHECK-NEXT: notrack jmpq *%rax
+
+notrack callq *(%rdx)
+// CHECK:      movq (%rdx), %r11
+// CHECK-NEXT: andl $-32, %r11d
+// CHECK-NEXT: addq %r14, %r11
+// CHECK-NEXT: notrack callq *%r11
 
 callq *%rcx
 // CHECK:      andl $-32, %ecx

@@ -61,6 +61,11 @@ static bool isSupportedIndirectBranch(const MCInst &Inst) {
   }
 }
 
+static bool hasNoTrackPrefix(const MCInst &Inst, const MCInstrInfo &InstInfo) {
+  return (InstInfo.get(Inst.getOpcode()).TSFlags & X86II::NOTRACK) ||
+         (Inst.getFlags() & X86::IP_HAS_NOTRACK);
+}
+
 // Find the index of the memory operand if it has an %fs segment override.
 // Returns -1 if there is no memory operand or no %fs override.
 static int findFSMemOperand(const MCInst &Inst, const MCInstrInfo &InstInfo) {
@@ -199,6 +204,8 @@ void X86::X86MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
   MCInst Branch;
   Branch.setOpcode(isCall(Inst) ? X86::CALL64r : X86::JMP64r);
   Branch.addOperand(MCOperand::createReg(Target));
+  if (hasNoTrackPrefix(Inst, *InstInfo))
+    Branch.setFlags(Branch.getFlags() | X86::IP_HAS_NOTRACK);
   Out.emitInstruction(Branch, STI);
 }
 
