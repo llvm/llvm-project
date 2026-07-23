@@ -5877,10 +5877,11 @@ public:
   ///                        dependent contexts.
   /// \param PreInits   Helper preinits statements for the loop nest.
   /// \param Finals     Loop variable finalization statements.
-  static OMPReverseDirective
-  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-         Stmt *AssociatedStmt, unsigned NumLoops, Stmt *TransformedStmt,
-         Stmt *PreInits, Stmt *Finals);
+  static OMPReverseDirective *Create(const ASTContext &C,
+                                     SourceLocation StartLoc,
+                                     SourceLocation EndLoc, Stmt *AssociatedStmt,
+                                     unsigned NumLoops, Stmt *TransformedStmt,
+                                     Stmt *PreInits, Stmt *Finals);
 
   /// Build an empty '#pragma omp reverse' AST node for deserialization.
   ///
@@ -6069,12 +6070,12 @@ public:
   ///                        dependent
   /// \param PreInits Helper preinits statements for the loop nest
   /// \param Finals Loop variable finalization statements
-  static OMPFuseDirective * Create(const ASTContext &C, SourceLocation StartLoc,
-                                   SourceLocation EndLoc,
-                                   ArrayRef<OMPClause *> Clauses,
-                                   unsigned NumGeneratedTopLevelLoops,
-                                   Stmt *AssociatedStmt, Stmt *TransformedStmt,
-                                   Stmt *PreInits, Stmt *Finals);
+  static OMPFuseDirective *Create(const ASTContext &C, SourceLocation StartLoc,
+                                  SourceLocation EndLoc,
+                                  ArrayRef<OMPClause *> Clauses,
+                                  unsigned NumGeneratedTopLevelLoops,
+                                  Stmt *AssociatedStmt, Stmt *TransformedStmt,
+                                  Stmt *PreInits, Stmt *Finals);
 
   /// Build an empty '#pragma omp fuse' AST node for deserialization
   ///
