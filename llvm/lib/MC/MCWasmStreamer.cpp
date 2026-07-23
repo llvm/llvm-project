@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCWasmStreamer.h"
-#include "../Target/WebAssembly/MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -183,7 +182,7 @@ void MCWasmStreamer::emitULEB128Value(const MCExpr *Value) {
   }
   // emit fixup for reloc / deferred resolution
   MCFixup Fixup =
-      MCFixup::create(CodeOffset, Value, WebAssembly::fixup_uleb128_i32);
+      MCFixup::create(CodeOffset, Value, FK_Data_leb128);
   F->appendFixups({Fixup});
 }
 

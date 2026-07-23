@@ -1041,10 +1041,10 @@ Error WasmObjectFile::parseTargetFeaturesSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseCodeMetadataSection(StringRef Name,
                                                ReadContext &Ctx) {
-  const auto HintTypeName = Name.substr(14 /* "code_metadata." */);
-  if (HintTypeName == "branch_hint") {
+  // "code_metadata." prefix length = 14
+  const auto HintTypeName = Name.substr(14);
+  if (HintTypeName == "branch_hint")
     return parseBranchHintSection(Ctx);
-  }
   dbgs() << "invalid code metadata section: " << Name
          << "; ignoring section.\n";
   return Error::success(); // Ignore unknown code metadata sections.

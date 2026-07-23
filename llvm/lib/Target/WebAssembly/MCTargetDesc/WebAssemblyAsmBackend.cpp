@@ -69,6 +69,11 @@ WebAssemblyAsmBackend::getFixupKind(StringRef Name) const {
 
 MCFixupKindInfo
 WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  // Generic FK_Data_leb128 defaults to a TargetSize of 0 in base MCAsmBackend.
+  // WebAssembly non-absolute LEB fixups/relocations occupy a fixed 5 bytes.
+  if (Kind == FK_Data_leb128)
+    return {"FK_Data_leb128", 0, 5 * 8, 0};
+
   const static MCFixupKindInfo Infos[WebAssembly::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // WebAssemblyFixupKinds.h.
@@ -106,7 +111,8 @@ std::optional<bool> WebAssemblyAsmBackend::evaluateFixup(const MCFragment &,
                                                          MCFixup &Fixup,
                                                          MCValue &Target,
                                                          uint64_t &Value) {
-  if (Fixup.getKind() == WebAssembly::fixup_uleb128_i32 &&
+  if ((Fixup.getKind() == WebAssembly::fixup_uleb128_i32 ||
+       Fixup.getKind() == FK_Data_leb128) &&
       static_cast<WebAssembly::Specifier>(Target.getSpecifier()) ==
           WebAssembly::S_None) {
     if (const auto *SymExpr =
