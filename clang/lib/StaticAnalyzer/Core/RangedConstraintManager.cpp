@@ -47,11 +47,12 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
     // no-op -- it is how the symbol-simplification fixpoint migrates a
     // constraint onto a just-simplified symbol. Concretely, in
     // symbol-simplification-fixpoint-two-iterations.cpp, once `b == 0` rewrites
-    // `c + b` (constrained to 0) into the bare symbol `c`, the classes merge and
-    // reAssume() calls assume(c, false); here `c` folds to the concrete 0, and
-    // falling through to assumeSymUnsupported()/assumeSymEQ() records `c == 0`.
-    // That recorded fact is what lets the *next* iteration rewrite `a + c` into
-    // `a`. Returning State here skips the recording and the class stays stuck at
+    // `c + b` (constrained to 0) into the bare symbol `c`, the classes merge
+    // and reAssume() calls assume(c, false); here `c` folds to the concrete 0,
+    // and falling through to assumeSymUnsupported()/assumeSymEQ() records `c ==
+    // 0`. That recorded fact is what lets the *next* iteration rewrite `a + c`
+    // into `a`. Returning State here skips the recording and the class stays
+    // stuck at
     // `(a + c) != d`, regressing that test. (EquivalenceClass::simplify ->
     // reAssume -> State->assume is the loop this participates in.)
   } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
@@ -140,12 +141,13 @@ ProgramStateRef RangedConstraintManager::assumeSymInclusiveRange(
 
   SVal SimplifiedVal = simplifyToSVal(State, Sym);
   // Note: unlike assumeSym(), this callsite can receive a pointer-typed Sym
-  // (assumeInclusiveRangeInternal's nonloc::LocAsInteger case, e.g. a case-range
-  // switch over `(intptr_t)ptr`), so simplifyToSVal() could in principle yield a
-  // loc::ConcreteInt. In practice it never does: that fold requires the pointer
-  // pinned to a single concrete address, and once it is, `(intptr_t)ptr` folds
-  // eagerly to a nonloc::ConcreteInt and is handled before ever reaching a
-  // symbol here. Hence only the nonloc::ConcreteInt case needs handling.
+  // (assumeInclusiveRangeInternal's nonloc::LocAsInteger case, e.g. a
+  // case-range switch over `(intptr_t)ptr`), so simplifyToSVal() could in
+  // principle yield a loc::ConcreteInt. In practice it never does: that fold
+  // requires the pointer pinned to a single concrete address, and once it is,
+  // `(intptr_t)ptr` folds eagerly to a nonloc::ConcreteInt and is handled
+  // before ever reaching a symbol here. Hence only the nonloc::ConcreteInt case
+  // needs handling.
   if (auto CI = SimplifiedVal.getAs<nonloc::ConcreteInt>()) {
     // The symbol folds to a concrete integer. Prune the path only when the
     // concrete value proves it infeasible (mirroring
