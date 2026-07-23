@@ -12932,14 +12932,30 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
   if (Init->isConstantInitializer(Context, /*ForRef=*/false, &Culprit))
     return false;
 
-  // Emit ObjC-specific diagnostics for non-constant literals at file scope.
-  if (getLangOpts().ObjCConstantLiterals && isa<ObjCObjectLiteral>(Culprit)) {
+  // The culprit reported by isConstantInitializer() may be wrapped in implicit
+  // casts that it does not look through: under ARC an object-pointer
+  // initializer is an `ImplicitCastExpr <ARCReclaimReturnedObject>`, and an
+  // `id`-typed (or otherwise differently-typed) variable adds an
+  // `ImplicitCastExpr <BitCast>` on top. Strip those so the ObjC-specific
+  // classification and per-element reporting below can see the underlying
+  // literal regardless of how it is wrapped.
+  const Expr *CulpritLiteral = Culprit->IgnoreImpCasts();
 
-    // For collection literals iterate the elements to highlight which one is
-    // the offender.
-    if (auto ALE = dyn_cast<ObjCArrayLiteral>(Init)) {
-      for (auto *Elm : ALE->elements()) {
-        if (!Elm->isConstantInitializer(Context)) {
+  // Emit ObjC-specific diagnostics for non-constant literals at file scope.
+  if (getLangOpts().ObjCConstantLiterals &&
+      isa<ObjCObjectLiteral>(CulpritLiteral)) {
+
+    // For collection literals, iterate the elements to point at the specific
+    // offender. These per-element checks mirror the constant-initializer rules
+    // applied when the literal was built (see SemaObjC::BuildObjCArrayLiteral
+    // and SemaObjC::BuildObjCDictionaryLiteral): each element must itself be a
+    // constant object literal, and dictionary keys must additionally be string
+    // literals. Elements, keys and values are wrapped in an implicit BitCast to
+    // `id`, so the isa<> classification is done on the unwrapped expression.
+    if (const auto *ALE = dyn_cast<ObjCArrayLiteral>(CulpritLiteral)) {
+      for (const Expr *Elm : ALE->elements()) {
+        if (!isa<ObjCObjectLiteral>(Elm->IgnoreImpCasts()) ||
+            !Elm->isConstantInitializer(Context)) {
           Diag(Elm->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)
               << ObjC().CheckLiteralKind(Init) << Elm->getSourceRange();
@@ -12948,12 +12964,12 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
       }
     }
 
-    if (auto DLE = dyn_cast<ObjCDictionaryLiteral>(Init)) {
+    if (const auto *DLE = dyn_cast<ObjCDictionaryLiteral>(CulpritLiteral)) {
       for (size_t I = 0, N = DLE->getNumElements(); I != N; ++I) {
         const ObjCDictionaryElement Elm = DLE->getKeyValueElement(I);
 
-        // Check that the key is a string literal and is constant.
-        if (!isa<ObjCStringLiteral>(Elm.Key) ||
+        // Keys must be constant string literals.
+        if (!isa<ObjCStringLiteral>(Elm.Key->IgnoreImpCasts()) ||
             !Elm.Key->isConstantInitializer(Context)) {
           Diag(Elm.Key->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)
@@ -12961,7 +12977,9 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
           return true;
         }
 
-        if (!Elm.Value->isConstantInitializer(Context)) {
+        // Values must be constant object literals.
+        if (!isa<ObjCObjectLiteral>(Elm.Value->IgnoreImpCasts()) ||
+            !Elm.Value->isConstantInitializer(Context)) {
           Diag(Elm.Value->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)
               << ObjC().CheckLiteralKind(Init) << Elm.Value->getSourceRange();
@@ -12970,9 +12988,9 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
       }
     }
 
-    Diag(Culprit->getExprLoc(),
+    Diag(CulpritLiteral->getExprLoc(),
          diag::err_objc_literal_nonconstant_at_file_scope)
-        << ObjC().CheckLiteralKind(Init) << Culprit->getSourceRange();
+        << ObjC().CheckLiteralKind(Init) << CulpritLiteral->getSourceRange();
     return true;
   }
 
