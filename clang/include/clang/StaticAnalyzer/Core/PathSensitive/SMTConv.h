@@ -264,8 +264,8 @@ public:
                                           QualType ToTy, uint64_t ToBitWidth,
                                           QualType FromTy,
                                           uint64_t FromBitWidth) {
-    if ((FromTy->isIntegralOrEnumerationType() &&
-         ToTy->isIntegralOrEnumerationType()) ||
+    if ((FromTy.getAtomicUnqualifiedType()->isIntegralOrEnumerationType() &&
+         ToTy.getAtomicUnqualifiedType()->isIntegralOrEnumerationType()) ||
         (FromTy->isAnyPointerType() ^ ToTy->isAnyPointerType()) ||
         (FromTy->isBlockPointerType() ^ ToTy->isBlockPointerType()) ||
         (FromTy->isReferenceType() ^ ToTy->isReferenceType())) {
