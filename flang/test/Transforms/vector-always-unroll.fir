@@ -1,5 +1,6 @@
 // RUN: fir-opt --vector-always-unroll %s | FileCheck %s
 // RUN: fir-opt --vector-always-unroll="max-unroll-ops=1" %s | FileCheck %s --check-prefix=CAPPED
+// RUN: fir-opt --vector-always-unroll="max-unroll-ops=50" %s | FileCheck %s --check-prefix=CAP50
 
 // Vectorization directives (`!dir$ vector always`, `!dir$ vector length`,
 // `!dir$ simd`) lower to a vectorize.enable (disable = false) loop_annotation.
@@ -110,6 +111,51 @@ func.func @no_annotation() {
     fir.do_loop %j = %c1 to %c10 step %c1 {
       fir.do_loop %k = %c1 to %c10 step %c1 {
         %0 = arith.addi %i, %j : index
+      }
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @omp_collapse_counted
+// CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #{{.+}}}
+// CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #[[UNROLL_ANNO]]}
+
+// With max-unroll-ops=50: ignoring the collapsed loop the estimate would be 4
+// (<= 50, so the loop would be tagged). Counting the 100-iteration collapsed
+// omp.loop_nest raises it to 404 (> 50), so nothing is tagged.
+// CAP50-LABEL: func.func @omp_collapse_counted
+// CAP50-NOT: unroll
+func.func @omp_collapse_counted() {
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  fir.do_loop %i = %c1 to %c4 step %c1 attributes {loopAnnotation = #anno_vec} {
+    fir.do_loop %j = %c1 to %c4 step %c1 {
+      omp.simd {
+        omp.loop_nest (%k, %l) : i32 = (%c1_i32, %c1_i32) to (%c10_i32, %c10_i32) inclusive step (%c1_i32, %c1_i32) collapse(2) {
+          %0 = arith.addi %k, %l : i32
+          omp.yield
+        }
+      }
+    }
+  }
+  return
+}
+// CHECK-LABEL: func.func @omp_collapse_nonconst
+// CHECK-NOT: unroll
+func.func @omp_collapse_nonconst(%n: i32) {
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c1_i32 = arith.constant 1 : i32
+  fir.do_loop %i = %c1 to %c4 step %c1 attributes {loopAnnotation = #anno_vec} {
+    fir.do_loop %j = %c1 to %c4 step %c1 {
+      omp.simd {
+        omp.loop_nest (%k, %l) : i32 = (%c1_i32, %c1_i32) to (%n, %n) inclusive step (%c1_i32, %c1_i32) collapse(2) {
+          %0 = arith.addi %k, %l : i32
+          omp.yield
+        }
       }
     }
   }

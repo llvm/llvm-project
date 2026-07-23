@@ -27,8 +27,10 @@
 
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/Debug.h"
@@ -48,27 +50,57 @@ namespace fir {
 
 namespace {
 
-static std::optional<std::uint64_t> estimateUnrolledCost(fir::DoLoopOp loop) {
-  std::optional<llvm::APInt> trip = loop.getStaticTripCount();
-  if (!trip)
-    return std::nullopt;
-  std::uint64_t tripCount = trip->getZExtValue();
+static std::optional<llvm::APInt>
+computeLoopNestTripCount(mlir::omp::LoopNestOp loopNest) {
+  mlir::OperandRange lbs = loopNest.getLoopLowerBounds();
+  mlir::OperandRange ubs = loopNest.getLoopUpperBounds();
+  mlir::OperandRange steps = loopNest.getLoopSteps();
+  bool inclusive = loopNest.getLoopInclusive();
 
-  std::uint64_t bodyOps = 0;
-  for (mlir::Operation &op : loop.getBody()->without_terminator()) {
-    auto nested = mlir::dyn_cast<fir::DoLoopOp>(&op);
-    if (!nested) {
-      // Count a non-loop operation counts as one op
-      bodyOps = llvm::SaturatingAdd(bodyOps, std::uint64_t{1});
+  std::uint64_t product = 1;
+  for (unsigned i = 0, e = steps.size(); i < e; ++i) {
+    std::optional<llvm::APInt> count =
+        fir::computeTripCount(lbs[i], ubs[i], steps[i], inclusive);
+    if (!count)
+      return std::nullopt;
+    product = llvm::SaturatingMultiply(product, count->getZExtValue());
+  }
+  return llvm::APInt(64, product);
+}
+
+static std::optional<std::uint64_t> estimateBlockCost(mlir::Block &block) {
+  std::uint64_t ops = 0;
+  for (mlir::Operation &op : block.without_terminator()) {
+    std::optional<llvm::APInt> trip;
+    mlir::Block *body = nullptr;
+    if (auto loop = mlir::dyn_cast<fir::DoLoopOp>(&op)) {
+      trip = loop.getStaticTripCount();
+      body = loop.getBody();
+    } else if (auto loopNest = mlir::dyn_cast<mlir::omp::LoopNestOp>(&op)) {
+      trip = computeLoopNestTripCount(loopNest);
+      body = &loopNest.getRegion().front();
+    }
+
+    if (body) {
+      std::optional<std::uint64_t> bodyCost = estimateBlockCost(*body);
+      if (!trip || !bodyCost)
+        return std::nullopt;
+      ops = llvm::SaturatingAdd(
+          ops, llvm::SaturatingMultiply(trip->getZExtValue(), *bodyCost));
       continue;
     }
-    std::optional<std::uint64_t> childCost = estimateUnrolledCost(nested);
-    if (!childCost)
-      return std::nullopt;
-    bodyOps = llvm::SaturatingAdd(bodyOps, *childCost);
-  }
 
-  return llvm::SaturatingMultiply(tripCount, bodyOps);
+    // Count a non-loop operation as one op
+    ops = llvm::SaturatingAdd(ops, std::uint64_t{1});
+    for (mlir::Region &region : op.getRegions())
+      for (mlir::Block &nested : region) {
+        std::optional<std::uint64_t> cost = estimateBlockCost(nested);
+        if (!cost)
+          return std::nullopt;
+        ops = llvm::SaturatingAdd(ops, *cost);
+      }
+  }
+  return ops;
 }
 
 class VectorAlwaysUnrollPass
@@ -132,24 +164,18 @@ void VectorAlwaysUnrollPass::runOnOperation() {
 
 void VectorAlwaysUnrollPass::tagNest(
     fir::DoLoopOp outerLoop, mlir::LLVM::LoopAnnotationAttr unrollAnnotation) {
-  std::uint64_t estimatedOps = 0;
-  for (mlir::Operation &op : outerLoop.getBody()->without_terminator()) {
-    auto nested = mlir::dyn_cast<fir::DoLoopOp>(&op);
-    if (!nested)
-      continue;
-    std::optional<std::uint64_t> cost = estimateUnrolledCost(nested);
-    if (!cost) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "  abort nest: contains a non-constant trip count loop\n");
-      return;
-    }
-    estimatedOps = llvm::SaturatingAdd(estimatedOps, *cost);
+  std::optional<std::uint64_t> estimatedOps =
+      estimateBlockCost(*outerLoop.getBody());
+  if (!estimatedOps) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "  abort nest: contains a non-constant trip count loop\n");
+    return;
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "  nest cost: estimatedOps=" << estimatedOps
+  LLVM_DEBUG(llvm::dbgs() << "  nest cost: estimatedOps=" << *estimatedOps
                           << "\n");
 
-  if (estimatedOps > static_cast<std::uint64_t>(maxUnrollOps)) {
+  if (*estimatedOps > static_cast<std::uint64_t>(maxUnrollOps)) {
     LLVM_DEBUG(llvm::dbgs()
                << "  estimatedOps exceeds threshold; tagging nothing\n");
     return;
