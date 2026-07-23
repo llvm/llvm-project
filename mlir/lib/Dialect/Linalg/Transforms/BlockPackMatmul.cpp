@@ -178,7 +178,7 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   // Build OpFoldResult tile sizes. Scalable dimensions are emitted as
   // arith.constant N : index multiplied by vector.vscale.
   SmallVector<OpFoldResult> mnkTiles;
-  for (auto [i, factor] : llvm::enumerate(options->blockFactors)) {
+  for (auto [idx, factor] : llvm::enumerate(options->blockFactors)) {
     bool isScalable = hasScalable && options->scalableBlockFactors[i];
     if (!isScalable) {
       mnkTiles.push_back(rewriter.getIndexAttr(factor));
