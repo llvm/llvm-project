@@ -175,11 +175,9 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
     return rewriter.notifyMatchFailure(
         linalgOp, "scalable block factors require padding");
 
-  // Build OpFoldResult tile sizes. Scalable dimensions are emitted as
-  // arith.constant N : index multiplied by vector.vscale.
   SmallVector<OpFoldResult> mnkTiles;
   for (auto [idx, factor] : llvm::enumerate(options->blockFactors)) {
-    bool isScalable = hasScalable && options->scalableBlockFactors[i];
+    bool isScalable = hasScalable && options->scalableBlockFactors[idx];
     if (!isScalable) {
       mnkTiles.push_back(rewriter.getIndexAttr(factor));
       continue;
@@ -332,16 +330,16 @@ struct LinalgBlockPackMatmul
 
       // Parse block-factors strings. Each element is either "N" (static) or
       // "[N]" (scalable, i.e. N * vscale at runtime).
-      for (const std::string &f : *blockFactors) {
-        StringRef s(f);
-        if (s.starts_with("[") && s.ends_with("]")) {
+      for (const std::string &blockFactor : *blockFactors) {
+        StringRef factor(blockFactor);
+        if (factor.starts_with("[") && factor.ends_with("]")) {
           int64_t val = 0;
-          s.drop_front().drop_back().getAsInteger(10, val);
+          factor.drop_front().drop_back().getAsInteger(10, val);
           options.blockFactors.push_back(val);
           options.scalableBlockFactors.push_back(true);
         } else {
           int64_t val = 0;
-          s.getAsInteger(10, val);
+          factor.getAsInteger(10, val);
           options.blockFactors.push_back(val);
           options.scalableBlockFactors.push_back(false);
         }
