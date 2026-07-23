@@ -81,7 +81,7 @@ class TestDAP_stepInTargets(DAPTestCaseBase):
 
     @skipIf(archs=["x86", "x86_64"])
     def test_supported_capability_other_archs(self):
-        program = self.getBuildArtifact("main.cpp")
+        program = self.getBuildArtifact("a.out")
         source = self.getSourcePath("main.cpp")
         session = self.build_and_create_session()
         bp_lines = [line_number(source, "// set breakpoint here")]
