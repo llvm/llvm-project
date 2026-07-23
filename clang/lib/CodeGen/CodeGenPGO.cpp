@@ -137,6 +137,7 @@ public:
     // The preceding values are available since PGO_HASH_V2.
 
     CallContinuationCounters,
+    CallContinuationCounter,
 
     // Keep this last.  It's for the static assert that follows.
     LastHashType
@@ -406,14 +407,18 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
 
   void addCallContinuation(const CallExpr *S, const CallExpr *CurrentMustTail) {
     if (CoverageCallContinuations && CallContinuationCounterMap &&
-        !isNoReturnCall(S) && S != CurrentMustTail)
+        !isNoReturnCall(S) && S != CurrentMustTail) {
       CallContinuations.push_back(S);
+      Hash.combine(PGOHash::CallContinuationCounter);
+    }
   }
 
   void addCallContinuation(const CXXConstructExpr *S) {
     if (CoverageCallContinuations && CallContinuationCounterMap &&
-        shouldEmitCXXConstructContinuation(S))
+        shouldEmitCXXConstructContinuation(S)) {
       CallContinuations.push_back(S);
+      Hash.combine(PGOHash::CallContinuationCounter);
+    }
   }
 
   // Continuation counters are emitted from codegen, so collection has to match
