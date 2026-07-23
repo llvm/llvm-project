@@ -467,11 +467,3 @@ memory address from a pointer.
 If pointers are like capabilities where their size is greater than that of
 a memory address, you will need to change the type LLDB uses to store addresses
 which is a lot more work.
-
-### Multiple Address Spaces
-
-At this time LLDB does not support multiple address spaces. Work is ongoing to
-add them, with WASM and GPU targets as the main motivation.
-
-Like anything that changes what an "address" consists of, it has a big impact
-on LLDB.
