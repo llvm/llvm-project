@@ -54,6 +54,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Clang Frontend Potentially Breaking Changes
 
+- Templight support has been removed.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 ### OpenCL Potentially Breaking Changes
@@ -120,6 +122,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
+
+- Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
 
 ### Improvements to Clang's diagnostics
 
@@ -288,6 +292,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   against or converted to a null pointer, the same as a bare function name.
   (#GH46362)
 
+- Clang now attempts to print enumerator names rather than C-style cast expressions
+  in more diagnostics.
+
 
 ### Improvements to Clang's time-trace
 
@@ -311,7 +318,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Bug Fixes to C++ Support
 
--Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
+- Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
+
+- Fixed a crash when a using-declaration naming an unresolvable member of a
+  dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
 #### Bug Fixes to AST Handling
 
@@ -421,6 +431,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### Python Binding Changes
 
 ### OpenMP Support
+
+- Added parsing and semantic support for `dims` modifier in `num_teams` and
+  `thread_limit` clauses for OpenMP 6.1 or later.
 
 ### SYCL Support
 
