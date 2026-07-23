@@ -142,7 +142,7 @@ void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
 void X86::X86MCLFIRewriter::emitSandboxBranchReg(MCRegister Reg,
                                                  MCStreamer &Out,
                                                  const MCSubtargetInfo &STI) {
-  MCRegister Reg32 = getX86SubSuperRegister(Reg, 32);
+  MCRegister Reg32 = RegInfo->getSubReg(Reg, X86::sub_32bit);
 
   MCInst And;
   And.setOpcode(X86::AND32ri8);
