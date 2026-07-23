@@ -20,19 +20,8 @@
 
 #include "llvm/ADT/ADL.h"
 #include <type_traits>
-#include <utility>
 
 namespace llvm {
-
-template <typename From, typename To, typename = void>
-struct explicitly_convertible : std::false_type {};
-
-template <typename From, typename To>
-struct explicitly_convertible<
-    From, To,
-    std::void_t<decltype(static_cast<To>(
-        std::declval<std::add_rvalue_reference_t<From>>()))>> : std::true_type {
-};
 
 /// A range adaptor for a pair of iterators.
 ///
@@ -51,8 +40,9 @@ public:
 #else
   template <
       typename Container,
-      std::enable_if_t<explicitly_convertible<
-          llvm::detail::IterOfRange<Container>, IteratorT>::value> * = nullptr>
+      std::enable_if_t<std::is_constructible_v<
+                           IteratorT, llvm::detail::IterOfRange<Container> &&>,
+                       int> = 0>
 #endif
   iterator_range(Container &&c)
       : begin_iterator(adl_begin(c)), end_iterator(adl_end(c)) {

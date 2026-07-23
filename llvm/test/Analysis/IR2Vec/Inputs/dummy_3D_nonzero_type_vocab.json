@@ -1,7 +1,8 @@
 {
     "Opcodes": {
         "Ret": [0, 0, 0],
-        "Br": [0, 0, 0],
+        "UncondBr": [0, 0, 0],
+        "CondBr": [0, 0, 0],
         "Switch": [0, 0, 0],
         "IndirectBr": [0, 0, 0],
         "Invoke": [0, 0, 0],
@@ -47,6 +48,7 @@
         "FPTrunc": [0, 0, 0],
         "FPExt": [0, 0, 0],
         "PtrToInt": [0, 0, 0],
+        "PtrToAddr": [0, 0, 0],
         "IntToPtr": [0, 0, 0],
         "BitCast": [0, 0, 0],
         "AddrSpaceCast": [0, 0, 0],

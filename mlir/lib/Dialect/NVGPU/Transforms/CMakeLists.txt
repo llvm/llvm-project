@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRNVGPUTransforms
   CreateAsyncGroups.cpp
+  MemoryAccessOpInterfacesImpl.cpp
   OptimizeSharedMemory.cpp
   MmaSyncTF32Transform.cpp
   Utils.cpp

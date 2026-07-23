@@ -46,11 +46,7 @@ if.end569:                                        ; preds = %if.else568, %if.the
 
 
 ; CHECK-LABEL: @f(i1 %arg)
-; CHECK: 7 = MemoryPhi(
-; CHECK: 6 = MemoryPhi(
-; CHECK: 10 = MemoryPhi(
-; CHECK: 9 = MemoryPhi(
-; CHECK: 8 = MemoryPhi(
+; CHECK: 4 = MemoryPhi(
 define void @f(i1 %arg) {
 entry:
   %e = alloca i16, align 1
@@ -87,7 +83,7 @@ if.else:                                          ; preds = %lbl1
   ]
 
 if.end12:                                         ; preds = %cleanup.cont11s, %cleanup.cont
-  call void @llvm.lifetime.end.p0(i64 1, ptr undef)
+  call i16 @g(i16 1)
   ret void
 
 unreachable:                                      ; preds = %if.else, %for.end5
@@ -95,6 +91,3 @@ unreachable:                                      ; preds = %if.else, %for.end5
 }
 
 declare i16 @g(i16)
-
-; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)

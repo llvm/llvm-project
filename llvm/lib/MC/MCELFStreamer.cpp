@@ -18,9 +18,11 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
@@ -28,8 +30,8 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include <cassert>
@@ -48,18 +50,15 @@ ELFObjectWriter &MCELFStreamer::getWriter() {
   return static_cast<ELFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
+void MCELFStreamer::initSections(const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
   emitCodeAlignment(Align(Ctx.getObjectFileInfo()->getTextSectionAlignment()),
-                    &STI);
-
-  if (NoExecStack)
-    switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+                    STI);
 }
 
 void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
   const MCSectionELF &Section =
@@ -70,7 +69,7 @@ void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
 
 void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
                                    uint64_t Offset) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
 
   const MCSectionELF &Section =
@@ -88,12 +87,14 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   if (SectionELF->getFlags() & ELF::SHF_GNU_RETAIN)
     getWriter().markGnuAbi();
 
-  changeSectionImpl(Section, Subsection);
-  Asm.registerSymbol(*Section->getBeginSymbol());
+  MCObjectStreamer::changeSection(Section, Subsection);
+  auto *Sym = static_cast<MCSymbolELF *>(Section->getBeginSymbol());
+  Sym->setBinding(ELF::STB_LOCAL);
+  Sym->setType(ELF::STT_SECTION);
 }
 
 void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) {
-  auto *A = cast<MCSymbolELF>(Alias);
+  auto *A = static_cast<MCSymbolELF *>(Alias);
   if (A->isDefined()) {
     getContext().reportError(getStartTokLoc(), "symbol '" + A->getName() +
                                                    "' is already defined");
@@ -124,7 +125,7 @@ static unsigned CombineSymbolTypes(unsigned T1, unsigned T2) {
 }
 
 bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
 
   // Adding a symbol attribute always introduces the symbol, note that an
   // important side effect of calling registerSymbol here is to register
@@ -150,6 +151,8 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_IndirectSymbol:
   case MCSA_Exported:
   case MCSA_WeakAntiDep:
+  case MCSA_OSLinkage:
+  case MCSA_XPLinkage:
     return false;
 
   case MCSA_NoDeadStrip:
@@ -245,7 +248,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
 void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                      Align ByteAlignment) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   getAssembler().registerSymbol(*Symbol);
 
   if (!Symbol->isBindingSet())
@@ -270,12 +273,11 @@ void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                          " redeclared as different type");
   }
 
-  cast<MCSymbolELF>(Symbol)
-      ->setSize(MCConstantExpr::create(Size, getContext()));
+  Symbol->setSize(MCConstantExpr::create(Size, getContext()));
 }
 
 void MCELFStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
-  cast<MCSymbolELF>(Symbol)->setSize(Value);
+  static_cast<MCSymbolELF *>(Symbol)->setSize(Value);
 }
 
 void MCELFStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
@@ -287,7 +289,7 @@ void MCELFStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
 
 void MCELFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                           Align ByteAlignment) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   // FIXME: Should this be caught and done earlier?
   getAssembler().registerSymbol(*Symbol);
   Symbol->setBinding(ELF::STB_LOCAL);
@@ -356,6 +358,13 @@ void MCELFStreamer::finalizeCGProfile() {
 }
 
 void MCELFStreamer::finishImpl() {
+  // Emit .note.GNU-stack, similar to AsmPrinter::doFinalization.
+  MCContext &Ctx = getContext();
+  auto *StackSec = Ctx.getAsmInfo().getStackSection(Ctx,
+                                                    /*Exec=*/false);
+  if (StackSec && Ctx.getTargetOptions().MCNoExecStack)
+    switchSection(StackSec);
+
   // Emit the .gnu attributes section if any attributes have been added.
   if (!GNUAttributes.empty()) {
     MCSection *DummyAttributeSection = nullptr;
@@ -363,8 +372,11 @@ void MCELFStreamer::finishImpl() {
                             DummyAttributeSection, GNUAttributes);
   }
 
+  if (Ctx.getTargetTriple().isLFI())
+    emitLFINoteSection(*this, Ctx);
+
   finalizeCGProfile();
-  emitFrames(nullptr);
+  emitFrames();
 
   this->MCObjectStreamer::finishImpl();
 }

@@ -24,6 +24,7 @@ struct SimplifyCFGOptions {
   int BonusInstThreshold = 1;
   bool ForwardSwitchCondToPhi = false;
   bool ConvertSwitchRangeToICmp = false;
+  bool ConvertSwitchToArithmetic = false;
   bool ConvertSwitchToLookupTable = false;
   bool NeedCanonicalLoop = true;
   bool HoistCommonInsts = false;
@@ -46,6 +47,10 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &convertSwitchRangeToICmp(bool B) {
     ConvertSwitchRangeToICmp = B;
+    return *this;
+  }
+  SimplifyCFGOptions &convertSwitchToArithmetic(bool B) {
+    ConvertSwitchToArithmetic = B;
     return *this;
   }
   SimplifyCFGOptions &convertSwitchToLookupTable(bool B) {

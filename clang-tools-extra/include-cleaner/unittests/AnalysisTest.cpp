@@ -680,5 +680,31 @@ TEST_F(WalkUsedTest, IgnoresIdentityMacros) {
                   // FIXME: we should have a reference from stdin to header.h
                   Pair(Code.point("bar"), UnorderedElementsAre(MainFile))));
 }
+
+TEST_F(WalkUsedTest, MacroConcat) {
+  llvm::Annotations Code(R"cpp(
+  #include "header.h"
+  void f() {
+    $xyz^FOO(xyz) = 1;
+    $bar^BAR = 2;
+  }
+  )cpp");
+  Inputs.Code = Code.code();
+  Inputs.ExtraFiles["header.h"] = guard(R"cpp(
+  #define FOO(x) FLAGS_##x
+  #define BAR FOO(bb)
+
+  int FLAGS_xyz;
+  int FLAGS_bb;
+  )cpp");
+
+  TestAST AST(Inputs);
+  auto &SM = AST.sourceManager();
+  auto Header = *SM.getFileManager().getOptionalFileRef("header.h");
+  EXPECT_THAT(
+      offsetToProviders(AST),
+      AllOf(Contains(Pair(Code.point("bar"), UnorderedElementsAre(Header))),
+            Contains(Pair(Code.point("xyz"), UnorderedElementsAre(Header)))));
+}
 } // namespace
 } // namespace clang::include_cleaner

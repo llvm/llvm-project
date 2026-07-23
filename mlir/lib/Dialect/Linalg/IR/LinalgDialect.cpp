@@ -15,7 +15,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
+#include "mlir/Dialect/Shard/Interfaces/ShardingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
@@ -72,7 +72,7 @@ using detect_has_region_builder = llvm::is_detected<has_region_builder, T>;
 /// an OpInterface).
 template <typename OpType, typename = std::enable_if_t<
                                !detect_has_region_builder<OpType>::value>>
-void addNamedOpBuilderImpl(
+static void addNamedOpBuilderImpl(
     llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
   // Do nothing.
 }
@@ -80,7 +80,7 @@ void addNamedOpBuilderImpl(
 template <typename OpType,
           typename = std::enable_if_t<detect_has_region_builder<OpType>::value>,
           typename = void>
-void addNamedOpBuilderImpl(
+static void addNamedOpBuilderImpl(
     llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
   map.insert(std::make_pair(
       OpType::getOperationName(),
@@ -88,8 +88,8 @@ void addNamedOpBuilderImpl(
 }
 
 template <typename... OpTypes>
-void addNamedOpBuilders(
-    llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
+static void
+addNamedOpBuilders(llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
   (addNamedOpBuilderImpl<OpTypes>(map), ...);
 }
 
@@ -119,8 +119,8 @@ void mlir::linalg::LinalgDialect::initialize() {
 
   addInterfaces<LinalgInlinerInterface>();
 
-  declarePromisedInterface<mesh::ShardingInterface, GenericOp>();
-  declarePromisedInterfaces<mesh::ShardingInterface,
+  declarePromisedInterface<shard::ShardingInterface, GenericOp>();
+  declarePromisedInterfaces<shard::ShardingInterface,
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
                             >();

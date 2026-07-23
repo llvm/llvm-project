@@ -9,7 +9,7 @@ define <2 x i64> @vpload_v2i64(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], [[M:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[PTR:%.*]], i32 1, <2 x i1> [[TMP2]], <2 x i64> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 1 [[PTR:%.*]], <2 x i1> [[TMP2]], <2 x i64> poison)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %load = call <2 x i64> @llvm.vp.load.v2i64.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
@@ -18,7 +18,7 @@ define <2 x i64> @vpload_v2i64(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 
 define <2 x i64> @vpload_v2i64_vlmax(ptr %ptr, <2 x i1> %m) {
 ; CHECK-LABEL: @vpload_v2i64_vlmax(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[PTR:%.*]], i32 1, <2 x i1> [[M:%.*]], <2 x i64> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 1 [[PTR:%.*]], <2 x i1> [[M:%.*]], <2 x i64> poison)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %load = call <2 x i64> @llvm.vp.load.v2i64.p0(ptr %ptr, <2 x i1> %m, i32 2)
@@ -31,7 +31,7 @@ define <2 x i64> @vpload_v2i64_allones_mask(ptr %ptr, i32 zeroext %evl) {
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], splat (i1 true)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[PTR:%.*]], i32 1, <2 x i1> [[TMP2]], <2 x i64> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 1 [[PTR:%.*]], <2 x i1> [[TMP2]], <2 x i64> poison)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %load = call <2 x i64> @llvm.vp.load.v2i64.p0(ptr %ptr, <2 x i1> <i1 1, i1 1>, i32 %evl)
@@ -53,7 +53,7 @@ define void @vpstore_v2i64(<2 x i64> %val, ptr %ptr, <2 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], [[M:%.*]]
-; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[VAL:%.*]], ptr [[PTR:%.*]], i32 1, <2 x i1> [[TMP2]])
+; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[VAL:%.*]], ptr align 1 [[PTR:%.*]], <2 x i1> [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.vp.store.v2i64.p0(<2 x i64> %val, ptr %ptr, <2 x i1> %m, i32 %evl)
@@ -62,7 +62,7 @@ define void @vpstore_v2i64(<2 x i64> %val, ptr %ptr, <2 x i1> %m, i32 zeroext %e
 
 define void @vpstore_v2i64_vlmax(<2 x i64> %val, ptr %ptr, <2 x i1> %m) {
 ; CHECK-LABEL: @vpstore_v2i64_vlmax(
-; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[VAL:%.*]], ptr [[PTR:%.*]], i32 1, <2 x i1> [[M:%.*]])
+; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[VAL:%.*]], ptr align 1 [[PTR:%.*]], <2 x i1> [[M:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.vp.store.v2i64.p0(<2 x i64> %val, ptr %ptr, <2 x i1> %m, i32 2)
@@ -75,7 +75,7 @@ define void @vpstore_v2i64_allones_mask(<2 x i64> %val, ptr %ptr, i32 zeroext %e
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], splat (i1 true)
-; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[VAL:%.*]], ptr [[PTR:%.*]], i32 1, <2 x i1> [[TMP2]])
+; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[VAL:%.*]], ptr align 1 [[PTR:%.*]], <2 x i1> [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.vp.store.v2i64.p0(<2 x i64> %val, ptr %ptr, <2 x i1> <i1 1, i1 1>, i32 %evl)
@@ -98,7 +98,7 @@ define <vscale x 1 x i64> @vpload_nxv1i64(ptr %ptr, <vscale x 1 x i1> %m, i32 ze
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <vscale x 1 x i1> [[TMP1]], [[M:%.*]]
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[SCALABLE_SIZE:%.*]] = mul nuw i32 [[VSCALE]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[TMP2]], <vscale x 1 x i64> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr align 1 [[PTR:%.*]], <vscale x 1 x i1> [[TMP2]], <vscale x 1 x i64> poison)
 ; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP3]]
 ;
   %load = call <vscale x 1 x i64> @llvm.vp.load.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
@@ -109,7 +109,7 @@ define <vscale x 1 x i64> @vpload_nxv1i64_vscale(ptr %ptr, <vscale x 1 x i1> %m)
 ; CHECK-LABEL: @vpload_nxv1i64_vscale(
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[VLMAX:%.*]] = mul nuw i32 [[VSCALE]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[M:%.*]], <vscale x 1 x i64> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr align 1 [[PTR:%.*]], <vscale x 1 x i1> [[M:%.*]], <vscale x 1 x i64> poison)
 ; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 ;
   %vscale = call i32 @llvm.vscale.i32()
@@ -124,7 +124,7 @@ define <vscale x 1 x i64> @vpload_nxv1i64_allones_mask(ptr %ptr, i32 zeroext %ev
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <vscale x 1 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[SCALABLE_SIZE:%.*]] = mul nuw i32 [[VSCALE]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[TMP2]], <vscale x 1 x i64> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr align 1 [[PTR:%.*]], <vscale x 1 x i1> [[TMP2]], <vscale x 1 x i64> poison)
 ; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP3]]
 ;
   %load = call <vscale x 1 x i64> @llvm.vp.load.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
@@ -150,7 +150,7 @@ define void @vpstore_nxv1i64(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <vscale x 1 x i1> [[TMP1]], [[M:%.*]]
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[SCALABLE_SIZE:%.*]] = mul nuw i32 [[VSCALE]], 1
-; CHECK-NEXT:    call void @llvm.masked.store.nxv1i64.p0(<vscale x 1 x i64> [[VAL:%.*]], ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[TMP2]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv1i64.p0(<vscale x 1 x i64> [[VAL:%.*]], ptr align 1 [[PTR:%.*]], <vscale x 1 x i1> [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
@@ -161,7 +161,7 @@ define void @vpstore_nxv1i64_vscale(<vscale x 1 x i64> %val, ptr %ptr, <vscale x
 ; CHECK-LABEL: @vpstore_nxv1i64_vscale(
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[VLMAX:%.*]] = mul nuw i32 [[VSCALE]], 1
-; CHECK-NEXT:    call void @llvm.masked.store.nxv1i64.p0(<vscale x 1 x i64> [[VAL:%.*]], ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[M:%.*]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv1i64.p0(<vscale x 1 x i64> [[VAL:%.*]], ptr align 1 [[PTR:%.*]], <vscale x 1 x i1> [[M:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %vscale = call i32 @llvm.vscale.i32()
@@ -176,7 +176,7 @@ define void @vpstore_nxv1i64_allones_mask(<vscale x 1 x i64> %val, ptr %ptr, i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <vscale x 1 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[SCALABLE_SIZE:%.*]] = mul nuw i32 [[VSCALE]], 1
-; CHECK-NEXT:    call void @llvm.masked.store.nxv1i64.p0(<vscale x 1 x i64> [[VAL:%.*]], ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[TMP2]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv1i64.p0(<vscale x 1 x i64> [[VAL:%.*]], ptr align 1 [[PTR:%.*]], <vscale x 1 x i1> [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)

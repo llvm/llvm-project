@@ -490,6 +490,30 @@ TEST_F(PythonDataObjectsTest, TestPythonDictionaryValueEquality) {
   EXPECT_EQ(value_1, chk_str.GetString());
 }
 
+TEST_F(PythonDataObjectsTest, TestPythonDictionaryGetItemWithInvalidKey) {
+  // A PythonString constructed from invalid UTF-8 silently fails (the
+  // PyUnicode_FromStringAndSize call returns NULL) and leaves m_py_obj == NULL.
+  // PythonDictionary::GetItem(const PythonObject&) must not pass that NULL key
+  // through to PyDict_GetItemWithError, which would then dereference it and
+  // crash.
+  llvm::StringRef invalid_utf8("\xd0p", 2);
+  PythonString invalid_key(invalid_utf8);
+  EXPECT_FALSE(invalid_key.IsValid());
+
+  PythonDictionary dict(PyInitialValue::Empty);
+  dict.SetItemForKey(PythonString("real_key"), PythonInteger(42));
+
+  // GetItem must return an error (not crash) when given an invalid key.
+  llvm::Expected<PythonObject> item = dict.GetItem(invalid_key);
+  EXPECT_FALSE(static_cast<bool>(item));
+  llvm::consumeError(item.takeError());
+
+  // GetItemForKey wraps GetItem, consumes any error, and returns an empty
+  // PythonObject.  It must not crash either.
+  PythonObject result = dict.GetItemForKey(invalid_key);
+  EXPECT_FALSE(result.IsAllocated());
+}
+
 TEST_F(PythonDataObjectsTest, TestPythonDictionaryManipulation) {
   // Test that manipulation of a dictionary behaves correctly when wrapped
   // by a PythonDictionary.
@@ -632,8 +656,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
   ASSERT_FALSE(error);
 
   {
-    PyObject *o = PyRun_String("lambda x : x", Py_eval_input, globals.get(),
-                               globals.get());
+    PyObject *o =
+        RunString("lambda x : x", Py_eval_input, globals.get(), globals.get());
     ASSERT_FALSE(o == NULL);
     auto lambda = Take<PythonCallable>(o);
     auto arginfo = lambda.GetArgInfo();
@@ -642,8 +666,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
   }
 
   {
-    PyObject *o = PyRun_String("lambda x,y=0: x", Py_eval_input, globals.get(),
-                               globals.get());
+    PyObject *o = RunString("lambda x,y=0: x", Py_eval_input, globals.get(),
+                            globals.get());
     ASSERT_FALSE(o == NULL);
     auto lambda = Take<PythonCallable>(o);
     auto arginfo = lambda.GetArgInfo();
@@ -652,8 +676,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
   }
 
   {
-    PyObject *o = PyRun_String("lambda x,y=0, **kw: x", Py_eval_input,
-                               globals.get(), globals.get());
+    PyObject *o = RunString("lambda x,y=0, **kw: x", Py_eval_input,
+                            globals.get(), globals.get());
     ASSERT_FALSE(o == NULL);
     auto lambda = Take<PythonCallable>(o);
     auto arginfo = lambda.GetArgInfo();
@@ -662,8 +686,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
   }
 
   {
-    PyObject *o = PyRun_String("lambda x,y,*a: x", Py_eval_input, globals.get(),
-                               globals.get());
+    PyObject *o = RunString("lambda x,y,*a: x", Py_eval_input, globals.get(),
+                            globals.get());
     ASSERT_FALSE(o == NULL);
     auto lambda = Take<PythonCallable>(o);
     auto arginfo = lambda.GetArgInfo();
@@ -673,8 +697,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
   }
 
   {
-    PyObject *o = PyRun_String("lambda x,y,*a,**kw: x", Py_eval_input,
-                               globals.get(), globals.get());
+    PyObject *o = RunString("lambda x,y,*a,**kw: x", Py_eval_input,
+                            globals.get(), globals.get());
     ASSERT_FALSE(o == NULL);
     auto lambda = Take<PythonCallable>(o);
     auto arginfo = lambda.GetArgInfo();
@@ -713,7 +737,7 @@ class NewStyle(object):
 
 )";
     PyObject *o =
-        PyRun_String(script, Py_file_input, globals.get(), globals.get());
+        RunString(script, Py_file_input, globals.get(), globals.get());
     ASSERT_FALSE(o == NULL);
     Take<PythonObject>(o);
 

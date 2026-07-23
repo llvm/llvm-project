@@ -13,7 +13,7 @@
 
 namespace llvm {
 class AMDGPUExportKernelRuntimeHandlesPass
-    : public PassInfoMixin<AMDGPUExportKernelRuntimeHandlesPass> {
+    : public OptionalPassInfoMixin<AMDGPUExportKernelRuntimeHandlesPass> {
 public:
   AMDGPUExportKernelRuntimeHandlesPass() = default;
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);

@@ -10,10 +10,8 @@
 #include <iomanip>
 #include <optional>
 
-#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Editline.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/CompletionRequest.h"
@@ -98,11 +96,6 @@ bool IsOnlySpaces(const EditLineStringType &content) {
       return false;
   }
   return true;
-}
-
-static size_t ColumnWidth(llvm::StringRef str) {
-  std::string stripped = ansi::StripAnsiTerminalCodes(str);
-  return llvm::sys::locale::columnWidth(stripped);
 }
 
 static int GetOperation(HistoryOperation op) {
@@ -219,20 +212,19 @@ private:
   const char *GetHistoryFilePath() {
     // Compute the history path lazily.
     if (m_path.empty() && m_history && !m_prefix.empty()) {
-      llvm::SmallString<128> lldb_history_file;
-      FileSystem::Instance().GetHomeDirectory(lldb_history_file);
-      llvm::sys::path::append(lldb_history_file, ".lldb");
+      FileSpec lldb_dir = HostInfo::GetUserLLDBDir();
 
       // LLDB stores its history in ~/.lldb/. If for some reason this directory
       // isn't writable or cannot be created, history won't be available.
-      if (!llvm::sys::fs::create_directory(lldb_history_file)) {
+      if (!llvm::sys::fs::create_directory(lldb_dir.GetPath())) {
 #if LLDB_EDITLINE_USE_WCHAR
         std::string filename = m_prefix + "-widehistory";
 #else
         std::string filename = m_prefix + "-history";
 #endif
-        llvm::sys::path::append(lldb_history_file, filename);
-        m_path = std::string(lldb_history_file.str());
+        FileSpec lldb_history_file =
+            lldb_dir.CopyByAppendingPathComponent(filename);
+        m_path = lldb_history_file.GetPath();
       }
     }
 
@@ -332,8 +324,8 @@ std::string Editline::PromptForIndex(int line_index) {
   if (m_set_continuation_prompt.length() > 0) {
     continuation_prompt = m_set_continuation_prompt;
     // Ensure that both prompts are the same length through space padding
-    const size_t prompt_width = ColumnWidth(prompt);
-    const size_t cont_prompt_width = ColumnWidth(continuation_prompt);
+    const size_t prompt_width = ansi::ColumnWidth(prompt);
+    const size_t cont_prompt_width = ansi::ColumnWidth(continuation_prompt);
     const size_t padded_prompt_width =
         std::max(prompt_width, cont_prompt_width);
     if (prompt_width < padded_prompt_width)
@@ -358,7 +350,9 @@ void Editline::SetCurrentLine(int line_index) {
   m_current_prompt = PromptForIndex(line_index);
 }
 
-size_t Editline::GetPromptWidth() { return ColumnWidth(PromptForIndex(0)); }
+size_t Editline::GetPromptWidth() {
+  return ansi::ColumnWidth(PromptForIndex(0));
+}
 
 bool Editline::IsEmacs() {
   const char *editor;
@@ -448,7 +442,7 @@ void Editline::DisplayInput(int firstIndex) {
 int Editline::CountRowsForLine(const EditLineStringType &content) {
   std::string prompt =
       PromptForIndex(0); // Prompt width is constant during an edit session
-  int line_length = (int)(content.length() + ColumnWidth(prompt));
+  int line_length = (int)(content.length() + ansi::ColumnWidth(prompt));
   return (line_length / m_terminal_width) + 1;
 }
 
@@ -581,8 +575,7 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
     m_current_line_rows = new_line_rows;
   }
 
-  if (m_terminal_size_has_changed)
-    ApplyTerminalSizeChange();
+  ApplyPendingTerminalSizeChange();
 
   // This mutex is locked by our caller (GetLine). Unlock it while we read a
   // character (blocking operation), so we do not hold the mutex
@@ -1060,9 +1053,10 @@ void Editline::DisplayCompletions(
     Editline &editline, llvm::ArrayRef<CompletionResult::Completion> results) {
   assert(!results.empty());
 
-  LockedStreamFile locked_stream = editline.m_output_stream_sp->Lock();
+  std::optional<LockedStreamFile> locked_stream =
+      editline.m_output_stream_sp->Lock();
 
-  fprintf(locked_stream.GetFile().GetStream(),
+  fprintf(locked_stream->GetFile().GetStream(),
           "\n" ANSI_CLEAR_BELOW "Available completions:\n");
 
   /// Account for the current line, the line showing "Available completions"
@@ -1081,14 +1075,20 @@ void Editline::DisplayCompletions(
   size_t cur_pos = 0;
   while (cur_pos < results.size()) {
     cur_pos += PrintCompletion(
-        locked_stream.GetFile().GetStream(), results.slice(cur_pos), max_len,
+        locked_stream->GetFile().GetStream(), results.slice(cur_pos), max_len,
         editline.GetTerminalWidth(),
         all ? std::nullopt : std::optional<size_t>(page_size));
 
     if (cur_pos >= results.size())
       break;
 
-    fprintf(locked_stream.GetFile().GetStream(), "More (Y/n/a): ");
+    fprintf(locked_stream->GetFile().GetStream(), "More (Y/n/a): ");
+
+    // Release the output lock across the blocking el_wgetc() so that
+    // Interrupt(), which may run on another thread, can acquire it to wake
+    // up the read.
+    locked_stream.reset();
+
     // The type for the output and the type for the parameter are different,
     // to allow interoperability with older versions of libedit. The container
     // for the reply must be as wide as what our implementation is using,
@@ -1097,14 +1097,17 @@ void Editline::DisplayCompletions(
     EditLineGetCharType reply = L'n';
     int got_char = el_wgetc(editline.m_editline,
                             reinterpret_cast<EditLineCharType *>(&reply));
+
+    locked_stream.emplace(editline.m_output_stream_sp->Lock());
+
     // Check for a ^C or other interruption.
     if (editline.m_editor_status == EditorStatus::Interrupted) {
       editline.m_editor_status = EditorStatus::Editing;
-      fprintf(locked_stream.GetFile().GetStream(), "^C\n");
+      fprintf(locked_stream->GetFile().GetStream(), "^C\n");
       break;
     }
 
-    fprintf(locked_stream.GetFile().GetStream(), "\n");
+    fprintf(locked_stream->GetFile().GetStream(), "\n");
     if (got_char == -1 || reply == 'n')
       break;
     if (reply == 'a')
@@ -1517,7 +1520,8 @@ Editline::Editline(const char *editline_name, FILE *input_file,
     : m_editor_status(EditorStatus::Complete), m_input_file(input_file),
       m_output_stream_sp(output_stream_sp), m_error_stream_sp(error_stream_sp),
       m_input_connection(fileno(input_file), false), m_color(color) {
-  assert(output_stream_sp && error_stream_sp);
+  assert(output_stream_sp && output_stream_sp->GetUnlockedFile().GetStream());
+  assert(error_stream_sp && output_stream_sp->GetUnlockedFile().GetStream());
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
   m_history_sp = EditlineHistory::GetHistory(m_editor_name);
@@ -1549,13 +1553,13 @@ void Editline::SetContinuationPrompt(const char *continuation_prompt) {
       continuation_prompt == nullptr ? "" : continuation_prompt;
 }
 
-void Editline::TerminalSizeChanged() { m_terminal_size_has_changed = 1; }
+void Editline::TerminalSizeChanged() { m_terminal_size_has_changed = true; }
 
 void Editline::ApplyTerminalSizeChange() {
   if (!m_editline)
     return;
 
-  m_terminal_size_has_changed = 0;
+  m_terminal_size_has_changed = false;
   el_resize(m_editline);
   int columns;
   // This function is documenting as taking (const char *, void *) for the
@@ -1583,6 +1587,11 @@ void Editline::ApplyTerminalSizeChange() {
   } else {
     m_terminal_height = INT_MAX;
   }
+}
+
+void Editline::ApplyPendingTerminalSizeChange() {
+  if (m_terminal_size_has_changed)
+    ApplyTerminalSizeChange();
 }
 
 const char *Editline::GetPrompt() { return m_set_prompt.c_str(); }
@@ -1631,6 +1640,9 @@ bool Editline::GetLine(std::string &line, bool &interrupted) {
   m_in_history = false;
   m_editor_status = EditorStatus::Editing;
   m_revert_cursor_index = -1;
+
+  lldbassert(m_output_stream_sp);
+  fprintf(m_locked_output->GetFile().GetStream(), "\r" ANSI_CLEAR_RIGHT);
 
   int count;
   auto input = el_wgets(m_editline, &count);
@@ -1698,6 +1710,7 @@ void Editline::PrintAsync(lldb::LockableStreamFileSP stream_sp, const char *s,
                           size_t len) {
   LockedStreamFile locked_stream = m_output_stream_sp->Lock();
   if (m_editor_status == EditorStatus::Editing) {
+    ApplyPendingTerminalSizeChange();
     SaveEditedLine();
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(locked_stream.GetFile().GetStream(), ANSI_CLEAR_BELOW);
@@ -1713,7 +1726,18 @@ void Editline::Refresh() {
   if (!m_editline || !m_output_stream_sp)
     return;
   LockedStreamFile locked_stream = m_output_stream_sp->Lock();
-  el_set(m_editline, EL_REFRESH);
+  ApplyPendingTerminalSizeChange();
+  if (m_editor_status == EditorStatus::Editing) {
+    // EL_REFRESH redraws from libedit's cursor model, which is stale once the
+    // statusline has moved the cursor, so it reprints the prompt at the wrong
+    // column. Repaint from our own tracked position instead.
+    SaveEditedLine();
+    MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
+    DisplayInput();
+    MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);
+  } else {
+    el_set(m_editline, EL_REFRESH);
+  }
 }
 
 bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {

@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MissingFrameInferrer.h"
+#include "Options.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include <algorithm>
 #include <cstdint>
-#include <iterator>
 #include <queue>
 #include <sys/types.h>
 
@@ -37,14 +37,15 @@ STATISTIC(TailCallMaxTailCallPath, "Length of the longest tail call path");
 static cl::opt<uint32_t>
     MaximumSearchDepth("max-search-depth", cl::init(UINT32_MAX - 1),
                        cl::desc("The maximum levels the DFS-based missing "
-                                "frame search should go with"));
+                                "frame search should go with"),
+                       cl::cat(ProfGenCategory));
 
 void MissingFrameInferrer::initialize(
     const ContextSampleCounterMap *SampleCounters) {
   // Refine call edges based on LBR samples.
   if (SampleCounters) {
-    std::unordered_map<uint64_t, std::unordered_set<uint64_t>> SampledCalls;
-    std::unordered_map<uint64_t, std::unordered_set<uint64_t>> SampledTailCalls;
+    DenseMap<uint64_t, DenseSet<uint64_t>> SampledCalls;
+    DenseMap<uint64_t, DenseSet<uint64_t>> SampledTailCalls;
 
     // Populate SampledCalls based on static call sites. Similarly to
     // SampledTailCalls.
@@ -71,8 +72,8 @@ void MissingFrameInferrer::initialize(
     }
 
     // Replace static edges with dynamic edges.
-    CallEdges = SampledCalls;
-    TailCallEdges = SampledTailCalls;
+    CallEdges = std::move(SampledCalls);
+    TailCallEdges = std::move(SampledTailCalls);
   }
 
   // Populate function-based edges. This is to speed up address to function
@@ -105,8 +106,7 @@ void MissingFrameInferrer::initialize(
 
 #ifndef NDEBUG
   auto PrintCallTargets =
-      [&](const std::unordered_map<uint64_t, std::unordered_set<uint64_t>>
-              &CallTargets,
+      [&](const DenseMap<uint64_t, DenseSet<uint64_t>> &CallTargets,
           bool IsTailCall) {
         for (const auto &Targets : CallTargets) {
           for (const auto &Target : Targets.second) {
@@ -117,12 +117,14 @@ void MissingFrameInferrer::initialize(
         }
       };
 
-  LLVM_DEBUG(dbgs() << "============================\n ";
-             dbgs() << "Call targets:\n";
-             PrintCallTargets(CallEdges, false);
-             dbgs() << "\nTail call targets:\n";
-             PrintCallTargets(CallEdges, true);
-             dbgs() << "============================\n";);
+  LLVM_DEBUG({
+    dbgs() << "============================\n ";
+    dbgs() << "Call targets:\n";
+    PrintCallTargets(CallEdges, false);
+    dbgs() << "\nTail call targets:\n";
+    PrintCallTargets(TailCallEdges, true);
+    dbgs() << "============================\n";
+  });
 #endif
 }
 

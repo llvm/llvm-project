@@ -12,6 +12,8 @@
 # <list>, <map>, <regex>, <set>, <span>, <string>, <string_view>, <unordered_map>,
 # <unordered_set>, <vector>.
 
+# UNSUPPORTED: c++03
+
 # RUN: %{python} %s %{libcxx-dir}/utils
 # END.
 
@@ -19,7 +21,6 @@ import sys
 
 sys.path.append(sys.argv[1])
 from libcxx.header_information import (
-    lit_header_restrictions,
     lit_header_undeprecations,
     Header,
 )
@@ -51,9 +52,7 @@ for header in headers:
     print(
         f"""\
 //--- {header}.pass.cpp
-{lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
-// UNSUPPORTED: c++03
 
 #include <{header}>
 #include <cassert>

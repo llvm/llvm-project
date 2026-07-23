@@ -67,7 +67,7 @@ public:
   LVType() : LVElement(LVSubclassID::LV_TYPE) { setIsType(); }
   LVType(const LVType &) = delete;
   LVType &operator=(const LVType &) = delete;
-  virtual ~LVType() = default;
+  ~LVType() override = default;
 
   static bool classof(const LVElement *Element) {
     return Element->getSubclassID() == LVSubclassID::LV_TYPE;
@@ -157,7 +157,7 @@ public:
   }
   LVTypeDefinition(const LVTypeDefinition &) = delete;
   LVTypeDefinition &operator=(const LVTypeDefinition &) = delete;
-  ~LVTypeDefinition() = default;
+  ~LVTypeDefinition() override = default;
 
   // Return the underlying type for a type definition.
   LVElement *getUnderlyingType() override;
@@ -183,7 +183,7 @@ public:
   }
   LVTypeEnumerator(const LVTypeEnumerator &) = delete;
   LVTypeEnumerator &operator=(const LVTypeEnumerator &) = delete;
-  ~LVTypeEnumerator() = default;
+  ~LVTypeEnumerator() override = default;
 
   // Process the values for a DW_TAG_enumerator.
   StringRef getValue() const override {
@@ -206,7 +206,7 @@ public:
   LVTypeImport() : LVType() { setIncludeInPrint(); }
   LVTypeImport(const LVTypeImport &) = delete;
   LVTypeImport &operator=(const LVTypeImport &) = delete;
-  ~LVTypeImport() = default;
+  ~LVTypeImport() override = default;
 
   // Returns true if current type is logically equal to the given 'Type'.
   bool equals(const LVType *Type) const override;
@@ -223,7 +223,7 @@ public:
   LVTypeParam();
   LVTypeParam(const LVTypeParam &) = delete;
   LVTypeParam &operator=(const LVTypeParam &) = delete;
-  ~LVTypeParam() = default;
+  ~LVTypeParam() override = default;
 
   // Template parameter value.
   StringRef getValue() const override {
@@ -256,7 +256,7 @@ public:
   }
   LVTypeSubrange(const LVTypeSubrange &) = delete;
   LVTypeSubrange &operator=(const LVTypeSubrange &) = delete;
-  ~LVTypeSubrange() = default;
+  ~LVTypeSubrange() override = default;
 
   int64_t getCount() const override {
     return getIsSubrangeCount() ? LowerBound : 0;

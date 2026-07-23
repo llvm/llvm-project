@@ -55,7 +55,8 @@ bool MCAsmInfoDarwin::isSectionAtomizableBySymbols(
   }
 }
 
-MCAsmInfoDarwin::MCAsmInfoDarwin() {
+MCAsmInfoDarwin::MCAsmInfoDarwin(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   // Common settings for all Darwin targets.
   // Syntax:
   LinkerPrivateGlobalPrefix = "l";
@@ -84,4 +85,9 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
 
   DwarfUsesRelocationsAcrossSections = false;
   SetDirectiveSuppressesReloc = true;
+}
+
+bool MCAsmInfoDarwin::useCodeAlign(const MCSection &Sec) const {
+  return static_cast<const MCSectionMachO &>(Sec).hasAttribute(
+      MachO::S_ATTR_PURE_INSTRUCTIONS);
 }

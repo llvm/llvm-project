@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ====================================================
 Extra Clang Tools |release| |ReleaseNotesTitle|
 ====================================================
@@ -43,6 +46,9 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
+Potentially Breaking Changes
+----------------------------
+
 Improvements to clangd
 ----------------------
 
@@ -85,11 +91,6 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
-- Matcher queries interpreted by clang-query are now support trailing comma (,)
-  in matcher arguments. Note that C++ still doesn't allow this in function
-  arguments. So when porting a query to C++, remove all instances of trailing
-  comma (otherwise C++ compiler will just complain about "expected expression").
-
 Improvements to clang-tidy
 --------------------------
 
@@ -102,6 +103,13 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`readability-named-parameter
+  <clang-tidy/checks/readability/named-parameter>` check by ignoring
+  standard tag types (e.g. ``std::in_place_t``, ``std::allocator_arg_t``,
+  ``std::nothrow_t``, iterator tags, lock tags, etc.) that are used
+  exclusively for overload resolution. Added the :option:`IgnoredTypes`
+  option to allow customizing the set of ignored types.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
@@ -111,21 +119,14 @@ Miscellaneous
 Improvements to include-fixer
 -----------------------------
 
-The improvements are...
-
 Improvements to clang-include-fixer
 -----------------------------------
 
-The improvements are...
-
 Improvements to modularize
 --------------------------
-
-The improvements are...
 
 Improvements to pp-trace
 ------------------------
 
 Clang-tidy Visual Studio plugin
 -------------------------------
-

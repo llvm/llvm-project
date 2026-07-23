@@ -18,11 +18,11 @@ define i32 @foo() #0 {
 ; CHECK-NEXT:    ret i32 27
 ;
   %var = alloca %struct.V, align 4
-  call void @llvm.lifetime.start.p0(i64 28, ptr %var) #3
+  call void @llvm.lifetime.start.p0(ptr %var) #3
   %arrayidx = getelementptr inbounds [10 x i8], ptr %var, i64 0, i64 1
   %t1 = call i64 @llvm.objectsize.i64.p0(ptr %arrayidx, i1 false)
   %conv = trunc i64 %t1 to i32
-  call void @llvm.lifetime.end.p0(i64 28, ptr %var) #3
+  call void @llvm.lifetime.end.p0(ptr %var) #3
   ret i32 %conv
 }
 
@@ -63,9 +63,9 @@ define ptr @minimal_invariant_start_use(i8 %x) {
   ret ptr %i
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 declare i64 @llvm.objectsize.i64.p0(ptr, i1) #2
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #0
 declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture) #0
 declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture) #0

@@ -9,6 +9,10 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 #define _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
 #include <__algorithm/inplace_merge.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/max.h>
@@ -48,6 +52,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
 
 namespace __libdispatch {
@@ -269,7 +274,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
       return __empty{};
     }
 
-    using _Value = __iter_value_type<_RandomAccessIterator>;
+    using _Value = __iterator_value_type<_RandomAccessIterator>;
 
     auto __destroy = [__size](_Value* __ptr) {
       std::destroy_n(__ptr, __size);
@@ -282,7 +287,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
     // Initialize all elements to a moved-from state
     // TODO: Don't do this - this can be done in the first merge - see https://llvm.org/PR63928
     std::__construct_at(__values.get(), std::move(*__first));
-    for (__iter_diff_t<_RandomAccessIterator> __i = 1; __i != __size; ++__i) {
+    for (__iterator_difference_type<_RandomAccessIterator> __i = 1; __i != __size; ++__i) {
       std::__construct_at(__values.get() + __i, std::move(__values.get()[__i - 1]));
     }
     *__first = std::move(__values.get()[__size - 1]);
@@ -393,6 +398,7 @@ struct __fill<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_fill<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 } // namespace __pstl
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

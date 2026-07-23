@@ -23,8 +23,6 @@
 
 #define DEBUG_TYPE "jitlink"
 
-#include <list>
-
 namespace llvm {
 namespace jitlink {
 
@@ -221,18 +219,6 @@ Error COFFLinkGraphBuilder::forEachRelocation(const object::SectionRef &RelSec,
   LLVM_DEBUG(dbgs() << "\n");
   return Error::success();
 }
-
-class GetImageBaseSymbol {
-public:
-  GetImageBaseSymbol(StringRef ImageBaseName = "__ImageBase")
-      : ImageBaseName(ImageBaseName) {}
-  Symbol *operator()(LinkGraph &G);
-  void reset() { ImageBase = std::nullopt; }
-
-private:
-  StringRef ImageBaseName;
-  std::optional<Symbol *> ImageBase;
-};
 
 } // end namespace jitlink
 } // end namespace llvm

@@ -20,6 +20,9 @@
 
 namespace Fortran::evaluate {
 
+// Forward declaration for static helper function
+static std::string FormatVectorType(const semantics::DerivedTypeSpec &);
+
 // Constant arrays can have non-default lower bounds, but this can't be
 // expressed in Fortran syntax directly, only implied through the use of
 // named constant (PARAMETER) definitions.  For debugging, setting this flag
@@ -98,6 +101,14 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
   return o;
 }
 
+template <typename RESULT, typename VALUE>
+std::string ConstantBase<RESULT, VALUE>::AsFortran() const {
+  std::string result;
+  llvm::raw_string_ostream sstream(result);
+  AsFortran(sstream);
+  return result;
+}
+
 template <int KIND>
 llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
     llvm::raw_ostream &o) const {
@@ -124,6 +135,14 @@ llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
   }
   ShapeAsFortran(o, shape(), lbounds(), hasNonDefaultLowerBound);
   return o;
+}
+
+template <int KIND>
+std::string Constant<Type<TypeCategory::Character, KIND>>::AsFortran() const {
+  std::string result;
+  llvm::raw_string_ostream sstream(result);
+  AsFortran(sstream);
+  return result;
 }
 
 llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const Symbol &symbol,
@@ -228,11 +247,51 @@ llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
           },
           [&](const AssumedType &assumedType) { assumedType.AsFortran(o); },
           [&](const common::Label &label) { o << '*' << label; },
+          [&](const ConditionalArg &condArg) { condArg.AsFortran(o); },
       },
       u_);
   if (isPercentVal() || isPercentRef()) {
     o << ')';
   }
+  return o;
+}
+
+std::string ActualArgument::AsFortran() const {
+  std::string result;
+  llvm::raw_string_ostream sstream(result);
+  AsFortran(sstream);
+  return result;
+}
+
+// Helper: emit the inner part of a conditional arg without outer parens
+static void EmitConditionalArgInner(
+    llvm::raw_ostream &o, const ActualArgument::ConditionalArg &ca) {
+  auto emitConsequent{
+      [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+        if (cons) {
+          cons->value().AsFortran(o);
+        } else {
+          o << ".NIL.";
+        }
+      }};
+  ca.condition().AsFortran(o);
+  o << " ? ";
+  emitConsequent(ca.consequent());
+  o << " : ";
+  ca.VisitTail(
+      [&](const ActualArgument::ConditionalArg &inner) {
+        EmitConditionalArgInner(o, inner);
+      },
+      [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+        emitConsequent(cons);
+      });
+}
+
+llvm::raw_ostream &ActualArgument::ConditionalArg::AsFortran(
+    llvm::raw_ostream &o) const {
+  o << "( ";
+  EmitConditionalArgInner(o, *this);
+  o << " )";
   return o;
 }
 
@@ -487,7 +546,7 @@ llvm::raw_ostream &Convert<TO, FROMCAT>::AsFortran(llvm::raw_ostream &o) const {
   if constexpr (TO::category == TypeCategory::Character) {
     this->left().AsFortran(o << "achar(iachar(") << ')';
   } else if constexpr (TO::category == TypeCategory::Integer) {
-    this->left().AsFortran(o << "int(");
+    this->left().AsFortran(o << IntrinsicProcTable::BuiltinIntName << "(");
   } else if constexpr (TO::category == TypeCategory::Real) {
     this->left().AsFortran(o << "real(");
   } else if constexpr (TO::category == TypeCategory::Complex) {
@@ -564,6 +623,29 @@ llvm::raw_ostream &ArrayConstructor<SomeDerived>::AsFortran(
   return o << ']';
 }
 
+template <typename T>
+llvm::raw_ostream &ConditionalExpr<T>::AsFortran(llvm::raw_ostream &o) const {
+  // Iterate over chained else-branches to avoid adding extra parentheses for
+  // chained conditional expressions.
+  o << '(';
+  const ConditionalExpr<T> *node{this};
+  while (true) {
+    node->condition().AsFortran(o);
+    o << " ? ";
+    node->thenValue().AsFortran(o);
+    o << " : ";
+    // Continue chain for nested ConditionalExpr; else emit terminal value.
+    if (const auto *nested{
+            std::get_if<ConditionalExpr<T>>(&node->elseValue().u)}) {
+      node = nested;
+    } else {
+      node->elseValue().AsFortran(o);
+      break;
+    }
+  }
+  return o << ')';
+}
+
 template <typename RESULT>
 std::string ExpressionBase<RESULT>::AsFortran() const {
   std::string buf;
@@ -615,6 +697,14 @@ static std::string DerivedTypeSpecAsFortran(
 
 llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
   o << DerivedTypeSpecAsFortran(result_.derivedTypeSpec());
+  if (result_.derivedTypeSpec().IsEnumerationType()) {
+    // Print as enum_name(ordinal) without exposing the hidden __ordinal keyword
+    o << '(';
+    if (!values_.empty()) {
+      values_.begin()->second.value().AsFortran(o);
+    }
+    return o << ')';
+  }
   if (values_.empty()) {
     o << '(';
   } else {
@@ -630,6 +720,9 @@ llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
 std::string DynamicType::AsFortran() const {
   if (derived_) {
     CHECK(category_ == TypeCategory::Derived);
+    if (derived_->IsVectorType()) {
+      return FormatVectorType(*derived_);
+    }
     std::string result{DerivedTypeSpecAsFortran(*derived_)};
     if (IsPolymorphic()) {
       result = "CLASS("s + result + ')';
@@ -782,10 +875,10 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
     o << "%STRIDE(";
     break;
   case Field::Rank:
-    o << "int(rank(";
+    o << IntrinsicProcTable::BuiltinIntName << "(rank(";
     break;
   case Field::Len:
-    o << "int(";
+    o << IntrinsicProcTable::BuiltinIntName << "(";
     break;
   }
   base_.AsFortran(o);
@@ -836,6 +929,25 @@ llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {
       },
       u);
   return o;
+}
+
+static std::string FormatVectorType(const semantics::DerivedTypeSpec &derived) {
+  int64_t vecElemKind{0};
+  int64_t vecElemCategory{-1};
+
+  if (derived.category() ==
+      semantics::DerivedTypeSpec::Category::IntrinsicVector) {
+    for (const auto &pair : derived.parameters()) {
+      if (pair.first == "element_category") {
+        vecElemCategory = ToInt64(pair.second.GetExplicit()).value_or(-1);
+      } else if (pair.first == "element_kind") {
+        vecElemKind = ToInt64(pair.second.GetExplicit()).value_or(0);
+      }
+    }
+  }
+
+  return common::FormatVectorTypeAsFortran(
+      static_cast<int>(derived.category()), vecElemCategory, vecElemKind);
 }
 
 #ifdef _MSC_VER // disable bogus warning about missing definitions

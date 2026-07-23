@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
 #include <vector>
 
@@ -32,6 +33,7 @@ enum Value {
   SGPRSpill = 1,
   ScalableVector = 2,
   WasmLocal = 3,
+  ScalablePredicateVector = 4,
   NoAlloc = 255
 };
 }
@@ -158,14 +160,6 @@ public:
   /// returns false, spill slots will be assigned using generic implementation.
   /// assignCalleeSavedSpillSlots() may add, delete or rearrange elements of
   /// CSI.
-  virtual bool assignCalleeSavedSpillSlots(MachineFunction &MF,
-                                           const TargetRegisterInfo *TRI,
-                                           std::vector<CalleeSavedInfo> &CSI,
-                                           unsigned &MinCSFrameIndex,
-                                           unsigned &MaxCSFrameIndex) const {
-    return assignCalleeSavedSpillSlots(MF, TRI, CSI);
-  }
-
   virtual bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
                               const TargetRegisterInfo *TRI,
@@ -374,6 +368,19 @@ public:
   virtual StackOffset getFrameIndexReferenceFromSP(const MachineFunction &MF,
                                                    int FI) const;
 
+  /// Return the list of registers which must be preserved by the function: the
+  /// value on exit must be the same as the value on entry. A register from this
+  /// list does may not need to be saved / reloaded if the function did not use
+  /// it.
+  const MCPhysReg *getMustPreserveRegisters(const MachineFunction &MF) const;
+
+  /// This method determines which of the registers reported by
+  /// getMustPreserveRegisters() must be saved in prolog and reloaded in epilog
+  /// regardless of whether or not they were modified by the function.
+  void determineUncondPrologCalleeSaves(MachineFunction &MF,
+                                        const MCPhysReg *CSRegs,
+                                        BitVector &UncondPrologCSRs) const;
+
   /// Returns the callee-saved registers as computed by determineCalleeSaves
   /// in the BitVector \p SavedRegs.
   virtual void getCalleeSaves(const MachineFunction &MF,
@@ -409,7 +416,7 @@ public:
                                             RegScavenger *RS = nullptr) const {}
 
   virtual unsigned getWinEHParentFrameOffset(const MachineFunction &MF) const {
-    report_fatal_error("WinEH not implemented for this target");
+    reportFatalUsageError("WinEH not implemented for this target");
   }
 
   /// This method is called during prolog/epilog code insertion to eliminate

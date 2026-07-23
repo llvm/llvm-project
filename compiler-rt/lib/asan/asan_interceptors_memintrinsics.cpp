@@ -55,8 +55,10 @@ using namespace __asan;
     if (LIKELY(replace_intrin_cached)) {       \
       ASAN_READ_RANGE(ctx, from, size);        \
       ASAN_WRITE_RANGE(ctx, to, size);         \
+    } else if (UNLIKELY(!AsanInited())) {      \
+      return internal_memmove(to, from, size); \
     }                                          \
-    return internal_memmove(to, from, size);   \
+    return REAL(memmove)(to, from, size);      \
   } while (0)
 
 void *__asan_memcpy(void *to, const void *from, uptr size) {

@@ -38,14 +38,6 @@ foreach i = 0...4 in {
   def R#i  : NVPTXReg<"%r"#i>;  // 32-bit
   def RL#i : NVPTXReg<"%rd"#i>; // 64-bit
   def RQ#i : NVPTXReg<"%rq"#i>; // 128-bit
-  def H#i  : NVPTXReg<"%h"#i>;  // 16-bit float
-  def HH#i : NVPTXReg<"%hh"#i>; // 2x16-bit float
-
-  // Arguments
-  def ia#i : NVPTXReg<"%ia"#i>;
-  def la#i : NVPTXReg<"%la"#i>;
-  def fa#i : NVPTXReg<"%fa"#i>;
-  def da#i : NVPTXReg<"%da"#i>;
 }
 
 foreach i = 0...31 in {
@@ -62,7 +54,8 @@ def B16 : NVPTXRegClass<[i16, f16, bf16], 16, (add (sequence "RS%u", 0, 4))>;
 def B32 : NVPTXRegClass<[i32, v2f16, v2bf16, v2i16, v4i8, f32], 32,
                               (add (sequence "R%u", 0, 4),
                               VRFrame32, VRFrameLocal32)>;
-def B64 : NVPTXRegClass<[i64, v2f32, f64], 64, (add (sequence "RL%u", 0, 4),
+def B64 : NVPTXRegClass<[i64, v2i32, v2f32, f64], 64,
+                        (add (sequence "RL%u", 0, 4),
                          VRFrame64, VRFrameLocal64)>;
 // 128-bit regs are not defined as general regs in NVPTX. They are used for inlineASM only.
 def B128 : NVPTXRegClass<[i128], 128, (add (sequence "RQ%u", 0, 4))>;

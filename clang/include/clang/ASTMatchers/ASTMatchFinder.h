@@ -135,10 +135,17 @@ public:
       llvm::StringMap<llvm::TimeRecord> &Records;
     };
 
+    MatchFinderOptions() {}
+
     /// Enables per-check timers.
     ///
     /// It prints a report after match.
     std::optional<Profiling> CheckProfiling;
+
+    /// Avoids matching declarations in system headers.
+    bool IgnoreSystemHeaders{false};
+
+    bool SkipDeclsInModules{false};
   };
 
   MatchFinder(MatchFinderOptions Options = MatchFinderOptions());

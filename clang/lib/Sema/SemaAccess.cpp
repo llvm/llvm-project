@@ -21,6 +21,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace sema;
@@ -318,11 +319,8 @@ static AccessResult IsDerivedFromInclusive(const CXXRecordDecl *Derived,
       const CXXRecordDecl *RD;
 
       QualType T = I.getType();
-      if (const RecordType *RT = T->getAs<RecordType>()) {
-        RD = cast<CXXRecordDecl>(RT->getDecl());
-      } else if (const InjectedClassNameType *IT
-                   = T->getAs<InjectedClassNameType>()) {
-        RD = IT->getDecl();
+      if (CXXRecordDecl *Rec = T->getAsCXXRecordDecl()) {
+        RD = Rec;
       } else {
         assert(T->isDependentType() && "non-dependent base wasn't a record?");
         OnFailure = AR_dependent;
@@ -442,8 +440,8 @@ static AccessResult MatchesFriend(Sema &S,
 static AccessResult MatchesFriend(Sema &S,
                                   const EffectiveContext &EC,
                                   CanQualType Friend) {
-  if (const RecordType *RT = Friend->getAs<RecordType>())
-    return MatchesFriend(S, EC, cast<CXXRecordDecl>(RT->getDecl()));
+  if (const auto *RD = Friend->getAsCXXRecordDecl())
+    return MatchesFriend(S, EC, RD);
 
   // TODO: we can do better than this
   if (Friend->isDependentType())
@@ -671,11 +669,8 @@ struct ProtectedFriendContext {
       const CXXRecordDecl *RD;
 
       QualType T = I.getType();
-      if (const RecordType *RT = T->getAs<RecordType>()) {
-        RD = cast<CXXRecordDecl>(RT->getDecl());
-      } else if (const InjectedClassNameType *IT
-                   = T->getAs<InjectedClassNameType>()) {
-        RD = IT->getDecl();
+      if (CXXRecordDecl *Rec = T->getAsCXXRecordDecl()) {
+        RD = Rec;
       } else {
         assert(T->isDependentType() && "non-dependent base wasn't a record?");
         EverDependent = true;
@@ -1072,7 +1067,7 @@ static bool TryDiagnoseProtectedAccess(Sema &S, const EffectiveContext &EC,
       // TODO: it would be great to have a fixit here, since this is
       // such an obvious error.
       S.Diag(D->getLocation(), diag::note_access_protected_restricted_noobject)
-        << S.Context.getTypeDeclType(ECRecord);
+          << S.Context.getCanonicalTagType(ECRecord);
       return true;
     }
 
@@ -1101,7 +1096,7 @@ static bool TryDiagnoseProtectedAccess(Sema &S, const EffectiveContext &EC,
     // Otherwise, use the generic diagnostic.
     return S.Diag(D->getLocation(),
                   diag::note_access_protected_restricted_object)
-           << S.Context.getTypeDeclType(ECRecord);
+           << S.Context.getCanonicalTagType(ECRecord);
   }
 
   return false;
@@ -1129,7 +1124,7 @@ static void diagnoseBadDirectAccess(Sema &S,
     else if (TypedefNameDecl *TND = dyn_cast<TypedefNameDecl>(D))
       PrevDecl = TND->getPreviousDecl();
     else if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
-      if (auto *RD = dyn_cast<CXXRecordDecl>(D);
+      if (const auto *RD = dyn_cast<CXXRecordDecl>(TD);
           RD && RD->isInjectedClassName())
         break;
       PrevDecl = TD->getPreviousDecl();
@@ -1284,10 +1279,10 @@ static void DiagnoseBadAccess(Sema &S, SourceLocation Loc,
   NamedDecl *D = (Entity.isMemberAccess() ? Entity.getTargetDecl() : nullptr);
 
   S.Diag(Loc, Entity.getDiag())
-    << (Entity.getAccess() == AS_protected)
-    << (D ? D->getDeclName() : DeclarationName())
-    << S.Context.getTypeDeclType(NamingClass)
-    << S.Context.getTypeDeclType(DeclaringClass);
+      << (Entity.getAccess() == AS_protected)
+      << (D ? D->getDeclName() : DeclarationName())
+      << S.Context.getCanonicalTagType(NamingClass)
+      << S.Context.getCanonicalTagType(DeclaringClass);
   DiagnoseAccessPath(S, EC, Entity);
 }
 
@@ -1618,6 +1613,15 @@ bool Sema::isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
   // Suppress diagnostics.
   Entity.setDiag(Diag);
 
+  // We don't want to delay access checking even we are inside an enclosing
+  // delayed-diagnostics scope (e.g. when parsing a later declaration whose
+  // initializer requires explaining why a defaulted comparison operator is
+  // deleted)
+  llvm::scope_exit UndelayDiags(
+      [&, CurrentState(DelayedDiagnostics.pushUndelayed())] {
+        DelayedDiagnostics.popUndelayed(CurrentState);
+      });
+
   switch (CheckAccess(*this, Loc, Entity)) {
   case AR_accessible: return true;
   case AR_inaccessible: return false;
@@ -1640,7 +1644,8 @@ Sema::AccessResult Sema::CheckDestructorAccess(SourceLocation Loc,
     return AR_accessible;
 
   CXXRecordDecl *NamingClass = Dtor->getParent();
-  if (ObjectTy.isNull()) ObjectTy = Context.getTypeDeclType(NamingClass);
+  if (ObjectTy.isNull())
+    ObjectTy = Context.getCanonicalTagType(NamingClass);
 
   AccessTarget Entity(Context, AccessTarget::Member, NamingClass,
                       DeclAccessPair::make(Dtor, Access),
@@ -1728,7 +1733,7 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
   AccessTarget AccessEntity(
       Context, AccessTarget::Member, NamingClass,
       DeclAccessPair::make(Constructor, Found.getAccess()),
-      Context.getTypeDeclType(ObjectClass));
+      Context.getCanonicalTagType(ObjectClass));
   AccessEntity.setDiag(PD);
 
   return CheckAccess(*this, UseLoc, AccessEntity);
@@ -1776,7 +1781,7 @@ Sema::CheckStructuredBindingMemberAccess(SourceLocation UseLoc,
     return AR_accessible;
 
   AccessTarget Entity(Context, AccessTarget::Member, DecomposedClass, Field,
-                      Context.getRecordType(DecomposedClass));
+                      Context.getCanonicalTagType(DecomposedClass));
   Entity.setDiag(diag::err_decomp_decl_inaccessible_field);
 
   return CheckAccess(*this, UseLoc, Entity);
@@ -1789,9 +1794,7 @@ Sema::AccessResult Sema::CheckMemberOperatorAccess(SourceLocation OpLoc,
   if (!getLangOpts().AccessControl || Found.getAccess() == AS_public)
     return AR_accessible;
 
-  const RecordType *RT = ObjectExpr->getType()->castAs<RecordType>();
-  CXXRecordDecl *NamingClass = cast<CXXRecordDecl>(RT->getDecl());
-
+  auto *NamingClass = ObjectExpr->getType()->castAsCXXRecordDecl();
   AccessTarget Entity(Context, AccessTarget::Member, NamingClass, Found,
                       ObjectExpr->getType());
   Entity.setDiag(diag::err_access) << ObjectExpr->getSourceRange() << Range;

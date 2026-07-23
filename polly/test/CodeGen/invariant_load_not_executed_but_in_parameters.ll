@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting=true -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true -disable-output < %s
 ;
 ; Check that this does not crash as the invariant load is not executed (thus
 ; not preloaded) but still referenced by one of the parameters.
@@ -35,7 +35,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @donestkptr = external global ptr, align 8
 
 ; Function Attrs: uwtable
-define i32 @_Z13dotableswitchP9Classfile(ptr %c) #0 personality ptr @__gxx_personality_v0 {
+define i32 @_Z13dotableswitchP9Classfile(ptr %c) personality ptr @__gxx_personality_v0 {
 entry:
   br label %entry.split
 
@@ -82,33 +82,27 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 }
 
 ; Function Attrs: nounwind readnone
-declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64) #1
+declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64)
 
 ; Function Attrs: nobuiltin
-declare noalias ptr @_Znam(i64) #2
+declare noalias ptr @_Znam(i64)
 
 ; Function Attrs: nobuiltin
-declare noalias ptr @_Znwm(i64) #2
+declare noalias ptr @_Znwm(i64)
 
 ; Function Attrs: uwtable
-declare void @_ZN3ExpC2Ejj7Exptype4Type2OpPS_jjP4Case(ptr, i32, i32, i32, i32, i32, ptr, i32, i32, ptr) unnamed_addr #0 align 2
+declare void @_ZN3ExpC2Ejj7Exptype4Type2OpPS_jjP4Case(ptr, i32, i32, i32, i32, i32, ptr, i32, i32, ptr) unnamed_addr align 2
 
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: nobuiltin nounwind
-declare void @_ZdlPv(ptr) #3
+declare void @_ZdlPv(ptr)
 
 ; Function Attrs: uwtable
-declare i32 @_Z10doluswitchP9Classfile(ptr) #0
+declare i32 @_Z10doluswitchP9Classfile(ptr)
 
 ; Function Attrs: nounwind uwtable
-declare void @_ZN4Exp_C2E7Exptype4Type2Op(ptr, i32, i32, i32) unnamed_addr #4 align 2
-
-attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nobuiltin "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nobuiltin nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+declare void @_ZN4Exp_C2E7Exptype4Type2Op(ptr, i32, i32, i32) unnamed_addr align 2
 
 !llvm.ident = !{!0}
 

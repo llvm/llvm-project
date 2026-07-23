@@ -1,0 +1,46 @@
+## Tests the case where module compilation fails.
+#
+# REQUIRES: system-darwin
+#
+# RUN: split-file %s %t/sources
+# RUN: %clang_host -g %t/sources/main.m -fmodules -fcxx-modules \
+# RUN:             -DSHOULD_COMPILE=1 \
+# RUN:             -fmodule-map-file=%t/sources/module.modulemap \
+# RUN:             -fmodules-cache-path=%t/ModuleCache -o %t.out
+#
+# RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/sources/commands.input %t.out -o exit 2>&1 | FileCheck %s
+
+#--- main.m
+@import foo;
+
+int main() { __builtin_debugtrap(); }
+
+#--- foo.h
+struct foo {};
+
+#ifndef SHOULD_COMPILE
+#error "Compilation failure."
+#endif
+
+#--- module.modulemap
+module foo {
+    header "foo.h"
+    export *
+}
+
+#--- commands.input
+log enable lldb expr
+run
+## Make sure expression fails so the 'note' diagnostics get printed.
+expr blah
+
+# CHECK: Finished building Clang module foo
+# CHECK: couldn't load top-level module foo:
+# CHECK: While building module 'foo' imported from LLDBModulesMemoryBuffer
+# CHEKC: {{.*}}sources/foo.h{{.*}}: error: "Compilation failure."
+# CHECK: LLDBModulesMemoryBuffer:1:1: fatal error: could not build module 'foo'
+
+# CHECK: Error while loading hand-imported modules:
+# CHECK: couldn't load top-level module foo:
+# CHECK-NOT: Compilation failure

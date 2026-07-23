@@ -215,6 +215,7 @@ public:
     MemProfVersionRequested = Version;
   }
   void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
+
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
   LLVM_ABI void overlapRecord(NamedInstrProfRecord &&Other,
@@ -226,8 +227,6 @@ private:
   void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,
                  uint64_t Weight, function_ref<void(Error)> Warn);
   bool shouldEncodeData(const ProfilingData &PD);
-  /// Add \p Trace using reservoir sampling.
-  void addTemporalProfileTrace(TemporalProfTraceTy Trace);
 
   /// Add a memprof record for a function identified by its \p Id.
   void addMemProfRecord(const GlobalValue::GUID Id,

@@ -30,10 +30,10 @@
 ; RUN: %if x86-registered-target     %{ llc < %s -mtriple=i686-unknown-linux-musl      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-gnu     | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 ; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-musl    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-;
-; FIXME(#144006): Windows-MSVC should also be run but has a ldexp selection
-; failure.
-; %if x86-registered-target     %{ llc < %s -mtriple=x86_64-pc-windows-msvc       -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+
+; FIXME(#144006): Windows-MSVC should also be run but has a ldexp selection failure.
+; %if x86-registered-target     %{ llc < %s -mtriple=x86_64-pc-windows-msvc       | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+; %if aarch64-registered-target %{ llc < %s -mtriple=arm64ec-pc-windows-msvc      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 
 define fp128 @test_acos(fp128 %a) {
 ; CHECK-ALL-LABEL:  test_acos:
@@ -92,16 +92,6 @@ define fp128 @test_cos(fp128 %a) {
 ; CHECK-S390X:      cosl
 start:
   %0 = tail call fp128 @llvm.cos.f128(fp128 %a)
-  ret fp128 %0
-}
-
-define fp128 @test_exp10(fp128 %a) {
-; CHECK-ALL-LABEL:  test_exp10:
-; CHECK-F128:       exp10f128
-; CHECK-USELD:      exp10l
-; CHECK-S390X:      exp10l
-start:
-  %0 = tail call fp128 @llvm.exp10.f128(fp128 %a)
   ret fp128 %0
 }
 

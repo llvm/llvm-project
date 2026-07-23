@@ -79,10 +79,9 @@ namespace DefaultInit {
 
   constexpr U1 u1; /// OK.
 
-  constexpr int foo() { // expected-error {{never produces a constant expression}}
+  constexpr int foo() {
     U1 u;
-    return u.a; // both-note {{read of member 'a' of union with active member 'b'}} \
-                // expected-note {{read of member 'a' of union with active member 'b'}}
+    return u.a; // both-note {{read of member 'a' of union with active member 'b'}}
   }
   static_assert(foo() == 42); // both-error {{not an integral constant expression}} \
                               // both-note {{in call to}}
@@ -122,7 +121,7 @@ namespace SimpleActivate {
         float x,y;
       } a;
       int b;
-    } Z;
+    } Z; // both-note {{declared here}}
 
     Z.a.y = 10;
 
@@ -387,6 +386,18 @@ namespace CopyCtor {
   static_assert(y.a == 42, "");
   static_assert(y.b == 42, ""); // both-error {{constant expression}} \
                                 // both-note {{'b' of union with active member 'a'}}
+
+  /// Non-defaulted copy ctor.
+  union U2 {
+    int a;
+    constexpr U2() : a(100) {}
+    constexpr U2(const U2 &u) {
+      a = 20;
+    };
+  };
+  constexpr U2 u2;
+  constexpr U2 u22(u2);
+  static_assert(u22.a == 20, "");
 }
 
 namespace UnionInBase {
@@ -411,7 +422,7 @@ namespace UnionInBase {
   static_assert(read_wrong_member_indirect() == 1); // both-error {{not an integral constant expression}} \
                                                     // both-note {{in call to}}
   constexpr int read_uninitialized() {
-    B b = {.b = 1};
+    B b = {.b = 1}; // both-note {{declared here}}
     int *p = &b.a.y;
     b.a.x = 1;
     return *p; // both-note {{read of uninitialized object}}
@@ -850,15 +861,82 @@ namespace Activation2 {
 
 namespace CopyCtorMutable {
   struct E {
-    union { // expected-note {{read of mutable member 'b'}}
+    union {
       int a;
       mutable int b; // both-note {{here}}
     };
   };
   constexpr E e1 = {{1}};
   constexpr E e2 = e1; // both-error {{constant}} \
-                       // ref-note {{read of mutable member 'b'}} \
+                       // both-note {{read of mutable member 'b'}} \
                        // both-note {{in call}}
+}
+
+
+namespace NonTrivialCtor {
+  struct A { int x = 1; constexpr int f() { return 1; } };
+  struct B : A { int y = 1; constexpr int g() { return 2; } };
+  struct C {
+    int x;
+    constexpr virtual int f() = 0;
+  };
+  struct D : C {
+    int y;
+    constexpr virtual int f() override { return 3; }
+  };
+
+  union U {
+    int n;
+    B b;
+    D d;
+  };
+
+  consteval int test(int which) {
+    if (which == 0) {}
+
+    U u{.n = 5};
+    assert_active(u);
+    assert_active(u.n);
+    assert_inactive(u.b);
+
+    switch (which) {
+    case 0:
+      u.b.x = 10; // both-note {{assignment to member 'b' of union with active member 'n'}}
+      return u.b.f();
+    case 1:
+      u.b.y = 10; // both-note {{assignment to member 'b' of union with active member 'n'}}
+      return u.b.g();
+    case 2:
+      u.d.x = 10; // both-note {{assignment to member 'd' of union with active member 'n'}}
+     return u.d.f();
+    case 3:
+    u.d.y = 10; // both-note {{assignment to member 'd' of union with active member 'n'}}
+      return u.d.f();
+    }
+
+    return 1;
+  }
+  static_assert(test(0)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(1)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(2)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(3)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+
+}
+
+namespace PrimitiveFieldInitActivates {
+  /// The initializer of a needs the field to be active _before_ it's visited.
+  template<int> struct X {};
+  union V {
+    int a, b;
+    constexpr V(X<0>) : a(a = 1) {} // ok
+    constexpr V(X<2>) : a() { b = 1; } // ok
+  };
+  constinit V v0 = X<0>();
+  constinit V v2 = X<2>();
 }
 
 #endif
@@ -899,4 +977,142 @@ namespace AddressComparison {
   static_assert(&U2.a[0] == &U2.b[0]);
   static_assert(&U2.a[0] != &U2.b[1]);
   static_assert(&U2.a[0] == &U2.b[1]); // both-error {{failed}}
+}
+
+#if __cplusplus >= 202002L
+namespace UnionMemberOnePastEnd {
+  constexpr bool b() {
+    union  {
+      int p;
+    };
+    return &p == (&p + 1);
+  }
+  static_assert(!b());
+}
+
+namespace ActicvateInvalidPtr {
+  constexpr void bar() { // both-error {{never produces a constant expression}}
+    union {
+      int a[1];
+    } foo;
+    foo.a[1] = 0; // both-note {{assignment to dereferenced one-past-the-end pointer}}
+  }
+}
+
+namespace NonTrivialUnionCtor {
+  union A {
+    int y = 5;
+  };
+  union D {
+    constexpr D(int n) : n(n) {}
+    constexpr D() : n(3) {}
+
+    A a;
+    int n;
+  };
+
+  constexpr bool j() {
+    D d;
+    d.a.y = 3; // both-note {{assignment to member 'a' of union with active member 'n'}}
+    return d.a.y == 3;
+  }
+  static_assert(j()); // both-error {{not an integral constant expression}} \
+                      // both-note {{in call to}}
+}
+
+/// u.a should not implicitly get activated when assigning to it, since A
+/// does not have a non-deleted trivial default constructor.
+namespace NoTrivialCtor {
+  struct A {
+   int i;
+   constexpr A() : i(0) {}
+   constexpr A(int i) : i(i) {}
+  };
+
+  constexpr auto test() {
+   union U {
+    int i;
+    A a;
+   } u{.i = 0};
+
+   u.a = {123}; // both-note {{member call on member 'a' of union with active member 'i'}}
+   return u.a.i;
+  }
+
+  constexpr auto r = test(); // both-error {{must be initialized by a constant expression}} \
+                             // both-note {{in call to}}
+
+  /// Should still work if the LHS is not a record type.
+  enum byte {};
+  constexpr byte operator|=(byte a, byte b) {
+    return byte{};
+  }
+  constexpr int foo() {
+    byte b{};
+    b |= byte{};
+    return 10;
+  }
+  static_assert(foo() == 10);
+}
+
+namespace Revive {
+  struct S { int p; };
+  struct A { S s;};
+  union U { A a; };
+
+  constexpr int g() {
+    U u;
+    u.a.s.p = 3;
+    u.a.~A();
+    u.a.s.p = 4; // Start lifetime of 'a' again.
+    int r = u.a.s.p;
+    u.a.~A();
+    return r;
+  }
+  static_assert(g() == 4);
+
+  constexpr int h() {
+    A a; // both-note {{declared here}}
+    a.s.p = 10;
+
+    a.s.~S();
+    a.s.p = 20; // both-note {{assignment to object outside its lifetime}}
+    int r = a.s.p;
+    return r;
+  }
+  static_assert(h() == 20); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
+}
+
+namespace GH197403 {
+  struct Inner {
+    constexpr ~Inner() noexcept {}
+  };
+  struct Outer {
+    Inner inner;
+  };
+  template<typename T>
+  struct BugTrigger {
+    union { T value; int dummy; };
+    constexpr BugTrigger() : value{} {}
+    constexpr ~BugTrigger() noexcept { value.~T(); }
+  };
+  consteval int test() {
+    BugTrigger<Outer> bt;
+    return 0;
+  }
+  static_assert(test() == 0);
+}
+#endif
+
+namespace TrivialDtorInEvaluateDtor{
+  template <class T> void foo() {
+    union { // both-error {{attempt to use a deleted function}}
+      T t; // both-note {{implicitly deleted}}
+    };
+  }
+  struct S {
+    ~S();
+  };
+  template void foo<S>(); // both-note {{in instantiation of function template specialization}}
 }

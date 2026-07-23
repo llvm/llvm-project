@@ -42,10 +42,9 @@ namespace {
 ///
 /// Returns the name of anonymous union VarDecl or nullptr if it is not found.
 static const IdentifierInfo *findAnonymousUnionVarDeclName(const VarDecl& VD) {
-  const RecordType *RT = VD.getType()->getAs<RecordType>();
-  assert(RT && "type of VarDecl is expected to be RecordType.");
-  assert(RT->getDecl()->isUnion() && "RecordType is expected to be a union.");
-  if (const FieldDecl *FD = RT->getDecl()->findFirstNamedDataMember()) {
+  const auto *RD = VD.getType()->castAsRecordDecl();
+  assert(RD->isUnion() && "RecordType is expected to be a union.");
+  if (const FieldDecl *FD = RD->findFirstNamedDataMember()) {
     return FD->getIdentifier();
   }
 
@@ -75,48 +74,13 @@ struct DecompositionDeclName {
 }
 
 namespace llvm {
-template <typename T> static bool isDenseMapKeyEmpty(T V) {
-  return llvm::DenseMapInfo<T>::isEqual(
-      V, llvm::DenseMapInfo<T>::getEmptyKey());
-}
-template <typename T> static bool isDenseMapKeyTombstone(T V) {
-  return llvm::DenseMapInfo<T>::isEqual(
-      V, llvm::DenseMapInfo<T>::getTombstoneKey());
-}
-
-template <typename T>
-static std::optional<bool> areDenseMapKeysEqualSpecialValues(T LHS, T RHS) {
-  bool LHSEmpty = isDenseMapKeyEmpty(LHS);
-  bool RHSEmpty = isDenseMapKeyEmpty(RHS);
-  if (LHSEmpty || RHSEmpty)
-    return LHSEmpty && RHSEmpty;
-
-  bool LHSTombstone = isDenseMapKeyTombstone(LHS);
-  bool RHSTombstone = isDenseMapKeyTombstone(RHS);
-  if (LHSTombstone || RHSTombstone)
-    return LHSTombstone && RHSTombstone;
-
-  return std::nullopt;
-}
-
 template<>
 struct DenseMapInfo<DecompositionDeclName> {
   using ArrayInfo = llvm::DenseMapInfo<ArrayRef<const BindingDecl*>>;
-  static DecompositionDeclName getEmptyKey() {
-    return {ArrayInfo::getEmptyKey()};
-  }
-  static DecompositionDeclName getTombstoneKey() {
-    return {ArrayInfo::getTombstoneKey()};
-  }
   static unsigned getHashValue(DecompositionDeclName Key) {
-    assert(!isEqual(Key, getEmptyKey()) && !isEqual(Key, getTombstoneKey()));
     return llvm::hash_combine_range(Key);
   }
   static bool isEqual(DecompositionDeclName LHS, DecompositionDeclName RHS) {
-    if (std::optional<bool> Result =
-            areDenseMapKeysEqualSpecialValues(LHS.Bindings, RHS.Bindings))
-      return *Result;
-
     return LHS.Bindings.size() == RHS.Bindings.size() &&
            std::equal(LHS.begin(), LHS.end(), RHS.begin());
   }

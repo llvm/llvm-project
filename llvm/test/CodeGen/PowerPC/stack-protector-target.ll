@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=powerpc-unknown-linux < %s | FileCheck -check-prefix=LINUX32 %s
 ; RUN: llc -mtriple=powerpc64-unknown-linux < %s | FileCheck -check-prefix=LINUX64 %s
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck -check-prefix=AIX32 %s
-; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff < %s | FileCheck -check-prefix=AIX64 %s
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --code-model=small < %s | FileCheck -check-prefix=AIX64 %s
 
 define void @func() sspreq nounwind {
 ; OPENBSD32-LABEL: func:
@@ -65,8 +65,8 @@ define void @func() sspreq nounwind {
 ; LINUX32:       # %bb.0:
 ; LINUX32-NEXT:    mflr 0
 ; LINUX32-NEXT:    stwu 1, -16(1)
-; LINUX32-NEXT:    stw 0, 20(1)
 ; LINUX32-NEXT:    lwz 3, -28680(2)
+; LINUX32-NEXT:    stw 0, 20(1)
 ; LINUX32-NEXT:    stw 3, 12(1)
 ; LINUX32-NEXT:    addi 3, 1, 8
 ; LINUX32-NEXT:    bl capture
@@ -86,8 +86,8 @@ define void @func() sspreq nounwind {
 ; LINUX64:       # %bb.0:
 ; LINUX64-NEXT:    mflr 0
 ; LINUX64-NEXT:    stdu 1, -128(1)
-; LINUX64-NEXT:    std 0, 144(1)
 ; LINUX64-NEXT:    ld 3, -28688(13)
+; LINUX64-NEXT:    std 0, 144(1)
 ; LINUX64-NEXT:    std 3, 120(1)
 ; LINUX64-NEXT:    addi 3, 1, 116
 ; LINUX64-NEXT:    bl capture

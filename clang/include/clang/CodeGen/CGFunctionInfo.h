@@ -17,10 +17,9 @@
 
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 
@@ -77,6 +76,11 @@ public:
     /// Array elements in the type are assumed to be padding and skipped.
     CoerceAndExpand,
 
+    /// TargetSpecific - Some argument types are passed as target specific types
+    /// such as RISC-V's tuple type, these need to be handled in the target
+    /// hook.
+    TargetSpecific,
+
     /// InAlloca - Pass the argument directly using the LLVM inalloca attribute.
     /// This is similar to indirect with byval, except it only applies to
     /// arguments stored in memory and forbids any implicit copies.  When
@@ -120,7 +124,7 @@ private:
 
   bool canHavePaddingType() const {
     return isDirect() || isExtend() || isIndirect() || isIndirectAliased() ||
-           isExpand();
+           isExpand() || isTargetSpecific();
   }
   void setPaddingType(llvm::Type *T) {
     assert(canHavePaddingType());
@@ -291,6 +295,20 @@ public:
     return AI;
   }
 
+  static ABIArgInfo getTargetSpecific(llvm::Type *T = nullptr,
+                                      unsigned Offset = 0,
+                                      llvm::Type *Padding = nullptr,
+                                      bool CanBeFlattened = true,
+                                      unsigned Align = 0) {
+    auto AI = ABIArgInfo(TargetSpecific);
+    AI.setCoerceToType(T);
+    AI.setPaddingType(Padding);
+    AI.setDirectOffset(Offset);
+    AI.setDirectAlign(Align);
+    AI.setCanBeFlattened(CanBeFlattened);
+    return AI;
+  }
+
   static bool isPaddingForCoerceAndExpand(llvm::Type *eltType) {
     return eltType->isArrayTy() &&
            eltType->getArrayElementType()->isIntegerTy(8);
@@ -305,27 +323,33 @@ public:
   bool isIndirectAliased() const { return TheKind == IndirectAliased; }
   bool isExpand() const { return TheKind == Expand; }
   bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
+  bool isTargetSpecific() const { return TheKind == TargetSpecific; }
 
   bool canHaveCoerceToType() const {
-    return isDirect() || isExtend() || isCoerceAndExpand();
+    return isDirect() || isExtend() || isCoerceAndExpand() ||
+           isTargetSpecific();
   }
 
   // Direct/Extend accessors
   unsigned getDirectOffset() const {
-    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    assert((isDirect() || isExtend() || isTargetSpecific()) &&
+           "Not a direct or extend or target specific kind");
     return DirectAttr.Offset;
   }
   void setDirectOffset(unsigned Offset) {
-    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    assert((isDirect() || isExtend() || isTargetSpecific()) &&
+           "Not a direct or extend or target specific kind");
     DirectAttr.Offset = Offset;
   }
 
   unsigned getDirectAlign() const {
-    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    assert((isDirect() || isExtend() || isTargetSpecific()) &&
+           "Not a direct or extend or target specific kind");
     return DirectAttr.Align;
   }
   void setDirectAlign(unsigned Align) {
-    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    assert((isDirect() || isExtend() || isTargetSpecific()) &&
+           "Not a direct or extend or target specific kind");
     DirectAttr.Align = Align;
   }
 
@@ -394,12 +418,14 @@ public:
   }
 
   bool getInReg() const {
-    assert((isDirect() || isExtend() || isIndirect()) && "Invalid kind!");
+    assert((isDirect() || isExtend() || isIndirect() || isTargetSpecific()) &&
+           "Invalid kind!");
     return InReg;
   }
 
   void setInReg(bool IR) {
-    assert((isDirect() || isExtend() || isIndirect()) && "Invalid kind!");
+    assert((isDirect() || isExtend() || isIndirect() || isTargetSpecific()) &&
+           "Invalid kind!");
     InReg = IR;
   }
 
@@ -481,12 +507,12 @@ public:
   }
 
   bool getCanBeFlattened() const {
-    assert(isDirect() && "Invalid kind!");
+    assert((isDirect() || isTargetSpecific()) && "Invalid kind!");
     return CanBeFlattened;
   }
 
   void setCanBeFlattened(bool Flatten) {
-    assert(isDirect() && "Invalid kind!");
+    assert((isDirect() || isTargetSpecific()) && "Invalid kind!");
     CanBeFlattened = Flatten;
   }
 
@@ -626,6 +652,10 @@ class CGFunctionInfo final
   /// Log 2 of the maximum vector width.
   unsigned MaxVectorWidth : 4;
 
+  /// X86 AVX Level, can be different from global / module level AVX level
+  /// because of target attributes.
+  unsigned X86ABIAVXLevel = 0;
+
   RequiredArgs Required;
 
   /// The struct representing all arguments passed in memory.  Only used when
@@ -656,7 +686,8 @@ class CGFunctionInfo final
 public:
   static CGFunctionInfo *
   create(unsigned llvmCC, bool instanceMethod, bool chainCall,
-         bool delegateCall, const FunctionType::ExtInfo &extInfo,
+         bool delegateCall, unsigned X86ABIAVXLevel,
+         const FunctionType::ExtInfo &extInfo,
          ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
          ArrayRef<CanQualType> argTypes, RequiredArgs required);
   void operator delete(void *p) { ::operator delete(p); }
@@ -782,6 +813,8 @@ public:
     MaxVectorWidth = llvm::countr_zero(Width) + 1;
   }
 
+  unsigned getX86ABIAVXLevel() const { return X86ABIAVXLevel; }
+
   void Profile(llvm::FoldingSetNodeID &ID) {
     ID.AddInteger(getASTCallingConvention());
     ID.AddBoolean(InstanceMethod);
@@ -794,6 +827,7 @@ public:
     ID.AddInteger(RegParm);
     ID.AddBoolean(NoCfCheck);
     ID.AddBoolean(CmseNSCall);
+    ID.AddInteger(X86ABIAVXLevel);
     ID.AddInteger(Required.getOpaqueData());
     ID.AddBoolean(HasExtParameterInfos);
     if (HasExtParameterInfos) {
@@ -806,6 +840,7 @@ public:
   }
   static void Profile(llvm::FoldingSetNodeID &ID, bool InstanceMethod,
                       bool ChainCall, bool IsDelegateCall,
+                      unsigned X86ABIAVXLevel,
                       const FunctionType::ExtInfo &info,
                       ArrayRef<ExtParameterInfo> paramInfos,
                       RequiredArgs required, CanQualType resultType,
@@ -821,6 +856,7 @@ public:
     ID.AddInteger(info.getRegParm());
     ID.AddBoolean(info.getNoCfCheck());
     ID.AddBoolean(info.getCmseNSCall());
+    ID.AddInteger(X86ABIAVXLevel);
     ID.AddInteger(required.getOpaqueData());
     ID.AddBoolean(!paramInfos.empty());
     if (!paramInfos.empty()) {

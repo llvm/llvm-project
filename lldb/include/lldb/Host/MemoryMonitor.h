@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <memory>
+#include <utility>
 
 namespace lldb_private {
 
@@ -18,7 +19,7 @@ class MemoryMonitor {
 public:
   using Callback = std::function<void()>;
 
-  MemoryMonitor(Callback callback) : m_callback(callback) {}
+  MemoryMonitor(Callback callback) : m_callback(std::move(callback)) {}
   virtual ~MemoryMonitor() = default;
 
   /// MemoryMonitor is not copyable.

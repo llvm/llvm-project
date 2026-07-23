@@ -14,7 +14,8 @@ define i8 @lea8bit(i8 %in) {
 ; NDD-LABEL: lea8bit:
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    # kill: def $edi killed $edi def $rdi
-; NDD-NEXT:    leab 1(%rdi,%rdi), %al
+; NDD-NEXT:    leal 1(%rdi,%rdi), %eax
+; NDD-NEXT:    # kill: def $al killed $al killed $eax
 ; NDD-NEXT:    retq
   %shl = shl i8 %in, 1
   %or = or i8 %shl, 1

@@ -26,7 +26,7 @@ define <4 x i32> @udot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
   %u.wide = zext <16 x i8> %u to <16 x i32>
   %s.wide = zext <16 x i8> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
 
@@ -96,7 +96,7 @@ vector.body:
   %load2 = load <16 x i8>, ptr %gep2, align 16
   %load2.wide = zext <16 x i8> %load2 to <16 x i32>
   %mul = mul nuw nsw <16 x i32> %load1.wide, %load2.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mul)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mul)
   %index.next = add nuw i64 %index, 16
   %cmp = icmp eq i64 %index.next, 16
   br i1 %cmp, label %end, label %vector.body
@@ -113,10 +113,10 @@ define <2 x i32> @udot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret
@@ -133,7 +133,7 @@ define <2 x i32> @udot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
   %u.wide = zext <8 x i8> %u to <8 x i32>
   %s.wide = zext <8 x i8> %s to <8 x i32>
   %mult = mul nuw nsw <8 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <8 x i32> %mult)
+  %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <8 x i32> %mult)
   ret <2 x i32> %partial.reduce
 }
 
@@ -160,7 +160,7 @@ define <4 x i32> @sdot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
   %u.wide = sext <16 x i8> %u to <16 x i32>
   %s.wide = sext <16 x i8> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
 
@@ -172,10 +172,10 @@ define <2 x i32> @sdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-NODOT-NEXT:    sshll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    sshll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
 ; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret
@@ -192,7 +192,7 @@ define <2 x i32> @sdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
   %u.wide = sext <8 x i8> %u to <8 x i32>
   %s.wide = sext <8 x i8> %s to <8 x i32>
   %mult = mul nuw nsw <8 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <8 x i32> %mult)
+  %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <8 x i32> %mult)
   ret <2 x i32> %partial.reduce
 }
 
@@ -211,14 +211,12 @@ define <4 x i32> @usdot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
 ;
 ; CHECK-DOT-LABEL: usdot:
 ; CHECK-DOT:       // %bb.0:
-; CHECK-DOT-NEXT:    ushll v3.8h, v1.8b, #0
-; CHECK-DOT-NEXT:    sshll v4.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    ushll2 v1.8h, v1.16b, #0
-; CHECK-DOT-NEXT:    sshll2 v2.8h, v2.16b, #0
-; CHECK-DOT-NEXT:    smlal v0.4s, v4.4h, v3.4h
-; CHECK-DOT-NEXT:    smlal2 v0.4s, v4.8h, v3.8h
-; CHECK-DOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
-; CHECK-DOT-NEXT:    smlal2 v0.4s, v2.8h, v1.8h
+; CHECK-DOT-NEXT:    movi v3.16b, #128
+; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-DOT-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-DOT-NEXT:    udot v4.4s, v3.16b, v1.16b
+; CHECK-DOT-NEXT:    udot v0.4s, v2.16b, v1.16b
+; CHECK-DOT-NEXT:    sub v0.4s, v0.4s, v4.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: usdot:
@@ -228,7 +226,7 @@ define <4 x i32> @usdot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
   %u.wide = zext <16 x i8> %u to <16 x i32>
   %s.wide = sext <16 x i8> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
 
@@ -258,23 +256,22 @@ define <4 x i32> @usdot_in_loop(ptr %p1, ptr %p2){
 ;
 ; CHECK-DOT-LABEL: usdot_in_loop:
 ; CHECK-DOT:       // %bb.0: // %entry
-; CHECK-DOT-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-DOT-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-DOT-NEXT:    movi v1.16b, #128
 ; CHECK-DOT-NEXT:    mov x8, xzr
 ; CHECK-DOT-NEXT:  .LBB6_1: // %vector.body
 ; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-NEXT:    ldr q3, [x1, x8]
-; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-NEXT:    ldr q0, [x0, x8]
+; CHECK-DOT-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-DOT-NEXT:    eor v4.16b, v0.16b, v1.16b
+; CHECK-DOT-NEXT:    mov v0.16b, v2.16b
+; CHECK-DOT-NEXT:    ldr q2, [x1, x8]
 ; CHECK-DOT-NEXT:    add x8, x8, #16
-; CHECK-DOT-NEXT:    sshll v4.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    ushll v5.8h, v3.8b, #0
-; CHECK-DOT-NEXT:    sshll2 v2.8h, v2.16b, #0
-; CHECK-DOT-NEXT:    ushll2 v3.8h, v3.16b, #0
+; CHECK-DOT-NEXT:    udot v3.4s, v1.16b, v2.16b
 ; CHECK-DOT-NEXT:    cmp x8, #16
-; CHECK-DOT-NEXT:    smlal v1.4s, v4.4h, v5.4h
-; CHECK-DOT-NEXT:    smlal2 v1.4s, v4.8h, v5.8h
-; CHECK-DOT-NEXT:    smlal v1.4s, v2.4h, v3.4h
-; CHECK-DOT-NEXT:    smlal2 v1.4s, v2.8h, v3.8h
+; CHECK-DOT-NEXT:    mov v5.16b, v0.16b
+; CHECK-DOT-NEXT:    udot v5.4s, v4.16b, v2.16b
+; CHECK-DOT-NEXT:    sub v2.4s, v5.4s, v3.4s
 ; CHECK-DOT-NEXT:    b.ne .LBB6_1
 ; CHECK-DOT-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-NEXT:    ret
@@ -307,7 +304,93 @@ vector.body:
   %load2 = load <16 x i8>, ptr %gep2, align 16
   %load2.wide = zext <16 x i8> %load2 to <16 x i32>
   %mul = mul nuw nsw <16 x i32> %load1.wide, %load2.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mul)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mul)
+  %index.next = add nuw i64 %index, 16
+  %cmp = icmp eq i64 %index.next, 16
+  br i1 %cmp, label %end, label %vector.body
+
+end:
+  ret <4 x i32> %acc
+}
+
+; Same as @usdot_in_loop, but with a non-zero initial accumulator carried
+; across iterations. Validates that the SUMLA -> 2x udot identity composes
+; correctly when the accumulator is not zero on entry.
+define <4 x i32> @usdot_in_loop_nonzero_acc(ptr %p1, ptr %p2, <4 x i32> %init){
+; CHECK-NODOT-LABEL: usdot_in_loop_nonzero_acc:
+; CHECK-NODOT:       // %bb.0: // %entry
+; CHECK-NODOT-NEXT:    mov x8, xzr
+; CHECK-NODOT-NEXT:  .LBB7_1: // %vector.body
+; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
+; CHECK-NODOT-NEXT:    ldr q3, [x1, x8]
+; CHECK-NODOT-NEXT:    mov v1.16b, v0.16b
+; CHECK-NODOT-NEXT:    add x8, x8, #16
+; CHECK-NODOT-NEXT:    sshll v4.8h, v2.8b, #0
+; CHECK-NODOT-NEXT:    ushll v5.8h, v3.8b, #0
+; CHECK-NODOT-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NODOT-NEXT:    ushll2 v3.8h, v3.16b, #0
+; CHECK-NODOT-NEXT:    cmp x8, #16
+; CHECK-NODOT-NEXT:    smlal v0.4s, v4.4h, v5.4h
+; CHECK-NODOT-NEXT:    smlal2 v0.4s, v4.8h, v5.8h
+; CHECK-NODOT-NEXT:    smlal v0.4s, v2.4h, v3.4h
+; CHECK-NODOT-NEXT:    smlal2 v0.4s, v2.8h, v3.8h
+; CHECK-NODOT-NEXT:    b.ne .LBB7_1
+; CHECK-NODOT-NEXT:  // %bb.2: // %end
+; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: usdot_in_loop_nonzero_acc:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    movi v2.16b, #128
+; CHECK-DOT-NEXT:    mov x8, xzr
+; CHECK-DOT-NEXT:  .LBB7_1: // %vector.body
+; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-DOT-NEXT:    ldr q1, [x0, x8]
+; CHECK-DOT-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-DOT-NEXT:    eor v4.16b, v1.16b, v2.16b
+; CHECK-DOT-NEXT:    mov v1.16b, v0.16b
+; CHECK-DOT-NEXT:    ldr q0, [x1, x8]
+; CHECK-DOT-NEXT:    add x8, x8, #16
+; CHECK-DOT-NEXT:    udot v3.4s, v2.16b, v0.16b
+; CHECK-DOT-NEXT:    cmp x8, #16
+; CHECK-DOT-NEXT:    mov v5.16b, v1.16b
+; CHECK-DOT-NEXT:    udot v5.4s, v4.16b, v0.16b
+; CHECK-DOT-NEXT:    sub v0.4s, v5.4s, v3.4s
+; CHECK-DOT-NEXT:    b.ne .LBB7_1
+; CHECK-DOT-NEXT:  // %bb.2: // %end
+; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: usdot_in_loop_nonzero_acc:
+; CHECK-DOT-I8MM:       // %bb.0: // %entry
+; CHECK-DOT-I8MM-NEXT:    mov x8, xzr
+; CHECK-DOT-I8MM-NEXT:  .LBB7_1: // %vector.body
+; CHECK-DOT-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0, x8]
+; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1, x8]
+; CHECK-DOT-I8MM-NEXT:    mov v1.16b, v0.16b
+; CHECK-DOT-I8MM-NEXT:    add x8, x8, #16
+; CHECK-DOT-I8MM-NEXT:    usdot v0.4s, v3.16b, v2.16b
+; CHECK-DOT-I8MM-NEXT:    cmp x8, #16
+; CHECK-DOT-I8MM-NEXT:    b.ne .LBB7_1
+; CHECK-DOT-I8MM-NEXT:  // %bb.2: // %end
+; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-I8MM-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %acc = phi <4 x i32> [ %init, %entry ], [ %partial.reduce, %vector.body ]
+  %gep1 = getelementptr i8, ptr %p1, i64 %index
+  %load1 = load <16 x i8>, ptr %gep1, align 16
+  %load1.wide = sext <16 x i8> %load1 to <16 x i32>
+  %gep2 = getelementptr i8, ptr %p2, i64 %index
+  %load2 = load <16 x i8>, ptr %gep2, align 16
+  %load2.wide = zext <16 x i8> %load2 to <16 x i32>
+  %mul = mul nuw nsw <16 x i32> %load1.wide, %load2.wide
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mul)
   %index.next = add nuw i64 %index, 16
   %cmp = icmp eq i64 %index.next, 16
   br i1 %cmp, label %end, label %vector.body
@@ -324,11 +407,11 @@ define <2 x i32> @usdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NODOT-NEXT:    smull v3.4s, v2.4h, v1.4h
 ; CHECK-NODOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
-; CHECK-NODOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d4, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d5, v2.d[1]
 ; CHECK-NODOT-NEXT:    smull2 v1.4s, v2.8h, v1.8h
-; CHECK-NODOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NODOT-NEXT:    mov d3, v3.d[1]
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
 ; CHECK-NODOT-NEXT:    smlal v0.4s, v5.4h, v4.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v1.2s, v0.2s
@@ -336,19 +419,12 @@ define <2 x i32> @usdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ;
 ; CHECK-DOT-LABEL: usdot_narrow:
 ; CHECK-DOT:       // %bb.0:
-; CHECK-DOT-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-DOT-NEXT:    sshll v2.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-DOT-NEXT:    smull v3.4s, v2.4h, v1.4h
-; CHECK-DOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
-; CHECK-DOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-DOT-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
-; CHECK-DOT-NEXT:    smull2 v1.4s, v2.8h, v1.8h
-; CHECK-DOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-DOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-DOT-NEXT:    add v0.2s, v3.2s, v0.2s
-; CHECK-DOT-NEXT:    smlal v0.4s, v5.4h, v4.4h
-; CHECK-DOT-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-DOT-NEXT:    movi v3.8b, #128
+; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-DOT-NEXT:    eor v2.8b, v2.8b, v3.8b
+; CHECK-DOT-NEXT:    udot v4.2s, v3.8b, v1.8b
+; CHECK-DOT-NEXT:    udot v0.2s, v2.8b, v1.8b
+; CHECK-DOT-NEXT:    sub v0.2s, v0.2s, v4.2s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: usdot_narrow:
@@ -358,7 +434,7 @@ define <2 x i32> @usdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
   %u.wide = zext <8 x i8> %u to <8 x i32>
   %s.wide = sext <8 x i8> %s to <8 x i32>
   %mult = mul nuw nsw <8 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <8 x i32> %mult)
+  %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <8 x i32> %mult)
   ret <2 x i32> %partial.reduce
 }
 
@@ -377,14 +453,12 @@ define <4 x i32> @sudot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) #0{
 ;
 ; CHECK-DOT-LABEL: sudot:
 ; CHECK-DOT:       // %bb.0:
-; CHECK-DOT-NEXT:    sshll v3.8h, v1.8b, #0
-; CHECK-DOT-NEXT:    ushll v4.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    sshll2 v1.8h, v1.16b, #0
-; CHECK-DOT-NEXT:    ushll2 v2.8h, v2.16b, #0
-; CHECK-DOT-NEXT:    smlal v0.4s, v4.4h, v3.4h
-; CHECK-DOT-NEXT:    smlal2 v0.4s, v4.8h, v3.8h
-; CHECK-DOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
-; CHECK-DOT-NEXT:    smlal2 v0.4s, v2.8h, v1.8h
+; CHECK-DOT-NEXT:    movi v3.16b, #128
+; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-DOT-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-DOT-NEXT:    udot v4.4s, v3.16b, v2.16b
+; CHECK-DOT-NEXT:    udot v0.4s, v1.16b, v2.16b
+; CHECK-DOT-NEXT:    sub v0.4s, v0.4s, v4.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: sudot:
@@ -394,7 +468,7 @@ define <4 x i32> @sudot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) #0{
   %s.wide = sext <16 x i8> %u to <16 x i32>
   %u.wide = zext <16 x i8> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %u.wide, %s.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
 
@@ -403,7 +477,7 @@ define <4 x i32> @sudot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NODOT:       // %bb.0: // %entry
 ; CHECK-NODOT-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NODOT-NEXT:    mov x8, xzr
-; CHECK-NODOT-NEXT:  .LBB9_1: // %vector.body
+; CHECK-NODOT-NEXT:  .LBB10_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
 ; CHECK-NODOT-NEXT:    ldr q3, [x1, x8]
@@ -418,30 +492,29 @@ define <4 x i32> @sudot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NODOT-NEXT:    smlal2 v1.4s, v4.8h, v5.8h
 ; CHECK-NODOT-NEXT:    smlal v1.4s, v2.4h, v3.4h
 ; CHECK-NODOT-NEXT:    smlal2 v1.4s, v2.8h, v3.8h
-; CHECK-NODOT-NEXT:    b.ne .LBB9_1
+; CHECK-NODOT-NEXT:    b.ne .LBB10_1
 ; CHECK-NODOT-NEXT:  // %bb.2: // %end
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: sudot_in_loop:
 ; CHECK-DOT:       // %bb.0: // %entry
-; CHECK-DOT-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-DOT-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-DOT-NEXT:    movi v1.16b, #128
 ; CHECK-DOT-NEXT:    mov x8, xzr
-; CHECK-DOT-NEXT:  .LBB9_1: // %vector.body
+; CHECK-DOT-NEXT:  .LBB10_1: // %vector.body
 ; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-DOT-NEXT:    ldr q0, [x1, x8]
+; CHECK-DOT-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-DOT-NEXT:    eor v4.16b, v0.16b, v1.16b
+; CHECK-DOT-NEXT:    mov v0.16b, v2.16b
 ; CHECK-DOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-NEXT:    ldr q3, [x1, x8]
-; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
 ; CHECK-DOT-NEXT:    add x8, x8, #16
-; CHECK-DOT-NEXT:    ushll v4.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    sshll v5.8h, v3.8b, #0
-; CHECK-DOT-NEXT:    ushll2 v2.8h, v2.16b, #0
-; CHECK-DOT-NEXT:    sshll2 v3.8h, v3.16b, #0
+; CHECK-DOT-NEXT:    udot v3.4s, v1.16b, v2.16b
 ; CHECK-DOT-NEXT:    cmp x8, #16
-; CHECK-DOT-NEXT:    smlal v1.4s, v4.4h, v5.4h
-; CHECK-DOT-NEXT:    smlal2 v1.4s, v4.8h, v5.8h
-; CHECK-DOT-NEXT:    smlal v1.4s, v2.4h, v3.4h
-; CHECK-DOT-NEXT:    smlal2 v1.4s, v2.8h, v3.8h
-; CHECK-DOT-NEXT:    b.ne .LBB9_1
+; CHECK-DOT-NEXT:    mov v5.16b, v0.16b
+; CHECK-DOT-NEXT:    udot v5.4s, v4.16b, v2.16b
+; CHECK-DOT-NEXT:    sub v2.4s, v5.4s, v3.4s
+; CHECK-DOT-NEXT:    b.ne .LBB10_1
 ; CHECK-DOT-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-NEXT:    ret
 ;
@@ -449,7 +522,7 @@ define <4 x i32> @sudot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    mov x8, xzr
-; CHECK-DOT-I8MM-NEXT:  .LBB9_1: // %vector.body
+; CHECK-DOT-I8MM-NEXT:  .LBB10_1: // %vector.body
 ; CHECK-DOT-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0, x8]
 ; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1, x8]
@@ -457,7 +530,7 @@ define <4 x i32> @sudot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-DOT-I8MM-NEXT:    add x8, x8, #16
 ; CHECK-DOT-I8MM-NEXT:    usdot v1.4s, v2.16b, v3.16b
 ; CHECK-DOT-I8MM-NEXT:    cmp x8, #16
-; CHECK-DOT-I8MM-NEXT:    b.ne .LBB9_1
+; CHECK-DOT-I8MM-NEXT:    b.ne .LBB10_1
 ; CHECK-DOT-I8MM-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-I8MM-NEXT:    ret
 entry:
@@ -473,7 +546,7 @@ vector.body:
   %load2 = load <16 x i8>, ptr %gep2, align 16
   %load2.wide = sext <16 x i8> %load2 to <16 x i32>
   %mul = mul nuw nsw <16 x i32> %load1.wide, %load2.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mul)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %mul)
   %index.next = add nuw i64 %index, 16
   %cmp = icmp eq i64 %index.next, 16
   br i1 %cmp, label %end, label %vector.body
@@ -490,11 +563,11 @@ define <2 x i32> @sudot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NODOT-NEXT:    smull v3.4s, v2.4h, v1.4h
 ; CHECK-NODOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
-; CHECK-NODOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d4, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d5, v2.d[1]
 ; CHECK-NODOT-NEXT:    smull2 v1.4s, v2.8h, v1.8h
-; CHECK-NODOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NODOT-NEXT:    mov d3, v3.d[1]
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
 ; CHECK-NODOT-NEXT:    smlal v0.4s, v5.4h, v4.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v1.2s, v0.2s
@@ -502,19 +575,12 @@ define <2 x i32> @sudot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ;
 ; CHECK-DOT-LABEL: sudot_narrow:
 ; CHECK-DOT:       // %bb.0:
-; CHECK-DOT-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-DOT-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-DOT-NEXT:    smull v3.4s, v2.4h, v1.4h
-; CHECK-DOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
-; CHECK-DOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-DOT-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
-; CHECK-DOT-NEXT:    smull2 v1.4s, v2.8h, v1.8h
-; CHECK-DOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-DOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-DOT-NEXT:    add v0.2s, v3.2s, v0.2s
-; CHECK-DOT-NEXT:    smlal v0.4s, v5.4h, v4.4h
-; CHECK-DOT-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-DOT-NEXT:    movi v3.8b, #128
+; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-DOT-NEXT:    eor v1.8b, v1.8b, v3.8b
+; CHECK-DOT-NEXT:    udot v4.2s, v3.8b, v2.8b
+; CHECK-DOT-NEXT:    udot v0.2s, v1.8b, v2.8b
+; CHECK-DOT-NEXT:    sub v0.2s, v0.2s, v4.2s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: sudot_narrow:
@@ -524,7 +590,7 @@ define <2 x i32> @sudot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
   %u.wide = sext <8 x i8> %u to <8 x i32>
   %s.wide = zext <8 x i8> %s to <8 x i32>
   %mult = mul nuw nsw <8 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <8 x i32> %mult)
+  %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <8 x i32> %mult)
   ret <2 x i32> %partial.reduce
 }
 
@@ -566,7 +632,7 @@ entry:
   %a.wide = zext <16 x i8> %a to <16 x i64>
   %b.wide = zext <16 x i8> %b to <16 x i64>
   %mult = mul nuw nsw <16 x i64> %a.wide, %b.wide
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add.v4i64.v16i64(
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add.v4i64.v16i64(
   <4 x i64> %acc, <16 x i64> %mult)
   ret <4 x i64> %partial.reduce
 }
@@ -609,7 +675,7 @@ entry:
   %a.wide = sext <16 x i8> %a to <16 x i64>
   %b.wide = sext <16 x i8> %b to <16 x i64>
   %mult = mul nuw nsw <16 x i64> %a.wide, %b.wide
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add.v4i64.v16i64(
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add.v4i64.v16i64(
   <4 x i64> %acc, <16 x i64> %mult)
   ret <4 x i64> %partial.reduce
 }
@@ -641,26 +707,15 @@ define <4 x i64> @usdot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b){
 ;
 ; CHECK-DOT-LABEL: usdot_8to64:
 ; CHECK-DOT:       // %bb.0: // %entry
-; CHECK-DOT-NEXT:    ushll v4.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    ushll2 v2.8h, v2.16b, #0
-; CHECK-DOT-NEXT:    sshll v5.8h, v3.8b, #0
-; CHECK-DOT-NEXT:    sshll2 v3.8h, v3.16b, #0
-; CHECK-DOT-NEXT:    ushll v6.4s, v4.4h, #0
-; CHECK-DOT-NEXT:    ushll v7.4s, v2.4h, #0
-; CHECK-DOT-NEXT:    sshll v16.4s, v5.4h, #0
-; CHECK-DOT-NEXT:    sshll v17.4s, v3.4h, #0
-; CHECK-DOT-NEXT:    ushll2 v4.4s, v4.8h, #0
-; CHECK-DOT-NEXT:    ushll2 v2.4s, v2.8h, #0
-; CHECK-DOT-NEXT:    sshll2 v5.4s, v5.8h, #0
-; CHECK-DOT-NEXT:    sshll2 v3.4s, v3.8h, #0
-; CHECK-DOT-NEXT:    smlal v0.2d, v6.2s, v16.2s
-; CHECK-DOT-NEXT:    smlal v1.2d, v7.2s, v17.2s
-; CHECK-DOT-NEXT:    smlal2 v0.2d, v6.4s, v16.4s
-; CHECK-DOT-NEXT:    smlal2 v1.2d, v7.4s, v17.4s
-; CHECK-DOT-NEXT:    smlal v0.2d, v4.2s, v5.2s
-; CHECK-DOT-NEXT:    smlal v1.2d, v2.2s, v3.2s
-; CHECK-DOT-NEXT:    smlal2 v0.2d, v4.4s, v5.4s
-; CHECK-DOT-NEXT:    smlal2 v1.2d, v2.4s, v3.4s
+; CHECK-DOT-NEXT:    movi v4.16b, #128
+; CHECK-DOT-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-DOT-NEXT:    movi v6.2d, #0000000000000000
+; CHECK-DOT-NEXT:    eor v3.16b, v3.16b, v4.16b
+; CHECK-DOT-NEXT:    udot v6.4s, v4.16b, v2.16b
+; CHECK-DOT-NEXT:    udot v5.4s, v3.16b, v2.16b
+; CHECK-DOT-NEXT:    sub v2.4s, v5.4s, v6.4s
+; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v2.2s
+; CHECK-DOT-NEXT:    saddw2 v0.2d, v0.2d, v2.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: usdot_8to64:
@@ -674,7 +729,7 @@ entry:
   %a.wide = zext <16 x i8> %a to <16 x i64>
   %b.wide = sext <16 x i8> %b to <16 x i64>
   %mult = mul nuw nsw <16 x i64> %a.wide, %b.wide
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add.v4i64.v16i64(
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add.v4i64.v16i64(
   <4 x i64> %acc, <16 x i64> %mult)
   ret <4 x i64> %partial.reduce
 }
@@ -706,26 +761,15 @@ define <4 x i64> @sudot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-DOT-LABEL: sudot_8to64:
 ; CHECK-DOT:       // %bb.0: // %entry
-; CHECK-DOT-NEXT:    sshll v4.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    sshll2 v2.8h, v2.16b, #0
-; CHECK-DOT-NEXT:    ushll v5.8h, v3.8b, #0
-; CHECK-DOT-NEXT:    ushll2 v3.8h, v3.16b, #0
-; CHECK-DOT-NEXT:    sshll v6.4s, v4.4h, #0
-; CHECK-DOT-NEXT:    sshll v7.4s, v2.4h, #0
-; CHECK-DOT-NEXT:    ushll v16.4s, v5.4h, #0
-; CHECK-DOT-NEXT:    ushll v17.4s, v3.4h, #0
-; CHECK-DOT-NEXT:    sshll2 v4.4s, v4.8h, #0
-; CHECK-DOT-NEXT:    sshll2 v2.4s, v2.8h, #0
-; CHECK-DOT-NEXT:    ushll2 v5.4s, v5.8h, #0
-; CHECK-DOT-NEXT:    ushll2 v3.4s, v3.8h, #0
-; CHECK-DOT-NEXT:    smlal v0.2d, v6.2s, v16.2s
-; CHECK-DOT-NEXT:    smlal v1.2d, v7.2s, v17.2s
-; CHECK-DOT-NEXT:    smlal2 v0.2d, v6.4s, v16.4s
-; CHECK-DOT-NEXT:    smlal2 v1.2d, v7.4s, v17.4s
-; CHECK-DOT-NEXT:    smlal v0.2d, v4.2s, v5.2s
-; CHECK-DOT-NEXT:    smlal v1.2d, v2.2s, v3.2s
-; CHECK-DOT-NEXT:    smlal2 v0.2d, v4.4s, v5.4s
-; CHECK-DOT-NEXT:    smlal2 v1.2d, v2.4s, v3.4s
+; CHECK-DOT-NEXT:    movi v4.16b, #128
+; CHECK-DOT-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-DOT-NEXT:    movi v6.2d, #0000000000000000
+; CHECK-DOT-NEXT:    eor v2.16b, v2.16b, v4.16b
+; CHECK-DOT-NEXT:    udot v6.4s, v4.16b, v3.16b
+; CHECK-DOT-NEXT:    udot v5.4s, v2.16b, v3.16b
+; CHECK-DOT-NEXT:    sub v2.4s, v5.4s, v6.4s
+; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v2.2s
+; CHECK-DOT-NEXT:    saddw2 v0.2d, v0.2d, v2.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: sudot_8to64:
@@ -739,7 +783,7 @@ entry:
   %a.wide = sext <16 x i8> %a to <16 x i64>
   %b.wide = zext <16 x i8> %b to <16 x i64>
   %mult = mul nuw nsw <16 x i64> %a.wide, %b.wide
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add.v4i64.v16i64(
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add.v4i64.v16i64(
   <4 x i64> %acc, <16 x i64> %mult)
   ret <4 x i64> %partial.reduce
 }
@@ -767,7 +811,7 @@ define <4 x i32> @udot_no_bin_op(<4 x i32> %acc, <16 x i8> %a){
 ; CHECK-DOT-I8MM-NEXT:    udot v0.4s, v1.16b, v2.16b
 ; CHECK-DOT-I8MM-NEXT:    ret
   %a.wide = zext <16 x i8> %a to <16 x i32>
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %a.wide)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %a.wide)
   ret <4 x i32> %partial.reduce
 }
 
@@ -776,7 +820,7 @@ define <4 x i32> @udot_no_bin_op_in_loop(ptr %p){
 ; CHECK-NODOT:       // %bb.0: // %entry
 ; CHECK-NODOT-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NODOT-NEXT:    mov x8, xzr
-; CHECK-NODOT-NEXT:  .LBB16_1: // %vector.body
+; CHECK-NODOT-NEXT:  .LBB17_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
 ; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
@@ -788,7 +832,7 @@ define <4 x i32> @udot_no_bin_op_in_loop(ptr %p){
 ; CHECK-NODOT-NEXT:    uaddw2 v1.4s, v1.4s, v3.8h
 ; CHECK-NODOT-NEXT:    uaddw v1.4s, v1.4s, v2.4h
 ; CHECK-NODOT-NEXT:    uaddw2 v1.4s, v1.4s, v2.8h
-; CHECK-NODOT-NEXT:    b.ne .LBB16_1
+; CHECK-NODOT-NEXT:    b.ne .LBB17_1
 ; CHECK-NODOT-NEXT:  // %bb.2: // %end
 ; CHECK-NODOT-NEXT:    ret
 ;
@@ -797,14 +841,14 @@ define <4 x i32> @udot_no_bin_op_in_loop(ptr %p){
 ; CHECK-DOT-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-DOT-NEXT:    movi v2.16b, #1
 ; CHECK-DOT-NEXT:    mov x8, xzr
-; CHECK-DOT-NEXT:  .LBB16_1: // %vector.body
+; CHECK-DOT-NEXT:  .LBB17_1: // %vector.body
 ; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-DOT-NEXT:    ldr q3, [x0, x8]
 ; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
 ; CHECK-DOT-NEXT:    add x8, x8, #16
 ; CHECK-DOT-NEXT:    cmp x8, #16
 ; CHECK-DOT-NEXT:    udot v1.4s, v3.16b, v2.16b
-; CHECK-DOT-NEXT:    b.ne .LBB16_1
+; CHECK-DOT-NEXT:    b.ne .LBB17_1
 ; CHECK-DOT-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-NEXT:    ret
 ;
@@ -813,14 +857,14 @@ define <4 x i32> @udot_no_bin_op_in_loop(ptr %p){
 ; CHECK-DOT-I8MM-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    movi v2.16b, #1
 ; CHECK-DOT-I8MM-NEXT:    mov x8, xzr
-; CHECK-DOT-I8MM-NEXT:  .LBB16_1: // %vector.body
+; CHECK-DOT-I8MM-NEXT:  .LBB17_1: // %vector.body
 ; CHECK-DOT-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-DOT-I8MM-NEXT:    ldr q3, [x0, x8]
 ; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
 ; CHECK-DOT-I8MM-NEXT:    add x8, x8, #16
 ; CHECK-DOT-I8MM-NEXT:    cmp x8, #16
 ; CHECK-DOT-I8MM-NEXT:    udot v1.4s, v3.16b, v2.16b
-; CHECK-DOT-I8MM-NEXT:    b.ne .LBB16_1
+; CHECK-DOT-I8MM-NEXT:    b.ne .LBB17_1
 ; CHECK-DOT-I8MM-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-I8MM-NEXT:    ret
 entry:
@@ -832,7 +876,7 @@ vector.body:
   %gep = getelementptr i8, ptr %p, i64 %index
   %load = load <16 x i8>, ptr %gep, align 16
   %load.wide = zext <16 x i8> %load to <16 x i32>
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %load.wide)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %load.wide)
   %index.next = add nuw i64 %index, 16
   %cmp = icmp eq i64 %index.next, 16
   br i1 %cmp, label %end, label %vector.body
@@ -864,7 +908,7 @@ define <4 x i32> @sdot_no_bin_op(<4 x i32> %acc, <16 x i8> %a){
 ; CHECK-DOT-I8MM-NEXT:    sdot v0.4s, v1.16b, v2.16b
 ; CHECK-DOT-I8MM-NEXT:    ret
   %a.wide = sext <16 x i8> %a to <16 x i32>
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %a.wide)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %a.wide)
   ret <4 x i32> %partial.reduce
 }
 
@@ -876,10 +920,10 @@ define <2 x i32> @udot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 ; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
 ; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret
@@ -896,7 +940,7 @@ define <2 x i32> @udot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 ; CHECK-DOT-I8MM-NEXT:    udot v0.2s, v1.8b, v2.8b
 ; CHECK-DOT-I8MM-NEXT:    ret
   %a.wide = zext <8 x i8> %a to <8 x i32>
-  %partial.reduce = tail call <2 x i32> @llvm.experimental.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> %acc, <8 x i32> %a.wide)
+  %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> %acc, <8 x i32> %a.wide)
   ret <2 x i32> %partial.reduce
 }
 
@@ -908,10 +952,10 @@ define <2 x i32> @sdot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 ; CHECK-NODOT-NEXT:    sshll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    sshll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
 ; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret
@@ -928,7 +972,7 @@ define <2 x i32> @sdot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 ; CHECK-DOT-I8MM-NEXT:    sdot v0.2s, v1.8b, v2.8b
 ; CHECK-DOT-I8MM-NEXT:    ret
   %a.wide = sext <8 x i8> %a to <8 x i32>
-  %partial.reduce = tail call <2 x i32> @llvm.experimental.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> %acc, <8 x i32> %a.wide)
+  %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> %acc, <8 x i32> %a.wide)
   ret <2 x i32> %partial.reduce
 }
 
@@ -969,7 +1013,7 @@ define <4 x i64> @udot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 ; CHECK-DOT-I8MM-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
 ; CHECK-DOT-I8MM-NEXT:    ret
   %a.wide = zext <16 x i8> %a to <16 x i64>
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add.v4i64.v16i64(<4 x i64> %acc, <16 x i64> %a.wide)
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add.v4i64.v16i64(<4 x i64> %acc, <16 x i64> %a.wide)
   ret <4 x i64> %partial.reduce
 }
 
@@ -1010,7 +1054,7 @@ define <4 x i64> @sdot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 ; CHECK-DOT-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
 ; CHECK-DOT-I8MM-NEXT:    ret
   %a.wide = sext <16 x i8> %a to <16 x i64>
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add.v4i64.v16i64(<4 x i64> %acc, <16 x i64> %a.wide)
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add.v4i64.v16i64(<4 x i64> %acc, <16 x i64> %a.wide)
   ret <4 x i64> %partial.reduce
 }
 
@@ -1024,7 +1068,7 @@ define <4 x i32> @not_udot(<4 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
   %u.wide = zext <8 x i8> %u to <8 x i32>
   %s.wide = zext <8 x i8> %s to <8 x i32>
   %mult = mul nuw nsw <8 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <8 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <8 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
 
@@ -1036,13 +1080,13 @@ define <2 x i32> @not_udot_narrow(<2 x i32> %acc, <4 x i8> %u, <4 x i8> %s) {
 ; CHECK-COMMON-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-COMMON-NEXT:    umull v3.4s, v2.4h, v1.4h
 ; CHECK-COMMON-NEXT:    umlal v0.4s, v2.4h, v1.4h
-; CHECK-COMMON-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
+; CHECK-COMMON-NEXT:    mov d1, v3.d[1]
 ; CHECK-COMMON-NEXT:    add v0.2s, v1.2s, v0.2s
 ; CHECK-COMMON-NEXT:    ret
   %u.wide = zext <4 x i8> %u to <4 x i32>
   %s.wide = zext <4 x i8> %s to <4 x i32>
   %mult = mul nuw nsw <4 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <4 x i32> %mult)
+  %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<2 x i32> %acc, <4 x i32> %mult)
   ret <2 x i32> %partial.reduce
 }
 
@@ -1063,7 +1107,7 @@ entry:
   %a.wide = zext <8 x i16> %a to <8 x i64>
   %b.wide = zext <8 x i8> %b to <8 x i64>
   %mult = mul nuw nsw <8 x i64> %a.wide, %b.wide
-  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
+  %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
   ret <2 x i64> %partial.reduce
 }
 
@@ -1084,7 +1128,7 @@ entry:
   %a.wide = sext <8 x i16> %a to <8 x i64>
   %b.wide = sext <8 x i8> %b to <8 x i64>
   %mult = mul nuw nsw <8 x i64> %a.wide, %b.wide
-  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
+  %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
   ret <2 x i64> %partial.reduce
 }
 
@@ -1105,7 +1149,7 @@ entry:
   %a.wide = zext <8 x i16> %a to <8 x i64>
   %b.wide = sext <8 x i8> %b to <8 x i64>
   %mult = mul nuw nsw <8 x i64> %a.wide, %b.wide
-  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
+  %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
   ret <2 x i64> %partial.reduce
 }
 
@@ -1126,7 +1170,7 @@ entry:
   %a.wide = sext <8 x i16> %a to <8 x i64>
   %b.wide = zext <8 x i8> %b to <8 x i64>
   %mult = mul nuw nsw <8 x i64> %a.wide, %b.wide
-  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
+  %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
   ret <2 x i64> %partial.reduce
 }
 
@@ -1136,7 +1180,7 @@ define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-NODOT-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NODOT-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NODOT-NEXT:    mov x8, xzr
-; CHECK-NODOT-NEXT:  .LBB28_1: // %vector.body
+; CHECK-NODOT-NEXT:  .LBB29_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
 ; CHECK-NODOT-NEXT:    ldr q3, [x1, x8]
@@ -1157,7 +1201,7 @@ define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-NODOT-NEXT:    smlal v1.4s, v3.4h, v4.4h
 ; CHECK-NODOT-NEXT:    smlal2 v0.4s, v2.8h, v4.8h
 ; CHECK-NODOT-NEXT:    smlal2 v1.4s, v3.8h, v4.8h
-; CHECK-NODOT-NEXT:    b.ne .LBB28_1
+; CHECK-NODOT-NEXT:    b.ne .LBB29_1
 ; CHECK-NODOT-NEXT:  // %bb.2: // %end
 ; CHECK-NODOT-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NODOT-NEXT:    ret
@@ -1165,32 +1209,27 @@ define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-DOT-LABEL: usdot_multiple_zext_users:
 ; CHECK-DOT:       // %bb.0: // %entry
 ; CHECK-DOT-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-DOT-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-DOT-NEXT:    movi v1.16b, #128
 ; CHECK-DOT-NEXT:    mov x8, xzr
-; CHECK-DOT-NEXT:  .LBB28_1: // %vector.body
+; CHECK-DOT-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-DOT-NEXT:  .LBB29_1: // %vector.body
 ; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-NEXT:    ldr q3, [x1, x8]
-; CHECK-DOT-NEXT:    ldr q4, [x2, x8]
+; CHECK-DOT-NEXT:    ldr q3, [x0, x8]
+; CHECK-DOT-NEXT:    ldr q4, [x1, x8]
+; CHECK-DOT-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-DOT-NEXT:    ldr q6, [x2, x8]
 ; CHECK-DOT-NEXT:    add x8, x8, #16
-; CHECK-DOT-NEXT:    sshll v5.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    ushll v6.8h, v4.8b, #0
-; CHECK-DOT-NEXT:    sshll v7.8h, v3.8b, #0
-; CHECK-DOT-NEXT:    sshll2 v2.8h, v2.16b, #0
-; CHECK-DOT-NEXT:    ushll2 v4.8h, v4.16b, #0
-; CHECK-DOT-NEXT:    sshll2 v3.8h, v3.16b, #0
+; CHECK-DOT-NEXT:    eor v3.16b, v3.16b, v1.16b
+; CHECK-DOT-NEXT:    eor v4.16b, v4.16b, v1.16b
 ; CHECK-DOT-NEXT:    cmp x8, #1024
-; CHECK-DOT-NEXT:    smlal v0.4s, v5.4h, v6.4h
-; CHECK-DOT-NEXT:    smlal v1.4s, v7.4h, v6.4h
-; CHECK-DOT-NEXT:    smlal2 v0.4s, v5.8h, v6.8h
-; CHECK-DOT-NEXT:    smlal2 v1.4s, v7.8h, v6.8h
-; CHECK-DOT-NEXT:    smlal v0.4s, v2.4h, v4.4h
-; CHECK-DOT-NEXT:    smlal v1.4s, v3.4h, v4.4h
-; CHECK-DOT-NEXT:    smlal2 v0.4s, v2.8h, v4.8h
-; CHECK-DOT-NEXT:    smlal2 v1.4s, v3.8h, v4.8h
-; CHECK-DOT-NEXT:    b.ne .LBB28_1
+; CHECK-DOT-NEXT:    udot v5.4s, v1.16b, v6.16b
+; CHECK-DOT-NEXT:    udot v0.4s, v3.16b, v6.16b
+; CHECK-DOT-NEXT:    udot v2.4s, v4.16b, v6.16b
+; CHECK-DOT-NEXT:    sub v0.4s, v0.4s, v5.4s
+; CHECK-DOT-NEXT:    sub v2.4s, v2.4s, v5.4s
+; CHECK-DOT-NEXT:    b.ne .LBB29_1
 ; CHECK-DOT-NEXT:  // %bb.2: // %end
-; CHECK-DOT-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-DOT-NEXT:    add v0.4s, v2.4s, v0.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: usdot_multiple_zext_users:
@@ -1198,7 +1237,7 @@ define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-DOT-I8MM-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    mov x8, xzr
-; CHECK-DOT-I8MM-NEXT:  .LBB28_1: // %vector.body
+; CHECK-DOT-I8MM-NEXT:  .LBB29_1: // %vector.body
 ; CHECK-DOT-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0, x8]
 ; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1, x8]
@@ -1207,7 +1246,7 @@ define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-DOT-I8MM-NEXT:    usdot v0.4s, v4.16b, v2.16b
 ; CHECK-DOT-I8MM-NEXT:    usdot v1.4s, v4.16b, v3.16b
 ; CHECK-DOT-I8MM-NEXT:    cmp x8, #1024
-; CHECK-DOT-I8MM-NEXT:    b.ne .LBB28_1
+; CHECK-DOT-I8MM-NEXT:    b.ne .LBB29_1
 ; CHECK-DOT-I8MM-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-I8MM-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-DOT-I8MM-NEXT:    ret
@@ -1227,10 +1266,10 @@ vector.body:
   %sext1 = sext <16 x i8> %load1 to <16 x i32>
   %zext = zext <16 x i8> %load3 to <16 x i32>
   %mul1 = mul <16 x i32> %sext1, %zext
-  %psum1 = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc1, <16 x i32> %mul1)
+  %psum1 = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc1, <16 x i32> %mul1)
   %sext2 = sext <16 x i8> %load2 to <16 x i32>
   %mul2 = mul <16 x i32> %sext2, %zext
-  %psum2 = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc2, <16 x i32> %mul2)
+  %psum2 = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc2, <16 x i32> %mul2)
   %iv.next = add i64 %iv, 16
   %1 = icmp eq i64 %iv.next, 1024
   br i1 %1, label %end, label %vector.body
@@ -1252,6 +1291,362 @@ define <2 x i64> @udot_16to64(<2 x i64> %acc, <8 x i16> %input){
 ; CHECK-COMMON-NEXT:    ret
 entry:
     %input.wide = zext <8 x i16> %input to <8 x i64>
-    %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add(<2 x i64> %acc, <8 x i64> %input.wide)
+    %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> %acc, <8 x i64> %input.wide)
     ret <2 x i64> %partial.reduce
+}
+
+define <4 x i32> @partial_reduce_shl_sext_const_rhs6(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-NODOT-LABEL: partial_reduce_shl_sext_const_rhs6:
+; CHECK-NODOT:       // %bb.0:
+; CHECK-NODOT-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-NODOT-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-NODOT-NEXT:    sshll v3.4s, v0.4h, #6
+; CHECK-NODOT-NEXT:    sshll2 v4.4s, v2.8h, #6
+; CHECK-NODOT-NEXT:    sshll v2.4s, v2.4h, #6
+; CHECK-NODOT-NEXT:    sshll2 v0.4s, v0.8h, #6
+; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NODOT-NEXT:    add v2.4s, v4.4s, v3.4s
+; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NODOT-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: partial_reduce_shl_sext_const_rhs6:
+; CHECK-DOT:       // %bb.0:
+; CHECK-DOT-NEXT:    movi v2.16b, #64
+; CHECK-DOT-NEXT:    sdot v1.4s, v0.16b, v2.16b
+; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: partial_reduce_shl_sext_const_rhs6:
+; CHECK-DOT-I8MM:       // %bb.0:
+; CHECK-DOT-I8MM-NEXT:    movi v2.16b, #64
+; CHECK-DOT-I8MM-NEXT:    sdot v1.4s, v0.16b, v2.16b
+; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-I8MM-NEXT:    ret
+  %ext = sext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 6)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_sext_const_rhs7(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_sext_const_rhs7:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-COMMON-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-COMMON-NEXT:    sshll v3.4s, v0.4h, #7
+; CHECK-COMMON-NEXT:    sshll2 v4.4s, v2.8h, #7
+; CHECK-COMMON-NEXT:    sshll v2.4s, v2.4h, #7
+; CHECK-COMMON-NEXT:    sshll2 v0.4s, v0.8h, #7
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v2.4s, v4.4s, v3.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-COMMON-NEXT:    ret
+  %ext = sext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 7)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_sext_const_rhs8(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_sext_const_rhs8:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-COMMON-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-COMMON-NEXT:    sshll v3.4s, v0.4h, #8
+; CHECK-COMMON-NEXT:    sshll2 v4.4s, v2.8h, #8
+; CHECK-COMMON-NEXT:    sshll v2.4s, v2.4h, #8
+; CHECK-COMMON-NEXT:    sshll2 v0.4s, v0.8h, #8
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v2.4s, v4.4s, v3.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-COMMON-NEXT:    ret
+  %ext = sext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 8)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_sext_const_rhs_9(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_sext_const_rhs_9:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    ret
+  %ext = sext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 32)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_sext_non_const_rhs(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_sext_non_const_rhs:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-COMMON-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-COMMON-NEXT:    sshll v3.4s, v2.4h, #0
+; CHECK-COMMON-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-COMMON-NEXT:    sshll v4.4s, v0.4h, #0
+; CHECK-COMMON-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-COMMON-NEXT:    ushl v4.4s, v4.4s, v4.4s
+; CHECK-COMMON-NEXT:    ushl v2.4s, v2.4s, v2.4s
+; CHECK-COMMON-NEXT:    ushl v3.4s, v3.4s, v3.4s
+; CHECK-COMMON-NEXT:    ushl v0.4s, v0.4s, v0.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-COMMON-NEXT:    add v2.4s, v2.4s, v4.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-COMMON-NEXT:    ret
+  %ext = sext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, %ext
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_zext_const_rhs6(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-NODOT-LABEL: partial_reduce_shl_zext_const_rhs6:
+; CHECK-NODOT:       // %bb.0:
+; CHECK-NODOT-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-NODOT-NEXT:    ushll2 v0.8h, v0.16b, #0
+; CHECK-NODOT-NEXT:    ushll v3.4s, v0.4h, #6
+; CHECK-NODOT-NEXT:    ushll2 v4.4s, v2.8h, #6
+; CHECK-NODOT-NEXT:    ushll v2.4s, v2.4h, #6
+; CHECK-NODOT-NEXT:    ushll2 v0.4s, v0.8h, #6
+; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NODOT-NEXT:    add v2.4s, v4.4s, v3.4s
+; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NODOT-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: partial_reduce_shl_zext_const_rhs6:
+; CHECK-DOT:       // %bb.0:
+; CHECK-DOT-NEXT:    movi v2.16b, #64
+; CHECK-DOT-NEXT:    udot v1.4s, v0.16b, v2.16b
+; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: partial_reduce_shl_zext_const_rhs6:
+; CHECK-DOT-I8MM:       // %bb.0:
+; CHECK-DOT-I8MM-NEXT:    movi v2.16b, #64
+; CHECK-DOT-I8MM-NEXT:    udot v1.4s, v0.16b, v2.16b
+; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-I8MM-NEXT:    ret
+  %ext = zext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 6)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_zext_const_rhs8(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_zext_const_rhs8:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-COMMON-NEXT:    ushll2 v0.8h, v0.16b, #0
+; CHECK-COMMON-NEXT:    ushll v3.4s, v0.4h, #8
+; CHECK-COMMON-NEXT:    ushll2 v4.4s, v2.8h, #8
+; CHECK-COMMON-NEXT:    ushll v2.4s, v2.4h, #8
+; CHECK-COMMON-NEXT:    ushll2 v0.4s, v0.8h, #8
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v2.4s, v4.4s, v3.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-COMMON-NEXT:    ret
+  %ext = zext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 8)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_zext_const_rhs_9(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_zext_const_rhs_9:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    ret
+  %ext = zext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 32)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_zext_non_const_rhs(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_zext_non_const_rhs:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-COMMON-NEXT:    ushll2 v0.8h, v0.16b, #0
+; CHECK-COMMON-NEXT:    ushll v3.4s, v2.4h, #0
+; CHECK-COMMON-NEXT:    ushll2 v2.4s, v2.8h, #0
+; CHECK-COMMON-NEXT:    ushll v4.4s, v0.4h, #0
+; CHECK-COMMON-NEXT:    ushll2 v0.4s, v0.8h, #0
+; CHECK-COMMON-NEXT:    ushl v4.4s, v4.4s, v4.4s
+; CHECK-COMMON-NEXT:    ushl v2.4s, v2.4s, v2.4s
+; CHECK-COMMON-NEXT:    ushl v3.4s, v3.4s, v3.4s
+; CHECK-COMMON-NEXT:    ushl v0.4s, v0.4s, v0.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-COMMON-NEXT:    add v2.4s, v2.4s, v4.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-COMMON-NEXT:    ret
+  %ext = zext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, %ext
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) {
+; CHECK-NODOT-LABEL: udot_v16i8tov2i32:
+; CHECK-NODOT:       // %bb.0: // %entry
+; CHECK-NODOT-NEXT:    ushll v2.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NODOT-NEXT:    ushll2 v1.8h, v1.16b, #0
+; CHECK-NODOT-NEXT:    ushll v3.4s, v2.4h, #0
+; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v2.4h
+; CHECK-NODOT-NEXT:    ushll2 v4.4s, v2.8h, #0
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
+; CHECK-NODOT-NEXT:    mov d3, v3.d[1]
+; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NODOT-NEXT:    mov d3, v4.d[1]
+; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v2.4h
+; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
+; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
+; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
+; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
+; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: udot_v16i8tov2i32:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    movi v2.16b, #1
+; CHECK-DOT-NEXT:    fmov d0, d0
+; CHECK-DOT-NEXT:    udot v0.4s, v1.16b, v2.16b
+; CHECK-DOT-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-DOT-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: udot_v16i8tov2i32:
+; CHECK-DOT-I8MM:       // %bb.0: // %entry
+; CHECK-DOT-I8MM-NEXT:    movi v2.16b, #1
+; CHECK-DOT-I8MM-NEXT:    fmov d0, d0
+; CHECK-DOT-I8MM-NEXT:    udot v0.4s, v1.16b, v2.16b
+; CHECK-DOT-I8MM-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-DOT-I8MM-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-DOT-I8MM-NEXT:    ret
+entry:
+    %input.wide = zext <16 x i8> %input to <16 x i32>
+    %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add(<2 x i32> %acc, <16 x i32> %input.wide)
+    ret <2 x i32> %partial.reduce
+}
+
+define <2 x i64> @usdot_v16i8tov2i64(<2 x i64> %acc, <16 x i8> %u, <16 x i8> %s) {
+; CHECK-NODOT-LABEL: usdot_v16i8tov2i64:
+; CHECK-NODOT:       // %bb.0: // %entry
+; CHECK-NODOT-NEXT:    ushll v3.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    sshll v4.8h, v2.8b, #0
+; CHECK-NODOT-NEXT:    ushll2 v1.8h, v1.16b, #0
+; CHECK-NODOT-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NODOT-NEXT:    ushll v5.4s, v3.4h, #0
+; CHECK-NODOT-NEXT:    sshll v6.4s, v4.4h, #0
+; CHECK-NODOT-NEXT:    ushll2 v3.4s, v3.8h, #0
+; CHECK-NODOT-NEXT:    sshll2 v4.4s, v4.8h, #0
+; CHECK-NODOT-NEXT:    smlal v0.2d, v6.2s, v5.2s
+; CHECK-NODOT-NEXT:    smlal2 v0.2d, v6.4s, v5.4s
+; CHECK-NODOT-NEXT:    smlal v0.2d, v4.2s, v3.2s
+; CHECK-NODOT-NEXT:    smlal2 v0.2d, v4.4s, v3.4s
+; CHECK-NODOT-NEXT:    ushll v3.4s, v1.4h, #0
+; CHECK-NODOT-NEXT:    sshll v4.4s, v2.4h, #0
+; CHECK-NODOT-NEXT:    ushll2 v1.4s, v1.8h, #0
+; CHECK-NODOT-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-NODOT-NEXT:    smlal v0.2d, v4.2s, v3.2s
+; CHECK-NODOT-NEXT:    smlal2 v0.2d, v4.4s, v3.4s
+; CHECK-NODOT-NEXT:    smlal v0.2d, v2.2s, v1.2s
+; CHECK-NODOT-NEXT:    smlal2 v0.2d, v2.4s, v1.4s
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: usdot_v16i8tov2i64:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    movi v3.16b, #128
+; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-DOT-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-DOT-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-DOT-NEXT:    udot v5.4s, v3.16b, v1.16b
+; CHECK-DOT-NEXT:    udot v4.4s, v2.16b, v1.16b
+; CHECK-DOT-NEXT:    sub v1.4s, v4.4s, v5.4s
+; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v1.2s
+; CHECK-DOT-NEXT:    saddw2 v0.2d, v0.2d, v1.4s
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: usdot_v16i8tov2i64:
+; CHECK-DOT-I8MM:       // %bb.0: // %entry
+; CHECK-DOT-I8MM-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-DOT-I8MM-NEXT:    usdot v3.4s, v1.16b, v2.16b
+; CHECK-DOT-I8MM-NEXT:    saddw v0.2d, v0.2d, v3.2s
+; CHECK-DOT-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v3.4s
+; CHECK-DOT-I8MM-NEXT:    ret
+entry:
+  %u.wide = zext <16 x i8> %u to <16 x i64>
+  %s.wide = sext <16 x i8> %s to <16 x i64>
+  %mult = mul nuw nsw <16 x i64> %s.wide, %u.wide
+  %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v16i64(<2 x i64> %acc, <16 x i64> %mult)
+  ret <2 x i64> %partial.reduce
+}
+
+define <2 x i32> @usdot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
+; CHECK-NODOT-LABEL: usdot_v16i8tov2i32:
+; CHECK-NODOT:       // %bb.0: // %entry
+; CHECK-NODOT-NEXT:    ushll v3.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    sshll v4.8h, v2.8b, #0
+; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NODOT-NEXT:    ushll2 v1.8h, v1.16b, #0
+; CHECK-NODOT-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NODOT-NEXT:    smull v5.4s, v4.4h, v3.4h
+; CHECK-NODOT-NEXT:    smlal v0.4s, v4.4h, v3.4h
+; CHECK-NODOT-NEXT:    mov d6, v3.d[1]
+; CHECK-NODOT-NEXT:    mov d7, v4.d[1]
+; CHECK-NODOT-NEXT:    smull2 v3.4s, v4.8h, v3.8h
+; CHECK-NODOT-NEXT:    smull v4.4s, v2.4h, v1.4h
+; CHECK-NODOT-NEXT:    mov d5, v5.d[1]
+; CHECK-NODOT-NEXT:    mov d3, v3.d[1]
+; CHECK-NODOT-NEXT:    add v0.2s, v5.2s, v0.2s
+; CHECK-NODOT-NEXT:    mov d5, v2.d[1]
+; CHECK-NODOT-NEXT:    smlal v0.4s, v7.4h, v6.4h
+; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NODOT-NEXT:    mov d3, v4.d[1]
+; CHECK-NODOT-NEXT:    mov d4, v1.d[1]
+; CHECK-NODOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
+; CHECK-NODOT-NEXT:    smull2 v1.4s, v2.8h, v1.8h
+; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    smlal v0.4s, v5.4h, v4.4h
+; CHECK-NODOT-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: usdot_v16i8tov2i32:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    movi v3.16b, #128
+; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-DOT-NEXT:    fmov d0, d0
+; CHECK-DOT-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-DOT-NEXT:    udot v4.4s, v3.16b, v1.16b
+; CHECK-DOT-NEXT:    udot v0.4s, v2.16b, v1.16b
+; CHECK-DOT-NEXT:    sub v0.4s, v0.4s, v4.4s
+; CHECK-DOT-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-DOT-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: usdot_v16i8tov2i32:
+; CHECK-DOT-I8MM:       // %bb.0: // %entry
+; CHECK-DOT-I8MM-NEXT:    fmov d0, d0
+; CHECK-DOT-I8MM-NEXT:    usdot v0.4s, v1.16b, v2.16b
+; CHECK-DOT-I8MM-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-DOT-I8MM-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-DOT-I8MM-NEXT:    ret
+entry:
+  %u.wide = zext <16 x i8> %u to <16 x i32>
+  %s.wide = sext <16 x i8> %s to <16 x i32>
+  %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
+  %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v16i32(<2 x i32> %acc, <16 x i32> %mult)
+  ret <2 x i32> %partial.reduce
 }

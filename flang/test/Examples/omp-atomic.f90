@@ -1,6 +1,7 @@
-! REQUIRES: plugins, examples, shell
+! REQUIRES: plugins, examples
+! XFAIL: system-aix
 
-! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport.so -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport%pluginext -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
 
 ! Check OpenMP 2.13.6 atomic Construct
 
@@ -25,35 +26,35 @@ end
 
 ! CHECK:---
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
-! CHECK-NEXT:  line:            9
+! CHECK-NEXT:  line:            [[@LINE-19]]
 ! CHECK-NEXT:  construct:       atomic
 ! CHECK-NEXT:  clauses:
 ! CHECK-NEXT:    - clause:      read
 ! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:    - clause:      seq_cst
-! CHECK-NEXT:      details:     'name_modifier=atomic;'
+! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
-! CHECK-NEXT:  line:            12
+! CHECK-NEXT:  line:            [[@LINE-24]]
 ! CHECK-NEXT:  construct:       atomic
 ! CHECK-NEXT:  clauses:
 ! CHECK-NEXT:    - clause:      seq_cst
-! CHECK-NEXT:      details:     'name_modifier=atomic;'
+! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:    - clause:      write
 ! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
-! CHECK-NEXT:  line:            16
+! CHECK-NEXT:  line:            [[@LINE-28]]
 ! CHECK-NEXT:  construct:       atomic
 ! CHECK-NEXT:  clauses:
 ! CHECK-NEXT:    - clause:      capture
-! CHECK-NEXT:      details:     'name_modifier=atomic;name_modifier=atomic;'
+! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:    - clause:      seq_cst
 ! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
-! CHECK-NEXT:  line:            21
+! CHECK-NEXT:  line:            [[@LINE-31]]
 ! CHECK-NEXT:  construct:       atomic
 ! CHECK-NEXT:  clauses:         []
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
-! CHECK-NEXT:  line:            8
+! CHECK-NEXT:  line:            [[@LINE-48]]
 ! CHECK-NEXT:  construct:       parallel
 ! CHECK-NEXT:  clauses:
 ! CHECK-NEXT:    - clause:      num_threads

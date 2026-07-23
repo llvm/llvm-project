@@ -56,8 +56,7 @@ if (LLVM_ENABLE_DOXYGEN)
     set(llvm_doxygen_qhp_cust_filter_attrs "")
   endif()
 
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg @ONLY)
+  llvm_configure_doxygen()
 
   set(abs_top_srcdir)
   set(abs_top_builddir)
@@ -136,17 +135,23 @@ if( NOT uses_ocaml LESS 0 AND LLVM_ENABLE_OCAMLDOC )
     list(APPEND odoc_files -load ${odoc_file})
   endforeach()
 
-  add_custom_target(ocaml_doc
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html
-    COMMAND ${OCAMLFIND} ocamldoc -d ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html
-                                  -sort -colorize-code -html ${odoc_files}
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/_ocamldoc/style.css
-                                     ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html)
+  set(OCAML_DOC_ADD_TO_ALL "")
+  if(LLVM_BUILD_DOCS)
+    set(OCAML_DOC_ADD_TO_ALL ALL)
+  endif()
+
+  add_custom_target(ocaml_doc ${OCAML_DOC_ADD_TO_ALL}
+      COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html
+      COMMAND ${OCAMLFIND} ocamldoc -d ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html
+                                    -sort -colorize-code -html ${odoc_files}
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/_ocamldoc/style.css
+                                       ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html)
 
   add_dependencies(ocaml_doc ${doc_targets})
 
-  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+
+  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND LLVM_BUILD_DOCS)
     # ./ suffix is needed to copy the contents of html directory without
     # appending html/ into LLVM_INSTALL_OCAMLDOC_HTML_DIR.
     install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html/.

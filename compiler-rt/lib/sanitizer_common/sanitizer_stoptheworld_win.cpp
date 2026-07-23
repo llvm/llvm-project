@@ -38,7 +38,7 @@ struct SuspendedThreadsListWindows final : public SuspendedThreadsList {
                                           InternalMmapVector<uptr> *buffer,
                                           uptr *sp) const override;
 
-  tid_t GetThreadID(uptr index) const override;
+  ThreadID GetThreadID(uptr index) const override;
   uptr ThreadCount() const override;
 };
 
@@ -68,7 +68,7 @@ PtraceRegistersStatus SuspendedThreadsListWindows::GetRegistersAndSP(
   return REGISTERS_AVAILABLE;
 }
 
-tid_t SuspendedThreadsListWindows::GetThreadID(uptr index) const {
+ThreadID SuspendedThreadsListWindows::GetThreadID(uptr index) const {
   CHECK_LT(index, threadIds.size());
   return threadIds[index];
 }

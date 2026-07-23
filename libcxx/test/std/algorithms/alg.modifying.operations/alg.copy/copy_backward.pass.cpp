@@ -13,10 +13,9 @@
 //   constexpr OutIter   // constexpr after C++17
 //   copy_backward(InIter first, InIter last, OutIter result);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <vector>
 
 #include "sized_allocator.h"
@@ -116,7 +115,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
   // Validate std::copy_backward with std::vector<bool> iterators and custom storage types.
   // Ensure that assigned bits hold the intended values, while unassigned bits stay unchanged.
-  // Related issue: https://github.com/llvm/llvm-project/issues/131718.
+  // Related issue: https://llvm.org/PR131718.
   {
     //// Tests for std::copy_backward with aligned bits
 

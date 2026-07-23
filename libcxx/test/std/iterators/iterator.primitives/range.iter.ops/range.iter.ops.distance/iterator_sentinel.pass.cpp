@@ -13,20 +13,24 @@
 //     constexpr iter_difference_t<I> ranges::distance(I first, S last);
 //
 // template<class I, sized_sentinel_for<decay_t<I>> S>
-//   constexpr iter_difference_t<I> ranges::distance(I&& first, S last); // TODO: update when LWG3664 is resolved
+//   constexpr iter_difference_t<decay_t<I>> ranges::distance(I&& first, S last);
 
-#include <iterator>
+#include <array>
 #include <cassert>
+#include <deque>
+#include <iterator>
+#include <ranges>
+#include <vector>
 
 #include "test_iterators.h"
 #include "test_macros.h"
 
-template<class It, class Sent>
+template <class It, class Sent>
 constexpr void test_unsized() {
   static_assert(std::sentinel_for<Sent, It> && !std::sized_sentinel_for<Sent, It>);
-  int a[3] = {1,2,3};
+  int a[3] = {1, 2, 3};
   {
-    It first = It(a);
+    It first  = It(a);
     auto last = Sent(It(a));
     assert(std::ranges::distance(first, last) == 0);
     assert(std::ranges::distance(It(a), last) == 0);
@@ -36,7 +40,7 @@ constexpr void test_unsized() {
   }
   {
     auto check = [&a]<class ItQual, class SentQual> {
-      It first = It(a);
+      It first  = It(a);
       Sent last = Sent(It(a + 3));
       assert(std::ranges::distance(static_cast<ItQual>(first), static_cast<SentQual>(last)) == 3);
     };
@@ -61,13 +65,13 @@ constexpr void test_unsized() {
   }
 }
 
-template<class It, class Sent>
+template <class It, class Sent>
 constexpr void test_sized() {
   static_assert(std::sized_sentinel_for<Sent, It>);
-  int a[] = {1,2,3};
+  int a[] = {1, 2, 3};
   {
     auto check = [&a]<class ItQual, class SentQual> {
-      It first = It(a + 3);
+      It first  = It(a + 3);
       Sent last = Sent(It(a));
       assert(std::ranges::distance(static_cast<ItQual>(first), static_cast<SentQual>(last)) == -3);
     };
@@ -91,7 +95,7 @@ constexpr void test_sized() {
     check.template operator()<const It&&, const Sent&&>();
   }
   {
-    It first = It(a);
+    It first  = It(a);
     auto last = Sent(It(a));
     assert(std::ranges::distance(first, last) == 0);
     assert(std::ranges::distance(It(a), last) == 0);
@@ -100,7 +104,7 @@ constexpr void test_sized() {
     ASSERT_SAME_TYPE(decltype(std::ranges::distance(It(a), Sent(It(a)))), std::iter_difference_t<It>);
   }
   {
-    It first = It(a);
+    It first  = It(a);
     auto last = Sent(It(a + 3));
     assert(std::ranges::distance(first, last) == 3);
     assert(std::ranges::distance(It(a), last) == 3);
@@ -110,13 +114,17 @@ constexpr void test_sized() {
 }
 
 struct StrideCounter {
-  int *it_;
-  int *inc_;
-  using value_type = int;
+  int* it_;
+  int* inc_;
+  using value_type      = int;
   using difference_type = int;
   explicit StrideCounter();
-  constexpr explicit StrideCounter(int *it, int *inc) : it_(it), inc_(inc) {}
-  constexpr auto& operator++() { ++it_; *inc_ += 1; return *this; }
+  constexpr explicit StrideCounter(int* it, int* inc) : it_(it), inc_(inc) {}
+  constexpr auto& operator++() {
+    ++it_;
+    *inc_ += 1;
+    return *this;
+  }
   StrideCounter operator++(int);
   int& operator*() const;
   bool operator==(StrideCounter) const;
@@ -125,11 +133,11 @@ static_assert(std::forward_iterator<StrideCounter>);
 static_assert(!std::sized_sentinel_for<StrideCounter, StrideCounter>);
 
 struct SizedStrideCounter {
-  int *it_;
-  int *minus_;
+  int* it_;
+  int* minus_;
   using value_type = int;
   explicit SizedStrideCounter();
-  constexpr explicit SizedStrideCounter(int *it, int *minus) : it_(it), minus_(minus) {}
+  constexpr explicit SizedStrideCounter(int* it, int* minus) : it_(it), minus_(minus) {}
   SizedStrideCounter& operator++();
   SizedStrideCounter operator++(int);
   int& operator*() const;
@@ -147,21 +155,49 @@ constexpr void test_stride_counting() {
     int a[] = {1, 2, 3};
     int inc = 0;
     StrideCounter first(a, &inc);
-    StrideCounter last(a+3, nullptr);
+    StrideCounter last(a + 3, nullptr);
     std::same_as<int> auto result = std::ranges::distance(first, last);
     assert(result == 3);
     assert(inc == 3);
   }
   {
-    int a[] = {1, 2, 3};
+    int a[]   = {1, 2, 3};
     int minus = 0;
     SizedStrideCounter first(a, &minus);
-    SizedStrideCounter last(a+3, nullptr);
+    SizedStrideCounter last(a + 3, nullptr);
     std::same_as<int> auto result = std::ranges::distance(first, last);
     assert(result == 3);
     assert(minus == 1);
   }
 }
+
+/*TEST_CONSTEXPR_CXX26*/ void test_deque() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
+  using Container = std::deque<std::deque<double>>;
+  Container c;
+  auto view                    = c | std::views::join;
+  Container::difference_type n = 0;
+  for (std::size_t i = 0; i < 10; ++i) {
+    n += i;
+    c.push_back(Container::value_type(i));
+  }
+  assert(std::ranges::distance(view.begin(), view.end()) == n);
+}
+
+template <class It>
+struct EvilSentinel {
+  It p_;
+  friend constexpr bool operator==(EvilSentinel s, It p) { return s.p_ == p; }
+  friend constexpr auto operator-(EvilSentinel s, It p) { return s.p_ - p; }
+  friend constexpr auto operator-(It p, EvilSentinel s) { return p - s.p_; }
+  friend constexpr void operator-(EvilSentinel s, int (&)[3])        = delete;
+  friend constexpr void operator-(EvilSentinel s, int (&&)[3])       = delete;
+  friend constexpr void operator-(EvilSentinel s, const int (&)[3])  = delete;
+  friend constexpr void operator-(EvilSentinel s, const int (&&)[3]) = delete;
+};
+static_assert(std::sized_sentinel_for<EvilSentinel<int*>, int*>);
+static_assert(!std::sized_sentinel_for<EvilSentinel<int*>, const int*>);
+static_assert(std::sized_sentinel_for<EvilSentinel<const int*>, int*>);
+static_assert(std::sized_sentinel_for<EvilSentinel<const int*>, const int*>);
 
 constexpr bool test() {
   {
@@ -197,7 +233,7 @@ constexpr bool test() {
   test_sized<contiguous_iterator<int*>, contiguous_iterator<int*>>();
 
   {
-    using It = cpp20_input_iterator<int*>;  // non-copyable, thus not a sentinel for itself
+    using It = cpp20_input_iterator<int*>; // non-copyable, thus not a sentinel for itself
     static_assert(!std::is_copy_constructible_v<It>);
     static_assert(!std::sentinel_for<It, It>);
     static_assert(!std::is_invocable_v<decltype(std::ranges::distance), It&, It&>);
@@ -206,10 +242,10 @@ constexpr bool test() {
     static_assert(!std::is_invocable_v<decltype(std::ranges::distance), It&&, It&&>);
   }
   {
-    using It = cpp20_input_iterator<int*>;  // non-copyable
-    using Sent = sentinel_wrapper<It>;  // not a sized sentinel
+    using It   = cpp20_input_iterator<int*>; // non-copyable
+    using Sent = sentinel_wrapper<It>;       // not a sized sentinel
     static_assert(std::sentinel_for<Sent, It> && !std::sized_sentinel_for<Sent, It>);
-    int a[] = {1,2,3};
+    int a[]   = {1, 2, 3};
     Sent last = Sent(It(a + 3));
     static_assert(!std::is_invocable_v<decltype(std::ranges::distance), It&, Sent&>);
     static_assert(!std::is_invocable_v<decltype(std::ranges::distance), It&, Sent&&>);
@@ -217,7 +253,7 @@ constexpr bool test() {
     assert(std::ranges::distance(It(a), Sent(It(a + 3))) == 3);
   }
   {
-    using It = cpp17_input_iterator<int*>;  // not a sentinel for itself
+    using It = cpp17_input_iterator<int*>; // not a sentinel for itself
     static_assert(!std::sentinel_for<It, It>);
     static_assert(!std::is_invocable_v<decltype(std::ranges::distance), It&, It&>);
     static_assert(!std::is_invocable_v<decltype(std::ranges::distance), It&, It&&>);
@@ -230,6 +266,49 @@ constexpr bool test() {
   static_assert(!std::is_invocable_v<decltype(std::ranges::distance), int*, int>);
   static_assert(!std::is_invocable_v<decltype(std::ranges::distance), int, int*>);
   static_assert(!std::is_invocable_v<decltype(std::ranges::distance), int*, char*>);
+
+  {
+    using Container = std::vector<std::vector<int>>;
+    Container c;
+    auto view                    = c | std::views::join;
+    Container::difference_type n = 0;
+    for (std::size_t i = 0; i < 10; ++i) {
+      n += i;
+      c.push_back(Container::value_type(i));
+    }
+    assert(std::ranges::distance(view.begin(), view.end()) == n);
+  }
+  {
+    using Container = std::array<std::array<char, 3>, 10>;
+    Container c;
+    auto view = c | std::views::join;
+    assert(std::ranges::distance(view.begin(), view.end()) == 30);
+  }
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+    test_deque();
+
+  {
+    int a[] = {1, 2, 3};
+    assert(std::ranges::distance(a, a + 3) == 3);
+    assert(std::ranges::distance(a, a) == 0);
+    assert(std::ranges::distance(a + 3, a) == -3);
+  }
+  {
+    int a[] = {1, 2, 3};
+    assert(std::ranges::distance(a, EvilSentinel<int*>{a + 3}) == 3);
+    assert(std::ranges::distance(a, EvilSentinel<int*>{a}) == 0);
+    assert(std::ranges::distance(a + 3, EvilSentinel<int*>{a}) == -3);
+    assert(std::ranges::distance(std::move(a), EvilSentinel<int*>{a + 3}) == 3);
+  }
+  {
+    const int a[] = {1, 2, 3};
+    assert(std::ranges::distance(a, EvilSentinel<const int*>{a + 3}) == 3);
+    assert(std::ranges::distance(a, EvilSentinel<const int*>{a}) == 0);
+    assert(std::ranges::distance(a + 3, EvilSentinel<const int*>{a}) == -3);
+    assert(std::ranges::distance(std::move(a), EvilSentinel<const int*>{a + 3}) == 3);
+    static_assert(!std::is_invocable_v<decltype(std::ranges::distance), const int (&)[3], EvilSentinel<int*>>);
+    static_assert(!std::is_invocable_v<decltype(std::ranges::distance), const int (&&)[3], EvilSentinel<int*>>);
+  }
 
   return true;
 }

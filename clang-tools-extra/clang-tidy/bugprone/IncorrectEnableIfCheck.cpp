@@ -1,4 +1,4 @@
-//===--- IncorrectEnableIfCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@ AST_MATCHER_P(TemplateTypeParmDecl, hasUnnamedDefaultArgument,
       Node.getDefaultArgument().getArgument().isNull())
     return false;
 
-  TypeLoc DefaultArgTypeLoc =
+  const TypeLoc DefaultArgTypeLoc =
       Node.getDefaultArgument().getTypeSourceInfo()->getTypeLoc();
   return InnerMatcher.matches(DefaultArgTypeLoc, Finder, Builder);
 }
@@ -32,13 +32,10 @@ AST_MATCHER_P(TemplateTypeParmDecl, hasUnnamedDefaultArgument,
 void IncorrectEnableIfCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       templateTypeParmDecl(
-          hasUnnamedDefaultArgument(
-              elaboratedTypeLoc(
-                  hasNamedTypeLoc(templateSpecializationTypeLoc(
-                                      loc(qualType(hasDeclaration(namedDecl(
-                                          hasName("::std::enable_if"))))))
-                                      .bind("enable_if_specialization")))
-                  .bind("elaborated")))
+          hasUnnamedDefaultArgument(templateSpecializationTypeLoc(
+                                        loc(qualType(hasDeclaration(namedDecl(
+                                            hasName("::std::enable_if"))))))
+                                        .bind("enable_if_specialization")))
           .bind("enable_if"),
       this);
 }
@@ -46,24 +43,23 @@ void IncorrectEnableIfCheck::registerMatchers(MatchFinder *Finder) {
 void IncorrectEnableIfCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *EnableIf =
       Result.Nodes.getNodeAs<TemplateTypeParmDecl>("enable_if");
-  const auto *ElaboratedLoc =
-      Result.Nodes.getNodeAs<ElaboratedTypeLoc>("elaborated");
   const auto *EnableIfSpecializationLoc =
       Result.Nodes.getNodeAs<TemplateSpecializationTypeLoc>(
           "enable_if_specialization");
 
-  if (!EnableIf || !ElaboratedLoc || !EnableIfSpecializationLoc)
-    return;
+  assert(EnableIf);
+  assert(EnableIfSpecializationLoc);
 
   const SourceManager &SM = *Result.SourceManager;
-  SourceLocation RAngleLoc =
+  const SourceLocation RAngleLoc =
       SM.getExpansionLoc(EnableIfSpecializationLoc->getRAngleLoc());
 
   auto Diag = diag(EnableIf->getBeginLoc(),
                    "incorrect std::enable_if usage detected; use "
                    "'typename std::enable_if<...>::type'");
-  if (!getLangOpts().CPlusPlus20) {
-    Diag << FixItHint::CreateInsertion(ElaboratedLoc->getBeginLoc(),
+  if (!getLangOpts().CPlusPlus20 &&
+      EnableIfSpecializationLoc->getElaboratedKeywordLoc().isInvalid()) {
+    Diag << FixItHint::CreateInsertion(EnableIfSpecializationLoc->getBeginLoc(),
                                        "typename ");
   }
   Diag << FixItHint::CreateInsertion(RAngleLoc.getLocWithOffset(1), "::type");

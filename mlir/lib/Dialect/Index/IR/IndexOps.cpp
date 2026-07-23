@@ -36,7 +36,7 @@ Operation *IndexDialect::materializeConstant(OpBuilder &b, Attribute value,
   if (auto boolValue = dyn_cast<BoolAttr>(value)) {
     if (!type.isSignlessInteger(1))
       return nullptr;
-    return b.create<BoolConstantOp>(loc, type, boolValue);
+    return BoolConstantOp::create(b, loc, type, boolValue);
   }
 
   // Materialize integer attributes as `index`.
@@ -46,7 +46,7 @@ Operation *IndexDialect::materializeConstant(OpBuilder &b, Attribute value,
       return nullptr;
     assert(indexValue.getValue().getBitWidth() ==
            IndexType::kInternalStorageBitWidth);
-    return b.create<ConstantOp>(loc, indexValue);
+    return ConstantOp::create(b, loc, indexValue);
   }
 
   return nullptr;
@@ -121,7 +121,7 @@ static OpFoldResult foldBinaryOpChecked(
 /// `x = op(v, c1); y = op(x, c2)` -> `tmp = op(c1, c2); y = op(v, tmp)`
 /// where c1 and c2 are constants. It is expected that `tmp` will be folded.
 template <typename BinaryOp>
-LogicalResult
+static LogicalResult
 canonicalizeAssociativeCommutativeBinaryOp(BinaryOp op,
                                            PatternRewriter &rewriter) {
   if (!mlir::matchPattern(op.getRhs(), mlir::m_Constant()))
@@ -583,8 +583,8 @@ OpFoldResult CastUOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 /// Compare two integers according to the comparison predicate.
-bool compareIndices(const APInt &lhs, const APInt &rhs,
-                    IndexCmpPredicate pred) {
+static bool compareIndices(const APInt &lhs, const APInt &rhs,
+                           IndexCmpPredicate pred) {
   switch (pred) {
   case IndexCmpPredicate::EQ:
     return lhs.eq(rhs);
@@ -715,11 +715,11 @@ LogicalResult CmpOp::canonicalize(CmpOp op, PatternRewriter &rewriter) {
 
   index::CmpOp newCmp;
   if (rhsIsZero)
-    newCmp = rewriter.create<index::CmpOp>(op.getLoc(), op.getPred(),
-                                           subOp.getLhs(), subOp.getRhs());
+    newCmp = index::CmpOp::create(rewriter, op.getLoc(), op.getPred(),
+                                  subOp.getLhs(), subOp.getRhs());
   else
-    newCmp = rewriter.create<index::CmpOp>(op.getLoc(), op.getPred(),
-                                           subOp.getRhs(), subOp.getLhs());
+    newCmp = index::CmpOp::create(rewriter, op.getLoc(), op.getPred(),
+                                  subOp.getRhs(), subOp.getLhs());
   rewriter.replaceOp(op, newCmp);
   return success();
 }

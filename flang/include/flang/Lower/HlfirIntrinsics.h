@@ -58,6 +58,14 @@ struct PreparedActualArgument {
   /// call, the current element value will be returned.
   hlfir::Entity getActual(mlir::Location loc, fir::FirOpBuilder &builder) const;
 
+  mlir::Type getFortranElementType() {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
+      return hlfir::getFortranElementType(actualEntity->getType());
+    mlir::Value entity =
+        std::get<hlfir::ElementalAddrOp>(actual).getElementEntity();
+    return hlfir::getFortranElementType(entity.getType());
+  }
+
   void derefPointersAndAllocatables(mlir::Location loc,
                                     fir::FirOpBuilder &builder) {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
@@ -103,6 +111,17 @@ struct PreparedActualArgument {
     assert(typeParams.size() == 1 &&
            "failed to retrieve vector subscripted character length");
     return typeParams[0];
+  }
+
+  void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
+                           llvm::SmallVectorImpl<mlir::Value> &result) {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual)) {
+      hlfir::genLengthParameters(loc, builder, *actualEntity, result);
+      return;
+    }
+    for (mlir::Value len :
+         std::get<hlfir::ElementalAddrOp>(actual).getTypeparams())
+      result.push_back(len);
   }
 
   /// When the argument is polymorphic, get mold value with the same dynamic

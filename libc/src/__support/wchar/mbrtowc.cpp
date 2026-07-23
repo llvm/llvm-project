@@ -8,7 +8,6 @@
 
 #include "src/__support/wchar/mbrtowc.h"
 #include "hdr/errno_macros.h"
-#include "hdr/types/mbstate_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
@@ -20,24 +19,25 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
-                        size_t n, mbstate *__restrict ps) {
+ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict src_ptr,
+                        size_t max_src_bytes, mbstate *__restrict ps) {
   CharacterConverter char_conv(ps);
   if (!char_conv.isValidState())
     return Error(EINVAL);
-  if (s == nullptr)
+  if (src_ptr == nullptr)
     return 0;
   size_t i = 0;
   // Reading in bytes until we have a complete wc or error
-  for (; i < n && !char_conv.isFull(); ++i) {
-    int err = char_conv.push(static_cast<char8_t>(s[i]));
+  for (; i < max_src_bytes && !char_conv.isFull(); ++i) {
+    int err = char_conv.push(static_cast<char8_t>(src_ptr[i]));
     // Encoding error
     if (err == EILSEQ)
       return Error(err);
   }
   auto wc = char_conv.pop_utf32();
   if (wc.has_value()) {
-    *pwc = wc.value();
+    if (pwc != nullptr)
+      *pwc = wc.value();
     // null terminator -> return 0
     if (wc.value() == L'\0')
       return 0;

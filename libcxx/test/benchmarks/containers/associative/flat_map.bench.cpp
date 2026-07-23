@@ -24,6 +24,14 @@ struct support::adapt_operations<std::flat_map<K, V>> {
 
   using InsertionResult = std::pair<typename std::flat_map<K, V>::iterator, bool>;
   static auto get_iterator(InsertionResult const& result) { return result.first; }
+
+  template <class Allocator>
+  using rebind_alloc =
+      std::flat_map<K,
+                    V,
+                    std::less<K>,
+                    std::vector<K, typename std::allocator_traits<Allocator>::template rebind_alloc<K>>,
+                    std::vector<V, typename std::allocator_traits<Allocator>::template rebind_alloc<V>>>;
 };
 
 int main(int argc, char** argv) {

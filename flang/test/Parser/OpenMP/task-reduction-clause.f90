@@ -15,8 +15,8 @@ end
 !UNPARSE: !$OMP END TASKGROUP
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = taskgroup
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = taskgroup
 !PARSE-TREE: | OmpClauseList -> OmpClause -> TaskReduction -> OmpTaskReductionClause
 !PARSE-TREE: | | Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'

@@ -1,6 +1,6 @@
-; RUN: llc -O0 -mtriple=powerpc-ibm-aix-xcoff -mcpu=pwr10 -stop-after=prologepilog -verify-machineinstrs < %s | \
+; RUN: llc -O0 -mtriple=powerpc-ibm-aix-xcoff -mcpu=pwr10 -stop-after=prolog-epilog -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefix=CHECK %s
-; RUN: llc -O0 -mtriple=powerpc-ibm-aix-xcoff -mcpu=pwr10 -vec-extabi -stop-after=prologepilog -verify-machineinstrs < %s | \
+; RUN: llc -O0 -mtriple=powerpc-ibm-aix-xcoff -mcpu=pwr10 -vec-extabi -stop-after=prolog-epilog -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefix=CHECK-VEXT %s
 
 ; CHECK-LABEL: name: foo

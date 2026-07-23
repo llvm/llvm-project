@@ -1,0 +1,18 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#if defined(__CLC_SCALAR)
+_CLC_OVERLOAD _CLC_DECL _CLC_CONST __CLC_GENTYPE
+__clc_sub_group_reduce_add(__CLC_GENTYPE x);
+
+_CLC_OVERLOAD _CLC_DECL _CLC_CONST __CLC_GENTYPE
+__clc_sub_group_reduce_min(__CLC_GENTYPE x);
+
+_CLC_OVERLOAD _CLC_DECL _CLC_CONST __CLC_GENTYPE
+__clc_sub_group_reduce_max(__CLC_GENTYPE x);
+#endif

@@ -14,17 +14,17 @@ end module
 
 program test_acc_routine
   use dummy_mod
-  
+
   !$acc routine(sub2) seq
-  
+
   implicit none
-  
+
   integer :: i
 
 contains
   subroutine sub2()
   end subroutine
-  
+
 end program
 
 ! CHECK: acc.routine @acc_routine_1 func(@_QFPsub2) seq

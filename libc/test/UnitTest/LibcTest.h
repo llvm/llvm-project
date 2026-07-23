@@ -24,12 +24,11 @@
 // This file can only include headers from src/__support/ or test/UnitTest. No
 // other headers should be included.
 
-#include "PlatformDefs.h"
-
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/c_string.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 
@@ -81,7 +80,7 @@ struct Message {
 // A trivial object to catch the Message, this enables custom logging and
 // returning from the test function, see LIBC_TEST_SCAFFOLDING_ below.
 struct Failure {
-  void operator=(Message msg) {}
+  void operator=([[maybe_unused]] Message msg) {}
 };
 
 struct RunContext {
@@ -179,6 +178,15 @@ protected:
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
   }
 
+  template <
+      typename ValType,
+      cpp::enable_if_t<
+          cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::wstring_view>, int> = 0>
+  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
+            const char *RHSStr, internal::Location Loc) {
+    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
+  }
+
   template <typename ValType,
             cpp::enable_if_t<
                 cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::string>, int> = 0>
@@ -260,7 +268,11 @@ constexpr char const *GetPrettyFunctionParamType(char const *str) {
 // This function recovers ParamType at compile time by using __PRETTY_FUNCTION__
 // It can be customized by using the REGISTER_TYPE_NAME macro below.
 template <typename ParamType> static constexpr const char *GetTypeName() {
+#ifdef LIBC_COMPILER_IS_MSVC
+  return GetPrettyFunctionParamType(__FUNCSIG__);
+#else
   return GetPrettyFunctionParamType(__PRETTY_FUNCTION__);
+#endif // LIBC_COMPILER_IS_MSVC
 }
 
 template <typename T>
@@ -477,7 +489,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 ////////////////////////////////////////////////////////////////////////////////
 // Subprocess checks.
 
-#ifdef ENABLE_SUBPROCESS_TESTS
+#if LIBC_TEST_SUBPROCESS_TESTS
 
 #define LIBC_TEST_PROCESS_(TEST_FUNC, FUNC, VALUE, RET_OR_EMPTY)               \
   LIBC_TEST_SCAFFOLDING_(                                                      \
@@ -490,12 +502,21 @@ CString libc_make_test_file_path_func(const char *file_name);
 #define ASSERT_EXITS(FUNC, EXIT)                                               \
   LIBC_TEST_PROCESS_(testProcessExits, FUNC, EXIT, return)
 
+#ifdef LIBC_TEST_SKIP_DEATH_TESTS
+
+#define EXPECT_DEATH(FUNC, SIG)
+#define ASSERT_DEATH(FUNC, SIG)
+
+#else
+
 #define EXPECT_DEATH(FUNC, SIG)                                                \
   LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, )
 #define ASSERT_DEATH(FUNC, SIG)                                                \
   LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, return)
 
-#endif // ENABLE_SUBPROCESS_TESTS
+#endif // LIBC_TEST_SKIP_DEATH_TESTS
+
+#endif // LIBC_TEST_SUBPROCESS_TESTS
 
 ////////////////////////////////////////////////////////////////////////////////
 // Custom matcher checks.

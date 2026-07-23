@@ -411,15 +411,18 @@ TEST(SetTest, isEqual) {
   EXPECT_FALSE(rect.complement().isEqual(square.complement()));
 }
 
-void expectEqual(const PresburgerSet &s, const PresburgerSet &t) {
+static void expectEqual(const PresburgerSet &s, const PresburgerSet &t) {
   EXPECT_TRUE(s.isEqual(t));
 }
 
-void expectEqual(const IntegerPolyhedron &s, const IntegerPolyhedron &t) {
+static void expectEqual(const IntegerPolyhedron &s,
+                        const IntegerPolyhedron &t) {
   EXPECT_TRUE(s.isEqual(t));
 }
 
-void expectEmpty(const PresburgerSet &s) { EXPECT_TRUE(s.isIntegerEmpty()); }
+static void expectEmpty(const PresburgerSet &s) {
+  EXPECT_TRUE(s.isIntegerEmpty());
+}
 
 TEST(SetTest, divisions) {
   // evens = {x : exists q, x = 2q}.
@@ -453,12 +456,13 @@ TEST(SetTest, divisions) {
   EXPECT_TRUE(setA.subtract(setB).isEqual(setA));
 }
 
-void convertSuffixDimsToLocals(IntegerPolyhedron &poly, unsigned numLocals) {
+static void convertSuffixDimsToLocals(IntegerPolyhedron &poly,
+                                      unsigned numLocals) {
   poly.convertVarKind(VarKind::SetDim, poly.getNumDimVars() - numLocals,
                       poly.getNumDimVars(), VarKind::Local);
 }
 
-inline IntegerPolyhedron
+static inline IntegerPolyhedron
 parseIntegerPolyhedronAndMakeLocals(StringRef str, unsigned numLocals) {
   IntegerPolyhedron poly = parseIntegerPolyhedron(str);
   convertSuffixDimsToLocals(poly, numLocals);
@@ -551,7 +555,7 @@ TEST(SetTest, subtractDuplicateDivsRegression) {
 
 /// Coalesce `set` and check that the `newSet` is equal to `set` and that
 /// `expectedNumPoly` matches the number of Poly in the coalesced set.
-void expectCoalesce(size_t expectedNumPoly, const PresburgerSet &set) {
+static void expectCoalesce(size_t expectedNumPoly, const PresburgerSet &set) {
   PresburgerSet newSet = set.coalesce();
   EXPECT_TRUE(set.isEqual(newSet));
   EXPECT_TRUE(expectedNumPoly == newSet.getNumDisjuncts());
@@ -811,9 +815,9 @@ TEST(SetTest, computeVolume) {
 
 // The last `numToProject` dims will be projected out, i.e., converted to
 // locals.
-void testComputeReprAtPoints(IntegerPolyhedron poly,
-                             ArrayRef<SmallVector<int64_t, 4>> points,
-                             unsigned numToProject) {
+static void testComputeReprAtPoints(IntegerPolyhedron poly,
+                                    ArrayRef<SmallVector<int64_t, 4>> points,
+                                    unsigned numToProject) {
   poly.convertVarKind(VarKind::SetDim, poly.getNumDimVars() - numToProject,
                       poly.getNumDimVars(), VarKind::Local);
   PresburgerRelation repr = poly.computeReprWithOnlyDivLocals();
@@ -825,8 +829,9 @@ void testComputeReprAtPoints(IntegerPolyhedron poly,
   }
 }
 
-void testComputeRepr(IntegerPolyhedron poly, const PresburgerSet &expected,
-                     unsigned numToProject) {
+static void testComputeRepr(IntegerPolyhedron poly,
+                            const PresburgerSet &expected,
+                            unsigned numToProject) {
   poly.convertVarKind(VarKind::SetDim, poly.getNumDimVars() - numToProject,
                       poly.getNumDimVars(), VarKind::Local);
   PresburgerRelation repr = poly.computeReprWithOnlyDivLocals();

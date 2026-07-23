@@ -17,8 +17,6 @@
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "llvm/ADT/iterator_range.h"
 
 namespace mlir {
 class Location;
@@ -29,117 +27,6 @@ namespace fir::factory {
 
 constexpr llvm::StringRef attrFortranArrayOffsets() {
   return "Fortran.offsets";
-}
-
-/// Generate a character copy with optimized forms.
-///
-/// If the lengths are constant and equal, use load/store rather than a loop.
-/// Otherwise, if the lengths are constant and the input is longer than the
-/// output, generate a loop to move a truncated portion of the source to the
-/// destination. Finally, if the lengths are runtime values or the destination
-/// is longer than the source, move the entire source character and pad the
-/// destination with spaces as needed.
-template <typename B>
-void genCharacterCopy(mlir::Value src, mlir::Value srcLen, mlir::Value dst,
-                      mlir::Value dstLen, B &builder, mlir::Location loc) {
-  auto srcTy =
-      mlir::cast<fir::CharacterType>(fir::dyn_cast_ptrEleTy(src.getType()));
-  auto dstTy =
-      mlir::cast<fir::CharacterType>(fir::dyn_cast_ptrEleTy(dst.getType()));
-  if (!srcLen && !dstLen && srcTy.getFKind() == dstTy.getFKind() &&
-      srcTy.getLen() == dstTy.getLen()) {
-    // same size, so just use load and store
-    auto load = builder.template create<fir::LoadOp>(loc, src);
-    builder.template create<fir::StoreOp>(loc, load, dst);
-    return;
-  }
-  auto zero = builder.template create<mlir::arith::ConstantIndexOp>(loc, 0);
-  auto one = builder.template create<mlir::arith::ConstantIndexOp>(loc, 1);
-  auto toArrayTy = [&](fir::CharacterType ty) {
-    return fir::ReferenceType::get(fir::SequenceType::get(
-        fir::SequenceType::ShapeRef{fir::SequenceType::getUnknownExtent()},
-        fir::CharacterType::getSingleton(ty.getContext(), ty.getFKind())));
-  };
-  auto toEleTy = [&](fir::ReferenceType ty) {
-    auto seqTy = mlir::cast<fir::SequenceType>(ty.getEleTy());
-    return mlir::cast<fir::CharacterType>(seqTy.getEleTy());
-  };
-  auto toCoorTy = [&](fir::ReferenceType ty) {
-    return fir::ReferenceType::get(toEleTy(ty));
-  };
-  if (!srcLen && !dstLen && srcTy.getLen() >= dstTy.getLen()) {
-    auto upper = builder.template create<mlir::arith::ConstantIndexOp>(
-        loc, dstTy.getLen() - 1);
-    auto loop = builder.template create<fir::DoLoopOp>(loc, zero, upper, one);
-    auto insPt = builder.saveInsertionPoint();
-    builder.setInsertionPointToStart(loop.getBody());
-    auto csrcTy = toArrayTy(srcTy);
-    auto csrc = builder.template create<fir::ConvertOp>(loc, csrcTy, src);
-    auto in = builder.template create<fir::CoordinateOp>(
-        loc, toCoorTy(csrcTy), csrc, loop.getInductionVar());
-    auto load = builder.template create<fir::LoadOp>(loc, in);
-    auto cdstTy = toArrayTy(dstTy);
-    auto cdst = builder.template create<fir::ConvertOp>(loc, cdstTy, dst);
-    auto out = builder.template create<fir::CoordinateOp>(
-        loc, toCoorTy(cdstTy), cdst, loop.getInductionVar());
-    mlir::Value cast =
-        srcTy.getFKind() == dstTy.getFKind()
-            ? load.getResult()
-            : builder
-                  .template create<fir::ConvertOp>(loc, toEleTy(cdstTy), load)
-                  .getResult();
-    builder.template create<fir::StoreOp>(loc, cast, out);
-    builder.restoreInsertionPoint(insPt);
-    return;
-  }
-  auto minusOne = [&](mlir::Value v) -> mlir::Value {
-    return builder.template create<mlir::arith::SubIOp>(
-        loc, builder.template create<fir::ConvertOp>(loc, one.getType(), v),
-        one);
-  };
-  mlir::Value len = dstLen ? minusOne(dstLen)
-                           : builder
-                                 .template create<mlir::arith::ConstantIndexOp>(
-                                     loc, dstTy.getLen() - 1)
-                                 .getResult();
-  auto loop = builder.template create<fir::DoLoopOp>(loc, zero, len, one);
-  auto insPt = builder.saveInsertionPoint();
-  builder.setInsertionPointToStart(loop.getBody());
-  mlir::Value slen =
-      srcLen
-          ? builder.template create<fir::ConvertOp>(loc, one.getType(), srcLen)
-                .getResult()
-          : builder
-                .template create<mlir::arith::ConstantIndexOp>(loc,
-                                                               srcTy.getLen())
-                .getResult();
-  auto cond = builder.template create<mlir::arith::CmpIOp>(
-      loc, mlir::arith::CmpIPredicate::slt, loop.getInductionVar(), slen);
-  auto ifOp = builder.template create<fir::IfOp>(loc, cond, /*withElse=*/true);
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  auto csrcTy = toArrayTy(srcTy);
-  auto csrc = builder.template create<fir::ConvertOp>(loc, csrcTy, src);
-  auto in = builder.template create<fir::CoordinateOp>(
-      loc, toCoorTy(csrcTy), csrc, loop.getInductionVar());
-  auto load = builder.template create<fir::LoadOp>(loc, in);
-  auto cdstTy = toArrayTy(dstTy);
-  auto cdst = builder.template create<fir::ConvertOp>(loc, cdstTy, dst);
-  auto out = builder.template create<fir::CoordinateOp>(
-      loc, toCoorTy(cdstTy), cdst, loop.getInductionVar());
-  mlir::Value cast =
-      srcTy.getFKind() == dstTy.getFKind()
-          ? load.getResult()
-          : builder.template create<fir::ConvertOp>(loc, toEleTy(cdstTy), load)
-                .getResult();
-  builder.template create<fir::StoreOp>(loc, cast, out);
-  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  auto space = builder.template create<fir::StringLitOp>(
-      loc, toEleTy(cdstTy), llvm::ArrayRef<char>{' '});
-  auto cdst2 = builder.template create<fir::ConvertOp>(loc, cdstTy, dst);
-  auto out2 = builder.template create<fir::CoordinateOp>(
-      loc, toCoorTy(cdstTy), cdst2, loop.getInductionVar());
-  builder.template create<fir::StoreOp>(loc, space, out2);
-  builder.restoreInsertionPoint(insPt);
 }
 
 /// Get extents from fir.shape/fir.shape_shift op. Empty result if
@@ -192,7 +79,7 @@ originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
     auto ty = fir::dyn_cast_ptrOrBoxEleTy(memTy);
     assert(ty && mlir::isa<fir::SequenceType>(ty));
     auto seqTy = mlir::cast<fir::SequenceType>(ty);
-    auto one = builder.template create<mlir::arith::ConstantIndexOp>(loc, 1);
+    auto one = mlir::arith::ConstantIndexOp::create(builder, loc, 1);
     const auto dimension = seqTy.getDimension();
     if (shapeVal) {
       assert(dimension == mlir::cast<fir::ShapeOp>(shapeVal.getDefiningOp())
@@ -203,7 +90,7 @@ originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
       if (i.index() < dimension) {
         assert(fir::isa_integer(i.value().getType()));
         result.push_back(
-            builder.template create<mlir::arith::AddIOp>(loc, i.value(), one));
+            mlir::arith::AddIOp::create(builder, loc, i.value(), one));
       } else {
         result.push_back(i.value());
       }
@@ -214,8 +101,8 @@ originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
   unsigned origOff = 0;
   for (auto i : llvm::enumerate(indices)) {
     if (i.index() < dimension)
-      result.push_back(builder.template create<mlir::arith::AddIOp>(
-          loc, i.value(), origins[origOff++]));
+      result.push_back(mlir::arith::AddIOp::create(builder, loc, i.value(),
+                                                   origins[origOff++]));
     else
       result.push_back(i.value());
   }

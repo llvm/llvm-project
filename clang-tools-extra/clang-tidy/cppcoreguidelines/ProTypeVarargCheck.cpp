@@ -1,4 +1,4 @@
-//===--- ProTypeVarargCheck.cpp - clang-tidy-------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,9 +65,9 @@ static constexpr StringRef VaArgWarningMessage =
 
 namespace {
 AST_MATCHER(QualType, isVAList) {
-  ASTContext &Context = Finder->getASTContext();
-  QualType Desugar = Node.getDesugaredType(Context);
-  QualType NodeTy = Node.getUnqualifiedType();
+  const ASTContext &Context = Finder->getASTContext();
+  const QualType Desugar = Node.getDesugaredType(Context);
+  const QualType NodeTy = Node.getUnqualifiedType();
 
   auto CheckVaList = [](QualType NodeTy, QualType Expected,
                         const ASTContext &Context) {
@@ -88,7 +88,8 @@ AST_MATCHER(QualType, isVAList) {
   // type. Some targets implements va_list as 'char *' or 'void *'.
   // In these cases we need to remove all typedefs one by one to check this.
   using BuiltinVaListKind = TargetInfo::BuiltinVaListKind;
-  BuiltinVaListKind VaListKind = Context.getTargetInfo().getBuiltinVaListKind();
+  const BuiltinVaListKind VaListKind =
+      Context.getTargetInfo().getBuiltinVaListKind();
   if (VaListKind == BuiltinVaListKind::CharPtrBuiltinVaList ||
       VaListKind == BuiltinVaListKind::VoidPtrBuiltinVaList) {
     if (CheckVaList(NodeTy, Context.getBuiltinVaListType(), Context))
@@ -119,9 +120,8 @@ public:
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *Args) override {
-    if (MacroNameTok.getIdentifierInfo()->getName() == "va_arg") {
+    if (MacroNameTok.getIdentifierInfo()->getName() == "va_arg")
       Check->diag(MacroNameTok.getLocation(), VaArgWarningMessage);
-    }
   }
 
 private:
@@ -178,12 +178,21 @@ void ProTypeVarargCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Matched = Result.Nodes.getNodeAs<CallExpr>("callvararg")) {
     if (hasSingleVariadicArgumentWithValue(Matched, 0))
       return;
+
+    // Skip builtins with custom type checking - they use variadics as an
+    // implementation detail to accept multiple types, not for C-style varargs.
+    // TODO: Remove some of the entries from the `AllowedVariadics` list.
+    if (const auto *FD = Matched->getDirectCallee())
+      if (const unsigned BuiltinID = FD->getBuiltinID();
+          BuiltinID &&
+          Result.Context->BuiltinInfo.hasCustomTypechecking(BuiltinID))
+        return;
+
     diag(Matched->getExprLoc(), "do not call c-style vararg functions");
   }
 
-  if (const auto *Matched = Result.Nodes.getNodeAs<Expr>("va_use")) {
+  if (const auto *Matched = Result.Nodes.getNodeAs<Expr>("va_use"))
     diag(Matched->getExprLoc(), VaArgWarningMessage);
-  }
 
   if (const auto *Matched = Result.Nodes.getNodeAs<VarDecl>("va_list")) {
     auto SR = Matched->getSourceRange();

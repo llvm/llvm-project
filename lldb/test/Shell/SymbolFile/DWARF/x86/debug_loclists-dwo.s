@@ -1,4 +1,5 @@
-# RUN: cd %T
+# RUN: mkdir -p %t.dir
+# RUN: cd %t.dir
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s >debug_loclists-dwo.o
 # RUN: %lldb debug_loclists-dwo.o -o "image lookup -v -s lookup_loclists" -o exit | FileCheck %s
 

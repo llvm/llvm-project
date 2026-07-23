@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Execution.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/ToolExecutorPluginRegistry.h"
 #include "clang/Tooling/Tooling.h"
 
-LLVM_INSTANTIATE_REGISTRY(clang::tooling::ToolExecutorPluginRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT,
+                             clang::tooling::ToolExecutorPluginRegistry)
 
 namespace clang {
 namespace tooling {
@@ -96,9 +98,9 @@ createExecutorFromCommandLineArgs(int &argc, const char **argv,
 // and thus register the StandaloneToolExecutorPlugin etc.
 extern volatile int StandaloneToolExecutorAnchorSource;
 extern volatile int AllTUsToolExecutorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED StandaloneToolExecutorAnchorDest =
+[[maybe_unused]] static int StandaloneToolExecutorAnchorDest =
     StandaloneToolExecutorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED AllTUsToolExecutorAnchorDest =
+[[maybe_unused]] static int AllTUsToolExecutorAnchorDest =
     AllTUsToolExecutorAnchorSource;
 
 } // end namespace tooling

@@ -106,3 +106,43 @@ define i1 @overdefined_range_negative(i8 %A, i8 %B) {
   %trunc = trunc i8 %xor to i1
   ret i1 %trunc
 }
+
+define i1 @trunc_nuw_infere_false_for_icmp_ne_1(i8 %x)  {
+; CHECK-LABEL: define i1 @trunc_nuw_infere_false_for_icmp_ne_1(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[X]], 1
+; CHECK-NEXT:    br i1 [[ICMP]], label %[[IFTRUE:.*]], label %[[IFFALSE:.*]]
+; CHECK:       [[IFTRUE]]:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    ret i1 false
+; CHECK:       [[IFFALSE]]:
+; CHECK-NEXT:    ret i1 true
+;
+  %icmp = icmp ne i8 %x, 1
+  br i1 %icmp, label %iftrue, label %iffalse
+iftrue:
+  %trunc = trunc nuw i8 %x to i1
+  ret i1 %trunc
+iffalse:
+  ret i1 true
+}
+
+define i1 @neg_trunc_do_not_infere_false_for_icmp_ne_1(i8 %x)  {
+; CHECK-LABEL: define i1 @neg_trunc_do_not_infere_false_for_icmp_ne_1(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[X]], 1
+; CHECK-NEXT:    br i1 [[ICMP]], label %[[IFTRUE:.*]], label %[[IFFALSE:.*]]
+; CHECK:       [[IFTRUE]]:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+; CHECK:       [[IFFALSE]]:
+; CHECK-NEXT:    ret i1 true
+;
+  %icmp = icmp ne i8 %x, 1
+  br i1 %icmp, label %iftrue, label %iffalse
+iftrue:
+  %trunc = trunc i8 %x to i1
+  ret i1 %trunc
+iffalse:
+  ret i1 true
+}

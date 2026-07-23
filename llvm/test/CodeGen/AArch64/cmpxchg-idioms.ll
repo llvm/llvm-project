@@ -181,41 +181,41 @@ define i1 @test_conditional2(i32 %a, i32 %b, ptr %c) {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldaxr w8, [x19]
 ; CHECK-NEXT:    cmp w8, w21
-; CHECK-NEXT:    b.ne LBB3_4
+; CHECK-NEXT:    b.ne LBB3_9
 ; CHECK-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NEXT:    ; in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    stlxr w8, w20, [x19]
 ; CHECK-NEXT:    cbnz w8, LBB3_1
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    mov w8, #1 ; =0x1
-; CHECK-NEXT:    b LBB3_5
-; CHECK-NEXT:  LBB3_4: ; %cmpxchg.nostore
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    clrex
-; CHECK-NEXT:  LBB3_5: ; %for.cond.preheader
+; CHECK-NEXT:  LBB3_4: ; %for.cond.preheader
 ; CHECK-NEXT:    mov w22, #2 ; =0x2
-; CHECK-NEXT:  LBB3_6: ; %for.cond
+; CHECK-NEXT:  LBB3_5: ; %for.cond
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cbz w22, LBB3_9
-; CHECK-NEXT:  ; %bb.7: ; %for.body
-; CHECK-NEXT:    ; in Loop: Header=BB3_6 Depth=1
+; CHECK-NEXT:    cbz w22, LBB3_8
+; CHECK-NEXT:  ; %bb.6: ; %for.body
+; CHECK-NEXT:    ; in Loop: Header=BB3_5 Depth=1
 ; CHECK-NEXT:    sub w22, w22, #1
 ; CHECK-NEXT:    orr w9, w21, w20
 ; CHECK-NEXT:    ldr w10, [x19, w22, sxtw #2]
 ; CHECK-NEXT:    cmp w9, w10
-; CHECK-NEXT:    b.eq LBB3_6
-; CHECK-NEXT:  ; %bb.8: ; %if.then
-; CHECK-NEXT:    ; in Loop: Header=BB3_6 Depth=1
+; CHECK-NEXT:    b.eq LBB3_5
+; CHECK-NEXT:  ; %bb.7: ; %if.then
+; CHECK-NEXT:    ; in Loop: Header=BB3_5 Depth=1
 ; CHECK-NEXT:    str w9, [x19, w22, sxtw #2]
 ; CHECK-NEXT:    bl _foo
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    b LBB3_6
-; CHECK-NEXT:  LBB3_9: ; %for.cond.cleanup
+; CHECK-NEXT:    b LBB3_5
+; CHECK-NEXT:  LBB3_8: ; %for.cond.cleanup
 ; CHECK-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp], #48 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB3_9: ; %cmpxchg.nostore
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    clrex
+; CHECK-NEXT:    b LBB3_4
 ;
 ; OUTLINE-ATOMICS-LABEL: test_conditional2:
 ; OUTLINE-ATOMICS:       ; %bb.0: ; %entry

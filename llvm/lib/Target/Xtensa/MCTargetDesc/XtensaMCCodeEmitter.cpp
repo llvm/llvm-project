@@ -142,6 +142,10 @@ private:
   uint32_t getImm7_22OpValue(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+
+  uint8_t getSelect_256OpValue(const MCInst &MI, unsigned OpNo,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
 };
 } // namespace
 
@@ -320,7 +324,7 @@ XtensaMCCodeEmitter::getMemRegEncoding(const MCInst &MI, unsigned OpNo,
   case Xtensa::SSIP:
   case Xtensa::LSI:
   case Xtensa::LSIP:
-
+  case Xtensa::S32C1I:
     if (Res & 0x3) {
       report_fatal_error("Unexpected operand value!");
     }
@@ -605,5 +609,17 @@ XtensaMCCodeEmitter::getImm7_22OpValue(const MCInst &MI, unsigned OpNo,
   assert(((res & 0xf) == res) && "Unexpected operand value!");
 
   return res;
+}
+
+uint8_t
+XtensaMCCodeEmitter::getSelect_256OpValue(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  uint8_t Res = static_cast<uint8_t>(MO.getImm());
+
+  assert(isUInt<8>(Res) && "Unexpected operand value!");
+
+  return Res;
 }
 #include "XtensaGenMCCodeEmitter.inc"

@@ -57,6 +57,12 @@ void ignoredBuiltinsTest(void *ptr) {
   (void)__builtin_fpclassify(0, 0, 0, 0, 0, 0.f);
   (void)__builtin_isinf_sign(0.f);
   (void)__builtin_prefetch(nullptr);
+
+  // GH#178629: Type-generic builtins should not warn.
+  (void)__builtin_clzg(1u);
+  (void)__builtin_ctzg(1u);
+  (void)__builtin_popcountg(1u);
+  (void)__builtin_bswapg(1u);
 }
 
 // Some implementations of __builtin_va_list and __builtin_ms_va_list desugared

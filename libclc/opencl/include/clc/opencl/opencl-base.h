@@ -18,9 +18,8 @@
 #endif
 
 /* Function Attributes */
-#include <clc/clcfunc.h>
+#include "clc/clcfunc.h"
 
 /* 6.1 Supported Data Types */
-#include <clc/clctypes.h>
 
 #endif // __CLC_OPENCL_OPENCL_BASE_H__

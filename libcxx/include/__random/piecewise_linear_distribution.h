@@ -9,9 +9,11 @@
 #ifndef _LIBCPP___RANDOM_PIECEWISE_LINEAR_DISTRIBUTION_H
 #define _LIBCPP___RANDOM_PIECEWISE_LINEAR_DISTRIBUTION_H
 
+#include <__algorithm/copy_n.h>
 #include <__algorithm/upper_bound.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__iterator/back_insert_iterator.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
 #include <__vector/comparison.h>
@@ -58,8 +60,8 @@ public:
     _LIBCPP_HIDE_FROM_ABI param_type(param_type const&) = default;
     _LIBCPP_HIDE_FROM_ABI param_type& operator=(const param_type& __rhs);
 
-    _LIBCPP_HIDE_FROM_ABI vector<result_type> intervals() const { return __b_; }
-    _LIBCPP_HIDE_FROM_ABI vector<result_type> densities() const { return __densities_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> intervals() const { return __b_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> densities() const { return __densities_; }
 
     friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__densities_ == __y.__densities_ && __x.__b_ == __y.__b_;
@@ -108,21 +110,21 @@ public:
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI vector<result_type> intervals() const { return __p_.intervals(); }
-  _LIBCPP_HIDE_FROM_ABI vector<result_type> densities() const { return __p_.densities(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> intervals() const { return __p_.intervals(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> densities() const { return __p_.densities(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
   _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return __p_.__b_.front(); }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return __p_.__b_.back(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return __p_.__b_.front(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return __p_.__b_.back(); }
 
   friend _LIBCPP_HIDE_FROM_ABI bool
   operator==(const piecewise_linear_distribution& __x, const piecewise_linear_distribution& __y) {
@@ -194,8 +196,7 @@ piecewise_linear_distribution<_RealType>::param_type::param_type(
     __areas_.assign(1, 0.0);
   } else {
     __densities_.reserve(__b_.size());
-    for (size_t __i = 0; __i < __b_.size(); ++__i, ++__f_w)
-      __densities_.push_back(*__f_w);
+    std::copy_n(__f_w, __b_.size(), std::back_inserter(__densities_));
     __init();
   }
 }

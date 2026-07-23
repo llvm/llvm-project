@@ -8,11 +8,11 @@
 define float @bug41488_test1(float %f) {
 ; CHECK-LABEL: 'bug41488_test1'
 ; CHECK-NEXT:  Src: %0 = load float, ptr %p, align 4 --> Dst: %0 = load float, ptr %p, align 4
-; CHECK-NEXT:    da analyze - input [*]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load float, ptr %p, align 4 --> Dst: store float %f, ptr %q, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store float %f, ptr %q, align 4 --> Dst: store float %f, ptr %q, align 4
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %g = alloca float, align 4
@@ -20,10 +20,10 @@ entry:
   br label %for.body
 
 for.body:
-  %p = phi float* [ %g, %entry ], [ %q, %for.body ]
-  %q = phi float* [ %h, %entry ], [ %p, %for.body ]
-  %0 = load float, float* %p, align 4
-  store float %f, float* %q, align 4
+  %p = phi ptr [ %g, %entry ], [ %q, %for.body ]
+  %q = phi ptr [ %h, %entry ], [ %p, %for.body ]
+  %0 = load float, ptr %p, align 4
+  store float %f, ptr %q, align 4
   %branch_cond = fcmp ugt float %0, 0.0
   br i1 %branch_cond, label %for.cond.cleanup, label %for.body
 
@@ -34,11 +34,11 @@ for.cond.cleanup:
 define void @bug41488_test2(i32 %n) {
 ; CHECK-LABEL: 'bug41488_test2'
 ; CHECK-NEXT:  Src: %0 = load float, ptr %p, align 4 --> Dst: %0 = load float, ptr %p, align 4
-; CHECK-NEXT:    da analyze - input [*]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load float, ptr %p, align 4 --> Dst: store float 0.000000e+00, ptr %q, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store float 0.000000e+00, ptr %q, align 4 --> Dst: store float 0.000000e+00, ptr %q, align 4
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %g = alloca float, align 4
@@ -47,10 +47,10 @@ entry:
 
 for.body:
   %i = phi i32 [0, %entry ], [ %inc, %for.body ]
-  %p = phi float* [ %g, %entry ], [ %q, %for.body ]
-  %q = phi float* [ %h, %entry ], [ %p, %for.body ]
-  %0 = load float, float* %p, align 4
-  store float 0.0, float* %q, align 4
+  %p = phi ptr [ %g, %entry ], [ %q, %for.body ]
+  %q = phi ptr [ %h, %entry ], [ %p, %for.body ]
+  %0 = load float, ptr %p, align 4
+  store float 0.0, ptr %q, align 4
   %inc = add nuw i32 %i, 1
   %branch_cond = icmp ult i32 %i, %n
   br i1 %branch_cond, label %for.body, label %for.cond.cleanup
@@ -64,11 +64,11 @@ for.cond.cleanup:
 define void @bug53942_foo(i32 noundef %n, ptr noalias nocapture noundef writeonly %A, ptr noalias nocapture noundef %B) {
 ; CHECK-LABEL: 'bug53942_foo'
 ; CHECK-NEXT:  Src: %.pre = load double, ptr %B, align 8 --> Dst: %.pre = load double, ptr %B, align 8
-; CHECK-NEXT:    da analyze - consistent input [S]!
+; CHECK-NEXT:    da analyze - input [S]!
 ; CHECK-NEXT:  Src: %.pre = load double, ptr %B, align 8 --> Dst: store double %.pre, ptr %arrayidx2, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store double %.pre, ptr %arrayidx2, align 8 --> Dst: store double %.pre, ptr %arrayidx2, align 8
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %cmp8 = icmp sgt i32 %n, 1
@@ -99,11 +99,11 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @bug53942_bar(i32 noundef %n, ptr noalias noundef %A, ptr noalias noundef %B) {
 ; CHECK-LABEL: 'bug53942_bar'
 ; CHECK-NEXT:  Src: %0 = load double, ptr %arrayidx, align 8 --> Dst: %0 = load double, ptr %arrayidx, align 8
-; CHECK-NEXT:    da analyze - input [*]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load double, ptr %arrayidx, align 8 --> Dst: store double %0, ptr %arrayidx8, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store double %0, ptr %arrayidx8, align 8 --> Dst: store double %0, ptr %arrayidx8, align 8
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond
@@ -166,14 +166,14 @@ for.end:                                          ; preds = %for.cond.cleanup
 ;       (j % 2 == 0 ? A[i][j] : A[i][j+1]) = 1;
 ; }
 ;
-; FIXME: There are loop-carried dependencies between the store instruction. For
+; There are loop-carried dependencies between the store instruction. For
 ; example, the value of %ptr0 when (i, j) = (0, 1) is %A+8, which is the same
 ; as when (i, j) = (0, 2).
 
 define void @non_invariant_baseptr_with_identical_obj(ptr %A) {
 ; CHECK-LABEL: 'non_invariant_baseptr_with_identical_obj'
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx, align 4 --> Dst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %loop.i.header
@@ -216,13 +216,13 @@ exit:
 ; Similar to the above case, but ptr0 is loop-invariant with respsect to the
 ; k-loop.
 ;
-; FIXME: Same as the above case, there are loop-carried dependencies between
-; the store.
+; Same as the above case, there are loop-carried dependencies between the
+; store.
 
 define void @non_invariant_baseptr_with_identical_obj2(ptr %A) {
 ; CHECK-LABEL: 'non_invariant_baseptr_with_identical_obj2'
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx, align 4 --> Dst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %loop.i.header
@@ -250,6 +250,61 @@ loop.j.latch:
   %j.inc = add i32 %j, 1
   %cmp.j = icmp slt i32 %j.inc, 41
   br i1 %cmp.j, label %loop.j.header, label %loop.i.latch
+
+loop.i.latch:
+  %i.inc = add i32 %i, 1
+  %cmp.i = icmp slt i32 %i.inc, 100
+  br i1 %cmp.i, label %loop.i.header, label %exit
+
+exit:
+  ret void
+}
+
+; Pseudo-code that is approximately semantically equivalent to the below IR:
+;
+; void f(int A[][32]) {
+;   for (int i = 0; i < 100; i++)
+;     for (int j = 0; j < 15; j++) {
+;       int offset = (j % 2 == 0) ? 1 : 0;
+;       A[i][2 * j + offset + 0] = 1;
+;       A[i][2 * j + offset + 1] = 1;
+;     }
+; }
+;
+; There are loop-carried dependencies between the two stores. For example,
+; A[0][2] is accessed from both the former one when (i, j) = (0, 1) and the
+; latter one when (i, j) = (0, 0).
+;
+define void @non_invariant_baseptr_with_identical_obj3(ptr %A) {
+; CHECK-LABEL: 'non_invariant_baseptr_with_identical_obj3'
+; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx0, align 4
+; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
+; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
+; CHECK-NEXT:    da analyze - confused!
+;
+entry:
+  br label %loop.i.header
+
+loop.i.header:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  %A1 = getelementptr i32, ptr %A, i32 1
+  br label %loop.j
+
+loop.j:
+  %j = phi i32 [ 0, %loop.i.header ], [ %j.inc, %loop.j ]
+  %ptr0 = phi ptr [ %A1, %loop.i.header ], [ %ptr1, %loop.j ]
+  %ptr1 = phi ptr [ %A, %loop.i.header ], [ %ptr0, %loop.j ]
+  %j2_0 = shl i32 %j, 1
+  %j2_1 = add i32 %j2_0, 1
+  %idx0 = getelementptr [32 x i32], ptr %ptr0, i32 %i, i32 %j2_0
+  %idx1 = getelementptr [32 x i32], ptr %ptr0, i32 %i, i32 %j2_1
+  store i32 1, ptr %idx0
+  store i32 1, ptr %idx1
+  %j.inc = add i32 %j, 1
+  %cmp.j = icmp slt i32 %j.inc, 15
+  br i1 %cmp.j, label %loop.j, label %loop.i.latch
 
 loop.i.latch:
   %i.inc = add i32 %i, 1

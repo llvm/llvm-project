@@ -1,10 +1,6 @@
-; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" \
-; RUN:     -polly-detect-track-failures '-passes=print<polly-detect>' -disable-output \
-; RUN:     -polly-process-unprofitable=false < %s 2>&1| FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-detect-track-failures '-passes=polly-custom<detect>' -polly-print-detect -disable-output -polly-process-unprofitable=false < %s 2>&1 | FileCheck %s
 
-; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" \
-; RUN:     -polly-detect-track-failures '-passes=print<polly-detect>' -disable-output \
-; RUN:     -polly-process-unprofitable=false < %s 2>&1 -pass-remarks-output=%t.yaml
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-detect-track-failures '-passes=polly-custom<detect>' -polly-print-detect -disable-output -polly-process-unprofitable=false -pass-remarks-output=%t.yaml < %s 2>&1
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -74,9 +70,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; YAML: Args:
 ; YAML:   - String:          Invalid Scop candidate ends here.
 
-
 ; Function Attrs: nounwind uwtable
-define void @onlyWrite(ptr %A) #0 !dbg !4 {
+define void @onlyWrite(ptr %A) !dbg !4 {
 entry:
   call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !14, metadata !15), !dbg !16
   call void @llvm.dbg.value(metadata i64 0, i64 0, metadata !17, metadata !15), !dbg !20
@@ -102,10 +97,10 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind uwtable
-define void @onlyRead(ptr %A) #0 !dbg !10 {
+define void @onlyRead(ptr %A) !dbg !10 {
 entry:
   call void @llvm.dbg.value(metadata ptr %A, i64 0, metadata !29, metadata !15), !dbg !30
   call void @llvm.dbg.value(metadata i64 0, i64 0, metadata !31, metadata !15), !dbg !33
@@ -131,10 +126,7 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !12}

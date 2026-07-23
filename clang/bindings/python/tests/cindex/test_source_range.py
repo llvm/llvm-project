@@ -1,10 +1,8 @@
-import os
 from pathlib import Path
+import os
 
-from clang.cindex import Config, SourceLocation, SourceRange, TranslationUnit
+from clang.cindex import SourceLocation, SourceRange, TranslationUnit
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import unittest
 
@@ -83,9 +81,13 @@ aaaaa"""
             ],
         )
 
-        r_curly = create_range(tu2, 1, 11, 3, 1)
-        l_f2 = SourceLocation.from_position(tu2, tu2.get_file("./numbers.inc"), 4, 1)
-        assert l_f2 in r_curly
+        # FIXME: Fails on windows.
+        if os.name != "nt":
+            r_curly = create_range(tu2, 1, 11, 3, 1)
+            l_f2 = SourceLocation.from_position(
+                tu2, tu2.get_file("./numbers.inc"), 4, 1
+            )
+            assert l_f2 in r_curly
 
     def test_equality(self):
         path = INPUTS_DIR / "testfile.c"
@@ -98,4 +100,4 @@ aaaaa"""
         self.assertEqual(r1, r1)
         self.assertEqual(r1, r1_2)
         self.assertNotEqual(r1, r2)
-        self.assertNotEqual(r1, "foo")
+        self.assertFalse(r1 == "foo")

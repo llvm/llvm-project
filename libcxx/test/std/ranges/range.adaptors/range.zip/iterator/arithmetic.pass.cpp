@@ -22,10 +22,11 @@
 #include <ranges>
 
 #include <array>
+#include <cassert>
 #include <concepts>
 #include <functional>
 
-#include "../types.h"
+#include "../../range_adaptor_types.h"
 
 template <class T, class U>
 concept canPlusEqual = requires(T& t, U& u) { t += u; };

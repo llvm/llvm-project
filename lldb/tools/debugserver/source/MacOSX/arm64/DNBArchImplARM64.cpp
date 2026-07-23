@@ -132,34 +132,11 @@ unsigned int DNBArchMachARM64::GetSMEMaxSVL() {
   return g_sme_max_svl;
 }
 
-static uint64_t clear_pac_bits(uint64_t value) {
-  uint32_t addressing_bits = 0;
-  if (!DNBGetAddressingBits(addressing_bits))
-    return value;
-
-    // On arm64_32, no ptrauth bits to clear
-#if !defined(__LP64__)
-  return value;
-#endif
-
-  uint64_t mask = ((1ULL << addressing_bits) - 1);
-
-  // Normally PAC bit clearing needs to check b55 and either set the
-  // non-addressing bits, or clear them.  But the register values we
-  // get from thread_get_state on an arm64e process don't follow this
-  // convention?, at least when there's been a PAC auth failure in
-  // the inferior.
-  // Userland processes are always in low memory, so this
-  // hardcoding b55 == 0 PAC stripping behavior here.
-
-  return value & mask; // high bits cleared to 0
-}
-
 uint64_t DNBArchMachARM64::GetPC(uint64_t failValue) {
   // Get program counter
   if (GetGPRState(false) == KERN_SUCCESS)
 #if defined(DEBUGSERVER_IS_ARM64E)
-    return clear_pac_bits(
+    return DNBFixAddress(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
     return m_state.context.gpr.__pc;
@@ -191,12 +168,30 @@ uint64_t DNBArchMachARM64::GetSP(uint64_t failValue) {
   // Get stack pointer
   if (GetGPRState(false) == KERN_SUCCESS)
 #if defined(DEBUGSERVER_IS_ARM64E)
-    return clear_pac_bits(
+    return DNBFixAddress(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp));
 #else
     return m_state.context.gpr.__sp;
 #endif
   return failValue;
+}
+
+static void log_signed_registers(arm_thread_state64_t *gpr, const char *desc) {
+  if (DNBLogEnabledForAny(LOG_THREAD)) {
+    const char *log_str = "%s signed regs "
+                          "\n   fp=%16.16llx"
+                          "\n   lr=%16.16llx"
+                          "\n   sp=%16.16llx"
+                          "\n   pc=%16.16llx";
+#if defined(DEBUGSERVER_IS_ARM64E)
+    DNBLogThreaded(log_str, desc, reinterpret_cast<uint64_t>(gpr->__opaque_fp),
+                   reinterpret_cast<uint64_t>(gpr->__opaque_lr),
+                   reinterpret_cast<uint64_t>(gpr->__opaque_sp),
+                   reinterpret_cast<uint64_t>(gpr->__opaque_pc));
+#else
+    DNBLogThreaded(log_str, desc, gpr->__fp, gpr->__lr, gpr->__sp, gpr->__pc);
+#endif
+  }
 }
 
 kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
@@ -210,33 +205,37 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
   kern_return_t kret =
       ::thread_get_state(m_thread->MachPortNumber(), ARM_THREAD_STATE64,
                          (thread_state_t)&m_state.context.gpr, &count);
+  log_signed_registers(&m_state.context.gpr, "Values from thread_get_state");
+
+#if defined(THREAD_CONVERT_THREAD_STATE_TO_SELF) && defined(__LP64__)
+  if (kret == KERN_SUCCESS) {
+    mach_msg_type_number_t newcount = ARM_THREAD_STATE64_COUNT;
+    arm_thread_state64_t new_gpr;
+    kern_return_t convert_kret = thread_convert_thread_state(
+        m_thread->MachPortNumber(), THREAD_CONVERT_THREAD_STATE_TO_SELF,
+        ARM_THREAD_STATE64, (thread_state_t)&m_state.context.gpr, count,
+        (thread_state_t)&new_gpr, &newcount);
+    DNBLogThreadedIf(
+        LOG_THREAD,
+        "converted register values "
+        "to debugserver's keys, return value %d, old count %d new count %d",
+        convert_kret, count, newcount);
+    if (convert_kret == KERN_SUCCESS)
+      memcpy(&m_state.context.gpr, &new_gpr, count * 4);
+    log_signed_registers(&m_state.context.gpr,
+                         "Values after thread_convert_thread_state");
+  }
+#endif // THREAD_CONVERT_THREAD_STATE_TO_SELF
+
   if (DNBLogEnabledForAny(LOG_THREAD)) {
-    uint64_t *x = &m_state.context.gpr.__x[0];
-
-    const char *log_str = "thread_get_state signed regs "
-                          "\n   fp=%16.16llx"
-                          "\n   lr=%16.16llx"
-                          "\n   sp=%16.16llx"
-                          "\n   pc=%16.16llx";
 #if defined(DEBUGSERVER_IS_ARM64E)
-    DNBLogThreaded(log_str,
-                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp),
-                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_lr),
-                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp),
-                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
-#else
-    DNBLogThreaded(log_str, m_state.context.gpr.__fp, m_state.context.gpr.__lr,
-                   m_state.context.gpr.__sp, m_state.context.gpr.__pc);
-#endif
-
-#if defined(DEBUGSERVER_IS_ARM64E)
-    uint64_t log_fp = clear_pac_bits(
+    uint64_t log_fp = DNBFixAddress(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp));
-    uint64_t log_lr = clear_pac_bits(
+    uint64_t log_lr = DNBFixAddress(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_lr));
-    uint64_t log_sp = clear_pac_bits(
+    uint64_t log_sp = DNBFixAddress(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp));
-    uint64_t log_pc = clear_pac_bits(
+    uint64_t log_pc = DNBFixAddress(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
     uint64_t log_fp = m_state.context.gpr.__fp;
@@ -244,6 +243,7 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
     uint64_t log_sp = m_state.context.gpr.__sp;
     uint64_t log_pc = m_state.context.gpr.__pc;
 #endif
+    uint64_t *x = &m_state.context.gpr.__x[0];
     DNBLogThreaded(
         "thread_get_state(0x%4.4x, %u, &gpr, %u) => 0x%8.8x (count = %u) regs"
         "\n   x0=%16.16llx"
@@ -567,10 +567,28 @@ kern_return_t DNBArchMachARM64::GetSMEState(bool force) {
 }
 
 kern_return_t DNBArchMachARM64::SetGPRState() {
+  arm_thread_state64_t *state_to_set = &m_state.context.gpr;
+#if defined(THREAD_CONVERT_THREAD_STATE_FROM_SELF) && defined(__LP64__)
+  mach_msg_type_number_t count = ARM_THREAD_STATE64_COUNT;
+  mach_msg_type_number_t new_count = ARM_THREAD_STATE64_COUNT;
+  arm_thread_state64_t new_gpr;
+  memcpy(&new_gpr, &m_state.context.gpr, count * 4);
+  kern_return_t convert_kret = thread_convert_thread_state(
+      m_thread->MachPortNumber(), THREAD_CONVERT_THREAD_STATE_FROM_SELF,
+      ARM_THREAD_STATE64, (thread_state_t)&m_state.context.gpr, count,
+      (thread_state_t)&new_gpr, &new_count);
+  if (convert_kret == KERN_SUCCESS)
+    state_to_set = &new_gpr;
+  DNBLogThreadedIf(LOG_THREAD,
+                   "converted register values "
+                   "to inferior's keys, return value %d, count %d",
+                   convert_kret, new_count);
+#endif // THREAD_CONVERT_THREAD_STATE_TO_SELF
+
   int set = e_regSetGPR;
-  kern_return_t kret = ::thread_set_state(
-      m_thread->MachPortNumber(), ARM_THREAD_STATE64,
-      (thread_state_t)&m_state.context.gpr, e_regSetGPRCount);
+  kern_return_t kret =
+      ::thread_set_state(m_thread->MachPortNumber(), ARM_THREAD_STATE64,
+                         (thread_state_t)state_to_set, e_regSetGPRCount);
   m_state.SetError(set, Write,
                    kret); // Set the current write error for this register set
   m_state.InvalidateRegisterSetState(set); // Invalidate the current register
@@ -801,28 +819,6 @@ bool DNBArchMachARM64::NotifyException(MachException::Data &exc) {
 
       return true;
     }
-    // detect a __builtin_debugtrap instruction pattern ("brk #0xf000")
-    // and advance the $pc past it, so that the user can continue execution.
-    // Generally speaking, this knowledge should be centralized in lldb,
-    // recognizing the builtin_trap instruction and knowing how to advance
-    // the pc past it, so that continue etc work.
-    if (exc.exc_data.size() == 2 && exc.exc_data[0] == EXC_ARM_BREAKPOINT) {
-      nub_addr_t pc = GetPC(INVALID_NUB_ADDRESS);
-      if (pc != INVALID_NUB_ADDRESS && pc > 0) {
-        DNBBreakpoint *bp =
-            m_thread->Process()->Breakpoints().FindByAddress(pc);
-        if (bp == nullptr) {
-          uint8_t insnbuf[4];
-          if (m_thread->Process()->ReadMemory(pc, 4, insnbuf) == 4) {
-            uint8_t builtin_debugtrap_insn[4] = {0x00, 0x00, 0x3e,
-                                                 0xd4}; // brk #0xf000
-            if (memcmp(insnbuf, builtin_debugtrap_insn, 4) == 0) {
-              SetPC(pc + 4);
-            }
-          }
-        }
-      }
-    }
     break;
   }
   return false;
@@ -890,7 +886,7 @@ kern_return_t DNBArchMachARM64::EnableHardwareSingleStep(bool enable) {
   }
 
 #if defined(DEBUGSERVER_IS_ARM64E)
-  uint64_t pc = clear_pac_bits(
+  uint64_t pc = DNBFixAddress(
       reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
   uint64_t pc = m_state.context.gpr.__pc;
@@ -2628,32 +2624,32 @@ bool DNBArchMachARM64::GetRegisterValue(uint32_t set, uint32_t reg,
         switch (reg) {
 #if defined(DEBUGSERVER_IS_ARM64E)
         case gpr_pc:
-          value->value.uint64 = clear_pac_bits(
+          value->value.uint64 = DNBFixAddress(
               reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
           break;
         case gpr_lr:
           value->value.uint64 = arm_thread_state64_get_lr(m_state.context.gpr);
           break;
         case gpr_sp:
-          value->value.uint64 = clear_pac_bits(
+          value->value.uint64 = DNBFixAddress(
               reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp));
           break;
         case gpr_fp:
-          value->value.uint64 = clear_pac_bits(
+          value->value.uint64 = DNBFixAddress(
               reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp));
           break;
 #else
         case gpr_pc:
-          value->value.uint64 = clear_pac_bits(m_state.context.gpr.__pc);
+          value->value.uint64 = DNBFixAddress(m_state.context.gpr.__pc);
           break;
         case gpr_lr:
-          value->value.uint64 = clear_pac_bits(m_state.context.gpr.__lr);
+          value->value.uint64 = DNBFixAddress(m_state.context.gpr.__lr);
           break;
         case gpr_sp:
-          value->value.uint64 = clear_pac_bits(m_state.context.gpr.__sp);
+          value->value.uint64 = DNBFixAddress(m_state.context.gpr.__sp);
           break;
         case gpr_fp:
-          value->value.uint64 = clear_pac_bits(m_state.context.gpr.__fp);
+          value->value.uint64 = DNBFixAddress(m_state.context.gpr.__fp);
           break;
 #endif
         default:

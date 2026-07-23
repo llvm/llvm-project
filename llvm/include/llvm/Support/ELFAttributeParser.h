@@ -11,13 +11,14 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 
 class ELFAttributeParser {
 public:
-  virtual ~ELFAttributeParser() {}
+  virtual ~ELFAttributeParser() = default;
 
   virtual Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian) {
     return llvm::Error::success();

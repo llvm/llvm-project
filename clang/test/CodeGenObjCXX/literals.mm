@@ -22,16 +22,16 @@ void test_array() {
   // CHECK: [[TMPY:%[a-zA-Z0-9.]+]] = alloca %
 
   // Initializing first element
-  // CHECK: call void @llvm.lifetime.start.p0(i64 8, ptr [[ARR]])
+  // CHECK: call void @llvm.lifetime.start.p0(ptr [[ARR]])
   // CHECK: [[ELEMENT0:%[a-zA-Z0-9.]+]] = getelementptr inbounds [2 x ptr], ptr [[OBJECTS]], i64 0, i64 0
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 1, ptr [[TMPX]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[TMPX]])
   // CHECK-NEXT: call void @_ZN1XC1Ev({{.*}} [[TMPX]])
   // CHECK-NEXT: [[OBJECT0:%[a-zA-Z0-9.]+]] = invoke noundef ptr @_ZNK1XcvP11objc_objectEv{{.*}} [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK: store ptr [[OBJECT0]], ptr [[ELEMENT0]]
   
   // Initializing the second element
   // CHECK: [[ELEMENT1:%[a-zA-Z0-9.]+]] = getelementptr inbounds [2 x ptr], ptr [[OBJECTS]], i64 0, i64 1
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 1, ptr [[TMPY]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[TMPY]])
   // CHECK-NEXT: invoke void @_ZN1YC1Ev({{.*}} [[TMPY]])
   // CHECK: [[OBJECT1:%[a-zA-Z0-9.]+]] = invoke noundef ptr @_ZNK1YcvP11objc_objectEv{{.*}} [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK: store ptr [[OBJECT1]], ptr [[ELEMENT1]]
@@ -50,7 +50,7 @@ void test_array() {
   // CHECK-NEXT: call void @_ZN1XD1Ev
   // CHECK-NOT: ret void
   // CHECK: call void @llvm.objc.release
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[ARR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[ARR]])
   // CHECK-NEXT: ret void
 
   // Check cleanups
@@ -71,7 +71,7 @@ void test_array_instantiation() {
   // CHECK: [[OBJECTS:%[a-zA-Z0-9.]+]] = alloca [2 x ptr]
 
   // Initializing first element
-  // CHECK: call void @llvm.lifetime.start.p0(i64 8, ptr [[ARR]])
+  // CHECK: call void @llvm.lifetime.start.p0(ptr [[ARR]])
   // CHECK: [[ELEMENT0:%[a-zA-Z0-9.]+]] = getelementptr inbounds [2 x ptr], ptr [[OBJECTS]], i64 0, i64 0
   // CHECK: call void @_ZN1XC1Ev
   // CHECK-NEXT: [[OBJECT0:%[a-zA-Z0-9.]+]] = invoke noundef ptr @_ZNK1XcvP11objc_objectEv{{.*}} [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
@@ -97,7 +97,7 @@ void test_array_instantiation() {
   // CHECK-NEXT: call void @_ZN1XD1Ev
   // CHECK-NOT: ret void
   // CHECK: call void @llvm.objc.release
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[ARR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[ARR]])
   // CHECK-NEXT: ret void
 
   // Check cleanups

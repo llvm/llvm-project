@@ -20,7 +20,7 @@ void f() {
   // CHECK: call void @_Zli2_xPKcm({{.*}}, ptr noundef @[[s_bar]], i64 noundef 3)
   // CHECK: call void @_Zli2_yw({{.*}} 97)
   // CHECK: call void @_Zli2_zy({{.*}} 42)
-  // CHECK: call void @_Zli2_fe({{.*}} x86_fp80 noundef 0xK3FFF8000000000000000)
+  // CHECK: call void @_Zli2_fe({{.*}} x86_fp80 noundef 1.000000e+00)
   // CHECK: call void @_ZN1SD1Ev({{.*}})
   // CHECK: call void @_ZN1SD1Ev({{.*}})
   // CHECK: call void @_ZN1SD1Ev({{.*}})

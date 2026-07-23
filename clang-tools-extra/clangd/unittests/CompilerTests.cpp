@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler.h"
+#include "Config.h"
+#include "Diagnostics.h"
 #include "TestTU.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
@@ -112,6 +114,19 @@ TEST(BuildCompilerInvocation, EmptyArgs) {
 
   // No crash.
   EXPECT_EQ(buildCompilerInvocation(Inputs, Diags), nullptr);
+}
+TEST(BuildCompilerInvocation, SuppressDiags) {
+  MockFS FS;
+  StoreDiags Diags;
+  TestTU TU;
+  TU.ExtraArgs = {"-funknown-arg"};
+  auto Inputs = TU.inputs(FS);
+
+  Config Cfg;
+  Cfg.Diagnostics.Suppress = {"drv_unknown_argument"};
+  WithContextValue SuppressFilterWithCfg(Config::Key, std::move(Cfg));
+  EXPECT_NE(buildCompilerInvocation(Inputs, Diags), nullptr);
+  EXPECT_THAT(Diags.take(), IsEmpty());
 }
 } // namespace
 } // namespace clangd

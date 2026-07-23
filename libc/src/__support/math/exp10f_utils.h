@@ -89,7 +89,7 @@ struct Exp10Base : public ExpBase {
                                        0x1.0470591dff149p1, 0x1.2bd7c0a9fbc4dp0,
                                        0x1.1429e74a98f43p-1};
 
-  static double powb_lo(double dx) {
+  LIBC_INLINE static double powb_lo(double dx) {
     using fputil::multiply_add;
     double dx2 = dx * dx;
     // c0 = 1 + COEFFS[0] * dx
@@ -132,7 +132,7 @@ struct exp_b_reduc_t {
 // Return:
 //   { 2^(hi + mid), lo }
 template <class Base>
-LIBC_INLINE static constexpr exp_b_reduc_t exp_b_range_reduc(float x) {
+LIBC_INLINE constexpr exp_b_reduc_t exp_b_range_reduc(float x) {
   double xd = static_cast<double>(x);
   // kd = round((hi + mid) * log2(b) * 2^MID_BITS)
   double kd = fputil::nearest_integer(Base::LOG2_B * xd);

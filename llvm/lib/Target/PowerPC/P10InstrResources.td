@@ -825,8 +825,7 @@ def : InstRW<[P10W_F2_4C, P10W_DISP_ANY, P10F2_Read, P10F2_Read, P10F2_Read],
 def : InstRW<[P10W_F2_4C, P10W_DISP_EVEN, P10W_DISP_ANY, P10F2_Read],
       (instrs
     SRADI_rec,
-    SRAWI_rec,
-    SRAWI8_rec
+    SRAWI8_rec, SRAWI_rec
 )>;
 
 // Single crack instructions
@@ -834,8 +833,7 @@ def : InstRW<[P10W_F2_4C, P10W_DISP_EVEN, P10W_DISP_ANY, P10F2_Read],
 def : InstRW<[P10W_F2_4C, P10W_DISP_EVEN, P10W_DISP_ANY, P10F2_Read, P10F2_Read],
       (instrs
     SRAD_rec,
-    SRAW_rec,
-    SRAW8_rec
+    SRAW8_rec, SRAW_rec
 )>;
 
 // 2-way crack instructions
@@ -883,7 +881,7 @@ def : InstRW<[P10W_FX_3C, P10W_DISP_ANY],
 // 3 Cycles ALU operations, 1 input operands
 def : InstRW<[P10W_FX_3C, P10W_DISP_ANY, P10FX_Read],
       (instrs
-    ADDI, ADDI8, ADDIdtprelL32, ADDItlsldLADDR32, ADDItocL, ADDItocL8, LI, LI8,
+    ADDI, ADDI8, ADDIdtprelL32, ADDItlsldLADDR32, ADDItocL, LI, LI8,
     ADDIC, ADDIC8,
     ADDIS, ADDIS8, ADDISdtprelHA32, ADDIStocHA, ADDIStocHA8, LIS, LIS8,
     ADDME, ADDME8,
@@ -1233,6 +1231,16 @@ def : InstRW<[P10W_FX_3C, P10W_DISP_EVEN, P10W_PM_4C, P10W_DISP_ANY],
 def : InstRW<[P10W_FX_3C, P10W_DISP_PAIR, P10W_FX_3C, P10FX_Read],
       (instrs
     MTCRF, MTCRF8
+)>;
+
+// 2 Cycle Branch operation, 1 input operand followed by a
+// 6 cycle Load operation, 0 input operands.
+def : InstRW<[P10W_BR_2C, P10W_DISP_ANY, P10BR_Read, P10W_LD_6C, P10W_DISP_ANY],
+      (instrs
+    BL_LWZinto_toc,
+    BL_LWZinto_toc_RM,
+    BL8_LDinto_toc,
+    BL8_LDinto_toc_RM
 )>;
 
 // 6 Cycles Load operations, 0 input operands
@@ -1864,7 +1872,7 @@ def : InstRW<[P10W_ST_3C, P10W_DISP_EVEN, P10W_DISP_ANY, P10ST_Read, P10ST_Read]
       (instrs
     CP_PASTE8_rec, CP_PASTE_rec,
     SLBIEG,
-    TLBIE
+    TLBIE, TLBIE8P9, TLBIEP9
 )>;
 
 // Single crack instructions
@@ -1886,12 +1894,11 @@ def : InstRW<[P10W_ST_3C, P10W_DISP_EVEN, P10W_DISP_ANY, P10ST_Read, P10ST_Read,
 def : InstRW<[P10W_ST_3C, P10W_DISP_EVEN, P10W_FX_3C, P10W_DISP_ANY],
       (instrs
     ISYNC,
-    SYNCP10,
-    SYNC
+    SYNC, SYNCP10
 )>;
 
 // Expand instructions
-// 3 Cycles Store operations, 3 Cycles ALU operations, 3 Cycles Store operations, 3 Cycles ALU operations, 3 Cycles Store operations, 3 Cycles ALU operations, 6 Cycles Load operations, and 3 Cycles Store operations, 1 input operands
+// 3 Cycles Store operations, 3 Cycles ALU operations, 3 Cycles Store operations, 3 Cycles ALU operations, 3 Cycles Store operations, 3 Cycles ALU operations, 6 Cycles Load operations, and 3 Cycles Store operations, 2 input operands
 def : InstRW<[P10W_ST_3C, P10W_DISP_EVEN, P10W_FX_3C, P10W_DISP_ANY, P10W_ST_3C, P10W_DISP_ANY, P10W_FX_3C, P10W_DISP_ANY, P10W_ST_3C, P10W_DISP_ANY, P10W_FX_3C, P10W_DISP_ANY, P10W_LD_6C, P10W_DISP_ANY, P10W_ST_3C, P10W_DISP_ANY],
       (instrs
     LDAT,
@@ -1995,6 +2002,7 @@ def : InstRW<[P10W_SX_3C, P10W_DISP_EVEN, P10W_DISP_ANY],
 // 3 Cycles Simple Fixed-point (SFX) operations, 1 input operands
 def : InstRW<[P10W_SX_3C, P10W_DISP_EVEN, P10W_DISP_ANY, P10SX_Read],
       (instrs
+    MSGSNDP, MSGSNDP8,
     MTMSR,
     MTMSRD
 )>;

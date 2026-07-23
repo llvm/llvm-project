@@ -1,8 +1,6 @@
 # This testing configuration handles running the test suite against LLVM's libc++
 # using a DLL, with Clang-cl on Windows.
 
-lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
-
 dbg_include = ''
 runtime_library = '@CMAKE_MSVC_RUNTIME_LIBRARY@'
 if runtime_library == '' or runtime_library.endswith('DLL'):
@@ -25,7 +23,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib -L %{lib-dir} -lc++ -l' + cxx_lib
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --prepend_env PATH=%{install-prefix}/bin -- '
+    '%{executor} --execdir %{temp} --prepend_env PATH=%{install-prefix}/bin -- '
 ))
 
 import os, site

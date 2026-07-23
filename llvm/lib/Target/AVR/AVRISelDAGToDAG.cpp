@@ -246,6 +246,16 @@ bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(
     return true;
   }
 
+  // Select global addresses.
+  if (Op.getOpcode() == AVRISD::WRAPPER) {
+    SDValue Sub = Op.getOperand(0);
+    if (Sub.getOpcode() == ISD::TargetGlobalAddress &&
+        (Sub.getValueType() == MVT::i16 || Sub.getValueType() == MVT::i8)) {
+      OutOps.push_back(Sub);
+      return false;
+    }
+  }
+
   // If Op is add 'register, immediate' and
   // register is either virtual register or register of PTRDISPREGSRegClass
   if (Op->getOpcode() == ISD::ADD || Op->getOpcode() == ISD::SUB) {

@@ -123,7 +123,7 @@ The ``Size`` field of the Attributes bitmask is a 1-byte value indicating the
 pointer size.  For example, a `void*` would have a size of either 4 or 8 depending
 on the target architecture.  On the other hand, if ``Mode`` indicates that this is
 a pointer to member function or pointer to data member, then the size can be any
-implementation defined number.
+implementation-defined number.
 
 The ``Member Ptr Info`` field of the ``LF_POINTER`` record is only present if the
 attributes indicate that this is a pointer to member.

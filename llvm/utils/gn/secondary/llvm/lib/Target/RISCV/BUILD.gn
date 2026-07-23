@@ -109,6 +109,7 @@ static_library("LLVMRISCVCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
@@ -117,6 +118,7 @@ static_library("LLVMRISCVCodeGen") {
   include_dirs = [ "." ]
   sources = [
     "GISel/RISCVCallLowering.cpp",
+    "GISel/RISCVInlineAsmLowering.cpp",
     "GISel/RISCVInstructionSelector.cpp",
     "GISel/RISCVLegalizerInfo.cpp",
     "GISel/RISCVO0PreLegalizerCombiner.cpp",
@@ -145,12 +147,15 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVLateBranchOpt.cpp",
     "RISCVLoadStoreOptimizer.cpp",
     "RISCVMachineFunctionInfo.cpp",
+    "RISCVMachineScheduler.cpp",
     "RISCVMakeCompressible.cpp",
     "RISCVMergeBaseOffset.cpp",
     "RISCVMoveMerger.cpp",
     "RISCVOptWInstrs.cpp",
     "RISCVPostRAExpandPseudoInsts.cpp",
+    "RISCVPromoteConstant.cpp",
     "RISCVPushPopOptimizer.cpp",
+    "RISCVQCRelaxMarking.cpp",
     "RISCVRedundantCopyElimination.cpp",
     "RISCVRegisterInfo.cpp",
     "RISCVSelectionDAGInfo.cpp",
@@ -160,9 +165,11 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVTargetTransformInfo.cpp",
     "RISCVVLOptimizer.cpp",
     "RISCVVMV0Elimination.cpp",
+    "RISCVVSETVLIInfoAnalysis.cpp",
     "RISCVVectorMaskDAGMutation.cpp",
     "RISCVVectorPeephole.cpp",
     "RISCVZacasABIFix.cpp",
+    "RISCVZilsdOptimizer.cpp",
   ]
 }
 

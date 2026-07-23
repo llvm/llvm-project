@@ -17,6 +17,9 @@ namespace {
 using namespace clang;
 using namespace dataflow;
 
+using ::testing::IsEmpty;
+using ::testing::UnorderedElementsAre;
+
 class DataflowAnalysisContextTest : public ::testing::Test {
 protected:
   DataflowAnalysisContextTest()
@@ -171,4 +174,97 @@ TEST_F(DataflowAnalysisContextTest, EquivBoolVals) {
                                          A.makeAnd(X, A.makeAnd(Y, Z))));
 }
 
+using ExportLogicalContextTest = DataflowAnalysisContextTest;
+
+TEST_F(ExportLogicalContextTest, EmptySet) {
+  EXPECT_THAT(Context.exportLogicalContext({}).TokenDefs, IsEmpty());
+}
+
+// Only constrainted tokens are included in the output.
+TEST_F(ExportLogicalContextTest, UnconstrainedIgnored) {
+  Atom FC1 = A.makeFlowConditionToken();
+  EXPECT_THAT(Context.exportLogicalContext({FC1}).TokenDefs, IsEmpty());
+}
+
+TEST_F(ExportLogicalContextTest, SingletonSet) {
+  Atom FC1 = A.makeFlowConditionToken();
+  auto &C1 = A.makeAtomRef(A.makeAtom());
+  Context.addFlowConditionConstraint(FC1, C1);
+  EXPECT_THAT(Context.exportLogicalContext({FC1}).TokenDefs.keys(),
+              UnorderedElementsAre(FC1));
+}
+
+TEST_F(ExportLogicalContextTest, NoDependency) {
+  Atom FC1 = A.makeFlowConditionToken();
+  Atom FC2 = A.makeFlowConditionToken();
+  Atom FC3 = A.makeFlowConditionToken();
+  auto &C1 = A.makeAtomRef(A.makeAtom());
+  auto &C2 = A.makeAtomRef(A.makeAtom());
+  auto &C3 = A.makeAtomRef(A.makeAtom());
+
+  Context.addFlowConditionConstraint(FC1, C1);
+  Context.addFlowConditionConstraint(FC2, C2);
+  Context.addFlowConditionConstraint(FC3, C3);
+
+  // FCs are independent.
+  EXPECT_THAT(Context.exportLogicalContext({FC1}).TokenDefs.keys(),
+              UnorderedElementsAre(FC1));
+  EXPECT_THAT(Context.exportLogicalContext({FC2}).TokenDefs.keys(),
+              UnorderedElementsAre(FC2));
+  EXPECT_THAT(Context.exportLogicalContext({FC3}).TokenDefs.keys(),
+              UnorderedElementsAre(FC3));
+}
+
+TEST_F(ExportLogicalContextTest, SimpleDependencyChain) {
+  Atom FC1 = A.makeFlowConditionToken();
+  const Formula &C = A.makeAtomRef(A.makeAtom());
+  Context.addFlowConditionConstraint(FC1, C);
+  Atom FC2 = Context.forkFlowCondition(FC1);
+  Atom FC3 = Context.forkFlowCondition(FC2);
+
+  EXPECT_THAT(Context.exportLogicalContext({FC3}).TokenDefs.keys(),
+              UnorderedElementsAre(FC1, FC2, FC3));
+}
+
+TEST_F(ExportLogicalContextTest, DependencyTree) {
+  Atom FC1 = A.makeFlowConditionToken();
+  const Formula &C = A.makeAtomRef(A.makeAtom());
+  Context.addFlowConditionConstraint(FC1, C);
+  Atom FC2 = Context.forkFlowCondition(FC1);
+  Atom FC3 = A.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC3, C);
+  Atom FC4 = Context.joinFlowConditions(FC2, FC3);
+
+  EXPECT_THAT(Context.exportLogicalContext({FC4}).TokenDefs.keys(),
+              UnorderedElementsAre(FC1, FC2, FC3, FC4));
+}
+
+TEST_F(ExportLogicalContextTest, DependencyDAG) {
+  Atom FC1 = A.makeFlowConditionToken();
+  const Formula &C = A.makeAtomRef(A.makeAtom());
+  Context.addFlowConditionConstraint(FC1, C);
+
+  Atom FC2 = Context.forkFlowCondition(FC1);
+  Atom FC3 = Context.forkFlowCondition(FC1);
+  Atom FC4 = Context.joinFlowConditions(FC2, FC3);
+
+  EXPECT_THAT(Context.exportLogicalContext({FC4}).TokenDefs.keys(),
+              UnorderedElementsAre(FC1, FC2, FC3, FC4));
+}
+
+TEST_F(ExportLogicalContextTest, MixedDependencies) {
+  Atom FC1 = A.makeFlowConditionToken();
+  const Formula &C = A.makeAtomRef(A.makeAtom());
+  Context.addFlowConditionConstraint(FC1, C);
+
+  Atom FC2 = Context.forkFlowCondition(FC1);
+  Atom FC3 = Context.forkFlowCondition(FC2);
+  (void)FC3; // unused, and we test below that it is not included.
+
+  Atom FC4 = A.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC4, C);
+
+  EXPECT_THAT(Context.exportLogicalContext({FC2, FC4}).TokenDefs.keys(),
+              UnorderedElementsAre(FC1, FC2, FC4));
+}
 } // namespace

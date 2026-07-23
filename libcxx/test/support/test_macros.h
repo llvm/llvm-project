@@ -42,6 +42,15 @@
 #define TEST_HAS_EXTENSION(X) 0
 #endif
 
+// _BitInt(N) is a C23 standard feature and a Clang extension in earlier C and C++.
+// __BITINT_MAXWIDTH__ is the portable probe: defined by every compiler that accepts _BitInt.
+// Note __has_extension(bit_int) is unusable because it is not recognized by Clang and produces 0.
+#ifdef __BITINT_MAXWIDTH__
+#  define TEST_HAS_BITINT 1
+#else
+#  define TEST_HAS_BITINT 0
+#endif
+
 #ifdef __has_warning
 #define TEST_HAS_WARNING(X) __has_warning(X)
 #else
@@ -262,6 +271,12 @@
 #define LIBCPP_ASSERT_NOEXCEPT(...) static_assert(true, "")
 #define LIBCPP_ASSERT_NOT_NOEXCEPT(...) static_assert(true, "")
 #define LIBCPP_ONLY(...) static_assert(true, "")
+#endif
+
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  define LIBCPP_NON_FROZEN_ASSERT(...) static_assert(true, "")
+#else
+#  define LIBCPP_NON_FROZEN_ASSERT(...) LIBCPP_ASSERT(__VA_ARGS__)
 #endif
 
 #if __has_cpp_attribute(nodiscard)
@@ -523,13 +538,6 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_IF_AIX(arg_true, arg_false) arg_true
 #else
 #  define TEST_IF_AIX(arg_true, arg_false) arg_false
-#endif
-
-// Clang-18 has support for deducing this, but it does not set the FTM.
-#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
-// This is a C++20 featue, so we don't care whether the compiler could support it
-#elif defined(_LIBCPP_VERSION) && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
-#  define TEST_HAS_EXPLICIT_THIS_PARAMETER
 #endif
 
 // Placement `operator new`/`operator new[]` are not yet constexpr in C++26

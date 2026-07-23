@@ -156,37 +156,37 @@ void test_message_send_result(
        NSArray<__kindof NSString *> *kindofStringArray,
        void (^block)(void)) {
   int *ip;
-  ip = [stringSet firstObject]; // expected-warning{{from 'NSString *'}}
-  ip = [mutStringSet firstObject]; // expected-warning{{from 'NSString *'}}
-  ip = [widgetSet firstObject]; // expected-warning{{from 'Widget *'}}
-  ip = [untypedMutSet firstObject]; // expected-warning{{from 'id'}}
-  ip = [mutStringArraySet firstObject]; // expected-warning{{from 'NSArray<NSString *> *'}}
-  ip = [set firstObject]; // expected-warning{{from 'id'}}
-  ip = [mutSet firstObject]; // expected-warning{{from 'id'}}
-  ip = [mutArraySet firstObject]; // expected-warning{{from 'id'}}
-  ip = [block firstObject]; // expected-warning{{from 'id'}}
+  ip = [stringSet firstObject]; // expected-error{{from 'NSString *'}}
+  ip = [mutStringSet firstObject]; // expected-error{{from 'NSString *'}}
+  ip = [widgetSet firstObject]; // expected-error{{from 'Widget *'}}
+  ip = [untypedMutSet firstObject]; // expected-error{{from 'id'}}
+  ip = [mutStringArraySet firstObject]; // expected-error{{from 'NSArray<NSString *> *'}}
+  ip = [set firstObject]; // expected-error{{from 'id'}}
+  ip = [mutSet firstObject]; // expected-error{{from 'id'}}
+  ip = [mutArraySet firstObject]; // expected-error{{from 'id'}}
+  ip = [block firstObject]; // expected-error{{from 'id'}}
 
-  ip = [stringSet findObject:@"blah"]; // expected-warning{{from 'NSString *'}}
+  ip = [stringSet findObject:@"blah"]; // expected-error{{from 'NSString *'}}
 
   // Class messages.
-  ip = [NSSet<NSString *> alloc]; // expected-warning{{from 'NSSet<NSString *> *'}}
-  ip = [NSSet alloc]; // expected-warning{{from 'NSSet *'}}
-  ip = [MutableSetOfArrays<NSString *> alloc]; // expected-warning{{from 'MutableSetOfArrays<NSString *> *'}}
-  ip = [MutableSetOfArrays alloc];  // expected-warning{{from 'MutableSetOfArrays *'}}
-  ip = [NSArray<NSString *> array]; // expected-warning{{from 'NSArray<NSString *> *'}}
-  ip = [NSArray<NSString *><NSCopying> array]; // expected-warning{{from 'NSArray<NSString *> *'}}
+  ip = [NSSet<NSString *> alloc]; // expected-error{{from 'NSSet<NSString *> *'}}
+  ip = [NSSet alloc]; // expected-error{{from 'NSSet *'}}
+  ip = [MutableSetOfArrays<NSString *> alloc]; // expected-error{{from 'MutableSetOfArrays<NSString *> *'}}
+  ip = [MutableSetOfArrays alloc];  // expected-error{{from 'MutableSetOfArrays *'}}
+  ip = [NSArray<NSString *> array]; // expected-error{{from 'NSArray<NSString *> *'}}
+  ip = [NSArray<NSString *><NSCopying> array]; // expected-error{{from 'NSArray<NSString *> *'}}
 
-  ip = [[NSMutableArray<NSString *> alloc] init];  // expected-warning{{from 'NSMutableArray<NSString *> *'}}
+  ip = [[NSMutableArray<NSString *> alloc] init];  // expected-error{{from 'NSMutableArray<NSString *> *'}}
 
   [[NSMutableArray alloc] initWithArray: stringArray]; // okay
   [[NSMutableArray<NSString *> alloc] initWithArray: stringArray]; // okay
-  [[NSMutableArray<NSNumber *> alloc] initWithArray: stringArray]; // expected-warning{{sending 'NSArray<NSString *> *' to parameter of type 'NSArray<NSNumber *> *'}}
+  [[NSMutableArray<NSNumber *> alloc] initWithArray: stringArray]; // expected-error{{sending 'NSArray<NSString *> *' to parameter of type 'NSArray<NSNumber *> *'}}
 
-  ip = [[[NSViewController alloc] init] view]; // expected-warning{{from '__kindof NSView *'}}
+  ip = [[[NSViewController alloc] init] view]; // expected-error{{from '__kindof NSView *'}}
   [[[[NSViewController alloc] init] view] toggle];
 
   NSMutableString *mutStr = kindofStringArray[0];
-  NSNumber *number = kindofStringArray[0]; // expected-warning{{of type '__kindof NSString *'}}
+  NSNumber *number = kindofStringArray[0]; // expected-error{{of type '__kindof NSString *'}}
 }
 
 void test_message_send_param(
@@ -200,13 +200,13 @@ void test_message_send_param(
        void (^block)(void)) {
   Window *window;
 
-  [mutStringSet addObject: window]; // expected-warning{{parameter of type 'NSString *'}}
-  [widgetSet addObject: window]; // expected-warning{{parameter of type 'Widget *'}}
+  [mutStringSet addObject: window]; // expected-error{{parameter of type 'NSString *'}}
+  [widgetSet addObject: window]; // expected-error{{parameter of type 'Widget *'}}
   [untypedMutSet addObject: window]; // expected-warning{{parameter of incompatible type 'id<NSCopying>'}}
-  [mutStringArraySet addObject: window]; // expected-warning{{parameter of type 'NSArray<NSString *> *'}}
+  [mutStringArraySet addObject: window]; // expected-error{{parameter of type 'NSArray<NSString *> *'}}
   [mutSet addObject: window]; // expected-warning{{parameter of incompatible type 'id<NSCopying>'}}
   [mutArraySet addObject: window]; // expected-warning{{parameter of incompatible type 'id<NSCopying>'}}
-  [typedefTypeParam test: window]; // expected-warning{{parameter of type 'NSString *'}}
+  [typedefTypeParam test: window]; // expected-error{{parameter of type 'NSString *'}}
   [block addObject: window]; // expected-warning{{parameter of incompatible type 'id<NSCopying>'}}
 }
 
@@ -224,18 +224,18 @@ void test_property_read(
        MutableSetOfArrays *mutArraySet,
        NSMutableDictionary *mutDict) {
   int *ip;
-  ip = stringSet.allObjects; // expected-warning{{from 'NSArray<NSString *> *'}}
-  ip = mutStringSet.allObjects; // expected-warning{{from 'NSArray<NSString *> *'}}
-  ip = widgetSet.allObjects; // expected-warning{{from 'NSArray<Widget *> *'}}
-  ip = untypedMutSet.allObjects; // expected-warning{{from 'NSArray *'}}
-  ip = mutStringArraySet.allObjects; // expected-warning{{from 'NSArray<NSArray<NSString *> *> *'}}
-  ip = set.allObjects; // expected-warning{{from 'NSArray *'}}
-  ip = mutSet.allObjects; // expected-warning{{from 'NSArray *'}}
-  ip = mutArraySet.allObjects; // expected-warning{{from 'NSArray *'}}
+  ip = stringSet.allObjects; // expected-error{{from 'NSArray<NSString *> *'}}
+  ip = mutStringSet.allObjects; // expected-error{{from 'NSArray<NSString *> *'}}
+  ip = widgetSet.allObjects; // expected-error{{from 'NSArray<Widget *> *'}}
+  ip = untypedMutSet.allObjects; // expected-error{{from 'NSArray *'}}
+  ip = mutStringArraySet.allObjects; // expected-error{{from 'NSArray<NSArray<NSString *> *> *'}}
+  ip = set.allObjects; // expected-error{{from 'NSArray *'}}
+  ip = mutSet.allObjects; // expected-error{{from 'NSArray *'}}
+  ip = mutArraySet.allObjects; // expected-error{{from 'NSArray *'}}
 
-  ip = mutDict.someRandomKey; // expected-warning{{from '__kindof id<NSCopying>'}}
+  ip = mutDict.someRandomKey; // expected-error{{from '__kindof id<NSCopying>'}}
 
-  ip = [[NSViewController alloc] init].view; // expected-warning{{from '__kindof NSView *'}}
+  ip = [[NSViewController alloc] init].view; // expected-error{{from '__kindof NSView *'}}
 }
 
 void test_property_write(
@@ -248,14 +248,14 @@ void test_property_write(
        NSMutableDictionary *mutDict) {
   int *ip;
 
-  mutStringSet.allObjects = ip; // expected-warning{{to 'NSArray<NSString *> *'}}
-  widgetSet.allObjects = ip; // expected-warning{{to 'NSArray<Widget *> *'}}
-  untypedMutSet.allObjects = ip; // expected-warning{{to 'NSArray *'}}
-  mutStringArraySet.allObjects = ip; // expected-warning{{to 'NSArray<NSArray<NSString *> *> *'}}
-  mutSet.allObjects = ip; // expected-warning{{to 'NSArray *'}}
-  mutArraySet.allObjects = ip; // expected-warning{{to 'NSArray *'}}
+  mutStringSet.allObjects = ip; // expected-error{{to 'NSArray<NSString *> *'}}
+  widgetSet.allObjects = ip; // expected-error{{to 'NSArray<Widget *> *'}}
+  untypedMutSet.allObjects = ip; // expected-error{{to 'NSArray *'}}
+  mutStringArraySet.allObjects = ip; // expected-error{{to 'NSArray<NSArray<NSString *> *> *'}}
+  mutSet.allObjects = ip; // expected-error{{to 'NSArray *'}}
+  mutArraySet.allObjects = ip; // expected-error{{to 'NSArray *'}}
 
-  mutDict.someRandomKey = ip; // expected-warning{{to 'id<NSCopying>'}}
+  mutDict.someRandomKey = ip; // expected-error{{to 'id<NSCopying>'}}
 }
 
 // --------------------------------------------------------------------------
@@ -275,28 +275,28 @@ void test_subscripting(
   Widget *widget;
   Window *window;
 
-  ip = stringArray[0]; // expected-warning{{from 'NSString *'}}
+  ip = stringArray[0]; // expected-error{{from 'NSString *'}}
 
-  ip = mutStringArray[0]; // expected-warning{{from 'NSString *'}}
-  mutStringArray[0] = ip; // expected-warning{{parameter of type 'NSString *'}}
+  ip = mutStringArray[0]; // expected-error{{from 'NSString *'}}
+  mutStringArray[0] = ip; // expected-error{{parameter of type 'NSString *'}}
 
-  ip = array[0]; // expected-warning{{from 'id'}}
+  ip = array[0]; // expected-error{{from 'id'}}
 
-  ip = mutArray[0]; // expected-warning{{from 'id'}}
-  mutArray[0] = ip; // expected-warning{{parameter of type 'id'}}
+  ip = mutArray[0]; // expected-error{{from 'id'}}
+  mutArray[0] = ip; // expected-error{{parameter of type 'id'}}
 
-  ip = stringWidgetDict[string]; // expected-warning{{from 'Widget *'}}
-  widget = stringWidgetDict[widget]; // expected-warning{{to parameter of type 'NSString *'}}
+  ip = stringWidgetDict[string]; // expected-error{{from 'Widget *'}}
+  widget = stringWidgetDict[widget]; // expected-error{{to parameter of type 'NSString *'}}
 
-  ip = mutStringWidgetDict[string]; // expected-warning{{from 'Widget *'}}
-  widget = mutStringWidgetDict[widget]; // expected-warning{{to parameter of type 'NSString *'}}
-  mutStringWidgetDict[string] = ip; // expected-warning{{to parameter of type 'Widget *'}}
-  mutStringWidgetDict[widget] = widget; // expected-warning{{to parameter of type 'NSString *'}}
+  ip = mutStringWidgetDict[string]; // expected-error{{from 'Widget *'}}
+  widget = mutStringWidgetDict[widget]; // expected-error{{to parameter of type 'NSString *'}}
+  mutStringWidgetDict[string] = ip; // expected-error{{to parameter of type 'Widget *'}}
+  mutStringWidgetDict[widget] = widget; // expected-error{{to parameter of type 'NSString *'}}
 
-  ip = dict[string]; // expected-warning{{from 'id'}}
+  ip = dict[string]; // expected-error{{from 'id'}}
 
-  ip = mutDict[string]; // expected-warning{{from 'id'}}
-  mutDict[string] = ip; // expected-warning{{to parameter of type 'id'}}
+  ip = mutDict[string]; // expected-error{{from 'id'}}
+  mutDict[string] = ip; // expected-error{{to parameter of type 'id'}}
 
   widget = mutDict[window];
   mutDict[window] = widget; // expected-warning{{parameter of incompatible type 'id<NSCopying>'}}
@@ -309,15 +309,15 @@ void test_instance_variable(NSArray<NSString *> *stringArray,
                             NSArray *array) {
   int *ip;
 
-  ip = stringArray->data; // expected-warning{{from 'NSString **'}}
-  ip = array->data; // expected-warning{{from 'id *'}}
+  ip = stringArray->data; // expected-error{{from 'NSString **'}}
+  ip = array->data; // expected-error{{from 'id *'}}
 }
 
 @implementation WindowArray
 - (void)testInstanceVariable {
   int *ip;
 
-  ip = data; // expected-warning{{from 'Window **'}}
+  ip = data; // expected-error{{from 'Window **'}}
 }
 @end
 
@@ -336,13 +336,13 @@ void test_implicit_conversions(NSArray<NSString *> *stringArray,
   stringArray = array;
 
   // Specialized -> specialized failure (same level).
-  stringArray = numberArray; // expected-warning{{incompatible pointer types assigning to 'NSArray<NSString *> *' from 'NSArray<NSNumber *> *'}}
+  stringArray = numberArray; // expected-error{{incompatible pointer types assigning to 'NSArray<NSString *> *' from 'NSArray<NSNumber *> *'}}
 
   // Specialized -> specialized (different levels).
   stringArray = mutStringArray;
 
   // Specialized -> specialized failure (different levels).
-  numberArray = mutStringArray; // expected-warning{{incompatible pointer types assigning to 'NSArray<NSNumber *> *' from 'NSMutableArray<NSString *> *'}}
+  numberArray = mutStringArray; // expected-error{{incompatible pointer types assigning to 'NSArray<NSNumber *> *' from 'NSMutableArray<NSString *> *'}}
 
   // Unspecialized -> specialized (different levels).
   stringArray = mutArray;
@@ -366,10 +366,10 @@ void test_variance(NSCovariant1<NSString *> *covariant1,
                    NSContravariant1<NSString *> *contravariant1,
                    NSContravariant1<NSMutableString *> *contravariant2) {
   covariant1 = covariant2; // okay
-  covariant2 = covariant1; // expected-warning{{incompatible pointer types assigning to 'NSCovariant1<NSMutableString *> *' from 'NSCovariant1<NSString *> *'}}
+  covariant2 = covariant1; // expected-error{{incompatible pointer types assigning to 'NSCovariant1<NSMutableString *> *' from 'NSCovariant1<NSString *> *'}}
 
   covariant3 = covariant4; // okay
-  covariant4 = covariant3; // expected-warning{{incompatible pointer types assigning to 'NSCovariant1<NSMutableString *(^)(void)> *' from 'NSCovariant1<NSString *(^)(void)> *'}}
+  covariant4 = covariant3; // expected-error{{incompatible pointer types assigning to 'NSCovariant1<NSMutableString *(^)(void)> *' from 'NSCovariant1<NSString *(^)(void)> *'}}
 
   covariant5 = covariant1; // okay
   covariant1 = covariant5; // okay: id is promiscuous
@@ -377,7 +377,7 @@ void test_variance(NSCovariant1<NSString *> *covariant1,
   covariant5 = covariant3; // okay
   covariant3 = covariant5; // okay
 
-  contravariant1 = contravariant2; // expected-warning{{incompatible pointer types assigning to 'NSContravariant1<NSString *> *' from 'NSContravariant1<NSMutableString *> *'}}
+  contravariant1 = contravariant2; // expected-error{{incompatible pointer types assigning to 'NSContravariant1<NSString *> *' from 'NSContravariant1<NSMutableString *> *'}}
   contravariant2 = contravariant1; // okay
 }
 
@@ -394,19 +394,19 @@ void test_ternary_operator(NSArray<NSString *> *stringArray,
   int *ip;
   id object;
 
-  ip = cond ? stringArray : mutStringArray; // expected-warning{{from 'NSArray<NSString *> *'}}
-  ip = cond ? mutStringArray : stringArray; // expected-warning{{from 'NSArray<NSString *> *'}}
+  ip = cond ? stringArray : mutStringArray; // expected-error{{from 'NSArray<NSString *> *'}}
+  ip = cond ? mutStringArray : stringArray; // expected-error{{from 'NSArray<NSString *> *'}}
 
-  ip = cond ? stringArray2 : mutStringArray; // expected-warning{{from 'NSArray<NSString *> *'}}
-  ip = cond ? mutStringArray : stringArray2; // expected-warning{{from 'NSArray<NSString *> *'}}
+  ip = cond ? stringArray2 : mutStringArray; // expected-error{{from 'NSArray<NSString *> *'}}
+  ip = cond ? mutStringArray : stringArray2; // expected-error{{from 'NSArray<NSString *> *'}}
 
-  ip = cond ? stringArray : mutArray; // expected-warning{{from 'NSArray *'}}
+  ip = cond ? stringArray : mutArray; // expected-error{{from 'NSArray *'}}
 
-  ip = cond ? stringArray2 : mutArray; // expected-warning{{from 'NSArray *'}}
+  ip = cond ? stringArray2 : mutArray; // expected-error{{from 'NSArray *'}}
 
-  ip = cond ? mutArray : stringArray; // expected-warning{{from 'NSArray *'}}
+  ip = cond ? mutArray : stringArray; // expected-error{{from 'NSArray *'}}
 
-  ip = cond ? mutArray : stringArray2; // expected-warning{{from 'NSArray *'}}
+  ip = cond ? mutArray : stringArray2; // expected-error{{from 'NSArray *'}}
 
   object = cond ? stringArray : numberArray; // expected-warning{{incompatible operand types ('NSArray<NSString *> *' and 'NSArray<NSNumber *> *')}}
 }
@@ -417,16 +417,16 @@ void test_ternary_operator(NSArray<NSString *> *stringArray,
 @implementation NSStringArray
 - (void)useSuperMethod {
   int *ip;
-  ip = super.lastObject; // expected-warning{{from 'NSString *'}}
-  super.lastObject = ip; // expected-warning{{to 'NSString *'}}
-  ip = [super objectAtIndexedSubscript:0]; // expected-warning{{from 'NSString *'}}
+  ip = super.lastObject; // expected-error{{from 'NSString *'}}
+  super.lastObject = ip; // expected-error{{to 'NSString *'}}
+  ip = [super objectAtIndexedSubscript:0]; // expected-error{{from 'NSString *'}}
 }
 
 + (void)useSuperMethod {
   int *ip;
-  ip = super.array; // expected-warning{{from 'NSArray<NSString *> *'}}
-  super.array = ip; // expected-warning{{to 'NSArray<NSString *> *'}}
-  ip = [super array]; // expected-warning{{from 'NSArray<NSString *> *'}}
+  ip = super.array; // expected-error{{from 'NSArray<NSString *> *'}}
+  super.array = ip; // expected-error{{to 'NSArray<NSString *> *'}}
+  ip = [super array]; // expected-error{{from 'NSArray<NSString *> *'}}
 }
 @end
 
@@ -443,8 +443,8 @@ typedef NSArray<NSObject> ArrayOfNSObjectWarning; // expected-warning{{parameter
 void bar(MyMutableDictionary<NSString *, NSString *> *stringsByString,
                              NSNumber *n1, NSNumber *n2) {
   // We warn here when the key types do not match.
-  stringsByString[n1] = n2; // expected-warning{{incompatible pointer types sending 'NSNumber *' to parameter of type 'NSString *'}} \
-    // expected-warning{{incompatible pointer types sending 'NSNumber *' to parameter of type 'NSString<NSCopying> *'}}
+  stringsByString[n1] = n2; // expected-error{{incompatible pointer types sending 'NSNumber *' to parameter of type 'NSString *'}} \
+    // expected-error{{incompatible pointer types sending 'NSNumber *' to parameter of type 'NSString<NSCopying> *'}}
 }
 
 @interface MyTest<K, V> : NSObject <NSCopying>

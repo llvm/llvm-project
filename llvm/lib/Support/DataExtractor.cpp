@@ -135,7 +135,26 @@ uint64_t DataExtractor::getUnsigned(uint64_t *offset_ptr, uint32_t byte_size,
   case 8:
     return getU64(offset_ptr, Err);
   }
-  llvm_unreachable("getUnsigned unhandled case!");
+
+  // For any other byte size, read the bytes and swap/shift if necessary.
+  ErrorAsOutParameter ErrAsOut(Err);
+  uint64_t val = 0;
+  if (isError(Err))
+    return val;
+  uint64_t offset = *offset_ptr;
+  if (!prepareRead(offset, byte_size, Err))
+    return val;
+  // Copy into the least significant bytes of val regardless of host
+  // endianness.
+  std::memcpy(reinterpret_cast<char *>(&val) +
+                  (sys::IsLittleEndianHost ? 0 : 8 - byte_size),
+              &Data.data()[offset], byte_size);
+  // Swap the least significant bytes of val if endianness doesn't match.
+  if (sys::IsLittleEndianHost != IsLittleEndian)
+    val = sys::getSwappedBytes(val) >> (8 * (8 - byte_size));
+
+  *offset_ptr += byte_size;
+  return val;
 }
 
 int64_t

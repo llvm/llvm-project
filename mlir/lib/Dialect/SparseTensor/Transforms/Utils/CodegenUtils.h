@@ -97,8 +97,8 @@ public:
       // Create the function if not already exist.
       OpBuilder::InsertionGuard insertionGuard(builder);
       builder.setInsertionPoint(getParentOpOf<func::FuncOp>(builder));
-      func = builder.create<func::FuncOp>(
-          loc, funcName,
+      func = func::FuncOp::create(
+          builder, loc, funcName,
           FunctionType::get(context, params.getTypes(), retTypes));
       func.setPrivate();
       // Set the insertion point to the body of the function.
@@ -108,10 +108,10 @@ public:
       // Delegates to user to generate the actually implementation.
       SmallVector<Value> result =
           genImplementation(retTypes, args, builder, loc);
-      builder.create<func::ReturnOp>(loc, result);
+      func::ReturnOp::create(builder, loc, result);
     }
     // Returns the CallOp result.
-    func::CallOp call = builder.create<func::CallOp>(loc, func, params);
+    func::CallOp call = func::CallOp::create(builder, loc, func, params);
     return call.getResults();
   }
 
@@ -310,9 +310,9 @@ inline Value constantZero(OpBuilder &builder, Location loc, Type tp) {
   if (auto ctp = dyn_cast<ComplexType>(tp)) {
     auto zeroe = builder.getZeroAttr(ctp.getElementType());
     auto zeroa = builder.getArrayAttr({zeroe, zeroe});
-    return builder.create<complex::ConstantOp>(loc, tp, zeroa);
+    return complex::ConstantOp::create(builder, loc, tp, zeroa);
   }
-  return builder.create<arith::ConstantOp>(loc, tp, builder.getZeroAttr(tp));
+  return arith::ConstantOp::create(builder, loc, tp, builder.getZeroAttr(tp));
 }
 
 /// Generates a 1-valued constant of the given type.  This supports all
@@ -322,39 +322,39 @@ inline Value constantOne(OpBuilder &builder, Location loc, Type tp) {
     auto zeroe = builder.getZeroAttr(ctp.getElementType());
     auto onee = getOneAttr(builder, ctp.getElementType());
     auto zeroa = builder.getArrayAttr({onee, zeroe});
-    return builder.create<complex::ConstantOp>(loc, tp, zeroa);
+    return complex::ConstantOp::create(builder, loc, tp, zeroa);
   }
-  return builder.create<arith::ConstantOp>(loc, tp, getOneAttr(builder, tp));
+  return arith::ConstantOp::create(builder, loc, tp, getOneAttr(builder, tp));
 }
 
 /// Generates a constant of `index` type.
 inline Value constantIndex(OpBuilder &builder, Location loc, int64_t i) {
-  return builder.create<arith::ConstantIndexOp>(loc, i);
+  return arith::ConstantIndexOp::create(builder, loc, i);
 }
 
 /// Generates a constant of `i64` type.
 inline Value constantI64(OpBuilder &builder, Location loc, int64_t i) {
-  return builder.create<arith::ConstantIntOp>(loc, i, 64);
+  return arith::ConstantIntOp::create(builder, loc, i, 64);
 }
 
 /// Generates a constant of `i32` type.
 inline Value constantI32(OpBuilder &builder, Location loc, int32_t i) {
-  return builder.create<arith::ConstantIntOp>(loc, i, 32);
+  return arith::ConstantIntOp::create(builder, loc, i, 32);
 }
 
 /// Generates a constant of `i16` type.
 inline Value constantI16(OpBuilder &builder, Location loc, int16_t i) {
-  return builder.create<arith::ConstantIntOp>(loc, i, 16);
+  return arith::ConstantIntOp::create(builder, loc, i, 16);
 }
 
 /// Generates a constant of `i8` type.
 inline Value constantI8(OpBuilder &builder, Location loc, int8_t i) {
-  return builder.create<arith::ConstantIntOp>(loc, i, 8);
+  return arith::ConstantIntOp::create(builder, loc, i, 8);
 }
 
 /// Generates a constant of `i1` type.
 inline Value constantI1(OpBuilder &builder, Location loc, bool b) {
-  return builder.create<arith::ConstantIntOp>(loc, b, 1);
+  return arith::ConstantIntOp::create(builder, loc, b, 1);
 }
 
 /// Generates a constant of the given `Action`.
@@ -400,12 +400,12 @@ inline Value constantLevelTypeEncoding(OpBuilder &builder, Location loc,
 inline Value genValFromAttr(OpBuilder &builder, Location loc, Attribute attr) {
   if (auto complexAttr = dyn_cast<complex::NumberAttr>(attr)) {
     Type tp = cast<ComplexType>(complexAttr.getType()).getElementType();
-    return builder.create<complex::ConstantOp>(
-        loc, complexAttr.getType(),
+    return complex::ConstantOp::create(
+        builder, loc, complexAttr.getType(),
         builder.getArrayAttr({FloatAttr::get(tp, complexAttr.getReal()),
                               FloatAttr::get(tp, complexAttr.getImag())}));
   }
-  return builder.create<arith::ConstantOp>(loc, cast<TypedAttr>(attr));
+  return arith::ConstantOp::create(builder, loc, cast<TypedAttr>(attr));
 }
 
 // TODO: is this at the right place?

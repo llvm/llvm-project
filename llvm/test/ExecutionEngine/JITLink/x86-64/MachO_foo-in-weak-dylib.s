@@ -1,8 +1,8 @@
-# RUN: yaml2obj -o %T/libfoo.dylib %S/Inputs/libFooUniversalDylib.yaml
+# RUN: yaml2obj -o %t.libfoo.dylib %S/Inputs/libFooUniversalDylib.yaml
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj \
-# RUN:     -o %T/MachO_foo-in-weak-dylib.o %s
-# RUN: llvm-jitlink -noexec %T/MachO_foo-in-weak-dylib.o \
-# RUN:     -weak_library %T/libfoo.dylib
+# RUN:     -o %t.MachO_foo-in-weak-dylib.o %s
+# RUN: llvm-jitlink -noexec %t.MachO_foo-in-weak-dylib.o \
+# RUN:     -weak_library %t.libfoo.dylib
 #
 # Check that -weak_library supports universal binaries.
 

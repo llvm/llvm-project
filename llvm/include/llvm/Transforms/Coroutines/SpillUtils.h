@@ -13,9 +13,7 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_SPILLINGINFO_H
 #define LLVM_TRANSFORMS_COROUTINES_SPILLINGINFO_H
 
-namespace llvm {
-
-namespace coro {
+namespace llvm::coro {
 
 using SpillInfo = SmallMapVector<Value *, SmallVector<Instruction *, 2>, 8>;
 
@@ -30,30 +28,29 @@ struct AllocaInfo {
         MayWriteBeforeCoroBegin(MayWriteBeforeCoroBegin) {}
 };
 
-void collectSpillsFromArgs(SpillInfo &Spills, Function &F,
-                           const SuspendCrossingInfo &Checker);
-void collectSpillsAndAllocasFromInsts(
+LLVM_ABI void collectSpillsFromArgs(SpillInfo &Spills, Function &F,
+                                    const SuspendCrossingInfo &Checker);
+LLVM_ABI void collectSpillsAndAllocasFromInsts(
     SpillInfo &Spills, SmallVector<AllocaInfo, 8> &Allocas,
     SmallVector<Instruction *, 4> &DeadInstructions,
     SmallVector<CoroAllocaAllocInst *, 4> &LocalAllocas, Function &F,
     const SuspendCrossingInfo &Checker, const DominatorTree &DT,
     const coro::Shape &Shape);
-void collectSpillsFromDbgInfo(SpillInfo &Spills, Function &F,
-                              const SuspendCrossingInfo &Checker);
+
+LLVM_ABI void collectSpillsFromDbgInfo(SpillInfo &Spills, Function &F,
+                                       const SuspendCrossingInfo &Checker);
 
 /// Async and Retcon{Once} conventions assume that all spill uses can be sunk
 /// after the coro.begin intrinsic.
-void sinkSpillUsesAfterCoroBegin(const DominatorTree &DT,
-                                 CoroBeginInst *CoroBegin,
-                                 coro::SpillInfo &Spills,
-                                 SmallVectorImpl<coro::AllocaInfo> &Allocas);
+LLVM_ABI void
+sinkSpillUsesAfterCoroBegin(const DominatorTree &DT, CoroBeginInst *CoroBegin,
+                            coro::SpillInfo &Spills,
+                            SmallVectorImpl<coro::AllocaInfo> &Allocas);
 
 // Get the insertion point for a spill after a Def.
-BasicBlock::iterator getSpillInsertionPt(const coro::Shape &, Value *Def,
-                                         const DominatorTree &DT);
+LLVM_ABI BasicBlock::iterator
+getSpillInsertionPt(const coro::Shape &, Value *Def, const DominatorTree &DT);
 
-} // namespace coro
-
-} // namespace llvm
+} // namespace llvm::coro
 
 #endif // LLVM_TRANSFORMS_COROUTINES_SPILLINGINFO_H

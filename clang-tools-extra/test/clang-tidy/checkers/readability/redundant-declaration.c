@@ -3,23 +3,23 @@
 extern int Xyz;
 extern int Xyz; // Xyz
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'Xyz' declaration [readability-redundant-declaration]
-// CHECK-FIXES: {{^}}// Xyz{{$}}
+// CHECK-FIXES: // Xyz
 int Xyz = 123;
 
 extern int A;
 extern int A, B;
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'A' declaration
-// CHECK-FIXES: {{^}}extern int A, B;{{$}}
+// CHECK-FIXES: extern int A, B;
 
 extern int Buf[10];
 extern int Buf[10]; // Buf[10]
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'Buf' declaration
-// CHECK-FIXES: {{^}}// Buf[10]{{$}}
+// CHECK-FIXES: // Buf[10]
 
 static int f(void);
 static int f(void); // f
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'f' declaration
-// CHECK-FIXES: {{^}}// f{{$}}
+// CHECK-FIXES: // f
 static int f(void) { return 0; }
 
 inline void g(void) {}

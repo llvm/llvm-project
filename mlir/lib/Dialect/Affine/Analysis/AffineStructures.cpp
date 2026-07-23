@@ -93,13 +93,13 @@ FlatAffineValueConstraints::addAffineForOpDomain(AffineForOp forOp) {
       int64_t lb = forOp.getConstantLowerBound();
       dividend[pos] = 1;
       dividend.back() -= lb;
-      addLocalFloorDiv(dividend, step);
+      unsigned qPos = addLocalFloorDiv(dividend, step);
       // Second constraint: (iv - lb) - step * q = 0.
       SmallVector<int64_t, 8> eq(getNumCols(), 0);
       eq[pos] = 1;
       eq.back() -= lb;
       // For the local var just added above.
-      eq[getNumCols() - 2] = -step;
+      eq[qPos] = -step;
       addEquality(eq);
     }
   }
@@ -133,14 +133,14 @@ LogicalResult FlatAffineValueConstraints::addAffineParallelOpDomain(
     }
 
     AffineMap lowerBound = parallelOp.getLowerBoundMap(ivPos);
-    if (lowerBound.isConstant())
+    if (lowerBound.isSingleConstant())
       addBound(BoundType::LB, pos, lowerBound.getSingleConstantResult());
     else if (failed(addBound(BoundType::LB, pos, lowerBound,
                              parallelOp.getLowerBoundsOperands())))
       return failure();
 
     auto upperBound = parallelOp.getUpperBoundMap(ivPos);
-    if (upperBound.isConstant())
+    if (upperBound.isSingleConstant())
       addBound(BoundType::UB, pos, upperBound.getSingleConstantResult() - 1);
     else if (failed(addBound(BoundType::UB, pos, upperBound,
                              parallelOp.getUpperBoundsOperands())))
@@ -342,8 +342,7 @@ void FlatAffineValueConstraints::getIneqAsAffineValueMap(
 
   if (inequality[pos] > 0)
     // Lower bound.
-    std::transform(bound.begin(), bound.end(), bound.begin(),
-                   std::negate<int64_t>());
+    llvm::transform(bound, bound.begin(), std::negate<int64_t>());
   else
     // Upper bound (which is exclusive).
     bound.back() += 1;

@@ -44,6 +44,7 @@ class SectionRef;
 class SymbolRef;
 class symbol_iterator;
 class WasmObjectFile;
+class DXContainerObjectFile;
 
 using section_iterator = content_iterator<SectionRef>;
 
@@ -401,6 +402,9 @@ public:
 
   static Expected<std::unique_ptr<WasmObjectFile>>
   createWasmObjectFile(MemoryBufferRef Object);
+
+  static Expected<std::unique_ptr<DXContainerObjectFile>>
+  createDXContainerObjectFile(MemoryBufferRef Object);
 };
 
 /// A filtered iterator for SectionRefs that skips sections based on some given
@@ -648,14 +652,6 @@ template <> struct DenseMapInfo<object::SectionRef> {
   static bool isEqual(const object::SectionRef &A,
                       const object::SectionRef &B) {
     return A == B;
-  }
-  static object::SectionRef getEmptyKey() {
-    return object::SectionRef({}, nullptr);
-  }
-  static object::SectionRef getTombstoneKey() {
-    object::DataRefImpl TS;
-    TS.p = (uintptr_t)-1;
-    return object::SectionRef(TS, nullptr);
   }
   static unsigned getHashValue(const object::SectionRef &Sec) {
     object::DataRefImpl Raw = Sec.getRawDataRefImpl();

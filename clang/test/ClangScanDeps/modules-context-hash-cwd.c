@@ -1,6 +1,6 @@
+// Most likely platform specific sed differences
+// UNSUPPORTED: system-windows
 // Test current directory pruning when computing the context hash.
-
-// REQUIRES: shell
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t

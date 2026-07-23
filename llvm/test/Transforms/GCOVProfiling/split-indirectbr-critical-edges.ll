@@ -10,7 +10,7 @@
 ; CHECK-NEXT:    load {{.*}} @__llvm_gcov_ctr
 ; CHECK-NOT:     load {{.*}} @__llvm_gcov_ctr
 
-define dso_local i32 @cannot_split(ptr nocapture readonly %p) #0 !dbg !7 {
+define dso_local i32 @cannot_split(ptr nocapture readonly %p) !dbg !7 {
 entry:
   %targets = alloca <2 x ptr>, align 16
   store <2 x ptr> <ptr blockaddress(@cannot_split, %indirect), ptr blockaddress(@cannot_split, %end)>, ptr %targets, align 16, !dbg !9
@@ -41,8 +41,6 @@ indirect2:
 end:                                              ; preds = %indirect
   ret i32 0, !dbg !22
 }
-
-attributes #0 = { norecurse nounwind readonly uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

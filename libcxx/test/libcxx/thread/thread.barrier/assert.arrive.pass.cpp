@@ -8,6 +8,8 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
+// Without the assertion, the test will most likely time out.
+// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
 
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 

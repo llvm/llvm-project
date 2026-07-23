@@ -55,14 +55,15 @@ define i128 @f4(ptr %ptr) {
 }
 
 ; Truncation to i64.
-define i64 @f5(i128 %a) {
+define i64 @f5(i128 %a, i128 %b) {
 ; CHECK-LABEL: f5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r2), 3
-; CHECK-NEXT:    vaq %v0, %v0, %v0
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vl %v1, 0(%r2), 3
+; CHECK-NEXT:    vaq %v0, %v1, %v0
 ; CHECK-NEXT:    vlgvg %r2, %v0, 1
 ; CHECK-NEXT:    br %r14
-  %op = add i128 %a, %a
+  %op = add i128 %a, %b
   %res = trunc i128 %op to i64
   ret i64 %res
 }
@@ -134,15 +135,16 @@ define i128 @f10(ptr %ptr) {
 }
 
 ; Truncation to i32.
-define i32 @f11(i128 %a) {
+define i32 @f11(i128 %a, i128 %b) {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r2), 3
-; CHECK-NEXT:    vaq %v0, %v0, %v0
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vl %v1, 0(%r2), 3
+; CHECK-NEXT:    vaq %v0, %v1, %v0
 ; CHECK-NEXT:    vlgvf %r2, %v0, 3
 ; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
 ; CHECK-NEXT:    br %r14
-  %op = add i128 %a, %a
+  %op = add i128 %a, %b
   %res = trunc i128 %op to i32
   ret i32 %res
 }
@@ -215,15 +217,16 @@ define i128 @f16(ptr %ptr) {
 }
 
 ; Truncation to i16.
-define i16 @f17(i128 %a) {
+define i16 @f17(i128 %a, i128 %b) {
 ; CHECK-LABEL: f17:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r2), 3
-; CHECK-NEXT:    vaq %v0, %v0, %v0
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vl %v1, 0(%r2), 3
+; CHECK-NEXT:    vaq %v0, %v1, %v0
 ; CHECK-NEXT:    vlgvf %r2, %v0, 3
 ; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
 ; CHECK-NEXT:    br %r14
-  %op = add i128 %a, %a
+  %op = add i128 %a, %b
   %res = trunc i128 %op to i16
   ret i16 %res
 }
@@ -296,15 +299,16 @@ define i128 @f22(ptr %ptr) {
 }
 
 ; Truncation to i8.
-define i8 @f23(i128 %a) {
+define i8 @f23(i128 %a, i128 %b) {
 ; CHECK-LABEL: f23:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r2), 3
-; CHECK-NEXT:    vaq %v0, %v0, %v0
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vl %v1, 0(%r2), 3
+; CHECK-NEXT:    vaq %v0, %v1, %v0
 ; CHECK-NEXT:    vlgvf %r2, %v0, 3
 ; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
 ; CHECK-NEXT:    br %r14
-  %op = add i128 %a, %a
+  %op = add i128 %a, %b
   %res = trunc i128 %op to i8
   ret i8 %res
 }
@@ -383,15 +387,16 @@ define i128 @f28(ptr %ptr) {
 }
 
 ; Truncation to i1.
-define i1 @f29(i128 %a) {
+define i1 @f29(i128 %a, i128 %b) {
 ; CHECK-LABEL: f29:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 0(%r2), 3
-; CHECK-NEXT:    vaq %v0, %v0, %v0
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vl %v1, 0(%r2), 3
+; CHECK-NEXT:    vaq %v0, %v1, %v0
 ; CHECK-NEXT:    vlgvf %r2, %v0, 3
 ; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
 ; CHECK-NEXT:    br %r14
-  %op = add i128 %a, %a
+  %op = add i128 %a, %b
   %res = trunc i128 %op to i1
   ret i1 %res
 }

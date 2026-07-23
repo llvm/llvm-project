@@ -10,7 +10,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 
-#include "hdr/float_macros.h"                        // LDBL_MANT_DIG
+#include "hdr/float_macros.h" // LDBL_MANT_DIG
+#include "hdr/stdint_proxy.h" // UINT64_MAX, __SIZEOF_INT128__
 #include "include/llvm-libc-macros/float16-macros.h" // LIBC_TYPES_HAS_FLOAT16
 #include "include/llvm-libc-types/float128.h"        // float128
 #include "src/__support/macros/config.h"             // LIBC_NAMESPACE_DECL
@@ -18,8 +19,6 @@
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/macros/properties/os.h"
-
-#include <stdint.h> // UINT64_MAX, __SIZEOF_INT128__
 
 // 'long double' properties.
 #if (LDBL_MANT_DIG == 53)
@@ -58,6 +57,21 @@ using float16 = _Float16;
 // -- float128 support --------------------------------------------------------
 // LIBC_TYPES_HAS_FLOAT128 and 'float128' type are provided by
 // "include/llvm-libc-types/float128.h"
+
+// -- Emulated float128 support ------------------------------------------------
+// Float128 is always available regardless of built-in float128 type support in
+// the compiler.
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
+struct Float128;
+}
+} // namespace LIBC_NAMESPACE_DECL
+
+// #ifndef LIBC_TYPES_HAS_FLOAT128
+// using float128 = LIBC_NAMESPACE::fputil::Float128;
+// #endif // LIBC_TYPES_HAS_FLOAT128
+// TODO: Commented till we modify all required functions to support emulated
+// Float128.
 
 // -- bfloat16 support ---------------------------------------------------------
 

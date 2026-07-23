@@ -33,8 +33,7 @@ makeTUDiagnostics(const std::string &MainSourceFile, StringRef DiagnosticName,
 // before applying.
 TEST(ApplyReplacementsTest, mergeDiagnosticsWithNoFixes) {
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts);
   FileManager Files((FileSystemOptions()));
   SourceManager SM(Diagnostics, Files);
   TUReplacements TURs;

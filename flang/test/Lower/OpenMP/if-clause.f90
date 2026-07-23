@@ -12,7 +12,6 @@ program main
   ! - PARALLEL SECTIONS
   ! - PARALLEL WORKSHARE
   ! - TARGET UPDATE
-  ! - TASKLOOP
   ! - TASKLOOP SIMD
 
   ! ----------------------------------------------------------------------------
@@ -1580,4 +1579,32 @@ program main
   !$omp teams if(teams: .true.)
   i = 1
   !$omp end teams
+
+  ! ----------------------------------------------------------------------------
+  ! TASKLOOP
+  ! ----------------------------------------------------------------------------
+
+  ! CHECK:      omp.taskloop.context
+  ! CHECK-NOT: if({{.*}})
+  ! CHECK:      omp.taskloop.wrapper
+  !$omp taskloop
+  do i = 1, 10
+  end do
+  !$omp end taskloop
+
+  ! CHECK:      omp.taskloop.context
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.taskloop.wrapper
+  !$omp taskloop if(.true.)
+  do i = 1, 10
+  end do
+  !$omp end taskloop
+
+  ! CHECK:      omp.taskloop.context
+  ! CHECK-SAME: if({{.*}})
+  ! CHECK:      omp.taskloop.wrapper
+  !$omp taskloop if(taskloop: .true.)
+  do i = 1, 10
+  end do
+  !$omp end taskloop
 end program main

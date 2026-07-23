@@ -72,6 +72,7 @@ define void @types() {
   %10 = alloca ptr addrspace(5), align 8
   %11 = alloca <5 x ptr>, align 64
   %12 = alloca <1 x i64>, align 8
+  %13 = alloca b8, align 1
   ret void
 }
 

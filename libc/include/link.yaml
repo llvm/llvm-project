@@ -1,4 +1,6 @@
 header: link.h
+public_includes:
+  - elf.h
 standards:
   - svid
 macros:

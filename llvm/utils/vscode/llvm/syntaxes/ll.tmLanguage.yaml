@@ -229,7 +229,9 @@ patterns:
             \\bnofree\\b|\
             \\bnoimplicitfloat\\b|\
             \\bnoinline\\b|\
+            \\bnoipa\\b|\
             \\bnomerge\\b|\
+            \\bnooutline\\b|\
             \\bnonlazybind\\b|\
             \\bnonnull\\b|\
             \\bnoprofile\\b|\
@@ -258,6 +260,7 @@ patterns:
             \\breturns_twice\\b|\
             \\bsafestack\\b|\
             \\bsanitize_address\\b|\
+            \\bsanitize_alloc_token\\b|\
             \\bsanitize_hwaddress\\b|\
             \\bsanitize_memory\\b|\
             \\bsanitize_memtag\\b|\
@@ -290,7 +293,6 @@ patterns:
             \\bunnamed_addr\\b|\
             \\bunordered\\b|\
             \\buselistorder\\b|\
-            \\buselistorder_bb\\b|\
             \\buwtable\\b|\
             \\bvolatile\\b|\
             \\bweak\\b|\

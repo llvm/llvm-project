@@ -2,7 +2,6 @@
 #include <stdio.h>
 #ifdef _WIN32
 #include <process.h>
-#include <windows.h>
 #else
 #include <unistd.h>
 #endif
@@ -18,13 +17,22 @@ int main(int argc, char const *argv[]) {
     fputs("\n", f);
     fflush(f);
     fclose(f);
+
+    // Wait on input from stdin.
+    // when lldb connects to the process, on MacOS getchar() is interupted
+    // and sets the stream's error indicator (EINTR).
+    // ignore that and keep waiting until we actually receive a character.
+    while (1) {
+      int c = getchar();
+      if (c == EOF && ferror(stdin)) {
+        clearerr(stdin);
+        continue;
+      }
+      printf("char = %c\n", c);
+      break;
+    }
   }
 
   printf("pid = %i\n", getpid());
-#ifdef _WIN32
-  Sleep(10 * 1000);
-#else
-  sleep(10);
-#endif
   return 0; // breakpoint 1
 }

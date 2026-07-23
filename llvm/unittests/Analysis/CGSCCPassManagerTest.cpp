@@ -149,7 +149,7 @@ private:
 
 AnalysisKey TestImmutableFunctionAnalysis::Key;
 
-struct LambdaModulePass : public PassInfoMixin<LambdaModulePass> {
+struct LambdaModulePass : public OptionalPassInfoMixin<LambdaModulePass> {
   template <typename T>
   LambdaModulePass(T &&Arg) : Func(std::forward<T>(Arg)) {}
 
@@ -160,7 +160,7 @@ struct LambdaModulePass : public PassInfoMixin<LambdaModulePass> {
   std::function<PreservedAnalyses(Module &, ModuleAnalysisManager &)> Func;
 };
 
-struct LambdaSCCPass : public PassInfoMixin<LambdaSCCPass> {
+struct LambdaSCCPass : public OptionalPassInfoMixin<LambdaSCCPass> {
   template <typename T> LambdaSCCPass(T &&Arg) : Func(std::forward<T>(Arg)) {}
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
@@ -173,7 +173,7 @@ struct LambdaSCCPass : public PassInfoMixin<LambdaSCCPass> {
       Func;
 };
 
-struct LambdaFunctionPass : public PassInfoMixin<LambdaFunctionPass> {
+struct LambdaFunctionPass : public OptionalPassInfoMixin<LambdaFunctionPass> {
   template <typename T>
   LambdaFunctionPass(T &&Arg) : Func(std::forward<T>(Arg)) {}
 
@@ -1320,7 +1320,8 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
 // is not defined.
 #ifndef NDEBUG
 
-struct LambdaSCCPassNoPreserve : public PassInfoMixin<LambdaSCCPassNoPreserve> {
+struct LambdaSCCPassNoPreserve
+    : public OptionalPassInfoMixin<LambdaSCCPassNoPreserve> {
   template <typename T>
   LambdaSCCPassNoPreserve(T &&Arg) : Func(std::forward<T>(Arg)) {}
 
@@ -1936,26 +1937,26 @@ TEST_F(CGSCCPassManagerTest, TestDeletionOfFunctionInNonTrivialRefSCC) {
 TEST_F(CGSCCPassManagerTest, TestInsertionOfNewNonTrivialCallEdge) {
   std::unique_ptr<Module> M = parseIR("define void @f1() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f4 to i8*\n"
-                                      "  %b = bitcast void ()* @f2 to i8*\n"
+                                      "  %a = bitcast ptr @f4 to ptr\n"
+                                      "  %b = bitcast ptr @f2 to ptr\n"
                                       "  ret void\n"
                                       "}\n"
                                       "define void @f2() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f1 to i8*\n"
-                                      "  %b = bitcast void ()* @f3 to i8*\n"
+                                      "  %a = bitcast ptr @f1 to ptr\n"
+                                      "  %b = bitcast ptr @f3 to ptr\n"
                                       "  ret void\n"
                                       "}\n"
                                       "define void @f3() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f2 to i8*\n"
-                                      "  %b = bitcast void ()* @f4 to i8*\n"
+                                      "  %a = bitcast ptr @f2 to ptr\n"
+                                      "  %b = bitcast ptr @f4 to ptr\n"
                                       "  ret void\n"
                                       "}\n"
                                       "define void @f4() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f3 to i8*\n"
-                                      "  %b = bitcast void ()* @f1 to i8*\n"
+                                      "  %a = bitcast ptr @f3 to ptr\n"
+                                      "  %b = bitcast ptr @f1 to ptr\n"
                                       "  ret void\n"
                                       "}\n");
 

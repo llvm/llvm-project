@@ -30,13 +30,23 @@ BreakpointResolverScripted::BreakpointResolverScripted(
     lldb::SearchDepth depth, const StructuredDataImpl &args_data)
     : BreakpointResolver(bkpt, BreakpointResolver::PythonResolver),
       m_class_name(std::string(class_name)), m_depth(depth), m_args(args_data) {
-  CreateImplementationIfNeeded(bkpt);
+  if (bkpt)
+    CreateImplementationIfNeeded(bkpt);
 }
 
 void BreakpointResolverScripted::CreateImplementationIfNeeded(
     BreakpointSP breakpoint_sp) {
-  if (m_implementation_sp)
+  // This version has to be called with a valid breakpoint_sp
+  // But the interface might have been made before we sent the breakpoint to
+  // the interface.  If so, do that here:
+  assert(breakpoint_sp);
+  if (m_interface_sp) {
+    if (!m_breakpoint_sent) {
+      m_interface_sp->SetBreakpoint(breakpoint_sp);
+      m_breakpoint_sent = true;
+    }
     return;
+  }
 
   if (m_class_name.empty())
     return;
@@ -45,13 +55,70 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
     return;
 
   TargetSP target_sp = breakpoint_sp->GetTargetSP();
-  ScriptInterpreter *script_interp = target_sp->GetDebugger()
-                                              .GetScriptInterpreter();
+  if (target_sp)
+    CreateImplementationIfNeeded(*target_sp.get(), breakpoint_sp);
+}
+
+void BreakpointResolverScripted::CreateImplementationIfNeeded(
+    Target &target, BreakpointSP breakpoint_sp) {
+  if (m_interface_sp) {
+    if (!m_breakpoint_sent && breakpoint_sp) {
+      m_interface_sp->SetBreakpoint(breakpoint_sp);
+      m_breakpoint_sent = true;
+    }
+    return;
+  }
+
+  ScriptInterpreter *script_interp =
+      target.GetDebugger().GetScriptInterpreter();
   if (!script_interp)
     return;
 
-  m_implementation_sp = script_interp->CreateScriptedBreakpointResolver(
-      m_class_name.c_str(), m_args, breakpoint_sp);
+  if (!m_interface_sp)
+    m_interface_sp = script_interp->CreateScriptedBreakpointInterface();
+
+  if (!m_interface_sp) {
+    m_error = Status::FromErrorStringWithFormat(
+        "BreakpointResolverScripted::%s () - ERROR: %s", __FUNCTION__,
+        "Script interpreter couldn't create Scripted Breakpoint Interface");
+    return;
+  }
+
+  StructuredData::ObjectSP args_obj = m_args.GetObjectSP();
+  StructuredData::DictionarySP args_dict_sp;
+  if (args_obj && args_obj->GetType() == lldb::eStructuredDataTypeDictionary)
+    args_dict_sp =
+        std::static_pointer_cast<StructuredData::Dictionary>(args_obj);
+  ScriptedMetadata scripted_metadata(m_class_name, args_dict_sp);
+  auto obj_or_err =
+      m_interface_sp->CreatePluginObject(scripted_metadata, breakpoint_sp);
+  if (!obj_or_err) {
+    m_interface_sp.reset();
+    m_error = Status::FromError(obj_or_err.takeError());
+    return;
+  }
+  StructuredData::ObjectSP object_sp = *obj_or_err;
+  if (!object_sp || !object_sp->IsValid()) {
+    m_error = Status::FromErrorStringWithFormat(
+        "ScriptedBreakpoint::%s () - ERROR: %s", __FUNCTION__,
+        "Failed to create valid script object");
+  }
+  if (breakpoint_sp)
+    m_breakpoint_sent = true;
+}
+
+bool BreakpointResolverScripted::OverridesResolver(
+    Target &target, BreakpointResolverSP original_sp) {
+  // At this point neither resolver has been assigned a breakpoint, so pass
+  // in an empty one.
+  CreateImplementationIfNeeded(target, {});
+  if (!m_interface_sp)
+    return false;
+
+  StructuredData::ObjectSP serialized_sp =
+      original_sp->SerializeToStructuredData();
+  StructuredDataImpl impl(serialized_sp);
+  return m_interface_sp->OverridesResolver(target, impl);
 }
 
 void BreakpointResolverScripted::NotifyBreakpointSet() {
@@ -104,13 +171,10 @@ ScriptInterpreter *BreakpointResolverScripted::GetScriptInterpreter() {
 Searcher::CallbackReturn BreakpointResolverScripted::SearchCallback(
     SearchFilter &filter, SymbolContext &context, Address *addr) {
   bool should_continue = true;
-  if (!m_implementation_sp)
+  if (!m_interface_sp)
     return Searcher::eCallbackReturnStop;
 
-  ScriptInterpreter *interp = GetScriptInterpreter();
-  should_continue = interp->ScriptedBreakpointResolverSearchCallback(
-      m_implementation_sp,
-      &context);
+  should_continue = m_interface_sp->ResolverCallback(context);
   if (should_continue)
     return Searcher::eCallbackReturnContinue;
 
@@ -120,27 +184,41 @@ Searcher::CallbackReturn BreakpointResolverScripted::SearchCallback(
 lldb::SearchDepth
 BreakpointResolverScripted::GetDepth() {
   lldb::SearchDepth depth = lldb::eSearchDepthModule;
-  if (m_implementation_sp) {
-    ScriptInterpreter *interp = GetScriptInterpreter();
-    depth = interp->ScriptedBreakpointResolverSearchDepth(
-        m_implementation_sp);
-  }
+  if (m_interface_sp)
+    depth = m_interface_sp->GetDepth();
+
   return depth;
 }
 
 void BreakpointResolverScripted::GetDescription(Stream *s) {
   StructuredData::GenericSP generic_sp;
-  std::string short_help;
+  std::optional<std::string> short_help;
 
-  if (m_implementation_sp) {
-    ScriptInterpreter *interp = GetScriptInterpreter();
-    interp->GetShortHelpForCommandObject(m_implementation_sp,
-                                         short_help);
+  CreateImplementationIfNeeded(GetBreakpoint());
+
+  if (m_interface_sp) {
+    short_help = m_interface_sp->GetShortHelp();
   }
-  if (!short_help.empty())
-    s->PutCString(short_help.c_str());
+  if (short_help && !short_help->empty())
+    s->PutCString(short_help->c_str());
   else
     s->Printf("python class = %s", m_class_name.c_str());
+}
+
+std::optional<std::string> BreakpointResolverScripted::GetLocationDescription(
+    lldb::BreakpointLocationSP bp_loc_sp, lldb::DescriptionLevel level) {
+  CreateImplementationIfNeeded(GetBreakpoint());
+  if (m_interface_sp)
+    return m_interface_sp->GetLocationDescription(bp_loc_sp, level);
+  return {};
+}
+
+lldb::BreakpointLocationSP
+BreakpointResolverScripted::WasHit(lldb::StackFrameSP frame_sp,
+                                   lldb::BreakpointLocationSP bp_loc_sp) {
+  if (m_interface_sp)
+    return m_interface_sp->WasHit(frame_sp, bp_loc_sp);
+  return {};
 }
 
 void BreakpointResolverScripted::Dump(Stream *s) const {}

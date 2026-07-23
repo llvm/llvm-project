@@ -26,6 +26,7 @@ add_clang_unittest(ASTTests
   ExternalASTSourceTest.cpp
   NamedDeclPrinterTest.cpp
   ProfilingTest.cpp
+  QualTypeNamesTest.cpp
   RandstructTest.cpp
   RawCommentForDeclTest.cpp
   RecursiveASTVisitorTest.cpp
@@ -33,6 +34,7 @@ add_clang_unittest(ASTTests
   SourceLocationTest.cpp
   StmtPrinterTest.cpp
   StructuralEquivalenceTest.cpp
+  SubobjectVisitorTest.cpp
   TemplateNameTest.cpp
   TypePrinterTest.cpp
   UnresolvedSetTest.cpp

@@ -19,8 +19,8 @@ def GR64 : RegisterOperand<RegClass>;
 def HasA : Predicate<"Subtarget->hasA()">;
 def HasB : Predicate<"Subtarget->hasB()">;
 
-def ModeA : HwMode<"+a", [HasA]>;
-def ModeB : HwMode<"+b", [HasB]>;
+def ModeA : HwMode<[HasA]>;
+def ModeB : HwMode<[HasB]>;
 
 def fooTypeEncA : InstructionEncoding {
   dag Inst = (descend

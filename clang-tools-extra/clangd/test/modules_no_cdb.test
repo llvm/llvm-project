@@ -1,0 +1,66 @@
+# A smoke test to check that clangd works without compilation database
+#
+# Windows have different escaping modes.
+# FIXME: We should add one for windows.
+# UNSUPPORTED: system-windows
+#
+# RUN: rm -fr %t
+# RUN: mkdir -p %t
+# RUN: split-file %s %t
+#
+# RUN: sed -e "s|DIR|%/t|g" %t/definition.jsonrpc.tmpl > %t/definition.jsonrpc
+#
+# RUN: clangd -experimental-modules-support -lit-test < %t/definition.jsonrpc \
+# RUN:      | FileCheck -strict-whitespace %t/definition.jsonrpc
+
+#--- A.h
+void printA();
+
+#--- Use.cpp
+#include "A.h"
+void foo() {
+    print
+}
+
+#--- definition.jsonrpc.tmpl
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "method": "initialize",
+  "params": {
+    "processId": 123,
+    "rootPath": "clangd",
+    "capabilities": {
+      "textDocument": {
+        "completion": {
+          "completionItem": {
+            "snippetSupport": true
+          }
+        }
+      }
+    },
+    "trace": "off"
+  }
+}
+---
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didOpen",
+  "params": {
+    "textDocument": {
+      "uri": "file://DIR/Use.cpp",
+      "languageId": "cpp",
+      "version": 1,
+      "text": "#include \"A.h\"\nvoid foo() {\n    print\n}\n"
+    }
+  }
+}
+
+# CHECK: "message"{{.*}}printA{{.*}}(fix available)
+
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file://DIR/Use.cpp"},"context":{"triggerKind":1},"position":{"line":2,"character":6}}}
+---
+{"jsonrpc":"2.0","id":2,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

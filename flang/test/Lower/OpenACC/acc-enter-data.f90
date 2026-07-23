@@ -619,9 +619,8 @@ subroutine acc_enter_data_derived_type()
 
 
 !CHECK: %[[DATA_COORD:.*]] = hlfir.designate %[[DECLC]]#0{"data"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTz{data:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!CHECK: %[[DATA_BOX:.*]] = fir.load %[[DATA_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!CHECK: %[[CREATE:.*]] = acc.create var(%[[DATA_BOX]] : !fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.box<!fir.heap<!fir.array<?xi32>>> {name = "c%data", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.box<!fir.heap<!fir.array<?xi32>>>)
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[DATA_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "c%data", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 
   !$acc enter data create (d%d(1)%array)
 
@@ -643,20 +642,29 @@ subroutine acc_enter_data_single_array_element()
   !$acc enter data create(e(2)%a(1,2))
 
 !CHECK-LABEL:   func.func @_QPacc_enter_data_single_array_element() {
-!CHECK-DAG:       %[[VAL_38:.*]]:3 = fir.box_dims %[[BOX:.*]], %[[VAL_37:.*]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, index) -> (index, index, index)
-!CHECK-DAG:       %[[VAL_37]] = arith.constant 0 : index
-!CHECK-DAG:       %[[VAL_40:.*]]:3 = fir.box_dims %[[BOX]], %[[VAL_39:.*]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, index) -> (index, index, index)
-!CHECK-DAG:       %[[VAL_39]] = arith.constant 1 : index
-!CHECK-DAG:       %[[VAL_41:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.heap<!fir.array<?x?xf32>>
-!CHECK:           %[[VAL_42:.*]] = arith.constant 1 : index
-!CHECK:           %[[VAL_43:.*]] = arith.constant 1 : index
-!CHECK:           %[[VAL_44:.*]] = arith.subi %[[VAL_43]], %[[VAL_38]]#0 : index
-!CHECK:           %[[VAL_45:.*]] = acc.bounds lowerbound(%[[VAL_44]] : index) upperbound(%[[VAL_44]] : index) extent(%[[VAL_42]] : index) stride(%[[VAL_42]] : index) startIdx(%[[VAL_38]]#0 : index)
-!CHECK:           %[[VAL_46:.*]] = arith.constant 2 : index
-!CHECK:           %[[VAL_47:.*]] = arith.subi %[[VAL_46]], %[[VAL_40]]#0 : index
-!CHECK:           %[[VAL_48:.*]] = acc.bounds lowerbound(%[[VAL_47]] : index) upperbound(%[[VAL_47]] : index) extent(%[[VAL_42]] : index) stride(%[[VAL_42]] : index) startIdx(%[[VAL_40]]#0 : index)
-!CHECK:           %[[CREATE:.*]] = acc.create varPtr(%[[VAL_41]] : !fir.heap<!fir.array<?x?xf32>>) bounds(%[[VAL_45]], %[[VAL_48]]) -> !fir.heap<!fir.array<?x?xf32>> {name = "e(2_8)%a(1,2)", structured = false}
-!CHECK:           acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?x?xf32>>)
+! CHECK:           fir.allocmem
+! CHECK:           %[[DESIGNATE_3:.*]] = hlfir.designate %{{.*}}{"a"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QFacc_enter_data_single_array_elementTt1{a:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+! CHECK-DAG:       %[[CONSTANT_11:.*]] = arith.constant 1 : index
+! CHECK-DAG:       %[[LOAD_2:.*]] = fir.load %[[DESIGNATE_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+! CHECK-DAG:       %[[CONSTANT_12:.*]] = arith.constant 0 : index
+! CHECK-DAG:       %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_2]], %[[CONSTANT_12]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+! CHECK-DAG:       %[[LOAD_3:.*]] = fir.load %[[DESIGNATE_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+! CHECK-DAG:       %[[CONSTANT_13:.*]] = arith.constant 0 : index
+! CHECK-DAG:       %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[LOAD_3]], %[[CONSTANT_13]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+! CHECK-DAG:       %[[CONSTANT_14:.*]] = arith.constant 1 : index
+! CHECK-DAG:       %[[SUBI_0:.*]] = arith.subi %[[CONSTANT_14]], %[[BOX_DIMS_0]]#0 : index
+! CHECK-DAG:       %[[BOUNDS_0:.*]] = acc.bounds lowerbound(%[[SUBI_0]] : index) upperbound(%[[SUBI_0]] : index) extent(%[[CONSTANT_11]] : index) stride(%[[BOX_DIMS_1]]#2 : index) startIdx(%[[BOX_DIMS_0]]#0 : index) {strideInBytes = true}
+! CHECK-DAG:       %[[LOAD_4:.*]] = fir.load %[[DESIGNATE_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+! CHECK-DAG:       %[[CONSTANT_15:.*]] = arith.constant 1 : index
+! CHECK-DAG:       %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[LOAD_4]], %[[CONSTANT_15]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+! CHECK-DAG:       %[[LOAD_5:.*]] = fir.load %[[DESIGNATE_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+! CHECK-DAG:       %[[CONSTANT_16:.*]] = arith.constant 1 : index
+! CHECK-DAG:       %[[BOX_DIMS_3:.*]]:3 = fir.box_dims %[[LOAD_5]], %[[CONSTANT_16]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+! CHECK-DAG:       %[[CONSTANT_17:.*]] = arith.constant 2 : index
+! CHECK-DAG:       %[[SUBI_1:.*]] = arith.subi %[[CONSTANT_17]], %[[BOX_DIMS_2]]#0 : index
+! CHECK-DAG:       %[[BOUNDS_1:.*]] = acc.bounds lowerbound(%[[SUBI_1]] : index) upperbound(%[[SUBI_1]] : index) extent(%[[CONSTANT_11]] : index) stride(%[[BOX_DIMS_3]]#2 : index) startIdx(%[[BOX_DIMS_2]]#0 : index) {strideInBytes = true}
+! CHECK:           %[[CREATE_0:.*]] = acc.create varPtr(%[[DESIGNATE_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) bounds(%[[BOUNDS_0]], %[[BOUNDS_1]]) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>> {name = "e(2_8)%[[VAL_0:.*]](1,2)", structured = false}
+! CHECK:           acc.enter_data dataOperands(%[[CREATE_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>)
 
 end subroutine
 
@@ -668,6 +676,6 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_class(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMmod1Tderived{m:f32}>> {fir.bindc_name = "a"}) {
-! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %0 {uniq_name = "_QFtest_classEa"} : (!fir.class<!fir.type<_QMmod1Tderived{m:f32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMmod1Tderived{m:f32}>>, !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>)
+! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %0 {{.*}} {uniq_name = "_QFtest_classEa"} : (!fir.class<!fir.type<_QMmod1Tderived{m:f32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMmod1Tderived{m:f32}>>, !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>)
 ! CHECK: %[[COPYIN:.*]] = acc.copyin var(%[[DECL_ARG0]]#0 : !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>) -> !fir.class<!fir.type<_QMmod1Tderived{m:f32}>> {name = "a", structured = false}
 ! CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>)

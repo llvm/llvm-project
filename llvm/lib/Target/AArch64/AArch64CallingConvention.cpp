@@ -75,8 +75,10 @@ static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
     auto &It = PendingMembers[0];
     CCAssignFn *AssignFn =
         TLI->CCAssignFnForCall(State.getCallingConv(), /*IsVarArg=*/false);
+    // FIXME: Get the correct original type.
+    Type *OrigTy = EVT(It.getValVT()).getTypeForEVT(State.getContext());
     if (AssignFn(It.getValNo(), It.getValVT(), It.getValVT(), CCValAssign::Full,
-                 ArgFlags, State))
+                 ArgFlags, OrigTy, State))
       llvm_unreachable("Call operand has unhandled type");
 
     // Return the flags to how they were before.
@@ -221,4 +223,5 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 
 // TableGen provides definitions of the calling convention analysis entry
 // points.
+#define GET_CALLING_CONV_IMPL
 #include "AArch64GenCallingConv.inc"

@@ -19,6 +19,7 @@
 #include <__cxx03/__type_traits/is_floating_point.h>
 #include <__cxx03/__type_traits/is_function.h>
 #include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
 #include <__cxx03/__type_traits/remove_const.h>
 #include <__cxx03/__type_traits/remove_pointer.h>
 #include <__cxx03/__type_traits/remove_volatile.h>
@@ -32,11 +33,15 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <typename _Tp>
+struct __check_atomic_mandates {
+  using type _LIBCPP_NODEBUG = _Tp;
+  static_assert(is_trivially_copyable<_Tp>::value, "std::atomic<T> requires that 'T' be a trivially copyable type");
+};
+
 template <class _Tp>
-struct atomic : public __atomic_base<_Tp> {
-  using __base          = __atomic_base<_Tp>;
-  using value_type      = _Tp;
-  using difference_type = value_type;
+struct atomic : public __atomic_base<typename __check_atomic_mandates<_Tp>::type> {
+  using __base = __atomic_base<_Tp>;
 
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;
 
@@ -59,8 +64,8 @@ struct atomic : public __atomic_base<_Tp> {
 
 template <class _Tp>
 struct atomic<_Tp*> : public __atomic_base<_Tp*> {
-  using __base          = __atomic_base<_Tp*>;
-  using value_type      = _Tp*;
+  using __base = __atomic_base<_Tp*>;
+
   using difference_type = ptrdiff_t;
 
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;

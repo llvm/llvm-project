@@ -82,18 +82,13 @@ define double @semi_strict2(double %e) nounwind {
   ret double %h
 }
 
-; FIXME:
-; Auto-upgrade function attribute to IR-level fast-math-flags.
-
-define double @fn_attr(double %e) nounwind #0 {
-; CHECK-LABEL: fn_attr:
+define double @nsz_flag(double %e) nounwind {
+; CHECK-LABEL: nsz_flag:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    jmp sin@PLT # TAILCALL
-  %f = fsub double 0.0, %e
-  %g = call double @sin(double %f) readonly
-  %h = fsub double 0.0, %g
+  %f = fsub nsz double 0.0, %e
+  %g = call nsz double @sin(double %f) readonly
+  %h = fsub nsz double 0.0, %g
   ret double %h
 }
-
-attributes #0 = { "unsafe-fp-math"="true" "no-signed-zeros-fp-math"="true" }
 

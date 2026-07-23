@@ -30,13 +30,13 @@ CheckValidProgramTranslation(llvm::StringRef fpo_program,
                              llvm::StringRef target_register_name,
                              llvm::StringRef expected_dwarf_expression) {
   // program translation
-  StreamBuffer<32> stream(Stream::eBinary, 4, eByteOrderLittle);
+  StreamBuffer<32> stream(Stream::eBinary, eByteOrderLittle);
   ASSERT_TRUE(TranslateFPOProgramToDWARFExpression(
       fpo_program, target_register_name, llvm::Triple::x86, stream));
 
   // print dwarf expression to comparable textual representation
   llvm::DataExtractor extractor({stream.GetData(), stream.GetSize()},
-                                /*IsLittleEndian=*/true, /*AddressSize=*/4);
+                                /*IsLittleEndian=*/true);
 
   std::string result;
   llvm::raw_string_ostream os(result);
@@ -76,10 +76,9 @@ CheckInvalidProgramTranslation(llvm::StringRef fpo_program,
   ArchSpec arch_spec("i686-pc-windows");
   llvm::Triple::ArchType arch_type = arch_spec.GetMachine();
   ByteOrder byte_order = arch_spec.GetByteOrder();
-  uint32_t address_size = arch_spec.GetAddressByteSize();
 
   // program translation
-  StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
+  StreamBuffer<32> stream(Stream::eBinary, byte_order);
   EXPECT_FALSE(TranslateFPOProgramToDWARFExpression(
       fpo_program, target_register_name, arch_type, stream));
   EXPECT_EQ((size_t)0, stream.GetSize());

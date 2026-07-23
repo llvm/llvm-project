@@ -35,7 +35,7 @@ class bar {       // expected-note {{definition of 'GH104802::bar' is not comple
 
 class baz {       // expected-note {{definition of 'GH104802::baz' is not complete until the closing '}'}}
   typedef class baz blech;
-  blech a;        // expected-error {{field has incomplete type 'blech' (aka 'GH104802::baz')}}
+  blech a;        // expected-error {{field has incomplete type 'blech' (aka 'class baz')}}
 
   virtual int c();
 };

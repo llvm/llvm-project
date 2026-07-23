@@ -481,7 +481,7 @@ private:
   // here, to get the "correct" assembler dialect, and use it in various
   // functions.
   unsigned getMAIAssemblerDialect() {
-    return Parser.getContext().getAsmInfo()->getAssemblerDialect();
+    return Parser.getContext().getAsmInfo().getAssemblerDialect();
   }
 
   // An alphabetic character in HLASM is a letter from 'A' through 'Z',
@@ -501,8 +501,8 @@ private:
 
 public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-                   const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
+                   const MCInstrInfo &MII)
+      : MCTargetAsmParser(sti, MII), Parser(parser) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Alias the .word directive to .short.
@@ -1339,7 +1339,7 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
     MatchClassKind Kind = Entry->OperandKinds[I];
 
     // Verify operand.
-    unsigned Res = validateOperandClass(Operand, Kind);
+    unsigned Res = validateOperandClass(Operand, Kind, *STI);
     if (Res != Match_Success)
       return Error(Operand.getStartLoc(), "unexpected operand type");
 

@@ -35,6 +35,10 @@ void test_semantic_failures() {
   int non_array;
   (void)_Countof non_array;  // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}  
   (void)_Countof(int);       // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}  
+  (void)_Countof(void);      // expected-error {{invalid application of '_Countof' to an incomplete type 'void'}}
+  int arr2[_Countof(void)];  // expected-error {{invalid application of '_Countof' to an incomplete type 'void'}}
+  void *vp = &non_array;
+  (void)_Countof(*vp);       // expected-error {{invalid application of '_Countof' to an incomplete type 'void'}}
   (void)_Countof(test_semantic_failures); // expected-error {{invalid application of '_Countof' to a function type}}
   (void)_Countof(struct S);  // expected-error {{invalid application of '_Countof' to an incomplete type 'struct S'}} \
                                 expected-note {{forward declaration of 'struct S'}}
@@ -100,11 +104,11 @@ void test_funcs() {
   int i5[5];
   char c35[3][5];
   test_func_fix_fix(5, &c35, &i3, NULL);
-  test_func_fix_fix(5, &c35, &i5, NULL); // expected-warning {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
+  test_func_fix_fix(5, &c35, &i5, NULL); // expected-error {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
   test_func_fix_var(5, &c35, &i3, NULL);
-  test_func_fix_var(5, &c35, &i5, NULL); // expected-warning {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
+  test_func_fix_var(5, &c35, &i5, NULL); // expected-error {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
   test_func_fix_uns(5, &c35, &i3, NULL);
-  test_func_fix_uns(5, &c35, &i5, NULL); // expected-warning {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
+  test_func_fix_uns(5, &c35, &i5, NULL); // expected-error {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
 }
 
 void test_multidimensional_arrays() {

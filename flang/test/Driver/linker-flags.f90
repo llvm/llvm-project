@@ -77,7 +77,7 @@
 ! MINGW-SAME: -lflang_rt.runtime
 ! MINGW-STATIC-FLANGRT: "{{.*}}{{\\|/}}libflang_rt.runtime.a"
 
-! NOTE: This also matches lld-link (when CLANG_DEFAULT_LINKER=lld) and
+! NOTE: This also matches lld-link (when FLANG_DEFAULT_LINKER=lld) and
 !       any .exe suffix that is added when resolving to the full path of
 !       (lld-)link.exe on Windows platforms. The suffix may not be added
 !       when the executable is not found or on non-Windows platforms.

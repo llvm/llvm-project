@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=instrprof -debug-info-correlate -S > %t.ll
+; RUN: opt < %s -passes=instrprof -profile-correlate=debug-info -S > %t.ll
 ; RUN: FileCheck < %t.ll --implicit-check-not "{{__llvm_prf_data|__llvm_prf_names}}" %s
 ; RUN: %llc_dwarf -O0 -filetype=obj < %t.ll | llvm-dwarfdump - | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s --check-prefix CHECK-DWARF
 
@@ -20,7 +20,7 @@
 
 define void @_Z3foov() !dbg !12 {
   call void @llvm.instrprof.increment(ptr @__profn_foo, i64 12345678, i32 2, i32 0)
-  ret void
+  ret void, !dbg !17
 }
 
 declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
@@ -46,6 +46,7 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 !14 = !DISubroutineType(types: !15)
 !15 = !{null}
 !16 = !{}
+!17 = !DILocation(line: 1, scope: !12)
 
 ; CHECK-DWARF: DW_TAG_compile_unit
 ; CHECK-DWARF:   DW_TAG_subprogram

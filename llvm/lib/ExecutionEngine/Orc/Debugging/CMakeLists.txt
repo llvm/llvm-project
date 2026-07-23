@@ -6,12 +6,16 @@ add_llvm_component_library(LLVMOrcDebugging
   DebugInfoSupport.cpp
   DebuggerSupport.cpp
   DebuggerSupportPlugin.cpp
+  ELFDebugObjectPlugin.cpp
   LLJITUtilsCBindings.cpp
   PerfSupportPlugin.cpp
   VTuneSupportPlugin.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc/Debugging/
+
+  DEPENDS
+  intrinsics_gen
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
@@ -21,6 +25,7 @@ add_llvm_component_library(LLVMOrcDebugging
   BinaryFormat
   DebugInfoDWARF
   JITLink
+  Object
   OrcJIT
   OrcShared
   Support

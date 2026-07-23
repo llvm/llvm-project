@@ -2,9 +2,9 @@
 
 ; CHECK-LABEL: test_sincos_f16:
 ; CHECK: bl __extendhfsf2
-; CHECK: bl cosf
 ; CHECK: bl sinf
 ; CHECK: bl __truncsfhf2
+; CHECK: bl cosf
 ; CHECK: bl __truncsfhf2
 define { half, half } @test_sincos_f16(half %a) nounwind {
   %result = call { half, half } @llvm.sincos.f16(half %a)
@@ -13,12 +13,14 @@ define { half, half } @test_sincos_f16(half %a) nounwind {
 
 ; CHECK-LABEL: test_sincos_v2f16:
 ; CHECK: bl __extendhfsf2
-; CHECK: bl __extendhfsf2
-; CHECK: bl cosf
-; CHECK: bl cosf
-; CHECK: bl sinf
 ; CHECK: bl sinf
 ; CHECK: bl __truncsfhf2
+; CHECK: bl __extendhfsf2
+; CHECK: bl sinf
+; CHECK: bl __truncsfhf2
+; CHECK: bl cosf
+; CHECK: bl __truncsfhf2
+; CHECK: bl cosf
 ; CHECK: bl __truncsfhf2
 define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) nounwind {
   %result = call { <2 x half>, <2 x half> } @llvm.sincos.v2f16(<2 x half> %a)
@@ -26,9 +28,8 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) nounwind {
 }
 
 ; CHECK-LABEL: test_sincos_f32:
-; OTHER: bl sinf
-; OTHER: bl cosf
-; GNU: bl sincosf
+; CHECK: bl sinf
+; CHECK: bl cosf
 define { float, float } @test_sincos_f32(float %a) nounwind {
   %result = call { float, float } @llvm.sincos.f32(float %a)
   ret { float, float } %result

@@ -112,7 +112,7 @@ void g(B *a) { a->foo(); }
 // CHECK3: call{{.*}} void @_ZN5test31CC1Ev(ptr
 // CHECK3: %[[CMP:.*]] = icmp eq ptr addrspace(1) %{{.*}}, getelementptr inbounds inrange(-24, 8) ({ [4 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test31CE, i32 0, i32 0, i32 3)
 // CHECK3: call{{.*}} void @llvm.assume(i1 %[[CMP]])
-// CHECK3-LABLEL: }
+// CHECK3-LABEL: {{^}}}
 void test() {
   C c;
   g(&c);
@@ -204,7 +204,7 @@ void g() {
 
 namespace test7 {
 // Because A's key function is defined here, vtable is generated in this TU
-// CHECK7: @_ZTVN5test71AE ={{.*}} unnamed_addr addrspace(1) constant
+// CHECK7: @_ZTVN5test71AE ={{.*}}addrspace(1) constant
 struct A {
   A();
   virtual void foo();
@@ -229,14 +229,14 @@ struct A {
   virtual void bar();
 };
 
-// CHECK8-DAG: @_ZTVN5test81BE = available_externally unnamed_addr addrspace(1) constant
+// CHECK8-DAG: @_ZTVN5test81BE = available_externally addrspace(1) constant
 struct B : A {
   B();
   void foo();
   void bar();
 };
 
-// CHECK8-DAG: @_ZTVN5test81CE = linkonce_odr unnamed_addr addrspace(1) constant
+// CHECK8-DAG: @_ZTVN5test81CE = linkonce_odr addrspace(1) constant
 struct C : A {
   C();
   void bar();
@@ -251,7 +251,7 @@ struct D : A {
 };
 void D::bar() {}
 
-// CHECK8-DAG: @_ZTVN5test81EE = linkonce_odr unnamed_addr addrspace(1) constant
+// CHECK8-DAG: @_ZTVN5test81EE = linkonce_odr addrspace(1) constant
 struct E : A {
   E();
 };

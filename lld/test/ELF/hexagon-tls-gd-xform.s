@@ -18,25 +18,24 @@
 _start:
 .ifdef GDPLT
                         call x@gdplt
-# CHECK_GDPLT:  101ec: { call 0x10220 <__tls_get_addr@plt> }
+# CHECK_GDPLT:  101e0: { call 0x10210 <__tls_get_addr@plt> }
 .else
                   call x
 # CHECK:  101b8: { call 0x101e0 <x@plt> }
 .endif
 
-# CHECK_GDPLT:        10220: { immext(#0x20040)
-# CHECK_GDPLT-NEXT:   10224:   r14 = add(pc,##0x2007c) }
-# CHECK_GDPLT-NEXT:   10228: { r28 = memw(r14+#0x0) }
-# CHECK_GDPLT-NEXT:   1022c: { jumpr r28 }
+# CHECK_GDPLT:        10210: { immext(#0x20040)
+# CHECK_GDPLT-NEXT:   10214:   r14 = add(pc,##0x20078) }
+# CHECK_GDPLT-NEXT:   10218: { r28 = memw(r14+#0x0) }
+# CHECK_GDPLT-NEXT:   1021c: { jumpr r28 }
 
 
-## Looking at the above check, 0x10220+0x2007c must equal the entry for
-##  __tls_get_addr, 0x3029C
+## Looking at the above check, 0x10210+0x20078 must equal the entry for
+##  __tls_get_addr, 0x30288
 
 # RELA_GDPLT: Relocations [
 # RELA_GDPLT-NEXT:  Section (5) .rela.plt {
-# RELA_GDPLT-NEXT:    0x30298 R_HEX_JMP_SLOT x 0x0
-# RELA_GDPLT-NEXT:    0x3029C R_HEX_JMP_SLOT __tls_get_addr 0x0
+# RELA_GDPLT-NEXT:    0x30288 R_HEX_JMP_SLOT __tls_get_addr 0x0
 # RELA_GDPLT-NEXT:  }
 # RELA_GDPLT-NEXT:]
 

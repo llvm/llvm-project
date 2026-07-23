@@ -14,6 +14,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MCContext;
@@ -36,10 +37,11 @@ class raw_pwrite_stream;
 /// are expected to subclass this interface to implement directives specific
 /// to that file format or custom semantics expected by the object writer
 /// implementation.
-class MCObjectStreamer : public MCStreamer {
+class LLVM_ABI MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
   bool EmitEHFrame;
   bool EmitDebugFrame;
+  bool EmitSFrame;
 
   struct PendingAssignment {
     MCSymbol *Symbol;
@@ -51,16 +53,23 @@ class MCObjectStreamer : public MCStreamer {
   DenseMap<const MCSymbol *, SmallVector<PendingAssignment, 1>>
       pendingAssignments;
 
+  SmallVector<std::unique_ptr<uint8_t[]>, 0> FragStorage;
+  // Available bytes in the current block for trailing data or new fragments.
+  size_t FragSpace = 0;
+  // Used to allocate special fragments that do not use MCFragment's fixed-size
+  // part.
+  BumpPtrAllocator SpecialFragAllocator;
+
+  void addSpecialFragment(MCFragment *F);
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
-  void emitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
 
 protected:
   MCObjectStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                    std::unique_ptr<MCObjectWriter> OW,
                    std::unique_ptr<MCCodeEmitter> Emitter);
-  ~MCObjectStreamer();
+  ~MCObjectStreamer() override;
 
 public:
   /// state management
@@ -69,16 +78,10 @@ public:
   /// Object streamers require the integrated assembler.
   bool isIntegratedAssemblerRequired() const override { return true; }
 
-  void emitFrames(MCAsmBackend *MAB);
+  void emitFrames();
+  void generateCompactUnwindEncodings();
   MCSymbol *emitCFILabel() override;
-  void emitCFISections(bool EH, bool Debug) override;
-
-  /// Get a data fragment to write into, creating a new one if the current
-  /// fragment is not FT_Data.
-  MCFragment *getOrCreateDataFragment();
-
-protected:
-  bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
+  void emitCFISections(bool EH, bool Debug, bool SFrame) override;
 
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
@@ -87,6 +90,30 @@ public:
   MCAssembler *getAssemblerPtr() override;
   /// \name MCStreamer Interface
   /// @{
+
+  uint8_t *getCurFragEnd() const {
+    return reinterpret_cast<uint8_t *>(CurFrag + 1) + CurFrag->getFixedSize();
+  }
+  MCFragment *allocFragSpace(size_t Headroom);
+  // Add a new fragment to the current section without a variable-size tail.
+  void newFragment();
+
+  // Add a new special fragment to the current section and start a new empty
+  // fragment.
+  template <typename FT, typename... Args>
+  FT *newSpecialFragment(Args &&...args) {
+    auto *F = new (SpecialFragAllocator.Allocate(sizeof(FT), alignof(FT)))
+        FT(std::forward<Args>(args)...);
+    addSpecialFragment(F);
+    return F;
+  }
+
+  void ensureHeadroom(size_t Headroom);
+  void appendContents(ArrayRef<char> Contents);
+  void appendContents(size_t Num, uint8_t Elt);
+  // Add a fixup to the current fragment. Call ensureHeadroom beforehand to
+  // ensure the fixup and appended content apply to the same fragment.
+  void addFixup(const MCExpr *Value, MCFixupKind Kind);
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
@@ -100,7 +127,6 @@ public:
   void emitSLEB128Value(const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
-  void switchSectionNoPrint(MCSection *Section) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Emit an instruction to a special fragment, because this instruction
@@ -111,8 +137,10 @@ public:
   void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
                             uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
-  void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo &STI,
                          unsigned MaxBytesToEmit = 0) override;
+  void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
+                     uint8_t Fill, const MCSubtargetInfo &STI) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
@@ -126,6 +154,9 @@ public:
                              MCSymbol *EndLabel = nullptr) override;
   void emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                  const MCSymbol *Label, SMLoc Loc);
+  void emitSFrameCalculateFuncOffset(const MCSymbol *FunCabsel,
+                                     const MCSymbol *FREBegin,
+                                     MCFragment *FDEFrag, SMLoc Loc);
   void emitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
                           unsigned Column, bool PrologueEnd, bool IsStmt,
                           StringRef FileName, SMLoc Loc) override;

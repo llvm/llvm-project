@@ -14,11 +14,14 @@ add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLV
   CodeGenIntrinsics.cpp
   DirectiveEmitter.cpp
   IntrinsicEmitter.cpp
+  PredicateExpanderDag.cpp
   RISCVTargetDefEmitter.cpp
   RuntimeLibcallsEmitter.cpp
+  RuntimeLibcalls.cpp
   SDNodeProperties.cpp
   TableGen.cpp
   TargetFeaturesEmitter.cpp
+  TargetLibraryInfoEmitter.cpp
   VTEmitter.cpp
 )
 

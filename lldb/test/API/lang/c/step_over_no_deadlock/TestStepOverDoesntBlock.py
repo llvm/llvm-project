@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class StepOverDoesntDeadlockTestCase(TestBase):
     def test_step_over(self):
         """Test that when step over steps over a function it lets other threads run."""

@@ -12,6 +12,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -25,9 +26,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
-LLVM_ABI extern llvm::cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
-
 namespace llvm {
+
+LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
+
 namespace {
 
 class ProfileSummaryInfoTest : public testing::Test {
@@ -36,6 +38,7 @@ protected:
   std::unique_ptr<BranchProbabilityInfo> BPI;
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
+  std::unique_ptr<CycleInfo> CI;
 
   ProfileSummaryInfo buildPSI(Module *M) {
     return ProfileSummaryInfo(*M);
@@ -43,7 +46,9 @@ protected:
   BlockFrequencyInfo buildBFI(Function &F) {
     DT.reset(new DominatorTree(F));
     LI.reset(new LoopInfo(*DT));
-    BPI.reset(new BranchProbabilityInfo(F, *LI));
+    CI.reset(new CycleInfo());
+    CI->compute(F);
+    BPI.reset(new BranchProbabilityInfo(F, *CI));
     return BlockFrequencyInfo(F, *BPI, *LI);
   }
   std::unique_ptr<Module> makeLLVMModule(const char *ProfKind = nullptr,

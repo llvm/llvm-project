@@ -120,7 +120,7 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
 
   const bool generate_debug_info = true;
   ClangExpressionParser parser(exe_ctx.GetBestExecutionContextScope(), *this,
-                               generate_debug_info);
+                               generate_debug_info, diagnostic_manager);
 
   unsigned num_errors = parser.Parse(diagnostic_manager);
 
@@ -187,5 +187,5 @@ void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
   }
   m_expr_decl_map_up = std::make_unique<ClangExpressionDeclMap>(
       keep_result_in_memory, nullptr, exe_ctx.GetTargetSP(), ast_importer,
-      nullptr);
+      nullptr, /*ignore_context_qualifiers=*/false);
 }

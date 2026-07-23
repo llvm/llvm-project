@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This implements an analysis pass that tries to delinearize all GEP
-// instructions in all loops using the SCEV analysis functionality. This pass is
-// only used for testing purposes: if your pass needs delinearization, please
-// use the on-demand SCEVAddRecExpr::delinearize() function.
+// instructions in all loops using the SCEV analysis functionality.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +15,7 @@
 #define LLVM_ANALYSIS_DELINEARIZATION_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Value.h"
 
 namespace llvm {
 class raw_ostream;
@@ -29,21 +28,21 @@ class SCEV;
 /// Compute the array dimensions Sizes from the set of Terms extracted from
 /// the memory access function of this SCEVAddRecExpr (second step of
 /// delinearization).
-void findArrayDimensions(ScalarEvolution &SE,
-                         SmallVectorImpl<const SCEV *> &Terms,
-                         SmallVectorImpl<const SCEV *> &Sizes,
-                         const SCEV *ElementSize);
+LLVM_ABI void findArrayDimensions(ScalarEvolution &SE,
+                                  SmallVectorImpl<const SCEV *> &Terms,
+                                  SmallVectorImpl<const SCEV *> &Sizes,
+                                  const SCEV *ElementSize);
 
 /// Collect parametric terms occurring in step expressions (first step of
 /// delinearization).
-void collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
-                            SmallVectorImpl<const SCEV *> &Terms);
+LLVM_ABI void collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
+                                     SmallVectorImpl<const SCEV *> &Terms);
 
 /// Return in Subscripts the access functions for each dimension in Sizes
 /// (third step of delinearization).
-void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
-                            SmallVectorImpl<const SCEV *> &Subscripts,
-                            SmallVectorImpl<const SCEV *> &Sizes);
+LLVM_ABI void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
+                                     SmallVectorImpl<const SCEV *> &Subscripts,
+                                     SmallVectorImpl<const SCEV *> &Sizes);
 /// Split this SCEVAddRecExpr into two vectors of SCEVs representing the
 /// subscripts and sizes of an array access.
 ///
@@ -108,40 +107,66 @@ void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
 /// The subscript of the outermost dimension is the Quotient: [j+k].
 ///
 /// Overall, we have: A[][n][m], and the access function: A[j+k][2i][5i].
-void delinearize(ScalarEvolution &SE, const SCEV *Expr,
-                 SmallVectorImpl<const SCEV *> &Subscripts,
-                 SmallVectorImpl<const SCEV *> &Sizes, const SCEV *ElementSize);
+LLVM_ABI void delinearize(ScalarEvolution &SE, const SCEV *Expr,
+                          SmallVectorImpl<const SCEV *> &Subscripts,
+                          SmallVectorImpl<const SCEV *> &Sizes,
+                          const SCEV *ElementSize);
+
+/// Compute the dimensions of fixed size array from \Expr and save the results
+/// in \p Sizes.
+LLVM_ABI bool findFixedSizeArrayDimensions(ScalarEvolution &SE,
+                                           const SCEV *Expr,
+                                           SmallVectorImpl<uint64_t> &Sizes,
+                                           const SCEV *ElementSize);
+
+/// Split this SCEVAddRecExpr into two vectors of SCEVs representing the
+/// subscripts and sizes of an access to a fixed size array. This is a special
+/// case of delinearization for fixed size arrays.
+///
+/// The delinearization is a 2 step process: the first step estimates the sizes
+/// of each dimension of the array. The second step computes the access
+/// functions for the delinearized array:
+///
+/// 1. Compute the array size
+/// 2. Compute the access function: same as normal delinearization
+///
+/// Different from the normal delinearization, this function assumes that NO
+/// terms exist in the \p Expr. In other words, it assumes that the all step
+/// values are constant.
+///
+/// This function is intended to replace getIndexExpressionsFromGEP. They rely
+/// on the GEP source element type so that will be removed in the future.
+LLVM_ABI bool
+delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
+                          SmallVectorImpl<const SCEV *> &Subscripts,
+                          SmallVectorImpl<const SCEV *> &Sizes,
+                          const SCEV *ElementSize);
+
+/// Check that each subscript in \p Subscripts is within the corresponding size
+/// in \p Sizes. For the outermost dimension, the subscript being negative is
+/// allowed.
+LLVM_ABI bool validateDelinearizationResult(ScalarEvolution &SE,
+                                            ArrayRef<const SCEV *> Sizes,
+                                            ArrayRef<const SCEV *> Subscripts);
 
 /// Gathers the individual index expressions from a GEP instruction.
 ///
 /// This function optimistically assumes the GEP references into a fixed size
 /// array. If this is actually true, this function returns a list of array
-/// subscript expressions in \p Subscripts and a list of integers describing
-/// the size of the individual array dimensions in \p Sizes. Both lists have
-/// either equal length or the size list is one element shorter in case there
-/// is no known size available for the outermost array dimension. Returns true
-/// if successful and false otherwise.
-bool getIndexExpressionsFromGEP(ScalarEvolution &SE,
-                                const GetElementPtrInst *GEP,
-                                SmallVectorImpl<const SCEV *> &Subscripts,
-                                SmallVectorImpl<int> &Sizes);
-
-/// Implementation of fixed size array delinearization. Try to delinearize
-/// access function for a fixed size multi-dimensional array, by deriving
-/// subscripts from GEP instructions. Returns true upon success and false
-/// otherwise. \p Inst is the load/store instruction whose pointer operand is
-/// the one we want to delinearize. \p AccessFn is its corresponding SCEV
-/// expression w.r.t. the surrounding loop.
-bool tryDelinearizeFixedSizeImpl(ScalarEvolution *SE, Instruction *Inst,
-                                 const SCEV *AccessFn,
-                                 SmallVectorImpl<const SCEV *> &Subscripts,
-                                 SmallVectorImpl<int> &Sizes);
+/// subscript expressions in \p Subscripts and a list of SCEV expressions
+/// describing the size of the individual array dimensions in \p Sizes. Both
+/// lists have either equal length or the size list is one element shorter in
+/// case there is no known size available for the outermost array dimension.
+/// Returns true if successful and false otherwise.
+LLVM_ABI bool
+getIndexExpressionsFromGEP(ScalarEvolution &SE, const GetElementPtrInst *GEP,
+                           SmallVectorImpl<const SCEV *> &Subscripts,
+                           SmallVectorImpl<const SCEV *> &Sizes);
 
 struct DelinearizationPrinterPass
-    : public PassInfoMixin<DelinearizationPrinterPass> {
-  explicit DelinearizationPrinterPass(raw_ostream &OS);
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
+    : public RequiredPassInfoMixin<DelinearizationPrinterPass> {
+  LLVM_ABI explicit DelinearizationPrinterPass(raw_ostream &OS);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   raw_ostream &OS;

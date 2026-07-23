@@ -23,14 +23,29 @@ class OpenMP_Attr<string name, string attrMnemonic, list<Trait> traits = [],
 }
 
 //===----------------------------------------------------------------------===//
+// AtomicControlAttr
+//===----------------------------------------------------------------------===//
+
+// Atomic control attributes hold information about architectural
+// characteristics which are required for lowering atomic operations.
+def AtomicControlAttr : OpenMP_Attr<"AtomicControl", "atomic_control"> {
+  let parameters =
+      (ins DefaultValuedParameter<"bool", "false">:$ignore_denormal_mode,
+          DefaultValuedParameter<"bool", "false">:$fine_grained_memory,
+          DefaultValuedParameter<"bool", "false">:$remote_memory);
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DeclareTargetAttr
 //===----------------------------------------------------------------------===//
 
 def DeclareTargetAttr : OpenMP_Attr<"DeclareTarget", "declaretarget"> {
-  let parameters = (ins
-    OptionalParameter<"DeclareTargetDeviceTypeAttr">:$device_type,
-    OptionalParameter<"DeclareTargetCaptureClauseAttr">:$capture_clause
-  );
+  let parameters =
+      (ins OptionalParameter<"DeclareTargetDeviceTypeAttr">:$device_type,
+          OptionalParameter<"DeclareTargetCaptureClauseAttr">:$capture_clause,
+          OptionalParameter<"BoolAttr">:$automap);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -61,6 +76,16 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
 def TaskDependArrayAttr
     : TypedArrayAttrBase<ClauseTaskDependAttr,
                          ClauseTaskDependAttr.summary # " array"> {
+  let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
+// InteropTypeArrayAttr
+//===----------------------------------------------------------------------===//
+
+def InteropTypeArrayAttr
+    : TypedArrayAttrBase<InteropTypeAttr,
+                         InteropTypeAttr.summary # " array"> {
   let constBuilderCall = ?;
 }
 

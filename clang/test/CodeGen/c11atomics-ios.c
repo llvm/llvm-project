@@ -235,6 +235,7 @@ _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
   // CHECK:   [[ATOMIC_DESIRED:%.*]] = alloca { %struct.PS, [2 x i8] }, align 8
   // CHECK:   [[ATOMIC_NEW:%.*]] = alloca { %struct.PS, [2 x i8] }, align 8
   // CHECK:   [[RES_ADDR:%.*]] = alloca i8, align 1
+  // CHECK:   [[OLD_TMP:%.*]] = alloca i64, align 8
   // CHECK:   store ptr %addr, ptr [[ADDR_ARG]], align 4
   // CHECK:   store ptr %desired, ptr [[DESIRED_ARG]], align 4
   // CHECK:   store ptr %new, ptr [[NEW_ARG]], align 4
@@ -251,13 +252,14 @@ _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
   // CHECK:   [[RES_BOOL:%.*]] = extractvalue { i64, i1 } [[RES]], 1
   // CHECK:   br i1 [[RES_BOOL]], label {{%.*}}, label {{%.*}}
 
-  // CHECK:   store i64 [[RES_VAL64]], ptr [[ATOMIC_DESIRED]], align 8
+  // CHECK:   store i64 [[RES_VAL64]], ptr [[OLD_TMP]], align 8
+  // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 2 [[DESIRED_ARG:%.*]], ptr align 8 [[OLD_TMP]], i64 6, i1 false)
   // CHECK:   br label {{%.*}}
 
   // CHECK:   [[RES_BOOL8:%.*]] = zext i1 [[RES_BOOL]] to i8
   // CHECK:   store i8 [[RES_BOOL8]], ptr [[RES_ADDR]], align 1
   // CHECK:   [[RES_BOOL8:%.*]] = load i8, ptr [[RES_ADDR]], align 1
-  // CHECK:   [[RETVAL:%.*]] = trunc i8 [[RES_BOOL8]] to i1
+  // CHECK:   [[RETVAL:%.*]] = icmp ne i8 [[RES_BOOL8]], 0
   // CHECK:   ret i1 [[RETVAL]]
 
   return __c11_atomic_compare_exchange_strong(addr, desired, *new, 5, 5);

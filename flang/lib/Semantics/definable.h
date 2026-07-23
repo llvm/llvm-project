@@ -33,7 +33,8 @@ ENUM_CLASS(DefinabilityFlag,
     SourcedAllocation, // ALLOCATE(a,SOURCE=)
     PolymorphicOkInPure, // don't check for polymorphic type in pure subprogram
     DoNotNoteDefinition, // context does not imply definition
-    AllowEventLockOrNotifyType, PotentialDeallocation)
+    AllowEventLockOrNotifyType, PotentialDeallocation,
+    OnlyWarnOnImpureFinalInPureContext)
 
 using DefinabilityFlags =
     common::EnumSet<DefinabilityFlag, DefinabilityFlag_enumSize>;

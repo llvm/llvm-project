@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
-! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 !----------------------
@@ -136,7 +136,7 @@ subroutine vec_sel_testu8(arg1, arg2, arg3)
   vector(unsigned(8)) :: arg1, arg2, r
   vector(unsigned(8)) :: arg3
   r = vec_sel(arg1, arg2, arg3)
-  
+
 
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <2 x i64>, ptr %{{.*}}, align 16

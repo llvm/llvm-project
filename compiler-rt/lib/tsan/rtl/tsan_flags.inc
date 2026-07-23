@@ -80,3 +80,42 @@ TSAN_FLAG(bool, shared_ptr_interceptor, true,
 TSAN_FLAG(bool, print_full_thread_history, false,
           "If set, prints thread creation stacks for the threads involved in "
           "the report and their ancestors up to the main thread.")
+
+#if SANITIZER_APPLE && !SANITIZER_GO
+TSAN_FLAG(LockDuringWriteSetting, lock_during_write, kLockDuringAllWrites,
+          "Determines whether to obtain a lock while writing logs or error "
+          "reports. "
+          "\"on\" - [default] lock during all writes. "
+          "\"disable_for_current_process\" - don't lock during all writes in "
+          "the current process, but do lock for all writes in child "
+          "processes."
+          "\"disable_for_all_processes\" - don't lock during all writes in "
+          "the current process and it's children processes.")
+#endif
+
+TSAN_FLAG(bool, enable_adaptive_delay, false,
+          "Enable adaptive delay injection to expose data races. When "
+          "enabled, delays are strategically injected at synchronization "
+          "points, atomic operations, and thread lifecycle events to increase "
+          "the likelihood of exposing races while maintaining a configurable "
+          "overhead budget.")
+
+TSAN_FLAG(
+    int, adaptive_delay_aggressiveness, 25,
+    "Controls delay injection intensity for race detection. Higher values "
+    "inject more delays to expose races. Suggested values: 10 (minimal delay), "
+    "50 (moderate delay), 200 (aggressive). "
+    "This is a tuning parameter; actual overhead varies by workload and "
+    "platform.")
+TSAN_FLAG(int, adaptive_delay_relaxed_sample_rate, 10000,
+          "Sample 1 in N relaxed atomic operations for delay")
+TSAN_FLAG(int, adaptive_delay_sync_atomic_sample_rate, 100,
+          "Sample 1 in N acquire/release/seq_cst atomic operations for delay")
+TSAN_FLAG(int, adaptive_delay_mutex_sample_rate, 10,
+          "Sample 1 in N mutex/cv operations for delay")
+TSAN_FLAG(const char*, adaptive_delay_max_atomic, "sleep_us=50",
+          "Delay for atomic operations: 'spin=N' (max N spins), 'yield', or "
+          "'sleep_us=N' (max N>0 us sleep)")
+TSAN_FLAG(const char*, adaptive_delay_max_sync, "sleep_us=500",
+          "Delay for sync operations: 'spin=N' (max N spins), 'yield', or "
+          "'sleep_us=N' (max N>0 us sleep)")

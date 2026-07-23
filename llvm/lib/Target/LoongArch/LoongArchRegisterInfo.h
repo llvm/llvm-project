@@ -33,8 +33,7 @@ struct LoongArchRegisterInfo : public LoongArchGenRegisterInfo {
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override {
+  getPointerRegClass(unsigned Kind = 0) const override {
     return &LoongArch::GPRRegClass;
   }
 

@@ -16,10 +16,10 @@ void test_dyn_cast(int* ptr) {
   (void)dyn_cast(ptr); // expected-error{{no matching function for call to 'dyn_cast'}}
 }
 
-template<int I, typename T> 
-  void get(const T&); // expected-note{{candidate template ignored: invalid explicitly-specified argument for template parameter 'I'}}
-template<template<class T> class, typename T> 
-  void get(const T&); // expected-note{{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+template<int I, typename T>
+  void get(const T&); // expected-note{{candidate template ignored: template argument for non-type template parameter must be an expression for template parameter 'I'}}
+template<template<class T> class, typename T>
+  void get(const T&); // expected-note{{candidate template ignored: template argument for template template parameter must be a class template}}
 
 void test_get(void *ptr) {
   get<int>(ptr); // expected-error{{no matching function for call to 'get'}}
@@ -100,7 +100,7 @@ namespace PR15673 {
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
 #endif
-  // expected-note@+1 {{candidate template ignored: requirement 'a_trait<int>::value' was not satisfied [with T = int]}}
+  // expected-note@+1 {{candidate template ignored: requirement 'PR15673::a_trait<int>::value' was not satisfied [with T = int]}}
   void foo() {}
   void bar() { foo<int>(); } // expected-error {{no matching function for call to 'foo'}}
 
@@ -128,7 +128,7 @@ namespace PR15673 {
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{alias declarations are a C++11 extension}}
 #endif
-  // expected-note@+7 {{candidate template ignored: requirement 'some_trait<int>::value' was not satisfied [with T = int]}}
+  // expected-note@+7 {{candidate template ignored: requirement 'PR15673::some_trait<int>::value' was not satisfied [with T = int]}}
 
   template<typename T,
            typename Requires = unicorns<T> >
@@ -148,7 +148,7 @@ namespace PR15673 {
   template<typename T,
            int n = 42,
            typename std::enable_if<n == 43 || (some_passing_trait<T>::value && some_trait<T>::value), int>::type = 0>
-  void almost_rangesv3(); // expected-note{{candidate template ignored: requirement '42 == 43 || (some_passing_trait<int>::value && some_trait<int>::value)' was not satisfied}}
+  void almost_rangesv3(); // expected-note{{candidate template ignored: requirement '42 == 43 || (PR15673::some_passing_trait<int>::value && PR15673::some_trait<int>::value)' was not satisfied}}
   void test_almost_rangesv3() { almost_rangesv3<int>(); } // expected-error{{no matching function for call to 'almost_rangesv3'}}
 
   #define CONCEPT_REQUIRES_(...)                                        \
@@ -161,6 +161,49 @@ namespace PR15673 {
 #endif
   template<typename T,
            CONCEPT_REQUIRES_(some_passing_trait<T>::value && some_trait<T>::value)>
-  void rangesv3(); // expected-note{{candidate template ignored: requirement 'some_trait<int>::value' was not satisfied [with T = int, x = 42]}}
+  void rangesv3(); // expected-note{{candidate template ignored: requirement 'PR15673::some_trait<int>::value' was not satisfied [with T = int, x = 42]}}
   void test_rangesv3() { rangesv3<int>(); } // expected-error{{no matching function for call to 'rangesv3'}}
 }
+
+#if __cplusplus >= 201103L
+namespace AddressOfTemplateSFINAE {
+template <class...> struct tag {};
+
+struct Foo {};
+
+template <class T> struct UniqueIf {
+  using Single = int;
+};
+template <class T, unsigned N> struct UniqueIf<T[N]> {
+  using Bounded = int;
+};
+
+template <class T> typename UniqueIf<T>::Single make_unique() { return {}; }
+template <class T, class... Args>
+typename UniqueIf<T>::Bounded make_unique(Args &&...) = delete;
+
+struct Detector {
+  using Self = Detector;
+
+  template <class, class T, class... Args>
+  static auto well_formed(Args &&...args)
+      -> decltype(void(), make_unique<T>(static_cast<Args &&>(args)...),
+                  void()) {}
+
+  template <class... Args, class = decltype(&Self::well_formed<Args...>)>
+  static constexpr bool test(tag<Args...> *, int) {
+    return true;
+  }
+
+  static constexpr bool test(void *, long) { return false; }
+};
+
+template <class T, class... Args> struct has_make_unique {
+  static constexpr bool value =
+      Detector::test(static_cast<tag<void, T, Args...> *>(nullptr), 0);
+};
+
+static_assert(has_make_unique<int>::value, "");
+static_assert(!has_make_unique<Foo[2], int, int>::value, "");
+} // namespace AddressOfTemplateSFINAE
+#endif

@@ -15,11 +15,9 @@ subroutine allocate()
     integer, parameter :: LEN = 2
 
     !$omp target private(a, b)
-    !ERROR: List items must be declared in the same scoping unit in which the ALLOCATORS directive appears
     !$omp allocators allocate(omp_default_mem_alloc: a)
         allocate(a(LEN))
-    !ERROR: ALLOCATORS directives that appear in a TARGET region must specify an allocator
-    !ERROR: List items must be declared in the same scoping unit in which the ALLOCATORS directive appears
+    !ERROR: An ALLOCATE clause in a TARGET region must specify an allocator or REQUIRES(DYNAMIC_ALLOCATORS) must be specified
     !$omp allocators allocate(b)
         allocate(b(LEN))
     !$omp end target

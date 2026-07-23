@@ -14,8 +14,9 @@
 // template<class InputIterator, class T>
 //   T reduce(InputIterator first, InputIterator last, T init);
 
-#include <numeric>
 #include <cassert>
+#include <numeric>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "test_iterators.h"

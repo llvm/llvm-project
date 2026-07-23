@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_stat_macros.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/remove.h"
 #include "src/sys/stat/mkdirat.h"
@@ -25,7 +26,7 @@ TEST_F(LlvmLibcRemoveTest, CreateAndRemoveFile) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-  constexpr const char *FILENAME = "remove.test.file";
+  constexpr const char *FILENAME = APPEND_LIBC_TEST("remove.test.file");
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
@@ -42,7 +43,7 @@ TEST_F(LlvmLibcRemoveTest, CreateAndRemoveDir) {
   // it was removed.
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *FILENAME = "remove.test.dir";
+  constexpr const char *FILENAME = APPEND_LIBC_TEST("remove.test.dir");
   auto TEST_DIR = libc_make_test_file_path(FILENAME);
   ASSERT_THAT(LIBC_NAMESPACE::mkdirat(AT_FDCWD, TEST_DIR, S_IRWXU),
               Succeeds(0));

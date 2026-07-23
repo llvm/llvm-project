@@ -31,7 +31,7 @@ static inline RT_API_ATTRS Cookie NoopUnit(const Terminator &terminator,
 }
 
 static inline RT_API_ATTRS ExternalFileUnit *GetOrCreateUnit(int unitNumber,
-    Direction direction, Fortran::common::optional<bool> isUnformatted,
+    Direction direction, common::optional<bool> isUnformatted,
     const Terminator &terminator, Cookie &errorCookie) {
   IoErrorHandler handler{terminator};
   handler.HasIoStat();
@@ -52,6 +52,41 @@ template <Direction DIR, template <Direction> class STATE, typename... A>
 RT_API_ATTRS Cookie BeginExternalListIO(
     int unitNumber, const char *sourceFile, int sourceLine, A &&...xs) {
   Terminator terminator{sourceFile, sourceLine};
+#if defined(RT_CUDA_THIN_IO)
+  if constexpr (DIR == Direction::Output) {
+    Cookie errorCookie{nullptr};
+    ExternalFileUnit *unit{GetOrCreateUnit(
+        unitNumber, DIR, false /*!unformatted*/, terminator, errorCookie)};
+    if (!unit) {
+      return errorCookie;
+    }
+    if (!unit->isUnformatted.has_value()) {
+      unit->isUnformatted = false;
+    }
+    Iostat iostat{IostatOk};
+    if (*unit->isUnformatted) {
+      iostat = IostatFormattedIoOnUnformattedUnit;
+    }
+    if (iostat == IostatOk && unit->GetChildIo()) {
+      iostat = IostatBadOpOnChildUnit;
+    }
+    if (iostat == IostatOk && unit->access == Access::Direct) {
+      iostat = IostatListIoOnDirectAccessUnit;
+    }
+    if (iostat == IostatOk) {
+      iostat = unit->SetDirection(Direction::Output);
+    }
+    if (iostat == IostatOk) {
+      return &unit->BeginIoStatement<STATE<Direction::Output>>(
+          terminator, std::forward<A>(xs)..., *unit, sourceFile, sourceLine);
+    } else {
+      return &unit->BeginIoStatement<ErroneousIoStatementState>(
+          terminator, iostat, unit, sourceFile, sourceLine);
+    }
+  } else {
+    return NoopUnit(terminator, unitNumber, IostatGenericError);
+  }
+#else
   Cookie errorCookie{nullptr};
   ExternalFileUnit *unit{GetOrCreateUnit(
       unitNumber, DIR, false /*!unformatted*/, terminator, errorCookie)};
@@ -91,6 +126,7 @@ RT_API_ATTRS Cookie BeginExternalListIO(
           terminator, iostat, unit, sourceFile, sourceLine);
     }
   }
+#endif
 }
 
 } // namespace Fortran::runtime::io

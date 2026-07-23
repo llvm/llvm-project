@@ -2,11 +2,19 @@
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF32
 
+; RUN: llc -mtriple=x86_64-pc-mingw -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
+; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
+; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF32
+
 ; RUN: llc -dwarf64 -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF64
 
 ; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
+; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
+; RUN:   FileCheck %s --check-prefixes=DWO,DWO32
+
+; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-mingw -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=DWO,DWO32
 
@@ -17,20 +25,20 @@
 ; CHECK:        DW_TAG_variable
 ; DWARF32-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x0) loclist = 0x00000018:
 ; DWARF64-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x0) loclist = 0x0000002c:
-; CHECK-NEXT:       [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +5, DW_OP_stack_value)
+; CHECK-NEXT:       [0x0000000000000000, 0x0000000000000003) ".text{{[.$]}}_Z2f1ii": DW_OP_consts +5, DW_OP_stack_value)
 ; CHECK-NEXT:     DW_AT_name {{.*}} "x"
 
 ; CHECK:        DW_TAG_variable
 ; DWARF32-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x00000020:
 ; DWARF64-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x00000034:
-; CHECK-NEXT:       [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +3, DW_OP_stack_value
-; CHECK-NEXT:       [0x0000000000000003, 0x0000000000000004) ".text._Z2f1ii": DW_OP_consts +4, DW_OP_stack_value)
+; CHECK-NEXT:       [0x0000000000000000, 0x0000000000000003) ".text{{[.$]}}_Z2f1ii": DW_OP_consts +3, DW_OP_stack_value
+; CHECK-NEXT:       [0x0000000000000003, 0x0000000000000004) ".text{{[.$]}}_Z2f1ii": DW_OP_consts +4, DW_OP_stack_value)
 ; CHECK-NEXT:     DW_AT_name {{.*}} "y"
 
 ; CHECK:        DW_TAG_variable
 ; DWARF32-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x2) loclist = 0x00000031:
 ; DWARF64-NEXT:   DW_AT_location [DW_FORM_loclistx]	(indexed (0x2) loclist = 0x00000045:
-; CHECK-NEXT:       [0x0000000000000003, 0x0000000000000004) ".text._Z2f1ii": DW_OP_reg0 RAX)
+; CHECK-NEXT:       [0x0000000000000003, 0x0000000000000004) ".text{{[.$]}}_Z2f1ii": DW_OP_reg0 RAX)
 ; CHECK-NEXT:     DW_AT_name {{.*}} "r"
 
 ; CHECK:        .debug_loclists contents:

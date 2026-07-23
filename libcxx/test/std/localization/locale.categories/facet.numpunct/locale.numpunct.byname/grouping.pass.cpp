@@ -5,14 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
+//
 // NetBSD does not support LC_NUMERIC at the moment
 // XFAIL: netbsd
-
-// XFAIL: LIBCXX-FREEBSD-FIXME
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
@@ -63,7 +58,7 @@ int main(int, char**)
     }
     {
         std::locale l(LOCALE_fr_FR_UTF_8);
-#if defined(TEST_HAS_GLIBC) || defined(_WIN32) || defined(_AIX)
+#if defined(TEST_HAS_GLIBC) || defined(_WIN32) || defined(_AIX) || defined(__APPLE__) || defined(__FreeBSD__)
         const char* const group = "\3";
 #else
         const char* const group = "\x7f";

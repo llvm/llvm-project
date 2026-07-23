@@ -4,7 +4,7 @@
 define float @erff_const() {
 ; CHECK-LABEL: define float @erff_const() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @erff(float 5.000000e-01)
-; CHECK-NEXT:    ret float 0x3FE0A7EF60000000
+; CHECK-NEXT:    ret float f0x3F053F7B
 ;
   %r = call float @erff(float 5.000000e-01)
   ret float %r
@@ -13,7 +13,7 @@ define float @erff_const() {
 define double @erf_const() {
 ; CHECK-LABEL: define double @erf_const() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @erf(double -5.000000e-01)
-; CHECK-NEXT:    ret double 0xBFE0A7EF5C18EDD2
+; CHECK-NEXT:    ret double f0xBFE0A7EF5C18EDD2
 ;
   %r = call double @erf(double -5.000000e-01)
   ret double %r
@@ -57,7 +57,7 @@ define double @erf_neg_zero() {
 
 define float @erff_inf() {
 ; CHECK-LABEL: define float @erff_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call float @erff(float 0x7FF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +inf)
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @erff(float 0x7FF0000000000000)
@@ -66,7 +66,7 @@ define float @erff_inf() {
 
 define double @erf_inf() {
 ; CHECK-LABEL: define double @erf_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call double @erf(double 0x7FF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call double @erf(double +inf)
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @erf(double 0x7FF0000000000000)
@@ -75,7 +75,7 @@ define double @erf_inf() {
 
 define float @erff_inf_memory_none() {
 ; CHECK-LABEL: define float @erff_inf_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call float @erff(float 0x7FF0000000000000) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +inf) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @erff(float 0x7FF0000000000000) readnone
@@ -84,7 +84,7 @@ define float @erff_inf_memory_none() {
 
 define double @erf_inf_memory_none() {
 ; CHECK-LABEL: define double @erf_inf_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call double @erf(double 0x7FF0000000000000) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call double @erf(double +inf) #[[ATTR1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @erf(double 0x7FF0000000000000) readnone
@@ -93,7 +93,7 @@ define double @erf_inf_memory_none() {
 
 define float @erff_neg_inf() {
 ; CHECK-LABEL: define float @erff_neg_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call float @erff(float 0xFFF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call float @erff(float -inf)
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @erff(float 0xFFF0000000000000)
@@ -102,7 +102,7 @@ define float @erff_neg_inf() {
 
 define double @erf_neg_inf() {
 ; CHECK-LABEL: define double @erf_neg_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call double @erf(double 0xFFF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call double @erf(double -inf)
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @erf(double 0xFFF0000000000000)
@@ -111,7 +111,7 @@ define double @erf_neg_inf() {
 
 define float @erff_neg_inf_memory_none() {
 ; CHECK-LABEL: define float @erff_neg_inf_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call float @erff(float 0xFFF0000000000000) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call float @erff(float -inf) #[[ATTR1]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @erff(float 0xFFF0000000000000) readnone
@@ -120,7 +120,7 @@ define float @erff_neg_inf_memory_none() {
 
 define double @erf_neg_inf_memory_none() {
 ; CHECK-LABEL: define double @erf_neg_inf_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call double @erf(double 0xFFF0000000000000) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call double @erf(double -inf) #[[ATTR1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @erf(double 0xFFF0000000000000) readnone
@@ -129,7 +129,7 @@ define double @erf_neg_inf_memory_none() {
 
 define float @erff_nan() {
 ; CHECK-LABEL: define float @erff_nan() {
-; CHECK-NEXT:    [[R:%.*]] = call float @erff(float 0x7FF8000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +qnan)
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @erff(float 0x7FF8000000000000)
@@ -138,7 +138,7 @@ define float @erff_nan() {
 
 define double @erf_nan() {
 ; CHECK-LABEL: define double @erf_nan() {
-; CHECK-NEXT:    [[R:%.*]] = call double @erf(double 0x7FF8000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call double @erf(double +qnan)
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @erf(double 0x7FF8000000000000)
@@ -147,7 +147,7 @@ define double @erf_nan() {
 
 define float @erff_nan_memory_none() {
 ; CHECK-LABEL: define float @erff_nan_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call float @erff(float 0x7FF8000000000000) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +qnan) #[[ATTR1]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @erff(float 0x7FF8000000000000) readnone
@@ -156,7 +156,7 @@ define float @erff_nan_memory_none() {
 
 define double @erf_nan_memory_none() {
 ; CHECK-LABEL: define double @erf_nan_memory_none() {
-; CHECK-NEXT:    [[R:%.*]] = call double @erf(double 0x7FF8000000000000) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call double @erf(double +qnan) #[[ATTR1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @erf(double 0x7FF8000000000000) readnone
@@ -201,7 +201,7 @@ define double @erf_const_strictfp() {
 
 define float @erff_nan_strictfp() {
 ; CHECK-LABEL: define float @erff_nan_strictfp() {
-; CHECK-NEXT:    [[R:%.*]] = call float @erff(float 0x7FF8000000000000) #[[ATTR2]]
+; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +qnan) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @erff(float 0x7FF8000000000000) strictfp
@@ -210,7 +210,7 @@ define float @erff_nan_strictfp() {
 
 define double @erf_nan_strictfp() {
 ; CHECK-LABEL: define double @erf_nan_strictfp() {
-; CHECK-NEXT:    [[R:%.*]] = call double @erf(double 0x7FF8000000000000) #[[ATTR2]]
+; CHECK-NEXT:    [[R:%.*]] = call double @erf(double +qnan) #[[ATTR2]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @erf(double 0x7FF8000000000000) strictfp

@@ -288,10 +288,6 @@ bool DAGTypeLegalizer::run() {
         WidenVectorResult(N, i);
         Changed = true;
         goto NodeDone;
-      case TargetLowering::TypePromoteFloat:
-        PromoteFloatResult(N, i);
-        Changed = true;
-        goto NodeDone;
       case TargetLowering::TypeSoftPromoteHalf:
         SoftPromoteHalfResult(N, i);
         Changed = true;
@@ -349,10 +345,6 @@ ScanOperands:
         break;
       case TargetLowering::TypeWidenVector:
         NeedsReanalyzing = WidenVectorOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypePromoteFloat:
-        NeedsReanalyzing = PromoteFloatOperand(N, i);
         Changed = true;
         break;
       case TargetLowering::TypeSoftPromoteHalf:
@@ -695,6 +687,12 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
           auto OldValId = getTableId(OldVal);
           auto NewValId = getTableId(NewVal);
           DAG.ReplaceAllUsesOfValueWith(OldVal, NewVal);
+          // Re-remap ids after RAUW, since the call above may have caused
+          // nodes to be deleted (via CSE), triggering NoteDeletion callbacks
+          // that added new entries to ReplacedValues. Without re-remapping,
+          // we could create a cycle like A -> B -> A.
+          RemapId(OldValId);
+          RemapId(NewValId);
           if (OldValId != NewValId)
             ReplacedValues[OldValId] = NewValId;
         }
@@ -1001,11 +999,10 @@ SDValue DAGTypeLegalizer::JoinIntegers(SDValue Lo, SDValue Hi) {
   EVT NVT = EVT::getIntegerVT(*DAG.getContext(),
                               LVT.getSizeInBits() + HVT.getSizeInBits());
 
-  EVT ShiftAmtVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   Lo = DAG.getNode(ISD::ZERO_EXTEND, dlLo, NVT, Lo);
   Hi = DAG.getNode(ISD::ANY_EXTEND, dlHi, NVT, Hi);
   Hi = DAG.getNode(ISD::SHL, dlHi, NVT, Hi,
-                   DAG.getConstant(LVT.getSizeInBits(), dlHi, ShiftAmtVT));
+                   DAG.getShiftAmountConstant(LVT.getSizeInBits(), NVT, dlHi));
   return DAG.getNode(ISD::OR, dlHi, NVT, Lo, Hi);
 }
 
@@ -1026,14 +1023,9 @@ void DAGTypeLegalizer::SplitInteger(SDValue Op,
   assert(LoVT.getSizeInBits() + HiVT.getSizeInBits() ==
          Op.getValueSizeInBits() && "Invalid integer splitting!");
   Lo = DAG.getNode(ISD::TRUNCATE, dl, LoVT, Op);
-  unsigned ReqShiftAmountInBits =
-      Log2_32_Ceil(Op.getValueType().getSizeInBits());
-  MVT ShiftAmountTy =
-      TLI.getScalarShiftAmountTy(DAG.getDataLayout(), Op.getValueType());
-  if (ReqShiftAmountInBits > ShiftAmountTy.getSizeInBits())
-    ShiftAmountTy = MVT::getIntegerVT(NextPowerOf2(ReqShiftAmountInBits));
-  Hi = DAG.getNode(ISD::SRL, dl, Op.getValueType(), Op,
-                   DAG.getConstant(LoVT.getSizeInBits(), dl, ShiftAmountTy));
+  Hi = DAG.getNode(
+      ISD::SRL, dl, Op.getValueType(), Op,
+      DAG.getShiftAmountConstant(LoVT.getSizeInBits(), Op.getValueType(), dl));
   Hi = DAG.getNode(ISD::TRUNCATE, dl, HiVT, Hi);
 }
 

@@ -58,7 +58,7 @@ enum WindowSchedulingFlag {
 
 /// The main class in the implementation of the target independent window
 /// scheduler.
-class WindowScheduler {
+class LLVM_ABI WindowScheduler {
 protected:
   MachineSchedContext *Context = nullptr;
   MachineFunction *MF = nullptr;
@@ -105,7 +105,7 @@ protected:
 
 public:
   WindowScheduler(MachineSchedContext *C, MachineLoop &ML);
-  virtual ~WindowScheduler() {}
+  virtual ~WindowScheduler() = default;
 
   bool run();
 

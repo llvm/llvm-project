@@ -605,8 +605,8 @@ struct Tag2 {};
 
 struct DoubleNode : ilist_node<DoubleNode, ilist_tag<Tag1>>,
                     ilist_node<DoubleNode, ilist_tag<Tag2>> {
-  typedef ilist_node<DoubleNode, ilist_tag<Tag1>> Node1Type;
-  typedef ilist_node<DoubleNode, ilist_tag<Tag2>> Node2Type;
+  using Node1Type = ilist_node<DoubleNode, ilist_tag<Tag1>>;
+  using Node2Type = ilist_node<DoubleNode, ilist_tag<Tag2>>;
 
   Node1Type::self_iterator getIterator1() { return Node1Type::getIterator(); }
   Node2Type::self_iterator getIterator2() { return Node2Type::getIterator(); }
@@ -617,8 +617,8 @@ struct DoubleNode : ilist_node<DoubleNode, ilist_tag<Tag1>>,
     return Node2Type::getIterator();
   }
 };
-typedef simple_ilist<DoubleNode, ilist_tag<Tag1>> TaggedList1Type;
-typedef simple_ilist<DoubleNode, ilist_tag<Tag2>> TaggedList2Type;
+using TaggedList1Type = simple_ilist<DoubleNode, ilist_tag<Tag1>>;
+using TaggedList2Type = simple_ilist<DoubleNode, ilist_tag<Tag2>>;
 
 TEST(SimpleIListTest, TaggedLists) {
   TaggedList1Type L1;

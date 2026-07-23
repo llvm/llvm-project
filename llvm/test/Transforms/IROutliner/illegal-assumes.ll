@@ -12,10 +12,10 @@ define void @outline_assumes() {
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[D:%.*]] = alloca i1, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DL_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_4(i1 true, ptr [[D]], ptr [[DL_LOC]])
 ; CHECK-NEXT:    [[DL_RELOAD:%.*]] = load i1, ptr [[DL_LOC]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DL_LOC]])
 ; CHECK-NEXT:    [[SPLIT_INST:%.*]] = sub i1 [[DL_RELOAD]], [[DL_RELOAD]]
 ; CHECK-NEXT:    call void @outlined_ir_func_1(ptr [[A]], ptr [[B]], ptr [[C]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[DL_RELOAD]])
@@ -48,10 +48,10 @@ define void @outline_assumes2() {
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[D:%.*]] = alloca i1, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DL_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_4(i1 false, ptr [[D]], ptr [[DL_LOC]])
 ; CHECK-NEXT:    [[DL_RELOAD:%.*]] = load i1, ptr [[DL_LOC]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DL_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_1(ptr [[A]], ptr [[B]], ptr [[C]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[DL_RELOAD]])
 ; CHECK-NEXT:    call void @outlined_ir_func_2(ptr [[A]], ptr [[B]], ptr [[C]])
@@ -82,10 +82,10 @@ define void @outline_assumes3() {
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[D:%.*]] = alloca i1, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DL_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i1 true, ptr [[D]], ptr [[A]], ptr [[B]], ptr [[C]], ptr [[DL_LOC]])
 ; CHECK-NEXT:    [[DL_RELOAD:%.*]] = load i1, ptr [[DL_LOC]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DL_LOC]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[DL_RELOAD]])
 ; CHECK-NEXT:    call void @outlined_ir_func_3(ptr [[A]])
 ; CHECK-NEXT:    ret void
@@ -115,10 +115,10 @@ define void @outline_assumes4() {
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[D:%.*]] = alloca i1, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DL_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i1 false, ptr [[D]], ptr [[A]], ptr [[B]], ptr [[C]], ptr [[DL_LOC]])
 ; CHECK-NEXT:    [[DL_RELOAD:%.*]] = load i1, ptr [[DL_LOC]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DL_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DL_LOC]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[DL_RELOAD]])
 ; CHECK-NEXT:    call void @outlined_ir_func_3(ptr [[A]])
 ; CHECK-NEXT:    ret void

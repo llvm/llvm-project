@@ -93,7 +93,7 @@ public:
   /// Accepts an incoming connection on the listening socket. This method can
   /// optionally either block until a connection is available or timeout after a
   /// specified amount of time has passed. By default the method will block
-  /// until the socket has recieved a connection. If the accept timesout this
+  /// until the socket has received a connection. If the accept timesout this
   /// method will return std::errc:timed_out
   ///
   /// \param Timeout An optional timeout duration in milliseconds. Setting
@@ -126,7 +126,7 @@ class LLVM_ABI raw_socket_stream : public raw_fd_stream {
 
 public:
   raw_socket_stream(int SocketFD);
-  ~raw_socket_stream();
+  ~raw_socket_stream() override;
 
   /// Create a \p raw_socket_stream connected to the UNIX domain socket at \p
   /// SocketPath.

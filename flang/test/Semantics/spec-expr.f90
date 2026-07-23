@@ -13,7 +13,7 @@ subroutine s1()
   real, dimension(dConst%field) :: realVar2
 end subroutine s1
 
-! an object designator with a base object that is a dummy argument that has 
+! an object designator with a base object that is a dummy argument that has
 ! neither the OPTIONAL nor the INTENT (OUT) attribute,
 subroutine s2(inArg, inoutArg, outArg, optArg)
   integer, intent(in) :: inArg
@@ -29,14 +29,14 @@ subroutine s2(inArg, inoutArg, outArg, optArg)
 
   outArg = 3
   block
-    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg'
+    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg' [-Whost-associated-intent-out-in-spec-expr]
     real a(outArg)
     !ERROR: Invalid specification expression: reference to OPTIONAL dummy argument 'optarg'
     real b(optArg)
   end block
  contains
   subroutine s2inner
-    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg'
+    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg' [-Whost-associated-intent-out-in-spec-expr]
     real a(outArg)
     !ERROR: Invalid specification expression: reference to OPTIONAL dummy argument 'optarg'
     real b(optArg)
@@ -61,7 +61,7 @@ subroutine s4()
   real, dimension(intVar) :: realVar
 end subroutine s4
 
-! an array constructor where each element and each scalar-int-expr of 
+! an array constructor where each element and each scalar-int-expr of
 !   each ac-implied-do-control is a restricted expression,
 subroutine s5()
   real, dimension(storage_size([1,2])) :: realVar
@@ -87,7 +87,7 @@ end subroutine s7a
 ! a specification inquiry where each designator or argument is
 !   (b) a variable that is not an optional dummy argument, and whose
 !     properties inquired about are not
-!     (i)   dependent on the upper bound of the last dimension of an 
+!     (i)   dependent on the upper bound of the last dimension of an
 !       assumed-size array,
 subroutine s7bi(assumedArg)
   integer, dimension(2, *) :: assumedArg
@@ -145,15 +145,15 @@ subroutine s10()
   real, dimension(bit_size(iVar)) :: realArray
 end subroutine s10
 
-! a reference to a transformational function from the intrinsic module 
-!   IEEE_ARITHMETIC, IEEE_EXCEPTIONS, or ISO_C_BINDING, where each argument 
+! a reference to a transformational function from the intrinsic module
+!   IEEE_ARITHMETIC, IEEE_EXCEPTIONS, or ISO_C_BINDING, where each argument
 !   is a restricted expression,
 subroutine s11()
   use ieee_exceptions
   real, dimension(merge(3, 4, ieee_support_halting(ieee_invalid))) :: realArray
 end subroutine s11
 
-! a reference to a specification function where each argument is a 
+! a reference to a specification function where each argument is a
 !   restricted expression,
 module m12
   contains
@@ -177,15 +177,15 @@ subroutine s13()
   end type dtype
 end subroutine s13
 
-! an ac-do-variable within an array constructor where each 
-!   scalar-int-expr of the corresponding ac-implied-do-control is a restricted 
+! an ac-do-variable within an array constructor where each
+!   scalar-int-expr of the corresponding ac-implied-do-control is a restricted
 !   expression, or
 subroutine s14()
   real, dimension(5) :: realField = [(i, i = 1, 5)]
 end subroutine s14
 
-! a restricted expression enclosed in parentheses,where each subscript, 
-!   section subscript, substring starting point, substring ending point, and 
+! a restricted expression enclosed in parentheses,where each subscript,
+!   section subscript, substring starting point, substring ending point, and
 !   type parameter value is a restricted expression
 subroutine s15()
   type :: dtype(param)

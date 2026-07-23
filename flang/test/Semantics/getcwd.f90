@@ -7,7 +7,7 @@ subroutine bad_kind_error(cwd, status)
   !ERROR: Actual argument for 'status=' has bad type or kind 'INTEGER(2)'
   call getcwd(cwd, status)
 end subroutine bad_kind_error
-  
+
 subroutine bad_args_error()
   !ERROR: missing mandatory 'c=' argument
   call getcwd()

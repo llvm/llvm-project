@@ -2,7 +2,7 @@
 ; RUN:  FileCheck %s -check-prefix=CHECK
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -passes=loop-vectorize -tail-predication=enabled \
-; RUN:     -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | \
+; RUN:     -tail-folding-policy=must-fold-tail -S < %s | \
 ; RUN:     FileCheck -check-prefix=PREDFLAG %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -11,7 +11,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 ; get tail-folded, except with -prefer-predicate-over-epilog which then
 ; overrules this.
 ;
-define dso_local void @flag_overrules_hint(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) local_unnamed_addr #0 {
+define void @flag_overrules_hint(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL: flag_overrules_hint(
 ; CHECK:       vector.body:
 ; CHECK-NOT:   @llvm.masked.load.v8i32.p0(
@@ -49,7 +49,7 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !10
 }
 
-define dso_local void @interleave4(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N) local_unnamed_addr #0 {
+define void @interleave4(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N) #0 {
 ; PREDFLAG-LABEL: interleave4(
 ; PREDFLAG:  %[[ADD2:.*]] = add i32 %index, 4
 ; PREDFLAG:  %[[ADD3:.*]] = add i32 %index, 8
@@ -77,16 +77,16 @@ entry:
   %cmp8 = icmp sgt i32 %N, 0
   br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i32 %i.09
   %0 = load i32, ptr %arrayidx, align 4

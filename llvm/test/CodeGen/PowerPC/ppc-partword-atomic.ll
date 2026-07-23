@@ -25,7 +25,7 @@ define dso_local zeroext i32 @testI8(i8 zeroext %val) local_unnamed_addr #0 {
 ; PWR7-NEXT:    andc 8, 7, 3
 ; PWR7-NEXT:    or 8, 6, 8
 ; PWR7-NEXT:    stwcx. 8, 0, 5
-; PWR7-NEXT:    bne 0, .LBB0_1
+; PWR7-NEXT:    bne- 0, .LBB0_1
 ; PWR7-NEXT:  # %bb.2: # %entry
 ; PWR7-NEXT:    srw 3, 7, 4
 ; PWR7-NEXT:    addis 4, 2, global_int@toc@ha
@@ -44,7 +44,7 @@ define dso_local zeroext i32 @testI8(i8 zeroext %val) local_unnamed_addr #0 {
 ; PWR9-NEXT:    #
 ; PWR9-NEXT:    lbarx 4, 0, 5
 ; PWR9-NEXT:    stbcx. 3, 0, 5
-; PWR9-NEXT:    bne 0, .LBB0_1
+; PWR9-NEXT:    bne- 0, .LBB0_1
 ; PWR9-NEXT:  # %bb.2: # %entry
 ; PWR9-NEXT:    addis 3, 2, global_int@toc@ha
 ; PWR9-NEXT:    lwsync
@@ -78,7 +78,7 @@ define dso_local zeroext i32 @testI16(i16 zeroext %val) local_unnamed_addr #0 {
 ; PWR7-NEXT:    andc 8, 7, 3
 ; PWR7-NEXT:    or 8, 6, 8
 ; PWR7-NEXT:    stwcx. 8, 0, 5
-; PWR7-NEXT:    bne 0, .LBB1_1
+; PWR7-NEXT:    bne- 0, .LBB1_1
 ; PWR7-NEXT:  # %bb.2: # %entry
 ; PWR7-NEXT:    srw 3, 7, 4
 ; PWR7-NEXT:    addis 4, 2, global_int@toc@ha
@@ -97,7 +97,7 @@ define dso_local zeroext i32 @testI16(i16 zeroext %val) local_unnamed_addr #0 {
 ; PWR9-NEXT:    #
 ; PWR9-NEXT:    lharx 4, 0, 5
 ; PWR9-NEXT:    sthcx. 3, 0, 5
-; PWR9-NEXT:    bne 0, .LBB1_1
+; PWR9-NEXT:    bne- 0, .LBB1_1
 ; PWR9-NEXT:  # %bb.2: # %entry
 ; PWR9-NEXT:    addis 3, 2, global_int@toc@ha
 ; PWR9-NEXT:    lwsync

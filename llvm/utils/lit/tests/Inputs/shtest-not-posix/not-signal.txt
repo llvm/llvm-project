@@ -1,0 +1,3 @@
+# Check that the builtin not still fails when we fail with a signal.
+
+# RUN: not %{python} fail-signal.py

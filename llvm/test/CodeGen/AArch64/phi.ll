@@ -391,13 +391,11 @@ define <4 x i8> @tv4i8(i1 %c, ptr %p, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    str wzr, [x1]
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB12_2:
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -501,13 +499,11 @@ define <2 x i16> @tv2i16(i1 %c, ptr %p, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    str wzr, [x1]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB16_2:
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e

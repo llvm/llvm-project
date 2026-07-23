@@ -8,30 +8,24 @@
 
 #include "src/fcntl/creat.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 #include "hdr/fcntl_macros.h"
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, creat, (const char *path, int mode_flags)) {
-#ifdef SYS_open
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(
-      SYS_open, path, O_CREAT | O_WRONLY | O_TRUNC, mode_flags);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(
-      SYS_openat, AT_FDCWD, path, O_CREAT | O_WRONLY | O_TRUNC, mode_flags);
-#endif
+  ErrorOr<int> fd =
+      linux_syscalls::open(path, O_CREAT | O_WRONLY | O_TRUNC, mode_flags);
 
-  if (fd > 0)
-    return fd;
-
-  libc_errno = -fd;
-  return -1;
+  if (!fd) {
+    libc_errno = fd.error();
+    return -1;
+  }
+  return fd.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

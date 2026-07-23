@@ -1,9 +1,7 @@
-; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -print-polyhedral-info -polly-check-parallel -disable-output < %s | FileCheck %s -check-prefix=PINFO
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<ast>' -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ;        void f(int *restrict A, int *restrict B, int N) {
 ; CHECK:   #pragma minimal dependence distance: 5
-; PINFO:   for.cond: Loop is not parallel.
 ;          for (int i = 0; i < N; i++) {
 ;            A[i + 7] = A[i] + 1;
 ;            B[i + 5] = B[i] + 1;

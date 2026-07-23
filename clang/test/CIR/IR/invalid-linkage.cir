@@ -1,0 +1,8 @@
+// Test that cir.global requires a valid linkage attribute
+// RUN: cir-opt %s -verify-diagnostics
+
+!u32i = !cir.int<u, 32>
+module {
+  // expected-error@+1 {{expected string or keyword containing one of the following enum values for attribute 'linkage' [external, available_externally, linkonce, linkonce_odr, weak, weak_odr, appending, internal, cir_private, extern_weak, common]}}
+  cir.global @a = #cir.const_array<[0 : !u8i, -23 : !u8i, 33 : !u8i] : !cir.array<!u32i x 3>>
+}

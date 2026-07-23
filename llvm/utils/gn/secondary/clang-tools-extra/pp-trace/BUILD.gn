@@ -5,6 +5,7 @@ executable("pp-trace") {
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
     "//clang/lib/Lex",
+    "//clang/lib/Options",
     "//clang/lib/Serialization",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",

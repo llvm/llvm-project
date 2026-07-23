@@ -11,9 +11,9 @@
 
 // ~optional();
 
+#include <cassert>
 #include <optional>
 #include <type_traits>
-#include <cassert>
 
 #include "test_macros.h"
 
@@ -64,6 +64,24 @@ int main(int, char**)
         }
         assert(X::dtor_called == true);
     }
+#if TEST_STD_VER >= 26
+    {
+      typedef X& T;
+      static_assert(std::is_trivially_destructible_v<T>);
+      static_assert(std::is_trivially_destructible_v<optional<T>>);
+    }
+    X::dtor_called = false;
+    X x;
+    {
+      optional<X&> opt{x};
+      assert(X::dtor_called == false);
+    }
+    assert(X::dtor_called == false);
 
-  return 0;
+    {
+      static_assert(std::is_trivially_destructible_v<X (&)()>);
+      static_assert(std::is_trivially_destructible_v<optional<X (&)()>>);
+    }
+#endif
+    return 0;
 }

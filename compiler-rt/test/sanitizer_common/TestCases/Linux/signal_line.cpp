@@ -7,6 +7,7 @@
 // RUN: %env_tool_opts=handle_segv=1:print_stacktrace=1 not %run %t 2 2>&1 | FileCheck --check-prefixes=CHECK2,CHECK %s
 
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 
 // CHECK: [[SAN:.*Sanitizer]]:DEADLYSIGNAL

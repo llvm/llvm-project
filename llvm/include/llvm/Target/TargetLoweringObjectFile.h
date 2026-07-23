@@ -74,7 +74,7 @@ public:
   TargetLoweringObjectFile(const TargetLoweringObjectFile &) = delete;
   TargetLoweringObjectFile &
   operator=(const TargetLoweringObjectFile &) = delete;
-  virtual ~TargetLoweringObjectFile();
+  ~TargetLoweringObjectFile() override;
 
   Mangler &getMangler() const { return *Mang; }
 
@@ -94,7 +94,9 @@ public:
   void emitCGProfileMetadata(MCStreamer &Streamer, Module &M) const;
 
   /// Emit pseudo_probe_desc metadata.
-  void emitPseudoProbeDescMetadata(MCStreamer &Streamer, Module &M) const;
+  void emitPseudoProbeDescMetadata(MCStreamer &Streamer, Module &M,
+                                   std::function<void(MCStreamer &Streamer)>
+                                       COMDATSymEmitter = nullptr) const;
 
   /// Process linker options metadata and emit platform-specific bits.
   virtual void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const {}
@@ -106,13 +108,14 @@ public:
   /// placed in.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment) const;
+                                           Align &Alignment,
+                                           const Function *F) const;
 
   /// Similar to the function above, but append \p SectionSuffix to the section
   /// name.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment,
+                                           Align &Alignment, const Function *F,
                                            StringRef SectionSuffix) const;
 
   virtual MCSection *
@@ -267,7 +270,7 @@ public:
   /// On targets that use separate function descriptor symbols, return a section
   /// for the descriptor given its symbol. Use only with defined functions.
   virtual MCSection *
-  getSectionForFunctionDescriptor(const Function *F,
+  getSectionForFunctionDescriptor(const GlobalObject *F,
                                   const TargetMachine &TM) const {
     return nullptr;
   }

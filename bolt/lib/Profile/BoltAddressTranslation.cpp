@@ -292,7 +292,7 @@ void BoltAddressTranslation::writeMaps(uint64_t &PrevAddress, raw_ostream &OS) {
 }
 
 std::error_code BoltAddressTranslation::parse(raw_ostream &OS, StringRef Buf) {
-  DataExtractor DE = DataExtractor(Buf, true, 8);
+  DataExtractor DE = DataExtractor(Buf, true);
   uint64_t Offset = 0;
   if (Buf.size() < 12)
     return make_error_code(llvm::errc::io_error);

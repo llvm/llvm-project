@@ -1,5 +1,5 @@
 // This tests uses the PATH environment variable.
-// REQUIRES: !system-windows
+// REQUIRES: !system-windows, !system-cygwin
 
 // RUN: env PATH=%S/Inputs/CUDA/usr/local/cuda/bin \
 // RUN:    %clang -v --target=i386-unknown-linux --sysroot=%S/no-cuda-there \

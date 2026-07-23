@@ -252,9 +252,9 @@ define <4 x i32> @unsafe_load_i32_insert_v4i32_addrspace(ptr align 16 dereferenc
 define <8 x i16> @gep01_load_i16_insert_v8i16(ptr align 16 dereferenceable(18) %p) nofree nosync {
 ; CHECK-LABEL: @gep01_load_i16_insert_v8i16(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    [[R:%.*]] = load <8 x i16>, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <8 x i16> [[R]], <8 x i16> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <8 x i16> [[R1]]
 ;
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 1
   %s = load i16, ptr %gep, align 2
@@ -336,14 +336,30 @@ define <4 x i32> @gep013_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceab
   ret <4 x i32> %r
 }
 
+; The element index is 2^32 and does not fit in unsigned. It must be rejected
+; before conversion to the shuffle-mask index type.
+
+define <4 x i32> @load_insert_large_offset(ptr align 16 dereferenceable(17179869188) %p) {
+; CHECK-LABEL: @load_insert_large_offset(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 17179869184
+; CHECK-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %gep = getelementptr inbounds i8, ptr %p, i64 17179869184
+  %s = load i32, ptr %gep, align 4
+  %r = insertelement <4 x i32> poison, i32 %s, i64 0
+  ret <4 x i32> %r
+}
+
 ; If there are enough dereferenceable bytes, we can offset the vector load.
 
 define <8 x i16> @gep10_load_i16_insert_v8i16(ptr align 16 dereferenceable(32) %p) nofree nosync {
 ; CHECK-LABEL: @gep10_load_i16_insert_v8i16(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 1, i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[GEP]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    [[R:%.*]] = load <8 x i16>, ptr [[GEP]], align 16
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <8 x i16> [[R]], <8 x i16> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <8 x i16> [[R1]]
 ;
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 1, i64 0
   %s = load i16, ptr %gep, align 16

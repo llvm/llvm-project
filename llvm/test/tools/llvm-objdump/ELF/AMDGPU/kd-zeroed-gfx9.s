@@ -2,7 +2,7 @@
 
 ; RUN: llvm-mc %s --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=-xnack -filetype=obj -o %t1
 ; RUN: echo '.amdhsa_code_object_version 5' > %t2.s
-; RUN: llvm-objdump --disassemble-symbols=my_kernel.kd %t1 | tail -n +7 >> %t2.s
+; RUN: llvm-objdump --disassemble-symbols=my_kernel.kd %t1 | tail -n +8 >> %t2.s
 ; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=-xnack -filetype=obj -o %t2 %t2.s
 ; RUN: diff %t1 %t2
 

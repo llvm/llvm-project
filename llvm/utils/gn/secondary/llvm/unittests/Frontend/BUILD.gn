@@ -13,8 +13,8 @@ unittest("LLVMFrontendTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "HLSLBindingTest.cpp",
     "HLSLRootSignatureDumpTest.cpp",
-    "HLSLRootSignatureRangesTest.cpp",
     "OpenACCTest.cpp",
     "OpenMPCompositionTest.cpp",
     "OpenMPContextTest.cpp",
@@ -23,5 +23,6 @@ unittest("LLVMFrontendTests") {
     "OpenMPDirectiveNameTest.cpp",
     "OpenMPIRBuilderTest.cpp",
     "OpenMPParsingTest.cpp",
+    "PropertySetRegistryTest.cpp",
   ]
 }

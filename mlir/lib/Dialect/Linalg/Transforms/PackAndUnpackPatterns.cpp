@@ -10,6 +10,8 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
@@ -22,24 +24,67 @@ static int64_t getNumGtOneDims(ArrayRef<int64_t> shape) {
       shape, [](int64_t v) { return ShapedType::isDynamic(v) || v > 1; });
 }
 
-/// Returns success() if there is only 1 dimension size in non-packed domain
-/// being greater than 1 and packing only happens on the dimension.
-/// Note: this method should only be used by pack/unpack to reshape conversion.
-/// It assumes that non-unit inner tile size must be used by the non-unit
-/// dimension.
-static LogicalResult isPackOn1D(RewriterBase &rewriter, Operation *op,
-                                ArrayRef<int64_t> srcShape,
-                                ArrayRef<int64_t> innerPackTileSize) {
-  if (getNumGtOneDims(srcShape) > 1) {
+/// Returns the index of the first non-unit size in `sizes`. Returns -1 if
+/// there are no non-unit sizes.
+static int64_t getFirstNonUnitSizeIdx(ArrayRef<int64_t> sizes) {
+  const auto *it = llvm::find_if(sizes, [](int64_t dim) { return dim != 1; });
+  return (it != sizes.end()) ? std::distance(sizes.begin(), it) : -1;
+}
+
+/// Check whether `op` is effectively a 1D pack/unpack. Example:
+///
+///  %pack = linalg.pack %src
+///     inner_dims_pos = [0, 1]
+///     inner_tiles = [1, 2] into %dest
+///   : tensor<1x32xf32> -> tensor<1x16x1x2xf32>
+///
+/// Returns success() if there is:
+///   * only 1 non-unit dim in the un-packed domain,
+///   * only 1 non-unit inner tile size, and
+///   * the unique non-unit tile size is applied to the unique non-unit
+///     un-packed dim.
+template <typename PackOrUnpackOp>
+static LogicalResult isPackOnEffectively1D(RewriterBase &rewriter,
+                                           PackOrUnpackOp *op) {
+  // Obtain the unpacked shape.
+  auto pack = dyn_cast<linalg::PackOp>(op);
+  auto unpack = dyn_cast<linalg::UnPackOp>(op);
+
+  ArrayRef<int64_t> unpackedShape = pack ? pack->getSourceType().getShape()
+                                         : unpack->getDestType().getShape();
+
+  // Obtain the inner tile sizes.
+  ArrayRef<int64_t> innerTileSizes = op->getStaticInnerTiles();
+
+  // Make sure that there is exactly single non-unit unpacked dim.
+  if (getNumGtOneDims(unpackedShape) != 1) {
     return rewriter.notifyMatchFailure(
-        op, "expects non-packed domain to have at most one non-unit dims");
+        *op, "expects non-packed domain to have at most one non-unit dims");
   }
-  // Non-unit inner tile size must be used by the non-unit dimension. If not, it
-  // will faill on getting reassociation maps.
-  if (getNumGtOneDims(innerPackTileSize) > 1) {
+
+  // Make sure that there is at most one non-unit inner tile size.
+  auto numNonUnitInnerTiles = getNumGtOneDims(innerTileSizes);
+  if (numNonUnitInnerTiles > 1) {
     return rewriter.notifyMatchFailure(
-        op, "expects at most one non-unit inner tiles");
+        *op, "expects at most one non-unit inner tiles");
   }
+
+  // If there are no non-unit tiles, there is nothing else to check.
+  if (numNonUnitInnerTiles == 0)
+    return success();
+
+  // Get the index of the unique non-unit unpacked dim.
+  int64_t nonUnitDimIdx = getFirstNonUnitSizeIdx(unpackedShape);
+
+  // Get the index of the dim that the unique non-unit tile is applied to.
+  int64_t nonUnitTileDestDimIdx = getFirstNonUnitSizeIdx(innerTileSizes);
+
+  // Make sure that the unique non-unit tile is applied to the unique unit dim.
+  if (nonUnitTileDestDimIdx != nonUnitDimIdx) {
+    return rewriter.notifyMatchFailure(
+        *op, "expects at most one non-unit inner tiles");
+  }
+
   return success();
 }
 
@@ -81,9 +126,8 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
                ArrayRef<ReassociationIndices> reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter
-        .create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
-                                       reassociation)
+    return tensor::ExpandShapeOp::create(rewriter, loc, newOperandType, operand,
+                                         reassociation)
         .getResult();
   }
 
@@ -110,16 +154,18 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
                                 PatternRewriter &rewriter) const override {
     if (packOp.getPaddingValue())
       return rewriter.notifyMatchFailure(packOp, "expects no padding value");
+    // TODO: Support Memref PackOp. Temporarily return failure.
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
 
-    RankedTensorType sourceType = packOp.getSourceType();
+    ShapedType sourceType = packOp.getSourceType();
     if (failed(isPackOnInnerMostDim(rewriter, packOp)) &&
-        failed(isPackOn1D(rewriter, packOp, sourceType.getShape(),
-                          packOp.getStaticTiles())) &&
+        failed(isPackOnEffectively1D(rewriter, &packOp)) &&
         !packOp.isLikePad()) {
       return failure();
     }
 
-    RankedTensorType destType = packOp.getDestType();
+    ShapedType destType = packOp.getDestType();
     auto reassociation =
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
@@ -143,8 +189,8 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
                        Type newOperandType, ArrayAttr reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter.create<tensor::CollapseShapeOp>(loc, newOperandType,
-                                                    operand, reassociation);
+    return tensor::CollapseShapeOp::create(rewriter, loc, newOperandType,
+                                           operand, reassociation);
   }
 
   /// Returns success() if it is unpacking on the innermost dimension.
@@ -157,8 +203,8 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
           "expects outer_dims_perm is empty or an identity permutation");
     }
 
-    RankedTensorType sourceType = unpackOp.getSourceType();
-    RankedTensorType destType = unpackOp.getDestType();
+    ShapedType sourceType = unpackOp.getSourceType();
+    ShapedType destType = unpackOp.getDestType();
     if (!sourceType.hasStaticShape() || !destType.hasStaticShape())
       return rewriter.notifyMatchFailure(unpackOp, "expects static shapes");
 
@@ -173,15 +219,18 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
 
   LogicalResult matchAndRewrite(UnPackOp unpackOp,
                                 PatternRewriter &rewriter) const override {
-    RankedTensorType destType = unpackOp.getDestType();
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unpackOp.hasPureTensorSemantics())
+      return failure();
+
+    ShapedType destType = unpackOp.getDestType();
     if (failed(isUnpackOnInnerMostDim(rewriter, unpackOp)) &&
-        failed(isPackOn1D(rewriter, unpackOp, destType.getShape(),
-                          unpackOp.getStaticTiles())) &&
+        failed(isPackOnEffectively1D(rewriter, &unpackOp)) &&
         !unpackOp.isLikeUnPad()) {
       return failure();
     }
 
-    RankedTensorType sourceType = unpackOp.getSourceType();
+    ShapedType sourceType = unpackOp.getSourceType();
     auto reassociation =
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
@@ -220,6 +269,33 @@ public:
       if (!isEqualConstantIntOrValue(paddingValue, constantPaddingValue))
         return failure();
 
+    // Folding is not allowed if it were to introduce artificial padding.
+    // Folding is also disabled in the case of dynamic dimensions and/or tile
+    // sizes - that is because it would be impossible to compute the padding
+    // size and hence to establish whether "artificial" padding would be
+    // created.
+    ShapedType unpackedType = packOp.getSourceType();
+    SmallVector<int64_t> outerShapeWithoutTranspose =
+        getPackedOuterShapeWithoutTransposition(packOp);
+    for (auto [pos, tileSize, high] :
+         llvm::zip_equal(packOp.getInnerDimsPos(), packOp.getStaticInnerTiles(),
+                         padOp.getMixedHighPad())) {
+      if (unpackedType.isDynamicDim(pos))
+        return failure();
+      if (ShapedType::isDynamic(outerShapeWithoutTranspose[pos]))
+        return failure();
+      if (ShapedType::isDynamic(tileSize))
+        return failure();
+      std::optional<int64_t> cstHigh = getConstantIntValue(high);
+      if (!cstHigh)
+        return failure();
+      int64_t paddingSize = outerShapeWithoutTranspose[pos] * tileSize -
+                            unpackedType.getDimSize(pos);
+      // Do not fold the op if it requires artificial padding.
+      if (paddingSize + cstHigh.value() >= tileSize)
+        return failure();
+    }
+
     rewriter.replaceOpWithNewOp<PackOp>(
         packOp, padOp.getSource(), packOp.getDest(), packOp.getInnerDimsPos(),
         packOp.getMixedTiles(), constantPaddingValue,
@@ -247,26 +323,21 @@ public:
     if (!unpackOp)
       return failure();
 
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unpackOp.hasPureTensorSemantics())
+      return failure();
+
     // User controlled folding function.
     if (controlFn && !controlFn(&sliceOp.getSourceMutable()))
       return failure();
 
-    if (sliceOp.getResultType().getRank() != unpackOp.getDestType().getRank()) {
-      return rewriter.notifyMatchFailure(
-          sliceOp, "rank-reduced folding is not supported");
-    }
-
-    // Check all offsets are zeros, and all strides are ones.
-    if (!areAllConstantIntValue(sliceOp.getMixedOffsets(), 0) ||
-        !areAllConstantIntValue(sliceOp.getMixedStrides(), 1)) {
-      return rewriter.notifyMatchFailure(
-          sliceOp, "expects offsets to be 0s and strides to be 1s");
-    }
+    if (!unpackOp.canFoldSliceOp(sliceOp))
+      return failure();
 
     // Create a new empty output tensor.
     Type elementType = unpackOp.getDestType().getElementType();
-    Value output = rewriter.create<tensor::EmptyOp>(
-        sliceOp.getLoc(), sliceOp.getMixedSizes(), elementType);
+    Value output = tensor::EmptyOp::create(
+        rewriter, sliceOp.getLoc(), sliceOp.getMixedSizes(), elementType);
     rewriter.replaceOpWithNewOp<UnPackOp>(
         sliceOp, unpackOp.getSource(), output, unpackOp.getInnerDimsPos(),
         unpackOp.getMixedTiles(), unpackOp.getOuterDimsPerm());
@@ -318,6 +389,10 @@ public:
     if (!packOp)
       return failure();
 
+    // TODO: Support Memref PackOp. Temporarily return failure.
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     // User controlled folding function.
     if (controlFn && !controlFn(&linalgOp->getOpOperand(0)))
       return failure();
@@ -330,7 +405,7 @@ public:
     auto innerDimsPos = packOp.getInnerDimsPos();
     auto mixedInnerTiles = packOp.getMixedTiles();
     auto outerDimsPerm = packOp.getOuterDimsPerm();
-    auto transposePerm = maybePerm.value();
+    const auto &transposePerm = maybePerm.value();
     SmallVector<int64_t> newOuterDimsPermVec;
     SmallVector<int64_t> newInnerDimsPosVec;
     SmallVector<OpFoldResult> newMixedInnerTilesVec;
@@ -377,6 +452,10 @@ public:
 
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: Support Memref PackOp. Temporarily return failure.
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     auto linalgOp = packOp.getSource().getDefiningOp<linalg::LinalgOp>();
     if (!linalgOp)
       return failure();
@@ -438,6 +517,10 @@ public:
     if (!unPackOp)
       return failure();
 
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unPackOp.hasPureTensorSemantics())
+      return failure();
+
     // User controlled folding function.
     if (controlFn && !controlFn(&linalgOp->getOpOperand(0)))
       return failure();
@@ -486,6 +569,10 @@ public:
 
   LogicalResult matchAndRewrite(UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unPackOp.hasPureTensorSemantics())
+      return failure();
+
     auto linalgOp = unPackOp.getSource().getDefiningOp<linalg::LinalgOp>();
     if (!linalgOp)
       return failure();
@@ -529,8 +616,8 @@ public:
 
     auto elemType =
         cast<ShapedType>(unPackOp->getResultTypes()[0]).getElementType();
-    Value output = rewriter.create<tensor::EmptyOp>(
-        unPackOp->getLoc(), unpackOpResultDims[0], elemType);
+    Value output = tensor::EmptyOp::create(rewriter, unPackOp->getLoc(),
+                                           unpackOpResultDims[0], elemType);
 
     rewriter.replaceOpWithNewOp<UnPackOp>(
         unPackOp, linalgOp->getOperand(0), output, newInnerDimsPosVec,
@@ -550,6 +637,10 @@ struct FoldEmptyTensorWithPackOp : public OpRewritePattern<PackOp> {
 
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: Support Memref PackOp. Temporarily return failure.
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     // Check for tensor.empty source.
     auto emptyOp = packOp.getSource().getDefiningOp<tensor::EmptyOp>();
     if (!emptyOp)
@@ -574,6 +665,10 @@ struct FoldEmptyTensorWithUnPackOp : public OpRewritePattern<UnPackOp> {
 
   LogicalResult matchAndRewrite(UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unPackOp.hasPureTensorSemantics())
+      return failure();
+
     // Check for tensor.empty source.
     auto emptyOp = unPackOp.getSource().getDefiningOp<tensor::EmptyOp>();
     if (!emptyOp)

@@ -25,7 +25,8 @@ class PPCELFMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit PPCELFMCAsmInfo(bool is64Bit, const Triple &);
+  explicit PPCELFMCAsmInfo(bool is64Bit, const Triple &,
+                           const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
@@ -33,10 +34,9 @@ public:
 };
 
 class PPCXCOFFMCAsmInfo : public MCAsmInfoXCOFF {
-  void anchor() override;
-
 public:
-  explicit PPCXCOFFMCAsmInfo(bool is64Bit, const Triple &);
+  explicit PPCXCOFFMCAsmInfo(bool is64Bit, const Triple &,
+                             const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,

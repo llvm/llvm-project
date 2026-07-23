@@ -48,6 +48,39 @@ class TestStopHooks(TestBase):
             "Got the right error",
         )
 
+    def test_self_deleting(self):
+        """Test that we can handle a stop hook that deletes itself"""
+        self.script_setup()
+        # Run to the first breakpoint before setting the stop hook
+        # so we don't have to figure out where it showed up in the new
+        # target.
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Stop here first", self.main_source_file
+        )
+
+        # Now add our stop hook and register it:
+        result = lldb.SBCommandReturnObject()
+        command = "target stop-hook add -P stop_hook.self_deleting_stop"
+        self.interp.HandleCommand(command, result)
+        self.assertCommandReturn(result, f"Added my stop hook: {result.GetError()}")
+
+        result_str = result.GetOutput()
+        p = re.compile("Stop hook #([0-9]+) added.")
+        m = p.match(result_str)
+        current_stop_hook_id = m.group(1)
+        command = "command script add -o -f stop_hook.handle_stop_hook_id handle_id"
+        self.interp.HandleCommand(command, result)
+        self.assertCommandReturn(result, "Added my command")
+
+        command = f"handle_id {current_stop_hook_id}"
+        self.interp.HandleCommand(command, result)
+        self.assertCommandReturn(result, "Registered my stop ID")
+
+        # Now step the process and make sure the stop hook was deleted.
+        thread.StepOver()
+        self.interp.HandleCommand("target stop-hook list", result)
+        self.assertEqual(result.GetOutput().rstrip(), "No stop hooks.", "Deleted hook")
+
     def test_stop_hooks_scripted(self):
         """Test that a scripted stop hook works with no specifiers"""
         self.stop_hooks_scripted(5, "-I false")

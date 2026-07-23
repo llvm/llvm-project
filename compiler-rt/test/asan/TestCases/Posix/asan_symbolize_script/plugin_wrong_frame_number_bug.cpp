@@ -1,7 +1,7 @@
 // This test case checks for an old bug when using plug-ins that caused
 // the stack numbering to be incorrect.
 // UNSUPPORTED: android
-// UNSUPPORTED: ios
+// UNSUPPORTED: darwin-remote
 
 // RUN: %clangxx_asan -O0 -g %s -o %t
 // RUN: %env_asan_opts=symbolize=0 not %run %t DUMMY_ARG > %t.asan_report 2>&1

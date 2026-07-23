@@ -20,7 +20,7 @@ target triple = "spir64-unknown-unknown"
 ; CHECK-DAG: %[[LongVec3:.*]] = OpTypeVector %[[Long]] 3
 
 ; CHECK: OpFunction
-; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[CharVec2]] %[[#]] %[[#]] 1 -1
+; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[CharVec2]] %[[#]] %[[#]] 1 0xFFFFFFFF
 ; CHECK: %[[Added1:.*]] = OpExtInst %[[CharVec2]] %[[#]] s_min %[[#]] %[[#]]
 ; CHECK: %[[Vec2CharR:.*]] = OpCompositeExtract %[[Char]] %[[Added1]] 0
 ; CHECK: OpReturnValue %[[Vec2CharR]]
@@ -37,7 +37,7 @@ target triple = "spir64-unknown-unknown"
 ; CHECK: OpFunctionEnd
 
 ; CHECK: OpFunction
-; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[ShortVec2]] %[[#]] %[[#]] 1 -1
+; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[ShortVec2]] %[[#]] %[[#]] 1 0xFFFFFFFF
 ; CHECK: %[[Added1:.*]] = OpExtInst %[[ShortVec2]] %[[#]] s_min %[[#]] %[[#]]
 ; CHECK: %[[Vec2ShortR:.*]] = OpCompositeExtract %[[Short]] %[[Added1]] 0
 ; CHECK: OpReturnValue %[[Vec2ShortR]]
@@ -54,7 +54,7 @@ target triple = "spir64-unknown-unknown"
 ; CHECK: OpFunctionEnd
 
 ; CHECK: OpFunction
-; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[IntVec2]] %[[#]] %[[#]] 1 -1
+; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[IntVec2]] %[[#]] %[[#]] 1 0xFFFFFFFF
 ; CHECK: %[[Added1:.*]] = OpExtInst %[[IntVec2]] %[[#]] s_min %[[#]] %[[#]]
 ; CHECK: %[[Vec2IntR:.*]] = OpCompositeExtract %[[Int]] %[[Added1]] 0
 ; CHECK: OpReturnValue %[[Vec2IntR]]
@@ -71,7 +71,7 @@ target triple = "spir64-unknown-unknown"
 ; CHECK: OpFunctionEnd
 
 ; CHECK: OpFunction
-; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[LongVec2]] %[[#]] %[[#]] 1 -1
+; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[LongVec2]] %[[#]] %[[#]] 1 0xFFFFFFFF
 ; CHECK: %[[Added1:.*]] = OpExtInst %[[LongVec2]] %[[#]] s_min %[[#]] %[[#]]
 ; CHECK: %[[Vec2LongR:.*]] = OpCompositeExtract %[[Long]] %[[Added1]] 0
 ; CHECK: OpReturnValue %[[Vec2LongR]]

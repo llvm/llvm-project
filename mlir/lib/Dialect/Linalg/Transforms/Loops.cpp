@@ -49,7 +49,7 @@ static SmallVector<Value> makeCanonicalAffineApplies(OpBuilder &b, Location loc,
     auto exprMap = AffineMap::get(dims, map.getNumSymbols(), e);
     SmallVector<Value> operands(vals);
     affine::canonicalizeMapAndOperands(&exprMap, &operands);
-    res.push_back(b.create<affine::AffineApplyOp>(loc, exprMap, operands));
+    res.push_back(affine::AffineApplyOp::create(b, loc, exprMap, operands));
   }
   return res;
 }
@@ -70,8 +70,9 @@ static void inlineRegionAndEmitStore(OpBuilder &b, Location loc, OpType op,
   Operation *terminator = block.getTerminator();
   for (OpOperand &operand : terminator->getOpOperands()) {
     Value toStore = map.lookupOrDefault(operand.get());
-    b.create<StoreOpTy>(loc, toStore, outputBuffers[operand.getOperandNumber()],
-                        indexing[operand.getOperandNumber()]);
+    StoreOpTy::create(b, loc, toStore,
+                      outputBuffers[operand.getOperandNumber()],
+                      indexing[operand.getOperandNumber()]);
   }
 }
 
@@ -145,7 +146,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
     auto indexing = makeCanonicalAffineApplies(
         b, loc, linalgOp.getMatchingIndexingMap(inputOperand), allIvsPlusDims);
     indexedValues.push_back(
-        b.create<LoadOpTy>(loc, inputOperand->get(), indexing));
+        LoadOpTy::create(b, loc, inputOperand->get(), indexing));
   }
   // 1.b. Emit load from output views.
   for (OpOperand &outputOperand : linalgOp.getDpsInitsMutable()) {
@@ -153,7 +154,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
         b, loc, linalgOp.getMatchingIndexingMap(&outputOperand),
         allIvsPlusDims);
     indexedValues.push_back(
-        b.create<LoadOpTy>(loc, outputOperand.get(), indexing));
+        LoadOpTy::create(b, loc, outputOperand.get(), indexing));
   }
 
   // TODO: When a region inliner exists, use it.
@@ -191,7 +192,7 @@ static void replaceIndexOpsByInductionVariables(RewriterBase &rewriter,
         .Case([&](affine::AffineForOp affineForOp) {
           allIvs.push_back(affineForOp.getInductionVar());
         })
-        .Default([&](Operation *op) { assert(false && "unexpected op"); });
+        .DefaultUnreachable("unexpected op");
   }
   assert(linalgOp.getNumLoops() == allIvs.size() &&
          "expected the number of loops and induction variables to match");

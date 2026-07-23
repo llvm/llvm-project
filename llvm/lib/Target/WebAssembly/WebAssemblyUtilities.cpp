@@ -104,16 +104,15 @@ const MachineOperand &WebAssembly::getCalleeOp(const MachineInstr &MI) {
 MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     MCContext &Ctx, const WebAssemblySubtarget *Subtarget) {
   StringRef Name = "__indirect_function_table";
-  MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
+  auto *Sym = static_cast<MCSymbolWasm *>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
     bool is64 = Subtarget && Subtarget->getTargetTriple().isArch64Bit();
-    Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
+    Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
     Sym->setFunctionTable(is64);
     // The default function table is synthesized by the linker.
-    Sym->setUndefined();
   }
   // MVP object files can't have symtab entries for tables.
   if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
@@ -124,12 +123,12 @@ MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
 MCSymbolWasm *WebAssembly::getOrCreateFuncrefCallTableSymbol(
     MCContext &Ctx, const WebAssemblySubtarget *Subtarget) {
   StringRef Name = "__funcref_call_table";
-  MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
+  auto *Sym = static_cast<MCSymbolWasm *>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
-    Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
+    Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
 
     // Setting Weak ensure only one table is left after linking when multiple
     // modules define the table.
@@ -194,4 +193,27 @@ bool WebAssembly::canLowerMultivalueReturn(
 bool WebAssembly::canLowerReturn(size_t ResultSize,
                                  const WebAssemblySubtarget *Subtarget) {
   return ResultSize <= 1 || canLowerMultivalueReturn(Subtarget);
+}
+
+MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
+                                       const WebAssemblySubtarget *Subtarget,
+                                       SDValue Chain) {
+  MVT PtrVT = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
+
+  unsigned Opcode;
+  const char *SymName;
+  if (Subtarget->hasLibcallThreadContext()) {
+    Opcode = WebAssembly::CALL;
+    SymName = "__wasm_get_tls_base";
+  } else {
+    Opcode = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
+                               : WebAssembly::GLOBAL_GET_I32;
+    SymName = "__tls_base";
+  }
+
+  SDValue Sym = DAG.getTargetExternalSymbol(SymName, PtrVT);
+
+  if (Chain.getNode())
+    return DAG.getMachineNode(Opcode, DL, {PtrVT, MVT::Other}, {Sym, Chain});
+  return DAG.getMachineNode(Opcode, DL, PtrVT, Sym);
 }

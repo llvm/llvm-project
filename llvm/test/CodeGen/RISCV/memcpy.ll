@@ -674,7 +674,6 @@ entry:
 ; ------------------------------------------------------------------------
 ; A few partially aligned cases
 
-
 define void @memcpy16_align4(ptr nocapture %dest, ptr nocapture %src) nounwind {
 ; RV32-BOTH-LABEL: memcpy16_align4:
 ; RV32-BOTH:       # %bb.0: # %entry
@@ -715,51 +714,53 @@ entry:
 define i32 @memcpy11_align8(ptr nocapture %dest, ptr %src) {
 ; RV32-LABEL: memcpy11_align8:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lbu a2, 10(a1)
-; RV32-NEXT:    sb a2, 10(a0)
-; RV32-NEXT:    lh a2, 8(a1)
-; RV32-NEXT:    sh a2, 8(a0)
-; RV32-NEXT:    lw a2, 4(a1)
-; RV32-NEXT:    sw a2, 4(a0)
+; RV32-NEXT:    lbu a3, 10(a1)
+; RV32-NEXT:    mv a2, a0
+; RV32-NEXT:    sb a3, 10(a0)
+; RV32-NEXT:    lh a0, 8(a1)
+; RV32-NEXT:    sh a0, 8(a2)
+; RV32-NEXT:    lw a0, 4(a1)
+; RV32-NEXT:    sw a0, 4(a2)
 ; RV32-NEXT:    lw a1, 0(a1)
-; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    sw a1, 0(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: memcpy11_align8:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lbu a2, 10(a1)
-; RV64-NEXT:    sb a2, 10(a0)
-; RV64-NEXT:    lh a2, 8(a1)
-; RV64-NEXT:    sh a2, 8(a0)
+; RV64-NEXT:    lbu a3, 10(a1)
+; RV64-NEXT:    mv a2, a0
+; RV64-NEXT:    sb a3, 10(a0)
+; RV64-NEXT:    lh a0, 8(a1)
+; RV64-NEXT:    sh a0, 8(a2)
 ; RV64-NEXT:    ld a1, 0(a1)
-; RV64-NEXT:    sd a1, 0(a0)
 ; RV64-NEXT:    li a0, 0
+; RV64-NEXT:    sd a1, 0(a2)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: memcpy11_align8:
 ; RV32-FAST:       # %bb.0: # %entry
-; RV32-FAST-NEXT:    lw a2, 7(a1)
-; RV32-FAST-NEXT:    sw a2, 7(a0)
-; RV32-FAST-NEXT:    lw a2, 4(a1)
-; RV32-FAST-NEXT:    sw a2, 4(a0)
+; RV32-FAST-NEXT:    lw a3, 7(a1)
+; RV32-FAST-NEXT:    mv a2, a0
+; RV32-FAST-NEXT:    sw a3, 7(a0)
+; RV32-FAST-NEXT:    lw a0, 4(a1)
+; RV32-FAST-NEXT:    sw a0, 4(a2)
 ; RV32-FAST-NEXT:    lw a1, 0(a1)
-; RV32-FAST-NEXT:    sw a1, 0(a0)
 ; RV32-FAST-NEXT:    li a0, 0
+; RV32-FAST-NEXT:    sw a1, 0(a2)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: memcpy11_align8:
 ; RV64-FAST:       # %bb.0: # %entry
-; RV64-FAST-NEXT:    lw a2, 7(a1)
-; RV64-FAST-NEXT:    sw a2, 7(a0)
+; RV64-FAST-NEXT:    lw a3, 7(a1)
+; RV64-FAST-NEXT:    mv a2, a0
+; RV64-FAST-NEXT:    sw a3, 7(a0)
 ; RV64-FAST-NEXT:    ld a1, 0(a1)
-; RV64-FAST-NEXT:    sd a1, 0(a0)
 ; RV64-FAST-NEXT:    li a0, 0
+; RV64-FAST-NEXT:    sd a1, 0(a2)
 ; RV64-FAST-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i32(ptr align 8 %dest, ptr align 8 %src, i32 11, i1 false)
   ret i32 0
 }
 
-declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
-declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

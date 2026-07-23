@@ -29,7 +29,7 @@ class TypeReferenceTracker;
 
 struct StatCollection {
   struct Stat {
-    Stat() {}
+    Stat() = default;
     Stat(uint32_t Count, uint32_t Size) : Count(Count), Size(Size) {}
     uint32_t Count = 0;
     uint32_t Size = 0;
@@ -99,6 +99,7 @@ private:
   Error dumpSectionHeaders();
   Error dumpSectionContribs();
   Error dumpSectionMap();
+  Error dumpDXContainer();
 
   void dumpSectionHeaders(StringRef Label, DbgHeaderType Type);
 

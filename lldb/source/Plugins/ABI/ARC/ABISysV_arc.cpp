@@ -479,20 +479,14 @@ ABISysV_arc::GetReturnValueObjectSimple(Thread &thread,
     value.SetValueType(Value::ValueType::Scalar);
   }
   // Floating point return type.
-  else if (type_flags & eTypeIsFloat) {
-    uint32_t float_count = 0;
-    bool is_complex = false;
+  else if (compiler_type.IsRealFloatingPointType()) {
+    const size_t byte_size =
+        llvm::expectedToOptional(compiler_type.GetByteSize(&thread))
+            .value_or(0);
+    auto raw_value = ReadRawValue(reg_ctx, byte_size);
 
-    if (compiler_type.IsFloatingPointType(float_count, is_complex) &&
-        1 == float_count && !is_complex) {
-      const size_t byte_size =
-          llvm::expectedToOptional(compiler_type.GetByteSize(&thread))
-              .value_or(0);
-      auto raw_value = ReadRawValue(reg_ctx, byte_size);
-
-      if (!SetSizedFloat(value.GetScalar(), raw_value, byte_size))
-        return ValueObjectSP();
-    }
+    if (!SetSizedFloat(value.GetScalar(), raw_value, byte_size))
+      return ValueObjectSP();
   }
   // Unsupported return type.
   else

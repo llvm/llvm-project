@@ -317,8 +317,9 @@ void PrintReport(const ReportDesc *rep) {
       } else {
         PrintStack(rep->stacks[i]);
         if (i == 0)
-          Printf("    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 "
-                 "to get more informative warning message\n\n");
+          Printf(
+              "    HINT: use TSAN_OPTIONS=second_deadlock_stack=1 "
+              "to get more informative warning message\n\n");
       }
     }
   } else {

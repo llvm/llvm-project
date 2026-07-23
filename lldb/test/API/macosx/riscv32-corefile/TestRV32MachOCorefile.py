@@ -13,21 +13,20 @@ from lldbsuite.test import lldbutil
 class TestRV32MachOCorefile(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @no_debug_info_test
+    @skipIfLLVMTargetMissing("RISCV")
     def test_riscv32_gpr_corefile_registers(self):
-        self.build()
-        create_corefile = self.getBuildArtifact("create-empty-riscv-corefile")
         corefile = self.getBuildArtifact("core")
-        call(create_corefile + " " + corefile, shell=True)
+        self.yaml2macho_core("riscv32-registers.yaml", corefile)
 
         target = self.dbg.CreateTarget("")
         process = target.LoadCore(corefile)
 
         process = target.GetProcess()
-        self.assertEqual(process.GetNumThreads(), 1)
+        self.assertEqual(process.GetNumThreads(), 2)
 
         thread = process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetNumFrames(), 1)
+        self.assertEqual(thread.GetNumFrames(), 2)
 
         frame = thread.GetFrameAtIndex(0)
         gpr_regs = frame.registers.GetValueAtIndex(0)
@@ -77,6 +76,36 @@ class TestRV32MachOCorefile(TestBase):
 
         idx = 0
         while idx < len(regnames):
-            val = idx | (idx << 8) | (idx << 16) | (idx << 24)
-            self.assertEqual(gpr_regs.GetChildAtIndex(idx).GetValueAsUnsigned(), val)
+            # fp needs to meet specific alignment rules,
+            # so hardcode that value.
+            if regnames[idx] == "fp":
+                self.assertEqual(
+                    gpr_regs.GetChildAtIndex(idx).GetValueAsUnsigned(), 0x08080800
+                )
+            else:
+                val = idx | (idx << 8) | (idx << 16) | (idx << 24)
+                self.assertEqual(
+                    gpr_regs.GetChildAtIndex(idx).GetValueAsUnsigned(), val
+                )
             idx = idx + 1
+
+        # We used an ArchDefaultUnwindPlan to get the second stack frame.
+        # Only pc and fp should be available in this stack frame; any other
+        # register being available is a bug.
+        frame = thread.GetFrameAtIndex(1)
+        gpr_regs = frame.registers.GetValueAtIndex(0)
+
+        # Get pc
+        self.assertEqual(gpr_regs.GetChildAtIndex(32).GetValueAsUnsigned(3), 0x20201020)
+        # Should not be able to read a callee-preserved register, s6
+        self.assertEqual(gpr_regs.GetChildAtIndex(22).GetValueAsUnsigned(3), 3)
+
+        # Check that we can read registers for second thread.
+        thread = process.GetThreadAtIndex(1)
+        self.assertEqual(thread.GetNumFrames(), 1)
+
+        frame = thread.GetFrameAtIndex(0)
+        gpr_regs = frame.registers.GetValueAtIndex(0)
+
+        self.assertEqual(gpr_regs.GetChildAtIndex(0).GetValueAsUnsigned(), 0x90000000)
+        self.assertEqual(gpr_regs.GetChildAtIndex(32).GetValueAsUnsigned(), 0x90202020)

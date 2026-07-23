@@ -25,7 +25,9 @@
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/ExecutionEngine/Orc/SymbolLookupSet.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
+#include "llvm/ExecutionEngine/Orc/WaitingOnGraph.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
@@ -48,6 +50,9 @@ class ResourceTracker;
 class InProgressLookupState;
 
 enum class SymbolState : uint8_t;
+
+using WaitingOnGraph =
+    detail::WaitingOnGraph<JITDylib *, NonOwningSymbolStringPtr>;
 
 using ResourceTrackerSP = IntrusiveRefCntPtr<ResourceTracker>;
 using JITDylibSP = IntrusiveRefCntPtr<JITDylib>;
@@ -146,16 +151,6 @@ public:
 /// as well.
 enum class JITDylibLookupFlags { MatchExportedSymbolsOnly, MatchAllSymbols };
 
-/// Lookup flags that apply to each symbol in a lookup.
-///
-/// If RequiredSymbol is used (the default) for a given symbol then that symbol
-/// must be found during the lookup or the lookup will fail returning a
-/// SymbolNotFound error. If WeaklyReferencedSymbol is used and the given
-/// symbol is not found then the query will continue, and no result for the
-/// missing symbol will be present in the result (assuming the rest of the
-/// lookup succeeds).
-enum class SymbolLookupFlags { RequiredSymbol, WeaklyReferencedSymbol };
-
 /// Describes the kind of lookup being performed. The lookup kind is passed to
 /// symbol generators (if they're invoked) to help them determine what
 /// definitions to generate.
@@ -184,221 +179,6 @@ inline JITDylibSearchOrder makeJITDylibSearchOrder(
     O.push_back(std::make_pair(JD, Flags));
   return O;
 }
-
-/// A set of symbols to look up, each associated with a SymbolLookupFlags
-/// value.
-///
-/// This class is backed by a vector and optimized for fast insertion,
-/// deletion and iteration. It does not guarantee a stable order between
-/// operations, and will not automatically detect duplicate elements (they
-/// can be manually checked by calling the validate method).
-class SymbolLookupSet {
-public:
-  using value_type = std::pair<SymbolStringPtr, SymbolLookupFlags>;
-  using UnderlyingVector = std::vector<value_type>;
-  using iterator = UnderlyingVector::iterator;
-  using const_iterator = UnderlyingVector::const_iterator;
-
-  SymbolLookupSet() = default;
-
-  SymbolLookupSet(std::initializer_list<value_type> Elems) {
-    for (auto &E : Elems)
-      Symbols.push_back(std::move(E));
-  }
-
-  explicit SymbolLookupSet(
-      SymbolStringPtr Name,
-      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    add(std::move(Name), Flags);
-  }
-
-  /// Construct a SymbolLookupSet from an initializer list of SymbolStringPtrs.
-  explicit SymbolLookupSet(
-      std::initializer_list<SymbolStringPtr> Names,
-      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    Symbols.reserve(Names.size());
-    for (const auto &Name : Names)
-      add(std::move(Name), Flags);
-  }
-
-  /// Construct a SymbolLookupSet from a SymbolNameSet with the given
-  /// Flags used for each value.
-  explicit SymbolLookupSet(
-      const SymbolNameSet &Names,
-      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    Symbols.reserve(Names.size());
-    for (const auto &Name : Names)
-      add(Name, Flags);
-  }
-
-  /// Construct a SymbolLookupSet from a vector of symbols with the given Flags
-  /// used for each value.
-  /// If the ArrayRef contains duplicates it is up to the client to remove these
-  /// before using this instance for lookup.
-  explicit SymbolLookupSet(
-      ArrayRef<SymbolStringPtr> Names,
-      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    Symbols.reserve(Names.size());
-    for (const auto &Name : Names)
-      add(Name, Flags);
-  }
-
-  /// Construct a SymbolLookupSet from DenseMap keys.
-  template <typename ValT>
-  static SymbolLookupSet
-  fromMapKeys(const DenseMap<SymbolStringPtr, ValT> &M,
-              SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    SymbolLookupSet Result;
-    Result.Symbols.reserve(M.size());
-    for (const auto &[Name, Val] : M)
-      Result.add(Name, Flags);
-    return Result;
-  }
-
-  /// Add an element to the set. The client is responsible for checking that
-  /// duplicates are not added.
-  SymbolLookupSet &
-  add(SymbolStringPtr Name,
-      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    Symbols.push_back(std::make_pair(std::move(Name), Flags));
-    return *this;
-  }
-
-  /// Quickly append one lookup set to another.
-  SymbolLookupSet &append(SymbolLookupSet Other) {
-    Symbols.reserve(Symbols.size() + Other.size());
-    for (auto &KV : Other)
-      Symbols.push_back(std::move(KV));
-    return *this;
-  }
-
-  bool empty() const { return Symbols.empty(); }
-  UnderlyingVector::size_type size() const { return Symbols.size(); }
-  iterator begin() { return Symbols.begin(); }
-  iterator end() { return Symbols.end(); }
-  const_iterator begin() const { return Symbols.begin(); }
-  const_iterator end() const { return Symbols.end(); }
-
-  /// Removes the Ith element of the vector, replacing it with the last element.
-  void remove(UnderlyingVector::size_type I) {
-    std::swap(Symbols[I], Symbols.back());
-    Symbols.pop_back();
-  }
-
-  /// Removes the element pointed to by the given iterator. This iterator and
-  /// all subsequent ones (including end()) are invalidated.
-  void remove(iterator I) { remove(I - begin()); }
-
-  /// Removes all elements matching the given predicate, which must be callable
-  /// as bool(const SymbolStringPtr &, SymbolLookupFlags Flags).
-  template <typename PredFn> void remove_if(PredFn &&Pred) {
-    UnderlyingVector::size_type I = 0;
-    while (I != Symbols.size()) {
-      const auto &Name = Symbols[I].first;
-      auto Flags = Symbols[I].second;
-      if (Pred(Name, Flags))
-        remove(I);
-      else
-        ++I;
-    }
-  }
-
-  /// Loop over the elements of this SymbolLookupSet, applying the Body function
-  /// to each one. Body must be callable as
-  /// bool(const SymbolStringPtr &, SymbolLookupFlags).
-  /// If Body returns true then the element just passed in is removed from the
-  /// set. If Body returns false then the element is retained.
-  template <typename BodyFn>
-  auto forEachWithRemoval(BodyFn &&Body) -> std::enable_if_t<
-      std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
-                                 std::declval<SymbolLookupFlags>())),
-                   bool>::value> {
-    UnderlyingVector::size_type I = 0;
-    while (I != Symbols.size()) {
-      const auto &Name = Symbols[I].first;
-      auto Flags = Symbols[I].second;
-      if (Body(Name, Flags))
-        remove(I);
-      else
-        ++I;
-    }
-  }
-
-  /// Loop over the elements of this SymbolLookupSet, applying the Body function
-  /// to each one. Body must be callable as
-  /// Expected<bool>(const SymbolStringPtr &, SymbolLookupFlags).
-  /// If Body returns a failure value, the loop exits immediately. If Body
-  /// returns true then the element just passed in is removed from the set. If
-  /// Body returns false then the element is retained.
-  template <typename BodyFn>
-  auto forEachWithRemoval(BodyFn &&Body) -> std::enable_if_t<
-      std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
-                                 std::declval<SymbolLookupFlags>())),
-                   Expected<bool>>::value,
-      Error> {
-    UnderlyingVector::size_type I = 0;
-    while (I != Symbols.size()) {
-      const auto &Name = Symbols[I].first;
-      auto Flags = Symbols[I].second;
-      auto Remove = Body(Name, Flags);
-      if (!Remove)
-        return Remove.takeError();
-      if (*Remove)
-        remove(I);
-      else
-        ++I;
-    }
-    return Error::success();
-  }
-
-  /// Construct a SymbolNameVector from this instance by dropping the Flags
-  /// values.
-  SymbolNameVector getSymbolNames() const {
-    SymbolNameVector Names;
-    Names.reserve(Symbols.size());
-    for (const auto &KV : Symbols)
-      Names.push_back(KV.first);
-    return Names;
-  }
-
-  /// Sort the lookup set by pointer value. This sort is fast but sensitive to
-  /// allocation order and so should not be used where a consistent order is
-  /// required.
-  void sortByAddress() { llvm::sort(Symbols, llvm::less_first()); }
-
-  /// Sort the lookup set lexicographically. This sort is slow but the order
-  /// is unaffected by allocation order.
-  void sortByName() {
-    llvm::sort(Symbols, [](const value_type &LHS, const value_type &RHS) {
-      return *LHS.first < *RHS.first;
-    });
-  }
-
-  /// Remove any duplicate elements. If a SymbolLookupSet is not duplicate-free
-  /// by construction, this method can be used to turn it into a proper set.
-  void removeDuplicates() {
-    sortByAddress();
-    auto LastI = llvm::unique(Symbols);
-    Symbols.erase(LastI, Symbols.end());
-  }
-
-#ifndef NDEBUG
-  /// Returns true if this set contains any duplicates. This should only be used
-  /// in assertions.
-  bool containsDuplicates() {
-    if (Symbols.size() < 2)
-      return false;
-    sortByAddress();
-    for (UnderlyingVector::size_type I = 1; I != Symbols.size(); ++I)
-      if (Symbols[I].first == Symbols[I - 1].first)
-        return true;
-    return false;
-  }
-#endif
-
-private:
-  UnderlyingVector Symbols;
-};
 
 struct SymbolAliasMapEntry {
   SymbolAliasMapEntry() = default;
@@ -436,6 +216,19 @@ private:
   ResourceTrackerSP RT;
 };
 
+/// Returned by operations that fail because a JITDylib has been closed.
+class LLVM_ABI JITDylibDefunct : public ErrorInfo<JITDylibDefunct> {
+public:
+  static char ID;
+
+  JITDylibDefunct(JITDylibSP JD) : JD(std::move(JD)) {}
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+
+private:
+  JITDylibSP JD;
+};
+
 /// Used to notify a JITDylib that the given set of symbols failed to
 /// materialize.
 class LLVM_ABI FailedToMaterialize : public ErrorInfo<FailedToMaterialize> {
@@ -444,7 +237,7 @@ public:
 
   FailedToMaterialize(std::shared_ptr<SymbolStringPool> SSP,
                       std::shared_ptr<SymbolDependenceMap> Symbols);
-  ~FailedToMaterialize();
+  ~FailedToMaterialize() override;
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
   const SymbolDependenceMap &getSymbols() const { return *Symbols; }
@@ -1131,20 +924,6 @@ private:
   using UnmaterializedInfosList =
       std::vector<std::shared_ptr<UnmaterializedInfo>>;
 
-  struct EmissionDepUnit {
-    EmissionDepUnit(JITDylib &JD) : JD(&JD) {}
-
-    JITDylib *JD = nullptr;
-    DenseMap<NonOwningSymbolStringPtr, JITSymbolFlags> Symbols;
-    DenseMap<JITDylib *, DenseSet<NonOwningSymbolStringPtr>> Dependencies;
-  };
-
-  struct EmissionDepUnitInfo {
-    std::shared_ptr<EmissionDepUnit> EDU;
-    DenseSet<EmissionDepUnit *> IntraEmitUsers;
-    DenseMap<JITDylib *, DenseSet<NonOwningSymbolStringPtr>> NewDeps;
-  };
-
   // Information about not-yet-ready symbol.
   // * DefiningEDU will point to the EmissionDepUnit that defines the symbol.
   // * DependantEDUs will hold pointers to any EmissionDepUnits currently
@@ -1153,9 +932,6 @@ private:
   //   symbol.
   struct MaterializingInfo {
     friend class ExecutionSession;
-
-    std::shared_ptr<EmissionDepUnit> DefiningEDU;
-    DenseSet<EmissionDepUnit *> DependantEDUs;
 
     LLVM_ABI void addQuery(std::shared_ptr<AsynchronousSymbolQuery> Q);
     LLVM_ABI void removeQuery(const AsynchronousSymbolQuery &Q);
@@ -1365,7 +1141,7 @@ public:
   using ErrorReporter = unique_function<void(Error)>;
 
   /// Send a result to the remote.
-  using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;
+  using SendResultFunction = unique_function<void(shared::WrapperFunctionBuffer)>;
 
   /// An asynchronous wrapper-function callable from the executor via
   /// jit-dispatch.
@@ -1407,6 +1183,22 @@ public:
 
   /// Add a symbol name to the SymbolStringPool and return a pointer to it.
   SymbolStringPtr intern(StringRef SymName) { return EPC->intern(SymName); }
+
+  /// Returns a reference to the bootstrap JITDylib.
+  ///
+  /// This is a bare JITDylib that is created for each ExecutionSession and
+  /// populated with the bootstrap symbol definitions provided by the
+  /// ExecutorProcessControl object.
+  JITDylib &getBootstrapJITDylib() { return BootstrapJD; }
+
+  /// Set a WaitingOnGraph::Recorder to capture WaitingOnGraph operations.
+  ///
+  /// This method can be called at most once. If called, it should be called
+  /// before any symbols are materialized.
+  void setWaitingOnGraphOpRecorder(WaitingOnGraph::OpRecorder &R) {
+    assert(!GOpRecorder && "WaitingOnGraph recorder already set");
+    GOpRecorder = &R;
+  }
 
   /// Set the Platform for this ExecutionSession.
   void setPlatform(std::unique_ptr<Platform> P) { this->P = std::move(P); }
@@ -1597,7 +1389,7 @@ public:
   /// The wrapper function should be callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         ExecutorProcessControl::IncomingWFRHandler OnComplete,
@@ -1627,9 +1419,9 @@ public:
   /// callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  shared::WrapperFunctionResult callWrapper(ExecutorAddr WrapperFnAddr,
+  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
                                             ArrayRef<char> ArgBuffer) {
     return EPC->callWrapper(WrapperFnAddr, ArgBuffer);
   }
@@ -1705,7 +1497,7 @@ public:
   /// to incoming jit-dispatch requests from the executor.
   LLVM_ABI void runJITDispatchHandler(SendResultFunction SendResult,
                                       ExecutorAddr HandlerFnTagAddr,
-                                      ArrayRef<char> ArgBuffer);
+                                      shared::WrapperFunctionBuffer ArgBytes);
 
   /// Dump the state of all the JITDylibs in this session.
   LLVM_ABI void dump(raw_ostream &OS);
@@ -1778,30 +1570,26 @@ private:
   LLVM_ABI Error OL_notifyResolved(MaterializationResponsibility &MR,
                                    const SymbolMap &Symbols);
 
-  using EDUInfosMap =
-      DenseMap<JITDylib::EmissionDepUnit *, JITDylib::EmissionDepUnitInfo>;
+  // FIXME: We should be able to derive FailedSymsForQuery from each query once
+  //        we fix how the detach operation works.
+  struct EmitQueries {
+    JITDylib::AsynchronousSymbolQuerySet Completed;
+    JITDylib::AsynchronousSymbolQuerySet Failed;
+    DenseMap<AsynchronousSymbolQuery *, std::shared_ptr<SymbolDependenceMap>>
+        FailedSymsForQuery;
+  };
 
-  template <typename HandleNewDepFn>
-  void propagateExtraEmitDeps(std::deque<JITDylib::EmissionDepUnit *> Worklist,
-                              EDUInfosMap &EDUInfos,
-                              HandleNewDepFn HandleNewDep);
-  EDUInfosMap simplifyDepGroups(MaterializationResponsibility &MR,
-                                ArrayRef<SymbolDependenceGroup> EmittedDeps);
-  void IL_makeEDUReady(std::shared_ptr<JITDylib::EmissionDepUnit> EDU,
-                       JITDylib::AsynchronousSymbolQuerySet &Queries);
-  void IL_makeEDUEmitted(std::shared_ptr<JITDylib::EmissionDepUnit> EDU,
-                         JITDylib::AsynchronousSymbolQuerySet &Queries);
-  bool IL_removeEDUDependence(JITDylib::EmissionDepUnit &EDU, JITDylib &DepJD,
-                              NonOwningSymbolStringPtr DepSym,
-                              EDUInfosMap &EDUInfos);
+  WaitingOnGraph::ExternalState
+  IL_getSymbolState(JITDylib *JD, NonOwningSymbolStringPtr Name);
 
-  static Error makeJDClosedError(JITDylib::EmissionDepUnit &EDU,
-                                 JITDylib &ClosedJD);
-  static Error makeUnsatisfiedDepsError(JITDylib::EmissionDepUnit &EDU,
-                                        JITDylib &BadJD, SymbolNameSet BadDeps);
+  template <typename UpdateSymbolFn, typename UpdateQueryFn>
+  void IL_collectQueries(JITDylib::AsynchronousSymbolQuerySet &Qs,
+                         WaitingOnGraph::ContainerElementsMap &QualifiedSymbols,
+                         UpdateSymbolFn &&UpdateSymbol,
+                         UpdateQueryFn &&UpdateQuery);
 
-  Expected<JITDylib::AsynchronousSymbolQuerySet>
-  IL_emit(MaterializationResponsibility &MR, EDUInfosMap EDUInfos);
+  Expected<EmitQueries> IL_emit(MaterializationResponsibility &MR,
+                                WaitingOnGraph::SimplifyResult SR);
   LLVM_ABI Error OL_notifyEmitted(MaterializationResponsibility &MR,
                                   ArrayRef<SymbolDependenceGroup> EmittedDeps);
 
@@ -1830,6 +1618,9 @@ private:
   std::vector<ResourceManager *> ResourceManagers;
 
   std::vector<JITDylibSP> JDs;
+  JITDylib &BootstrapJD;
+  WaitingOnGraph G;
+  WaitingOnGraph::OpRecorder *GOpRecorder = nullptr;
 
   // FIXME: Remove this (and runOutstandingMUs) once the linking layer works
   //        with callbacks from asynchronous queries.
@@ -1903,7 +1694,8 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &&MU,
     });
 
   return ES.runSessionLocked([&, this]() -> Error {
-    assert(State == Open && "JD is defunct");
+    if (State != Open)
+      return make_error<JITDylibDefunct>(this);
 
     if (auto Err = defineImpl(*MU))
       return Err;

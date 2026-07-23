@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 #include "xray-registry.h"
 
-#include <unordered_map>
+#include "llvm/ADT/DenseMap.h"
 
-namespace llvm {
-namespace xray {
+using namespace llvm;
+using namespace xray;
 
 using HandlerType = std::function<Error()>;
 
-static std::unordered_map<cl::SubCommand *, HandlerType> &getCommands() {
-  static std::unordered_map<cl::SubCommand *, HandlerType> Commands;
+static DenseMap<cl::SubCommand *, HandlerType> &getCommands() {
+  static DenseMap<cl::SubCommand *, HandlerType> Commands;
   return Commands;
 }
 
@@ -31,12 +31,9 @@ CommandRegistration::CommandRegistration(cl::SubCommand *SC,
   getCommands()[SC] = Command;
 }
 
-HandlerType dispatch(cl::SubCommand *SC) {
+HandlerType xray::dispatch(cl::SubCommand *SC) {
   auto It = getCommands().find(SC);
   assert(It != getCommands().end() &&
          "Attempting to dispatch on un-registered SubCommand.");
   return It->second;
 }
-
-} // namespace xray
-} // namespace llvm

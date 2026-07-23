@@ -75,7 +75,7 @@ LogicalResult EmulateFloatPattern::matchAndRewrite(
   for (auto [res, oldType, newType] : llvm::zip_equal(
            MutableArrayRef{newResults}, op->getResultTypes(), resultTypes)) {
     if (oldType != newType) {
-      auto truncFOp = rewriter.create<arith::TruncFOp>(loc, oldType, res);
+      auto truncFOp = arith::TruncFOp::create(rewriter, loc, oldType, res);
       truncFOp.setFastmath(arith::FastMathFlags::contract);
       res = truncFOp.getResult();
     }
@@ -98,7 +98,7 @@ void mlir::arith::populateEmulateUnsupportedFloatsConversions(
   });
   converter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        auto extFOp = b.create<arith::ExtFOp>(loc, target, input);
+        auto extFOp = arith::ExtFOp::create(b, loc, target, input);
         extFOp.setFastmath(arith::FastMathFlags::contract);
         return extFOp;
       });
@@ -118,12 +118,12 @@ void mlir::arith::populateEmulateUnsupportedFloatsLegality(
         return converter.isLegal(op);
       });
   // Manually mark arithmetic-performing vector instructions.
-  target.addDynamicallyLegalOp<
-      vector::ContractionOp, vector::ReductionOp, vector::MultiDimReductionOp,
-      vector::FMAOp, vector::OuterProductOp, vector::MatmulOp, vector::ScanOp>(
+  target.addDynamicallyLegalOp<vector::ContractionOp, vector::ReductionOp,
+                               vector::MultiDimReductionOp, vector::FMAOp,
+                               vector::OuterProductOp, vector::ScanOp>(
       [&](Operation *op) { return converter.isLegal(op); });
   target.addLegalOp<arith::BitcastOp, arith::ExtFOp, arith::TruncFOp,
-                    arith::ConstantOp, vector::SplatOp>();
+                    arith::ConstantOp, arith::SelectOp, vector::BroadcastOp>();
 }
 
 void EmulateUnsupportedFloatsPass::runOnOperation() {
@@ -132,25 +132,23 @@ void EmulateUnsupportedFloatsPass::runOnOperation() {
   SmallVector<Type> sourceTypes;
   Type targetType;
 
-  std::optional<FloatType> maybeTargetType =
-      arith::parseFloatType(ctx, targetTypeStr);
-  if (!maybeTargetType) {
+  FloatType parsedTargetType = arith::parseFloatType(ctx, targetTypeStr);
+  if (!parsedTargetType) {
     emitError(UnknownLoc::get(ctx), "could not map target type '" +
                                         targetTypeStr +
                                         "' to a known floating-point type");
     return signalPassFailure();
   }
-  targetType = *maybeTargetType;
+  targetType = parsedTargetType;
   for (StringRef sourceTypeStr : sourceTypeStrs) {
-    std::optional<FloatType> maybeSourceType =
-        arith::parseFloatType(ctx, sourceTypeStr);
-    if (!maybeSourceType) {
+    FloatType sourceType = arith::parseFloatType(ctx, sourceTypeStr);
+    if (!sourceType) {
       emitError(UnknownLoc::get(ctx), "could not map source type '" +
                                           sourceTypeStr +
                                           "' to a known floating-point type");
       return signalPassFailure();
     }
-    sourceTypes.push_back(*maybeSourceType);
+    sourceTypes.push_back(sourceType);
   }
   if (sourceTypes.empty())
     (void)emitOptionalWarning(

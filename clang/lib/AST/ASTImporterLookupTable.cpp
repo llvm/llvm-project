@@ -49,8 +49,6 @@ struct Builder : RecursiveASTVisitor<Builder> {
   bool VisitFriendDecl(FriendDecl *D) {
     if (D->getFriendType()) {
       QualType Ty = D->getFriendType()->getType();
-      if (isa<ElaboratedType>(Ty))
-        Ty = cast<ElaboratedType>(Ty)->getNamedType();
       // A FriendDecl with a dependent type (e.g. ClassTemplateSpecialization)
       // always has that decl as child node.
       // However, there are non-dependent cases which does not have the
@@ -64,13 +62,15 @@ struct Builder : RecursiveASTVisitor<Builder> {
                      dyn_cast<SubstTemplateTypeParmType>(Ty)) {
           if (SubstTy->getAsCXXRecordDecl())
             LT.add(SubstTy->getAsCXXRecordDecl());
-        } else if (isa<TypedefType>(Ty)) {
-          // We do not put friend typedefs to the lookup table because
-          // ASTImporter does not organize typedefs into redecl chains.
-        } else if (isa<UsingType>(Ty)) {
-          // Similar to TypedefType, not putting into lookup table.
         } else {
-          llvm_unreachable("Unhandled type of friend class");
+          if (isa<TypedefType>(Ty)) {
+            // We do not put friend typedefs to the lookup table because
+            // ASTImporter does not organize typedefs into redecl chains.
+          } else if (isa<UsingType>(Ty)) {
+            // Similar to TypedefType, not putting into lookup table.
+          } else {
+            llvm_unreachable("Unhandled type of friend class");
+          }
         }
       }
     }

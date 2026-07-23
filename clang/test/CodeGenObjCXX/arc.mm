@@ -61,9 +61,9 @@ void test34(int cond) {
   // CHECK-NEXT: [[CONDCLEANUPSAVE:%.*]] = alloca ptr
   // CHECK-NEXT: [[CONDCLEANUP:%.*]] = alloca i1
   // CHECK-NEXT: store i32
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[STRONG]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[STRONG]])
   // CHECK-NEXT: store ptr null, ptr [[STRONG]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[WEAK]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[WEAK]])
   // CHECK-NEXT: call ptr @llvm.objc.initWeak(ptr [[WEAK]], ptr null)
 
   // CHECK-NEXT: [[T0:%.*]] = load i32, ptr [[COND]]
@@ -293,7 +293,7 @@ template void test40_helper<int>();
 // CHECK-LABEL:    define weak_odr void @_Z13test40_helperIiEvv()
 // CHECK:      [[X:%.*]] = alloca ptr
 // CHECK-NEXT: [[TEMP:%.*]] = alloca ptr
-// CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[X]])
+// CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[X]])
 // CHECK-NEXT: store ptr null, ptr [[X]]
 // CHECK:      [[T0:%.*]] = load ptr, ptr [[X]]
 // CHECK-NEXT: store ptr [[T0]], ptr [[TEMP]]

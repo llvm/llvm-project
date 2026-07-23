@@ -15,6 +15,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/InferIntDivisibilityOpInterface.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -59,15 +60,27 @@ public:
   /// Build a constant int op that produces an integer of the specified width.
   static void build(OpBuilder &builder, OperationState &result, int64_t value,
                     unsigned width);
+  static ConstantIntOp create(OpBuilder &builder, Location location,
+                              int64_t value, unsigned width);
+  static ConstantIntOp create(ImplicitLocOpBuilder &builder, int64_t value,
+                              unsigned width);
 
   /// Build a constant int op that produces an integer of the specified type,
   /// which must be an integer type.
   static void build(OpBuilder &builder, OperationState &result, Type type,
                     int64_t value);
+  static ConstantIntOp create(OpBuilder &builder, Location location, Type type,
+                              int64_t value);
+  static ConstantIntOp create(ImplicitLocOpBuilder &builder, Type type,
+                              int64_t value);
 
   /// Build a constant int op that produces an integer from an APInt
   static void build(OpBuilder &builder, OperationState &result, Type type,
                     const APInt &value);
+  static ConstantIntOp create(OpBuilder &builder, Location location, Type type,
+                              const APInt &value);
+  static ConstantIntOp create(ImplicitLocOpBuilder &builder, Type type,
+                              const APInt &value);
 
   inline int64_t value() {
     return cast<IntegerAttr>(arith::ConstantOp::getValue()).getInt();
@@ -85,6 +98,10 @@ public:
   /// Build a constant float op that produces a float of the specified type.
   static void build(OpBuilder &builder, OperationState &result, FloatType type,
                     const APFloat &value);
+  static ConstantFloatOp create(OpBuilder &builder, Location location,
+                                FloatType type, const APFloat &value);
+  static ConstantFloatOp create(ImplicitLocOpBuilder &builder, FloatType type,
+                                const APFloat &value);
 
   inline APFloat value() {
     return cast<FloatAttr>(arith::ConstantOp::getValue()).getValue();
@@ -100,6 +117,9 @@ public:
   static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
   /// Build a constant int op that produces an index.
   static void build(OpBuilder &builder, OperationState &result, int64_t value);
+  static ConstantIndexOp create(OpBuilder &builder, Location location,
+                                int64_t value);
+  static ConstantIndexOp create(ImplicitLocOpBuilder &builder, int64_t value);
 
   inline int64_t value() {
     return cast<IntegerAttr>(arith::ConstantOp::getValue()).getInt();

@@ -118,7 +118,7 @@ struct GlobalStoreOpInterface
 
   bool bufferizesToMemoryRead(Operation *, OpOperand &,
                               const AnalysisState &) const {
-    return false;
+    return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *, OpOperand &,
@@ -135,8 +135,9 @@ struct GlobalStoreOpInterface
     auto memrefType = getMemRefTypeWithStaticIdentityLayout(tensorType);
 
     auto loc = globalStoreOp.getLoc();
-    auto targetMemref = rewriter.create<memref::GetGlobalOp>(
-        loc, memrefType, globalStoreOp.getGlobalAttr().getLeafReference());
+    auto targetMemref = memref::GetGlobalOp::create(
+        rewriter, loc, memrefType,
+        globalStoreOp.getGlobalAttr().getLeafReference());
 
     auto sourceMemref =
         getBuffer(rewriter, globalStoreOp.getValue(), options, state);
@@ -145,7 +146,7 @@ struct GlobalStoreOpInterface
     }
 
     auto memcpy =
-        options.createMemCpy(rewriter, loc, sourceMemref.value(), targetMemref);
+        options.memCpyFn(rewriter, loc, sourceMemref.value(), targetMemref);
     if (failed(memcpy)) {
       return failure();
     }

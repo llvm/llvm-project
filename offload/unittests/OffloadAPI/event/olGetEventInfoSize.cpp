@@ -19,6 +19,12 @@ TEST_P(olGetEventInfoSizeTest, SuccessQueue) {
   ASSERT_EQ(Size, sizeof(ol_queue_handle_t));
 }
 
+TEST_P(olGetEventInfoSizeTest, SuccessIsComplete) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetEventInfoSize(Event, OL_EVENT_INFO_IS_COMPLETE, &Size));
+  ASSERT_EQ(Size, sizeof(bool));
+}
+
 TEST_P(olGetEventInfoSizeTest, InvalidNullHandle) {
   size_t Size = 0;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,

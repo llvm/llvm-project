@@ -1,7 +1,11 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=kabini -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,16BANK %s
-; RUN: llc -mtriple=amdgcn -mcpu=stoney -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,16BANK %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.01 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu6.01 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.02 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.02 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.03 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,16BANK %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu7.03 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,16BANK %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.10 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,16BANK %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.10 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,16BANK %s
 
 ; GCN-LABEL: {{^}}v_interp:
 ; GCN-NOT: s_wqm

@@ -1,4 +1,4 @@
-//===--- NoEscapeCheck.h - clang-tidy ---------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// attribute, then we warn the user of their error.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/no-escape.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/no-escape.html
 class NoEscapeCheck : public ClangTidyCheck {
 public:
   NoEscapeCheck(StringRef Name, ClangTidyContext *Context)

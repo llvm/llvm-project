@@ -102,7 +102,7 @@ MCSymbol *AArch64MCInstLower::GetGlobalValueSymbol(const GlobalValue *GV,
     //
     // If we see a reference to an "aux" symbol, also emit a reference to the
     // corresponding non-aux symbol.  Otherwise, the Microsoft linker behaves
-    // strangely when linking against x64 import libararies.
+    // strangely when linking against x64 import libraries.
     //
     // emitSymbolAttribute() doesn't have any real effect here; it just
     // ensures the symbol name appears in the assembly without any

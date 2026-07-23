@@ -28,6 +28,12 @@ static cl::opt<bool> IndexedCodeGenDataReadFunctionMapNames(
 
 namespace llvm {
 
+cl::opt<bool> IndexedCodeGenDataLazyLoading(
+    "indexed-codegen-data-lazy-loading", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Lazily load indexed CodeGenData. Enable to save memory and time "
+        "for final consumption of the indexed CodeGenData in production."));
+
 static Expected<std::unique_ptr<MemoryBuffer>>
 setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
   auto BufferOrErr = Filename.str() == "-" ? MemoryBuffer::getSTDIN()
@@ -109,11 +115,20 @@ Error IndexedCodeGenDataReader::read() {
       return error(cgdata_error::eof);
     HashTreeRecord.deserialize(Ptr);
   }
+
+  // TODO: lazy loading support for outlined hash tree.
+  std::shared_ptr<MemoryBuffer> SharedDataBuffer = std::move(DataBuffer);
   if (hasStableFunctionMap()) {
     const unsigned char *Ptr = Start + Header.StableFunctionMapOffset;
     if (Ptr >= End)
       return error(cgdata_error::eof);
-    FunctionMapRecord.deserialize(Ptr, IndexedCodeGenDataReadFunctionMapNames);
+    FunctionMapRecord.setReadStableFunctionMapNames(
+        IndexedCodeGenDataReadFunctionMapNames);
+    if (IndexedCodeGenDataLazyLoading)
+      FunctionMapRecord.lazyDeserialize(std::move(SharedDataBuffer),
+                                        Header.StableFunctionMapOffset);
+    else
+      FunctionMapRecord.deserialize(Ptr);
   }
 
   return success();
@@ -154,8 +169,8 @@ bool IndexedCodeGenDataReader::hasFormat(const MemoryBuffer &DataBuffer) {
   if (DataBuffer.getBufferSize() < sizeof(IndexedCGData::Magic))
     return false;
 
-  uint64_t Magic = endian::read<uint64_t, llvm::endianness::little, aligned>(
-      DataBuffer.getBufferStart());
+  uint64_t Magic = endian::read<uint64_t, aligned>(DataBuffer.getBufferStart(),
+                                                   llvm::endianness::little);
   // Verify that it's magical.
   return Magic == IndexedCGData::Magic;
 }

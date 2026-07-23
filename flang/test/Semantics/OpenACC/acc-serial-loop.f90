@@ -77,32 +77,32 @@ program openacc_serial_loop_validity
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the SERIAL LOOP directive
   !$acc serial loop device_type(*) if(.TRUE.)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial loop
 
   !$acc serial loop if(ifCondition)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial loop
 
   !$acc serial loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !ERROR: Unmatched END PARALLEL LOOP directive
   !$acc end parallel loop
 
   !$acc serial loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial loop
 
   !$acc serial loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 

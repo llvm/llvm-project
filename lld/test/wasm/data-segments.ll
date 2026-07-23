@@ -18,7 +18,7 @@
 ; RUN: obj2yaml %t.bulk-mem64.wasm | FileCheck %s --check-prefixes ACTIVE,ACTIVE64
 
 ;; In -pie mode segments are combined into one active segment.
-; RUN: wasm-ld --experimental-pic --import-memory -pie -no-gc-sections --no-entry %t.atomics.bulk-mem.pic.o -o %t.pic.wasm
+; RUN: wasm-ld --import-memory -pie -no-gc-sections --no-entry %t.atomics.bulk-mem.pic.o -o %t.pic.wasm
 ; RUN: obj2yaml %t.pic.wasm | FileCheck %s --check-prefixes ACTIVE-PIC
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.pic.wasm | FileCheck %s --check-prefixes PIC-NON-SHARED-DIS
 
@@ -33,12 +33,12 @@
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.atomics.bulk-mem64.wasm | FileCheck %s --check-prefixes DIS,NOPIC-DIS -DPTR=i64
 
 ;; Also test in combination with PIC/pie
-; RUN: wasm-ld --experimental-pic -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic.o -o %t.shared.pic.wasm
+; RUN: wasm-ld -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic.o -o %t.shared.pic.wasm
 ; RUN: obj2yaml %t.shared.pic.wasm | FileCheck %s --check-prefixes PASSIVE-PIC,PASSIVE32-PIC
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.shared.pic.wasm | FileCheck %s --check-prefixes DIS,PIC-DIS -DPTR=i32
 
 ;; Also test in combination with PIC/pie + wasm64
-; RUN: wasm-ld -mwasm64 --experimental-pic -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic-mem64.o -o %t.pic-mem64.wasm
+; RUN: wasm-ld -mwasm64 -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic-mem64.o -o %t.pic-mem64.wasm
 ; RUN: obj2yaml %t.pic-mem64.wasm | FileCheck %s --check-prefixes PASSIVE-PIC,PASSIVE64-PIC
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.pic-mem64.wasm | FileCheck %s --check-prefixes DIS,PIC-DIS -DPTR=i64
 
@@ -61,20 +61,20 @@
 ; ACTIVE-NEXT:        Body:            0B
 ; ACTIVE-NEXT:  - Type:            DATA
 ; ACTIVE-NEXT:    Segments:
-; ACTIVE-NEXT:      - SectionOffset:   7
+; ACTIVE-NEXT:      - SectionOffset:   8
 ; ACTIVE-NEXT:        InitFlags:       0
 ; ACTIVE-NEXT:        Offset:
 ; ACTIVE32-NEXT:        Opcode:          I32_CONST
 ; ACTIVE64-NEXT:        Opcode:          I64_CONST
-; ACTIVE-NEXT:          Value:           1024
+; ACTIVE-NEXT:          Value:           65536
 ; ACTIVE-NEXT:        Content:         636F6E7374616E74000000002B
-; ACTIVE-NEXT:      - SectionOffset:   26
+; ACTIVE-NEXT:      - SectionOffset:   28
 ; ACTIVE-NEXT:        InitFlags:       0
 ; ACTIVE-NEXT:        Offset:
 ; ACTIVE32-NEXT:        Opcode:          I32_CONST
 ; ACTIVE64-NEXT:        Opcode:          I64_CONST
-; ACTIVE-NEXT:          Value:           1040
-; ACTIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
+; ACTIVE-NEXT:          Value:           65552
+; ACTIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A00000063000000
 ; ACTIVE-NEXT:  - Type:            CUSTOM
 ; ACTIVE-NEXT:    Name:            name
 ; ACTIVE-NEXT:    FunctionNames:
@@ -201,7 +201,7 @@
 ; DIS-NEXT:           block
 ; DIS-NEXT:            block
 
-; NOPIC-DIS-NEXT:       [[PTR]].const   11064
+; NOPIC-DIS-NEXT:       [[PTR]].const   75576
 ; PIC-DIS-NEXT:         local.get       0
 
 ; DIS-NEXT:             i32.const       0
@@ -211,8 +211,8 @@
 ; DIS-NEXT:                                            # 2:     down to label0
 ; DIS-NEXT:            end
 
-; NOPIC-DIS-NEXT:      [[PTR]].const   1024
-; NOPIC-DIS-NEXT:      [[PTR]].const   1024
+; NOPIC-DIS-NEXT:      [[PTR]].const   65536
+; NOPIC-DIS-NEXT:      [[PTR]].const   65536
 ; NOPIC-DIS-NEXT:      global.set      1
 ; PIC-DIS-NEXT:        [[PTR]].const   0
 ; PIC-DIS-NEXT:        global.get      1
@@ -224,7 +224,7 @@
 ; DIS-NEXT:            i32.const       4
 ; DIS-NEXT:            memory.init  0, 0
 
-; NOPIC-DIS-NEXT:      [[PTR]].const   1028
+; NOPIC-DIS-NEXT:      [[PTR]].const   65540
 ; PIC-DIS-NEXT:        [[PTR]].const   4
 ; PIC-DIS-NEXT:        global.get      1
 ; PIC-DIS-NEXT:        [[PTR]].add
@@ -233,7 +233,7 @@
 ; DIS-NEXT:            i32.const       13
 ; DIS-NEXT:            memory.init     1, 0
 
-; NOPIC-DIS-NEXT:      [[PTR]].const   1044
+; NOPIC-DIS-NEXT:      [[PTR]].const   65556
 ; PIC-DIS-NEXT:        [[PTR]].const   20
 ; PIC-DIS-NEXT:        global.get      1
 ; PIC-DIS-NEXT:        [[PTR]].add
@@ -241,7 +241,7 @@
 ; DIS-NEXT:            i32.const       0
 ; DIS-NEXT:            i32.const       20
 ; DIS-NEXT:            memory.init     2, 0
-; NOPIC-DIS-NEXT:      [[PTR]].const   1064
+; NOPIC-DIS-NEXT:      [[PTR]].const   65576
 ; PIC-DIS-NEXT:        [[PTR]].const   40
 ; PIC-DIS-NEXT:        global.get      1
 ; PIC-DIS-NEXT:        [[PTR]].add
@@ -249,13 +249,13 @@
 ; DIS-NEXT:            [[PTR]].const   10000
 ; DIS-NEXT:            memory.fill     0
 
-; NOPIC-DIS-NEXT:      [[PTR]].const   11064
+; NOPIC-DIS-NEXT:      [[PTR]].const   75576
 ; PIC-DIS-NEXT:        local.get       0
 
 ; DIS-NEXT:            i32.const       2
 ; DIS-NEXT:            i32.atomic.store        0
 
-; NOPIC-DIS-NEXT:      [[PTR]].const   11064
+; NOPIC-DIS-NEXT:      [[PTR]].const   75576
 ; PIC-DIS-NEXT:        local.get       0
 
 ; DIS-NEXT:            i32.const       -1
@@ -264,7 +264,7 @@
 ; DIS-NEXT:            br              1               # 1:     down to label1
 ; DIS-NEXT:           end
 
-; NOPIC-DIS-NEXT:     [[PTR]].const   11064
+; NOPIC-DIS-NEXT:     [[PTR]].const   75576
 ; PIC-DIS-NEXT:       local.get       0
 
 ; DIS-NEXT:           i32.const       1

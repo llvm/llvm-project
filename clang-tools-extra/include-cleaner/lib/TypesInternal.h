@@ -96,6 +96,8 @@ template <typename T> struct Hinted : public T {
   }
 };
 
+llvm::SmallString<128> normalizePath(llvm::StringRef Path);
+
 } // namespace clang::include_cleaner
 
 #endif

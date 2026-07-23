@@ -37,7 +37,7 @@ For example non-compliant code:
 Should become:
 
 .. code-block:: c++
-  
+
   // Small anonymous namespace for class declaration
   namespace {
 
@@ -48,7 +48,7 @@ Should become:
   };
 
   }
-  
+
   // placed method definition outside of the anonymous namespace
   bool StringSort::operator<(const char *RHS) const {}
 

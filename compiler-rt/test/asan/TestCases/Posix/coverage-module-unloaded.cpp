@@ -1,11 +1,12 @@
 // Check that unloading a module doesn't break coverage dumping for remaining
 // modules.
-// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard -DSHARED %s -shared -o %dynamiclib1 -fPIC
-// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard -DSHARED %s -shared -o %dynamiclib2 -fPIC
-// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s %libdl -o %t.exe
+// RUN: mkdir -p %t.dir && cd %t.dir
+// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard -DSHARED_LIB %s -shared -o %dynamiclib1 -fPIC
+// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard -DSHARED_LIB %s -shared -o %dynamiclib2 -fPIC
+// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s %libdl -o %t.dir/exe
 // RUN: mkdir -p %t.tmp/coverage-module-unloaded && cd %t.tmp/coverage-module-unloaded
-// RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t.exe %dynamiclib1 %dynamiclib2 2>&1        | FileCheck %s
-// RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t.exe %dynamiclib1 %dynamiclib2 foo 2>&1    | FileCheck %s
+// RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t.dir/exe %dynamiclib1 %dynamiclib2 2>&1        | FileCheck %s
+// RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t.dir/exe %dynamiclib1 %dynamiclib2 foo 2>&1    | FileCheck %s
 //
 // https://code.google.com/p/address-sanitizer/issues/detail?id=263
 // XFAIL: android
@@ -17,7 +18,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#ifdef SHARED
+#ifdef SHARED_LIB
 extern "C" {
 void bar() { printf("bar\n"); }
 }

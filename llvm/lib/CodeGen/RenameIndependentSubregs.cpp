@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -108,6 +109,7 @@ public:
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<SlotIndexesWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -306,6 +308,7 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
     const IntEqClasses &Classes,
     const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
     const SmallVectorImpl<LiveInterval*> &Intervals) const {
+  const TargetRegisterInfo &TRI = TII->getRegisterInfo();
   BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
   const SlotIndexes &Indexes = *LIS->getSlotIndexes();
   for (size_t I = 0, E = Intervals.size(); I < E; ++I) {
@@ -314,9 +317,29 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
 
     LI.removeEmptySubRanges();
 
+    // Try to establish a single subregister which covers all uses.
+    // Note: this is assuming the selected subregister will only be
+    // used for fixing up live intervals issues created by this pass.
+    LaneBitmask UsedMask, UnusedMask;
+    for (LiveInterval::SubRange &SR : LI.subranges())
+      UsedMask |= SR.LaneMask;
+    SmallVector<unsigned> SubRegIdxs;
+    RegState Flags = {};
+    unsigned SubReg = 0;
+    // TODO: Handle SubRegIdxs.size() > 1
+    if (TRI.getCoveringSubRegIndexes(MRI->getRegClass(Reg), UsedMask,
+                                     SubRegIdxs) &&
+        SubRegIdxs.size() == 1) {
+      SubReg = SubRegIdxs.front();
+      Flags = RegState::Undef;
+    } else {
+      UnusedMask = MRI->getMaxLaneMaskForVReg(Reg) & ~UsedMask;
+    }
+
     // There must be a def (or live-in) before every use. Splitting vregs may
     // violate this principle as the splitted vreg may not have a definition on
     // every path. Fix this by creating IMPLICIT_DEF instruction as necessary.
+    bool NeedsUnusedSubrange = UnusedMask.any();
     for (const LiveInterval::SubRange &SR : LI.subranges()) {
       // Search for "PHI" value numbers in the subranges. We must find a live
       // value in each predecessor block, add an IMPLICIT_DEF where it is
@@ -336,20 +359,24 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
           MachineBasicBlock::iterator InsertPos =
             llvm::findPHICopyInsertPoint(PredMBB, &MBB, Reg);
           const MCInstrDesc &MCDesc = TII->get(TargetOpcode::IMPLICIT_DEF);
-          MachineInstrBuilder ImpDef = BuildMI(*PredMBB, InsertPos,
-                                               DebugLoc(), MCDesc, Reg);
+          MachineInstrBuilder ImpDef =
+              BuildMI(*PredMBB, InsertPos, DebugLoc(), MCDesc)
+                  .addDef(Reg, Flags, SubReg);
           SlotIndex DefIdx = LIS->InsertMachineInstrInMaps(*ImpDef);
           SlotIndex RegDefIdx = DefIdx.getRegSlot();
-          LaneBitmask Mask = MRI->getMaxLaneMaskForVReg(Reg);
           for (LiveInterval::SubRange &SR : LI.subranges()) {
-            Mask = Mask & ~SR.LaneMask;
             VNInfo *SRVNI = SR.getNextValue(RegDefIdx, Allocator);
             SR.addSegment(LiveRange::Segment(RegDefIdx, PredEnd, SRVNI));
           }
-
-          if (!Mask.none()) {
-            LiveInterval::SubRange *SR = LI.createSubRange(Allocator, Mask);
+          if (NeedsUnusedSubrange) {
+            LiveInterval::SubRange *SR =
+                LI.createSubRange(Allocator, UnusedMask);
             SR->createDeadDef(RegDefIdx, Allocator);
+            // We only need to create a new subrange once, otherwise we end up
+            // with duplicate sub ranges for the unused lanes. The following
+            // iterations will attach their segment to this new subrange in the
+            // loop above.
+            NeedsUnusedSubrange = false;
           }
         }
       }

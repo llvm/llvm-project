@@ -17,8 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_once,
                    (pthread_once_t * flag, __pthread_once_func_t func)) {
-  return callonce(reinterpret_cast<CallOnceFlag *>(flag),
-                  reinterpret_cast<CallOnceCallback *>(func));
+  return callonce(reinterpret_cast<CallOnceFlag *>(flag), func);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

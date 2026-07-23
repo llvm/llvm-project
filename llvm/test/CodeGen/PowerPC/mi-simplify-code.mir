@@ -14,10 +14,10 @@ body:             |
     %2:g8rc = RLDICR %1, 2, 61
     %3:f8rc, %4:g8rc_and_g8rc_nox0 = LFSUX %0, killed %2
     %5:f4rc = FRSP killed %3, implicit $rm
-    %22:vslrc = SUBREG_TO_REG 1, %5, %subreg.sub_64
+    %22:vslrc = SUBREG_TO_REG %5, %subreg.sub_64
     %7:g8rc = LI8 8
     %8:vssrc = XFLOADf32 %4, killed %7
-    %23:vslrc = SUBREG_TO_REG 1, %8, %subreg.sub_64
+    %23:vslrc = SUBREG_TO_REG %8, %subreg.sub_64
     %10:vsrc = XXPERMDI %23, %22, 0
     %11:vrrc = XVCVDPSP killed %10, implicit $rm
     $v2 = COPY %11
@@ -44,10 +44,10 @@ body:             |
     %2:g8rc = RLDICR %1, 2, 61
     %3:f8rc, %4:g8rc_and_g8rc_nox0 = LFSUX %0, killed %2
     %5:vssrc = XSRSP killed %3
-    %22:vslrc = SUBREG_TO_REG 1, %5, %subreg.sub_64
+    %22:vslrc = SUBREG_TO_REG %5, %subreg.sub_64
     %7:g8rc = LI8 8
     %8:vssrc = XFLOADf32 %4, killed %7
-    %23:vslrc = SUBREG_TO_REG 1, %8, %subreg.sub_64
+    %23:vslrc = SUBREG_TO_REG %8, %subreg.sub_64
     %10:vsrc = XXPERMDI %23, %22, 0
     %11:vrrc = XVCVDPSP killed %10, implicit $rm
     $v2 = COPY %11

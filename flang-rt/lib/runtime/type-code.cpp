@@ -92,7 +92,7 @@ RT_API_ATTRS TypeCode::TypeCode(TypeCategory f, int kind) {
       raw_ = CFI_type_extended_double_Complex;
       break;
     case 16:
-      raw_ = CFI_type_long_double_Complex;
+      raw_ = CFI_type_float128_Complex;
       break;
     }
     break;
@@ -131,7 +131,7 @@ RT_API_ATTRS TypeCode::TypeCode(TypeCategory f, int kind) {
   }
 }
 
-RT_API_ATTRS Fortran::common::optional<std::pair<TypeCategory, int>>
+RT_API_ATTRS common::optional<std::pair<TypeCategory, int>>
 TypeCode::GetCategoryAndKind() const {
   switch (raw_) {
   case CFI_type_signed_char:
@@ -233,7 +233,7 @@ TypeCode::GetCategoryAndKind() const {
   case CFI_type_uint128_t:
     return std::make_pair(TypeCategory::Unsigned, 16);
   default:
-    return Fortran::common::nullopt;
+    return common::nullopt;
   }
 }
 

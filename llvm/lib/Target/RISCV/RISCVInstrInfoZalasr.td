@@ -26,25 +26,26 @@ class LAQ_r<bit aq, bit rl, bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class SRL_r<bit aq, bit rl, bits<3> funct3, string opcodestr>
     : RVInstRAtomic<0b00111, aq, rl, funct3, OPC_AMO,
-                    (outs ), (ins GPRMemZeroOffset:$rs1, GPR:$rs2),
+                    (outs), (ins GPR:$rs2, GPRMemZeroOffset:$rs1),
                     opcodestr, "$rs2, $rs1"> {
   let rd = 0;
 }
+
 multiclass LAQ_r_aq_rl<bits<3> funct3, string opcodestr> {
-  def _AQ    : LAQ_r<1, 0, funct3, opcodestr # ".aq">;
-  def _AQ_RL : LAQ_r<1, 1, funct3, opcodestr # ".aqrl">;
+  def _AQ   : LAQ_r<1, 0, funct3, opcodestr # ".aq">;
+  def _AQRL : LAQ_r<1, 1, funct3, opcodestr # ".aqrl">;
 }
 
 multiclass SRL_r_aq_rl<bits<3> funct3, string opcodestr> {
-  def _RL    : SRL_r<0, 1, funct3, opcodestr # ".rl">;
-  def _AQ_RL : SRL_r<1, 1, funct3, opcodestr # ".aqrl">;
+  def _RL   : SRL_r<0, 1, funct3, opcodestr # ".rl">;
+  def _AQRL : SRL_r<1, 1, funct3, opcodestr # ".aqrl">;
 }
 
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZalasr] in {
+let Predicates = [HasStdExtZalasr], IsSignExtendingOpW = 1 in {
 defm LB : LAQ_r_aq_rl<0b000, "lb">;
 defm LH : LAQ_r_aq_rl<0b001, "lh">;
 defm LW : LAQ_r_aq_rl<0b010, "lw">;
@@ -63,14 +64,15 @@ defm SD : SRL_r_aq_rl<0b011, "sd">;
 //===----------------------------------------------------------------------===//
 
 class PatLAQ<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (OpNode (vt GPRMemZeroOffset:$rs1))), (Inst GPRMemZeroOffset:$rs1)>;
+    : Pat<(vt (OpNode (XLenVT GPRMemZeroOffset:$rs1))),
+          (Inst GPRMemZeroOffset:$rs1)>;
 
 // n.b. this switches order of arguments
 //  to deal with the fact that SRL has addr, data
 //  while atomic_store has data, addr
 class PatSRL<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(OpNode (vt GPR:$rs2), (vt GPRMemZeroOffset:$rs1)),
-          (Inst GPRMemZeroOffset:$rs1, GPR:$rs2)>;
+    : Pat<(OpNode (vt GPR:$rs2), (XLenVT GPRMemZeroOffset:$rs1)),
+          (Inst GPR:$rs2, GPRMemZeroOffset:$rs1)>;
 
 
 let Predicates = [HasStdExtZalasr] in {
@@ -92,21 +94,20 @@ let Predicates = [HasStdExtZalasr] in {
 
   def : PatSRL<releasing_store<atomic_store_32>, SW_RL>;
   def : PatSRL<seq_cst_store<atomic_store_32>, SW_RL>;
-} // Predicates = [HasStdExtZalasr]
+}
 
 let Predicates = [HasStdExtZalasr, IsRV32] in {
-  def : PatLAQ<acquiring_load<atomic_load_nonext_32>, LW_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_nonext_32>, LW_AQ>;
-
-} // Predicates = [HasStdExtZalasr, IsRV64]
+  def : PatLAQ<acquiring_load<atomic_load_nonext_32>, LW_AQ, i32>;
+  def : PatLAQ<seq_cst_load<atomic_load_nonext_32>, LW_AQ, i32>;
+} // Predicates = [HasStdExtZalasr, IsRV32]
 
 let Predicates = [HasStdExtZalasr, IsRV64] in {
-  def : PatLAQ<acquiring_load<atomic_load_asext_32>, LW_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_asext_32>, LW_AQ>;
+  def : PatLAQ<acquiring_load<atomic_load_asext_32>, LW_AQ, i64>;
+  def : PatLAQ<seq_cst_load<atomic_load_asext_32>, LW_AQ, i64>;
 
-  def : PatLAQ<acquiring_load<atomic_load_nonext_64>, LD_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_nonext_64>, LD_AQ>;
+  def : PatLAQ<acquiring_load<atomic_load_nonext_64>, LD_AQ, i64>;
+  def : PatLAQ<seq_cst_load<atomic_load_nonext_64>, LD_AQ, i64>;
 
-  def : PatSRL<releasing_store<atomic_store_64>, SD_RL>;
-  def : PatSRL<seq_cst_store<atomic_store_64>, SD_RL>;
+  def : PatSRL<releasing_store<atomic_store_64>, SD_RL, i64>;
+  def : PatSRL<seq_cst_store<atomic_store_64>, SD_RL, i64>;
 } // Predicates = [HasStdExtZalasr, IsRV64]

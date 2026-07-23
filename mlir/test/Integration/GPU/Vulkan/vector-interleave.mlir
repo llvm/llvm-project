@@ -26,17 +26,17 @@ module attributes {
       %val2 = memref.load %arg1[%idx0] : memref<2xi32>
       %val3 = memref.load %arg1[%idx1] : memref<2xi32>
 
-      %lhs0 = vector.insertelement %val0, %lhs[%idx0 : index] : vector<2xi32>
-      %lhs1 = vector.insertelement %val1, %lhs0[%idx1 : index] : vector<2xi32>
-      %rhs0 = vector.insertelement %val2, %rhs[%idx0 : index] : vector<2xi32>
-      %rhs1 = vector.insertelement %val3, %rhs0[%idx1 : index] : vector<2xi32>
+      %lhs0 = vector.insert %val0, %lhs[%idx0] : i32 into vector<2xi32>
+      %lhs1 = vector.insert %val1, %lhs0[%idx1] : i32 into vector<2xi32>
+      %rhs0 = vector.insert %val2, %rhs[%idx0] : i32 into vector<2xi32>
+      %rhs1 = vector.insert %val3, %rhs0[%idx1] : i32 into vector<2xi32>
 
       %interleave = vector.interleave %lhs1, %rhs1 : vector<2xi32> -> vector<4xi32>
 
-      %res0 = vector.extractelement %interleave[%idx0 : index] : vector<4xi32>
-      %res1 = vector.extractelement %interleave[%idx1 : index] : vector<4xi32>
-      %res2 = vector.extractelement %interleave[%idx2 : index] : vector<4xi32>
-      %res3 = vector.extractelement %interleave[%idx3 : index] : vector<4xi32>
+      %res0 = vector.extract %interleave[%idx0] : i32 from vector<4xi32>
+      %res1 = vector.extract %interleave[%idx1] : i32 from vector<4xi32>
+      %res2 = vector.extract %interleave[%idx2] : i32 from vector<4xi32>
+      %res3 = vector.extract %interleave[%idx3] : i32 from vector<4xi32>
 
       memref.store %res0, %arg2[%idx0]: memref<4xi32>
       memref.store %res1, %arg2[%idx1]: memref<4xi32>

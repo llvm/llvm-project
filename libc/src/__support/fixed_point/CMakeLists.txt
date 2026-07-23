@@ -3,6 +3,7 @@ add_header_library(
   HDRS
     fx_rep.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
     libc.src.__support.CPP.type_traits
@@ -22,6 +23,7 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.math_extras
+    libc.src.__support.uint128
 )
 
 add_header_library(

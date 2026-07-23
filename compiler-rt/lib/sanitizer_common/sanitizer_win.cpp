@@ -108,9 +108,7 @@ int internal_dlinfo(void *handle, int request, void *p) {
 
 // In contrast to POSIX, on Windows GetCurrentThreadId()
 // returns a system-unique identifier.
-tid_t GetTid() {
-  return GetCurrentThreadId();
-}
+ThreadID GetTid() { return GetCurrentThreadId(); }
 
 uptr GetThreadSelf() {
   return GetTid();
@@ -915,11 +913,12 @@ void ReportFile::Write(const char *buffer, uptr length) {
   }
 }
 
-void SetAlternateSignalStack() {
+void* SetAlternateSignalStack() {
   // FIXME: Decide what to do on Windows.
+  return nullptr;
 }
 
-void UnsetAlternateSignalStack() {
+void UnsetAlternateSignalStack(void* altstack_base) {
   // FIXME: Decide what to do on Windows.
 }
 
@@ -1224,7 +1223,7 @@ int WaitForProcess(pid_t pid) { return -1; }
 // FIXME implement on this platform.
 void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 
-void CheckNoDeepBind(const char *filename, int flag) {
+void OnDlOpen(const char* filename, int flag) {
   // Do nothing.
 }
 

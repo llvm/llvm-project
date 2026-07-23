@@ -92,13 +92,13 @@ define void @store_v6i1(ptr %p, <6 x i1> %v) {
 ; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    andi a3, a2, 2
 ; CHECK-NEXT:    andi a4, a2, 4
+; CHECK-NEXT:    andi a5, a2, 8
 ; CHECK-NEXT:    or a1, a1, a3
-; CHECK-NEXT:    andi a3, a2, 8
-; CHECK-NEXT:    or a3, a4, a3
-; CHECK-NEXT:    andi a4, a2, 16
+; CHECK-NEXT:    or a4, a4, a5
+; CHECK-NEXT:    andi a3, a2, 16
 ; CHECK-NEXT:    andi a2, a2, -32
-; CHECK-NEXT:    or a1, a1, a3
-; CHECK-NEXT:    or a2, a4, a2
+; CHECK-NEXT:    or a1, a1, a4
+; CHECK-NEXT:    or a2, a3, a2
 ; CHECK-NEXT:    or a1, a1, a2
 ; CHECK-NEXT:    andi a1, a1, 63
 ; CHECK-NEXT:    sb a1, 0(a0)
@@ -223,7 +223,7 @@ define void @store_constant_undef_v2i8(ptr %p) {
 ; CHECK-NEXT:    li a1, 768
 ; CHECK-NEXT:    sh a1, 0(a0)
 ; CHECK-NEXT:    ret
-  store <2 x i8> <i8 undef, i8 3>, ptr %p
+  store <2 x i8> <i8 poison, i8 3>, ptr %p
   ret void
 }
 

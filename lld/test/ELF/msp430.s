@@ -1,6 +1,6 @@
 ; REQUIRES: msp430
 ; RUN: llvm-mc -filetype=obj -triple=msp430-elf -o %t1.o %s
-; RUN: echo -e '.global _start\n _start: nop' | llvm-mc -filetype=obj -triple=msp430-elf -o %t2.o -
+; RUN: printf '.global _start\n _start: nop' | llvm-mc -filetype=obj -triple=msp430-elf -o %t2.o -
 ; RUN: ld.lld -o %t.exe --image-base=0x1000 --Tdata=0x2000 --Ttext=0x8000 --defsym=_byte=0x21 -z separate-code %t2.o %t1.o
 ; RUN: llvm-objdump -s -d %t.exe | FileCheck %s
 

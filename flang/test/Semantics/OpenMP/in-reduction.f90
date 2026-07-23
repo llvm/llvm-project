@@ -22,7 +22,7 @@ subroutine f02(p)
 end
 
 subroutine f03
-  common /c/ a, b 
+  common /c/ a, b
 !ERROR: Common block names are not allowed in IN_REDUCTION clause
 !$omp target in_reduction(+: /c/)
 !$omp end target
@@ -47,6 +47,7 @@ subroutine f06
     integer :: a(10)
   end type
   type(t) :: x
+!ERROR: A variable that is part of another variable cannot appear on the IN_REDUCTION clause
 !ERROR: The base expression of an array element or section in IN_REDUCTION clause must be an identifier
 !$omp target in_reduction(+: x%a(2))
 !$omp end target
@@ -57,6 +58,7 @@ subroutine f07
     integer :: a(10)
   end type
   type(t) :: x
+!ERROR: A variable that is part of another variable cannot appear on the IN_REDUCTION clause
 !ERROR: The base expression of an array element or section in IN_REDUCTION clause must be an identifier
 !$omp target in_reduction(+: x%a(1:10))
 !$omp end target
@@ -64,7 +66,7 @@ end
 
 subroutine f08
   integer :: x
-!ERROR: Type parameter inquiry is not permitted in IN_REDUCTION clause
+!ERROR: Type parameter inquiry is not allowed as a list item on IN_REDUCTION clause
 !$omp target in_reduction(+: x%kind)
 !$omp end target
 end

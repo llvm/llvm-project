@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFUnwindTablePrinter.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
-#include <optional>
 
 using namespace llvm;
 using namespace dwarf;
@@ -116,13 +117,10 @@ raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
 /// for certain architectures like x86.
 static void printRegisterLocations(const RegisterLocations &RL, raw_ostream &OS,
                                    DIDumpOptions DumpOpts) {
-  bool First = true;
+  ListSeparator LS;
   for (uint32_t Reg : RL.getRegisters()) {
     auto Loc = *RL.getRegisterLocation(Reg);
-    if (First)
-      First = false;
-    else
-      OS << ", ";
+    OS << LS;
     printRegister(OS, DumpOpts, Reg);
     OS << '=';
     printUnwindLocation(Loc, OS, DumpOpts);
@@ -156,7 +154,7 @@ static void printUnwindRow(const UnwindRow &Row, raw_ostream &OS,
                            DIDumpOptions DumpOpts, unsigned IndentLevel) {
   OS.indent(2 * IndentLevel);
   if (Row.hasAddress())
-    OS << format("0x%" PRIx64 ": ", Row.getAddress());
+    OS << formatv("{0:x}: ", Row.getAddress());
   OS << "CFA=";
   printUnwindLocation(Row.getCFAValue(), OS, DumpOpts);
   if (Row.getRegisterLocations().hasLocations()) {

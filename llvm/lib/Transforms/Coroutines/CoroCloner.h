@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,9 +20,7 @@
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
-namespace llvm {
-
-namespace coro {
+namespace llvm::coro {
 
 enum class CloneKind {
   /// The shared resume function for a switch lowering.
@@ -78,7 +77,7 @@ public:
       : OrigF(OrigF), Suffix(Suffix), Shape(Shape), FKind(FKind),
         Builder(OrigF.getContext()), TTI(TTI) {}
 
-  virtual ~BaseCloner() {}
+  virtual ~BaseCloner() = default;
 
   /// Create a clone for a continuation lowering.
   static Function *createClone(Function &OrigF, const Twine &Suffix,
@@ -120,6 +119,7 @@ protected:
   void replaceRetconOrAsyncSuspendUses();
   void replaceCoroSuspends();
   void replaceCoroEnds();
+  void replaceCoroIsInRamp();
   void replaceSwiftErrorOps();
   void salvageDebugInfo();
   void handleFinalSuspend();
@@ -148,8 +148,6 @@ public:
   }
 };
 
-} // end namespace coro
-
-} // end namespace llvm
+} // end namespace llvm::coro
 
 #endif // LLVM_LIB_TRANSFORMS_COROUTINES_COROCLONER_H

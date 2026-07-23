@@ -14,8 +14,10 @@
 
 #include "NewPMDriver.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -101,6 +103,13 @@ int llvm::compileModuleWithNewPM(
 
   raw_pwrite_stream *OS = &Out->os();
 
+  std::unique_ptr<buffer_ostream> BOS;
+  if (codegen::getFileType() != CodeGenFileType::AssemblyFile &&
+      !Out->os().supportsSeeking()) {
+    BOS = std::make_unique<buffer_ostream>(Out->os());
+    OS = BOS.get();
+  }
+
   // Fetch options from TargetPassConfig
   CGPassBuilderOption Opt = getCGPassBuilderOption();
   Opt.DisableVerify = VK != VerifierKind::InputOutput;
@@ -119,6 +128,19 @@ int llvm::compileModuleWithNewPM(
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
+
+  FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
+
+  MAM.registerPass([&] {
+    const TargetOptions &Options = Target->Options;
+    return RuntimeLibraryAnalysis(
+        M->getTargetTriple(), Target->Options.ExceptionModel,
+        Target->Options.FloatABIType, Target->Options.EABIVersion,
+        Options.MCOptions.ABIName, Target->Options.VecLib);
+  });
+
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+
   PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -127,9 +149,6 @@ int llvm::compileModuleWithNewPM(
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
   SI.registerCallbacks(PIC, &MAM);
-
-  FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
-  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   ModulePassManager MPM;
   FunctionPassManager FPM;
@@ -155,7 +174,8 @@ int llvm::compileModuleWithNewPM(
 
   } else {
     ExitOnErr(Target->buildCodeGenPipeline(
-        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
+        MPM, MAM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt,
+        MMI.getContext(), &PIC));
   }
 
   // If user only wants to print the pipeline, print it before parsing the MIR.
@@ -166,7 +186,8 @@ int llvm::compileModuleWithNewPM(
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    outs() << PipelineStr << '\n';
+    printFormattedPipelinePasses(outs(), PipelineStr, *PrintPipelinePasses);
+    outs() << '\n';
     return 0;
   }
 
@@ -179,7 +200,7 @@ int llvm::compileModuleWithNewPM(
   MPM.run(*M, MAM);
 
   if (Context.getDiagHandlerPtr()->HasErrors)
-    exit(1);
+    return 1;
 
   // Declare success.
   Out->keep();

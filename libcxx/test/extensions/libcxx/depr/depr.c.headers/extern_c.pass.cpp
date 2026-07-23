@@ -8,15 +8,11 @@
 
 // When building with modules, including headers inside extern "C" is an anti-pattern
 // that we don't want to support and can't support with LSV enabled.
-// UNSUPPORTED: clang-modules-build
-
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // Sometimes C++'s <foo.h> headers get included within extern "C" contexts. This
 // is ill-formed (no diagnostic required), per [using.headers]p3, but we permit
 // it as an extension.
-
-#include <__config>
 
 extern "C" {
 #include <assert.h>

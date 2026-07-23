@@ -24,7 +24,53 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
+template <template <class...> class KeyContainer, template <class...> class ValueContainer>
+constexpr void test() {
+  {
+    std::pair<int, int> expected[] = {{1, 1}, {1, 2}, {2, 3}, {2, 2}, {3, 1}};
+    using C                        = test_less<int>;
+    using A                        = test_allocator<int>;
+    using M                        = std::flat_multimap<int, int, C, KeyContainer<int, A>, ValueContainer<int, A>>;
+    auto mo                        = M(expected, expected + 5, C(5), A(7));
+    auto m                         = M(std::move(mo), A(3));
+
+    assert(m.key_comp() == C(5));
+    assert(m.size() == 5);
+    auto [keys, values] = std::move(m).extract();
+    assert(keys.get_allocator() == A(3));
+    assert(values.get_allocator() == A(3));
+    assert(std::ranges::equal(keys, expected | std::views::elements<0>));
+    check_possible_values(
+        values,
+        std::vector<std::vector<int>>{
+            {1, 2},
+            {1, 2},
+            {2, 3},
+            {2, 3},
+            {1},
+        });
+
+    // The original flat_multimap is moved-from.
+    assert(std::is_sorted(mo.begin(), mo.end(), mo.value_comp()));
+    assert(mo.empty());
+    assert(mo.key_comp() == C(5));
+    assert(mo.keys().get_allocator() == A(7));
+    assert(mo.values().get_allocator() == A(7));
+  }
+  {
+    // moved-from object maintains invariant if one of underlying container does not clear after move
+    using M = std::flat_multimap<int, int, std::less<>, KeyContainer<int>, CopyOnlyVector<int>>;
+    M m1    = M({1, 2, 3}, {1, 2, 3});
+    M m2(std::move(m1), std::allocator<int>{});
+    assert(m2.size() == 3);
+    check_invariant(m1);
+    LIBCPP_ASSERT(m1.empty());
+    LIBCPP_ASSERT(m1.keys().size() == 0);
+    LIBCPP_ASSERT(m1.values().size() == 0);
+  }
+}
+
+constexpr bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<key_container_type, Alloc> is true
@@ -43,40 +89,24 @@ int main(int, char**) {
     static_assert(!std::is_constructible_v<M2, M2&&, const A2&>);
     static_assert(!std::is_constructible_v<M3, M3&&, const A2&>);
   }
-  {
-    std::pair<int, int> expected[] = {{1, 1}, {1, 2}, {2, 3}, {2, 2}, {3, 1}};
-    using C                        = test_less<int>;
-    using A                        = test_allocator<int>;
-    using M                        = std::flat_multimap<int, int, C, std::vector<int, A>, std::deque<int, A>>;
-    auto mo                        = M(expected, expected + 5, C(5), A(7));
-    auto m                         = M(std::move(mo), A(3));
 
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 5);
-    auto [keys, values] = std::move(m).extract();
-    assert(keys.get_allocator() == A(3));
-    assert(values.get_allocator() == A(3));
-    assert(std::ranges::equal(keys, expected | std::views::elements<0>));
-    assert(std::ranges::equal(values, expected | std::views::elements<1>));
+  test<std::vector, std::vector>();
 
-    // The original flat_multimap is moved-from.
-    assert(std::is_sorted(mo.begin(), mo.end(), mo.value_comp()));
-    assert(mo.empty());
-    assert(mo.key_comp() == C(5));
-    assert(mo.keys().get_allocator() == A(7));
-    assert(mo.values().get_allocator() == A(7));
-  }
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
   {
-    // moved-from object maintains invariant if one of underlying container does not clear after move
-    using M = std::flat_multimap<int, int, std::less<>, std::vector<int>, CopyOnlyVector<int>>;
-    M m1    = M({1, 1, 3}, {1, 2, 3});
-    M m2(std::move(m1), std::allocator<int>{});
-    assert(m2.size() == 3);
-    check_invariant(m1);
-    LIBCPP_ASSERT(m1.empty());
-    LIBCPP_ASSERT(m1.keys().size() == 0);
-    LIBCPP_ASSERT(m1.values().size() == 0);
+    test<std::deque, std::deque>();
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

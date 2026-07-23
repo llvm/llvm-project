@@ -372,6 +372,46 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived{a:i32,b
 
 // -----
 
+func.func @create_box_rank_mismatch(%arg0: !fir.ref<!fir.array<?xf32>>, %lb0: index, %ext0: index, %sm0: index, %lb1: index, %ext1: index, %sm1: index) {
+  // expected-error@+1 {{'fir.create_box' op memref rank does not match result box rank}}
+  %0 = fir.create_box %arg0 lbs(%lb0, %lb1) extents(%ext0, %ext1) strides(%sm0, %sm1) : (!fir.ref<!fir.array<?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+
+func.func @create_box_operand_count(%arg0: !fir.ref<!fir.array<?x?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op expected 2 values for each of lbounds, extents, and strides}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext, %ext) strides(%sm, %sm) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+
+func.func @create_box_dynamic_char(%arg0: !fir.ref<!fir.array<?x!fir.char<1,?>>>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op result box element type must be statically sized}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, index, index, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  return
+}
+
+// -----
+
+func.func @create_box_storage_kind(%arg0: !fir.heap<!fir.array<?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op result box element storage kind must match the memref storage kind}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.heap<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
+func.func @create_box_volatile_mismatch(%arg0: !fir.ref<!fir.array<?xf32>, volatile>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op cannot convert between volatile and non-volatile types}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ref<!fir.array<?xf32>, volatile>, index, index, index) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
 %lo = arith.constant 1 : index
 %c1 = arith.constant 1 : index
 %up = arith.constant 10 : index
@@ -1425,4 +1465,142 @@ func.func @wrong_weights_number_in_if_then_else(%cond: i1) {
   } else {
   }
   return
+}
+
+// -----
+
+func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<!fir.array<8xi8>>) {
+  %c0 = arith.constant 0 : index
+  %addr = fir.address_of(@block_) : !fir.ref<!fir.array<8xi8>>
+  %2 = fir.convert %addr : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %var = fir.coordinate_of %2, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  // expected-error@+1 {{negative integer literal not valid for unsigned integer type}}
+  %decl = fir.declare %var storage (%addr[-1]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<i8>
+  return
+}
+
+// -----
+
+"func.func"() <{function_type = (!fir.ref<!fir.array<8xi8>>) -> (), sym_name = "fir_declare_bad_storage_offset"}> ({
+^bb0(%arg0: !fir.ref<!fir.array<8xi8>>):
+  %0 = "arith.constant"() <{value = 0 : index}> : () -> index
+  %1 = "fir.address_of"() <{symbol = @block_}> : () -> !fir.ref<!fir.array<8xi8>>
+  %2 = "fir.convert"(%1) : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %3 = "fir.coordinate_of"(%2, %0) <{baseType = !fir.ref<!fir.array<?xi8>>}> : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+// expected-error@+1 {{storage offset specified without the storage reference}}
+  %4 = "fir.declare"(%3) <{operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>, storage_offset = 1 : ui64, uniq_name = "a"}> : (!fir.ref<i8>) -> !fir.ref<i8>
+  "func.return"() : () -> ()
+}) : () -> ()
+
+// -----
+
+func.func @fir_declare_bad_storage(%arg0: !fir.ref<i8>) {
+  // expected-error@+1 {{storage must be a vector}}
+  %decl = fir.declare %arg0 storage (%arg0[0]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>
+  return
+}
+
+// -----
+
+func.func @fir_declare_bad_storage(%arg0: !fir.ref<i8>, %arg1: !fir.ref<!fir.array<?xi8>>) {
+  // expected-error@+1 {{storage must have known extent}}
+  %decl = fir.declare %arg0 storage (%arg1[0]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<!fir.array<?xi8>>) -> !fir.ref<i8>
+  return
+}
+
+// -----
+
+func.func @fir_declare_bad_storage(%arg0: !fir.ref<i8>, %arg1: !fir.ref<!fir.array<1xi32>>) {
+  // expected-error@+1 {{storage must be an array of i8 elements}}
+  %decl = fir.declare %arg0 storage (%arg1[0]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<!fir.array<1xi32>>) -> !fir.ref<i8>
+  return
+}
+
+// -----
+
+func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<i8>, %arg1: !fir.ref<!fir.array<1xi8>>) {
+  // expected-error@+1 {{storage offset exceeds the storage size}}
+  %decl = fir.declare %arg0 storage (%arg1[2]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<!fir.array<1xi8>>) -> !fir.ref<i8>
+  return
+}
+
+// -----
+
+func.func @bad_declare_value(%arg0: !fir.ref<i32>) {
+  // expected-error@+1 {{'fir.declare_value' op value must be a simple scalar (integer, real, complex, or logical)}}
+  fir.declare_value %arg0 {uniq_name = "test"} : !fir.ref<i32>
+  return
+}
+
+// -----
+
+func.func @bitcast_pointer_input(%arg0: !fir.ref<i32>) -> i32 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.ref<i32>) -> i32
+  return %0 : i32
+}
+
+// -----
+
+func.func @bitcast_pointer_output(%arg0: i32) -> !fir.ref<i32> {
+  // expected-error@+1 {{'fir.bitcast' op output type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (i32) -> !fir.ref<i32>
+  return %0 : !fir.ref<i32>
+}
+
+// -----
+
+func.func @bitcast_complex(%arg0: complex<f32>) -> i64 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (complex<f32>) -> i64
+  return %0 : i64
+}
+
+// -----
+
+func.func @bitcast_char_not_singleton(%arg0: !fir.char<1,2>) -> i16 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.char<1,2>) -> i16
+  return %0 : i16
+}
+
+// -----
+
+func.func @bitcast_box(%arg0: !fir.box<!fir.type<t{i:i32}>>) -> i64 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.box<!fir.type<t{i:i32}>>) -> i64
+  return %0 : i64
+}
+
+// -----
+
+func.func @bitcast_size_mismatch(%arg0: i32) -> f64 {
+  // expected-error@+1 {{'fir.bitcast' op bit size mismatch: input has 32 bits but output has 64 bits}}
+  %0 = fir.bitcast %arg0 : (i32) -> f64
+  return %0 : f64
+}
+
+// -----
+
+func.func @logical_and_type_mismatch(%a: !fir.logical<4>, %b: !fir.logical<2>) {
+  // expected-note@-1 {{prior use here}}
+  // expected-error@+1 {{use of value '%b' expects different type than prior uses: '!fir.logical<4>' vs '!fir.logical<2>'}}
+  %0 = fir.logical_and %a, %b : !fir.logical<4>
+  return
+}
+
+// -----
+
+func.func @logical_or_float(%a: f32, %b: f32) {
+  // expected-error@+1 {{'fir.logical_or' op operand #0 must be fir.logical or signless integer, but got 'f32'}}
+  %0 = fir.logical_or %a, %b : f32
+  return
+}
+
+// -----
+
+func.func @allocmem_bad_alignment() -> !fir.heap<!fir.array<10xf32>> {
+  // expected-error@+1 {{'fir.allocmem' op alignment must be a positive power of two}}
+  %0 = fir.allocmem !fir.array<10xf32> {alignment = 3 : i64}
+  return %0 : !fir.heap<!fir.array<10xf32>>
 }

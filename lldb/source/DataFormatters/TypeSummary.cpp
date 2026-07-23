@@ -8,7 +8,8 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 
-#include "FormatterBytecode.h"
+#include "lldb/Core/FormatEntity.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
@@ -105,9 +106,9 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
     retval = std::string(s.GetString());
     return true;
   } else {
-    if (FormatEntity::Format(m_format, s, &sc, &exe_ctx,
-                             &sc.line_entry.range.GetBaseAddress(), valobj,
-                             false, false)) {
+    if (FormatEntity::Formatter(
+            &sc, &exe_ctx, &sc.line_entry.range.GetBaseAddress(), false, false)
+            .Format(m_format, s, valobj)) {
       retval.assign(std::string(s.GetString()));
       return true;
     } else {
@@ -260,11 +261,10 @@ bool BytecodeSummaryFormat::FormatObject(ValueObject *valobj,
     return false;
   }
 
-  std::vector<FormatterBytecode::ControlStackElement> control(
-      {m_bytecode->getBuffer()});
+  FormatterBytecode::ControlStack control({m_bytecode->getBuffer()});
   FormatterBytecode::DataStack data({valobj->GetSP()});
   llvm::Error error = FormatterBytecode::Interpret(
-      control, data, FormatterBytecode::sel_summary);
+      control, data, FormatterBytecode::sig_summary);
   if (error) {
     retval = llvm::toString(std::move(error));
     return false;

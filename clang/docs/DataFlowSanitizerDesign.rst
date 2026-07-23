@@ -160,8 +160,8 @@ instructions, glibc memcpy and memmove. When ``-dfsan-track-origins`` is 2, a
 new chain is also appended at loads.
 
 Other instructions do not create new chains, but simply propagate origin trace
-IDs. If an instruction has more than one operands with non-zero labels, the origin
-treace ID of the last operand with non-zero label is propagated to the result of
+IDs. If an instruction has more than one operand with non-zero labels, the origin
+trace ID of the last operand with non-zero label is propagated to the result of
 the instruction.
 
 Memory layout and label management

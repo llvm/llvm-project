@@ -109,12 +109,6 @@ public:
   /// Hooks for using ASTNodeKind as a key in a DenseMap.
   struct DenseMapInfo {
     // ASTNodeKind() is a good empty key because it is represented as a 0.
-    static inline ASTNodeKind getEmptyKey() { return ASTNodeKind(); }
-    // NKI_NumberOfKinds is not a valid value, so it is good for a
-    // tombstone key.
-    static inline ASTNodeKind getTombstoneKey() {
-      return ASTNodeKind(NKI_NumberOfKinds);
-    }
     static unsigned getHashValue(const ASTNodeKind &Val) { return Val.KindId; }
     static bool isEqual(const ASTNodeKind &LHS, const ASTNodeKind &RHS) {
       return LHS.KindId == RHS.KindId;
@@ -164,6 +158,7 @@ private:
 #include "clang/Basic/AttrList.inc"
     NKI_ObjCProtocolLoc,
     NKI_ConceptReference,
+    NKI_OffsetOfNode,
     NKI_NumberOfKinds
   };
 
@@ -224,6 +219,7 @@ KIND_TO_KIND_ID(Attr)
 KIND_TO_KIND_ID(ObjCProtocolLoc)
 KIND_TO_KIND_ID(CXXBaseSpecifier)
 KIND_TO_KIND_ID(ConceptReference)
+KIND_TO_KIND_ID(OffsetOfNode)
 #define DECL(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Decl)
 #include "clang/AST/DeclNodes.inc"
 #define STMT(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED)
@@ -307,7 +303,7 @@ public:
 
   /// For nodes which represent textual entities in the source code,
   /// return their SourceRange.  For all other nodes, return SourceRange().
-  SourceRange getSourceRange() const;
+  SourceRange getSourceRange(bool IncludeQualifier = false) const;
 
   /// @{
   /// Imposes an order on \c DynTypedNode.
@@ -336,9 +332,9 @@ public:
             NodeKind)) {
       auto NNSLA = getUnchecked<NestedNameSpecifierLoc>();
       auto NNSLB = Other.getUnchecked<NestedNameSpecifierLoc>();
-      return std::make_pair(NNSLA.getNestedNameSpecifier(),
+      return std::make_pair(NNSLA.getNestedNameSpecifier().getAsVoidPointer(),
                             NNSLA.getOpaqueData()) <
-             std::make_pair(NNSLB.getNestedNameSpecifier(),
+             std::make_pair(NNSLB.getNestedNameSpecifier().getAsVoidPointer(),
                             NNSLB.getOpaqueData());
     }
 
@@ -372,16 +368,6 @@ public:
 
   /// Hooks for using DynTypedNode as a key in a DenseMap.
   struct DenseMapInfo {
-    static inline DynTypedNode getEmptyKey() {
-      DynTypedNode Node;
-      Node.NodeKind = ASTNodeKind::DenseMapInfo::getEmptyKey();
-      return Node;
-    }
-    static inline DynTypedNode getTombstoneKey() {
-      DynTypedNode Node;
-      Node.NodeKind = ASTNodeKind::DenseMapInfo::getTombstoneKey();
-      return Node;
-    }
     static unsigned getHashValue(const DynTypedNode &Val) {
       // FIXME: Add hashing support for the remaining types.
       if (ASTNodeKind::getFromNodeKind<TypeLoc>().isBaseOf(Val.NodeKind)) {
@@ -393,21 +379,16 @@ public:
       if (ASTNodeKind::getFromNodeKind<NestedNameSpecifierLoc>().isSame(
               Val.NodeKind)) {
         auto NNSL = Val.getUnchecked<NestedNameSpecifierLoc>();
-        return llvm::hash_combine(NNSL.getNestedNameSpecifier(),
-                                  NNSL.getOpaqueData());
+        return llvm::hash_combine(
+            NNSL.getNestedNameSpecifier().getAsVoidPointer(),
+            NNSL.getOpaqueData());
       }
 
       assert(Val.getMemoizationData());
       return llvm::hash_value(Val.getMemoizationData());
     }
     static bool isEqual(const DynTypedNode &LHS, const DynTypedNode &RHS) {
-      auto Empty = ASTNodeKind::DenseMapInfo::getEmptyKey();
-      auto TombStone = ASTNodeKind::DenseMapInfo::getTombstoneKey();
-      return (ASTNodeKind::DenseMapInfo::isEqual(LHS.NodeKind, Empty) &&
-              ASTNodeKind::DenseMapInfo::isEqual(RHS.NodeKind, Empty)) ||
-             (ASTNodeKind::DenseMapInfo::isEqual(LHS.NodeKind, TombStone) &&
-              ASTNodeKind::DenseMapInfo::isEqual(RHS.NodeKind, TombStone)) ||
-             LHS == RHS;
+      return LHS == RHS;
     }
   };
 
@@ -539,8 +520,8 @@ struct DynTypedNode::BaseConverter<
     : public DynCastPtrConverter<T, Attr> {};
 
 template <>
-struct DynTypedNode::BaseConverter<
-    NestedNameSpecifier, void> : public PtrConverter<NestedNameSpecifier> {};
+struct DynTypedNode::BaseConverter<NestedNameSpecifier, void>
+    : public ValueConverter<NestedNameSpecifier> {};
 
 template <>
 struct DynTypedNode::BaseConverter<
@@ -587,6 +568,10 @@ struct DynTypedNode::BaseConverter<ObjCProtocolLoc, void>
 template <>
 struct DynTypedNode::BaseConverter<ConceptReference, void>
     : public PtrConverter<ConceptReference> {};
+
+template <>
+struct DynTypedNode::BaseConverter<OffsetOfNode, void>
+    : public PtrConverter<OffsetOfNode> {};
 
 // The only operation we allow on unsupported types is \c get.
 // This allows to conveniently use \c DynTypedNode when having an arbitrary

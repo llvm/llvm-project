@@ -9,6 +9,7 @@
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=arith,cf,func,math" %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=arith,cf,func,math allow-pattern-rollback=0" %s | FileCheck %s
 
 // CHECK-LABEL: func @empty() {
 // CHECK-NEXT:  llvm.return
@@ -582,3 +583,18 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// During signature conversion with index-bitwidth=32, pattern rollback can
+// unlink blocks/ops from their regions. If loop-like operations are folded
+// in this state, querying `isDefinedOutsideOfLoop` on block arguments
+// of unlinked blocks would previously dereference a null parent region pointer
+// and crash.
+// See: https://github.com/llvm/llvm-project/issues/203860
+// CHECK32-LABEL: llvm.func @affine_for_index_bitwidth_32
+func.func @affine_for_index_bitwidth_32(%arg0: index, %arg1: index, %arg2: index, %arg3: index) {
+  %0 = affine.for %arg4 = 0 to 101 iter_args(%arg5 = %arg1) -> (index) {
+    affine.yield %arg3 : index
+  }
+  return
+}
+

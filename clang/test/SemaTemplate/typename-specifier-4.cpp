@@ -147,7 +147,7 @@ namespace rdar8740998 {
     // expected-error{{dependent using declaration resolved to type without 'typename'}}
 
     void f() {
-      typename X<T>::iterator i; // expected-error{{typename specifier refers to a dependent using declaration for a value 'iterator' in 'X<T>'}}
+      typename X<T>::iterator i; // expected-error{{typename specifier refers to a dependent using declaration for a value 'iterator' in 'rdar8740998::X<T>'}}
     }
   };
 

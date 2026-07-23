@@ -14,12 +14,12 @@ define void @test(i1 %P, ptr %Q) {
   br i1 %P, label %T, label %F
 T:              ; preds = %0
   store i32 1, ptr %Q
-  %A = load i32, ptr %Q               ; <i32> [#uses=1]
+  %A = load i32, ptr %Q
   call void @bar( i32 %A )
   ret void
 F:              ; preds = %0
   store i32 1, ptr %Q
-  %B = load i32, ptr %Q               ; <i32> [#uses=1]
+  %B = load i32, ptr %Q
   call void @bar( i32 %B )
   ret void
 }
@@ -38,17 +38,17 @@ define void @test_switch(i64 %i, ptr %Q) {
   ]
 bb0:              ; preds = %0
   store i32 1, ptr %Q
-  %A = load i32, ptr %Q               ; <i32> [#uses=1]
+  %A = load i32, ptr %Q
   call void @bar( i32 %A )
   ret void
 bb1:              ; preds = %0
   store i32 1, ptr %Q
-  %B = load i32, ptr %Q               ; <i32> [#uses=1]
+  %B = load i32, ptr %Q
   call void @bar( i32 %B )
   ret void
 bb2:              ; preds = %0
   store i32 1, ptr %Q
-  %C = load i32, ptr %Q               ; <i32> [#uses=1]
+  %C = load i32, ptr %Q
   call void @bar( i32 %C )
   ret void
 }
@@ -485,4 +485,150 @@ else:
   %op2 = call float @llvm.fma(float %a, float %d, float %b)
   call void @bar()
   ret float %op2
+}
+
+define void @test_switch_with_unreachable_block_as_default(i1 %c, i32 %x, ptr %ptr) {
+; CHECK-LABEL: @test_switch_with_unreachable_block_as_default(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[SW1:%.*]], label [[SW2:%.*]]
+; CHECK:       sw1:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i32 1, label [[COMMON_RET:%.*]]
+; CHECK-NEXT:      i32 2, label [[BAR:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       sw2:
+; CHECK-NEXT:    store i64 42, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+; CHECK:       bar:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  br i1 %c, label %sw1, label %sw2
+
+sw1:
+  ; This switch only exists to have an %unreachable block with multiple predecessors.
+  switch i32 %x, label %unreachable [
+  i32 1, label %foo
+  i32 2, label %bar
+  ]
+
+sw2:
+  switch i32 %x, label %unreachable [
+  i32 1, label %bb1
+  i32 2, label %bb2
+  i32 3, label %bb3
+  ]
+
+bb1:
+  store i64 42, ptr %ptr
+  ret void
+
+bb2:
+  store i64 42, ptr %ptr
+  ret void
+
+bb3:
+  store i64 42, ptr %ptr
+  ret void
+
+unreachable:
+  unreachable
+
+foo:
+  ret void
+
+bar:
+  call void @bar()
+  ret void
+}
+
+define void @test_switch_with_unreachable_block_as_case(i1 %c, i32 %x, ptr %ptr) {
+; CHECK-LABEL: @test_switch_with_unreachable_block_as_case(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[SW1:%.*]], label [[SW2:%.*]]
+; CHECK:       sw1:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i32 1, label [[COMMON_RET:%.*]]
+; CHECK-NEXT:      i32 2, label [[BAR:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       sw2:
+; CHECK-NEXT:    store i64 42, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+; CHECK:       bar:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  br i1 %c, label %sw1, label %sw2
+
+sw1:
+  ; This switch only exists to have an %unreachable block with multiple predecessors.
+  switch i32 %x, label %unreachable [
+  i32 1, label %foo
+  i32 2, label %bar
+  ]
+
+sw2:
+  switch i32 %x, label %bb3 [
+  i32 1, label %bb1
+  i32 2, label %bb2
+  i32 3, label %unreachable
+  ]
+
+bb1:
+  store i64 42, ptr %ptr
+  ret void
+
+bb2:
+  store i64 42, ptr %ptr
+  ret void
+
+bb3:
+  store i64 42, ptr %ptr
+  ret void
+
+unreachable:
+  unreachable
+
+foo:
+  ret void
+
+bar:
+  call void @bar()
+  ret void
+}
+
+define void @test_switch_with_multicases_dest(i64 %i, ptr %Q) {
+; CHECK-LABEL: @test_switch_with_multicases_dest(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    call void @bar(i32 [[C]])
+; CHECK-NEXT:    ret void
+;
+  switch i64 %i, label %bb0 [
+  i64 1, label %bb1
+  i64 2, label %bb2
+  i64 3, label %bb2
+  ]
+bb0:              ; preds = %0
+  store i32 1, ptr %Q
+  %A = load i32, ptr %Q
+  call void @bar( i32 %A )
+  ret void
+bb1:              ; preds = %0
+  store i32 1, ptr %Q
+  %B = load i32, ptr %Q
+  call void @bar( i32 %B )
+  ret void
+bb2:              ; preds = %0
+  store i32 1, ptr %Q
+  %C = load i32, ptr %Q
+  call void @bar( i32 %C )
+  ret void
 }

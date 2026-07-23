@@ -16,7 +16,6 @@
 #include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
-#include <optional>
 
 namespace llvm {
 namespace remarks {
@@ -36,28 +35,22 @@ struct LLVM_ABI YAMLRemarkSerializer : public RemarkSerializer {
   /// The YAML streamer.
   yaml::Output YAMLOutput;
 
-  YAMLRemarkSerializer(raw_ostream &OS, SerializerMode Mode,
-                       std::optional<StringTable> StrTab = std::nullopt);
+  YAMLRemarkSerializer(raw_ostream &OS);
+  YAMLRemarkSerializer(raw_ostream &OS, StringTable StrTabIn);
 
   void emit(const Remark &Remark) override;
-  std::unique_ptr<MetaSerializer> metaSerializer(
-      raw_ostream &OS,
-      std::optional<StringRef> ExternalFilename = std::nullopt) override;
+  std::unique_ptr<MetaSerializer>
+  metaSerializer(raw_ostream &OS, StringRef ExternalFilename) override;
 
   static bool classof(const RemarkSerializer *S) {
     return S->SerializerFormat == Format::YAML;
   }
-
-protected:
-  YAMLRemarkSerializer(Format SerializerFormat, raw_ostream &OS,
-                       SerializerMode Mode,
-                       std::optional<StringTable> StrTab = std::nullopt);
 };
 
 struct LLVM_ABI YAMLMetaSerializer : public MetaSerializer {
-  std::optional<StringRef> ExternalFilename;
+  StringRef ExternalFilename;
 
-  YAMLMetaSerializer(raw_ostream &OS, std::optional<StringRef> ExternalFilename)
+  YAMLMetaSerializer(raw_ostream &OS, StringRef ExternalFilename)
       : MetaSerializer(OS), ExternalFilename(ExternalFilename) {}
 
   void emit() override;

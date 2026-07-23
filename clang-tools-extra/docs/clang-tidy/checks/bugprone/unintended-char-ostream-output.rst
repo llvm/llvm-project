@@ -3,14 +3,14 @@
 bugprone-unintended-char-ostream-output
 =======================================
 
-Finds unintended character output from ``unsigned char`` and ``signed char`` to an
-``ostream``.
+Finds unintended character output from ``unsigned char`` and ``signed char`` to
+an ``ostream``.
 
-Normally, when ``unsigned char (uint8_t)`` or ``signed char (int8_t)`` is used, it
-is more likely a number than a character. However, when it is passed directly to
-``std::ostream``'s ``operator<<``, the result is the character output instead
-of the numeric value. This often contradicts the developer's intent to print
-integer values.
+Normally, when ``unsigned char (uint8_t)`` or ``signed char (int8_t)`` is used,
+it is more likely a number than a character. However, when it is passed
+directly to ``std::ostream``'s ``operator<<``, the result is the character
+output instead of the numeric value. This often contradicts the developer's
+intent to print integer values.
 
 .. code-block:: c++
 
@@ -26,8 +26,9 @@ intent, by default, it will cast to ``unsigned int`` for ``unsigned char`` and
   std::cout << static_cast<unsigned int>(v); // when v is unsigned char
   std::cout << static_cast<int>(v); // when v is signed char
 
-To avoid lengthy cast statements, add prefix ``+`` to the variable can also
-suppress warnings because unary expression will promote the value to an ``int``.
+To avoid lengthy cast statements, add prefix ``+`` to the variable can
+also suppress warnings because unary expression will promote the value
+to an ``int``.
 
 .. code-block:: c++
 

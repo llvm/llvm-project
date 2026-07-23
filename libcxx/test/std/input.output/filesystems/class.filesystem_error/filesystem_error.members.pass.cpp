@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: availability-filesystem-missing
 // UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>

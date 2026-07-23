@@ -21,7 +21,9 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {SystemZ::S_TLSLDM, "TLSLDM"},
 };
 
-SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
+SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
+                                         const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   AssemblerDialect = AD_GNU;
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
@@ -36,7 +38,9 @@ SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
   initializeAtSpecifiers(atSpecifiers);
 }
 
-SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
+SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
+                                           const MCTargetOptions &Options)
+    : MCAsmInfoGOFF(Options) {
   AllowAdditionalComments = false;
   AllowAtInName = true;
   AllowAtAtStartOfIdentifier = true;
@@ -63,13 +67,16 @@ void SystemZMCAsmInfoGOFF::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   switch (Expr.getSpecifier()) {
   case SystemZ::S_None:
-    OS << "A";
+    OS << "AD";
+    break;
+  case SystemZ::S_QCon:
+    OS << "QD";
     break;
   case SystemZ::S_RCon:
-    OS << "R";
+    OS << "RD";
     break;
   case SystemZ::S_VCon:
-    OS << "V";
+    OS << "VD";
     break;
   default:
     llvm_unreachable("Invalid kind");

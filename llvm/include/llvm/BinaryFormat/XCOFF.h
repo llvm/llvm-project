@@ -412,7 +412,7 @@ struct TracebackTable {
   static constexpr uint8_t LanguageIdShift = 16;
 
   // Byte 3
-  static constexpr uint32_t IsGlobaLinkageMask = 0x0000'8000;
+  static constexpr uint32_t IsGlobalLinkageMask = 0x0000'8000;
   static constexpr uint32_t IsOutOfLineEpilogOrPrologueMask = 0x0000'4000;
   static constexpr uint32_t HasTraceBackTableOffsetMask = 0x0000'2000;
   static constexpr uint32_t IsInternalProcedureMask = 0x0000'1000;

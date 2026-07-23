@@ -29,7 +29,8 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
 };
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
-                                 const MCTargetOptions &Options) {
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   CodePointerSize = (TT.isAMDGCN()) ? 8 : 4;
   StackGrowsUp = true;
   HasSingleParameterDotFile = false;
@@ -75,8 +76,9 @@ unsigned AMDGPUMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
   if (STI->hasFeature(AMDGPU::FeatureNSAEncoding))
     return 20;
 
-  // VOP3PX encoding.
-  if (STI->hasFeature(AMDGPU::FeatureGFX950Insts))
+  // VOP3PX/VOP3PX2 encoding.
+  if (STI->hasFeature(AMDGPU::FeatureGFX950Insts) ||
+      STI->hasFeature(AMDGPU::FeatureGFX1250Insts))
     return 16;
 
   // 64-bit instruction with 32-bit literal.

@@ -36,8 +36,9 @@ public:
   /// library.
   ///
   /// \param InputBuffer Buffer holding contents of TAPI text file.
+  /// \param SkipUnknownTriples Whether to ignore unknown or invalid triples.
   LLVM_ABI static Expected<std::unique_ptr<InterfaceFile>>
-  get(MemoryBufferRef InputBuffer);
+  get(MemoryBufferRef InputBuffer, bool SkipUnknownTriples = false);
 
   TextAPIReader() = delete;
 };

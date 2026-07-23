@@ -189,7 +189,12 @@ AttributeCommonInfo::Kind
 AttributeCommonInfo::getParsedKind(const IdentifierInfo *Name,
                                    const IdentifierInfo *ScopeName,
                                    Syntax SyntaxUsed) {
-  return ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
+  AttributeCommonInfo::Kind Kind =
+      ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
+  if (SyntaxUsed == AS_HLSLAnnotation &&
+      Kind == AttributeCommonInfo::Kind::UnknownAttribute)
+    return AttributeCommonInfo::Kind::AT_HLSLUnparsedSemantic;
+  return Kind;
 }
 
 AttributeCommonInfo::AttrArgsInfo
@@ -235,6 +240,15 @@ getScopeFromNormalizedScopeName(StringRef ScopeName) {
 }
 
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
+  // An unknown attribute (getParsedKind() == UnknownAttribute) has no entry in
+  // the generated spelling tables. The name/scope StringSwitches below assume a
+  // known attribute and intentionally have no default, so computing an index
+  // for an unknown *scoped* attribute such as [[ns::foo]] would fall off the
+  // end (getScopeFromNormalizedScopeName aborts). It has a single no-spelling,
+  // so report index 0 instead.
+  if (getParsedKind() == AttributeCommonInfo::UnknownAttribute)
+    return 0;
+
   // Both variables will be used in tablegen generated
   // attribute spell list index matching code.
   auto Syntax = static_cast<AttributeCommonInfo::Syntax>(getSyntax());

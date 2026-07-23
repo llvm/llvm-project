@@ -16,6 +16,9 @@ bar:
 ; CHECK: brmi bar            ; encoding: [0bAAAAA010,0b111100AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 0a f1      brmi .+66
-; INST-NEXT: ea f0      brmi .+58
-; INST-NEXT: 02 f0      brmi .+0
+; INST-NEXT: fa f3      brmi .-2
+; INST-NEXT: VR_7_PCREL .text+0x44
+; INST-NEXT: fa f3      brmi .-2
+; INST-NEXT: VR_7_PCREL .text+0x3e
+; INST-NEXT: fa f3      brmi .-2
+; INST-NEXT: VR_7_PCREL .text+0x6

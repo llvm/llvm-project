@@ -158,13 +158,13 @@ struct OutlinableRegion {
 
   /// For the contained region, split the parent BasicBlock at the starting and
   /// ending instructions of the contained IRSimilarityCandidate.
-  void splitCandidate();
+  LLVM_ABI void splitCandidate();
 
   /// For the contained region, reattach the BasicBlock at the starting and
   /// ending instructions of the contained IRSimilarityCandidate, or if the
   /// function has been extracted, the start and end of the BasicBlock
   /// containing the called function.
-  void reattachCandidate();
+  LLVM_ABI void reattachCandidate();
 
   /// Find a corresponding value for \p V in similar OutlinableRegion \p Other.
   ///
@@ -172,7 +172,8 @@ struct OutlinableRegion {
   /// in.
   /// \param V [in] - The Value to look for in the other region.
   /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
-  Value *findCorrespondingValueIn(const OutlinableRegion &Other, Value *V);
+  LLVM_ABI Value *findCorrespondingValueIn(const OutlinableRegion &Other,
+                                           Value *V);
 
   /// Find a corresponding BasicBlock for \p BB in similar OutlinableRegion \p Other.
   ///
@@ -180,14 +181,14 @@ struct OutlinableRegion {
   /// BasicBlock in.
   /// \param BB [in] - The BasicBlock to look for in the other region.
   /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
-  BasicBlock *findCorrespondingBlockIn(const OutlinableRegion &Other,
-                                       BasicBlock *BB);
+  LLVM_ABI BasicBlock *findCorrespondingBlockIn(const OutlinableRegion &Other,
+                                                BasicBlock *BB);
 
   /// Get the size of the code removed from the region.
   ///
   /// \param [in] TTI - The TargetTransformInfo for the parent function.
   /// \returns the code size of the region
-  InstructionCost getBenefit(TargetTransformInfo &TTI);
+  LLVM_ABI InstructionCost getBenefit(TargetTransformInfo &TTI);
 };
 
 /// This class is a pass that identifies similarity in a Module, extracts
@@ -201,15 +202,8 @@ public:
   IROutliner(function_ref<TargetTransformInfo &(Function &)> GTTI,
              function_ref<IRSimilarityIdentifier &(Module &)> GIRSI,
              function_ref<OptimizationRemarkEmitter &(Function &)> GORE)
-      : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {
-    
-    // Check that the DenseMap implementation has not changed.
-    assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
-           "DenseMapInfo<unsigned>'s empty key isn't -1!");
-    assert(DenseMapInfo<unsigned>::getTombstoneKey() == (unsigned)-2 &&
-           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
-  }
-  bool run(Module &M);
+      : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {}
+  LLVM_ABI bool run(Module &M);
 
 private:
   /// Find repeated similar code sequences in \p M and outline them into new
@@ -312,6 +306,22 @@ private:
                                     std::vector<Function *> &FuncsToRemove,
                                     unsigned &OutlinedFunctionNum);
 
+  /// Fill the new function that will serve as the replacement function for all
+  /// of the extracted regions of a certain structure from the first region in
+  /// the list of regions.  Replace this first region's extracted function with
+  /// the new overall function.
+  ///
+  /// \param [in] M - The module we are outlining from.
+  /// \param [in] CurrentGroup - The group of regions to be outlined.
+  /// \param [in,out] OutputStoreBBs - The output blocks for each different
+  /// set of stores needed for the different functions.
+  /// \param [in,out] FuncsToRemove - Extracted functions to erase from module
+  /// once outlining is complete.
+  void fillOverallFunction(
+      Module &M, OutlinableGroup &CurrentGroup,
+      std::vector<DenseMap<Value *, BasicBlock *>> &OutputStoreBBs,
+      std::vector<Function *> &FuncsToRemove);
+
   /// If true, enables us to outline from functions that have LinkOnceFromODR
   /// linkages.
   bool OutlineFromLinkODRs = false;
@@ -354,7 +364,8 @@ private:
   struct InstructionAllowed : public InstVisitor<InstructionAllowed, bool> {
     InstructionAllowed() = default;
 
-    bool visitBranchInst(BranchInst &BI) { return EnableBranches; }
+    bool visitUncondBrInst(UncondBrInst &BI) { return EnableBranches; }
+    bool visitCondBrInst(CondBrInst &BI) { return EnableBranches; }
     bool visitPHINode(PHINode &PN) { return EnableBranches; }
     // TODO: Handle allocas.
     bool visitAllocaInst(AllocaInst &AI) { return false; }
@@ -389,6 +400,13 @@ private:
         return false;
       // TODO: Update the outliner to capture whether the outlined function
       // needs these extra attributes.
+
+      // `nomerge` states that calls to this function should never be merged
+      // during optimisation. Outlining would have the effect of merging
+      // callsites from separate functions into a single callsite in the
+      // outlined function.
+      if (CI.hasFnAttr(Attribute::NoMerge))
+        return false;
 
       // Functions marked with the swifttailcc and tailcc calling conventions
       // require special handling when outlining musttail functions.  The
@@ -441,9 +459,9 @@ private:
 };
 
 /// Pass to outline similar regions.
-class IROutlinerPass : public PassInfoMixin<IROutlinerPass> {
+class IROutlinerPass : public OptionalPassInfoMixin<IROutlinerPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

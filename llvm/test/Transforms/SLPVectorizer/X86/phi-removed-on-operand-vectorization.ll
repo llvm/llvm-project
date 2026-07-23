@@ -5,7 +5,7 @@ define i32 @test(double %mul321.i) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: double [[MUL321_I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[MUL321_I]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[MUL321_I]], i64 0
 ; CHECK-NEXT:    br label %[[DO_BODY220_I:.*]]
 ; CHECK:       [[DO_BODY220_I]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ [[TMP6:%.*]], %[[DO_BODY221_I:.*]] ], [ zeroinitializer, %[[ENTRY]] ]
@@ -13,10 +13,10 @@ define i32 @test(double %mul321.i) {
 ; CHECK:       [[DO_BODY221_I]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[ADD318_I:%.*]] = fadd double [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP6]] = insertelement <2 x double> [[TMP0]], double [[ADD318_I]], i32 1
+; CHECK-NEXT:    [[TMP6]] = insertelement <2 x double> [[TMP0]], double [[ADD318_I]], i64 1
 ; CHECK-NEXT:    br label %[[DO_BODY220_I]]
 ;
 entry:

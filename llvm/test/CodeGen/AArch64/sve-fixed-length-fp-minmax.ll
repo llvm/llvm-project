@@ -55,10 +55,9 @@ define void @fmaxnm_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fmaxnm z1.h, p0/m, z1.h, z3.h
+; VBITS_EQ_256-NEXT:    fmaxnm z2.h, p0/m, z2.h, z3.h
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
-; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1h { z2.h }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fmaxnm_v32f16:
@@ -154,10 +153,9 @@ define void @fmaxnm_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fmaxnm z1.s, p0/m, z1.s, z3.s
+; VBITS_EQ_256-NEXT:    fmaxnm z2.s, p0/m, z2.s, z3.s
 ; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
-; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1w { z2.s }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fmaxnm_v16f32:
@@ -253,10 +251,9 @@ define void @fmaxnm_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fmaxnm z1.d, p0/m, z1.d, z3.d
+; VBITS_EQ_256-NEXT:    fmaxnm z2.d, p0/m, z2.d, z3.d
 ; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1d { z2.d }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fmaxnm_v8f64:
@@ -356,10 +353,9 @@ define void @fminnm_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fminnm z1.h, p0/m, z1.h, z3.h
+; VBITS_EQ_256-NEXT:    fminnm z2.h, p0/m, z2.h, z3.h
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
-; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1h { z2.h }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fminnm_v32f16:
@@ -455,10 +451,9 @@ define void @fminnm_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fminnm z1.s, p0/m, z1.s, z3.s
+; VBITS_EQ_256-NEXT:    fminnm z2.s, p0/m, z2.s, z3.s
 ; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
-; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1w { z2.s }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fminnm_v16f32:
@@ -554,10 +549,9 @@ define void @fminnm_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fminnm z1.d, p0/m, z1.d, z3.d
+; VBITS_EQ_256-NEXT:    fminnm z2.d, p0/m, z2.d, z3.d
 ; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1d { z2.d }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fminnm_v8f64:
@@ -657,10 +651,9 @@ define void @fmax_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fmax z0.h, p0/m, z0.h, z1.h
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fmax z1.h, p0/m, z1.h, z3.h
+; VBITS_EQ_256-NEXT:    fmax z2.h, p0/m, z2.h, z3.h
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
-; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1h { z2.h }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fmax_v32f16:
@@ -756,10 +749,9 @@ define void @fmax_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fmax z1.s, p0/m, z1.s, z3.s
+; VBITS_EQ_256-NEXT:    fmax z2.s, p0/m, z2.s, z3.s
 ; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
-; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1w { z2.s }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fmax_v16f32:
@@ -855,10 +847,9 @@ define void @fmax_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fmax z0.d, p0/m, z0.d, z1.d
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fmax z1.d, p0/m, z1.d, z3.d
+; VBITS_EQ_256-NEXT:    fmax z2.d, p0/m, z2.d, z3.d
 ; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1d { z2.d }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fmax_v8f64:
@@ -958,10 +949,9 @@ define void @fmin_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fmin z0.h, p0/m, z0.h, z1.h
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fmin z1.h, p0/m, z1.h, z3.h
+; VBITS_EQ_256-NEXT:    fmin z2.h, p0/m, z2.h, z3.h
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
-; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1h { z2.h }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fmin_v32f16:
@@ -1057,10 +1047,9 @@ define void @fmin_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fmin z1.s, p0/m, z1.s, z3.s
+; VBITS_EQ_256-NEXT:    fmin z2.s, p0/m, z2.s, z3.s
 ; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
-; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1w { z2.s }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fmin_v16f32:
@@ -1156,10 +1145,9 @@ define void @fmin_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
 ; VBITS_EQ_256-NEXT:    fmin z0.d, p0/m, z0.d, z1.d
-; VBITS_EQ_256-NEXT:    movprfx z1, z2
-; VBITS_EQ_256-NEXT:    fmin z1.d, p0/m, z1.d, z3.d
+; VBITS_EQ_256-NEXT:    fmin z2.d, p0/m, z2.d, z3.d
 ; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
-; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_EQ_256-NEXT:    st1d { z2.d }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fmin_v8f64:
@@ -1209,80 +1197,696 @@ define void @fmin_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
+;
+; FMAXIMUMNUM
+;
+
+; Don't use SVE for 64-bit vectors.
+define <4 x half> @fmaximumnum_v4f16(<4 x half> %op1, <4 x half> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.4h, v1.4h, v1.4h
+; CHECK-NEXT:    fminnm v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    fmaxnm v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+  %res = call <4 x half> @llvm.maximumnum.v4f16(<4 x half> %op1, <4 x half> %op2)
+  ret <4 x half> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <8 x half> @fmaximumnum_v8f16(<8 x half> %op1, <8 x half> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.8h, v1.8h, v1.8h
+; CHECK-NEXT:    fminnm v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    fmaxnm v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %res = call <8 x half> @llvm.maximumnum.v8f16(<8 x half> %op1, <8 x half> %op2)
+  ret <8 x half> %res
+}
+
+define void @fmaximumnum_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v16f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
+  %res = call <16 x half> @llvm.maximumnum.v16f16(<16 x half> %op1, <16 x half> %op2)
+  store <16 x half> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v32f16(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fmaximumnum_v32f16:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
+; VBITS_EQ_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; VBITS_EQ_256-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; VBITS_EQ_256-NEXT:    fminnm z2.h, p0/m, z2.h, z2.h
+; VBITS_EQ_256-NEXT:    fminnm z3.h, p0/m, z3.h, z3.h
+; VBITS_EQ_256-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
+; VBITS_EQ_256-NEXT:    fmaxnm z2.h, p0/m, z2.h, z3.h
+; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    st1h { z2.h }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fmaximumnum_v32f16:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; VBITS_GE_512-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; VBITS_GE_512-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
+; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <32 x half>, ptr %a
+  %op2 = load <32 x half>, ptr %b
+  %res = call <32 x half> @llvm.maximumnum.v32f16(<32 x half> %op1, <32 x half> %op2)
+  store <32 x half> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v64f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fmaximumnum_v64f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl64
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <64 x half>, ptr %a
+  %op2 = load <64 x half>, ptr %b
+  %res = call <64 x half> @llvm.maximumnum.v64f16(<64 x half> %op1, <64 x half> %op2)
+  store <64 x half> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v128f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fmaximumnum_v128f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl128
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <128 x half>, ptr %a
+  %op2 = load <128 x half>, ptr %b
+  %res = call <128 x half> @llvm.maximumnum.v128f16(<128 x half> %op1, <128 x half> %op2)
+  store <128 x half> %res, ptr %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <2 x float> @fmaximumnum_v2f32(<2 x float> %op1, <2 x float> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.2s, v1.2s, v1.2s
+; CHECK-NEXT:    fminnm v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmaxnm v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+  %res = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %op1, <2 x float> %op2)
+  ret <2 x float> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <4 x float> @fmaximumnum_v4f32(<4 x float> %op1, <4 x float> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fminnm v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %res = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> %op1, <4 x float> %op2)
+  ret <4 x float> %res
+}
+
+define void @fmaximumnum_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
+  %res = call <8 x float> @llvm.maximumnum.v8f32(<8 x float> %op1, <8 x float> %op2)
+  store <8 x float> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v16f32(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fmaximumnum_v16f32:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; VBITS_EQ_256-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; VBITS_EQ_256-NEXT:    fminnm z2.s, p0/m, z2.s, z2.s
+; VBITS_EQ_256-NEXT:    fminnm z3.s, p0/m, z3.s, z3.s
+; VBITS_EQ_256-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; VBITS_EQ_256-NEXT:    fmaxnm z2.s, p0/m, z2.s, z3.s
+; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    st1w { z2.s }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fmaximumnum_v16f32:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; VBITS_GE_512-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; VBITS_GE_512-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <16 x float>, ptr %a
+  %op2 = load <16 x float>, ptr %b
+  %res = call <16 x float> @llvm.maximumnum.v16f32(<16 x float> %op1, <16 x float> %op2)
+  store <16 x float> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v32f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fmaximumnum_v32f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <32 x float>, ptr %a
+  %op2 = load <32 x float>, ptr %b
+  %res = call <32 x float> @llvm.maximumnum.v32f32(<32 x float> %op1, <32 x float> %op2)
+  store <32 x float> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fmaximumnum_v64f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl64
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <64 x float>, ptr %a
+  %op2 = load <64 x float>, ptr %b
+  %res = call <64 x float> @llvm.maximumnum.v64f32(<64 x float> %op1, <64 x float> %op2)
+  store <64 x float> %res, ptr %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <1 x double> @fmaximumnum_v1f64(<1 x double> %op1, <1 x double> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    fminnm d0, d0, d0
+; CHECK-NEXT:    fmaxnm d0, d0, d1
+; CHECK-NEXT:    ret
+  %res = call <1 x double> @llvm.maximumnum.v1f64(<1 x double> %op1, <1 x double> %op2)
+  ret <1 x double> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <2 x double> @fmaximumnum_v2f64(<2 x double> %op1, <2 x double> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.2d, v1.2d, v1.2d
+; CHECK-NEXT:    fminnm v0.2d, v0.2d, v0.2d
+; CHECK-NEXT:    fmaxnm v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+  %res = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %op1, <2 x double> %op2)
+  ret <2 x double> %res
+}
+
+define void @fmaximumnum_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
+  %res = call <4 x double> @llvm.maximumnum.v4f64(<4 x double> %op1, <4 x double> %op2)
+  store <4 x double> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v8f64(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fmaximumnum_v8f64:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; VBITS_EQ_256-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; VBITS_EQ_256-NEXT:    fminnm z2.d, p0/m, z2.d, z2.d
+; VBITS_EQ_256-NEXT:    fminnm z3.d, p0/m, z3.d, z3.d
+; VBITS_EQ_256-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
+; VBITS_EQ_256-NEXT:    fmaxnm z2.d, p0/m, z2.d, z3.d
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    st1d { z2.d }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fmaximumnum_v8f64:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; VBITS_GE_512-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; VBITS_GE_512-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
+; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <8 x double>, ptr %a
+  %op2 = load <8 x double>, ptr %b
+  %res = call <8 x double> @llvm.maximumnum.v8f64(<8 x double> %op1, <8 x double> %op2)
+  store <8 x double> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fmaximumnum_v16f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl16
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <16 x double>, ptr %a
+  %op2 = load <16 x double>, ptr %b
+  %res = call <16 x double> @llvm.maximumnum.v16f64(<16 x double> %op1, <16 x double> %op2)
+  store <16 x double> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fmaximumnum_v32f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl32
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <32 x double>, ptr %a
+  %op2 = load <32 x double>, ptr %b
+  %res = call <32 x double> @llvm.maximumnum.v32f64(<32 x double> %op1, <32 x double> %op2)
+  store <32 x double> %res, ptr %a
+  ret void
+}
+
+;
+; FMINIMUMNUM
+;
+
+; Don't use SVE for 64-bit vectors.
+define <4 x half> @fminimumnum_v4f16(<4 x half> %op1, <4 x half> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.4h, v1.4h, v1.4h
+; CHECK-NEXT:    fminnm v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    fminnm v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+  %res = call <4 x half> @llvm.minimumnum.v4f16(<4 x half> %op1, <4 x half> %op2)
+  ret <4 x half> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <8 x half> @fminimumnum_v8f16(<8 x half> %op1, <8 x half> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.8h, v1.8h, v1.8h
+; CHECK-NEXT:    fminnm v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    fminnm v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %res = call <8 x half> @llvm.minimumnum.v8f16(<8 x half> %op1, <8 x half> %op2)
+  ret <8 x half> %res
+}
+
+define void @fminimumnum_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v16f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
+  %res = call <16 x half> @llvm.minimumnum.v16f16(<16 x half> %op1, <16 x half> %op2)
+  store <16 x half> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v32f16(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fminimumnum_v32f16:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
+; VBITS_EQ_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; VBITS_EQ_256-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; VBITS_EQ_256-NEXT:    fminnm z2.h, p0/m, z2.h, z2.h
+; VBITS_EQ_256-NEXT:    fminnm z3.h, p0/m, z3.h, z3.h
+; VBITS_EQ_256-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
+; VBITS_EQ_256-NEXT:    fminnm z2.h, p0/m, z2.h, z3.h
+; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    st1h { z2.h }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fminimumnum_v32f16:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; VBITS_GE_512-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; VBITS_GE_512-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
+; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <32 x half>, ptr %a
+  %op2 = load <32 x half>, ptr %b
+  %res = call <32 x half> @llvm.minimumnum.v32f16(<32 x half> %op1, <32 x half> %op2)
+  store <32 x half> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v64f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fminimumnum_v64f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl64
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <64 x half>, ptr %a
+  %op2 = load <64 x half>, ptr %b
+  %res = call <64 x half> @llvm.minimumnum.v64f16(<64 x half> %op1, <64 x half> %op2)
+  store <64 x half> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v128f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fminimumnum_v128f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl128
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <128 x half>, ptr %a
+  %op2 = load <128 x half>, ptr %b
+  %res = call <128 x half> @llvm.minimumnum.v128f16(<128 x half> %op1, <128 x half> %op2)
+  store <128 x half> %res, ptr %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <2 x float> @fminimumnum_v2f32(<2 x float> %op1, <2 x float> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.2s, v1.2s, v1.2s
+; CHECK-NEXT:    fminnm v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fminnm v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+  %res = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %op1, <2 x float> %op2)
+  ret <2 x float> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <4 x float> @fminimumnum_v4f32(<4 x float> %op1, <4 x float> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fminnm v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fminnm v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %res = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> %op1, <4 x float> %op2)
+  ret <4 x float> %res
+}
+
+define void @fminimumnum_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
+  %res = call <8 x float> @llvm.minimumnum.v8f32(<8 x float> %op1, <8 x float> %op2)
+  store <8 x float> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v16f32(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fminimumnum_v16f32:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; VBITS_EQ_256-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; VBITS_EQ_256-NEXT:    fminnm z2.s, p0/m, z2.s, z2.s
+; VBITS_EQ_256-NEXT:    fminnm z3.s, p0/m, z3.s, z3.s
+; VBITS_EQ_256-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; VBITS_EQ_256-NEXT:    fminnm z2.s, p0/m, z2.s, z3.s
+; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    st1w { z2.s }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fminimumnum_v16f32:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; VBITS_GE_512-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; VBITS_GE_512-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <16 x float>, ptr %a
+  %op2 = load <16 x float>, ptr %b
+  %res = call <16 x float> @llvm.minimumnum.v16f32(<16 x float> %op1, <16 x float> %op2)
+  store <16 x float> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v32f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fminimumnum_v32f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <32 x float>, ptr %a
+  %op2 = load <32 x float>, ptr %b
+  %res = call <32 x float> @llvm.minimumnum.v32f32(<32 x float> %op1, <32 x float> %op2)
+  store <32 x float> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fminimumnum_v64f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl64
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <64 x float>, ptr %a
+  %op2 = load <64 x float>, ptr %b
+  %res = call <64 x float> @llvm.minimumnum.v64f32(<64 x float> %op1, <64 x float> %op2)
+  store <64 x float> %res, ptr %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <1 x double> @fminimumnum_v1f64(<1 x double> %op1, <1 x double> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    fminnm d0, d0, d0
+; CHECK-NEXT:    fminnm d0, d0, d1
+; CHECK-NEXT:    ret
+  %res = call <1 x double> @llvm.minimumnum.v1f64(<1 x double> %op1, <1 x double> %op2)
+  ret <1 x double> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <2 x double> @fminimumnum_v2f64(<2 x double> %op1, <2 x double> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.2d, v1.2d, v1.2d
+; CHECK-NEXT:    fminnm v0.2d, v0.2d, v0.2d
+; CHECK-NEXT:    fminnm v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+  %res = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %op1, <2 x double> %op2)
+  ret <2 x double> %res
+}
+
+define void @fminimumnum_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
+  %res = call <4 x double> @llvm.minimumnum.v4f64(<4 x double> %op1, <4 x double> %op2)
+  store <4 x double> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v8f64(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fminimumnum_v8f64:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; VBITS_EQ_256-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; VBITS_EQ_256-NEXT:    fminnm z2.d, p0/m, z2.d, z2.d
+; VBITS_EQ_256-NEXT:    fminnm z3.d, p0/m, z3.d, z3.d
+; VBITS_EQ_256-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
+; VBITS_EQ_256-NEXT:    fminnm z2.d, p0/m, z2.d, z3.d
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    st1d { z2.d }, p0, [x0]
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fminimumnum_v8f64:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; VBITS_GE_512-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; VBITS_GE_512-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
+; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <8 x double>, ptr %a
+  %op2 = load <8 x double>, ptr %b
+  %res = call <8 x double> @llvm.minimumnum.v8f64(<8 x double> %op1, <8 x double> %op2)
+  store <8 x double> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fminimumnum_v16f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl16
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <16 x double>, ptr %a
+  %op2 = load <16 x double>, ptr %b
+  %res = call <16 x double> @llvm.minimumnum.v16f64(<16 x double> %op1, <16 x double> %op2)
+  store <16 x double> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fminimumnum_v32f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl32
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %op1 = load <32 x double>, ptr %a
+  %op2 = load <32 x double>, ptr %b
+  %res = call <32 x double> @llvm.minimumnum.v32f64(<32 x double> %op1, <32 x double> %op2)
+  store <32 x double> %res, ptr %a
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
-
-declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>)
-declare <8 x half> @llvm.minnum.v8f16(<8 x half>, <8 x half>)
-declare <16 x half> @llvm.minnum.v16f16(<16 x half>, <16 x half>)
-declare <32 x half> @llvm.minnum.v32f16(<32 x half>, <32 x half>)
-declare <64 x half> @llvm.minnum.v64f16(<64 x half>, <64 x half>)
-declare <128 x half> @llvm.minnum.v128f16(<128 x half>, <128 x half>)
-declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
-declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>)
-declare <8 x float> @llvm.minnum.v8f32(<8 x float>, <8 x float>)
-declare <16 x float> @llvm.minnum.v16f32(<16 x float>, <16 x float>)
-declare <32 x float> @llvm.minnum.v32f32(<32 x float>, <32 x float>)
-declare <64 x float> @llvm.minnum.v64f32(<64 x float>, <64 x float>)
-declare <1 x double> @llvm.minnum.v1f64(<1 x double>, <1 x double>)
-declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>)
-declare <4 x double> @llvm.minnum.v4f64(<4 x double>, <4 x double>)
-declare <8 x double> @llvm.minnum.v8f64(<8 x double>, <8 x double>)
-declare <16 x double> @llvm.minnum.v16f64(<16 x double>, <16 x double>)
-declare <32 x double> @llvm.minnum.v32f64(<32 x double>, <32 x double>)
-
-declare <4 x half> @llvm.maxnum.v4f16(<4 x half>, <4 x half>)
-declare <8 x half> @llvm.maxnum.v8f16(<8 x half>, <8 x half>)
-declare <16 x half> @llvm.maxnum.v16f16(<16 x half>, <16 x half>)
-declare <32 x half> @llvm.maxnum.v32f16(<32 x half>, <32 x half>)
-declare <64 x half> @llvm.maxnum.v64f16(<64 x half>, <64 x half>)
-declare <128 x half> @llvm.maxnum.v128f16(<128 x half>, <128 x half>)
-declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>)
-declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>)
-declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>)
-declare <16 x float> @llvm.maxnum.v16f32(<16 x float>, <16 x float>)
-declare <32 x float> @llvm.maxnum.v32f32(<32 x float>, <32 x float>)
-declare <64 x float> @llvm.maxnum.v64f32(<64 x float>, <64 x float>)
-declare <1 x double> @llvm.maxnum.v1f64(<1 x double>, <1 x double>)
-declare <2 x double> @llvm.maxnum.v2f64(<2 x double>, <2 x double>)
-declare <4 x double> @llvm.maxnum.v4f64(<4 x double>, <4 x double>)
-declare <8 x double> @llvm.maxnum.v8f64(<8 x double>, <8 x double>)
-declare <16 x double> @llvm.maxnum.v16f64(<16 x double>, <16 x double>)
-declare <32 x double> @llvm.maxnum.v32f64(<32 x double>, <32 x double>)
-
-declare <4 x half> @llvm.minimum.v4f16(<4 x half>, <4 x half>)
-declare <8 x half> @llvm.minimum.v8f16(<8 x half>, <8 x half>)
-declare <16 x half> @llvm.minimum.v16f16(<16 x half>, <16 x half>)
-declare <32 x half> @llvm.minimum.v32f16(<32 x half>, <32 x half>)
-declare <64 x half> @llvm.minimum.v64f16(<64 x half>, <64 x half>)
-declare <128 x half> @llvm.minimum.v128f16(<128 x half>, <128 x half>)
-declare <2 x float> @llvm.minimum.v2f32(<2 x float>, <2 x float>)
-declare <4 x float> @llvm.minimum.v4f32(<4 x float>, <4 x float>)
-declare <8 x float> @llvm.minimum.v8f32(<8 x float>, <8 x float>)
-declare <16 x float> @llvm.minimum.v16f32(<16 x float>, <16 x float>)
-declare <32 x float> @llvm.minimum.v32f32(<32 x float>, <32 x float>)
-declare <64 x float> @llvm.minimum.v64f32(<64 x float>, <64 x float>)
-declare <1 x double> @llvm.minimum.v1f64(<1 x double>, <1 x double>)
-declare <2 x double> @llvm.minimum.v2f64(<2 x double>, <2 x double>)
-declare <4 x double> @llvm.minimum.v4f64(<4 x double>, <4 x double>)
-declare <8 x double> @llvm.minimum.v8f64(<8 x double>, <8 x double>)
-declare <16 x double> @llvm.minimum.v16f64(<16 x double>, <16 x double>)
-declare <32 x double> @llvm.minimum.v32f64(<32 x double>, <32 x double>)
-
-declare <4 x half> @llvm.maximum.v4f16(<4 x half>, <4 x half>)
-declare <8 x half> @llvm.maximum.v8f16(<8 x half>, <8 x half>)
-declare <16 x half> @llvm.maximum.v16f16(<16 x half>, <16 x half>)
-declare <32 x half> @llvm.maximum.v32f16(<32 x half>, <32 x half>)
-declare <64 x half> @llvm.maximum.v64f16(<64 x half>, <64 x half>)
-declare <128 x half> @llvm.maximum.v128f16(<128 x half>, <128 x half>)
-declare <2 x float> @llvm.maximum.v2f32(<2 x float>, <2 x float>)
-declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
-declare <8 x float> @llvm.maximum.v8f32(<8 x float>, <8 x float>)
-declare <16 x float> @llvm.maximum.v16f32(<16 x float>, <16 x float>)
-declare <32 x float> @llvm.maximum.v32f32(<32 x float>, <32 x float>)
-declare <64 x float> @llvm.maximum.v64f32(<64 x float>, <64 x float>)
-declare <1 x double> @llvm.maximum.v1f64(<1 x double>, <1 x double>)
-declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
-declare <4 x double> @llvm.maximum.v4f64(<4 x double>, <4 x double>)
-declare <8 x double> @llvm.maximum.v8f64(<8 x double>, <8 x double>)
-declare <16 x double> @llvm.maximum.v16f64(<16 x double>, <16 x double>)
-declare <32 x double> @llvm.maximum.v32f64(<32 x double>, <32 x double>)

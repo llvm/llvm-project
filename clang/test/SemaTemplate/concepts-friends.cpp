@@ -548,3 +548,21 @@ Template<void, 4> f{};
 static_assert(+Template<float, 5>{} == 5);
 
 } // namespace GH78101
+
+namespace GH156225 {
+
+struct Test {
+  template <class T>
+  friend constexpr bool foo()
+    requires([] {
+      bool flags[1];
+      for (bool x : flags)
+        return false;
+      return true;
+    }())
+  {
+    return {};
+  }
+};
+
+}

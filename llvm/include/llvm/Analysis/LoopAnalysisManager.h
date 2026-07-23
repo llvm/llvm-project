@@ -36,8 +36,6 @@ namespace llvm {
 
 class AAResults;
 class AssumptionCache;
-class BlockFrequencyInfo;
-class BranchProbabilityInfo;
 class DominatorTree;
 class Function;
 class Loop;
@@ -59,8 +57,6 @@ struct LoopStandardAnalysisResults {
   ScalarEvolution &SE;
   TargetLibraryInfo &TLI;
   TargetTransformInfo &TTI;
-  BlockFrequencyInfo *BFI;
-  BranchProbabilityInfo *BPI;
   MemorySSA *MSSA;
 };
 
@@ -94,7 +90,7 @@ public:
   Result(Result &&Arg)
       : InnerAM(std::move(Arg.InnerAM)), LI(Arg.LI), MSSAUsed(Arg.MSSAUsed) {
     // We have to null out the analysis manager in the moved-from state
-    // because we are taking ownership of the responsibilty to clear the
+    // because we are taking ownership of the responsibility to clear the
     // analysis state.
     Arg.InnerAM = nullptr;
   }
@@ -103,7 +99,7 @@ public:
     LI = RHS.LI;
     MSSAUsed = RHS.MSSAUsed;
     // We have to null out the analysis manager in the moved-from state
-    // because we are taking ownership of the responsibilty to clear the
+    // because we are taking ownership of the responsibility to clear the
     // analysis state.
     RHS.InnerAM = nullptr;
     return *this;

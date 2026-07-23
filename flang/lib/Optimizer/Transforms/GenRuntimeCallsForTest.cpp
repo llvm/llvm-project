@@ -23,14 +23,10 @@
 ///    return %0 : i1
 ///  }
 //===----------------------------------------------------------------------===//
-#include "flang/Common/static-multimap-view.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/io-api.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 
 namespace fir {
 #define GEN_PASS_DEF_GENRUNTIMECALLSFORTEST
@@ -91,8 +87,8 @@ void GenRuntimeCallsForTestPass::runOnOperation() {
     // Generate the wrapper function body that consists of a call and return.
     builder.setInsertionPointToStart(callerFunc.addEntryBlock());
     mlir::Block::BlockArgListType args = callerFunc.front().getArguments();
-    auto callOp = builder.create<fir::CallOp>(loc, funcOp, args);
-    builder.create<mlir::func::ReturnOp>(loc, callOp.getResults());
+    auto callOp = fir::CallOp::create(builder, loc, funcOp, args);
+    mlir::func::ReturnOp::create(builder, loc, callOp.getResults());
 
     newFuncs.push_back(callerFunc.getOperation());
     builder.restoreInsertionPoint(insertPt);

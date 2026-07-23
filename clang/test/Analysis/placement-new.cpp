@@ -38,7 +38,7 @@ void f(void *place) {
   (void)lp;
 }
 void g() {
-  char buf[2]; // expected-note {{'buf' initialized here}}
+  char buf[2]; // expected-note {{'buf' declared without an initial value}}
   f(&buf);     // expected-note 2 {{}}
 }
 } // namespace testArrayBuffer
@@ -78,7 +78,7 @@ void g() {
 namespace testPtrToArrayAsPlace {
 void f() {
   //char *st = new char [8];
-  char buf[3];                // expected-note {{'buf' initialized here}}
+  char buf[3];                // expected-note {{'buf' declared without an initial value}}
   void *st = buf;             // expected-note {{'st' initialized here}}
   long *lp = ::new (st) long; // expected-warning{{Storage provided to placement new is only 3 bytes, whereas the allocated type requires 8 bytes}} expected-note 1 {{}}
   (void)lp;
@@ -87,7 +87,7 @@ void f() {
 
 namespace testPtrToArrayWithOffsetAsPlace {
 void f() {
-  int buf[3];                      // expected-note {{'buf' initialized here}}
+  int buf[3];                      // expected-note {{'buf' declared without an initial value}}
   long *lp = ::new (buf + 2) long; // expected-warning{{Storage provided to placement new is only 4 bytes, whereas the allocated type requires 8 bytes}} expected-note 1 {{}}
   (void)lp;
 }
@@ -95,7 +95,7 @@ void f() {
 
 namespace testZeroSize {
 void f() {
-  int buf[3];                      // expected-note {{'buf' initialized here}}
+  int buf[3];                      // expected-note {{'buf' declared without an initial value}}
   long *lp = ::new (buf + 3) long; // expected-warning{{Storage provided to placement new is only 0 bytes, whereas the allocated type requires 8 bytes}} expected-note 1 {{}}
   (void)lp;
 }
@@ -103,7 +103,7 @@ void f() {
 
 namespace testNegativeSize {
 void f() {
-  int buf[3];                      // expected-note {{'buf' initialized here}}
+  int buf[3];                      // expected-note {{'buf' declared without an initial value}}
   long *lp = ::new (buf + 4) long; // expected-warning{{Storage provided to placement new is only -4 bytes, whereas the allocated type requires 8 bytes}} expected-note 1 {{}}
   (void)lp;
 }
@@ -123,7 +123,7 @@ void g2() {
 
 namespace testMultiDimensionalArray {
 void f() {
-  char buf[2][3];              // expected-note {{'buf' initialized here}}
+  char buf[2][3];              // expected-note {{'buf' declared without an initial value}}
   long *lp = ::new (buf) long; // expected-warning{{Storage provided to placement new is only 6 bytes, whereas the allocated type requires 8 bytes}} expected-note 1 {{}}
   (void)lp;
 }
@@ -131,7 +131,7 @@ void f() {
 
 namespace testMultiDimensionalArray2 {
 void f() {
-  char buf[2][3];                  // expected-note {{'buf' initialized here}}
+  char buf[2][3];                  // expected-note {{'buf' declared without an initial value}}
   long *lp = ::new (buf + 1) long; // expected-warning{{Storage provided to placement new is only 3 bytes, whereas the allocated type requires 8 bytes}} expected-note 1 {{}}
   (void)lp;
 }
@@ -139,7 +139,7 @@ void f() {
 
 namespace testMultiDimensionalArray3 {
 void f() {
-  char buf[2][3];                     // expected-note {{'buf' initialized here}}
+  char buf[2][3];                     // expected-note {{'buf' declared without an initial value}}
   long *lp = ::new (&buf[1][1]) long; // expected-warning{{Storage provided to placement new is only 2 bytes, whereas the allocated type requires 8 bytes}} expected-note 1 {{}}
   (void)lp;
 }
@@ -166,10 +166,29 @@ void f1() {
     short a;
   };
 
-  // bad (not enough space).
+  // On some systems, (notably before MSVC 16.7), a non-allocating placement
+  // array new could allocate more memory than the nominal size of the array.
+
+  // Since CWG 2382 (implemented in MSVC 16.7), overhead was disallowed for non-allocating placement new.
+  //  See:
+  //    https://learn.microsoft.com/en-us/cpp/overview/visual-cpp-language-conformance?view=msvc-170
+  //    https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1969r0.html#2382
+
+  // However, as of 17.1, there is a regression when the type comes from a template
+  // parameter where MSVC reintroduces overhead.
+  //  See:
+  //    https://developercommunity.visualstudio.com/t/10777485
+  //    https://godbolt.org/z/E1z1Tsfvj
+
+  // The checker doesn't warn here because this behavior only affects older
+  // MSVC versions (<16.7) or certain specific versions (17.1).
+  // Suppressing warnings avoids false positives on standard-compliant compilers
+  // and modern MSVC versions, but users of affected MSVC versions should be
+  // aware of potential buffer size issues.
+
   const unsigned N = 32;
-  alignas(S) unsigned char buffer1[sizeof(S) * N]; // expected-note {{'buffer1' initialized here}}
-  ::new (buffer1) S[N];                            // expected-warning{{Storage provided to placement new is only 64 bytes, whereas the allocated array type requires more space for internal needs}} expected-note 1 {{}}
+  alignas(S) unsigned char buffer1[sizeof(S) * N]; 
+  ::new (buffer1) S[N]; // no-warning: See comments above
 }
 
 void f2() {
@@ -177,10 +196,11 @@ void f2() {
     short a;
   };
 
-  // maybe ok but we need to warn.
+  // On some systems, placement array new could allocate more memory than the nominal size of the array.
+  // See the comment at f1() above for more details.
   const unsigned N = 32;
-  alignas(S) unsigned char buffer2[sizeof(S) * N + sizeof(int)]; // expected-note {{'buffer2' initialized here}}
-  ::new (buffer2) S[N];                                          // expected-warning{{68 bytes is possibly not enough for array allocation which requires 64 bytes. Current overhead requires the size of 4 bytes}} expected-note 1 {{}}
+  alignas(S) unsigned char buffer2[sizeof(S) * N + sizeof(int)]; 
+  ::new (buffer2) S[N]; // no-warning: See comments above
 }
 } // namespace testArrayTypesAllocation
 
@@ -231,13 +251,13 @@ void f4() {
 }
 
 void f5() {
-  short b[10]; // expected-note {{'b' initialized here}}
+  short b[10]; // expected-note {{'b' declared without an initial value}}
 
   ::new (&b) long; // expected-warning{{Storage type is aligned to 2 bytes but allocated type is aligned to 8 bytes}} expected-note 1 {{}}
 }
 
 void f6() {
-  short b[10]; // expected-note {{'b' initialized here}}
+  short b[10]; // expected-note {{'b' declared without an initial value}}
 
   // bad (same as previous but checks ElementRegion case)
   ::new (&b[0]) long; // expected-warning{{Storage type is aligned to 2 bytes but allocated type is aligned to 8 bytes}} expected-note 1 {{}}
@@ -251,7 +271,7 @@ void f7() {
 }
 
 void f8() {
-  alignas(alignof(long)) short b[10]; // expected-note {{'b' initialized here}}
+  alignas(alignof(long)) short b[10]; // expected-note {{'b' declared without an initial value}}
 
   // ok. aligned to long(ok). offset 3*2(ok)
   ::new (&b[3]) long; // expected-warning{{Storage type is aligned to 6 bytes but allocated type is aligned to 8 bytes}} expected-note 1 {{}}

@@ -138,13 +138,13 @@ void RTDEF(PointerAssociateRemappingMonomorphic)(Descriptor &pointer,
 }
 
 RT_API_ATTRS void *AllocateValidatedPointerPayload(
-    std::size_t byteSize, int allocatorIdx) {
+    std::size_t byteSize, int allocatorIdx, std::size_t alignment) {
   // Add space for a footer to validate during deallocation.
   constexpr std::size_t align{sizeof(std::uintptr_t)};
   byteSize = ((byteSize + align - 1) / align) * align;
   std::size_t total{byteSize + sizeof(std::uintptr_t)};
   AllocFct alloc{allocatorRegistry.GetAllocator(allocatorIdx)};
-  void *p{alloc(total, /*asyncObject=*/nullptr)};
+  void *p{alloc(total, alignment, /*asyncObject=*/nullptr)};
   if (p && allocatorIdx == 0) {
     // Fill the footer word with the XOR of the ones' complement of
     // the base address, which is a value that would be highly unlikely
@@ -157,7 +157,8 @@ RT_API_ATTRS void *AllocateValidatedPointerPayload(
 }
 
 int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine,
+    MemcpyFct memcpyFct) {
   Terminator terminator{sourceFile, sourceLine};
   if (!pointer.IsPointer()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
@@ -169,7 +170,9 @@ int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
     elementBytes = pointer.raw().elem_len = 0;
   }
   std::size_t byteSize{pointer.Elements() * elementBytes};
-  void *p{AllocateValidatedPointerPayload(byteSize, pointer.GetAllocIdx())};
+  std::size_t alignment{pointer.rank() > 0 ? kDefaultArrayAlignment : 0};
+  void *p{AllocateValidatedPointerPayload(
+      byteSize, pointer.GetAllocIdx(), alignment)};
   if (!p) {
     return ReturnError(terminator, CFI_ERROR_MEM_ALLOCATION, errMsg, hasStat);
   }
@@ -179,7 +182,8 @@ int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
   if (const DescriptorAddendum * addendum{pointer.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       if (!derived->noInitializationNeeded()) {
-        stat = Initialize(pointer, *derived, terminator, hasStat, errMsg);
+        stat = Initialize(
+            pointer, *derived, terminator, hasStat, errMsg, memcpyFct);
       }
     }
   }
@@ -267,8 +271,10 @@ bool RTDEF(PointerIsAssociatedWith)(
   if (!target) {
     return pointer.raw().base_addr != nullptr;
   }
-  if (!target->raw().base_addr ||
-      (target->raw().type != CFI_type_struct && target->ElementBytes() == 0)) {
+  if (!target->raw().base_addr || target->ElementBytes() == 0 ||
+      target->Elements() == 0) {
+    // F2023, 16.9.20, p5, case (v)-(vi): don't associate pointers with
+    // targets that have zero sized storage sequence.
     return false;
   }
   int rank{pointer.rank()};

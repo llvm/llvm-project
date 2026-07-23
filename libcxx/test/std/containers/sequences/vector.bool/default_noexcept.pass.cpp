@@ -16,8 +16,9 @@
 // For vector<>, this was added to the standard by N4258,
 //   but vector<bool> was not changed.
 
-#include <vector>
 #include <cassert>
+#include <vector>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "test_allocator.h"

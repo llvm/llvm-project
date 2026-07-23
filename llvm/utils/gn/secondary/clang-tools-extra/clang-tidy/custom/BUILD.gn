@@ -1,0 +1,14 @@
+static_library("custom") {
+  output_name = "clangTidyCustomModule"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang-tools-extra/clang-query",
+    "//clang-tools-extra/clang-tidy",
+    "//clang-tools-extra/clang-tidy/utils",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "CustomTidyModule.cpp",
+    "QueryCheck.cpp",
+  ]
+}

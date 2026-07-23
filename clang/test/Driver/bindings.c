@@ -30,4 +30,4 @@
 
 // Darwin StaticLibTool binding
 // RUN: %clang -target i386-apple-darwin11 -ccc-print-bindings --emit-static-lib %s 2>&1 | FileCheck %s --check-prefix=CHECK16
-// CHECK16: "i386-apple-darwin11" - "darwin::StaticLibTool", inputs: ["{{.*}}.o"], output: "a.out"
+// CHECK16: "i386-apple-macosx10.7.0" - "darwin::StaticLibTool", inputs: ["{{.*}}.o"], output: "a.out"

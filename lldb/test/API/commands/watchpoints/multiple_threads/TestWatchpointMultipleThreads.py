@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class WatchpointForMultipleThreadsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     main_spec = lldb.SBFileSpec("main.cpp", False)

@@ -57,6 +57,7 @@ endif()
 add_clang_library(clangBasic
   ASTSourceDescriptor.cpp
   Attributes.cpp
+  AtomicLineLogger.cpp
   Builtins.cpp
   CLWarnings.cpp
   CharInfo.cpp
@@ -69,7 +70,6 @@ add_clang_library(clangBasic
   ExpressionTraits.cpp
   FileEntry.cpp
   FileManager.cpp
-  FileSystemStatCache.cpp
   IdentifierTable.cpp
   LangOptions.cpp
   LangStandards.cpp

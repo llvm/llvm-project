@@ -43,6 +43,21 @@ def int_wasm_ref_is_null_exn :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_exnref_ty], [IntrNoMem],
                         "llvm.wasm.ref.is_null.exn">;
 
+def int_wasm_ref_test_func
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_vararg_ty],
+                            [IntrNoMem]>;
+
+//===----------------------------------------------------------------------===//
+// funcref <--> pointer conversion intrinsics
+//===----------------------------------------------------------------------===//
+def int_wasm_funcref_to_ptr :
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_funcref_ty],
+                        [IntrNoMem], "llvm.wasm.funcref.to_ptr">;
+
+def int_wasm_ptr_to_funcref :
+  DefaultAttrsIntrinsic<[llvm_funcref_ty], [llvm_ptr_ty],
+                        [IntrNoMem], "llvm.wasm.ptr.to_funcref">;
+
 //===----------------------------------------------------------------------===//
 // Table intrinsics
 //===----------------------------------------------------------------------===//

@@ -98,7 +98,15 @@ class HelpTextVariant<list<OptionVisibility> visibilities, string text> {
   string Text = text;
 }
 
-class Option<list<string> prefixes, string name, OptionKind kind> {
+// Class definition for positional subcommands.
+class SubCommand<string name, string helpText, string usage = ""> {
+  string Name = name;
+  string HelpText = helpText;
+  string Usage = usage;
+}
+
+class Option<list<string> prefixes, string name, OptionKind kind,
+             list<SubCommand> subcommands = []> {
   string EnumName = ?; // Uses the def name if undefined.
   list<string> Prefixes = prefixes;
   string Name = name;
@@ -126,29 +134,35 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   code NormalizedValuesScope = "";
   code Normalizer = "";
   code Denormalizer = "";
-  code ValueMerger = "mergeForwardValue";
-  code ValueExtractor = "extractForwardValue";
   list<code> NormalizedValues = ?;
+  list<SubCommand> SubCommands = subcommands;
 }
 
 // Helpers for defining options.
 
-class Flag<list<string> prefixes, string name>
-  : Option<prefixes, name, KIND_FLAG>;
-class Joined<list<string> prefixes, string name>
-  : Option<prefixes, name, KIND_JOINED>;
-class Separate<list<string> prefixes, string name>
-  : Option<prefixes, name, KIND_SEPARATE>;
-class CommaJoined<list<string> prefixes, string name>
-  : Option<prefixes, name, KIND_COMMAJOINED>;
-class MultiArg<list<string> prefixes, string name, int numargs>
-  : Option<prefixes, name, KIND_MULTIARG> {
+class Flag<list<string> prefixes, string name,
+           list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_FLAG, subcommands>;
+class Joined<list<string> prefixes, string name,
+             list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_JOINED, subcommands>;
+class Separate<list<string> prefixes, string name,
+               list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_SEPARATE, subcommands>;
+class CommaJoined<list<string> prefixes, string name,
+                  list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_COMMAJOINED, subcommands>;
+class MultiArg<list<string> prefixes, string name, int numargs,
+               list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_MULTIARG, subcommands> {
   int NumArgs = numargs;
 }
-class JoinedOrSeparate<list<string> prefixes, string name>
-  : Option<prefixes, name, KIND_JOINED_OR_SEPARATE>;
-class JoinedAndSeparate<list<string> prefixes, string name>
-  : Option<prefixes, name, KIND_JOINED_AND_SEPARATE>;
+class JoinedOrSeparate<list<string> prefixes, string name,
+                       list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_JOINED_OR_SEPARATE, subcommands>;
+class JoinedAndSeparate<list<string> prefixes, string name,
+                        list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_JOINED_AND_SEPARATE, subcommands>;
 
 // Mix-ins for adding optional attributes.
 
@@ -232,14 +246,6 @@ class MarshallingInfoNegativeFlag<KeyPathAndMacro kpm, code defaultvalue = "true
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
-// Marshalled option - single flag contributing to a bitfield.
-class MarshallingInfoBitfieldFlag<KeyPathAndMacro kpm, code value>
-  : MarshallingInfoFlag<kpm, "0u"> {
-  code Normalizer = "makeFlagToValueNormalizer("#value#")";
-  code ValueMerger = "mergeMaskValue";
-  code ValueExtractor = "(extractMaskValue<unsigned, decltype("#value#"), "#value#">)";
-}
-
 // Implementation detail of BoolOption.
 class MarshallingInfoBooleanFlag<KeyPathAndMacro kpm, code defaultvalue, code value,
                                  code other_value, code other_name>
@@ -264,8 +270,6 @@ class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
 class NormalizedValuesScope<code scope> { code NormalizedValuesScope = scope; }
 class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = definitions; }
-class ValueMerger<code merger> { code ValueMerger = merger; }
-class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
 
 // Predefined options.
 

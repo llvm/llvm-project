@@ -40,6 +40,24 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  float128_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    float128_test.cpp
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
+)
+
+# TODO: Temporally disable bfloat16 test until MPCommon target is updated
+# https://github.com/llvm/llvm-project/pull/149678
+if(LLVM_LIBC_FULL_BUILD)
+  return()
+endif()
+
+add_fp_unittest(
   bfloat16_test
   NEED_MPFR
   SUITE
@@ -48,4 +66,16 @@ add_fp_unittest(
     bfloat16_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  comparison_operations_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    comparison_operations_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.comparison_operations
+    libc.src.__support.macros.properties.types
 )

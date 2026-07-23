@@ -31,9 +31,9 @@ not on pointer types:
     int x{};
     float y = std::bit_cast<float>(x);
 
-This way, the bytes of the input object are copied into the output object, which
-is much safer. Do note that Undefined Behavior can still occur, if there is no
-value of type ``To`` corresponding to the value representation produced.
+This way, the bytes of the input object are copied into the output object,
+which is much safer. Do note that Undefined Behavior can still occur, if there
+is no value of type ``To`` corresponding to the value representation produced.
 Compilers may be able to optimize this copy and generate identical assembly to
 the original ``reinterpret_cast`` version.
 

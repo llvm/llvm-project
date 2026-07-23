@@ -236,7 +236,7 @@ TEST_F(FormatTestJava, ArrayInitializers) {
                "};");
 
   FormatStyle Style = getStyleWithColumns(65);
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat(
       "expected = new int[] { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,\n"
       "  100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };",
@@ -596,7 +596,8 @@ TEST_F(FormatTestJava, RetainsLogicalShifts) {
 
 TEST_F(FormatTestJava, ShortFunctions) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_Java);
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
   verifyFormat("enum Enum {\n"
                "  E1,\n"
                "  E2;\n"
@@ -631,17 +632,17 @@ TEST_F(FormatTestJava, SwitchExpression) {
                "});",
                Style);
 
-  constexpr StringRef Code1{"i = switch (day) {\n"
+  constexpr StringRef Code1("i = switch (day) {\n"
                             "  case THURSDAY, SATURDAY -> 8;\n"
                             "  case WEDNESDAY -> 9;\n"
                             "  default -> 0;\n"
-                            "};"};
+                            "};");
   verifyFormat(Code1, Style);
 
   Style.IndentCaseLabels = true;
   verifyFormat(Code1, Style);
 
-  constexpr StringRef Code2{"i = switch (day) {\n"
+  constexpr StringRef Code2("i = switch (day) {\n"
                             "  case THURSDAY, SATURDAY -> {\n"
                             "    foo();\n"
                             "    yield 8;\n"
@@ -653,17 +654,17 @@ TEST_F(FormatTestJava, SwitchExpression) {
                             "  default -> {\n"
                             "    yield 0;\n"
                             "  }\n"
-                            "};"};
+                            "};");
   verifyFormat(Code2, Style);
 
   Style.IndentCaseLabels = false;
   verifyFormat(Code2, Style);
 
-  constexpr StringRef Code3{"switch (day) {\n"
+  constexpr StringRef Code3("switch (day) {\n"
                             "case THURSDAY, SATURDAY -> i = 8;\n"
                             "case WEDNESDAY -> i = 9;\n"
                             "default -> i = 0;\n"
-                            "};"};
+                            "};");
   verifyFormat(Code3, Style);
 
   Style.IndentCaseLabels = true;
@@ -846,6 +847,26 @@ TEST_F(FormatTestJava, TextBlock) {
 
   verifyNoChange("String name = \"\"\"\n"
                  "              Pat Q. Smith");
+
+  verifyFormat("String foo = \"\"\"\n"
+               "    bar\n"
+               "    \\\\\"\"\";",
+               "String foo=\"\"\"\n"
+               "    bar\n"
+               "    \\\\\"\"\" ;");
+}
+
+TEST_F(FormatTestJava, BreakAfterRecord) {
+  auto Style = getLLVMStyle(FormatStyle::LK_Java);
+  Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
+  Style.BraceWrapping.SplitEmptyRecord = true;
+
+  verifyFormat("public record Foo(int i)\n"
+               "{\n"
+               "}",
+               "public record Foo(int i) {}", Style);
 }
 
 } // namespace

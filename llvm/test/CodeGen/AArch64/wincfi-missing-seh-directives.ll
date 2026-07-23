@@ -9,9 +9,9 @@
 ; CHECK-NEXT:   .seh_proc foo
 ; CHECK:        sub     sp, sp, #496
 ; CHECK-NEXT:   .seh_stackalloc 496
-; CHECK-NEXT:   str     x19, [sp, #208]                 // 8-byte Folded Spill
+; CHECK-NEXT:   str     x19, [sp, #208]                 // 8-byte Spill
 ; CHECK-NEXT:   .seh_save_reg   x19, 208
-; CHECK-NEXT:   str     x21, [sp, #216]                 // 8-byte Folded Spill
+; CHECK-NEXT:   str     x21, [sp, #216]                 // 8-byte Spill
 ; CHECK-NEXT:   .seh_save_reg   x21, 216
 ; CHECK-NEXT:   stp     x23, x24, [sp, #224]            // 16-byte Folded Spill
 ; CHECK-NEXT:   .seh_save_regp  x23, 224
@@ -19,7 +19,7 @@
 ; CHECK-NEXT:   .seh_save_regp  x25, 240
 ; CHECK-NEXT:   stp     x27, x28, [sp, #256]            // 16-byte Folded Spill
 ; CHECK-NEXT:   .seh_save_regp  x27, 256
-; CHECK-NEXT:   str     x30, [sp, #272]                 // 8-byte Folded Spill
+; CHECK-NEXT:   str     x30, [sp, #272]                 // 8-byte Spill
 ; CHECK-NEXT:   .seh_save_reg   x30, 272
 ; CHECK-NEXT:   .seh_endprologue
 

@@ -55,8 +55,8 @@ unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case ELF::R_RISCV_TLS_GOT_HI20:
   case ELF::R_RISCV_TLS_GD_HI20:
   case ELF::R_RISCV_TLSDESC_HI20:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   case ELF::R_RISCV_PLT32:
   case ELF::R_RISCV_GOT32_PCREL:
@@ -142,6 +142,10 @@ unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return ELF::R_RISCV_QC_E_32;
   case RISCV::fixup_riscv_qc_abs20_u:
     return ELF::R_RISCV_QC_ABS20_U;
+  case RISCV::fixup_qc_access_16:
+    return ELF::R_RISCV_QC_ACCESS_16;
+  case RISCV::fixup_qc_access_32:
+    return ELF::R_RISCV_QC_ACCESS_32;
   }
 }
 

@@ -31,6 +31,33 @@ TEST(TimeIntrinsics, CpuTime) {
   }
 }
 
+TEST(TimeIntrinsics, Timef) {
+#ifdef _WIN32
+  // TODO: remove this after TIMEF() is implemented on Windows
+  GTEST_SKIP() << "Timef() is not implemented on Windows";
+#endif
+
+  // We can't really test that we get the "right" result for Timef, but we
+  // can have a smoke test to see that we get something reasonable on the
+  // platforms where we expect to support it.
+  double start{RTNAME(Timef)()}, end{0.0};
+  ASSERT_GE(start, 0.0);
+
+  // Loop until we get a different value from Timef. If we don't get one
+  // before we time out, then we should probably look into an implementation
+  // for Timef with a better timer resolution.
+  constexpr int max_iterations{10000000};
+  int iter{0};
+  for (end = start; end == start && iter < max_iterations;
+      end = RTNAME(Timef)(), iter++) {
+    ASSERT_GE(end, 0.0);
+    ASSERT_GE(end, start);
+  }
+
+  ASSERT_GE(end, 0.0);
+  ASSERT_GE(end, start);
+}
+
 using count_t = std::int64_t;
 
 TEST(TimeIntrinsics, SystemClock) {

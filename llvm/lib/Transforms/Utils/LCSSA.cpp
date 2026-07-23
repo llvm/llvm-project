@@ -41,7 +41,6 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -95,7 +94,8 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
     UsesToRewrite.clear();
 
     Instruction *I = Worklist.pop_back_val();
-    assert(!I->getType()->isTokenTy() && "Tokens shouldn't be in the worklist");
+    assert(!I->getType()->isTokenLikeTy() &&
+           "Token-like values shouldn't be in the worklist");
     BasicBlock *InstBB = I->getParent();
     Loop *L = LI.getLoopFor(InstBB);
     assert(L && "Instruction belongs to a BB that's not part of a loop");
@@ -243,26 +243,10 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
       SSAUpdate.RewriteUse(*UseToRewrite);
     }
 
-    SmallVector<DbgValueInst *, 4> DbgValues;
     SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-    llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
+    llvm::findDbgValues(I, DbgVariableRecords);
 
     // Update pre-existing debug value uses that reside outside the loop.
-    for (auto *DVI : DbgValues) {
-      BasicBlock *UserBB = DVI->getParent();
-      if (InstBB == UserBB || L->contains(UserBB))
-        continue;
-      // We currently only handle debug values residing in blocks that were
-      // traversed while rewriting the uses. If we inserted just a single PHI,
-      // we will handle all relevant debug values.
-      Value *V = AddedPHIs.size() == 1 ? AddedPHIs[0]
-                                       : SSAUpdate.FindValueForBlock(UserBB);
-      if (V)
-        DVI->replaceVariableLocationOp(I, V);
-    }
-
-    // RemoveDIs: copy-paste of block above, using non-instruction debug-info
-    // records.
     for (DbgVariableRecord *DVR : DbgVariableRecords) {
       BasicBlock *UserBB = DVR->getMarker()->getParent();
       if (InstBB == UserBB || L->contains(UserBB))
@@ -422,11 +406,11 @@ static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
            !isa<PHINode>(I.user_back())))
         continue;
 
-      // Tokens cannot be used in PHI nodes, so we skip over them.
+      // Token-like values cannot be used in PHI nodes, so we skip over them.
       // We can run into tokens which are live out of a loop with catchswitch
       // instructions in Windows EH if the catchswitch has one catchpad which
       // is inside the loop and another which is not.
-      if (I.getType()->isTokenTy())
+      if (I.getType()->isTokenLikeTy())
         continue;
 
       Worklist.push_back(&I);

@@ -198,7 +198,7 @@ public:
         if (CFIStack.empty())
           dbgs() << "Assertion is about to fail: " << BF.getPrintName() << "\n";
         assert(!CFIStack.empty() && "Corrupt CFI stack");
-        std::pair<int64_t, uint16_t> &Elem = CFIStack.top();
+        std::pair<int64_t, uint16_t> Elem = CFIStack.top();
         CFIStack.pop();
         CfaOffset = Elem.first;
         CfaReg = Elem.second;

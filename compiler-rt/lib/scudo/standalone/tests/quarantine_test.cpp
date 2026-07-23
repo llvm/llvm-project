@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/scudo_unit_test.h"
-
 #include "quarantine.h"
 
 #include <pthread.h>
 #include <stdlib.h>
 
-static void *FakePtr = reinterpret_cast<void *>(0xFA83FA83);
-static const scudo::uptr BlockSize = 8UL;
-static const scudo::uptr LargeBlockSize = 16384UL;
+#include "tests/scudo_unit_test.h"
+
+namespace {
+
+void *FakePtr = reinterpret_cast<void *>(0xFA83FA83);
+const scudo::uptr BlockSize = 8UL;
+const scudo::uptr LargeBlockSize = 16384UL;
 
 struct QuarantineCallback {
   void recycle(void *P) { EXPECT_EQ(P, FakePtr); }
@@ -26,9 +28,9 @@ struct QuarantineCallback {
 typedef scudo::GlobalQuarantine<QuarantineCallback, void> QuarantineT;
 typedef typename QuarantineT::CacheT CacheT;
 
-static QuarantineCallback Cb;
+QuarantineCallback Cb;
 
-static void deallocateCache(CacheT *Cache) {
+void deallocateCache(CacheT *Cache) {
   while (scudo::QuarantineBatch *Batch = Cache->dequeueBatch())
     Cb.deallocate(Batch);
 }
@@ -187,8 +189,8 @@ TEST(ScudoQuarantineTest, QuarantineCacheMergeBatchesALotOfBatches) {
   deallocateCache(&ToDeallocate);
 }
 
-static const scudo::uptr MaxQuarantineSize = 1024UL << 10; // 1MB
-static const scudo::uptr MaxCacheSize = 256UL << 10;       // 256KB
+const scudo::uptr MaxQuarantineSize = 1024UL << 10; // 1MB
+const scudo::uptr MaxCacheSize = 256UL << 10;       // 256KB
 
 TEST(ScudoQuarantineTest, GlobalQuarantine) {
   QuarantineT Quarantine;
@@ -214,9 +216,11 @@ TEST(ScudoQuarantineTest, GlobalQuarantine) {
   Quarantine.drainAndRecycle(&Cache, Cb);
   EXPECT_EQ(Cache.getSize(), 0UL);
 
-  scudo::ScopedString Str;
-  Quarantine.getStats(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Quarantine.getStats(&Str);
+    Str.output();
+  }
 }
 
 struct PopulateQuarantineThread {
@@ -246,10 +250,14 @@ TEST(ScudoQuarantineTest, ThreadedGlobalQuarantine) {
   for (scudo::uptr I = 0; I < NumberOfThreads; I++)
     pthread_join(T[I].Thread, 0);
 
-  scudo::ScopedString Str;
-  Quarantine.getStats(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Quarantine.getStats(&Str);
+    Str.output();
+  }
 
   for (scudo::uptr I = 0; I < NumberOfThreads; I++)
     Quarantine.drainAndRecycle(&T[I].Cache, Cb);
 }
+
+} // namespace

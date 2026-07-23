@@ -24,35 +24,21 @@
 namespace clang {
 namespace targets {
 
-static const unsigned NVPTXAddrSpaceMap[] = {
-    0, // Default
-    1, // opencl_global
-    3, // opencl_local
-    4, // opencl_constant
-    0, // opencl_private
+static constexpr LangASMap NVPTXAddrSpaceMap = {
+    {LangAS::opencl_global, 1},
+    {LangAS::opencl_local, 3},
+    {LangAS::opencl_constant, 4},
     // FIXME: generic has to be added to the target
-    0, // opencl_generic
-    1, // opencl_global_device
-    1, // opencl_global_host
-    1, // cuda_device
-    4, // cuda_constant
-    3, // cuda_shared
-    1, // sycl_global
-    1, // sycl_global_device
-    1, // sycl_global_host
-    3, // sycl_local
-    0, // sycl_private
-    0, // ptr32_sptr
-    0, // ptr32_uptr
-    0, // ptr64
-    0, // hlsl_groupshared
-    0, // hlsl_constant
-    0, // hlsl_private
-    0, // hlsl_device
-    0, // hlsl_input
-    // Wasm address space values for this target are dummy values,
-    // as it is only enabled for Wasm targets.
-    20, // wasm_funcref
+    {LangAS::opencl_generic, 0},
+    {LangAS::opencl_global_device, 1},
+    {LangAS::opencl_global_host, 1},
+    {LangAS::cuda_device, 1},
+    {LangAS::cuda_constant, 4},
+    {LangAS::cuda_shared, 3},
+    {LangAS::sycl_global, 1},
+    {LangAS::sycl_global_device, 1},
+    {LangAS::sycl_global_host, 1},
+    {LangAS::sycl_local, 3},
 };
 
 /// The DWARF address class. Taken from
@@ -80,15 +66,18 @@ public:
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
-  bool useFP16ConversionIntrinsics() const override { return false; }
+  bool isCLZForZeroUndef() const override { return false; }
 
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override {
-    if (GPU != OffloadArch::UNUSED)
+    if (GPU != OffloadArch::Unused)
       Features[OffloadArchToString(GPU)] = true;
-    Features["ptx" + std::to_string(PTXVersion)] = true;
+    // Only add PTX feature if explicitly requested. Otherwise, let the backend
+    // use the minimum required PTX version for the target SM.
+    if (PTXVersion != 0)
+      Features["ptx" + std::to_string(PTXVersion)] = true;
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 
@@ -142,7 +131,7 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    return StringToOffloadArch(Name) != OffloadArch::UNKNOWN;
+    return StringToOffloadArch(Name) != OffloadArch::Unknown;
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
@@ -151,9 +140,9 @@ public:
       Values.emplace_back(OffloadArchToString(static_cast<OffloadArch>(i)));
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     GPU = StringToOffloadArch(Name);
-    return GPU != OffloadArch::UNKNOWN;
+    return GPU != OffloadArch::Unknown;
   }
 
   void setSupportedOpenCLOpts() override {
@@ -161,6 +150,7 @@ public:
     Opts["cl_clang_storage_class_specifiers"] = true;
     Opts["__cl_clang_function_pointers"] = true;
     Opts["__cl_clang_variadic_functions"] = true;
+    Opts["__cl_clang_function_scope_local_variables"] = true;
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
     Opts["__cl_clang_bitfields"] = true;
 
@@ -171,6 +161,10 @@ public:
     Opts["cl_khr_global_int32_extended_atomics"] = true;
     Opts["cl_khr_local_int32_base_atomics"] = true;
     Opts["cl_khr_local_int32_extended_atomics"] = true;
+
+    Opts["__opencl_c_images"] = true;
+    Opts["__opencl_c_3d_image_writes"] = true;
+    Opts["cl_khr_3d_image_writes"] = true;
 
     Opts["__opencl_c_generic_address_space"] = true;
   }
@@ -200,7 +194,7 @@ public:
     // a host function.
     if (HostTarget)
       return HostTarget->checkCallingConvention(CC);
-    return CCCR_Warning;
+    return CC == CC_DeviceKernel ? CCCR_OK : CCCR_Warning;
   }
 
   bool hasBitIntType() const override { return true; }

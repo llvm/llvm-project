@@ -75,7 +75,7 @@ TEST(WebAssemblyExceptionInfoTest, TEST0) {
 
   declare i32 @__gxx_wasm_personality_v0(...)
 
-  define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+  define void @test0() personality ptr @__gxx_wasm_personality_v0 {
     unreachable
   }
 
@@ -168,7 +168,7 @@ body: |
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
   MDT.recalculate(*MF);
-  MDF.getBase().analyze(MDT);
+  MDF.analyze(MDT);
   WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:
@@ -237,7 +237,7 @@ TEST(WebAssemblyExceptionInfoTest, TEST1) {
 
   declare i32 @__gxx_wasm_personality_v0(...)
 
-  define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+  define void @test1() personality ptr @__gxx_wasm_personality_v0 {
     unreachable
   }
 
@@ -342,7 +342,7 @@ body: |
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
   MDT.recalculate(*MF);
-  MDF.getBase().analyze(MDT);
+  MDF.analyze(MDT);
   WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:
