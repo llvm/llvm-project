@@ -4189,18 +4189,17 @@ Certain atomic instructions, such as {ref}`atomicrmw <i_atomicrmw>`,
 and {ref}`atomic load <i_load>`, may be marked `elementwise`. The access type
 must then be a fixed vector type whose total bit width is a power of two greater
 than or equal to eight, and whose element type is supported by the corresponding
-scalar atomic instruction.
+scalar atomic instruction. The {ref}`ordering <ordering>` of an `elementwise`
+instruction may not be `seq_cst`.
 
-For the purposes of the happens-before relation, the instruction behaves as if
-one thread were spawned per element, each performing the corresponding scalar
-atomic operation on that element, and then joining after completion. For the
-purposes of `syncscope`, each scalar operation is still considered to execute
-in the same thread as the original instruction. Synchronizing with one of the
-scalar operations does not, by itself, establish a happens-before relationship
-with another scalar operation from the same `elementwise` instruction.
+For the purposes of the memory model, the instruction behaves as if one thread
+were spawned per element, each performing the corresponding scalar atomic
+operation on that element, and then joining after completion. For the purposes
+of `syncscope`, each scalar operation is still considered to execute in the
+same thread as the original instruction. Synchronizing with one of the scalar
+operations does not, by itself, establish a happens-before relationship with
+another scalar operation from the same `elementwise` instruction.
 
-The instruction's `syncscope` and {ref}`ordering <ordering>` apply
-independently to each scalar operation and the `ordering` may not be `seq_cst`.
 Without `elementwise`, vector atomic instructions are performed atomically over
 the entire vector operation.
 
