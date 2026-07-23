@@ -549,7 +549,7 @@ Expected<std::unique_ptr<MemoryBuffer>> L0ProgramBuilderTy::getELF() {
 
 Error L0ProgramTy::getSymbolMetadata(const char *Name, void **AddrPtr,
                                      size_t *SizePtr) const {
-  if (!Name)
+  if (!Name || !AddrPtr || !SizePtr)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Invalid arguments to getSymbolDeviceAddr");
 
@@ -557,21 +557,17 @@ Error L0ProgramTy::getSymbolMetadata(const char *Name, void **AddrPtr,
   void *SymbolAddr = nullptr;
   ze_result_t RC;
   for (auto Module : Modules) {
-    auto SetResults = [&](void *Addr, size_t Size) {
-      if (AddrPtr)
-        *AddrPtr = Addr;
-      if (SizePtr)
-        *SizePtr = Size;
-    };
     CALL_ZE(RC, zeModuleGetGlobalPointer, Module, Name, &SymbolSize,
             &SymbolAddr);
     if (RC == ZE_RESULT_SUCCESS && SymbolAddr) {
-      SetResults(SymbolAddr, SymbolSize);
+      *AddrPtr = SymbolAddr;
+      *SizePtr = SymbolSize;
       return Plugin::success();
     }
     CALL_ZE(RC, zeModuleGetFunctionPointer, Module, Name, &SymbolAddr);
     if (RC == ZE_RESULT_SUCCESS && SymbolAddr) {
-      SetResults(SymbolAddr, 0);
+      *AddrPtr = SymbolAddr;
+      *SizePtr = 0;
       return Plugin::success();
     }
   }
