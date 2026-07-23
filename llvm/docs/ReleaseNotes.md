@@ -528,6 +528,20 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to BOLT
 
+* BOLT supports AArch64 binaries using Pointer Authentication (PAC) and Branch
+  Target Identification (BTI). For PAC-enabled binaries, BOLT preserves pointer
+  authentication CFI state during optimization. For BTI-enabled binaries, BOLT
+  can patch PLT entries or indirect branch targets with BTI landing pads where
+  possible.
+
+* BOLT adds compact-code-model support for Armv9.6-A FEAT_CMPBR
+  compare-and-branch instructions, including support for block reordering,
+  function splitting, branch inversion where legal.
+
+* BOLT supports AArch64 profile data collected with Arm SPE and branch-stack
+  profiles from hardware such as BRBE. LLVM 23 adds pre-parsed perf-script and
+  profile-format support for these workflows.
+
 ### Changes to Sanitizers
 
 * Add a random delay into ThreadSanitizer to help find rare thread interleavings.
