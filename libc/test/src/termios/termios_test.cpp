@@ -43,9 +43,11 @@ TEST_F(LlvmLibcTermiosTest, SpeedSmokeTest) {
 
   ASSERT_THAT(LIBC_NAMESPACE::cfsetispeed(&t, ~CBAUD), Fails(EINVAL));
   ASSERT_THAT(LIBC_NAMESPACE::cfsetospeed(&t, ~CBAUD), Fails(EINVAL));
+  ASSERT_THAT(LIBC_NAMESPACE::cfsetispeed(&t, 12345), Fails(EINVAL));
+  ASSERT_THAT(LIBC_NAMESPACE::cfsetospeed(&t, 12345), Fails(EINVAL));
+#if B50 != 1
   ASSERT_THAT(LIBC_NAMESPACE::cfsetispeed(&t, 4096), Fails(EINVAL));
   ASSERT_THAT(LIBC_NAMESPACE::cfsetospeed(&t, 4096), Fails(EINVAL));
-#if B50 != 1
   ASSERT_THAT(LIBC_NAMESPACE::cfsetispeed(&t, 1), Fails(EINVAL));
   ASSERT_THAT(LIBC_NAMESPACE::cfsetospeed(&t, 1), Fails(EINVAL));
 #endif
