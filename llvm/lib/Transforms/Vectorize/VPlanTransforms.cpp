@@ -256,6 +256,13 @@ static bool
 canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
                                std::optional<SinkStoreInfo> SinkInfo = {}) {
+  // The alias check below scans the single-successor chain from FirstBB to
+  // LastBB. If LastBB is not reachable from FirstBB through single successors
+  // (e.g. there is conditional control flow in between), we cannot prove the
+  // absence of aliasing, so conservatively disallow hoisting/sinking.
+  if (!VPBlockUtils::isReachableViaSingleSuccessors(FirstBB, LastBB))
+    return false;
+
   bool CheckReads = SinkInfo.has_value();
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
