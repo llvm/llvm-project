@@ -5446,7 +5446,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         if (Reverse)
           // Reverse the stored values so they are written in descending order.
           StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
-                                         VPI->getDebugLoc());
+                                           VPI->getDebugLoc());
 
         auto *StoreR = Builder.createWidenStore(
             *cast<StoreInst>(I), VectorPtr, StoredVal,
