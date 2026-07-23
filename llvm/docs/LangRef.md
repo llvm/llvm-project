@@ -12138,7 +12138,7 @@ operation. The operation must be one of the following keywords:
 For all of these operations, the type of `<value>` must be a type whose bit width is a power of two greater than or equal to eight.
 For add/sub/and/nand/or/xor/max/min/umax/umin/uinc_wrap/udec_wrap/usub_cond/usub_sat, this must be an integer type or a fixed vector of integer type.
 For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point or fixed vector of floating-point type.
-For xchg, this must be an integer type, floating-point type, or pointer type, or, if the `elementwise` modifier is present, a fixed vector of integer type, floating-point type, or pointer type.
+For xchg, this must be an integer type, a floating-point type, a pointer type, or a fixed vector of any of these types.
 The type of the `<pointer>` operand must be a pointer to the type of `<value>`.
 If the `atomicrmw` is marked as `volatile`, then the optimizer is not allowed to modify the
 number or order of execution of this `atomicrmw` with other

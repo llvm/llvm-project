@@ -70,6 +70,9 @@ features cannot lower the translation-unit ABI level;
 
 ### Clang Python Bindings Potentially Breaking Changes
 
+- `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
+  The representation now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
+
 - Remove the deprecated `CompletionChunk.isKind...` methods.
   Existing uses should be adapted to directly compare equality of the `CompletionChunk` kind with the corresponding `CompletionChunkKind` variant.
 
@@ -360,6 +363,10 @@ features cannot lower the translation-unit ABI level;
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
   argument instead of asserting. (#GH210714)
+
+- Fixed a crash when computing the implicit deletion of a defaulted comparison
+  operator required an access check that ran while an enclosing declaration
+  was still being parsed. (#GH210692)
 
 #### Bug Fixes to AST Handling
 

@@ -7023,7 +7023,8 @@ void AMDGPUAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
 
 void AMDGPUAsmParser::checkKernelPrologues() {
   if (getFeatureBits()[AMDGPU::FeatureRequiresInitialUnclausedVmem]) {
-    static const unsigned Required[] = {GLOBAL_WB_gfx12, V_NOP_e32_gfx12};
+    static const unsigned Required[] = {GLOBAL_PREFETCH_B8_SADDR_gfx1250,
+                                        V_NOP_e32_gfx12};
     for (auto [Sym, Loc, Offset] : OpcodeStreamSymbols) {
       if (!AMDHSAKernelSymbols.contains(Sym))
         continue;
@@ -7031,7 +7032,7 @@ void AMDGPUAsmParser::checkKernelPrologues() {
       if (Prologue.take_front(std::size(Required)) != ArrayRef(Required)) {
         Warning(Loc, "kernel '" + Sym->getName() +
                          "' does not begin with the required prologue "
-                         "sequence: GLOBAL_WB followed by V_NOP");
+                         "sequence: GLOBAL_PREFETCH_B8 followed by V_NOP");
       }
     }
   }

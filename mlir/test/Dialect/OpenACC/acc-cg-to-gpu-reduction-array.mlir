@@ -196,20 +196,29 @@ func.func @rank_three_array_reduction() {
   return
 }
 
-// Unsupported dynamic multi-rank accumulators must not generate invalid
-// indexing operations.
 // CHECK-LABEL: func.func @dynamic_rank_two_array_reduction
-// CHECK: gpu.launch
-// CHECK-NOT: memref.load
-// CHECK: gpu.terminator
-func.func @dynamic_rank_two_array_reduction(%local: memref<?x?xi32>, %extent: index) {
+// CHECK: scf.for %[[LINEAR:.*]] =
+// CHECK: %[[DIM1:.*]] = memref.dim %{{.*}}, %{{.*}} : memref<2x?xi32>
+// CHECK: %[[IDX1:.*]] = arith.remui %[[LINEAR]], %[[DIM1]] : index
+// CHECK: %[[ROW:.*]] = arith.divui %[[LINEAR]], %[[DIM1]] : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[IDX0:.*]] = arith.remui %[[ROW]], %[[C2]] : index
+// CHECK: %[[ELEM:.*]] = memref.load %{{.*}}[%[[IDX0]], %[[IDX1]]] : memref<2x?xi32>
+// CHECK: %[[RESULT:.*]] = gpu.all_reduce add %[[ELEM]]
+// CHECK: memref.store %[[RESULT]], %{{.*}}[%[[IDX0]], %[[IDX1]]] : memref<2x?xi32>
+func.func @dynamic_rank_two_array_reduction(
+    %local: memref<2x?xi32>, %n: index) {
   %c1 = arith.constant 1 : index
   %c128 = arith.constant 128 : index
   %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
   %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
-  acc.compute_region launch(%kbx = %bx, %ktx = %tx) ins(%arg0 = %local, %ext = %extent) : (memref<?x?xi32>, index) {
-    %bounds = acc.bounds extent(%ext : index)
-    acc.reduction_accumulate_array %arg0 bounds(%bounds) <add> : memref<?x?xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx)
+      ins(%arg0 = %local, %arg1 = %n)
+      : (memref<2x?xi32>, index) {
+    %c2 = arith.constant 2 : index
+    %extent = arith.muli %c2, %arg1 : index
+    %bounds = acc.bounds extent(%extent : index)
+    acc.reduction_accumulate_array %arg0 bounds(%bounds) <add> : memref<2x?xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
     acc.yield
   } {origin = "acc.parallel"}
   return
