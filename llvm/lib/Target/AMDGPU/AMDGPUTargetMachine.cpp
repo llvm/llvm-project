@@ -431,7 +431,8 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
 static cl::opt<bool> EnableHotBlockRemat(
     "amdgpu-enable-hot-block-remat",
     cl::desc("Enable hot block rematerialize optimization"),
-    cl::init(false),
+    cl::init(true),
+    cl::Hidden);
     cl::Hidden);
 
 static cl::opt<bool, true> EnableObjectLinking(
