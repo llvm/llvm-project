@@ -30,7 +30,6 @@ LLVM_LIBC_FUNCTION(int, cfsetispeed, (termios * t, speed_t speed)) {
     return -1;
   }
 
-  t->c_cflag = (t->c_cflag & NOT_SPEED_MASK) | encoded;
   t->c_ispeed = speed;
   return 0;
 }

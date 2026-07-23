@@ -20,6 +20,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+constexpr speed_t INVALID_SPEED = ~static_cast<speed_t>(0);
+
 // glibc 2.42 changed the behavior of the termios Bxxx constants:
 // - Before glibc 2.42, the Bxxx constants correspond to the kernel speed
 // bitmasks
@@ -104,7 +106,7 @@ LIBC_INLINE constexpr speed_t encode_speed(speed_t speed) {
   case 4000000:
     return 0010017;
   default:
-    return speed;
+    return INVALID_SPEED;
   }
 }
 
