@@ -41,7 +41,6 @@ public:
   void applySPIRVCross(MachineInstr &MI) const;
 
 private:
-  bool getCrossOperands(MachineInstr &MI, Register &X, Register &Y) const;
   SPIRVTypeInst getDotProductVectorType(Register ResReg, uint32_t K,
                                         SPIRVGlobalRegistry *GR) const;
   SmallVector<Register, 4> extractColumns(Register BReg, uint32_t N,
