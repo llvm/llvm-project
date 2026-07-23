@@ -665,9 +665,7 @@ the compiler aligns function entry points, address-taken basic blocks, jump
 table targets, and exception handling landing pads to a bundle boundary.
 
 The targets of direct branches do not need to be aligned, since they are
-resolved at build time. The hidden `-x86-lfi-align-direct-branches` option
-aligns every basic block anyway, so that every branch target in the program is
-bundle-aligned, which can simplify verification.
+resolved at build time.
 
 #### Control flow
 

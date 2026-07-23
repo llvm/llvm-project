@@ -17,15 +17,9 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
-
-static cl::opt<bool> AlignDirectBranches(
-    "x86-lfi-align-direct-branches",
-    cl::desc("Align the targets of direct branches to a bundle boundary"),
-    cl::init(false), cl::Hidden);
 
 static constexpr Align BundleAlign = Align::Constant<X86::LFIBundleSize>();
 
@@ -47,14 +41,11 @@ static void alignToBundle(MachineBasicBlock &MBB) {
   MBB.setAlignment(std::max(MBB.getAlignment(), BundleAlign), /*MaxBytes=*/0);
 }
 
-// Returns true if MBB may be reached by an indirect branch.
-static bool isIndirectlyReachable(
-    MachineFunction &MF, const MachineBasicBlock &MBB,
-    const SmallPtrSetImpl<MachineBasicBlock *> &JumpTableTargets) {
-  if (MBB.hasAddressTaken() || JumpTableTargets.contains(&MBB))
-    return true;
-
-  if (MBB.isEHPad())
+// Returns true if MBB may be reached by an indirect branch (does not include
+// jump table targets).
+static bool isIndirectlyReachable(MachineFunction &MF,
+                                  const MachineBasicBlock &MBB) {
+  if (MBB.hasAddressTaken() || MBB.isEHPad())
     return true;
 
   // With SJLJ exception handling, the dispatch block jumps indirectly to the
@@ -75,13 +66,13 @@ static void alignIndirectBranchTargets(MachineFunction &MF) {
 
   // Blocks that are the target of a jump table are not considered
   // address-taken by LLVM, but they are still reached by an indirect branch.
-  SmallPtrSet<MachineBasicBlock *, 8> JumpTableTargets;
   if (const MachineJumpTableInfo *JTI = MF.getJumpTableInfo())
     for (const MachineJumpTableEntry &JTE : JTI->getJumpTables())
-      JumpTableTargets.insert_range(JTE.MBBs);
+      for (MachineBasicBlock *MBB : JTE.MBBs)
+        alignToBundle(*MBB);
 
   for (MachineBasicBlock &MBB : MF)
-    if (AlignDirectBranches || isIndirectlyReachable(MF, MBB, JumpTableTargets))
+    if (isIndirectlyReachable(MF, MBB))
       alignToBundle(MBB);
 }
 
