@@ -35,6 +35,83 @@ define void @masked_store_v8f16(ptr %dst, <8 x i1> %mask) {
   ret void
 }
 
+define void @masked_store_v8bf16_without_bf16_attr(ptr %dst, <8 x i1> %mask) {
+; CHECK-LABEL: masked_store_v8bf16_without_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.8b, v0.8b, #7
+; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tbnz w8, #0, .LBB2_9
+; CHECK-NEXT:  // %bb.1: // %else
+; CHECK-NEXT:    tbnz w8, #1, .LBB2_10
+; CHECK-NEXT:  .LBB2_2: // %else2
+; CHECK-NEXT:    tbnz w8, #2, .LBB2_11
+; CHECK-NEXT:  .LBB2_3: // %else4
+; CHECK-NEXT:    tbnz w8, #3, .LBB2_12
+; CHECK-NEXT:  .LBB2_4: // %else6
+; CHECK-NEXT:    tbnz w8, #4, .LBB2_13
+; CHECK-NEXT:  .LBB2_5: // %else8
+; CHECK-NEXT:    tbnz w8, #5, .LBB2_14
+; CHECK-NEXT:  .LBB2_6: // %else10
+; CHECK-NEXT:    tbnz w8, #6, .LBB2_15
+; CHECK-NEXT:  .LBB2_7: // %else12
+; CHECK-NEXT:    tbnz w8, #7, .LBB2_16
+; CHECK-NEXT:  .LBB2_8: // %else14
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_9: // %cond.store
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    tbz w8, #1, .LBB2_2
+; CHECK-NEXT:  .LBB2_10: // %cond.store1
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    str h0, [x0, #2]
+; CHECK-NEXT:    tbz w8, #2, .LBB2_3
+; CHECK-NEXT:  .LBB2_11: // %cond.store3
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    str h0, [x0, #4]
+; CHECK-NEXT:    tbz w8, #3, .LBB2_4
+; CHECK-NEXT:  .LBB2_12: // %cond.store5
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    str h0, [x0, #6]
+; CHECK-NEXT:    tbz w8, #4, .LBB2_5
+; CHECK-NEXT:  .LBB2_13: // %cond.store7
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    str h0, [x0, #8]
+; CHECK-NEXT:    tbz w8, #5, .LBB2_6
+; CHECK-NEXT:  .LBB2_14: // %cond.store9
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    str h0, [x0, #10]
+; CHECK-NEXT:    tbz w8, #6, .LBB2_7
+; CHECK-NEXT:  .LBB2_15: // %cond.store11
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    str h0, [x0, #12]
+; CHECK-NEXT:    tbz w8, #7, .LBB2_8
+; CHECK-NEXT:  .LBB2_16: // %cond.store13
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    str h0, [x0, #14]
+; CHECK-NEXT:    ret
+  call void @llvm.masked.store.v8bf16(<8 x bfloat> zeroinitializer, ptr %dst, i32 8, <8 x i1> %mask)
+  ret void
+}
+
+define void @masked_store_v8bf16_with_bf16_attr(ptr %dst, <8 x i1> %mask) #0 {
+; CHECK-LABEL: masked_store_v8bf16_with_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    shl v0.8h, v0.8h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.masked.store.v8bf16(<8 x bfloat> zeroinitializer, ptr %dst, i32 8, <8 x i1> %mask)
+  ret void
+}
+
 define void @masked_store_v4f32(ptr %dst, <4 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v4f32:
 ; CHECK:       // %bb.0:
@@ -116,3 +193,69 @@ define void @masked_store_v4f16(ptr %ap, ptr %bp) {
   ret void
 }
 
+define void @masked_store_v4bf16_without_bf16_attr(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_store_v4bf16_without_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    adrp x8, .LCPI9_0
+; CHECK-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEXT:    shll v2.4s, v0.4h, #16
+; CHECK-NEXT:    fcmeq v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI9_0]
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    addv h1, v1.4h
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    tbnz w8, #0, .LBB9_5
+; CHECK-NEXT:  // %bb.1: // %else
+; CHECK-NEXT:    tbnz w8, #1, .LBB9_6
+; CHECK-NEXT:  .LBB9_2: // %else2
+; CHECK-NEXT:    tbnz w8, #2, .LBB9_7
+; CHECK-NEXT:  .LBB9_3: // %else4
+; CHECK-NEXT:    tbnz w8, #3, .LBB9_8
+; CHECK-NEXT:  .LBB9_4: // %else6
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB9_5: // %cond.store
+; CHECK-NEXT:    st1 { v0.h }[0], [x1]
+; CHECK-NEXT:    tbz w8, #1, .LBB9_2
+; CHECK-NEXT:  .LBB9_6: // %cond.store1
+; CHECK-NEXT:    add x9, x1, #2
+; CHECK-NEXT:    st1 { v0.h }[1], [x9]
+; CHECK-NEXT:    tbz w8, #2, .LBB9_3
+; CHECK-NEXT:  .LBB9_7: // %cond.store3
+; CHECK-NEXT:    add x9, x1, #4
+; CHECK-NEXT:    st1 { v0.h }[2], [x9]
+; CHECK-NEXT:    tbz w8, #3, .LBB9_4
+; CHECK-NEXT:  .LBB9_8: // %cond.store5
+; CHECK-NEXT:    add x8, x1, #6
+; CHECK-NEXT:    st1 { v0.h }[3], [x8]
+; CHECK-NEXT:    ret
+  %a = load <4 x bfloat>, ptr %ap
+  %b = load <4 x bfloat>, ptr %bp
+  %mask = fcmp oeq <4 x bfloat> %a, %b
+  call void @llvm.masked.store.v4bf16(<4 x bfloat> %a, ptr %bp, i32 2, <4 x i1> %mask)
+  ret void
+}
+
+define void @masked_store_v4bf16_with_bf16_attr(ptr %ap, ptr %bp) #0 {
+; CHECK-LABEL: masked_store_v4bf16_with_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEXT:    shll v2.4s, v0.4h, #16
+; CHECK-NEXT:    fcmeq v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1]
+; CHECK-NEXT:    ret
+  %a = load <4 x bfloat>, ptr %ap
+  %b = load <4 x bfloat>, ptr %bp
+  %mask = fcmp oeq <4 x bfloat> %a, %b
+  call void @llvm.masked.store.v4bf16(<4 x bfloat> %a, ptr %bp, i32 2, <4 x i1> %mask)
+  ret void
+}
+
+attributes #0 = { "target-features"="+bf16" }

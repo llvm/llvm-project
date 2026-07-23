@@ -259,7 +259,10 @@ WebAssemblyMemIntrinsicResultsPass::run(MachineFunction &MF,
                                         MachineFunctionAnalysisManager &MFAM) {
   MachineDominatorTree *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   LiveIntervals *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  const TargetLibraryInfo *LibInfo = &MFAM.getResult<TargetLibraryAnalysis>(MF);
+  const TargetLibraryInfo *LibInfo =
+      &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+           .getManager()
+           .getResult<TargetLibraryAnalysis>(MF.getFunction());
   const WebAssemblySubtarget &Subtarget =
       MF.getSubtarget<WebAssemblySubtarget>();
   const LibcallLoweringInfo &LibCalls =
