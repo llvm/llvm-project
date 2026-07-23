@@ -30,7 +30,7 @@ LIBC_INLINE static cpp::simd<double, N> inline_exp10(cpp::simd<double, N> x) {
 
   // Rounds n to be (x * log2(10)) to the nearest multiple of 1/64
   // While preparing z to be used as an index for the lookup in eval_exp
-  cpp::simd<double, N> z = (x * log2_10) + shift;
+  cpp::simd<double, N> z = cpp::fma(x, log2_10, shift);
   cpp::simd<double, N> n = z - shift;
 
   constexpr cpp::simd<double, N> log2_10_lo = 0x1.7f2495fb7fa6dp-53;
@@ -41,8 +41,8 @@ LIBC_INLINE static cpp::simd<double, N> inline_exp10(cpp::simd<double, N> x) {
   // r = (x * log2(10) - n) * ln(2), with |r| <= ln2/128,
   // Computed as (n - x * log2(10)) * -ln(2) to avoid negating n.
   cpp::simd<double, N> r;
-  r = n - (x * log2_10);
-  r = r - (x * log2_10_lo);
+  r = cpp::fma(-x, log2_10, n);
+  r = cpp::fma(-x, log2_10_lo, r);
   r = r * negative_ln2;
 
   return eval_exp(r, z);

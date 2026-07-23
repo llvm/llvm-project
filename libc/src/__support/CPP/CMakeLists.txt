@@ -238,7 +238,6 @@ add_header_library(
   HDRS
     simd.h
   DEPENDS
-    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     .utility

@@ -50,10 +50,10 @@ LIBC_INLINE static cpp::simd<double, N> eval_exp(cpp::simd<double, N> r,
 
   // y = exp(r) - 1 ~= r + C0 r^2 + C1 r^3 + C2 r^4 + C3 r^5.
   cpp::simd<double, N> r2 = r * r;
-  cpp::simd<double, N> p01 = fputil::multiply_add(c1, r, c0);
-  cpp::simd<double, N> p23 = fputil::multiply_add(c3, r, c2);
-  cpp::simd<double, N> p04 = fputil::multiply_add(p23, r2, p01);
-  cpp::simd<double, N> y = fputil::multiply_add(p04, r2, r);
+  cpp::simd<double, N> p01 = cpp::fma(c1, r, c0);
+  cpp::simd<double, N> p23 = cpp::fma(c3, r, c2);
+  cpp::simd<double, N> p04 = cpp::fma(p23, r2, p01);
+  cpp::simd<double, N> y = cpp::fma(p04, r2, r);
 
   // Table lookup for 2^n, where n is a multiple of 1/64
   cpp::simd<uint64_t, N> u = cpp::bit_cast<cpp::simd<uint64_t, N>>(z);
@@ -62,7 +62,7 @@ LIBC_INLINE static cpp::simd<double, N> eval_exp(cpp::simd<double, N> r,
   // e^x = 2^n * exp(r)
   // Since y = exp(r) - 1, e^x = 2^n * (1 + y)
   // Or as an FMA: e^x = 2^n + (2^n * y)
-  return fputil::multiply_add(y, s, s);
+  return cpp::fma(y, s, s);
 }
 
 } // namespace mathvec
