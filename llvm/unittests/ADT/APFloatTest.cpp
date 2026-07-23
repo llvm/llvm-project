@@ -1078,7 +1078,6 @@ TEST(APFloatTest, IsSmallestNormalized) {
     EXPECT_EQ(fcPosNormal, PosSmallestNormalized.classify());
 
     SmallVector<std::optional<APFloat>> Vals = {PosSmallestNormalized};
-
     std::optional<APFloat> NegSmallestNormalized;
     if (Semantics.hasSignedRepr) {
       NegSmallestNormalized = APFloat::getSmallestNormalized(Semantics, true);
@@ -1087,7 +1086,7 @@ TEST(APFloatTest, IsSmallestNormalized) {
       Vals.push_back(NegSmallestNormalized);
     }
 
-    for (auto& Val : Vals) {
+    for (auto &Val : Vals) {
       bool OldSign = Val->isNegative();
 
       // Step down, make sure it's still not smallest normalized.
