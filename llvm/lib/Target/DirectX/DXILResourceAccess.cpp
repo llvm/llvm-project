@@ -767,6 +767,16 @@ static Value *materializeInPred(Value *V, PHINode *Phi, unsigned EdgeIdx,
 static void hoistResourceAccess(Instruction *Access, PHINode *Phi, Value *PtrOp,
                                 Value *ValOp,
                                 SmallSetVector<Instruction *, 16> &DeadInsts) {
+  // HLSL codegen and the InstCombine/SimplifyCFG/LICM sinks always follow this
+  // property. If an assert fires, another optimization produced an unexpected
+  // phi-of-resource-pointers pattern.
+  [[maybe_unused]] BasicBlock *MergeBB = Phi->getParent();
+  assert(Access->getParent() == MergeBB &&
+         "Access must be in the phi's merge block");
+  for ([[maybe_unused]] BasicBlock *Pred : Phi->blocks())
+    assert(Pred->getSingleSuccessor() == MergeBB &&
+           "Phi predecessor must flow unconditionally into the merge block");
+
   unsigned NumEdges = Phi->getNumIncomingValues();
 
   // The old resource-pointer phi will be superseded.
@@ -812,8 +822,10 @@ static void hoistResourceAccess(Instruction *Access, PHINode *Phi, Value *PtrOp,
 // Reports an error if a resource access is not guaranteed into a unique global
 // resource.
 //
-// Returns true if any changes are made.
-static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
+// Returns std::nullopt if an error was encountered, otherwise returns true if
+// any changes were made.
+static std::optional<bool> legalizeResourceHandles(Function &F,
+                                                   DXILResourceTypeMap &DRTM) {
   // Look through any GEP chain to the phi of resource pointers that a sunk
   // load must be hoisted above.
   auto FindPointerPhi = [](Value *Ptr) -> PHINode * {
@@ -857,6 +869,7 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           }
 
         diagnoseNonUniqueResourceAccess(&I, Handles);
+        return std::nullopt;
       }
     }
   }
@@ -933,9 +946,12 @@ PreservedAnalyses DXILResourceAccess::run(Function &F,
       MAMProxy.getCachedResult<DXILResourceTypeAnalysis>(*F.getParent());
   assert(DRTM && "DXILResourceTypeAnalysis must be available");
 
-  bool MadeHandleChanges = legalizeResourceHandles(F, *DRTM);
+  std::optional<bool> MadeHandleChanges = legalizeResourceHandles(F, *DRTM);
+  if (!MadeHandleChanges.has_value())
+    return PreservedAnalyses::all();
+
   bool MadeResourceChanges = transformResourcePointers(F, *DRTM);
-  if (!(MadeHandleChanges || MadeResourceChanges))
+  if (!(MadeHandleChanges.value() || MadeResourceChanges))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -950,9 +966,11 @@ public:
   bool runOnFunction(Function &F) override {
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-    bool MadeHandleChanges = legalizeResourceHandles(F, DRTM);
+    std::optional<bool> MadeHandleChanges = legalizeResourceHandles(F, DRTM);
+    if (!MadeHandleChanges.has_value())
+      return false;
     bool MadeResourceChanges = transformResourcePointers(F, DRTM);
-    return MadeHandleChanges || MadeResourceChanges;
+    return MadeHandleChanges.value() || MadeResourceChanges;
   }
   StringRef getPassName() const override { return "DXIL Resource Access"; }
   DXILResourceAccessLegacy() : FunctionPass(ID) {}
