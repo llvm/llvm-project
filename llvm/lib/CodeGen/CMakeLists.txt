@@ -18,7 +18,8 @@ if (LLVM_BUILD_REGALLOCEVICTMODEL)
       ${LLVM_RAEVICT_MODEL_PATH}
       ${LLVM_RAEVICT_MODEL_CURRENT_URL}
       ${LLVM_RAEVICT_MODEL_PATH_DEFAULT}
-      "../Analysis/models/gen-regalloc-eviction-test-model.py"
+      "${LLVM_MAIN_SRC_DIR}/../mlir/test/Integration/Dialect/EmitC/regalloc-eviction-test-model-tosa.mlir"
+      RegAllocEvictModel
       "llvm/CodeGen/MLIRRegAllocEvictModel.inc"
     )
   else()

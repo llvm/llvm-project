@@ -23,7 +23,8 @@ if (LLVM_BUILD_INLINERSIZEMODEL)
       ${LLVM_INLINER_MODEL_PATH}
       ${LLVM_INLINER_MODEL_CURRENT_URL}
       ${LLVM_INLINER_MODEL_PATH_DEFAULT}
-      "models/gen-inline-oz-test-model.py"
+      "${LLVM_MAIN_SRC_DIR}/../mlir/test/Integration/Dialect/EmitC/inline-oz-test-model-tosa.mlir"
+      InlinerSizeModel
       "llvm/Analysis/MLIRInlinerSizeModel.inc"
     )
   else()
