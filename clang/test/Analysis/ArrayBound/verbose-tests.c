@@ -410,7 +410,11 @@ int *nothingIsCertain(int x, int y) {
   return mem;
 }
 
-#ifndef _MSC_VER
+#ifndef _WIN32
+// We disable this test under Windows because 'struct Empty {}' has a nozero
+// size on that platform. Note that '_WIN32' is also defined on 64-bit systems
+// and is apparently the customary way to detect Windows OS.
+
 struct Empty {};
 struct Empty ZeroSizeElements[10];
 
