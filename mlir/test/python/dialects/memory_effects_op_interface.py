@@ -77,6 +77,10 @@ class SymbolTargetModel(ir.MemoryEffectsOpInterface):
             effects.append(ir.MemoryEffect.Read, parameters=42)
         except TypeError as error:
             print("invalid parameters:", error)
+        try:
+            effects.append(ir.MemoryEffect.Read, 42)
+        except TypeError as error:
+            print("invalid target:", error)
         effects.append(
             ir.MemoryEffect.Read,
             ir.FlatSymbolRefAttr.get("global"),
@@ -277,6 +281,7 @@ with ir.Context(), ir.Location.unknown():
     # remain removable by trivial-dce.
     # CHECK: invalid symbol target: target Attribute must be a SymbolRefAttr
     # CHECK: invalid parameters: parameters must be an Attribute or None
+    # CHECK: invalid target: target must be an OpOperand, OpResult, BlockArgument, SymbolRefAttr, or None
     # CHECK: DCE block argument target count: 0
     # CHECK: DCE symbol target count: 0
     print(
