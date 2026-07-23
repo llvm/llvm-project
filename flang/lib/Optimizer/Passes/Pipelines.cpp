@@ -223,7 +223,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   if (pc.OptLevel == llvm::OptimizationLevel::O2 ||
       pc.OptLevel == llvm::OptimizationLevel::O3)
-    pm.addPass(fir::createVectorAlwaysUnroll());
+    addPassConditionally(pm, disableVectorAlwaysUnroll,
+                         [&]() { return fir::createVectorAlwaysUnroll(); });
 
   pm.addPass(mlir::createCSEPass());
 
