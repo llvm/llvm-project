@@ -90,7 +90,7 @@ struct __distance {
     if constexpr (!is_array_v<remove_reference_t<_Ip>>) {
       return __last - __first;
     } else {
-      return __last - decay_t<_Ip>(__first);
+      return __last - static_cast<decay_t<_Ip>>(__first);
     }
   }
 
