@@ -2023,12 +2023,20 @@ tryCombineFromSVBoolBinOp(InstCombiner &IC, IntrinsicInst &II) {
       Intrinsic::aarch64_sve_convert_from_svbool;
 
   Type *Ty = II.getType();
-  Value *NarrowLHS, *RHS;
+  Value *LHS, *RHS, *NarrowLHS, *NarrowRHS;
 
   if (match(II.getOperand(0),
-            m_c_LogicalAnd(m_ConvertToSVBool(m_SpecificType(Ty, NarrowLHS)),
-                           m_Value(RHS)))) {
-    Value *NarrowRHS = IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, RHS);
+            m_LogicalAnd(m_Value(LHS),
+                         m_ConvertToSVBool(m_SpecificType(Ty, NarrowRHS))))) {
+    NarrowLHS = IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, LHS);
+    Value *NarrowAnd = IC.Builder.CreateLogicalAnd(NarrowLHS, NarrowRHS);
+    return IC.replaceInstUsesWith(II, NarrowAnd);
+  }
+
+  if (match(II.getOperand(0),
+            m_LogicalAnd(m_ConvertToSVBool(m_SpecificType(Ty, NarrowLHS)),
+                         m_Value(RHS)))) {
+    NarrowRHS = IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, RHS);
     Value *NarrowAnd = IC.Builder.CreateLogicalAnd(NarrowLHS, NarrowRHS);
     return IC.replaceInstUsesWith(II, NarrowAnd);
   }
