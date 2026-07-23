@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryExtractor.h"
@@ -87,7 +88,8 @@ inline void logWarningFromError(llvm::Error Err) {
 void findContributors(
     ASTContext &Ctx, const SSAFOptions &Options,
     llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
-        &Contributors);
+        &Contributors,
+    bool ExtractFromSystemHeaders = true);
 
 /// Perform "MatchAction" on each Stmt and Decl belonging to the `Contributor`.
 /// \param Contributor
@@ -116,7 +118,8 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
                             llvm::StringRef ExtractorName = "") {
   llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
       Contributors;
-  findContributors(Ctx, Extractor.getOptions(), Contributors);
+  findContributors(Ctx, Extractor.getOptions(), Contributors,
+                   Extractor.getOptions().ExtractFromSystemHeaders);
   for (const auto &[Cano, Decls] : Contributors) {
     assert(!Decls.empty() &&
            "'findContributors' guarantees that 'Decls' are non-empty");

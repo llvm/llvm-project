@@ -244,8 +244,19 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Expand);
   }
 
+  for (MVT VT : MVT::fp_valuetypes()) {
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
+  }
+
+  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
+  setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
+
   // Floating-point truncation and stores need to be done separately.
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+  setTruncStoreAction(MVT::f64, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f32, MVT::f16, Expand);
 
   if (Subtarget.hasS32C1I()) {
     setMaxAtomicSizeInBitsSupported(32);
@@ -289,6 +300,7 @@ XtensaTargetLowering::getConstraintType(StringRef Constraint) const {
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'r':
+    case 'f':
       return C_RegisterClass;
     default:
       break;
@@ -318,6 +330,10 @@ XtensaTargetLowering::getSingleConstraintMatchWeight(
     if (Ty->isIntegerTy())
       Weight = CW_Register;
     break;
+  case 'f':
+    if (Ty->isFloatingPointTy())
+      Weight = CW_Register;
+    break;
   }
   return Weight;
 }
@@ -332,6 +348,9 @@ XtensaTargetLowering::getRegForInlineAsmConstraint(
       break;
     case 'r': // General-purpose register
       return std::make_pair(0U, &Xtensa::ARRegClass);
+    case 'f': // Floating-point register
+      if (Subtarget.hasSingleFloat())
+        return std::make_pair(0U, &Xtensa::FPRRegClass);
     }
   }
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);

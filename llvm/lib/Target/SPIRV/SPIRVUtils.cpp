@@ -301,9 +301,26 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
             static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
       continue; // Ignored.
     }
-    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
-                   .addUse(Reg)
-                   .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
+    uint32_t Dec = static_cast<uint32_t>(DecorationId->getZExtValue());
+    if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId)) {
+      ConstantInt *ScopeV =
+          OpMD->getNumOperands() == 2
+              ? mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
+              : nullptr;
+      assert(ScopeV && isUInt<32>(ScopeV->getZExtValue()) &&
+             "Expect Scope <id> operand of the UniformId decoration");
+      SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+      SPIRVTypeInst SpvTypeInt32 =
+          GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
+      Register ScopeReg = GR->buildConstantInt(
+          ScopeV->getZExtValue(), MIRBuilder, SpvTypeInt32, /*EmitIR=*/false);
+      MIRBuilder.buildInstr(SPIRV::OpDecorateId)
+          .addUse(Reg)
+          .addImm(Dec)
+          .addUse(ScopeReg);
+      continue;
+    }
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate).addUse(Reg).addImm(Dec);
     for (unsigned OpI = 1, OpE = OpMD->getNumOperands(); OpI != OpE; ++OpI) {
       if (ConstantInt *OpV =
               mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(OpI)))
@@ -874,7 +891,26 @@ createExitVariable(BasicBlock *BB,
     return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
   }
 
-  // TODO: add support for switch cases.
+  if (auto *SI = dyn_cast<SwitchInst>(T)) {
+    Value *Condition = SI->getCondition();
+    // The default destination acts as the fallback value of the select chain.
+    Value *Result = TargetToValue.lookup(SI->getDefaultDest());
+    for (const auto &Case : SI->cases()) {
+      Value *CaseValue = TargetToValue.lookup(Case.getCaseSuccessor());
+      // Successors that are internal to the region have no exit value.
+      if (CaseValue == nullptr)
+        continue;
+      // The first known exit value becomes the base of the select chain.
+      if (Result == nullptr) {
+        Result = CaseValue;
+        continue;
+      }
+      Value *Cmp = Builder.CreateICmpEQ(Condition, Case.getCaseValue());
+      Result = Builder.CreateSelect(Cmp, CaseValue, Result);
+    }
+    return Result;
+  }
+
   llvm_unreachable("Unhandled terminator type.");
 }
 

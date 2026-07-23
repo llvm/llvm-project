@@ -603,12 +603,20 @@ public:
   /// the module-level flags named metadata if it doesn't already exist.
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint64_t Val);
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
+  inline void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, int Val) {
+    addModuleFlag(Behavior, Key, static_cast<uint32_t>(Val));
+  }
   void addModuleFlag(MDNode *Node);
   /// Like addModuleFlag but replaces the old module flag if it already exists.
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint64_t Val);
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
+  inline void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, int Val) {
+    setModuleFlag(Behavior, Key, static_cast<uint32_t>(Val));
+  }
 
   /// @}
   /// @name Materialization

@@ -708,6 +708,39 @@ TEST(DWARFExpression, GenericBinaryOpsAllowDifferentSignedness) {
       ExpectScalar(4));
 }
 
+TEST(DWARFExpression, RelationalOpsProduceGenericResult) {
+  struct TestCase {
+    uint8_t opcode;
+    uint8_t lhs;
+    uint8_t rhs;
+  };
+  constexpr TestCase test_cases[] = {
+      {DW_OP_eq, 3, 3}, {DW_OP_ge, 4, 3}, {DW_OP_gt, 4, 3},
+      {DW_OP_le, 3, 4}, {DW_OP_lt, 3, 4}, {DW_OP_ne, 3, 4},
+  };
+
+  for (const TestCase &test : test_cases) {
+    const std::vector<uint8_t> expr = {
+        DW_OP_lit8,
+        static_cast<uint8_t>(DW_OP_lit0 + test.lhs),
+        static_cast<uint8_t>(DW_OP_lit0 + test.rhs),
+        test.opcode,
+        DW_OP_plus,
+        DW_OP_stack_value,
+    };
+    DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
+                            /*addr_size=*/8);
+
+    EXPECT_THAT_EXPECTED(
+        DWARFExpression::Evaluate(
+            /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{},
+            extractor, /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+            /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr),
+        ExpectScalar(64, 9, false))
+        << "opcode 0x" << llvm::utohexstr(test.opcode);
+  }
+}
+
 TEST(DWARFExpression, DW_OP_stack_value) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
 }

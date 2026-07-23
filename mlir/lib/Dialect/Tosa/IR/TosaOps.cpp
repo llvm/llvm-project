@@ -888,21 +888,16 @@ static LogicalResult verifyConvOp(T op) {
     return failure();
   }
 
-  if (isa<Float8E5M2Type>(inputEType) || isa<Float8E4M3FNType>(inputEType) ||
-      isa<Float8E5M2Type>(weightEType) || isa<Float8E4M3FNType>(weightEType)) {
-    if (inputEType != weightEType) {
-      op.emitOpError(
-          "expect both input and weight to have same element type, got ")
-          << inputEType << " and " << weightEType;
-      return failure();
-    }
-  }
+  const bool isInputBlockScaled = llvm::isa<BlockScaledType>(inputEType);
+  const bool isWeightBlockScaled = llvm::isa<BlockScaledType>(weightEType);
+  const bool isInputFloat = llvm::isa<FloatType>(inputEType);
+  const bool isWeightFloat = llvm::isa<FloatType>(weightEType);
 
-  bool inputIsFloat = llvm::isa<FloatType>(inputEType);
-  bool weightIsFloat = llvm::isa<FloatType>(weightEType);
+  const bool isInputBSorFloat = isInputBlockScaled || isInputFloat;
+  const bool isWeightBSorFloat = isWeightBlockScaled || isWeightFloat;
 
   // Either both must be float or both non-float.
-  if (inputIsFloat != weightIsFloat) {
+  if (isInputBSorFloat != isWeightBSorFloat) {
     op.emitOpError(
         "expect both input and weight to be float or not together, got ")
         << inputEType << " and " << weightEType;
@@ -910,16 +905,26 @@ static LogicalResult verifyConvOp(T op) {
   }
 
   auto inputZpEType = getStorageElementTypeOrSelf(op.getInputZp().getType());
-  if (inputEType != inputZpEType) {
+  if (!isInputBlockScaled && inputEType != inputZpEType) {
     return op.emitOpError("expect both input and its zero point are the same "
                           "element type, got ")
            << inputEType << " and " << inputZpEType;
   }
+  if (isInputBlockScaled && !llvm::isa<Float32Type>(inputZpEType)) {
+    return op.emitOpError(
+               "expect block scaled input to have fp32 zero point, got ")
+           << inputEType << " and " << inputZpEType;
+  }
 
   auto weightZpEType = getStorageElementTypeOrSelf(op.getWeightZp().getType());
-  if (weightEType != weightZpEType) {
+  if (!isWeightBlockScaled && weightEType != weightZpEType) {
     return op.emitOpError("expect both weight and its zero point are the same "
                           "element type, got ")
+           << weightEType << " and " << weightZpEType;
+  }
+  if (isWeightBlockScaled && !llvm::isa<Float32Type>(weightZpEType)) {
+    return op.emitOpError(
+               "expect block scaled weight to have fp32 zero point, got ")
            << weightEType << " and " << weightZpEType;
   }
 
@@ -997,33 +1002,6 @@ static LogicalResult verifyConvOpModes(T op) {
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
     inputEType = getStorageElementTypeFromQuantized(quantType);
-
-  auto accType = op.getAccType();
-  if (inputEType.isInteger(8) && !accType.isInteger(32))
-    return op.emitOpError("accumulator type for i8 tensor is not i32, got ")
-           << accType;
-
-  if (inputEType.isInteger(16) && !accType.isInteger(48))
-    return op.emitOpError("accumulator type for i16 tensor is not i48, got ")
-           << accType;
-
-  if (isa<Float8E5M2Type, Float8E4M3Type>(inputEType) &&
-      !(accType.isF16() || accType.isF32()))
-    return op.emitOpError("accumulator type for f8 tensor is not f16/f32, got ")
-           << accType;
-
-  if (inputEType.isF16() && !(accType.isF16() || accType.isF32()))
-    return op.emitOpError(
-               "accumulator type for f16 tensor is not f16/f32, got ")
-           << accType;
-
-  if (inputEType.isBF16() && !accType.isF32())
-    return op.emitOpError("accumulator type for bf16 tensor is not f32, got ")
-           << accType;
-
-  if (inputEType.isF32() && !accType.isF32())
-    return op.emitOpError("accumulator type for f32 tensor is not f32, got ")
-           << accType;
 
   auto resultEType =
       llvm::cast<ShapedType>(op.getResult().getType()).getElementType();
@@ -2238,16 +2216,26 @@ template <typename T>
 static LogicalResult verifyMatMulZeroPointType(T op, Value input, Value zp,
                                                StringRef inputName,
                                                StringRef zpName) {
+  const Type inputElementType = getElementTypeOrSelf(input.getType());
   const Type inputStorageElementType = getStorageElementTypeOrSelf(input);
   const Type zpElementType = getStorageElementTypeOrSelf(zp);
+  Type expectedElementType = inputStorageElementType;
 
-  if (inputStorageElementType != zpElementType)
-    return op.emitOpError("expect input ")
-           << inputName << " and " << zpName
-           << " have the same element type, got " << inputStorageElementType
-           << " and " << zpElementType;
+  if (isa<BlockScaledType>(inputElementType))
+    expectedElementType = Float32Type::get(op.getContext());
 
-  return success();
+  if (expectedElementType == zpElementType)
+    return success();
+
+  InFlightDiagnostic diag = op.emitOpError("expect input ");
+  diag << inputName << " and " << zpName;
+  if (isa<BlockScaledType>(inputElementType))
+    diag << " have compatible element types, got " << inputElementType
+         << " and " << zpElementType;
+  else
+    diag << " have the same element type, got " << inputStorageElementType
+         << " and " << zpElementType;
+  return diag;
 }
 
 LogicalResult MatMulOp::verify() {

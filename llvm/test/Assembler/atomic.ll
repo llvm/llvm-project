@@ -71,6 +71,11 @@ define void @f(ptr %x) {
   ; CHECK : store atomic <2 x float> <float 3.0, float 4.0>, ptr %x release, align 4
   store atomic <2 x float> <float 3.0, float 4.0>, ptr %x release, align 4
 
+  ; CHECK: load atomic elementwise <2 x float>, ptr %x syncscope("agent") monotonic, align 4
+  load atomic elementwise <2 x float>, ptr %x syncscope("agent") monotonic, align 4
+  ; CHECK: load atomic volatile elementwise <2 x i32>, ptr %x monotonic, align 4
+  load atomic volatile elementwise <2 x i32>, ptr %x monotonic, align 4
+
   ; CHECK: fence syncscope("singlethread") release
   fence syncscope("singlethread") release
   ; CHECK: fence seq_cst
@@ -157,6 +162,25 @@ define void @fp_vector_atomicrmw(ptr %x, <2 x half> %val) {
   ; CHECK: %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val seq_cst
   %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val seq_cst
 
+  ret void
+}
+
+define void @vector_atomicrmw_xchg(ptr %x, <2 x i16> %ival, <2 x half> %fval, <2 x ptr> %pval) {
+  ; CHECK: %atomic.xchg.int = atomicrmw xchg ptr %x, <2 x i16> %ival seq_cst
+  %atomic.xchg.int = atomicrmw xchg ptr %x, <2 x i16> %ival seq_cst
+
+  ; CHECK: %atomic.xchg.fp = atomicrmw xchg ptr %x, <2 x half> %fval seq_cst
+  %atomic.xchg.fp = atomicrmw xchg ptr %x, <2 x half> %fval seq_cst
+
+  ; CHECK: %atomic.xchg.ptr = atomicrmw xchg ptr %x, <2 x ptr> %pval seq_cst
+  %atomic.xchg.ptr = atomicrmw xchg ptr %x, <2 x ptr> %pval seq_cst
+
+  ret void
+}
+
+define void @vector_atomicrmw_xchg_i1(ptr %x, <8 x i1> %val) {
+  ; CHECK: %atomic.xchg = atomicrmw xchg ptr %x, <8 x i1> %val seq_cst
+  %atomic.xchg = atomicrmw xchg ptr %x, <8 x i1> %val seq_cst
   ret void
 }
 
