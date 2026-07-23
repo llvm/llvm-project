@@ -1420,9 +1420,14 @@ bool ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
 
   // Get metadata for the base class
   Defined *metaRo = getClassRo(baseClass, /*getMetaRo=*/true);
-  ConcatInputSection *metaIsec = dyn_cast<ConcatInputSection>(metaRo->isec());
   Defined *classRo = getClassRo(baseClass, /*getMetaRo=*/false);
+  if (!metaRo || !classRo)
+    return false;
+
+  ConcatInputSection *metaIsec = dyn_cast<ConcatInputSection>(metaRo->isec());
   ConcatInputSection *classIsec = dyn_cast<ConcatInputSection>(classRo->isec());
+  if (!metaIsec || !classIsec)
+    return false;
 
   // Now collect the info from the base class from the various lists in the
   // class metadata
