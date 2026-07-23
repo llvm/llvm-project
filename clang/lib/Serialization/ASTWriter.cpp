@@ -1608,6 +1608,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   // Language options.
   Record.clear();
   const LangOptions &LangOpts = PP.getLangOpts();
+  Record.push_back(static_cast<unsigned>(LangOpts.LangStd));
   const uint64_t LanguageOptionValues[] = {
 #define LANGOPT(Name, Bits, Default, Compatibility, Description) LangOpts.Name,
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
@@ -8607,6 +8608,9 @@ void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
 
 void OMPClauseWriter::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
   Record.push_back(C->varlist_size());
+  Record.writeEnum(C->getModifier());
+  Record.AddSourceLocation(C->getModifierLoc());
+  Record.AddStmt(C->getModifierExpr());
   VisitOMPClauseWithPreInit(C);
   Record.AddSourceLocation(C->getLParenLoc());
   for (auto *VE : C->varlist())
