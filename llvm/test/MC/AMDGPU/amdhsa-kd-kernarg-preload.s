@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=obj < %s -o - | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=obj < %s -o - | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx942"
 

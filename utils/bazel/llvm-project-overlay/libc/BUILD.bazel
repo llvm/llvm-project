@@ -2065,6 +2065,180 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_printf_core_printf_config",
+    hdrs = ["src/__support/printf_core/printf_config.h"],
+    deps = [
+    ],
+)
+
+libc_support_library(
+    name = "__support_printf_core_printf_core_structs",
+    hdrs = ["src/__support/printf_core/core_structs.h"],
+    deps = [
+        ":__support_cpp_string_view",
+        ":__support_cpp_type_traits",
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+        ":__support_printf_core_printf_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_printf_core_printf_parser",
+    hdrs = ["src/__support/printf_core/parser.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_common",
+        ":__support_cpp_algorithm",
+        ":__support_cpp_bit",
+        ":__support_cpp_limits",
+        ":__support_cpp_optional",
+        ":__support_cpp_string_view",
+        ":__support_cpp_type_traits",
+        ":__support_ctype_utils",
+        ":__support_fixed_point",
+        ":__support_fputil_fp_bits",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_properties_types",
+        ":__support_printf_core_printf_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_str_to_integer",
+        ":errno",
+        ":llvm_libc_macros_stdfix_macros",
+        ":types_wint_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_printf_core_printf_writer",
+    hdrs = ["src/__support/printf_core/writer.h"],
+    textual_hdrs = ["src/__support/printf_core/write_modes.def"],
+    deps = [
+        ":__support_cpp_string_view",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_printf_core_printf_core_structs",
+        ":string_memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_printf_core_printf_converter",
+    hdrs = [
+        "src/__support/printf_core/char_converter.h",
+        "src/__support/printf_core/converter.h",
+        "src/__support/printf_core/converter_atlas.h",
+        "src/__support/printf_core/converter_utils.h",
+        "src/__support/printf_core/float_dec_converter.h",
+        "src/__support/printf_core/float_hex_converter.h",
+        "src/__support/printf_core/float_inf_nan_converter.h",
+        "src/__support/printf_core/int_converter.h",
+        "src/__support/printf_core/ptr_converter.h",
+        "src/__support/printf_core/strerror_converter.h",
+        "src/__support/printf_core/string_converter.h",
+        "src/__support/printf_core/write_int_converter.h",
+    ],
+    deps = [
+        ":__support_big_int",
+        ":__support_common",
+        ":__support_cpp_limits",
+        ":__support_cpp_span",
+        ":__support_cpp_string_view",
+        ":__support_ctype_utils",
+        ":__support_float_to_string",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_rounding_mode",
+        ":__support_integer_to_string",
+        ":__support_libc_assert",
+        ":__support_macros_config",
+        ":__support_printf_core_printf_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_writer",
+        ":__support_stringutil",
+        ":__support_uint128",
+        ":__support_wchar_mbstate",
+        ":__support_wchar_string_converter",
+        ":__support_wchar_wcrtomb",
+        ":hdr_limits_macros",
+        ":hdr_wchar_macros",
+        ":string_utils",
+        ":types_char32_t",
+        ":types_char8_t",
+        ":types_wchar_t",
+        ":types_wint_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_printf_core_printf_error_mapper",
+    hdrs = [
+        "src/__support/printf_core/error_mapper.h",
+    ] + select({
+        "@platforms//os:linux": [
+            "src/__support/printf_core/linux/error_mapper.h",
+        ],
+        "//conditions:default": ["src/__support/printf_core/generic/error_mapper.h"],
+    }),
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_error_or",
+        ":__support_macros_properties_architectures",
+        ":__support_printf_core_printf_core_structs",
+        ":hdr_errno_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_printf_core_printf_main",
+    hdrs = ["src/__support/printf_core/printf_main.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_printf_core_printf_converter",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_printf_parser",
+        ":__support_printf_core_printf_writer",
+    ],
+)
+
+libc_support_library(
+    name = "__support_printf_core_vfprintf_internal",
+    hdrs = ["src/__support/printf_core/vfprintf_internal.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_error_or",
+        ":__support_file_file",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_main",
+        ":__support_printf_core_printf_writer",
+        ":types_FILE",
+    ],
+)
+
+libc_support_library(
+    name = "__support_printf_core_vasprintf_internal",
+    hdrs = ["src/__support/printf_core/vasprintf_internal.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_error_or",
+        ":__support_macros_attributes",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_main",
+        ":__support_printf_core_printf_writer",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
+        ":types_FILE",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
@@ -13908,10 +14082,10 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_type_traits",
         ":__support_macros_config",
+        ":__support_printf_core_printf_converter",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_writer",
         ":__support_str_to_integer",
-        ":printf_converter",
-        ":printf_core_structs",
-        ":printf_writer",
     ],
 )
 
@@ -13923,8 +14097,8 @@ libc_function(
         ":__support_common",
         ":__support_cpp_limits",
         ":__support_macros_config",
-        ":printf_core_structs",
-        ":printf_error_mapper",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
         ":str_from_util",
     ],
 )
@@ -13937,8 +14111,8 @@ libc_function(
         ":__support_common",
         ":__support_cpp_limits",
         ":__support_macros_config",
-        ":printf_core_structs",
-        ":printf_error_mapper",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
         ":str_from_util",
     ],
 )
@@ -13951,8 +14125,8 @@ libc_function(
         ":__support_common",
         ":__support_cpp_limits",
         ":__support_macros_config",
-        ":printf_core_structs",
-        ":printf_error_mapper",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
         ":str_from_util",
     ],
 )
@@ -15298,180 +15472,6 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
-    name = "printf_config",
-    hdrs = ["src/stdio/printf_core/printf_config.h"],
-    deps = [
-    ],
-)
-
-libc_support_library(
-    name = "printf_core_structs",
-    hdrs = ["src/stdio/printf_core/core_structs.h"],
-    deps = [
-        ":__support_cpp_string_view",
-        ":__support_cpp_type_traits",
-        ":__support_fputil_fp_bits",
-        ":__support_macros_config",
-        ":printf_config",
-    ],
-)
-
-libc_support_library(
-    name = "printf_parser",
-    hdrs = ["src/stdio/printf_core/parser.h"],
-    deps = [
-        ":__support_arg_list",
-        ":__support_common",
-        ":__support_cpp_algorithm",
-        ":__support_cpp_bit",
-        ":__support_cpp_limits",
-        ":__support_cpp_optional",
-        ":__support_cpp_string_view",
-        ":__support_cpp_type_traits",
-        ":__support_ctype_utils",
-        ":__support_fixed_point",
-        ":__support_fputil_fp_bits",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_macros_properties_types",
-        ":__support_str_to_integer",
-        ":errno",
-        ":llvm_libc_macros_stdfix_macros",
-        ":printf_config",
-        ":printf_core_structs",
-        ":types_wint_t",
-    ],
-)
-
-libc_support_library(
-    name = "printf_writer",
-    hdrs = ["src/stdio/printf_core/writer.h"],
-    textual_hdrs = ["src/stdio/printf_core/write_modes.def"],
-    deps = [
-        ":__support_cpp_string_view",
-        ":__support_macros_config",
-        ":__support_macros_optimization",
-        ":printf_core_structs",
-        ":string_memory_utils",
-    ],
-)
-
-libc_support_library(
-    name = "printf_converter",
-    hdrs = [
-        "src/stdio/printf_core/char_converter.h",
-        "src/stdio/printf_core/converter.h",
-        "src/stdio/printf_core/converter_atlas.h",
-        "src/stdio/printf_core/converter_utils.h",
-        "src/stdio/printf_core/float_dec_converter.h",
-        "src/stdio/printf_core/float_hex_converter.h",
-        "src/stdio/printf_core/float_inf_nan_converter.h",
-        "src/stdio/printf_core/int_converter.h",
-        "src/stdio/printf_core/ptr_converter.h",
-        "src/stdio/printf_core/strerror_converter.h",
-        "src/stdio/printf_core/string_converter.h",
-        "src/stdio/printf_core/write_int_converter.h",
-    ],
-    deps = [
-        ":__support_big_int",
-        ":__support_common",
-        ":__support_cpp_limits",
-        ":__support_cpp_span",
-        ":__support_cpp_string_view",
-        ":__support_ctype_utils",
-        ":__support_float_to_string",
-        ":__support_fputil_fenv_impl",
-        ":__support_fputil_fp_bits",
-        ":__support_fputil_rounding_mode",
-        ":__support_integer_to_string",
-        ":__support_libc_assert",
-        ":__support_macros_config",
-        ":__support_stringutil",
-        ":__support_uint128",
-        ":__support_wchar_mbstate",
-        ":__support_wchar_string_converter",
-        ":__support_wchar_wcrtomb",
-        ":hdr_limits_macros",
-        ":hdr_wchar_macros",
-        ":printf_config",
-        ":printf_core_structs",
-        ":printf_writer",
-        ":string_utils",
-        ":types_char32_t",
-        ":types_char8_t",
-        ":types_wchar_t",
-        ":types_wint_t",
-    ],
-)
-
-libc_support_library(
-    name = "printf_error_mapper",
-    hdrs = [
-        "src/stdio/printf_core/error_mapper.h",
-    ] + select({
-        "@platforms//os:linux": [
-            "src/stdio/printf_core/linux/error_mapper.h",
-        ],
-        "//conditions:default": ["src/stdio/printf_core/generic/error_mapper.h"],
-    }),
-    deps = [
-        ":__support_cpp_type_traits",
-        ":__support_error_or",
-        ":__support_macros_properties_architectures",
-        ":hdr_errno_macros",
-        ":printf_core_structs",
-    ],
-)
-
-libc_support_library(
-    name = "printf_main",
-    hdrs = ["src/stdio/printf_core/printf_main.h"],
-    deps = [
-        ":__support_arg_list",
-        ":__support_error_or",
-        ":__support_macros_config",
-        ":printf_converter",
-        ":printf_core_structs",
-        ":printf_error_mapper",
-        ":printf_parser",
-        ":printf_writer",
-    ],
-)
-
-libc_support_library(
-    name = "vfprintf_internal",
-    hdrs = ["src/stdio/printf_core/vfprintf_internal.h"],
-    deps = [
-        ":__support_arg_list",
-        ":__support_error_or",
-        ":__support_file_file",
-        ":__support_macros_attributes",
-        ":__support_macros_config",
-        ":printf_core_structs",
-        ":printf_main",
-        ":printf_writer",
-        ":types_FILE",
-    ],
-)
-
-libc_support_library(
-    name = "vasprintf_internal",
-    hdrs = ["src/stdio/printf_core/vasprintf_internal.h"],
-    deps = [
-        ":__support_arg_list",
-        ":__support_error_or",
-        ":__support_macros_attributes",
-        ":func_free",
-        ":func_malloc",
-        ":func_realloc",
-        ":printf_core_structs",
-        ":printf_main",
-        ":printf_writer",
-        ":types_FILE",
-    ],
-)
-
 libc_function(
     name = "asprintf",
     srcs = ["src/stdio/asprintf.cpp"],
@@ -15481,9 +15481,9 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":printf_core_structs",
-        ":printf_error_mapper",
-        ":vasprintf_internal",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_vasprintf_internal",
     ],
 )
 
@@ -15496,12 +15496,12 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_printf_core_printf_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_printf_main",
+        ":__support_printf_core_printf_writer",
         ":errno",
-        ":printf_config",
-        ":printf_core_structs",
-        ":printf_error_mapper",
-        ":printf_main",
-        ":printf_writer",
     ],
 )
 
@@ -15514,11 +15514,11 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_printf_main",
+        ":__support_printf_core_printf_writer",
         ":errno",
-        ":printf_core_structs",
-        ":printf_error_mapper",
-        ":printf_main",
-        ":printf_writer",
     ],
 )
 
@@ -15531,12 +15531,12 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_file_file",
         ":__support_macros_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_vfprintf_internal",
         ":errno",
-        ":printf_core_structs",
-        ":printf_error_mapper",
         ":stdout",
         ":types_FILE",
-        ":vfprintf_internal",
     ],
 )
 
@@ -15549,11 +15549,11 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_file_file",
         ":__support_macros_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_vfprintf_internal",
         ":errno",
-        ":printf_core_structs",
-        ":printf_error_mapper",
         ":types_FILE",
-        ":vfprintf_internal",
     ],
 )
 
@@ -15566,9 +15566,9 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":printf_core_structs",
-        ":printf_error_mapper",
-        ":vasprintf_internal",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_vasprintf_internal",
     ],
 )
 
@@ -15581,11 +15581,11 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_printf_main",
+        ":__support_printf_core_printf_writer",
         ":errno",
-        ":printf_core_structs",
-        ":printf_error_mapper",
-        ":printf_main",
-        ":printf_writer",
     ],
 )
 
@@ -15598,11 +15598,11 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_printf_main",
+        ":__support_printf_core_printf_writer",
         ":errno",
-        ":printf_core_structs",
-        ":printf_error_mapper",
-        ":printf_main",
-        ":printf_writer",
     ],
 )
 
@@ -15615,12 +15615,12 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_file_file",
         ":__support_macros_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_vfprintf_internal",
         ":errno",
-        ":printf_core_structs",
-        ":printf_error_mapper",
         ":stdout",
         ":types_FILE",
-        ":vfprintf_internal",
     ],
 )
 
@@ -15633,11 +15633,11 @@ libc_function(
         ":__support_cpp_limits",
         ":__support_file_file",
         ":__support_macros_config",
+        ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
+        ":__support_printf_core_vfprintf_internal",
         ":errno",
-        ":printf_core_structs",
-        ":printf_error_mapper",
         ":types_FILE",
-        ":vfprintf_internal",
     ],
 )
 

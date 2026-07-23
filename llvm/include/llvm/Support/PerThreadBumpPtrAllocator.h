@@ -10,26 +10,38 @@
 #define LLVM_SUPPORT_PERTHREADBUMPPTRALLOCATOR_H
 
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Parallel.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
+#include <mutex>
+#include <vector>
 
 namespace llvm {
 namespace parallel {
 
-/// PerThreadAllocator is used in conjunction with ThreadPoolExecutor to allow
-/// per-thread allocations. It wraps a possibly thread-unsafe allocator,
-/// e.g. BumpPtrAllocator. PerThreadAllocator must be used with only main thread
-/// or threads created by ThreadPoolExecutor, as it utilizes getThreadIndex,
-/// which is set by ThreadPoolExecutor. To work properly, ThreadPoolExecutor
-/// should be initialized before PerThreadAllocator is created.
-/// TODO: The same approach might be implemented for ThreadPool.
+namespace detail {
+/// Return a new process-unique PerThreadAllocator instance id. Ids are never
+/// reused.
+LLVM_ABI unsigned claimPerThreadAllocatorId();
+} // namespace detail
 
+/// PerThreadAllocator wraps a thread-unsafe allocator (e.g. BumpPtrAllocator)
+/// for lock-free concurrent allocation: each thread receives its own
+/// sub-allocator on first allocation, and the PerThreadAllocator owns all
+/// sub-allocators. Recommended to used with the thread pool in Parallel.h even
+/// if there is no dependency on it.
 template <typename AllocatorTy>
 class PerThreadAllocator
     : public AllocatorBase<PerThreadAllocator<AllocatorTy>> {
+  // Heap-allocated so that the class stays movable while holding a mutex.
+  struct State {
+    std::mutex Mutex;
+    std::vector<std::unique_ptr<AllocatorTy>> Allocators;
+  };
+
 public:
   PerThreadAllocator()
-      : NumOfAllocators(parallel::getThreadCount()),
-        Allocators(std::make_unique<AllocatorTy[]>(NumOfAllocators)) {}
+      : S(std::make_unique<State>()), Id(detail::claimPerThreadAllocatorId()) {}
 
   /// \defgroup Methods which could be called asynchronously:
   ///
@@ -41,25 +53,45 @@ public:
 
   /// Allocate \a Size bytes of \a Alignment aligned memory.
   void *Allocate(size_t Size, size_t Alignment) {
-    assert(getThreadIndex() < NumOfAllocators);
-    return Allocators[getThreadIndex()].Allocate(Size, Alignment);
+    return getThreadLocalAllocator().Allocate(Size, Alignment);
   }
 
   /// Deallocate \a Ptr to \a Size bytes of memory allocated by this
   /// allocator.
   void Deallocate(const void *Ptr, size_t Size, size_t Alignment) {
-    assert(getThreadIndex() < NumOfAllocators);
-    return Allocators[getThreadIndex()].Deallocate(Ptr, Size, Alignment);
+    return getThreadLocalAllocator().Deallocate(Ptr, Size, Alignment);
   }
 
-  /// Return allocator corresponding to the current thread.
+  /// Return the calling thread's sub-allocator, creating it on first use.
   AllocatorTy &getThreadLocalAllocator() {
-    assert(getThreadIndex() < NumOfAllocators);
-    return Allocators[getThreadIndex()];
+    // The calling thread's sub-allocator of each instance, indexed by a
+    // process-unique instance id.
+    //
+    // mlir::ThreadLocalCache keys an analogous per-thread map on the instance
+    // pointer and reclaims a thread's slot once the instance dies, but pays a
+    // map lookup and shared_ptr bookkeeping per allocation. Instances here are
+    // few and short-lived, so we prefer the O(1) vector index and accept that a
+    // thread's Cache only grows with the number of instances created.
+    static thread_local std::vector<AllocatorTy *> Cache;
+    if (LLVM_UNLIKELY(Cache.size() <= Id))
+      Cache.resize(Id + 1);
+    AllocatorTy *&A = Cache[Id];
+    if (LLVM_UNLIKELY(!A)) {
+      // Heap-allocate sub-allocators so that their addresses are stable and
+      // different threads' bump pointers do not share a cache line.
+      auto New = std::make_unique<AllocatorTy>();
+      A = New.get();
+      std::lock_guard<std::mutex> Lock(S->Mutex);
+      S->Allocators.push_back(std::move(New));
+    }
+    return *A;
   }
 
-  // Return number of used allocators.
-  size_t getNumberOfAllocators() const { return NumOfAllocators; }
+  /// Return the number of sub-allocators, i.e. threads that have allocated.
+  size_t getNumberOfAllocators() const {
+    std::lock_guard<std::mutex> Lock(S->Mutex);
+    return S->Allocators.size();
+  }
   /// @}
 
   /// \defgroup Methods which could not be called asynchronously:
@@ -68,38 +100,37 @@ public:
 
   /// Reset state of allocators.
   void Reset() {
-    for (size_t Idx = 0; Idx < getNumberOfAllocators(); Idx++)
-      Allocators[Idx].Reset();
+    for (const auto &A : S->Allocators)
+      A->Reset();
   }
 
   /// Return total memory size used by all allocators.
   size_t getTotalMemory() const {
     size_t TotalMemory = 0;
-
-    for (size_t Idx = 0; Idx < getNumberOfAllocators(); Idx++)
-      TotalMemory += Allocators[Idx].getTotalMemory();
-
+    for (const auto &A : S->Allocators)
+      TotalMemory += A->getTotalMemory();
     return TotalMemory;
   }
 
   /// Set red zone for all allocators.
   void setRedZoneSize(size_t NewSize) {
-    for (size_t Idx = 0; Idx < getNumberOfAllocators(); Idx++)
-      Allocators[Idx].setRedZoneSize(NewSize);
+    for (const auto &A : S->Allocators)
+      A->setRedZoneSize(NewSize);
   }
 
   /// Print statistic for each allocator.
   void PrintStats() const {
-    for (size_t Idx = 0; Idx < getNumberOfAllocators(); Idx++) {
-      errs() << "\n Allocator " << Idx << "\n";
-      Allocators[Idx].PrintStats();
+    size_t Idx = 0;
+    for (const auto &A : S->Allocators) {
+      errs() << "\n Allocator " << Idx++ << "\n";
+      A->PrintStats();
     }
   }
   /// @}
 
 protected:
-  size_t NumOfAllocators;
-  std::unique_ptr<AllocatorTy[]> Allocators;
+  std::unique_ptr<State> S;
+  unsigned Id;
 };
 
 using PerThreadBumpPtrAllocator = PerThreadAllocator<BumpPtrAllocator>;

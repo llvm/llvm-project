@@ -138,9 +138,27 @@ class SPIRVLegalizePointerCastImpl {
         return AssignValue;
     }
 
-    assert(TargetType->getNumElements() < SourceType->getNumElements());
-    SmallVector<int> Mask(/* Size= */ TargetType->getNumElements());
-    for (unsigned I = 0; I < TargetType->getNumElements(); ++I)
+    auto *AssignVecTy = cast<FixedVectorType>(AssignValue->getType());
+    const unsigned NumTarget = TargetType->getNumElements();
+    const unsigned NumSource = AssignVecTy->getNumElements();
+
+    // Optimizations may widen a narrow load to cover padding (e.g., loading a
+    // <1 x float> column as <4 x float>). Since extra lanes read trailing
+    // padding, insert only the valid lanes into a poison vector to avoid poison
+    // scalars.
+    if (NumTarget > NumSource) {
+      Value *Result = PoisonValue::get(TargetType);
+      buildAssignType(B, TargetType, Result);
+      for (unsigned I = 0; I < NumSource; ++I) {
+        Value *Scalar = extractScalarFromVector(B, AssignValue, I);
+        Result = makeInsertElement(B, Result, Scalar, I);
+      }
+      return Result;
+    }
+
+    assert(NumTarget < NumSource);
+    SmallVector<int> Mask(/* Size= */ NumTarget);
+    for (unsigned I = 0; I < NumTarget; ++I)
       Mask[I] = I;
     Value *Output = B.CreateShuffleVector(AssignValue, AssignValue, Mask);
     buildAssignType(B, TargetType, Output);
@@ -425,6 +443,22 @@ class SPIRVLegalizePointerCastImpl {
     Value *NewI = B.CreateIntrinsic(Intrinsic::spv_extractelt, {Types}, {Args});
     buildAssignType(B, ElementType, NewI);
     return NewI;
+  }
+
+  // Extracts scalar element |Index| from |Vector|. A <1 x T> vector shares its
+  // SPIR-V type with the scalar T, so a plain extractelement would be invalid;
+  // bridge it with spv_bitcast instead.
+  Value *extractScalarFromVector(IRBuilder<> &B, Value *Vector,
+                                 unsigned Index) {
+    auto *VecTy = cast<FixedVectorType>(Vector->getType());
+    Type *ElemTy = VecTy->getElementType();
+    if (VecTy->getNumElements() == 1) {
+      Value *Scalar =
+          B.CreateIntrinsic(Intrinsic::spv_bitcast, {ElemTy, VecTy}, {Vector});
+      buildAssignType(B, ElemTy, Scalar);
+      return Scalar;
+    }
+    return makeExtractElement(B, ElemTy, Vector, Index);
   }
 
   // Stores the given Src vector operand into the Dst vector, adjusting the size

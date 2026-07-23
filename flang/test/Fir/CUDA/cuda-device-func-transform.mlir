@@ -201,3 +201,23 @@ func.func @_QPsub_maxtnid_only() attributes {cuf.launch_bounds = #cuf.launch_bou
 
 // CHECK: gpu.func @_QPsub_maxtnid_only() kernel attributes {nvvm.maxntid = array<i32: 256, 1, 1>}
 // CHECK-NOT: nvvm.minctasm
+
+// -----
+
+// ACC routines are materialized and moved to the GPU module later by the
+// OpenACC pipeline. Do not clone them while collecting CUDA device callees.
+func.func @acc_routine() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_info]>} {
+  return
+}
+
+func.func @cuda_global() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  fir.call @acc_routine() : () -> ()
+  return
+}
+
+// CHECK-LABEL: func.func @acc_routine()
+// CHECK-LABEL: gpu.module @cuda_device_mod
+// CHECK-NOT: func.func @acc_routine()
+// CHECK-NOT: gpu.func @acc_routine()
+// CHECK: gpu.func @cuda_global() kernel
+// CHECK: fir.call @acc_routine() : () -> ()

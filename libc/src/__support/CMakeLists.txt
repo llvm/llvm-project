@@ -462,6 +462,8 @@ add_subdirectory(threads)
 
 add_subdirectory(File)
 
+add_subdirectory(printf_core)
+
 add_subdirectory(HashTable)
 
 add_subdirectory(fixed_point)

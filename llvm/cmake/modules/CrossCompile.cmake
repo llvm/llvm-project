@@ -79,10 +79,6 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
          "-DLLVM_EXTERNAL_${name}_SOURCE_DIR=${LLVM_EXTERNAL_${name}_SOURCE_DIR}")
   endforeach()
 
-  if(LLVM_LIBC_GPU_BUILD)
-    set(libc_flags -DLLVM_LIBC_GPU_BUILD=ON)
-  endif()
-
   if(PYTHON_EXECUTABLE)
     set(python_executable_flag "-DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}")
   endif()
@@ -110,7 +106,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_INCLUDE_EXAMPLES=OFF
         -DLLVM_TABLEGEN_FLAGS="${llvm_tablegen_flags}"
         ${python_executable_flag}
-        ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}
+        ${build_type_flags} ${linker_flag} ${external_clang_dir}
         ${ARGN}
     WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}
     DEPENDS CREATE_${project_name}_${target_name}

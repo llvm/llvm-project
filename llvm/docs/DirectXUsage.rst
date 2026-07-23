@@ -18,6 +18,7 @@ User Guide for the DirectX Target
    DirectX/DXILOpTableGenDesign
    DirectX/DXILResources
    DirectX/RootSignatures
+   DirectX/SemanticSignatures
 
 Introduction
 ============

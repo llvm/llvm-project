@@ -106,6 +106,7 @@ public:
                                                 bool IsArray = false);
   BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
+  BuiltinTypeDeclBuilder &addByteAddressBufferInterlockedMethods();
   BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim,
                                            bool IsArray = false);
   BuiltinTypeDeclBuilder &addSampleBiasMethods(ResourceDimension Dim,
@@ -134,6 +135,9 @@ public:
                             QualType ReturnTy = QualType());
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
                                            QualType ValueType);
+  BuiltinTypeDeclBuilder &
+  addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
+                                        StringRef BuiltinName);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 

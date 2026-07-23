@@ -22,5 +22,9 @@
 DEFINE_C_API_PTR_METHODS(
     MlirMemoryEffectInstancesList,
     llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance>)
+DEFINE_C_API_PTR_METHODS(MlirMemoryEffect, mlir::MemoryEffects::Effect)
+DEFINE_C_API_PTR_METHODS(MlirMemoryEffectInstance,
+                         mlir::MemoryEffects::EffectInstance)
+DEFINE_C_API_PTR_METHODS(MlirSideEffectResource, mlir::SideEffects::Resource)
 
 #endif // MLIR_CAPI_INTERFACES_H

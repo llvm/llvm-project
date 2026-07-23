@@ -344,12 +344,18 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
     }
   }
 
-  // Refill the ready list by visiting all nodes from the top of DAG to LowestI.
+  // Refill the ready list by visiting all the nodes in the unscheduled part of
+  // the DAG. In bottom-up that is from the top of the DAG down to LowestI; in
+  // top-down it is the mirror image, from TopI down to the bottom of the DAG.
   ReadyList.clear();
-  Interval<Instruction> RefillIntvl(DAG.getInterval().top(), LowestI);
+  Interval<Instruction> RefillIntvl =
+      Dir == SchedDirection::BottomUp
+          ? Interval<Instruction>(DAG.getInterval().top(), LowestI)
+          : Interval<Instruction>(TopI, DAG.getInterval().bottom());
   for (Instruction &I : RefillIntvl) {
     auto *N = DAG.getNode(&I);
-    if (N->readyBottomUp())
+    if (Dir == SchedDirection::BottomUp ? N->readyBottomUp()
+                                        : N->readyTopDown())
       ReadyList.insert(N);
   }
 }

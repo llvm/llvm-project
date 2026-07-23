@@ -38,6 +38,19 @@ LegalityPredicate typeOfExtendedScalars(unsigned TypeIdx, bool IsExtendedInts) {
   };
 }
 
+// Split a wider vector into a legal vector. For shader targets, pick the
+// largest divisor in [2, MaxVectorSize] (9 -> 3, 12 -> 4). Returns 1 for
+// prime widths (scalarize). Non-shader targets are 2/3/4/8/16
+static unsigned getVectorSplitWidth(unsigned NumElts, unsigned MaxVectorSize,
+                                    bool IsShader) {
+  if (!IsShader)
+    return MaxVectorSize;
+  for (unsigned D = std::min(NumElts, MaxVectorSize); D >= 2; --D)
+    if (NumElts % D == 0)
+      return D;
+  return 1;
+}
+
 SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   using namespace TargetOpcode;
 
@@ -191,6 +204,17 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   uint32_t MaxVectorSize = ST.isShader() ? 4 : 16;
   LLVM_DEBUG(dbgs() << "MaxVectorSize: " << MaxVectorSize << "\n");
 
+  // The following lambda is used to split wide vectors into legal vectors.
+  // Informed by getVectorSplitWidth.
+  auto SplitWideVectorToDivisor =
+      [MaxVectorSize, IsShader = ST.isShader()](const LegalityQuery &Query) {
+        const LLT Ty = Query.Types[0];
+        unsigned Target =
+            getVectorSplitWidth(Ty.getNumElements(), MaxVectorSize, IsShader);
+        return std::make_pair(
+            0u, Ty.changeElementCount(ElementCount::getFixed(Target)));
+      };
+
   for (auto Opc : getTypeFoldingSupportedOpcodes()) {
     switch (Opc) {
     case G_EXTRACT_VECTOR_ELT:
@@ -233,8 +257,30 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_INTRINSIC_W_SIDE_EFFECTS).custom();
 
+  // Lower wide G_SHUFFLE_VECTORs into per-chunk shuffles.
+  // Note: Only applies to shader targets, not kernels.
+  auto ShuffleChunkable =
+      [MaxVectorSize, IsShader = ST.isShader()](const LegalityQuery &Query) {
+        const LLT DstTy = Query.Types[0];
+        const LLT SrcTy = Query.Types[1];
+        if (!IsShader || !DstTy.isVector() || !SrcTy.isVector())
+          return false;
+        unsigned DstN = DstTy.getNumElements();
+        unsigned SrcN = SrcTy.getNumElements();
+        if (DstN <= MaxVectorSize || SrcN <= MaxVectorSize)
+          return false;
+        // Power-of-two shuffles can use generic lowering handles
+        if (isPowerOf2_32(DstN) || isPowerOf2_32(SrcN))
+          return false;
+        // past this point is non-power-of-two matrix eg (6, 9, 12)
+        unsigned Wd = getVectorSplitWidth(DstN, MaxVectorSize, IsShader);
+        unsigned Ws = getVectorSplitWidth(SrcN, MaxVectorSize, IsShader);
+        return Wd >= 2 && Wd == Ws;
+      };
+
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes)
+      .customIf(ShuffleChunkable)
       .moreElementsToNextPow2(0)
       .lowerIf(vectorElementCountIsGreaterThan(0, MaxVectorSize))
       .moreElementsToNextPow2(1)
@@ -332,7 +378,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT}).lower();
 
-  getActionDefinitionsBuilder(G_STRICT_FLDEXP)
+  getActionDefinitionsBuilder({G_FLDEXP, G_STRICT_FLDEXP})
       .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
@@ -351,14 +397,25 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectorsProduct);
 
-  // Extensions.
+  // Vulkan Shaders limits vectors to 2-4 components. Split wider vectors into
+  // <= MaxVectorSize chunks for independent extend/truncate operations.
+  // NOTE: Intentionally not using moreElementsToNextPow2 here; padding rebuilds
+  // illegal wide vectors, whereas direct splitting safely handles remainders.
   getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
       .legalForCartesianProduct(allScalarsAndVectors)
-      .legalIf(extendedScalarsAndVectorsProduct);
+      .legalIf(extendedScalarsAndVectorsProduct)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       SplitWideVectorToDivisor);
 
   // Lower G_SEXT_INREG to the canonical shl/ashr pair, which map to
-  // OpShiftLeftLogical + OpShiftRightArithmetic.
-  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+  // OpShiftLeftLogical + OpShiftRightArithmetic. Split wide vectors the same
+  // GCD-divisor way as G_TRUNC/G_ZEXT/G_SEXT above (rather than falling back
+  // to the generic pow2/MaxVectorSize padding split) so sign-extension of a
+  // wide non-power-of-two vector doesn't needlessly pad with undef lanes.
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       SplitWideVectorToDivisor)
+      .lower();
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor(allPtrsScalarsAndVectors)
@@ -718,6 +775,161 @@ static bool legalizeStore(LegalizerHelper &Helper, MachineInstr &MI,
   return true;
 }
 
+// Returns true if a G_UNMERGE_VALUES use scalarizes DstReg without ever
+// feeding a G_BUILD_VECTOR (directly or through its scalar defs). Such an
+// unmerge is just scattering DstReg's lanes out to individual scalars.
+static bool unmergeOnlyScatters(MachineRegisterInfo &MRI,
+                                const MachineInstr &Unmerge) {
+  if (!MRI.getType(Unmerge.getOperand(0).getReg()).isScalar())
+    return false;
+  for (const MachineOperand &Def : Unmerge.defs())
+    for (MachineInstr &U : MRI.use_nodbg_instructions(Def.getReg()))
+      if (U.getOpcode() == TargetOpcode::G_BUILD_VECTOR ||
+          U.getOpcode() == TargetOpcode::G_BUILD_VECTOR_TRUNC)
+        return false;
+  return true;
+}
+
+// Returns true if every use of DstReg just scatters it out (feeds a G_STORE,
+// or a G_UNMERGE_VALUES that doesn't feed a G_BUILD_VECTOR). In that case
+// chunk-vectorizing the shuffle only adds overhead, so the caller should fall
+// back to the generic scalarizing lowering instead.
+static bool allUsesAreShuffleScatter(MachineRegisterInfo &MRI,
+                                     Register DstReg) {
+  if (MRI.use_nodbg_empty(DstReg))
+    return false;
+  auto IsScatterUse = [&](MachineInstr &Use) {
+    if (Use.getOpcode() == TargetOpcode::G_STORE)
+      return true;
+    return Use.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
+           unmergeOnlyScatters(MRI, Use);
+  };
+  for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg))
+    if (!IsScatterUse(Use))
+      return false;
+  return true;
+}
+
+// Splits SrcReg into NumChunks separate ChunkTy-typed registers.
+static SmallVector<Register>
+unmergeIntoChunks(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                  Register SrcReg, unsigned NumChunks, LLT ChunkTy) {
+  assert(NumChunks >= 2 && "ShuffleChunkable should have handled this case");
+  SmallVector<Register> Regs;
+  for (unsigned I = 0; I < NumChunks; ++I)
+    Regs.push_back(MRI.createGenericVirtualRegister(ChunkTy));
+  MIRBuilder.buildUnmerge(Regs, SrcReg);
+  return Regs;
+}
+
+// Builds one legal-width dst chunk of a chunked shuffle. ChunkMask indexes
+// lanes of the logical concatenation and chains legal-width OpVectorShuffles
+// folding in one contributing source chunk's lanes at each step.
+static Register buildShuffleChunk(MachineIRBuilder &MIRBuilder,
+                                  MachineRegisterInfo &MRI, LLT ChunkTy,
+                                  unsigned VectorSplitWidth,
+                                  ArrayRef<int> ChunkMask,
+                                  ArrayRef<Register> SrcChunks) {
+  SmallVector<int> LaneSrcChunk(VectorSplitWidth, -1);
+  SmallVector<int> LaneInChunk(VectorSplitWidth, -1);
+  SmallVector<unsigned> UsedChunks;
+  for (unsigned J = 0; J < VectorSplitWidth; ++J) {
+    int ChunkElementMask = ChunkMask[J];
+    if (ChunkElementMask < 0)
+      continue;
+    unsigned SrcChunk = ChunkElementMask / VectorSplitWidth;
+    LaneSrcChunk[J] = SrcChunk;
+    LaneInChunk[J] = ChunkElementMask % VectorSplitWidth;
+    if (!is_contained(UsedChunks, SrcChunk))
+      UsedChunks.push_back(SrcChunk);
+  }
+
+  if (UsedChunks.empty()) {
+    Register Undef = MRI.createGenericVirtualRegister(ChunkTy);
+    MIRBuilder.buildUndef(Undef);
+    return Undef;
+  }
+
+  Register Partial;
+  SmallVector<bool> Resolved(VectorSplitWidth, false);
+  for (unsigned Step = 0; Step < UsedChunks.size(); ++Step) {
+    unsigned SC = UsedChunks[Step];
+    Register SrcChunk = SrcChunks[SC];
+    SmallVector<int> ShufMask(VectorSplitWidth, -1);
+    Register Res = MRI.createGenericVirtualRegister(ChunkTy);
+    if (Step == 0) {
+      for (unsigned J = 0; J < VectorSplitWidth; ++J)
+        if (LaneSrcChunk[J] == static_cast<int>(SC))
+          ShufMask[J] = LaneInChunk[J];
+      MIRBuilder.buildShuffleVector(Res, SrcChunk, SrcChunk, ShufMask);
+    } else {
+      for (unsigned J = 0; J < VectorSplitWidth; ++J) {
+        if (LaneSrcChunk[J] == static_cast<int>(SC))
+          ShufMask[J] = static_cast<int>(VectorSplitWidth) + LaneInChunk[J];
+        else if (Resolved[J])
+          ShufMask[J] = static_cast<int>(J);
+      }
+      MIRBuilder.buildShuffleVector(Res, Partial, SrcChunk, ShufMask);
+    }
+    for (unsigned J = 0; J < VectorSplitWidth; ++J)
+      if (LaneSrcChunk[J] == static_cast<int>(SC))
+        Resolved[J] = true;
+    Partial = Res;
+  }
+  return Partial;
+}
+
+// Lowers wide G_SHUFFLE_VECTORs into legal-width chunked OpVectorShuffles
+// instead of scalarizing. Unmerge/concat artifacts fold away naturally.
+// Requires shader targets and matching chunk widths (see shuffleChunkable).
+static bool legalizeShuffleVector(LegalizerHelper &Helper, MachineInstr &MI) {
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  Register DstReg = MI.getOperand(0).getReg();
+
+  if (allUsesAreShuffleScatter(MRI, DstReg))
+    return Helper.lower(MI, 0, LLT()) == LegalizerHelper::Legalized;
+
+  Register Src1Reg = MI.getOperand(1).getReg();
+  Register Src2Reg = MI.getOperand(2).getReg();
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(Src1Reg);
+  LLT EltTy = SrcTy.getElementType();
+
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+  unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
+  unsigned VectorSplitWidth =
+      getVectorSplitWidth(DstTy.getNumElements(), MaxVectorSize, ST.isShader());
+  LLT ChunkTy = LLT::fixed_vector(VectorSplitWidth, EltTy);
+  unsigned NumSrcChunks = SrcTy.getNumElements() / VectorSplitWidth;
+  unsigned NumDstChunks = DstTy.getNumElements() / VectorSplitWidth;
+
+  // The G_SHUFFLE_VECTOR mask indexes a logical concatenation of the two
+  // sources, so lay the chunks out the same way: global chunk indices
+  // [0, NumSrcChunks) are Src1, the next NumSrcChunks are Src2.
+  SmallVector<Register> SrcChunks =
+      unmergeIntoChunks(MIRBuilder, MRI, Src1Reg, NumSrcChunks, ChunkTy);
+  SmallVector<Register> Src2Chunks =
+      unmergeIntoChunks(MIRBuilder, MRI, Src2Reg, NumSrcChunks, ChunkTy);
+  SrcChunks.append(Src2Chunks.begin(), Src2Chunks.end());
+
+  SmallVector<Register> DstChunks;
+  for (unsigned D = 0; D < NumDstChunks; ++D)
+    DstChunks.push_back(buildShuffleChunk(
+        MIRBuilder, MRI, ChunkTy, VectorSplitWidth,
+        Mask.slice(D * VectorSplitWidth, VectorSplitWidth), SrcChunks));
+
+  // A single-chunk result is already the final legal-width value.
+  if (DstChunks.size() == 1)
+    MIRBuilder.buildCopy(DstReg, DstChunks[0]);
+  else
+    MIRBuilder.buildConcatVectors(DstReg, DstChunks);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool SPIRVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -761,6 +973,8 @@ bool SPIRVLegalizerInfo::legalizeCustom(
     return legalizeLoad(Helper, MI, GR);
   case TargetOpcode::G_STORE:
     return legalizeStore(Helper, MI, GR);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return legalizeShuffleVector(Helper, MI);
   }
 }
 

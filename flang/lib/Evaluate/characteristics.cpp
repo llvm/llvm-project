@@ -668,6 +668,7 @@ static std::optional<Procedure> CharacterizeProcedure(
               }
             }
             result.cudaSubprogramAttrs = subp.cudaSubprogramAttrs();
+            result.hasOpenACCRoutine = !subp.openACCRoutineInfos().empty();
             return std::move(result);
           },
           [&](const semantics::ProcEntityDetails &proc)
@@ -695,6 +696,9 @@ static std::optional<Procedure> CharacterizeProcedure(
                 // functions as their interfaces.
                 result->attrs.reset(Procedure::Attr::Elemental);
               }
+              if (result && !proc.openACCRoutineInfos().empty()) {
+                result->hasOpenACCRoutine = true;
+              }
               return result;
             } else {
               Procedure result;
@@ -716,6 +720,7 @@ static std::optional<Procedure> CharacterizeProcedure(
               } else if (symbol.test(semantics::Symbol::Flag::Function)) {
                 return std::nullopt;
               }
+              result.hasOpenACCRoutine = !proc.openACCRoutineInfos().empty();
               // The PASS name, if any, is not a characteristic.
               return std::move(result);
             }

@@ -1,6 +1,9 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -mmlir --enable-delayed-privatization-staging=false %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
 !RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -mmlir --enable-delayed-privatization-staging=true %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
 
+! Flat derived types get no implicit default mapper through an allocatable.
+! CHECK-NOT: omp.declare_mapper
+
 subroutine defaultmap_allocatable_present()
     implicit none
     integer, dimension(:), allocatable :: arr
@@ -117,7 +120,7 @@ subroutine defaultmap_scalar_implicit_mapper()
     type(dtype), allocatable :: obj
 
 ! CHECK-LABEL: func.func @_QPdefaultmap_scalar_implicit_mapper
-! CHECK: %[[BASE_MAP:.*]] = omp.map.info {{.*}} map_clauses(implicit, tofrom) capture(ByRef) {{.*}} mapper(@{{.*}}) -> {{.*}} {name = ""}
+! CHECK: %[[BASE_MAP:.*]] = omp.map.info {{.*}} map_clauses(implicit, tofrom) capture(ByRef) {{.*}} -> {{.*}} {name = ""}
 ! CHECK: %[[DESC_MAP:.*]] = omp.map.info {{.*}} map_clauses(always, implicit, to) capture(ByRef) members(%[[BASE_MAP]] : [0] : {{.*}}) -> {{.*}} {name = "obj"}
 ! CHECK: omp.target kernel_type(generic) map_entries(%[[DESC_MAP]] -> {{.*}}, %[[BASE_MAP]] -> {{.*}})
     allocate(obj)

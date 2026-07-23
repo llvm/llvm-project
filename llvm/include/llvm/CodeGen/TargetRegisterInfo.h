@@ -785,6 +785,11 @@ public:
   virtual unsigned getRegPressureSetLimit(const MachineFunction &MF,
                                           unsigned Idx) const = 0;
 
+  /// Get the register class for this pressure set with the largest
+  /// `RegClassWeight::WeightLimit`.
+  virtual const TargetRegisterClass *
+  getLargestRegClassForRegPressureSet(unsigned Idx) const = 0;
+
   /// Get the dimensions of register pressure impacted by this register class.
   /// Returns a -1 terminated array of pressure set IDs.
   virtual const int *getRegClassPressureSets(

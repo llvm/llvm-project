@@ -19,6 +19,7 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 
@@ -26,8 +27,72 @@
 #include "ExceptionRecord.h"
 #include "ProcessWindowsLog.h"
 
+#include <string>
+#include <string_view>
+
 using namespace lldb;
 using namespace lldb_private;
+
+static void NormalizeWindowsPathSeparators(std::string &s) {
+  for (char &c : s)
+    if (c == '/')
+      c = '\\';
+}
+
+bool ProcessDebugger::IsSystemDLL(llvm::StringRef path) {
+  if (path.empty())
+    return false;
+
+  static const std::string windows_prefix = []() {
+    std::string prefix;
+    wchar_t buf[MAX_PATH];
+    UINT len = ::GetWindowsDirectoryW(buf, MAX_PATH);
+    if (len == 0 || len >= MAX_PATH)
+      return prefix;
+    llvm::convertWideToUTF8(std::wstring_view(buf, len), prefix);
+    NormalizeWindowsPathSeparators(prefix);
+    if (!prefix.empty() && prefix.back() != '\\')
+      prefix += '\\';
+    return prefix;
+  }();
+
+  if (windows_prefix.empty())
+    return false;
+
+  std::string normalized = path.str();
+  NormalizeWindowsPathSeparators(normalized);
+  return llvm::StringRef(normalized).starts_with_insensitive(windows_prefix);
+}
+
+bool ProcessDebugger::IsSystemModuleAddress(lldb::addr_t addr) {
+  if (!m_session_data || !m_session_data->m_debugger)
+    return false;
+  lldb::process_t handle = m_session_data->m_debugger->GetProcess()
+                               .GetNativeProcess()
+                               .GetSystemHandle();
+  if (handle == nullptr || handle == LLDB_INVALID_PROCESS)
+    return false;
+
+  MEMORY_BASIC_INFORMATION mbi = {};
+  if (::VirtualQueryEx(handle, reinterpret_cast<LPCVOID>(addr), &mbi,
+                       sizeof(mbi)) != sizeof(mbi))
+    return false;
+  if (mbi.AllocationBase == nullptr)
+    return false;
+
+  // A truncated path still carries the leading directory, which is all
+  // IsSystemDLL() inspects. MAX_PATH is enough.
+  wchar_t module_path[MAX_PATH];
+  DWORD len = ::GetModuleFileNameExW(
+      handle, reinterpret_cast<HMODULE>(mbi.AllocationBase), module_path,
+      MAX_PATH);
+  if (len == 0)
+    return false;
+
+  std::string path_utf8;
+  llvm::convertWideToUTF8(std::wstring_view(module_path, len), path_utf8);
+  return IsSystemDLL(path_utf8);
+}
 
 static DWORD ConvertLldbToWinApiProtect(uint32_t protect) {
   // We also can process a read / write permissions here, but if the debugger

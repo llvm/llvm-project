@@ -2093,6 +2093,54 @@ global_load_addtid_b32 v1, s[0:1] offset:64
 global_load_addtid_b32 v1, s[2:3]
 // GFX13: global_load_addtid_b32 v1, s[2:3]       ; encoding: [0x02,0x80,0x05,0xee,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 
+global_load_async_to_lds_b8 v1, v[2:3], off
+// GFX13-W32: global_load_async_to_lds_b8 v1, v[2:3], off ; encoding: [0x7c,0x40,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b8 v1, v[2:3], off offset:64
+// GFX13-W32: global_load_async_to_lds_b8 v1, v[2:3], off offset:64 ; encoding: [0x7c,0x40,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b8 v1, v[2:3], off offset:-64
+// GFX13-W32: global_load_async_to_lds_b8 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0x40,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b8 v1, v2, s[2:3]
+// GFX13-W32: global_load_async_to_lds_b8 v1, v2, s[2:3] ; encoding: [0x02,0x40,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b8 v1, v2, s[2:3] offset:64
+// GFX13-W32: global_load_async_to_lds_b8 v1, v2, s[2:3] offset:64 ; encoding: [0x02,0x40,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b8 v1, v2, s[2:3] offset:-64
+// GFX13-W32: global_load_async_to_lds_b8 v1, v2, s[2:3] offset:-64 ; encoding: [0x02,0x40,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b32 v1, v[2:3], off
+// GFX13-W32: global_load_async_to_lds_b32 v1, v[2:3], off ; encoding: [0x7c,0x80,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b32 v1, v[2:3], off offset:64
+// GFX13-W32: global_load_async_to_lds_b32 v1, v[2:3], off offset:64 ; encoding: [0x7c,0x80,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b32 v1, v[2:3], off offset:-64
+// GFX13-W32: global_load_async_to_lds_b32 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0x80,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b32 v1, v2, s[2:3]
+// GFX13-W32: global_load_async_to_lds_b32 v1, v2, s[2:3] ; encoding: [0x02,0x80,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b32 v1, v2, s[2:3] offset:64
+// GFX13-W32: global_load_async_to_lds_b32 v1, v2, s[2:3] offset:64 ; encoding: [0x02,0x80,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_async_to_lds_b32 v1, v2, s[2:3] offset:-64
+// GFX13-W32: global_load_async_to_lds_b32 v1, v2, s[2:3] offset:-64 ; encoding: [0x02,0x80,0x18,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
 global_load_b128 v[1:4], v0, s[0:1] offset:-64
 // GFX1250-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 // GFX13: global_load_b128 v[1:4], v0, s[0:1] offset:-64 ; encoding: [0x00,0x80,0x03,0xee,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]

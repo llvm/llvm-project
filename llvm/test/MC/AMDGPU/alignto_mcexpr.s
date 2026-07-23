@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
 
 // ASM: .set alignto_zero_eight, 0
 // ASM: .set alignto_one_eight, 8

@@ -10,19 +10,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-// #include "clang/AST/ASTContext.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassManager.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace cir {
+
+/// Map a target triple to the ABI target that drives CallConvLowering.
+/// Returns None for targets whose calling convention is not yet implemented.
+static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
+  if (triple.getArch() == llvm::Triple::x86_64)
+    return CallConvTarget::X86_64;
+  return CallConvTarget::None;
+}
 
 mlir::LogicalResult
 runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
                   clang::ASTContext &astContext, bool enableVerifier,
                   bool enableIdiomRecognizer, bool enableCIRSimplify,
-                  bool enableLibOpt, llvm::StringRef libOptOptions) {
+                  bool enableLibOpt, llvm::StringRef libOptOptions,
+                  bool enableCallConvLowering) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -49,6 +60,19 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
 
   pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());
+
+  if (enableCallConvLowering) {
+    // CallConvLowering rewrites signatures and call sites using the classifier,
+    // so it must run after CXXABILowering has lowered C++ ABI types to plain
+    // records the classifier can handle.  Only the x86_64 System V classifier
+    // is implemented; other targets are left unchanged.
+    CallConvTarget target =
+        getCallConvTarget(astContext.getTargetInfo().getTriple());
+    if (target != CallConvTarget::None)
+      pm.addPass(mlir::createCallConvLoweringPass(
+          target, llvm::abi::X86AVXABILevel::None));
+  }
+
   pm.addPass(mlir::createLoweringPreparePass(&astContext));
 
   pm.enableVerifier(enableVerifier);

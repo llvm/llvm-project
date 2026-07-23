@@ -891,7 +891,26 @@ createExitVariable(BasicBlock *BB,
     return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
   }
 
-  // TODO: add support for switch cases.
+  if (auto *SI = dyn_cast<SwitchInst>(T)) {
+    Value *Condition = SI->getCondition();
+    // The default destination acts as the fallback value of the select chain.
+    Value *Result = TargetToValue.lookup(SI->getDefaultDest());
+    for (const auto &Case : SI->cases()) {
+      Value *CaseValue = TargetToValue.lookup(Case.getCaseSuccessor());
+      // Successors that are internal to the region have no exit value.
+      if (CaseValue == nullptr)
+        continue;
+      // The first known exit value becomes the base of the select chain.
+      if (Result == nullptr) {
+        Result = CaseValue;
+        continue;
+      }
+      Value *Cmp = Builder.CreateICmpEQ(Condition, Case.getCaseValue());
+      Result = Builder.CreateSelect(Cmp, CaseValue, Result);
+    }
+    return Result;
+  }
+
   llvm_unreachable("Unhandled terminator type.");
 }
 

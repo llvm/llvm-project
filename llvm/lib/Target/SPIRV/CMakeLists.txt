@@ -46,6 +46,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp
+  SPIRVFinalizeShaderLinkage.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVTargetTransformInfo.cpp

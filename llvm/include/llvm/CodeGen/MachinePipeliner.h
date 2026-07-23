@@ -73,7 +73,7 @@ public:
   const MachineDominatorTree *MDT = nullptr;
   const InstrItineraryData *InstrItins = nullptr;
   const TargetInstrInfo *TII = nullptr;
-  RegisterClassInfo RegClassInfo;
+  const RegisterClassInfo *RegClassInfo = nullptr;
   bool disabledByPragma = false;
   unsigned II_setByPragma = 0;
 

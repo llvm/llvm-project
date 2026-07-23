@@ -120,6 +120,7 @@ void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
     CurrentState = State::Attached;
   }
 
+  // Fall through to disconnect from case (3) above.
   CA->disconnect();
 }
 

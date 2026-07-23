@@ -359,9 +359,7 @@ Below are some guidelines about the format of the message itself:
   revert or reapply of a patch, include the git commit hash of the prior
   related commit. This could be as simple as "Revert commit NNNN because it
   caused issue #".
-- If the patch has been reviewed, add a link to its review page, as shown
-  [here](https://www.llvm.org/docs/Phabricator.html#committing-a-change). If
-  the patch fixes a bug in GitHub Issues, we encourage adding a reference to
+- If the patch fixes a bug in GitHub Issues, we encourage adding a reference to
   the issue being closed, as described
   [here](https://llvm.org/docs/BugLifeCycle.html#resolving-closing-bugs).
 - It is also acceptable to add other metadata to the commit message to automate

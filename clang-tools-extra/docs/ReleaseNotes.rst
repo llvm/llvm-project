@@ -103,6 +103,13 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`readability-named-parameter
+  <clang-tidy/checks/readability/named-parameter>` check by ignoring
+  standard tag types (e.g. ``std::in_place_t``, ``std::allocator_arg_t``,
+  ``std::nothrow_t``, iterator tags, lock tags, etc.) that are used
+  exclusively for overload resolution. Added the :option:`IgnoredTypes`
+  option to allow customizing the set of ignored types.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

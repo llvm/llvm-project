@@ -167,26 +167,30 @@ define swifttailcc void @caller_to8_from0() "branch-protection-pauth-lr" "sign-r
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    add x16, sp, #16
-; CHECK-NEXT:    mov x17, x30
 
+; COMPAT-NEXT:   mov x17, x30
 ; COMPAT-NEXT:   adrp x15, .Ltmp2
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp2
 ; COMPAT-NEXT:   hint #39
 ; COMPAT-NEXT:   hint #12
+; COMPAT-NEXT:   mov x30, x17
 
+; V83A-NEXT:     mov x17, x30
 ; V83A-NEXT:     adrp x15, .Ltmp2
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp2
 ; V83A-NEXT:     hint #39
 ; V83A-NEXT:     autia1716
+; V83A-NEXT:     mov x30, x17
 
+; V9A-NEXT:      mov x17, x30
 ; V9A-NEXT:      adrp x15, .Ltmp2
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp2
 ; V9A-NEXT:      autia171615
+; V9A-NEXT:      mov x30, x17
 
-; PAUTH-NEXT:    autia1716
+; PAUTH-NEXT:    autia x30, x16
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
-; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    b callee_stack8
   tail call swifttailcc void @callee_stack8([8 x i64] poison, i64 42)
   ret void

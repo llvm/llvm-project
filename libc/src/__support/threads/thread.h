@@ -10,10 +10,12 @@
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H
 
 #include "hdr/stdint_proxy.h"
+#include "hdr/types/struct_sched_param.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
@@ -24,6 +26,11 @@
 #include <stddef.h> // For size_t
 
 namespace LIBC_NAMESPACE_DECL {
+
+struct SchedParameters {
+  int policy;
+  struct sched_param param;
+};
 
 using ThreadRunnerPosix = void *(void *);
 using ThreadRunnerStdc = int(void *);
@@ -230,6 +237,14 @@ struct Thread {
 
   // Return the name of the thread in |name|. Return the error number of error.
   int get_name(cpp::StringStream &name) const;
+
+  // Set the scheduling policy and parameters of the thread.
+  // Return 0 on success, or an error number on failure.
+  int setschedparam(SchedParameters params);
+
+  // Get the scheduling policy and parameters of the thread.
+  // Return SchedParameters on success, or an error number on failure.
+  ErrorOr<SchedParameters> getschedparam() const;
 };
 
 LIBC_INLINE_VAR LIBC_THREAD_LOCAL Thread self;

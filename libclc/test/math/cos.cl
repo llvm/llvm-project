@@ -10,7 +10,7 @@
 // AMDGCN-NEXT:    [[TMP1:%.*]] = fcmp une float [[TMP0]], +inf
 // AMDGCN-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float [[TMP0]], float +qnan
 // AMDGCN-NEXT:    [[TMP3:%.*]] = fcmp ult float [[TMP2]], 1.310720e+05
-// AMDGCN-NEXT:    br i1 [[TMP3]], label %[[BB108:.*]], label %[[BB4:.*]]
+// AMDGCN-NEXT:    br i1 [[TMP3]], label %[[BB109:.*]], label %[[BB4:.*]]
 // AMDGCN:       [[BB4]]:
 // AMDGCN-NEXT:    [[TMP5:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[TMP2]])
 // AMDGCN-NEXT:    [[TMP6:%.*]] = extractvalue { float, i32 } [[TMP5]], 1
@@ -119,37 +119,41 @@
 // AMDGCN-NEXT:    [[TMP105:%.*]] = fadd float [[TMP100]], [[TMP104]]
 // AMDGCN-NEXT:    [[TMP106:%.*]] = lshr i32 [[TMP69]], 30
 // AMDGCN-NEXT:    [[TMP107:%.*]] = add nuw nsw i32 [[TMP76]], [[TMP106]]
+// AMDGCN-NEXT:    [[TMP108:%.*]] = and i32 [[TMP107]], 3
 // AMDGCN-NEXT:    br label %[[_Z3COSF_EXIT:.*]]
-// AMDGCN:       [[BB108]]:
-// AMDGCN-NEXT:    [[TMP109:%.*]] = fmul float [[TMP2]], f0x3F22F983
-// AMDGCN-NEXT:    [[TMP110:%.*]] = tail call contract noundef float @llvm.rint.f32(float [[TMP109]])
-// AMDGCN-NEXT:    [[TMP111:%.*]] = tail call contract noundef float @llvm.fma.f32(float [[TMP110]], float f0xBFC90FDA, float [[TMP2]])
-// AMDGCN-NEXT:    [[TMP112:%.*]] = tail call contract noundef float @llvm.fma.f32(float [[TMP110]], float f0xB3A22168, float [[TMP111]])
-// AMDGCN-NEXT:    [[TMP113:%.*]] = tail call contract noundef float @llvm.fma.f32(float [[TMP110]], float f0xA7C234C4, float [[TMP112]])
-// AMDGCN-NEXT:    [[TMP114:%.*]] = fptosi float [[TMP110]] to i32
+// AMDGCN:       [[BB109]]:
+// AMDGCN-NEXT:    [[TMP110:%.*]] = fmul float [[TMP2]], f0x3F22F983
+// AMDGCN-NEXT:    [[TMP111:%.*]] = tail call contract noundef float @llvm.rint.f32(float [[TMP110]])
+// AMDGCN-NEXT:    [[TMP112:%.*]] = tail call contract noundef float @llvm.fma.f32(float [[TMP111]], float f0xBFC90FDA, float [[TMP2]])
+// AMDGCN-NEXT:    [[TMP113:%.*]] = tail call contract noundef float @llvm.fma.f32(float [[TMP111]], float f0xB3A22168, float [[TMP112]])
+// AMDGCN-NEXT:    [[TMP114:%.*]] = tail call contract noundef float @llvm.fma.f32(float [[TMP111]], float f0xA7C234C4, float [[TMP113]])
+// AMDGCN-NEXT:    [[TMP115:%.*]] = fptosi float [[TMP111]] to i32
+// AMDGCN-NEXT:    [[TMP116:%.*]] = and i32 [[TMP115]], 3
+// AMDGCN-NEXT:    [[TMP117:%.*]] = fcmp ord float [[TMP111]], 0.000000e+00
+// AMDGCN-NEXT:    [[TMP118:%.*]] = select i1 [[TMP117]], i32 [[TMP116]], i32 0
 // AMDGCN-NEXT:    br label %[[_Z3COSF_EXIT]]
 // AMDGCN:       [[_Z3COSF_EXIT]]:
-// AMDGCN-NEXT:    [[DOTSINK_I_I_I_I:%.*]] = phi float [ [[TMP113]], %[[BB108]] ], [ [[TMP105]], %[[BB4]] ]
-// AMDGCN-NEXT:    [[TMP115:%.*]] = phi i32 [ [[TMP114]], %[[BB108]] ], [ [[TMP107]], %[[BB4]] ]
-// AMDGCN-NEXT:    [[TMP116:%.*]] = fmul float [[DOTSINK_I_I_I_I]], [[DOTSINK_I_I_I_I]]
-// AMDGCN-NEXT:    [[TMP117:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP116]], float f0xB94C1982, float f0x3C0881C4)
-// AMDGCN-NEXT:    [[TMP118:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP116]], float [[TMP117]], float f0xBE2AAA9D)
-// AMDGCN-NEXT:    [[TMP119:%.*]] = fmul float [[TMP116]], [[TMP118]]
-// AMDGCN-NEXT:    [[TMP120:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[DOTSINK_I_I_I_I]], float [[TMP119]], float [[DOTSINK_I_I_I_I]])
-// AMDGCN-NEXT:    [[TMP121:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP116]], float f0x37D75334, float f0xBAB64F3B)
-// AMDGCN-NEXT:    [[TMP122:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP116]], float [[TMP121]], float f0x3D2AABF7)
-// AMDGCN-NEXT:    [[TMP123:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP116]], float [[TMP122]], float f0xBF000004)
-// AMDGCN-NEXT:    [[TMP124:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP116]], float [[TMP123]], float 1.000000e+00)
-// AMDGCN-NEXT:    [[TMP125:%.*]] = and i32 [[TMP115]], 1
-// AMDGCN-NEXT:    [[TMP126:%.*]] = icmp eq i32 [[TMP125]], 0
-// AMDGCN-NEXT:    [[TMP127:%.*]] = shl i32 [[TMP115]], 30
-// AMDGCN-NEXT:    [[TMP128:%.*]] = and i32 [[TMP127]], -2147483648
-// AMDGCN-NEXT:    [[TMP129:%.*]] = fneg contract float [[TMP120]]
-// AMDGCN-NEXT:    [[DOTV_I_I:%.*]] = select i1 [[TMP126]], float [[TMP124]], float [[TMP129]]
-// AMDGCN-NEXT:    [[TMP130:%.*]] = bitcast float [[DOTV_I_I]] to i32
-// AMDGCN-NEXT:    [[TMP131:%.*]] = xor i32 [[TMP128]], [[TMP130]]
-// AMDGCN-NEXT:    [[TMP132:%.*]] = bitcast i32 [[TMP131]] to float
-// AMDGCN-NEXT:    ret float [[TMP132]]
+// AMDGCN-NEXT:    [[DOTSINK_I_I_I_I:%.*]] = phi float [ [[TMP114]], %[[BB109]] ], [ [[TMP105]], %[[BB4]] ]
+// AMDGCN-NEXT:    [[TMP119:%.*]] = phi i32 [ [[TMP118]], %[[BB109]] ], [ [[TMP108]], %[[BB4]] ]
+// AMDGCN-NEXT:    [[TMP120:%.*]] = fmul float [[DOTSINK_I_I_I_I]], [[DOTSINK_I_I_I_I]]
+// AMDGCN-NEXT:    [[TMP121:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP120]], float f0xB94C1982, float f0x3C0881C4)
+// AMDGCN-NEXT:    [[TMP122:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP120]], float [[TMP121]], float f0xBE2AAA9D)
+// AMDGCN-NEXT:    [[TMP123:%.*]] = fmul float [[TMP120]], [[TMP122]]
+// AMDGCN-NEXT:    [[TMP124:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[DOTSINK_I_I_I_I]], float [[TMP123]], float [[DOTSINK_I_I_I_I]])
+// AMDGCN-NEXT:    [[TMP125:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP120]], float f0x37D75334, float f0xBAB64F3B)
+// AMDGCN-NEXT:    [[TMP126:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP120]], float [[TMP125]], float f0x3D2AABF7)
+// AMDGCN-NEXT:    [[TMP127:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP120]], float [[TMP126]], float f0xBF000004)
+// AMDGCN-NEXT:    [[TMP128:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP120]], float [[TMP127]], float 1.000000e+00)
+// AMDGCN-NEXT:    [[TMP129:%.*]] = and i32 [[TMP119]], 1
+// AMDGCN-NEXT:    [[TMP130:%.*]] = icmp eq i32 [[TMP129]], 0
+// AMDGCN-NEXT:    [[TMP131:%.*]] = icmp samesign ugt i32 [[TMP119]], 1
+// AMDGCN-NEXT:    [[TMP132:%.*]] = select i1 [[TMP131]], i32 -2147483648, i32 0
+// AMDGCN-NEXT:    [[TMP133:%.*]] = fneg contract float [[TMP124]]
+// AMDGCN-NEXT:    [[DOTV_I_I:%.*]] = select i1 [[TMP130]], float [[TMP128]], float [[TMP133]]
+// AMDGCN-NEXT:    [[TMP134:%.*]] = bitcast float [[DOTV_I_I]] to i32
+// AMDGCN-NEXT:    [[TMP135:%.*]] = xor i32 [[TMP132]], [[TMP134]]
+// AMDGCN-NEXT:    [[TMP136:%.*]] = bitcast i32 [[TMP135]] to float
+// AMDGCN-NEXT:    ret float [[TMP136]]
 //
 float test_float(float x) {
   return cos(x);

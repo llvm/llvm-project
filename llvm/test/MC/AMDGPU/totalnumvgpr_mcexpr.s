@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck --check-prefix=GFX90A %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck --check-prefix=GFX90A %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck --check-prefix=GFX10 %s
 
 // GFX10: .set totalvgpr_none, 0
 // GFX10: .set totalvgpr_one, 1

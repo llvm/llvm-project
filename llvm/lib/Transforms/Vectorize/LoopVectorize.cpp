@@ -5910,7 +5910,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ++LoopsEarlyExitVectorized;
 
   RUN_VPLAN_PASS(VPlanTransforms::replaceWideCanonicalIVWithWideIV, BestVPlan,
-                 *PSE.getSE(), CM.TTI, Config.CostKind, BestVF, BestUF,
+                 *PSE.getSE(), TTI, Config.CostKind, BestVF, BestUF,
                  CM.ValuesToIgnore);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
@@ -6194,8 +6194,8 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
 
   VPValue *Ptr = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
                                                        : VPI->getOperand(1);
+  Builder.setInsertPoint(VPI);
   if (Consecutive) {
-    Builder.setInsertPoint(VPI);
     Ptr = Builder.createConsecutiveVectorPointer(Ptr, getLoadStoreType(I),
                                                  Reverse, VPI->getDebugLoc());
   }
@@ -6205,13 +6205,11 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
 
   if (VPI->getOpcode() == Instruction::Load) {
     auto *Load = cast<LoadInst>(I);
-    auto *LoadR = new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, *VPI,
-                                        Load->getDebugLoc());
-    if (Reverse) {
-      Builder.insert(LoadR);
-      return new VPInstruction(VPInstruction::Reverse, LoadR, {}, {},
-                               LoadR->getDebugLoc());
-    }
+    auto *LoadR = Builder.createWidenLoad(*Load, Ptr, Mask, Consecutive, *VPI,
+                                          Load->getDebugLoc());
+    if (Reverse)
+      return Builder.createNaryOp(VPInstruction::Reverse, LoadR,
+                                  LoadR->getDebugLoc());
     return LoadR;
   }
 
@@ -6220,8 +6218,8 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   if (Reverse)
     StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                      Store->getDebugLoc());
-  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive, *VPI,
-                                Store->getDebugLoc());
+  return Builder.createWidenStore(*Store, Ptr, StoredVal, Mask, Consecutive,
+                                  *VPI, Store->getDebugLoc());
 }
 
 VPWidenIntOrFpInductionRecipe *

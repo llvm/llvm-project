@@ -36,7 +36,7 @@ entry:
 define amdgpu_ps void @test_ds_atomic_async_barrier_arrive_b64_s(ptr addrspace(3) inreg %bar) {
 ; GCN-LABEL: test_ds_atomic_async_barrier_arrive_b64_s:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    global_wb
+; GCN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0

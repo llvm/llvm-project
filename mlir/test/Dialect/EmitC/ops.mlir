@@ -187,6 +187,23 @@ func.func @test_assign(%arg1: f32) {
   return
 }
 
+// CHECK-LABEL: func.func @compound_assign
+// CHECK: emitc.add_assign
+// CHECK: emitc.sub_assign
+// CHECK: emitc.mul_assign
+// CHECK: emitc.div_assign
+// CHECK: emitc.rem_assign
+func.func @compound_assign(%arg0: i32, %arg1: !emitc.opaque<"number">) {
+  %v = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+  %opaque = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.opaque<"number">>
+  emitc.add_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.sub_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.mul_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.div_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.rem_assign %arg1 : !emitc.opaque<"number"> to %opaque : !emitc.lvalue<!emitc.opaque<"number">>
+  return
+}
+
 func.func @test_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32, %arg4: f32) -> i32 {
   %c7 = "emitc.constant"() {value = 7 : i32} : () -> i32
   %q = emitc.expression %arg1, %c7 : (i32, i32) -> i32 {

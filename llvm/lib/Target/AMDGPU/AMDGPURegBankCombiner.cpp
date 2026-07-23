@@ -251,6 +251,10 @@ bool AMDGPURegBankCombinerImpl::matchIntMinMaxToMed3(
 bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
     MachineInstr &MI, Med3MatchInfo &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();
+  // Perform combine only when the destination is a VGPR.
+  if (!isVgprRegBank(Dst))
+    return false;
+
   LLT Ty = MRI.getType(Dst);
 
   // med3 for f16 is only available on gfx9+, and not available for v2f16.
@@ -289,6 +293,10 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
 
 bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
                                                      Register &Reg) const {
+  // Perform combine only when the destination is a VGPR.
+  if (!isVgprRegBank(MI.getOperand(0).getReg()))
+    return false;
+
   // Clamp is available on all types after regbankselect (f16, f32, f64, v2f16).
   auto OpcodeTriple = getMinMaxPair(MI.getOpcode());
   Register Val;
@@ -325,6 +333,10 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
 // min(min(0.0, 1.0), NaN) = min(0.0, NaN) = 0.0
 bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
                                                    Register &Reg) const {
+  // Perform combine only when the destination is a VGPR.
+  if (!isVgprRegBank(MI.getOperand(0).getReg()))
+    return false;
+
   // In llvm-ir, clamp is often represented as an intrinsic call to
   // @llvm.amdgcn.fmed3.f32(%Val, 0.0, 1.0). Check for other operand orders.
   MachineInstr *Src0 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);

@@ -4,6 +4,10 @@
 ; -mbranch-protection=+pc enables branch protection. If the feature +pauth-lr
 ; is available (v9.5a onwards) then non-NOP instructions are used; otherwise
 ; NOP instructions are used.
+;
+; Independently, -aarch64-cfi-llvm-set-ra-sign-state picks which CFI directive
+; describes that signing: the legacy .cfi_negate_ra_state[_with_pc] ("never",
+; the default), or the new .cfi_set_ra_state ("pauth-lr"/"always").
 
 ; There are 6 cases to cover:
 
@@ -17,11 +21,19 @@
 
 ; sign-return-address-pauth-lr.ll is identical, with the addition of the function
 ; attribute, which enables -mbranch-protection=pac-ret+pc, and therefore tests
-; the remaining parameter combinations in the table:
+; the remaining parameter combinations in the table, each with the legacy
+; negate-based CFI, and the new set-based CFI.
 
 ; RUN: llc -mtriple=aarch64              < %s | FileCheck --check-prefixes=CHECK,COMPAT %s
 ; RUN: llc -mtriple=aarch64 -mattr=v8.3a < %s | FileCheck --check-prefixes=CHECK,V83A %s
 ; RUN: llc -mtriple=aarch64 -mattr=v9a -mattr=pauth-lr < %s | FileCheck --check-prefixes=PAUTHLR %s
+;
+; RUN: llc -mtriple=aarch64                     -aarch64-cfi-llvm-set-ra-sign-state=pauth-lr < %s | FileCheck --check-prefixes=CFISET-CHECK,CFISET-COMPAT %s
+; RUN: llc -mtriple=aarch64 -mattr=v8.3a        -aarch64-cfi-llvm-set-ra-sign-state=pauth-lr < %s | FileCheck --check-prefixes=CFISET-CHECK,CFISET-V83A %s
+;
+; RUN: llc -mtriple=aarch64                     -aarch64-cfi-llvm-set-ra-sign-state=never    < %s | FileCheck --check-prefixes=NEGATE-CHECK,NEGATE-COMPAT %s
+; RUN: llc -mtriple=aarch64 -mattr=v8.3a        -aarch64-cfi-llvm-set-ra-sign-state=never    < %s | FileCheck --check-prefixes=NEGATE-CHECK,NEGATE-V83A %s
+; RUN: llc -mtriple=aarch64 -mattr=v9a,pauth-lr -aarch64-cfi-llvm-set-ra-sign-state=never    < %s | FileCheck --check-prefixes=NEGATE-PAUTHLR %s
 
 ; See also: sign-return-address-pauth-lr-mir.ll
 
@@ -33,6 +45,18 @@ define i32 @leaf(i32 %x) "branch-protection-pauth-lr" {
 ; PAUTHLR-LABEL: leaf:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    ret
+;
+; CFISET-CHECK-LABEL: leaf:
+; CFISET-CHECK:       // %bb.0:
+; CFISET-CHECK-NEXT:    ret
+;
+; NEGATE-CHECK-LABEL: leaf:
+; NEGATE-CHECK:       // %bb.0:
+; NEGATE-CHECK-NEXT:    ret
+;
+; NEGATE-PAUTHLR-LABEL: leaf:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    ret
   ret i32 %x
 }
 
@@ -44,6 +68,18 @@ define i32 @leaf_sign_none(i32 %x) "branch-protection-pauth-lr"   {
 ; PAUTHLR-LABEL: leaf_sign_none:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    ret
+;
+; CFISET-CHECK-LABEL: leaf_sign_none:
+; CFISET-CHECK:       // %bb.0:
+; CFISET-CHECK-NEXT:    ret
+;
+; NEGATE-CHECK-LABEL: leaf_sign_none:
+; NEGATE-CHECK:       // %bb.0:
+; NEGATE-CHECK-NEXT:    ret
+;
+; NEGATE-PAUTHLR-LABEL: leaf_sign_none:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    ret
   ret i32 %x
 }
 
@@ -55,6 +91,18 @@ define i32 @leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-return
 ; PAUTHLR-LABEL: leaf_sign_non_leaf:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    ret
+;
+; CFISET-CHECK-LABEL: leaf_sign_non_leaf:
+; CFISET-CHECK:       // %bb.0:
+; CFISET-CHECK-NEXT:    ret
+;
+; NEGATE-CHECK-LABEL: leaf_sign_non_leaf:
+; NEGATE-CHECK:       // %bb.0:
+; NEGATE-CHECK-NEXT:    ret
+;
+; NEGATE-PAUTHLR-LABEL: leaf_sign_non_leaf:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    ret
   ret i32 %x
 }
 
@@ -88,6 +136,59 @@ define i32 @leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-addr
 ; PAUTHLR-NEXT:  .Ltmp0:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    retaasppc .Ltmp0
+;
+; CFISET-COMPAT-LABEL: leaf_sign_all:
+; CFISET-COMPAT:       // %bb.0:
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:  .Ltmp0:
+; CFISET-COMPAT-NEXT:    hint #25
+; CFISET-COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp0
+; CFISET-COMPAT-NEXT:    adrp x16, .Ltmp0
+; CFISET-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp0
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:    hint #29
+; CFISET-COMPAT-NEXT:    ret
+;
+; CFISET-V83A-LABEL: leaf_sign_all:
+; CFISET-V83A:       // %bb.0:
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:  .Ltmp0:
+; CFISET-V83A-NEXT:    paciasp
+; CFISET-V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp0
+; CFISET-V83A-NEXT:    adrp x16, .Ltmp0
+; CFISET-V83A-NEXT:    add x16, x16, :lo12:.Ltmp0
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:    retaa
+;
+; NEGATE-COMPAT-LABEL: leaf_sign_all:
+; NEGATE-COMPAT:       // %bb.0:
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-COMPAT-NEXT:  .Ltmp0:
+; NEGATE-COMPAT-NEXT:    hint #25
+; NEGATE-COMPAT-NEXT:    adrp x16, .Ltmp0
+; NEGATE-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp0
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    hint #29
+; NEGATE-COMPAT-NEXT:    ret
+;
+; NEGATE-V83A-LABEL: leaf_sign_all:
+; NEGATE-V83A:       // %bb.0:
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-V83A-NEXT:  .Ltmp0:
+; NEGATE-V83A-NEXT:    paciasp
+; NEGATE-V83A-NEXT:    adrp x16, .Ltmp0
+; NEGATE-V83A-NEXT:    add x16, x16, :lo12:.Ltmp0
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    retaa
+;
+; NEGATE-PAUTHLR-LABEL: leaf_sign_all:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:  .Ltmp0:
+; NEGATE-PAUTHLR-NEXT:    paciasppc
+; NEGATE-PAUTHLR-NEXT:    retaasppc .Ltmp0
   ret i32 %x
 }
 
@@ -142,6 +243,94 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
 ; PAUTHLR-NEXT:    //NO_APP
 ; PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; PAUTHLR-NEXT:    retaasppc .Ltmp1
+;
+; CFISET-COMPAT-LABEL: leaf_clobbers_lr:
+; CFISET-COMPAT:       // %bb.0:
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:  .Ltmp1:
+; CFISET-COMPAT-NEXT:    hint #25
+; CFISET-COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp1
+; CFISET-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CFISET-COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; CFISET-COMPAT-NEXT:    .cfi_offset w30, -16
+; CFISET-COMPAT-NEXT:    //APP
+; CFISET-COMPAT-NEXT:    mov x30, x0
+; CFISET-COMPAT-NEXT:    //NO_APP
+; CFISET-COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CFISET-COMPAT-NEXT:    adrp x16, .Ltmp1
+; CFISET-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp1
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:    hint #29
+; CFISET-COMPAT-NEXT:    ret
+;
+; CFISET-V83A-LABEL: leaf_clobbers_lr:
+; CFISET-V83A:       // %bb.0:
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:  .Ltmp1:
+; CFISET-V83A-NEXT:    paciasp
+; CFISET-V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp1
+; CFISET-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CFISET-V83A-NEXT:    .cfi_def_cfa_offset 16
+; CFISET-V83A-NEXT:    .cfi_offset w30, -16
+; CFISET-V83A-NEXT:    //APP
+; CFISET-V83A-NEXT:    mov x30, x0
+; CFISET-V83A-NEXT:    //NO_APP
+; CFISET-V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CFISET-V83A-NEXT:    adrp x16, .Ltmp1
+; CFISET-V83A-NEXT:    add x16, x16, :lo12:.Ltmp1
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:    retaa
+;
+; NEGATE-COMPAT-LABEL: leaf_clobbers_lr:
+; NEGATE-COMPAT:       // %bb.0:
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-COMPAT-NEXT:  .Ltmp1:
+; NEGATE-COMPAT-NEXT:    hint #25
+; NEGATE-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-COMPAT-NEXT:    .cfi_offset w30, -16
+; NEGATE-COMPAT-NEXT:    //APP
+; NEGATE-COMPAT-NEXT:    mov x30, x0
+; NEGATE-COMPAT-NEXT:    //NO_APP
+; NEGATE-COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-COMPAT-NEXT:    adrp x16, .Ltmp1
+; NEGATE-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp1
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    hint #29
+; NEGATE-COMPAT-NEXT:    ret
+;
+; NEGATE-V83A-LABEL: leaf_clobbers_lr:
+; NEGATE-V83A:       // %bb.0:
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-V83A-NEXT:  .Ltmp1:
+; NEGATE-V83A-NEXT:    paciasp
+; NEGATE-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-V83A-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-V83A-NEXT:    .cfi_offset w30, -16
+; NEGATE-V83A-NEXT:    //APP
+; NEGATE-V83A-NEXT:    mov x30, x0
+; NEGATE-V83A-NEXT:    //NO_APP
+; NEGATE-V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-V83A-NEXT:    adrp x16, .Ltmp1
+; NEGATE-V83A-NEXT:    add x16, x16, :lo12:.Ltmp1
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    retaa
+;
+; NEGATE-PAUTHLR-LABEL: leaf_clobbers_lr:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:  .Ltmp1:
+; NEGATE-PAUTHLR-NEXT:    paciasppc
+; NEGATE-PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-PAUTHLR-NEXT:    .cfi_offset w30, -16
+; NEGATE-PAUTHLR-NEXT:    //APP
+; NEGATE-PAUTHLR-NEXT:    mov x30, x0
+; NEGATE-PAUTHLR-NEXT:    //NO_APP
+; NEGATE-PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-PAUTHLR-NEXT:    retaasppc .Ltmp1
   call void asm sideeffect "mov x30, $0", "r,~{lr}"(i64 %x) #1
   ret i64 %x
 }
@@ -193,6 +382,84 @@ define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ; PAUTHLR-NEXT:    bl foo
 ; PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; PAUTHLR-NEXT:    retaasppc .Ltmp2
+;
+; CFISET-COMPAT-LABEL: non_leaf_sign_all:
+; CFISET-COMPAT:       // %bb.0:
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:  .Ltmp2:
+; CFISET-COMPAT-NEXT:    hint #25
+; CFISET-COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp2
+; CFISET-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CFISET-COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; CFISET-COMPAT-NEXT:    .cfi_offset w30, -16
+; CFISET-COMPAT-NEXT:    bl foo
+; CFISET-COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CFISET-COMPAT-NEXT:    adrp x16, .Ltmp2
+; CFISET-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp2
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:    hint #29
+; CFISET-COMPAT-NEXT:    ret
+;
+; CFISET-V83A-LABEL: non_leaf_sign_all:
+; CFISET-V83A:       // %bb.0:
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:  .Ltmp2:
+; CFISET-V83A-NEXT:    paciasp
+; CFISET-V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp2
+; CFISET-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CFISET-V83A-NEXT:    .cfi_def_cfa_offset 16
+; CFISET-V83A-NEXT:    .cfi_offset w30, -16
+; CFISET-V83A-NEXT:    bl foo
+; CFISET-V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CFISET-V83A-NEXT:    adrp x16, .Ltmp2
+; CFISET-V83A-NEXT:    add x16, x16, :lo12:.Ltmp2
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:    retaa
+;
+; NEGATE-COMPAT-LABEL: non_leaf_sign_all:
+; NEGATE-COMPAT:       // %bb.0:
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-COMPAT-NEXT:  .Ltmp2:
+; NEGATE-COMPAT-NEXT:    hint #25
+; NEGATE-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-COMPAT-NEXT:    .cfi_offset w30, -16
+; NEGATE-COMPAT-NEXT:    bl foo
+; NEGATE-COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-COMPAT-NEXT:    adrp x16, .Ltmp2
+; NEGATE-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp2
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    hint #29
+; NEGATE-COMPAT-NEXT:    ret
+;
+; NEGATE-V83A-LABEL: non_leaf_sign_all:
+; NEGATE-V83A:       // %bb.0:
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-V83A-NEXT:  .Ltmp2:
+; NEGATE-V83A-NEXT:    paciasp
+; NEGATE-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-V83A-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-V83A-NEXT:    .cfi_offset w30, -16
+; NEGATE-V83A-NEXT:    bl foo
+; NEGATE-V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-V83A-NEXT:    adrp x16, .Ltmp2
+; NEGATE-V83A-NEXT:    add x16, x16, :lo12:.Ltmp2
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    retaa
+;
+; NEGATE-PAUTHLR-LABEL: non_leaf_sign_all:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:  .Ltmp2:
+; NEGATE-PAUTHLR-NEXT:    paciasppc
+; NEGATE-PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-PAUTHLR-NEXT:    .cfi_offset w30, -16
+; NEGATE-PAUTHLR-NEXT:    bl foo
+; NEGATE-PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-PAUTHLR-NEXT:    retaasppc .Ltmp2
   %call = call i32 @foo(i32 %x)
   ret i32 %call
 }
@@ -242,6 +509,84 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
 ; PAUTHLR-NEXT:    bl foo
 ; PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; PAUTHLR-NEXT:    retaasppc .Ltmp3
+;
+; CFISET-COMPAT-LABEL: non_leaf_sign_non_leaf:
+; CFISET-COMPAT:       // %bb.0:
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:  .Ltmp3:
+; CFISET-COMPAT-NEXT:    hint #25
+; CFISET-COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp3
+; CFISET-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CFISET-COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; CFISET-COMPAT-NEXT:    .cfi_offset w30, -16
+; CFISET-COMPAT-NEXT:    bl foo
+; CFISET-COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CFISET-COMPAT-NEXT:    adrp x16, .Ltmp3
+; CFISET-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp3
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:    hint #29
+; CFISET-COMPAT-NEXT:    ret
+;
+; CFISET-V83A-LABEL: non_leaf_sign_non_leaf:
+; CFISET-V83A:       // %bb.0:
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:  .Ltmp3:
+; CFISET-V83A-NEXT:    paciasp
+; CFISET-V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp3
+; CFISET-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CFISET-V83A-NEXT:    .cfi_def_cfa_offset 16
+; CFISET-V83A-NEXT:    .cfi_offset w30, -16
+; CFISET-V83A-NEXT:    bl foo
+; CFISET-V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CFISET-V83A-NEXT:    adrp x16, .Ltmp3
+; CFISET-V83A-NEXT:    add x16, x16, :lo12:.Ltmp3
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:    retaa
+;
+; NEGATE-COMPAT-LABEL: non_leaf_sign_non_leaf:
+; NEGATE-COMPAT:       // %bb.0:
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-COMPAT-NEXT:  .Ltmp3:
+; NEGATE-COMPAT-NEXT:    hint #25
+; NEGATE-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-COMPAT-NEXT:    .cfi_offset w30, -16
+; NEGATE-COMPAT-NEXT:    bl foo
+; NEGATE-COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-COMPAT-NEXT:    adrp x16, .Ltmp3
+; NEGATE-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp3
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    hint #29
+; NEGATE-COMPAT-NEXT:    ret
+;
+; NEGATE-V83A-LABEL: non_leaf_sign_non_leaf:
+; NEGATE-V83A:       // %bb.0:
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-V83A-NEXT:  .Ltmp3:
+; NEGATE-V83A-NEXT:    paciasp
+; NEGATE-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-V83A-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-V83A-NEXT:    .cfi_offset w30, -16
+; NEGATE-V83A-NEXT:    bl foo
+; NEGATE-V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-V83A-NEXT:    adrp x16, .Ltmp3
+; NEGATE-V83A-NEXT:    add x16, x16, :lo12:.Ltmp3
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    retaa
+;
+; NEGATE-PAUTHLR-LABEL: non_leaf_sign_non_leaf:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:  .Ltmp3:
+; NEGATE-PAUTHLR-NEXT:    paciasppc
+; NEGATE-PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-PAUTHLR-NEXT:    .cfi_offset w30, -16
+; NEGATE-PAUTHLR-NEXT:    bl foo
+; NEGATE-PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-PAUTHLR-NEXT:    retaasppc .Ltmp3
   %call = call i32 @foo(i32 %x)
   ret i32 %call
 }
@@ -283,6 +628,62 @@ define i32 @non_leaf_scs(i32 %x) "branch-protection-pauth-lr" "sign-return-addre
 ; PAUTHLR-NEXT:    ldr x30, [x18, #-8]!
 ; PAUTHLR-NEXT:    autiasppc .Ltmp4
 ; PAUTHLR-NEXT:    ret
+;
+; CFISET-CHECK-LABEL: non_leaf_scs:
+; CFISET-CHECK:       // %bb.0:
+; CFISET-CHECK-NEXT:    hint #39
+; CFISET-CHECK-NEXT:  .Ltmp4:
+; CFISET-CHECK-NEXT:    paciasp
+; CFISET-CHECK-NEXT:    .cfi_set_ra_state 2, .Ltmp4
+; CFISET-CHECK-NEXT:    str x30, [x18], #8
+; CFISET-CHECK-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
+; CFISET-CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CFISET-CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CFISET-CHECK-NEXT:    .cfi_offset w30, -16
+; CFISET-CHECK-NEXT:    bl foo
+; CFISET-CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CFISET-CHECK-NEXT:    ldr x30, [x18, #-8]!
+; CFISET-CHECK-NEXT:    adrp x16, .Ltmp4
+; CFISET-CHECK-NEXT:    add x16, x16, :lo12:.Ltmp4
+; CFISET-CHECK-NEXT:    hint #39
+; CFISET-CHECK-NEXT:    autiasp
+; CFISET-CHECK-NEXT:    ret
+;
+; NEGATE-CHECK-LABEL: non_leaf_scs:
+; NEGATE-CHECK:       // %bb.0:
+; NEGATE-CHECK-NEXT:    hint #39
+; NEGATE-CHECK-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-CHECK-NEXT:  .Ltmp4:
+; NEGATE-CHECK-NEXT:    paciasp
+; NEGATE-CHECK-NEXT:    str x30, [x18], #8
+; NEGATE-CHECK-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
+; NEGATE-CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-CHECK-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-CHECK-NEXT:    .cfi_offset w30, -16
+; NEGATE-CHECK-NEXT:    bl foo
+; NEGATE-CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-CHECK-NEXT:    ldr x30, [x18, #-8]!
+; NEGATE-CHECK-NEXT:    adrp x16, .Ltmp4
+; NEGATE-CHECK-NEXT:    add x16, x16, :lo12:.Ltmp4
+; NEGATE-CHECK-NEXT:    hint #39
+; NEGATE-CHECK-NEXT:    autiasp
+; NEGATE-CHECK-NEXT:    ret
+;
+; NEGATE-PAUTHLR-LABEL: non_leaf_scs:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:  .Ltmp4:
+; NEGATE-PAUTHLR-NEXT:    paciasppc
+; NEGATE-PAUTHLR-NEXT:    str x30, [x18], #8
+; NEGATE-PAUTHLR-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
+; NEGATE-PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-PAUTHLR-NEXT:    .cfi_offset w30, -16
+; NEGATE-PAUTHLR-NEXT:    bl foo
+; NEGATE-PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-PAUTHLR-NEXT:    ldr x30, [x18, #-8]!
+; NEGATE-PAUTHLR-NEXT:    autiasppc .Ltmp4
+; NEGATE-PAUTHLR-NEXT:    ret
   %call = call i32 @foo(i32 %x)
   ret i32 %call
 }
@@ -305,6 +706,35 @@ define i32 @leaf_sign_all_v83(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ; PAUTHLR-NEXT:  .Ltmp5:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    retaasppc .Ltmp5
+;
+; CFISET-CHECK-LABEL: leaf_sign_all_v83:
+; CFISET-CHECK:       // %bb.0:
+; CFISET-CHECK-NEXT:    hint #39
+; CFISET-CHECK-NEXT:  .Ltmp5:
+; CFISET-CHECK-NEXT:    paciasp
+; CFISET-CHECK-NEXT:    .cfi_set_ra_state 2, .Ltmp5
+; CFISET-CHECK-NEXT:    adrp x16, .Ltmp5
+; CFISET-CHECK-NEXT:    add x16, x16, :lo12:.Ltmp5
+; CFISET-CHECK-NEXT:    hint #39
+; CFISET-CHECK-NEXT:    retaa
+;
+; NEGATE-CHECK-LABEL: leaf_sign_all_v83:
+; NEGATE-CHECK:       // %bb.0:
+; NEGATE-CHECK-NEXT:    hint #39
+; NEGATE-CHECK-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-CHECK-NEXT:  .Ltmp5:
+; NEGATE-CHECK-NEXT:    paciasp
+; NEGATE-CHECK-NEXT:    adrp x16, .Ltmp5
+; NEGATE-CHECK-NEXT:    add x16, x16, :lo12:.Ltmp5
+; NEGATE-CHECK-NEXT:    hint #39
+; NEGATE-CHECK-NEXT:    retaa
+;
+; NEGATE-PAUTHLR-LABEL: leaf_sign_all_v83:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:  .Ltmp5:
+; NEGATE-PAUTHLR-NEXT:    paciasppc
+; NEGATE-PAUTHLR-NEXT:    retaasppc .Ltmp5
   ret i32 %x
 }
 
@@ -363,6 +793,97 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
 ; PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; PAUTHLR-NEXT:    autiasppc .Ltmp6
 ; PAUTHLR-NEXT:    b bar
+;
+; CFISET-COMPAT-LABEL: spill_lr_and_tail_call:
+; CFISET-COMPAT:       // %bb.0:
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:  .Ltmp6:
+; CFISET-COMPAT-NEXT:    hint #25
+; CFISET-COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp6
+; CFISET-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CFISET-COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; CFISET-COMPAT-NEXT:    .cfi_offset w30, -16
+; CFISET-COMPAT-NEXT:    //APP
+; CFISET-COMPAT-NEXT:    mov x30, x0
+; CFISET-COMPAT-NEXT:    //NO_APP
+; CFISET-COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CFISET-COMPAT-NEXT:    adrp x16, .Ltmp6
+; CFISET-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp6
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:    hint #29
+; CFISET-COMPAT-NEXT:    b bar
+;
+; CFISET-V83A-LABEL: spill_lr_and_tail_call:
+; CFISET-V83A:       // %bb.0:
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:  .Ltmp6:
+; CFISET-V83A-NEXT:    paciasp
+; CFISET-V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp6
+; CFISET-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CFISET-V83A-NEXT:    .cfi_def_cfa_offset 16
+; CFISET-V83A-NEXT:    .cfi_offset w30, -16
+; CFISET-V83A-NEXT:    //APP
+; CFISET-V83A-NEXT:    mov x30, x0
+; CFISET-V83A-NEXT:    //NO_APP
+; CFISET-V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CFISET-V83A-NEXT:    adrp x16, .Ltmp6
+; CFISET-V83A-NEXT:    add x16, x16, :lo12:.Ltmp6
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:    autiasp
+; CFISET-V83A-NEXT:    b bar
+;
+; NEGATE-COMPAT-LABEL: spill_lr_and_tail_call:
+; NEGATE-COMPAT:       // %bb.0:
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-COMPAT-NEXT:  .Ltmp6:
+; NEGATE-COMPAT-NEXT:    hint #25
+; NEGATE-COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-COMPAT-NEXT:    .cfi_offset w30, -16
+; NEGATE-COMPAT-NEXT:    //APP
+; NEGATE-COMPAT-NEXT:    mov x30, x0
+; NEGATE-COMPAT-NEXT:    //NO_APP
+; NEGATE-COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-COMPAT-NEXT:    adrp x16, .Ltmp6
+; NEGATE-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp6
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    hint #29
+; NEGATE-COMPAT-NEXT:    b bar
+;
+; NEGATE-V83A-LABEL: spill_lr_and_tail_call:
+; NEGATE-V83A:       // %bb.0:
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-V83A-NEXT:  .Ltmp6:
+; NEGATE-V83A-NEXT:    paciasp
+; NEGATE-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-V83A-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-V83A-NEXT:    .cfi_offset w30, -16
+; NEGATE-V83A-NEXT:    //APP
+; NEGATE-V83A-NEXT:    mov x30, x0
+; NEGATE-V83A-NEXT:    //NO_APP
+; NEGATE-V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-V83A-NEXT:    adrp x16, .Ltmp6
+; NEGATE-V83A-NEXT:    add x16, x16, :lo12:.Ltmp6
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    autiasp
+; NEGATE-V83A-NEXT:    b bar
+;
+; NEGATE-PAUTHLR-LABEL: spill_lr_and_tail_call:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:  .Ltmp6:
+; NEGATE-PAUTHLR-NEXT:    paciasppc
+; NEGATE-PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; NEGATE-PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
+; NEGATE-PAUTHLR-NEXT:    .cfi_offset w30, -16
+; NEGATE-PAUTHLR-NEXT:    //APP
+; NEGATE-PAUTHLR-NEXT:    mov x30, x0
+; NEGATE-PAUTHLR-NEXT:    //NO_APP
+; NEGATE-PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; NEGATE-PAUTHLR-NEXT:    autiasppc .Ltmp6
+; NEGATE-PAUTHLR-NEXT:    b bar
   call void asm sideeffect "mov x30, $0", "r,~{lr}"(i64 %x) #1
   tail call fastcc i64 @bar(i64 %x)
   ret void
@@ -398,6 +919,59 @@ define i32 @leaf_sign_all_a_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ; PAUTHLR-NEXT:  .Ltmp7:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    retaasppc .Ltmp7
+;
+; CFISET-COMPAT-LABEL: leaf_sign_all_a_key:
+; CFISET-COMPAT:       // %bb.0:
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:  .Ltmp7:
+; CFISET-COMPAT-NEXT:    hint #25
+; CFISET-COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp7
+; CFISET-COMPAT-NEXT:    adrp x16, .Ltmp7
+; CFISET-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp7
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:    hint #29
+; CFISET-COMPAT-NEXT:    ret
+;
+; CFISET-V83A-LABEL: leaf_sign_all_a_key:
+; CFISET-V83A:       // %bb.0:
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:  .Ltmp7:
+; CFISET-V83A-NEXT:    paciasp
+; CFISET-V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp7
+; CFISET-V83A-NEXT:    adrp x16, .Ltmp7
+; CFISET-V83A-NEXT:    add x16, x16, :lo12:.Ltmp7
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:    retaa
+;
+; NEGATE-COMPAT-LABEL: leaf_sign_all_a_key:
+; NEGATE-COMPAT:       // %bb.0:
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-COMPAT-NEXT:  .Ltmp7:
+; NEGATE-COMPAT-NEXT:    hint #25
+; NEGATE-COMPAT-NEXT:    adrp x16, .Ltmp7
+; NEGATE-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp7
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    hint #29
+; NEGATE-COMPAT-NEXT:    ret
+;
+; NEGATE-V83A-LABEL: leaf_sign_all_a_key:
+; NEGATE-V83A:       // %bb.0:
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-V83A-NEXT:  .Ltmp7:
+; NEGATE-V83A-NEXT:    paciasp
+; NEGATE-V83A-NEXT:    adrp x16, .Ltmp7
+; NEGATE-V83A-NEXT:    add x16, x16, :lo12:.Ltmp7
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    retaa
+;
+; NEGATE-PAUTHLR-LABEL: leaf_sign_all_a_key:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:  .Ltmp7:
+; NEGATE-PAUTHLR-NEXT:    paciasppc
+; NEGATE-PAUTHLR-NEXT:    retaasppc .Ltmp7
   ret i32 %x
 }
 
@@ -434,6 +1008,64 @@ define i32 @leaf_sign_all_b_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ; PAUTHLR-NEXT:  .Ltmp8:
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    retabsppc .Ltmp8
+;
+; CFISET-COMPAT-LABEL: leaf_sign_all_b_key:
+; CFISET-COMPAT:       // %bb.0:
+; CFISET-COMPAT-NEXT:    .cfi_b_key_frame
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:  .Ltmp8:
+; CFISET-COMPAT-NEXT:    hint #27
+; CFISET-COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp8
+; CFISET-COMPAT-NEXT:    adrp x16, .Ltmp8
+; CFISET-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp8
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:    hint #31
+; CFISET-COMPAT-NEXT:    ret
+;
+; CFISET-V83A-LABEL: leaf_sign_all_b_key:
+; CFISET-V83A:       // %bb.0:
+; CFISET-V83A-NEXT:    .cfi_b_key_frame
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:  .Ltmp8:
+; CFISET-V83A-NEXT:    pacibsp
+; CFISET-V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp8
+; CFISET-V83A-NEXT:    adrp x16, .Ltmp8
+; CFISET-V83A-NEXT:    add x16, x16, :lo12:.Ltmp8
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:    retab
+;
+; NEGATE-COMPAT-LABEL: leaf_sign_all_b_key:
+; NEGATE-COMPAT:       // %bb.0:
+; NEGATE-COMPAT-NEXT:    .cfi_b_key_frame
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-COMPAT-NEXT:  .Ltmp8:
+; NEGATE-COMPAT-NEXT:    hint #27
+; NEGATE-COMPAT-NEXT:    adrp x16, .Ltmp8
+; NEGATE-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp8
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    hint #31
+; NEGATE-COMPAT-NEXT:    ret
+;
+; NEGATE-V83A-LABEL: leaf_sign_all_b_key:
+; NEGATE-V83A:       // %bb.0:
+; NEGATE-V83A-NEXT:    .cfi_b_key_frame
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-V83A-NEXT:  .Ltmp8:
+; NEGATE-V83A-NEXT:    pacibsp
+; NEGATE-V83A-NEXT:    adrp x16, .Ltmp8
+; NEGATE-V83A-NEXT:    add x16, x16, :lo12:.Ltmp8
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    retab
+;
+; NEGATE-PAUTHLR-LABEL: leaf_sign_all_b_key:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_b_key_frame
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:  .Ltmp8:
+; NEGATE-PAUTHLR-NEXT:    pacibsppc
+; NEGATE-PAUTHLR-NEXT:    retabsppc .Ltmp8
   ret i32 %x
 }
 
@@ -457,6 +1089,38 @@ define i32 @leaf_sign_all_v83_b_key(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; PAUTHLR-NEXT:  .Ltmp9:
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    retabsppc .Ltmp9
+;
+; CFISET-CHECK-LABEL: leaf_sign_all_v83_b_key:
+; CFISET-CHECK:       // %bb.0:
+; CFISET-CHECK-NEXT:    .cfi_b_key_frame
+; CFISET-CHECK-NEXT:    hint #39
+; CFISET-CHECK-NEXT:  .Ltmp9:
+; CFISET-CHECK-NEXT:    pacibsp
+; CFISET-CHECK-NEXT:    .cfi_set_ra_state 2, .Ltmp9
+; CFISET-CHECK-NEXT:    adrp x16, .Ltmp9
+; CFISET-CHECK-NEXT:    add x16, x16, :lo12:.Ltmp9
+; CFISET-CHECK-NEXT:    hint #39
+; CFISET-CHECK-NEXT:    retab
+;
+; NEGATE-CHECK-LABEL: leaf_sign_all_v83_b_key:
+; NEGATE-CHECK:       // %bb.0:
+; NEGATE-CHECK-NEXT:    .cfi_b_key_frame
+; NEGATE-CHECK-NEXT:    hint #39
+; NEGATE-CHECK-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-CHECK-NEXT:  .Ltmp9:
+; NEGATE-CHECK-NEXT:    pacibsp
+; NEGATE-CHECK-NEXT:    adrp x16, .Ltmp9
+; NEGATE-CHECK-NEXT:    add x16, x16, :lo12:.Ltmp9
+; NEGATE-CHECK-NEXT:    hint #39
+; NEGATE-CHECK-NEXT:    retab
+;
+; NEGATE-PAUTHLR-LABEL: leaf_sign_all_v83_b_key:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_b_key_frame
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:  .Ltmp9:
+; NEGATE-PAUTHLR-NEXT:    pacibsppc
+; NEGATE-PAUTHLR-NEXT:    retabsppc .Ltmp9
   ret i32 %x
 }
 
@@ -494,6 +1158,64 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; PAUTHLR-NEXT:  .Ltmp10:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    retaasppc .Ltmp10
+;
+; CFISET-COMPAT-LABEL: leaf_sign_all_a_key_bti:
+; CFISET-COMPAT:       // %bb.0:
+; CFISET-COMPAT-NEXT:    hint #34
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:  .Ltmp10:
+; CFISET-COMPAT-NEXT:    hint #25
+; CFISET-COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp10
+; CFISET-COMPAT-NEXT:    adrp x16, .Ltmp10
+; CFISET-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp10
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:    hint #29
+; CFISET-COMPAT-NEXT:    ret
+;
+; CFISET-V83A-LABEL: leaf_sign_all_a_key_bti:
+; CFISET-V83A:       // %bb.0:
+; CFISET-V83A-NEXT:    hint #34
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:  .Ltmp10:
+; CFISET-V83A-NEXT:    paciasp
+; CFISET-V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp10
+; CFISET-V83A-NEXT:    adrp x16, .Ltmp10
+; CFISET-V83A-NEXT:    add x16, x16, :lo12:.Ltmp10
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:    retaa
+;
+; NEGATE-COMPAT-LABEL: leaf_sign_all_a_key_bti:
+; NEGATE-COMPAT:       // %bb.0:
+; NEGATE-COMPAT-NEXT:    hint #34
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-COMPAT-NEXT:  .Ltmp10:
+; NEGATE-COMPAT-NEXT:    hint #25
+; NEGATE-COMPAT-NEXT:    adrp x16, .Ltmp10
+; NEGATE-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp10
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    hint #29
+; NEGATE-COMPAT-NEXT:    ret
+;
+; NEGATE-V83A-LABEL: leaf_sign_all_a_key_bti:
+; NEGATE-V83A:       // %bb.0:
+; NEGATE-V83A-NEXT:    hint #34
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-V83A-NEXT:  .Ltmp10:
+; NEGATE-V83A-NEXT:    paciasp
+; NEGATE-V83A-NEXT:    adrp x16, .Ltmp10
+; NEGATE-V83A-NEXT:    add x16, x16, :lo12:.Ltmp10
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    retaa
+;
+; NEGATE-PAUTHLR-LABEL: leaf_sign_all_a_key_bti:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:    bti c
+; NEGATE-PAUTHLR-NEXT:  .Ltmp10:
+; NEGATE-PAUTHLR-NEXT:    paciasppc
+; NEGATE-PAUTHLR-NEXT:    retaasppc .Ltmp10
   ret i32 %x
 }
 
@@ -534,6 +1256,69 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; PAUTHLR-NEXT:  .Ltmp11:
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    retabsppc .Ltmp11
+;
+; CFISET-COMPAT-LABEL: leaf_sign_all_b_key_bti:
+; CFISET-COMPAT:       // %bb.0:
+; CFISET-COMPAT-NEXT:    .cfi_b_key_frame
+; CFISET-COMPAT-NEXT:    hint #34
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:  .Ltmp11:
+; CFISET-COMPAT-NEXT:    hint #27
+; CFISET-COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp11
+; CFISET-COMPAT-NEXT:    adrp x16, .Ltmp11
+; CFISET-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp11
+; CFISET-COMPAT-NEXT:    hint #39
+; CFISET-COMPAT-NEXT:    hint #31
+; CFISET-COMPAT-NEXT:    ret
+;
+; CFISET-V83A-LABEL: leaf_sign_all_b_key_bti:
+; CFISET-V83A:       // %bb.0:
+; CFISET-V83A-NEXT:    .cfi_b_key_frame
+; CFISET-V83A-NEXT:    hint #34
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:  .Ltmp11:
+; CFISET-V83A-NEXT:    pacibsp
+; CFISET-V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp11
+; CFISET-V83A-NEXT:    adrp x16, .Ltmp11
+; CFISET-V83A-NEXT:    add x16, x16, :lo12:.Ltmp11
+; CFISET-V83A-NEXT:    hint #39
+; CFISET-V83A-NEXT:    retab
+;
+; NEGATE-COMPAT-LABEL: leaf_sign_all_b_key_bti:
+; NEGATE-COMPAT:       // %bb.0:
+; NEGATE-COMPAT-NEXT:    .cfi_b_key_frame
+; NEGATE-COMPAT-NEXT:    hint #34
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-COMPAT-NEXT:  .Ltmp11:
+; NEGATE-COMPAT-NEXT:    hint #27
+; NEGATE-COMPAT-NEXT:    adrp x16, .Ltmp11
+; NEGATE-COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp11
+; NEGATE-COMPAT-NEXT:    hint #39
+; NEGATE-COMPAT-NEXT:    hint #31
+; NEGATE-COMPAT-NEXT:    ret
+;
+; NEGATE-V83A-LABEL: leaf_sign_all_b_key_bti:
+; NEGATE-V83A:       // %bb.0:
+; NEGATE-V83A-NEXT:    .cfi_b_key_frame
+; NEGATE-V83A-NEXT:    hint #34
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-V83A-NEXT:  .Ltmp11:
+; NEGATE-V83A-NEXT:    pacibsp
+; NEGATE-V83A-NEXT:    adrp x16, .Ltmp11
+; NEGATE-V83A-NEXT:    add x16, x16, :lo12:.Ltmp11
+; NEGATE-V83A-NEXT:    hint #39
+; NEGATE-V83A-NEXT:    retab
+;
+; NEGATE-PAUTHLR-LABEL: leaf_sign_all_b_key_bti:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_b_key_frame
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:    bti c
+; NEGATE-PAUTHLR-NEXT:  .Ltmp11:
+; NEGATE-PAUTHLR-NEXT:    pacibsppc
+; NEGATE-PAUTHLR-NEXT:    retabsppc .Ltmp11
   ret i32 %x
 }
 
@@ -560,5 +1345,40 @@ define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "si
 ; PAUTHLR-NEXT:  .Ltmp12:
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    retabsppc .Ltmp12
+;
+; CFISET-CHECK-LABEL: leaf_sign_all_v83_b_key_bti:
+; CFISET-CHECK:       // %bb.0:
+; CFISET-CHECK-NEXT:    .cfi_b_key_frame
+; CFISET-CHECK-NEXT:    hint #34
+; CFISET-CHECK-NEXT:    hint #39
+; CFISET-CHECK-NEXT:  .Ltmp12:
+; CFISET-CHECK-NEXT:    pacibsp
+; CFISET-CHECK-NEXT:    .cfi_set_ra_state 2, .Ltmp12
+; CFISET-CHECK-NEXT:    adrp x16, .Ltmp12
+; CFISET-CHECK-NEXT:    add x16, x16, :lo12:.Ltmp12
+; CFISET-CHECK-NEXT:    hint #39
+; CFISET-CHECK-NEXT:    retab
+;
+; NEGATE-CHECK-LABEL: leaf_sign_all_v83_b_key_bti:
+; NEGATE-CHECK:       // %bb.0:
+; NEGATE-CHECK-NEXT:    .cfi_b_key_frame
+; NEGATE-CHECK-NEXT:    hint #34
+; NEGATE-CHECK-NEXT:    hint #39
+; NEGATE-CHECK-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-CHECK-NEXT:  .Ltmp12:
+; NEGATE-CHECK-NEXT:    pacibsp
+; NEGATE-CHECK-NEXT:    adrp x16, .Ltmp12
+; NEGATE-CHECK-NEXT:    add x16, x16, :lo12:.Ltmp12
+; NEGATE-CHECK-NEXT:    hint #39
+; NEGATE-CHECK-NEXT:    retab
+;
+; NEGATE-PAUTHLR-LABEL: leaf_sign_all_v83_b_key_bti:
+; NEGATE-PAUTHLR:       // %bb.0:
+; NEGATE-PAUTHLR-NEXT:    .cfi_b_key_frame
+; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; NEGATE-PAUTHLR-NEXT:    bti c
+; NEGATE-PAUTHLR-NEXT:  .Ltmp12:
+; NEGATE-PAUTHLR-NEXT:    pacibsppc
+; NEGATE-PAUTHLR-NEXT:    retabsppc .Ltmp12
   ret i32 %x
 }

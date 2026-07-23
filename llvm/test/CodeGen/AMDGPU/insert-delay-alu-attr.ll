@@ -4,7 +4,7 @@
 define amdgpu_kernel void @delay_alu() {
 ; CHECK-LABEL: delay_alu:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
@@ -24,7 +24,7 @@ entry:
 define amdgpu_kernel void @delay_alu_waves_1_8() "amdgpu-waves-per-eu"="1,8" {
 ; CHECK-LABEL: delay_alu_waves_1_8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
@@ -44,7 +44,7 @@ entry:
 define amdgpu_kernel void @delay_alu_waves_1_1() "amdgpu-waves-per-eu"="1,1" {
 ; CHECK-LABEL: delay_alu_waves_1_1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
@@ -64,7 +64,7 @@ entry:
 define amdgpu_kernel void @delay_alu_waves_1_1_wgsize() "amdgpu-flat-work-group-size"="1,128" "amdgpu-waves-per-eu"="1,1" {
 ; CHECK-LABEL: delay_alu_waves_1_1_wgsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0

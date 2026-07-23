@@ -280,6 +280,78 @@ MlirSpeculatability mlirConditionallySpeculatableOpInterfaceGetSpeculatability(
 // MemoryEffectOpInterface
 //===---------------------------------------------------------------------===//
 
+MlirMemoryEffect mlirMemoryEffectsAllocateGet() {
+  return wrap(
+      static_cast<MemoryEffects::Effect *>(MemoryEffects::Allocate::get()));
+}
+
+MlirMemoryEffect mlirMemoryEffectsFreeGet() {
+  return wrap(static_cast<MemoryEffects::Effect *>(MemoryEffects::Free::get()));
+}
+
+MlirMemoryEffect mlirMemoryEffectsReadGet() {
+  return wrap(static_cast<MemoryEffects::Effect *>(MemoryEffects::Read::get()));
+}
+
+MlirMemoryEffect mlirMemoryEffectsWriteGet() {
+  return wrap(
+      static_cast<MemoryEffects::Effect *>(MemoryEffects::Write::get()));
+}
+
+MlirSideEffectResource mlirSideEffectsDefaultResourceGet() {
+  return wrap(static_cast<SideEffects::Resource *>(
+      SideEffects::DefaultResource::get()));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreate(
+    MlirMemoryEffect effect, MlirAttribute parameters, int stage,
+    bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), unwrap(parameters), stage, effectOnFullRegion,
+      unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForOpOperand(
+    MlirMemoryEffect effect, MlirOpOperand opOperand, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), unwrap(opOperand), unwrap(parameters), stage,
+      effectOnFullRegion, unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForOpResult(
+    MlirMemoryEffect effect, MlirValue result, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), cast<OpResult>(unwrap(result)), unwrap(parameters), stage,
+      effectOnFullRegion, unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForBlockArgument(
+    MlirMemoryEffect effect, MlirValue blockArgument, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), cast<BlockArgument>(unwrap(blockArgument)),
+      unwrap(parameters), stage, effectOnFullRegion, unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForSymbol(
+    MlirMemoryEffect effect, MlirAttribute symbol, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), cast<SymbolRefAttr>(unwrap(symbol)), unwrap(parameters),
+      stage, effectOnFullRegion, unwrap(resource)));
+}
+
+void mlirMemoryEffectInstanceDestroy(MlirMemoryEffectInstance instance) {
+  delete unwrap(instance);
+}
+
+void mlirMemoryEffectInstancesListAppend(MlirMemoryEffectInstancesList list,
+                                         MlirMemoryEffectInstance instance) {
+  unwrap(list)->push_back(*unwrap(instance));
+}
+
 MlirTypeID mlirMemoryEffectsOpInterfaceTypeID() {
   return wrap(MemoryEffectOpInterface::getInterfaceID());
 }

@@ -141,6 +141,34 @@ __attribute__((naked, target("pauth"))) static uint64_t check_negate() {
   // clang-format on
 }
 
+#if defined(HAVE_CFI_SET_RA_STATE)
+__attribute__((naked, target("pauth"))) uint64_t check_set() {
+  // clang-format off
+  asm(
+#if !defined(__APPLE__)
+      ".cfi_b_key_frame\n"
+#endif
+      ".cfi_set_ra_state 1, 0\n"
+      "pacibsp\n"
+
+      "stp x29, x30, [sp, #-16]!\n"
+      ".cfi_def_cfa_offset 16\n"
+      ".cfi_offset x29, -16\n"
+      ".cfi_offset x30, -8\n"
+
+      "bl " SYMBOL_NAME(get_main_ra_sign_state) "\n"
+
+      "ldp x29, x30, [sp], #16\n"
+      ".cfi_def_cfa_offset 0\n"
+      ".cfi_restore x29\n"
+      ".cfi_restore x30\n"
+
+      ".cfi_set_ra_state 0, -20\n"
+      "retab");
+  // clang-format on
+}
+#endif
+
 FUNC_ATTR(main_func) int main(int, char **) {
   uint64_t ret;
 
@@ -159,6 +187,12 @@ FUNC_ATTR(main_func) int main(int, char **) {
   fprintf(stderr, "check_negate: ret = 0x%" PRIx64 "\n", ret);
   assert(ret == 1);
 
-  printf("success\n");
+#if defined(HAVE_CFI_SET_RA_STATE)
+  ret = check_set();
+  fprintf(stderr, "check_set: ret = 0x%" PRIx64 "\n", ret);
+  assert(ret == 1);
+#endif
+
+  fprintf(stderr, "success\n");
   return 0;
 }

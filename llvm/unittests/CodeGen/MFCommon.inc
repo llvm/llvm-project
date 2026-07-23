@@ -52,6 +52,10 @@ public:
                                   unsigned Idx) const override {
     return 0;
   }
+  const TargetRegisterClass *
+  getLargestRegClassForRegPressureSet(unsigned Idx) const override {
+    return nullptr;
+  }
   const int *
   getRegClassPressureSets(const TargetRegisterClass *RC) const override {
     static const int Bogus[] = {0, -1};

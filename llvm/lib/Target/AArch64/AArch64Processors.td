@@ -1280,6 +1280,13 @@ class ProcessorAlias<string n, string alias> {
   string Alias = alias;
 }
 
+// A note on scheduling models - we do not have exact models for each core and
+// attempt to use the "best equivalent" that we have for those that are
+// missing. -mcpu=generic uses a cortex-a510 model to get good scheduling
+// performance for in-order cores where it is most beneficial. Out-of-order
+// cores are expected to be less sensitive and scheduling from an in-order
+// model will be sufficient.
+
 // FeatureFuseAdrpAdd is enabled under Generic to allow linker merging
 // optimizations. We use a fixed load latency of 4 as the a510 scheduling model
 // has a latency of 2 for most loads which is disproportionately low for many
@@ -1317,17 +1324,17 @@ def : ProcessorModel<"cortex-a73", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA73]>;
 def : ProcessorModel<"cortex-a75", CortexA57Model, ProcessorFeatures.A55,
                      [TuneA75]>;
-def : ProcessorModel<"cortex-a76", CortexA57Model, ProcessorFeatures.A76,
+def : ProcessorModel<"cortex-a76", NeoverseN1Model, ProcessorFeatures.A76,
                      [TuneA76]>;
-def : ProcessorModel<"cortex-a76ae", CortexA57Model, ProcessorFeatures.A76,
+def : ProcessorModel<"cortex-a76ae", NeoverseN1Model, ProcessorFeatures.A76,
                      [TuneA76]>;
-def : ProcessorModel<"cortex-a77", CortexA57Model, ProcessorFeatures.A77,
+def : ProcessorModel<"cortex-a77", NeoverseN2Model, ProcessorFeatures.A77,
                      [TuneA77]>;
-def : ProcessorModel<"cortex-a78", CortexA57Model, ProcessorFeatures.A78,
+def : ProcessorModel<"cortex-a78", NeoverseN2Model, ProcessorFeatures.A78,
                      [TuneA78]>;
-def : ProcessorModel<"cortex-a78ae", CortexA57Model, ProcessorFeatures.A78AE,
+def : ProcessorModel<"cortex-a78ae", NeoverseN2Model, ProcessorFeatures.A78AE,
                      [TuneA78AE]>;
-def : ProcessorModel<"cortex-a78c", CortexA57Model, ProcessorFeatures.A78C,
+def : ProcessorModel<"cortex-a78c", NeoverseN2Model, ProcessorFeatures.A78C,
                      [TuneA78C]>;
 def : ProcessorModel<"cortex-a710", NeoverseN2Model, ProcessorFeatures.A710,
                      [TuneA710]>;

@@ -9353,11 +9353,12 @@ define i64 @udiv_i64_9divbits(i8 %size) {
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, 1, v0
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, v0
-; GFX6-NEXT:    v_mov_b32_e32 v1, 0
+; GFX6-NEXT:    v_rcp_f32_e32 v1, 0x41200000
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, 1, v0
-; GFX6-NEXT:    v_mul_f32_e32 v0, 0x3dcccccd, v0
+; GFX6-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX6-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX6-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: udiv_i64_9divbits:
@@ -9366,11 +9367,12 @@ define i64 @udiv_i64_9divbits(i8 %size) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX9-NEXT:    v_add_u32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, v0
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_rcp_f32_e32 v1, 0x41200000
 ; GFX9-NEXT:    v_add_u32_e32 v0, 1, v0
-; GFX9-NEXT:    v_mul_f32_e32 v0, 0x3dcccccd, v0
+; GFX9-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-LABEL: define i64 @udiv_i64_9divbits(
 ; CHECK-SAME: i8 [[SIZE:%.*]]) {

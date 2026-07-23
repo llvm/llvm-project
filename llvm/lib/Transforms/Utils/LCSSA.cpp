@@ -107,9 +107,21 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
     if (ExitBlocks.empty())
       continue;
 
+    SmallVector<Instruction *> LifetimeMarkers;
+    bool DropLifetimeMarkers = false;
     for (Use &U : make_early_inc_range(I->uses())) {
       Instruction *User = cast<Instruction>(U.getUser());
       BasicBlock *UserBB = User->getParent();
+
+      // Lifetime markers must refer directly to an alloca. Rewriting their
+      // operands through LCSSA PHIs would produce invalid IR, so conservatively
+      // drop all lifetime markers when one crosses the loop boundary.
+      if (User->isLifetimeStartOrEnd()) {
+        LifetimeMarkers.push_back(User);
+        if (InstBB != UserBB && !L->contains(UserBB))
+          DropLifetimeMarkers = true;
+        continue;
+      }
 
       // Skip uses in unreachable blocks.
       if (!DT.isReachableFromEntry(UserBB)) {
@@ -125,6 +137,13 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
 
       if (InstBB != UserBB && !L->contains(UserBB))
         UsesToRewrite.push_back(&U);
+    }
+
+    if (DropLifetimeMarkers) {
+      // Use-list order is arbitrary, so wait until all markers are collected.
+      for (Instruction *Marker : LifetimeMarkers)
+        Marker->eraseFromParent();
+      Changed = true;
     }
 
     // If there are no uses outside the loop, exit with no change.

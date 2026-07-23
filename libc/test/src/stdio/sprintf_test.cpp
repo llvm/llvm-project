@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/printf_config.h"
+#include "src/__support/printf_core/printf_config.h"
 #include "src/stdio/sprintf.h"
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_WIDE

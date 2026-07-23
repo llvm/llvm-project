@@ -418,6 +418,8 @@ struct Procedure {
   DummyArguments dummyArguments;
   Attrs attrs;
   std::optional<common::CUDASubprogramAttrs> cudaSubprogramAttrs;
+  // Used only by CUDA semantic checks; this is not a CUDA procedure attribute.
+  bool hasOpenACCRoutine{false};
 };
 
 } // namespace Fortran::evaluate::characteristics

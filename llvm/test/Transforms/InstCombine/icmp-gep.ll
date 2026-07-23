@@ -1124,3 +1124,143 @@ define i1 @gep_gep_multiple_ult_nuw_multi_use(ptr %base, i64 %idx1, i64 %idx2, i
   %cmp = icmp ult ptr %gep2, %gep4
   ret i1 %cmp
 }
+
+define i1 @gep_const_same_block(ptr align 16 %foo) {
+; CHECK-LABEL: @gep_const_same_block(
+; CHECK-NEXT:    ret i1 true
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 4
+  %gep2 = getelementptr i8, ptr %foo, i64 8
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_const_same_negative_block(ptr align 16 %foo) {
+; CHECK-LABEL: @gep_const_same_negative_block(
+; CHECK-NEXT:    ret i1 true
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 -12
+  %gep2 = getelementptr i8, ptr %foo, i64 -8
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_const_different_block_1(ptr align 4 %foo) {
+; CHECK-LABEL: @gep_const_different_block_1(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 4
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 4
+  %gep2 = getelementptr i8, ptr %foo, i64 8
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_const_different_block_2(ptr align 16 %foo) {
+; CHECK-LABEL: @gep_const_different_block_2(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 -4
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 -4
+  %gep2 = getelementptr i8, ptr %foo, i64 4
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_const_edge_case_1(ptr align 16 %foo) {
+; CHECK-LABEL: @gep_const_edge_case_1(
+; CHECK-NEXT:    ret i1 true
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 14
+  %gep2 = getelementptr i8, ptr %foo, i64 15
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_const_edge_case_2(ptr align 16 %foo) {
+; CHECK-LABEL: @gep_const_edge_case_2(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 15
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 15
+  %gep2 = getelementptr i8, ptr %foo, i64 16
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_const_edge_case_3(ptr align 16 %foo) {
+; CHECK-LABEL: @gep_const_edge_case_3(
+; CHECK-NEXT:    ret i1 true
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 16
+  %gep2 = getelementptr i8, ptr %foo, i64 17
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_const_edge_case_4(ptr align 16 %foo) {
+; CHECK-LABEL: @gep_const_edge_case_4(
+; CHECK-NEXT:    ret i1 false
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 -15
+  %gep2 = getelementptr i8, ptr %foo, i64 -16
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_const_edge_case_5(ptr align 16 %foo) {
+; CHECK-LABEL: @gep_const_edge_case_5(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 -16
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 -17
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 -16
+  %gep2 = getelementptr i8, ptr %foo, i64 -17
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_variable_offsets(ptr align 16 %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @gep_variable_offsets(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 [[J:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i8, ptr %foo, i64 %i
+  %gep2 = getelementptr i8, ptr %foo, i64 %j
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+; Similar to tests above, but extracted from an actual program.
+@g16 = global [4 x i32] zeroinitializer, align 16
+define i1 @gep_global_offsets() {
+; CHECK-LABEL: @gep_global_offsets(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp ule ptr getelementptr (i8, ptr @g16, i64 20), getelementptr inbounds nuw (i8, ptr @g16, i64 16)
+  ret i1 %cmp
+}
+
+; Regression test: when checking for folding opportunities check for pointer
+; base before using trying to get the pointer alignment.
+define <2 x i1> @vec_gep_cmp(<2 x ptr> %base, <2 x i64> %i, <2 x i64> %j) {
+; CHECK-LABEL: @vec_gep_cmp(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, <2 x ptr> [[BASE:%.*]], <2 x i64> [[I:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, <2 x ptr> [[BASE]], <2 x i64> [[J:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x ptr> [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %gep1 = getelementptr i8, <2 x ptr> %base, <2 x i64> %i
+  %gep2 = getelementptr i8, <2 x ptr> %base, <2 x i64> %j
+  %cmp = icmp ult <2 x ptr> %gep1, %gep2
+  ret <2 x i1> %cmp
+}

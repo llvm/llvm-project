@@ -98,6 +98,9 @@ struct DeviceExprChecker
                 "not yet implemented: CUDA dynamic parallelism"_err_en_US);
           }
         }
+        if (!subp->openACCRoutineInfos().empty()) {
+          return {};
+        }
       }
 
       const Symbol &ultimate{sym->GetUltimate()};

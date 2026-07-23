@@ -391,10 +391,10 @@ private:
 
   _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 
-  // There are multiple (__)open function, they use different C-API open
-  // function. After that call these functions behave the same. This function
-  // does that part and determines the final return value.
-  _LIBCPP_HIDE_FROM_ABI basic_filebuf* __do_open(FILE* __file, ios_base::openmode __mode) {
+public:
+  // Update the buffer so that __file is considered to be the underlying file and is opened as __mode. This is used in
+  // the open family of functions as well as various iostreams in sync_with_stdio(false) mode.
+  _LIBCPP_HIDE_FROM_ABI basic_filebuf* __adopt_file(FILE* __file, ios_base::openmode __mode) {
     __file_ = __file;
     if (!__file_)
       return nullptr;
@@ -417,6 +417,7 @@ private:
     return this;
   }
 
+private:
   // If the file is already open, switch to unbuffered mode. Otherwise, record
   // the request to use unbuffered mode so that we use that mode when we
   // eventually open the file.
@@ -742,7 +743,7 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char*
   if (!__mdstr)
     return nullptr;
 
-  return __do_open(std::fopen(__s, __mdstr), __mode);
+  return __adopt_file(std::fopen(__s, __mdstr), __mode);
 }
 
 template <class _CharT, class _Traits>
@@ -753,7 +754,7 @@ inline basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::__open(in
   if (!__mdstr)
     return nullptr;
 
-  return __do_open(fdopen(__fd, __mdstr), __mode);
+  return __adopt_file(fdopen(__fd, __mdstr), __mode);
 }
 
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
@@ -767,7 +768,7 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const wchar
   if (!__mdstr)
     return nullptr;
 
-  return __do_open(_wfopen(__s, __mdstr), __mode);
+  return __adopt_file(_wfopen(__s, __mdstr), __mode);
 }
 #    endif
 

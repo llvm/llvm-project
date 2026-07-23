@@ -2061,6 +2061,10 @@ class RVPBinaryIntrinsic
   def int_riscv_pabd  : RVPBinaryIntrinsic;
   def int_riscv_pabdu : RVPBinaryIntrinsic;
 
+  // Packed "Q-format" Multiplication.
+  def int_riscv_pmulq  : RVPBinaryIntrinsic;
+  def int_riscv_pmulqr : RVPBinaryIntrinsic;
+
   // Packed Saturating and Rounding Shifts.
   class RVPShiftIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2094,6 +2098,16 @@ class RVPBinaryIntrinsic
                              LLVMMatchType<0>],
                             [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_pmerge : RVPTernaryIntrinsic;
+
+  // Packed Sign and Zero Extend.
+  class RVPExtIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_psext_b : RVPExtIntrinsic;
+  def int_riscv_psext_h : RVPExtIntrinsic;
+  def int_riscv_pzext_b : RVPExtIntrinsic;
+  def int_riscv_pzext_h : RVPExtIntrinsic;
 
   // Packed Absolute Difference Sum.
   def int_riscv_pabdsumu

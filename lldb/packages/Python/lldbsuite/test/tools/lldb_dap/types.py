@@ -1150,15 +1150,24 @@ class LaunchArgs:
 @dataclass(frozen=True)
 @args_protocol
 class AttachArgs:
-    restart: Optional[Any] = field(metadata={"alias": "__restart"}, default=None)
+    @dataclass(frozen=True)
+    class Session:
+        targetId: int
+        debuggerId: Optional[int] = None
 
+    program: Optional[str] = None
     attachCommands: Optional[List[str]] = None
     pid: Optional[int] = None
     waitFor: Optional[bool] = None
-    gdbRemotePort: Optional[int] = None
-    gdbRemoteHostname: Optional[str] = None
+    gdbRemotePort: Optional[int] = field(
+        metadata={"alias": "gdb-remote-port"}, default=None
+    )
+    gdbRemoteHostname: Optional[str] = field(
+        metadata={"alias": "gdb-remote-hostname"}, default=None
+    )
     coreFile: Optional[str] = None
-    program: Optional[str] = None
+    session: Optional[Session] = None
+    restart: Optional[Any] = field(metadata={"alias": "__restart"}, default=None)
 
     # Configurations.
     debuggerRoot: Optional[str] = None

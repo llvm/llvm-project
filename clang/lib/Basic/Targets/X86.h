@@ -956,6 +956,14 @@ public:
 
   unsigned getMinGlobalAlign(uint64_t TypeSize,
                              bool HasNonWeakDef) const override;
+
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
+
+private:
+  // Whether to apply the MSVC size-based global-alignment scheme. Disabled by
+  // -fclang-abi-compat<=22 to restore prior x86_64-windows-msvc behavior.
+  bool UseMSVCCompatGlobalAlign = true;
 };
 
 // x86-64 MinGW target

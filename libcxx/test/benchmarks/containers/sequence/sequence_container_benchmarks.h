@@ -372,9 +372,7 @@ void sequence_container_benchmarks(std::string container) {
             }
             DoNotOptimizeData(c);
 
-            st.PauseTiming();
             c.erase(c.end() - BatchSize, c.end());
-            st.ResumeTiming();
           }
         });
     }
@@ -396,7 +394,7 @@ void sequence_container_benchmarks(std::string container) {
           DoNotOptimizeData(c);
 
           st.PauseTiming();
-          c.clear();
+          c = Container();
           st.ResumeTiming();
         }
       });

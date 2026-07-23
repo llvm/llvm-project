@@ -2856,6 +2856,28 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createNegateRAStateWithPC(nullptr));
     break;
+  case MIToken::kw_cfi_set_ra_state: {
+    unsigned State;
+    MCSymbol *PACSym = nullptr;
+    if (parseCFIUnsigned(State) || expectAndConsume(MIToken::comma))
+      return true;
+    if (Token.is(MIToken::MCSymbol)) {
+      PACSym = getOrCreateMCSymbol(Token.stringValue());
+      lex();
+      CFIIndex = MF.addFrameInst(
+          MCCFIInstruction::createSetRAState(nullptr, State, PACSym));
+    } else if (Token.is(MIToken::IntegerLiteral)) {
+      int Offset;
+      if (parseCFIOffset(Offset))
+        return true;
+      CFIIndex = MF.addFrameInst(
+          MCCFIInstruction::createSetRAState(nullptr, State, Offset));
+    } else {
+      return error("expected '<mcsymbol ...>' or integer offset for "
+                   "cfi_set_ra_state");
+    }
+    break;
+  }
   case MIToken::kw_cfi_llvm_register_pair: {
     unsigned Reg, R1, R2;
     unsigned R1Size, R2Size;
@@ -3301,6 +3323,7 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_window_save:
   case MIToken::kw_cfi_aarch64_negate_ra_sign_state:
   case MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc:
+  case MIToken::kw_cfi_set_ra_state:
   case MIToken::kw_cfi_llvm_register_pair:
   case MIToken::kw_cfi_llvm_vector_registers:
   case MIToken::kw_cfi_llvm_vector_offset:

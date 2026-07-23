@@ -1071,6 +1071,17 @@ add_header_macro(
     .llvm-libc-types.nl_catd
   )
 
+add_header_macro(
+  langinfo
+  ../libc/include/langinfo.yaml
+  langinfo.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.langinfo_macros
+    .llvm-libc-types.nl_item
+    .llvm-libc-types.locale_t
+  )
+
 # UEFI spec references "Uefi.h" so we use that name for compatibility
 add_header_macro(
   uefi

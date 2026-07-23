@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1250 -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1251 -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1250 -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1251 -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s
 
 .text
 

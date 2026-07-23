@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllTranslations.h"
@@ -159,8 +160,10 @@ void registerToLLVMTranslation() {
           return mlir::failure();
 
         llvm::LLVMContext llvmContext;
+        const bool enableOpenMP = mlir::omp::isOpenMPModule(cirModule);
         std::unique_ptr<llvm::Module> llvmModule =
-            cir::direct::lowerDirectlyFromCIRToLLVMIR(cirModule, llvmContext);
+            cir::direct::lowerDirectlyFromCIRToLLVMIR(cirModule, llvmContext,
+                                                      enableOpenMP);
         if (!llvmModule)
           return mlir::failure();
         llvmModule->print(output, nullptr);

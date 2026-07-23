@@ -78,7 +78,6 @@ private:
   bool tryStore(SDNode *N);
   bool tryStoreVector(SDNode *N);
   bool tryFence(SDNode *N);
-  void SelectAddrSpaceCast(SDNode *N);
   bool tryBFE(SDNode *N);
   bool tryBF16ArithToFMA(SDNode *N);
   bool tryConstantFP(SDNode *N);
@@ -93,7 +92,6 @@ private:
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
   void SelectTcgen05St(SDNode *N, bool hasOffset = false);
   void selectAtomicSwap128(SDNode *N);
-  void selectBR_JT(SDNode *N);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);

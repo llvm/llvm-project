@@ -157,6 +157,10 @@ def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mli
     that device code can reference them.
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::gpu::GPUDialect"];
+  let options = [
+    Option<"cudaUnified", "cuda-unified", "bool", "false",
+           "Emit declaration-only device globals for CUDA unified memory.">
+  ];
 }
 
 def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {

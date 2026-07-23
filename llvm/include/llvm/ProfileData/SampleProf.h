@@ -207,8 +207,13 @@ enum class SecNameTableFlags : uint32_t {
   SecFlagFixedLengthMD5 = (1 << 1),
   // Profile contains ".__uniq." suffix name. Compiler shouldn't strip
   // the suffix when doing profile matching when seeing the flag.
-  SecFlagUniqSuffix = (1 << 2)
+  SecFlagUniqSuffix = (1 << 2),
+  // Name table is stored in 3-span Eytzinger layout (CS, Flat, Inlinees).
+  SecFlagEytzinger = (1 << 3)
 };
+
+enum class EytzingerSpan : size_t { CS, Flat, Inlinee, NumSpans };
+
 enum class SecProfileSymbolListFlags : uint32_t {
   SecFlagInValid = 0,
   SecFlagMD5 = (1 << 0)
