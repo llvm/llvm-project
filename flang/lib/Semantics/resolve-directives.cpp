@@ -126,14 +126,6 @@ protected:
   bool IsObjectWithDSA(const Symbol &symbol) {
     return GetContext().FindSymbolWithDSA(symbol).has_value();
   }
-  bool IsObjectWithVisibleDSA(const Symbol &symbol) {
-    for (std::size_t i{dirContext_.size()}; i != 0; i--) {
-      if (dirContext_[i - 1].FindSymbolWithDSA(symbol).has_value()) {
-        return true;
-      }
-    }
-    return false;
-  }
 
   bool WithinConstruct() {
     return !dirContext_.empty() && GetContext().withinConstruct;
@@ -150,37 +142,13 @@ protected:
   Symbol &MakeAssocSymbol(const SourceName &name, const Symbol &prev) {
     return MakeAssocSymbol(name, prev, currScope());
   }
-  struct DataSharingAttributeObjectKey {
-    SymbolRef symbol;
-    std::optional<std::string> designator;
-    bool operator<(const DataSharingAttributeObjectKey &that) const {
-      SymbolAddressCompare compare;
-      if (compare(symbol, that.symbol)) {
-        return true;
-      }
-      if (compare(that.symbol, symbol)) {
-        return false;
-      }
-      return designator < that.designator;
-    }
-  };
-  void AddDataSharingAttributeObject(
-      SymbolRef object, std::optional<std::string> designator = std::nullopt) {
-    dataSharingAttributeObjects_.try_emplace(
-        DataSharingAttributeObjectKey{object, std::move(designator)});
-  }
-  void AddDataSharingAttributeObject(SymbolRef object, Symbol::Flag flag,
-      std::optional<std::string> designator = std::nullopt) {
-    dataSharingAttributeObjects_.try_emplace(
-        DataSharingAttributeObjectKey{object, std::move(designator)}, flag);
+  void AddDataSharingAttributeObject(SymbolRef object) {
+    dataSharingAttributeObjects_.insert(object);
   }
   void ClearDataSharingAttributeObjects() {
     dataSharingAttributeObjects_.clear();
   }
-  std::optional<Symbol::Flag> FindDataSharingAttributeObject(
-      const Symbol &, const std::optional<std::string> &designator);
-  bool HasDataSharingAttributeObject(const Symbol &,
-      const std::optional<std::string> &designator = std::nullopt);
+  bool HasDataSharingAttributeObject(const Symbol &);
 
   /// Extract the iv and bounds of a DO loop:
   /// 1. The loop index/induction variable
@@ -207,8 +175,7 @@ protected:
   Symbol *DeclareAccessEntity(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(Symbol &, Symbol::Flag, Scope &);
 
-  std::map<DataSharingAttributeObjectKey, std::optional<Symbol::Flag>>
-      dataSharingAttributeObjects_; // on one directive
+  UnorderedSymbolSet dataSharingAttributeObjects_; // on one directive
   SemanticsContext &context_;
   std::vector<DirContext> dirContext_; // used as a stack
 };
@@ -390,6 +357,7 @@ public:
   void Post(const parser::Expr &);
   bool Pre(const parser::Variable &);
   void Post(const parser::Variable &);
+  bool Pre(const parser::ArrayElement &);
   void Post(const parser::ArrayElement &);
   void Post(const parser::Name &);
 
@@ -406,7 +374,7 @@ private:
   void PopAccContext();
   void AddAccObjectWithDSA(
       const Symbol &, Symbol::Flag, DesignatorPath designator = {});
-  bool AccObjectWithDSAVisible(
+  bool IsObjectWithVisibleDSA(
       const Symbol &, const std::optional<DesignatorPath> &) const;
   void AdjustAccSymbolReference(const parser::Name &);
   void CheckAccDefaultNoneReference(
@@ -464,6 +432,12 @@ private:
 
   DesignatorPathMap<AccDataSharingEntry> accDataSharingEntries_;
   std::vector<DesignatorPathMap<AccDataSharingEntry>> accObjectWithDSA_;
+  // Depth of the Expr, Variable, and ArrayElement nodes currently being
+  // visited.  A Name reached at depth zero is a whole-object reference that no
+  // precise Post handler covers (e.g. the object of an ALLOCATE, DEALLOCATE, or
+  // NULLIFY, or the pointer of a pointer assignment), so DEFAULT(NONE) is
+  // checked for it directly in Post(const parser::Name &).
+  int referenceContextDepth_{0};
   Scope *topScope_;
 };
 
@@ -1138,21 +1112,10 @@ void ResolveOmpParts(
 }
 
 template <typename T>
-std::optional<Symbol::Flag>
-DirectiveAttributeVisitor<T>::FindDataSharingAttributeObject(
-    const Symbol &object, const std::optional<std::string> &designator) {
-  auto it{dataSharingAttributeObjects_.find({object, designator})};
-  if (it != dataSharingAttributeObjects_.end()) {
-    return it->second;
-  }
-  return std::nullopt;
-}
-
-template <typename T>
 bool DirectiveAttributeVisitor<T>::HasDataSharingAttributeObject(
-    const Symbol &object, const std::optional<std::string> &designator) {
-  return dataSharingAttributeObjects_.find({object, designator}) !=
-      dataSharingAttributeObjects_.end();
+    const Symbol &object) {
+  auto it{dataSharingAttributeObjects_.find(object)};
+  return it != dataSharingAttributeObjects_.end();
 }
 
 template <typename T>
@@ -1927,7 +1890,7 @@ void AccAttributeVisitor::AddAccObjectWithDSA(
       {ultimate, flag, nullptr, ultimate.name().ToString()});
 }
 
-bool AccAttributeVisitor::AccObjectWithDSAVisible(const Symbol &symbol,
+bool AccAttributeVisitor::IsObjectWithVisibleDSA(const Symbol &symbol,
     const std::optional<DesignatorPath> &reference) const {
   for (std::size_t i{accObjectWithDSA_.size()}; i != 0; --i) {
     for (const auto &entry : accObjectWithDSA_[i - 1]) {
@@ -2000,7 +1963,7 @@ void AccAttributeVisitor::CheckAccDefaultNoneReference(
     const Symbol &symbol{name.symbol->GetUltimate()};
     if (!symbol.owner().IsDerivedType() && !symbol.has<ProcEntityDetails>() &&
         !symbol.has<SubprogramDetails>() &&
-        !AccObjectWithDSAVisible(symbol, designator) &&
+        !IsObjectWithVisibleDSA(symbol, designator) &&
         !symbol.has<AssocEntityDetails>() && !symbol.has<MiscDetails>()) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (&symbol != found) {
@@ -2044,9 +2007,13 @@ void AccAttributeVisitor::CheckAccDefaultNoneReference(
   }
 }
 
-bool AccAttributeVisitor::Pre(const parser::Expr &) { return true; }
+bool AccAttributeVisitor::Pre(const parser::Expr &) {
+  ++referenceContextDepth_;
+  return true;
+}
 
 void AccAttributeVisitor::Post(const parser::Expr &expr) {
+  --referenceContextDepth_;
   if (const auto *designator{
           std::get_if<common::Indirection<parser::Designator>>(&expr.u)}) {
     std::optional<DesignatorPath> designatorPath{
@@ -2067,9 +2034,13 @@ void AccAttributeVisitor::Post(const parser::Expr &expr) {
   }
 }
 
-bool AccAttributeVisitor::Pre(const parser::Variable &) { return true; }
+bool AccAttributeVisitor::Pre(const parser::Variable &) {
+  ++referenceContextDepth_;
+  return true;
+}
 
 void AccAttributeVisitor::Post(const parser::Variable &variable) {
+  --referenceContextDepth_;
   if (const auto *designator{
           std::get_if<common::Indirection<parser::Designator>>(&variable.u)}) {
     std::optional<DesignatorPath> designatorPath{
@@ -2090,7 +2061,13 @@ void AccAttributeVisitor::Post(const parser::Variable &variable) {
   }
 }
 
+bool AccAttributeVisitor::Pre(const parser::ArrayElement &) {
+  ++referenceContextDepth_;
+  return true;
+}
+
 void AccAttributeVisitor::Post(const parser::ArrayElement &arrayElement) {
+  --referenceContextDepth_;
   DesignatorPath path;
   if (AddDesignatorPath(context_, arrayElement.Base(), path)) {
     if (auto subscripts{
@@ -2104,6 +2081,14 @@ void AccAttributeVisitor::Post(const parser::ArrayElement &arrayElement) {
 
 void AccAttributeVisitor::Post(const parser::Name &name) {
   AdjustAccSymbolReference(name);
+  // A Name reached outside any Expr, Variable, or ArrayElement is a
+  // whole-object reference that no path-aware handler covers -- for instance
+  // the object of an ALLOCATE, DEALLOCATE, or NULLIFY, or the pointer of a
+  // pointer assignment. Check it for DEFAULT(NONE) here with no designator
+  // path.
+  if (referenceContextDepth_ == 0) {
+    CheckAccDefaultNoneReference(name);
+  }
 }
 
 Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
