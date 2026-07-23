@@ -1095,15 +1095,23 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   return Cost;
 }
 
-VPRegionBlock *VPlan::getVectorLoopRegion() {
-  if (VectorLoopRegion)
-    return VectorLoopRegion;
-  for (VPBlockBase *B : vp_depth_first_shallow(getEntry()))
-    if (auto *R = dyn_cast<VPRegionBlock>(B)) {
-      VectorLoopRegion = R->isReplicator() ? nullptr : R;
-      return VectorLoopRegion;
-    }
+// Find the vector loop region by following the last successor of each block,
+// starting from the plan's entry. The vector code path is always the last
+// successor of the entry (and of the min-iters bypass block, if present), and
+// every block on the path to the region has a single predecessor. Stop at the
+// first block with multiple predecessors: in a plain CFG that is the loop
+// header (no region exists yet), and in a rolled CFG it is the middle block
+// following the region.
+static VPRegionBlock *findVectorLoopRegion(VPBlockBase *Entry) {
+  for (VPBlockBase *B = Entry; B && B->getNumPredecessors() <= 1;
+       B = B->hasSuccessors() ? B->getSuccessors().back() : nullptr)
+    if (auto *R = dyn_cast<VPRegionBlock>(B))
+      return R->isReplicator() ? nullptr : R;
   return nullptr;
+}
+
+VPRegionBlock *VPlan::getVectorLoopRegion() {
+  return findVectorLoopRegion(getEntry());
 }
 
 const VPRegionBlock *VPlan::getVectorLoopRegion() const {

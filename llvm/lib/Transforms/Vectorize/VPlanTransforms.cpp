@@ -3936,8 +3936,6 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
   }
   for (VPRegionBlock *R : LoopRegions)
     R->dissolveToCFGLoop();
-  // Drop any cached pointer to the (now-detached) vector loop region.
-  Plan.invalidateVectorLoopRegionCache();
 }
 
 void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
