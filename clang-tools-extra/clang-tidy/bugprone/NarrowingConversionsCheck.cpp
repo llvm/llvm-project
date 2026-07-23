@@ -55,7 +55,8 @@ NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
       WarnWithinTemplateInstantiation(
           Options.get("WarnWithinTemplateInstantiation", false)),
       WarnOnEquivalentBitWidth(Options.get("WarnOnEquivalentBitWidth", true)),
-      WarnOnTimeTNarrowingConversion(Options.get("WarnOnTimeTNarrowingConversion", false)),
+      WarnOnTimeTNarrowingConversion(
+          Options.get("WarnOnTimeTNarrowingConversion", false)),
       IgnoreConversionFromTypes(Options.get("IgnoreConversionFromTypes", "")),
       PedanticMode(Options.get("PedanticMode", false)) {}
 
@@ -70,7 +71,8 @@ void NarrowingConversionsCheck::storeOptions(
   Options.store(Opts, "WarnWithinTemplateInstantiation",
                 WarnWithinTemplateInstantiation);
   Options.store(Opts, "WarnOnEquivalentBitWidth", WarnOnEquivalentBitWidth);
-  Options.store(Opts, "WarnOnTimeTNarrowingConversion", WarnOnTimeTNarrowingConversion);
+  Options.store(Opts, "WarnOnTimeTNarrowingConversion",
+                WarnOnTimeTNarrowingConversion);
   Options.store(Opts, "IgnoreConversionFromTypes", IgnoreConversionFromTypes);
   Options.store(Opts, "PedanticMode", PedanticMode);
 }
@@ -457,8 +459,8 @@ void NarrowingConversionsCheck::diagTimeTConversion(SourceLocation SourceLoc,
       << getUnqualifiedType(Rhs) << getUnqualifiedType(Lhs);
 }
 
-void NarrowingConversionsCheck::handleTimeTOnlyCast(
-    const ASTContext &Context, const CastExpr &Cast) {
+void NarrowingConversionsCheck::handleTimeTOnlyCast(const ASTContext &Context,
+                                                    const CastExpr &Cast) {
   const Expr &Lhs = Cast;
   const Expr &Rhs = *Cast.getSubExprAsWritten();
 
@@ -469,9 +471,10 @@ void NarrowingConversionsCheck::handleTimeTOnlyCast(
   handleTimeTConversion(Context, SourceLoc, Lhs, Rhs);
 }
 
-void NarrowingConversionsCheck::handleTimeTConversion(
-  const ASTContext &Context, SourceLocation SourceLoc,
-  const Expr &Lhs, const Expr &Rhs) {
+void NarrowingConversionsCheck::handleTimeTConversion(const ASTContext &Context,
+                                                      SourceLocation SourceLoc,
+                                                      const Expr &Lhs,
+                                                      const Expr &Rhs) {
   if (!WarnOnTimeTNarrowingConversion)
     return;
 
@@ -756,7 +759,8 @@ void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
     handleBinaryOperator(*Result.Context, *Op);
   else if (const auto *Cast = Result.Nodes.getNodeAs<ImplicitCastExpr>("cast"))
     handleImplicitCast(*Result.Context, *Cast);
-  else if (const auto *ECast = Result.Nodes.getNodeAs<ExplicitCastExpr>("explicit_cast"))
+  else if (const auto *ECast =
+               Result.Nodes.getNodeAs<ExplicitCastExpr>("explicit_cast"))
     handleTimeTOnlyCast(*Result.Context, *ECast);
   else
     llvm_unreachable("must be binary operator or cast expression");
