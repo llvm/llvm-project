@@ -12,7 +12,7 @@ if (llvm_install_cctools_symlinks) {
   symlink_or_copy("libtool") {
     deps = [ ":llvm-libtool-darwin" ]
     source = "llvm-libtool-darwin"
-    output = "$root_out_dir/bin/libtool"
+    output = "$llvm_current_bindir/libtool"
   }
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck %s
 
 %struct.ShapeData = type { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, i32, i32, i64, <4 x float>, i32, i8, i8, i16, i32, i32 }
 

@@ -25,6 +25,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/DependencyGraph.h"
 #include <queue>
+#include <variant>
 
 namespace llvm::sandboxir {
 
@@ -170,6 +171,109 @@ public:
 #endif
 };
 
+/// The scheduling point in the context of the Scheduler points to the
+/// top-of-schedule (i.e., the top-most instruction of the top bundle) during
+/// bottom-up scheduling or the bottom of the schedule (i.e., the bottom-most
+/// instruction of the bottom bundle) during top-down.
+///
+/// This class can be thought of as an extended BB::iterator, one that can
+/// not only point to after the last instruction in a BB (i.e., BB.end()), but
+/// also before the first instruction (i.e., something equivalent to
+/// prev(BB.begin()), which is not a legal BasicBlock::iterator).
+///
+/// This is needed for symmetric implementations of top-down and bottom-up
+/// scheduling. More specifically, if this is the first scheduling attempt we
+/// need the scheduling front to still point to a hypothetical last scheduling
+/// point. In bottom-up this can be at BB.end() but in top-down this can be
+/// before BB.begin(). This is why a BasicBlock::iterator is not suitable for
+/// this.
+class SchedulingPoint {
+  /// If Where contains a Block, then we are pointing before BB.begin(),
+  /// otherwise if it contains an iterator then we point to anywhere in the BB
+  /// or at BB.end().
+  std::variant<BasicBlock::iterator, BasicBlock *> Where;
+
+  /// Creates a scheduling point pointing before the beginning of BB.
+  SchedulingPoint(BasicBlock &BB) : Where(&BB) {}
+
+public:
+  /// Creates a scheduling point pointing at \p It, meaning any instruction in a
+  /// BB or BB.end().
+  SchedulingPoint(BasicBlock::iterator It) : Where(It) {}
+  /// Returns a SchedulingPoint that points to \p It.
+  static SchedulingPoint createAt(BasicBlock::iterator It) {
+    return SchedulingPoint(It);
+  }
+  /// Returns a SchedulingPoint that points to one element before \p It.
+  static SchedulingPoint createBefore(BasicBlock::iterator It) {
+    BasicBlock &BB = *It.getNodeParent();
+    if (It == BB.begin())
+      return SchedulingPoint(BB);
+    return SchedulingPoint(std::prev(It));
+  }
+  /// Returns a SchedulingPoint that points to one element after \p It.
+  static SchedulingPoint createAfter(BasicBlock::iterator It) {
+    assert(It != It.getNodeParent()->end() && "Already at end!");
+    return SchedulingPoint(std::next(It));
+  }
+
+  /// If the SchedulingPoint points to before the beginning of a BB, then this
+  /// returns that BB, else returns nullptr.
+  BasicBlock *atBeforeBeginOrNull() const {
+    if (std::holds_alternative<BasicBlock::iterator>(Where))
+      return nullptr;
+    return std::get<BasicBlock *>(Where);
+  }
+  /// If the SchedulingPoint points after the last instruction in the BB then
+  /// this returns the corresponding BasicBlock, nullptr otherwise.
+  BasicBlock *atEndOrNull() const {
+    if (std::holds_alternative<BasicBlock *>(Where))
+      return nullptr;
+    auto It = std::get<BasicBlock::iterator>(Where);
+    return It == It.getNodeParent()->end() ? It.getNodeParent() : nullptr;
+  }
+  /// Returns the instruction pointed to by this SchedulingPoint or null if we
+  /// are before/after BB.
+  Instruction *atInstrOrNull() const {
+    if (atBeforeBeginOrNull() || atEndOrNull())
+      return nullptr;
+    return &*std::get<BasicBlock::iterator>(Where);
+  }
+  /// Cast to Instruction *. Asserts that we are pointing to an instruction and
+  /// not before/after the beginning/end of a BB.
+  operator Instruction *() const { return atInstrOrNull(); }
+  /// Returns the corresponding BB::iterator. Asserts that we are not pointing
+  /// before BB begin.
+  BasicBlock::iterator getIterator() const {
+    assert(!atBeforeBeginOrNull() && "Expected in/after BB!");
+    return std::get<BasicBlock::iterator>(Where);
+  }
+  operator BasicBlock::iterator() const { return getIterator(); }
+  /// Returns the SchedulingPoint pointing after this.
+  SchedulingPoint getNext() const {
+    assert(!atEndOrNull() && "Expected before/in BB!");
+    if (BasicBlock *BB = atBeforeBeginOrNull())
+      return BB->begin();
+    return std::next(getIterator());
+  }
+  /// Returns the SchedulingPoint pointing before this.
+  SchedulingPoint getPrev() const {
+    assert(!atBeforeBeginOrNull() && "Expected in/after BB!");
+    auto It = getIterator();
+    auto *BB = It.getNodeParent();
+    if (It == BB->begin())
+      return *BB;
+    return std::prev(It);
+  }
+  bool operator==(const SchedulingPoint &Other) const {
+    return Where == Other.Where;
+  }
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+};
+
 /// The list scheduler.
 class Scheduler {
   /// This is a list-scheduler and this is the list containing the instructions
@@ -181,10 +285,12 @@ class Scheduler {
   DependencyGraph DAG;
   friend class SchedulerInternalsAttorney; // For DAG.
   Context &Ctx;
-  /// This is the top of the schedule, i.e. the location where the scheduler
-  /// is about to place the scheduled instructions. It gets updated as we
-  /// schedule.
-  std::optional<BasicBlock::iterator> ScheduleTopItOpt;
+  /// This is the top of the schedule during bottom-up scheduling and the bottom
+  /// of the schedule during top-down. It points to the position of the last
+  /// top-most/bottom-most instruction scheduled. It may get updated after every
+  /// trySchedule() attempt, regardless of whether scheduling succeeded or not.
+  /// It is nullopt if we have not scheduled before.
+  std::optional<SchedulingPoint> ScheduleTopItOpt;
   // TODO: This is wasting memory in exchange for fast removal using a raw ptr.
   DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
   /// The BB that we are currently scheduling.

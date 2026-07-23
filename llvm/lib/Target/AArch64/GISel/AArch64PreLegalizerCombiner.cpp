@@ -918,7 +918,7 @@ AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   auto &MAMProxy =
       MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
-  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+  const ModuleLibcallLoweringInfo *LibcallResult =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(
           *MF.getFunction().getParent());
   if (!LibcallResult)
