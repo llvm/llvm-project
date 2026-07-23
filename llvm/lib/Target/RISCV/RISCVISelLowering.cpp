@@ -7015,7 +7015,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       MaskVals.push_back(DAG.getConstant(C, DL, XLenVT));
     }
     assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
-
     MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
     SDValue SelectMask = convertToScalableVector(
         ContainerVT.changeVectorElementType(MVT::i1),
