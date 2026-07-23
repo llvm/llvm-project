@@ -1470,6 +1470,14 @@ public:
     auto position = rewriter.getInsertionPoint();
     auto *continueBlock = rewriter.splitBlock(currentBlock, position);
 
+    // Add arguments to the continue block for selections that yield values.
+    for (auto ty : op.getResultTypes()) {
+      Type dstTy = getTypeConverter()->convertType(ty);
+      if (!dstTy)
+        return rewriter.notifyMatchFailure(op, "failed to convert type");
+      continueBlock->addArgument(dstTy, loc);
+    }
+
     // Extract conditional branch information from the header block. By SPIR-V
     // dialect spec, it should contain `spirv.BranchConditional` or
     // `spirv.Switch` op. Note that `spirv.Switch op` is not supported at the

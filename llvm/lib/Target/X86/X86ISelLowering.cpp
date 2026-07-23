@@ -25508,52 +25508,102 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
   return SDValue();
 }
 
-// Return true if Val is an integer ISD::SETCC or an AND/OR tree thereof,
-// suitable for lowering to a CCMP chain.
-static bool canEmitConjunctionForCCMP(SDValue Val) {
-  unsigned Opc = Val.getOpcode();
-  if (Opc == ISD::SETCC)
-    return Val.getOperand(0).getSimpleValueType().isInteger();
-  if (Opc == ISD::AND && Val.hasOneUse())
-    return canEmitConjunctionForCCMP(Val.getOperand(0)) &&
-           canEmitConjunctionForCCMP(Val.getOperand(1));
-  // For OR, at least one operand must be a leaf SETCC so the DCF of the right
-  // CCMP is unambiguous.
-  if (Opc == ISD::OR && Val.hasOneUse())
-    return (Val.getOperand(0).getOpcode() == ISD::SETCC ||
-            Val.getOperand(1).getOpcode() == ISD::SETCC) &&
-           canEmitConjunctionForCCMP(Val.getOperand(0)) &&
-           canEmitConjunctionForCCMP(Val.getOperand(1));
+/// Returns true if \p Val is a tree of integer AND/OR/SETCC operations that
+/// can be expressed as a CCMP conjunction. This mirrors AArch64's
+/// canEmitConjunction and tracks the negation bookkeeping required to lower
+/// arbitrarily nested AND/OR trees (e.g. AND(cc, OR(cc, cc))) correctly.
+/// \param CanNegate   Set to true if the whole sub-tree can be negated just by
+///                    inverting the conditions on the SETCC leaves.
+/// \param MustBeFirst Set to true if this sub-tree needs to be negated but
+///                    cannot be negated naturally, so it must be emitted first.
+/// \param WillNegate  True when the result of this sub-expression must be
+///                    negated (i.e. the outer expression is an OR).
+static bool canEmitConjunctionForCCMP(SDValue Val, bool &CanNegate,
+                                      bool &MustBeFirst, bool WillNegate,
+                                      unsigned Depth = 0) {
+  if (!Val.hasOneUse())
+    return false;
+  unsigned Opcode = Val.getOpcode();
+  if (Opcode == ISD::SETCC) {
+    if (!Val.getOperand(0).getSimpleValueType().isInteger())
+      return false;
+    CanNegate = true;
+    MustBeFirst = false;
+    return true;
+  }
+  // Protect against exponential runtime and stack overflow.
+  if (Depth > 6)
+    return false;
+  if (Opcode == ISD::AND || Opcode == ISD::OR) {
+    bool IsOR = Opcode == ISD::OR;
+    SDValue O0 = Val.getOperand(0);
+    SDValue O1 = Val.getOperand(1);
+    bool CanNegateL, MustBeFirstL;
+    if (!canEmitConjunctionForCCMP(O0, CanNegateL, MustBeFirstL, IsOR,
+                                   Depth + 1))
+      return false;
+    bool CanNegateR, MustBeFirstR;
+    if (!canEmitConjunctionForCCMP(O1, CanNegateR, MustBeFirstR, IsOR,
+                                   Depth + 1))
+      return false;
+
+    if (MustBeFirstL && MustBeFirstR)
+      return false;
+
+    if (IsOR) {
+      // For an OR we need to be able to naturally negate at least one side or
+      // we cannot do the transformation at all.
+      if (!CanNegateL && !CanNegateR)
+        return false;
+      // If the OR's result will be negated and both leaves can be negated
+      // naturally, then this sub-tree as a whole negates naturally.
+      CanNegate = WillNegate && CanNegateL && CanNegateR;
+      MustBeFirst = !CanNegate;
+    } else {
+      assert(Opcode == ISD::AND && "Must be OR or AND");
+      // We cannot naturally negate an AND operation.
+      CanNegate = false;
+      MustBeFirst = MustBeFirstL || MustBeFirstR;
+    }
+    return true;
+  }
   return false;
 }
 
-// Recursively emit a CCMP chain for an AND/OR tree of integer SETCCs.
-//   CCOp:      incoming flags value (null for the first/root comparison)
-//   Predicate: condition under which CCOp was produced (COND_INVALID at root)
-//   OutCC:     set to the condition code to test after the whole chain
-// Returns the flags-producing node (SUB or CCMP).
-//
-// AND(cc1, cc2): emit cc1 first; CCMP(cc2) fires when cc1 is true.
-//   SrcCC = cc1,  DCF forces cc2 false when cc1 is false.
-// OR(cc1, cc2):  emit cc1 first; CCMP(cc2) fires when cc1 is false.
-//   SrcCC = ~cc1, DCF forces cc2 true when cc1 is true.
+/// Emit a conjunction or disjunction tree as a CMP followed by a chain of
+/// CCMP operations. Mirrors AArch64's emitConjunctionRec.
+///   CCOp:      incoming flags value (null for the first/root comparison)
+///   Predicate: condition under which CCOp was produced (COND_INVALID at root)
+///   Negate:    true if this sub-tree should be negated by inverting the
+///              conditions on its SETCC leaves
+///   OutCC:     set to the condition code to test after the whole chain
+/// Returns the flags-producing node (CMP/SUB or CCMP).
 static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
-                                         SDValue CCOp, X86::CondCode Predicate,
+                                         bool Negate, SDValue CCOp,
+                                         X86::CondCode Predicate,
                                          SelectionDAG &DAG,
                                          const X86Subtarget &Subtarget) {
   SDLoc DL(Val);
 
-  if (Val.getOpcode() == ISD::SETCC) {
+  unsigned Opcode = Val.getOpcode();
+  if (Opcode == ISD::SETCC) {
     SDValue LHS = Val.getOperand(0), RHS = Val.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Val.getOperand(2))->get();
+    if (Negate)
+      CC = ISD::getSetCCInverse(CC, LHS.getValueType());
     X86::CondCode X86CC = TranslateX86CC(CC, DL, /*IsFP=*/false, LHS, RHS, DAG);
     assert(X86CC != X86::COND_INVALID);
     OutCC = X86CC;
 
     SDValue Flags = EmitCmp(LHS, RHS, X86CC, DL, DAG, Subtarget);
+    // Produce a normal comparison if we are first in the chain.
     if (!CCOp)
       return Flags;
 
+    // Otherwise produce a CCMP. The CCMP executes (and updates EFLAGS) only
+    // when Predicate holds; when it is skipped it forces the default condition
+    // flags, which must make OutCC evaluate to false. That default is encoded
+    // from the opposite of X86CC.
     SDNode *FlagsNode = Flags.getNode();
     X86::CondCode DCFCode = X86::GetOppositeBranchCondition(X86CC);
     SDValue CFlags = DAG.getTargetConstant(
@@ -25563,47 +25613,78 @@ static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
                        {FlagsNode->getOperand(0), FlagsNode->getOperand(1),
                         CFlags, SrcCC, CCOp});
   }
+  assert(Val.hasOneUse() && "Valid conjunction/disjunction tree");
 
-  bool IsOR = Val.getOpcode() == ISD::OR;
-  SDValue LHS = Val.getOperand(0), RHS = Val.getOperand(1);
+  bool IsOR = Opcode == ISD::OR;
 
-  // For OR, the right subtree must be a leaf SETCC so its DCF unambiguously
-  // forces the outcome true when skipped. OR is commutative, so swap if needed.
-  if (IsOR && RHS.getOpcode() != ISD::SETCC)
+  SDValue LHS = Val.getOperand(0);
+  bool CanNegateL, MustBeFirstL;
+  bool ValidL = canEmitConjunctionForCCMP(LHS, CanNegateL, MustBeFirstL, IsOR);
+  assert(ValidL && "Valid conjunction/disjunction tree");
+  (void)ValidL;
+
+  SDValue RHS = Val.getOperand(1);
+  bool CanNegateR, MustBeFirstR;
+  bool ValidR = canEmitConjunctionForCCMP(RHS, CanNegateR, MustBeFirstR, IsOR);
+  assert(ValidR && "Valid conjunction/disjunction tree");
+  (void)ValidR;
+
+  // Swap the sub-tree that must come first to the right side.
+  if (MustBeFirstL) {
+    assert(!MustBeFirstR && "Valid conjunction/disjunction tree");
     std::swap(LHS, RHS);
-
-  // Emit the left subtree first (provides CCOp for the right subtree's CCMP).
-  X86::CondCode LHSCC;
-  SDValue CmpL =
-      emitConjunctionForCCMPRec(LHS, LHSCC, CCOp, Predicate, DAG, Subtarget);
-
-  // For AND: right CCMP fires when left is true,  SrcCC = LHSCC.
-  // For OR:  right CCMP fires when left is false, SrcCC = !LHSCC.
-  X86::CondCode NextPred =
-      IsOR ? X86::GetOppositeBranchCondition(LHSCC) : LHSCC;
-
-  SDValue CmpR =
-      emitConjunctionForCCMPRec(RHS, OutCC, CmpL, NextPred, DAG, Subtarget);
-
-  // For OR, patch the DCF of the right leaf's CCMP to force OutCC TRUE when
-  // the CCMP is skipped (i.e. when the left condition was already true).
-  if (IsOR && CmpR.getOpcode() == X86ISD::CCMP) {
-    SDValue CFlags = DAG.getTargetConstant(
-        X86::getCCMPCondFlagsFromCondCode(OutCC), DL, MVT::i8);
-    CmpR = DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
-                       {CmpR.getOperand(0), CmpR.getOperand(1), CFlags,
-                        CmpR.getOperand(3), CmpR.getOperand(4)});
+    std::swap(CanNegateL, CanNegateR);
+    std::swap(MustBeFirstL, MustBeFirstR);
   }
-  return CmpR;
+
+  bool NegateR, NegateAfterR, NegateL, NegateAfterAll;
+  if (IsOR) {
+    // Swap the sub-tree that we can negate naturally to the left.
+    if (!CanNegateL) {
+      assert(CanNegateR && "at least one side must be negatable");
+      assert(!MustBeFirstR && "invalid conjunction/disjunction tree");
+      assert(!Negate);
+      std::swap(LHS, RHS);
+      NegateR = false;
+      NegateAfterR = true;
+    } else {
+      // Negate the left sub-tree if possible, otherwise negate the result.
+      NegateR = CanNegateR;
+      NegateAfterR = !CanNegateR;
+    }
+    NegateL = true;
+    NegateAfterAll = !Negate;
+  } else {
+    assert(Opcode == ISD::AND && "Valid conjunction/disjunction tree");
+    assert(!Negate && "Valid conjunction/disjunction tree");
+    NegateL = false;
+    NegateR = false;
+    NegateAfterR = false;
+    NegateAfterAll = false;
+  }
+
+  // Emit sub-trees. The right sub-tree is emitted first so its flags feed the
+  // left sub-tree's CCMP chain.
+  X86::CondCode RHSCC;
+  SDValue CmpR = emitConjunctionForCCMPRec(RHS, RHSCC, NegateR, CCOp, Predicate,
+                                           DAG, Subtarget);
+  if (NegateAfterR)
+    RHSCC = X86::GetOppositeBranchCondition(RHSCC);
+  SDValue CmpL = emitConjunctionForCCMPRec(LHS, OutCC, NegateL, CmpR, RHSCC,
+                                           DAG, Subtarget);
+  if (NegateAfterAll)
+    OutCC = X86::GetOppositeBranchCondition(OutCC);
+  return CmpL;
 }
 
 static SDValue emitConjunctionForCCMP(SDValue Val, X86::CondCode &OutCC,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
-  if (!canEmitConjunctionForCCMP(Val))
+  bool DummyCanNegate, DummyMustBeFirst;
+  if (!canEmitConjunctionForCCMP(Val, DummyCanNegate, DummyMustBeFirst, false))
     return SDValue();
-  return emitConjunctionForCCMPRec(Val, OutCC, SDValue(), X86::COND_INVALID,
-                                   DAG, Subtarget);
+  return emitConjunctionForCCMPRec(Val, OutCC, /*Negate=*/false, SDValue(),
+                                   X86::COND_INVALID, DAG, Subtarget);
 }
 
 SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
