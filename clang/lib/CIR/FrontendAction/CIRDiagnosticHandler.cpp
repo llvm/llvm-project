@@ -14,7 +14,7 @@
 #include "mlir/IR/MLIRContext.h"
 
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/DiagnosticCodeGen.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"

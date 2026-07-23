@@ -10,7 +10,7 @@
 #include "CIRDiagnosticHandler.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
-#include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/DiagnosticCodeGen.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/LowerToLLVM.h"
