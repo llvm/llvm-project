@@ -13,6 +13,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -539,6 +540,46 @@ bool isSimple(Instruction *I) {
   return true;
 }
 
+bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
+                        const DataLayout &DL, Value *&TrueBase,
+                        Value *&FalseBase,
+                        SmallVectorImpl<Value *> &Conditions) {
+  TrueBase = nullptr;
+  FalseBase = nullptr;
+  uint64_t ScalarSize = DL.getTypeStoreSize(ScalarTy);
+  Conditions.assign(PointerOps.size(), nullptr);
+  for (auto [Idx, P] : enumerate(PointerOps)) {
+    Value *Base = P;
+    uint64_t Offset = 0;
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(P)) {
+      APInt OffsetAP(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+      if (!GEP->accumulateConstantOffset(DL, OffsetAP) || OffsetAP.isNegative())
+        return false;
+      Offset = OffsetAP.getZExtValue();
+      Base = GEP->getPointerOperand();
+    }
+    auto *Sel = dyn_cast<SelectInst>(Base);
+    if (!Sel)
+      return false;
+    Value *T = Sel->getTrueValue();
+    Value *F = Sel->getFalseValue();
+    if (!TrueBase) {
+      if (T == F)
+        return false;
+      TrueBase = T;
+      FalseBase = F;
+    } else if (TrueBase != T || FalseBase != F) {
+      return false;
+    }
+    // Lane Idx must be at exactly Base + Idx * sizeof(ScalarTy); codegen reads
+    // contiguously from TrueBase/FalseBase starting at lane 0.
+    if (Offset != static_cast<uint64_t>(Idx) * ScalarSize)
+      return false;
+    Conditions[Idx] = Sel->getCondition();
+  }
+  return TrueBase != nullptr;
+}
+
 void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
              bool ExtendingManyInputs) {
   if (SubMask.empty())
@@ -609,6 +650,21 @@ SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF) {
   for (auto [I, V] : enumerate(Val))
     std::fill_n(NewVal.begin() + I * VF, VF, V);
   return NewVal;
+}
+
+Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::UDiv:
+    return Intrinsic::masked_udiv;
+  case Instruction::SDiv:
+    return Intrinsic::masked_sdiv;
+  case Instruction::URem:
+    return Intrinsic::masked_urem;
+  case Instruction::SRem:
+    return Intrinsic::masked_srem;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
 }
 
 } // namespace llvm::slpvectorizer
