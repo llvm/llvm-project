@@ -856,8 +856,8 @@ def FeatureFuseAddSub2RegAndConstOne : SubtargetFeature<
    "CPU fuses (a + b + 1) and (a - b - 1)",
    [], InlineIgnore>;
 
-def FeatureFuseSMECompute : SubtargetFeature<
-   "fuse-sme-compute", "HasFuseSMECompute", "true",
+def FeatureFuseAppleSMECompute : SubtargetFeature<
+   "fuse-apple-sme-compute", "HasFuseAppleSMECompute", "true",
    "CPU fuses SME compute operations",
    [], InlineIgnore>;
 
