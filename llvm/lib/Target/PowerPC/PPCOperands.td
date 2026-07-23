@@ -384,6 +384,15 @@ def dispRIX16 : Operand<iPTR> {
   let EncoderMethod = "getDispRIX16Encoding";
   let DecoderMethod = "decodeDispRIX16Operand";
 }
+def PPCDispPSQOperand : AsmOperandClass {
+ let Name = "DispPSQ"; let PredicateMethod = "isSImm<12>";
+ let RenderMethod = "addImmOperands";
+}
+def dispPSQ : Operand<iPTR> {
+  let ParserMatchClass = PPCDispPSQOperand;
+  let DecoderMethod = "decodeDispPSQOperand";
+  let EncoderMethod = "getDispPSQEncoding";
+}
 def PPCDispSPE8Operand : AsmOperandClass {
  let Name = "DispSPE8"; let PredicateMethod = "isU8ImmX8";
  let RenderMethod = "addImmOperands";
