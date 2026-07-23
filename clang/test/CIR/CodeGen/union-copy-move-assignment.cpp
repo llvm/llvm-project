@@ -27,10 +27,12 @@ auto get_move = static_cast<U &(U::*)(U &&)>(&U::operator=);
 
 // LLVMCIR: define{{.*}}ptr @_ZN1UaSERKS_
 // LLVMCIR:   call ptr @memcpy(ptr {{.*}}, ptr {{.*}}, i64 noundef 4)
+// LLVMCIR-NOT: @memcpy
 // LLVMCIR: define{{.*}}ptr @_ZN1UaSEOS_
 // LLVMCIR:   call ptr @memcpy(ptr {{.*}}, ptr {{.*}}, i64 noundef 4)
 
 // OGCG: define{{.*}}ptr @_ZN1UaSERKS_
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}, i64 4, i1 false)
+// OGCG-NOT: @llvm.memcpy
 // OGCG: define{{.*}}ptr @_ZN1UaSEOS_
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}, i64 4, i1 false)

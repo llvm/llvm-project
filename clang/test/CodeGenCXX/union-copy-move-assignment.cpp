@@ -10,12 +10,28 @@ union U {
 auto get_copy = static_cast<U &(U::*)(const U &)>(&U::operator=);
 auto get_move = static_cast<U &(U::*)(U &&)>(&U::operator=);
 
+// Exactly one whole-object memcpy per assignment body.
 // CHECK-LABEL: define {{.*}} ptr @_ZN1UaSERKS_
 // CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}, i64 4, i1 false)
+// CHECK-NOT:     memcpy
 // CHECK:         ret ptr
 
 // CHECK-LABEL: define {{.*}} ptr @_ZN1UaSEOS_
 // CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}, i64 4, i1 false)
+// CHECK-NOT:     memcpy
+// CHECK:         ret ptr
+
+union Padded {
+  int a;
+  char b[5];
+};
+
+// sizeof(Padded) == 8, so the whole-object copy includes the tail padding.
+auto get_copy_padded = static_cast<Padded &(Padded::*)(const Padded &)>(&Padded::operator=);
+
+// CHECK-LABEL: define {{.*}} ptr @_ZN6PaddedaSERKS_
+// CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}, i64 8, i1 false)
+// CHECK-NOT:     memcpy
 // CHECK:         ret ptr
 
 struct WithNamedUnion {
