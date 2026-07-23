@@ -1585,8 +1585,7 @@ bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
   }
 
   return selectExtInst(ResVReg, ResType, I, CL::ldexp, GL::Ldexp,
-                       /*setMIFlags=*/true, /*useMISrc=*/false,
-                       {XReg, ExpReg});
+                       /*setMIFlags=*/true, /*useMISrc=*/false, {XReg, ExpReg});
 }
 
 bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
