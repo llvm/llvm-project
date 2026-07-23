@@ -48,7 +48,6 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
-#include <sstream>
 
 using namespace Fortran::frontend;
 
@@ -122,7 +121,8 @@ static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
 
 bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
                                             llvm::opt::ArgList &args) {
-  opts.ShowColors = parseShowColorsArgs(args);
+  opts.setShowColors(parseShowColorsArgs(args) ? clang::ShowColorsKind::On
+                                               : clang::ShowColorsKind::Off);
 
   return true;
 }
@@ -298,6 +298,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::options::OPT_fsafe_trampoline,
                    clang::options::OPT_fno_safe_trampoline, false))
     opts.EnableSafeTrampoline = 1;
+
+  if (args.hasFlag(clang::options::OPT_freal_sum_reassociation,
+                   clang::options::OPT_fno_real_sum_reassociation, false))
+    opts.SplitSumExpressionTree = 1;
 
   if (args.getLastArg(clang::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
@@ -881,6 +885,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
+  // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
+  opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,
+                       args.hasFlag(clang::options::OPT_fenumeration_type,
+                                    clang::options::OPT_fno_enumeration_type,
+                                    false));
+
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
     opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLocChecks);
@@ -1102,8 +1112,10 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // Default to off for `flang -fc1`.
   bool showColors{parseShowColorsArgs(args, false)};
-  diags.getDiagnosticOptions().ShowColors = showColors;
-  res.getDiagnosticOpts().ShowColors = showColors;
+  auto colorsMode =
+      showColors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off;
+  diags.getDiagnosticOptions().setShowColors(colorsMode);
+  res.getDiagnosticOpts().setShowColors(colorsMode);
   res.getFrontendOpts().showColors = showColors;
   return !diags.hasUncompilableErrorOccurred();
 }
@@ -1292,6 +1304,16 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
 
+  if (args.hasFlag(clang::options::OPT_fopenmp_assume_teams_oversubscription,
+                   clang::options::OPT_fno_openmp_assume_teams_oversubscription,
+                   /*Default=*/false))
+    res.getLangOpts().OpenMPTeamSubscription = true;
+  if (args.hasFlag(
+          clang::options::OPT_fopenmp_assume_threads_oversubscription,
+          clang::options::OPT_fno_openmp_assume_threads_oversubscription,
+          /*Default=*/false))
+    res.getLangOpts().OpenMPThreadSubscription = true;
+
   if (args.hasArg(clang::options::OPT_fopenmp_force_usm)) {
     res.getLangOpts().OpenMPForceUSM = 1;
   }
@@ -1308,23 +1330,11 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             << res.getLangOpts().OMPHostIRFile;
     }
 
-    if (args.hasFlag(
-            clang::options::OPT_fopenmp_assume_teams_oversubscription,
-            clang::options::OPT_fno_openmp_assume_teams_oversubscription,
-            /*Default=*/false))
-      res.getLangOpts().OpenMPTeamSubscription = true;
-
     if (args.hasArg(clang::options::OPT_fopenmp_assume_no_thread_state))
       res.getLangOpts().OpenMPNoThreadState = 1;
 
     if (args.hasArg(clang::options::OPT_fopenmp_assume_no_nested_parallelism))
       res.getLangOpts().OpenMPNoNestedParallelism = 1;
-
-    if (args.hasFlag(
-            clang::options::OPT_fopenmp_assume_threads_oversubscription,
-            clang::options::OPT_fno_openmp_assume_threads_oversubscription,
-            /*Default=*/false))
-      res.getLangOpts().OpenMPThreadSubscription = true;
 
     if ((args.hasArg(clang::options::OPT_fopenmp_target_debug) ||
          args.hasArg(clang::options::OPT_fopenmp_target_debug_EQ))) {
@@ -1971,7 +1981,9 @@ CompilerInvocation::getSemanticsCtx(
           clang::getDriverOptTable()
               .getOptionPrefixedName(
                   clang::options::OPT_fno_openacc_default_none_scalars_strict)
-              .str());
+              .str())
+      .set_targetTriple(targetMachine.getTargetTriple().str())
+      .set_targetFeatures(targetMachine.getTargetFeatureString().str());
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(
@@ -1994,6 +2006,7 @@ void CompilerInvocation::setLoweringOptions() {
   loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
                                     Fortran::common::LangOptions::SOB_Defined);
   loweringOpts.setProtectParens(codegenOpts.ProtectParens);
+  loweringOpts.setSplitSumExpressionTree(codegenOpts.SplitSumExpressionTree);
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,

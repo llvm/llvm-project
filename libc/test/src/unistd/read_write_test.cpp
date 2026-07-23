@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_stat_macros.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/remove.h"
 #include "src/unistd/close.h"
@@ -15,8 +16,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/stat.h>
 
 using LlvmLibcUniStd = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
@@ -58,7 +57,13 @@ TEST_F(LlvmLibcUniStd, WriteFails) {
 TEST_F(LlvmLibcUniStd, ReadFails) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 
+#ifdef LIBC_TEST_UNDER_EMULATOR
+  // QEMU returns EFAULT instead of EBADF when reading into a nullptr.
+  char buf[1];
+  EXPECT_THAT(LIBC_NAMESPACE::read(-1, buf, 1), Fails<ssize_t>(EBADF));
+#else
   EXPECT_THAT(LIBC_NAMESPACE::read(-1, nullptr, 1), Fails<ssize_t>(EBADF));
+#endif
   EXPECT_THAT(LIBC_NAMESPACE::read(0, reinterpret_cast<void *>(-1), 1),
               Fails<ssize_t>(EFAULT));
 }

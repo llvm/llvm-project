@@ -66,8 +66,10 @@ func.func @main() {
 }
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%module : !transform.any_op {transform.consumed}) {
+  transform.named_sequence @__transform_main(%module : !transform.any_op {transform.readonly}) {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %module
+      : (!transform.any_op) -> !transform.any_op
+    %func = transform.structured.match ops{["func.func"]} in %module
       : (!transform.any_op) -> !transform.any_op
 
     // Step 1: Tile for size [8] x [8] (unrolled by 4), which corresponds to
@@ -77,31 +79,24 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.op<"scf.for">, !transform.op<"scf.for">)
 
     // Step 2: Vectorize.
-    transform.structured.vectorize %tiled_linalg_op vector_sizes [[8], [8], 4]
+    transform.structured.vectorize %tiled_linalg_op vector_sizes [[8], [8], 4] {create_named_contraction}
       : !transform.any_op
 
-    // Step 3: Bufferize ahead of TransferReadDropUnitDimsPattern, which
-    // currently only supports memrefs.
-    %bufferize = transform.bufferization.one_shot_bufferize %module
-      {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
-
-    %func = transform.structured.match ops{["func.func"]} in %bufferize
-      : (!transform.any_op) -> !transform.any_op
-
-    // Step 4: Lower vector.multi_reduction to vector.contract (+ some helpful patterns).
-    transform.apply_patterns to %func {
+    // Step 3: Lower vector.mask %mask { vector.transfer_* } to vector.transfer_* %mask
+    // (Unlocks hoisting below)
+    transform.apply_patterns to %loop_k {
       transform.apply_patterns.vector.lower_masked_transfers
-      transform.apply_patterns.vector.transfer_permutation_patterns
-      transform.apply_patterns.vector.reduction_to_contract
-    } : !transform.any_op
+    } : !transform.op<"scf.for">
 
-    // Step 5: Lower vector.contract to vector.outerproduct. Also drop unit
-    // dims, specifically to prevent vector.transfer_read of vector<[8]x1xf32>,
-    // which can't be lowered in generic path.
+    // Step 4: Hoist the C accumulator load/store out of the k-loop while still
+    // in tensor form, so transfer_write has a result value the loop can yield.
+    transform.apply_licm to %loop_k : !transform.op<"scf.for">
+    transform.loop.hoist_loop_invariant_subsets %loop_k : !transform.op<"scf.for">
+
+    // Step 5: Lower to vector.outerproduct.
     transform.apply_patterns to %func {
+      transform.apply_patterns.vector.transfer_permutation_patterns
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
-      transform.apply_patterns.vector.lower_masks
-      transform.apply_patterns.vector.rank_reducing_subview_patterns
     } : !transform.any_op
 
     transform.yield

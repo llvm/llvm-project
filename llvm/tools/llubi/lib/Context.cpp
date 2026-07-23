@@ -288,25 +288,52 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
       return std::nullopt;
     return MaterializedConstant(std::move(Res), Cacheable);
   }
-  case Instruction::PtrToAddr: {
+  case Instruction::PtrToAddr:
+  case Instruction::PtrToInt: {
+    const auto *Src = getConstantValue(CE->getOperand(0));
+    if (!Src)
+      return std::nullopt;
+    bool Cacheable = Opc == Instruction::PtrToAddr && Src->isCacheable();
+    if (Src->isPoison())
+      return MaterializedConstant(AnyValue::poison(), Cacheable);
+    unsigned BitWidth = CE->getType()->getScalarSizeInBits();
+    if (Src->isPointer()) {
+      if (Opc == Instruction::PtrToInt)
+        exposeProvenance(Src->asPointer().provenance());
+      return MaterializedConstant(Src->asPointer().address().trunc(BitWidth),
+                                  Cacheable);
+    }
+    std::vector<AnyValue> Vec = Src->asAggregate();
+    for (auto &V : Vec) {
+      if (V.isPointer()) {
+        if (Opc == Instruction::PtrToInt)
+          exposeProvenance(V.asPointer().provenance());
+        V = V.asPointer().address().trunc(BitWidth);
+      }
+    }
+    return MaterializedConstant(std::move(Vec), Cacheable);
+  }
+  case Instruction::IntToPtr: {
     const auto *Src = getConstantValue(CE->getOperand(0));
     if (!Src)
       return std::nullopt;
     if (Src->isPoison())
-      return MaterializedConstant(AnyValue::poison(), Src->isCacheable());
-    unsigned BitWidth = CE->getType()->getScalarSizeInBits();
-    if (Src->isPointer())
-      return MaterializedConstant(Src->asPointer().address().trunc(BitWidth),
-                                  Src->isCacheable());
+      return MaterializedConstant(AnyValue::poison(), /*Cacheable=*/false);
+    unsigned BitWidth =
+        DL.getPointerSizeInBits(CE->getType()->getPointerAddressSpace());
+    if (Src->isInteger())
+      return MaterializedConstant(
+          Pointer(getWildcardProvenance(),
+                  Src->asInteger().zextOrTrunc(BitWidth)),
+          /*Cacheable=*/false);
     std::vector<AnyValue> Vec = Src->asAggregate();
     for (auto &V : Vec) {
-      if (V.isPointer())
-        V = V.asPointer().address().trunc(BitWidth);
+      if (V.isInteger())
+        V = Pointer(getWildcardProvenance(),
+                    V.asInteger().zextOrTrunc(BitWidth));
     }
-    return MaterializedConstant(std::move(Vec), Src->isCacheable());
+    return MaterializedConstant(std::move(Vec), /*Cacheable=*/false);
   }
-  case Instruction::PtrToInt:
-  case Instruction::IntToPtr:
   case Instruction::AddrSpaceCast:
     return std::nullopt;
   default:
@@ -368,9 +395,8 @@ const MaterializedConstant *Context::getConstantValue(Constant *C) {
   if (Val.isNone())
     return nullptr;
   if (!Val.isCacheable()) {
-    assert(NoncacheableConstBuffer.getBytesAllocated() <=
-               1024 * sizeof(MaterializedConstant) &&
-           "Unbounded temporary buffer.");
+    assert(NoncacheableConstCount <= 1024 && "Unbounded temporary buffer.");
+    ++NoncacheableConstCount;
     return new (NoncacheableConstBuffer.Allocate())
         MaterializedConstant(std::move(Val));
   }
@@ -380,6 +406,7 @@ const MaterializedConstant *Context::getConstantValue(Constant *C) {
 
 void Context::resetNoncacheableConstantBuffer() {
   NoncacheableConstBuffer.DestroyAll();
+  NoncacheableConstCount = 0;
 }
 
 APInt Context::getTag(uint32_t BitWidth, Provenance &Prov) {

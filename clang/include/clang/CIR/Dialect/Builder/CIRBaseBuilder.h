@@ -267,6 +267,18 @@ public:
     return cir::WhileOp::create(*this, loc, condBuilder, bodyBuilder);
   }
 
+  /// Create a while operation with a per-iteration cleanup region.
+  cir::WhileOp createWhile(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+          cleanupBuilder,
+      cir::CleanupKind cleanupKind) {
+    return cir::WhileOp::create(*this, loc, condBuilder, bodyBuilder,
+                                cleanupBuilder, cleanupKind);
+  }
+
   /// Create a for operation.
   cir::ForOp createFor(
       mlir::Location loc,
@@ -275,6 +287,19 @@ public:
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
     return cir::ForOp::create(*this, loc, condBuilder, bodyBuilder,
                               stepBuilder);
+  }
+
+  /// Create a for operation with a per-iteration cleanup region.
+  cir::ForOp createFor(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+          cleanupBuilder,
+      cir::CleanupKind cleanupKind) {
+    return cir::ForOp::create(*this, loc, condBuilder, bodyBuilder, stepBuilder,
+                              cleanupBuilder, cleanupKind);
   }
 
   /// Create a break operation.
@@ -377,8 +402,9 @@ public:
   cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
                          bool isVolatile = false,
                          bool skipTailPadding = false) {
-    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile,
-                               skipTailPadding);
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src,
+                               /*dst_alignment=*/{}, /*src_alignment=*/{},
+                               isVolatile, skipTailPadding);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,

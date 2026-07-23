@@ -8,13 +8,8 @@
 
 // REQUIRES: std-at-least-c++26
 
-// TODO(LLVM25): Remove these restrictions.
-// Clang <= 22 mis-evaluates std::saturating_mul on non-byte-aligned _BitInt at
-// compile time. See https://llvm.org/PR204085 (fixed in Clang 23 via
-// https://llvm.org/PR192568). The latest version of Android Clang still has
-// this bug.
-// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22
-// UNSUPPORTED: apple-clang-17, apple-clang-18, apple-clang-19, apple-clang-20, apple-clang-21
+// UNSUPPORTED: clang-21, clang-22
+// UNSUPPORTED: apple-clang-21
 // UNSUPPORTED: target={{.+}}-android{{.*}}
 
 // <numeric>
@@ -191,9 +186,8 @@ constexpr bool test() {
   test_saturate_cast<_BitInt(128), unsigned _BitInt(128)>();
 #  endif
 
-  // TODO: __builtin_mul_overflow is currently broken for (unsigned) _BitInt(N)
-  // where N > 128 (https://llvm.org/PR46337). Cover them once this bug gets
-  // fixed.
+  // TODO: cover N > 128 once __builtin_mul_overflow is fixed for wide
+  // _BitInt(N); see https://llvm.org/PR46337.
 
   return true;
 }

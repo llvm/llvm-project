@@ -2508,27 +2508,29 @@ public:
         MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
-        bool destTypeComplete = true;
 
         if (!isa<PointerType>(destType))
           return;
         destType = destType.getTypePtr()->getPointeeType();
-        if (const auto *D = destType->getAsTagDecl())
-          destTypeComplete = D->isCompleteDefinition();
 
-        // If destination type is incomplete, it is unsafe to cast to anyway, no
-        // need to check its type:
-        if (destTypeComplete) {
+        // If destination type is incomplete or dependent, it is unsafe to cast
+        // to anyway, no need to check its type:
+        if (!destType->isIncompleteType() && !destType->isDependentType()) {
           const uint64_t dSize = Ctx.getTypeSize(destType);
           QualType srcType = ECE->getSubExpr()->getType();
 
           assert(srcType->isPointerType());
 
-          const uint64_t sSize =
-              Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+          QualType srcPointeeType = srcType.getTypePtr()->getPointeeType();
 
-          if (sSize >= dSize)
-            return;
+          // Check if source type is incomplete or dependent as well:
+          if (!srcPointeeType->isIncompleteType() &&
+              !srcPointeeType->isDependentType()) {
+            const uint64_t sSize = Ctx.getTypeSize(srcPointeeType);
+
+            if (sSize >= dSize)
+              return;
+          }
         }
         if (const auto *CE = dyn_cast<CXXMemberCallExpr>(
                 ECE->getSubExpr()->IgnoreParens())) {
@@ -2906,6 +2908,28 @@ public:
   }
 };
 
+// CFG build options for running the lifetime safety analysis on a function.
+static void setLifetimeSafetyCFGBuildOptions(AnalysisDeclContext &AC) {
+  AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
+  AC.getCFGBuildOptions().AddLifetime = true;
+  AC.getCFGBuildOptions().AddParameterLifetimes = true;
+  AC.getCFGBuildOptions().AddInitializers = true;
+  AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
+  AC.getCFGBuildOptions().setAllAlwaysAdd();
+}
+
+// Returns true when analysis-based warnings should be skipped for D: warnings
+// are ignored, D is in a suppressed system header, or D is in a dependent
+// context (which is handled later at instantiation time).
+static bool shouldSkipAnalysisForDecl(Sema &S, const Decl *D) {
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+  if (Diags.getIgnoreAllWarnings() ||
+      (Diags.getSuppressSystemWarnings() &&
+       S.SourceMgr.isInSystemHeader(D->getLocation())))
+    return true;
+  return cast<DeclContext>(D)->isDependentContext();
+}
+
 static void
 LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
                          clang::lifetimes::LifetimeSafetyStats &LSStats) {
@@ -2922,12 +2946,7 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     if (!FD)
       continue;
     AnalysisDeclContext AC(nullptr, FD);
-    AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
-    AC.getCFGBuildOptions().AddLifetime = true;
-    AC.getCFGBuildOptions().AddParameterLifetimes = true;
-    AC.getCFGBuildOptions().AddInitializers = true;
-    AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
-    AC.getCFGBuildOptions().setAllAlwaysAdd();
+    setLifetimeSafetyCFGBuildOptions(AC);
     if (AC.getCFG())
       runLifetimeSafetyAnalysis(AC, &SemaHelper,
                                 lifetimes::GetLifetimeSafetyOpts(S, FD),
@@ -3005,6 +3024,45 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     LifetimeSafetyTUAnalysis(S, TU, LSStats);
 }
 
+void clang::sema::AnalysisBasedWarnings::IssueWarningsForImplicitFunction(
+    const Decl *D) {
+  // Currently this runs only lifetime safety: a default member initializer
+  // applied by a synthesized constructor can bind a view/pointer member to a
+  // temporary that dies at the end of construction -- a dangling field that
+  // would otherwise be missed.
+  if (!D || !D->getBody())
+    return;
+  // In TU-end mode IsLifetimeSafetyEnabled returns false for non-TU decls, so
+  // such definitions are reached only via the call-graph walk, not here.
+  if (!lifetimes::IsLifetimeSafetyEnabled(S, D))
+    return;
+  if (shouldSkipAnalysisForDecl(S, D) || S.hasUncompilableErrorOccurred())
+    return;
+
+  // A synthesized constructor can only dangle a field through an NSDMI, so skip
+  // classes with no in-class field initializer. We do not narrow by member
+  // type: an NSDMI can bind a borrow nested inside an aggregate member too.
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
+    bool HasInClassInit = false;
+    for (const FieldDecl *FD : Ctor->getParent()->fields())
+      if (FD->hasInClassInitializer()) {
+        HasInClassInit = true;
+        break;
+      }
+    if (!HasInClassInit)
+      return;
+  }
+
+  AnalysisDeclContext AC(/*AnalysisDeclContextManager=*/nullptr, D);
+  setLifetimeSafetyCFGBuildOptions(AC);
+
+  lifetimes::LifetimeSafetySemaHelperImpl SemaHelper(S);
+  if (AC.getCFG())
+    lifetimes::runLifetimeSafetyAnalysis(AC, &SemaHelper,
+                                         lifetimes::GetLifetimeSafetyOpts(S, D),
+                                         LSStats, S.CollectStats);
+}
+
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     sema::AnalysisBasedWarnings::Policy P, sema::FunctionScopeInfo *fscope,
     const Decl *D, QualType BlockType) {
@@ -3017,14 +3075,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   //     time.
   DiagnosticsEngine &Diags = S.getDiagnostics();
 
-  // Do not do any analysis if we are going to just ignore them.
-  if (Diags.getIgnoreAllWarnings() ||
-      (Diags.getSuppressSystemWarnings() &&
-       S.SourceMgr.isInSystemHeader(D->getLocation())))
-    return;
-
-  // For code in dependent contexts, we'll do this at instantiation time.
-  if (cast<DeclContext>(D)->isDependentContext())
+  if (shouldSkipAnalysisForDecl(S, D))
     return;
 
   if (S.hasUncompilableErrorOccurred()) {
