@@ -354,6 +354,22 @@ likely you are to confuse users by showing them even when they are unusable.
 For instance if you have two execution modes that use separate register sets,
 showing both all the time makes it hard to tell what mode you are in.
 
+### Registers With The Same Name In Different Contexts
+
+When you have banked registers or a copy of a register for each execution mode,
+it usually only has one name. You need to decide if it makes sense to
+allow users to access each one separately.
+
+For example, AArch64's SME extension adds a "streaming mode". SVE registers
+exist in the normal mode and the streaming mode. However programs only ever use
+one or the other, and the values are cleared when the mode is switched. So there
+is no reason to let users write to the inactive mode's registers, and so we just
+present 1 set with the normal naming.
+
+However if you have overlapping sets that can hold their own values, you may
+want to make the normal register name the active set, and have a way to address
+the other sets.
+
 ### Execution Modes That Change Instruction Encoding
 
 Arm (meaning Armv7 and prior) has 2 execution modes: Arm and Thumb. If you
