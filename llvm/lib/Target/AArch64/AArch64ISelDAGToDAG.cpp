@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64ExpandImm.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -368,6 +369,7 @@ public:
 
   void SelectPtrauthAuth(SDNode *N);
   void SelectPtrauthResign(SDNode *N);
+  void SelectPtrauthResignWithPC(SDNode *N);
 
   bool trySelectStackSlotTagP(SDNode *N);
   void SelectTagP(SDNode *N);
@@ -402,7 +404,6 @@ public:
   void SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs,
                               unsigned Op, unsigned MaxIdx, unsigned Scale,
                               unsigned BaseReg = 0);
-  bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
   template <int64_t Min, int64_t Max>
   bool SelectAddrModeIndexedSVE(SDNode *Root, SDValue N, SDValue &Base,
@@ -476,6 +477,7 @@ private:
   bool SelectAddrModeXRO(SDValue N, unsigned Size, SDValue &Base,
                          SDValue &Offset, SDValue &SignExtend,
                          SDValue &DoShift);
+  bool isWorthNegatingImm(SDValue V) const;
   bool isWorthFoldingALU(SDValue V, bool LSL = false) const;
   bool isWorthFoldingAddr(SDValue V, unsigned Size) const;
   bool SelectExtendedSHL(SDValue N, unsigned Size, bool WantExtend,
@@ -992,6 +994,25 @@ getExtendTypeForNode(SDValue N, bool IsLoadStore = false) {
   }
 
   return AArch64_AM::InvalidShiftExtend;
+}
+
+/// Determine whether constant -V is cheaper to materialise than V.
+bool AArch64DAGToDAGISel::isWorthNegatingImm(SDValue V) const {
+  assert(isa<ConstantSDNode>(V) && "invalid node");
+
+  EVT VT = V.getValueType();
+  assert((VT == MVT::i32 || VT == MVT::i64) && "invalid type");
+
+  // It's only worth negating the constant if it doesn't have other uses.
+  if (!V.hasOneUse())
+    return false;
+
+  uint64_t Imm = cast<ConstantSDNode>(V)->getZExtValue();
+  unsigned BitSize = VT.getSizeInBits();
+  SmallVector<AArch64_IMM::ImmInsnModel, 4> OrigCost, NewCost;
+  AArch64_IMM::expandMOVImm(Imm, BitSize, OrigCost);
+  AArch64_IMM::expandMOVImm(-Imm, BitSize, NewCost);
+  return NewCost.size() < OrigCost.size();
 }
 
 /// Determine whether it is worth to fold V into an extended register of an
@@ -1765,6 +1786,39 @@ void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
   }
 }
 
+void AArch64DAGToDAGISel::SelectPtrauthResignWithPC(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Val = N->getOperand(1);
+  SDValue AUTKey = N->getOperand(2);
+  SDValue AUTDisc = N->getOperand(3);
+  SDValue AUTPC = N->getOperand(4);
+  SDValue PACKey = N->getOperand(5);
+  SDValue PACDisc = N->getOperand(6);
+
+  unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+  unsigned PACKeyC = cast<ConstantSDNode>(PACKey)->getZExtValue();
+
+  AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+  PACKey = CurDAG->getTargetConstant(PACKeyC, DL, MVT::i64);
+
+  SDValue PACAddrDisc, PACConstDisc;
+  std::tie(PACConstDisc, PACAddrDisc) =
+      extractPtrauthBlendDiscriminators(PACDisc, CurDAG);
+
+  SDValue X17Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                         AArch64::X17, Val, SDValue());
+  SDValue X16Copy = CurDAG->getCopyToReg(
+      CurDAG->getEntryNode(), DL, AArch64::X16, AUTDisc, X17Copy.getValue(1));
+  SDValue X15Copy = CurDAG->getCopyToReg(
+      CurDAG->getEntryNode(), DL, AArch64::X15, AUTPC, X16Copy.getValue(1));
+
+  SDValue Ops[] = {AUTKey, PACKey, PACConstDisc, PACAddrDisc,
+                   X15Copy.getValue(1)};
+  SDNode *AUTPCPAC =
+      CurDAG->getMachineNode(AArch64::AUTPCPAC, DL, MVT::i64, Ops);
+  ReplaceNode(N, AUTPCPAC);
+}
+
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   LoadSDNode *LD = cast<LoadSDNode>(N);
   if (LD->isUnindexed())
@@ -2532,23 +2586,6 @@ void AArch64DAGToDAGISel::SelectPredicatedStore(SDNode *N, unsigned NumVecs,
   SDNode *St = CurDAG->getMachineNode(Opc, dl, N->getValueType(0), Ops);
 
   ReplaceNode(N, St);
-}
-
-bool AArch64DAGToDAGISel::SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base,
-                                                      SDValue &OffImm) {
-  SDLoc dl(N);
-  const DataLayout &DL = CurDAG->getDataLayout();
-  const TargetLowering *TLI = getTargetLowering();
-
-  // Try to match it for the frame address
-  if (auto FINode = dyn_cast<FrameIndexSDNode>(N)) {
-    int FI = FINode->getIndex();
-    Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
-    OffImm = CurDAG->getTargetConstant(0, dl, MVT::i64);
-    return true;
-  }
-
-  return false;
 }
 
 void AArch64DAGToDAGISel::SelectPostStore(SDNode *N, unsigned NumVecs,
@@ -6079,6 +6116,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPtrauthResign(Node);
       return;
 
+    case Intrinsic::ptrauth_auth_with_pc_and_resign:
+      SelectPtrauthResignWithPC(Node);
+      return;
+
     case Intrinsic::aarch64_neon_tbl2:
       SelectTable(Node, 2,
                   VT == MVT::v8i8 ? AArch64::TBLv8i8Two : AArch64::TBLv16i8Two,
@@ -8166,15 +8207,11 @@ SDValue AArch64DAGToDAGISel::tryFoldCselToFMaxMin(SDNode &N) {
   if (CondCode == AArch64CC::GT || CondCode == AArch64CC::GE) {
     if (TVal == CmpLHS && FVal == CmpRHS)
       isMax = true;
-    else if (TVal == CmpRHS && FVal == CmpLHS)
-      isMax = false;
     else
       return SDValue();
   } else if (CondCode == AArch64CC::MI || CondCode == AArch64CC::LS) {
     if (TVal == CmpLHS && FVal == CmpRHS)
       isMax = false;
-    else if (TVal == CmpRHS && FVal == CmpLHS)
-      isMax = true;
     else
       return SDValue();
   } else {

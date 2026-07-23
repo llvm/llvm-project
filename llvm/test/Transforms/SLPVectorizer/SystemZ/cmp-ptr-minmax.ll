@@ -9,17 +9,17 @@ define i1 @test(i64 %0, i64 %1, ptr %2) {
 ; CHECK-NEXT:    [[GEP45:%.*]] = getelementptr i8, ptr null, i64 [[TMP1]]
 ; CHECK-NEXT:    [[GEP48:%.*]] = getelementptr i8, ptr null, i64 [[TMP0]]
 ; CHECK-NEXT:    [[GEP49:%.*]] = getelementptr i8, ptr null, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x ptr> poison, ptr [[GEP44]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr> [[TMP3]], ptr [[GEP48]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x ptr> poison, ptr [[GEP45]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> [[TMP5]], ptr [[GEP49]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x ptr> poison, ptr [[GEP44]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr> [[TMP3]], ptr [[GEP48]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x ptr> poison, ptr [[GEP45]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> [[TMP5]], ptr [[GEP49]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <2 x ptr> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP7]], <2 x ptr> [[TMP4]], <2 x ptr> [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x ptr> [[TMP9]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <2 x ptr> [[TMP8]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP11]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP11]], i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TMP12]], [[TMP13]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;

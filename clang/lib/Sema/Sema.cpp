@@ -69,7 +69,6 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
 #include "clang/Sema/TemplateDeduction.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -375,6 +374,8 @@ void Sema::Initialize() {
   // name mangling. And the name mangling uses BuiltinVaListDecl.
   if (Context.getTargetInfo().hasBuiltinMSVaList())
     (void)Context.getBuiltinMSVaListDecl();
+  if (Context.getTargetInfo().hasBuiltinZOSVaList())
+    (void)Context.getBuiltinZOSVaListDecl();
   (void)Context.getBuiltinVaListDecl();
 
   if (SemaConsumer *SC = dyn_cast<SemaConsumer>(&Consumer))
@@ -584,6 +585,12 @@ void Sema::Initialize() {
     DeclarationName MSVaList = &Context.Idents.get("__builtin_ms_va_list");
     if (IdResolver.begin(MSVaList) == IdResolver.end())
       PushOnScopeChains(Context.getBuiltinMSVaListDecl(), TUScope);
+  }
+
+  if (Context.getTargetInfo().hasBuiltinZOSVaList()) {
+    DeclarationName ZOSVaList = &Context.Idents.get("__builtin_zos_va_list");
+    if (IdResolver.begin(ZOSVaList) == IdResolver.end())
+      PushOnScopeChains(Context.getBuiltinZOSVaListDecl(), TUScope);
   }
 
   DeclarationName BuiltinVaList = &Context.Idents.get("__builtin_va_list");
@@ -1184,11 +1191,26 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   return Complete;
 }
 
+void Sema::getSortedUnusedLocalTypedefNameCandidates(
+    SmallVectorImpl<const TypedefNameDecl *> &Sorted) const {
+  // The candidates are collected while iterating a Scope's SmallPtrSet, so sort
+  // by source location for a deterministic order.
+  Sorted.assign(UnusedLocalTypedefNameCandidates.begin(),
+                UnusedLocalTypedefNameCandidates.end());
+  llvm::sort(Sorted,
+             [](const TypedefNameDecl *LHS, const TypedefNameDecl *RHS) {
+               return LHS->getLocation().getRawEncoding() <
+                      RHS->getLocation().getRawEncoding();
+             });
+}
+
 void Sema::emitAndClearUnusedLocalTypedefWarnings() {
   if (ExternalSource)
     ExternalSource->ReadUnusedLocalTypedefNameCandidates(
         UnusedLocalTypedefNameCandidates);
-  for (const TypedefNameDecl *TD : UnusedLocalTypedefNameCandidates) {
+  SmallVector<const TypedefNameDecl *, 4> Sorted;
+  getSortedUnusedLocalTypedefNameCandidates(Sorted);
+  for (const TypedefNameDecl *TD : Sorted) {
     if (TD->isReferenced())
       continue;
     Diag(TD->getLocation(), diag::warn_unused_local_typedef)
@@ -1706,14 +1728,15 @@ DeclContext *Sema::getFunctionLevelDeclContext(bool AllowLambda) const {
   DeclContext *DC = CurContext;
 
   while (true) {
-    if (isa<BlockDecl>(DC) || isa<EnumDecl>(DC) || isa<CapturedDecl>(DC) ||
-        isa<RequiresExprBodyDecl>(DC)) {
+    if (isa<BlockDecl, EnumDecl, CapturedDecl, RequiresExprBodyDecl,
+            CXXExpansionStmtDecl>(DC)) {
       DC = DC->getParent();
     } else if (!AllowLambda && isa<CXXMethodDecl>(DC) &&
                cast<CXXMethodDecl>(DC)->getOverloadedOperator() == OO_Call &&
                cast<CXXRecordDecl>(DC->getParent())->isLambda()) {
       DC = DC->getParent()->getParent();
-    } else break;
+    } else
+      break;
   }
 
   return DC;

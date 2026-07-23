@@ -44,7 +44,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Config/llvm-config.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFolder.h"
@@ -91,7 +91,6 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
-#include <queue>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -2525,8 +2524,7 @@ static Value *extractVector(IRBuilderTy &IRB, Value *V, unsigned BeginIndex,
     return V;
 
   if (NumElements == 1) {
-    V = IRB.CreateExtractElement(V, IRB.getInt32(BeginIndex),
-                                 Name + ".extract");
+    V = IRB.CreateExtractElement(V, BeginIndex, Name + ".extract");
     LLVM_DEBUG(dbgs() << "     extract: " << *V << "\n");
     return V;
   }
@@ -2545,8 +2543,7 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   VectorType *Ty = dyn_cast<VectorType>(V->getType());
   if (!Ty) {
     // Single element to insert.
-    V = IRB.CreateInsertElement(Old, V, IRB.getInt32(BeginIndex),
-                                Name + ".insert");
+    V = IRB.CreateInsertElement(Old, V, BeginIndex, Name + ".insert");
     LLVM_DEBUG(dbgs() << "     insert: " << *V << "\n");
     return V;
   }
@@ -2816,12 +2813,14 @@ public:
 
   /// Attempts to rewrite a partition using tree-structured merge optimization.
   ///
-  /// This function analyzes a partition to determine if it can be optimized
-  /// using a tree-structured merge pattern, where multiple non-overlapping
-  /// stores completely fill an alloca. And there is no load from the alloca in
-  /// the middle of the stores. Such patterns can be optimized by eliminating
-  /// the intermediate stores and directly constructing the final vector by
-  /// using shufflevectors.
+  /// This function handles two patterns. Both produce an O(log n) tree of
+  /// shufflevectors in place of the linear expand+blend chain that SROA would
+  /// otherwise emit for each partial store.
+  ///
+  /// Pattern 1 (stores-only):
+  ///   Multiple non-overlapping partial stores completely fill the alloca
+  ///   and there is exactly one full-width load coming after the stores.
+  ///   The stores are tree-merged into a single vector and stored once.
   ///
   /// Example transformation:
   /// Before: (stores do not have to be in order)
@@ -2830,36 +2829,47 @@ public:
   ///   store <2 x float> %val2, ptr %alloca+16          ; offset 4-5
   ///   store <2 x float> %val1, ptr %alloca+8           ; offset 2-3
   ///   store <2 x float> %val3, ptr %alloca+24          ; offset 6-7
+  ///   %r = load <8 x float>, ptr %alloca
   ///
-  /// After:
-  ///   %alloca = alloca <8 x float>
-  ///   %shuffle0 = shufflevector %val0, %val1, <4 x i32> <i32 0, i32 1, i32 2,
-  ///                 i32 3>
-  ///   %shuffle1 = shufflevector %val2, %val3, <4 x i32> <i32 0, i32 1, i32 2,
-  ///                 i32 3>
-  ///   %shuffle2 = shufflevector %shuffle0, %shuffle1, <8 x i32> <i32 0, i32 1,
-  ///                 i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  ///   store %shuffle2, ptr %alloca
+  ///   After: tree of shufflevectors producing <8 x float> directly.
   ///
-  /// The optimization looks for partitions that:
-  /// 1. Have no overlapping split slice tails
-  /// 2. Contain non-overlapping stores that cover the entire alloca
-  /// 3. Have exactly one load that reads the complete alloca structure and not
-  ///    in the middle of the stores (TODO: maybe we can relax the constraint
-  ///    about reading the entire alloca structure)
+  /// Pattern 2 (init + RMW, possibly multi-round):
+  ///   A single full-width init store, followed by partial loads and
+  ///   partial stores that read-modify-write the alloca one or more
+  ///   times, optionally followed by a full-width load. The only
+  ///   structural requirement is that the distinct [begin, end) ranges
+  ///   touched by the partial loads and stores, taken together, tile
+  ///   the alloca disjointly.
+  ///
+  ///   We keep a map from each slice range to the SSA value that
+  ///   currently lives there, `SliceValues[r] -> Value*`:
+  ///     - initialize each entry to the corresponding piece of the
+  ///       init store's value (via a shufflevector picking the
+  ///       range's elements out of the init value),
+  ///     - walk partial loads and stores in block order,
+  ///     - for a partial load at range r: RAUW with `SliceValues[r]`,
+  ///     - for a partial store at range r: update `SliceValues[r]` to
+  ///       the stored value and drop the store.
+  ///   At the end, the final `SliceValues[r]` entries are tree-merged
+  ///   (in range order) into a single store to the alloca, and the
+  ///   optional full-width load is replaced by a load of the alloca.
+  ///
+  ///   Because the ranges are disjoint by construction, a store at one
+  ///   range cannot affect another range's tracked value, so a single
+  ///   block-order walk correctly tracks the memory state at each
+  ///   range. The algorithm handles multi-round RMW, partial loads
+  ///   and stores interleaved in any order, read-only slices (the
+  ///   tracked value stays at the init extract), and write-only
+  ///   slices (the tracked value never flows into a load).
   ///
   /// \param P The partition to analyze and potentially rewrite
-  /// \return An optional vector of values that were deleted during the rewrite
-  ///         process, or std::nullopt if the partition cannot be optimized
-  ///         using tree-structured merge
+  /// \return An optional vector of values that were deleted during the
+  ///         rewrite, or std::nullopt if the partition cannot be optimized.
   std::optional<SmallVector<Value *, 4>>
   rewriteTreeStructuredMerge(Partition &P) {
     // No tail slices that overlap with the partition
     if (P.splitSliceTails().size() > 0)
       return std::nullopt;
-
-    SmallVector<Value *, 4> DeletedValues;
-    LoadInst *TheLoad = nullptr;
 
     // Structure to hold store information
     struct StoreInfo {
@@ -2870,8 +2880,16 @@ public:
       StoreInfo(StoreInst *SI, uint64_t Begin, uint64_t End, Value *Val)
           : Store(SI), BeginOffset(Begin), EndOffset(End), StoredValue(Val) {}
     };
+    struct LoadInfo {
+      LoadInst *Load;
+      uint64_t BeginOffset;
+      uint64_t EndOffset;
+    };
 
-    SmallVector<StoreInfo, 4> StoreInfos;
+    SmallVector<StoreInfo, 4> StoreInfos; // partial stores only
+    SmallVector<LoadInfo, 4> LoadInfos;   // partial loads only
+    LoadInst *FullLoad = nullptr;         // optional full-width load
+    StoreInst *InitStore = nullptr;       // optional full-width init store
 
     // If the new alloca is a fixed vector type, we use its element type as the
     // allocated element type, otherwise we use i8 as the allocated element
@@ -2895,143 +2913,339 @@ public:
 
     for (Slice &S : P) {
       auto *User = cast<Instruction>(S.getUse()->getUser());
+      // A "full-width" slice spans the entire alloca; it's either the single
+      // init store (Pattern 2) or the single final load (both patterns).
+      bool IsFullWidth = (S.beginOffset() == NewAllocaBeginOffset &&
+                          S.endOffset() == NewAllocaEndOffset);
       if (auto *LI = dyn_cast<LoadInst>(User)) {
-        // Do not handle the case if
-        //   1. There is more than one load
-        //   2. The load is volatile
-        //   3. The load does not read the entire alloca structure
-        //   4. The load does not meet the conditions in the helper function
-        if (TheLoad || !IsTypeValidForTreeStructuredMerge(LI->getType()) ||
-            S.beginOffset() != NewAllocaBeginOffset ||
-            S.endOffset() != NewAllocaEndOffset || LI->isVolatile())
+        // Only handle simple (non-volatile, non-atomic) loads.
+        if (!LI->isSimple() ||
+            !IsTypeValidForTreeStructuredMerge(LI->getType()))
           return std::nullopt;
-        TheLoad = LI;
+        if (IsFullWidth) {
+          // We accept at most one full-width load (the "final" load, after
+          // all the partial stores).
+          if (FullLoad)
+            return std::nullopt;
+          FullLoad = LI;
+        } else {
+          // Partial load (RMW pattern only).
+          LoadInfos.push_back({LI, S.beginOffset(), S.endOffset()});
+        }
       } else if (auto *SI = dyn_cast<StoreInst>(User)) {
         // Do not handle the case if
         //   1. The store does not meet the conditions in the helper function
-        //   2. The store is volatile
-        //   3. The total store size is not a multiple of the allocated element
-        //   type size
-        if (!IsTypeValidForTreeStructuredMerge(
-                SI->getValueOperand()->getType()) ||
-            SI->isVolatile())
+        //   2. The store is not simple — we drop stores as part of the
+        //      rewrite, so volatile stores (which must be kept) and atomic
+        //      stores (which carry memory-ordering semantics) are unsound
+        //      to replace with SSA bookkeeping.
+        //   3. The total store size is not a multiple of the allocated
+        //      element type size (required so the tree merge can produce a
+        //      vector whose element type matches the alloca).
+        if (!SI->isSimple() || !IsTypeValidForTreeStructuredMerge(
+                                   SI->getValueOperand()->getType()))
           return std::nullopt;
-        auto *VecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
-        unsigned NumElts = VecTy->getNumElements();
-        unsigned EltSize = DL.getTypeSizeInBits(VecTy->getElementType());
+        auto *StVecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
+        unsigned NumElts = StVecTy->getNumElements();
+        unsigned EltSize = DL.getTypeSizeInBits(StVecTy->getElementType());
         if (NumElts * EltSize % AllocatedEltTySize != 0)
           return std::nullopt;
-        StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
-                                SI->getValueOperand());
+        if (IsFullWidth) {
+          // At most one full-width store is allowed — it's the init store
+          // for the RMW pattern.
+          if (InitStore)
+            return std::nullopt;
+          InitStore = SI;
+        } else {
+          StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
+                                  SI->getValueOperand());
+        }
       } else {
-        // If we have instructions other than load and store, we cannot do the
-        // tree structured merge
+        // If we have instructions other than load and store, we cannot do
+        // the tree structured merge.
         return std::nullopt;
       }
     }
-    // If we do not have any load, we cannot do the tree structured merge
-    if (!TheLoad)
-      return std::nullopt;
 
-    // If we do not have multiple stores, we cannot do the tree structured merge
+    // Need at least two partial stores to benefit from tree-merging; a
+    // single store is already optimal as-is. This applies to both patterns
+    // below, so check it before classifying.
     if (StoreInfos.size() < 2)
       return std::nullopt;
 
-    // Stores should not overlap and should cover the whole alloca
-    // Sort by begin offset
-    llvm::sort(StoreInfos, [](const StoreInfo &A, const StoreInfo &B) {
-      return A.BeginOffset < B.BeginOffset;
-    });
-
-    // Check for overlaps and coverage
-    uint64_t ExpectedStart = NewAllocaBeginOffset;
-    for (auto &StoreInfo : StoreInfos) {
-      uint64_t BeginOff = StoreInfo.BeginOffset;
-      uint64_t EndOff = StoreInfo.EndOffset;
-
-      // Check for gap or overlap
-      if (BeginOff != ExpectedStart)
-        return std::nullopt;
-
-      ExpectedStart = EndOff;
-    }
-    // Check that stores cover the entire alloca
-    if (ExpectedStart != NewAllocaEndOffset)
+    // Classify the pattern by looking at what we collected:
+    //   Pattern 1 (stores-only): only partial stores + exactly one full load.
+    //   Pattern 2 (RMW): one full init store + partial loads + partial stores
+    //     (+ optional full final load). RMW also needs VecTy to be set
+    //     because we use getIndex() to convert byte offsets to element
+    //     indices, which requires a promoted vector alloca.
+    bool IsRMWPattern = InitStore && VecTy && !LoadInfos.empty();
+    bool IsStoresOnlyPattern = !InitStore && FullLoad && LoadInfos.empty();
+    if (!IsRMWPattern && !IsStoresOnlyPattern)
       return std::nullopt;
 
-    // Stores should be in the same basic block
-    // The load should not be in the middle of the stores
-    // Note:
-    // If the load is in a different basic block with the stores, we can still
-    // do the tree structured merge. This is because we do not have the
-    // store->load forwarding here. The merged vector will be stored back to
-    // NewAI and the new load will load from NewAI. The forwarding will be
-    // handled later when we try to promote NewAI.
-    BasicBlock *LoadBB = TheLoad->getParent();
+    // All partial stores must live in the same basic block — the tree merge
+    // is built in a single BB using block-order ordering (comesBefore).
     BasicBlock *StoreBB = StoreInfos[0].Store->getParent();
+    for (auto &Info : StoreInfos)
+      if (Info.Store->getParent() != StoreBB)
+        return std::nullopt;
 
-    for (auto &StoreInfo : StoreInfos) {
-      if (StoreInfo.Store->getParent() != StoreBB)
+    SmallVector<Value *, 4> DeletedValues;
+
+    // Helper: pairwise tree-merge a list of vectors into a single vector.
+    // At each iteration we merge each adjacent pair via mergeTwoVectors,
+    // collect the merged values into Next, and (if Vals had odd length)
+    // carry the trailing element through unchanged. Loop until one value
+    // remains — the fully-merged vector.
+    auto TreeMerge = [&](SmallVectorImpl<Value *> &Vals,
+                         IRBuilder<> &B) -> Value * {
+      LLVM_DEBUG(dbgs() << "  Rewrite stores into shufflevectors:\n");
+      while (Vals.size() > 1) {
+        SmallVector<Value *, 8> Next;
+        for (unsigned I = 0, E = Vals.size(); I + 1 < E; I += 2) {
+          Value *M =
+              mergeTwoVectors(Vals[I], Vals[I + 1], DL, AllocatedEltTy, B);
+          LLVM_DEBUG(dbgs() << "    shufflevector: " << *M << "\n");
+          Next.push_back(M);
+        }
+        if (Vals.size() % 2 == 1)
+          Next.push_back(Vals.back());
+        Vals = std::move(Next);
+      }
+      return Vals[0];
+    };
+
+    // Replace a full-width load with a load of the freshly-merged alloca.
+    // The merge stored a value of type Merged->getType() into NewAI; we load
+    // that same type back so every access to NewAI stays consistently typed
+    // (otherwise the alloca is no longer promotable).
+    auto ReplaceFullLoad = [&](LoadInst *LoadToReplace, Value *Merged) {
+      IRBuilder<> LoadBuilder(LoadToReplace);
+      Value *NewLoad = LoadBuilder.CreateAlignedLoad(
+          Merged->getType(), &NewAI, getSliceAlign(),
+          LoadToReplace->isVolatile(),
+          LoadToReplace->getName() + ".sroa.new.load");
+      if (NewLoad->getType() != LoadToReplace->getType())
+        NewLoad = LoadBuilder.CreateBitCast(NewLoad, LoadToReplace->getType());
+      LoadToReplace->replaceAllUsesWith(NewLoad);
+      DeletedValues.push_back(LoadToReplace);
+    };
+
+    if (IsStoresOnlyPattern) {
+      // Stores should not overlap and should cover the whole alloca.
+      // Sort by begin offset to verify this with a single linear scan.
+      llvm::sort(StoreInfos, [](const StoreInfo &A, const StoreInfo &B) {
+        return A.BeginOffset < B.BeginOffset;
+      });
+      // Check for gap or overlap: each begin offset must equal the previous
+      // end offset, i.e. the store ranges must tile [NewAllocaBeginOffset,
+      // NewAllocaEndOffset) exactly.
+      uint64_t Expected = NewAllocaBeginOffset;
+      for (auto &Info : StoreInfos) {
+        if (Info.BeginOffset != Expected)
+          return std::nullopt;
+        Expected = Info.EndOffset;
+      }
+      // Stores cover the entire alloca (no trailing gap either).
+      if (Expected != NewAllocaEndOffset)
         return std::nullopt;
-      if (LoadBB == StoreBB && !StoreInfo.Store->comesBefore(TheLoad))
-        return std::nullopt;
+
+      // The load should not be in the middle of the stores.
+      // Note:
+      // If the load is in a different basic block from the stores, we can
+      // still do the tree-structured merge. We don't have store->load
+      // forwarding here — the merged vector is stored back to NewAI and
+      // the new load loads from NewAI. The forwarding will be handled
+      // later when NewAI is promoted.
+      BasicBlock *LoadBB = FullLoad->getParent();
+      if (LoadBB == StoreBB) {
+        for (auto &Info : StoreInfos)
+          if (!Info.Store->comesBefore(FullLoad))
+            return std::nullopt;
+      }
+
+      LLVM_DEBUG({
+        dbgs() << "Tree structured merge rewrite (stores-only):\n";
+        dbgs() << "  Load: " << *FullLoad << "\n Ordered stores:\n";
+        for (auto [I, Info] : enumerate(StoreInfos)) {
+          dbgs() << "    [" << I << "] Range[" << Info.BeginOffset << ", "
+                 << Info.EndOffset << ") \tStore: " << *Info.Store
+                 << "\tValue: " << *Info.StoredValue << "\n";
+        }
+      });
+
+      // StoreInfos is sorted by offset, not by block order. Anchoring to
+      // StoreInfos.back().Store (last by offset) can place shuffles before
+      // operands that appear later in the block (invalid SSA). Insert before
+      // FullLoad when it shares the store block (after all stores, before
+      // any later IR in that block). Otherwise insert before the store
+      // block's terminator so the merge runs after every store and any
+      // trailing instructions in that block.
+      IRBuilder<> Builder(LoadBB == StoreBB ? cast<Instruction>(FullLoad)
+                                            : StoreBB->getTerminator());
+      SmallVector<Value *, 8> Vals;
+      for (const auto &Info : StoreInfos) {
+        DeletedValues.push_back(Info.Store);
+        Vals.push_back(Info.StoredValue);
+      }
+      // Merge all stored values and store the merged value into the alloca.
+      Value *Merged = TreeMerge(Vals, Builder);
+      Builder.CreateAlignedStore(Merged, &NewAI, getSliceAlign());
+
+      // Replace the original load with a load of the newly-merged alloca.
+      ReplaceFullLoad(FullLoad, Merged);
+      return DeletedValues;
     }
 
-    // If we reach here, the partition can be merged with a tree structured
-    // merge
-    LLVM_DEBUG({
-      dbgs() << "Tree structured merge rewrite:\n  Load: " << *TheLoad
-             << "\n Ordered stores:\n";
-      for (auto [i, Info] : enumerate(StoreInfos))
-        dbgs() << "    [" << i << "] Range[" << Info.BeginOffset << ", "
-               << Info.EndOffset << ") \tStore: " << *Info.Store
-               << "\tValue: " << *Info.StoredValue << "\n";
+    // RMW pattern handling starts from here.
+    // Like StoreBB above: keep the init store, all partial loads and all
+    // partial stores in one basic block so we can reason about ordering
+    // with comesBefore and build SSA without PHIs.
+    if (InitStore->getParent() != StoreBB)
+      return std::nullopt;
+    if (any_of(LoadInfos, [&](const LoadInfo &I) {
+          return I.Load->getParent() != StoreBB;
+        }))
+      return std::nullopt;
+    // FullLoad (if any) is allowed to live in a different basic block. See
+    // the note on the stores-only path: we don't do store->load forwarding
+    // directly — the merged vector is stored to NewAI and the new load
+    // loads from NewAI, so cross-BB ordering is resolved later when NewAI
+    // is promoted.
+
+    // Collect the combined partial-load/partial-store accesses sorted
+    // by block order. Used both for ordering checks and for the rewrite
+    // walk below.
+    struct Access {
+      Instruction *Inst;
+      uint64_t BeginOffset, EndOffset;
+      bool IsStore;
+    };
+    SmallVector<Access, 16> Accesses;
+    Accesses.reserve(LoadInfos.size() + StoreInfos.size());
+    for (const auto &L : LoadInfos)
+      Accesses.push_back({L.Load, L.BeginOffset, L.EndOffset, false});
+    for (const auto &S : StoreInfos)
+      Accesses.push_back({S.Store, S.BeginOffset, S.EndOffset, true});
+    llvm::sort(Accesses, [](const Access &A, const Access &B) {
+      return A.Inst->comesBefore(B.Inst);
     });
 
-    // Instead of having these stores, we merge all the stored values into a
-    // vector and store the merged value into the alloca
-    std::queue<Value *> VecElements;
-    // StoreInfos is sorted by offset, not by block order. Anchoring to
-    // StoreInfos.back().Store (last by offset) can place shuffles before
-    // operands that appear later in the block (invalid SSA). Insert before
-    // TheLoad when it shares the store block (after all stores, before any
-    // later IR in that block). Otherwise insert before the store block's
-    // terminator so the merge runs after every store and any trailing
-    // instructions in that block.
-    IRBuilder<> Builder(LoadBB == StoreBB ? TheLoad : StoreBB->getTerminator());
-    for (const auto &Info : StoreInfos) {
-      DeletedValues.push_back(Info.Store);
-      VecElements.push(Info.StoredValue);
+    // Ordering constraint 1: InitStore must come before every partial
+    // access — they read/write the RMW state initialised by InitStore.
+    // Accesses is sorted by block order, so the first element is the
+    // earliest; checking it is enough.
+    if (!InitStore->comesBefore(Accesses.front().Inst))
+      return std::nullopt;
+    // Ordering constraint 2: when FullLoad shares the block with the
+    // partial accesses, it must come after every one of them — otherwise
+    // it could read a stale value. Accesses is sorted, so the last
+    // element is the latest; checking it is enough. If FullLoad is in
+    // another block, mem2reg forwards the merged store to it.
+    if (FullLoad && FullLoad->getParent() == StoreBB &&
+        !Accesses.back().Inst->comesBefore(FullLoad))
+      return std::nullopt;
+
+    // Coverage check: the distinct [begin, end) ranges touched by the
+    // partial loads and stores must tile the alloca disjointly. That is
+    // the only precondition the per-range SliceValues tracking below
+    // needs — a disjoint tile guarantees the entries don't alias each
+    // other. We don't check per-range load/store counts: a range with
+    // only loads ends with SliceValues[r] = the init extract
+    // (contributed to the final tree-merge), and a range with only
+    // stores ends with SliceValues[r] = its last stored value. Both are
+    // correct.
+    using SliceRange = std::pair<uint64_t, uint64_t>;
+    SmallVector<SliceRange, 8> SortedRanges;
+    SortedRanges.reserve(Accesses.size());
+    for (auto &Acc : Accesses)
+      SortedRanges.emplace_back(Acc.BeginOffset, Acc.EndOffset);
+    llvm::sort(SortedRanges);
+    SortedRanges.erase(llvm::unique(SortedRanges), SortedRanges.end());
+    // Disjoint + contiguous tile of the whole alloca.
+    uint64_t Expected = NewAllocaBeginOffset;
+    for (auto &Range : SortedRanges) {
+      if (Range.first != Expected)
+        return std::nullopt;
+      Expected = Range.second;
+    }
+    if (Expected != NewAllocaEndOffset)
+      return std::nullopt;
+
+    LLVM_DEBUG({
+      dbgs() << "Tree structured merge rewrite (RMW):\n";
+      dbgs() << "  Init store: " << *InitStore << "\n";
+      if (FullLoad)
+        dbgs() << "  Final load: " << *FullLoad << "\n";
+      dbgs() << "  Slice ranges (" << SortedRanges.size() << "):\n";
+      for (auto &Range : SortedRanges)
+        dbgs() << "    [" << Range.first << ", " << Range.second << ")\n";
+    });
+
+    // Initialize SliceValues: one SSA value per slice range, tracking
+    // the value the alloca currently holds at that range. Each entry
+    // starts at the corresponding piece of the init store, obtained by
+    // bitcasting the init value to the alloca's vector type (if needed)
+    // and extracting the slice's sub-range.
+    IRB.SetInsertPoint(InitStore->getNextNode());
+    Value *InitVec = InitStore->getValueOperand();
+    if (InitVec->getType() != NewAllocaTy)
+      InitVec = IRB.CreateBitCast(InitVec, NewAllocaTy, "init.cast");
+    DenseMap<SliceRange, Value *> SliceValues;
+    for (auto &Range : SortedRanges) {
+      unsigned BeginIdx = getIndex(Range.first);
+      unsigned EndIdx = getIndex(Range.second);
+      SliceValues[Range] = IRB.CreateShuffleVector(
+          InitVec, createSequentialMask(BeginIdx, EndIdx - BeginIdx, 0),
+          "init.extract");
+    }
+    // The init store itself becomes dead — its value is consumed via the
+    // extracts above.
+    DeletedValues.push_back(InitStore);
+
+    // Walk accesses in block order:
+    //   - partial load at range r: replace with SliceValues[r] (bitcast
+    //     if the load's type differs from the current tracked value's
+    //     type, e.g. because a previous store wrote a vector with a
+    //     different element type);
+    //   - partial store at range r: update SliceValues[r] to the stored
+    //     value and drop the store.
+    for (auto &Acc : Accesses) {
+      SliceRange Range{Acc.BeginOffset, Acc.EndOffset};
+      if (!Acc.IsStore) {
+        Value *V = SliceValues[Range];
+        if (V->getType() != Acc.Inst->getType()) {
+          IRB.SetInsertPoint(cast<LoadInst>(Acc.Inst));
+          V = IRB.CreateBitCast(V, Acc.Inst->getType());
+        }
+        Acc.Inst->replaceAllUsesWith(V);
+      } else {
+        SliceValues[Range] = cast<StoreInst>(Acc.Inst)->getValueOperand();
+      }
+      DeletedValues.push_back(Acc.Inst);
     }
 
-    LLVM_DEBUG(dbgs() << "  Rewrite stores into shufflevectors:\n");
-    while (VecElements.size() > 1) {
-      const auto NumElts = VecElements.size();
-      for ([[maybe_unused]] const auto _ : llvm::seq(NumElts / 2)) {
-        Value *V0 = VecElements.front();
-        VecElements.pop();
-        Value *V1 = VecElements.front();
-        VecElements.pop();
-        Value *Merged = mergeTwoVectors(V0, V1, DL, AllocatedEltTy, Builder);
-        LLVM_DEBUG(dbgs() << "    shufflevector: " << *Merged << "\n");
-        VecElements.push(Merged);
-      }
-      if (NumElts % 2 == 1) {
-        Value *V = VecElements.front();
-        VecElements.pop();
-        VecElements.push(V);
-      }
-    }
+    // Tree-merge the final per-range values (in range order) into the
+    // alloca's final vector value. Anchor the IRBuilder to FullLoad (when it
+    // shares the partial-access block) or otherwise to the block's
+    // terminator — never to a partial access, since those are queued for
+    // deletion. Both anchors are guaranteed to dominate every SliceValues
+    // entry: each one is either an init extract (before any access) or a
+    // stored value defined before its (now-deleted) store.
+    IRBuilder<> Builder(FullLoad && FullLoad->getParent() == StoreBB
+                            ? cast<Instruction>(FullLoad)
+                            : StoreBB->getTerminator());
+    SmallVector<Value *, 8> Vals;
+    for (auto &Range : SortedRanges)
+      Vals.push_back(SliceValues[Range]);
+    Value *Merged = TreeMerge(Vals, Builder);
+    Builder.CreateAlignedStore(Merged, &NewAI, getSliceAlign());
 
-    // Store the merged value into the alloca
-    Value *MergedValue = VecElements.front();
-    Builder.CreateAlignedStore(MergedValue, &NewAI, getSliceAlign());
-
-    IRBuilder<> LoadBuilder(TheLoad);
-    TheLoad->replaceAllUsesWith(LoadBuilder.CreateAlignedLoad(
-        TheLoad->getType(), &NewAI, getSliceAlign(), TheLoad->isVolatile(),
-        TheLoad->getName() + ".sroa.new.load"));
-    DeletedValues.push_back(TheLoad);
+    // Replace the optional final full-width load with a load of the newly
+    // merged alloca. Later promotion will forward the store above to it.
+    if (FullLoad)
+      ReplaceFullLoad(FullLoad, Merged);
 
     return DeletedValues;
   }
@@ -5090,11 +5304,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
 /// Try to canonicalize a homogeneous struct partition to a vector type.
 ///
-/// We can do this if all the elements of the struct are the same and tightly
-/// packed. This can sometimes eliminate allocas because structs cannot get
-/// promoted to LLVM values, but vectors can.
+/// We can do this if all the elements of the struct are the same and the
+/// corresponding vector has the same byte-level layout. This can sometimes
+/// eliminate allocas because structs cannot get promoted to LLVM values, but
+/// vectors can.
 ///
-/// We only apply this transformation when all users of the alloca are memory
+/// We only apply this transformation when all users of the partition are memory
 /// intrinsics. Otherwise, if there is a load or store of some other type to the
 /// partition, SROA would select that type.
 ///
@@ -5125,26 +5340,42 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
       !IsIntegralPointerTy)
     return nullptr;
 
+  // Ensure the struct is tightly packed so that the bit-layout is the same as
+  // the corresponding vector. For example, this prevents a miscompile for
+  // { i5, i5 }, which has padding after each i5 field, whereas <i5, i5> has
+  // tightly packed elements and trailing padding.
+  if (DL.getTypeSizeInBits(EltTy) != DL.getTypeAllocSizeInBits(EltTy))
+    return nullptr;
+
   auto *VTy = FixedVectorType::get(EltTy, NumElts);
   TypeSize StructSize = DL.getStructLayout(STy)->getSizeInBytes();
-  TypeSize VectorSize = DL.getTypeAllocSize(VTy);
+  TypeSize VectorSize = DL.getTypeStoreSize(VTy);
+  // After ruling out per-element padding, make sure a vector load/store
+  // covers the same number of bytes as the struct layout.
   if (StructSize != VectorSize)
     return nullptr;
 
-  for (const Slice &S : P) {
+  auto IsIgnorableOrMemIntrinsicSlice = [](const Slice &S) {
     if (S.isDead())
-      continue;
+      return true;
     auto *U = S.getUse();
     if (!U)
-      continue;
+      return true;
 
     User *Usr = U->getUser();
     if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
-      continue;
+      return true;
 
-    if (!isa<MemIntrinsic>(Usr))
+    return isa<MemIntrinsic>(Usr);
+  };
+
+  for (const Slice &S : P)
+    if (!IsIgnorableOrMemIntrinsicSlice(S))
       return nullptr;
-  }
+
+  for (const Slice *S : P.splitSliceTails())
+    if (!IsIgnorableOrMemIntrinsicSlice(*S))
+      return nullptr;
 
   return VTy;
 }

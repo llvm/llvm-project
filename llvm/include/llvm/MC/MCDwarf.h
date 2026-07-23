@@ -527,6 +527,7 @@ public:
     OpWindowSave,
     OpNegateRAState,
     OpNegateRAStateWithPC,
+    OpLLVMSetRAState,
     OpGnuArgsSize,
     OpLabel,
     OpValOffset,
@@ -594,12 +595,24 @@ public:
     unsigned MaskRegister;
     unsigned MaskRegisterSizeInBits;
   };
+  /// Held in ExtraFields when OpLLVMSetRAState.
+  struct LLVMSetRAStateFields {
+    /// The ra_state value (DW_AARCH64_RA_NOT_SIGNED, DW_AARCH64_RA_SIGNED_SP,
+    /// or DW_AARCH64_RA_SIGNED_SP_PC).
+    unsigned State;
+    /// Symbol pointing to the signing instruction.
+    /// Precisely one of \p PACSym xor \p Offset should be set.
+    MCSymbol *PACSym;
+    /// Factored offset to the signing instruction.
+    /// Precisely one of \p PACSym xor \p Offset should be set.
+    int64_t Offset;
+  };
 
 private:
   MCSymbol *Label;
   std::variant<CommonFields, EscapeFields, LabelFields, RegisterPairFields,
                VectorRegistersFields, VectorOffsetFields,
-               VectorRegisterMaskFields>
+               VectorRegisterMaskFields, LLVMSetRAStateFields>
       ExtraFields;
   OpType Operation;
   SMLoc Loc;
@@ -688,6 +701,22 @@ public:
   static MCCFIInstruction createNegateRAStateWithPC(MCSymbol *L,
                                                     SMLoc Loc = {}) {
     return {OpNegateRAStateWithPC, L, CommonFields{}, Loc};
+  }
+
+  /// .cfi_set_ra_state AArch64 set RA sign state,
+  // with a symbolic offset to the signing instruction.
+  static MCCFIInstruction createSetRAState(MCSymbol *L, unsigned State,
+                                           MCSymbol *PACSym = nullptr,
+                                           SMLoc Loc = {}) {
+    return {OpLLVMSetRAState, L, LLVMSetRAStateFields{State, PACSym, 0}, Loc};
+  }
+
+  /// .cfi_set_ra_state AArch64 set RA sign state,
+  /// with a pre-computed factored offset to the signing instruction.
+  static MCCFIInstruction createSetRAState(MCSymbol *L, unsigned State,
+                                           int64_t Offset, SMLoc Loc = {}) {
+    return {OpLLVMSetRAState, L, LLVMSetRAStateFields{State, nullptr, Offset},
+            Loc};
   }
 
   /// .cfi_restore says that the rule for Register is now the same as it
@@ -829,6 +858,21 @@ public:
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
            Operation == OpValOffset || Operation == OpLLVMDefAspaceCfa);
     return std::get<CommonFields>(ExtraFields).Offset;
+  }
+
+  unsigned getRASignState() const {
+    assert(Operation == OpLLVMSetRAState);
+    return std::get<LLVMSetRAStateFields>(ExtraFields).State;
+  }
+
+  MCSymbol *getRASignSymbol() const {
+    assert(Operation == OpLLVMSetRAState);
+    return std::get<LLVMSetRAStateFields>(ExtraFields).PACSym;
+  }
+
+  int64_t getRASignOffset() const {
+    assert(Operation == OpLLVMSetRAState);
+    return std::get<LLVMSetRAStateFields>(ExtraFields).Offset;
   }
 
   MCSymbol *getCfiLabel() const {

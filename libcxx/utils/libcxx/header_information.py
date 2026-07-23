@@ -172,7 +172,6 @@ headers_not_available = list(map(Header, [
     "spanstream",
     "stacktrace",
     "stdfloat",
-    "text_encoding",
 ]))
 
 # Undeprecate headers that are deprecated in C++17 and removed in C++20.

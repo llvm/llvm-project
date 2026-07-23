@@ -2571,11 +2571,10 @@ _mm_avg_pu16(__m64 __a, __m64 __b) {
 /// \returns A 64-bit integer vector whose lower 16 bits contain the sums of the
 ///    sets of absolute differences between both operands. The upper bits are
 ///    cleared.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_sad_pu8(__m64 __a, __m64 __b)
-{
-  return __trunc64(__builtin_ia32_psadbw128((__v16qi)__zext128(__a),
-                                            (__v16qi)__zext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_sad_pu8(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_psadbw128((__v16qu)__zext128(__a),
+                                            (__v16qu)__zext128(__b)));
 }
 
 #if defined(__cplusplus)

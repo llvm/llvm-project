@@ -92,7 +92,8 @@ class RISCVTuneProcessorModel<string n, SchedMachineModel m,
 }
 
 defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
-                              TuneEnableSelectOptimize];
+                              TuneEnableSelectOptimize,
+                              TuneNoDefaultUnroll];
 
 // `generic-rv32`, and `generic-rv64` are expected to target
 // in-order application processors designed for general-purpose computing.
@@ -873,7 +874,8 @@ def SPACEMIT_A100 : RISCVProcessorModel<"spacemit-a100",
                                          FeatureStdExtZvksc,
                                          FeatureStdExtZvksg,
                                          FeatureStdExtZvl1024b,
-                                         FeatureUnalignedScalarMem]),
+                                         FeatureUnalignedScalarMem,
+                                         FeatureVendorXSMTVDotII]),
                                         [TuneDLenFactor2,
                                          TuneOptimizedNF2SegmentLoadStore,
                                          TuneOptimizedNF3SegmentLoadStore,
@@ -938,6 +940,7 @@ def SPACEMIT_X100 : RISCVProcessorModel<"spacemit-x100",
                                          TuneOptimizedNF3SegmentLoadStore,
                                          TuneOptimizedNF4SegmentLoadStore,
                                          TuneVXRMPipelineFlush,
+                                         TuneNoDefaultUnroll,
                                          TuneFusionLogicRegReg,
                                          TuneFusionLogicRegImm,
                                          TuneFusionLogicImmReg,

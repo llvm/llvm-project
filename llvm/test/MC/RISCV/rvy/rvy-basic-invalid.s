@@ -11,9 +11,15 @@ yaddi a0, a0, 2048
 /// Since X0 is invalid, we fall back to checking the immediate alias and get that error instead
 /// TODO: It would be nice to report operand must be a a register other than X0 instead.
 yadd a0, a1, zero
-// CHECK: :[[#@LINE-1]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+// CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+// CHECK: :[[#@LINE-2]]:14: note: register must be a GPR excluding zero (x0)
+// CHECK: :[[#@LINE-3]]:14: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+
 yadd a0, a1, x0
-// CHECK: :[[#@LINE-1]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+// CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+// CHECK: :[[#@LINE-2]]:14: note: register must be a GPR excluding zero (x0)
+// CHECK: :[[#@LINE-3]]:14: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+
 srliy a0, a1, 65
 // CHECK-32: :[[#@LINE-1]]:15: error: immediate must be an integer equal to XLEN (32)
 // CHECK-64: :[[#@LINE-2]]:15: error: immediate must be an integer equal to XLEN (64)

@@ -22,4 +22,4 @@ RUN: FileCheck %s --check-prefix=CRASH --input-file=%t-ShallowOOMDeepCrash.log
 
 MAX_TOTAL_TIME: INFO: fuzzed for {{.*}} seconds, wrapping up soon
 MAX_TOTAL_TIME: INFO: exiting: {{.*}} time:
-RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=256 -ignore_crashes=1 -max_total_time=30 2>&1 | FileCheck %s  --check-prefix=MAX_TOTAL_TIME
+RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=512 -ignore_crashes=1 -max_total_time=30 2>&1 | FileCheck %s  --check-prefix=MAX_TOTAL_TIME

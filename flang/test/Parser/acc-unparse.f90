@@ -33,6 +33,14 @@ subroutine acc_loop()
   end do
 !CHECK: !$ACC LOOP COLLAPSE(FORCE:2_4)
 
+! Blanks are permitted around the ':' separator of a collapse force modifier.
+  !$acc loop collapse(force : 2)
+  do i = 1, 10
+    do j = 1, 10
+    end do
+  end do
+!CHECK: !$ACC LOOP COLLAPSE(FORCE:2_4)
+
   !$acc loop gang
   do i = 1, 10
     a(i) = i
@@ -75,6 +83,54 @@ subroutine acc_loop()
   end do
 ! CHECK: !$ACC LOOP GANG(STATIC:gangstatic,DIM:gangdim)
 
+! Spaces are permitted around the ':' separator of a gang-arg.
+  !$acc loop gang(static :gangStatic)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(STATIC:gangstatic)
+
+  !$acc loop gang(static : gangStatic)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(STATIC:gangstatic)
+
+  !$acc loop gang(static : *)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(STATIC:*)
+
+  !$acc loop gang(dim : gangDim)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(DIM:gangdim)
+
+  !$acc loop gang(num : gangNum)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(NUM:gangnum)
+
+end subroutine
+
+! Blanks are permitted around the ':' separators of a wait-argument
+! (devnum/queues) and of copy/create data modifiers (zero/readonly).
+subroutine acc_clause_spaces()
+  integer :: i
+  real :: a(10), b(10)
+
+!CHECK-LABEL: SUBROUTINE acc_clause_spaces
+
+  !$acc wait(devnum : 1 : 2, 3)
+!CHECK: !$ACC WAIT(DEVNUM:1_4:2_4,3_4)
+
+  !$acc data copyin(readonly : a) create(zero : b)
+!CHECK: !$ACC DATA COPYIN(READONLY:a) CREATE(ZERO:b)
+  !$acc end data
+!CHECK: !$ACC END DATA
 end subroutine
 
 subroutine routine1()
