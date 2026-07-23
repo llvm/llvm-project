@@ -97,19 +97,21 @@ add_unittest_framework_library(
 )
 
 set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
+set(libc_death_test_deps
+  libc.hdr.stdint_proxy
+  libc.src.__support.libc_assert
+)
 if (LIBC_TEST_SUBPROCESS_TESTS)
   list(APPEND libc_death_test_srcs ExecuteFunctionUnix.cpp)
-endif()
-set(libc_death_tess_deps libc.hdr.stdint_proxy)
-if (LLVM_LIBC_FULL_BUILD)
-  list(APPEND libc_death_tess_deps
-    libc.include.llvm-libc-macros.poll-macros
-    libc.include.llvm-libc-macros.signal_macros
-    libc.include.llvm-libc-macros.sys_wait_macros
-    libc.include.llvm-libc-types.pid_t
-    libc.include.llvm-libc-types.struct_pollfd
-    libc.src.__support.libc_assert
-  )
+  if (LLVM_LIBC_FULL_BUILD)
+    list(APPEND libc_death_test_deps
+      libc.include.llvm-libc-macros.poll-macros
+      libc.include.llvm-libc-macros.signal_macros
+      libc.include.llvm-libc-macros.sys_wait_macros
+      libc.include.llvm-libc-types.pid_t
+      libc.include.llvm-libc-types.struct_pollfd
+    )
+  endif()
 endif()
 
 add_unittest_framework_library(
@@ -119,7 +121,7 @@ add_unittest_framework_library(
   HDRS
     ExecuteFunction.h
   DEPENDS
-    ${libc_death_tess_deps}
+    ${libc_death_test_deps}
 )
 
 add_unittest_framework_library(

@@ -793,8 +793,8 @@ function(add_libc_hermetic test_name)
       libc.src.strings.bzero
   )
 
-  # Syscalls used by death tests. See also libc/test/UnitTest/CMakeLists.txt.
-  if(${LIBC_TARGET_OS} STREQUAL "linux" OR ${LIBC_TARGET_OS} STREQUAL "darwin")
+  # Syscalls used by death tests.
+  if(LIBC_TEST_SUBPROCESS_TESTS)
     list(APPEND fq_deps_list
         libc.src.poll.poll
         libc.src.signal.kill
