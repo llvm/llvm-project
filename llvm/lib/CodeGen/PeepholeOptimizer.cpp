@@ -959,8 +959,15 @@ bool PeepholeOptimizer::optimizeCmpInstr(
 
   // Attempt to optimize the comparison instruction.
   LLVM_DEBUG(dbgs() << "Attempting to optimize compare: " << MI);
-  if (!TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI))
+  // Stop tracking MI before optimizeCompareInstr may erase it. Any instruction
+  // created below could otherwise reuse MI's address and be confused with the
+  // erased instruction in LocalMIs.
+  LocalMIs.erase(&MI);
+  if (!TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
+    // MI was not erased, and is still part of the already visited region.
+    LocalMIs.insert(&MI);
     return false;
+  }
 
   LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
   ++NumCmps;
@@ -1843,7 +1850,6 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
       }
 
       if (MI->isCompare() && optimizeCmpInstr(*MI, MF, LocalMIs)) {
-        LocalMIs.erase(MI);
         Changed = true;
         continue;
       }
