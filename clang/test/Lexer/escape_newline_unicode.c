@@ -34,5 +34,5 @@ int \
 
 int a\
 ❌ = 0;
-// expected-error@-1 {{character <U+274C> not allowed in an identifier}}
+// expected-error@-1 {{character '❌' U+274C not allowed in an identifier}}
 }

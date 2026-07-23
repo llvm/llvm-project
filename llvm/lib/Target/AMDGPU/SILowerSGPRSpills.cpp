@@ -67,7 +67,7 @@ private:
   MBBVector SaveBlocks;
   MBBVector RestoreBlocks;
 
-  MachineBasicBlock *getCycleDomBB(MachineCycle *C);
+  MachineBasicBlock *getCycleDomBB(CycleRef C);
 
 public:
   SILowerSGPRSpills(LiveIntervals *LIS, SlotIndexes *Indexes,
@@ -302,17 +302,17 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
   return false;
 }
 
-MachineBasicBlock *SILowerSGPRSpills::getCycleDomBB(MachineCycle *C) {
+MachineBasicBlock *SILowerSGPRSpills::getCycleDomBB(CycleRef C) {
   // If the insertion point lands on a cycle entry, move it to a block that
   // dominates all entries.
-  if (MCI->isReducible(*C)) {
-    if (auto *IDom = MDT->getNode(MCI->getHeader(*C))->getIDom())
+  if (MCI->isReducible(C)) {
+    if (auto *IDom = MDT->getNode(MCI->getHeader(C))->getIDom())
       return IDom->getBlock();
     llvm_unreachable("Expected cycle to have an IDom.");
     return nullptr;
   }
 
-  ArrayRef<MachineBasicBlock *> Entries = MCI->getEntries(*C);
+  ArrayRef<MachineBasicBlock *> Entries = MCI->getEntries(C);
   assert(!Entries.empty() && "Expected cycle to have at least one entry.");
   MachineBasicBlock *EntryBB = Entries[0];
   for (unsigned I = 1; I < Entries.size(); ++I)
@@ -518,7 +518,7 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
 
     for (auto Reg : FuncInfo->getSGPRSpillVGPRs()) {
       LaneVGPRInsertPt IP = LaneVGPRDomInstr[Reg];
-      if (MachineCycle *C = MCI->getTopLevelParentCycle(IP.MBB)) {
+      if (CycleRef C = MCI->getTopLevelParentCycle(IP.MBB)) {
         MachineBasicBlock *AdjMBB = getCycleDomBB(C);
         IP = insertPt(AdjMBB, AdjMBB->getFirstTerminator());
       }

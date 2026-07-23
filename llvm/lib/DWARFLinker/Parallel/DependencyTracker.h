@@ -141,15 +141,18 @@ protected:
 
       RootDieEntry = RootEntry.DieEntry;
     }
-    LiveRootWorklistItemTy(LiveRootWorklistActionTy Action,
-                           UnitEntryPairTy RootEntry,
-                           UnitEntryPairTy ReferencedBy) {
+    LiveRootWorklistItemTy(
+        LiveRootWorklistActionTy Action, UnitEntryPairTy RootEntry,
+        UnitEntryPairTy ReferencedBy,
+        const DWARFDebugInfoEntry *ReferencedTypeDieEntry = nullptr) {
       RootCU.setPointer(RootEntry.CU);
       RootCU.setInt(Action);
       RootDieEntry = RootEntry.DieEntry;
 
       ReferencedByCU = ReferencedBy.CU;
       ReferencedByDieEntry = ReferencedBy.DieEntry;
+
+      this->ReferencedTypeDieEntry = ReferencedTypeDieEntry;
     }
 
     UnitEntryPairTy getRootEntry() const {
@@ -166,6 +169,15 @@ protected:
       assert(ReferencedByCU);
       assert(ReferencedByDieEntry);
       return UnitEntryPairTy{ReferencedByCU, ReferencedByDieEntry};
+    }
+
+    /// \returns the DIE actually referenced by ReferencedByDieEntry, whose
+    /// placement (rather than the enclosing RootDieEntry's) determines whether
+    /// ReferencedByDieEntry may remain in the type table. Null when the
+    /// referenced DIE is RootDieEntry itself, in which case RootDieEntry's
+    /// placement is used instead.
+    const DWARFDebugInfoEntry *getReferencedTypeDieEntry() const {
+      return ReferencedTypeDieEntry;
     }
 
     LiveRootWorklistActionTy getAction() const {
@@ -200,6 +212,14 @@ protected:
     /// of ReferencedByDieEntry then it should be updated.
     CompileUnit *ReferencedByCU = nullptr;
     const DWARFDebugInfoEntry *ReferencedByDieEntry = nullptr;
+
+    /// The DIE actually referenced by ReferencedByDieEntry. It lives in the
+    /// same CU as RootDieEntry, but its placement can differ: RootDieEntry is
+    /// the enclosing root that is marked as kept, whereas this DIE may be a
+    /// nested type demoted independently. That placement, not RootDieEntry's,
+    /// determines whether ReferencedByDieEntry may remain in the type table.
+    /// Null when RootDieEntry is the referenced DIE itself.
+    const DWARFDebugInfoEntry *ReferencedTypeDieEntry = nullptr;
   };
 
   using RootEntriesListTy = SmallVector<LiveRootWorklistItemTy>;
@@ -225,12 +245,16 @@ protected:
   bool markCollectedLiveRootsAsKept(bool InterCUProcessingStarted,
                                     std::atomic<bool> &HasNewInterconnectedCUs);
 
-  /// Mark whole DIE tree as kept recursively.
+  /// Mark whole DIE tree as kept recursively. When \p RecordDepsOnly is set the
+  /// tree is not marked. Instead its completeness dependencies are recorded
+  /// (see maybeAddReferencedRoots). This is used to re-walk an already-marked
+  /// subtree so a racing referencing root still contributes its dependencies.
   bool markDIEEntryAsKeptRec(LiveRootWorklistActionTy Action,
                              const UnitEntryPairTy &RootEntry,
                              const UnitEntryPairTy &Entry,
                              bool InterCUProcessingStarted,
-                             std::atomic<bool> &HasNewInterconnectedCUs);
+                             std::atomic<bool> &HasNewInterconnectedCUs,
+                             bool RecordDepsOnly = false);
 
   /// Mark parents as keeping children.
   void markParentsAsKeepingChildren(const UnitEntryPairTy &Entry);
@@ -238,12 +262,20 @@ protected:
   /// Mark whole DIE tree as placed in "PlainDwarf".
   void setPlainDwarfPlacementRec(const UnitEntryPairTy &Entry);
 
-  /// Check referenced DIEs and add them into the worklist.
+  /// Check referenced DIEs and add them into the worklist. When \p
+  /// RecordDepsOnly is set, the referenced roots are not scheduled for marking
+  /// (no new worklist items, hence no reference-following recursion). Instead
+  /// each completeness dependency is appended directly to \c Dependencies. This
+  /// is used when \p Entry was already marked by a racing CU/root: the marking
+  /// and subtree are handled elsewhere, but this referencing root's
+  /// dependencies must still be recorded so the completeness fixpoint sees a
+  /// complete, order-independent dependency set.
   bool maybeAddReferencedRoots(LiveRootWorklistActionTy Action,
                                const UnitEntryPairTy &RootEntry,
                                const UnitEntryPairTy &Entry,
                                bool InterCUProcessingStarted,
-                               std::atomic<bool> &HasNewInterconnectedCUs);
+                               std::atomic<bool> &HasNewInterconnectedCUs,
+                               bool RecordDepsOnly = false);
 
   /// \returns true if \p DIEEntry can possibly be put into the artificial type
   /// unit.
@@ -253,10 +285,10 @@ protected:
   UnitEntryPairTy getRootForSpecifiedEntry(UnitEntryPairTy Entry);
 
   /// Add action item to the work list.
-  void
-  addActionToRootEntriesWorkList(LiveRootWorklistActionTy Action,
-                                 const UnitEntryPairTy &Entry,
-                                 std::optional<UnitEntryPairTy> ReferencedBy);
+  void addActionToRootEntriesWorkList(
+      LiveRootWorklistActionTy Action, const UnitEntryPairTy &Entry,
+      std::optional<UnitEntryPairTy> ReferencedBy,
+      const DWARFDebugInfoEntry *ReferencedTypeDieEntry = nullptr);
 
   CompileUnit &CU;
 
