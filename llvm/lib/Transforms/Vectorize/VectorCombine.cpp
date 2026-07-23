@@ -3569,7 +3569,8 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
                     const DenseSet<std::pair<Value *, Use *>> &IdentityLeafs,
                     const DenseSet<std::pair<Value *, Use *>> &SplatLeafs,
                     const DenseSet<std::pair<Value *, Use *>> &ConcatLeafs,
-                    IRBuilderBase &Builder, const TargetTransformInfo *TTI) {
+                    IRBuilderBase &Builder, InstructionWorklist &WorkList,
+                    const TargetTransformInfo *TTI) {
   auto [FrontV, FrontLane] = Item.front();
 
   if (IdentityLeafs.contains(std::make_pair(FrontV, From))) {
@@ -3641,7 +3642,8 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
       }
       Value *Op = generateNewInstTree(NewItem, &BitCast->getOperandUse(0),
                                       IdentityLeafs, SplatLeafs, ConcatLeafs,
-                                      Builder, TTI);
+                                      Builder, WorkList, TTI);
+      WorkList.pushValue(Op);
       return Builder.CreateBitCast(
           Op, FixedVectorType::get(BCDstTy->getScalarType(), Item.size()));
     }
@@ -3655,9 +3657,10 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
       Ops[Idx] = II->getOperand(Idx);
       continue;
     }
-    Ops[Idx] = generateNewInstTree(generateInstLaneVectorFromOperand(Item, Idx),
-                                   &I->getOperandUse(Idx), IdentityLeafs,
-                                   SplatLeafs, ConcatLeafs, Builder, TTI);
+    Ops[Idx] = generateNewInstTree(
+        generateInstLaneVectorFromOperand(Item, Idx), &I->getOperandUse(Idx),
+        IdentityLeafs, SplatLeafs, ConcatLeafs, Builder, WorkList, TTI);
+    WorkList.pushValue(Ops[Idx]);
   }
 
   SmallVector<Value *, 8> ValueList;
@@ -3946,8 +3949,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.
   Builder.SetInsertPoint(&I);
-  Value *V = generateNewInstTree(Start, &*I.use_begin(), IdentityLeafs,
-                                 SplatLeafs, ConcatLeafs, Builder, &TTI);
+  Value *V =
+      generateNewInstTree(Start, &*I.use_begin(), IdentityLeafs, SplatLeafs,
+                          ConcatLeafs, Builder, Worklist, &TTI);
   replaceValue(I, *V);
   return true;
 }
