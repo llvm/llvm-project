@@ -281,6 +281,7 @@ jobs:
       - name: Install Ninja, CMake, and sccache
         run: |
           brew install ninja cmake
+          brew postinstall python@3.14
           command -v sccache >/dev/null || brew install sccache
       - name: Set up Python venv
         run: |
