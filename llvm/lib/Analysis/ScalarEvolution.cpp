@@ -16422,10 +16422,18 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
         // sure we don't lose information when rewriting expressions based on
         // back-edge taken counts in some cases.
         if (Expr->getNumOperands() == 2) {
-          auto *NewC =
-              SE.getAddExpr(Expr->getOperand(0), SE.getOne(Expr->getType()));
-          if (const SCEV *S =
-                  Map.lookup(SE.getAddExpr(NewC, Expr->getOperand(1))))
+          const SCEV *S = nullptr;
+          // Handle (-1 + 1 + A) without constructing SCEVs.
+          if (match(Expr->getOperand(0), m_scev_AllOnes())) {
+            S = Map.lookup(Expr->getOperand(1));
+          } else {
+            const SCEV *NewC =
+                SE.getAddExpr(Expr->getOperand(0), SE.getOne(Expr->getType()));
+            SmallVector<SCEVUse, 2> Ops = {NewC, Expr->getOperand(1)};
+            if (const SCEV *Key = SE.findExistingSCEVInCache(scAddExpr, Ops))
+              S = Map.lookup(Key);
+          }
+          if (S)
             return SE.getAddExpr(S, SE.getMinusOne(Expr->getType()));
         }
       }
