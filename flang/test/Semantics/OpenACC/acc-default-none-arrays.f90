@@ -1,10 +1,9 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenacc -fno-openacc-default-none-scalars-strict -Wno-openacc-default-none-scalars-strict
 
 ! Verify that array sections explicitly listed in OpenACC data clauses are
-! correctly registered as having a DSA, so DEFAULT(NONE) does not produce
-! spurious errors.  This does not implement section-level overlap
-! detection; duplicate/conflict diagnostics only apply to exact data-sharing
-! designators.  This also covers the substring-in-clause error.
+! correctly registered as having a DSA, so DEFAULT(NONE) uses path containment
+! rather than treating a listed array section as covering every reference to the
+! base array.  This also covers the substring-in-clause error.
 
 ! 1. Data-mapping clauses with array sections: no DEFAULT(NONE) errors.
 subroutine test_data_mapping_sections(n)
@@ -24,6 +23,62 @@ subroutine test_data_mapping_sections(n)
     c(i) = temp
   enddo
   !$acc end kernels
+end subroutine
+
+subroutine test_default_none_literal_section_contains_element()
+  implicit none
+  real :: a(10)
+  !$acc parallel default(none) copy(a(1:5))
+  a(3) = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_literal_section_rejects_disjoint_element()
+  implicit none
+  real :: a(10)
+  !$acc parallel default(none) copy(a(1:5))
+  !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
+  a(6) = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_literal_section_rejects_partially_overlapping_section()
+  implicit none
+  real :: a(10)
+  !$acc parallel default(none) copy(a(1:5))
+  !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
+  a(5:10) = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_literal_section_rejects_full_section()
+  implicit none
+  real :: a(10)
+  !$acc parallel default(none) copy(a(1:5))
+  !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
+  a(:) = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_full_section_contains_element()
+  implicit none
+  real :: a(10)
+  !$acc parallel default(none) copy(a(:))
+  a = 0.0
+  a(10) = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_variable_section_lenient(n, lo, hi, i, j, mid)
+  implicit none
+  integer, intent(in) :: n, lo, hi, i, j, mid
+  real :: a(n), b(n), c(n)
+  !$acc parallel default(none) copy(a(lo:hi), b(i), c(1:5))
+  a(i) = 1.0
+  a(mid:hi) = 2.0
+  b(j) = 3.0
+  c(j) = 4.0
+  !$acc end parallel
 end subroutine
 
 ! 2. Private clause with array section: no DEFAULT(NONE) error.
