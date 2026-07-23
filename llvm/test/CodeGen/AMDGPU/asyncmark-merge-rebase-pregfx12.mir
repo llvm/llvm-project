@@ -15,17 +15,13 @@
 # (bb.1), so whichever of those carries the async mark seeds bb.3's incoming
 # state and the other side is merged in with an empty AsyncMarks list.
 #
-# async_mark_pred_merged_first (bb.2 -> bb.1): the async-mark predecessor seeds the incoming
-# state, then the load predecessor (empty OtherMarks) widens LOAD_CNT to 4. The
-# surviving mark must be shifted from score 1 to score 4. Without the fix
-# mergeAsyncMarks returned early and left the stale score 1, so WAIT_ASYNCMARK 0
-# lowered to s_waitcnt vmcnt(3) (4 - 1) and failed to drain the async LDS DMA.
-# With the fix the mark is rebased and it lowers to s_waitcnt vmcnt(0).
-#
-# load_pred_merged_first (bb.1 -> bb.2): mirror ordering (load predecessor seeds the incoming
-# state). Here the async mark arrives via the non-empty OtherMarks path, which
-# was always rebased, so this case is correct with or without the fix and acts
-# as a control.
+# bb.2 seeds the incoming state of bb.3. Next, bb.1 is visisted and merges itself
+# as other to the incoming state. UB of LOAD_CNT is updated to 4 = max(1,4).
+# If mergeScore is not called because bb.1 has no async marks,
+# bb.2's Score 1 (ASYNCMAR) is not rebased to new UB 4. The vmcnt value finally
+# becomes 0 (4 - 1). If score 1 is rebased to 4 (1 + (4 - 1)), vmcnt
+# correctly becomes 0.
+# Previously, mergeScore was not called when other block had no asyncmark.
 
 ---
 name:            async_mark_pred_merged_first
