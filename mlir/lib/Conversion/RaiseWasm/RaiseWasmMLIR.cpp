@@ -671,6 +671,23 @@ struct WasmGlobalWithGetGlobalInitConversion
   }
 };
 
+struct WasmGlobalSetOpConversion : OpConversionPattern<GlobalSetOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(GlobalSetOp globalSetOp, GlobalSetOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = globalSetOp.getLoc();
+    auto globalPtr = memref::GetGlobalOp::create(
+        rewriter, loc, MemRefType::get({1}, adaptor.getValue().getType()),
+        globalSetOp.getGlobal());
+    auto idx = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    rewriter.replaceOpWithNewOp<memref::StoreOp>(
+        globalSetOp, adaptor.getValue(), globalPtr.getResult(),
+        ValueRange{idx.getResult()});
+    return success();
+  }
+};
+
 struct WasmMemoryOpConversion : OpConversionPattern<MemOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -876,6 +893,7 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
            WasmGeSIOpConversion,
            WasmGeUIOpConversion,
            WasmGlobalImportOpConverter,
+           WasmGlobalSetOpConversion,
            WasmGlobalWithConstInitConversion,
            WasmGlobalWithGetGlobalInitConversion,
            WasmGtOpConversion,
