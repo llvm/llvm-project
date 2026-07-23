@@ -307,18 +307,18 @@ deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
   // operand 0 as LLVMExtendedType<0>: the result vector's lane count with
   // double-width elements. Reconstruct that LLVM operand type from the Clang
   // builtin's scalar argument type.
-  if (modifier & WidenArgs) {
+  if (modifier & ArgAsWidenedRetType) {
     auto resVecTy = mlir::dyn_cast<cir::VectorType>(funcResTy);
     assert(resVecTy &&
            "SISD LLVM argument reconstruction requires a vector result");
     vecArgTy = cir::VectorType::get(arg0Ty, resVecTy.getSize());
   }
 
-  // `vecArgTy` is populated by `VectorizeArgTypes` or `WidenArgs`. When set,
-  // wrap every non-immediate data operand that has the same scalar type as
-  // arg0. Checking the ICE bitmap prevents an i32 immediate from being
-  // vectorized when it has the same type as a data operand (e.g.
-  // vqshrns_n_s32).
+  // `vecArgTy` is populated by `VectorizeArgTypes` or
+  // `ArgAsWidenedRetType`. When set, wrap every non-immediate data operand
+  // that has the same scalar type as arg0. Checking the ICE bitmap prevents
+  // an i32 immediate from being vectorized when it has the same type as a
+  // data operand (e.g. vqshrns_n_s32).
   llvm::SmallVector<mlir::Type> argTypes;
   argTypes.reserve(ops.size());
   for (unsigned i = 0, e = ops.size(); i != e; ++i) {
@@ -333,12 +333,12 @@ deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
 }
 
 // Source-operand vector type for a common NEON binary intrinsic: the
-// double-element-width form of `vTy` when `WidenArgs` is set (e.g. vraddhn),
-// otherwise `vTy`.
+// double-element-width form of `vTy` when `ArgAsWidenedRetType` is set (e.g.
+// vraddhn), otherwise `vTy`.
 static cir::VectorType deriveNeonBinaryArgType(CIRGenBuilderTy &builder,
                                                unsigned modifier,
                                                cir::VectorType vTy) {
-  if (modifier & WidenArgs)
+  if (modifier & ArgAsWidenedRetType)
     return builder.getExtendedOrTruncatedElementVectorType(vTy,
                                                            /*isExtended=*/true);
   return vTy;
