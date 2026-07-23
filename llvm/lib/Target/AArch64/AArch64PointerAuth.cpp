@@ -269,12 +269,16 @@ void AArch64PointerAuthImpl::authenticateLR(
                     StackOffset::getFixed(-ArgumentStackToRestore), TII,
                     MachineInstr::FrameDestroy);
 
-    if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
+    auto emitMOV = [&](Register Dst, Register Src) {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), Dst)
           .addReg(AArch64::XZR)
-          .addReg(AArch64::LR)
+          .addReg(Src)
           .addImm(0)
           .setMIFlag(MachineInstr::FrameDestroy);
+    };
+
+    if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+      emitMOV(AArch64::X17, AArch64::LR);
 
       assert(PACSym && "No PAC instruction to refer to");
       emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
@@ -285,17 +289,9 @@ void AArch64PointerAuthImpl::authenticateLR(
       BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
           .setMIFlag(MachineInstr::FrameDestroy);
 
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::LR)
-          .addReg(AArch64::XZR)
-          .addReg(AArch64::X17)
-          .addImm(0)
-          .setMIFlag(MachineInstr::FrameDestroy);
+      emitMOV(AArch64::LR, AArch64::X17);
     } else if (MFnI->branchProtectionPAuthLR()) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
-          .addReg(AArch64::XZR)
-          .addReg(AArch64::LR)
-          .addImm(0)
-          .setMIFlag(MachineInstr::FrameDestroy);
+      emitMOV(AArch64::X17, AArch64::LR);
 
       assert(PACSym && "No PAC instruction to refer to");
       emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
@@ -314,11 +310,7 @@ void AArch64PointerAuthImpl::authenticateLR(
       BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
           .setMIFlag(MachineInstr::FrameDestroy);
 
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::LR)
-          .addReg(AArch64::XZR)
-          .addReg(AArch64::X17)
-          .addImm(0)
-          .setMIFlag(MachineInstr::FrameDestroy);
+      emitMOV(AArch64::LR, AArch64::X17);
     } else if (Subtarget->hasPAuth()) {
       BuildMI(MBB, MBBI, DL,
               TII->get(UseBKey ? AArch64::AUTIB : AArch64::AUTIA), AArch64::LR)
@@ -327,22 +319,14 @@ void AArch64PointerAuthImpl::authenticateLR(
           .setMIFlag(MachineInstr::FrameDestroy);
       emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
     } else {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
-          .addReg(AArch64::XZR)
-          .addReg(AArch64::LR)
-          .addImm(0)
-          .setMIFlag(MachineInstr::FrameDestroy);
+      emitMOV(AArch64::X17, AArch64::LR);
 
       unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
       BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
           .setMIFlag(MachineInstr::FrameDestroy);
       emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
 
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::LR)
-          .addReg(AArch64::XZR)
-          .addReg(AArch64::X17)
-          .addImm(0)
-          .setMIFlag(MachineInstr::FrameDestroy);
+      emitMOV(AArch64::LR, AArch64::X17);
     }
     return;
   }
