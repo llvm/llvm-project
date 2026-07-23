@@ -5431,10 +5431,10 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         VPSingleDefRecipe *VectorPtr = Builder.createConsecutiveVectorPointer(
             Ptr, ScalarTy, Reverse, VPI->getDebugLoc());
         if (IsLoad) {
-          VPValue *Load = Builder.createWidenLoad(*cast<LoadInst>(I), VectorPtr,
-                                                  /*Mask=*/nullptr,
-                                                  /*Consecutive=*/true, *VPI,
-                                                  VPI->getDebugLoc());
+          VPSingleDefRecipe *Load = Builder.createWidenLoad(
+              *cast<LoadInst>(I), VectorPtr,
+              /*Mask=*/nullptr,
+              /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
           // Reverse the loaded values back into program order.
           if (Reverse)
             Load = Builder.createNaryOp(VPInstruction::Reverse, Load,
