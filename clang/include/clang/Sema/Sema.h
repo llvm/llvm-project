@@ -6430,6 +6430,9 @@ public:
                             ArrayRef<TemplateParameterList *> TPLs,
                             bool IsInstantiation);
 
+  bool DiagnosePackIndexingInFriendNNS(SourceLocation Loc,
+                                       NestedNameSpecifierLoc NNSLoc);
+
   MSPropertyDecl *HandleMSProperty(Scope *S, RecordDecl *TagD,
                                    SourceLocation DeclStart, Declarator &D,
                                    Expr *BitfieldWidth,

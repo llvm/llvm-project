@@ -94,7 +94,7 @@ namespace cwg1909 { // cwg1909: 3.7
   };
 } // namespace cwg1909
 
-namespace cwg1918 { // cwg1918: yes
+namespace cwg1918 { // cwg1918: 24
 template<typename T> struct A {
   class B {
     class C {};
@@ -104,7 +104,7 @@ class X {
   static int x; // #cwg1918-X-x
   template <typename T>
   friend class A<T>::B::C;
-  // expected-error@-1 {{nested name specifier 'A<T>::B' in friend declaration must end with a simple-template-id naming a class template, but 'B' is a non-template member}}
+  // expected-error@-1 {{'A<T>::B' does not name a class template}}
 };
 template<> struct A<int> {
   typedef struct Q B;
@@ -159,7 +159,7 @@ derived d2(42, 9);
 #endif
 } // namespace cwg1941
 
-namespace cwg1945 { // cwg1945: yes
+namespace cwg1945 { // cwg1945: 24
 template<typename T> struct A {
   class B {
     class C {};
@@ -169,7 +169,7 @@ class X {
   static int x;
   template <typename T>
   friend class A<T>::B::C;
-  // expected-error@-1 {{nested name specifier 'A<T>::B' in friend declaration must end with a simple-template-id naming a class template, but 'B' is a non-template member}}
+  // expected-error@-1 {{'A<T>::B' does not name a class template}}
 };
 } // namespace cwg1945
 

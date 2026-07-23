@@ -140,7 +140,7 @@ namespace test7 {
 
   struct C {
     template <class T> friend void A<T>::D::g();
-    // expected-error@-1 {{nested name specifier 'A<T>::D' in friend declaration must end with a simple-template-id naming a class template, but 'D' is a non-template member}}
+    // expected-error@-1 {{'A<T>::D' does not name a class template}}
   };
 }
 
@@ -619,10 +619,10 @@ namespace test27 {
 
   template <class V> struct D {
     template <class U> friend void A<V>::B::g(U);
-    // expected-error@-1 {{nested name specifier 'A<V>::B' in friend declaration must end with a simple-template-id naming a class template, but 'B' is a non-template member}}
+    // expected-error@-1 {{'A<V>::B' does not name a class template}}
 
     template <class U> friend class A<V>::B::C;
-    // expected-error@-1 {{nested name specifier 'A<V>::B' in friend declaration must end with a simple-template-id naming a class template, but 'B' is a non-template member}}
+    // expected-error@-1 {{'A<V>::B' does not name a class template}}
   };
 }
 
@@ -808,7 +808,7 @@ namespace test33 {
 
   template <class P> struct D {
     template <class U> friend struct P::template D<U>::M;
-    // expected-error@-1 {{nested name specifier 'test33::C::template D<U>' in friend declaration must end with a simple-template-id naming a class template, but 'D' is an alias template}}
+    // expected-error@-1 {{'test33::C::template D<U>' does not name a class template}}
   };
 
   template struct D<A>;
@@ -817,7 +817,7 @@ namespace test33 {
 
   template <class P> struct E {
     template <class U> friend struct P::template D<int>::N;
-    // expected-error@-1 {{nested name specifier 'test33::C::template D<int>' in friend declaration must end with a simple-template-id naming a class template, but 'D' is an alias template}}
+    // expected-error@-1 {{'test33::C::template D<int>' does not name a class template}}
   };
 
   template struct E<A>;
@@ -826,7 +826,7 @@ namespace test33 {
 
   template <class P> struct F {
     template <class U> friend void P::template D<U>::f();
-    // expected-error@-1 {{nested name specifier 'test33::C::template D<U>' in friend declaration must end with a simple-template-id naming a class template, but 'D' is an alias template}}
+    // expected-error@-1 {{'test33::C::template D<U>' does not name a class template}}
   };
 
   template struct F<A>;
@@ -835,7 +835,7 @@ namespace test33 {
 
   template <class P> struct G {
     template <class U> friend void P::template D<int>::g();
-    // expected-error@-1 {{nested name specifier 'test33::C::template D<int>' in friend declaration must end with a simple-template-id naming a class template, but 'D' is an alias template}}
+    // expected-error@-1 {{'test33::C::template D<int>' does not name a class template}}
   };
 
   template struct G<A>;

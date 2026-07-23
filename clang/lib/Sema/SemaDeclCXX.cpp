@@ -18132,15 +18132,14 @@ GetClassTemplateSpecializationType(ASTContext &Context, QualType T) {
   return nullptr;
 }
 
-static bool DiagnosePackIndexingInFriendNNS(Sema &S, SourceLocation Loc,
-                                            NestedNameSpecifierLoc NNSLoc) {
+bool Sema::DiagnosePackIndexingInFriendNNS(SourceLocation Loc,
+                                           NestedNameSpecifierLoc NNSLoc) {
   for (TypeLoc TL = NNSLoc.getAsTypeLoc(); TL;
        TL = TL.getPrefix().getAsTypeLoc()) {
     if (TL.getTypeLocClass() != TypeLoc::PackIndexing)
       continue;
 
-    S.Diag(Loc, diag::err_computed_type_in_declarative_nns)
-        << 0 << TL.getSourceRange();
+    Diag(Loc, diag::err_pack_indexing_in_friend) << TL.getSourceRange();
     return true;
   }
   return false;
@@ -18151,17 +18150,17 @@ static void DiagnoseDependentFriendNotMember(Sema &S, SourceLocation Loc,
   QualType T(NNS.getAsType(), 0);
   if (const auto *TST =
           dyn_cast<TemplateSpecializationType>(IgnorePackIndexing(T))) {
-    if (auto *TD = dyn_cast_or_null<TypeAliasTemplateDecl>(
+    if (isa_and_nonnull<TypeAliasTemplateDecl>(
             TST->getTemplateName().getAsTemplateDecl())) {
       S.Diag(Loc, diag::err_dependent_friend_not_member_of_template_spec)
-          << TD << NNS << 1;
+          << NNS;
       return;
     }
   }
 
-  if (CXXRecordDecl *RD = NNS.getAsRecordDecl()) {
+  if (NNS.getAsRecordDecl()) {
     S.Diag(Loc, diag::err_dependent_friend_not_member_of_template_spec)
-        << RD << NNS << 0;
+        << NNS;
   } else {
     S.Diag(Loc, diag::err_dependent_friend_not_member);
   }
@@ -18179,7 +18178,7 @@ bool Sema::CheckDependentFriend(SourceLocation Loc,
          "nested-name-specifier of dependent friend must be a type");
 
   QualType T(NNS.getAsType(), 0);
-  if (DiagnosePackIndexingInFriendNNS(*this, Loc, NNSLoc))
+  if (DiagnosePackIndexingInFriendNNS(Loc, NNSLoc))
     return true;
 
   const TemplateSpecializationType *TST =
@@ -18562,6 +18561,11 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   CXXScopeSpec &SS = D.getCXXScopeSpec();
   DeclarationNameInfo NameInfo = GetNameForDeclarator(D);
   assert(NameInfo.getName());
+
+  if (SS.isValid() &&
+      DiagnosePackIndexingInFriendNNS(
+          NameInfo.getLoc(), SS.getWithLocInContext(Context)))
+    return nullptr;
 
   // Check for unexpanded parameter packs.
   if (DiagnoseUnexpandedParameterPack(Loc, TInfo, UPPC_FriendDeclaration) ||

@@ -396,7 +396,7 @@ namespace cwg637 { // cwg637: 3.0
   }
 } // namespace cwg637
 
-namespace cwg638 { // cwg638: yes
+namespace cwg638 { // cwg638: 24
   template<typename T> struct A {
     struct B;
     void f();
@@ -412,7 +412,7 @@ namespace cwg638 { // cwg638: yes
     template<class T> friend void A<T>::f();
     template<class T> friend void A<T>::g();
     template<class T> friend void A<T>::C::h();
-    // expected-error@-1 {{nested name specifier 'A<T>::C' in friend declaration must end with a simple-template-id naming a class template, but 'C' is a non-template member}}
+    // expected-error@-1 {{'A<T>::C' does not name a class template}}
   };
 
   template<> struct A<int> {

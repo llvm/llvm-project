@@ -11207,6 +11207,11 @@ TypeResult Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
   if (!NNS)
     return true;
 
+  if (TUK == TagUseKind::Friend &&
+      DiagnosePackIndexingInFriendNNS(NameLoc,
+                                      SS.getWithLocInContext(Context)))
+    return true;
+
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
 
   if (TUK == TagUseKind::Declaration || TUK == TagUseKind::Definition) {

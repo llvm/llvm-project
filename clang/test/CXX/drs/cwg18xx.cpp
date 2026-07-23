@@ -375,7 +375,7 @@ namespace cwg1837 { // cwg1837: 3.3
 #endif
 } // namespace cwg1837
 
-namespace cwg1862 { // cwg1862: yes
+namespace cwg1862 { // cwg1862: 24
 template<class T>
 struct A {
   struct B {
@@ -426,7 +426,7 @@ class C {
 
   template<class T>
   friend void A<T>::D::g();
-  // expected-error@-1 {{nested name specifier 'A<T>::D' in friend declaration must end with a simple-template-id naming a class template, but 'D' is a non-template member}}
+  // expected-error@-1 {{'A<T>::D' does not name a class template}}
 
   template<class T>
   friend int *A<T*>::h();
