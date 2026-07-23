@@ -298,8 +298,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
 
   unsigned MinVecNumElts = MinVectorSize / OriginalScalarSizeInBits;
-  auto *MinVecTy =
-      VectorType::get(OriginalScalarTy, MinVecNumElts, false);
+  auto *MinVecTy = VectorType::get(OriginalScalarTy, MinVecNumElts, false);
 
   unsigned OffsetEltIndex = 0;
   // An aligned scalar occupies one vector element. Unaligned accesses below
@@ -325,11 +324,9 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     if (Offset.isNegative())
       return false;
 
-    const uint64_t OriginalScalarSizeInBytes =
-        OriginalScalarSizeInBits / 8;
+    const uint64_t OriginalScalarSizeInBytes = OriginalScalarSizeInBits / 8;
     uint64_t ChunkSizeInBytes = OriginalScalarSizeInBytes;
-    if (uint64_t UnalignedBytes =
-            Offset.urem(OriginalScalarSizeInBytes)) {
+    if (uint64_t UnalignedBytes = Offset.urem(OriginalScalarSizeInBytes)) {
       // Reconstruct an unaligned scalar from smaller integer chunks.
       // Consecutive low-address chunks appear in increasing vector lanes on a
       // little-endian target. Big-endian reconstruction would require a
@@ -339,8 +336,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
 
       // The GCD gives the largest chunk that exactly divides both the scalar
       // width and byte offset. This minimizes the number of shuffle lanes.
-      ChunkSizeInBytes =
-          std::gcd(OriginalScalarSizeInBytes, UnalignedBytes);
+      ChunkSizeInBytes = std::gcd(OriginalScalarSizeInBytes, UnalignedBytes);
       const uint64_t ChunkSizeInBits = ChunkSizeInBytes * 8;
       NumScalarChunks = OriginalScalarSizeInBytes / ChunkSizeInBytes;
       MinVecNumElts = MinVectorSize / ChunkSizeInBits;
@@ -403,8 +399,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     //   %chunks = shufflevector <8 x i16> %wide.i16, <8 x i16> poison,
     //       <8 x i32> <i32 1, i32 2, i32 poison, i32 poison,
     //                   i32 poison, i32 poison, i32 poison, i32 poison>
-    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy,
-                                  MinVecTy, Mask, CostKind);
+    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy, MinVecTy,
+                                  Mask, CostKind);
 
     // Account for the bitcast after the unaligned chunk shuffle:
     //   %result = bitcast <8 x i16> %chunks to <4 x i32>
