@@ -18,62 +18,63 @@
 
 struct TestFloat {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(std::fpclassify(std::numeric_limits<T>::quiet_NaN()) == FP_NAN);
-    assert(std::fpclassify(std::numeric_limits<T>::signaling_NaN()) == FP_NAN);
+  TEST_CONSTEXPR_CXX23 void operator()() const {
+    using lim                    = std::numeric_limits<T>;
+    TEST_CONSTEXPR_CXX23 T max   = lim::max();
+    TEST_CONSTEXPR_CXX23 T min   = lim::min();
+    TEST_CONSTEXPR_CXX23 T d_min = lim::denorm_min();
+    TEST_CONSTEXPR_CXX23 T inf   = lim::infinity();
+    TEST_CONSTEXPR_CXX23 T nan   = lim::quiet_NaN();
+    TEST_CONSTEXPR_CXX23 T s_nan = lim::signaling_NaN();
 
-    assert(std::fpclassify(std::numeric_limits<T>::infinity()) == FP_INFINITE);
-    assert(std::fpclassify(-std::numeric_limits<T>::infinity()) == FP_INFINITE);
+    assert(std::fpclassify(nan) == FP_NAN);
+    assert(std::fpclassify(s_nan) == FP_NAN);
+
+    assert(std::fpclassify(inf) == FP_INFINITE);
+    assert(std::fpclassify(-inf) == FP_INFINITE);
 
     assert(std::fpclassify(T(1)) == FP_NORMAL);
     assert(std::fpclassify(T(-1)) == FP_NORMAL);
-    assert(std::fpclassify(std::numeric_limits<T>::max()) == FP_NORMAL);
-    assert(std::fpclassify(std::numeric_limits<T>::min()) == FP_NORMAL);
+    assert(std::fpclassify(max) == FP_NORMAL);
+    assert(std::fpclassify(min) == FP_NORMAL);
 
-    assert(std::fpclassify(std::numeric_limits<T>::denorm_min()) == FP_SUBNORMAL);
+    assert(std::fpclassify(d_min) == FP_SUBNORMAL);
 
     assert(std::fpclassify(T(0)) == FP_ZERO);
     assert(std::fpclassify(T(-0.0)) == FP_ZERO);
-
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 
 struct TestInt {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
+  TEST_CONSTEXPR_CXX23 void operator()() const {
+    using lim                  = std::numeric_limits<T>;
+    TEST_CONSTEXPR_CXX23 T max = lim::max();
+    TEST_CONSTEXPR_CXX23 T low = lim::lowest();
+
     assert(std::fpclassify(T(0)) == FP_ZERO);
     assert(std::fpclassify(T(1)) == FP_NORMAL);
-    assert(std::fpclassify(std::numeric_limits<T>::max()) == FP_NORMAL);
+    assert(std::fpclassify(max) == FP_NORMAL);
 
     if (std::is_signed<T>::value) {
-      assert(std::fpclassify(std::numeric_limits<T>::lowest()) == FP_NORMAL);
+      assert(std::fpclassify(low) == FP_NORMAL);
       assert(std::fpclassify(T(-1)) == FP_NORMAL);
     }
-
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX23 bool test() {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
 
   return 0;
 }
