@@ -279,8 +279,8 @@ gpu.module @test {
 
 // -----
 gpu.module @test {
-  // CHECK-LABEL: for_loop_misaligned_dpas_fail
-  gpu.func @for_loop_misaligned_dpas_fail(%arg0: memref<2048x8192xf16>, %arg1: memref<8192x4096xf16>, %arg2: memref<2048x4096xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 16>} {
+  // CHECK-LABEL: for_loop_dpas_k_broadcast
+  gpu.func @for_loop_dpas_k_broadcast(%arg0: memref<2048x8192xf16>, %arg1: memref<8192x4096xf16>, %arg2: memref<2048x4096xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 16>} {
     %cst = arith.constant dense<0.000000e+00> : vector<128x128xf32>
     %c128 = arith.constant 128 : index
     %c8192 = arith.constant 8192 : index
@@ -294,8 +294,7 @@ gpu.module @test {
       %5 = xegpu.load_nd %4[%block_id_x, %arg3]  : !xegpu.tensor_desc<128x128xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<128x128xf16>
       %6 = xegpu.create_nd_tdesc %arg1 : memref<8192x4096xf16> -> !xegpu.tensor_desc<128x128xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
       %7 = xegpu.load_nd %6[%arg3, %block_id_y]  : !xegpu.tensor_desc<128x128xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<128x128xf16>
-      // Couldn not find a layout whose sg_data would be aligned on the reduction dimension.
-      // CHECK: xegpu.dpas %{{.*}} {layout_cd = #xegpu.layout<sg_layout = [2, 4], sg_data = [64, 32]>} :
+      // CHECK: xegpu.dpas %{{.*}} {layout_a = #xegpu.layout<sg_layout = [2, 4], sg_data = [64, 128]>, layout_b = #xegpu.layout<sg_layout = [2, 4], sg_data = [128, 32]>, layout_cd = #xegpu.layout<sg_layout = [2, 4], sg_data = [64, 32]>} :
       %8 = xegpu.dpas %5, %7, %arg4 : vector<128x128xf16>, vector<128x128xf16>, vector<128x128xf32> -> vector<128x128xf32>
       scf.yield %8 : vector<128x128xf32>
     }
@@ -308,8 +307,8 @@ gpu.module @test {
 
 // -----
 gpu.module @test {
-  // CHECK-LABEL: dpas_fails
-  gpu.func @dpas_fails(%arg0: memref<2048x8192xf16>, %arg1: memref<8192x4096xf16>, %arg2: memref<2048x4096xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 16>} {
+  // CHECK-LABEL: dpas_small_k_broadcast
+  gpu.func @dpas_small_k_broadcast(%arg0: memref<2048x8192xf16>, %arg1: memref<8192x4096xf16>, %arg2: memref<2048x4096xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 16>} {
     %cst = arith.constant dense<0.000000e+00> : vector<32x64xf32>
     %c16 = arith.constant 16 : index
     %c8192 = arith.constant 8192 : index
@@ -319,10 +318,9 @@ gpu.module @test {
     %4 = xegpu.create_nd_tdesc %arg0 : memref<2048x8192xf16> -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
     %5 = xegpu.load_nd %4[%block_id_x, %c0]  : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<32x16xf16>
     %6 = xegpu.create_nd_tdesc %arg1 : memref<8192x4096xf16> -> !xegpu.tensor_desc<16x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
-    // CHECK: xegpu.load_nd %{{.*}}[%{{.*}}, %{{.*}}]  :
+    // CHECK: xegpu.load_nd %{{.*}}[%{{.*}}, %{{.*}}] <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>}> :
     %7 = xegpu.load_nd %6[%c0, %block_id_y]  : !xegpu.tensor_desc<16x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<16x64xf16>
-    // We have 8 SGs, but currently attempt to use only the largest inst size, so the 32x16 A tile is too small -> fail propagation.
-    // CHECK: xegpu.dpas %{{.*}} {layout_cd = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>} :
+    // CHECK: xegpu.dpas %{{.*}} {layout_a = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>, layout_b = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>, layout_cd = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>} :
     %8 = xegpu.dpas %5, %7, %cst : vector<32x16xf16>, vector<16x64xf16>, vector<32x64xf32> -> vector<32x64xf32>
     %3 = xegpu.create_nd_tdesc %arg2 : memref<2048x4096xf32> -> !xegpu.tensor_desc<32x64xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
     // CHECK: xegpu.store_nd %{{.*}} <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>}> :

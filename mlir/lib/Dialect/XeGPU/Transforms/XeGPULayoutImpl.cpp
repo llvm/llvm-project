@@ -1067,12 +1067,17 @@ static SmallVector<LayoutRepresentation> enumerateFactorizations(int64_t total,
 // Results are sorted by balance (smallest max-min spread first), with
 // lexicographic order as a tiebreaker.
 //
+// `broadcastDim` (default -1 = none) marks a dimension broadcast across
+// subgroups rather than distributed (e.g. the K/contraction dim of a DPAS
+// operand). Its full extent stays in every subgroup, so rule 1 is skipped for
+// it, but rule 2 (multiple of instData) still applies.
+//
 // Example (2D):
 //   wgShape = [128, 64], instData = [8, 16], sgCount = 32
 //   Returns: [[8,4], [16,2]], corresponding to sgData [16,16] and [8,32].
 static SmallVector<LayoutRepresentation>
 getSgLayoutCandidates(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
-                      int64_t sgCount) {
+                      int64_t sgCount, int64_t broadcastDim = -1) {
   int64_t rank = wgShape.size();
   assert(rank > 0 && "wgShape must be non-empty");
   assert(static_cast<int64_t>(instData.size()) == rank &&
@@ -1086,11 +1091,18 @@ getSgLayoutCandidates(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
   for (const auto &sgLayout : allFactorizations) {
     bool valid = true;
     for (int64_t dim = 0; dim < rank; ++dim) {
-      if (wgShape[dim] % sgLayout[dim] != 0) {
-        valid = false;
-        break;
+      // A broadcast dim keeps its full extent in every subgroup; others are
+      // split evenly by sgLayout[dim].
+      int64_t sgData;
+      if (dim == broadcastDim) {
+        sgData = wgShape[dim];
+      } else {
+        if (wgShape[dim] % sgLayout[dim] != 0) {
+          valid = false;
+          break;
+        }
+        sgData = wgShape[dim] / sgLayout[dim];
       }
-      int64_t sgData = wgShape[dim] / sgLayout[dim];
       if (sgData % instData[dim] != 0) {
         valid = false;
         break;
@@ -1345,23 +1357,19 @@ getDpasSubgroupLayouts(
   }
 
   // Get all valid layouts for A, B and C/D operands
-  auto layoutsA = getSgLayoutCandidates(aTy.getShape(), instDataA, numSg);
-  auto layoutsB = getSgLayoutCandidates(bTy.getShape(), instDataB, numSg);
+  auto layoutsA = getSgLayoutCandidates(aTy.getShape(), instDataA, numSg,
+                                        /*broadcastDim=*/aTy.getRank() - 1);
+  auto layoutsB = getSgLayoutCandidates(bTy.getShape(), instDataB, numSg,
+                                        /*broadcastDim=*/bTy.getRank() - 2);
   auto layoutsCD = getSgLayoutCandidates(cdTy.getShape(), instDataCD, numSg);
   if (layoutsA.empty() || layoutsB.empty() || layoutsCD.empty())
     return std::nullopt;
 
   // Pick the best subgroup layout
   std::optional<LayoutRepresentation> bestPick;
-  auto checkAlignedSgDataAB = [&](const LayoutRepresentation &sgLayout) {
-    return aTy.getShape().back() / sgLayout[1] ==
-           bTy.getShape().front() / sgLayout[0];
-  };
   for (auto &sgLayout : layoutsB) {
     if (llvm::is_contained(layoutsA, sgLayout) &&
         llvm::is_contained(layoutsCD, sgLayout)) {
-      if (!checkAlignedSgDataAB(sgLayout))
-        continue;
       // Is in (A and B and CD) and matches consumer -> best pick
       if (consumerSgLayout.has_value() && sgLayout == *consumerSgLayout) {
         bestPick = sgLayout;
