@@ -4,26 +4,48 @@
 
 void clang_analyzer_dump(float);
 
-// `(x & 1) && ((x & 1) ^ 1)` is self-contradictory: the second conjunct is
-// `1 ^ 1 == 0` whenever the first holds.  The range-based constraint manager
-// now folds the concrete simplification of `(x & 1) ^ 1` and prunes the dead
-// branch on its own, so the null dereference is unreachable in *both*
-// configurations -- the Z3 cross-check is no longer needed to refute it.
-int foo(int x)
+// The built-in range-based constraint manager reasons about each `%` / `/`
+// sub-expression as an independent, coarsely over-approximated symbol and
+// cannot relate two of them, so it wrongly enters these contradictory
+// branches and reports a null dereference.  Z3, with exact modular/division
+// semantics, refutes the path -- which is exactly what the cross-check is for.
+
+int rem_parity(int x) // `x` even and `x + 1` even: impossible
 {
   int *z = 0;
-  if ((x & 1) && ((x & 1) ^ 1))
-      return *z; // no-warning (dead branch pruned by the range solver)
+  if (x % 2 == 0)
+    if ((x + 1) % 2 == 0)
+#ifdef NO_CROSSCHECK
+      return *z; // expected-warning {{Dereference of null pointer (loaded from variable 'z')}}
+#else
+      return *z; // no-warning
+#endif
   return 0;
 }
 
-int unary(int x, long l)
+int mul_parity(int x, int y) // `x == 2 * y` is even, yet assumed odd: impossible
 {
   int *z = 0;
-  int y = l;
-  if ((x & 1) && ((x & 1) ^ 1))
-    if (-y)
-        return *z; // no-warning (dead branch pruned by the range solver)
+  if (x == 2 * y)
+    if (x % 2 != 0)
+#ifdef NO_CROSSCHECK
+      return *z; // expected-warning {{Dereference of null pointer (loaded from variable 'z')}}
+#else
+      return *z; // no-warning
+#endif
+  return 0;
+}
+
+int div_rem_identity(int x) // `(x / 10) * 10 + x % 10 == x` always holds
+{
+  int *z = 0;
+  if (x > 0 && x < 1000)
+    if ((x / 10) * 10 + (x % 10) != x)
+#ifdef NO_CROSSCHECK
+      return *z; // expected-warning {{Dereference of null pointer (loaded from variable 'z')}}
+#else
+      return *z; // no-warning
+#endif
   return 0;
 }
 
