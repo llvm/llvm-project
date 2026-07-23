@@ -14,8 +14,8 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETSCHEDPARAM_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETSCHEDPARAM_H
 
+#include "hdr/types/pthread_t.h"
 #include "hdr/types/struct_sched_param.h"
-#include "include/llvm-libc-types/pthread_t.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

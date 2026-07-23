@@ -13,8 +13,8 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/sched_macros.h"
+#include "hdr/types/pthread_t.h"
 #include "hdr/types/struct_sched_param.h"
-#include "include/llvm-libc-types/pthread_t.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_getschedparam.h"
 #include "src/pthread/pthread_join.h"

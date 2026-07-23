@@ -949,8 +949,8 @@ add_entrypoint_object(
   HDRS
     pthread_setschedparam.h
   DEPENDS
+    libc.hdr.types.pthread_t
     libc.hdr.types.struct_sched_param
-    libc.include.llvm-libc-types.pthread_t
     libc.src.__support.macros.null_check
     libc.src.__support.threads.thread
 )
@@ -962,8 +962,8 @@ add_entrypoint_object(
   HDRS
     pthread_getschedparam.h
   DEPENDS
+    libc.hdr.types.pthread_t
     libc.hdr.types.struct_sched_param
-    libc.include.llvm-libc-types.pthread_t
     libc.src.__support.macros.null_check
     libc.src.__support.threads.thread
 )

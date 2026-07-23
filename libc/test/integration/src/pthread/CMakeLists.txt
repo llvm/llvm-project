@@ -302,7 +302,7 @@ add_integration_test(
     libc.hdr.errno_macros
     libc.hdr.sched_macros
     libc.hdr.types.struct_sched_param
-    libc.include.llvm-libc-types.pthread_t
+    libc.hdr.types.pthread_t
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_join
