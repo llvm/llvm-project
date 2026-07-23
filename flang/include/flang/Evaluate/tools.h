@@ -1410,6 +1410,8 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 
   // Managed/unified data is host-addressable, so several assignments are
   // performed on the host and need no explicit data transfer:
+  // - A whole-allocatable left-hand side involving managed/unified data: the
+  //   assignment has reallocation semantics and is performed on the host.
   // - Element-wise (scalar) access to managed/unified data.
   // - A right-hand side expression involving managed/unified data assigned into
   //   a host-addressable (managed/unified or host) left-hand side: evaluating it
@@ -1417,7 +1419,9 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   // - A managed/unified left-hand side assigned from host-only data.
   // A whole-array assignment whose right-hand side is a managed/unified variable
   // is a synchronous data transfer that waits for previously launched kernels.
-  if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
+  if ((IsAllocatableDesignator(lhs) &&
+          (lhsNbManagedSymbols >= 1 || rhsNbManagedSymbols >= 1)) ||
+      (lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
           lhs.Rank() == 0) ||
       (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
           rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
