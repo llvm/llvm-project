@@ -131,6 +131,17 @@ public:
 
 FunctionPass *createX86FixupVectorConstantsLegacyPass();
 
+/// Return a pass that coalesces redundant vector zero and all-ones
+/// materializations into subregister extracts.
+class X86OptimizeVectorConstantsPass
+    : public OptionalPassInfoMixin<X86OptimizeVectorConstantsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86OptimizeVectorConstantsLegacyPass();
+
 /// Return a pass that removes redundant LEA instructions and redundant address
 /// recalculations.
 class X86OptimizeLEAsPass : public OptionalPassInfoMixin<X86OptimizeLEAsPass> {
@@ -483,6 +494,7 @@ void initializeX86ArgumentStackSlotLegacyPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningLegacyPass(PassRegistry &);
 void initializeX86FixupVectorConstantsLegacyPass(PassRegistry &);
+void initializeX86OptimizeVectorConstantsLegacyPass(PassRegistry &);
 void initializeWinEHStateLegacyPass(PassRegistry &);
 void initializeX86AvoidSFBLegacyPass(PassRegistry &);
 void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);

@@ -10,7 +10,6 @@ define void @endless_loop() {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1,2,3,4,5,6],ymm1[7]
-; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX1-NEXT:    vmovaps %ymm0, (%eax)
 ; AVX1-NEXT:    vmovaps %ymm1, (%eax)

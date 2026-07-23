@@ -1058,10 +1058,9 @@ define void @main.158() #0 {
 ; BWON-F16C-LABEL: main.158:
 ; BWON-F16C:       # %bb.0: # %entry
 ; BWON-F16C-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm1 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; BWON-F16C-NEXT:    vucomiss %xmm0, %xmm1
-; BWON-F16C-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm1
+; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm2 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; BWON-F16C-NEXT:    vucomiss %xmm1, %xmm2
 ; BWON-F16C-NEXT:    jae .LBB20_2
 ; BWON-F16C-NEXT:  # %bb.1: # %entry
 ; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]

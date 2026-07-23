@@ -55,6 +55,7 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    subq %rax, %rsp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    movl %ecx, %r8d
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    kmovw %k2, 14(%rbx) # 2-byte Spill
@@ -116,6 +117,7 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    movq 296(%rbp), %r27
 ; CHECK-NEXT:    movq 288(%rbp), %r20
 ; CHECK-NEXT:    movq 280(%rbp), %r21
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    movq 24(%rbx), %r8 # 8-byte Reload
 ; CHECK-NEXT:    movq 16(%rbx), %rax # 8-byte Reload
 ; CHECK-NEXT:    subq %r21, %r15
@@ -136,12 +138,11 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    movl %r24d, %r27d
 ; CHECK-NEXT:    movq 336(%rbp), %r24
 ; CHECK-NEXT:    movq 216(%rbp), %r28
-; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqu32 %ymm0, (%r28,%r24) {%k2}
+; CHECK-NEXT:    vmovdqu32 %ymm2, (%r28,%r24) {%k2}
 ; CHECK-NEXT:    movl %r27d, %r24d
 ; CHECK-NEXT:    movq %r20, %r27
 ; CHECK-NEXT:    movq %rax, %r20
-; CHECK-NEXT:    vmovups %ymm0, (%rcx) {%k2}
+; CHECK-NEXT:    vmovups %ymm2, (%rcx) {%k2}
 ; CHECK-NEXT:    cmpl %edx, %r25d
 ; CHECK-NEXT:    movq 16(%rbx), %rax # 8-byte Reload
 ; CHECK-NEXT:    je .LBB0_6
@@ -150,27 +151,26 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    jmp .LBB0_13
 ; CHECK-NEXT:  .LBB0_3: # %vector_loop.preheader
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_4: # %vector_loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovdqu (%r9), %ymm1
-; CHECK-NEXT:    vpord (%r18), %ymm1, %ymm1
-; CHECK-NEXT:    vmovups %ymm0, (%r23) {%k2}
-; CHECK-NEXT:    vmovups %ymm0, (%r12) {%k2}
-; CHECK-NEXT:    vmovups (%r13,%r15), %ymm2
-; CHECK-NEXT:    vcmpltps (%r30,%r15), %ymm2, %k1
-; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1 {%k1}
-; CHECK-NEXT:    vmovups (%r10), %ymm1 {%k1} {z}
-; CHECK-NEXT:    vmovups %ymm1, (%r22) {%k2}
-; CHECK-NEXT:    vmovdqu32 %ymm0, (%rdi) {%k2}
-; CHECK-NEXT:    vmovdqu32 %ymm0, (%r16) {%k2}
-; CHECK-NEXT:    vmovups %ymm0, (%r19) {%k2}
-; CHECK-NEXT:    vmovups (%r31), %ymm1 {%k2} {z}
-; CHECK-NEXT:    vmovups %ymm1, (%r17,%r29,4) {%k2}
-; CHECK-NEXT:    vmovups %ymm0, (%r11) {%k2}
-; CHECK-NEXT:    vmovups %ymm0, (%rsi) {%k2}
-; CHECK-NEXT:    vmovups %ymm0, (%r14) {%k2}
+; CHECK-NEXT:    vmovdqu (%r9), %ymm0
+; CHECK-NEXT:    vpord (%r18), %ymm0, %ymm0
+; CHECK-NEXT:    vmovups %ymm2, (%r23) {%k2}
+; CHECK-NEXT:    vmovups %ymm2, (%r12) {%k2}
+; CHECK-NEXT:    vmovups (%r13,%r15), %ymm1
+; CHECK-NEXT:    vcmpltps (%r30,%r15), %ymm1, %k1
+; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1 {%k1}
+; CHECK-NEXT:    vmovups (%r10), %ymm0 {%k1} {z}
+; CHECK-NEXT:    vmovups %ymm0, (%r22) {%k2}
+; CHECK-NEXT:    vmovdqu32 %ymm2, (%rdi) {%k2}
+; CHECK-NEXT:    vmovdqu32 %ymm2, (%r16) {%k2}
+; CHECK-NEXT:    vmovups %ymm2, (%r19) {%k2}
+; CHECK-NEXT:    vmovups (%r31), %ymm0 {%k2} {z}
+; CHECK-NEXT:    vmovups %ymm0, (%r17,%r29,4) {%k2}
+; CHECK-NEXT:    vmovups %ymm2, (%r11) {%k2}
+; CHECK-NEXT:    vmovups %ymm2, (%rsi) {%k2}
+; CHECK-NEXT:    vmovups %ymm2, (%r14) {%k2}
 ; CHECK-NEXT:    incq %rax
 ; CHECK-NEXT:    addq $4, %r15
 ; CHECK-NEXT:    jmp .LBB0_4
