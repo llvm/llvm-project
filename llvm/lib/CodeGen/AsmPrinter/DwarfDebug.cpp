@@ -1295,7 +1295,7 @@ void DwarfDebug::beginModule(Module *M) {
         CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
       continue;
 
-    DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
+    getOrCreateDwarfCompileUnit(CUNode);
   }
 }
 
