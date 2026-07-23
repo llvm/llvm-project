@@ -41,12 +41,10 @@ void call_var_args() {
 }
 
 // CHECK-LABEL: define dso_local void @"?call_var_args@@YAXXZ"()
-// CHECK: call void {{.*varargs_zero.*}}(ptr inalloca(<{ %struct.A }>) %{{.*}})
-// CHECK: call void {{.*varargs_one.*}}(ptr inalloca(<{ i32, %struct.A }>) %{{.*}})
-// CHECK: call void {{.*varargs_two.*}}(ptr inalloca(<{ i32, i32, %struct.A }>) %{{.*}})
-// CHECK: call void {{.*varargs_three.*}}(ptr inalloca(<{ i32, i32, i32, %struct.A }>) %{{.*}})
+// Passing non-POD to varargs ellipsis (...) traps. Since the trap is noreturn,
+// it is followed by unreachable, and subsequent dead code (like inalloca stack
+// allocations and varargs calls) is pruned and not emitted.
+// CHECK: call void @llvm.trap()
+// CHECK-NEXT: unreachable
 
 // CHECK-LABEL: declare dso_local void @"?varargs_zero@@YAXZZ"(...)
-// CHECK-LABEL: declare dso_local void @"?varargs_one@@YAXHZZ"(i32 noundef, ...)
-// CHECK-LABEL: declare dso_local void @"?varargs_two@@YAXHHZZ"(i32 noundef, i32 noundef, ...)
-// CHECK-LABEL: declare dso_local void @"?varargs_three@@YAXHHHZZ"(i32 noundef, i32 noundef, i32 noundef, ...)

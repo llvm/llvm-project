@@ -149,6 +149,20 @@ entry:
   ret void
 }
 
+; Test that coroutines, when feasible, are elided without requiring inlining.
+define void @noinline_elision() {
+; CHECK-LABEL: define void @noinline_elision() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @noinline_elision, ptr @f.resumers)
+  %alloc = call i1 @llvm.coro.alloc(token %id)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
+  call void @llvm.coro.dead(ptr %hdl)
+  ret void
+}
+
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare ptr @llvm.coro.frame()

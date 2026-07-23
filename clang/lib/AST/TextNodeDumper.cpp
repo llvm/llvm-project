@@ -811,6 +811,12 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
         },
         Value.getStructNumFields(), "field", "fields");
 
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getStructVirtualBase(Index);
+        },
+        Value.getStructNumVirtualBases(), "vbase", "vbases");
     return;
   }
   case APValue::Matrix: {
@@ -2238,7 +2244,7 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     OS << " " #Trait;                                                          \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 

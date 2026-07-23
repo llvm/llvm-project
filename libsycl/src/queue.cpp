@@ -35,6 +35,10 @@ bool queue::is_in_order() const { return impl->isInOrder(); }
 
 void queue::wait() { impl->wait(); }
 
+void queue::wait_and_throw() { impl->waitAndThrow(); }
+
+void queue::throw_asynchronous() { impl->throwAsynchronous(); }
+
 event queue::memcpy(void *dest, const void *src, std::size_t numBytes,
                     const std::vector<event> &depEvents) {
   std::shared_ptr<detail::EventImpl> EventImplPtr =

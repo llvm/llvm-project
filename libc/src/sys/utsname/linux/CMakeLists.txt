@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     ../uname.h
   DEPENDS
-    libc.include.sys_utsname
+    libc.hdr.types.struct_utsname
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

@@ -110,14 +110,15 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::init(true));
 
 // PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
-// (see shouldExpandAtomicRMWInIR), so by default we fall back to a CAS loop
-// when they disagree. This flag is an escape hatch to use atom.add anyway,
-// trading correct denormal handling for the speed of the native instruction.
+// (see shouldExpandAtomicRMWInIR), so we'd normally fall back to a CAS loop
+// when they disagree. This option (enabled by default) allows using atom.add
+// anyway, trading correct denormal handling for the speed of the native
+// instruction.
 static cl::opt<bool> AllowFTZAtomics(
     "nvptx-allow-ftz-atomics", cl::Hidden,
     cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
              "FTZ behavior does not match the function's denormal mode."),
-    cl::init(false));
+    cl::init(true));
 
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.
@@ -4070,10 +4071,12 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   const DataLayout &DL = DAG.getDataLayout();
   LLVMContext &Ctx = *DAG.getContext();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   const Function &F = DAG.getMachineFunction().getFunction();
   const bool IsKernel = isKernelFunction(F);
+
+  const MVT PtrVT = getPointerTy(DL, IsKernel ? ADDRESS_SPACE_ENTRY_PARAM
+                                              : ADDRESS_SPACE_LOCAL);
 
   SDValue Root = DAG.getRoot();
   SmallVector<SDValue, 16> OutChains;
@@ -4128,18 +4131,17 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       const auto &ByvalIn = ArgIns[0];
       assert(getValueType(DL, Ty) == ByvalIn.VT &&
              "Ins type did not match function type");
-      assert(ByvalIn.VT == PtrVT && "ByVal argument must be a pointer");
 
       SDValue P;
       if (IsKernel) {
-        assert(Arg.getType()->getPointerAddressSpace() ==
-                   ADDRESS_SPACE_ENTRY_PARAM &&
+        assert(Ty->getPointerAddressSpace() == ADDRESS_SPACE_ENTRY_PARAM &&
                "Kernel ByVal argument must be lowered to the param address "
                "space by NVPTXLowerArgs");
         P = ArgSymbol;
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
-        P = DAG.getNode(NVPTXISD::MoveParam, dl, ByvalIn.VT, ArgSymbol);
+        P = DAG.getNode(NVPTXISD::MoveParam, dl, ArgSymbol.getValueType(),
+                        ArgSymbol);
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
         P = DAG.getAddrSpaceCast(dl, ByvalIn.VT, P, ADDRESS_SPACE_LOCAL,
                                  ADDRESS_SPACE_GENERIC);

@@ -25,7 +25,7 @@ int reachablePathReturns(int X) {
   }
 }
 
-} // anonymous namespace
+} // namespace
 
 TEST(CompilerTest, UnreachableCompilesInReturningFunction) {
   EXPECT_EQ(reachablePathReturns(0), 0);

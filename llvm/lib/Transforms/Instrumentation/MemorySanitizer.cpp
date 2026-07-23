@@ -5292,6 +5292,50 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // AVX512 Floating-Point Classification
+  //
+  // e.g.,
+  // - < 8 x i1> @llvm.x86.avx512.fpclass.pd.512
+  //                 (<8 x double> %input, i32 %classifiers)
+  // - <16 x i1> @llvm.x86.avx512.fpclass.ps.512
+  //                 (<16 x float> %input, i32 %classifiers)
+  void handleAVX512FPClass(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 2);
+
+    Value *Input = I.getOperand(0);
+    assert(isFixedFPVector(Input));
+    [[maybe_unused]] FixedVectorType *InputType = cast<FixedVectorType>(Input->getType());
+
+    Value *Classifiers = I.getOperand(1);
+    assert(isa<ConstantInt>(Classifiers));
+    // No shadow check needed for constants
+
+    assert(isFixedIntVectorTy(I.getType()));
+    FixedVectorType *OutputType = cast<FixedVectorType>(I.getType());
+    assert(OutputType->getScalarSizeInBits() == 1);
+
+    assert(OutputType->getNumElements() == InputType->getNumElements());
+
+    Value *OutputShadow;
+    if (cast<ConstantInt>(Classifiers)->isZero())
+      // Each bit specifies whether a particular classifier is enabled.
+      // If Classifiers == 0, the output is trivially known to be zero, thus
+      // the output is fully initialized.
+      OutputShadow = getCleanShadow(OutputType);
+    else
+      // Approximate each bit of the output shadow based on whether the
+      // corresponding input element is fully initialized. It is only
+      // approximate because some classifications do not rely on all bits of
+      // the input element.
+      OutputShadow = IRB.CreateICmpNE(getShadow(Input), getCleanShadow(Input));
+
+    setShadow(&I, OutputShadow);
+
+    setOriginForNaryOp(I);
+  }
+
   // For sh.* compiler intrinsics:
   //   llvm.x86.avx512fp16.mask.{add/sub/mul/div/max/min}.sh.round
   //     (<8 x half>, <8 x half>, <8 x half>, i8,  i32)
@@ -6889,6 +6933,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    // e.g.,
+    // <16 x float> @llvm.x86.avx512.mask.compress
+    //                  (<16 x float> %data, <16 x float> %passthru,
+    //                   <16 x i1> %mask)
+    // <16 x i32>   @llvm.x86.avx512.mask.compress
+    //                  (<16 x i32> %data, <16 x i32> %passthru,
+    //                   <16 x i1> %mask)
+    case Intrinsic::x86_avx512_mask_compress:
+      handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
+                                        /*trailingVerbatimArgs=*/1,
+                                        /*forceIntegerIntrinsic=*/true);
+      break;
+
     // AVX512/AVX10 Reciprocal
     //   <16 x float> @llvm.x86.avx512.rsqrt14.ps.512
     //                    (<16 x float>, <16 x float>, i16)
@@ -7124,6 +7181,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       visitGenericScalarHalfwordInst(I);
       break;
     }
+
+    // AVX512 Floating-Point Classification
+    // - <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double>, i32)
+    // - <16 x i1> @llvm.x86.avx512.fpclass.ps.512(<16 x float>, i32)
+    case Intrinsic::x86_avx512_fpclass_pd_512:
+    case Intrinsic::x86_avx512_fpclass_ps_512:
+      handleAVX512FPClass(I);
+      break;
 
     // AVX Galois Field New Instructions
     case Intrinsic::x86_vgf2p8affineqb_128:

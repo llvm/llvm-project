@@ -35,12 +35,6 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 
-static llvm::cl::opt<bool> useAccReductionCombine(
-    "openacc-use-reduction-combine",
-    llvm::cl::desc("Whether to generate acc.reduction_combine. Does not "
-                   "control reduction for MIN/MAX and logical reductions."),
-    llvm::cl::init(true));
-
 static llvm::cl::opt<bool> useAccReductionCombineAll(
     "openacc-use-reduction-combine-all",
     llvm::cl::desc("Whether to generate acc.reduction_combine for all types "
@@ -634,9 +628,10 @@ genDesignateWithTriplets(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::SequenceType::Shape resultTypeShape;
   bool shapeIsConstant = true;
   for (mlir::Value extent : extents) {
-    if (std::optional<std::int64_t> cst_extent =
-            fir::getIntIfConstant(extent)) {
-      resultTypeShape.push_back(*cst_extent);
+    std::optional<llvm::APInt> cstExtent = fir::getIntIfConstant(extent);
+    if (std::optional<std::int64_t> cstExtent64 =
+            cstExtent ? cstExtent->trySExtValue() : std::nullopt) {
+      resultTypeShape.push_back(*cstExtent64);
     } else {
       resultTypeShape.push_back(fir::SequenceType::getUnknownExtent());
       shapeIsConstant = false;
@@ -1160,8 +1155,6 @@ static bool useAccReductionCombineOp(mlir::Type elementType,
                                      mlir::acc::ReductionOperator op) {
   if (useAccReductionCombineAll)
     return true;
-  if (!useAccReductionCombine)
-    return false;
   // LOGICAL operators do not have mlir operators and requires FIR specific
   // logic to interpret the TRUE and FALSE values from the storage (implemented
   // in fir.convert to i1).
