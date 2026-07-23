@@ -811,6 +811,14 @@ LLVM_ABI bool canCreatePoison(const Operator *Op,
 /// impliesPoison returns true.
 LLVM_ABI bool impliesPoison(const Value *ValAssumedPoison, const Value *V);
 
+/// Return true if V is guaranteed to be poison whenever ValAssumedPoison is
+/// poison, based only on how the two values are defined, not on how they are
+/// used. Their uses are ignored on purpose: this is called to justify removing
+/// a use, so any conclusion drawn from the current uses could be invalidated by
+/// the transform it enables.
+LLVM_ABI bool structurallyImpliesPoison(const Value *ValAssumedPoison,
+                                        const Value *V);
+
 /// Return true if this function can prove that V does not have undef bits
 /// and is never poison. If V is an aggregate value or vector, check whether
 /// all elements (except padding) are not undef or poison.

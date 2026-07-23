@@ -2225,7 +2225,10 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
     if (std::optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
       // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
-      if (*Implied == true)
+      // Only refine to Op0 if Op0 being poison implies the 'and' was already
+      // poison; otherwise (Op1 == false absorbing a poison Op0) we would turn
+      // a well-defined result into poison.
+      if (*Implied == true && structurallyImpliesPoison(Op0, Op1))
         return Op0;
       // If Op0 is true implies Op1 is false, then they are not true together.
       if (*Implied == false)
@@ -2233,7 +2236,10 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     }
     if (std::optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL)) {
       // If Op1 is true implies Op0 is true, then Op1 is a subset of Op0.
-      if (*Implied)
+      // Only refine to Op1 if Op1 being poison implies the 'and' was already
+      // poison; otherwise (Op0 == false absorbing a poison Op1) we would turn
+      // a well-defined result into poison.
+      if (*Implied && structurallyImpliesPoison(Op1, Op0))
         return Op1;
       // If Op1 is true implies Op0 is false, then they are not true together.
       if (!*Implied)
@@ -2498,7 +2504,10 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     if (std::optional<bool> Implied =
             isImpliedCondition(Op0, Op1, Q.DL, false)) {
       // If Op0 is false implies Op1 is false, then Op1 is a subset of Op0.
-      if (*Implied == false)
+      // Only refine to Op0 if Op0 being poison implies the 'or' was already
+      // poison; otherwise (Op1 == true absorbing a poison Op0) we would turn
+      // a well-defined result into poison.
+      if (*Implied == false && structurallyImpliesPoison(Op0, Op1))
         return Op0;
       // If Op0 is false implies Op1 is true, then at least one is always true.
       if (*Implied == true)
@@ -2507,7 +2516,10 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     if (std::optional<bool> Implied =
             isImpliedCondition(Op1, Op0, Q.DL, false)) {
       // If Op1 is false implies Op0 is false, then Op0 is a subset of Op1.
-      if (*Implied == false)
+      // Only refine to Op1 if Op1 being poison implies the 'or' was already
+      // poison; otherwise (Op0 == true absorbing a poison Op1) we would turn
+      // a well-defined result into poison.
+      if (*Implied == false && structurallyImpliesPoison(Op1, Op0))
         return Op1;
       // If Op1 is false implies Op0 is true, then at least one is always true.
       if (*Implied == true)

@@ -7895,6 +7895,45 @@ bool llvm::impliesPoison(const Value *ValAssumedPoison, const Value *V) {
   return ::impliesPoison(ValAssumedPoison, V, /* Depth */ 0);
 }
 
+// Return true if V can't be poison, looking only at its structure and not its
+// use-list.
+static bool isDefinitionGuaranteedNotToBePoison(const Value *V) {
+  if (const auto *C = dyn_cast<Constant>(V))
+    return !isa<ConstantExpr>(C) && !isa<PoisonValue>(C) &&
+           !C->containsPoisonElement();
+  if (const auto *Arg = dyn_cast<Argument>(V))
+    return Arg->hasAttribute(Attribute::NoUndef);
+  return isa<FreezeInst>(V);
+}
+
+static bool structurallyImpliesPoison(const Value *ValAssumedPoison,
+                                      const Value *V, unsigned Depth) {
+  if (isDefinitionGuaranteedNotToBePoison(ValAssumedPoison))
+    return true;
+
+  if (directlyImpliesPoison(ValAssumedPoison, V, /* Depth */ 0))
+    return true;
+
+  const unsigned MaxDepth = 2;
+  if (Depth >= MaxDepth)
+    return false;
+
+  // ValAssumedPoison can't create poison locally, so its poison comes from an
+  // operand; require each operand to imply V's poison.
+  const auto *I = dyn_cast<Instruction>(ValAssumedPoison);
+  if (I && !canCreatePoison(cast<Operator>(I))) {
+    return all_of(I->operands(), [=](const Value *Op) {
+      return structurallyImpliesPoison(Op, V, Depth + 1);
+    });
+  }
+  return false;
+}
+
+bool llvm::structurallyImpliesPoison(const Value *ValAssumedPoison,
+                                     const Value *V) {
+  return ::structurallyImpliesPoison(ValAssumedPoison, V, /* Depth */ 0);
+}
+
 static bool programUndefinedIfUndefOrPoison(const Value *V, bool PoisonOnly);
 
 static bool isGuaranteedNotToBeUndefOrPoison(

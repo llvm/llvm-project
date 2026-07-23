@@ -359,7 +359,9 @@ define i1 @pr70374(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @pr70374(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[ADD]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP2]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %add = add nuw i32 %y, %z
   %cmp1 = icmp ule i32 %add, %x
@@ -372,7 +374,9 @@ define i1 @pr70374_commuted_add(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @pr70374_commuted_add(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[ADD]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP2]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %add = add nuw i32 %z, %y
   %cmp1 = icmp ule i32 %add, %x
