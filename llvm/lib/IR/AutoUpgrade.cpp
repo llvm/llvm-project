@@ -7558,6 +7558,10 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
         Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
       if (!DL.contains("-p9") && !DL.starts_with("p9"))
         Res.append("-p9:192:256:256:32");
+
+      // Add sizing for address space 15
+      if (!DL.contains("-p15") && !DL.starts_with("p15"))
+        Res.append("-p15:32:32");
     }
 
     // Upgrade the ELF mangling mode.
