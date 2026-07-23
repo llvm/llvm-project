@@ -93,6 +93,15 @@ void positiveSideEffectTemporary(std::optional<std::string> opt) {
   // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
 }
 
+std::optional<std::string> &getOptionalRef();
+void positiveSideEffectObject(const std::string &fallback) {
+  const std::string &ref = getOptionalRef().value_or(fallback);
+  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:45: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-OWNING: :[[@LINE-2]]:45: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-FIXES-NON-OWNING: const std::string &ref = getOptionalRef().value_or(fallback);
+  // CHECK-FIXES-OWNING: const std::string &ref = getOptionalRef().value_or(fallback);
+}
+
 // Template instantiation.
 
 template <typename T> void positiveTemplate(std::optional<T> opt) {

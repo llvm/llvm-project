@@ -77,6 +77,8 @@ static std::optional<FixItHint> buildFixIt(const CXXMemberCallExpr *Call,
     return std::nullopt;
   if (!ObjExpr->isLValue())
     return std::nullopt;
+  if (ObjExpr->HasSideEffects(Ctx))
+    return std::nullopt;
   if (!hasOperatorStar(OptionalClass))
     return std::nullopt;
 
