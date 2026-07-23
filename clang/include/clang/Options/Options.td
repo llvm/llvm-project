@@ -2507,8 +2507,7 @@ def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<
 defm fast_math : BoolFOption<"fast-math",
   LangOpts<"FastMath">, Default<hlsl.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FC1Option, FlangOption],
-          "Allow aggressive, lossy floating-point optimizations",
-          [cl_fast_relaxed_math.KeyPath]>,
+          "Allow aggressive, lossy floating-point optimizations">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option, FC1Option, FlangOption]>>;
 defm math_errno : BoolFOption<"math-errno",
   LangOpts<"MathErrno">, DefaultFalse,

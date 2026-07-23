@@ -5507,8 +5507,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_reduce_and:
     return selectWaveReduceOp(ResVReg, ResType, I,
                               SPIRV::OpGroupNonUniformBitwiseAnd);
-  case Intrinsic::spv_interlocked_add:
-    return selectInterlockedOp(ResVReg, ResType, I, SPIRV::OpAtomicIAdd);
   case Intrinsic::spv_interlocked_or:
     return selectInterlockedOp(ResVReg, ResType, I, SPIRV::OpAtomicOr);
   case Intrinsic::spv_wave_reduce_umax:
