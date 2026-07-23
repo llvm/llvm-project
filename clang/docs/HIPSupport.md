@@ -643,7 +643,7 @@ We augment the `clang` driver with the following flags:
   - when compiling:
 
     - `-x hip` gets prepended to enable HIP support;
-    - the `ROCmToolchain` component checks for the `hipstdpar_lib.hpp`
+    - the `AMDGPUToolchain` component checks for the `hipstdpar_lib.hpp`
       forwarding header,
       [rocThrust](https://rocm.docs.amd.com/projects/rocThrust/en/latest/) and
       [rocPrim](https://rocm.docs.amd.com/projects/rocPRIM/en/latest/) in
