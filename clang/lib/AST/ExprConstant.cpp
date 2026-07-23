@@ -2718,8 +2718,8 @@ static bool checkFloatingPointLibraryCall(EvalInfo &Info, const Expr *E,
   // Per [library.c]p3, a C standard library function call is not a core
   // constant expression if it raises a floating-point exception other than
   // FE_INEXACT.
-  if (St & (APFloat::opInvalidOp | APFloat::opOverflow |
-            APFloat::opUnderflow | APFloat::opDivByZero)) {
+  if (St & (APFloat::opInvalidOp | APFloat::opOverflow | APFloat::opUnderflow |
+            APFloat::opDivByZero)) {
     if (!Info.checkingPotentialConstantExpression())
       Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << Result.isNaN();
     return false;
