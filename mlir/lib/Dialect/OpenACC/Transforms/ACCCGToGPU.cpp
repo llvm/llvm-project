@@ -249,15 +249,29 @@ static SmallVector<GPUParallelDimAttr> getAncestorParDims(Operation *op) {
   ComputeRegionOp computeRegion = op->getParentOfType<ComputeRegionOp>();
   assert(computeRegion && "missing enclosing acc.compute_region");
   scf::ParallelOp parentLoop = op->getParentOfType<scf::ParallelOp>();
+  // True while parentLoop is the innermost parallel ancestor of op.
+  bool isInnermostParallelParent = true;
   while (parentLoop) {
-    if (GPUParallelDimsAttr parDimsAttr = getParDimsAttr(parentLoop))
-      for (GPUParallelDimAttr parDim : parDimsAttr.getArray())
+    bool hasNonSeqParDim = false;
+    if (GPUParallelDimsAttr parDimsAttr = getParDimsAttr(parentLoop)) {
+      for (GPUParallelDimAttr parDim : parDimsAttr.getArray()) {
         insertParDim(parDimsArray, parDim);
-    // A block-redundant loop executes on every block, so its enclosing block
-    // dimensions are active ancestors that must not be predicated away.
-    if (hasGPUBlockRedundantAttr(parentLoop))
+        if (!parDim.isSeq())
+          hasNonSeqParDim = true;
+      }
+    }
+    // Include launch dims for a block-redundant ancestor when:
+    // - it is itself worksharing (e.g. vector + gpu_block_redundant), or
+    // - it is the innermost parallel parent (sequential remnant after
+    //   partition-kernel-loops), so the body is not predicated on blockIdx.
+    // Do not include them for an outer sequential block-redundant wrapper
+    // around nested gang/worker/vector worksharing: that widens gang-private
+    // storage to per-thread.
+    if (hasGPUBlockRedundantAttr(parentLoop) &&
+        (hasNonSeqParDim || isInnermostParallelParent))
       for (GPUParallelDimAttr parDim : computeRegion.getLaunchParDims())
         insertParDim(parDimsArray, parDim);
+    isInnermostParallelParent = false;
     parentLoop = parentLoop->getParentOfType<scf::ParallelOp>();
   }
 
