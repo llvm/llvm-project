@@ -9160,9 +9160,9 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
     break;
   }
-  attrs.MinTeams = minTeamsVal;
+  attrs.MinTeams.front() = minTeamsVal;
   attrs.MaxTeams.front() = maxTeamsVal;
-  attrs.MinThreads = 1;
+  attrs.MinThreads.front() = 1;
   attrs.MaxThreads.front() = combinedMaxThreadsVal;
   attrs.ReductionDataSize = reductionDataSize;
 }
@@ -9198,7 +9198,7 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   // truncate or sign extend lower and upper num_teams bounds as well as
   // thread_limit to match int32 ABI requirements for the OpenMP runtime.
   if (numTeamsLower)
-    attrs.MinTeams = builder.CreateSExtOrTrunc(
+    attrs.MinTeams.front() = builder.CreateSExtOrTrunc(
         moduleTranslation.lookupValue(numTeamsLower), builder.getInt32Ty());
 
   if (numTeamsUpper)
@@ -9210,7 +9210,7 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
         moduleTranslation.lookupValue(teamsThreadLimit), builder.getInt32Ty());
 
   if (numThreads)
-    attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
+    attrs.MaxThreads.front() = moduleTranslation.lookupValue(numThreads);
 
   if (targetOp.hasHostEvalTripCount()) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
