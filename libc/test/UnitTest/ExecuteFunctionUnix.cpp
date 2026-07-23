@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ExecuteFunction.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
-#include "test/UnitTest/ExecuteFunction.h" // FunctionCaller
+#include "test/UnitTest/ExecuteFunction.h"
 
 #ifdef LIBC_FULL_BUILD
 #include "include/llvm-libc-macros/poll-macros.h"
@@ -17,7 +16,6 @@
 #include "include/llvm-libc-macros/sys-wait-macros.h"
 #include "include/llvm-libc-types/pid_t.h"
 #include "include/llvm-libc-types/struct_pollfd.h"
-#include "src/__support/libc_assert.h"
 #include "src/poll/poll.h"
 #include "src/signal/kill.h"
 #include "src/stdio/fflush.h"
