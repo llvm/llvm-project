@@ -112,3 +112,56 @@ void inlined_callee_single_report() {
   // expected-note@-1 {{Calling 'deref_param'}}
   (void)r;
 }
+
+struct MyBuffer {
+  char buffer[8];
+};
+
+void member_subregion_dangling_deref() {
+  const char *p = nullptr;
+  {
+    struct MyBuffer tmp_buffer = {};
+    p = tmp_buffer.buffer;
+  }
+  // expected-note@-1 {{'tmp_buffer.buffer[0]' is destroyed here}}
+  char c = *p;
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
+  (void)c;
+}
+
+void opaque(const char *);
+
+void passing_dangling_to_call() {
+  const char *p = nullptr;
+  {
+    struct MyBuffer tmp_buffer = {};
+    p = tmp_buffer.buffer;
+  }
+  // expected-note@-1 {{'tmp_buffer.buffer[0]' is destroyed here}}
+  opaque(p);
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
+}
+
+void member_subregion_alive_deref() {
+  {
+    struct MyBuffer tmp_buffer = {};
+    const char *p = tmp_buffer.buffer;
+    opaque(p); //   no-warning
+    char c = *p; // no-warning
+    (void)c;
+  }
+}
+
+void arr_elem_subreg_dangling_deref() {
+  int *ptr = nullptr;
+  {
+    int local_arr[5];
+    ptr = &local_arr[1];
+  }
+  // expected-note@-1 {{'local_arr[1]' is destroyed here}}
+  *ptr = 7;
+  // expected-warning@-1 {{Use of 'local_arr[1]' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'local_arr[1]' after its lifetime ended}}
+}
