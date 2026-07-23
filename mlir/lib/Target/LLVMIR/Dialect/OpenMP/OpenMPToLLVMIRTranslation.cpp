@@ -191,23 +191,32 @@ public:
   }
 
   // Find linear iteration variable and save it for later updates
-  void initLinearIV(omp::SimdOp simdOp) {
+  LogicalResult initLinearIV(omp::SimdOp simdOp) {
     auto loopOp = cast<omp::LoopNestOp>(simdOp.getWrappedLoop());
     // NOTE iteration variables can only be linear in non-nested loops.
     if (loopOp.getIVs().size() != 1)
-      return;
-    // The linear IV is the loop IV's store address.
+      return success();
+    // Currently, frontends using `omp.simd` always generate a store from the
+    // `omp.loop_nest`'s IV to the corresponding iteration variable.
+    // We leverage this to find the linear iteration variable.
+    //
+    // TODO Add an attribute to `omp.loop_nest` that explicitly lists the
+    //      variables that correspond to the loop induction variables.
     BlockArgument arg = loopOp.getIVs().front();
     for (const Operation *user : arg.getUsers()) {
       if (auto storeOp = dyn_cast<LLVM::StoreOp>(user)) {
         for (Value linearVar : simdOp.getLinearVars()) {
           if (linearVar == storeOp.getAddr()) {
+            if (linearLoopIV)
+              return simdOp.emitError(
+                  "Could not determine the linear variable associated with the "
+                  "loop nest induction variable");
             linearLoopIV = linearVar;
-            break;
           }
         }
       }
     }
+    return success();
   }
 
   // Emit IR for updating Linear variables
@@ -4858,7 +4867,8 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Initialize linear variables and linear step
   LinearClauseProcessor linearClauseProcessor;
-  linearClauseProcessor.initLinearIV(simdOp);
+  if (linearClauseProcessor.initLinearIV(simdOp).failed())
+    return failure();
 
   if (!simdOp.getLinearVars().empty()) {
     auto linearVarTypes = simdOp.getLinearVarTypes().value();

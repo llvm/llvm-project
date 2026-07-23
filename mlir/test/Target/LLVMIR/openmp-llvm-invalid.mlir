@@ -130,6 +130,21 @@ llvm.func @simd_linear_private(%lb : i32, %ub : i32, %step : i32, %i : !llvm.ptr
 
 // -----
 
+llvm.func @simd_linear_ambiguous_iv(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{Could not determine the linear variable associated with the loop nest induction variable}}
+  // expected-error @below {{LLVM Translation failed for operation: omp.simd}}
+  omp.simd linear(%x : !llvm.ptr = %step : i32, %y : !llvm.ptr = %step : i32) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      llvm.store %iv, %x : i32, !llvm.ptr
+      llvm.store %iv, %y : i32, !llvm.ptr
+      omp.yield
+    }
+  } {linear_var_types = [i32, i32]}
+  llvm.return
+}
+
+// -----
+
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @host_op_in_device(%arg0 : !llvm.ptr) {
     // expected-error @below {{unsupported host op found in device}}
