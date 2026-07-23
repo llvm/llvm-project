@@ -407,9 +407,10 @@ However, if you want to only stop in certain situations (a single address space,
 a single execution mode, and so on), code breakpoints implemented in hardware
 will be much faster.
 
-Doing it in software means you have to return into the debugger to filter
-every stop event. Which is slow even when locally debugging. Put the debug
-server on the end of a high latency connection and the slow down is multiplied.
+Doing it in software means you have to context switch between the debug stub and
+the debugger to filter every stop event. Which is slow even when locally
+debugging. Put the debug server on the end of a high latency connection and the
+slow down is multiplied.
 
 In addition, hardware code breakpoints can be set in read-only memory. Which is
 important for code executing out of ROM, which is common on embedded targets.
