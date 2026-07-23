@@ -1624,92 +1624,6 @@ bool ScriptInterpreterPythonImpl::GenerateTypeSynthClass(
   return true;
 }
 
-StructuredData::GenericSP
-ScriptInterpreterPythonImpl::CreateFrameRecognizer(const char *class_name) {
-  if (class_name == nullptr || class_name[0] == '\0')
-    return StructuredData::GenericSP();
-
-  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-  PythonObject ret_val = SWIGBridge::LLDBSWIGPython_CreateFrameRecognizer(
-      class_name, m_dictionary_name.c_str());
-
-  return StructuredData::GenericSP(
-      new StructuredPythonObject(std::move(ret_val)));
-}
-
-lldb::ValueObjectListSP ScriptInterpreterPythonImpl::GetRecognizedArguments(
-    const StructuredData::ObjectSP &os_plugin_object_sp,
-    lldb::StackFrameSP frame_sp) {
-  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-
-  if (!os_plugin_object_sp)
-    return ValueObjectListSP();
-
-  StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
-  if (!generic)
-    return nullptr;
-
-  PythonObject implementor(PyRefType::Borrowed,
-                           (PyObject *)generic->GetValue());
-
-  if (!implementor.IsAllocated())
-    return ValueObjectListSP();
-
-  PythonObject py_return(PyRefType::Owned,
-                         SWIGBridge::LLDBSwigPython_GetRecognizedArguments(
-                             implementor.get(), frame_sp));
-
-  // if it fails, print the error but otherwise go on
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-  }
-  if (py_return.get()) {
-    PythonList result_list(PyRefType::Borrowed, py_return.get());
-    ValueObjectListSP result = std::make_shared<ValueObjectList>();
-    for (size_t i = 0; i < result_list.GetSize(); i++) {
-      PyObject *item = result_list.GetItemAtIndex(i).get();
-      lldb::SBValue *sb_value_ptr =
-          (lldb::SBValue *)LLDBSWIGPython_CastPyObjectToSBValue(item);
-      auto valobj_sp =
-          SWIGBridge::LLDBSWIGPython_GetValueObjectSPFromSBValue(sb_value_ptr);
-      if (valobj_sp)
-        result->Append(valobj_sp);
-    }
-    return result;
-  }
-  return ValueObjectListSP();
-}
-
-bool ScriptInterpreterPythonImpl::ShouldHide(
-    const StructuredData::ObjectSP &os_plugin_object_sp,
-    lldb::StackFrameSP frame_sp) {
-  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-
-  if (!os_plugin_object_sp)
-    return false;
-
-  StructuredData::Generic *generic = os_plugin_object_sp->GetAsGeneric();
-  if (!generic)
-    return false;
-
-  PythonObject implementor(PyRefType::Borrowed,
-                           (PyObject *)generic->GetValue());
-
-  if (!implementor.IsAllocated())
-    return false;
-
-  bool result =
-      SWIGBridge::LLDBSwigPython_ShouldHide(implementor.get(), frame_sp);
-
-  // if it fails, print the error but otherwise go on
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-  }
-  return result;
-}
-
 ScriptedProcessInterfaceUP
 ScriptInterpreterPythonImpl::CreateScriptedProcessInterface() {
   return std::make_unique<ScriptedProcessPythonInterface>(*this);
@@ -1723,6 +1637,11 @@ ScriptInterpreterPythonImpl::CreateScriptedHookInterface() {
 ScriptedBreakpointInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedBreakpointInterface() {
   return std::make_shared<ScriptedBreakpointPythonInterface>(*this);
+}
+
+ScriptedStackFrameRecognizerInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedStackFrameRecognizerInterface() {
+  return std::make_shared<ScriptedStackFrameRecognizerPythonInterface>(*this);
 }
 
 ScriptedThreadInterfaceSP
