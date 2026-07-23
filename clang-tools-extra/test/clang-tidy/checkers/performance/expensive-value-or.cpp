@@ -102,6 +102,12 @@ void positiveSideEffectObject(const std::string &fallback) {
   // CHECK-FIXES-OWNING: const std::string &ref = getOptionalRef().value_or(fallback);
 }
 
+void negativeUnevaluatedContext(std::optional<std::string> opt,
+                                const std::string &fallback) {
+  (void)sizeof(opt.value_or(fallback));
+  using ValueOrType = decltype(opt.value_or(fallback));
+}
+
 // Template instantiation.
 
 template <typename T> void positiveTemplate(std::optional<T> opt) {

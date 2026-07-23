@@ -118,7 +118,9 @@ void ExpensiveValueOrCheck::registerMatchers(MatchFinder *Finder) {
       anyOf(on(isLValueExpr()),
             hasType(qualType(unless(hasNonTrivialMoveCtor())))),
       hasType(qualType(
-          anyOf(matchers::isExpensiveToCopy(), isLargerThan(SizeThreshold)))));
+          anyOf(matchers::isExpensiveToCopy(), isLargerThan(SizeThreshold)))),
+      unless(anyOf(hasAncestor(typeLoc()),
+                   hasAncestor(expr(matchers::hasUnevaluatedContext())))));
 
   if (WarnOnOwnershipTaking) {
     Finder->addMatcher(ValueOrCall.bind("call"), this);
