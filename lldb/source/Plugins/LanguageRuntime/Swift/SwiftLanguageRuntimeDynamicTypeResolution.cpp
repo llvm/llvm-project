@@ -835,6 +835,18 @@ private:
                                      VisitCallback visit_callback);
 };
 
+/// Augment generic reflection failures with LLDB-specific explanations.
+static llvm::Error AugmentReflectionError(llvm::Error error) {
+  std::string message;
+  llvm::handleAllErrors(std::move(error), [&](const llvm::ErrorInfoBase &info) {
+    message = info.message();
+  });
+  if (llvm::StringRef(message).contains("accessor function symbolic reference"))
+    message += ": non-copyable fields in resilient types with "
+               "a deployment target < 27.0 are not supported in LLDB";
+  return llvm::createStringError(message);
+}
+
 llvm::Expected<unsigned>
 SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
                                    VisitCallback visit_callback) {
@@ -1311,7 +1323,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
           *tr, &tip,
           ts.GetDescriptorFinder(m_exe_ctx.GetBestExecutionContextScope()));
       if (!cti_or_err)
-        return cti_or_err.takeError();
+        return AugmentReflectionError(cti_or_err.takeError());
       if (auto *rti = llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(
               &*cti_or_err)) {
         LLDB_LOG(GetLog(LLDBLog::Types),
@@ -1455,11 +1467,9 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
 
       auto cti_or_err =
           reflection_ctx->GetClassInstanceTypeInfo(*tr, &tip, desc_finder);
-      const swift::reflection::TypeInfo *cti = nullptr;
-      if (cti_or_err)
-        cti = &*cti_or_err;
-      else
-        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), cti_or_err.takeError(), "{0}");
+      if (!cti_or_err)
+        return AugmentReflectionError(cti_or_err.takeError());
+      const swift::reflection::TypeInfo *cti = &*cti_or_err;
       if (auto *rti =
               llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
         auto fields = rti->getFields();
