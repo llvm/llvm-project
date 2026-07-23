@@ -5599,12 +5599,12 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
 // vector_shuffle v8:v8i8, v9:v8i8 <9, 10, 2, 3, 4, 5, 6, 7>
 // ->
 // vsetvli zero, 2, e8, mf2, tu, ma
-// vslideup.v1 v8, v9, 1
+// vslidedown.vi v8, v9, 1
 static SDValue lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
-    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<SDValue> MaskVals,
+    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
     const std::array<std::pair<int, int>, 2> &SrcInfo, MVT ContainerVT,
     const RISCVSubtarget &Subtarget, SelectionDAG &DAG) {
-  if (V1.isUndef() || V2.isUndef() || MaskVals.empty())
+  if (V1.isUndef() || V2.isUndef())
     return SDValue();
 
   const unsigned NumElts = VT.getVectorNumElements();
@@ -5615,44 +5615,46 @@ static SDValue lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
   if (SrcInfo[0].second != 0 || SlideAmt >= 0)
     return SDValue();
 
-  if (static_cast<unsigned>(-SlideAmt) >= NumElts)
+  unsigned SlideDownAmt = -SlideAmt;
+  if (SlideDownAmt >= NumElts)
     return SDValue();
 
-  // Count the number of 1s in MaskVals,
-  // and ensure all 1s are at the beginning.
-  unsigned NumOnes = 0;
-  for (SDValue V : MaskVals) {
-    if (V.isUndef())
-      continue;
-    auto *C = dyn_cast<ConstantSDNode>(V);
-    if (!C)
-      return SDValue();
-    if (!C->isZero())
-      ++NumOnes;
+  // Check whether the leading lanes are consecutive lanes
+  // from the second slide.
+  auto IsSecondSlideLane = [&](unsigned I) {
+    int M = Mask[I];
+    if (M < 0)
+      return false;
+
+    int Src = M >= (int)NumElts;
+    int Diff = (int)I - (M % NumElts);
+    return Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
+  };
+
+  unsigned VL = 0;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    if (!IsSecondSlideLane(I))
+      break;
+    ++VL;
   }
 
-  if (NumOnes == 0 || NumOnes == NumElts || NumOnes > NumElts + SlideAmt)
+  if (VL == 0 || VL == NumElts || VL > NumElts - SlideDownAmt)
     return SDValue();
 
-  for (unsigned I = 0; I != NumOnes; ++I) {
-    auto *C = dyn_cast<ConstantSDNode>(MaskVals[I]);
-    if (!C || C->isZero())
+  for (unsigned I = VL; I != NumElts; ++I)
+    if (IsSecondSlideLane(I))
       return SDValue();
-  }
 
   SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
   SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
 
-  if (!Src1.hasOneUse())
-    return SDValue();
-
   unsigned Policy =
       RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED | RISCVVType::MASK_AGNOSTIC;
   auto TrueMask = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).first;
-  SDValue VL = DAG.getConstant(NumOnes, DL, XLenVT);
+  SDValue VLOp = DAG.getConstant(VL, DL, XLenVT);
   SDValue Slidedown = getVSlidedown(DAG, Subtarget, DL, ContainerVT, Src1, Src2,
-                                    DAG.getConstant(-SlideAmt, DL, XLenVT),
-                                    TrueMask, VL, Policy);
+                                    DAG.getConstant(SlideDownAmt, DL, XLenVT),
+                                    TrueMask, VLOp, Policy);
   return convertFromScalableVector(VT, Slidedown, DAG, Subtarget);
 }
 
@@ -5667,7 +5669,7 @@ static SDValue lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
 // vector_shuffle v8:v8i8, v9:v8i8 <0, 1, 8, 9, 10, 5, 6, 7>
 // ->
 // vsetvli zero, 5, e8, mf2, tu, ma
-// vslideup.v1 v8, v9, 2
+// vslideup.vi v8, v9, 2
 static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
                                              SDValue V1, SDValue V2,
                                              ArrayRef<int> Mask,
@@ -6990,6 +6992,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
           return V;
     }
 
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
+            DL, VT, V1, V2, Mask, SrcInfo, ContainerVT, Subtarget, DAG))
+      return V;
+
     // Build the mask.  Note that vslideup unconditionally preserves elements
     // below the slide amount in the destination, and thus those elements are
     // undefined in the mask.  If the mask ends up all true (or undef), it
@@ -7009,10 +7015,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       MaskVals.push_back(DAG.getConstant(C, DL, XLenVT));
     }
     assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
-
-    if (SDValue V = lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
-            DL, VT, V1, V2, MaskVals, SrcInfo, ContainerVT, Subtarget, DAG))
-      return V;
 
     MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
     SDValue SelectMask = convertToScalableVector(

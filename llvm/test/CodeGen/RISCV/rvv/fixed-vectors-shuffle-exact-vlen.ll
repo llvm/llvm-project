@@ -283,12 +283,13 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) vsca
 define <4 x double> @shuffles_add(<4 x double> %0, <4 x double> %1) vscale_range(2,2) {
 ; CHECK-LABEL: shuffles_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v0, 1
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v13, v10
 ; CHECK-NEXT:    vslideup.vi v13, v11, 1
-; CHECK-NEXT:    vslidedown.vi v11, v10, 1, v0.t
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, tu, ma
+; CHECK-NEXT:    vslidedown.vi v11, v10, 1
 ; CHECK-NEXT:    vmv1r.v v10, v9
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v12, v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v12, v10
