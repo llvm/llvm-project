@@ -32,6 +32,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DebugLog.h"
+#include <limits>
 #include <optional>
 
 using namespace mlir;
@@ -712,6 +713,25 @@ void ForOp::getSuccessorRegions(RegionBranchPoint point,
   // body.
   regions.push_back(RegionSuccessor(&getRegion()));
   regions.push_back(RegionSuccessor(getOperation()));
+}
+
+void ForOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands,
+    SmallVectorImpl<InvocationBounds> &invocationBounds) {
+  auto asOpFoldResult = [&](unsigned idx) -> OpFoldResult {
+    if (Attribute attr = operands[idx])
+      return attr;
+    return getOperand(idx);
+  };
+  std::optional<APInt> tripCount =
+      constantTripCount(asOpFoldResult(0), asOpFoldResult(1), asOpFoldResult(2),
+                        /*isSigned=*/!getUnsignedCmp(), computeUbMinusLb);
+  if (!tripCount || !tripCount->ule(std::numeric_limits<unsigned>::max())) {
+    invocationBounds.push_back(InvocationBounds::getUnknown());
+    return;
+  }
+  unsigned count = tripCount->getZExtValue();
+  invocationBounds.emplace_back(count, count);
 }
 
 ValueRange ForOp::getSuccessorInputs(RegionSuccessor successor) {
