@@ -759,17 +759,15 @@ static Value *materializeInPred(Value *V, PHINode *Phi, unsigned EdgeIdx,
   return Clone;
 }
 
-// Undo an InstCombine/SimplifyCFG access-sink that memory semantics cannot
-// prevent: the access (a load or store) reaches a phi of resource pointers
-// (optionally behind a GEP chain) through PtrOp. Clone it into each predecessor
-// addressing that edge's concrete resource, rematerializing PtrOp (and ValOp,
-// for a store) per edge. A load's per-edge results are merged with a new phi.
+// Undo an InstCombine/SimplifyCFG/LICM access-sink by cloning it into each
+// predecessor addressing that edge's concrete resource, rematerializing PtrOp
+// (and ValOp, for a store) per edge. A load's per-edge results are merged with
+// a new phi.
 static void hoistResourceAccess(Instruction *Access, PHINode *Phi, Value *PtrOp,
                                 Value *ValOp,
                                 SmallSetVector<Instruction *, 16> &DeadInsts) {
-  // HLSL codegen and the InstCombine/SimplifyCFG/LICM sinks always follow this
-  // property. If an assert fires, another optimization produced an unexpected
-  // phi-of-resource-pointers pattern.
+  // InstCombine/SimplifyCFG/LICM sinks always follow this property. If an
+  // assert fires, another optimization produced an unexpected phi pattern.
   [[maybe_unused]] BasicBlock *MergeBB = Phi->getParent();
   assert(Access->getParent() == MergeBB &&
          "Access must be in the phi's merge block");
@@ -782,8 +780,6 @@ static void hoistResourceAccess(Instruction *Access, PHINode *Phi, Value *PtrOp,
   // The old resource-pointer phi will be superseded.
   DeadInsts.insert(Phi);
 
-  // A load produces a value; merge the per-edge clones with a new phi. A store
-  // (which supplies ValOp) has no result to merge.
   PHINode *NewPhi =
       ValOp ? nullptr
             : PHINode::Create(Access->getType(), NumEdges, Access->getName(),
@@ -826,8 +822,10 @@ static void hoistResourceAccess(Instruction *Access, PHINode *Phi, Value *PtrOp,
 // any changes were made.
 static std::optional<bool> legalizeResourceHandles(Function &F,
                                                    DXILResourceTypeMap &DRTM) {
-  // Look through any GEP chain to the phi of resource pointers that a sunk
-  // load must be hoisted above.
+  // Used below when determining if a hoist is possible. This does not traverse
+  // through a `dx.resource.getpointer` to find the phi. This distinguishes if
+  // we will hoist a optimazation generated phi of pointers or if it was an
+  // illegally created phi of resource handles.
   auto FindPointerPhi = [](Value *Ptr) -> PHINode * {
     while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
       Ptr = GEP->getPointerOperand();
