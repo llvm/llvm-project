@@ -111,6 +111,7 @@
 ; GCN-O0-NEXT:        Register Usage Information Propagation
 ; GCN-O0-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O0-NEXT:        SI Lower control flow pseudo instructions
+; GCN-O0-NEXT:        SI sink async DMA out of execz then-blocks
 ; GCN-O0-NEXT:        Two-Address instruction pass
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        Slot index numbering
@@ -354,6 +355,7 @@
 ; GCN-O1-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O1-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O1-NEXT:        SI Lower control flow pseudo instructions
+; GCN-O1-NEXT:        SI sink async DMA out of execz then-blocks
 ; GCN-O1-NEXT:        Two-Address instruction pass
 ; GCN-O1-NEXT:        Slot index numbering
 ; GCN-O1-NEXT:        Live Interval Analysis
@@ -671,6 +673,7 @@
 ; GCN-O1-OPTS-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O1-OPTS-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O1-OPTS-NEXT:        SI Lower control flow pseudo instructions
+; GCN-O1-OPTS-NEXT:        SI sink async DMA out of execz then-blocks
 ; GCN-O1-OPTS-NEXT:        Two-Address instruction pass
 ; GCN-O1-OPTS-NEXT:        Slot index numbering
 ; GCN-O1-OPTS-NEXT:        Live Interval Analysis
@@ -993,6 +996,7 @@
 ; GCN-O2-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O2-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O2-NEXT:        SI Lower control flow pseudo instructions
+; GCN-O2-NEXT:        SI sink async DMA out of execz then-blocks
 ; GCN-O2-NEXT:        Two-Address instruction pass
 ; GCN-O2-NEXT:        Slot index numbering
 ; GCN-O2-NEXT:        Live Interval Analysis
@@ -1329,6 +1333,7 @@
 ; GCN-O3-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O3-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O3-NEXT:        SI Lower control flow pseudo instructions
+; GCN-O3-NEXT:        SI sink async DMA out of execz then-blocks
 ; GCN-O3-NEXT:        Two-Address instruction pass
 ; GCN-O3-NEXT:        Slot index numbering
 ; GCN-O3-NEXT:        Live Interval Analysis

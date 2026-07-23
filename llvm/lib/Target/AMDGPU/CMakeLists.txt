@@ -177,6 +177,7 @@ add_llvm_target(AMDGPUCodeGen
   SISpillUtils.cpp
   SIMachineScheduler.cpp
   SIMemoryLegalizer.cpp
+  SISinkAsyncDMA.cpp
   SIModeRegister.cpp
   SIModeRegisterDefaults.cpp
   SIOptimizeExecMasking.cpp
