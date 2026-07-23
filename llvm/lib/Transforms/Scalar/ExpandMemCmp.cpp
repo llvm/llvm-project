@@ -171,13 +171,12 @@ public:
 static bool isAccessAllowed(const CallInst *CI, const TargetTransformInfo &TTI,
                             Align CommonAlign, unsigned LoadSize,
                             uint64_t Offset) {
-  // LoadSize is always a power of two here: the only non-power-of-two sizes
-  // come from tail expansions, which are legalized by the backend and never
-  // reach this check. A power-of-two access is thus naturally aligned exactly
-  // when the known alignment is a multiple of it.
-  assert(isPowerOf2_32(LoadSize) && "expected a power-of-two load size");
+  // The access is naturally aligned when the known alignment is at least the
+  // load width. LoadSize is not necessarily a power of two here: RISC-V vector
+  // memcmp adds non-power-of-two load sizes, so compare against the raw width
+  // rather than constructing an Align, which would require a power of two.
   Align AccessAlign = commonAlignment(CommonAlign, Offset);
-  if (isAligned(Align(LoadSize), AccessAlign.value()))
+  if (AccessAlign.value() >= LoadSize)
     return true;
   unsigned AS = CI->getArgOperand(0)->getType()->getPointerAddressSpace();
   return TTI.allowsMisalignedMemoryAccesses(CI->getContext(), LoadSize * 8, AS,
