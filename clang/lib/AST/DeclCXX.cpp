@@ -3783,7 +3783,7 @@ DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
 
   // Helper to determine diagnostic kind from a CallExpr based on value
   // category.
-  auto getDiagKindFromCall = [](const CallExpr *Call) {
+  auto GetDiagKindFromCall = [](const CallExpr *Call) {
     return Call->isXValue() ? OriginalVarResult::MoveExpr
                             : OriginalVarResult::CallExpr;
   };
@@ -3802,7 +3802,7 @@ DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
         return Result;
       }
       if (const auto *Call = dyn_cast<CallExpr>(ArgStripped))
-        Result.DiagKind = getDiagKindFromCall(Call);
+        Result.DiagKind = GetDiagKindFromCall(Call);
       else
         Result.DiagKind = OriginalVarResult::Temporary;
       return Result;
@@ -3810,7 +3810,7 @@ DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
   }
   Result.DiagKind = OriginalVarResult::Temporary;
   if (const auto *Call = dyn_cast<CallExpr>(Stripped)) {
-    Result.DiagKind = getDiagKindFromCall(Call);
+    Result.DiagKind = GetDiagKindFromCall(Call);
   } else if (isa<InitListExpr, CXXStdInitializerListExpr>(Stripped)) {
     Result.DiagKind = OriginalVarResult::InitListExpr;
   } else if (const auto *FCE = dyn_cast<CXXFunctionalCastExpr>(Stripped)) {
@@ -3818,12 +3818,12 @@ DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
     if (isa<InitListExpr>(SubExpr)) {
       Result.DiagKind = OriginalVarResult::InitListExpr;
     } else if (const auto *Call = dyn_cast<CallExpr>(SubExpr)) {
-      Result.DiagKind = getDiagKindFromCall(Call);
+      Result.DiagKind = GetDiagKindFromCall(Call);
     } else if (const auto *CE = dyn_cast<CXXConstructExpr>(SubExpr)) {
       if (CE->getNumArgs() == 1) {
         if (const auto *ArgCall =
                 dyn_cast<CallExpr>(CE->getArg(0)->IgnoreParenImpCasts()))
-          Result.DiagKind = getDiagKindFromCall(ArgCall);
+          Result.DiagKind = GetDiagKindFromCall(ArgCall);
       }
     }
   } else if (isa<MaterializeTemporaryExpr, CXXBindTemporaryExpr>(Stripped)) {

@@ -51,12 +51,12 @@ see {ref}`OpenMP implementation details <openmp-implementation-details>` and
   Limitations: tuple-like bindings (using the tuple protocol with ``get<N>()``)
   are not yet supported; conditional lastprivate, task reductions, inscan
   reductions, and non-trivial type reductions are not yet supported.
-  Important limitation for target regions: When the original variable is
-  explicitly mapped (e.g., ``map(tofrom: t)``) but only bindings from it are
-  used in the target region, modifications to the bindings will not be reflected
-  in the original variable. To ensure modifications are visible, either use
-  the original variable directly in the target region, or map the bindings
-  explicitly instead of the original variable.
+  Important restriction for target regions: if the original variable is
+  explicitly mapped (e.g., ``map(tofrom: t)``) but only bindings from it,
+  and not the original variable itself, are used in the target region, the
+  compiler emits an error. Either use the original variable directly in the
+  target region, or map the bindings explicitly instead of the original
+  variable.
 
 ## GPU devices support
 
