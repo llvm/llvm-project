@@ -63,12 +63,12 @@ static cl::opt<float>
     WasmHighBranchProb("wasm-branch-prob-high", cl::Hidden,
                        cl::desc("lowest branch probability to not be annotated "
                                 "as likely taken (range [0.0-1.0])"),
-                       cl::init(0.5f));
+                       cl::init(0.95f));
 static cl::opt<float>
     WasmLowBranchProb("wasm-branch-prob-low", cl::Hidden,
                       cl::desc("highest branch probability to be annotated as "
                                "unlikely taken (range [0.0-1.0])"),
-                      cl::init(0.5f));
+                      cl::init(0.05f));
 
 //===----------------------------------------------------------------------===//
 // Helpers.
