@@ -2202,8 +2202,8 @@ struct PragmaFinalHandler : public PragmaHandler {
 /// \code
 ///   #pragma clang __set_pp_state glibcxx_version INTEGER
 /// \endcode
-struct PragmaGLIBCXXVersionHandler : PragmaHandler {
-  PragmaGLIBCXXVersionHandler() : PragmaHandler("__set_pp_state") {}
+struct PragmaSetPPStateHandler : PragmaHandler {
+  PragmaSetPPStateHandler() : PragmaHandler("__set_pp_state") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &Tok) override {
     PP.HandlePragmaSetPPState(Introducer, Tok);
@@ -2240,7 +2240,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   AddPragmaHandler("clang", new PragmaDeprecatedHandler());
   AddPragmaHandler("clang", new PragmaRestrictExpansionHandler());
   AddPragmaHandler("clang", new PragmaFinalHandler());
-  AddPragmaHandler("clang", new PragmaGLIBCXXVersionHandler());
+  AddPragmaHandler("clang", new PragmaSetPPStateHandler());
 
   // #pragma clang module ...
   auto *ModuleHandler = new PragmaNamespace("module");
