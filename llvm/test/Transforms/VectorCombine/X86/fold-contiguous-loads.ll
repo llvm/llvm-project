@@ -5,7 +5,7 @@
 define <2 x float> @extract_subvector_with_offset(ptr %arg0) {
 ; CHECK-LABEL: define <2 x float> @extract_subvector_with_offset(
 ; CHECK-SAME: ptr [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG0]], i64 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
@@ -32,7 +32,7 @@ define <2 x float> @large_offset_without_signed_overflow(ptr %p) {
 define <2 x float> @extract_subvector_with_offset_gep_i32(ptr %arg0) {
 ; CHECK-LABEL: define <2 x float> @extract_subvector_with_offset_gep_i32(
 ; CHECK-SAME: ptr [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG0]], i64 48
 ; CHECK-NEXT:    [[V2:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret <2 x float> [[V2]]
 ;
@@ -46,7 +46,7 @@ define <2 x float> @extract_subvector_with_offset_gep_i32(ptr %arg0) {
 define <2 x float> @extract_subvector_with_offset_gep_i64(ptr %arg0) {
 ; CHECK-LABEL: define <2 x float> @extract_subvector_with_offset_gep_i64(
 ; CHECK-SAME: ptr [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG0]], i64 48
 ; CHECK-NEXT:    [[V2:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret <2 x float> [[V2]]
 ;
@@ -60,7 +60,7 @@ define <2 x float> @extract_subvector_with_offset_gep_i64(ptr %arg0) {
 define <2 x double> @extract_subvector_middle(ptr %arg0) {
 ; CHECK-LABEL: define <2 x double> @extract_subvector_middle(
 ; CHECK-SAME: ptr [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG0]], i64 48
 ; CHECK-NEXT:    [[V2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret <2 x double> [[V2]]
 ;
@@ -73,7 +73,7 @@ define <2 x double> @extract_subvector_middle(ptr %arg0) {
 define <2 x double> @extract_subvector_middle_gep_i32(ptr %arg0) {
 ; CHECK-LABEL: define <2 x double> @extract_subvector_middle_gep_i32(
 ; CHECK-SAME: ptr [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG0]], i64 48
 ; CHECK-NEXT:    [[V2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret <2 x double> [[V2]]
 ;
@@ -86,7 +86,7 @@ define <2 x double> @extract_subvector_middle_gep_i32(ptr %arg0) {
 define <2 x double> @extract_subvector_middle_gep_i64(ptr %arg0) {
 ; CHECK-LABEL: define <2 x double> @extract_subvector_middle_gep_i64(
 ; CHECK-SAME: ptr [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG0]], i64 48
 ; CHECK-NEXT:    [[V2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret <2 x double> [[V2]]
 ;
@@ -545,7 +545,7 @@ define <2 x float> @negative_call_between_load_and_shuffle(ptr %p) {
 define <2 x float> @preserve_load_metadata_for_single_attributed_load(ptr %p) {
 ; CHECK-LABEL: define <2 x float> @preserve_load_metadata_for_single_attributed_load(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 48
 ; CHECK-NEXT:    [[R:%.*]] = load <2 x float>, ptr [[TMP1]], align 8, !tbaa [[FLOAT_TBAA0:![0-9]+]], !alias.scope [[META3:![0-9]+]], !noalias [[META3]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
@@ -569,49 +569,6 @@ define <2 x i1> @drop_load_metadata_for_multiple_attributed_loads(ptr %p) {
   %r = shufflevector <2 x i8> %l0, <2 x i8> %l1, <2 x i32> <i32 1, i32 2>
   %cmp = icmp ult <2 x i8> %r, <i8 2, i8 2>
   ret <2 x i1> %cmp
-}
-
-define <3 x i32> @preserve_nusw_gep(ptr %p) {
-; CHECK-LABEL: define <3 x i32> @preserve_nusw_gep(
-; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[P]], i64 40
-; CHECK-NEXT:    [[R:%.*]] = load <3 x i32>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    ret <3 x i32> [[R]]
-;
-  %q = getelementptr nusw i8, ptr %p, i64 40
-  %l0 = load <2 x i32>, ptr %q, align 8
-  %q1 = getelementptr i8, ptr %q, i64 8
-  %l1 = load <2 x i32>, ptr %q1, align 8
-  %r = shufflevector <2 x i32> %l0, <2 x i32> %l1, <3 x i32> <i32 0, i32 1, i32 2>
-  ret <3 x i32> %r
-}
-
-define <3 x i32> @preserve_nusw_gep_negative_offset(ptr %p) {
-; CHECK-LABEL: define <3 x i32> @preserve_nusw_gep_negative_offset(
-; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i8, ptr [[P]], i64 -40
-; CHECK-NEXT:    [[R:%.*]] = load <3 x i32>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    ret <3 x i32> [[R]]
-;
-  %q = getelementptr nusw i8, ptr %p, i64 -40
-  %l0 = load <2 x i32>, ptr %q, align 8
-  %q1 = getelementptr i8, ptr %q, i64 8
-  %l1 = load <2 x i32>, ptr %q1, align 8
-  %r = shufflevector <2 x i32> %l0, <2 x i32> %l1, <3 x i32> <i32 0, i32 1, i32 2>
-  ret <3 x i32> %r
-}
-
-define <2 x i32> @drop_nusw_gep_sign_change(ptr %p) {
-; CHECK-LABEL: define <2 x i32> @drop_nusw_gep_sign_change(
-; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[R:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    ret <2 x i32> [[R]]
-;
-  %q = getelementptr nusw i8, ptr %p, i64 -4
-  %l0 = load <4 x i32>, ptr %q, align 4
-  %r = shufflevector <4 x i32> %l0, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
-  ret <2 x i32> %r
 }
 
 define <2 x float> @negative_load_in_different_block(ptr %p, i1 %c) {

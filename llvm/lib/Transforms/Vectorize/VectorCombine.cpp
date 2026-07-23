@@ -6726,26 +6726,6 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   return true;
 }
 
-static GEPNoWrapFlags getConstantGEPNoWrapFlagsToBase(Value *Ptr, Value *Base,
-                                                      const DataLayout &DL) {
-  std::optional<GEPNoWrapFlags> Flags;
-  while (Ptr != Base) {
-    auto *GEP = dyn_cast<GEPOperator>(Ptr);
-    if (!GEP)
-      return GEPNoWrapFlags::none();
-
-    APInt Offset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-    if (!GEP->accumulateConstantOffset(DL, Offset))
-      return GEPNoWrapFlags::none();
-
-    Flags = Flags ? Flags->intersectForOffsetAdd(GEP->getNoWrapFlags())
-                  : GEP->getNoWrapFlags();
-    Ptr = GEP->getPointerOperand();
-  }
-
-  return Flags.value_or(GEPNoWrapFlags::none());
-}
-
 /// Try to fold lanes assembled from contiguous vector-load elements into one
 /// load of the result type.
 ///
@@ -6796,7 +6776,6 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   Value *CommonBase = nullptr;
   APInt StartByteOffset(1, 0), FirstLoadByteOffset(1, 0);
   LoadInst *FirstLI = nullptr;
-  GEPNoWrapFlags NewGEPFlags = GEPNoWrapFlags::none();
   SmallPtrSet<LoadInst *, 4> Loads;
   for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
     // Step 1: Trace this result lane through shuffle users to find the source
@@ -6838,12 +6817,6 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
       StartByteOffset = SourceByteOffset;
       FirstLI = LI;
       FirstLoadByteOffset = LoadByteOffsetAP;
-      NewGEPFlags = getConstantGEPNoWrapFlagsToBase(LI->getPointerOperand(),
-                                                    CommonBase, *DL);
-      // The selected lane is inside the original vector load's memory range.
-      if (IL.second != 0)
-        NewGEPFlags =
-            NewGEPFlags.intersectForOffsetAdd(GEPNoWrapFlags::inBounds());
     } else {
       // Step 2: All later result lanes must use the same underlying base
       // pointer and appear at the element-stride offset expected from the first
@@ -6902,8 +6875,7 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
 
   // Step 5: Emit the same byte-offset GEP modeled above, then load the
   // contiguous result vector from it.
-  Value *NewBasePtr =
-      Builder.CreatePtrAdd(CommonBase, StartByteOffsetValue, "", NewGEPFlags);
+  Value *NewBasePtr = Builder.CreatePtrAdd(CommonBase, StartByteOffsetValue);
   LoadInst *NewLoad = Builder.CreateAlignedLoad(VT, NewBasePtr, NewAlign);
   if (Loads.size() == 1)
     copyMetadataForLoad(*NewLoad, *FirstLI);
