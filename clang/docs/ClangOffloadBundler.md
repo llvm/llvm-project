@@ -156,26 +156,72 @@ bundle file is:
 
 The layout of a bundled code object is defined by the following table:
 
-```{table} Bundled Code Object Layout
+:::{list-table} Bundled Code Object Layout
 :name: bundled-code-object-layout-table
+:header-rows: 1
 
-| Field                               | Type    | Size in Bytes                     | Description |
-| ----------------------------------- | ------- | --------------------------------- | ----------- |
-| Magic String                        | string  | 24                                | `__CLANG_OFFLOAD_BUNDLE__` |
-| Number Of Bundle Entries            | integer | 8                                 | Number of bundle entries. |
-| 1st Bundle Entry Code Object Offset | integer | 8                                 | Byte offset from beginning of bundled code object to 1st code object. |
-| 1st Bundle Entry Code Object Size   | integer | 8                                 | Byte size of 1st code object. |
-| 1st Bundle Entry ID Length          | integer | 8                                 | Character length of bundle entry ID of 1st code object. |
-| 1st Bundle Entry ID                 | string  | 1st Bundle Entry ID Length        | Bundle entry ID of 1st code object. This is not NUL terminated. See {ref}`clang-bundle-entry-id`. |
-| ...                                 |         |                                   | |
-| Nth Bundle Entry Code Object Offset | integer | 8                                 | |
-| Nth Bundle Entry Code Object Size   | integer | 8                                 | |
-| Nth Bundle Entry ID Length          | integer | 8                                 | |
-| Nth Bundle Entry ID                 | string  | 1st Bundle Entry ID Length        | |
-| 1st Bundle Entry Code Object        | bytes   | 1st Bundle Entry Code Object Size | |
-| ...                                 |         |                                   | |
-| Nth Bundle Entry Code Object        | bytes   | Nth Bundle Entry Code Object Size | |
-```
+* - Field
+  - Type
+  - Size in Bytes
+  - Description
+* - Magic String
+  - string
+  - 24
+  - `__CLANG_OFFLOAD_BUNDLE__`
+* - Number Of Bundle Entries
+  - integer
+  - 8
+  - Number of bundle entries.
+* - 1st Bundle Entry Code Object Offset
+  - integer
+  - 8
+  - Byte offset from beginning of bundled code object to 1st code object.
+* - 1st Bundle Entry Code Object Size
+  - integer
+  - 8
+  - Byte size of 1st code object.
+* - 1st Bundle Entry ID Length
+  - integer
+  - 8
+  - Character length of bundle entry ID of 1st code object.
+* - 1st Bundle Entry ID
+  - string
+  - 1st Bundle Entry ID Length
+  - Bundle entry ID of 1st code object. This is not NUL terminated. See
+    {ref}`clang-bundle-entry-id`.
+* - ...
+  -
+  -
+  -
+* - Nth Bundle Entry Code Object Offset
+  - integer
+  - 8
+  -
+* - Nth Bundle Entry Code Object Size
+  - integer
+  - 8
+  -
+* - Nth Bundle Entry ID Length
+  - integer
+  - 8
+  -
+* - Nth Bundle Entry ID
+  - string
+  - 1st Bundle Entry ID Length
+  -
+* - 1st Bundle Entry Code Object
+  - bytes
+  - 1st Bundle Entry Code Object Size
+  -
+* - ...
+  -
+  -
+  -
+* - Nth Bundle Entry Code Object
+  - bytes
+  - Nth Bundle Entry Code Object Size
+  -
+:::
 
 (clang-bundle-entry-id)=
 
@@ -198,16 +244,33 @@ Where:
 : The runtime responsible for managing the bundled entry code object. See
   {ref}`clang-offload-kind-table`.
 
-```{table} Bundled Code Object Offload Kind
+:::{list-table} Bundled Code Object Offload Kind
 :name: clang-offload-kind-table
+:header-rows: 1
 
-| Offload Kind | Description |
-| ------------ | ----------- |
-| host         | Host code object. `clang-offload-bundler` always includes this entry as the first bundled code object entry. For an embedded bundled code object, this entry is not used by the runtime and so is generally an empty code object. |
-| hip          | Offload code object for the HIP language. Used for all HIP language offload code objects when `clang-offload-bundler` is used to bundle code objects as intermediate steps of the tool chain. Also used for AMD GPU code objects before ABI version V4 when `clang-offload-bundler` is used to create a *fat binary* to be loaded by the HIP runtime. The fat binary can be loaded directly from a file, or be embedded in the host code object as a data section with the name `.hip_fatbin`. |
-| hipv4        | Offload code object for the HIP language. Used for AMD GPU code objects with at least ABI version V4 and above when `clang-offload-bundler` is used to create a *fat binary* to be loaded by the HIP runtime. The fat binary can be loaded directly from a file, or be embedded in the host code object as a data section with the name `.hip_fatbin`. |
-| openmp       | Offload code object for the OpenMP language extension. |
-```
+* - Offload Kind
+  - Description
+* - host
+  - Host code object. `clang-offload-bundler` always includes this entry as the
+    first bundled code object entry. For an embedded bundled code object, this
+    entry is not used by the runtime and so is generally an empty code object.
+* - hip
+  - Offload code object for the HIP language. Used for all HIP language offload
+    code objects when the `clang-offload-bundler` is used to bundle code objects
+    as intermediate steps of the tool chain. Also used for AMD GPU code objects
+    before ABI version V4 when the `clang-offload-bundler` is used to create a
+    *fat binary* to be loaded by the HIP runtime. The fat binary can be loaded
+    directly from a file, or be embedded in the host code object as a data
+    section with the name `.hip_fatbin`.
+* - hipv4
+  - Offload code object for the HIP language. Used for AMD GPU code objects with
+    at least ABI version V4 and above when the `clang-offload-bundler` is used
+    to create a *fat binary* to be loaded by the HIP runtime. The fat binary can
+    be loaded directly from a file, or be embedded in the host code object as a
+    data section with the name `.hip_fatbin`.
+* - openmp
+  - Offload code object for the OpenMP language extension.
+:::
 
 Note: The distinction between the `hip` and `hipv4` offload kinds is historically based.
 Originally, these designations might have indicated different versions of the
@@ -345,7 +408,10 @@ Target-specific information is available for the following:
 
 *AMD GPU*
 
-: AMD GPU supports target ID and target features. See [User Guide for AMDGPU Backend](https://llvm.org/docs/AMDGPUUsage.html) which defines the [processors](https://llvm.org/docs/AMDGPUUsage.html#amdgpu-processors) and [target
+: AMD GPU supports target ID and target features. See [User Guide for AMDGPU
+  Backend](https://llvm.org/docs/AMDGPUUsage.html) which defines the
+  [processors](https://llvm.org/docs/AMDGPUUsage.html#amdgpu-processors) and
+  [target
   features](https://llvm.org/docs/AMDGPUUsage.html#amdgpu-target-features)
   supported.
 
@@ -475,19 +541,36 @@ bundle, leveraging inherent redundancies within the bundle entries. Use the
 
 The compressed offload bundle begins with a header followed by the compressed binary data:
 
-- **Magic Number (4 bytes)**:
-  : This is a unique identifier to distinguish compressed offload bundles. The value is the string 'CCOB' (Compressed Clang Offload Bundle).
-- **Version Number (16-bit unsigned int)**:
-  : This denotes the version of the compressed offload bundle format. The current version is `3`.
-- **Compression Method (16-bit unsigned int)**:
-  : This field indicates the compression method used. The value corresponds to either `zlib` or `zstd`, represented as a 16-bit unsigned integer cast from the LLVM compression enumeration.
-- **Total File Size (unsigned int, 32-bit in v2, 64-bit in v3)**:
-  : This is the total size (in bytes) of the file, including the header. Available in version 2 and above.
-- **Uncompressed Binary Size (unsigned int, 32-bit in v2, 64-bit in v3)**:
-  : This is the size (in bytes) of the binary data before it was compressed.
-- **Hash (64-bit unsigned int)**:
-  : This is a 64-bit truncated MD5 hash of the uncompressed binary data. It serves for verification and caching purposes.
-- **Compressed Data**:
-  : The actual compressed binary data follows the header. Its size can be inferred from the total size of the file minus the header size.
+**Magic Number (4 bytes)**:
 
-    \> **Note**: Version 3 is now the default format. For backward compatibility with older HIP runtimes that support version 2 only, set the environment variable `COMPRESSED_BUNDLE_FORMAT_VERSION=2`.
+: This is a unique identifier to distinguish compressed offload bundles. The
+  value is the string 'CCOB' (Compressed Clang Offload Bundle).
+
+**Version Number (16-bit unsigned int)**:
+: This denotes the version of the compressed offload bundle format. The current
+  version is `3`.
+
+**Compression Method (16-bit unsigned int)**:
+: This field indicates the compression method used. The value corresponds to
+  either `zlib` or `zstd`, represented as a 16-bit unsigned integer cast from
+  the LLVM compression enumeration.
+
+**Total File Size (unsigned int, 32-bit in v2, 64-bit in v3)**:
+: This is the total size (in bytes) of the file, including the header.
+  Available in version 2 and above.
+
+**Uncompressed Binary Size (unsigned int, 32-bit in v2, 64-bit in v3)**:
+: This is the size (in bytes) of the binary data before it was compressed.
+
+**Hash (64-bit unsigned int)**:
+: This is a 64-bit truncated MD5 hash of the uncompressed binary data. It
+  serves for verification and caching purposes.
+
+**Compressed Data**:
+: The actual compressed binary data follows the header. Its size can be
+  inferred from the total size of the file minus the header size.
+
+:::{note} Version 3 is now the default format. For backward compatibility
+with older HIP runtimes that support version 2 only, set the environment
+variable `COMPRESSED_BUNDLE_FORMAT_VERSION=2`.
+:::

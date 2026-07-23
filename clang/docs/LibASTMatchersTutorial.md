@@ -453,12 +453,11 @@ loop's AST. At some point, we will need to make changes to the input
 source code. Next, we'll work on using the nodes we bound in the
 previous step.
 
-The `MatchFinder::run()` callback takes a
-`MatchFinder::MatchResult&` as its parameter. We're most interested in
-its `Context` and `Nodes` members. Clang uses the `ASTContext`
-class to represent contextual information about the AST, as the name
-implies, though the most functionally important detail is that several
-operations require an `ASTContext*` parameter. More immediately useful
+The `MatchFinder::run()` callback takes a `MatchFinder::MatchResult&` as its
+parameter. We're most interested in its `Context` and `Nodes` members. Clang
+uses the `ASTContext` class to represent contextual information about the AST,
+as the name implies, though the most functionally important detail is that
+several operations require an `ASTContext*` parameter. More immediately useful
 is the set of matched nodes, and how we retrieve them.
 
 Since we bind three variables (identified by ConditionVarName,
@@ -547,12 +546,10 @@ static bool areSameExpr(ASTContext *Context, const Expr *First,
 }
 ```
 
-This code relies on the comparison between two
-`llvm::FoldingSetNodeIDs`. As the documentation for
-`Stmt::Profile()` indicates, the `Profile()` member function builds
-a description of a node in the AST, based on its properties, along with
-those of its children. `FoldingSetNodeID` then serves as a hash we can
-use to compare expressions. We will need `areSameExpr` later. Before
-you run the new code on the additional loops added to
-test-files/simple.cpp, try to figure out which ones will be considered
-potentially convertible.
+This code relies on the comparison between two `llvm::FoldingSetNodeIDs`. As
+the documentation for `Stmt::Profile()` indicates, the `Profile()` member
+function builds a description of a node in the AST, based on its properties,
+along with those of its children. `FoldingSetNodeID` then serves as a hash we
+can use to compare expressions. We will need `areSameExpr` later. Before you
+run the new code on the additional loops added to test-files/simple.cpp, try to
+figure out which ones will be considered potentially convertible.

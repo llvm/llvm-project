@@ -353,9 +353,9 @@ Class:
 Description:
 
 : This is a formatter which represents the argument number as an ordinal: the
-  value `1` becomes `1st`, `3` becomes `3rd`, and so on. Values less
-  than `1` are not supported. This formatter is currently hard-coded to use
-  English ordinals.
+  value `1` becomes `1st`, `3` becomes `3rd`, and so on. Values less than `1`
+  are not supported. This formatter is currently hard-coded to use English
+  ordinals.
 
 **"human" format**
 
@@ -434,9 +434,9 @@ Description:
 
 : This formatter takes two `QualType`s and attempts to print a template
   difference between the two. If tree printing is off, the text inside the
-  braces before the pipe is printed, with the formatted text replacing the \$.
-  If tree printing is on, the text after the pipe is printed and a type tree is
-  printed after the diagnostic message.
+  braces before the pipe is printed, with the formatted text replacing the
+  `$`. If tree printing is on, the text after the pipe is printed and a type
+  tree is printed after the diagnostic message.
 
 **"sub" format**
 
@@ -1548,10 +1548,9 @@ a `PointerType`, we can return that; otherwise, we have to dig through the
 typedefs to find the pointer type. For example, if the subexpression had type
 "`foo*`", we could return that type as the result. If the subexpression had
 type "`bar`", we want to return "`foo*`" (note that we do *not* want
-"`int*`"). In order to provide all of this, `Type` has a
-`getAsPointerType()` method that checks whether the type is structurally a
-`PointerType` and, if so, returns the best one. If not, it returns a null
-pointer.
+"`int*`"). In order to provide all of this, `Type` has a `getAsPointerType()`
+method that checks whether the type is structurally a `PointerType` and, if so,
+returns the best one. If not, it returns a null pointer.
 
 This structure is somewhat mystical, but after meditating on it, it will make
 sense to you :).
@@ -1681,11 +1680,10 @@ what kind of name the instance will store. Normal identifiers
 implicitly converted to `DeclarationNames`. Names for C++ constructors,
 destructors, conversion functions, and overloaded operators can be retrieved
 from the `DeclarationNameTable`, an instance of which is available as
-`ASTContext::DeclarationNames`. The member functions
-`getCXXConstructorName`, `getCXXDestructorName`,
-`getCXXConversionFunctionName`, and `getCXXOperatorName`, respectively,
-return `DeclarationName` instances for the four kinds of C++ special function
-names.
+`ASTContext::DeclarationNames`. The member functions `getCXXConstructorName`,
+`getCXXDestructorName`, `getCXXConversionFunctionName`, and
+`getCXXOperatorName`, respectively, return `DeclarationName` instances for the
+four kinds of C++ special function names.
 
 (declcontext)=
 
@@ -1776,11 +1774,10 @@ void g();
 void g(int);
 ```
 
-the `DeclContext::lookup` operation will return a
-`DeclContext::lookup_result` that contains a range of iterators over
-declarations of "`g`". Clients that perform semantic analysis on a program
-that is not concerned with the actual source code will primarily use this
-semantics-centric view.
+the `DeclContext::lookup` operation will return a `DeclContext::lookup_result`
+that contains a range of iterators over declarations of "`g`". Clients that
+perform semantic analysis on a program that is not concerned with the actual
+source code will primarily use this semantics-centric view.
 
 (lexicalandsemanticcontexts)=
 
@@ -2115,7 +2112,8 @@ void recoveryExpr(int abc) {
 The `ASTImporter` class imports nodes of an `ASTContext` into another
 `ASTContext`. Please refer to the document {doc}`ASTImporter: Merging Clang
 ASTs <LibASTImporter>` for an introduction. And please read through the
-high-level [description of the import algorithm](LibASTImporter.md#algorithm-of-the-import), this is essential for
+high-level [description of the import
+algorithm](LibASTImporter.md#algorithm-of-the-import), this is essential for
 understanding further implementation details of the importer.
 
 (templated)=
@@ -2171,9 +2169,9 @@ ASTImporter, e.g., the `clang::Sema` class uses it also.
 The equivalence of nodes may depend on the equivalency of other pairs of nodes.
 Thus, the check is implemented as a parallel graph traversal. We traverse
 through the nodes of both graphs at the same time. The actual implementation is
-similar to breadth-first-search. Let's say we start the traverse with the \<A,B>
-pair of nodes. Whenever the traversal reaches a pair \<X,Y> then the following
-statements are true:
+similar to breadth-first-search. Let's say we start the traverse with the
+`<A,B>` pair of nodes. Whenever the traversal reaches a pair `<X,Y>` then the
+following statements are true:
 
 - A and X are nodes from the same ASTContext.
 
@@ -2727,19 +2725,13 @@ statement of block B4 (i.e., B4.2). In this manner, conditions for
 control-flow (which also includes conditions for loops and switch statements)
 are hoisted into the actual basic block.
 
-% Implicit Control-Flow
+#### Implicit Control-Flow
 
-% ^^^^^^^^^^^^^^^^^^^^^
-
-% A key design principle of the ``CFG`` class was to not require any
-
-% transformations to the AST in order to represent control-flow.  Thus the
-
-% ``CFG`` does not perform any "lowering" of the statements in an AST: loops
-
-% are not transformed into guarded gotos, short-circuit operations are not
-
-% converted to a set of if-statements, and so on.
+A key design principle of the `CFG` class was to not require any
+transformations to the AST in order to represent control-flow.  Thus the `CFG`
+does not perform any "lowering" of the statements in an AST: loops are not
+transformed into guarded gotos, short-circuit operations are not converted to a
+set of if-statements, and so on.
 
 ### Constant Folding in the Clang AST
 
@@ -2997,17 +2989,44 @@ may have a keyword spelling, as well as a C++11 spelling and a GNU spelling. An
 empty spelling list is also permissible and may be useful for attributes which
 are created implicitly. The following spellings are accepted:
 
-| Spelling         | Description                                                                                                                                                                                                                                                                             |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GNU`            | Spelled with a GNU-style `__attribute__((attr))` syntax and placement.                                                                                                                                                                                                                  |
-| `CXX11`          | Spelled with a C++-style `[[attr]]` syntax with an optional vendor-specific namespace.                                                                                                                                                                                                  |
-| `C23`            | Spelled with a C-style `[[attr]]` syntax with an optional vendor-specific namespace.                                                                                                                                                                                                    |
-| `Declspec`       | Spelled with a Microsoft-style `__declspec(attr)` syntax.                                                                                                                                                                                                                               |
-| `CustomKeyword`  | The attribute is spelled as a keyword, and requires custom parsing.                                                                                                                                                                                                                     |
-| `RegularKeyword` | The attribute is spelled as a keyword. It can be used in exactly the places that the standard `[[attr]]` syntax can be used, and appertains to exactly the same thing that a standard attribute would appertain to. Lexing and parsing of the keyword are handled automatically.        |
-| `GCC`            | Specifies two or three spellings: the first is a GNU-style spelling, the second is a C++-style spelling with the `gnu` namespace, and the third is an optional C-style spelling with the `gnu` namespace. Attributes should only specify this spelling for attributes supported by GCC. |
-| `Clang`          | Specifies two or three spellings: the first is a GNU-style spelling, the second is a C++-style spelling with the `clang` namespace, and the third is an optional C-style spelling with the `clang` namespace. By default, a C-style spelling is provided.                               |
-| `Pragma`         | The attribute is spelled as a `#pragma`, and requires custom processing within the preprocessor. If the attribute is meant to be used by Clang, it should set the namespace to `"clang"`. Note that this spelling is not used for declaration attributes.                               |
+:::{list-table}
+:header-rows: 1
+
+* - Spelling
+  - Description
+* - `GNU`
+  - Spelled with a GNU-style `__attribute__((attr))` syntax and placement.
+* - `CXX11`
+  - Spelled with a C++-style `[[attr]]` syntax with an optional vendor-specific
+    namespace.
+* - `C23`
+  - Spelled with a C-style `[[attr]]` syntax with an optional vendor-specific
+    namespace.
+* - `Declspec`
+  - Spelled with a Microsoft-style `__declspec(attr)` syntax.
+* - `CustomKeyword`
+  - The attribute is spelled as a keyword, and requires custom parsing.
+* - `RegularKeyword`
+  - The attribute is spelled as a keyword. It can be used in exactly the places
+    that the standard `[[attr]]` syntax can be used, and appertains to exactly
+    the same thing that a standard attribute would appertain to. Lexing and
+    parsing of the keyword are handled automatically.
+* - `GCC`
+  - Specifies two or three spellings: the first is a GNU-style spelling, the
+    second is a C++-style spelling with the `gnu` namespace, and the third is an
+    optional C-style spelling with the `gnu` namespace. Attributes should only
+    specify this spelling for attributes supported by GCC.
+* - `Clang`
+  - Specifies two or three spellings: the first is a GNU-style spelling, the
+    second is a C++-style spelling with the `clang` namespace, and the third is
+    an optional C-style spelling with the `clang` namespace. By default, a
+    C-style spelling is provided.
+* - `Pragma`
+  - The attribute is spelled as a `#pragma`, and requires custom processing
+    within the preprocessor. If the attribute is meant to be used by Clang, it
+    should set the namespace to `"clang"`. Note that this spelling is not used
+    for declaration attributes.
+:::
 
 The C++ standard specifies that “any [non-standard attribute] that is not
 recognized by the implementation is ignored” (`[dcl.attr.grammar]`).
@@ -3781,7 +3800,7 @@ in their own file. Typical reasons for that include:
 - **Test is checking AST dump or LLVM IR.** We don't yet know how
   to concatenate FileCheck directives from multiple tests into a single file
   without avoiding test interference.
-- **Test is not compatible with \`\`-verify-directives\`\`.** For instance, some
+- **Test is not compatible with `-verify-directives`.** For instance, some
   tests can't be rewritten to prevent instantiations at the end of TU.
 - **Test needs C++20 modules.** Such tests require special RUN lines to compile
   modules in the right order.

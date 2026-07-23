@@ -24,17 +24,24 @@ Clang-Repl data flow can be divided into roughly 8 phases:
 
 1. Clang-Repl controls the input infrastructure by an interactive prompt or by
    an interface allowing the incremental processing of input.
+
 2. Then it sends the input to the underlying incremental facilities in Clang
    infrastructure.
+
 3. Clang compiles the input into an AST representation.
+
 4. When required the AST can be further transformed in order to attach specific
    behavior.
+
 5. The AST representation is then lowered to LLVM IR.
+
 6. The LLVM IR is the input format for LLVM’s JIT compilation infrastructure.
    The tool will instruct the JIT to run specified functions, translating them
    into machine code targeting the underlying device architecture (eg. Intel
    x86 or NVPTX).
+
 7. The LLVM JIT lowers the LLVM IR to machine code.
+
 8. The machine code is then executed.
 
 ## Build Instructions:
@@ -242,8 +249,8 @@ compiled program. This result can be stored in an object of type **Value**.
 The synthesizer chooses which expression to synthesize, and then it replaces
 the original expression with the synthesized expression. Depending on the
 expression type, it may choose to save an object (`LastValue`) of type 'value'
-while allocating memory to it (`SetValueWithAlloc()`), or not (
-`SetValueNoAlloc()`).
+while allocating memory to it (`SetValueWithAlloc()`), or not
+(`SetValueNoAlloc()`).
 
 ```{graphviz}
 :name: valuesynthesis

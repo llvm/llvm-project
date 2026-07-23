@@ -47,9 +47,11 @@ worthwhile somewhere between 100 and 500 files.
 Patterns in Transformer are expressed with {doc}`clang's AST matchers <LibASTMatchers>`.
 Matchers are a language of combinators for describing portions of a clang
 Abstract Syntax Tree (AST). Since clang's AST includes complete type information
-(within the limits of single [Translation Unit (TU)],
+(within the limits of single [Translation Unit (TU)]),
 these patterns can even encode rich constraints on the type properties of AST
 nodes.
+
+[Translation Unit (TU)]: https://en.wikipedia.org/wiki/Translation_unit_(programming)
 
 We assume a familiarity with the clang AST and the corresponding AST matchers
 for the purpose of this tutorial. Users who are unfamiliar with either are
@@ -376,5 +378,3 @@ introductions on clang's site:
 [^f1]: Technically, it binds it to the string "str", to which our
     variable `s` is bound. But, the choice of that id string is
     irrelevant, so elide the difference.
-
-[translation unit (tu)]: https://en.wikipedia.org/wiki/Translation_unit_(programming)

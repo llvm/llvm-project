@@ -42,8 +42,6 @@ matcher you are interested in. Note that there will always be matchers missing
 for some part of the AST. See the section about {ref}`how to write your own
 AST matchers <astmatchers-writing>` later in this document.
 
-% FIXME: why is it linking back to the same section?!
-
 The precondition to using the matchers is to understand how the AST for what you
 want to match looks like. The
 {doc}`Introduction to the Clang AST <IntroductionToTheClangAST>` teaches you
