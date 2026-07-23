@@ -813,6 +813,24 @@ struct WasmReturnOpConversion : OpConversionPattern<ReturnOp> {
   }
 };
 
+struct WasmSelectOpConversion : OpConversionPattern<SelectOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SelectOp selectOp, SelectOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = selectOp.getLoc();
+    auto zero =
+        arith::ConstantOp::create(rewriter, loc, rewriter.getI32IntegerAttr(0));
+    auto flag = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ne,
+                                      adaptor.getCondition(), zero.getResult());
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(selectOp, flag.getResult(),
+                                                 adaptor.getTrueValue(),
+                                                 adaptor.getFalseValue());
+    return success();
+  }
+};
+
 struct RaiseWasmMLIRPass : public impl::RaiseWasmMLIRBase<RaiseWasmMLIRPass> {
   void runOnOperation() override {
     ConversionTarget target{getContext()};
@@ -924,6 +942,7 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
            WasmReturnOpConversion,
            WasmRotlOpConversion,
            WasmRotrOpConversion,
+           WasmSelectOpConversion,
            WasmShLOpConversion,
            WasmShRSOpConversion,
            WasmShRUOpConversion,
