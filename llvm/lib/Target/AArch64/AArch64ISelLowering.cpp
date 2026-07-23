@@ -31848,11 +31848,9 @@ bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
   return isInt<9>(CstOffset->getSExtValue());
 }
 
-bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
-                                                   SDValue &Base,
-                                                   SDValue &Offset,
-                                                   SelectionDAG &DAG,
-                                                   ISD::MemIndexedMode AM) const {
+bool AArch64TargetLowering::getIndexedAddressParts(
+    SDNode *N, SDNode *Op, SDValue &Base, SDValue &Offset, SelectionDAG &DAG,
+    ISD::MemIndexedMode AM) const {
   if (Op->getOpcode() != ISD::ADD && Op->getOpcode() != ISD::SUB)
     return false;
 
@@ -31934,7 +31932,8 @@ bool AArch64TargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
   if (IsVolatile)
     return false;
 
-  if (!getIndexedAddressParts(N, Ptr.getNode(), Base, Offset, DAG, ISD::PRE_INC))
+  if (!getIndexedAddressParts(N, Ptr.getNode(), Base, Offset, DAG,
+                              ISD::PRE_INC))
     return false;
   AM = ISD::PRE_INC;
   return true;
