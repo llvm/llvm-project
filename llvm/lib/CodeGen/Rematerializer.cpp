@@ -287,7 +287,7 @@ void Rematerializer::deleteReg(RegisterIdx RootIdx) {
         shrinkToUses(DepRegIdx);
       }
     }
-    for (const auto [Reg, Mask] : getUnrematableDeps(DeletedRegIdx)) {
+    for (const auto &[Reg, Mask] : getUnrematableDeps(DeletedRegIdx)) {
       if (ShrinkUnrematRegs.insert(Reg).second)
         shrinkToUsesUnremat(Reg);
     }
