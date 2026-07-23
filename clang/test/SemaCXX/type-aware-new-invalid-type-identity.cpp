@@ -7,7 +7,6 @@
 
 namespace std {
 #if !defined(INVALID_TYPE_IDENTITY_VERSION)
-  // expected-no-diagnostics
   template <class T> struct type_identity {
   };
   #define TYPE_IDENTITY(T) std::type_identity<T>
@@ -57,3 +56,17 @@ void f() {
   TestType *t = new TestType;
   delete t;
 }
+
+#if !defined(INVALID_TYPE_IDENTITY_VERSION)
+struct Bad {};
+template <> struct std::type_identity<Bad>; // #incomplete_specialization
+
+// This is a pure implementation test to ensure correct caching behavior if
+// constructing the type_identity argument fails.
+void failedTypeIdentitySpecialization() {
+  Bad *a = new Bad;
+  // expected-error@-1 {{incomplete type 'std::type_identity<Bad>' where a complete type is required}}
+  // expected-note@#incomplete_specialization {{forward declaration of 'std::type_identity<Bad>'}}
+  Bad *b = new Bad;
+}
+#endif

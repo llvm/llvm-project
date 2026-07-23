@@ -8651,14 +8651,52 @@ public:
   bool CheckAllocatedType(QualType AllocType, SourceLocation Loc,
                           SourceRange R);
 
+  struct ImplicitAllocationArguments {
+    friend Sema;
+
+    ArrayRef<Expr *> getImplicitArguments() const {
+      return ArrayRef(ImplicitArguments, ArgumentCount);
+    }
+
+    Expr *getAlignmentArgument() const {
+      if (PassAlignment == AlignedAllocationMode::Yes)
+        return ImplicitArguments[ArgumentCount - 1];
+      return nullptr;
+    }
+
+    void updateLookupForMSVCCompatibility(Sema &, LookupResult &);
+    TypeAwareAllocationMode PassTypeIdentity;
+    AlignedAllocationMode PassAlignment;
+
+  private:
+    ImplicitAllocationArguments(Sema &SemaRef, Expr *TypeIdentityArg,
+                                Expr *SizeArg, Expr *AlignArg,
+                                bool IsMSVCCompatibilityFallback);
+
+    // Type-identity, size, and alignment
+    static constexpr unsigned MaxImplicitArguments = 3;
+    bool IsMSVCCompatibilityFallback;
+
+    unsigned ArgumentCount;
+    Expr *ImplicitArguments[MaxImplicitArguments];
+  };
+
+  struct AllocationArgumentSet {
+    bool TypeAwareViable;
+    SmallVector<ImplicitAllocationArguments, 3> Candidates;
+  };
+
+private:
+  struct ResolvedAllocation;
+
+public:
   /// Finds the overloads of operator new and delete that are appropriate
   /// for the allocation.
-  bool FindAllocationFunctions(
+  std::optional<ResolvedAllocation> FindAllocationFunctions(
       SourceLocation StartLoc, SourceRange Range,
       AllocationFunctionScope NewScope, AllocationFunctionScope DeleteScope,
-      QualType AllocType, bool IsArray, ImplicitAllocationParameters &IAP,
-      MultiExprArg PlaceArgs, FunctionDecl *&OperatorNew,
-      FunctionDecl *&OperatorDelete, bool Diagnose = true);
+      QualType AllocType, bool IsArray, const ImplicitAllocationParameters &IAP,
+      MultiExprArg PlaceArgs, bool Diagnose = true);
 
   /// DeclareGlobalNewDelete - Declare the global forms of operator new and
   /// delete. These are:
@@ -8961,6 +8999,25 @@ private:
   void AnalyzeDeleteExprMismatch(const CXXDeleteExpr *DE);
   void AnalyzeDeleteExprMismatch(FieldDecl *Field, SourceLocation DeleteLoc,
                                  bool DeleteWasArrayForm);
+
+  struct ResolvedAllocation {
+    FunctionDecl *OperatorNew;
+    FunctionDecl *OperatorDelete;
+    ImplicitAllocationParameters IAP;
+    // type-identity, size, alignment, nothrow or other single placement
+    // parameter
+    SmallVector<Expr *, 4> Arguments;
+  };
+
+  std::optional<AllocationArgumentSet>
+  resolveAllocationArguments(LookupResult &R,
+                             const ImplicitAllocationParameters &,
+                             ArrayRef<Expr *> PlacementArguments);
+  bool getTypeIdentityArgument(QualType Type, SourceLocation, Expr **FoundExpr);
+
+  Expr *AllocationSizeExpr = nullptr;
+  Expr *AllocationAlignmentExpr = nullptr;
+  llvm::DenseMap<QualType, Expr *> AllocationTypeIdentityArguments;
 
   ///@}
 
@@ -10371,7 +10428,7 @@ public:
   void DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
                                     DeclarationName Name,
                                     OverloadCandidateSet &CandidateSet,
-                                    FunctionDecl *Fn, MultiExprArg Args,
+                                    FunctionDecl *Fn, ArrayRef<Expr *> Args,
                                     bool IsMember = false);
 
   ExprResult InitializeExplicitObjectArgument(Sema &S, Expr *Obj,

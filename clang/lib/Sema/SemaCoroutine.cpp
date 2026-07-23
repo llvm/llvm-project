@@ -1478,13 +1478,16 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     IAP = ImplicitAllocationParameters(
         alignedAllocationModeFromBool(ShouldUseAlignedAlloc));
 
-    FunctionDecl *UnusedResult = nullptr;
-    S.FindAllocationFunctions(
+    auto FoundAllocations = S.FindAllocationFunctions(
         Loc, SourceRange(), NewScope,
         /*DeleteScope=*/AllocationFunctionScope::Both, PromiseType,
         /*isArray=*/false, IAP,
-        WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs, OperatorNew,
-        UnusedResult, /*Diagnose=*/false);
+        WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs,
+        /*Diagnose=*/false);
+    if (FoundAllocations) {
+      IAP = FoundAllocations->IAP;
+      OperatorNew = FoundAllocations->OperatorNew;
+    }
     assert(!OperatorNew || !OperatorNew->isTypeAwareOperatorNewOrDelete());
   };
 
