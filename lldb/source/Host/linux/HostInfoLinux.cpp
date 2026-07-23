@@ -147,6 +147,12 @@ void HostInfoLinux::ComputeHostArchitectureSupport(ArchSpec &arch_32,
   if (arch_32.IsValid()) {
     if (arch_32.GetTriple().getVendor() == llvm::Triple::UnknownVendor)
       arch_32.GetTriple().setVendorName(llvm::StringRef());
+    // For Linux/AArch64, the environment components of triples for 64- and
+    // 32-bit targets do not match, for example, "aarch64--linux-gnu" and
+    // "arm--linux-eabihf". Clear the borrowed environment.
+    if (arch_64.IsValid() && arch_64.GetTriple().isAArch64() &&
+        arch_64.GetTriple().getEnvironment() == llvm::Triple::GNU)
+      arch_32.GetTriple().setEnvironment(llvm::Triple::UnknownEnvironment);
   }
   if (arch_64.IsValid()) {
     if (arch_64.GetTriple().getVendor() == llvm::Triple::UnknownVendor)
