@@ -15,7 +15,7 @@
 // UNKNOWN: no analysis registered for 'AnalysisName(NoSuchAnalysis)'
 
 // ============================================================================
-// Success: Analyese might not add summaries in every run.
+// Success: Analyses might not add summaries in every run.
 // Valid analysis name but LUSummary lacks entity data for it is not an error.
 // ============================================================================
 
