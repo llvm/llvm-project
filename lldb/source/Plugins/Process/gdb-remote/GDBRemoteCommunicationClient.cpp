@@ -1179,7 +1179,7 @@ bool GDBRemoteCommunicationClient::GetGDBServerVersion() {
           } else if (name == "version") {
             llvm::StringRef major, minor;
             std::tie(major, minor) = value.split('.');
-            if (!major.getAsInteger(0, m_gdb_server_version))
+            if (!major.getAsInteger(10, m_gdb_server_version))
               success = true;
           }
         }
@@ -1347,11 +1347,11 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
         while (response.GetNameColonValue(name, value)) {
           if (name == "cputype") {
             // exception type in big endian hex
-            if (!value.getAsInteger(0, cpu))
+            if (!value.getAsInteger(10, cpu))
               ++num_keys_decoded;
           } else if (name == "cpusubtype") {
             // exception count in big endian hex
-            if (!value.getAsInteger(0, sub))
+            if (!value.getAsInteger(10, sub))
               ++num_keys_decoded;
           } else if (name == "arch") {
             arch_name = std::string(value);
@@ -1391,17 +1391,17 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             if (byte_order != eByteOrderInvalid)
               ++num_keys_decoded;
           } else if (name == "ptrsize") {
-            if (!value.getAsInteger(0, pointer_byte_size))
+            if (!value.getAsInteger(10, pointer_byte_size))
               ++num_keys_decoded;
           } else if (name == "addressing_bits") {
-            if (!value.getAsInteger(0, m_low_mem_addressing_bits)) {
+            if (!value.getAsInteger(10, m_low_mem_addressing_bits)) {
               ++num_keys_decoded;
             }
           } else if (name == "high_mem_addressing_bits") {
-            if (!value.getAsInteger(0, m_high_mem_addressing_bits))
+            if (!value.getAsInteger(10, m_high_mem_addressing_bits))
               ++num_keys_decoded;
           } else if (name == "low_mem_addressing_bits") {
-            if (!value.getAsInteger(0, m_low_mem_addressing_bits))
+            if (!value.getAsInteger(10, m_low_mem_addressing_bits))
               ++num_keys_decoded;
           } else if (name == "os_version" ||
                      name == "version") // Older debugserver binaries used
@@ -1423,14 +1423,14 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
               ++num_keys_decoded;
           } else if (name == "default_packet_timeout") {
             uint32_t timeout_seconds;
-            if (!value.getAsInteger(0, timeout_seconds)) {
+            if (!value.getAsInteger(10, timeout_seconds)) {
               m_default_packet_timeout = seconds(timeout_seconds);
               SetPacketTimeout(m_default_packet_timeout);
               ++num_keys_decoded;
             }
           } else if (name == "vm-page-size") {
             int page_size;
-            if (!value.getAsInteger(0, page_size)) {
+            if (!value.getAsInteger(10, page_size)) {
               m_target_vm_page_size = page_size;
               ++num_keys_decoded;
             }
@@ -2144,27 +2144,27 @@ bool GDBRemoteCommunicationClient::DecodeProcessInfoResponse(
     while (response.GetNameColonValue(name, value)) {
       if (name == "pid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        value.getAsInteger(0, pid);
+        value.getAsInteger(10, pid);
         process_info.SetProcessID(pid);
       } else if (name == "ppid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        value.getAsInteger(0, pid);
+        value.getAsInteger(10, pid);
         process_info.SetParentProcessID(pid);
       } else if (name == "uid") {
         uint32_t uid = UINT32_MAX;
-        value.getAsInteger(0, uid);
+        value.getAsInteger(10, uid);
         process_info.SetUserID(uid);
       } else if (name == "euid") {
         uint32_t uid = UINT32_MAX;
-        value.getAsInteger(0, uid);
+        value.getAsInteger(10, uid);
         process_info.SetEffectiveUserID(uid);
       } else if (name == "gid") {
         uint32_t gid = UINT32_MAX;
-        value.getAsInteger(0, gid);
+        value.getAsInteger(10, gid);
         process_info.SetGroupID(gid);
       } else if (name == "egid") {
         uint32_t gid = UINT32_MAX;
-        value.getAsInteger(0, gid);
+        value.getAsInteger(10, gid);
         process_info.SetEffectiveGroupID(gid);
       } else if (name == "triple") {
         StringExtractor extractor(value);
@@ -2199,9 +2199,9 @@ bool GDBRemoteCommunicationClient::DecodeProcessInfoResponse(
           is_arg0 = false;
         }
       } else if (name == "cputype") {
-        value.getAsInteger(0, cpu);
+        value.getAsInteger(10, cpu);
       } else if (name == "cpusubtype") {
-        value.getAsInteger(0, sub);
+        value.getAsInteger(10, sub);
       } else if (name == "vendor") {
         vendor = std::string(value);
       } else if (name == "ostype") {
@@ -2570,7 +2570,7 @@ bool GDBRemoteCommunicationClient::GetGroupName(uint32_t gid,
 static void MakeSpeedTestPacket(StreamString &packet, uint32_t send_size,
                                 uint32_t recv_size) {
   packet.Clear();
-  packet.Printf("qSpeedTest:response_size:%i;data:", recv_size);
+  packet.Printf("qSpeedTest:response_size:%x;data:", recv_size);
   uint32_t bytes_left = send_size;
   while (bytes_left > 0) {
     if (bytes_left >= 26) {
@@ -2772,9 +2772,9 @@ bool GDBRemoteCommunicationClient::LaunchGDBServer(
     llvm::StringRef value;
     while (response.GetNameColonValue(name, value)) {
       if (name == "port")
-        value.getAsInteger(0, port);
+        value.getAsInteger(10, port);
       else if (name == "pid")
-        value.getAsInteger(0, pid);
+        value.getAsInteger(10, pid);
       else if (name.compare("socket_name") == 0) {
         StringExtractor extractor(value);
         extractor.GetHexByteString(socket_name);

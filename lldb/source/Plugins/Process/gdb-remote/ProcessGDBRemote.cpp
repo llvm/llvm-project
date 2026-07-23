@@ -540,10 +540,10 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
           } else if (name == "alt-name") {
             reg_info.alt_name.SetString(value);
           } else if (name == "bitsize") {
-            if (!value.getAsInteger(0, reg_info.byte_size))
+            if (!value.getAsInteger(10, reg_info.byte_size))
               reg_info.byte_size /= CHAR_BIT;
           } else if (name == "offset") {
-            value.getAsInteger(0, reg_info.byte_offset);
+            value.getAsInteger(10, reg_info.byte_offset);
           } else if (name == "encoding") {
             const Encoding encoding = Args::StringToEncoding(value);
             if (encoding != eEncodingInvalid)
@@ -2515,7 +2515,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
                          .Default(eQueueKindUnknown);
         queue_vars_valid = queue_kind != eQueueKindUnknown;
       } else if (key.compare("qserialnum") == 0) {
-        if (!value.getAsInteger(0, queue_serial_number))
+        if (!value.getAsInteger(10, queue_serial_number))
           queue_vars_valid = true;
       } else if (key.compare("reason") == 0) {
         reason = std::string(value);
@@ -2541,7 +2541,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         std::tie(addr_str, bytes_str) = value.split('=');
         if (!addr_str.empty() && !bytes_str.empty()) {
           lldb::addr_t mem_cache_addr = LLDB_INVALID_ADDRESS;
-          if (!addr_str.getAsInteger(0, mem_cache_addr)) {
+          if (!addr_str.getAsInteger(16, mem_cache_addr)) {
             StringExtractor bytes(bytes_str);
             const size_t byte_size = bytes.GetBytesLeft() / 2;
             WritableDataBufferSP data_buffer_sp(
@@ -2594,17 +2594,17 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         description = std::string(ostr.GetString());
       } else if (key.compare("addressing_bits") == 0) {
         uint64_t addressing_bits;
-        if (!value.getAsInteger(0, addressing_bits)) {
+        if (!value.getAsInteger(10, addressing_bits)) {
           addressable_bits.SetAddressableBits(addressing_bits);
         }
       } else if (key.compare("low_mem_addressing_bits") == 0) {
         uint64_t addressing_bits;
-        if (!value.getAsInteger(0, addressing_bits)) {
+        if (!value.getAsInteger(10, addressing_bits)) {
           addressable_bits.SetLowmemAddressableBits(addressing_bits);
         }
       } else if (key.compare("high_mem_addressing_bits") == 0) {
         uint64_t addressing_bits;
-        if (!value.getAsInteger(0, addressing_bits)) {
+        if (!value.getAsInteger(10, addressing_bits)) {
           addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
       } else if (key == "added-binaries") {
@@ -6022,7 +6022,7 @@ std::string ProcessGDBRemote::HarmonizeThreadIdsForProfileData(
       if (profileDataExtractor.GetNameColonValue(usec_name, usec_value)) {
         if (usec_name == "thread_used_usec") {
           has_used_usec = true;
-          usec_value.getAsInteger(0, curr_used_usec);
+          usec_value.getAsInteger(10, curr_used_usec);
         } else {
           // We didn't find what we want, it is probably an older version. Bail
           // out.
