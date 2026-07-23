@@ -997,6 +997,44 @@ def _ssaf_no_extract_from_system_headers :
   HelpText<
     "Skip declarations in system headers during SSAF summary extraction">,
   MarshallingInfoNegativeFlag<SSAFOpts<"ExtractFromSystemHeaders">>;
+def _ssaf_source_transformation :
+  Joined<["--"], "ssaf-source-transformation=">,
+  MetaVarName<"<name>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Name of the SSAF source transformation to run. Exactly one transformation "
+    "per invocation.">,
+  MarshallingInfoString<SSAFOpts<"SourceTransformation">>;
+def _ssaf_global_scope_analysis_result :
+  Joined<["--"], "ssaf-global-scope-analysis-result=">,
+  MetaVarName<"<path>.<format>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Path to the WPASuite file containing the whole-program analysis result "
+    "consumed by the source transformation. The extension selects which file "
+    "format to use.">,
+  MarshallingInfoString<SSAFOpts<"GlobalScopeAnalysisResult">>;
+def _ssaf_src_edit_file :
+  Joined<["--"], "ssaf-src-edit-file=">,
+  MetaVarName<"<path>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Output file for the source edits produced by the source transformation. "
+    "The output is a YAML document compatible with "
+    "'clang-apply-replacements'.">,
+  MarshallingInfoString<SSAFOpts<"SrcEditFile">>;
+def _ssaf_transformation_report_file :
+  Joined<["--"], "ssaf-transformation-report-file=">,
+  MetaVarName<"<path>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Output file for the transformation report produced by the source "
+    "transformation. The output is a SARIF JSON document.">,
+  MarshallingInfoString<SSAFOpts<"TransformationReportFile">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
@@ -3421,6 +3459,11 @@ def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recogniz
   HelpText<"ClangIR: Enable Idiom Recognizer pass">,
   MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
 
+def clangir_enable_call_conv_lowering : Flag<["-"], "clangir-enable-call-conv-lowering">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"ClangIR: Enable calling-convention lowering pass (x86_64 only)">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIREnableCallConvLowering">>;
+
 def clangir_lib_opt_EQ : Joined<["-"], "clangir-lib-opt=">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>, Values<"all">,
   HelpText<"Enable C/C++ library based optimizations (with options)">,
@@ -4895,6 +4938,19 @@ def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>,
 def fwrapv_pointer : Flag<["-"], "fwrapv-pointer">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Treat pointer overflow as two's complement">;
+def fdefined_pointer_subtraction :
+  Flag<["-"], "fdefined-pointer-subtraction">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Define subtraction of pointers not aligned to object boundaries"
+  >,
+  DocBrief<
+    "When subtracting two pointers, do not assume that the byte difference is an "
+    "exact multiple of the pointee type size, thereby preventing such subtraction "
+    "from resulting in undefined behavior. Users should prefer casting pointers "
+    "to ``char *`` before subtracting them rather than relying on this flag."
+  >,
+  MarshallingInfoFlag<LangOpts<"StablePointerSubtraction">>;
 def fno_wrapv_pointer : Flag<["-"], "fno-wrapv-pointer">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, FlangOption]>;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>,
@@ -5928,10 +5984,18 @@ defm cumode : SimpleMFlag<"cumode",
   " execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
 defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
   " threadgroup split execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
-defm xnack : SimpleMFlag<"xnack", "Enable", "Disable",
-  " XNACK (AMDGPU only)", m_amdgpu_Features_Group>;
-defm sramecc : SimpleMFlag<"sramecc", "Enable", "Disable",
-  " SRAMECC (AMDGPU only)", m_amdgpu_Features_Group>;
+def mxnack : Flag<["-"], "mxnack">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable XNACK (AMDGPU only)">;
+def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable XNACK (AMDGPU only)">;
+def msramecc : Flag<["-"], "msramecc">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable SRAMECC (AMDGPU only)">;
+def mno_sramecc : Flag<["-"], "mno-sramecc">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable SRAMECC (AMDGPU only)">;
 defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
   "Specify wavefront size 64", "Specify wavefront size 32",
   " mode (AMDGPU only)">;
@@ -6744,6 +6808,7 @@ def target : Joined<["--"], "target=">, Flags<[NoXarchOption]>,
 def darwin_target_variant : Separate<["-"], "darwin-target-variant">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption]>,
   HelpText<"Generate code for an additional runtime variant of the deployment target">;
+def target_variant : Separate<["-"], "target-variant">, Alias<darwin_target_variant>;
 
 //===----------------------------------------------------------------------===//
 // Print CPU info options (clang, clang-cl, flang)
@@ -8570,8 +8635,6 @@ def ast_dump_all_EQ : Joined<["-"], "ast-dump-all=">,
 def ast_dump_decl_types : Flag<["-"], "ast-dump-decl-types">,
   HelpText<"Include declaration types in AST dumps">,
   MarshallingInfoFlag<FrontendOpts<"ASTDumpDeclTypes">>;
-def templight_dump : Flag<["-"], "templight-dump">,
-  HelpText<"Dump templight information to stdout">;
 def ast_dump_lookups : Flag<["-"], "ast-dump-lookups">,
   HelpText<"Build ASTs and then debug dump their name lookup tables">,
   MarshallingInfoFlag<FrontendOpts<"ASTDumpLookups">>;
@@ -9763,6 +9826,9 @@ def dxc_Zsb : DXCFlag<"Zsb">,
 def dxc_source_in_debug_module
     : DXCFlag<"Qsource_in_debug_module">,
       HelpText<"Embed source code into PDB debug module">;
+def dxc_Qstrip_debug
+    : DXCFlag<"Qstrip_debug">,
+      HelpText<"Strip debug information from shader container (specified with /Fo <file>)">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
@@ -9862,6 +9928,9 @@ def dxc_gis : DXCFlag<"Gis">,
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;
+def dxc_Qpdb_in_private : DXCFlag<"Qpdb_in_private">,
+                          Flags<[HelpHidden]>,
+                          HelpText<"Store PDB in private user data">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
 def metal : DXCFlag<"metal">, HelpText<"Generate Metal library">;

@@ -18,6 +18,7 @@ class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 class PredicatedScalarEvolution;
+class VPBuilder;
 } // namespace llvm
 
 namespace llvm {
@@ -64,6 +65,9 @@ bool isUniformAcrossVFsAndUFs(const VPValue *V);
 /// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
 bool isElementwise(const VPValue *V);
 
+/// Returns true if \p R produces scalar values for all VF lanes.
+bool doesGeneratePerAllLanes(const VPRecipeBase *R);
+
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
@@ -105,6 +109,16 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
   }
   return Intrinsic::not_intrinsic;
 }
+
+/// Return the instruction opcode for the recipe defining \p V or 0 for
+/// unsupported recipes and VPValues not defined by a recipe.
+unsigned getOpcode(const VPValue *V);
+
+/// Get the instruction opcode or intrinsic ID for the recipe defining \p V.
+/// Returns an optional pair, where the first element indicates whether it is an
+/// intrinsic ID.
+std::optional<std::pair<bool, unsigned>>
+getOpcodeOrIntrinsicID(const VPValue *V);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
@@ -166,6 +180,61 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
+
+/// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
+/// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
+/// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is
+/// non-null, inserting recipes via \p Builder.
+VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, Instruction *TruncI,
+                    VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+                    VPBuilder &Builder);
+
+/// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
+/// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
+/// generates scalar values.
+VPValue *scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
+                                          VPlan &Plan, VPBuilder &Builder);
+
+/// Returns true if \p R is dead, i.e. none of its defined values are used and
+/// it has no side effects (with the exception of conditional assumes, which are
+/// considered dead as their conditions may be flattened).
+bool isDeadRecipe(VPRecipeBase &R);
+
+/// Recursively delete \p V and any of its operands that become dead.
+void recursivelyDeleteDeadRecipes(VPValue *V);
+
+/// Collect all users of \p V, looking through recipes that define other values.
+SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
+
+/// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
+/// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
+/// Operands are foldable live-ins.
+VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
+                            const DataLayout &DL);
+
+namespace detail {
+
+/// Template-independent implementation for pullOutPermutations.
+void pullOutPermutationsImpl(
+    VPlan &Plan, function_ref<VPValue *(VPValue *Op)> Perm,
+    function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> Build);
+} // namespace detail
+
+/// Removes the permutation pattern \p Perm from any elementwise operations
+/// in the plan, by constructing a new permutation via \p Build.
+/// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
+template <typename Match_t, typename Builder>
+void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
+  // Convert matcher to function returing the matched VPValue.
+  auto MatchPerm = [&Perm](VPValue *Op) -> VPValue * {
+    VPValue *X;
+    return match(Op, Perm(X)) ? X : nullptr;
+  };
+  detail::pullOutPermutationsImpl(Plan, MatchPerm, Build);
+}
 
 } // namespace vputils
 
