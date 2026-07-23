@@ -1,9 +1,11 @@
 ; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; DIGlobalVariable with a static data member declaration. The backend does not
-; emit DebugTypeMember yet, so the Static Member Declaration operand cannot be
-; resolved and the whole DebugGlobalVariable is skipped.
+; DIGlobalVariable with a static data member declaration whose member type is a
+; pointer with no DWARF address space. emitDebugTypePointer skips that type, so
+; the member is not emitted, the Static Member Declaration operand cannot be
+; resolved, and the whole DebugGlobalVariable is skipped. Durable as more member
+; types are supported.
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: OpExtInst {{.*}} [[EXT]] DebugCompilationUnit
@@ -34,7 +36,8 @@ entry:
 !13 = !{i32 2, !"Debug Info Version", i32 3}
 !16 = !DISubroutineType(cc: DW_CC_LLVM_SpirFunction, types: !17)
 !17 = !{null}
-!20 = !DIDerivedType(tag: DW_TAG_member, name: "member", scope: !22, file: !3, line: 2, baseType: !8, size: 32, flags: DIFlagStaticMember)
+!20 = !DIDerivedType(tag: DW_TAG_member, name: "member", scope: !22, file: !3, line: 2, baseType: !24, size: 32, flags: DIFlagStaticMember)
 !21 = !{!20}
 !22 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "A", file: !3, line: 1, size: 32, elements: !23, identifier: "_ZTS1A")
 !23 = !{!20}
+!24 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 64)

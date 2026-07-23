@@ -70,6 +70,9 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // DICompositeType nodes with DW_TAG_array_type that are not vectors,
   // partitioned in beginModule().
   SmallVector<const DICompositeType *> ArrayTypes;
+  // DICompositeType nodes with DW_TAG_structure_type, DW_TAG_class_type, or
+  // DW_TAG_union_type, partitioned in beginModule() for DebugTypeComposite.
+  SmallVector<const DICompositeType *> CompositeTypes;
 
   // Filled in emitNonSemanticGlobalDebugInfo(): DI types to their result
   // registers.
@@ -335,6 +338,30 @@ private:
                                                MCRegister ExtInstSetReg,
                                                SPIRV::ModuleAnalysisInfo &MAI);
 
+  /// Emit \c DebugTypeMember for the data member \p M (a \c DIDerivedType with
+  /// \c DW_TAG_member). Operands: Name, Type, Source, Line, Column, Offset,
+  /// Size, Flags. NonSemantic \c DebugTypeMember carries no Parent operand: the
+  /// enclosing \c DebugTypeComposite references its members, not the reverse.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p M's type has not been emitted into \c DebugTypeRegs.
+  std::optional<MCRegister> emitDebugTypeMember(const DIDerivedType *M,
+                                                MCRegister VoidTypeReg,
+                                                MCRegister I32TypeReg,
+                                                MCRegister ExtInstSetReg,
+                                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypeComposite for the struct, class, or union \p CT, listing
+  /// the already-emitted \p MemberRegs in its Members operand. A forward
+  /// declaration emits \c DebugInfoNone for Size and no members.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if the Parent scope cannot be resolved.
+  std::optional<MCRegister> emitDebugTypeComposite(
+      const DICompositeType *CT, ArrayRef<MCRegister> MemberRegs,
+      MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+      SPIRV::ModuleAnalysisInfo &MAI);
+
   /// Map a \c DISubroutineType::getTypeArray() element to an operand register
   /// for
   /// \c DebugTypeFunction. Non-null \p Ty resolves via \c DebugTypeRegs; if the
@@ -378,6 +405,14 @@ private:
   /// id.
   std::optional<MCRegister>
   resolveDebugFunctionDeclarationParent(const DISubprogram *SP) const;
+
+  /// Resolve the \c Parent operand for a type instruction (\c
+  /// DebugTypeComposite) from its \p Scope: an emitted debug type id when \p
+  /// Scope is a \c DIType in \c DebugTypeRegs (a type nested in another type),
+  /// otherwise the first module \c DebugCompilationUnit.
+  /// \returns \c std::nullopt when \p Scope is a \c DIType that has not been
+  /// emitted, or when there is no compile unit.
+  std::optional<MCRegister> resolveTypeScopeParent(const DIScope *Scope) const;
 };
 
 } // namespace llvm
