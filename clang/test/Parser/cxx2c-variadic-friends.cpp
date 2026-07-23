@@ -56,11 +56,13 @@ struct VS {
   template<bool... Bs>
   friend class E<Bs>::Nested...; // expected-error {{friend declaration expands pack 'Bs' that is declared it its own template parameter list}}
 
+  // FIXME: Both of these should be valid, but we can't handle these at
+  // the moment because the NNS is dependent.
   template<class ...T>
-  friend class TS<Ts>::Nested...;
+  friend class TS<Ts>::Nested...; // expected-warning {{dependent nested name specifier 'TS<Ts>' for friend template declaration is not supported; ignoring this friend declaration}}
 
   template<class T>
-  friend class D<T, Ts>::Nested...;
+  friend class D<T, Ts>::Nested...; // expected-warning {{dependent nested name specifier 'D<T, Ts>' for friend class declaration is not supported; turning off access control for 'VS'}}
 };
 
 namespace length_mismatch {

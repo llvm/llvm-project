@@ -74,6 +74,7 @@
 using namespace llvm;
 
 extern cl::opt<bool> EmitJalrReloc;
+extern cl::opt<bool> NoZeroDivCheck;
 
 namespace {
 
@@ -1953,8 +1954,8 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
-  if (!isa<ConstantInt>(I->getOperand(1)) ||
-      dyn_cast<ConstantInt>(I->getOperand(1))->isZero()) {
+  if (!NoZeroDivCheck && (!isa<ConstantInt>(I->getOperand(1)) ||
+                          dyn_cast<ConstantInt>(I->getOperand(1))->isZero())) {
     emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
   }
 

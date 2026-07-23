@@ -558,6 +558,41 @@ def UnrollHeuristicOp : OpenMPTransform_Op<"unroll_heuristic", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP unroll_partial operation
+//===----------------------------------------------------------------------===//
+
+def UnrollPartialOp : OpenMPTransform_Op<"unroll_partial", []> {
+  let summary = "OpenMP partial unroll operation";
+  let description = [{
+    Represents a `#pragma omp unroll partial` construct introduced in OpenMP
+    5.1.
+
+    The operation has one applyee and no generatees. The applyee is partially
+    unrolled by the factor given in the `unroll_factor` attribute, which must be
+    a positive constant. That is, the operation replaces `unroll_factor`
+    consecutive logical iterations of the applyee by a single iteration that
+    executes the original body `unroll_factor` times.
+
+    The resulting unrolled loop is currently not accessible as a generatee, so
+    no further loop-associated transformations can be chained onto it.
+
+    The lowering is implemented using `OpenMPIRBuilder::unrollLoopPartial`.
+
+    Assembly formats:
+      omp.unroll_partial(%cli) {unroll_factor = 4 : i64}
+  }];
+
+  let arguments = (ins CanonicalLoopInfoType:$applyee,
+                       ConfinedAttr<I64Attr, [IntPositive]>:$unroll_factor);
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$cli, "uint64_t":$unrollFactor)>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // OpenMP tile operation
 //===----------------------------------------------------------------------===//
 
@@ -966,7 +1001,8 @@ def TaskOp : OpenMP_Op<"task", traits = [
     OutlineableOpenMPOpInterface
   ], clauses = [
     OpenMP_AffinityClause, OpenMP_AllocateClause, OpenMP_DependClause,
-    OpenMP_FinalClause, OpenMP_IfClause, OpenMP_InReductionClause,
+    OpenMP_FinalClause, OpenMP_IfClause,
+    OpenMP_InReductionClauseSkip<assemblyFormat = true>,
     OpenMP_MergeableClause, OpenMP_PriorityClause, OpenMP_PrivateClause,
     OpenMP_UntiedClause, OpenMP_DetachClause
   ], singleRegion = true> {
@@ -1012,9 +1048,10 @@ def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
     DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
-    OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_MergeableClause,
-    OpenMP_NogroupClause, OpenMP_NumTasksClause, OpenMP_PriorityClause,
-    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_UntiedClause
+    OpenMP_IfClause, OpenMP_InReductionClauseSkip<assemblyFormat = true>,
+    OpenMP_MergeableClause, OpenMP_NogroupClause, OpenMP_NumTasksClause,
+    OpenMP_PriorityClause, OpenMP_PrivateClause, OpenMP_ReductionClause,
+    OpenMP_UntiedClause
   ], singleRegion = true> {
   let summary = "OutlinableOpenMPOpInterface wrapper for taskloop construct";
   let description = [{
@@ -1627,6 +1664,15 @@ def TargetOp : OpenMP_Op<"target", traits = [
   ];
 
   let extraClassDeclaration = [{
+    // Override BlockArgOpenMPOpInterface method because `in_reduction` list
+    // items on `omp.target` do not define entry block arguments. The reduction
+    // variable is accessed inside the target body through its matching
+    // `map_entries` block argument; the `in_reduction` operands are kept only
+    // as host-side metadata used to look up the per-task private storage.
+    unsigned numInReductionBlockArgs() {
+      return 0;
+    }
+
     mlir::Value getMappedValueForPrivateVar(unsigned privVarIdx) {
       std::optional<DenseI64ArrayAttr> privateMapIdices = getPrivateMapsAttr();
 
@@ -1651,8 +1697,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
     " | `map_iterated` `(` $map_iterated `:` type($map_iterated) `)`)" # [{
       custom<TargetOpRegion>(
           $region, $has_device_addr_vars, type($has_device_addr_vars),
-          $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
-          type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
+          $host_eval_vars, type($host_eval_vars),
           $map_vars, type($map_vars), $private_vars, type($private_vars),
           $private_syms, $private_needs_barrier, $private_maps) attr-dict
     }];
@@ -2607,6 +2652,106 @@ def GroupprivateOp : OpenMP_Op<"groupprivate",
   let results = (outs OpenMP_PointerLikeType:$gp_addr);
   let assemblyFormat = [{
     $sym_name (`device_type` $device_type^)? `:` type($gp_addr) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// 14.1 interop construct
+//===----------------------------------------------------------------------===//
+
+def InteropInitOp
+    : OpenMP_Op<"interop.init", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
+  let summary = "interop init operation";
+  let description = [{
+    The interop init operation initializes an interop object for
+    foreign runtime interoperability. The `interop_type` attribute specifies
+    whether the interop object provides access to the target execution
+    environment (`target`), a synchronization object (`targetsync`), or both.
+
+    The optional `prefer_type` attribute provides a list of preferred foreign
+    runtime types as integer identifiers.
+
+    The optional `device` operand specifies the device number.
+  }] # clausesDescription;
+
+  let arguments = !con((ins
+      OpenMP_PointerLikeType:$interop_var,
+      InteropTypeArrayAttr:$interop_types,
+      OptionalAttr<I64ArrayAttr>:$prefer_type,
+      Optional<AnyInteger>:$device),
+      clausesArgs);
+
+  let assemblyFormat = [{
+    $interop_var `:` type($interop_var)
+    `interop_types` `(` $interop_types `)`
+    (`prefer_type` `(` $prefer_type^ `)`)?
+    (`device` `(` $device^ `:` type($device) `)`)?
+    oilist(
+      `depend` `(`
+      custom<DependVarList>($depend_vars, type($depend_vars), $depend_kinds,
+                            $depend_iterated, type($depend_iterated),
+                            $depend_iterated_kinds) `)`
+      | `nowait` $nowait
+    )
+    attr-dict
+  }];
+}
+
+def InteropUseOp
+    : OpenMP_Op<"interop.use", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
+  let summary = "interop use operation";
+  let description = [{
+    The interop use operation indicates use of an interop object. This is
+    used in combination with depend clauses to synchronize tasks with
+    foreign runtime operations.
+  }] # clausesDescription;
+
+  let arguments = !con((ins
+      OpenMP_PointerLikeType:$interop_var,
+      Optional<AnyInteger>:$device),
+      clausesArgs);
+
+  let assemblyFormat = [{
+    $interop_var `:` type($interop_var)
+    (`device` `(` $device^ `:` type($device) `)`)?
+    oilist(
+      `depend` `(`
+      custom<DependVarList>($depend_vars, type($depend_vars), $depend_kinds,
+                            $depend_iterated, type($depend_iterated),
+                            $depend_iterated_kinds) `)`
+      | `nowait` $nowait
+    )
+    attr-dict
+  }];
+}
+
+def InteropDestroyOp
+    : OpenMP_Op<"interop.destroy", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
+  let summary = "interop destroy operation";
+  let description = [{
+    The interop destroy operation releases an interop object and frees
+    any resources associated with it.
+  }] # clausesDescription;
+
+  let arguments = !con((ins
+      OpenMP_PointerLikeType:$interop_var,
+      Optional<AnyInteger>:$device),
+      clausesArgs);
+
+  let assemblyFormat = [{
+    $interop_var `:` type($interop_var)
+    (`device` `(` $device^ `:` type($device) `)`)?
+    oilist(
+      `depend` `(`
+      custom<DependVarList>($depend_vars, type($depend_vars), $depend_kinds,
+                            $depend_iterated, type($depend_iterated),
+                            $depend_iterated_kinds) `)`
+      | `nowait` $nowait
+    )
+    attr-dict
   }];
 }
 

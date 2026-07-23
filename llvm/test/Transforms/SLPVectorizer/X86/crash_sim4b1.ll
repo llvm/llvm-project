@@ -9,39 +9,39 @@ target triple = "x86_64-apple-macosx10.8.0"
 define void @SIM4(i1 %arg) {
 ; CHECK-LABEL: @SIM4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN:%.*]], label [[LOR_LHS_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[RETURN:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[RETURN]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_END605:%.*]], label [[FOR_BODY_LR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_END605:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_INC603:%.*]], label [[IF_END12:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_INC603:%.*]], label [[IF_END12:%.*]]
 ; CHECK:       if.end12:
-; CHECK-NEXT:    br i1 %arg, label [[LAND_LHS_TRUE:%.*]], label [[LAND_LHS_TRUE167:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[LAND_LHS_TRUE:%.*]], label [[LAND_LHS_TRUE167:%.*]]
 ; CHECK:       land.lhs.true:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN17:%.*]], label [[LAND_LHS_TRUE167]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN17:%.*]], label [[LAND_LHS_TRUE167]]
 ; CHECK:       if.then17:
-; CHECK-NEXT:    br i1 %arg, label [[IF_END98:%.*]], label [[LAND_RHS_LR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_END98:%.*]], label [[LAND_RHS_LR_PH:%.*]]
 ; CHECK:       land.rhs.lr.ph:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end98:
-; CHECK-NEXT:    br i1 %arg, label [[LAND_LHS_TRUE167]], label [[IF_THEN103:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[LAND_LHS_TRUE167]], label [[IF_THEN103:%.*]]
 ; CHECK:       if.then103:
 ; CHECK-NEXT:    [[DOTSUB100:%.*]] = select i1 undef, i32 250, i32 undef
 ; CHECK-NEXT:    [[MUL114:%.*]] = shl nsw i32 [[DOTSUB100]], 2
 ; CHECK-NEXT:    [[COND125:%.*]] = select i1 undef, i32 undef, i32 [[MUL114]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[COND125]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[DOTSUB100]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[COND125]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[DOTSUB100]], i64 1
 ; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i32> [ undef, [[LAND_RHS_I874:%.*]] ], [ [[TMP1]], [[IF_THEN103]] ]
-; CHECK-NEXT:    br i1 %arg, label [[LAND_RHS_I874]], label [[FOR_END_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[LAND_RHS_I874]], label [[FOR_END_I:%.*]]
 ; CHECK:       land.rhs.i874:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_COND_I]], label [[FOR_END_I]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_COND_I]], label [[FOR_END_I]]
 ; CHECK:       for.end.i:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN_I:%.*]], label [[IF_END_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN_I:%.*]], label [[IF_END_I:%.*]]
 ; CHECK:       if.then.i:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], undef
 ; CHECK-NEXT:    br label [[EXTEND_BW_EXIT:%.*]]
@@ -52,15 +52,15 @@ define void @SIM4(i1 %arg) {
 ; CHECK:       for.body28.lr.ph.i:
 ; CHECK-NEXT:    br label [[FOR_END33_I]]
 ; CHECK:       for.end33.i:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_END58_I:%.*]], label [[FOR_BODY52_LR_PH_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_END58_I:%.*]], label [[FOR_BODY52_LR_PH_I:%.*]]
 ; CHECK:       for.body52.lr.ph.i:
 ; CHECK-NEXT:    br label [[FOR_END58_I]]
 ; CHECK:       for.end58.i:
 ; CHECK-NEXT:    br label [[WHILE_COND260_I:%.*]]
 ; CHECK:       while.cond260.i:
-; CHECK-NEXT:    br i1 %arg, label [[LAND_RHS263_I:%.*]], label [[WHILE_END275_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[LAND_RHS263_I:%.*]], label [[WHILE_END275_I:%.*]]
 ; CHECK:       land.rhs263.i:
-; CHECK-NEXT:    br i1 %arg, label [[WHILE_COND260_I]], label [[WHILE_END275_I]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[WHILE_COND260_I]], label [[WHILE_END275_I]]
 ; CHECK:       while.end275.i:
 ; CHECK-NEXT:    br label [[EXTEND_BW_EXIT]]
 ; CHECK:       extend_bw.exit:
@@ -73,7 +73,7 @@ define void @SIM4(i1 %arg) {
 ; CHECK:       land.lhs.true167:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.inc603:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY]], label [[FOR_END605]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_BODY]], label [[FOR_END605]]
 ; CHECK:       for.end605:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       return:

@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 38;
+const unsigned VERSION_MAJOR = 39;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -1466,6 +1466,9 @@ enum DeclCode {
   /// \brief A StaticAssertDecl record.
   DECL_STATIC_ASSERT,
 
+  /// A C++ expansion statement.
+  DECL_EXPANSION_STMT,
+
   /// A record containing CXXBaseSpecifiers.
   DECL_CXX_BASE_SPECIFIERS,
 
@@ -1848,6 +1851,12 @@ enum StmtCode {
 
   STMT_CXX_FOR_RANGE,
 
+  /// A CXXExpansionPatternStmt.
+  STMT_CXX_EXPANSION_PATTERN,
+
+  /// A CXXExpansionInstantiationStmt.
+  STMT_CXX_EXPANSION_INSTANTIATION,
+
   /// A CXXOperatorCallExpr record.
   EXPR_CXX_OPERATOR_CALL,
 
@@ -1939,6 +1948,7 @@ enum StmtCode {
   EXPR_CXX_FOLD,                          // CXXFoldExpr
   EXPR_CONCEPT_SPECIALIZATION,            // ConceptSpecializationExpr
   EXPR_REQUIRES,                          // RequiresExpr
+  EXPR_CXX_EXPANSION_SELECT,              // CXXExpansionSelectExpr
 
   // Reflection
   EXPR_REFLECT,
@@ -2107,13 +2117,6 @@ enum CtorInitializerType {
   CTOR_INITIALIZER_DELEGATING,
   CTOR_INITIALIZER_MEMBER,
   CTOR_INITIALIZER_INDIRECT_MEMBER
-};
-
-/// Kinds of friend payloads owned by FriendTemplateDecl.
-enum FriendTemplateDeclKind {
-  FTDK_Type = 0,
-  FTDK_Decl = 1,
-  FTDK_Template = 2,
 };
 
 /// Kinds of cleanup objects owned by ExprWithCleanups.

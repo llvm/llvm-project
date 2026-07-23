@@ -92,6 +92,39 @@ loop.outer.latch:
   br label %loop.outer
 }
 
+; Test LoopInfo is fixed up to remove the early-exit dispatch block from the
+; outer loop, even though the fully vectorized inner loop's countable exit
+; becomes an exit block without predecessors.
+define void @early_exit_dispatch_in_outer_loop(i1 %c) {
+; CHECK-LABEL: Loop info for function 'early_exit_dispatch_in_outer_loop':
+; CHECK: Loop at depth 1 containing: %outer.header<header>,%inner.header<exiting>,%inner.search<exiting>,%inner.latch,%outer.header.loopexit<latch>,%scalar.ph,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
+; CHECK:    Loop at depth 2 containing: %inner.header<header><exiting>,%inner.search<exiting>,%inner.latch<latch><exiting>
+; CHECK:    Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
+entry:
+  br label %outer.header
+
+outer.header:
+  br label %inner.header
+
+inner.header:
+  %iv = phi i64 [ %iv.next, %inner.latch ], [ 0, %outer.header ]
+  %iv.next = add i64 %iv, 1
+  br i1 %c, label %exit, label %inner.search
+
+inner.search:
+  %lo = icmp ult i64 %iv, 1
+  %hi = icmp ugt i64 %iv, 100
+  %early = or i1 %lo, %hi
+  br i1 %early, label %inner.latch, label %exit
+
+inner.latch:
+  %outer.cond = icmp ugt i64 %iv, 200
+  br i1 %outer.cond, label %outer.header, label %inner.header
+
+exit:
+  ret void
+}
+
 define i32 @early_exit_branch_to_outer_header() {
 ; CHECK-LABEL: Loop info for function 'early_exit_branch_to_outer_header':
 ; CHECK-NEXT:  Loop at depth 1 containing: %outer.header<header>,%outer.header.loopexit<latch>,%vector.ph,%vector.body,%vector.body.interim<exiting>,%vector.early.exit
