@@ -10970,7 +10970,7 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   unsigned CurrOffset = 0;
   unsigned Size = KnownLen;
   for (auto CopyTy : MemOps) {
-    unsigned TySize = CopyTy.getSizeInBytes();
+    TypeSize TySize = CopyTy.getSizeInBytes();
 
     // Issuing a load / store pair that overlaps with the previous pair. Adjust
     // the offset accordingly.
@@ -11059,7 +11059,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
   unsigned Size = KnownLen;
   SmallVector<Register, 16> LoadVals;
   for (auto CopyTy : MemOps) {
-    unsigned TySize = CopyTy.getSizeInBytes();
+    TypeSize TySize = CopyTy.getSizeInBytes();
 
     // Issuing a load that overlaps with the previous load. Adjust the offset
     // accordingly.
@@ -11090,7 +11090,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
   Size = KnownLen;
   for (unsigned I = 0; I < MemOps.size(); ++I) {
     LLT CopyTy = MemOps[I];
-    unsigned TySize = CopyTy.getSizeInBytes();
+    TypeSize TySize = CopyTy.getSizeInBytes();
 
     // Issuing a store that overlaps with the previous store. Adjust the offset
     // accordingly.
