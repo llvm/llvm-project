@@ -50,6 +50,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   InfiniteLoopCheck.cpp
   IntegerDivisionCheck.cpp
   LambdaFunctionNameCheck.cpp
+  MacroConditionCheck.cpp
   MacroParenthesesCheck.cpp
   MacroRepeatedSideEffectsCheck.cpp
   MisleadingSetterOfReferenceCheck.cpp
