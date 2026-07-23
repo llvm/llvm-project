@@ -932,6 +932,16 @@ class SPIRVStructurizerImpl {
       auto It = SI->case_begin();
       while (It != SI->case_end()) {
         BasicBlock *Target = It->getCaseSuccessor();
+
+        // Don't Split. Just remove cases branching to the default destination
+        // to prevent spurious extra successors thus preserving single-exit
+        // convergence regions (i.e. if a merged exit is default & a case).
+        if (Target == SI->getDefaultDest()) {
+          Modified = true;
+          It = SI->removeCase(It);
+          continue;
+        }
+
         if (Seen.count(Target) == 0) {
           Seen.insert(Target);
           ++It;

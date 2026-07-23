@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/Intrinsics.h"
 
 #include <optional>
 #include <string>
@@ -287,6 +288,11 @@ SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, Type *ScalarTy,
 
 /// Replicates the given \p Val \p VF times.
 SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF);
+
+/// \returns the masked division/remainder intrinsic corresponding to \p
+/// Opcode. Disabled lanes of these intrinsics are poison rather than UB,
+/// unlike the plain opcode.
+Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
 
 } // namespace llvm::slpvectorizer
 
