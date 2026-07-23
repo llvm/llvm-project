@@ -410,6 +410,7 @@ int *nothingIsCertain(int x, int y) {
   return mem;
 }
 
+#ifndef _MSC_VER
 struct Empty {};
 struct Empty ZeroSizeElements[10];
 
@@ -419,3 +420,4 @@ struct Empty zeroSizeElements(void) {
   // expected-warning@-1 {{Out of bound access to memory after the end of 'ZeroSizeElements'}}
   // expected-note@-2 {{Access of 'ZeroSizeElements' at byte offset 0, while it holds only 0 byte}}
 }
+#endif
