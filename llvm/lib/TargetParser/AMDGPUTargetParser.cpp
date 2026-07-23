@@ -588,6 +588,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["wavefrontsize32"] = true;
     Features["clusters"] = true;
     Features["mcast-load-insts"] = true;
+    Features["async-load-to-lds-insts"] = true;
+    Features["async-store-from-lds-insts"] = true;
     Features["asynccnt"] = true;
     break;
   case GK_GFX1201:
