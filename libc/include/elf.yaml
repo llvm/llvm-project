@@ -1,5 +1,4 @@
 header: elf.h
-public_includes:
-  - proxy/elf_proxy.h
+header_template: elf.h.def
 standards:
   - svid
