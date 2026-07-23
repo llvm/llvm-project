@@ -283,13 +283,15 @@ test-tools)
         --commit HEAD \
         --install-dir "${INSTALL_DIR}" \
         --tmp-build-dir "${BUILD_DIR}/build-at-commit" \
-        -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -- -DCMAKE_CXX_COMPILER="${CXX}" \
+           -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
     step "Running a benchmark through the benchmark tooling pipeline"
     "${MONOREPO_ROOT}/libcxx/utils/test-at-commit" \
         --git-repo "${MONOREPO_ROOT}" \
         --libcxx-installation "${INSTALL_DIR}" \
         --build-dir "${BUILD_DIR}/benchmarks" \
+        --compiler "${CXX}"                   \
         -- -sv --param optimization=speed \
         "${MONOREPO_ROOT}/libcxx/test/benchmarks/hash.bench.cpp"
 
