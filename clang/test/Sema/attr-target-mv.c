@@ -185,3 +185,18 @@ int __attribute__((target("default"))) no_priority3(void);
 int __attribute__((target("avx2"))) no_priority3(void);
 // expected-error@+1 {{function multiversioning doesn't support feature 'sha'}}
 int __attribute__((target("sha"))) no_priority3(void);
+
+int __attribute__((target("default"))) apxf_mv(void) { return 0; }
+int __attribute__((target("apxf"))) apxf_mv(void) { return 1; }
+
+// expected-error@+2 {{function multiversioning doesn't support feature 'ndd'}}
+// expected-note@+2 {{function multiversioning caused by this declaration}}
+int __attribute__((target("ndd"))) apx_sub(void);
+int __attribute__((target("default"))) apx_sub(void);
+
+// expected-error@+1 {{function multiversioning doesn't support feature 'egpr'}}
+int __attribute__((target("egpr"))) apx_two_subs(void) { return 0; }
+// expected-error@+1 {{function multiversioning doesn't support feature 'ndd'}}
+int __attribute__((target("ndd"))) apx_two_subs(void) { return 1; }
+// expected-note@+1 {{function multiversioning caused by this declaration}}
+int __attribute__((target("default"))) apx_two_subs(void) { return 2; }

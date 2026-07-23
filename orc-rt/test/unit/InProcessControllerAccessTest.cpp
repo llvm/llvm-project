@@ -191,7 +191,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
 TEST(InProcessControllerAccessTest, CallControllerSuccess) {
   // A callController call routed through MockIPEPC, which echoes the args
   // back as the result. Verify OnComplete fires with the payload.
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
 
   std::unique_ptr<MockIPEPC> Mock;
   attachWithMock(S, Mock);
@@ -219,7 +219,7 @@ TEST(InProcessControllerAccessTest, CallControllerSuccess) {
 TEST(InProcessControllerAccessTest, CallControllerOutOfBandError) {
   // A callController call where the mock responds with an out-of-band error.
   // OnComplete should observe the error message intact.
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
 
   std::unique_ptr<MockIPEPC> Mock;
   attachWithMock(S, Mock);
@@ -248,7 +248,7 @@ TEST(InProcessControllerAccessTest, DisconnectDrainsPendingCalls) {
   // A callController call is in-flight when the connection drops (the mock
   // never responds). Verify that doDisconnect drains the pending handler with
   // a "disconnected" out-of-band error rather than leaving it stranded.
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
 
   std::unique_ptr<MockIPEPC> Mock;
   attachWithMock(S, Mock);
@@ -287,7 +287,7 @@ static void echoWrapper(orc_rt_SessionRef S, uint64_t CallId,
 
 TEST(InProcessControllerAccessTest, CallFromControllerSuccess) {
   // The mock IPEPC initiates a wrapper call into IPCA. The Session's
-  // RunWrapperCall hook (a QueueingRunner over `Tasks`) enqueues the
+  // dispatch hook (a QueueingRunner over `Tasks`) enqueues the
   // invocation; draining the queue runs the wrapper, which echoes its
   // arguments back. Verify the mock receives the echoed bytes via
   // ReturnWrapperResult.

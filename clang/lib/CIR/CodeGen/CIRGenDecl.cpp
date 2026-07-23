@@ -358,6 +358,63 @@ void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
   emitAutoVarCleanups(emission);
 }
 
+void CIRGenFunction::emitLoopConditionVariable(
+    const VarDecl &d, DeferredLoopConditionCleanup &condCleanup) {
+  // A condition variable always has automatic storage duration, so this
+  // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. The alloca and
+  // initializer are emitted with capturing disabled so that any cleanups they
+  // introduce get their normal cir.cleanup.scope handling; only the variable's
+  // own destructor cleanup is captured for the loop's per-iteration cleanup
+  // region.
+  assert(d.hasLocalStorage() && "loop condition variable is not local");
+
+  // Mirror the diagnostic emitted by emitVarDecl on the automatic-storage path.
+  // A condition variable is implicitly in the private address space, so this is
+  // not expected to fire, but keep it to preserve emitVarDecl's behavior.
+  if (d.getType().getAddressSpace() == LangAS::opencl_local)
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitLoopConditionVariable: OpenCL local address space");
+
+  CIRGenFunction::VarDeclContext varDeclCtx{*this, &d};
+  CIRGenFunction::AutoVarEmission emission = emitAutoVarAlloca(d);
+
+  // The condition variable's destructor is captured into the loop op's
+  // per-iteration cleanup region, which structurally spans the initializer.
+  // If the initializer throws, the variable was never constructed and its
+  // destructor must not run. Classic codegen avoids this by pushing the
+  // cleanup only after the initializer, but our deferred cleanup necessarily
+  // covers the whole condition region, so guard it with an active flag that is
+  // false while the initializer runs and set to true once construction
+  // completes. The flag is stored to on every iteration, so it also resets
+  // correctly across iterations.
+  bool needsCleanup = d.needsDestruction(getContext()) != QualType::DK_none;
+  // We will also need cleanup if lifetime markers are enabled.
+  assert(!cir::MissingFeatures::emitLifetimeMarkers());
+  Address activeFlag = Address::invalid();
+  if (needsCleanup) {
+    mlir::Location loc = getLoc(d.getSourceRange());
+    activeFlag = createTempAllocaWithoutCast(
+        builder.getBoolTy(), CharUnits::One(), loc, "cond.cleanup.isactive",
+        /*arraySize=*/nullptr,
+        builder.getBestAllocaInsertPoint(getCurFunctionEntryBlock()));
+    builder.createFlagStore(loc, false, activeFlag.getPointer());
+  }
+
+  emitAutoVarInit(emission);
+
+  if (needsCleanup) {
+    // Construction has completed, so activate the destructor cleanup.
+    mlir::Location loc = getLoc(d.getSourceRange());
+    builder.createFlagStore(loc, true, activeFlag.getPointer());
+  }
+
+  DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+  emitAutoVarCleanups(emission);
+
+  if (needsCleanup)
+    initFullExprCleanupWithFlag(activeFlag);
+}
+
 void CIRGenFunction::emitVarDecl(const VarDecl &d) {
   // If the declaration has external storage, don't emit it now, allow it to be
   // emitted lazily on its first use.
