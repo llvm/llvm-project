@@ -746,8 +746,8 @@ public:
     return materializeAddress(Target, Ctx, Reg, Addend);
   }
 
-  InstructionListType createAdrpLdr(const MCInst &LDRInst, MCContext *Ctx,
-                                    const MCPhysReg Reg) const override {
+  InstructionListType createAdrpLdr(const MCInst &LDRInst,
+                                    MCContext *Ctx) const override {
     assert(LDRInst.getOperand(0).isReg() &&
            "unexpected operand in LDR instruction");
     const MCPhysReg DataReg = LDRInst.getOperand(0).getReg();
@@ -773,17 +773,17 @@ public:
       RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
       break;
     case AArch64::LDRSl:
-      AddrReg = Reg;
+      AddrReg = AArch64::X16;
       OpCode = AArch64::LDRSui;
       RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
       break;
     case AArch64::LDRDl:
-      AddrReg = Reg;
+      AddrReg = AArch64::X16;
       OpCode = AArch64::LDRDui;
       RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
       break;
     case AArch64::LDRQl:
-      AddrReg = Reg;
+      AddrReg = AArch64::X16;
       OpCode = AArch64::LDRQui;
       RelType = ELF::R_AARCH64_LDST128_ABS_LO12_NC;
       break;
@@ -792,23 +792,46 @@ public:
                        "expected");
     }
 
+    // For the relaxation of LDRSl/LDRDl/LDRQl, the destination register is a
+    // floating-point register and therefore cannot be reused as the base
+    // register. The current implementation uses X16 as the base register and
+    // saves/restores X16 and X17 by pushing them onto the stack before use and
+    // popping them afterward.
+    //
+    // X16 and X17 are pushed/popped together for two reasons:
+    // 1. AAPCS64 requires the stack to remain 16-byte (quad-word) aligned.
+    // 2. Pushing/popping registers that are already in use here may reduce
+    //    instruction-level parallelism (ILP) on out-of-order processors. X16
+    //    and X17 are more likely to be not in use at this point.
+    bool PreserveRegisters = isLoadLiteralFPR(LDRInst);
+
     const MCSymbol *Target = getTargetSymbol(LDRInst, 1);
     assert(Target && "missing target symbol in LDR instruction");
 
-    InstructionListType Insts(2);
-    Insts[0].setOpcode(AArch64::ADRP);
-    Insts[0].clear();
-    Insts[0].addOperand(MCOperand::createReg(AddrReg));
-    Insts[0].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, 0, Ctx,
+    InstructionListType Insts;
+    if (PreserveRegisters) {
+      Insts.emplace_back();
+      createPushRegisters(Insts.back(), AArch64::X16, AArch64::X17);
+    }
+    Insts.emplace_back();
+    Insts.back().setOpcode(AArch64::ADRP);
+    Insts.back().clear();
+    Insts.back().addOperand(MCOperand::createReg(AddrReg));
+    Insts.back().addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(Insts.back(), /* OpNum */ 1, Target, 0, Ctx,
                           ELF::R_AARCH64_NONE);
-    Insts[1].setOpcode(OpCode);
-    Insts[1].clear();
-    Insts[1].addOperand(MCOperand::createReg(DataReg));
-    Insts[1].addOperand(MCOperand::createReg(AddrReg));
-    Insts[1].addOperand(MCOperand::createImm(0));
-    Insts[1].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx, RelType);
+    Insts.emplace_back();
+    Insts.back().setOpcode(OpCode);
+    Insts.back().clear();
+    Insts.back().addOperand(MCOperand::createReg(DataReg));
+    Insts.back().addOperand(MCOperand::createReg(AddrReg));
+    Insts.back().addOperand(MCOperand::createImm(0));
+    Insts.back().addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(Insts.back(), /* OpNum */ 2, Target, 0, Ctx, RelType);
+    if (PreserveRegisters) {
+      Insts.emplace_back();
+      createPopRegisters(Insts.back(), AArch64::X16, AArch64::X17);
+    }
     return Insts;
   }
 
@@ -2639,26 +2662,6 @@ public:
     }
 
     return false;
-  }
-
-  void createPushRegister(MCInst &Inst, MCPhysReg Reg,
-                          unsigned Size) const override {
-    assert(Size == 8 && "Unexpected Size");
-    Inst = MCInstBuilder(AArch64::STRXpre)
-               .addReg(AArch64::SP)
-               .addReg(Reg)
-               .addReg(AArch64::SP)
-               .addImm(-8);
-  }
-
-  void createPopRegister(MCInst &Inst, MCPhysReg Reg,
-                         unsigned Size) const override {
-    assert(Size == 8 && "Unexpected Size");
-    Inst = MCInstBuilder(AArch64::LDRXpost)
-               .addReg(AArch64::SP)
-               .addReg(Reg)
-               .addReg(AArch64::SP)
-               .addImm(8);
   }
 
   void createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
