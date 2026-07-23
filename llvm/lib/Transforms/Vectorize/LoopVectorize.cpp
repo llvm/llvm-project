@@ -1273,14 +1273,6 @@ public:
   /// the factor width.
   InstructionCost expectedCost(ElementCount VF);
 
-  /// Returns true if epilogue vectorization is considered profitable, and
-  /// false otherwise.
-  /// \p VF is the vectorization factor chosen for the original loop.
-  /// \p Multiplier is an aditional scaling factor applied to VF before
-  /// comparing to EpilogueVectorizationMinVF.
-  bool isEpilogueVectorizationProfitable(const ElementCount VF,
-                                         const unsigned IC) const;
-
   /// Returns the execution time cost of an instruction for a given vector
   /// width. Vector width of one means scalar.
   InstructionCost getInstructionCost(Instruction *I, ElementCount VF);
@@ -3418,7 +3410,7 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   return true;
 }
 
-bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
+bool VFSelectionContext::isEpilogueVectorizationProfitable(
     const ElementCount VF, const unsigned IC) const {
   // FIXME: We need a much better cost-model to take different parameters such
   // as register pressure, code size increase and cost of extra branches into
@@ -3432,8 +3424,7 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   unsigned MinVFThreshold = EpilogueVectorizationMinVF.getNumOccurrences() > 0
                                 ? EpilogueVectorizationMinVF
                                 : TTI.getEpilogueVectorizationMinVF();
-  return estimateElementCount(VF * IC, Config.getVScaleForTuning()) >=
-         MinVFThreshold;
+  return estimateElementCount(VF * IC, getVScaleForTuning()) >= MinVFThreshold;
 }
 
 std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
@@ -3495,7 +3486,7 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     return nullptr;
   }
 
-  if (!CM.isEpilogueVectorizationProfitable(MainLoopVF, IC)) {
+  if (!Config.isEpilogueVectorizationProfitable(MainLoopVF, IC)) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is not profitable for "
                          "this loop\n");
     return nullptr;
