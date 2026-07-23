@@ -2495,6 +2495,50 @@ int8x8_t test_psabs_i8x8(int8x8_t a) { return __riscv_psabs_i8x8(a); }
 // RV64:        psabs.h
 int16x4_t test_psabs_i16x4(int16x4_t a) { return __riscv_psabs_i16x4(a); }
 
+// Packed "Q-format" Multiplication
+// CHECK-LABEL: test_pmulq_i16x2:
+// CHECK:       pmulq.h
+int16x2_t test_pmulq_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pmulq_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulqr_i16x2:
+// CHECK:       pmulqr.h
+int16x2_t test_pmulqr_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pmulqr_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulq_i16x4:
+// RV32:        pmulq.h
+// RV32:        pmulq.h
+// RV64:        pmulq.h
+int16x4_t test_pmulq_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pmulq_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulqr_i16x4:
+// RV32:        pmulqr.h
+// RV32:        pmulqr.h
+// RV64:        pmulqr.h
+int16x4_t test_pmulqr_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pmulqr_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulq_i32x2:
+// RV32:        mulq
+// RV32:        mulq
+// RV64:        pmulq.w
+int32x2_t test_pmulq_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pmulq_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulqr_i32x2:
+// RV32:        mulqr
+// RV32:        mulqr
+// RV64:        pmulqr.w
+int32x2_t test_pmulqr_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pmulqr_i32x2(a, b);
+}
 // CHECK-LABEL: test_pnzip_i8x4:
 // CHECK:       ppaire.b
 int8x4_t test_pnzip_i8x4(int16x2_t rs1, int16x2_t rs2) {

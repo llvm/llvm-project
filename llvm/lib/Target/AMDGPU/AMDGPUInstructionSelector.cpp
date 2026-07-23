@@ -7610,12 +7610,6 @@ void AMDGPUInstructionSelector::renderExtractCpolSetGLC(
   MIB.addImm(Cpol | AMDGPU::CPol::GLC);
 }
 
-void AMDGPUInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
-                                                 const MachineInstr &MI,
-                                                 int OpIdx) const {
-  MIB.addFrameIndex(MI.getOperand(1).getIndex());
-}
-
 void AMDGPUInstructionSelector::renderFPPow2ToExponent(MachineInstrBuilder &MIB,
                                                        const MachineInstr &MI,
                                                        int OpIdx) const {
