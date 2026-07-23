@@ -138,9 +138,9 @@ Register NVPTXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 
 Register
 NVPTXRegisterInfo::getFrameLocalRegister(const MachineFunction &MF) const {
-  const NVPTXTargetMachine &TM =
-      static_cast<const NVPTXTargetMachine &>(MF.getTarget());
-  return TM.is64Bit() ? NVPTX::VRFrameLocal64 : NVPTX::VRFrameLocal32;
+  return MF.getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_LOCAL) == 64
+             ? NVPTX::VRFrameLocal64
+             : NVPTX::VRFrameLocal32;
 }
 
 void NVPTXRegisterInfo::clearDebugRegisterMap() const {
