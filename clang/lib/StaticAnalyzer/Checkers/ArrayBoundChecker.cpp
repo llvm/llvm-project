@@ -552,8 +552,7 @@ static BugDescription describeInvalidAccess(bounds::CheckResult Res,
           std::string(Buf)};
 }
 
-static BugDescription describeTaintBug(StringRef RegName,
-                                       StringRef OffsetName,
+static BugDescription describeTaintBug(StringRef RegName, StringRef OffsetName,
                                        bool AlsoMentionUnderflow) {
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
