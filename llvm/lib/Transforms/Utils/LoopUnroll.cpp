@@ -1721,14 +1721,15 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions, including sub, any-of and find-last.
   // TODO: Handle sub, any-of and find-last reductions.
-  if (RK != RecurKind::Add && RK != RecurKind::Mul && RK != RecurKind::Or &&
-      RK != RecurKind::And && RK != RecurKind::Xor && RK != RecurKind::SMin &&
-      RK != RecurKind::SMax && RK != RecurKind::UMin && RK != RecurKind::UMax &&
-      RK != RecurKind::FAdd && RK != RecurKind::FMul && RK != RecurKind::FMin &&
-      RK != RecurKind::FMax && RK != RecurKind::FMinNum &&
-      RK != RecurKind::FMaxNum && RK != RecurKind::FMinimum &&
-      RK != RecurKind::FMaximum && RK != RecurKind::FMinimumNum &&
-      RK != RecurKind::FMaximumNum && RK != RecurKind::FMulAdd)
+  static const auto ValidRKs = {
+      RecurKind::Add,         RecurKind::Mul,      RecurKind::Or,
+      RecurKind::And,         RecurKind::Xor,      RecurKind::SMin,
+      RecurKind::SMax,        RecurKind::UMin,     RecurKind::UMax,
+      RecurKind::FAdd,        RecurKind::FMul,     RecurKind::FMin,
+      RecurKind::FMax,        RecurKind::FMinNum,  RecurKind::FMaxNum,
+      RecurKind::FMinimum,    RecurKind::FMaximum, RecurKind::FMinimumNum,
+      RecurKind::FMaximumNum, RecurKind::FMulAdd};
+  if (!any_of(ValidRKs, equal_to(RK)))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
