@@ -54,8 +54,7 @@ using namespace llvm;
 #define DEBUG_TYPE "register-info-emitter"
 
 STATISTIC(NumExplicitRegClasses, "Number of explicit register classes");
-STATISTIC(NumSynthesizedRegClasses,
-          "Number of synthesized register classes");
+STATISTIC(NumSynthesizedRegClasses, "Number of synthesized register classes");
 STATISTIC(NumRegPressureSets, "Number of register pressure sets");
 
 static cl::OptionCategory RegisterInfoCat("Options for -gen-register-info");
@@ -80,8 +79,8 @@ public:
     RegBank.computeDerivedInfo();
 
     const auto &RegClasses = RegBank.getRegClasses();
-    NumExplicitRegClasses = llvm::count_if(
-        RegClasses, [](const CodeGenRegisterClass &RC) {
+    NumExplicitRegClasses =
+        llvm::count_if(RegClasses, [](const CodeGenRegisterClass &RC) {
           return RC.getDef() != nullptr;
         });
     NumSynthesizedRegClasses = RegClasses.size() - NumExplicitRegClasses;
