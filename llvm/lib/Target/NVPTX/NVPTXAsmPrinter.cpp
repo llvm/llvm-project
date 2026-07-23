@@ -33,9 +33,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -145,12 +145,25 @@ static void emitInitialRawDwarfLocDirective(const MachineFunction &MF,
 namespace {
 
 /// Return a list of GlobalVariables on which \p V depends.
-static void discoverDependentGlobals(
-    const Value *V, SmallVectorImpl<const GlobalVariable *> &Globals,
-    SmallPtrSetImpl<const GlobalVariable *> &Seen) {
+static void
+discoverDependentGlobals(const Value *V,
+                         SmallVectorImpl<const GlobalVariable *> &Globals,
+                         SmallPtrSetImpl<const GlobalVariable *> &Seen) {
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(V)) {
     if (Seen.insert(GV).second)
       Globals.push_back(GV);
+    return;
+  }
+
+  // Global values are emitted as symbols. Their operands do not contribute to
+  // the initializer expression that refers to that symbol.
+  if (isa<GlobalValue>(V))
+    return;
+
+  // lowerConstantForGV emits a GEP as its base symbol plus a constant byte
+  // offset. Symbols used to compute an index are not part of that expression.
+  if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
+    discoverDependentGlobals(GEP->getPointerOperand(), Globals, Seen);
     return;
   }
 
@@ -221,8 +234,7 @@ using GlobalVariableSCCIterator =
 static bool shouldSkipModuleLevelGlobal(const GlobalVariable &GV) {
   if (GV.hasSection() && GV.getSection() == "llvm.metadata")
     return true;
-  return GV.getName().starts_with("llvm.") ||
-         GV.getName().starts_with("nvvm.");
+  return GV.getName().starts_with("llvm.") || GV.getName().starts_with("nvvm.");
 }
 
 static bool isForwardDeclarableGlobal(const GlobalVariable *GVar) {
@@ -245,8 +257,7 @@ static bool isForwardDeclarableGlobal(const GlobalVariable *GVar) {
 /// Order definitions after treating references to forward-declared globals as
 /// already satisfied. A remaining cycle cannot be emitted portably because it
 /// requires an undeclared forward reference.
-static SmallVector<const GlobalVariable *, 4>
-orderDefinitionsInSCC(
+static SmallVector<const GlobalVariable *, 4> orderDefinitionsInSCC(
     ArrayRef<const GlobalVariableDependencyNode *> SCC,
     const DenseSet<const GlobalVariableDependencyNode *> &ForwardDeclared) {
   using Node = GlobalVariableDependencyNode;
@@ -964,7 +975,7 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
            GlobalVariableSCCIterator::begin(DependencyGraph.getEntryNode());
        !I.isAtEnd(); ++I) {
     SmallVector<const GlobalVariableDependencyNode *, 4> SCC(I->begin(),
-                                                              I->end());
+                                                             I->end());
 
     // Nothing points to the synthetic root, so it is always in its own SCC.
     if (!SCC.front()->GV) {
