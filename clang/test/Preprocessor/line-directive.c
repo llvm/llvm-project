@@ -130,3 +130,9 @@ undefined t; // expected-error {{unknown type name 'undefined'}}
 #line 130 "\x12"
 # 131 U"hello" // expected-error {{invalid filename for line marker directive}}
 # 132 "\x13" // expected-warning {{this style of line directive is a GNU extension}}
+
+#line 0 // expected-warning {{#line directive with zero argument is a GNU extension}}
+// #UNTERMINATED
+#line 1 "foo\""
+// expected-warning@#UNTERMINATED {{missing terminating '"' character}}
+// expected-warning@#UNTERMINATED {{extra tokens at end of #line directive}}
