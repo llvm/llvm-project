@@ -154,6 +154,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
+- Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210610)
 
 ### OpenACC Specific Changes
 
