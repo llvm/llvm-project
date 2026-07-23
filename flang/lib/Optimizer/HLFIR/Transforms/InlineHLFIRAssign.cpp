@@ -19,6 +19,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -38,6 +39,57 @@ static llvm::cl::opt<bool> inlineAllocatableExprAssignFlag(
     llvm::cl::desc("Enable inlining of allocatable assignments when RHS is an "
                    "hlfir.expr (e.g., from hlfir.elemental)"),
     llvm::cl::init(false));
+
+/// Is \p assign an `omp.private` copy region copying the mold to the clone?
+///
+/// The copy region's entry-block arguments are the mold and the freshly
+/// allocated clone, which cannot overlap, so the copy needs no aliasing check.
+/// The body is unrestricted, so match only the shape lowering emits:
+///
+/// \code
+///   ^bb0(%mold, %clone):
+///     %0 = fir.load %mold          // boxed privatizer only
+///     hlfir.assign %0 to %clone
+/// \endcode
+///
+/// A POINTER privatizer is excluded: firstprivate copies the association, so
+/// mold and clone share data and the copy aliases. It is lowered with fir.store
+/// today, not hlfir.assign, so the guard only covers a future codegen change.
+static bool isOmpPrivateCopyInAssign(hlfir::AssignOp assign) {
+  auto privateOp = llvm::dyn_cast_or_null<mlir::omp::PrivateClauseOp>(
+      assign->getParentRegion()->getParentOp());
+  if (!privateOp)
+    return false;
+  mlir::Region &copyRegion = privateOp.getCopyRegion();
+  if (assign->getParentRegion() != &copyRegion)
+    return false;
+
+  // Only the entry block: another block's arguments are not the mold/clone
+  // pair.
+  mlir::Block &entry = copyRegion.front();
+  if (assign->getBlock() != &entry || entry.getNumArguments() != 2)
+    return false;
+
+  mlir::Value mold = privateOp.getCopyMoldArg();
+  if (assign.getLhs() != privateOp.getCopyPrivateArg())
+    return false;
+
+  // A POINTER firstprivate copies the association, so the data aliases.
+  auto isPointer = [](mlir::Value v) -> bool {
+    auto boxTy =
+        mlir::dyn_cast<fir::BaseBoxType>(fir::unwrapRefType(v.getType()));
+    return boxTy && boxTy.isPointer();
+  };
+  if (isPointer(mold))
+    return false;
+
+  mlir::Value rhs = assign.getRhs();
+  if (rhs == mold)
+    return true;
+  // A boxed privatizer loads the mold's descriptor first.
+  auto load = rhs.getDefiningOp<fir::LoadOp>();
+  return load && load.getMemref() == mold;
+}
 
 namespace {
 /// Expand hlfir.assign of array RHS to array LHS into a loop nest
@@ -104,7 +156,7 @@ public:
 
     bool rhsNeedsTemporary = false;
     if (rhs.isArray() && !mlir::isa<hlfir::ExprType>(rhs.getType()) &&
-        !assign.getTemporaryLhs()) {
+        !assign.getTemporaryLhs() && !isOmpPrivateCopyInAssign(assign)) {
       fir::AliasAnalysis aliasAnalysis;
       mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
       if (!aliasRes.isNo()) {

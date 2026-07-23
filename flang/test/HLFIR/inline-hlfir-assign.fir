@@ -496,3 +496,100 @@ func.func @_QPtest_scalar_ref_from_lhs(%arg0: !fir.ref<!fir.array<10xf32>>) {
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+// The copy-in writes the clone, which is distinct from the mold, so it inlines
+// even though alias analysis cannot prove it from the block arguments alone.
+omp.private {type = firstprivate} @_QFtestEc_firstprivate : !fir.box<!fir.array<1xf64>> copy {
+^bb0(%arg0: !fir.ref<!fir.box<!fir.array<1xf64>>>, %arg1: !fir.ref<!fir.box<!fir.array<1xf64>>>):
+  %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.array<1xf64>>>
+  hlfir.assign %0 to %arg1 : !fir.box<!fir.array<1xf64>>, !fir.ref<!fir.box<!fir.array<1xf64>>>
+  omp.yield(%arg1 : !fir.ref<!fir.box<!fir.array<1xf64>>>)
+}
+// CHECK-LABEL:   omp.private {type = firstprivate} @_QFtestEc_firstprivate : !fir.box<!fir.array<1xf64>> copy {
+// CHECK:         ^bb0(%[[ORIG:.*]]: !fir.ref<!fir.box<!fir.array<1xf64>>>, %[[CLONE:.*]]: !fir.ref<!fir.box<!fir.array<1xf64>>>):
+// CHECK:           %[[RHS:.*]] = fir.load %[[ORIG]] : !fir.ref<!fir.box<!fir.array<1xf64>>>
+// CHECK:           %[[LHS:.*]] = fir.load %[[CLONE]] : !fir.ref<!fir.box<!fir.array<1xf64>>>
+// CHECK:           fir.do_loop
+// CHECK-NOT:       hlfir.assign %[[RHS]] to %[[CLONE]]
+// CHECK:           omp.yield(%[[CLONE]] : !fir.ref<!fir.box<!fir.array<1xf64>>>)
+// CHECK:         }
+
+// An assignment in the copy region that does not write the clone keeps its
+// aliasing check.
+omp.private {type = firstprivate} @_QFtestEd_firstprivate : !fir.box<!fir.array<1xf64>> copy {
+^bb0(%arg0: !fir.ref<!fir.box<!fir.array<1xf64>>>, %arg1: !fir.ref<!fir.box<!fir.array<1xf64>>>):
+  %0 = fir.load %arg1 : !fir.ref<!fir.box<!fir.array<1xf64>>>
+  hlfir.assign %0 to %arg0 : !fir.box<!fir.array<1xf64>>, !fir.ref<!fir.box<!fir.array<1xf64>>>
+  omp.yield(%arg1 : !fir.ref<!fir.box<!fir.array<1xf64>>>)
+}
+// CHECK-LABEL:   omp.private {type = firstprivate} @_QFtestEd_firstprivate : !fir.box<!fir.array<1xf64>> copy {
+// CHECK:         ^bb0(%[[ORIG2:.*]]: !fir.ref<!fir.box<!fir.array<1xf64>>>, %[[CLONE2:.*]]: !fir.ref<!fir.box<!fir.array<1xf64>>>):
+// CHECK:           %[[RHS2:.*]] = fir.load %[[CLONE2]] : !fir.ref<!fir.box<!fir.array<1xf64>>>
+// CHECK:           hlfir.assign %[[RHS2]] to %[[ORIG2]] : !fir.box<!fir.array<1xf64>>, !fir.ref<!fir.box<!fir.array<1xf64>>>
+// CHECK:           omp.yield(%[[CLONE2]] : !fir.ref<!fir.box<!fir.array<1xf64>>>)
+// CHECK:         }
+
+// A copy-region assignment whose RHS is rooted in the clone rather than the
+// original can overlap the LHS, so it keeps its aliasing check.
+omp.private {type = firstprivate} @_QFtestEe_firstprivate : !fir.box<!fir.array<2xf64>> copy {
+^bb0(%arg0: !fir.ref<!fir.box<!fir.array<2xf64>>>, %arg1: !fir.ref<!fir.box<!fir.array<2xf64>>>):
+  %0 = fir.load %arg1 : !fir.ref<!fir.box<!fir.array<2xf64>>>
+  hlfir.assign %0 to %arg1 : !fir.box<!fir.array<2xf64>>, !fir.ref<!fir.box<!fir.array<2xf64>>>
+  omp.yield(%arg1 : !fir.ref<!fir.box<!fir.array<2xf64>>>)
+}
+// CHECK-LABEL:   omp.private {type = firstprivate} @_QFtestEe_firstprivate : !fir.box<!fir.array<2xf64>> copy {
+// CHECK:         ^bb0(%[[ORIG3:.*]]: !fir.ref<!fir.box<!fir.array<2xf64>>>, %[[CLONE3:.*]]: !fir.ref<!fir.box<!fir.array<2xf64>>>):
+// CHECK:           %[[RHS3:.*]] = fir.load %[[CLONE3]] : !fir.ref<!fir.box<!fir.array<2xf64>>>
+// CHECK:           hlfir.assign %[[RHS3]] to %[[CLONE3]] : !fir.box<!fir.array<2xf64>>, !fir.ref<!fir.box<!fir.array<2xf64>>>
+// CHECK:           omp.yield(%[[CLONE3]] : !fir.ref<!fir.box<!fir.array<2xf64>>>)
+// CHECK:         }
+
+// An RHS from a call may designate unrelated memory, so it keeps its aliasing
+// check.
+func.func private @get_box(!fir.ref<!fir.box<!fir.array<2xf64>>>) -> !fir.box<!fir.array<2xf64>>
+omp.private {type = firstprivate} @_QFtestEf_firstprivate : !fir.box<!fir.array<2xf64>> copy {
+^bb0(%arg0: !fir.ref<!fir.box<!fir.array<2xf64>>>, %arg1: !fir.ref<!fir.box<!fir.array<2xf64>>>):
+  %0 = fir.call @get_box(%arg0) : (!fir.ref<!fir.box<!fir.array<2xf64>>>) -> !fir.box<!fir.array<2xf64>>
+  hlfir.assign %0 to %arg1 : !fir.box<!fir.array<2xf64>>, !fir.ref<!fir.box<!fir.array<2xf64>>>
+  omp.yield(%arg1 : !fir.ref<!fir.box<!fir.array<2xf64>>>)
+}
+// CHECK-LABEL:   omp.private {type = firstprivate} @_QFtestEf_firstprivate : !fir.box<!fir.array<2xf64>> copy {
+// CHECK:         ^bb0(%[[ORIG4:.*]]: !fir.ref<!fir.box<!fir.array<2xf64>>>, %[[CLONE4:.*]]: !fir.ref<!fir.box<!fir.array<2xf64>>>):
+// CHECK:           %[[RHS4:.*]] = fir.call @get_box(%[[ORIG4]])
+// CHECK:           hlfir.assign %[[RHS4]] to %[[CLONE4]] : !fir.box<!fir.array<2xf64>>, !fir.ref<!fir.box<!fir.array<2xf64>>>
+// CHECK:           omp.yield(%[[CLONE4]] : !fir.ref<!fir.box<!fir.array<2xf64>>>)
+// CHECK:         }
+
+// Argument 1 of a block other than the entry block is not the clone, so an
+// assignment writing it keeps its aliasing check.
+omp.private {type = firstprivate} @_QFtestEg_firstprivate : !fir.box<!fir.array<2xf64>> copy {
+^bb0(%arg0: !fir.ref<!fir.box<!fir.array<2xf64>>>, %arg1: !fir.ref<!fir.box<!fir.array<2xf64>>>):
+  %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.array<2xf64>>>
+  cf.br ^bb1(%arg0, %arg0 : !fir.ref<!fir.box<!fir.array<2xf64>>>, !fir.ref<!fir.box<!fir.array<2xf64>>>)
+^bb1(%a: !fir.ref<!fir.box<!fir.array<2xf64>>>, %b: !fir.ref<!fir.box<!fir.array<2xf64>>>):
+  hlfir.assign %0 to %b : !fir.box<!fir.array<2xf64>>, !fir.ref<!fir.box<!fir.array<2xf64>>>
+  omp.yield(%arg1 : !fir.ref<!fir.box<!fir.array<2xf64>>>)
+}
+// CHECK-LABEL:   omp.private {type = firstprivate} @_QFtestEg_firstprivate : !fir.box<!fir.array<2xf64>> copy {
+// CHECK:         ^bb0(%[[ORIG5:.*]]: !fir.ref<!fir.box<!fir.array<2xf64>>>, %[[CLONE5:.*]]: !fir.ref<!fir.box<!fir.array<2xf64>>>):
+// CHECK:           %[[RHS5:.*]] = fir.load %[[ORIG5]]
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1(%[[A:.*]]: !fir.ref<!fir.box<!fir.array<2xf64>>>, %[[B:.*]]: !fir.ref<!fir.box<!fir.array<2xf64>>>):
+// CHECK:           hlfir.assign %[[RHS5]] to %[[B]] : !fir.box<!fir.array<2xf64>>, !fir.ref<!fir.box<!fir.array<2xf64>>>
+// CHECK:         }
+
+// A POINTER firstprivate shares data between mold and clone, so the copy
+// aliases and keeps its check despite matching the shape. Guards a future
+// codegen change; lowering uses fir.store, not hlfir.assign, today.
+omp.private {type = firstprivate} @_QFtestEp_firstprivate : !fir.box<!fir.ptr<!fir.array<?xf64>>> copy {
+^bb0(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, %arg1: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>):
+  %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+  hlfir.assign %0 to %arg1 : !fir.box<!fir.ptr<!fir.array<?xf64>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+  omp.yield(%arg1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
+}
+// CHECK-LABEL:   omp.private {type = firstprivate} @_QFtestEp_firstprivate : !fir.box<!fir.ptr<!fir.array<?xf64>>> copy {
+// CHECK:         ^bb0(%[[MOLD:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, %[[CLONE:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>):
+// CHECK:           %[[RHS:.*]] = fir.load %[[MOLD]]
+// CHECK:           hlfir.assign %[[RHS]] to %[[CLONE]] : !fir.box<!fir.ptr<!fir.array<?xf64>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+// CHECK:           omp.yield(%[[CLONE]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
+// CHECK:         }
