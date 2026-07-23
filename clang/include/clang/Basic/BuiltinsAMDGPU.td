@@ -1275,6 +1275,18 @@ def __builtin_amdgcn_cooperative_atomic_load_8x16B : AMDGPUBuiltin<"_ExtVector<4
 def __builtin_amdgcn_cooperative_atomic_store_8x16B : AMDGPUBuiltin<"void(_ExtVector<4, int> *, _ExtVector<4, int>, _Constant int, char const *)", [Const], "gfx1250-insts,wavefrontsize32">;
 
 //===----------------------------------------------------------------------===//
+// GFX13+ only builtins.
+//===----------------------------------------------------------------------===//
+def __builtin_amdgcn_cvt_scalef32_pk32_bf6_f32 : AMDGPUBuiltin<"_Vector<6, unsigned int>(_Vector<32, float>, float)", [Const], "f32-to-fp6bf6-cvt-scale-insts"> {
+  let Documentation = [DocCvtScaleF32Pk32BF6F32];
+  let ArgNames = ["src", "scale"];
+}
+def __builtin_amdgcn_cvt_scalef32_pk32_fp6_f32 : AMDGPUBuiltin<"_Vector<6, unsigned int>(_Vector<32, float>, float)", [Const], "f32-to-fp6bf6-cvt-scale-insts"> {
+  let Documentation = [DocCvtScaleF32Pk32FP6F32];
+  let ArgNames = ["src", "scale"];
+}
+
+//===----------------------------------------------------------------------===//
 // Image builtins
 //===----------------------------------------------------------------------===//
 def __builtin_amdgcn_image_load_1d_v4f32_i32 : AMDGPUBuiltin<"_ExtVector<4, float>(int, int, __amdgpu_texture_t, int, int)", [Const], "image-insts">;

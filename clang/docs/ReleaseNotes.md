@@ -46,9 +46,21 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### C/C++ Language Potentially Breaking Changes
 
+- `-Wunicode-whitespace` now defaults to an error.
+The previous behavior can be restored with `-Wno-error=unicode-whitespace`.
+Clang will stop accepting non-ascii whitespaces as token separators
+in a future version of Clang.
+
 ### C++ Specific Potentially Breaking Changes
 
 ### ABI Changes in This Version
+
+- Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
+for 256- and 512-bit vector arguments and returns from effective per-function
+target features. Features and `arch=` CPUs that imply AVX or AVX512F are
+honored, and calls use the caller's features, matching GCC. Per-function
+features cannot lower the translation-unit ABI level;
+`-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -57,6 +69,15 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Templight support has been removed.
 
 ### Clang Python Bindings Potentially Breaking Changes
+
+- `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
+  The representation now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
+
+- Remove the deprecated `CompletionChunk.isKind...` methods.
+  Existing uses should be adapted to directly compare equality of the `CompletionChunk` kind with the corresponding `CompletionChunkKind` variant.
+
+  Affected methods: `isKindOptional`, `isKindTypedText`, `isKindPlaceHolder`,
+  `isKindInformative` and `isKindResultType`.
 
 ### OpenCL Potentially Breaking Changes
 
@@ -115,6 +136,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### New Compiler Flags
 
+- New option `-fdefined-pointer-subtraction` added to preserve stable semantics
+  when subtracting pointers to unrelated objects.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -126,6 +150,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
 
 ### Improvements to Clang's diagnostics
+
+- More consistent rendering of Unicode characters in diagnostic messages.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
@@ -307,6 +333,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Bug Fixes to Compiler Builtins
 
+- Fixed a crash when classifying a call to a builtin with dependent arguments,
+  such as when the call is used as an `auto` non-type template argument.
+
 #### Bug Fixes to Attribute Support
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
@@ -322,6 +351,18 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
+
+- Fixed a regression where an internal-linkage function (e.g. a `static` or
+  anonymous-namespace helper) declared in the global module fragment of the
+  current translation unit was removed from the overload set when the calling
+  template was instantiated after the global module fragment was closed,
+  producing a spurious "no matching function" error with no candidate notes.
+  (#GH210822)
+  
+- Fixed a crash when a lambda parameter pack was given a default argument that
+  is a pack expansion referencing an enclosing function's parameter pack (e.g.
+  `[](Types... = args...) {}`). Clang now diagnoses the illegal default
+  argument instead of asserting. (#GH210714)
 
 #### Bug Fixes to AST Handling
 

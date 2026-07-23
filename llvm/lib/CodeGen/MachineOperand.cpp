@@ -790,6 +790,17 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
     break;
+  case MCCFIInstruction::OpLLVMSetRAState: {
+    OS << "llvm_set_ra_state ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    OS << CFI.getRASignState() << ", ";
+    if (MCSymbol *PACSym = CFI.getRASignSymbol())
+      MachineOperand::printSymbol(OS, *PACSym);
+    else
+      OS << CFI.getRASignOffset();
+    break;
+  }
   case MCCFIInstruction::OpLLVMRegisterPair: {
     const auto &Fields =
         CFI.getExtraFields<MCCFIInstruction::RegisterPairFields>();
