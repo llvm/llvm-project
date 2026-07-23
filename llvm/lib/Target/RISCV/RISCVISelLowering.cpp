@@ -5602,7 +5602,7 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
 // vslidedown.vi v8, v9, 1
 static SDValue lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
     const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
-    const std::array<std::pair<int, int>, 2> &SrcInfo, MVT ContainerVT,
+    ArrayRef<std::pair<int, int>> SrcInfo, MVT ContainerVT,
     const RISCVSubtarget &Subtarget, SelectionDAG &DAG) {
   if (V1.isUndef() || V2.isUndef())
     return SDValue();
