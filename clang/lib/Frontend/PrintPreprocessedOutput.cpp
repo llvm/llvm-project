@@ -184,7 +184,8 @@ public:
   void PragmaExecCharsetPop(SourceLocation Loc) override;
   void PragmaAssumeNonNullBegin(SourceLocation Loc) override;
   void PragmaAssumeNonNullEnd(SourceLocation Loc) override;
-  void PragmaGLIBCXXVersion(SourceLocation Loc, std::uint64_t Value) override;
+  void PragmaSetPPState(SourceLocation Loc, IdentifierInfo *MacroName,
+                        std::uint64_t Value) override;
 
   /// Insert whitespace before emitting the next token.
   ///
@@ -578,13 +579,14 @@ void PrintPPOutputPPCallbacks::MacroDefined(const Token &MacroNameTok,
       ShouldEmitDefine = false;
   }
 
+  IdentifierInfo *MacroName = MacroNameTok.getIdentifierInfo();
   if (!ShouldEmitDefine) {
-    // Preserve '__GLIBCXX__' as a pragma if we shouldn't print '#define's; this
-    // is required for a number of workarounds in Sema (which are enabled
-    // depending on the value of this macro).
-    if (MacroNameTok.getIdentifierInfo()->getName() == "__GLIBCXX__") {
+    // Preserve macro definitions of macros that can be used with
+    // '#pragma clang __set_pp_state' as pragmas if printing '#define's
+    // is disabled.
+    if (PP.isPragmaSetPPStateMacro(MacroName)) {
       MoveToLine(DefLoc, /*RequireStartOfLine=*/true);
-      *OS << "#pragma clang glibcxx_version";
+      *OS << "#pragma clang __set_pp_state " << MacroName->getName();
       PrintMacroDefinition(/*II=*/nullptr, *MI, PP, OS);
       setEmittedDirectiveOnThisLine();
     }
@@ -592,7 +594,7 @@ void PrintPPOutputPPCallbacks::MacroDefined(const Token &MacroNameTok,
   }
 
   MoveToLine(DefLoc, /*RequireStartOfLine=*/true);
-  PrintMacroDefinition(MacroNameTok.getIdentifierInfo(), *MI, PP, OS);
+  PrintMacroDefinition(MacroName, *MI, PP, OS);
   setEmittedDirectiveOnThisLine();
 }
 
@@ -770,10 +772,12 @@ PragmaAssumeNonNullEnd(SourceLocation Loc) {
   setEmittedDirectiveOnThisLine();
 }
 
-void PrintPPOutputPPCallbacks::PragmaGLIBCXXVersion(SourceLocation Loc,
-                                                    std::uint64_t Value) {
+void PrintPPOutputPPCallbacks::PragmaSetPPState(SourceLocation Loc,
+                                                IdentifierInfo *MacroName,
+                                                std::uint64_t Value) {
   MoveToLine(Loc, /*RequireStartOfLine=*/true);
-  *OS << "#pragma clang glibcxx_version " << Value;
+  *OS << "#pragma clang __set_pp_state " << MacroName->getName() << " "
+      << Value;
   setEmittedDirectiveOnThisLine();
 }
 

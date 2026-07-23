@@ -342,8 +342,9 @@ public:
   /// is read.
   virtual void PragmaAssumeNonNullEnd(SourceLocation Loc) {}
 
-  /// Callback invoked when a \#pragma clang glibcxx_version directive is read.
-  virtual void PragmaGLIBCXXVersion(SourceLocation Loc, std::uint64_t Value) {}
+  /// Callback invoked when a \#pragma clang __set_pp_state directive is read.
+  virtual void PragmaSetPPState(SourceLocation Loc, IdentifierInfo *MacroName,
+                                std::uint64_t Value) {}
 
   /// Called by Preprocessor::HandleMacroExpandedIdentifier when a
   /// macro invocation is found.
@@ -703,9 +704,10 @@ public:
     Second->PragmaAssumeNonNullEnd(Loc);
   }
 
-  void PragmaGLIBCXXVersion(SourceLocation Loc, std::uint64_t Value) override {
-    First->PragmaGLIBCXXVersion(Loc, Value);
-    Second->PragmaGLIBCXXVersion(Loc, Value);
+  void PragmaSetPPState(SourceLocation Loc, IdentifierInfo *MacroName,
+                        std::uint64_t Value) override {
+    First->PragmaSetPPState(Loc, MacroName, Value);
+    Second->PragmaSetPPState(Loc, MacroName, Value);
   }
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,

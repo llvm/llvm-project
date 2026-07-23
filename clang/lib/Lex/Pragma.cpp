@@ -913,6 +913,48 @@ void Preprocessor::HandlePragmaHdrstop(Token &Tok) {
     SkippingUntilPragmaHdrStop = false;
 }
 
+bool Preprocessor::isPragmaSetPPStateMacro(IdentifierInfo *MacroName) {
+  return MacroName == Ident__GLIBCXX__;
+}
+
+void Preprocessor::HandlePragmaSetPPState(PragmaIntroducer Introducer,
+                                          Token &Tok) {
+  // Lex the macro name we want to set.
+  LexUnexpandedToken(Tok);
+  if (!Tok.getIdentifierInfo()) {
+    Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_expected_name);
+    return;
+  }
+
+  IdentifierInfo *MacroName = Tok.getIdentifierInfo();
+  if (!isPragmaSetPPStateMacro(MacroName)) {
+    Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_invalid_arg)
+        << MacroName;
+    return;
+  }
+
+  // Lex the integer argument.
+  Lex(Tok);
+  std::uint64_t Value;
+  if (!Tok.is(tok::numeric_constant) ||
+      !parseSimpleIntegerLiteral(Tok, Value)) {
+    Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_expected_int_after)
+        // Don't pass an IdentifierInfo* here to avoid quoting.
+        << MacroName->getName();
+    return;
+  }
+
+  // Update the state.
+  if (MacroName == Ident__GLIBCXX__) {
+    setStdLibCxxVersion(Value);
+  } else {
+    llvm_unreachable("forgot to handle a possible argument to __set_pp_state");
+  }
+
+  if (Callbacks)
+    Callbacks->PragmaSetPPState(Introducer.Loc, MacroName, Value);
+}
+
 /// AddPragmaHandler - Add the specified pragma handler to the preprocessor.
 /// If 'Namespace' is non-null, then it is a token required to exist on the
 /// pragma line before the pragma string starts, e.g. "STDC" or "GCC".
@@ -2148,28 +2190,23 @@ struct PragmaFinalHandler : public PragmaHandler {
   }
 };
 
-/// "\#pragma clang glibcxx_version ..."
+/// "\#pragma clang __set_pp_state ..."
+///
+/// This pragma takes an identifier+value pair and sets some internal state in
+/// the compiler; it is intended primarily to preserve preprocessor state that
+/// is required for compilation to function properly across preprocessor runs
+/// if '-E' is used. This is an internal pragma that should not be used by
+/// users.
 ///
 /// The syntax is
 /// \code
-///   #pragma clang glibcxx_version INTEGER
+///   #pragma clang __set_pp_state glibcxx_version INTEGER
 /// \endcode
 struct PragmaGLIBCXXVersionHandler : PragmaHandler {
-  PragmaGLIBCXXVersionHandler() : PragmaHandler("glibcxx_version") {}
+  PragmaGLIBCXXVersionHandler() : PragmaHandler("__set_pp_state") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &Tok) override {
-    PP.Lex(Tok);
-    std::uint64_t Value;
-    if (Tok.is(tok::numeric_constant) &&
-        PP.parseSimpleIntegerLiteral(Tok, Value)) {
-      PP.setStdLibCxxVersion(Value);
-
-      if (PP.getPPCallbacks())
-        PP.getPPCallbacks()->PragmaGLIBCXXVersion(Introducer.Loc, Value);
-    } else {
-      PP.Diag(Tok.getLocation(),
-              diag::err_pp_pragma_glibcxx_version_requires_integer);
-    }
+    PP.HandlePragmaSetPPState(Introducer, Tok);
   }
 };
 } // namespace
