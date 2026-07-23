@@ -41,7 +41,7 @@ BOLTAArch64OptimizationStatus
 
 BAT
 BinaryAnalysis
+NewBackend
 PointerAuthDesign
 RuntimeLibrary
 ```
-
