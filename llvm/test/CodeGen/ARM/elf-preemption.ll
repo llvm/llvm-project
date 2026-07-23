@@ -242,3 +242,52 @@ define ptr @get_extern_weak_func() nounwind {
 ; PIC-NEXT:    .long extern_weak_func(GOT_PREL)-(.LPC10_0+8-.Ltmp5)
   ret ptr @extern_weak_func
 }
+
+;; An undefined weak reference with hidden visibility (e.g. from
+;; `[[gnu::weak, gnu::visibility("hidden")]] extern int foo;`) is still not
+;; dso_local, so it must go through the GOT: the compiler cannot know whether
+;; it will be defined or undefined at link time, and an undefined weak has to
+;; materialize as 0, which only the GOT can produce (R_ARM_REL32 cannot).
+@extern_weak_hidden_var = extern_weak hidden global i32
+define ptr @get_extern_weak_hidden_var() nounwind {
+; STATIC-LABEL: get_extern_weak_hidden_var:
+; STATIC:       @ %bb.0:
+; STATIC-NEXT:    movw r0, :lower16:extern_weak_hidden_var
+; STATIC-NEXT:    movt r0, :upper16:extern_weak_hidden_var
+; STATIC-NEXT:    bx lr
+;
+; PIC-LABEL: get_extern_weak_hidden_var:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    ldr r0, .LCPI11_0
+; PIC-NEXT:  .LPC11_0:
+; PIC-NEXT:    ldr r0, [pc, r0]
+; PIC-NEXT:    bx lr
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI11_0:
+; PIC-NEXT:  .Ltmp6:
+; PIC-NEXT:    .long extern_weak_hidden_var(GOT_PREL)-(.LPC11_0+8-.Ltmp6)
+  ret ptr @extern_weak_hidden_var
+}
+
+declare extern_weak hidden ptr @extern_weak_hidden_func()
+define ptr @get_extern_weak_hidden_func() nounwind {
+; STATIC-LABEL: get_extern_weak_hidden_func:
+; STATIC:       @ %bb.0:
+; STATIC-NEXT:    movw r0, :lower16:extern_weak_hidden_func
+; STATIC-NEXT:    movt r0, :upper16:extern_weak_hidden_func
+; STATIC-NEXT:    bx lr
+;
+; PIC-LABEL: get_extern_weak_hidden_func:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    ldr r0, .LCPI12_0
+; PIC-NEXT:  .LPC12_0:
+; PIC-NEXT:    ldr r0, [pc, r0]
+; PIC-NEXT:    bx lr
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI12_0:
+; PIC-NEXT:  .Ltmp7:
+; PIC-NEXT:    .long extern_weak_hidden_func(GOT_PREL)-(.LPC12_0+8-.Ltmp7)
+  ret ptr @extern_weak_hidden_func
+}
