@@ -12,6 +12,7 @@
 #include "AArch64SMEAttributes.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -1370,7 +1371,7 @@ struct SVEIntrinsicInfo {
   }
 
   unsigned getGoverningPredicateOperandIdx() const {
-    assert(hasGoverningPredicate() && "Propery not set!");
+    assert(hasGoverningPredicate() && "Property not set!");
     return GoverningPredicateIdx;
   }
 
@@ -1388,12 +1389,16 @@ struct SVEIntrinsicInfo {
   // simplification can be used to optimise an intrinsic's active lanes.
   //
 
+  //
+  // Intrinsic that produces the same result for active lanes.
+  //
+
   bool hasMatchingUndefIntrinsic() const {
     return UndefIntrinsic != Intrinsic::not_intrinsic;
   }
 
   Intrinsic::ID getMatchingUndefIntrinsic() const {
-    assert(hasMatchingUndefIntrinsic() && "Propery not set!");
+    assert(hasMatchingUndefIntrinsic() && "Property not set!");
     return UndefIntrinsic;
   }
 
@@ -1403,10 +1408,14 @@ struct SVEIntrinsicInfo {
     return *this;
   }
 
+  //
+  // Instruction where active lanes produce the same result.
+  //
+
   bool hasMatchingIROpode() const { return IROpcode != 0; }
 
   unsigned getMatchingIROpode() const {
-    assert(hasMatchingIROpode() && "Propery not set!");
+    assert(hasMatchingIROpode() && "Property not set!");
     return IROpcode;
   }
 
@@ -1425,7 +1434,7 @@ struct SVEIntrinsicInfo {
   }
 
   unsigned getOperandIdxInactiveLanesTakenFrom() const {
-    assert(inactiveLanesTakenFromOperand() && "Propery not set!");
+    assert(inactiveLanesTakenFromOperand() && "Property not set!");
     return OperandIdxForInactiveLanes;
   }
 
@@ -1477,7 +1486,7 @@ struct SVEIntrinsicInfo {
   }
 
   unsigned getOperandIdxWithNoActiveLanes() const {
-    assert(hasOperandWithNoActiveLanes() && "Propery not set!");
+    assert(hasOperandWithNoActiveLanes() && "Property not set!");
     return OperandIdxWithNoActiveLanes;
   }
 
@@ -4831,6 +4840,17 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
           const auto *Entry = CostTableLookup(DivTbl, ISD, VT.getSimpleVT());
           if (nullptr != Entry)
             return Entry->Cost;
+        }
+        // A non-power-of-2 count can't divide as a single whole-register op
+        // (an inactive lane's leftover value could be a zero divisor and
+        // trap), so the legalizer emits one div per whole register plus one
+        // per set bit of the remainder (e.g. <7 x i32> emits 3 divs, not 2).
+        if (auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+            FVTy && LT.second.isFixedLengthVector()) {
+          unsigned NumElts = FVTy->getNumElements();
+          unsigned RegElts = LT.second.getVectorNumElements();
+          if (RegElts > 0)
+            Cost = (NumElts / RegElts + popcount(NumElts % RegElts)) * 2;
         }
         // For 8/16-bit elements, the cost is higher because the type
         // requires promotion and possibly splitting:

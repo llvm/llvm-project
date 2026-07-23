@@ -603,7 +603,7 @@ class SPIRVStructurizerImpl {
   // than another when its target merge block post-dominates the other target's
   // merge block. (This ordering should match the nesting ordering of the source
   // HLSL).
-  bool sortSelectionMerge(Function &F, BasicBlock &Block) {
+  bool sortSelectionMerge(PartialOrderingVisitor &Visitor, BasicBlock &Block) {
     std::vector<Instruction *> MergeInstructions;
     for (Instruction &I : Block)
       if (isMergeInstruction(&I))
@@ -614,7 +614,6 @@ class SPIRVStructurizerImpl {
 
     Instruction *InsertionPoint = *MergeInstructions.begin();
 
-    PartialOrderingVisitor Visitor(F);
     llvm::sort(MergeInstructions,
                [&Visitor](Instruction *Left, Instruction *Right) {
                  if (Left == Right)
@@ -637,8 +636,9 @@ class SPIRVStructurizerImpl {
   // the one designated by A.
   bool sortSelectionMergeHeaders(Function &F) {
     bool Modified = false;
+    PartialOrderingVisitor Visitor(F);
     for (BasicBlock &BB : F) {
-      Modified |= sortSelectionMerge(F, BB);
+      Modified |= sortSelectionMerge(Visitor, BB);
     }
     return Modified;
   }
@@ -932,6 +932,16 @@ class SPIRVStructurizerImpl {
       auto It = SI->case_begin();
       while (It != SI->case_end()) {
         BasicBlock *Target = It->getCaseSuccessor();
+
+        // Don't Split. Just remove cases branching to the default destination
+        // to prevent spurious extra successors thus preserving single-exit
+        // convergence regions (i.e. if a merged exit is default & a case).
+        if (Target == SI->getDefaultDest()) {
+          Modified = true;
+          It = SI->removeCase(It);
+          continue;
+        }
+
         if (Seen.count(Target) == 0) {
           Seen.insert(Target);
           ++It;
