@@ -207,8 +207,10 @@ public:
       LLT DstTy = MRI.getType(DstReg);
       LLT SrcTy = MRI.getType(SrcReg);
       uint64_t SizeInBits = SrcTy.getScalarSizeInBits();
-      if (isInstUnsupported(
-              {TargetOpcode::G_SEXT_INREG, {DstTy}, {}, {(int64_t)SizeInBits}}))
+      if (isInstUnsupported({TargetOpcode::G_SEXT_INREG,
+                             {DstTy},
+                             {},
+                             {static_cast<int64_t>(SizeInBits)}}))
         return false;
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       if (DstTy != MRI.getType(TruncSrc))
