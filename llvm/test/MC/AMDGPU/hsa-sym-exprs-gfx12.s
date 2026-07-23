@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=obj < %s > %t
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=obj < %s > %t
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
 // When going from asm -> asm, the expressions should remain the same (i.e., symbolic).

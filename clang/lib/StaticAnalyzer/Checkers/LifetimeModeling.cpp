@@ -47,10 +47,10 @@ static bool isDanglingStackSource(const MemRegion *Source,
     // the warning should be suppressed. When a lifetimebound method
     // is called from a destructor then its return value is not expected
     // to outlive the object being destroyed.
-    for (const StackFrame *DtorSF = CurrentSF; DtorSF;
-         DtorSF = DtorSF->getParent()) {
-      if (isa<CXXDestructorDecl>(DtorSF->getDecl()))
-        return false;
+    if (llvm::any_of(C.stackframes(), [&](const StackFrame &Frame) {
+          return isa<CXXDestructorDecl>(Frame.getDecl());
+        })) {
+      return false;
     }
 
     if (SF == CurrentSF || !SF->isParentOf(CurrentSF))

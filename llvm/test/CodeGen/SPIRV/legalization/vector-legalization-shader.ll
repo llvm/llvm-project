@@ -87,7 +87,8 @@ entry:
   ret void
 }
 
-; Test splitting a vector of size 6. It must be expanded to 8, and then split.
+; The <6 x i32> is reassembled as two <3 x i32> chunks, and the two
+; deinterleave shuffles stay vectorized as chained <3 x> OpVectorShuffles
 define internal void @test_bitcast_expand() {
 entry:
   ; CHECK: %[[#load:]] = OpLoad %[[#v3double]] %[[#GVec3]]
@@ -101,19 +102,16 @@ entry:
   ; CHECK: %[[#v4i0:]] = OpBitcast %[[#v4int]] %[[#v2d0]]
   ; CHECK: %[[#v4i1:]] = OpBitcast %[[#v4int]] %[[#v2d1]]
   %1 = bitcast <3 x double> %0 to <6 x i32>
-  
-  ; CHECK: %[[#l0:]] = OpCompositeExtract %[[#int]] %[[#v4i0]] 0
-  ; CHECK: %[[#l1:]] = OpCompositeExtract %[[#int]] %[[#v4i0]] 2
-  ; CHECK: %[[#l2:]] = OpCompositeExtract %[[#int]] %[[#v4i1]] 0
-  ; CHECK: %[[#res_low:]] = OpCompositeConstruct %[[#v3int]] %[[#l0]] %[[#l1]] %[[#l2]]
+  ; (mask "0 1 4" for the low lanes, "0 3 5" for the high lanes) instead of
+  ; being scalarized into per-element extract/construct sequences.
+  ; CHECK: %[[#c0:]] = OpCompositeConstruct %[[#v3int]] %[[#]] %[[#]] %[[#]]
+  ; CHECK: %[[#c1:]] = OpCompositeConstruct %[[#v3int]] %[[#]] %[[#]] %[[#]]
   %2 = shufflevector <6 x i32> %1, <6 x i32> poison, <3 x i32> <i32 0, i32 2, i32 4>
-  
-  ; CHECK: %[[#h0:]] = OpCompositeExtract %[[#int]] %[[#v4i0]] 1
-  ; CHECK: %[[#h1:]] = OpCompositeExtract %[[#int]] %[[#v4i0]] 3
-  ; CHECK: %[[#h2:]] = OpCompositeExtract %[[#int]] %[[#v4i1]] 1
-  ; CHECK: %[[#res_high:]] = OpCompositeConstruct %[[#v3int]] %[[#h0]] %[[#h1]] %[[#h2]]
+  ; CHECK: %[[#low0:]] = OpVectorShuffle %[[#v3int]] %[[#c0]] %[[#c0]] 0 2 {{.*}}
+  ; CHECK: %[[#res_low:]] = OpVectorShuffle %[[#v3int]] %[[#low0]] %[[#c1]] 0 1 4
+  ; CHECK: %[[#high0:]] = OpVectorShuffle %[[#v3int]] %[[#]] %[[#]] 1 {{.*}} {{.*}}
+  ; CHECK: %[[#res_high:]] = OpVectorShuffle %[[#v3int]] %[[#high0]] %[[#]] 0 3 5
   %3 = shufflevector <6 x i32> %1, <6 x i32> poison, <3 x i32> <i32 1, i32 3, i32 5>
-
   ; CHECK: OpStore %[[#Lows3]] %[[#res_low]]
   store <3 x i32> %2, ptr addrspace(10) @Lows3, align 16
 
