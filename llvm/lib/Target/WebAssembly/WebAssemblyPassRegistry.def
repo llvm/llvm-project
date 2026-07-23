@@ -43,6 +43,8 @@ MACHINE_FUNCTION_PASS("wasm-fix-irreducible-control-flow",
 MACHINE_FUNCTION_PASS("wasm-late-eh-prepare", WebAssemblyLateEHPreparePass())
 MACHINE_FUNCTION_PASS("wasm-nullify-dbg-value-lists",
                       WebAssemblyNullifyDebugValueListsPass())
+MACHINE_FUNCTION_PASS("wasm-optimize-live-intervals",
+                      WebAssemblyOptimizeLiveIntervalsPass())
 MACHINE_FUNCTION_PASS("wasm-replace-phys-regs", WebAssemblyReplacePhysRegsPass())
 MACHINE_FUNCTION_PASS("wasm-set-p2align-operands",
                       WebAssemblySetP2AlignOperandsPass())
