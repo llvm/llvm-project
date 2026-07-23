@@ -498,8 +498,7 @@ void onlyReadsHandle(nb::iterable &operands,
   std::vector<MlirOpOperand> operandsVec;
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
-  mlirTransformOnlyReadsHandle(operandsVec.data(), operandsVec.size(),
-                               effects.get());
+  mlirTransformOnlyReadsHandle(operandsVec.data(), operandsVec.size(), effects);
 };
 
 void consumesHandle(nb::iterable &operands,
@@ -507,8 +506,7 @@ void consumesHandle(nb::iterable &operands,
   std::vector<MlirOpOperand> operandsVec;
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
-  mlirTransformConsumesHandle(operandsVec.data(), operandsVec.size(),
-                              effects.get());
+  mlirTransformConsumesHandle(operandsVec.data(), operandsVec.size(), effects);
 };
 
 void producesHandle(nb::iterable &results,
@@ -516,16 +514,15 @@ void producesHandle(nb::iterable &results,
   std::vector<MlirValue> resultsVec;
   for (auto result : results)
     resultsVec.push_back(nb::cast<PyOpResult>(result).get());
-  mlirTransformProducesHandle(resultsVec.data(), resultsVec.size(),
-                              effects.get());
+  mlirTransformProducesHandle(resultsVec.data(), resultsVec.size(), effects);
 };
 
 void modifiesPayload(const PyMemoryEffectsInstanceList &effects) {
-  mlirTransformModifiesPayload(effects.get());
+  mlirTransformModifiesPayload(effects);
 }
 
 void onlyReadsPayload(const PyMemoryEffectsInstanceList &effects) {
-  mlirTransformOnlyReadsPayload(effects.get());
+  mlirTransformOnlyReadsPayload(effects);
 }
 } // namespace
 

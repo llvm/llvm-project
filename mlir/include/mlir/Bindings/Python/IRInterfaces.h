@@ -135,7 +135,7 @@ private:
   nanobind::object obj;
 };
 
-/// A borrowed memory effect.
+/// A memory effect.
 class PyMemoryEffect {
 public:
   explicit PyMemoryEffect(MlirMemoryEffect effect) : effect(effect) {}
@@ -146,7 +146,7 @@ private:
   MlirMemoryEffect effect;
 };
 
-/// A borrowed side effect resource.
+/// A side effect resource.
 class PySideEffectResource {
 public:
   explicit PySideEffectResource(MlirSideEffectResource resource)
@@ -158,7 +158,7 @@ private:
   MlirSideEffectResource resource;
 };
 
-/// An owning memory effect instance.
+/// A memory effect instance.
 class PyMemoryEffectInstance {
 public:
   explicit PyMemoryEffectInstance(MlirMemoryEffectInstance instance)
@@ -185,6 +185,7 @@ public:
       : effects(effects) {}
 
   MlirMemoryEffectInstancesList get() const { return effects; }
+  operator MlirMemoryEffectInstancesList() const { return effects; }
 
 private:
   MlirMemoryEffectInstancesList effects;

@@ -539,26 +539,26 @@ void populateIRInterfaces(nb::module_ &m) {
       .value("RecursivelySpeculatable",
              MlirSpeculatabilityRecursivelySpeculatable);
   nb::class_<PyMemoryEffect>(m, "MemoryEffect", "A memory effect.")
-      .def_prop_ro_static("allocate",
+      .def_prop_ro_static("Allocate",
                           [](nb::object & /*class*/) {
                             return PyMemoryEffect(
                                 mlirMemoryEffectsAllocateGet());
                           })
-      .def_prop_ro_static("free",
+      .def_prop_ro_static("Free",
                           [](nb::object & /*class*/) {
                             return PyMemoryEffect(mlirMemoryEffectsFreeGet());
                           })
-      .def_prop_ro_static("read",
+      .def_prop_ro_static("Read",
                           [](nb::object & /*class*/) {
                             return PyMemoryEffect(mlirMemoryEffectsReadGet());
                           })
-      .def_prop_ro_static("write", [](nb::object & /*class*/) {
+      .def_prop_ro_static("Write", [](nb::object & /*class*/) {
         return PyMemoryEffect(mlirMemoryEffectsWriteGet());
       });
 
   nb::class_<PySideEffectResource>(m, "SideEffectResource",
                                    "A side effect resource.")
-      .def_prop_ro_static("default", [](nb::object & /*class*/) {
+      .def_prop_ro_static("Default", [](nb::object & /*class*/) {
         return PySideEffectResource(mlirSideEffectsDefaultResourceGet());
       });
 

@@ -21,64 +21,64 @@ class ReadModel(ir.MemoryEffectsOpInterface):
     @staticmethod
     def get_effects(op, effects):
         effects.append(
-            ir.MemoryEffect.read,
+            ir.MemoryEffect.Read,
             op.op_operands[0],
             parameters=ir.StringAttr.get("read parameter"),
             stage=1,
             effect_on_full_region=True,
-            resource=ir.SideEffectResource.default,
+            resource=ir.SideEffectResource.Default,
         )
 
 
 class ReadDeadModel(ir.MemoryEffectsOpInterface):
     @staticmethod
     def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.read)
+        effects.append(ir.MemoryEffect.Read)
 
 
 class WriteModel(ir.MemoryEffectsOpInterface):
     @staticmethod
     def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.write)
+        effects.append(ir.MemoryEffect.Write)
 
 
 class FreeModel(ir.MemoryEffectsOpInterface):
     @staticmethod
     def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.free)
+        effects.append(ir.MemoryEffect.Free)
 
 
 class AllocateModel(ir.MemoryEffectsOpInterface):
     @staticmethod
     def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.allocate)
+        effects.append(ir.MemoryEffect.Allocate)
 
 
 class AllocateResultModel(ir.MemoryEffectsOpInterface):
     @staticmethod
     def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.allocate, op.results[0])
+        effects.append(ir.MemoryEffect.Allocate, op.results[0])
 
 
 class BlockArgumentTargetModel(ir.MemoryEffectsOpInterface):
     @staticmethod
     def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.read, op.regions[0].blocks[0].arguments[0])
+        effects.append(ir.MemoryEffect.Read, op.regions[0].blocks[0].arguments[0])
 
 
 class SymbolTargetModel(ir.MemoryEffectsOpInterface):
     @staticmethod
     def get_effects(op, effects):
         try:
-            effects.append(ir.MemoryEffect.read, ir.StringAttr.get("not a symbol"))
+            effects.append(ir.MemoryEffect.Read, ir.StringAttr.get("not a symbol"))
         except TypeError as error:
             print("invalid symbol target:", error)
         try:
-            effects.append(ir.MemoryEffect.read, parameters=42)
+            effects.append(ir.MemoryEffect.Read, parameters=42)
         except TypeError as error:
             print("invalid parameters:", error)
         effects.append(
-            ir.MemoryEffect.read,
+            ir.MemoryEffect.Read,
             ir.FlatSymbolRefAttr.get("global"),
             parameters=ir.StringAttr.get("symbol parameter"),
             stage=2,
@@ -158,15 +158,15 @@ with ir.Context(), ir.Location.unknown():
     # CHECK: memory effect properties: True True True True
     print(
         "memory effect properties:",
-        isinstance(ir.MemoryEffect.allocate, ir.MemoryEffect),
-        isinstance(ir.MemoryEffect.free, ir.MemoryEffect),
-        isinstance(ir.MemoryEffect.read, ir.MemoryEffect),
-        isinstance(ir.MemoryEffect.write, ir.MemoryEffect),
+        isinstance(ir.MemoryEffect.Allocate, ir.MemoryEffect),
+        isinstance(ir.MemoryEffect.Free, ir.MemoryEffect),
+        isinstance(ir.MemoryEffect.Read, ir.MemoryEffect),
+        isinstance(ir.MemoryEffect.Write, ir.MemoryEffect),
     )
     # CHECK: default resource property: True
     print(
         "default resource property:",
-        isinstance(ir.SideEffectResource.default, ir.SideEffectResource),
+        isinstance(ir.SideEffectResource.Default, ir.SideEffectResource),
     )
 
     read_cse = run_pass(
