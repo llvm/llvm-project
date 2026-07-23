@@ -309,7 +309,7 @@ BreakpointLocationSP Breakpoint::AddLocation(const Address &addr,
   // non-instruction header.
   Address bp_addr = addr;
   if (Architecture *arch = m_target.GetArchitecturePlugin())
-    bp_addr = arch->GetFirstInstructionAddress(bp_addr);
+    bp_addr = arch->SkipFunctionHeader(bp_addr);
   return m_locations.AddLocation(bp_addr, m_resolve_indirect_symbols,
                                  new_location);
 }

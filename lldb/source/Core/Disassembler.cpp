@@ -1358,7 +1358,7 @@ size_t Disassembler::AppendInstructions(Target &target, Address start,
 
   // Don't decode a non-instruction function header.
   if (Architecture *arch = target.GetArchitecturePlugin()) {
-    const Address first_insn = arch->GetFirstInstructionAddress(start);
+    const Address first_insn = arch->SkipFunctionHeader(start);
     if (first_insn.GetFileAddress() != start.GetFileAddress()) {
       const addr_t skip = first_insn.GetFileAddress() - start.GetFileAddress();
       start = first_insn;

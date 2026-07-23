@@ -26,7 +26,7 @@ public:
   /// A WebAssembly function begins with a local variable declaration header
   /// that is part of the function but is not an executable instruction. Skip it
   /// so the address lands on the first instruction.
-  Address GetFirstInstructionAddress(Address addr) const override;
+  Address SkipFunctionHeader(Address addr) const override;
 
 private:
   static std::unique_ptr<Architecture> Create(const ArchSpec &arch);

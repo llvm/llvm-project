@@ -34,7 +34,7 @@ std::unique_ptr<Architecture> ArchitectureWasm::Create(const ArchSpec &arch) {
   return std::unique_ptr<Architecture>(new ArchitectureWasm());
 }
 
-Address ArchitectureWasm::GetFirstInstructionAddress(Address addr) const {
+Address ArchitectureWasm::SkipFunctionHeader(Address addr) const {
   // The header is recorded as the symbol's prologue.
   SymbolContext sc;
   addr.CalculateSymbolContext(&sc, eSymbolContextSymbol);
