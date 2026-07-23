@@ -1896,11 +1896,9 @@ public:
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
     // Note the value of the PC was signed to its address in the register state
     // but everyone else expects it to be signed by the SP, so convert on return.
-    value = (uint64_t)ptrauth_auth_and_resign((void *)_registers.__pc,
-                                              ptrauth_key_return_address,
-                                              &_registers.__pc,
-                                              ptrauth_key_return_address,
-                                              _registers.__sp);
+    value = (uint64_t)ptrauth_auth_and_resign(
+        (void *)_registers.__pc, ptrauth_key_return_address, &_registers.__pc,
+        ptrauth_key_return_address, _registers.__sp);
 #endif
     return value;
   }
@@ -1909,11 +1907,9 @@ public:
     // Note the value which was set should have been signed with the SP.
     // We then resign with the slot we are being stored in to so that both SP
     // and LR can't be spoofed at the same time.
-    value = (uint64_t)ptrauth_auth_and_resign((void *)value,
-                                              ptrauth_key_return_address,
-                                              _registers.__sp,
-                                              ptrauth_key_return_address,
-                                              &_registers.__pc);
+    value = (uint64_t)ptrauth_auth_and_resign(
+        (void *)value, ptrauth_key_return_address, _registers.__sp,
+        ptrauth_key_return_address, &_registers.__pc);
 #endif
     _registers.__pc = value;
   }
