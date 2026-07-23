@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Support/Error.h"
+#include <cstdio>
 #include <inttypes.h>
 
 typedef struct __attribute__((__packed__)) {
@@ -79,17 +80,13 @@ static void readTUFatbin(const char *Binary, const FatbinWrapperTy *FW) {
 
     uint32_t Arch = TextHeader->Arch;
     bool IsCompatible = false;
-    ol_result_t CompatibilityCheckResult = olElfIsCompatibleWithDevice(
-        Device, CubinData, CubinSize, &IsCompatible);
-
-    if (CompatibilityCheckResult && CompatibilityCheckResult->Code) {
-      fprintf(stderr, "Failed to check for device compatibility (%i): %s\n",
-              CompatibilityCheckResult->Code,
-              CompatibilityCheckResult->Details);
+    olIsValidBinary(Device, CubinData, CubinSize, &IsCompatible);
+    if (!IsCompatible) {
+      fprintf(stderr, "Device is not compatible with image.");
       abort();
     }
 
-    if (IsCompatible && Arch > ProgramArch) {
+    if (Arch > ProgramArch) {
       ProgramData = CubinData;
       ProgramSize = CubinSize;
       ProgramArch = Arch;
@@ -150,19 +147,17 @@ static void readHIPFatbinEntries(const char *Binary, const char *HIPFatbinPtr) {
     }
 
     bool IsCompatible = false;
-    ol_result_t CompatibilityCheckResult = olElfIsCompatibleWithDevice(
-        Device, HIPFatbinPtr + BundleOffset, BundleSize, &IsCompatible);
+    olIsValidBinary(Device, HIPFatbinPtr + BundleOffset, BundleSize,
+                    &IsCompatible);
 
-    if (CompatibilityCheckResult && CompatibilityCheckResult->Code) {
-      fprintf(stderr, "Failed to check for device compatibility (%i): %s\n",
-              CompatibilityCheckResult->Code,
-              CompatibilityCheckResult->Details);
+    if (!IsCompatible) {
+      fprintf(stderr, "Device is not compatible with image.");
       abort();
     }
 
     llvm::StringRef CurrentBundleId(ProgramIdString, ProgramIdLength);
     llvm::StringRef NewBundleId(BundleIdString, BundleIdLength);
-    if (IsCompatible && NewBundleId.compare(CurrentBundleId) > 0) {
+    if (NewBundleId.compare(CurrentBundleId) > 0) {
       ProgramData = HIPFatbinPtr + BundleOffset;
       ProgramSize = BundleSize;
       ProgramIdLength = BundleIdLength;

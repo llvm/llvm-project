@@ -44,7 +44,7 @@ def ol_device_info_t : Enum {
     TaggedEtor<"MAX_MEM_ALLOC_SIZE", "uint64_t", "The maximum size of memory object allocation in bytes">,
     TaggedEtor<"GLOBAL_MEM_SIZE", "uint64_t", "The size of global device memory in bytes">,
     TaggedEtor<"WORK_GROUP_LOCAL_MEM_SIZE", "uint64_t", "The maximum size of local shared memory per work group in bytes">,
-    TaggedEtor<"WARP_SIZE", "uint32_t", "Warp size in threads">,
+    TaggedEtor<"NUM_LANES", "uint32_t", "Warp size in threads">,
   ];
   list<TaggedEtor> fp_configs = !foreach(type, ["Single", "Double", "Half"], TaggedEtor<type # "_FP_CONFIG", "ol_device_fp_capability_flags_t", type # " precision floating point capability">);
   list<TaggedEtor> native_vec_widths = !foreach(type, ["char","short","int","long","float","double","half"], TaggedEtor<"NATIVE_VECTOR_WIDTH_" # type, "uint32_t", "Native vector width for " # type>);
@@ -141,29 +141,5 @@ def olGetDeviceInfoSize : Function {
       "If `PropName` is not supported by the device."
     ]>,
     Return<"OL_ERRC_INVALID_DEVICE">
-  ];
-}
-
-def olElfIsCompatibleWithDevice : Function {
-  let desc = "Checks if the given ELF binary is compatible with the specified device.";
-  let details = [
-    "This function determines whether an ELF image can be executed on the specified device."
-  ];
-  let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device to check against", PARAM_IN>,
-    Param<"const void*", "ElfData", "pointer to the ELF image data in memory", PARAM_IN>,
-    Param<"size_t", "ElfSize", "size in bytes of the ELF image", PARAM_IN>,
-    Param<"bool*", "IsCompatible", "set to true if the ELF is compatible, false otherwise", PARAM_OUT>
-  ];
-  let returns = [
-    Return<"OL_ERRC_INVALID_DEVICE", [
-      "If the provided device handle is invalid."
-    ]>,
-    Return<"OL_ERRC_INVALID_ARGUMENT", [
-      "If `ElfData` is null or `ElfSize` is zero."
-    ]>,
-    Return<"OL_ERRC_NULL_POINTER", [
-      "If `IsCompatible` is null."
-    ]>
   ];
 }

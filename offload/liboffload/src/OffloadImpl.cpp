@@ -500,7 +500,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_DOUBLE_FP_CONFIG:
   case OL_DEVICE_INFO_HALF_FP_CONFIG:
   case OL_DEVICE_INFO_MEMORY_CLOCK_RATE:
-  case OL_DEVICE_INFO_WARP_SIZE: {
+  case OL_DEVICE_INFO_NUM_LANES: {
     // Uint32 values
     if (!std::holds_alternative<uint64_t>(Entry->Value))
       return makeError(ErrorCode::BACKEND_FAILURE,
@@ -582,23 +582,6 @@ Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
     }
   }
 
-  return Error::success();
-}
-
-Error olElfIsCompatibleWithDevice_impl(ol_device_handle_t Device,
-                                       const void *ElfData, size_t ElfSize,
-                                       bool *IsCompatible) {
-  GenericDeviceTy *DeviceTy = Device->Device;
-  int32_t DeviceId = DeviceTy->getDeviceId();
-  GenericPluginTy &DevicePlugin = DeviceTy->Plugin;
-
-  StringRef Image(reinterpret_cast<const char *>(ElfData), ElfSize);
-
-  Expected<bool> ResultOrErr = DevicePlugin.isELFCompatible(DeviceId, Image);
-  if (!ResultOrErr)
-    return ResultOrErr.takeError();
-
-  *IsCompatible = *ResultOrErr;
   return Error::success();
 }
 
