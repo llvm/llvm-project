@@ -19,11 +19,11 @@
 #include "Utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
@@ -36,6 +36,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/openmp-utils.h"
@@ -55,6 +56,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringSwitch.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -933,6 +935,201 @@ static void genNestedEvaluations(lower::AbstractConverter &converter,
     converter.genEval(e);
 }
 
+static mlir::Operation *setLoopVar(lower::AbstractConverter &converter,
+                                   mlir::Location loc, mlir::Value indexVal,
+                                   const semantics::Symbol *sym);
+
+/// Emit the body of a collapsed loop nest, including any intervening code
+/// from imperfect nesting at intermediate levels (CLN relaxation, applied
+/// retroactively for all OMP versions).
+///
+/// Because omp.loop_nest places its entire body at the innermost nesting
+/// level, intervening code must be guarded so that it only executes on the
+/// iterations where the corresponding inner induction variables are at their
+/// initial (for intervening code before nested loop) or final (for intervening
+/// code after nested loop) values.
+///
+/// \param [in] converter - PFT to MLIR conversion interface.
+/// \param [in] outerEval - the evaluation containing the outermost loop
+///                         (typically the OpenMP construct evaluation).
+/// \param [in] collapseValue - number of loops being collapsed (>= 1).
+static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
+                                     lower::pft::Evaluation &outerEval,
+                                     int collapseValue) {
+  assert(collapseValue >= 1);
+  if (collapseValue == 1) {
+    genNestedEvaluations(converter, outerEval, /*collapseValue=*/1);
+    return;
+  }
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  const mlir::Location loc = converter.getCurrentLocation();
+
+  // Get the enclosing omp.loop_nest to access induction variables and bounds.
+  auto loopNestOp = mlir::dyn_cast<mlir::omp::LoopNestOp>(
+      firOpBuilder.getInsertionBlock()->getParentOp());
+  assert(loopNestOp && "expected to be inside omp.loop_nest");
+
+  // Collect before/after evaluations at each intermediate level.
+  struct LevelInfo {
+    llvm::SmallVector<lower::pft::Evaluation *> before;
+    llvm::SmallVector<lower::pft::Evaluation *> after;
+
+    // Whether this level carries intervening code (i.e. imperfect nesting).
+    bool hasInterveningCode() const {
+      return !before.empty() || !after.empty();
+    }
+  };
+  llvm::SmallVector<LevelInfo> levels;
+
+  // DO-variable symbol of each collapsed level (index 0 = outermost). Used to
+  // restore an inner loop's variable to its Fortran terminal value before
+  // emitting "after" intervening code (see below).
+  llvm::SmallVector<const semantics::Symbol *> ivSyms;
+
+  lower::pft::Evaluation *curEval = &outerEval;
+  for (int i = 0; i < collapseValue - 1; ++i) {
+    lower::pft::Evaluation *doEval = getNestedDoConstruct(*curEval);
+    const semantics::Symbol *ivSym = getIterationVariableSymbol(*doEval);
+    assert(ivSym && "expected iteration variable on collapsed DO loop");
+    ivSyms.push_back(ivSym);
+    LevelInfo level;
+    bool pastDo = false;
+    for (lower::pft::Evaluation &e : doEval->getNestedEvaluations()) {
+      // A labeled DO loop leaves a no-op ContinueStmt for its terminating
+      // labeled statement (alongside the EndDoStmt). Skip it so it isn't
+      // misclassified as intervening code.
+      if (e.getIf<parser::NonLabelDoStmt>() || e.getIf<parser::EndDoStmt>() ||
+          e.getIf<parser::ContinueStmt>() ||
+          e.getIf<parser::CompilerDirective>())
+        continue;
+      // Semantics guarantees the only DoConstruct here is the next associated
+      // loop (non-associated DO loops are rejected as intervening code).
+      if (e.getIf<parser::DoConstruct>()) {
+        pastDo = true;
+        continue;
+      }
+      if (!pastDo)
+        level.before.push_back(&e);
+      else
+        level.after.push_back(&e);
+    }
+    levels.push_back(std::move(level));
+    curEval = doEval;
+  }
+  // DO-variable symbol of the innermost collapsed loop must be restored
+  // inside enclosing "after" regions.
+  const semantics::Symbol *innermostIvSym =
+      getIterationVariableSymbol(*getNestedDoConstruct(*curEval));
+  assert(innermostIvSym && "expected iteration variable on collapsed DO loop");
+  ivSyms.push_back(innermostIvSym);
+
+  // Build a guard condition: all induction variables from
+  // startLevel..endLevel-1 equal their respective bound values.
+  // For "before" guards (useLowerBound=true), compare iv == lb (first iter).
+  // For "after" guards (useLowerBound=false), compare iv == last_iv.
+  const auto lbs = loopNestOp.getLoopLowerBounds();
+  const auto ubs = loopNestOp.getLoopUpperBounds();
+  const auto steps = loopNestOp.getLoopSteps();
+
+  // The intervening-code guards and terminal-value restoration do arithmetic
+  // on the collapsed loop bounds. If those bounds are host_eval block arguments
+  // of an enclosing omp.target region, such uses are illegal, so diagnose
+  // instead of emitting IR the omp.target verifier rejects.
+  const bool hasInterveningCode = llvm::any_of(
+      levels, [](const LevelInfo &l) { return l.hasInterveningCode(); });
+  if (hasInterveningCode) {
+    auto isHostEvalValue = [](mlir::Value v) {
+      auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(v);
+      if (!blockArg)
+        return false;
+      auto iface = mlir::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(
+          blockArg.getOwner()->getParentOp());
+      return iface &&
+             llvm::is_contained(iface.getHostEvalBlockArgs(), blockArg);
+    };
+    if (llvm::any_of(lbs, isHostEvalValue) ||
+        llvm::any_of(ubs, isHostEvalValue) ||
+        llvm::any_of(steps, isHostEvalValue))
+      TODO(loc, "collapsed loop nest with intervening code whose loop bounds "
+                "are evaluated on the host for an enclosing 'target' region");
+  }
+
+  // Last value the induction variable at \p lvl actually takes:
+  // lb + ((ub - lb) / step) * step. For unit steps this is exactly ub.
+  auto computeLastIV = [&](const int lvl) -> mlir::Value {
+    const std::optional<llvm::APInt> constStep =
+        fir::getIntIfConstant(steps[lvl]);
+    if (constStep && (constStep->isOne() || constStep->isAllOnes()))
+      return ubs[lvl];
+    const mlir::Value lb = lbs[lvl];
+    const mlir::Value ub = ubs[lvl];
+    const mlir::Value step = steps[lvl];
+    const mlir::Value range =
+        mlir::arith::SubIOp::create(firOpBuilder, loc, ub, lb);
+    const mlir::Value tripMinus1 =
+        mlir::arith::DivSIOp::create(firOpBuilder, loc, range, step);
+    const mlir::Value lastOffset =
+        mlir::arith::MulIOp::create(firOpBuilder, loc, tripMinus1, step);
+    return mlir::arith::AddIOp::create(firOpBuilder, loc, lb, lastOffset);
+  };
+
+  auto buildGuard = [&](const int startLevel, const int endLevel,
+                        const bool useLowerBound) -> mlir::Value {
+    mlir::Value cond;
+    for (int lvl = startLevel; lvl < endLevel; ++lvl) {
+      const mlir::Value iv = loopNestOp.getRegion().getArgument(lvl);
+      const mlir::Value target = useLowerBound ? lbs[lvl] : computeLastIV(lvl);
+      const mlir::Value cmp = mlir::arith::CmpIOp::create(
+          firOpBuilder, loc, mlir::arith::CmpIPredicate::eq, iv, target);
+      if (!cond)
+        cond = cmp;
+      else
+        cond = mlir::arith::AndIOp::create(firOpBuilder, loc, cond, cmp);
+    }
+    return cond;
+  };
+
+  // Emit "before" code at each level, guarded by inner IVs == lower bounds.
+  for (int i = 0; i < static_cast<int>(levels.size()); ++i) {
+    if (levels[i].before.empty())
+      continue;
+    const mlir::Value guard =
+        buildGuard(i + 1, collapseValue, /*useLowerBound=*/true);
+    auto ifOp = fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false);
+    firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    for (auto *e : levels[i].before)
+      converter.genEval(*e);
+    firOpBuilder.setInsertionPointAfter(ifOp);
+  }
+
+  // Emit innermost loop body.
+  genNestedEvaluations(converter, *curEval, /*collapseValue=*/1);
+
+  // Emit "after" code at each level (innermost first), guarded by
+  // inner IVs == last iteration values (accounts for non-unit steps).
+  for (int i = static_cast<int>(levels.size()) - 1; i >= 0; --i) {
+    if (levels[i].after.empty())
+      continue;
+    const mlir::Value guard =
+        buildGuard(i + 1, collapseValue, /*useLowerBound=*/false);
+    auto ifOp = fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false);
+    firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    // A normally-terminated Fortran DO loop leaves its variable one step past
+    // the last executed value, but the flattened nest leaves each at its last
+    // executed value. Restore the terminal value before running "after" code
+    // that may read it.
+    for (int lvl = i + 1; lvl < collapseValue; ++lvl) {
+      const mlir::Value terminal = mlir::arith::AddIOp::create(
+          firOpBuilder, loc, computeLastIV(lvl), steps[lvl]);
+      setLoopVar(converter, loc, terminal, ivSyms[lvl]);
+    }
+    for (auto *e : levels[i].after)
+      converter.genEval(*e);
+    firOpBuilder.setInsertionPointAfter(ifOp);
+  }
+}
+
 static fir::GlobalOp globalInitialization(lower::AbstractConverter &converter,
                                           fir::FirOpBuilder &firOpBuilder,
                                           const semantics::Symbol &sym,
@@ -1624,6 +1821,13 @@ struct OpWithBodyGenInfo {
     return *this;
   }
 
+  OpWithBodyGenInfo &setCollapseInfo(int value,
+                                     lower::pft::Evaluation &outerEval) {
+    collapseValue = value;
+    outerCollapseEval = &outerEval;
+    return *this;
+  }
+
   /// [inout] converter to use for the clauses.
   lower::AbstractConverter &converter;
   /// [in] Symbol table
@@ -1652,6 +1856,10 @@ struct OpWithBodyGenInfo {
   bool genSkeletonOnly = false;
   /// [in] enables handling of privatized variable unless set to `false`.
   bool privatize = true;
+  /// [in] if set, outermost evaluation and collapse depth for emitting
+  /// intervening code from imperfect collapsed loop nests.
+  lower::pft::Evaluation *outerCollapseEval = nullptr;
+  int collapseValue = 0;
 };
 
 static mlir::Value getReductionOverrideValue(fir::FirOpBuilder &builder,
@@ -1951,7 +2159,11 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
       firOpBuilder.setInsertionPointToEnd(&op.getRegion(0).back());
       auto *temp = lower::genOpenMPTerminator(firOpBuilder, &op, info.loc);
       firOpBuilder.setInsertionPointAfter(marker);
-      genNestedEvaluations(info.converter, info.eval);
+      if (info.outerCollapseEval)
+        genCollapsedLoopNestBody(info.converter, *info.outerCollapseEval,
+                                 info.collapseValue);
+      else
+        genNestedEvaluations(info.converter, info.eval);
       temp->erase();
     }
 
@@ -2831,7 +3043,8 @@ genLoopNestOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                         directive)
           .setClauses(&item->clauses)
           .setDataSharingProcessor(&dsp)
-          .setGenRegionEntryCb(ivCallback),
+          .setGenRegionEntryCb(ivCallback)
+          .setCollapseInfo(nestValue, eval),
       queue, item, clauseOps);
   converter.overrideExprValues(oldOverrides);
   return loopNestOp;
@@ -2923,7 +3136,7 @@ static void genCanonicalLoopNest(
   // Step 1: Loop prologues
   // Computing the trip count must happen before entering the outermost loop
   lower::pft::Evaluation *innermostEval = nestedEval;
-  for ([[maybe_unused]] auto iv : ivs) {
+  for (std::size_t i = 0; i < ivs.size(); ++i) {
     if (innermostEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
       // OpenMP specifies DO CONCURRENT only with the `!omp loop` construct.
       // Will need to add special cases for this combination.
@@ -3005,7 +3218,8 @@ static void genCanonicalLoopNest(
     mlir::Value cli = newcli.getResult();
     clis.push_back(cli);
 
-    innermostEval = &*std::next(innermostEval->getNestedEvaluations().begin());
+    if (i + 1 < ivs.size())
+      innermostEval = getNestedDoConstruct(*innermostEval);
   }
 
   // Step 2: Create nested canoncial loops
@@ -3787,7 +4001,13 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             // Avoid attaching implicit default mappers to pointer captures.
             // For large pointer-based derived aggregates this can over-map
             // nested payloads and conflict with explicit enter/exit maps.
-            if (!isPointer && (hasDefaultMapper || isAllocatable)) {
+            //
+            // For an allocatable capture, only synthesize an implicit default
+            // mapper when the type requires one; a flat record does not.
+            if (!isPointer &&
+                (hasDefaultMapper ||
+                 (isAllocatable &&
+                  requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
@@ -6067,8 +6287,149 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPInteropConstruct &interopConstruct) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPInteropConstruct");
+  if (semaCtx.langOptions().OpenMPSimd)
+    return;
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.genLocation(interopConstruct.source);
+  mlir::MLIRContext *context = firOpBuilder.getContext();
+
+  List<Clause> clauses = makeClauses(interopConstruct.v.Clauses(), semaCtx);
+
+  // Process shared clauses (depend, nowait, device) that apply to all
+  // action clauses.
+  lower::StatementContext stmtCtx;
+  mlir::omp::DependClauseOps dependOps;
+  mlir::omp::NowaitClauseOps nowaitOps;
+  mlir::Value deviceValue;
+
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processDepend(symTable, stmtCtx, dependOps);
+  cp.processNowait(nowaitOps);
+
+  // Process device clause manually.
+  for (auto &clause : clauses) {
+    if (auto *deviceClause = std::get_if<clause::Device>(&clause.u)) {
+      const auto &deviceExpr = std::get<SomeExpr>(deviceClause->t);
+      deviceValue = fir::getBase(converter.genExprValue(deviceExpr, stmtCtx));
+    }
+  }
+
+  // Helper to get the address of an interop variable from an Object.
+  auto getInteropVarAddr = [&](const Object &object) -> mlir::Value {
+    const semantics::Symbol *sym = object.sym();
+    assert(sym && "interop variable must have a symbol");
+    mlir::Value addr = converter.getSymbolAddress(*sym);
+    assert(addr && "interop variable must have a valid address");
+    return addr;
+  };
+
+  // Process action clauses: init, destroy, use.
+  for (auto &clause : clauses) {
+    if (auto *initClause = std::get_if<clause::Init>(&clause.u)) {
+      auto &interopVar = std::get<clause::Init::InteropVar>(initClause->t);
+      auto &interopTypes = std::get<clause::Init::InteropTypes>(initClause->t);
+      auto &interopPref =
+          std::get<std::optional<clause::Init::InteropPreference>>(
+              initClause->t);
+
+      mlir::Value interopVarAddr = getInteropVarAddr(interopVar);
+
+      // Convert interop types to MLIR attributes. A single init clause may
+      // list both `target` and `targetsync`; keep them on one op and let the
+      // LLVM-IR translation collapse them into a single runtime init call,
+      // matching Clang.
+      llvm::SmallVector<mlir::Attribute> interopTypeAttrs;
+      for (auto itype : interopTypes) {
+        switch (itype) {
+        case clause::Init::InteropType::Target:
+          interopTypeAttrs.push_back(mlir::omp::InteropTypeAttr::get(
+              context, mlir::omp::InteropType::target));
+          break;
+        case clause::Init::InteropType::Targetsync:
+          interopTypeAttrs.push_back(mlir::omp::InteropTypeAttr::get(
+              context, mlir::omp::InteropType::targetsync));
+          break;
+        }
+      }
+      auto interopTypesAttr = mlir::ArrayAttr::get(context, interopTypeAttrs);
+
+      // Convert prefer_type to I64ArrayAttr if present.
+      mlir::ArrayAttr preferTypeAttr;
+      if (interopPref) {
+        llvm::SmallVector<int64_t> prefValues;
+        for (auto &pref : *interopPref) {
+          // Try to evaluate as a constant integer (e.g., omp_ifr_cuda).
+          if (auto constVal = evaluate::ToInt64(pref)) {
+            prefValues.push_back(*constVal);
+          } else if (auto str =
+                         evaluate::GetScalarConstantValue<evaluate::Ascii>(
+                             pref)) {
+            // Map standard OpenMP foreign-runtime identifier strings to
+            // their well-known integer values (OpenMP 5.1, Table 22.2).
+            auto frId = llvm::StringSwitch<std::optional<int64_t>>(
+                            llvm::StringRef(*str).lower())
+                            .Case("cuda", 1)
+                            .Case("cuda_driver", 2)
+                            .Case("opencl", 3)
+                            .Case("sycl", 4)
+                            .Case("hip", 5)
+                            .Case("level_zero", 6)
+                            .Case("hsa", 7)
+                            .Default(std::nullopt);
+            if (frId)
+              prefValues.push_back(*frId);
+            else
+              TODO(loc, "unknown foreign-runtime identifier in "
+                        "prefer_type");
+          } else {
+            TODO(loc, "non-constant prefer_type value in interop init");
+          }
+        }
+        if (!prefValues.empty())
+          preferTypeAttr = firOpBuilder.getI64ArrayAttr(prefValues);
+      }
+
+      // Emit a single InteropInitOp carrying all interop-types from this init
+      // clause. The translation to LLVM IR collapses them into one runtime
+      // call, matching Clang (one init clause -> one __tgt_interop_init).
+      mlir::omp::InteropInitOp::create(
+          firOpBuilder, loc, interopVarAddr, interopTypesAttr, preferTypeAttr,
+          deviceValue,
+          dependOps.dependKinds.empty()
+              ? nullptr
+              : firOpBuilder.getArrayAttr(dependOps.dependKinds),
+          dependOps.dependVars,
+          /*depend_iterated_kinds=*/nullptr,
+          /*depend_iterated=*/mlir::ValueRange{}, nowaitOps.nowait);
+
+    } else if (auto *destroyClause = std::get_if<clause::Destroy>(&clause.u)) {
+      assert(destroyClause->v &&
+             "destroy clause must have an interop variable");
+      if (destroyClause->v) {
+        mlir::Value interopVarAddr = getInteropVarAddr(*destroyClause->v);
+        mlir::omp::InteropDestroyOp::create(
+            firOpBuilder, loc, interopVarAddr, deviceValue,
+            dependOps.dependKinds.empty()
+                ? nullptr
+                : firOpBuilder.getArrayAttr(dependOps.dependKinds),
+            dependOps.dependVars,
+            /*depend_iterated_kinds=*/nullptr,
+            /*depend_iterated=*/mlir::ValueRange{}, nowaitOps.nowait);
+      }
+
+    } else if (auto *useClause = std::get_if<clause::Use>(&clause.u)) {
+      mlir::Value interopVarAddr = getInteropVarAddr(useClause->v);
+      mlir::omp::InteropUseOp::create(
+          firOpBuilder, loc, interopVarAddr, deviceValue,
+          dependOps.dependKinds.empty()
+              ? nullptr
+              : firOpBuilder.getArrayAttr(dependOps.dependKinds),
+          dependOps.dependVars,
+          /*depend_iterated_kinds=*/nullptr,
+          /*depend_iterated=*/mlir::ValueRange{}, nowaitOps.nowait);
+    }
+  }
 }
 
 static void

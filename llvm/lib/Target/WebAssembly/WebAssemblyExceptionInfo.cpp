@@ -245,7 +245,7 @@ bool WebAssemblyExceptionInfo::invalidate(
     MachineFunctionAnalysisManager::Invalidator &) {
   // Check whether the analysis, all analyses on machine functions, or the
   // machine function's CFG have been preserved.
-  auto PAC = PA.getChecker<MachineBlockFrequencyAnalysis>();
+  auto PAC = PA.getChecker<WebAssemblyExceptionAnalysis>();
   return !PAC.preserved() &&
          !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
          !PAC.preservedSet<CFGAnalyses>();
