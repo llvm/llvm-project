@@ -2037,8 +2037,8 @@ tryCombineFromSVBoolBinOp(InstCombiner &IC, IntrinsicInst &II) {
   if (!BinOp)
     return std::nullopt;
 
-  Intrinsic::ID IntrinsicID = BinOp->getIntrinsicID();
-  switch (IntrinsicID) {
+  Intrinsic::ID BinOpIID = BinOp->getIntrinsicID();
+  switch (BinOpIID) {
   case Intrinsic::aarch64_sve_and_z:
   case Intrinsic::aarch64_sve_bic_z:
   case Intrinsic::aarch64_sve_eor_z:
@@ -2055,22 +2055,18 @@ tryCombineFromSVBoolBinOp(InstCombiner &IC, IntrinsicInst &II) {
   Value *BinOpOp1 = BinOp->getOperand(1);
   Value *BinOpOp2 = BinOp->getOperand(2);
 
-  Value *PredOp;
-  if (!match(BinOpPred, m_ConvertToSVBool(m_SpecificType(Ty, PredOp))))
+  Value *NarrowBinOpPred;
+  if (!match(BinOpPred, m_ConvertToSVBool(m_SpecificType(Ty, NarrowBinOpPred))))
     return std::nullopt;
 
-  SmallVector<Value *> NarrowedBinOpArgs = {PredOp};
   Value *NarrowBinOpOp1 =
       IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, BinOpOp1);
-  NarrowedBinOpArgs.push_back(NarrowBinOpOp1);
-  if (BinOpOp1 == BinOpOp2)
-    NarrowedBinOpArgs.push_back(NarrowBinOpOp1);
-  else
-    NarrowedBinOpArgs.push_back(
-        IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, BinOpOp2));
-
-  Value *NarrowedBinOp =
-      IC.Builder.CreateIntrinsic(IntrinsicID, Ty, NarrowedBinOpArgs);
+  Value *NarrowedBinOp2 =
+      BinOpOp1 == BinOpOp2
+          ? NarrowBinOpOp1
+          : IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, BinOpOp2);
+  Value *NarrowedBinOp = IC.Builder.CreateIntrinsic(
+      BinOpIID, Ty, {NarrowBinOpPred, NarrowBinOpOp1, NarrowedBinOp2});
   return IC.replaceInstUsesWith(II, NarrowedBinOp);
 }
 
