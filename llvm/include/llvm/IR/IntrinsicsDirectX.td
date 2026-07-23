@@ -62,6 +62,17 @@ def int_dx_resource_store_rawbuffer
           [], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_any_ty],
           [IntrWriteMem]>;
 
+// Atomic read-modify-write on a UAV resource element. Emitted by
+// DXILResourceAccess from an `atomicrmw` on a `dx.resource.getpointer` result,
+// and lowered by DXILOpLowering to the DXIL `AtomicBinOp` op (78).
+// Args: handle, AtomicBinOpCode, coord0 (index), coord1 (offset or poison),
+//       new value. Returns the original value.
+def int_dx_resource_atomic_binop
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+           LLVMMatchType<0>],
+          [IntrArgMemOnly]>;
 // dx.resource.load.cbufferrow encodes the number of elements returned in the
 // function name. The total size of the return should always be 128 bits.
 def int_dx_resource_load_cbufferrow_8
@@ -257,10 +268,6 @@ def int_dx_wave_getlaneindex : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrCon
 def int_dx_wave_reduce_or : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_wave_reduce_xor : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_wave_reduce_and : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
-def int_dx_interlocked_add :
-    DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                          [llvm_anyptr_ty, LLVMMatchType<0>],
-                          [IntrArgMemOnly]>;
 def int_dx_interlocked_or :
     DefaultAttrsIntrinsic<[llvm_anyint_ty],
                           [llvm_anyptr_ty, LLVMMatchType<0>],

@@ -51,6 +51,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -59,6 +60,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "lldb/Host/Config.h"
 #include "lldb/lldb-forward.h"
@@ -2001,7 +2003,22 @@ Status CommandInterpreter::PreprocessToken(std::string &expr_str) {
       expr_result_valobj_sp =
           expr_result_valobj_sp->GetQualifiedRepresentationIfAvailable(
               expr_result_valobj_sp->GetDynamicValueType(), true);
-    if (expr_result_valobj_sp->ResolveValue(scalar)) {
+    // For array-typed results, C decays the array to a pointer to its first
+    // element. ResolveValue() can't produce a scalar for an aggregate, and the
+    // expression evaluator materializes arrays into a temporary result buffer
+    // whose address is not the array's real location. So decay explicitly here:
+    // use the address of the array object instead of its (non-existent) scalar
+    // value.
+    if (expr_result_valobj_sp &&
+        expr_result_valobj_sp->GetCompilerType().IsArrayType()) {
+      lldb::addr_t addr =
+          expr_result_valobj_sp->GetAddressOf(/*scalar_is_load_address=*/true)
+              .address;
+      if (addr != LLDB_INVALID_ADDRESS)
+        scalar = addr;
+    }
+
+    if (scalar.IsValid() || expr_result_valobj_sp->ResolveValue(scalar)) {
 
       StreamString value_strm;
       const bool show_type = false;

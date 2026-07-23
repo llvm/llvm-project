@@ -13797,6 +13797,9 @@ def err_hlsl_atomic_arg_addr_space : Error<
   "%ordinal0 argument to atomic builtin must reference groupshared or device "
   "memory (was %1)">;
 
+def err_hlsl_builtin_requires_sm : Error<
+  "%0 requires shader model %1 or newer">;
+
 def err_hlsl_export_not_on_function : Error<
   "export declaration can only be used on functions">;
 

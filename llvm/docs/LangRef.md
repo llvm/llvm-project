@@ -2794,8 +2794,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
     optimizations that require assumptions about the floating-point rounding
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
-    not introduce any new floating-point instructions that may trap. All
-    function definitions that contain strictfp calls must be marked strictfp.
+    not introduce any new floating-point instructions that may trap.
 
 (denormal_fpenv)=
 
@@ -12139,7 +12138,7 @@ operation. The operation must be one of the following keywords:
 For all of these operations, the type of `<value>` must be a type whose bit width is a power of two greater than or equal to eight.
 For add/sub/and/nand/or/xor/max/min/umax/umin/uinc_wrap/udec_wrap/usub_cond/usub_sat, this must be an integer type or a fixed vector of integer type.
 For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point or fixed vector of floating-point type.
-For xchg, this must be an integer type, floating-point type, or pointer type, or, if the `elementwise` modifier is present, a fixed vector of integer type, floating-point type, or pointer type.
+For xchg, this must be an integer type, a floating-point type, a pointer type, or a fixed vector of any of these types.
 The type of the `<pointer>` operand must be a pointer to the type of `<value>`.
 If the `atomicrmw` is marked as `volatile`, then the optimizer is not allowed to modify the
 number or order of execution of this `atomicrmw` with other
@@ -20655,18 +20654,19 @@ The result is a vector with the i1 element type.
 
 ##### Semantics:
 
-`%elementSize` is the size of the accessed elements in bytes.
-The intrinsic returns `poison` if the distance between `%addrA` and `%addrB`
-is smaller than `VF * %elementsize` and either `%addrA + VF * %elementSize`
-or `%addrB + VF * %elementSize` wrap.
+`%elementSize` is the size of the accessed elements in bytes. The intrinsic
+returns `poison` if the distance between `%addrA` and `%addrB` is not a multiple
+of `%elementsize`.
 
-The element of the result mask is active when loading from `%addrA` then
-storing to `%addrB` is safe and doesn't result in a write-after-read hazard,
-meaning that:
+Each lane of the mask `%m[i]` is defined as the `or` of:
 
-* (addrB - addrA) <= 0 (guarantees that all lanes are loaded before any stores), or
-* elementSize * lane < (addrB - addrA) (guarantees that this lane is loaded
-  before the store to the same address)
+* `icmp uge %addrA, %addrB`
+  * (guarantees that all lanes are loaded before any stores)
+* `icmp ult (%elementSize * i), (%addrB - %addrA)`
+  * (guarantees that this lane is loaded before the store to the same address)
+
+where `%m` is the vector mask of active/inactive lanes with its elements
+indexed by `i`.
 
 ##### Examples:
 
@@ -20743,18 +20743,20 @@ The result is a vector with the i1 element type.
 
 ##### Semantics:
 
-`%elementSize` is the size of the accessed elements in bytes.
-The intrinsic returns `poison` if the distance between `%addrA` and `%addrB`
-is smaller than `VF * %elementsize` and either `%addrA + VF * %elementSize`
-or `%addrB + VF * %elementSize` wrap.
+`%elementSize` is the size of the accessed elements in bytes. The intrinsic
+returns `poison` if the distance between `%addrA` and `%addrB` is not a multiple
+of `%elementsize`.
 
-The element of the result mask is active when storing to `%addrA` then
-loading from `%addrB` is safe and doesn't result in aliasing, meaning that:
+Each lane of the mask `%m[i]` is defined as the `or` of:
 
-* elementSize * lane < abs(addrB - addrA) (guarantees that the store of this lane
-  occurs before loading from this address), or
-* addrA == addrB (doesn't introduce any new hazards that weren't in the scalar
-  code)
+* `icmp eq %addrA, %addrB`
+  * (doesn't introduce any new hazards that weren't in the scalar code)
+* `icmp ult (%elementSize * i), uabs(%addrA,  %addrB)`
+  * (guarantees that this lane is loaded before the store to the same address)
+
+where `%m` is the vector mask of active/inactive lanes with its elements indexed
+by `i` and `uabs` is the unsigned absolute difference between `%addrA` and
+`%addrB`.
 
 ##### Examples:
 
@@ -26623,6 +26625,9 @@ All function *calls* done in a function that uses constrained floating
 point intrinsics must have the `strictfp` attribute either on the
 calling instruction or on the declaration or definition of the function
 being called.
+
+All function *definitions* that use constrained floating point intrinsics
+must have the `strictfp` attribute.
 
 #### '`llvm.experimental.constrained.fadd`' Intrinsic
 
