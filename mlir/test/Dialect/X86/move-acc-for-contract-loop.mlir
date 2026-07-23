@@ -67,11 +67,20 @@ func.func @brmatmul_acc_mv(%arg0: memref<16x64x32xbf16>, %arg1: memref<16x32x64x
 }
 
 // CHECK-LABEL: @brmatmul_acc_mv
-// CHECK: arith.constant dense<0.000000e+00> : vector<1x16xf32>
-// CHECK: arith.addf
-// CHECK-NEXT: vector.transfer_write
-// CHECK: arith.addf
-// CHECK-NEXT: vector.transfer_write
+// CHECK: %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<1x16xf32>
+// CHECK: scf.for
+// CHECK-NEXT: scf.for
+// CHECK: memref.subview
+// CHECK: %[[TRANSFER_READ_0:.*]] = vector.transfer_read
+// CHECK: %[[TRANSFER_READ_1:.*]] = vector.transfer_read
+// CHECK: scf.for {{.*}} iter_args(%[[VAL_3:.*]] = %[[CST]], %[[VAL_4:.*]] = %[[CST]]) -> (vector<1x16xf32>, vector<1x16xf32>) {
+// CHECK-NEXT: scf.for
+// CHECK: scf.yield
+// CHECK: scf.yield
+// CHECK: %[[ADDF_0:.*]] = arith.addf {{.*}}, %[[TRANSFER_READ_1]] : vector<1x16xf32>
+// CHECK-NEXT: vector.transfer_write %[[ADDF_0:.*]], %subview[%c0, %c16] {{.*}}
+// CHECK: %[[ADDF_1:.*]] = arith.addf {{.*}}, %[[TRANSFER_READ_0]] : vector<1x16xf32>
+// CHECK-NEXT: vector.transfer_write %[[ADDF_1:.*]], %subview[%c0, %c0] {{.*}}
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

@@ -58,8 +58,7 @@ struct MoveAccumulatorForContractLoop
     if (dyn_cast<arith::ConstantOp>(accReadOp))
       return rewriter.notifyMatchFailure(
           contractOp,
-          "The input acc to contract is already a constant zero vector.");
-    ;
+          "The input acc to contract is already a constant vector.");
 
     if ((accReadOp->getBlock() == contractOp->getBlock()) ||
         (resultWriteOp->getBlock() == contractOp->getBlock()))
@@ -67,11 +66,13 @@ struct MoveAccumulatorForContractLoop
           contractOp, "Acc read/write should be in a separate block.");
 
     // Replace acc of a contraction operation with vector constant.
-    rewriter.setInsertionPointAfter(accReadOp);
     Value accValue = accReadOp->getResult(0);
+    Operation *firstUser = *accValue.getUsers().begin();
+    rewriter.setInsertionPoint(firstUser);
+
     auto vecTy = llvm::dyn_cast<VectorType>(accValue.getType());
     if (!vecTy)
-      return rewriter.notifyMatchFailure(contractOp, "Excepts vector type.");
+      return rewriter.notifyMatchFailure(contractOp, "Expects vector type.");
 
     Location loc = accReadOp->getLoc();
     Type elemTy = vecTy.getElementType();
@@ -84,7 +85,7 @@ struct MoveAccumulatorForContractLoop
 
     accValue.replaceAllUsesWith(zeroVec);
 
-    // Adds the initial acc value with acontract results before storing to acc
+    // Adds the initial acc value with contract results before storing to acc
     // matrix.
     rewriter.setInsertionPoint(resultWriteOp);
     Location locUser = resultWriteOp->getLoc();

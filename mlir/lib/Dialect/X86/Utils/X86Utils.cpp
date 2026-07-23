@@ -147,7 +147,7 @@ inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc, bool isInt8Avx2) {
 // Recursively follows single-use values through scf.yield operations
 // and returns the first non-yield user result in the contraction chain.
 Value contractionUsersAfterYield(Value v) {
-  if (v.getNumUses() != 1)
+  if (!v || v.getNumUses() != 1)
     return nullptr;
 
   OpOperand &use = *v.use_begin();
@@ -320,12 +320,12 @@ LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
 
 // This function shuffles the vectors written by vector.contract operation
 // as a flat layout structure before they are stored.
-LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter, Value opA,
-                                       Value opB, int64_t nonUnitDimAcc,
+LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter, Value valA,
+                                       Value valB, int64_t nonUnitDimAcc,
                                        VectorType accTy) {
 
-  Value vecA = contractionUsersAfterYield(opA);
-  Value vecB = contractionUsersAfterYield(opB);
+  Value vecA = contractionUsersAfterYield(valA);
+  Value vecB = contractionUsersAfterYield(valB);
 
   if (!vecA || !vecB)
     return failure();
