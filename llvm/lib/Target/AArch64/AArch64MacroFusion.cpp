@@ -552,8 +552,9 @@ static bool readsRegInClass(const MachineInstr &MI,
       Class, [&MI, TRI](MCPhysReg Reg) { return MI.readsRegister(Reg, TRI); });
 }
 
-static bool isFusableSMEOp(const MachineInstr &MI, const TargetInstrInfo &TII,
-                           const TargetRegisterInfo *TRI) {
+static bool isFusableSMEComputeOp(const MachineInstr &MI,
+                                  const TargetInstrInfo &TII,
+                                  const TargetRegisterInfo *TRI) {
   const bool ReadOrWriteZA = MI.readsRegister(AArch64::ZA, TRI) ||
                              MI.definesRegister(AArch64::ZA, TRI);
 
@@ -590,15 +591,16 @@ static bool isFusableSMEOp(const MachineInstr &MI, const TargetInstrInfo &TII,
   return true;
 }
 
-static bool isSMEPair(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
-                      const TargetInstrInfo &TII,
-                      const TargetRegisterInfo *TRI) {
-  if (!isFusableSMEOp(SecondMI, TII, TRI))
+static bool isSMEComputePair(const MachineInstr *FirstMI,
+                             const MachineInstr &SecondMI,
+                             const TargetInstrInfo &TII,
+                             const TargetRegisterInfo *TRI) {
+  if (!isFusableSMEComputeOp(SecondMI, TII, TRI))
     return false;
   // Assume the 1st instr to be a wildcard if it is unspecified.
   if (FirstMI == nullptr)
     return true;
-  if (isFusableSMEOp(*FirstMI, TII, TRI))
+  if (isFusableSMEComputeOp(*FirstMI, TII, TRI))
     return true;
   return false;
 }
@@ -643,7 +645,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
       isAddSub2RegAndConstOnePair(FirstMI, SecondMI))
     return true;
   const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
-  if (ST.hasFuseSME() && isSMEPair(FirstMI, SecondMI, TII, TRI))
+  if (ST.hasFuseSMECompute() && isSMEComputePair(FirstMI, SecondMI, TII, TRI))
     return true;
 
   return false;

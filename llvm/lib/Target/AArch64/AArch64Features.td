@@ -856,9 +856,9 @@ def FeatureFuseAddSub2RegAndConstOne : SubtargetFeature<
    "CPU fuses (a + b + 1) and (a - b - 1)",
    [], InlineIgnore>;
 
-def FeatureFuseSME : SubtargetFeature<
-   "fuse-sme", "HasFuseSME", "true",
-   "CPU fuses SME matrix operations",
+def FeatureFuseSMECompute : SubtargetFeature<
+   "fuse-sme-compute", "HasFuseSMECompute", "true",
+   "CPU fuses SME compute operations",
    [], InlineIgnore>;
 
 def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
