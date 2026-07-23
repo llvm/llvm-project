@@ -18,3 +18,26 @@ define amdgpu_ps void @store_i8(ptr addrspace(8) inreg %rsrc, i8 %data, i32 %ind
   call void @llvm.amdgcn.struct.ptr.buffer.store.format.i8(i8 %data, ptr addrspace(8) %rsrc, i32 %index, i32 0, i32 0, i32 0)
   ret void
 }
+
+; A D16 buffer.load.format combined with TFE has no corresponding real
+; instruction (no TFE variant of the D16 format load opcodes exists in
+; hardware), so it must be refused instead of miscounting SDNode results.
+; CHECK: error: {{.*}}unsupported TFE D16 format buffer load
+define amdgpu_kernel void @load_v3i16_tfe(ptr addrspace(8) inreg %rsrc, ptr addrspace(1) %out, ptr addrspace(1) %status) {
+  %r = call {<3 x i16>, i32} @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v3i16i32s(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %data = extractvalue {<3 x i16>, i32} %r, 0
+  %st = extractvalue {<3 x i16>, i32} %r, 1
+  store <3 x i16> %data, ptr addrspace(1) %out
+  store i32 %st, ptr addrspace(1) %status
+  ret void
+}
+
+; CHECK: error: {{.*}}unsupported TFE D16 format buffer load
+define amdgpu_kernel void @load_f16_tfe(ptr addrspace(8) inreg %rsrc, ptr addrspace(1) %out, ptr addrspace(1) %status) {
+  %r = call {half, i32} @llvm.amdgcn.struct.ptr.buffer.load.format.sl_f16i32s(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %data = extractvalue {half, i32} %r, 0
+  %st = extractvalue {half, i32} %r, 1
+  store half %data, ptr addrspace(1) %out
+  store i32 %st, ptr addrspace(1) %status
+  ret void
+}

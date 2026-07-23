@@ -6901,6 +6901,16 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     return true;
   }
 
+  if (IsFormat && !IsTyped && IsD16 && IsTFE) {
+    const Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "unsupported TFE D16 format buffer load", MI.getDebugLoc()));
+    B.buildUndef(Dst);
+    B.buildUndef(StatusDst);
+    MI.eraseFromParent();
+    return true;
+  }
+
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
   unsigned Opc;
