@@ -18,6 +18,23 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
+namespace {
+
+AST_MATCHER(Expr, isLValueExpr) { return Node.isLValue(); }
+
+AST_MATCHER(QualType, hasNonTrivialMoveCtor) {
+  return utils::type_traits::hasNonTrivialMoveConstructor(Node);
+}
+
+AST_MATCHER_P(QualType, isLargerThan, unsigned, SizeThreshold) {
+  if (Node.isNull() || Node->isDependentType() || Node->isIncompleteType())
+    return false;
+  return Finder->getASTContext().getTypeSizeInChars(Node).getQuantity() >
+         static_cast<int64_t>(SizeThreshold);
+}
+
+} // namespace
+
 static bool hasOperatorStar(const CXXRecordDecl *RD) {
   const DeclarationName OpStar =
       RD->getASTContext().DeclarationNames.getCXXOperatorName(OO_Star);
@@ -95,7 +112,11 @@ void ExpensiveValueOrCheck::registerMatchers(MatchFinder *Finder) {
       matchers::matchesAnyListedRegexName(OptionalTypes);
   auto ValueOrMatcher = hasAnyName("value_or", "valueOr", "ValueOr");
   auto ValueOrCall = cxxMemberCallExpr(
-      callee(cxxMethodDecl(ValueOrMatcher, ofClass(OptionalTypesMatcher))));
+      callee(cxxMethodDecl(ValueOrMatcher, ofClass(OptionalTypesMatcher))),
+      anyOf(on(isLValueExpr()),
+            hasType(qualType(unless(hasNonTrivialMoveCtor())))),
+      hasType(qualType(
+          anyOf(matchers::isExpensiveToCopy(), isLargerThan(SizeThreshold)))));
 
   if (WarnOnOwnershipTaking) {
     Finder->addMatcher(ValueOrCall.bind("call"), this);
@@ -130,20 +151,6 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
 
   const ASTContext &Ctx = *Result.Context;
   const QualType ValueType = Call->getType();
-
-  // Rvalue optional uses && overload which moves. Suppress if move is cheap.
-  if (!ObjExpr->isLValue() &&
-      utils::type_traits::hasNonTrivialMoveConstructor(ValueType))
-    return;
-
-  const bool IsExpensiveType =
-      utils::type_traits::isExpensiveToCopy(ValueType, Ctx).value_or(false);
-  const int64_t ValueSize = Ctx.getTypeSizeInChars(ValueType).getQuantity();
-  const bool IsExpensive =
-      IsExpensiveType || ValueSize > static_cast<int64_t>(SizeThreshold);
-
-  if (!IsExpensive)
-    return;
 
   const CXXMethodDecl *Method = Call->getMethodDecl();
   const CXXRecordDecl *OptionalClass = Method->getParent();
