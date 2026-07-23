@@ -184,31 +184,12 @@ define i4 @clmulh_i4(i4 %a, i4 %b) nounwind {
 ;
 ; RV64IMZVBC-LABEL: clmulh_i4:
 ; RV64IMZVBC:       # %bb.0:
-; RV64IMZVBC-NEXT:    andi a2, a0, 8
-; RV64IMZVBC-NEXT:    andi a3, a1, 8
-; RV64IMZVBC-NEXT:    andi a4, a1, 1
-; RV64IMZVBC-NEXT:    andi a5, a0, 2
-; RV64IMZVBC-NEXT:    andi a6, a1, 2
-; RV64IMZVBC-NEXT:    andi a7, a0, 1
-; RV64IMZVBC-NEXT:    mul t0, a5, a4
-; RV64IMZVBC-NEXT:    mul t1, a7, a6
-; RV64IMZVBC-NEXT:    andi a0, a0, 4
-; RV64IMZVBC-NEXT:    andi a1, a1, 4
-; RV64IMZVBC-NEXT:    mul a5, a5, a3
-; RV64IMZVBC-NEXT:    mul a4, a7, a4
-; RV64IMZVBC-NEXT:    mul a7, a0, a1
-; RV64IMZVBC-NEXT:    mul a6, a2, a6
-; RV64IMZVBC-NEXT:    mul a0, a0, a3
-; RV64IMZVBC-NEXT:    mul a1, a2, a1
-; RV64IMZVBC-NEXT:    mul a2, a2, a3
-; RV64IMZVBC-NEXT:    xor a3, t1, t0
-; RV64IMZVBC-NEXT:    or a4, a4, a5
-; RV64IMZVBC-NEXT:    xor a5, a7, a6
-; RV64IMZVBC-NEXT:    or a0, a3, a0
-; RV64IMZVBC-NEXT:    xor a4, a4, a5
-; RV64IMZVBC-NEXT:    xor a0, a0, a1
-; RV64IMZVBC-NEXT:    or a2, a4, a2
-; RV64IMZVBC-NEXT:    or a0, a2, a0
+; RV64IMZVBC-NEXT:    andi a0, a0, 15
+; RV64IMZVBC-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
+; RV64IMZVBC-NEXT:    vmv.s.x v8, a0
+; RV64IMZVBC-NEXT:    andi a1, a1, 15
+; RV64IMZVBC-NEXT:    vclmul.vx v8, v8, a1
+; RV64IMZVBC-NEXT:    vmv.x.s a0, v8
 ; RV64IMZVBC-NEXT:    srli a0, a0, 4
 ; RV64IMZVBC-NEXT:    ret
   %a.ext = zext i4 %a to i8
@@ -395,31 +376,12 @@ define i4 @clmulh_i4_bitreverse(i4 %a, i4 %b) nounwind {
 ;
 ; RV64IMZVBC-LABEL: clmulh_i4_bitreverse:
 ; RV64IMZVBC:       # %bb.0:
-; RV64IMZVBC-NEXT:    andi a2, a0, 8
-; RV64IMZVBC-NEXT:    andi a3, a1, 8
-; RV64IMZVBC-NEXT:    andi a4, a1, 1
-; RV64IMZVBC-NEXT:    andi a5, a0, 2
-; RV64IMZVBC-NEXT:    andi a6, a1, 2
-; RV64IMZVBC-NEXT:    andi a7, a0, 1
-; RV64IMZVBC-NEXT:    mul t0, a5, a4
-; RV64IMZVBC-NEXT:    mul t1, a7, a6
-; RV64IMZVBC-NEXT:    andi a0, a0, 4
-; RV64IMZVBC-NEXT:    andi a1, a1, 4
-; RV64IMZVBC-NEXT:    mul a5, a5, a3
-; RV64IMZVBC-NEXT:    mul a4, a7, a4
-; RV64IMZVBC-NEXT:    mul a7, a0, a1
-; RV64IMZVBC-NEXT:    mul a6, a2, a6
-; RV64IMZVBC-NEXT:    mul a0, a0, a3
-; RV64IMZVBC-NEXT:    mul a1, a2, a1
-; RV64IMZVBC-NEXT:    mul a2, a2, a3
-; RV64IMZVBC-NEXT:    xor a3, t1, t0
-; RV64IMZVBC-NEXT:    or a4, a4, a5
-; RV64IMZVBC-NEXT:    xor a5, a7, a6
-; RV64IMZVBC-NEXT:    or a0, a3, a0
-; RV64IMZVBC-NEXT:    xor a4, a4, a5
-; RV64IMZVBC-NEXT:    xor a0, a0, a1
-; RV64IMZVBC-NEXT:    or a2, a4, a2
-; RV64IMZVBC-NEXT:    or a0, a2, a0
+; RV64IMZVBC-NEXT:    andi a0, a0, 15
+; RV64IMZVBC-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
+; RV64IMZVBC-NEXT:    vmv.s.x v8, a0
+; RV64IMZVBC-NEXT:    andi a1, a1, 15
+; RV64IMZVBC-NEXT:    vclmul.vx v8, v8, a1
+; RV64IMZVBC-NEXT:    vmv.x.s a0, v8
 ; RV64IMZVBC-NEXT:    srli a0, a0, 4
 ; RV64IMZVBC-NEXT:    ret
   %a.rev = call i4 @llvm.bitreverse.i4(i4 %a)
@@ -766,64 +728,13 @@ define i8 @clmulh_i8(i8 %a, i8 %b) nounwind {
 ;
 ; RV64IMZVBC-LABEL: clmulh_i8:
 ; RV64IMZVBC:       # %bb.0:
-; RV64IMZVBC-NEXT:    addi sp, sp, -32
-; RV64IMZVBC-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    andi a2, a0, 136
-; RV64IMZVBC-NEXT:    andi a3, a1, 136
-; RV64IMZVBC-NEXT:    andi a4, a1, 17
-; RV64IMZVBC-NEXT:    andi a5, a0, 34
-; RV64IMZVBC-NEXT:    andi a6, a1, 34
-; RV64IMZVBC-NEXT:    andi a7, a0, 17
-; RV64IMZVBC-NEXT:    mul t0, a5, a4
-; RV64IMZVBC-NEXT:    mul t1, a7, a6
-; RV64IMZVBC-NEXT:    andi a0, a0, 68
-; RV64IMZVBC-NEXT:    andi a1, a1, 68
-; RV64IMZVBC-NEXT:    mul t2, a0, a3
-; RV64IMZVBC-NEXT:    mul t3, a2, a1
-; RV64IMZVBC-NEXT:    li t4, 17
-; RV64IMZVBC-NEXT:    slli t5, t4, 9
-; RV64IMZVBC-NEXT:    xor t0, t1, t0
-; RV64IMZVBC-NEXT:    xor t1, t2, t3
-; RV64IMZVBC-NEXT:    mul t2, a5, a3
-; RV64IMZVBC-NEXT:    xor t0, t0, t1
-; RV64IMZVBC-NEXT:    mul t1, a7, a4
-; RV64IMZVBC-NEXT:    mul t3, a0, a1
-; RV64IMZVBC-NEXT:    mul t6, a2, a6
-; RV64IMZVBC-NEXT:    and t0, t0, t5
-; RV64IMZVBC-NEXT:    mul t5, a5, a6
-; RV64IMZVBC-NEXT:    mul s0, a7, a1
-; RV64IMZVBC-NEXT:    mul s1, a0, a4
-; RV64IMZVBC-NEXT:    mul s2, a2, a3
-; RV64IMZVBC-NEXT:    mul a1, a5, a1
-; RV64IMZVBC-NEXT:    mul a3, a7, a3
-; RV64IMZVBC-NEXT:    mul a0, a0, a6
-; RV64IMZVBC-NEXT:    mul a2, a2, a4
-; RV64IMZVBC-NEXT:    xor a4, t1, t2
-; RV64IMZVBC-NEXT:    xor a5, t3, t6
-; RV64IMZVBC-NEXT:    xor a4, a4, a5
-; RV64IMZVBC-NEXT:    slli a5, t4, 8
-; RV64IMZVBC-NEXT:    xor a6, s0, t5
-; RV64IMZVBC-NEXT:    lui a7, %hi(.LCPI2_0)
-; RV64IMZVBC-NEXT:    xor t1, s1, s2
-; RV64IMZVBC-NEXT:    ld a7, %lo(.LCPI2_0)(a7)
-; RV64IMZVBC-NEXT:    and a4, a4, a5
-; RV64IMZVBC-NEXT:    xor a5, a6, t1
-; RV64IMZVBC-NEXT:    xor a1, a3, a1
-; RV64IMZVBC-NEXT:    xor a0, a0, a2
-; RV64IMZVBC-NEXT:    slli t4, t4, 10
-; RV64IMZVBC-NEXT:    xor a0, a1, a0
-; RV64IMZVBC-NEXT:    and a1, a5, t4
-; RV64IMZVBC-NEXT:    and a0, a0, a7
-; RV64IMZVBC-NEXT:    or a2, a4, t0
-; RV64IMZVBC-NEXT:    or a0, a1, a0
-; RV64IMZVBC-NEXT:    or a0, a2, a0
+; RV64IMZVBC-NEXT:    zext.b a0, a0
+; RV64IMZVBC-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
+; RV64IMZVBC-NEXT:    vmv.s.x v8, a0
+; RV64IMZVBC-NEXT:    zext.b a0, a1
+; RV64IMZVBC-NEXT:    vclmul.vx v8, v8, a0
+; RV64IMZVBC-NEXT:    vmv.x.s a0, v8
 ; RV64IMZVBC-NEXT:    srli a0, a0, 8
-; RV64IMZVBC-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    addi sp, sp, 32
 ; RV64IMZVBC-NEXT:    ret
   %a.ext = zext i8 %a to i16
   %b.ext = zext i8 %b to i16
@@ -1368,64 +1279,14 @@ define i16 @clmulh_i16(i16 %a, i16 %b) nounwind {
 ;
 ; RV64IMZVBC-LABEL: clmulh_i16:
 ; RV64IMZVBC:       # %bb.0:
-; RV64IMZVBC-NEXT:    lui a2, %hi(.LCPI3_0)
-; RV64IMZVBC-NEXT:    lui a3, 1
-; RV64IMZVBC-NEXT:    lui a4, 2
-; RV64IMZVBC-NEXT:    addi a5, a3, 273
-; RV64IMZVBC-NEXT:    addi a4, a4, 546
-; RV64IMZVBC-NEXT:    and a3, a1, a5
-; RV64IMZVBC-NEXT:    and a6, a0, a4
-; RV64IMZVBC-NEXT:    ld a2, %lo(.LCPI3_0)(a2)
-; RV64IMZVBC-NEXT:    mul a7, a6, a3
-; RV64IMZVBC-NEXT:    and a4, a1, a4
-; RV64IMZVBC-NEXT:    and a5, a0, a5
-; RV64IMZVBC-NEXT:    mul t0, a5, a4
-; RV64IMZVBC-NEXT:    lui t1, 16
-; RV64IMZVBC-NEXT:    lui t2, 4
-; RV64IMZVBC-NEXT:    addi t1, t1, -1
-; RV64IMZVBC-NEXT:    addi t2, t2, 1092
-; RV64IMZVBC-NEXT:    and t3, a1, t1
-; RV64IMZVBC-NEXT:    and t4, a0, t2
-; RV64IMZVBC-NEXT:    and t3, t3, a2
-; RV64IMZVBC-NEXT:    mul t5, t4, t3
-; RV64IMZVBC-NEXT:    and a0, a0, t1
-; RV64IMZVBC-NEXT:    and a1, a1, t2
+; RV64IMZVBC-NEXT:    lui a2, 16
+; RV64IMZVBC-NEXT:    addi a2, a2, -1
 ; RV64IMZVBC-NEXT:    and a0, a0, a2
-; RV64IMZVBC-NEXT:    mul t1, a0, a1
-; RV64IMZVBC-NEXT:    mul t2, a5, a3
-; RV64IMZVBC-NEXT:    mul t6, t4, a1
-; RV64IMZVBC-NEXT:    xor a7, t0, a7
-; RV64IMZVBC-NEXT:    xor a7, a7, t5
-; RV64IMZVBC-NEXT:    xor a7, a7, t1
-; RV64IMZVBC-NEXT:    mul t0, a6, t3
-; RV64IMZVBC-NEXT:    xor t1, t2, t6
-; RV64IMZVBC-NEXT:    mul t2, a0, a4
-; RV64IMZVBC-NEXT:    mul t5, a6, a4
-; RV64IMZVBC-NEXT:    mul a6, a6, a1
-; RV64IMZVBC-NEXT:    mul a1, a5, a1
-; RV64IMZVBC-NEXT:    mul a4, t4, a4
-; RV64IMZVBC-NEXT:    mul t4, t4, a3
-; RV64IMZVBC-NEXT:    mul a5, a5, t3
-; RV64IMZVBC-NEXT:    mul t3, a0, t3
-; RV64IMZVBC-NEXT:    mul a0, a0, a3
-; RV64IMZVBC-NEXT:    lui a3, 139808
-; RV64IMZVBC-NEXT:    and a3, a7, a3
-; RV64IMZVBC-NEXT:    xor a7, t1, t0
-; RV64IMZVBC-NEXT:    xor a7, a7, t2
-; RV64IMZVBC-NEXT:    lui t0, 69904
-; RV64IMZVBC-NEXT:    and a7, a7, t0
-; RV64IMZVBC-NEXT:    xor a1, a1, t5
-; RV64IMZVBC-NEXT:    xor a1, a1, t4
-; RV64IMZVBC-NEXT:    xor a4, a6, a4
-; RV64IMZVBC-NEXT:    xor a1, a1, t3
-; RV64IMZVBC-NEXT:    xor a4, a5, a4
-; RV64IMZVBC-NEXT:    lui a5, 279616
-; RV64IMZVBC-NEXT:    xor a0, a4, a0
-; RV64IMZVBC-NEXT:    and a1, a1, a5
-; RV64IMZVBC-NEXT:    and a0, a0, a2
-; RV64IMZVBC-NEXT:    or a2, a7, a3
-; RV64IMZVBC-NEXT:    or a0, a1, a0
-; RV64IMZVBC-NEXT:    or a0, a2, a0
+; RV64IMZVBC-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
+; RV64IMZVBC-NEXT:    vmv.s.x v8, a0
+; RV64IMZVBC-NEXT:    and a1, a1, a2
+; RV64IMZVBC-NEXT:    vclmul.vx v8, v8, a1
+; RV64IMZVBC-NEXT:    vmv.x.s a0, v8
 ; RV64IMZVBC-NEXT:    srli a0, a0, 16
 ; RV64IMZVBC-NEXT:    ret
   %a.ext = zext i16 %a to i32
@@ -2584,73 +2445,15 @@ define i32 @clmulh_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64IMZVBC-LABEL: clmulh_i32:
 ; RV64IMZVBC:       # %bb.0:
-; RV64IMZVBC-NEXT:    addi sp, sp, -32
-; RV64IMZVBC-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    lui a2, %hi(.LCPI4_0)
-; RV64IMZVBC-NEXT:    ld a2, %lo(.LCPI4_0)(a2)
-; RV64IMZVBC-NEXT:    lui a3, 69905
-; RV64IMZVBC-NEXT:    lui a4, 139810
-; RV64IMZVBC-NEXT:    addi a3, a3, 273
-; RV64IMZVBC-NEXT:    addi a5, a4, 546
-; RV64IMZVBC-NEXT:    and a4, a1, a3
-; RV64IMZVBC-NEXT:    and a6, a0, a5
-; RV64IMZVBC-NEXT:    and a7, a0, a2
-; RV64IMZVBC-NEXT:    and t0, a1, a2
-; RV64IMZVBC-NEXT:    mul t1, a6, a4
-; RV64IMZVBC-NEXT:    and a5, a1, a5
-; RV64IMZVBC-NEXT:    and t2, a0, a3
-; RV64IMZVBC-NEXT:    lui t3, 279620
-; RV64IMZVBC-NEXT:    mul t4, t2, a5
-; RV64IMZVBC-NEXT:    addi t3, t3, 1092
-; RV64IMZVBC-NEXT:    and a0, a0, t3
-; RV64IMZVBC-NEXT:    slli t0, t0, 32
-; RV64IMZVBC-NEXT:    srli t5, t0, 32
-; RV64IMZVBC-NEXT:    slli a7, a7, 32
-; RV64IMZVBC-NEXT:    and a1, a1, t3
-; RV64IMZVBC-NEXT:    srli t3, a7, 32
-; RV64IMZVBC-NEXT:    mul t6, a0, t5
-; RV64IMZVBC-NEXT:    mul s0, t3, a1
-; RV64IMZVBC-NEXT:    mul s1, t2, a4
-; RV64IMZVBC-NEXT:    mul s2, a0, a1
-; RV64IMZVBC-NEXT:    xor t1, t4, t1
-; RV64IMZVBC-NEXT:    xor t1, t1, t6
-; RV64IMZVBC-NEXT:    mul t4, a6, t5
-; RV64IMZVBC-NEXT:    xor t1, t1, s0
-; RV64IMZVBC-NEXT:    xor t6, s1, s2
-; RV64IMZVBC-NEXT:    mul s0, t3, a5
-; RV64IMZVBC-NEXT:    mul s1, a6, a5
-; RV64IMZVBC-NEXT:    mul a6, a6, a1
-; RV64IMZVBC-NEXT:    mul a1, t2, a1
-; RV64IMZVBC-NEXT:    mul a5, a0, a5
-; RV64IMZVBC-NEXT:    mul a0, a0, a4
-; RV64IMZVBC-NEXT:    mulhu a7, a7, t0
-; RV64IMZVBC-NEXT:    mul t0, t2, t5
-; RV64IMZVBC-NEXT:    slli t2, a3, 33
-; RV64IMZVBC-NEXT:    mul a4, t3, a4
-; RV64IMZVBC-NEXT:    and t1, t1, t2
-; RV64IMZVBC-NEXT:    xor t2, t6, t4
-; RV64IMZVBC-NEXT:    xor t2, t2, s0
-; RV64IMZVBC-NEXT:    slli t3, a3, 32
-; RV64IMZVBC-NEXT:    and t2, t2, t3
-; RV64IMZVBC-NEXT:    xor a1, a1, s1
-; RV64IMZVBC-NEXT:    xor a0, a1, a0
-; RV64IMZVBC-NEXT:    xor a1, a6, a5
-; RV64IMZVBC-NEXT:    xor a0, a0, a7
-; RV64IMZVBC-NEXT:    xor a1, t0, a1
-; RV64IMZVBC-NEXT:    slli a3, a3, 34
-; RV64IMZVBC-NEXT:    xor a1, a1, a4
-; RV64IMZVBC-NEXT:    and a0, a0, a3
-; RV64IMZVBC-NEXT:    and a1, a1, a2
-; RV64IMZVBC-NEXT:    or a2, t2, t1
-; RV64IMZVBC-NEXT:    or a0, a0, a1
-; RV64IMZVBC-NEXT:    or a0, a2, a0
+; RV64IMZVBC-NEXT:    slli a0, a0, 32
 ; RV64IMZVBC-NEXT:    srli a0, a0, 32
-; RV64IMZVBC-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    addi sp, sp, 32
+; RV64IMZVBC-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
+; RV64IMZVBC-NEXT:    vmv.s.x v8, a0
+; RV64IMZVBC-NEXT:    slli a1, a1, 32
+; RV64IMZVBC-NEXT:    srli a1, a1, 32
+; RV64IMZVBC-NEXT:    vclmul.vx v8, v8, a1
+; RV64IMZVBC-NEXT:    vmv.x.s a0, v8
+; RV64IMZVBC-NEXT:    srli a0, a0, 32
 ; RV64IMZVBC-NEXT:    ret
   %a.ext = zext i32 %a to i64
   %b.ext = zext i32 %b to i64
@@ -3077,82 +2880,15 @@ define void @commutative_clmulh_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) {
 ;
 ; RV64IMZVBC-LABEL: commutative_clmulh_i8:
 ; RV64IMZVBC:       # %bb.0:
-; RV64IMZVBC-NEXT:    addi sp, sp, -48
-; RV64IMZVBC-NEXT:    .cfi_def_cfa_offset 48
-; RV64IMZVBC-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
-; RV64IMZVBC-NEXT:    .cfi_offset s0, -8
-; RV64IMZVBC-NEXT:    .cfi_offset s1, -16
-; RV64IMZVBC-NEXT:    .cfi_offset s2, -24
-; RV64IMZVBC-NEXT:    .cfi_offset s3, -32
-; RV64IMZVBC-NEXT:    .cfi_offset s4, -40
-; RV64IMZVBC-NEXT:    andi a4, a1, 136
-; RV64IMZVBC-NEXT:    andi a5, a0, 136
-; RV64IMZVBC-NEXT:    andi a6, a0, 17
-; RV64IMZVBC-NEXT:    andi a7, a1, 34
-; RV64IMZVBC-NEXT:    andi t0, a0, 34
-; RV64IMZVBC-NEXT:    andi t1, a1, 17
-; RV64IMZVBC-NEXT:    mul t2, a7, a6
-; RV64IMZVBC-NEXT:    mul t3, t1, t0
-; RV64IMZVBC-NEXT:    andi a1, a1, 68
-; RV64IMZVBC-NEXT:    andi a0, a0, 68
-; RV64IMZVBC-NEXT:    mul t4, a1, a5
-; RV64IMZVBC-NEXT:    mul t5, a4, a0
-; RV64IMZVBC-NEXT:    xor t2, t3, t2
-; RV64IMZVBC-NEXT:    xor t3, t4, t5
-; RV64IMZVBC-NEXT:    li t4, 17
-; RV64IMZVBC-NEXT:    xor t2, t2, t3
-; RV64IMZVBC-NEXT:    slli t3, t4, 9
-; RV64IMZVBC-NEXT:    mul t5, a7, a5
-; RV64IMZVBC-NEXT:    mul t6, t1, a6
-; RV64IMZVBC-NEXT:    mul s0, a1, a0
-; RV64IMZVBC-NEXT:    mul s1, a4, t0
-; RV64IMZVBC-NEXT:    and t2, t2, t3
-; RV64IMZVBC-NEXT:    mul t3, a7, t0
-; RV64IMZVBC-NEXT:    mul s2, t1, a0
-; RV64IMZVBC-NEXT:    mul s3, a1, a6
-; RV64IMZVBC-NEXT:    mul s4, a4, a5
-; RV64IMZVBC-NEXT:    mul a0, a7, a0
-; RV64IMZVBC-NEXT:    mul a5, t1, a5
-; RV64IMZVBC-NEXT:    mul a1, a1, t0
-; RV64IMZVBC-NEXT:    mul a4, a4, a6
-; RV64IMZVBC-NEXT:    xor a6, t6, t5
-; RV64IMZVBC-NEXT:    xor s0, s0, s1
-; RV64IMZVBC-NEXT:    xor a6, a6, s0
-; RV64IMZVBC-NEXT:    slli a7, t4, 8
-; RV64IMZVBC-NEXT:    xor t0, s2, t3
-; RV64IMZVBC-NEXT:    lui t1, %hi(.LCPI5_0)
-; RV64IMZVBC-NEXT:    xor t3, s3, s4
-; RV64IMZVBC-NEXT:    ld t1, %lo(.LCPI5_0)(t1)
-; RV64IMZVBC-NEXT:    and a6, a6, a7
-; RV64IMZVBC-NEXT:    xor a7, t0, t3
-; RV64IMZVBC-NEXT:    xor a0, a5, a0
-; RV64IMZVBC-NEXT:    xor a1, a1, a4
-; RV64IMZVBC-NEXT:    slli t4, t4, 10
-; RV64IMZVBC-NEXT:    xor a0, a0, a1
-; RV64IMZVBC-NEXT:    and a1, a7, t4
-; RV64IMZVBC-NEXT:    and a0, a0, t1
-; RV64IMZVBC-NEXT:    or a4, a6, t2
-; RV64IMZVBC-NEXT:    or a0, a1, a0
-; RV64IMZVBC-NEXT:    or a0, a4, a0
+; RV64IMZVBC-NEXT:    zext.b a1, a1
+; RV64IMZVBC-NEXT:    vsetvli a4, zero, e64, m1, ta, ma
+; RV64IMZVBC-NEXT:    vmv.s.x v8, a1
+; RV64IMZVBC-NEXT:    zext.b a0, a0
+; RV64IMZVBC-NEXT:    vclmul.vx v8, v8, a0
+; RV64IMZVBC-NEXT:    vmv.x.s a0, v8
 ; RV64IMZVBC-NEXT:    srli a0, a0, 8
 ; RV64IMZVBC-NEXT:    sb a0, 0(a2)
 ; RV64IMZVBC-NEXT:    sb a0, 0(a3)
-; RV64IMZVBC-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
-; RV64IMZVBC-NEXT:    .cfi_restore s0
-; RV64IMZVBC-NEXT:    .cfi_restore s1
-; RV64IMZVBC-NEXT:    .cfi_restore s2
-; RV64IMZVBC-NEXT:    .cfi_restore s3
-; RV64IMZVBC-NEXT:    .cfi_restore s4
-; RV64IMZVBC-NEXT:    addi sp, sp, 48
-; RV64IMZVBC-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IMZVBC-NEXT:    ret
   %x.ext = zext i8 %x to i16
   %y.ext = zext i8 %y to i16
