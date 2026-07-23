@@ -122,6 +122,11 @@ static cl::opt<unsigned> UnrollFullMaxCount(
     cl::desc(
         "Set the max unroll count for full unrolling, for testing purposes"));
 
+static cl::opt<uint64_t> UnrollFullMaxClonedInstructions(
+    "unroll-full-max-cloned-instructions", cl::init(100'000), cl::Hidden,
+    cl::desc("Maximum estimated instructions cloned by automatic full "
+             "unrolling"));
+
 static cl::opt<bool>
     UnrollAllowPartial("unroll-allow-partial", cl::Hidden,
                        cl::desc("Allows loops to be partially unrolled until "
@@ -206,6 +211,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.MaxUpperBound = UnrollMaxUpperBound;
   UP.FullUnrollMaxCount = std::numeric_limits<unsigned>::max();
+  UP.FullUnrollMaxClonedInstructions = UnrollFullMaxClonedInstructions;
   UP.BEInsns = 2;
   UP.Partial = false;
   UP.Runtime = false;
@@ -249,6 +255,8 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.MaxUpperBound = UnrollMaxUpperBound;
   if (UnrollFullMaxCount.getNumOccurrences() > 0)
     UP.FullUnrollMaxCount = UnrollFullMaxCount;
+  if (UnrollFullMaxClonedInstructions.getNumOccurrences() > 0)
+    UP.FullUnrollMaxClonedInstructions = UnrollFullMaxClonedInstructions;
   if (UnrollAllowPartial.getNumOccurrences() > 0)
     UP.Partial = UnrollAllowPartial;
   if (UnrollAllowRemainder.getNumOccurrences() > 0)
@@ -905,7 +913,7 @@ static std::optional<unsigned> shouldFullUnroll(
     Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
     ScalarEvolution &SE, const SmallPtrSetImpl<const Value *> &EphValues,
     const unsigned FullUnrollTripCount, const UnrollCostEstimator UCE,
-    const TargetTransformInfo::UnrollingPreferences &UP) {
+    const TargetTransformInfo::UnrollingPreferences &UP, bool ExplicitUnroll) {
   assert(FullUnrollTripCount && "should be non-zero!");
 
   if (FullUnrollTripCount > UP.FullUnrollMaxCount) {
@@ -918,6 +926,19 @@ static std::optional<unsigned> shouldFullUnroll(
   // When computing the unrolled size, note that BEInsns are not replicated
   // like the rest of the loop body.
   uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP, FullUnrollTripCount);
+  uint64_t LoopInstructionCount = 0;
+  for (const BasicBlock *BB : L->blocks())
+    LoopInstructionCount += BB->size();
+  uint64_t AdditionalCopies = FullUnrollTripCount - 1;
+  if (!ExplicitUnroll && UP.Threshold != NoThreshold && AdditionalCopies &&
+      LoopInstructionCount >
+          UP.FullUnrollMaxClonedInstructions / AdditionalCopies) {
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Not unrolling: estimated cloned instructions exceed "
+               << UP.FullUnrollMaxClonedInstructions << ".\n");
+    return std::nullopt;
+  }
+
   if (UnrolledSize < UP.Threshold) {
     LLVM_DEBUG(dbgs().indent(2) << "Unrolling: size " << UnrolledSize
                                 << " < threshold " << UP.Threshold << ".\n");
@@ -1093,7 +1114,8 @@ unsigned llvm::computeUnrollCount(
   LLVM_DEBUG(dbgs().indent(1) << "Trying full unroll...\n");
   if (TripCount) {
     if (auto UnrollFactor =
-            shouldFullUnroll(L, TTI, DT, SE, EphValues, TripCount, UCE, UP))
+            shouldFullUnroll(L, TTI, DT, SE, EphValues, TripCount, UCE, UP,
+                             PInfo.ExplicitUnroll))
       return *UnrollFactor;
   }
 
@@ -1113,7 +1135,8 @@ unsigned llvm::computeUnrollCount(
   if (!TripCount && MaxTripCount && (UP.UpperBound || MaxOrZero) &&
       MaxTripCount <= UP.MaxUpperBound) {
     if (auto UnrollFactor =
-            shouldFullUnroll(L, TTI, DT, SE, EphValues, MaxTripCount, UCE, UP))
+            shouldFullUnroll(L, TTI, DT, SE, EphValues, MaxTripCount, UCE, UP,
+                             PInfo.ExplicitUnroll))
       return *UnrollFactor;
   }
 
