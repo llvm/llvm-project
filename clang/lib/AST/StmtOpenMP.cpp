@@ -454,8 +454,7 @@ OMPTileDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                          unsigned NumLoops, Stmt *AssociatedStmt,
                          Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
   OMPTileDirective *Dir = createDirective<OMPTileDirective>(
-      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   Dir->setFinals(Finals);
@@ -470,14 +469,12 @@ OMPTileDirective *OMPTileDirective::CreateEmpty(const ASTContext &C,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
-OMPStripeDirective *
-OMPStripeDirective::Create(const ASTContext &C, SourceLocation StartLoc,
-                           SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
-                           unsigned NumLoops, Stmt *AssociatedStmt,
-                           Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
+OMPStripeDirective *OMPStripeDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
+    Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
   OMPStripeDirective *Dir = createDirective<OMPStripeDirective>(
-      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   Dir->setFinals(Finals);
@@ -520,8 +517,7 @@ OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             unsigned NumLoops, Stmt *TransformedStmt,
                             Stmt *PreInits, Stmt *Finals) {
   OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
-      C, {}, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, {}, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   Dir->setFinals(Finals);
@@ -531,8 +527,8 @@ OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
 OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C,
                                                       unsigned NumLoops) {
   return createEmptyDirective<OMPReverseDirective>(
-      C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true,
-      FinalsOffset + 1, SourceLocation(), SourceLocation(), NumLoops);
+      C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
 }
 
 OMPInterchangeDirective *OMPInterchangeDirective::Create(
@@ -540,8 +536,7 @@ OMPInterchangeDirective *OMPInterchangeDirective::Create(
     ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
     Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
   OMPInterchangeDirective *Dir = createDirective<OMPInterchangeDirective>(
-      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   Dir->setFinals(Finals);
