@@ -11,6 +11,12 @@
 
 include "mlir/Pass/PassBase.td"
 
+def FunctionFilteringPass : Pass<"omp-function-filter"> {
+  let summary = "Filters out functions intended for the host when compiling "
+                "for an OpenMP target device.";
+  let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
 def HostOpFilteringPass : Pass<"omp-host-op-filter"> {
   let summary = "Removes all non target-related ops from host functions.";
   let description = [{
