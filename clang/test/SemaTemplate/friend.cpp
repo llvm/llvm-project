@@ -180,3 +180,16 @@ namespace InstQualifier1 {
     };
   }
 } // namespace InstQualifier1
+
+namespace invalid_function_name_in_template_instantiation {
+  template <typename T>
+  struct D {
+    friend T::S::~ffl_fusion(); // expected-error {{no type named 'ffl_fusion'}}
+  };
+
+  struct Q {
+    struct S { ~S(); };
+  };
+
+  template struct D<Q>; // expected-note {{in instantiation of template class}}
+} // namespace invalid_function_name_in_template_instantiation
