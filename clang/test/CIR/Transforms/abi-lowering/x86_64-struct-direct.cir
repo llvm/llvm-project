@@ -6,18 +6,21 @@
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
+!s128i = !cir.int<s, 128>
 !rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
 !rec_Two = !cir.struct<"Two" {!s64i, !s64i}>
 !rec_Mixed = !cir.struct<"Mixed" {!s8i, !s32i}>
 !rec_CharBuf = !cir.struct<"CharBuf" {!cir.array<!s8i x 4>}>
 !rec_Char1 = !cir.struct<"Char1" {!cir.array<!s8i x 1>}>
+!rec_S1 = !cir.struct<"S1" {!s128i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
   dlti.dl_spec = #dlti.dl_spec<
     #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<i128, dense<128>: vector<2xi64>>>
 } {
 
   // A two-int struct (8 bytes) is coerced to a single i64 register.  The body
@@ -145,6 +148,18 @@ module attributes {
   // CHECK:   %[[C1:.*]] = cir.cast bitcast %[[S1]] : !cir.ptr<!rec_Pair> -> !cir.ptr<!u64i>
   // CHECK:   %[[U:.*]] = cir.load %[[C1]] : !cir.ptr<!u64i>, !u64i
   // CHECK:   %{{.*}} = cir.call @take_pair(%[[U]]) : (!u64i) -> !s32i
+
+  // A struct holding a single __int128 is exactly two eightbytes, so it is
+  // Direct and coerced to i128 rather than passed by value.
+  cir.func @coerce_s1(%arg0: !rec_S1) -> !rec_S1 {
+    %0 = cir.alloca "a" align(16) : !cir.ptr<!rec_S1>
+    cir.store %arg0, %0 : !rec_S1, !cir.ptr<!rec_S1>
+    %1 = cir.load %0 : !cir.ptr<!rec_S1>, !rec_S1
+    cir.return %1 : !rec_S1
+  }
+
+  // CHECK: cir.func{{.*}} @coerce_s1(%arg0: !s128i) -> !s128i
+  // CHECK: cir.cast bitcast %{{.*}} : !cir.ptr<!s128i> -> !cir.ptr<!rec_S1>
 }
 
 // LLVM: define i32 @take_pair(i64 %{{.+}})
@@ -156,3 +171,4 @@ module attributes {
 // LLVM: define void @take_anon(i64 %{{.+}})
 // LLVM: define void @call_pair(i64 %{{.+}})
 // LLVM:   %{{.+}} = call i32 @take_pair(i64 %{{.+}})
+// LLVM: define i128 @coerce_s1(i128 %{{.+}})

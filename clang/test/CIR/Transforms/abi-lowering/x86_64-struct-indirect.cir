@@ -54,8 +54,8 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @take_noregs(%arg0: !cir.ptr<!rec_NoRegs> {llvm.align = 4 : i64, llvm.byref = !rec_NoRegs})
 
-  // A struct containing an __int128 spans more than two eightbytes, so it does
-  // not fit in registers: the argument is byval and the return uses sret.
+  // {__int128, char} spans more than two eightbytes, so it does not fit in
+  // registers: the argument is byval and the return uses sret.
   cir.func @take_big128(%arg0: !rec_Big128) {
     cir.return
   }

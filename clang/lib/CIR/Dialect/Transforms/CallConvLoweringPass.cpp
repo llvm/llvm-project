@@ -108,14 +108,12 @@ static bool isSupportedType(mlir::Type ty) {
   if (isa<cir::VoidType, cir::BoolType, cir::SingleType, cir::DoubleType>(ty))
     return true;
   if (auto intTy = dyn_cast<cir::IntType>(ty)) {
-    // A register-sized integer is Direct (kept as-is, or extended for a
-    // sub-register width).  __int128 is the only wider integer this bridge
-    // accepts: it is Direct and passes in a pair of integer registers, and the
-    // scalar Direct branch in convertABIArgInfo keeps it unchanged, which
-    // matches classic CodeGen (an i128 argument / return).  Intermediate widths
-    // (65..127) do not arise from C and would need a register-pair coercion the
-    // scalar Direct branch does not apply, so they stay rejected.  _BitInt is
-    // rejected pending its coercion and padding handling.
+    // Integers up to 64 bits and __int128 are Direct; convertABIArgInfo's
+    // scalar branch passes them through (with sign/zero extension for
+    // sub-register widths), matching classic CodeGen.  Intermediate widths
+    // (65..127) do not arise from C and would need a coercion the Direct
+    // branch does not apply, so they stay rejected, as does _BitInt pending
+    // its coercion and padding handling.
     if (intTy.getIsBitInt())
       return false;
     return intTy.getWidth() <= 64 || intTy.getWidth() == 128;
