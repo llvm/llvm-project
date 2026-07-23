@@ -88,15 +88,17 @@ define internal void @test_matrix_multiply_i32_2x2_2x2() {
 
 ; Test Matrix Multiply 2x3 * 3x2 float (Result 2x2 float)
 ; CHECK-LABEL: ; -- Begin function test_matrix_multiply_f32_2x3_3x2
-; CHECK:       %[[Col0B:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
-; CHECK:       %[[Col1B:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
-; CHECK:       %[[Row0A:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
-; CHECK:       %[[Row1A:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
-;
-; CHECK-DAG:   %[[C00:[0-9]+]] = OpDot %[[Float_ID]] %[[Row0A]] %[[Col0B]]
-; CHECK-DAG:   %[[C10:[0-9]+]] = OpDot %[[Float_ID]] %[[Row1A]] %[[Col0B]]
-; CHECK-DAG:   %[[C01:[0-9]+]] = OpDot %[[Float_ID]] %[[Row0A]] %[[Col1B]]
-; CHECK-DAG:   %[[C11:[0-9]+]] = OpDot %[[Float_ID]] %[[Row1A]] %[[Col1B]]
+; The A rows are gathered from the column-major layout by the transpose shuffle,
+; which stays vectorized on the legal <3 x float> chunk width (chained
+; OpVectorShuffle) rather than being scalarized.
+; CHECK:       %[[Row0A:[0-9]+]] = OpVectorShuffle %[[V3F32_ID]] {{.*}} 0 1 4
+; CHECK:       %[[Row1A:[0-9]+]] = OpVectorShuffle %[[V3F32_ID]] {{.*}} 0 3 5
+; The B columns are contiguous OpCompositeConstruct vectors; capture each as the
+; second dot operand (Col0B on the first dot that uses it, Col1B likewise).
+; CHECK:       %[[C00:[0-9]+]] = OpDot %[[Float_ID]] %[[Row0A]] %[[Col0B:[0-9]+]]
+; CHECK:       %[[C10:[0-9]+]] = OpDot %[[Float_ID]] %[[Row1A]] %[[Col0B]]
+; CHECK:       %[[C01:[0-9]+]] = OpDot %[[Float_ID]] %[[Row0A]] %[[Col1B:[0-9]+]]
+; CHECK:       %[[C11:[0-9]+]] = OpDot %[[Float_ID]] %[[Row1A]] %[[Col1B]]
 ; CHECK:       OpCompositeConstruct %[[V4F32_ID]] %[[C00]] %[[C10]] %[[C01]] %[[C11]]
 define internal void @test_matrix_multiply_f32_2x3_3x2() {
   %1 = load <6 x float>, ptr addrspace(10) @private_v6f32

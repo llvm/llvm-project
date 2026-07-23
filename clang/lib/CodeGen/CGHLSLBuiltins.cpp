@@ -311,6 +311,28 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
 }
 
 static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
+                                  llvm::AtomicRMWInst::BinOp Op) {
+  // Emit `atomicrmw <op>` directly — no intermediate intrinsic needed on
+  // either DXIL or SPIR-V.
+  LValue DestLV = CGF.EmitLValue(E->getArg(0));
+  Address DestAddr = DestLV.getAddress();
+  Value *Val = CGF.EmitScalarExpr(E->getArg(1));
+  assert(E->getArg(1)->getType()->isIntegerType() &&
+         "Intrinsic InterlockedOp value operand must be an integer");
+
+  llvm::AtomicRMWInst *Call = CGF.Builder.CreateAtomicRMW(
+      Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic);
+
+  // The 3-arg overload writes the old value (the RMW's return value) into
+  // the `original_value` reference parameter.
+  if (E->getNumArgs() == 3) {
+    LValue OrigLV = CGF.EmitLValue(E->getArg(2));
+    CGF.EmitStoreThroughLValue(RValue::get(Call), OrigLV);
+  }
+  return Call;
+}
+
+static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
                                   Intrinsic::ID ID, const Twine &Name) {
   // HLSL signatures (synthesized as overloads in HLSLExternalSemaSource):
   //   void InterlockedOp(groupshared|device T &dest, T value);
@@ -1457,9 +1479,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                              "hlsl.wave.active.bit.and");
   }
   case Builtin::BI__builtin_hlsl_interlocked_add: {
-    return handleInterlockedOp(
-        *this, E, CGM.getHLSLRuntime().getInterlockedAddIntrinsic(),
-        "hlsl.interlocked.add");
+    // Emit `atomicrmw` directly for both DXIL and SPIR-V — the backends pick
+    // up the raw instruction (DXIL via DXILResourceAccess for resource
+    // pointers, SPIR-V via selectAtomicRMW). No intermediate intrinsic.
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Add);
   }
   case Builtin::BI__builtin_hlsl_interlocked_or: {
     return handleInterlockedOp(*this, E,

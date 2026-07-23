@@ -336,6 +336,22 @@ define <4 x i32> @gep013_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceab
   ret <4 x i32> %r
 }
 
+; The element index is 2^32 and does not fit in unsigned. It must be rejected
+; before conversion to the shuffle-mask index type.
+
+define <4 x i32> @load_insert_large_offset(ptr align 16 dereferenceable(17179869188) %p) {
+; CHECK-LABEL: @load_insert_large_offset(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 17179869184
+; CHECK-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %gep = getelementptr inbounds i8, ptr %p, i64 17179869184
+  %s = load i32, ptr %gep, align 4
+  %r = insertelement <4 x i32> poison, i32 %s, i64 0
+  ret <4 x i32> %r
+}
+
 ; If there are enough dereferenceable bytes, we can offset the vector load.
 
 define <8 x i16> @gep10_load_i16_insert_v8i16(ptr align 16 dereferenceable(32) %p) nofree nosync {
