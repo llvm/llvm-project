@@ -24,7 +24,6 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
@@ -51,6 +50,7 @@
 #include "flang/Support/OpenMP-utils.h"
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/StateStack.h"
@@ -1059,8 +1059,9 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   // Last value the induction variable at \p lvl actually takes:
   // lb + ((ub - lb) / step) * step. For unit steps this is exactly ub.
   auto computeLastIV = [&](const int lvl) -> mlir::Value {
-    const auto constStep = fir::getIntIfConstant(steps[lvl]);
-    if (constStep && (*constStep == 1 || *constStep == -1))
+    const std::optional<llvm::APInt> constStep =
+        fir::getIntIfConstant(steps[lvl]);
+    if (constStep && (constStep->isOne() || constStep->isAllOnes()))
       return ubs[lvl];
     const mlir::Value lb = lbs[lvl];
     const mlir::Value ub = ubs[lvl];
@@ -4001,7 +4002,13 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             // Avoid attaching implicit default mappers to pointer captures.
             // For large pointer-based derived aggregates this can over-map
             // nested payloads and conflict with explicit enter/exit maps.
-            if (!isPointer && (hasDefaultMapper || isAllocatable)) {
+            //
+            // For an allocatable capture, only synthesize an implicit default
+            // mapper when the type requires one; a flat record does not.
+            if (!isPointer &&
+                (hasDefaultMapper ||
+                 (isAllocatable &&
+                  requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
@@ -5074,8 +5081,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumesDirective &assumesConstruct) {
+  // Assumption clauses are hints with no representation in the OpenMP dialect,
+  // so this declarative directive is a no-op.
   if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
+    TODO(converter.getCurrentLocation(),
+         "assumption clauses on the assumes directive");
 }
 
 static void
@@ -6534,9 +6544,31 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumeDirective &assumeConstruct) {
-  mlir::Location clauseLocation = converter.genLocation(assumeConstruct.source);
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(clauseLocation, "OpenMP ASSUME construct");
+  if (!semaCtx.langOptions().OpenMPSimd) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    lower::StatementContext stmtCtx;
+
+    const parser::OmpDirectiveSpecification &beginSpec =
+        assumeConstruct.BeginDir();
+    for (const parser::OmpClause &clause : beginSpec.Clauses().v) {
+      mlir::Location clauseLoc = converter.genLocation(clause.source);
+      const auto *holds = std::get_if<parser::OmpClause::Holds>(&clause.u);
+      if (!holds) {
+        TODO(clauseLoc, "assumption clause is not implemented yet");
+      }
+      const parser::Expr &parserExpr = holds->v.v.value();
+      const semantics::SomeExpr *expr = semantics::GetExpr(semaCtx, parserExpr);
+      assert(expr && "Expecting analyzed expression for holds clause");
+
+      mlir::Value cond =
+          fir::getBase(converter.genExprValue(*expr, stmtCtx, &clauseLoc));
+      cond =
+          firOpBuilder.createConvert(clauseLoc, firOpBuilder.getI1Type(), cond);
+      mlir::LLVM::AssumeOp::create(firOpBuilder, clauseLoc, cond);
+    }
+    stmtCtx.finalizeAndPop();
+  }
+  genNestedEvaluations(converter, eval);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

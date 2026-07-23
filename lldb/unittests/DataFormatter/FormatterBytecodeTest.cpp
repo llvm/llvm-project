@@ -1,17 +1,20 @@
 #include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
 using namespace lldb;
 using namespace FormatterBytecode;
+using llvm::FailedWithMessage;
 using llvm::StringRef;
 
 namespace {
 class FormatterBytecodeTest : public ::testing::Test {};
+} // namespace
 
-bool Interpret(std::vector<uint8_t> code, DataStack &data) {
+static bool Interpret(std::vector<uint8_t> code, DataStack &data) {
   auto buf =
       StringRef(reinterpret_cast<const char *>(code.data()), code.size());
   ControlStack control({buf});
@@ -26,7 +29,15 @@ bool Interpret(std::vector<uint8_t> code, DataStack &data) {
   return true;
 }
 
-} // namespace
+/// Like Interpret() above, but returns (instead of discarding) the Error,
+/// allowing tests to assert on the error message.
+static llvm::Error InterpretFail(std::vector<uint8_t> code) {
+  auto buf =
+      StringRef(reinterpret_cast<const char *>(code.data()), code.size());
+  ControlStack control({buf});
+  DataStack data;
+  return Interpret(control, data, sig_summary);
+}
 
 TEST_F(FormatterBytecodeTest, StackOps) {
   {
@@ -249,6 +260,69 @@ TEST_F(FormatterBytecodeTest, ArithOps) {
     ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 1, op_ge}, data));
     ASSERT_EQ(data.Pop<uint64_t>(), 1u);
   }
+}
+
+TEST_F(FormatterBytecodeTest, OutOfBounds) {
+  // op_lit_uint's ULEB128 operand is truncated: the interpreter runs off
+  // the end of the buffer while decoding it.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_uint}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed uleb128, extends past end"));
+
+  // op_begin claims a block that is longer than the remaining bytecode.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_begin, 5, op_lit_uint, 42}),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x4 while reading [0x2, 0x7)"));
+
+  // The ULEB128 byte's continuation bit is set, but there is no
+  // terminating byte.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_uint, 0x80}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed uleb128, extends past end"));
+
+  // Same as above, but for op_lit_int's SLEB128 operand.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_int, 0x80}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed sleb128, extends past end"));
+
+  // The ULEB128 operand encodes a value that doesn't fit into a uint64_t:
+  // 9 continuation bytes (63 bits) followed by a final byte contributing
+  // more than the single remaining bit.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_uint, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                     0x80, 0x80, 0x02}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "uleb128 too big for uint64"));
+
+  // Same as above, but for op_lit_int's SLEB128 operand not fitting into
+  // an int64_t.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_int, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                     0x80, 0x02}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "sleb128 too big for int64"));
+}
+
+TEST_F(FormatterBytecodeTest, EmptyBytecode) {
+  DataStack data;
+  ASSERT_TRUE(Interpret({}, data));
+  ASSERT_EQ(data.size(), 0u);
+}
+
+TEST_F(FormatterBytecodeTest, UnknownSelector) {
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_selector, 0xff, op_call}),
+      FailedWithMessage(
+          "selector not implemented (opcode=call, selector=@255)"));
+}
+
+TEST_F(FormatterBytecodeTest, UnknownOpcode) {
+  EXPECT_THAT_ERROR(InterpretFail({0xaa}),
+                    FailedWithMessage("opcode not implemented(opcode=170)"));
 }
 
 TEST_F(FormatterBytecodeTest, CallOps) {

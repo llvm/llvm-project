@@ -16,6 +16,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include <functional>
 
 namespace fir {
 #define GEN_PASS_DEF_CUFDEVICEGLOBAL
@@ -114,6 +116,81 @@ processPotentialTypeDescriptor(mlir::Type candidateType,
     processTypeDescriptor(recTy, symbolTable, candidates);
 }
 
+/// NVPTX cannot emit global initializers that form a reference cycle (see
+/// VisitGlobalVariableForEmission). Fortran type-info globals often do
+/// (mutually recursive derived types). Make a subset of the GPU copies extern
+/// declarations so that the remaining initializer dependency graph is
+/// acyclic, while preserving as many complete initializers as possible.
+static void dropCyclicGlobalInitializers(mlir::gpu::GPUModuleOp gpuMod) {
+  llvm::DenseMap<llvm::StringRef, fir::GlobalOp> byName;
+  llvm::SmallVector<fir::GlobalOp, 16> globals;
+  for (auto global : gpuMod.getOps<fir::GlobalOp>()) {
+    byName[global.getSymName()] = global;
+    globals.push_back(global);
+  }
+  if (globals.empty())
+    return;
+
+  llvm::sort(globals, [](fir::GlobalOp lhs, fir::GlobalOp rhs) {
+    return lhs.getSymName() < rhs.getSymName();
+  });
+
+  // Adjacency: global -> targets referenced via fir.address_of in its body.
+  llvm::DenseMap<fir::GlobalOp, llvm::SmallVector<fir::GlobalOp, 4>> adj;
+  for (fir::GlobalOp global : globals) {
+    global.walk([&](fir::AddrOfOp addrOf) {
+      fir::GlobalOp target =
+          byName.lookup(addrOf.getSymbol().getRootReference().getValue());
+      if (!target)
+        return;
+      adj[global].push_back(target);
+    });
+  }
+
+  // Greedily construct a feedback vertex set. Dropping one initializer
+  // removes all outgoing dependency edges from that global. Restart the DFS
+  // after each cut until no back edge remains.
+  llvm::DenseSet<fir::GlobalOp> declarationOnly;
+  while (true) {
+    // 0: unvisited, 1: active, 2: complete.
+    llvm::DenseMap<fir::GlobalOp, unsigned> state;
+    fir::GlobalOp cut;
+    std::function<bool(fir::GlobalOp)> findCycle =
+        [&](fir::GlobalOp global) -> bool {
+      if (declarationOnly.contains(global))
+        return false;
+      state[global] = 1;
+      for (fir::GlobalOp target : adj.lookup(global)) {
+        if (declarationOnly.contains(target))
+          continue;
+        if (state.lookup(target) == 1) {
+          cut = global;
+          return true;
+        }
+        if (state.lookup(target) == 0 && findCycle(target))
+          return true;
+      }
+      state[global] = 2;
+      return false;
+    };
+
+    for (fir::GlobalOp global : globals)
+      if (state.lookup(global) == 0 && findCycle(global))
+        break;
+    if (!cut)
+      break;
+    declarationOnly.insert(cut);
+  }
+
+  for (fir::GlobalOp global : declarationOnly) {
+    global.getRegion().getBlocks().clear();
+    global.removeInitValAttr();
+    // No initializer: use default external linkage so NVPTX emits
+    // `.extern .global` with no initializer dependency edges.
+    global.removeLinkNameAttr();
+  }
+}
+
 class CUFDeviceGlobal : public fir::impl::CUFDeviceGlobalBase<CUFDeviceGlobal> {
 public:
   using CUFDeviceGlobalBase::CUFDeviceGlobalBase;
@@ -190,6 +267,9 @@ public:
         clonedGlobal.removeLinkNameAttr();
       gpuSymTable.insert(cloned);
     }
+    // Type-info globals for mutually recursive derived types form initializer
+    // cycles; NVPTX rejects those. Drop initializers from cyclic GPU copies.
+    dropCyclicGlobalInitializers(gpuMod);
   }
 };
 } // namespace
