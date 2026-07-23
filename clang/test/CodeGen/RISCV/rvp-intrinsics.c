@@ -7352,6 +7352,142 @@ uint16x2_t test_pncvth_u16x2(uint32x2_t rs1) {
   return __riscv_pncvth_u16x2(rs1);
 }
 
+/* Packed "Q-format" Multiplication (32-bit) */
+
+// RV32-LABEL: define dso_local i32 @test_pmulq_i16x2(
+// RV32-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.riscv.pmulq.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV32-NEXT:    [[TMP3:%.*]] = bitcast <2 x i16> [[TMP2]] to i32
+// RV32-NEXT:    ret i32 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i32 @test_pmulq_i16x2(
+// RV64-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.riscv.pmulq.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV64-NEXT:    [[TMP3:%.*]] = bitcast <2 x i16> [[TMP2]] to i32
+// RV64-NEXT:    ret i32 [[TMP3]]
+//
+int16x2_t test_pmulq_i16x2(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmulq_i16x2(rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pmulqr_i16x2(
+// RV32-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.riscv.pmulqr.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV32-NEXT:    [[TMP3:%.*]] = bitcast <2 x i16> [[TMP2]] to i32
+// RV32-NEXT:    ret i32 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i32 @test_pmulqr_i16x2(
+// RV64-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.riscv.pmulqr.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV64-NEXT:    [[TMP3:%.*]] = bitcast <2 x i16> [[TMP2]] to i32
+// RV64-NEXT:    ret i32 [[TMP3]]
+//
+int16x2_t test_pmulqr_i16x2(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmulqr_i16x2(rs1, rs2);
+}
+
+/* Packed "Q-format" Multiplication (64-bit) */
+
+// RV32-LABEL: define dso_local i64 @test_pmulq_i16x4(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.riscv.pmulq.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
+// RV32-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pmulq_i16x4(
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.riscv.pmulq.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
+// RV64-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+int16x4_t test_pmulq_i16x4(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pmulq_i16x4(rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pmulqr_i16x4(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.riscv.pmulqr.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
+// RV32-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pmulqr_i16x4(
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.riscv.pmulqr.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
+// RV64-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+int16x4_t test_pmulqr_i16x4(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pmulqr_i16x4(rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pmulq_i32x2(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.riscv.pmulq.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV32-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pmulq_i32x2(
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// RV64-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.riscv.pmulq.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV64-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+int32x2_t test_pmulq_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pmulq_i32x2(rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pmulqr_i32x2(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.riscv.pmulqr.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV32-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
+// RV32-NEXT:    ret i64 [[TMP3]]
+//
+// RV64-LABEL: define dso_local i64 @test_pmulqr_i32x2(
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]], i64 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
+// RV64-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.riscv.pmulqr.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV64-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to i64
+// RV64-NEXT:    ret i64 [[TMP3]]
+//
+int32x2_t test_pmulqr_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pmulqr_i32x2(rs1, rs2);
+}
+
 /* Reinterpret Casts, Packed <-> Scalar (32-bit) */
 // RV32-LABEL: define dso_local i32 @test_preinterpret_u8x4_u32(
 // RV32-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
