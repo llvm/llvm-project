@@ -268,14 +268,11 @@ classifySecondInstInMacroFusion(const MCInst &MI, const MCInstrInfo &MCII) {
 
 /// Check if the instruction uses RIP relative addressing.
 static bool isRIPRelative(const MCInst &MI, const MCInstrInfo &MCII) {
-  unsigned Opcode = MI.getOpcode();
-  const MCInstrDesc &Desc = MCII.get(Opcode);
-  uint64_t TSFlags = Desc.TSFlags;
-  unsigned CurOp = X86II::getOperandBias(Desc);
-  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  int MemoryOperand = X86II::getMemoryOperandIdx(Desc);
   if (MemoryOperand < 0)
     return false;
-  unsigned BaseRegNum = MemoryOperand + CurOp + X86::AddrBaseReg;
+  unsigned BaseRegNum = MemoryOperand + X86::AddrBaseReg;
   MCRegister BaseReg = MI.getOperand(BaseRegNum).getReg();
   return (BaseReg == X86::RIP);
 }
