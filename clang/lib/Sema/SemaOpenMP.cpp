@@ -16934,9 +16934,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
       FinalLoops.push_back(SeqAnalysis.Loops[I].TheForStmt);
     }
 
-    // Insert the fused loop.
     FinalLoops.insert(FinalLoops.begin() + (FirstVal - 1), FusedForStmt);
-
     FusionStmt = CompoundStmt::Create(Context, FinalLoops, FPOptionsOverride(),
                                       SourceLocation(), SourceLocation());
   }
