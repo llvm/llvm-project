@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/SampleProfWriter.h"
+#include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <memory>
@@ -53,6 +55,10 @@ static cl::opt<bool>
     WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
                         cl::desc("Write ProfileSymbolList (Cold Symbols) as "
                                  "64-bit MD5 hashes in Eytzinger layout"));
+
+static cl::opt<bool> WriteEytzingerNameTables(
+    "sample-profile-write-eytzinger-name-tables", cl::init(false), cl::Hidden,
+    cl::desc("Write Eytzinger 3-span layout for NameTable"));
 
 namespace llvm {
 namespace support {
@@ -402,8 +408,101 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
     }
   }
 
+  if (UseMD5 && WriteEytzingerNameTables) {
+    if (auto EC = writeEytzingerNameTableSection(ProfileMap))
+      return EC;
+    return sampleprof_error::success;
+  }
+
   if (auto EC = writeNameTable())
     return EC;
+  return sampleprof_error::success;
+}
+
+namespace {
+
+// Helper class to construct and write the SecNameTable section in Eytzinger
+// layout for ExtBinary MD5 profiles.
+//
+// The on-disk layout of the Eytzinger name table section consists of symbol
+// counts followed by three contiguous Eytzinger hash arrays:
+// - ULEB128 count of Context-Sensitive (CS) top-level profile symbol keys
+// - ULEB128 count of Flat top-level profile symbol keys
+// - ULEB128 count of Inlinee and auxiliary profile symbol keys
+// - Array of 64-bit little-endian MD5 hash keys for CS profiles in Eytzinger
+//   order
+// - Array of 64-bit little-endian MD5 hash keys for Flat profiles in Eytzinger
+//   order
+// - Array of 64-bit little-endian MD5 hash keys for Inlinees in Eytzinger order
+class EytzingerNameTable {
+  using TableT = llvm::EytzingerTable<support::ulittle64_t>;
+  std::array<TableT, static_cast<size_t>(EytzingerSpan::NumSpans)> Spans;
+
+public:
+  EytzingerNameTable(std::vector<support::ulittle64_t> CSKeys,
+                     std::vector<support::ulittle64_t> FlatKeys,
+                     std::vector<support::ulittle64_t> InlineeKeys)
+      : Spans{TableT::create(std::move(CSKeys)),
+              TableT::create(std::move(FlatKeys)),
+              TableT::create(std::move(InlineeKeys))} {}
+
+  // Find the global index of GUID across the three Eytzinger table spans.
+  uint64_t findGlobalIdx(uint64_t GUID) const {
+    uint64_t BaseIdx = 0;
+    for (const auto &Table : Spans) {
+      if (std::optional<size_t> LocalIdx = Table.findIndex(GUID))
+        return BaseIdx + *LocalIdx;
+      BaseIdx += Table.size();
+    }
+    llvm_unreachable("Symbol in NameTable missing from Eytzinger spans");
+  }
+
+  void write(raw_ostream &OS) const {
+    for (const auto &Table : Spans)
+      encodeULEB128(uint64_t(Table.size()), OS);
+    for (const auto &Table : Spans)
+      OS.write(reinterpret_cast<const char *>(Table.data()),
+               Table.size() * sizeof(support::ulittle64_t));
+  }
+};
+
+} // end anonymous namespace
+
+std::error_code
+SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
+    const SampleProfileMap &ProfileMap) {
+  DenseSet<uint64_t> TopLevelGUIDs;
+  std::vector<support::ulittle64_t> CSKeys, FlatKeys, InlineeKeys;
+
+  // Collect top-level CS and Flat keys directly from ProfileMap.
+  for (const auto &I : ProfileMap) {
+    const SampleContext &Ctx = I.second.getContext();
+    uint64_t GUID = Ctx.getFunction().getHashCode();
+    if (TopLevelGUIDs.insert(GUID).second) {
+      if (Ctx.hasContext())
+        CSKeys.emplace_back(GUID);
+      else
+        FlatKeys.emplace_back(GUID);
+    }
+  }
+
+  // Collect remaining non-top-level symbols (inlinees, targets, vtables) from
+  // NameTable.
+  for (const auto &Entry : NameTable) {
+    uint64_t GUID = Entry.first.getHashCode();
+    if (!TopLevelGUIDs.contains(GUID))
+      InlineeKeys.emplace_back(GUID);
+  }
+
+  EytzingerNameTable Tables(std::move(CSKeys), std::move(FlatKeys),
+                            std::move(InlineeKeys));
+
+  // Assign each symbol its corresponding index in the Eytzinger layout.
+  for (auto &[FId, Idx] : NameTable)
+    Idx = Tables.findGlobalIdx(FId.getHashCode());
+
+  Tables.write(*OutputStream);
+
   return sampleprof_error::success;
 }
 
@@ -484,6 +583,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
                    SecProfSummaryFlags::SecFlagHasVTableTypeProf);
   if (Type == SecProfileSymbolList && WriteMD5ProfSymList)
     addSectionFlag(SecProfileSymbolList, SecProfileSymbolListFlags::SecFlagMD5);
+  if (Type == SecNameTable && WriteEytzingerNameTables && UseMD5)
+    addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagEytzinger);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {

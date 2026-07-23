@@ -1636,6 +1636,31 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
 }
 
 BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+
+  // This is a helper that declares two overloads with and without an out
+  // original-value parameter for each entry.
+  addByteAddressBufferInterlockedMethod("InterlockedAdd", AST.UnsignedIntTy,
+                                        "__builtin_hlsl_interlocked_add");
+
+  // Skip synthesizing the 64 bit methods on DXIL targets older than SM 6.6.
+  const llvm::Triple &TT = AST.getTargetInfo().getTriple();
+  bool HasInt64AtomicSupport =
+      TT.getArch() != llvm::Triple::dxil ||
+      AST.getTargetInfo().getPlatformMinVersion() >= VersionTuple(6, 6);
+  if (HasInt64AtomicSupport) {
+    // HLSL's uint64_t is `unsigned long`.
+    addByteAddressBufferInterlockedMethod("InterlockedAdd64",
+                                          AST.UnsignedLongTy,
+                                          "__builtin_hlsl_interlocked_add");
+  }
+
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
@@ -2354,6 +2379,42 @@ BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name, bool IsConst,
       .dereference(PH::LastStmt)
       .assign(PH::LastStmt, PH::_1)
       .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethod(
+    StringRef MethodName, QualType ValueTy, StringRef BuiltinName) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // Interlocked atomics operate on a typed slot in the buffer. Compose
+  // `resource_getpointer_typed` with the scalar `__builtin_hlsl_interlocked_*`
+  // builtin so backend lowering (DXIL and SPIR-V) can pattern-match a
+  // resource-pointer atomicrmw.
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ValueTy, LangAS::hlsl_device);
+  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
+
+  auto BuildOverload = [&](bool WithOriginalValue) {
+    BuiltinTypeMethodBuilder MMB(*this, MethodName, AST.VoidTy);
+    MMB.addParam("Offset", AST.UnsignedIntTy).addParam("Value", ValueTy);
+    if (WithOriginalValue)
+      MMB.addParam("OriginalValue", ValueTy,
+                   HLSLParamModifierAttr::Keyword_out);
+    MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
+                    PH::Handle, PH::_0, ValueTy)
+        .dereference(PH::LastStmt);
+    if (WithOriginalValue)
+      MMB.callBuiltin(BuiltinName, AST.VoidTy, PH::LastStmt, PH::_1, PH::_2);
+    else
+      MMB.callBuiltin(BuiltinName, AST.VoidTy, PH::LastStmt, PH::_1);
+    MMB.finalize();
+  };
+
+  BuildOverload(/*WithOriginalValue=*/false);
+  BuildOverload(/*WithOriginalValue=*/true);
+  return *this;
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addAppendMethod() {

@@ -334,6 +334,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  pthread_t
+  HDRS
+    pthread_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_t
+    libc.include.pthread
+)
+
+add_proxy_header_library(
   atexithandler_t
   HDRS
     atexithandler_t.h
@@ -517,6 +526,24 @@ add_proxy_header_library(
     struct_ip_msfilter.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ip_msfilter
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
+  struct_group_req
+  HDRS
+    struct_group_req.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_group_req
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
+  struct_group_source_req
+  HDRS
+    struct_group_source_req.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_group_source_req
     libc.include.netinet_in
 )
 

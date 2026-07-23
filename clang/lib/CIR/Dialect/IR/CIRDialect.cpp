@@ -578,7 +578,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (isa<cir::DataMemberAttr, cir::MethodAttr>(attrType)) {
+  if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
+          attrType)) {
     // More detailed type verifications are already done in
     // DataMemberAttr::verify or MethodAttr::verify. Don't need to repeat here.
     return success();
@@ -4687,6 +4688,18 @@ static void printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
   p.printNewline();
 
   p << "]";
+}
+
+//===----------------------------------------------------------------------===//
+// Standard library op signature matching
+//===----------------------------------------------------------------------===//
+
+bool cir::StdFindOp::signatureMatches(mlir::TypeRange operands,
+                                      mlir::TypeRange results) {
+  if (operands.size() != getNumArgs() || results.size() != 1)
+    return false;
+  mlir::Type iterTy = operands[0];
+  return iterTy == operands[1] && iterTy == operands[2] && iterTy == results[0];
 }
 
 //===----------------------------------------------------------------------===//

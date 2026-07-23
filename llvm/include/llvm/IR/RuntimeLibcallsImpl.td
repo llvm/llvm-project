@@ -8,13 +8,40 @@
 
 include "llvm/TableGen/SetTheory.td"
 
+// Dag operators for composing predicates.
+def all_of;
+def any_of;
+def not;
+
+// Composable predicate leaf expressed as a C++ boolean over an
+// `Triple TT`. Generally should check a single triple property.
+class LibcallPredicate<code cond> {
+  code Cond = cond;
+}
+
 // Predicate for whether a libcall exists for the target ABI. This is
 // a module level property that should only be computed based on the
 // triple.
-class RuntimeLibcallAvailability<code cond> {
-  // Expression of an llvm::Triple named TT for whether a libcall
+//
+// Two forms are accepted:
+//   - a raw C++ `code` condition over `Triple TT`
+//   - a `dag` of LibcallPredicate leaves combined with all_of/any_of/not,
+//     which the emitter lowers to the equivalent C++ boolean.
+// The dag form takes precedence when present.
+//
+// TODO: Remove the C++ form
+class RuntimeLibcallAvailability<code cond = [{}]> {
+  // Expression of an Triple named TT for whether a libcall
   // should exist.
   code Cond = cond;
+
+  // Composable form: (all_of/any_of/not <LibcallPredicate>...). Unset (?)
+  // means the `Cond` code form is used instead.
+  dag CondDag = ?;
+}
+
+class RuntimeLibcallAvailabilityDag<dag cond> : RuntimeLibcallAvailability<[{}]> {
+  let CondDag = cond;
 }
 
 // Predicate for whether a libcall should be used for the current
