@@ -846,7 +846,7 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
             R_GOTPLTONLY_PC, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT,
             R_GOTPLT_GOTREL, R_GOTPLT_PC, RE_PPC32_PLTREL, RE_PPC64_CALL_PLT,
             RE_RISCV_ADD, RE_AARCH64_GOT_PAGE, RE_LOONGARCH_PLT_PAGE_PC,
-            RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(e))
+            RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC, RE_X86_64_PCNEXT32>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if

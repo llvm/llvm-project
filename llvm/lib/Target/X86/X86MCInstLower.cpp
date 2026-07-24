@@ -301,6 +301,9 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case X86II::MO_PLT:
     Specifier = X86::S_PLT;
     break;
+  case X86II::MO_PCNEXT32:
+    Specifier = X86::S_PCNEXT32;
+    break;
   case X86II::MO_ABS8:
     Specifier = X86::S_ABS8;
     break;

@@ -394,6 +394,11 @@ enum TOF {
   /// See the X86-64 ELF ABI supplement for more details.
   ///    SYMBOL_LABEL @PLT
   MO_PLT,
+  /// MO_PCNEXT32 - On a symbol operand this indicates that the immediate is
+  /// offset to the prefetch target symbol name from the next code location.
+  /// If the target symbol is undefined, it will resolve to zero displacement.
+  ///    SYMBOL_LABEL @PCNEXT32
+  MO_PCNEXT32,
   /// MO_TLSGD - On a symbol operand this indicates that the immediate is
   /// the offset of the GOT entry with the TLS index structure that contains
   /// the module number and variable offset for the symbol. Used in the
