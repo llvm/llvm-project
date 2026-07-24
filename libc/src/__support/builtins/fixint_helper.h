@@ -16,6 +16,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_BUILTINS_FIXINT_HELPER_H
 #define LLVM_LIBC_SRC___SUPPORT_BUILTINS_FIXINT_HELPER_H
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/attributes.h"
@@ -25,8 +26,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace builtins {
 
 // TODO: use fputil::round_to_signed_integer after adding Float128/64/32/16
-// classes currently, we are using these helpers to avoid an infinity loop that
-// happens because fputil::round_to_signed_integer is calling the builtins if
+// classes currently, we use these helpers to avoid an infinite loop that
+// happens because fputil::round_to_signed_integer calls the builtins if
 // the target doesn't have FPU.
 
 // Truncating conversion of F to the signed integer I (round toward zero).
@@ -34,8 +35,8 @@ namespace builtins {
 template <typename I, typename F> LIBC_INLINE constexpr I fixint(F a) {
   using FPBits = fputil::FPBits<F>;
   using UI = cpp::make_unsigned_t<I>;
-  constexpr I FIXINT_MAX = static_cast<I>(~UI(0) >> 1);
-  constexpr I FIXINT_MIN = -FIXINT_MAX - 1;
+  constexpr I FIXINT_MAX = cpp::numeric_limits<I>::max();
+  constexpr I FIXINT_MIN = cpp::numeric_limits<I>::min();
 
   const FPBits bits(a);
   const I sign = bits.is_neg() ? -1 : 1;
