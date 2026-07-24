@@ -38,8 +38,23 @@ add_header(cookie_io_functions_t HDR cookie_io_functions_t.h DEPENDS .off64_t .s
 add_header(cpu_set_t HDR cpu_set_t.h)
 add_header(double_t HDR double_t.h)
 add_header(DIR HDR DIR.h)
+add_header(caddr_t HDR caddr_t.h)
 add_header(dev_t HDR dev_t.h)
 add_header(div_t HDR div_t.h)
+add_header(id_t HDR id_t.h)
+add_header(ino64_t HDR ino64_t.h)
+add_header(u_int HDR u_int.h)
+add_header(u_int16_t HDR u_int16_t.h)
+add_header(u_int8_t HDR u_int8_t.h)
+add_header(u_long HDR u_long.h)
+add_header(u_short HDR u_short.h)
+add_header(ulong HDR ulong.h)
+add_header(ushort HDR ushort.h)
+add_header(useconds_t HDR useconds_t.h)
+add_header(__off_t HDR __off_t.h)
+add_header(__off64_t HDR __off64_t.h)
+add_header(__uint64_t HDR __uint64_t.h)
+
 add_header(errno_t HDR errno_t.h DEPENDS libc.include.llvm-libc-macros.annex_k_macros)
 add_header(
   constraint_handler_t
