@@ -969,10 +969,12 @@ void State::addInfoForInductions(BasicBlock &BB) {
       !SE.isSCEVable(PN->getType()))
     return;
 
-  // The condition in the latch allows injecting %PN - %step <= %B - %step
-  // in the header, but currently we can only add facts based on existing IR
-  // values. For now, only use the condition when comparing a post-inc IV, in
-  // which case the injected condition %PN <= %B is an over-approximation.
+  // For latch conditions, we need to inject the condition that holds for the
+  // next iteration into the header. We limit to post-inc conditions, for which
+  // an original PN + Step != B condition results in a PN < B constraint in the
+  // header, which also holds for the next loop iteration. This would no longer
+  // be correct if the post-inc handling would inject a more precise PN + Step <
+  // B constraint instead.
   if (&BB == Latch && !IncStep)
     return;
 
