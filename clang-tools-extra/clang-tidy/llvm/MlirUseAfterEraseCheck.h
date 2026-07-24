@@ -13,11 +13,7 @@
 
 namespace clang::tidy::llvm_check {
 
-/// Detects uses of an ``mlir::Operation`` after it has been erased, either
-/// directly through ``Operation::erase``/``Operation::destroy``, through
-/// ``mlir::RewriterBase`` helpers such as ``eraseOp`` and ``replaceOp``,
-/// or through derived ops of ``mlir::OpState`` that provide are wrappers
-/// around an ``mlir::Operation``.
+/// Detects uses of an ``mlir::Operation`` after it has been erased.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/llvm/mlir-use-after-erase.html
