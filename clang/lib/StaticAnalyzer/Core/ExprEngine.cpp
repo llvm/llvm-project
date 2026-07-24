@@ -3661,23 +3661,20 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
   }
 }
 
-void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
-                              const Stmt *NodeEx,
-                              const Stmt *BoundEx,
-                              ExplodedNode *Pred,
-                              ProgramStateRef state,
-                              SVal location,
+void ExprEngine::evalLocation(ExplodedNodeSet &Dst, const Stmt *NodeEx,
+                              const Stmt *BoundEx, ExplodedNode *Pred,
+                              ProgramStateRef state, SVal location,
                               bool isLoad) {
-  NodeBuilder BldrTop(Pred, Dst, *currBldrCtx);
   // Early checks for performance reason.
   if (location.isUnknown()) {
+    Dst.insert(Pred);
     return;
   }
 
   ExplodedNodeSet Src;
-  BldrTop.takeNodes(Pred);
-  NodeBuilder Bldr(Pred, Src, *currBldrCtx);
-  if (Pred->getState() != state) {
+  if (Pred->getState() == state) {
+    Src.insert(Pred);
+  } else {
     // Associate this new state with an ExplodedNode.
     // FIXME: If I pass null tag, the graph is incorrect, e.g for
     //   int *p;
@@ -3688,12 +3685,15 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
     // "Variable 'p' initialized to a null pointer value"
 
     static SimpleProgramPointTag tag(TagProviderName, "Location");
-    Bldr.generateNode(NodeEx, Pred, state, &tag);
+    const ProgramPoint &L = ProgramPoint::getProgramPoint(
+        NodeEx, ProgramPoint::PostStmtKind, Pred->getStackFrame(), &tag);
+    Src.insert(Engine.makeNode(L, state, Pred));
   }
+
   ExplodedNodeSet Tmp;
   getCheckerManager().runCheckersForLocation(Tmp, Src, location, isLoad,
                                              NodeEx, BoundEx, *this);
-  BldrTop.addNodes(Tmp);
+  Dst.insert(Tmp);
 }
 
 std::pair<const ProgramPointTag *, const ProgramPointTag *>
