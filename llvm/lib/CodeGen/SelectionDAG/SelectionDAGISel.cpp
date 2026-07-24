@@ -3966,6 +3966,10 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (!ISD::isConstantSplatVectorAllZeros(N.getNode()))
         break;
       continue;
+    case OPC_CheckUndef:
+      if (!N.isUndef())
+        break;
+      continue;
 
     case OPC_CheckFoldableChainNode: {
       assert(NodeStack.size() != 1 && "No parent node");
