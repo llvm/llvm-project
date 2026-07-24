@@ -1038,6 +1038,12 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     emitAndCacheScopePathOpStringReg(TD->getFile(), MAI);
   }
 
+  for (const DISubprogram *SP : SubprogramDefinitions) {
+    emitOpStringIfNew(SP->getName(), MAI);
+    emitOpStringIfNew(SP->getLinkageName(), MAI);
+    ScopeToPathOpStringReg[SP] = emitOpStringIfNew(getDebugFullPath(SP), MAI);
+  }
+
   for (const auto &[GV, _] : GlobalVariableDebugInfoMap) {
     emitOpStringIfNew(GV->getName(), MAI);
     emitOpStringIfNew(GV->getLinkageName(), MAI);
