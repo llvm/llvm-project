@@ -21,6 +21,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 
+#include <cstddef>
+#include <functional>
+#include <optional>
+#include <string>
+
 using AccDirectiveSet = Fortran::common::EnumSet<llvm::acc::Directive,
     llvm::acc::Directive_enumSize>;
 
