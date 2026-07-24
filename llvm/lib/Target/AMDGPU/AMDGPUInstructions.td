@@ -92,9 +92,10 @@ def IEEEModeDisabled : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode
 
 def FMA : Predicate<"Subtarget->hasFMA()">;
 
-def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
+def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 
-// Packed 1-bit field; mark immediate so it is not counted as a literal.
 def i1imm_0 : OperandWithDefaultOps<i1, (ops (i1 0))> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
