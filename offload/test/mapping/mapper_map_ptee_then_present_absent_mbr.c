@@ -9,17 +9,12 @@
 //
 // FIXME: This currently PASSES (no present-check failure) even though s.x is
 // absent. The mapper emits the s.x member component WITHOUT the PRESENT bit, so
-// its absence is a silent no-op; PRESENT is only propagated to the pointee entry
-// (s.p[0:10]), which is present here. We eventually need to propagate PRESENT to
-// non-pointee (member) data as well, so that an absent member triggers the
-// present check.
+// its absence is a silent no-op. PRESENT should be propagated to the s.x member
+// entry pushed by the mapper, so that an absent member triggers the present
+// check, but it currently is not.
 //
 // EXPECTED: the present check should FAIL (assert / abort) because s.x is not
-// present on the device. Propagating PRESENT to member entries is blocked while
-// pointer members use PTR_AND_OBJ: a single combined entry allocates the whole
-// struct (including the pointer's own storage), so propagating PRESENT there
-// would wrongly require the pointer's pointee to be present. Enable this once
-// Clang emits attach-style maps throughout instead of PTR_AND_OBJ.
+// present on the device.
 
 int x[10];
 
