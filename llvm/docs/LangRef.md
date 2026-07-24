@@ -4192,13 +4192,15 @@ than or equal to eight, and whose element type is supported by the corresponding
 scalar atomic instruction. The {ref}`ordering <ordering>` of an `elementwise`
 instruction may not be `seq_cst`.
 
-For the purposes of the memory model, the instruction behaves as if one thread
-were spawned per element, each performing the corresponding scalar atomic
-operation on that element, and then joining after completion. For the purposes
-of `syncscope`, each scalar operation is still considered to execute in the
-same thread as the original instruction. Synchronizing with one of the scalar
-operations does not, by itself, establish a happens-before relationship with
-another scalar operation from the same `elementwise` instruction.
+An `elementwise` atomic instruction behaves as if it were expanded into one
+scalar version of that instruction for each vector element. Each resulting
+scalar operation has the same {ref}`ordering <ordering>` and `syncscope` as the
+original instruction. Each scalar operation occupies the original instruction's
+position in program order relative to other operations, but the scalar
+operations are not ordered by program order with respect to one another.
+Synchronizing with one scalar operation does not, by itself, establish a
+happens-before relationship with any other scalar operation from the same
+`elementwise` instruction.
 
 Without `elementwise`, vector atomic instructions are performed atomically over
 the entire vector operation.
@@ -11763,7 +11765,7 @@ multiple atomic stores. The type of the pointee must be an integer, pointer,
 floating-point, or vector type whose bit width is a power of two greater than or
 equal to eight.
 
-If the `elementwise` modifier is present, the instruction has
+If the `load` is marked `elementwise`, the instruction has
 {ref}`elementwise atomic semantics <elementwise-atomics>`. The loaded type must
 be a fixed vector type whose total bit width is a power of two greater than or
 equal to eight, and whose element type is supported by scalar atomic loads.
@@ -12162,7 +12164,7 @@ isn't specified.
 An `atomicrmw` instruction can also take an optional
 "{ref}`syncscope <syncscope>`" argument.
 
-If the `elementwise` modifier is present, the instruction has
+If `atomicrmw` is marked `elementwise`, the instruction has
 {ref}`elementwise atomic semantics <elementwise-atomics>`.
 
 ##### Semantics:
