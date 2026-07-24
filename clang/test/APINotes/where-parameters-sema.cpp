@@ -79,17 +79,11 @@
 
 // CHECK-METHOD-OVERLOADS: CXXMethodDecl {{.+}} setValue 'void (int)'
 // CHECK-METHOD-OVERLOADS-NEXT: ParmVarDecl {{.+}} 'int'
-// CHECK-METHOD-OVERLOADS-NEXT: SwiftVersionedAdditionAttr
-// CHECK-METHOD-OVERLOADS-NEXT: SwiftNameAttr {{.+}} "setIntValue(_:)"
 // CHECK-METHOD-OVERLOADS-NEXT: SwiftNameAttr {{.+}} "setIntValue(_:)"
 // CHECK-METHOD-OVERLOADS: CXXMethodDecl {{.+}} setValue 'void (double)'
 // CHECK-METHOD-OVERLOADS-NEXT: ParmVarDecl {{.+}} 'double'
-// CHECK-METHOD-OVERLOADS-NEXT: SwiftVersionedAdditionAttr
-// CHECK-METHOD-OVERLOADS-NEXT: SwiftNameAttr {{.+}} "setDoubleValue(_:)"
 // CHECK-METHOD-OVERLOADS-NEXT: SwiftNameAttr {{.+}} "setDoubleValue(_:)"
 // CHECK-METHOD-OVERLOADS: CXXMethodDecl {{.+}} setValue 'void ()'
-// CHECK-METHOD-OVERLOADS-NEXT: SwiftVersionedAdditionAttr
-// CHECK-METHOD-OVERLOADS-NEXT: SwiftNameAttr {{.+}} "currentValue()"
 // CHECK-METHOD-OVERLOADS-NEXT: SwiftNameAttr {{.+}} "currentValue()"
 
 // CHECK-METHOD-BROAD: CXXMethodDecl {{.+}} broad 'void (int)'
@@ -136,11 +130,7 @@
 
 // CHECK-METHOD-OPERATOR: CXXMethodDecl {{.+}} operator+ 'SelectorWidget (int)'
 // CHECK-METHOD-OPERATOR-NEXT: ParmVarDecl {{.+}} 'int'
-// CHECK-METHOD-OPERATOR-NEXT: SwiftVersionedAdditionAttr
-// CHECK-METHOD-OPERATOR-NEXT: SwiftNameAttr {{.+}} "plusInt(_:)"
 // CHECK-METHOD-OPERATOR-NEXT: SwiftNameAttr {{.+}} "plusInt(_:)"
 // CHECK-METHOD-OPERATOR: CXXMethodDecl {{.+}} operator+ 'SelectorWidget (double)'
 // CHECK-METHOD-OPERATOR-NEXT: ParmVarDecl {{.+}} 'double'
-// CHECK-METHOD-OPERATOR-NEXT: SwiftVersionedAdditionAttr
-// CHECK-METHOD-OPERATOR-NEXT: SwiftNameAttr {{.+}} "plusDouble(_:)"
 // CHECK-METHOD-OPERATOR-NEXT: SwiftNameAttr {{.+}} "plusDouble(_:)"

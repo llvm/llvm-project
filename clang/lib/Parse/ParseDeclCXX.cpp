@@ -3136,10 +3136,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
         // initialize it.
         ThisDecl = VT->getTemplatedDecl();
 
-      if (ThisDecl) {
+      if (ThisDecl)
         Actions.ProcessDeclAttributeList(getCurScope(), ThisDecl, AccessAttrs);
-        Actions.ProcessAPINotes(ThisDecl);
-      }
     }
 
     // Error recovery might have converted a non-static member into a static

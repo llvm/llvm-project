@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fsyntax-only -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks -fexperimental-bounds-safety-attributes %s -ast-dump -ast-dump-filter asdf | FileCheck %s --check-prefixes=CHECK,CHECK-MEMBER
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fsyntax-only -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks -fexperimental-bounds-safety-attributes %s -ast-dump -ast-dump-filter asdf | FileCheck %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fsyntax-only -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks -fexperimental-bounds-safety-attributes %s -ast-dump -ast-dump-filter asdf -DFREE_FUNCTIONS | FileCheck %s
 
 #ifdef FREE_FUNCTIONS
@@ -38,8 +38,6 @@
 
 // CHECK: asdf_counted_noescape 'void (int * __counted_by(len), int)'
 // CHECK: buf 'int * __counted_by(len)':'int *'
-// CHECK-MEMBER-NEXT: | |-SwiftVersionedAdditionAttr {{.*}} Implicit 0 IsReplacedByActive
-// CHECK-MEMBER-NEXT: | | `-NoEscapeAttr
 // CHECK-NEXT: | `-NoEscapeAttr
 
 // CHECK: asdf_counted_default_level 'void (int * __counted_by(len), int)'
