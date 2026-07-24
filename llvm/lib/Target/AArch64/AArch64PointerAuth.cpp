@@ -48,7 +48,7 @@ enum class SetRAStateMode {
   Always,  // Use .cfi_set_ra_state for both PAuth and PAuth_LR
 };
 cl::opt<SetRAStateMode> CFILLVMSetRASignStateMode(
-    "aarch64-cfi-llvm-set-ra-sign-state", cl::init(SetRAStateMode::Never),
+    "aarch64-cfi-llvm-set-ra-sign-state", cl::init(SetRAStateMode::PAuthLR),
     cl::desc("Control emission of .cfi_set_ra_state for PAC return address "
              "signing CFI"),
     cl::values(clEnumValN(SetRAStateMode::Never, "never",

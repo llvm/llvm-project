@@ -73,6 +73,10 @@ features cannot lower the translation-unit ABI level;
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
   The representation now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
+- Remove the deprecated `SPELLING_CACHE` alias.
+  All usage should be migrated to use `CompletionChunk.SPELLING_CACHE` instead.
+  Note that this uses `CompletionChunkKind` enumeration as keys, instead of integer values.
+
 - Remove the deprecated `CompletionChunk.isKind...` methods.
   Existing uses should be adapted to directly compare equality of the `CompletionChunk` kind with the corresponding `CompletionChunkKind` variant.
 
