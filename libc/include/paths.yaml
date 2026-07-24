@@ -1,0 +1,44 @@
+header: paths.h
+standards:
+  - bsd
+macros:
+  - macro_name: _PATH_DEFPATH
+    macro_header: paths-macros.h
+  - macro_name: _PATH_STDPATH
+    macro_header: paths-macros.h
+  - macro_name: _PATH_BSHELL
+    macro_header: paths-macros.h
+  - macro_name: _PATH_CONSOLE
+    macro_header: paths-macros.h
+  - macro_name: _PATH_CSHELL
+    macro_header: paths-macros.h
+  - macro_name: _PATH_DEV
+    macro_header: paths-macros.h
+  - macro_name: _PATH_DEVNULL
+    macro_header: paths-macros.h
+  - macro_name: _PATH_KLOG
+    macro_header: paths-macros.h
+  - macro_name: _PATH_MAILDIR
+    macro_header: paths-macros.h
+  - macro_name: _PATH_MAN
+    macro_header: paths-macros.h
+  - macro_name: _PATH_MNTTAB
+    macro_header: paths-macros.h
+  - macro_name: _PATH_MOUNTED
+    macro_header: paths-macros.h
+  - macro_name: _PATH_NOLOGIN
+    macro_header: paths-macros.h
+  - macro_name: _PATH_SENDMAIL
+    macro_header: paths-macros.h
+  - macro_name: _PATH_SHELLS
+    macro_header: paths-macros.h
+  - macro_name: _PATH_TTY
+    macro_header: paths-macros.h
+  - macro_name: _PATH_TMP
+    macro_header: paths-macros.h
+  - macro_name: _PATH_VARDB
+    macro_header: paths-macros.h
+  - macro_name: _PATH_VARRUN
+    macro_header: paths-macros.h
+  - macro_name: _PATH_VARTMP
+    macro_header: paths-macros.h

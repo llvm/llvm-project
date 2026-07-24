@@ -1,0 +1,26 @@
+header: values.h
+standards:
+  - svid
+macros:
+  - macro_name: BITSPERBYTE
+    macro_header: values-macros.h
+  - macro_name: MAXINT
+    macro_header: values-macros.h
+  - macro_name: MININT
+    macro_header: values-macros.h
+  - macro_name: MAXSHORT
+    macro_header: values-macros.h
+  - macro_name: MINSHORT
+    macro_header: values-macros.h
+  - macro_name: MAXLONG
+    macro_header: values-macros.h
+  - macro_name: MINLONG
+    macro_header: values-macros.h
+  - macro_name: MAXDOUBLE
+    macro_header: values-macros.h
+  - macro_name: MINDOUBLE
+    macro_header: values-macros.h
+  - macro_name: MAXFLOAT
+    macro_header: values-macros.h
+  - macro_name: MINFLOAT
+    macro_header: values-macros.h

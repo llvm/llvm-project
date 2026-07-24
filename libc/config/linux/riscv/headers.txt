@@ -33,6 +33,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.netinet_udp
     libc.include.nl_types
     libc.include.poll
+    libc.include.paths
     libc.include.pthread
     libc.include.pwd
     libc.include.sched
@@ -50,6 +51,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.string
     libc.include.strings
     libc.include.sys_auxv
+    libc.include.sys_cdefs
     libc.include.sys_epoll
     libc.include.sys_fcntl
     libc.include.sys_file
@@ -89,6 +91,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.time
     libc.include.uchar
     libc.include.unistd
+    libc.include.values
     libc.include.wchar
     libc.include.wctype
 )
