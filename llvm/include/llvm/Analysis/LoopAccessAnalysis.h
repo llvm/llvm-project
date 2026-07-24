@@ -921,11 +921,11 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
 
 /// If \p PtrSCEV is a bounded access of the form `Base + ElemSize * (i % 2^N)`
 /// where Base is loop invariant in \p L and ElemSize equals the allocation size
-/// of \p AccessTy, returns the bound 2^N.
-LLVM_ABI std::optional<uint64_t> getBoundedAccessBound(const SCEV *PtrSCEV,
-                                                       Type *AccessTy,
-                                                       const Loop *L,
-                                                       ScalarEvolution &SE);
+/// of \p AccessTy, returns the bound 2^N. Returns 0 if \p PtrSCEV is not such a
+/// bounded access; a valid bound is always >= 2.
+LLVM_ABI uint64_t getBoundForConsecutiveLoad(const SCEV *PtrSCEV,
+                                             Type *AccessTy, const Loop *L,
+                                             ScalarEvolution &SE);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
 /// compatible and it is possible to calculate the distance between them. This

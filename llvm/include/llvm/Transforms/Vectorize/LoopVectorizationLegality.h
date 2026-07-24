@@ -390,8 +390,8 @@ public:
   LLVM_ABI int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
   /// If \p I is a bounded (i % 2^N) load in a read-only loop, returns its
-  /// bound (2^N).
-  LLVM_ABI std::optional<uint64_t> getBoundedLoadBound(Instruction *I) const;
+  /// bound (2^N). Returns 0 otherwise; a valid bound is always >= 2.
+  LLVM_ABI uint64_t getBoundForConsecutiveLoad(Instruction *I) const;
 
   /// Returns true if \p V is invariant across all loop iterations according to
   /// SCEV.

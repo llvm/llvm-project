@@ -1708,12 +1708,10 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   return Stride;
 }
 
-std::optional<uint64_t> llvm::getBoundedAccessBound(const SCEV *PtrSCEV,
-                                                    Type *AccessTy,
-                                                    const Loop *L,
-                                                    ScalarEvolution &SE) {
+uint64_t llvm::getBoundForConsecutiveLoad(const SCEV *PtrSCEV, Type *AccessTy,
+                                          const Loop *L, ScalarEvolution &SE) {
   if (AccessTy->isScalableTy())
-    return std::nullopt;
+    return 0;
 
   // `A[i % 2^N]` is `Base + ElemSize * zext({0,+,1}<iN>)`. For a byte
   // element (ElemSize == 1) the multiply folds away.
@@ -1724,19 +1722,17 @@ std::optional<uint64_t> llvm::getBoundedAccessBound(const SCEV *PtrSCEV,
   if (!match(PtrSCEV, m_scev_Add(m_scev_Mul(m_scev_APInt(Scale), Index),
                                  m_SCEV(Base))) &&
       !match(PtrSCEV, m_scev_Add(Index, m_SCEV(Base))))
-    return std::nullopt;
+    return 0;
 
-  uint64_t AllocSize = L->getHeader()
-                           ->getDataLayout()
-                           .getTypeAllocSize(AccessTy)
-                           .getFixedValue();
+  uint64_t AllocSize =
+      SE.getDataLayout().getTypeAllocSize(AccessTy).getFixedValue();
   if (!Start->isZero() || !SE.isLoopInvariant(Base, L) ||
       (Scale ? *Scale != AllocSize : AllocSize != 1))
-    return std::nullopt;
+    return 0;
 
   unsigned NarrowWidth = SE.getTypeSizeInBits(Start->getType());
-  if (NarrowWidth == 0 || NarrowWidth >= 64)
-    return std::nullopt;
+  if (NarrowWidth >= 64)
+    return 0;
   return uint64_t(1) << NarrowWidth;
 }
 

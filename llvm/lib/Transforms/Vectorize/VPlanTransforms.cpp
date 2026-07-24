@@ -5359,16 +5359,15 @@ static bool canCreateBoundedLoad(VPInstruction *VPI, VFRange &Range,
 
   const SCEV *PtrSCEV =
       vputils::getSCEVExprForVPValue(VPI->getOperand(0), Ctx.PSE, Ctx.L);
-  std::optional<uint64_t> Bound =
-      getBoundedAccessBound(PtrSCEV, ScalarTy, Ctx.L, *Ctx.PSE.getSE());
-  if (!Bound)
+  uint64_t Bound =
+      getBoundForConsecutiveLoad(PtrSCEV, ScalarTy, Ctx.L, *Ctx.PSE.getSE());
+  if (Bound == 0)
     return false;
 
   // Only widen for VFs that divide the bound, so each VF-wide load stays within
   // a single window and does not wrap.
   auto DividesBound = [&](ElementCount VF) {
-    return VF.isFixed() && VF.getFixedValue() <= *Bound &&
-           *Bound % VF.getFixedValue() == 0;
+    return ElementCount::getFixed(Bound).isKnownMultipleOf(VF);
   };
   return LoopVectorizationPlanner::getDecisionAndClampRange(DividesBound,
                                                             Range);
@@ -5495,11 +5494,13 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
   VPlanTransforms::runPass(
       "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
         Instruction *I = VPI->getUnderlyingInstr();
+
+        VPBuilder Builder(VPI);
         bool IsLoad = VPI->getOpcode() == Instruction::Load;
         if (IsLoad && !LoopHasStore &&
             canCreateBoundedLoad(VPI, Range, CostCtx)) {
           auto *Load = cast<LoadInst>(VPI->getUnderlyingInstr());
-          VPSingleDefRecipe *LoadR = VPBuilder(VPI).createWidenLoad(
+          auto *LoadR = Builder.createWidenLoad(
               *Load, VPI->getOperand(0), /*Mask=*/nullptr,
               /*Consecutive=*/true, *VPI, Load->getDebugLoc());
           return ReplaceWith(VPI, LoadR);
@@ -5523,7 +5524,6 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                 getLoadStoreAddressSpace(I)))
           return false;
 
-        VPBuilder Builder(VPI);
         VPSingleDefRecipe *VectorPtr = Builder.createConsecutiveVectorPointer(
             Ptr, ScalarTy, Reverse, VPI->getDebugLoc());
 
