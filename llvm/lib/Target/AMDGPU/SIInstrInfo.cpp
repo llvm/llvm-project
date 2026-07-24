@@ -6307,9 +6307,8 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
     // a VGPR we need to replicate low half.
     // We also do not select immediates for these instructions so it always has
     // to be an SGPR register here.
-    // Operands which are not legal as per
-    // isLegalGFX12PlusPackedMathFP32or64BitOperand() sent here specifically to
-    // fix a non-splat SGPR and shall perform a full copy.
+    // Operands which are not legal as per isLegalWidePackedInstOperand() sent
+    // here specifically to fix a non-splat SGPR and shall perform a full copy.
 
     const TargetRegisterClass *VRC64 = RI.getVGPRClassForBitWidth(64);
     Register Low64 = MRI.createVirtualRegister(VRC64);
