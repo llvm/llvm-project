@@ -1271,6 +1271,15 @@ bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
 
 void VPlanTransforms::handleCountableEarlyExits(VPlan &Plan) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
+  bool HasEarlyExits =
+      any_of(Plan.getExitBlocks(), [MiddleVPBB](VPIRBasicBlock *EB) {
+        return any_of(EB->getPredecessors(), [MiddleVPBB](VPBlockBase *Pred) {
+          return Pred != MiddleVPBB;
+        });
+      });
+  if (!HasEarlyExits)
+    return;
+
   // Disconnect countable early exits from the loop, leaving it with a single
   // exit from the latch. Countable early exits are left for a scalar epilog.
   for (auto [EarlyExitingVPBB, EB] : vputils::getEarlyExits(Plan, MiddleVPBB)) {
