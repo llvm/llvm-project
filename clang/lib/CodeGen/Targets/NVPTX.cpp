@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/NVVMAttributes.h"
 
 using namespace clang;
@@ -50,6 +51,9 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
+  void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                               llvm::Instruction &AtomicInst,
+                               const AtomicExpr *AE) const override;
   bool shouldEmitStaticExternCAliases() const override;
 
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
@@ -302,6 +306,22 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,
 
 bool NVPTXTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
   return false;
+}
+
+void NVPTXTargetCodeGenInfo::setTargetAtomicMetadata(
+    CodeGenFunction &CGF, llvm::Instruction &AtomicInst,
+    const AtomicExpr *AE) const {
+  auto *RMW = dyn_cast<llvm::AtomicRMWInst>(&AtomicInst);
+  if (!RMW)
+    return;
+
+  AtomicOptions AO = CGF.CGM.getAtomicOpts();
+  llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
+      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
+      RMW->getType()->isFloatTy()) {
+    RMW->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
+  }
 }
 
 StringRef NVPTXTargetCodeGenInfo::getLLVMSyncScopeStr(

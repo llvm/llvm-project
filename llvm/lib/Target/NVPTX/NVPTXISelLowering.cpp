@@ -53,6 +53,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -7493,7 +7494,9 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
     // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
     if (Ty->isFloatTy()) {
-      bool UseNative = AllowFTZAtomics;
+      bool UseNative =
+          AllowFTZAtomics ||
+          AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
       switch (AI->getPointerAddressSpace()) {
       case llvm::ADDRESS_SPACE_GLOBAL:
         UseNative |= FTZ;
@@ -7507,7 +7510,9 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
         return AtomicExpansionKind::None;
     }
 
-    if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics) &&
+    bool IgnoreDenormal =
+        AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
+    if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics || IgnoreDenormal) &&
         STI.getSmVersion() >= 70 && STI.getPTXVersion() >= 63)
       return AtomicExpansionKind::None;
 

@@ -196,7 +196,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__amdgpu_no_fine_g
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr float, ptr addrspace(7) %ptr, i32 256
-  %result = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret float %result
 }
 
@@ -360,7 +360,7 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_f32__offset__amdgpu_no_fine_
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr float, ptr addrspace(7) %ptr, i32 256
-  %unused = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %unused = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret void
 }
 
@@ -767,7 +767,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr float, ptr addrspace(7) %ptr, i32 256
-  %result = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret float %result
 }
 
@@ -1816,7 +1816,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__amdgpu_no_remote
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr float, ptr addrspace(7) %ptr, i32 256
-  %result = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret float %result
 }
 

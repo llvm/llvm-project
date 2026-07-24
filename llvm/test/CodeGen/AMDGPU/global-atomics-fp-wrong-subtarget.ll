@@ -29,7 +29,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(ptr addr
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:  .LBB0_2:
 ; GCN-NEXT:    s_endpgm
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret void
 }
 

@@ -2652,7 +2652,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataKindRecord(
   unsigned Kind = Record[0];
   SmallString<8> Name(Record.begin() + 1, Record.end());
 
-  unsigned NewKind = TheModule.getMDKindID(Name.str());
+  unsigned NewKind = TheModule.getMDKindID(UpgradeMetadataID(Name.str()));
   if (!MDKindMap.insert(std::make_pair(Kind, NewKind)).second)
     return error("Conflicting METADATA_KIND records");
   return Error::success();

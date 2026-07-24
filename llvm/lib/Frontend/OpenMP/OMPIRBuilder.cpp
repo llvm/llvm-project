@@ -11169,10 +11169,10 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
   if (emitRMWOp) {
     AtomicRMWInst *RMWInst =
         Builder.CreateAtomicRMW(RMWOp, X, Expr, llvm::MaybeAlign(), AO);
+    if (IsIgnoreDenormalMode)
+      RMWInst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                           llvm::MDNode::get(Builder.getContext(), {}));
     if (T.isAMDGPU()) {
-      if (IsIgnoreDenormalMode)
-        RMWInst->setMetadata("amdgpu.ignore.denormal.mode",
-                             llvm::MDNode::get(Builder.getContext(), {}));
       if (!IsFineGrainedMemory)
         RMWInst->setMetadata("amdgpu.no.fine.grained.memory",
                              llvm::MDNode::get(Builder.getContext(), {}));

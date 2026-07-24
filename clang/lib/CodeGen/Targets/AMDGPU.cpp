@@ -10,6 +10,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -572,7 +573,7 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
   if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
       RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
       RMW->getType()->isFloatTy())
-    RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
+    RMW->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
 }
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
