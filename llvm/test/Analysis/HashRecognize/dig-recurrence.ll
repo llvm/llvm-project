@@ -9,6 +9,8 @@ define float @dense_use_def_chain(float %src) {
 ; CHECK-NEXT:  Reason: Unable to find conditional recurrence
 ;
 entry:
+  ; %f must be the result of an instruction in order for digRecurrence to be
+  ; called from matchConditionalRecurrence.
   %f = fneg float %src
   br label %loop
 
