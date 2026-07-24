@@ -20,6 +20,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
@@ -107,33 +108,36 @@ bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-std::optional<bool> WebAssemblyAsmBackend::evaluateFixup(const MCFragment &,
+std::optional<bool> WebAssemblyAsmBackend::evaluateFixup(const MCFragment &F,
                                                          MCFixup &Fixup,
                                                          MCValue &Target,
                                                          uint64_t &Value) {
-  if ((Fixup.getKind() == WebAssembly::fixup_uleb128_i32 ||
-       Fixup.getKind() == FK_Data_leb128) &&
-      static_cast<WebAssembly::Specifier>(Target.getSpecifier()) ==
-          WebAssembly::S_None) {
-    if (const auto *SymExpr =
-            dyn_cast_or_null<MCSymbolRefExpr>(Fixup.getValue())) {
-      // only evaluate fixups for temporary symbols
-      // (in-function offsets for compilation hints metadata)
-      if (const MCSymbol &SymA = SymExpr->getSymbol();
-          SymA.isInSection() && SymA.isTemporary()) {
-        assert(SymA.getSection().isText() &&
-               "Only branch hint offsets in text sections are expected");
-        const uint64_t SymbolOffset = Asm->getSymbolOffset(SymA);
-        uint8_t Buffer[5];
-        const unsigned EncodedSize = encodeULEB128(SymbolOffset, Buffer, 5);
-        Value = 0;
-        for (unsigned I = 0; I < EncodedSize; ++I)
-          Value |= static_cast<uint64_t>(Buffer[I]) << (I * 8);
-        return true;
-      }
-    }
-  }
-  return {};
+  const auto *Section = F.getParent();
+  if (!Section || !Section->getName().starts_with(
+                      ".custom_section.metadata.code.branch_hint"))
+    return {};
+
+  assert(Fixup.getKind() == FK_Data_leb128 &&
+         "Branch hint metadata should only contain LEB128 fixups");
+  auto Spec = static_cast<WebAssembly::Specifier>(Target.getSpecifier());
+  if (Spec == WebAssembly::S_FUNCINDEX)
+    return {}; // Function indices require relocations.
+
+  assert(Spec == WebAssembly::S_None &&
+         "Instruction offsets in branch hints should have no specifier");
+  const auto *SymExpr = cast<MCSymbolRefExpr>(Fixup.getValue());
+  const MCSymbol &SymA = SymExpr->getSymbol();
+  assert(SymA.isInSection() && SymA.isTemporary() &&
+         SymA.getSection().isText() &&
+         "Branch hint instruction target must be a temporary symbol in text section");
+
+  const uint64_t SymbolOffset = Asm->getSymbolOffset(SymA);
+  uint8_t Buffer[5];
+  const unsigned EncodedSize = encodeULEB128(SymbolOffset, Buffer, 5);
+  Value = 0;
+  for (unsigned I = 0; I < EncodedSize; ++I)
+    Value |= static_cast<uint64_t>(Buffer[I]) << (I * 8);
+  return true;
 }
 
 void WebAssemblyAsmBackend::applyFixup(const MCFragment &F,
