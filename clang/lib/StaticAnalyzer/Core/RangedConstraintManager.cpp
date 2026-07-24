@@ -151,12 +151,17 @@ ProgramStateRef RangedConstraintManager::assumeSymInclusiveRange(
   if (auto CI = SimplifiedVal.getAs<nonloc::ConcreteInt>()) {
     // The symbol folds to a concrete integer. Prune the path only when the
     // concrete value proves it infeasible (mirroring
-    // SimpleConstraintManager::assumeInclusiveRangeInternal; APSInt comparison
-    // handles differing widths/signedness, so no explicit conversion needed).
-    // If it is consistent, fall through so the existing machinery still runs
-    // (see the note in assumeSym for why the fall-through is load-bearing).
+    // SimpleConstraintManager::assumeInclusiveRangeInternal). If it is
+    // consistent, fall through so the existing machinery still runs (see the
+    // note in assumeSym for why the fall-through is load-bearing).
+    //
+    // V comes from the simplified symbol, so it need not share From/To's
+    // bit width or signedness. Use APSInt::compareValues(), which normalizes
+    // both, rather than the APSInt relational operators, which assert on a
+    // signedness mismatch and require equal bit width.
     const llvm::APSInt &V = *CI->getValue();
-    bool IsInRange = V >= From && V <= To;
+    bool IsInRange = llvm::APSInt::compareValues(V, From) >= 0 &&
+                     llvm::APSInt::compareValues(V, To) <= 0;
     if (IsInRange != InRange)
       return nullptr;
   } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {

@@ -66,3 +66,23 @@ void assumeSym_comparison(void) {
       clang_analyzer_warnIfReached(); // no-warning (correctly unreachable)
   }
 }
+
+void noCrashOnTypeMismatch(_Bool a) {
+  // Type mismatch (int vs. _Bool).
+  // A switch routes through ExprEngine::processSwitch -> assumeInclusiveRange
+  // -> assumeSymInclusiveRange. Since `a` is _Bool its range is {0,1}: after
+  // `case 1` is split off, the fall-through path pins the value to 0, so the
+  // switch symbol folds to a concrete integer inside assumeSymInclusiveRange.
+  // That concrete keeps the operand's _Bool (1-bit, unsigned) type, while the
+  // `case 0` label is a promoted `int` (32-bit, signed). The naive `V >= From
+  // && V <= To` used APSInt relational operators, which assert on the
+  // signedness/width mismatch; APSInt::compareValues() normalizes both.
+  switch (a) { // expected-warning {{switch condition has boolean value}}
+    case 1:
+      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+      break;
+    case 0:
+      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+      break;
+  }
+}
