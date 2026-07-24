@@ -11,7 +11,6 @@ class TestSwiftReflectionLoading(lldbtest.TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfWindows
     def test(self):
         """Test that reflection metadata is imported"""
         self.build()
