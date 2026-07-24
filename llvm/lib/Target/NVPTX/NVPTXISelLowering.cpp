@@ -7506,16 +7506,12 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
         return AtomicExpansionKind::None;
     }
 
-    if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics) &&
-        STI.getSmVersion() >= 70 && STI.getPTXVersion() >= 63)
-      return AtomicExpansionKind::None;
-
-    if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
-        STI.getPTXVersion() >= 78)
-      return AtomicExpansionKind::None;
-
     if (Ty->isDoubleTy() && STI.hasAtomAddF64())
       return AtomicExpansionKind::None;
+
+    // F16 and BF16 operations are to be lowered to a CAS loop. The denormal
+    // mode of the floating point add in the loop is determined by the
+    // function's FTZ behavior.
   }
 
   // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
