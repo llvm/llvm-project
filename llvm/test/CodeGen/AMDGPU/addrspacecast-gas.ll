@@ -18,7 +18,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s0, -1
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], src_flat_scratch_base_lo, v[0:1]
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_cndmask_b32 v1, 0, v1
 ; GFX1250-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
 ; GFX1250-SDAG-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS

@@ -572,10 +572,9 @@ define amdgpu_kernel void @s_test_copysign_v3f32(ptr addrspace(1) %out, <3 x flo
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v3, s12
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s14 :: v_dual_mov_b32 v1, s13
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_bfi_b32 v2, 0x7fffffff, s10, v0
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, s9, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, s8, v3
 ; GFX11-NEXT:    global_store_b96 v4, v[0:2], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -640,10 +639,9 @@ define amdgpu_kernel void @s_test_copysign_v4f32(ptr addrspace(1) %out, <4 x flo
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s15 :: v_dual_mov_b32 v1, s14
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s13 :: v_dual_mov_b32 v5, s12
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_bfi_b32 v3, 0x7fffffff, s11, v0
 ; GFX11-NEXT:    v_bfi_b32 v2, 0x7fffffff, s10, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, s9, v4
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, s8, v5
 ; GFX11-NEXT:    global_store_b128 v6, v[0:3], s[0:1]

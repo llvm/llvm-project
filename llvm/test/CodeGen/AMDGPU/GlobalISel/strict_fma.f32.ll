@@ -153,7 +153,7 @@ define void @v_constained_fma_v2f32_fpexcept_strict_uni(<2 x float> inreg %x, <2
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s16 :: v_dual_mov_b32 v3, s17
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_f32 v2, s0, s2, v2
 ; GFX11-NEXT:    v_fma_f32 v3, s1, s3, v3
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
@@ -290,10 +290,9 @@ define void @v_constained_fma_v3f32_fpexcept_strict_uni(<3 x float> inreg %x, <3
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s18 :: v_dual_mov_b32 v3, s19
 ; GFX11-NEXT:    v_mov_b32_e32 v4, s20
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_fma_f32 v2, s0, s3, v2
 ; GFX11-NEXT:    v_fma_f32 v3, s1, s16, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_fma_f32 v4, s2, s17, v4
 ; GFX11-NEXT:    global_store_b96 v[0:1], v[2:4], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -450,10 +449,9 @@ define void @v_constained_fma_v4f32_fpexcept_strict_uni(<4 x float> inreg %x, <4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s20 :: v_dual_mov_b32 v3, s21
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s22 :: v_dual_mov_b32 v5, s23
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_fma_f32 v2, s0, s16, v2
 ; GFX11-NEXT:    v_fma_f32 v3, s1, s17, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_fma_f32 v4, s2, s18, v4
 ; GFX11-NEXT:    v_fma_f32 v5, s3, s19, v5
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off
@@ -921,7 +919,7 @@ define void @v_constained_fma_v2f32_fpexcept_strict_fneg_fneg_uni(<2 x float> in
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s16 :: v_dual_mov_b32 v3, s17
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_f32 v2, -s0, -s2, v2
 ; GFX11-NEXT:    v_fma_f32 v3, -s1, -s3, v3
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off

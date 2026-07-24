@@ -121,7 +121,7 @@ define i64 @test_abs_i64(i64 %a) {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v2
 ; CHECK-NEXT:    v_add_nc_u64_e32 v[0:1], v[0:1], v[2:3]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; CHECK-NEXT:    v_xor_b32_e32 v1, v1, v2
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
@@ -136,7 +136,7 @@ define amdgpu_ps i64 @test_umin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_min_u64 v[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -151,7 +151,7 @@ define amdgpu_ps i64 @test_umax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_max_u64 v[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -166,7 +166,7 @@ define amdgpu_ps i64 @test_smin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_min_i64 v[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -181,7 +181,7 @@ define amdgpu_ps i64 @test_smax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_max_i64 v[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
 ; CHECK-NEXT:    ; return to shader part epilog

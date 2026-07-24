@@ -41,7 +41,7 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_non_splat(<2 x double> %A, <2 x
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1251-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_mov_b32 v11, 0x3ff00000
-; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1251-NEXT:    v_dual_mov_b32 v15, 2.0 :: v_dual_mov_b32 v12, v10
 ; GFX1251-NEXT:    v_dual_mov_b32 v13, v11 :: v_dual_mov_b32 v14, v10
 ; GFX1251-NEXT:    v_dual_mov_b32 v16, v10 :: v_dual_mov_b32 v17, v11

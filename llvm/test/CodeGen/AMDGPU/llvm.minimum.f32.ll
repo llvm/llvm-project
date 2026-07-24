@@ -570,7 +570,7 @@ define <2 x float> @v_minimum_v2f32(<2 x float> %src0, <2 x float> %src1) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_min_f32 v4, v0, v2 :: v_dual_min_f32 v5, v1, v3
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v4, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v3
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v5, vcc_lo
@@ -713,7 +713,7 @@ define <2 x float> @v_minimum_v2f32__nsz(<2 x float> %src0, <2 x float> %src1) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_min_f32 v4, v0, v2 :: v_dual_min_f32 v5, v1, v3
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v4, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v3
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v5, vcc_lo
@@ -991,12 +991,11 @@ define <3 x float> @v_minimum_v3f32(<3 x float> %src0, <3 x float> %src1) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_min_f32 v6, v0, v3 :: v_dual_min_f32 v7, v1, v4
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v6, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v4
 ; GFX11-NEXT:    v_dual_min_f32 v8, v2, v5 :: v_dual_cndmask_b32 v1, 0x7fc00000, v7
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v5
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, 0x7fc00000, v8, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1159,12 +1158,11 @@ define <3 x float> @v_minimum_v3f32__nsz(<3 x float> %src0, <3 x float> %src1) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_min_f32 v6, v0, v3 :: v_dual_min_f32 v7, v1, v4
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v6, vcc_lo
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v4
 ; GFX11-NEXT:    v_dual_min_f32 v8, v2, v5 :: v_dual_cndmask_b32 v1, 0x7fc00000, v7
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v2, v5
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, 0x7fc00000, v8, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;

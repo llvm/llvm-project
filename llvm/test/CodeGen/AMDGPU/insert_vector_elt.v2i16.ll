@@ -2400,7 +2400,7 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(ptr addrspace(1) %
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 4, v2
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], v2, 0xffff
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_bfi_b32 v1, v3, s2, v1
 ; GFX11-NEXT:    v_bfi_b32 v0, v2, s2, v0
 ; GFX11-NEXT:    global_store_b64 v4, v[0:1], s[0:1]

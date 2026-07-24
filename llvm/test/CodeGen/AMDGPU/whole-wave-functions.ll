@@ -1076,7 +1076,7 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) #0 {
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    v_dual_cndmask_b32 v1, 0, v1 :: v_dual_cndmask_b32 v0, 5, v0
 ; DAGISEL-NEXT:    v_dual_cndmask_b32 v2, 3, v2 :: v_dual_cndmask_b32 v3, 0, v3
-; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_mov_b32_dpp v0, v2 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; DAGISEL-NEXT:    v_mov_b32_dpp v1, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; DAGISEL-NEXT:    s_xor_b32 exec_lo, vcc_lo, -1
@@ -1106,7 +1106,7 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) #0 {
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_dual_cndmask_b32 v0, 5, v0 :: v_dual_cndmask_b32 v1, 0, v1
 ; GISEL-NEXT:    v_dual_cndmask_b32 v2, 3, v2 :: v_dual_cndmask_b32 v3, 0, v3
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_mov_b32_dpp v0, v2 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GISEL-NEXT:    v_mov_b32_dpp v1, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GISEL-NEXT:    s_xor_b32 exec_lo, vcc_lo, -1
@@ -1197,7 +1197,7 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) #0 {
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1250-DAGISEL-NEXT:    v_dual_cndmask_b32 v1, 0, v1 :: v_dual_cndmask_b32 v0, 5, v0
 ; GFX1250-DAGISEL-NEXT:    v_dual_cndmask_b32 v2, 3, v2 :: v_dual_cndmask_b32 v3, 0, v3
-; GFX1250-DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-DAGISEL-NEXT:    v_mov_b32_dpp v0, v2 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GFX1250-DAGISEL-NEXT:    v_mov_b32_dpp v1, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GFX1250-DAGISEL-NEXT:    s_xor_b32 exec_lo, vcc_lo, -1

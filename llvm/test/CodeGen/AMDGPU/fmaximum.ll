@@ -974,10 +974,9 @@ define amdgpu_ps <2 x float> @test_fmaximum_f64_ss(double inreg %a, double inreg
 ; GFX1170-GISEL-LABEL: test_fmaximum_f64_ss:
 ; GFX1170-GISEL:       ; %bb.0:
 ; GFX1170-GISEL-NEXT:    v_maximum_f64 v[0:1], s[0:1], s[2:3]
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1170-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1170-GISEL-NEXT:    ; return to shader part epilog
 ;
@@ -989,11 +988,10 @@ define amdgpu_ps <2 x float> @test_fmaximum_f64_ss(double inreg %a, double inreg
 ; GFX12-GISEL-LABEL: test_fmaximum_f64_ss:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_maximum_f64 v[0:1], s[0:1], s[2:3]
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call double @llvm.maximum.f64(double %a, double %b)
@@ -1055,10 +1053,9 @@ define amdgpu_ps <4 x float> @test_fmaximum_v2f64_ss(<2 x double> inreg %a, <2 x
 ; GFX1170-GISEL:       ; %bb.0:
 ; GFX1170-GISEL-NEXT:    v_maximum_f64 v[0:1], s[0:1], s[4:5]
 ; GFX1170-GISEL-NEXT:    v_maximum_f64 v[2:3], s[2:3], s[6:7]
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -1076,10 +1073,9 @@ define amdgpu_ps <4 x float> @test_fmaximum_v2f64_ss(<2 x double> inreg %a, <2 x
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_maximum_f64 v[0:1], s[0:1], s[4:5]
 ; GFX12-GISEL-NEXT:    v_maximum_f64 v[2:3], s[2:3], s[6:7]
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)

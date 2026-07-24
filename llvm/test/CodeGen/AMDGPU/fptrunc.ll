@@ -2187,9 +2187,9 @@ define half @fabs_fptrunc_f64_to_f16(double %x) {
 ; GFX11-SDAG-NEXT:    v_dual_mov_b32 v3, 0x7e00 :: v_dual_add_nc_u32 v2, v2, v3
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0x7c00, v2, vcc_lo
 ; GFX11-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0x7c00, v3, vcc_lo
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x40f, v1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;

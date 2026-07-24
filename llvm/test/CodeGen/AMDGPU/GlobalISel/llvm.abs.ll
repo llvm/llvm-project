@@ -217,7 +217,7 @@ define i64 @abs_vgpr_i64(i64 %arg) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], v[0:1], v[2:3]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX1250-NEXT:    v_xor_b32_e32 v1, v1, v2
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -271,10 +271,9 @@ define <4 x i32> @abs_vgpr_v4i32(<4 x i32> %arg) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_sub_nc_u32 v4, 0, v0 :: v_dual_sub_nc_u32 v5, 0, v1
 ; GFX1250-NEXT:    v_dual_sub_nc_u32 v6, 0, v2 :: v_dual_sub_nc_u32 v7, 0, v3
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_max_i32_e32 v0, v0, v4
 ; GFX1250-NEXT:    v_max_i32_e32 v1, v1, v5
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1250-NEXT:    v_max_i32_e32 v2, v2, v6
 ; GFX1250-NEXT:    v_max_i32_e32 v3, v3, v7
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]

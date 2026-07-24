@@ -124,7 +124,7 @@ define <2 x float> @v_pow_v2f32(<2 x float> %x, <2 x float> %y) {
 ; GFX11-NEXT:    v_log_f32_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_dual_mul_dx9_zero_f32 v0, v2, v0 :: v_dual_mul_dx9_zero_f32 v1, v3, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX11-NEXT:    v_exp_f32_e32 v1, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

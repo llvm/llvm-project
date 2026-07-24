@@ -2500,7 +2500,7 @@ define amdgpu_ps double @test_fmin_f64_v_ieee_off(double %a, double %b) #0 {
 ; GFX12-LABEL: test_fmin_f64_v_ieee_off:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -2617,7 +2617,7 @@ define amdgpu_ps double @test_fmin_f64_s_ieee_off(double inreg %a, double inreg 
 ; GFX12-LABEL: test_fmin_f64_s_ieee_off:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_min_num_f64_e64 v[0:1], s[0:1], s[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)

@@ -789,7 +789,7 @@ define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i64(ptr addrspace(1) %out,
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_pk_add_u16 v0, v2, v0
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v1.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.h
 ; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-TRUE16-NEXT:    global_store_b128 v1, v[0:3], s[0:1]
@@ -1005,13 +1005,12 @@ define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i64(ptr addrspace(1) %out,
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_pk_add_u16 v0, v1, v0
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v2, v1, 0, 16
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX11-TRUE16-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm

@@ -3837,7 +3837,6 @@ define amdgpu_ps <2 x i32> @s_fminimum3_f64(double inreg %a, double inreg %b, do
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_minimum_f64 v[0:1], v[0:1], s[4:5]
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -3848,7 +3847,6 @@ define amdgpu_ps <2 x i32> @s_fminimum3_f64(double inreg %a, double inreg %b, do
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-NEXT:    v_minimum_f64 v[0:1], v[0:1], s[4:5]
 ; GFX1170-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1170-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1170-NEXT:    ; return to shader part epilog
 ;
