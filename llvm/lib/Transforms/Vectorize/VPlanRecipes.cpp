@@ -3910,17 +3910,16 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo,
         UsedByLoadStoreAddress ? UI : nullptr);
 
-    Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
     InstructionCost ScalarCost =
         ScalarMemOpCost +
         Ctx.TTI.getAddressComputationCost(
-            PtrTy, UsedByLoadStoreAddress ? nullptr : Ctx.PSE.getSE(), PtrSCEV,
-            Ctx.CostKind);
+            ScalarPtrTy, UsedByLoadStoreAddress ? nullptr : Ctx.PSE.getSE(),
+            PtrSCEV, Ctx.CostKind);
     if (isSingleScalar())
       return ScalarCost;
 
     SmallVector<const VPValue *> OpsToScalarize;
-    Type *ResultTy = Type::getVoidTy(PtrTy->getContext());
+    Type *ResultTy = Type::getVoidTy(ScalarPtrTy->getContext());
     // Set ResultTy and OpsToScalarize, if scalarization is needed. Currently we
     // don't assign scalarization overhead in general, if the target prefers
     // vectorized addressing or the loaded value is used as part of an address

@@ -473,7 +473,7 @@ define double @test_load_used_by_other_load_scev(ptr %ptr.a, ptr %ptr.b, ptr %pt
 ; I64-NEXT:    br label %[[VECTOR_BODY1:.*]]
 ; I64:       [[VECTOR_BODY1]]:
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY1]] ]
-; I64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; I64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; I64-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; I64-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP8:![0-9]+]]
 ; I64:       [[MIDDLE_BLOCK]]:

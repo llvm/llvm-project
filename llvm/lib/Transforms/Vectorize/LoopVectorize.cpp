@@ -4230,9 +4230,6 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 
   unsigned AS = getLoadStoreAddressSpace(I);
   Value *Ptr = getLoadStorePointerOperand(I);
-  Type *PtrTy = toVectorTy(Ptr->getType(), VF);
-  // NOTE: PtrTy is a vector to signal `TTI::getAddressComputationCost`
-  //       that it is being called from this specific place.
 
   // Figure out whether the access is strided and get the stride value
   // if it's known in compile time
@@ -4240,8 +4237,8 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 
   // Get the cost of the scalar memory instruction and address computation.
   InstructionCost Cost =
-      VF.getFixedValue() *
-      TTI.getAddressComputationCost(PtrTy, SE, PtrSCEV, Config.CostKind);
+      VF.getFixedValue() * TTI.getAddressComputationCost(
+                               Ptr->getType(), SE, PtrSCEV, Config.CostKind);
 
   // Don't pass *I here, since it is scalar but will actually be part of a
   // vectorized loop where the user of it is a vectorized instruction.

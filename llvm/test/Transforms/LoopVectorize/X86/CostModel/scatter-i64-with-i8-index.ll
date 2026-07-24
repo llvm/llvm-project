@@ -18,25 +18,25 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; SSE2:  Cost of 29 for VF 2: REPLICATE store ir<%valB>, ir<%out>
-; SSE2:  Cost of 58 for VF 4: REPLICATE store ir<%valB>, ir<%out>
-; SSE2:  Cost of 116 for VF 8: REPLICATE store ir<%valB>, ir<%out>
-; SSE2:  Cost of 232 for VF 16: REPLICATE store ir<%valB>, ir<%out>
+; SSE2:  Cost of 9 for VF 2: REPLICATE store ir<%valB>, ir<%out>
+; SSE2:  Cost of 18 for VF 4: REPLICATE store ir<%valB>, ir<%out>
+; SSE2:  Cost of 36 for VF 8: REPLICATE store ir<%valB>, ir<%out>
+; SSE2:  Cost of 72 for VF 16: REPLICATE store ir<%valB>, ir<%out>
 ;
 ; SSE42-LABEL: 'test'
 ; SSE42:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; SSE42:  Cost of 26 for VF 2: REPLICATE store ir<%valB>, ir<%out>
-; SSE42:  Cost of 52 for VF 4: REPLICATE store ir<%valB>, ir<%out>
-; SSE42:  Cost of 104 for VF 8: REPLICATE store ir<%valB>, ir<%out>
-; SSE42:  Cost of 208 for VF 16: REPLICATE store ir<%valB>, ir<%out>
+; SSE42:  Cost of 6 for VF 2: REPLICATE store ir<%valB>, ir<%out>
+; SSE42:  Cost of 12 for VF 4: REPLICATE store ir<%valB>, ir<%out>
+; SSE42:  Cost of 24 for VF 8: REPLICATE store ir<%valB>, ir<%out>
+; SSE42:  Cost of 48 for VF 16: REPLICATE store ir<%valB>, ir<%out>
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; AVX1:  Cost of 26 for VF 2: REPLICATE store ir<%valB>, ir<%out>
-; AVX1:  Cost of 54 for VF 4: REPLICATE store ir<%valB>, ir<%out>
-; AVX1:  Cost of 108 for VF 8: REPLICATE store ir<%valB>, ir<%out>
-; AVX1:  Cost of 216 for VF 16: REPLICATE store ir<%valB>, ir<%out>
-; AVX1:  Cost of 432 for VF 32: REPLICATE store ir<%valB>, ir<%out>
+; AVX1:  Cost of 6 for VF 2: REPLICATE store ir<%valB>, ir<%out>
+; AVX1:  Cost of 14 for VF 4: REPLICATE store ir<%valB>, ir<%out>
+; AVX1:  Cost of 28 for VF 8: REPLICATE store ir<%valB>, ir<%out>
+; AVX1:  Cost of 56 for VF 16: REPLICATE store ir<%valB>, ir<%out>
+; AVX1:  Cost of 112 for VF 32: REPLICATE store ir<%valB>, ir<%out>
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8

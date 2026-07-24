@@ -516,29 +516,48 @@ exit:
 define void @interleave_group_with_gather(ptr %indices, ptr %src, i64 %n) {
 ; CHECK-LABEL: define void @interleave_group_with_gather(
 ; CHECK-SAME: ptr [[INDICES:%.*]], ptr [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[EXIT:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OUT_GEP:%.*]] = getelementptr { double, double }, ptr null, i64 [[IV]]
 ; CHECK-NEXT:    [[IDX_GEP:%.*]] = getelementptr i32, ptr [[INDICES]], i64 [[IV]]
-; CHECK-NEXT:    [[IDX:%.*]] = load i32, ptr [[IDX_GEP]], align 4
-; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[IDX_GEP]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = extractelement <4 x i64> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i64 1
+; CHECK-NEXT:    [[OUT_M1_0_GEP:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP3]], i64 2
+; CHECK-NEXT:    [[OUT_M1_1_GEP:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP3]], i64 3
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[SRC_VAL:%.*]] = load double, ptr [[SRC_GEP]], align 8
-; CHECK-NEXT:    [[OUT_M1_0_GEP:%.*]] = getelementptr i8, ptr [[OUT_GEP]], i64 -16
 ; CHECK-NEXT:    [[OUT_M1_0:%.*]] = load double, ptr [[OUT_M1_0_GEP]], align 8
-; CHECK-NEXT:    [[ADD_0:%.*]] = fadd double 1.000000e+01, [[SRC_VAL]]
-; CHECK-NEXT:    store double [[ADD_0]], ptr [[OUT_M1_0_GEP]], align 8
-; CHECK-NEXT:    [[OUT_M1_1_GEP:%.*]] = getelementptr i8, ptr [[OUT_GEP]], i64 -8
 ; CHECK-NEXT:    [[OUT_M1_1:%.*]] = load double, ptr [[OUT_M1_1_GEP]], align 8
-; CHECK-NEXT:    [[ADD_1:%.*]] = fadd double 1.000000e+01, [[SRC_VAL]]
-; CHECK-NEXT:    store double [[ADD_1]], ptr [[OUT_M1_1_GEP]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load double, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> poison, double [[SRC_VAL]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP16]], double [[OUT_M1_0]], i32 1
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x double> [[TMP17]], double [[OUT_M1_1]], i32 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x double> [[TMP18]], double [[TMP15]], i32 3
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[OUT_GEP]], i64 -16
+; CHECK-NEXT:    [[TMP21:%.*]] = fadd <4 x double> splat (double 1.000000e+01), [[TMP19]]
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x double> [[TMP21]], <4 x double> [[TMP21]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP22]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[TMP20]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP24:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT1:label %.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop

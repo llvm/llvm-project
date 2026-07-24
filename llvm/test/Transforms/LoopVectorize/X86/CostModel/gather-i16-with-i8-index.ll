@@ -18,18 +18,18 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE-LABEL: 'test'
 ; SSE:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB = load i16, ptr %inB, align 2
-; SSE:  Cost of 24 for VF 2: REPLICATE ir<%valB> = load ir<%inB>
-; SSE:  Cost of 48 for VF 4: REPLICATE ir<%valB> = load ir<%inB>
-; SSE:  Cost of 96 for VF 8: REPLICATE ir<%valB> = load ir<%inB>
-; SSE:  Cost of 192 for VF 16: REPLICATE ir<%valB> = load ir<%inB>
+; SSE:  Cost of 4 for VF 2: REPLICATE ir<%valB> = load ir<%inB>
+; SSE:  Cost of 8 for VF 4: REPLICATE ir<%valB> = load ir<%inB>
+; SSE:  Cost of 16 for VF 8: REPLICATE ir<%valB> = load ir<%inB>
+; SSE:  Cost of 32 for VF 16: REPLICATE ir<%valB> = load ir<%inB>
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB = load i16, ptr %inB, align 2
-; AVX1:  Cost of 24 for VF 2: REPLICATE ir<%valB> = load ir<%inB>
-; AVX1:  Cost of 48 for VF 4: REPLICATE ir<%valB> = load ir<%inB>
-; AVX1:  Cost of 96 for VF 8: REPLICATE ir<%valB> = load ir<%inB>
-; AVX1:  Cost of 193 for VF 16: REPLICATE ir<%valB> = load ir<%inB>
-; AVX1:  Cost of 386 for VF 32: REPLICATE ir<%valB> = load ir<%inB>
+; AVX1:  Cost of 4 for VF 2: REPLICATE ir<%valB> = load ir<%inB>
+; AVX1:  Cost of 8 for VF 4: REPLICATE ir<%valB> = load ir<%inB>
+; AVX1:  Cost of 16 for VF 8: REPLICATE ir<%valB> = load ir<%inB>
+; AVX1:  Cost of 33 for VF 16: REPLICATE ir<%valB> = load ir<%inB>
+; AVX1:  Cost of 66 for VF 32: REPLICATE ir<%valB> = load ir<%inB>
 ;
 ; AVX2-SLOWGATHER-LABEL: 'test'
 ; AVX2-SLOWGATHER:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB = load i16, ptr %inB, align 2
