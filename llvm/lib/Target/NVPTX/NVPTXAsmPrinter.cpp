@@ -182,6 +182,8 @@ class GlobalVariableDependencyGraph {
   // scc_iterator needs a single entry node. Global initializer dependencies
   // may be disconnected, so use a synthetic root with an edge to every global.
   GlobalVariableDependencyNode SyntheticRoot;
+  // Edges store pointers into Nodes, so node addresses must remain stable while
+  // the graph is constructed.
   std::map<const GlobalVariable *, GlobalVariableDependencyNode> Nodes;
 
 public:
@@ -269,6 +271,8 @@ static SmallVector<const GlobalVariable *, 4> orderDefinitionsInSCC(
   DenseMap<const Node *, SmallVector<const Node *, 4>> Dependents;
   std::set<std::pair<unsigned, const Node *>> Ready;
 
+  // Dependencies outside this SCC have already been emitted. Forward-declared
+  // dependencies are also satisfied, so only count the remaining SCC edges.
   for (const Node *N : SCC) {
     unsigned &Count = DependencyCount[N];
     for (const Node *Dependency : N->Dependencies) {
@@ -970,6 +974,8 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
   // ptxas requires global symbols referenced by initializers to be known
   // before use. Acyclic dependencies can be handled by dependency-first
   // emission. Cyclic SCCs need compatible .extern declarations first.
+  // Edges point from each global to the globals used by its initializer.
+  // Reverse-topological SCC iteration therefore emits dependencies first.
   GlobalVariableDependencyGraph DependencyGraph(M);
   for (GlobalVariableSCCIterator I =
            GlobalVariableSCCIterator::begin(DependencyGraph.getEntryNode());
