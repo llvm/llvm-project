@@ -73,7 +73,7 @@ namespace {
 struct TempFile {
   std::string Filename;
   FileRemover Remover;
-  bool init(const std::string &Ext, bool IsText);
+  bool init(const std::string &Ext, bool IsText = false);
   bool writeBitcode(const Module &M) const;
   bool writeAssembly(const Module &M) const;
   std::unique_ptr<Module> readBitcode(LLVMContext &Context) const;
@@ -106,7 +106,7 @@ struct ValueMapping {
 
 } // end namespace
 
-bool TempFile::init(const std::string &Ext, bool IsText = false) {
+bool TempFile::init(const std::string &Ext, bool IsText) {
   SmallVector<char, 64> Vector;
   LLVM_DEBUG(dbgs() << " - create-temp-file\n");
   if (auto EC = sys::fs::createTemporaryFile("uselistorder", Ext, Vector,
