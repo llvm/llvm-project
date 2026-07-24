@@ -335,7 +335,6 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  const std::string &GetFunctionName() const { return m_name; }
   ASTNode &GetNodeArg() const { return *m_node_arg; }
   CompilerType GetTypeArg() const { return m_type_arg; }
 
