@@ -199,7 +199,8 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
       for (auto Note : ELFF.notes(Sec, Err)) {
         if (Err) {
           std::string ErrMsg = toString(std::move(Err));
-          ODBG(OLDT_Module) << "Warning: unable to get ELF notes handle:" << ErrMsg;
+          ODBG(OLDT_Module)
+              << "Warning: unable to get ELF notes handle:" << ErrMsg;
           return false;
         }
         if (Note.getName() != "INTELONEOMPOFFLOAD")
