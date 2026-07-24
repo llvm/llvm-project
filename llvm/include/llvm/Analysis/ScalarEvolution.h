@@ -59,6 +59,7 @@ class LoopInfo;
 class raw_ostream;
 class ScalarEvolution;
 class SCEVAddRecExpr;
+class SCEVConstant;
 class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
@@ -2537,6 +2538,10 @@ private:
   FoldingSet<SCEV> UniqueSCEVs;
   FoldingSet<SCEVPredicate> UniquePreds;
   BumpPtrAllocator SCEVAllocator;
+
+  /// Fast lookup cache for SCEVConstant nodes, using the fact that IR constants
+  /// are already uniqued.
+  DenseMap<ConstantInt *, SCEVConstant *> ConstantSCEVs;
 
   /// This maps loops to a list of addrecs that directly use said loop.
   DenseMap<const Loop *, SmallVector<const SCEVAddRecExpr *, 4>> LoopUsers;
