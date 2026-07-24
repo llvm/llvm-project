@@ -16,7 +16,7 @@ void simple_case(void) {
   {
     int i;
     p = &i; // expected-warning {{local variable 'i' does not live long enough}}
-  }         // expected-note {{destroyed here}}
+  }         // expected-note {{local variable 'i' is destroyed here}}
   (void)*p; // expected-note {{later used here}}
 }
 
@@ -25,7 +25,7 @@ void chained_assignment(void) {
   {
     int i;
     p = q = r = &i; // expected-warning {{local variable 'i' does not live long enough}}
-  }                 // expected-note {{destroyed here}}
+  }                 // expected-note {{local variable 'i' is destroyed here}}
   (void)*p;         // expected-note {{later used here}}
 }
 
@@ -35,7 +35,7 @@ void conditional_branch(int cond) {
   if (cond) {
     int i;
     p = &i; // expected-warning {{local variable 'i' does not live long enough}}
-  }         // expected-note {{destroyed here}}
+  }         // expected-note {{local variable 'i' is destroyed here}}
   (void)*p; // expected-note {{later used here}}
 }
 
@@ -46,7 +46,7 @@ void loop_with_break(int cond) {
     if (cond) {
       int i;
       p = &i; // expected-warning {{local variable 'i' does not live long enough}}
-      break;  // expected-note {{destroyed here}}
+      break;  // expected-note {{local variable 'i' is destroyed here}}
     }
   }
   (void)*p; // expected-note {{later used here}}
@@ -64,7 +64,7 @@ void lifetimebound_call(void) {
     int i;
     p = identity(&i); // expected-warning {{local variable 'i' does not live long enough}} \
                       // expected-note {{result of call to 'identity' aliases the storage of local variable 'i'}}
-  }                   // expected-note {{destroyed here}}
+  }                   // expected-note {{local variable 'i' is destroyed here}}
   (void)*p;           // expected-note {{later used here}}
 }
 
@@ -85,7 +85,7 @@ void struct_address_of_field(void) {
   {
     struct IntField holder;
     p = &holder.field; // expected-warning {{local variable 'holder' does not live long enough}}
-  }                    // expected-note {{destroyed here}}
+  }                    // expected-note {{local variable 'holder' is destroyed here}}
   (void)*p;            // expected-note {{later used here}}
 }
 
@@ -93,9 +93,12 @@ void conditional_operator_lifetimebound(int cond) {
   int *p;
   {
     int a, b;
-    p = identity(cond ? &a    // expected-warning {{local variable 'a' does not live long enough}}
+    p = identity(cond ? &a    // expected-warning {{local variable 'a' does not live long enough}} \
+                              // expected-note {{result of call to 'identity' aliases the storage of local variable 'a'}} \
+                              // expected-note {{result of call to 'identity' aliases the storage of local variable 'b'}}
                       : &b);  // expected-warning {{local variable 'b' does not live long enough}}
-  }                           // expected-note 2 {{destroyed here}}
+  }                           // expected-note {{local variable 'a' is destroyed here}} \
+                              // expected-note {{local variable 'b' is destroyed here}}
   (void)*p;                   // expected-note 2 {{later used here}}
 }
 
@@ -109,7 +112,7 @@ void union_member(void) {
   {
     union IntOrPtr u;
     p = &u.i; // expected-warning {{local variable 'u' does not live long enough}}
-  }           // expected-note {{destroyed here}}
+  }           // expected-note {{local variable 'u' is destroyed here}}
   (void)*p;   // expected-note {{later used here}}
 }
 
@@ -125,7 +128,7 @@ void anonymous_union_member(void) {
   {
     struct AnonymousUnion u;
     p = &u.i; // expected-warning {{local variable 'u' does not live long enough}}
-  }           // expected-note {{destroyed here}}
+  }           // expected-note {{local variable 'u' is destroyed here}}
   (void)*p;   // expected-note {{later used here}}
 }
 

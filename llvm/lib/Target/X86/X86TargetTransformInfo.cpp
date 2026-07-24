@@ -51,6 +51,7 @@
 #include "X86TargetTransformInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -232,7 +233,8 @@ unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
       .getFixedValue();
 }
 
-unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                            bool HasUnorderedReductions) const {
   // If the loop will not be vectorized, don't interleave the loop.
   // Let regular unroll to unroll the loop, which saves the overflow
   // check and memory check cost.
@@ -420,6 +422,24 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  static const CostKindTblEntry AVX512DQUniformConstCostTable[] = {
+    { ISD::SDIV, MVT::v4i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v4i64, { 17 } }, // vpmullq-based MULHS+mul+sub sequence
+    { ISD::SDIV, MVT::v8i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v8i64, { 17 } }, // vpmullq-based MULHS+mul+sub sequence
+    // The remainder's multiply-back is a single vpmullq with DQ, just like the
+    // pmulld the vXi32 entries above rely on. Without DQ it is another
+    // vpmuludq schoolbook, so the AVX512/AVX2 tables charge more.
+    { ISD::UREM, MVT::v4i64, { 17 } }, // MULHU + vpmullq + sub sequence
+    { ISD::UREM, MVT::v8i64, { 17 } }, // MULHU + vpmullq + sub sequence
+  };
+
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasDQI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512DQUniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   static const CostKindTblEntry AVX512UniformConstCostTable[] = {
     { ISD::SHL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psllw + pand.
     { ISD::SRL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psrlw + pand.
@@ -448,6 +468,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v16i32, {  8 } }, // pmuludq+mul+sub sequence
     { ISD::UDIV, MVT::v16i32, {  5 } }, // pmuludq sequence
     { ISD::UREM, MVT::v16i32, {  7 } }, // pmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v8i64,  { 9 } }, // pmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v8i64,  { 21 } }, // pmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX512())
@@ -489,6 +512,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v8i32, {  8 } }, // pmuludq+mul+sub sequence
     { ISD::UDIV, MVT::v8i32, {  5 } }, // pmuludq sequence
     { ISD::UREM, MVT::v8i32, {  7 } }, // pmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v4i64, { 9 } }, // pmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v4i64, { 21 } }, // pmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX2())
@@ -589,6 +615,23 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  static const CostKindTblEntry AVX512DQConstCostTable[] = {
+    { ISD::SDIV, MVT::v4i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v4i64, { 21 } }, // vpmullq-based MULHS+mul+sub sequence
+    { ISD::SDIV, MVT::v8i64, { 9 } }, // vpmullq-based MULHS sequence
+    { ISD::SREM, MVT::v8i64, { 21 } }, // vpmullq-based MULHS+mul+sub sequence
+    // The remainder's multiply-back is a single vpmullq with DQ, whereas the
+    // AVX512/AVX2 tables have to charge for another vpmuludq schoolbook.
+    { ISD::UREM, MVT::v4i64, { 24 } }, // MULHU + vpmullq + sub sequence
+    { ISD::UREM, MVT::v8i64, { 24 } }, // MULHU + vpmullq + sub sequence
+  };
+
+  if (Op2Info.isConstant() && ST->hasDQI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512DQConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   static const CostKindTblEntry AVX512ConstCostTable[] = {
     { ISD::SDIV, MVT::v64i8,  { 28 } }, // 4*ext+4*pmulhw sequence
     { ISD::SREM, MVT::v64i8,  { 32 } }, // 4*ext+4*pmulhw+mul+sub sequence
@@ -604,6 +647,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v16i32, { 17 } }, // vpmuldq+mul+sub sequence
     { ISD::UDIV, MVT::v16i32, { 15 } }, // vpmuludq sequence
     { ISD::UREM, MVT::v16i32, { 17 } }, // vpmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v8i64,  { 9 } }, // vpmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v8i64,  { 28 } }, // vpmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isConstant() && ST->hasAVX512())
@@ -627,6 +673,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v8i32,  { 19 } }, // vpmuldq+mul+sub sequence
     { ISD::UDIV, MVT::v8i32,  { 15 } }, // vpmuludq sequence
     { ISD::UREM, MVT::v8i32,  { 19 } }, // vpmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v4i64,  { 9 } }, // vpmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v4i64,  { 28 } }, // vpmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isConstant() && ST->hasAVX2())
@@ -2241,10 +2290,6 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Reverse, MVT::v8f16, {1, 2, 1, 2}}, // pshufb
       {TTI::SK_Reverse, MVT::v16i8, {1, 2, 1, 2}}, // pshufb
 
-      {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // 2*pshufb + por
-      {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // 2*pshufb + por
-      {TTI::SK_Select, MVT::v16i8, {3, 3, 3, 3}}, // 2*pshufb + por
-
       {TTI::SK_Splice, MVT::v4i32, {1, 1, 1, 1}}, // palignr
       {TTI::SK_Splice, MVT::v4f32, {1, 1, 1, 1}}, // palignr
       {TTI::SK_Splice, MVT::v8i16, {1, 1, 1, 1}}, // palignr
@@ -2284,9 +2329,9 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Select, MVT::v2i64, {1, 1, 1, 1}}, // movsd
       {TTI::SK_Select, MVT::v2f64, {1, 1, 1, 1}}, // movsd
       {TTI::SK_Select, MVT::v4i32, {2, 2, 2, 2}}, // 2*shufps
-      {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // pand + pandn + por
-      {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // pand + pandn + por
-      {TTI::SK_Select, MVT::v16i8, {3, 3, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v8i16, {2, 2, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v8f16, {2, 2, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v16i8, {2, 2, 3, 3}}, // pand + pandn + por
 
       {TTI::SK_Splice, MVT::v2i64, {1, 1, 1, 1}}, // shufpd
       {TTI::SK_Splice, MVT::v2f64, {1, 1, 1, 1}}, // shufpd
@@ -4451,6 +4496,14 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::i16,     {  1,  1,  2,  2 } }, // popcnt(zext())
     { ISD::CTPOP,      MVT::i8,      {  1,  1,  2,  2 } }, // popcnt(zext())
   };
+  static const CostKindTblEntry PCLMULCostTbl[] = {
+    { ISD::CLMUL,      MVT::v2i64,   {  3, 12,  4,  8 } }, // MOV+2xPCLMUL+unpack
+    { ISD::CLMUL,      MVT::v4i32,   {  8, 18, 12, 16 } }, // MOV+4xPCLMUL+unpack
+    { ISD::CLMUL,      MVT::i64,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i32,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i16,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i8,      {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+  };
   static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::ABS,        MVT::i64,     {  1,  2,  3,  3 } }, // SUB+CMOV
     { ISD::BITREVERSE, MVT::i64,     { 10, 12, 20, 22 } },
@@ -4673,6 +4726,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::UMULO;
     OpTy = RetTy->getContainedType(0);
     break;
+  case Intrinsic::clmul:
+    ISD = ISD::CLMUL;
+    break;
   }
 
   if (ISD != ISD::DELETED_NODE) {
@@ -4843,6 +4899,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         if (auto KindCost = Entry->Cost[CostKind])
           return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
     }
+
+    // FIXME: PCLMUL w/ AVX/AVX512 and VPCLMULQDQ are not handled properly.
+    if (ST->hasPCLMUL())
+      if (const auto *Entry = CostTableLookup(PCLMULCostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->is64Bit())
       if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
@@ -5637,36 +5699,48 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
   // and make it as the cost.
 
-  static const CostTblEntry SLMCostTbl[] = {
-    { ISD::FADD,  MVT::v2f64,   3 },
-    { ISD::ADD,   MVT::v2i64,   5 },
+  static const CostKindTblEntry SLMCostTbl[] = {
+    { ISD::FADD,  MVT::v2f64,   {3, 3, 3, 3} },
+    { ISD::ADD,   MVT::v2i64,   {5, 5, 5, 5} },
   };
 
-  static const CostTblEntry SSE2CostTbl[] = {
-    { ISD::FADD,  MVT::v2f64,   2 },
-    { ISD::FADD,  MVT::v2f32,   2 },
-    { ISD::FADD,  MVT::v4f32,   4 },
-    { ISD::ADD,   MVT::v2i64,   2 },      // The data reported by the IACA tool is "1.6".
-    { ISD::ADD,   MVT::v2i32,   2 }, // FIXME: chosen to be less than v4i32
-    { ISD::ADD,   MVT::v4i32,   3 },      // The data reported by the IACA tool is "3.3".
-    { ISD::ADD,   MVT::v2i16,   2 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v4i16,   3 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v8i16,   4 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v2i8,    2 },
-    { ISD::ADD,   MVT::v4i8,    2 },
-    { ISD::ADD,   MVT::v8i8,    2 },
-    { ISD::ADD,   MVT::v16i8,   3 },
+  static const CostKindTblEntry SSE2CostTbl[] = {
+    { ISD::FADD,  MVT::v2f64,   {2, 2, 2, 2} },
+    { ISD::FADD,  MVT::v2f32,   {2, 2, 2, 2} },
+    { ISD::FADD,  MVT::v4f32,   {4, 4, 4, 4} },
+    { ISD::ADD,   MVT::v2i64,   {2, 2, 2, 2} },      // The data reported by the IACA tool is "1.6".
+    { ISD::ADD,   MVT::v2i32,   {2, 2, 2, 2} }, // FIXME: chosen to be less than v4i32
+    { ISD::ADD,   MVT::v4i32,   {3, 3, 3, 3} },      // The data reported by the IACA tool is "3.3".
+    { ISD::ADD,   MVT::v2i16,   {2, 2, 2, 2} },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v4i16,   {3, 3, 3, 3} },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v8i16,   {4, 4, 4, 4} },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v2i8,    {2, 2, 2, 2} },
+    { ISD::ADD,   MVT::v4i8,    {2, 2, 2, 2} },
+    { ISD::ADD,   MVT::v8i8,    {2, 2, 2, 2} },
+    { ISD::ADD,   MVT::v16i8,   {3, 3, 3, 3} },
   };
 
-  static const CostTblEntry AVX1CostTbl[] = {
-    { ISD::FADD,  MVT::v4f64,   3 },
-    { ISD::FADD,  MVT::v4f32,   3 },
-    { ISD::FADD,  MVT::v8f32,   4 },
-    { ISD::ADD,   MVT::v2i64,   1 },      // The data reported by the IACA tool is "1.5".
-    { ISD::ADD,   MVT::v4i64,   3 },
-    { ISD::ADD,   MVT::v8i32,   5 },
-    { ISD::ADD,   MVT::v16i16,  5 },
-    { ISD::ADD,   MVT::v32i8,   4 },
+  static const CostKindTblEntry AVX1CostTbl[] = {
+    { ISD::FADD,  MVT::v4f64,   {3, 3, 3, 3} },
+    { ISD::FADD,  MVT::v4f32,   {3, 3, 3, 3} },
+    { ISD::FADD,  MVT::v8f32,   {4, 4, 4, 4} },
+    { ISD::ADD,   MVT::v2i64,   {1, 1, 1, 1} },      // The data reported by the IACA tool is "1.5".
+    { ISD::ADD,   MVT::v4i64,   {3, 3, 3, 3} },
+    { ISD::ADD,   MVT::v8i32,   {5, 5, 5, 5} },
+    { ISD::ADD,   MVT::v16i16,  {5, 5, 5, 5} },
+    { ISD::ADD,   MVT::v32i8,   {4, 4, 4, 4} },
+  };
+
+  static const CostKindTblEntry AVX512FCostTbl[] = {
+    { ISD::FADD,  MVT::v8f64,   {4, 4, 4, 4} },
+    { ISD::FADD,  MVT::v16f32,  {5, 5, 5, 5} },
+    { ISD::ADD,   MVT::v8i64,   {4, 4, 4, 4} },
+    { ISD::ADD,   MVT::v16i32,  {6, 6, 6, 6} },
+  };
+
+  static const CostKindTblEntry AVX512BWCostTbl[] = {
+    { ISD::ADD,   MVT::v32i16,  {7, 7, 7, 7} },
+    { ISD::ADD,   MVT::v64i8,   {4, 4, 4, 4} },
   };
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -5680,15 +5754,28 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     MVT MTy = VT.getSimpleVT();
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+
+    if (ST->hasBWI())
+      if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+
+    if (ST->hasAVX512())
+      if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
   }
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
@@ -5719,60 +5806,73 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasBWI())
+    if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasAVX512())
+    if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-      return ArithmeticCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   // FIXME: These assume a naive kshift+binop lowering, which is probably
   // conservative in most cases.
-  static const CostTblEntry AVX512BoolReduction[] = {
-    { ISD::AND,  MVT::v2i1,   3 },
-    { ISD::AND,  MVT::v4i1,   5 },
-    { ISD::AND,  MVT::v8i1,   7 },
-    { ISD::AND,  MVT::v16i1,  9 },
-    { ISD::AND,  MVT::v32i1, 11 },
-    { ISD::AND,  MVT::v64i1, 13 },
-    { ISD::OR,   MVT::v2i1,   3 },
-    { ISD::OR,   MVT::v4i1,   5 },
-    { ISD::OR,   MVT::v8i1,   7 },
-    { ISD::OR,   MVT::v16i1,  9 },
-    { ISD::OR,   MVT::v32i1, 11 },
-    { ISD::OR,   MVT::v64i1, 13 },
+  static const CostKindTblEntry AVX512BoolReduction[] = {
+    { ISD::AND,  MVT::v2i1,   { 3, 3, 3, 3} },
+    { ISD::AND,  MVT::v4i1,   { 5, 5, 5, 5} },
+    { ISD::AND,  MVT::v8i1,   { 7, 7, 7, 7} },
+    { ISD::AND,  MVT::v16i1,  { 9, 9, 9, 9} },
+    { ISD::AND,  MVT::v32i1,  {11,11,11,11} },
+    { ISD::AND,  MVT::v64i1,  {13,13,13,13} },
+    { ISD::OR,   MVT::v2i1,   { 3, 3, 3, 3} },
+    { ISD::OR,   MVT::v4i1,   { 5, 5, 5, 5} },
+    { ISD::OR,   MVT::v8i1,   { 7, 7, 7, 7} },
+    { ISD::OR,   MVT::v16i1,  { 9, 9, 9, 9} },
+    { ISD::OR,   MVT::v32i1,  {11,11,11,11} },
+    { ISD::OR,   MVT::v64i1,  {13,13,13,13} },
   };
 
-  static const CostTblEntry AVX2BoolReduction[] = {
-    { ISD::AND,  MVT::v16i16,  2 }, // vpmovmskb + cmp
-    { ISD::AND,  MVT::v32i8,   2 }, // vpmovmskb + cmp
-    { ISD::OR,   MVT::v16i16,  2 }, // vpmovmskb + cmp
-    { ISD::OR,   MVT::v32i8,   2 }, // vpmovmskb + cmp
+  static const CostKindTblEntry AVX2BoolReduction[] = {
+    { ISD::AND,  MVT::v16i16, { 2, 2, 2, 2} }, // vpmovmskb + cmp
+    { ISD::AND,  MVT::v32i8,  { 2, 2, 2, 2} }, // vpmovmskb + cmp
+    { ISD::OR,   MVT::v16i16, { 2, 2, 2, 2} }, // vpmovmskb + cmp
+    { ISD::OR,   MVT::v32i8,  { 2, 2, 2, 2} }, // vpmovmskb + cmp
   };
 
-  static const CostTblEntry AVX1BoolReduction[] = {
-    { ISD::AND,  MVT::v4i64,   2 }, // vmovmskpd + cmp
-    { ISD::AND,  MVT::v8i32,   2 }, // vmovmskps + cmp
-    { ISD::AND,  MVT::v16i16,  4 }, // vextractf128 + vpand + vpmovmskb + cmp
-    { ISD::AND,  MVT::v32i8,   4 }, // vextractf128 + vpand + vpmovmskb + cmp
-    { ISD::OR,   MVT::v4i64,   2 }, // vmovmskpd + cmp
-    { ISD::OR,   MVT::v8i32,   2 }, // vmovmskps + cmp
-    { ISD::OR,   MVT::v16i16,  4 }, // vextractf128 + vpor + vpmovmskb + cmp
-    { ISD::OR,   MVT::v32i8,   4 }, // vextractf128 + vpor + vpmovmskb + cmp
+  static const CostKindTblEntry AVX1BoolReduction[] = {
+    { ISD::AND,  MVT::v4i64,  {2, 2, 2, 2} }, // vmovmskpd + cmp
+    { ISD::AND,  MVT::v8i32,  {2, 2, 2, 2} }, // vmovmskps + cmp
+    { ISD::AND,  MVT::v16i16, {4, 4, 4, 4} }, // vextractf128 + vpand + vpmovmskb + cmp
+    { ISD::AND,  MVT::v32i8,  {4, 4, 4, 4} }, // vextractf128 + vpand + vpmovmskb + cmp
+    { ISD::OR,   MVT::v4i64,  {2, 2, 2, 2} }, // vmovmskpd + cmp
+    { ISD::OR,   MVT::v8i32,  {2, 2, 2, 2} }, // vmovmskps + cmp
+    { ISD::OR,   MVT::v16i16, {4, 4, 4, 4} }, // vextractf128 + vpor + vpmovmskb + cmp
+    { ISD::OR,   MVT::v32i8,  {4, 4, 4, 4} }, // vextractf128 + vpor + vpmovmskb + cmp
   };
 
-  static const CostTblEntry SSE2BoolReduction[] = {
-    { ISD::AND,  MVT::v2i64,   2 }, // movmskpd + cmp
-    { ISD::AND,  MVT::v4i32,   2 }, // movmskps + cmp
-    { ISD::AND,  MVT::v8i16,   2 }, // pmovmskb + cmp
-    { ISD::AND,  MVT::v16i8,   2 }, // pmovmskb + cmp
-    { ISD::OR,   MVT::v2i64,   2 }, // movmskpd + cmp
-    { ISD::OR,   MVT::v4i32,   2 }, // movmskps + cmp
-    { ISD::OR,   MVT::v8i16,   2 }, // pmovmskb + cmp
-    { ISD::OR,   MVT::v16i8,   2 }, // pmovmskb + cmp
+  static const CostKindTblEntry SSE2BoolReduction[] = {
+    { ISD::AND,  MVT::v2i64,  {2, 2, 2, 2} }, // movmskpd + cmp
+    { ISD::AND,  MVT::v4i32,  {2, 2, 2, 2} }, // movmskps + cmp
+    { ISD::AND,  MVT::v8i16,  {2, 2, 2, 2} }, // pmovmskb + cmp
+    { ISD::AND,  MVT::v16i8,  {2, 2, 2, 2} }, // pmovmskb + cmp
+    { ISD::OR,   MVT::v2i64,  {2, 2, 2, 2} }, // movmskpd + cmp
+    { ISD::OR,   MVT::v4i32,  {2, 2, 2, 2} }, // movmskps + cmp
+    { ISD::OR,   MVT::v8i16,  {2, 2, 2, 2} }, // pmovmskb + cmp
+    { ISD::OR,   MVT::v16i8,  {2, 2, 2, 2} }, // pmovmskb + cmp
   };
 
   // Handle bool allof/anyof patterns.
@@ -5800,16 +5900,20 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
     if (ST->hasAVX512())
       if (const auto *Entry = CostTableLookup(AVX512BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2BoolReduction, ISD, MTy))
-        return ArithmeticCost + Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return ArithmeticCost + *KindCost;
 
     return BaseT::getArithmeticReductionCost(Opcode, ValVTy, FMF, CostKind);
   }
@@ -6719,21 +6823,26 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
   // Work this as a subsetting of subtarget features.
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+  const X86Subtarget &CallerSubtarget = TM.getSubtarget<X86Subtarget>(*Caller);
+  const X86Subtarget &CalleeSubtarget = TM.getSubtarget<X86Subtarget>(*Callee);
+  const FeatureBitset &CallerBits = CallerSubtarget.getFeatureBits();
+  const FeatureBitset &CalleeBits = CalleeSubtarget.getFeatureBits();
 
-  // Check whether features are the same (apart from the ignore list).
-  FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
-  FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
-  if (RealCallerBits == RealCalleeBits)
-    return true;
-
-  // If the features are a subset, we need to additionally check for calls
-  // that may become ABI-incompatible as a result of inlining.
+  // Check whether callee features are a subset of caller features
+  // (apart from the ignore list).
+  const FeatureBitset &InlineIgnoreFeatures =
+      CallerSubtarget.getInlineIgnoreFeatures();
+  FeatureBitset RealCallerBits = CallerBits & ~InlineIgnoreFeatures;
+  FeatureBitset RealCalleeBits = CalleeBits & ~InlineIgnoreFeatures;
   if ((RealCallerBits & RealCalleeBits) != RealCalleeBits)
     return false;
+
+  // If the features are not exactly the same (or there is a difference in
+  // AVX512 register usage), we need to additionally check for calls
+  // that may become ABI-incompatible as a result of inlining.
+  if (RealCallerBits == RealCalleeBits &&
+      CallerSubtarget.useAVX512Regs() == CalleeSubtarget.useAVX512Regs())
+    return true;
 
   for (const Instruction &I : instructions(Callee)) {
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
@@ -6765,23 +6874,23 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 bool X86TTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
                                        ArrayRef<Type *> Types) const {
-  if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
-    return false;
-
-  // If we get here, we know the target features match. If one function
-  // considers 512-bit vectors legal and the other does not, consider them
-  // incompatible.
   const TargetMachine &TM = getTLI()->getTargetMachine();
+  const TargetLowering *CallerTLI =
+      TM.getSubtargetImpl(*Caller)->getTargetLowering();
+  const TargetLowering *CalleeTLI =
+      TM.getSubtargetImpl(*Callee)->getTargetLowering();
 
-  if (TM.getSubtarget<X86Subtarget>(*Caller).useAVX512Regs() ==
-      TM.getSubtarget<X86Subtarget>(*Callee).useAVX512Regs())
-    return true;
-
-  // Consider the arguments compatible if they aren't vectors or aggregates.
-  // FIXME: Look at the size of vectors.
-  // FIXME: Look at the element types of aggregates to see if there are vectors.
-  return llvm::none_of(Types,
-      [](Type *T) { return T->isVectorTy() || T->isAggregateType(); });
+  LLVMContext &Ctx = Caller->getContext();
+  const DataLayout &DL = Caller->getDataLayout();
+  CallingConv::ID CC = Callee->getCallingConv();
+  return all_of(Types, [&](Type *Ty) {
+    SmallVector<EVT> VTs;
+    ComputeValueVTs(*CallerTLI, DL, Ty, VTs);
+    return all_of(VTs, [&](EVT VT) {
+      return CallerTLI->getRegisterTypeForCallingConv(Ctx, CC, VT) ==
+             CalleeTLI->getRegisterTypeForCallingConv(Ctx, CC, VT);
+    });
+  });
 }
 
 X86TTIImpl::TTI::MemCmpExpansionOptions
@@ -6828,6 +6937,7 @@ bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:
     return true;
+  case Intrinsic::vector_reduce_mul:
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_smin:
   case Intrinsic::vector_reduce_umax:

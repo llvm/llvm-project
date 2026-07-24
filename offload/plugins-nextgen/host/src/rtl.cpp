@@ -99,7 +99,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
                            "cooperative kernel launch not supported for host");
     // TODO: The data will need to be copied locally if we ever support
     //       asynchronous kernel launches in the host interface.
-    Func(LaunchParams.Data);
+    Func(LaunchParams.Args);
     return Plugin::success();
   }
 
@@ -112,8 +112,9 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
 private:
-  /// Host kernel arguments are defined as a single, contiguous buffer.
-  using KernelTy = void(void *);
+  /// Host kernel arguments are defined as an array of pointers, one per
+  /// argument, each pointing to that argument's storage.
+  using KernelTy = void(void **);
   /// The kernel function to execute.
   KernelTy *Func;
 };
@@ -224,7 +225,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t /* Alignment */) override {
     if (Size == 0)
       return nullptr;
 
@@ -388,6 +390,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     Info.add("Max Memory Allocation Size (bytes)", 1, "",
              DeviceInfo::MAX_MEM_ALLOC_SIZE);
     Info.add("Max Group size", 1, "", DeviceInfo::MAX_WORK_GROUP_SIZE);
+    Info.add("Number of Lanes", 1, "", DeviceInfo::NUM_LANES);
     auto &MaxGroupSize =
         *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
                   DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
@@ -556,7 +559,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 };
 
 template <typename... ArgsTy>
-static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
+[[maybe_unused]] static Error Plugin::check(int32_t Code, const char *ErrMsg,
+                                            ArgsTy... Args) {
   if (Code == 0)
     return Plugin::success();
 

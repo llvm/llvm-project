@@ -358,6 +358,15 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
 #endif
 
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG - Like
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE but disabled in debug builds to avoid stack
+/// overflow with deep recursion.
+#if defined(NDEBUG)
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG LLVM_ATTRIBUTE_ALWAYS_INLINE
+#else
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG inline
+#endif
+
 /// LLVM_ATTRIBUTE_NO_DEBUG - On compilers where we have a directive to do
 /// so, mark a method "no debug" because debug info makes the debugger
 /// experience worse.
@@ -763,5 +772,37 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
     virtual void anchor()
 #endif
 // clang-format on
+
+/// \macro LLVM_IS_X86
+/// Whether the target architecture is x86 / x86-64.
+#if defined(__x86_64__) || defined(__i386__)
+#define LLVM_IS_X86 1
+#else
+#define LLVM_IS_X86 0
+#endif
+
+/// \macro LLVM_TARGET_SSE42
+/// Function attribute to compile a function with SSE4.2 enabled.
+#if defined(__has_attribute) && __has_attribute(target)
+#define LLVM_TARGET_SSE42 __attribute__((target("sse4.2")))
+#else
+#define LLVM_TARGET_SSE42
+#endif
+
+#if __has_builtin(__builtin_cpu_supports) &&                                   \
+    (defined(__linux__) || defined(__APPLE__))
+#define LLVM_CPU_SUPPORTS(feature) __builtin_cpu_supports(feature)
+#else
+#define LLVM_CPU_SUPPORTS(feature) 0
+#endif
+
+/// \macro LLVM_CPU_SUPPORTS_SSE42
+/// Expands to true if the runtime cpu supports SSE4.2, or if compiled with
+/// SSE4.2 enabled.
+#if defined(__SSE4_2__)
+#define LLVM_CPU_SUPPORTS_SSE42 1
+#else
+#define LLVM_CPU_SUPPORTS_SSE42 LLVM_CPU_SUPPORTS("sse4.2")
+#endif
 
 #endif

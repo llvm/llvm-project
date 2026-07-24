@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -581,14 +582,14 @@ static std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
   return lhs / rhs;
 }
 
-static Type getStorageElementTypeOrSelf(Type type) {
+Type mlir::tosa::getStorageElementTypeOrSelf(Type type) {
   auto srcType = getElementTypeOrSelf(type);
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcType))
     srcType = getStorageElementTypeFromQuantized(quantType);
   return srcType;
 }
 
-static Type getStorageElementTypeOrSelf(Value value) {
+Type mlir::tosa::getStorageElementTypeOrSelf(Value value) {
   return getStorageElementTypeOrSelf(value.getType());
 }
 
@@ -628,6 +629,8 @@ Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
 }
 
 unsigned mlir::tosa::getBitWidth(Type type) {
+  if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type))
+    return getBitWidth(blockScaledTy.getValueType());
   if (dyn_cast<tosa::mxint8Type>(type))
     return 8;
   return type.getIntOrFloatBitWidth();
@@ -735,6 +738,118 @@ LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA block scaling utilities.
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::tosa::verifyBlockScaledTensorType(mlir::Type type,
+                                                      bool allowScaleValues) {
+  const auto tensorType = llvm::cast<ShapedType>(type);
+  const BlockScaledType elemType =
+      llvm::dyn_cast<BlockScaledType>(tensorType.getElementType());
+  if (!elemType)
+    return success();
+
+  if (!allowScaleValues && elemType.hasScaleValues())
+    return failure();
+
+  if (!tensorType.hasRank())
+    return success();
+
+  if (tensorType.getRank() == 0)
+    return failure();
+
+  const ArrayRef<int64_t> tensorShape = tensorType.getShape();
+  const uint32_t blockSize =
+      BlockShapeAttr::getBlockShapeValue(elemType.getBlockShape());
+
+  if (allowScaleValues && elemType.hasScaleValues() &&
+      tensorType.hasStaticShape()) {
+    const size_t numBlocks = tensorType.getNumElements() / blockSize;
+    if (elemType.getScaleValues().size() != numBlocks)
+      return failure();
+  }
+
+  const int64_t blockedDimension = tensorShape.back();
+  if (ShapedType::isDynamic(blockedDimension))
+    return success();
+  if (blockedDimension % blockSize != 0)
+    return failure();
+
+  return success();
+}
+
+static ParseResult parseScaleValues(AsmParser &parser,
+                                    SmallVector<Attribute> &scaleValues,
+                                    Type scaleType) {
+  const auto parseScaleValue = [&]() -> ParseResult {
+    const SMLoc loc = parser.getCurrentLocation();
+
+    double floatValue;
+    if (parser.parseFloat(floatValue))
+      return failure();
+
+    if (floatValue < 0.0)
+      return parser.emitError(loc, "scale value must be non-negative, got ")
+             << floatValue;
+
+    Type attrType = scaleType;
+    if (succeeded(parser.parseOptionalColon()) && parser.parseType(attrType))
+      return failure();
+
+    if (attrType != scaleType)
+      return parser.emitError(loc, "parsed attribute type ")
+             << attrType << " does not match expected scale type " << scaleType;
+
+    scaleValues.push_back(FloatAttr::get(attrType, floatValue));
+    return success();
+  };
+
+  return parser.parseCommaSeparatedList(parseScaleValue);
+}
+
+static void printScaleValues(AsmPrinter &printer,
+                             ArrayRef<Attribute> scaleValues, Type) {
+  llvm::interleaveComma(scaleValues, printer, [&](Attribute scaleValue) {
+    printer.printAttributeWithoutType(scaleValue);
+  });
+}
+
+size_t mlir::tosa::BlockScaledType::getDenseElementBitSize() const {
+  const Type valueType = getValueType();
+  if (isa<tosa::mxint8Type>(valueType))
+    return 8;
+  return valueType.getIntOrFloatBitWidth();
+}
+
+Attribute
+mlir::tosa::BlockScaledType::convertToAttribute(ArrayRef<char> rawData) const {
+  // Block scaled values are stored as a single byte. This is because possible
+  // value data types are either 8-bit or sub-byte. Sub-byte types are aligned
+  // to 8-bits.
+  assert(rawData.size() == 1 && "expected 1 byte for block_scaled element");
+  const Type valueType = getValueType();
+  if (const auto mxint8Value = dyn_cast<tosa::mxint8Type>(valueType))
+    return mxint8Value.convertToAttribute(rawData);
+  if (!isa<FloatType>(valueType))
+    return {};
+  return mlir::detail::convertFloatTypeToAttribute(valueType, rawData);
+}
+
+LogicalResult mlir::tosa::BlockScaledType::convertFromAttribute(
+    Attribute attr, SmallVectorImpl<char> &result) const {
+  const Type valueType = getValueType();
+  if (const auto mxint8Value = dyn_cast<tosa::mxint8Type>(valueType))
+    return mxint8Value.convertFromAttribute(attr, result);
+
+  const auto floatAttr = dyn_cast<FloatAttr>(attr);
+  if (!floatAttr || floatAttr.getType() != valueType)
+    return failure();
+  // const APFloat value = floatAttr.getValue();
+  return mlir::detail::convertFloatTypeFromAttribute(valueType, floatAttr,
+                                                     result);
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
@@ -773,21 +888,16 @@ static LogicalResult verifyConvOp(T op) {
     return failure();
   }
 
-  if (isa<Float8E5M2Type>(inputEType) || isa<Float8E4M3FNType>(inputEType) ||
-      isa<Float8E5M2Type>(weightEType) || isa<Float8E4M3FNType>(weightEType)) {
-    if (inputEType != weightEType) {
-      op.emitOpError(
-          "expect both input and weight to have same element type, got ")
-          << inputEType << " and " << weightEType;
-      return failure();
-    }
-  }
+  const bool isInputBlockScaled = llvm::isa<BlockScaledType>(inputEType);
+  const bool isWeightBlockScaled = llvm::isa<BlockScaledType>(weightEType);
+  const bool isInputFloat = llvm::isa<FloatType>(inputEType);
+  const bool isWeightFloat = llvm::isa<FloatType>(weightEType);
 
-  bool inputIsFloat = llvm::isa<FloatType>(inputEType);
-  bool weightIsFloat = llvm::isa<FloatType>(weightEType);
+  const bool isInputBSorFloat = isInputBlockScaled || isInputFloat;
+  const bool isWeightBSorFloat = isWeightBlockScaled || isWeightFloat;
 
   // Either both must be float or both non-float.
-  if (inputIsFloat != weightIsFloat) {
+  if (isInputBSorFloat != isWeightBSorFloat) {
     op.emitOpError(
         "expect both input and weight to be float or not together, got ")
         << inputEType << " and " << weightEType;
@@ -795,16 +905,26 @@ static LogicalResult verifyConvOp(T op) {
   }
 
   auto inputZpEType = getStorageElementTypeOrSelf(op.getInputZp().getType());
-  if (inputEType != inputZpEType) {
+  if (!isInputBlockScaled && inputEType != inputZpEType) {
     return op.emitOpError("expect both input and its zero point are the same "
                           "element type, got ")
            << inputEType << " and " << inputZpEType;
   }
+  if (isInputBlockScaled && !llvm::isa<Float32Type>(inputZpEType)) {
+    return op.emitOpError(
+               "expect block scaled input to have fp32 zero point, got ")
+           << inputEType << " and " << inputZpEType;
+  }
 
   auto weightZpEType = getStorageElementTypeOrSelf(op.getWeightZp().getType());
-  if (weightEType != weightZpEType) {
+  if (!isWeightBlockScaled && weightEType != weightZpEType) {
     return op.emitOpError("expect both weight and its zero point are the same "
                           "element type, got ")
+           << weightEType << " and " << weightZpEType;
+  }
+  if (isWeightBlockScaled && !llvm::isa<Float32Type>(weightZpEType)) {
+    return op.emitOpError(
+               "expect block scaled weight to have fp32 zero point, got ")
            << weightEType << " and " << weightZpEType;
   }
 
@@ -820,7 +940,7 @@ static LogicalResult verifyConvOp(T op) {
 }
 
 LogicalResult tosa::ConstOp::verify() {
-
+  Operation &op = *getOperation();
   auto attrType = llvm::dyn_cast<TensorType>(getValuesAttr().getType());
   auto outputType = llvm::dyn_cast<TensorType>(getOutput().getType());
 
@@ -829,16 +949,48 @@ LogicalResult tosa::ConstOp::verify() {
     return failure();
   }
 
-  if (auto result = llvm::dyn_cast<mlir::quant::QuantizedType>(
-          outputType.getElementType())) {
-    if (getStorageElementTypeFromQuantized(result) == attrType.getElementType())
+  const Type attrElemType = attrType.getElementType();
+  const Type resultElemType = outputType.getElementType();
+
+  if (auto result =
+          llvm::dyn_cast<mlir::quant::QuantizedType>(resultElemType)) {
+    if (getStorageElementTypeFromQuantized(result) == attrElemType)
       return success();
   }
 
-  if (attrType.getElementType() != outputType.getElementType()) {
-    emitOpError("expected same attr/result element types");
-    return failure();
+  if (auto attrBlockScaledType =
+          llvm::dyn_cast<mlir::tosa::BlockScaledType>(attrElemType)) {
+    if (!attrBlockScaledType.hasScaleValues())
+      return op.emitOpError(
+          "attribute block scaled type must have scale values");
+
+    if (failed(verifyBlockScaledTensorType(attrType, true)))
+      return op.emitOpError("block scaled attribute type is not valid, got ")
+             << attrType;
+
+    const BlockScaledType resultBlockScaledType =
+        llvm::dyn_cast<mlir::tosa::BlockScaledType>(resultElemType);
+    if (!resultBlockScaledType)
+      return op.emitOpError(
+          "result type must be block scaled type if attribute is block "
+          "scaled type");
+
+    if (attrBlockScaledType.getValueType() !=
+            resultBlockScaledType.getValueType() ||
+        attrBlockScaledType.getScaleType() !=
+            resultBlockScaledType.getScaleType() ||
+        attrBlockScaledType.getBlockShape() !=
+            resultBlockScaledType.getBlockShape())
+      return op.emitOpError(
+                 "expected block scaled element type to be compatible "
+                 "between attr and result, got ")
+             << attrBlockScaledType << " vs. " << resultBlockScaledType;
+
+    return success();
   }
+
+  if (attrElemType != resultElemType)
+    return emitOpError("expected same attr/result element types");
 
   return success();
 }
@@ -850,33 +1002,6 @@ static LogicalResult verifyConvOpModes(T op) {
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
     inputEType = getStorageElementTypeFromQuantized(quantType);
-
-  auto accType = op.getAccType();
-  if (inputEType.isInteger(8) && !accType.isInteger(32))
-    return op.emitOpError("accumulator type for i8 tensor is not i32, got ")
-           << accType;
-
-  if (inputEType.isInteger(16) && !accType.isInteger(48))
-    return op.emitOpError("accumulator type for i16 tensor is not i48, got ")
-           << accType;
-
-  if (isa<Float8E5M2Type, Float8E4M3Type>(inputEType) &&
-      !(accType.isF16() || accType.isF32()))
-    return op.emitOpError("accumulator type for f8 tensor is not f16/f32, got ")
-           << accType;
-
-  if (inputEType.isF16() && !(accType.isF16() || accType.isF32()))
-    return op.emitOpError(
-               "accumulator type for f16 tensor is not f16/f32, got ")
-           << accType;
-
-  if (inputEType.isBF16() && !accType.isF32())
-    return op.emitOpError("accumulator type for bf16 tensor is not f32, got ")
-           << accType;
-
-  if (inputEType.isF32() && !accType.isF32())
-    return op.emitOpError("accumulator type for f32 tensor is not f32, got ")
-           << accType;
 
   auto resultEType =
       llvm::cast<ShapedType>(op.getResult().getType()).getElementType();
@@ -1447,18 +1572,14 @@ buildTransConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
   result.addTypes(finalOutputType);
 }
 
-/// The tosa.matmul op is also intended to be generated where a fully_connected
-/// op must be constructed where the weight is not a constant. In this case,
-/// the fully_connected op must be expressed using matmul.
-/// TODO: Add link to the leglization document explaining this.
-static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
-                                       OperationState &result, Type outputType,
-                                       Value a, Value b) {
-  auto zps = createZPsAsConst(builder, a, b);
+static void buildMatMulLikeOpWithQuantInfo(OpBuilder &builder,
+                                           OperationState &result,
+                                           Type outputType, Value a, Value b) {
+  const std::pair<Value, Value> zps = createZPsAsConst(builder, a, b);
   result.addOperands({a, b, zps.first, zps.second});
 
   Type finalOutputType{outputType};
-  if (auto quantAttr = buildMatMulOpQuantizationAttr(builder, a, b)) {
+  if (buildMatMulOpQuantizationAttr(builder, a, b)) {
     auto eType = getStorageElementTypeOrSelf(a.getType());
     auto inputBits = eType.getIntOrFloatBitWidth();
 
@@ -1474,6 +1595,18 @@ static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
     finalOutputType = outputShapedType.clone(accElementType);
   }
   result.addTypes(finalOutputType);
+}
+
+static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
+                                       OperationState &result, Type outputType,
+                                       Value a, Value b) {
+  buildMatMulLikeOpWithQuantInfo(builder, result, outputType, a, b);
+}
+
+static void buildMatMulTOpWithQuantInfo(OpBuilder &builder,
+                                        OperationState &result, Type outputType,
+                                        Value a, Value b) {
+  buildMatMulLikeOpWithQuantInfo(builder, result, outputType, a, b);
 }
 
 /// Both the tosa.avg_pool2d and unary ops use the same
@@ -2052,12 +2185,9 @@ LogicalResult tosa::MatMulOp::inferReturnTypeComponents(
   return success();
 }
 
-LogicalResult MatMulOp::verify() {
-  const ShapeAdaptor aShape(getA().getType());
-  const ShapeAdaptor bShape(getB().getType());
-  const Type aElementType = aShape.getElementType();
-  const Type bElementType = bShape.getElementType();
-
+template <typename T>
+static LogicalResult verifyMatMulQuantizedOperandsType(T op, Type aElementType,
+                                                       Type bElementType) {
   const auto aQuantizedEType =
       llvm::dyn_cast<quant::UniformQuantizedType>(aElementType);
   const auto bQuantizedEType =
@@ -2065,33 +2195,62 @@ LogicalResult MatMulOp::verify() {
 
   if (aQuantizedEType || bQuantizedEType) {
     if (!aQuantizedEType || !bQuantizedEType) {
-      return emitOpError("expect operands to be both quantized or both not "
-                         "quantized, got ")
+      return op.emitOpError("expect operands to be both quantized or both not "
+                            "quantized, got ")
              << aElementType << " and " << bElementType;
     }
     // both a and b have quantized element types
     auto aQuantWidth = aQuantizedEType.getStorageTypeIntegralWidth();
     auto bQuantWidth = bQuantizedEType.getStorageTypeIntegralWidth();
     if (aQuantWidth != bQuantWidth) {
-      return emitOpError("expect quantized operands to have same widths, got ")
+      return op.emitOpError("expect quantized operands to have same widths, "
+                            "got ")
              << aQuantWidth << " and " << bQuantWidth;
     }
   }
 
-  // check a_zp and b_zp
-  auto aEType = getStorageElementTypeOrSelf(aElementType);
-  auto aZpEType = getStorageElementTypeOrSelf(getAZp().getType());
-  if (aEType != aZpEType)
-    return emitOpError("expect input a and a_zp have the same "
-                       "element type, got ")
-           << aEType << " and " << aZpEType;
+  return success();
+}
 
-  const Type bEType = getStorageElementTypeOrSelf(bElementType);
-  const Type bZpEType = getStorageElementTypeOrSelf(getBZp().getType());
-  if (bEType != bZpEType)
-    return emitOpError("expect input b and b_zp have the same "
-                       "element type, got ")
-           << bEType << " and " << bZpEType;
+template <typename T>
+static LogicalResult verifyMatMulZeroPointType(T op, Value input, Value zp,
+                                               StringRef inputName,
+                                               StringRef zpName) {
+  const Type inputElementType = getElementTypeOrSelf(input.getType());
+  const Type inputStorageElementType = getStorageElementTypeOrSelf(input);
+  const Type zpElementType = getStorageElementTypeOrSelf(zp);
+  Type expectedElementType = inputStorageElementType;
+
+  if (isa<BlockScaledType>(inputElementType))
+    expectedElementType = Float32Type::get(op.getContext());
+
+  if (expectedElementType == zpElementType)
+    return success();
+
+  InFlightDiagnostic diag = op.emitOpError("expect input ");
+  diag << inputName << " and " << zpName;
+  if (isa<BlockScaledType>(inputElementType))
+    diag << " have compatible element types, got " << inputElementType
+         << " and " << zpElementType;
+  else
+    diag << " have the same element type, got " << inputStorageElementType
+         << " and " << zpElementType;
+  return diag;
+}
+
+LogicalResult MatMulOp::verify() {
+  const ShapeAdaptor aShape(getA().getType());
+  const ShapeAdaptor bShape(getB().getType());
+  const Type aElementType = aShape.getElementType();
+  const Type bElementType = bShape.getElementType();
+
+  if (failed(
+          verifyMatMulQuantizedOperandsType(*this, aElementType, bElementType)))
+    return failure();
+
+  if (failed(verifyMatMulZeroPointType(*this, getA(), getAZp(), "a", "a_zp")) ||
+      failed(verifyMatMulZeroPointType(*this, getB(), getBZp(), "b", "b_zp")))
+    return failure();
 
   FailureOr<int64_t> maybeAZp = getAZeroPoint();
   if (succeeded(maybeAZp) && verifyAZeroPoint(*maybeAZp).failed())
@@ -2125,14 +2284,96 @@ LogicalResult MatMulOp::verify() {
   const SmallVector<int64_t, 3> expectedOutputShape = {N, H, W};
   const auto outputType = cast<ShapedType>(getResult().getType());
   if (outputType.hasRank() &&
-      failed(
-          verifyCompatibleShape(outputType.getShape(), expectedOutputShape))) {
-    InFlightDiagnostic opError = emitOpError("expected output shape ");
-    printShapeToDiagnostic(opError, outputType.getShape());
-    opError << " to be compatible with expected output shape ";
-    printShapeToDiagnostic(opError, expectedOutputShape);
-    return opError;
+      failed(verifyOutputShapeCompatibleWithExpected(getOperation(), outputType,
+                                                     expectedOutputShape)))
+    return failure();
+
+  return success();
+}
+
+LogicalResult tosa::MatMulTOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    MatMulTOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  const ShapeAdaptor lhsShape(adaptor.getA().getType());
+  const ShapeAdaptor rhsShape(adaptor.getB().getType());
+
+  SmallVector<int64_t, 3> outShape(3, ShapedType::kDynamic);
+
+  if (lhsShape.hasRank()) {
+    outShape[0] = lhsShape.getDimSize(0);
+    outShape[1] = lhsShape.getDimSize(1);
   }
+
+  if (rhsShape.hasRank()) {
+    const int64_t bBatchSize = rhsShape.getDimSize(0);
+    if (bBatchSize != 1 && ShapedType::isDynamic(outShape[0]))
+      outShape[0] = bBatchSize;
+    outShape[2] = rhsShape.getDimSize(1);
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
+  return success();
+}
+
+LogicalResult MatMulTOp::verify() {
+  const ShapeAdaptor aShape(getA().getType());
+  const ShapeAdaptor bShape(getB().getType());
+  const Type aElementType = aShape.getElementType();
+  const Type bElementType = bShape.getElementType();
+
+  if (failed(
+          verifyMatMulQuantizedOperandsType(*this, aElementType, bElementType)))
+    return failure();
+
+  if (failed(verifyMatMulZeroPointType(*this, getA(), getAZp(), "a", "a_zp")) ||
+      failed(verifyMatMulZeroPointType(*this, getB(), getBZp(), "b", "b_zp")))
+    return failure();
+
+  FailureOr<int64_t> maybeAZp = getAZeroPoint();
+  if (succeeded(maybeAZp) && verifyAZeroPoint(*maybeAZp).failed())
+    return failure();
+
+  FailureOr<int64_t> maybeBZp = getBZeroPoint();
+  if (succeeded(maybeBZp) && verifyBZeroPoint(*maybeBZp).failed())
+    return failure();
+
+  // Verify input/output shapes
+  int64_t N = ShapedType::kDynamic;
+  int64_t D = ShapedType::kDynamic;
+  int64_t H = ShapedType::kDynamic;
+  int64_t W = ShapedType::kDynamic;
+  int64_t C = ShapedType::kDynamic;
+
+  if (aShape.hasRank()) {
+    N = aShape.getDimSize(0);
+    H = aShape.getDimSize(1);
+    C = aShape.getDimSize(2);
+  }
+
+  if (bShape.hasRank()) {
+    D = bShape.getDimSize(0);
+    W = bShape.getDimSize(1);
+    if (failed(tryUpdateDimOrFailure(*this, C, bShape.getDimSize(2), "b",
+                                     "channels")))
+      return failure();
+  }
+
+  // Verify B batch size is broadcast compatible with A.
+  if (ShapedType::isStatic(N) && ShapedType::isStatic(D) && N != D && D != 1)
+    return emitOpError("expect B matrix batch size to be broadcast compatible "
+                       "with A, got D=")
+           << D << " vs N=" << N;
+
+  if (ShapedType::isDynamic(N) && ShapedType::isStatic(D) && D != 1)
+    N = D;
+
+  const SmallVector<int64_t, 3> expectedOutputShape = {N, H, W};
+  const auto outputType = cast<ShapedType>(getResult().getType());
+  if (outputType.hasRank() &&
+      failed(verifyOutputShapeCompatibleWithExpected(getOperation(), outputType,
+                                                     expectedOutputShape)))
+    return failure();
 
   return success();
 }
@@ -3195,6 +3436,8 @@ ZERO_POINT_HELPER(AvgPool2dAdaptiveOp, Input, true)
 ZERO_POINT_HELPER(AvgPool2dAdaptiveOp, Output, true)
 ZERO_POINT_HELPER(MatMulOp, A, true)
 ZERO_POINT_HELPER(MatMulOp, B, true)
+ZERO_POINT_HELPER(MatMulTOp, A, true)
+ZERO_POINT_HELPER(MatMulTOp, B, true)
 ZERO_POINT_HELPER(NegateOp, Input1, true)
 ZERO_POINT_HELPER(NegateOp, Output, true)
 ZERO_POINT_HELPER(RescaleOp, Input, !getInputUnsigned())
@@ -5076,6 +5319,34 @@ LogicalResult RescaleOp::inferReturnTypeComponents(
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape(adaptor.getInput().getType());
   inferredReturnShapes.push_back(ShapedTypeComponents(inputShape));
+  return success();
+}
+
+LogicalResult CastOp::verify() {
+  const ShapedType inputType = llvm::cast<ShapedType>(getInput().getType());
+  const ShapedType outputType = llvm::cast<ShapedType>(getType());
+  const Type inputElementType = inputType.getElementType();
+  const Type outputElementType = outputType.getElementType();
+
+  const bool inputIsBlockScaled = llvm::isa<BlockScaledType>(inputElementType);
+  const bool outputIsBlockScaled =
+      llvm::isa<BlockScaledType>(outputElementType);
+  if (!inputIsBlockScaled && !outputIsBlockScaled)
+    return success();
+
+  if (inputIsBlockScaled && outputIsBlockScaled)
+    return emitOpError()
+           << "requires exactly one of input or output to have block scaled "
+              "element type";
+
+  const Type scalarElementType =
+      inputIsBlockScaled ? outputElementType : inputElementType;
+  if (!llvm::isa<FloatType>(scalarElementType))
+    return emitOpError()
+           << "requires non-block-scaled element type to be floating-point "
+              "when casting to or from block scaled element type, got "
+           << scalarElementType;
+
   return success();
 }
 

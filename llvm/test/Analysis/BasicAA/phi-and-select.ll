@@ -80,9 +80,8 @@ entry:
 }
 
 ; A gep off a select of two argument pointers does not alias a noalias argument.
-; TODO: This should be NoModRef.
 ; CHECK-LABEL: Function: select_and_gep_unknown_size
-; CHECK: Just Mod:   call void @llvm.memset.p0.i32(ptr %g, i8 0, i32 %size, i1 false) <->   call void @llvm.memset.p0.i32(ptr %z, i8 0, i32 %size, i1 false)
+; CHECK: NoModRef:   call void @llvm.memset.p0.i32(ptr %g, i8 0, i32 %size, i1 false) <->   call void @llvm.memset.p0.i32(ptr %z, i8 0, i32 %size, i1 false)
 define void @select_and_gep_unknown_size(i1 %c, ptr %x, ptr %y, ptr noalias %z, i32 %size) {
 entry:
   %p = select i1 %c, ptr %x, ptr %y

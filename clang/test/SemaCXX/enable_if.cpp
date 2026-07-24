@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
+// RUN: %clang_cc1 -std=c++11 -verify %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify %s -fexperimental-new-constant-interpreter
 
 typedef int (*fp)(int);
 int surrogate(int);
@@ -642,6 +644,45 @@ void Substitute(Arg) __attribute__((enable_if(PlaceholderBitmask, ""))) {
 
 }
 
+}
+
+namespace GH199527 {
+struct S { // expected-note {{definition of 'GH199527::S' is not complete until the closing '}'}}
+  ~S() {}
+  bool b;
+  // expected-error@+1{{member access into incomplete type 'S'}}
+  void foo(S b) __attribute__((enable_if(b.b, "")));
+};
+
+template<typename T>
+struct S2 {
+  bool b;
+  void foo(S2 b) const __attribute__((enable_if(b.b, "templ_foo_disabled"))); // #FOO
+};
+
+void use() {
+  S2<int> s_whatever;
+  S2<int> s_true{true};
+  S2<int> s_false{false};
+
+
+  // Both fail because this isn't a constexpr.
+  // expected-error@+2{{no matching member function for call to 'foo'}}
+  // expected-note@#FOO{{candidate disabled: templ_foo_disabled}}
+  s_whatever.foo(s_true);
+  // expected-error@+2{{no matching member function for call to 'foo'}}
+  // expected-note@#FOO{{candidate disabled: templ_foo_disabled}}
+  s_whatever.foo(s_false);
+
+  constexpr S2<int> ce_s_whatever{};
+  constexpr S2<int> ce_s_true{true};
+  constexpr S2<int> ce_s_false{false};
+
+  ce_s_whatever.foo(ce_s_true);
+  // expected-error@+2{{no matching member function for call to 'foo'}}
+  // expected-note@#FOO{{candidate disabled: templ_foo_disabled}}
+  ce_s_whatever.foo(ce_s_false);
+}
 }
 
 namespace DefaultArgs {

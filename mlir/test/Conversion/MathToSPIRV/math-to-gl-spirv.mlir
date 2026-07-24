@@ -139,6 +139,20 @@ func.func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
   return
 }
 
+// CHECK-LABEL: @float32_binary_scalar
+func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
+  // CHECK: spirv.GL.Atan2 %{{.*}}, %{{.*}} : f32
+  %0 = math.atan2 %lhs, %rhs : f32
+  return
+}
+
+// CHECK-LABEL: @float32_binary_vector
+func.func @float32_binary_vector(%lhs: vector<3xf32>, %rhs: vector<3xf32>) {
+  // CHECK: spirv.GL.Atan2 %{{.*}}, %{{.*}} : vector<3xf32>
+  %0 = math.atan2 %lhs, %rhs : vector<3xf32>
+  return
+}
+
 // CHECK-LABEL: @float32_clamp_scalar
 func.func @float32_clamp_scalar(%value: f32, %min: f32, %max: f32) {
   // CHECK: spirv.GL.FClamp %{{.*}}, %{{.*}}, %{{.*}} : f32
