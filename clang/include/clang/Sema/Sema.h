@@ -8944,7 +8944,7 @@ public:
       concepts::Requirement::SubstitutionDiagnostic *SubstDiag);
   concepts::NestedRequirement *BuildNestedRequirement(Expr *E);
   concepts::NestedRequirement *
-  BuildNestedRequirement(StringRef InvalidConstraintEntity,
+  BuildNestedRequirement(Expr *InvalidConstraintEntity,
                          const ASTConstraintSatisfaction &Satisfaction);
   ExprResult ActOnRequiresExpr(SourceLocation RequiresKWLoc,
                                RequiresExprBodyDecl *Body,
@@ -14104,12 +14104,10 @@ public:
            !inConstraintSubstitution();
   }
 
-  using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;
-
   /// \brief create a Requirement::SubstitutionDiagnostic with only a
   /// SubstitutedEntity and DiagLoc using ASTContext's allocator.
   concepts::Requirement::SubstitutionDiagnostic *
-  createSubstDiagAt(SourceLocation Location, EntityPrinter Printer);
+  createSubstDiagAt(SourceLocation Location, Expr *E);
 
   ///@}
 

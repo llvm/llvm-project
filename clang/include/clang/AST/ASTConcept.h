@@ -18,14 +18,17 @@
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/OptionalUnsigned.h"
+#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <utility>
 
 namespace clang {
 
+class ASTContext;
 class ConceptDecl;
 class TemplateDecl;
 class ConceptReference;
@@ -33,11 +36,50 @@ class Expr;
 class NamedDecl;
 struct PrintingPolicy;
 
+/// A compact, trivially-destructible stand-in for \c PartialDiagnostic suitable
+/// for storage on the AST and for serialization.
+///
+/// Unlike \c PartialDiagnostic it doesn't own a \c DiagnosticStorage and is not
+/// tied to a \c DiagStorageAllocator: only part of the arguments that are
+/// currently used by SFINAE diagnostics are kept.
+///
+class ASTPartialDiagnostic final
+    : private llvm::TrailingObjects<ASTPartialDiagnostic, uint64_t, uint32_t,
+                                    CharSourceRange> {
+  friend TrailingObjects;
+
+  /// Low bits of each packed word hold the ArgumentKind; the rest is the
+  /// (string) text length.
+  static constexpr unsigned KindBits = 5;
+
+  unsigned DiagID;
+  unsigned NumArgs;
+  unsigned NumRanges;
+
+  size_t numTrailingObjects(OverloadToken<uint64_t>) const { return NumArgs; }
+  size_t numTrailingObjects(OverloadToken<uint32_t>) const { return NumArgs; }
+
+  ASTPartialDiagnostic(const ASTContext &C, const PartialDiagnostic &PD,
+                       unsigned NumArgs, unsigned NumRanges);
+
+public:
+  static ASTPartialDiagnostic *Create(const ASTContext &C,
+                                      const PartialDiagnostic &PD);
+
+  unsigned getDiagID() const { return DiagID; }
+
+  /// Rebuild an equivalent \c PartialDiagnostic, using \p Alloc for its
+  /// storage.
+  PartialDiagnostic
+  getPartialDiagnostic(PartialDiagnostic::DiagStorageAllocator &Alloc) const;
+};
+
 /// Unsatisfied constraint expressions if the template arguments could be
 /// substituted into them, or a diagnostic if substitution resulted in
 /// an invalid expression.
 ///
-using ConstraintSubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
+using ConstraintSubstitutionDiagnostic =
+    std::pair<SourceLocation, ASTPartialDiagnostic *>;
 using UnsatisfiedConstraintRecord =
     llvm::PointerUnion<const Expr *, const ConceptReference *,
                        const ConstraintSubstitutionDiagnostic *>;
