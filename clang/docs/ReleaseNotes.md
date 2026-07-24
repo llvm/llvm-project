@@ -381,6 +381,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a non-deterministic ordering of unused local typedefs that made
   serialized PCH/AST files and `-Wunused-local-typedef` diagnostics
   non-reproducible across runs. (#GH209639)
+- Instantiated enum definitions now preserve the pattern's brace range, so their
+  source ranges include their enumerators.
 
 #### Miscellaneous Bug Fixes
 

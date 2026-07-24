@@ -1129,4 +1129,28 @@ template <int X> requires NS::CCC<X> int z = X;
   EXPECT_TRUE(Verifier.match(Code2, varTemplateDecl(hasName("z")), Lang_CXX20));
 }
 
+TEST(EnumDecl, InstantiatedMemberEnumRange) {
+  // The range includes the enumerators.
+  RangeVerifier<EnumDecl> Verifier;
+  Verifier.expectRange(2, 3, 2, 25);
+  EXPECT_TRUE(Verifier.match("template <typename T> struct A {\n"
+                             "  enum E { X = 1, Y = 2 };\n"
+                             "};\n"
+                             "A<int> a;\n",
+                             enumDecl(hasName("E"), isInstantiated()),
+                             Lang_CXX11));
+}
+
+TEST(EnumDecl, InstantiatedScopedMemberEnumRange) {
+  // Referencing an enumerator instantiates the full range.
+  RangeVerifier<EnumDecl> Verifier;
+  Verifier.expectRange(2, 3, 2, 29);
+  EXPECT_TRUE(Verifier.match("template <typename T> struct A {\n"
+                             "  enum class S : int { P, Q };\n"
+                             "};\n"
+                             "auto s = A<int>::S::P;\n",
+                             enumDecl(hasName("S"), isInstantiated()),
+                             Lang_CXX11));
+}
+
 } // end namespace

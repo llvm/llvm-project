@@ -529,12 +529,12 @@ namespace testClassTemplateDecl {
 // CHECK:      ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-29]]:3, col:65> col:19 struct TestClassTemplateWithScopedMemberEnum definition external-linkage instantiated_from 0x{{.+}} explicit_instantiation_definition
 // CHECK:      |-TemplateArgument type 'unsigned int'
 // CHECK-NEXT: | `-BuiltinType 0x{{.+}} 'unsigned int'
-// CHECK:      |-EnumDecl 0x{{.+}} <line:[[@LINE-38]]:5, col:21> col:16 class E1 'unsigned int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E1]] external-linkage{{$}}
+// CHECK:      |-EnumDecl 0x{{.+}} <line:[[@LINE-38]]:5, col:36> col:16 class E1 'unsigned int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E1]] external-linkage{{$}}
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:25> col:25 A 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E1'
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:28> col:28 B 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E1'
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:31> col:31 C 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E1'
 // CHECK-NEXT: | `-EnumConstantDecl 0x{{.+}} <col:34> col:34 D 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E1'
-// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-42]]:5, col:21> col:16 class E2 'int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E2]] external-linkage{{$}}
+// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-42]]:5, col:38> col:16 class E2 'int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E2]] external-linkage{{$}}
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:27> col:27 A 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E2'
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:30> col:30 B 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E2'
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:33> col:33 C 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E2'
@@ -578,12 +578,12 @@ namespace testClassTemplateDecl {
 // CHECK:      ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-22]]:3, col:67> col:19 referenced struct TestClassTemplateWithUnscopedMemberEnum definition external-linkage instantiated_from 0x{{.+}} explicit_instantiation_definition
 // CHECK:      |-TemplateArgument type 'unsigned int'
 // CHECK-NEXT: | `-BuiltinType 0x{{.+}} 'unsigned int'
-// CHECK:      |-EnumDecl 0x{{.+}} <line:[[@LINE-31]]:5, col:15> col:10 E1 'unsigned int' instantiated_from 0x[[#UNSCOPED_MEMBER_ENUM_E1]] external-linkage{{$}}
+// CHECK:      |-EnumDecl 0x{{.+}} <line:[[@LINE-31]]:5, col:42> col:10 E1 'unsigned int' instantiated_from 0x[[#UNSCOPED_MEMBER_ENUM_E1]] external-linkage{{$}}
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:19> col:19 E1_A 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E1'
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:25> col:25 E1_B 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E1'
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:31> col:31 E1_C 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E1'
 // CHECK-NEXT: | `-EnumConstantDecl 0x{{.+}} <col:37> col:37 E1_D 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E1'
-// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-35]]:5, col:15> col:10 E2 'int' instantiated_from 0x[[#UNSCOPED_MEMBER_ENUM_E2]] external-linkage{{$}}
+// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-35]]:5, col:44> col:10 E2 'int' instantiated_from 0x[[#UNSCOPED_MEMBER_ENUM_E2]] external-linkage{{$}}
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:21> col:21 E2_A 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E2'
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:27> col:27 E2_B 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E2'
 // CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:33> col:33 E2_C 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E2'
