@@ -5167,6 +5167,48 @@ mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMCoroIntrinsicIsInRampOpLowering::matchAndRewrite(
+    cir::CoroIntrinsicIsInRampOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
+}
+
+mlir::LogicalResult CIRToLLVMCoroIntrinsicFreeOpLowering::matchAndRewrite(
+    cir::CoroIntrinsicFreeOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
+}
+
+mlir::LogicalResult CIRToLLVMCoroIntrinsicEndOpLowering::matchAndRewrite(
+    cir::CoroIntrinsicEndOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
+}
+
+mlir::LogicalResult CIRToLLVMCoroIntrinsicAllocOpLowering::matchAndRewrite(
+    cir::CoroIntrinsicAllocOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
+}
+
+mlir::LogicalResult CIRToLLVMCoroIntrinsicBeginOpLowering::matchAndRewrite(
+    cir::CoroIntrinsicBeginOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
+}
+
+mlir::LogicalResult CIRToLLVMCoroIntrinsicIdOpLowering::matchAndRewrite(
+    cir::CoroIntrinsicIdOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
+}
+
+mlir::LogicalResult CIRToLLVMCoroIntrinsicSizeOpLowering::matchAndRewrite(
+    cir::CoroIntrinsicSizeOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
+}
+
 mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
     cir::CpuIdOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

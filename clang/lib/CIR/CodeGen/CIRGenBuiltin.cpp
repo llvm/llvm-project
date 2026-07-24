@@ -1361,34 +1361,54 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitRotate(e, /*isRotateLeft=*/false);
 
   case Builtin::BI__builtin_coro_id:
+    return RValue::get(emitCoroIDBuiltinCall(e).getResult());
+  case Builtin::BI__builtin_coro_alloc: {
+    cir::CoroIntrinsicAllocOp coroAlloc = emitCoroAllocBuiltinCall(e);
+    return coroAlloc ? RValue::get(coroAlloc.getResult())
+                     : getUndefRValue(e->getType());
+  }
+  case Builtin::BI__builtin_coro_begin: {
+    cir::CoroIntrinsicBeginOp coroBeg = emitCoroBeginBuiltinCall(e);
+    return coroBeg ? RValue::get(coroBeg.getResult())
+                   : getUndefRValue(e->getType());
+  }
+
   case Builtin::BI__builtin_coro_promise:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_promise NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_resume:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_resume NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_noop:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_noop NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_destroy:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_destroy NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_done:
-  case Builtin::BI__builtin_coro_alloc:
-  case Builtin::BI__builtin_coro_begin:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_done NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_end:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_end NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_suspend:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_align:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_id like NYI");
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_align NYI");
     return getUndefRValue(e->getType());
 
   case Builtin::BI__builtin_coro_frame: {
     return emitCoroutineFrame();
   }
-  case Builtin::BI__builtin_coro_free:
-    return RValue::get(emitCoroFreeBuiltin(e).getResult());
+  case Builtin::BI__builtin_coro_free: {
+    cir::CoroIntrinsicFreeOp coroFree = emitCoroFreeBuiltin(e);
+    return coroFree ? RValue::get(coroFree.getResult())
+                    : getUndefRValue(e->getType());
+  }
+
   case Builtin::BI__builtin_coro_size: {
-    GlobalDecl gd{fd};
-    mlir::Type ty = cgm.getTypes().getFunctionType(
-        cgm.getTypes().arrangeGlobalDeclaration(gd));
-    const auto *nd = cast<NamedDecl>(gd.getDecl());
-    cir::FuncOp fnOp =
-        cgm.getOrCreateCIRFunction(nd->getName(), ty, gd, /*ForVTable=*/false);
-    fnOp.setBuiltin(true);
-    return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
-                    returnValue);
+    return RValue::get(emitCoroSizeBuiltinCall(e).getResult());
   }
 
   case Builtin::BI__builtin_constant_p: {
