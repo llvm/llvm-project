@@ -1741,6 +1741,7 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
                                             uint64_t off, bool isPrefix) {
   auto *ts = make<ThunkSection>(ctx, os, off);
   ts->partition = os->partition;
+  ts->isPrefix = isPrefix;
   if ((ctx.arg.fixCortexA53Errata843419 || ctx.arg.fixCortexA8) &&
       !isd->sections.empty() && !isPrefix) {
     // The errata fixes are sensitive to addresses modulo 4 KiB. When we add
@@ -1966,8 +1967,15 @@ bool ThunkCreator::createThunks(uint32_t pass,
               rel.addend = -getPCBias(ctx, *isec, rel);
           }
 
-        for (auto &p : isd->thunkSections)
+        for (auto &p : isd->thunkSections) {
+          // Sort in pass 0, which creates most thunks. Sorting in later passes
+          // could oscillate: the sort keys are derived from the very layout
+          // being recomputed. Prefix thunk sections hold alternative entry
+          // points whose order is meaningful and must not be reordered.
+          if (pass == 0 && ctx.arg.zSortThunks && !p.first->isPrefix)
+            p.first->sortByDestination();
           addressesChanged |= p.first->assignOffsets();
+        }
       });
 
   for (auto &p : thunkedSections)
