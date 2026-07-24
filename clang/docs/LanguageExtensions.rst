@@ -5869,6 +5869,118 @@ in the analyzer's `list of annotations for analysis
 <analyzer/user-docs/Annotations.html>`__.
 
 
+Flow-Sensitive Nullability Analysis
+===================================
+
+When enabled with ``-fflow-sensitive-nullability`` (off by default), Clang runs
+a flow-sensitive, intraprocedural analysis that proves whether a ``_Nullable``
+pointer may be null at the point it is used. Unlike the type-only nullability
+checks, this analysis tracks the *flow* of a function: a ``_Nullable`` pointer
+that has been guarded by a null check is treated as non-null on the paths where
+the check succeeded, so only genuinely unguarded uses are diagnosed.
+
+The analysis is built on the CFG and follows the same model as Clang's thread
+safety and uninitialized-variable analyses. A translation-unit pass visits
+functions in call-graph order (callees before callers, via Tarjan SCCs) so that
+``always returns non-null`` can be inferred for a callee before its callers are
+analyzed.
+
+What it diagnoses
+-----------------
+
+The diagnostics live under the ``-Wflow-nullability`` umbrella group:
+
+* ``-Wflow-nullable-dereference`` — dereference (``*p``, ``p->m``, ``p[i]``) of a
+  pointer that may be null on that path.
+* ``-Wflow-nullable-arithmetic`` — pointer arithmetic on a possibly-null pointer.
+* ``-Wflow-nullable-return`` — returning a possibly-null value from a function
+  whose return type is ``_Nonnull``.
+* ``-Wflow-nullable-assignment`` — assigning a possibly-null value to a
+  ``_Nonnull`` variable.
+* ``-Wflow-nullable-argument`` — passing a possibly-null value as a ``_Nonnull``
+  parameter.
+
+Opt-in
+------
+
+Per function, the analysis is active when any of the following holds:
+
+* the function is in a ``#pragma clang assume_nonnull`` region, or
+* ``-fnullability-default`` is set to something other than ``unspecified``, or
+* the function has explicit ``_Nullable`` / ``_Nonnull`` annotations on its
+  parameters or return type (checked across the entire redeclaration chain, so a
+  function annotated only on a header prototype still opts in).
+
+This makes adoption gradual: unannotated functions in a translation unit are
+left untouched until they are annotated or the region/flag opts them in.
+
+Narrowing idioms
+----------------
+
+The analysis recognizes the common ways a null check narrows a pointer to
+non-null on the guarded path:
+
+.. code-block:: c++
+
+  void f(int *_Nullable p, int *_Nullable q) {
+    if (p)                 *p = 1;   // narrowed by truthiness test
+    if (q != nullptr)      *q = 1;   // narrowed by explicit comparison
+    if (!p) return;        *p = 1;   // narrowed by early return
+    if (p && q) { *p = *q; }         // && / || are decomposed
+    if (!(p && q)) return; *p = *q;  // negation of a conjunction
+    bool ok = (p != nullptr);
+    if (ok)                *p = 1;   // bool guard variable
+    int *r = p; if (p)     *r = 1;   // depth-1 alias of a narrowed pointer
+    __builtin_assume(p);   *p = 1;   // __builtin_assume
+  }
+
+Member-access paths (``o.field``, ``this->field``, ``o.inner.x``) are narrowed at
+any depth.
+
+Smart pointers
+--------------
+
+``std::unique_ptr``, ``std::shared_ptr``, and ``std::weak_ptr`` are modeled:
+
+* ``std::make_unique`` / ``std::make_shared`` and construction from a
+  ``new``-expression produce a non-null pointer.
+* ``reset()`` and being moved-from make the pointer possibly-null again.
+* ``operator bool`` (including ``if (sp)``) narrows the pointer.
+* ``.get()``, ``operator*``, and ``operator->`` are checked against the current
+  state.
+
+Lambdas
+-------
+
+A lambda's pointer parameters default to ``_Nonnull`` and are auto-narrowed
+inside the body, unless a parameter is explicitly annotated ``_Nullable``. This
+is an intentional asymmetry with ordinary functions, whose unannotated
+parameters follow ``-fnullability-default``.
+
+Known limitations (false negatives)
+-----------------------------------
+
+The analysis is intentionally conservative in the direction of *not* warning, to
+keep the diagnostic noise low. The following cases are not diagnosed by design:
+
+* **Address escape.** Only the direct pattern ``T **pp = &p; *pp = ...;`` is
+  understood; narrowing that escapes through more indirect aliasing of a
+  pointer's address is not invalidated.
+* **Deep aliasing.** Only depth-1 aliases (``q = p``) are tracked; chains of
+  aliases are not.
+* **Function calls do not invalidate narrowing.** Once a pointer is narrowed,
+  an intervening call does not reset it. This is deliberate and matches the
+  behavior of the thread safety analysis.
+
+Migration evidence
+------------------
+
+``-Rnullsafe-evidence`` emits remarks describing the nullability the analysis
+inferred for parameters, members, and return values (including
+``always returns non-null``). These remarks are intended to be consumed by
+migration tooling that proposes annotations; they are not user-facing warnings.
+
+
 Extensions for Dynamic Analysis
 ===============================
 

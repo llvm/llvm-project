@@ -14159,6 +14159,27 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     }
 
     Init = Result.getAs<Expr>();
+
+    // Skip discarded `if constexpr` branches: the non-taken branch is parsed
+    // inside a DiscardedStatement evaluation context (see ParseStmt.cpp), so a
+    // null-init of a _Nonnull var there is not a real initialization and must
+    // not warn. The flow analysis itself naturally skips these (they aren't in
+    // the CFG); this type-based check needs the explicit gate.
+    if (VDecl && Init && getLangOpts().FlowSensitiveNullability &&
+        !ExprEvalContexts.empty() &&
+        !ExprEvalContexts.back().isDiscardedStatementContext()) {
+      QualType VDeclType = VDecl->getType();
+      if (auto Nullability = VDeclType->getNullability()) {
+        if (*Nullability == NullabilityKind::NonNull) {
+          if (Init->isNullPointerConstant(Context,
+                                          Expr::NPC_ValueDependentIsNotNull)) {
+            Diag(Init->getBeginLoc(), diag::warn_null_init_nonnull)
+                << VDeclType << Init->getSourceRange();
+          }
+        }
+      }
+    }
+
     IsParenListInit = !InitSeq.steps().empty() &&
                       InitSeq.step_begin()->Kind ==
                           InitializationSequence::SK_ParenthesizedListInit;

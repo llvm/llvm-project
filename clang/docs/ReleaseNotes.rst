@@ -348,6 +348,16 @@ New Compiler Flags
   that ``bool`` values loaded from memory cannot have a bit pattern other
   than 0 or 1.
 
+- New option ``-f[no-]flow-sensitive-nullability`` added to enable a
+  flow-sensitive, intraprocedural analysis that diagnoses uses of ``_Nullable``
+  pointers that may be null on the path where they occur. It is off by default.
+
+- New option ``-fnullability-default=`` added to control how unannotated
+  pointers are treated by the flow-sensitive nullability analysis. Accepted
+  values are ``unspecified`` (the default), ``nullable``, and ``nonnull``; a
+  non-``unspecified`` value also opts every function in the translation unit
+  into the analysis.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -450,6 +460,21 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Added the ``-Wflow-nullability`` family of warnings, driven by a new
+  flow-sensitive, intraprocedural nullability analysis (enabled with
+  ``-fflow-sensitive-nullability``). It tracks null checks through the control
+  flow of a function and warns about dereferences, arithmetic, returns,
+  assignments, and arguments where a ``_Nullable`` pointer may be null on that
+  path, via the subgroups ``-Wflow-nullable-dereference``,
+  ``-Wflow-nullable-arithmetic``, ``-Wflow-nullable-return``,
+  ``-Wflow-nullable-assignment``, and ``-Wflow-nullable-argument``. The analysis
+  recognizes common narrowing idioms and models ``std::unique_ptr`` /
+  ``shared_ptr`` / ``weak_ptr``, and is opt-in per function (via
+  ``#pragma clang assume_nonnull`` regions, explicit annotations, or
+  ``-fnullability-default=``). ``-Rnullsafe-evidence`` emits remarks for
+  annotation-migration tooling. See the User's Manual and Language Extensions
+  documentation for details.
+
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
   function template instantiations (#64087).
 
