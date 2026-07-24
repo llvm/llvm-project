@@ -434,13 +434,16 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
     if (MemoryDef *Def = dyn_cast<MemoryDef>(MA)) {
       LLVM_DEBUG(dbgs() << "  Def: " << *Def->getMemoryInst() << '\n');
 
-      if (isReallyAClobber(Load->getPointerOperand(), Def, AA)) {
-        LLVM_DEBUG(dbgs() << "      -> load is clobbered\n");
-        return true;
+      MemoryAccess *Next = Walker->getClobberingMemoryAccess(Def, Loc);
+      if (Next == Def) {
+        if (isReallyAClobber(Load->getPointerOperand(), Def, AA)) {
+          LLVM_DEBUG(dbgs() << "      -> load is clobbered\n");
+          return true;
+        }
+        Next = Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc);
       }
 
-      WorkList.push_back(
-          Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc));
+      WorkList.push_back(Next);
       continue;
     }
 

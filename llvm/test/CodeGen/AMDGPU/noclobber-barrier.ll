@@ -133,7 +133,7 @@ define amdgpu_kernel void @memory_phi_clobber1(ptr addrspace(1) %arg, i1 %cond) 
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 1, !amdgpu.uniform [[META0]]
-; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr addrspace(1) [[I1]], align 4
+; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr addrspace(1) [[I1]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I3:%.*]] = add i32 [[I2]], [[I]]
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 2
 ; CHECK-NEXT:    store i32 [[I3]], ptr addrspace(1) [[I4]], align 4
@@ -162,10 +162,11 @@ define amdgpu_kernel void @memory_phi_clobber1(ptr addrspace(1) %arg, i1 %cond) 
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:12
 ; GCN-NEXT:  .LBB2_4: ; %if.end
+; GCN-NEXT:    s_load_dword s2, s[0:1], 0x4
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    global_load_dword v1, v0, s[0:1] offset:4
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_add_u32_e32 v1, s4, v1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_add_i32 s2, s2, s4
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:8
 ; GCN-NEXT:    s_endpgm
 bb:
@@ -204,7 +205,7 @@ define amdgpu_kernel void @memory_phi_clobber2(ptr addrspace(1) %arg, i1 %cond) 
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 1, !amdgpu.uniform [[META0]]
-; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr addrspace(1) [[I1]], align 4
+; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr addrspace(1) [[I1]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I3:%.*]] = add i32 [[I2]], [[I]]
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 2
 ; CHECK-NEXT:    store i32 [[I3]], ptr addrspace(1) [[I4]], align 4
@@ -233,10 +234,11 @@ define amdgpu_kernel void @memory_phi_clobber2(ptr addrspace(1) %arg, i1 %cond) 
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_barrier
 ; GCN-NEXT:  .LBB3_4: ; %if.end
+; GCN-NEXT:    s_load_dword s2, s[0:1], 0x4
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    global_load_dword v1, v0, s[0:1] offset:4
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_add_u32_e32 v1, s4, v1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_add_i32 s2, s2, s4
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:8
 ; GCN-NEXT:    s_endpgm
 bb:
