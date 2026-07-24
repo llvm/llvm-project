@@ -13,12 +13,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
-
-namespace llvm {
-namespace vfs {
-class FileSystem;
-}
-} // namespace llvm
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 namespace polly {
 class ScopInlinerPass : public llvm::OptionalPassInfoMixin<ScopInlinerPass> {

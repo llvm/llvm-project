@@ -27,6 +27,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 namespace llvm {
 class BasicBlock;
@@ -36,9 +37,6 @@ class Function;
 class IRBuilderBase;
 class OpenMPIRBuilder;
 class Value;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 } // namespace llvm
 
 namespace mlir {

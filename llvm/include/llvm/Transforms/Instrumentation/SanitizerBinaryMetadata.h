@@ -18,12 +18,10 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 
 namespace llvm {
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 struct SanitizerBinaryMetadataOptions {
   bool Covered = false;

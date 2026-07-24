@@ -24,6 +24,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 #include <memory>
 #include <string>
@@ -37,12 +38,6 @@ namespace opt {
 class ArgList;
 
 } // namespace opt
-
-namespace vfs {
-
-class FileSystem;
-
-} // namespace vfs
 
 } // namespace llvm
 
