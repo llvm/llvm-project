@@ -4052,7 +4052,7 @@ checkClausesForDecompositionConflicts(Sema &SemaRef, OpenMPDirectiveKind DKind,
 
 namespace {
 /// Visitor to collect variables used in a statement.
-class VarUsageVisitor : public RecursiveASTVisitor<VarUsageVisitor> {
+class VarUsageVisitor : public DynamicRecursiveASTVisitor {
   llvm::SmallPtrSet<const VarDecl *, 8> &UsedVars;
   llvm::SmallPtrSet<const BindingDecl *, 8> &UsedBindings;
 
@@ -4061,7 +4061,7 @@ public:
                   llvm::SmallPtrSet<const BindingDecl *, 8> &UsedBindings)
       : UsedVars(UsedVars), UsedBindings(UsedBindings) {}
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
       UsedVars.insert(cast<VarDecl>(VD->getCanonicalDecl()));
     else if (auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))

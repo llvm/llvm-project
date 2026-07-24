@@ -44,7 +44,7 @@ see {ref}`OpenMP implementation details <openmp-implementation-details>` and
   known at compile time. To prevent this conservative choice and use
   at most 32 bits, compile your program with the
   `-fopenmp-optimistic-collapse`.
-- C++17 structured bindings are now supported in OpenMP constructs.
+- C++20 structured bindings are now supported in OpenMP constructs.
   Bindings from structured binding declarations can be used in data-sharing
   clauses (``private``, ``firstprivate``, ``lastprivate``, ``shared``,
   ``reduction``, ``linear``), and in ``map`` clauses for target directives.

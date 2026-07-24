@@ -3862,20 +3862,31 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   // an enclosing scope.
   if (const auto *BD = dyn_cast<BindingDecl>(ND)) {
     if (E->refersToEnclosingVariableOrCapture()) {
+      auto ApplyNontemporal = [&](LValue LV) {
+        if (getLangOpts().OpenMP &&
+            CGM.getOpenMPRuntime().isNontemporalDecl(BD))
+          LV.setNontemporal(/*Value=*/true);
+        return LV;
+      };
+
       // Try direct lookup first.
       auto It = LocalDeclMap.find(BD->getCanonicalDecl());
-      if (It != LocalDeclMap.end())
-        return MakeAddrLValue(It->second, E->getType(), AlignmentSource::Decl);
+      if (It != LocalDeclMap.end()) {
+        return ApplyNontemporal(
+            MakeAddrLValue(It->second, E->getType(), AlignmentSource::Decl));
+      }
+
       // OpenMP case: binding was captured via its decomposed decl.
       if (CapturedStmtInfo &&
           CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
           CGM.getLangOpts().OpenMP) {
         auto NameIt = OMPPrivatizedBindings.find(
             cast<BindingDecl>(BD->getCanonicalDecl()));
-        if (NameIt != OMPPrivatizedBindings.end())
-          return MakeAddrLValue(NameIt->second, E->getType(),
-                                AlignmentSource::Decl);
-        return EmitOMPCapturedBindingLValue(BD);
+        if (NameIt != OMPPrivatizedBindings.end()) {
+          return ApplyNontemporal(MakeAddrLValue(NameIt->second, E->getType(),
+                                                 AlignmentSource::Decl));
+        }
+        return ApplyNontemporal(EmitOMPCapturedBindingLValue(BD));
       }
       // Non-OpenMP case: lambda capture.
       auto *FD = LambdaCaptureFields.lookup(BD);
