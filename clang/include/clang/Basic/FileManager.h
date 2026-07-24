@@ -29,6 +29,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <ctime>
 #include <map>
 #include <memory>
@@ -39,7 +40,6 @@ namespace llvm {
 
 namespace vfs {
 class File;
-class FileSystem;
 class Status;
 } // end namespace vfs
 
