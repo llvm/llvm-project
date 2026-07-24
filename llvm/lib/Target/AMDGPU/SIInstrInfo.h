@@ -18,8 +18,8 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 
@@ -94,7 +94,7 @@ struct SIInstrWorklist {
 private:
   /// InstrList contains the MachineInstrs.
   SmallVector<MachineInstr *> InstrList;
-  DenseSet<MachineInstr *> InSet;
+  SmallPtrSet<MachineInstr *, 8> InSet;
   unsigned Front = 0;
   /// Deferred instructions are specific MachineInstr
   /// that will be added by insert method.
