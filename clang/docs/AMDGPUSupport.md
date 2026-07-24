@@ -36,11 +36,19 @@ Clang exposes AMDGPU hardware intrinsics as target-specific builtins with the
 ### Named Workgroup Barrier Type
 
 The `__amdgpu_named_workgroup_barrier_t` type is used to represent the GFX12.5 named barriers.
+
+This type is subject to certain restrictions when used to declare non-static fields of classes.
+See the {ref}`named barrier wrappers<namedbarrierwrappers>` section below for more information.
+
 Example usage:
 
 ```c
 __amdgpu_named_workgroup_barrier_t x;
 __amdgpu_named_workgroup_barrier_t arr[2]; // Arrays are also fine
+
+struct SimpleWrapper {
+  __amdgpu_named_workgroup_barrier_t foo;
+};
 
 void foo(int a)
 {
@@ -48,18 +56,18 @@ void foo(int a)
 }
 ```
 
-A "named barrier wrapper" is a class that contains exactly one field, which is either
-a single value or an array of values of one of the following types:
+(namedbarrierwrappers)=
+### Named Barrier Wrappers
 
-* `__amdgpu_named_workgroup_barrier_t`.
-* Another "named barrier wrapper".
+A "named barrier wrapper" is a class that contains exactly one non-static field
+of one of the following types:
 
-Named barrier wrappers let users add helper methods around named barrier objects.
+* `__amdgpu_named_workgroup_barrier_t`, or an array thereof.
+* Another named barrier wrapper, or an array thereof.
 
 In C++, a class that inherits from a named barrier wrapper is also considered a
-named barrier wrapper. Named barrier wrappers must be standard-layout types
-(see `std::is_standard_layout`).
-This means that named barrier wrappers:
+named barrier wrapper, and all named barrier wrappers must be standard-layout
+types (see `std::is_standard_layout`). This means that named barrier wrappers:
 
 * May not have a virtual table: they cannot declare or inherit any virtual
   functions, or inherit from a virtual base class.
