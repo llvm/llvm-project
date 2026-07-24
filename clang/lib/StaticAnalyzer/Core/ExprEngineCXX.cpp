@@ -1114,8 +1114,7 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
   ProgramStateRef state = Pred->getState();
   state = state->bindLoc(state->getLValue(VD, SF), V, SF);
 
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-  Bldr.generateNode(CS, Pred, state);
+  Dst.insert(Engine.makePostStmtNode(CS, state, Pred));
 }
 
 void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
