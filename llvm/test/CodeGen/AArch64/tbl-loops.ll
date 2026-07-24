@@ -1321,10 +1321,8 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-LABEL: loop3_intrinsic:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs w8, w2, #1
-; CHECK-NEXT:    b.lt .LBB5_7
+; CHECK-NEXT:    b.lt .LBB5_6
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    b.ls .LBB5_3
 ; CHECK-NEXT:  // %bb.2: // %vector.memcheck
@@ -1334,7 +1332,7 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    add x9, x1, x9, lsl #2
 ; CHECK-NEXT:    cmp x10, x1
 ; CHECK-NEXT:    ccmp x9, x0, #0, hi
-; CHECK-NEXT:    b.ls .LBB5_8
+; CHECK-NEXT:    b.ls .LBB5_7
 ; CHECK-NEXT:  .LBB5_3:
 ; CHECK-NEXT:    mov w10, wzr
 ; CHECK-NEXT:    mov x8, x1
@@ -1370,11 +1368,9 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    stur b3, [x9, #2]
 ; CHECK-NEXT:    add x9, x9, #3
 ; CHECK-NEXT:    b.ne .LBB5_5
-; CHECK-NEXT:  .LBB5_6:
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:  .LBB5_7: // %for.cond.cleanup
+; CHECK-NEXT:  .LBB5_6: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB5_8: // %vector.ph
+; CHECK-NEXT:  .LBB5_7: // %vector.ph
 ; CHECK-NEXT:    add x11, x8, #1
 ; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
 ; CHECK-NEXT:    adrp x12, .LCPI5_0
@@ -1382,14 +1378,13 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:    ldr q1, [x12, :lo12:.LCPI5_0]
 ; CHECK-NEXT:    add x9, x10, x10, lsl #1
-; CHECK-NEXT:    add x12, sp, #8
-; CHECK-NEXT:    and x13, x11, #0x1fffffffc
+; CHECK-NEXT:    and x12, x11, #0x1fffffffc
 ; CHECK-NEXT:    add x8, x1, x9, lsl #2
 ; CHECK-NEXT:    add x9, x0, x9
-; CHECK-NEXT:  .LBB5_9: // %vector.body
+; CHECK-NEXT:  .LBB5_8: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld3 { v2.4s, v3.4s, v4.4s }, [x1], #48
-; CHECK-NEXT:    subs x13, x13, #4
+; CHECK-NEXT:    subs x12, x12, #4
 ; CHECK-NEXT:    fcmgt v5.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v6.4s, v3.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v7.4s, v4.4s, v0.4s
@@ -1408,16 +1403,13 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    xtn v5.4h, v3.4s
 ; CHECK-NEXT:    xtn v6.4h, v4.4s
 ; CHECK-NEXT:    xtn v7.4h, v2.4s
-; CHECK-NEXT:    st3 { v5.4h, v6.4h, v7.4h }, [x12]
-; CHECK-NEXT:    ldp d3, d4, [sp, #16]
-; CHECK-NEXT:    ldr d2, [sp, #8]
-; CHECK-NEXT:    tbl v2.16b, { v2.16b, v3.16b, v4.16b }, v1.16b
+; CHECK-NEXT:    tbl v2.16b, { v5.16b, v6.16b, v7.16b }, v1.16b
 ; CHECK-NEXT:    mov s3, v2.s[2]
 ; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    str s3, [x0, #8]
 ; CHECK-NEXT:    add x0, x0, #12
-; CHECK-NEXT:    b.ne .LBB5_9
-; CHECK-NEXT:  // %bb.10: // %middle.block
+; CHECK-NEXT:    b.ne .LBB5_8
+; CHECK-NEXT:  // %bb.9: // %middle.block
 ; CHECK-NEXT:    cmp x11, x10
 ; CHECK-NEXT:    b.ne .LBB5_4
 ; CHECK-NEXT:    b .LBB5_6
@@ -1596,47 +1588,43 @@ define void @loop4_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:  .LBB6_7: // %vector.ph
 ; CHECK-NEXT:    add x11, x8, #1
 ; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
+; CHECK-NEXT:    adrp x12, .LCPI6_0
 ; CHECK-NEXT:    and x10, x11, #0x1fffffffc
 ; CHECK-NEXT:    dup v0.4s, w8
-; CHECK-NEXT:    and x12, x11, #0x1fffffffc
+; CHECK-NEXT:    ldr q1, [x12, :lo12:.LCPI6_0]
 ; CHECK-NEXT:    add x8, x1, x10, lsl #4
 ; CHECK-NEXT:    add x9, x0, x10, lsl #2
+; CHECK-NEXT:    and x12, x11, #0x1fffffffc
 ; CHECK-NEXT:  .LBB6_8: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld4 { v1.4s, v2.4s, v3.4s, v4.4s }, [x1], #64
+; CHECK-NEXT:    ld4 { v2.4s, v3.4s, v4.4s, v5.4s }, [x1], #64
 ; CHECK-NEXT:    subs x12, x12, #4
-; CHECK-NEXT:    fcmgt v5.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fcmgt v6.4s, v4.4s, v0.4s
-; CHECK-NEXT:    fcmgt v7.4s, v1.4s, v0.4s
-; CHECK-NEXT:    fcmgt v16.4s, v3.4s, v0.4s
-; CHECK-NEXT:    fcmlt v17.4s, v1.4s, #0.0
+; CHECK-NEXT:    fcmgt v6.4s, v2.4s, v0.4s
+; CHECK-NEXT:    fcmgt v7.4s, v3.4s, v0.4s
+; CHECK-NEXT:    fcmgt v16.4s, v4.4s, v0.4s
+; CHECK-NEXT:    fcmgt v17.4s, v5.4s, v0.4s
 ; CHECK-NEXT:    fcmlt v18.4s, v2.4s, #0.0
-; CHECK-NEXT:    fcmlt v19.4s, v4.4s, #0.0
-; CHECK-NEXT:    bsl v5.16b, v0.16b, v2.16b
-; CHECK-NEXT:    bsl v6.16b, v0.16b, v4.16b
-; CHECK-NEXT:    bsl v7.16b, v0.16b, v1.16b
-; CHECK-NEXT:    bsl v16.16b, v0.16b, v3.16b
-; CHECK-NEXT:    fcmlt v1.4s, v3.4s, #0.0
-; CHECK-NEXT:    bic v2.16b, v5.16b, v18.16b
-; CHECK-NEXT:    bic v3.16b, v6.16b, v19.16b
-; CHECK-NEXT:    bic v4.16b, v7.16b, v17.16b
-; CHECK-NEXT:    bic v1.16b, v16.16b, v1.16b
-; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    fcmlt v19.4s, v3.4s, #0.0
+; CHECK-NEXT:    fcmlt v20.4s, v4.4s, #0.0
+; CHECK-NEXT:    bsl v6.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bsl v7.16b, v0.16b, v3.16b
+; CHECK-NEXT:    bsl v16.16b, v0.16b, v4.16b
+; CHECK-NEXT:    bsl v17.16b, v0.16b, v5.16b
+; CHECK-NEXT:    fcmlt v2.4s, v5.4s, #0.0
+; CHECK-NEXT:    bic v3.16b, v6.16b, v18.16b
+; CHECK-NEXT:    bic v4.16b, v7.16b, v19.16b
+; CHECK-NEXT:    bic v5.16b, v16.16b, v20.16b
+; CHECK-NEXT:    bic v2.16b, v17.16b, v2.16b
 ; CHECK-NEXT:    fcvtzs v3.4s, v3.4s
 ; CHECK-NEXT:    fcvtzs v4.4s, v4.4s
-; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NEXT:    xtn v2.4h, v2.4s
-; CHECK-NEXT:    xtn v3.4h, v3.4s
-; CHECK-NEXT:    xtn v4.4h, v4.4s
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    zip2 v5.4h, v2.4h, v3.4h
-; CHECK-NEXT:    zip1 v2.4h, v2.4h, v3.4h
-; CHECK-NEXT:    zip2 v6.4h, v4.4h, v1.4h
-; CHECK-NEXT:    zip1 v1.4h, v4.4h, v1.4h
-; CHECK-NEXT:    zip1 v3.8h, v6.8h, v5.8h
-; CHECK-NEXT:    zip1 v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    uzp1 v1.16b, v1.16b, v3.16b
-; CHECK-NEXT:    str q1, [x0], #16
+; CHECK-NEXT:    fcvtzs v5.4s, v5.4s
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    xtn v16.4h, v3.4s
+; CHECK-NEXT:    xtn v17.4h, v4.4s
+; CHECK-NEXT:    xtn v18.4h, v5.4s
+; CHECK-NEXT:    xtn v19.4h, v2.4s
+; CHECK-NEXT:    tbl v2.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v1.16b
+; CHECK-NEXT:    str q2, [x0], #16
 ; CHECK-NEXT:    b.ne .LBB6_8
 ; CHECK-NEXT:  // %bb.9: // %middle.block
 ; CHECK-NEXT:    cmp x11, x10
