@@ -5,7 +5,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:9: error: invalid operand for instruction
+# CHECK-MINUS: :[[@LINE+1]]:9: error: register must be a GPR
 qc.e.li 9, 33554432
 
 # CHECK-PLUS: :[[@LINE+2]]:11: error: too few operands for instruction

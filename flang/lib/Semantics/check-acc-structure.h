@@ -32,9 +32,13 @@ using AccClauseSet =
 
 namespace Fortran::semantics {
 
+template <>
+void IterateOverMembers(
+    const AccClauseSet &set, std::function<void(llvm::acc::Clause)> func);
+
 class AccStructureChecker
     : public DirectiveStructureChecker<llvm::acc::Directive, llvm::acc::Clause,
-          parser::AccClause, llvm::acc::Clause_enumSize> {
+          parser::AccClause, AccClauseSet> {
 public:
   AccStructureChecker(SemanticsContext &context)
       : DirectiveStructureChecker(context,
@@ -79,6 +83,7 @@ public:
   void Enter(const parser::DoConstruct &);
   void Leave(const parser::DoConstruct &);
   void Enter(const parser::CallStmt &);
+  void Enter(const parser::FunctionReference &);
 
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenACC/ACC.inc"
@@ -107,6 +112,7 @@ private:
   std::optional<std::int64_t> getGangDimensionSize(
       DirectiveContext &dirContext);
   void CheckNotInSameOrSubLevelLoopConstruct();
+  void CheckRoutineCallInLoop(const Symbol &);
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectList &, llvm::acc::Clause);
   void CheckMultipleOccurrenceInDeclare(

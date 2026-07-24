@@ -66,7 +66,7 @@ qc.ppreg x10, x2
 # CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.ppreg
 
-# CHECK-PLUS: :[[@LINE+1]]:10: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+1]]:10: error: register must be a GPR
 qc.ppreg 23
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
@@ -79,7 +79,7 @@ qc.pputc x7, x3
 # CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.pputc
 
-# CHECK-PLUS: :[[@LINE+1]]:10: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+1]]:10: error: register must be a GPR
 qc.pputc 34
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
@@ -92,7 +92,7 @@ qc.pputs x15, x18
 # CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.pputs
 
-# CHECK-PLUS: :[[@LINE+1]]:10: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+1]]:10: error: register must be a GPR
 qc.pputs 45
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
@@ -105,7 +105,7 @@ qc.pexit x26, x23
 # CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.pexit
 
-# CHECK-PLUS: :[[@LINE+1]]:10: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+1]]:10: error: register must be a GPR
 qc.pexit 78
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)
@@ -118,7 +118,7 @@ qc.psyscall x11, x5
 # CHECK-PLUS: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.psyscall
 
-# CHECK-PLUS: :[[@LINE+1]]:13: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+1]]:13: error: register must be a GPR
 qc.psyscall 98
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcisim' (Qualcomm uC Simulation Hint Extension)

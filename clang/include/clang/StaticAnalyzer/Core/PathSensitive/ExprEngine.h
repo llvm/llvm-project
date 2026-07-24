@@ -681,9 +681,6 @@ public:
                                       QualType ExTy, const CastExpr *CastE,
                                       NodeBuilder &Bldr, ExplodedNode *Pred);
 
-  void handleUOExtension(ExplodedNode *N, const UnaryOperator *U,
-                         NodeBuilder &Bldr);
-
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,
                  SVal LHS, SVal RHS, QualType T) {
@@ -843,8 +840,10 @@ private:
                     bool isLoad);
 
   /// Count the stack depth and determine if the call is recursive.
-  void examineStackFrames(const Decl *D, const StackFrame *SF,
-                          bool &IsRecursive, unsigned &StackDepth);
+  void
+  examineStackFrames(const Decl *D,
+                     llvm::iterator_range<StackFrame::parent_iterator> Frames,
+                     bool &IsRecursive, unsigned &StackDepth);
 
   enum CallInlinePolicy {
     CIP_Allowed,

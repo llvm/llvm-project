@@ -588,7 +588,10 @@ public:
   // Normally SVE is only used for byte size vectors that do not fit within a
   // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
   // used for 64bit and 128bit vectors as well.
-  bool useSVEForFixedLengthVectorVT(EVT VT, bool OverrideNEON = false) const;
+  // FIXME: AllowBF16 is used to incrementally enable SVE code generation for
+  // all the fixed-length vectors of bf16 and will be removed in the future.
+  bool useSVEForFixedLengthVectorVT(EVT VT, bool OverrideNEON = false,
+                                    bool AllowBF16 = false) const;
 
   // Follow NEON ABI rules even when using SVE for fixed length vectors.
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
@@ -807,6 +810,8 @@ private:
   SDValue LowerMSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
+
+  SDValue LowerFPToIntToSVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFixedLengthVectorIntDivideToSVE(SDValue Op,
                                                SelectionDAG &DAG) const;

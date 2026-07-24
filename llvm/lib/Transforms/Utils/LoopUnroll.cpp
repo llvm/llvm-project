@@ -1284,6 +1284,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // Loop over the PHI nodes in the original block, setting incoming values.
   for (PHINode *PN : OrigPHINode) {
     if (CompletelyUnroll) {
+      // The RAUW below disconnects the original PHI from its users.
+      // Invalidate cached SCEVs while the def-use chain is still intact.
+      if (SE)
+        SE->forgetValue(PN);
       PN->replaceAllUsesWith(PN->getIncomingValueForBlock(Preheader));
       PN->eraseFromParent();
     } else if (ULO.Count > 1) {
@@ -1715,10 +1719,17 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.hasUsesOutsideReductionChain())
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
-  // Skip unsupported reductions.
-  // TODO: Handle any-of and find-last reductions.
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindRecurrenceKind(RK))
+  static const auto ValidRKs = {
+      RecurKind::Add,         RecurKind::Mul,      RecurKind::Or,
+      RecurKind::And,         RecurKind::Xor,      RecurKind::SMin,
+      RecurKind::SMax,        RecurKind::UMin,     RecurKind::UMax,
+      RecurKind::FAdd,        RecurKind::FMul,     RecurKind::FMin,
+      RecurKind::FMax,        RecurKind::FMinNum,  RecurKind::FMaxNum,
+      RecurKind::FMinimum,    RecurKind::FMaximum, RecurKind::FMinimumNum,
+      RecurKind::FMaximumNum, RecurKind::FMulAdd};
+  // Skip unsupported reductions, including sub, any-of and find-last.
+  // TODO: Handle sub, any-of and find-last reductions.
+  if (!any_of(ValidRKs, equal_to(RK)))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
