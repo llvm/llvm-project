@@ -69,9 +69,9 @@ void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
 static std::string getRegionName(const MemRegion *Reg) {
   // FIXME: Once the checker supports heap allocation, more region kinds
   // should be handled to produce the correct descriptive name.
-  if (const std::string RegName = Reg->getDescriptiveName(); !RegName.empty())
+  if (const std::string &RegName = Reg->getDescriptiveName(); !RegName.empty())
     return RegName;
-  return "the region";
+  llvm_unreachable("unhandled region");
 }
 
 void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
