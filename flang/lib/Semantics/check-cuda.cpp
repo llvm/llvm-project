@@ -79,9 +79,14 @@ struct DeviceExprChecker
   using Base::operator();
   Result operator()(const evaluate::ProcedureDesignator &x) const {
     if (const Symbol * sym{x.GetInterfaceSymbol()}) {
+      const Symbol &ultimate{sym->GetUltimate()};
       const auto *subp{
-          sym->GetUltimate().detailsIf<semantics::SubprogramDetails>()};
+          ultimate.detailsIf<semantics::SubprogramDetails>()};
       if (subp) {
+        if (const auto &stmtFunction{subp->stmtFunction()};
+            stmtFunction && IsCUDADeviceContext(&ultimate.owner())) {
+          return (*this)(*stmtFunction);
+        }
         if (auto attrs{subp->cudaSubprogramAttrs()}) {
           if (*attrs == common::CUDASubprogramAttrs::HostDevice ||
               *attrs == common::CUDASubprogramAttrs::Device) {
@@ -103,7 +108,6 @@ struct DeviceExprChecker
         }
       }
 
-      const Symbol &ultimate{sym->GetUltimate()};
       const Scope &scope{ultimate.owner()};
       const Symbol *mod{scope.IsModule() ? scope.symbol() : nullptr};
       // Allow ieee_arithmetic module functions to be called on the device.
