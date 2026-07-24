@@ -473,7 +473,7 @@ struct InstrumentationOpportunity {
   /// may be disabled and will not be passed to the function call.
   SmallVector<IRTArg> IRTArgs;
 
-  /// Instruction flag names and their integer bitmask values.
+  /// Flag names and their integer bitmask values.
   StringMap<int32_t> FlagNames;
 
   /// Whether the opportunity is enabled.
