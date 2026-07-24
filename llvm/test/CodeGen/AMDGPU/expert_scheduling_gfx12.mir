@@ -5,7 +5,6 @@
 ---
 # Make sure we don't output expert mode waitcnts with amdgpu-waitcnt-forcezero flag if hazard mode isn't enabled,
 # otherwise it will cause an assert.
-# CHECK-LABEL: name: raw_exp
 
 name:            raw_exp
 body:             |
@@ -24,6 +23,39 @@ body:             |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: EXP_DONE 15, $vgpr3, $vgpr2, $vgpr1, $vgpr0, 0, 0, 1, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
+    ;
+    ; CHECK-LABEL: name: raw_exp
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 1082130432, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 1073741824, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 1065353216, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr3 = V_MOV_B32_e32 1056964608, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: EXP_DONE 15, $vgpr3, $vgpr2, $vgpr1, $vgpr0, 0, 0, 1, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
     $vgpr0 = V_MOV_B32_e32 1082130432, implicit $exec
     $vgpr1 = V_MOV_B32_e32 1073741824, implicit $exec
     $vgpr2 = V_MOV_B32_e32 1065353216, implicit $exec
@@ -62,6 +94,53 @@ body:             |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ;
+    ; CHECK-LABEL: name: raw_vmem
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr3, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr2, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr1, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr3, implicit $mode, implicit $exec
@@ -100,6 +179,47 @@ body:             |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ;
+    ; CHECK-LABEL: name: war_lds
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr5, $vgpr0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr6, $vgpr1, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 $vgpr7, $vgpr2, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e32 $vgpr8, $vgpr3, implicit $mode, implicit $exec
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr5, $vgpr0, implicit $mode, implicit $exec
@@ -137,6 +257,42 @@ body:             |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ;
+    ; CHECK-LABEL: name: war_tex
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr5 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: DS_WRITE_B128_gfx9 $vgpr5, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, implicit $exec :: (store (s128), addrspace 3)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT 0
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $exec
     $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
@@ -173,6 +329,53 @@ body:             |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ;
+    ; CHECK-LABEL: name: war_valu
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr5, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr6, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr7, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr8, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr5_vgpr6_vgpr7_vgpr8, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit $exec
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr4 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr5, implicit $mode, implicit $exec
     $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr6, implicit $mode, implicit $exec
@@ -212,6 +415,53 @@ body:             |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ;
+    ; CHECK-LABEL: name: war_vmem
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr3, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr2, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr1, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr3, implicit $mode, implicit $exec
@@ -250,6 +500,47 @@ body:             |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ;
+    ; CHECK-LABEL: name: waw_vmem
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr7, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr6, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr5, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr4, implicit $mode, implicit $exec
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr7, implicit $mode, implicit $exec
@@ -276,6 +567,32 @@ body: |
     ; GCN-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr1, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_1
     ; GCN-NEXT: $vgpr4 = SCRATCH_LOAD_UBYTE_SVS $vgpr2, $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ;
+    ; CHECK-LABEL: name: raw_valu_scratch
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4 = SCRATCH_LOAD_UBYTE_SVS $vgpr2, $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
     $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 $vgpr1, implicit $exec
@@ -296,6 +613,26 @@ body: |
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ;
+    ; CHECK-LABEL: name: valu_depctr_valu
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_1_VmVsrc_1
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
     S_WAITCNT_DEPCTR .VmVsrc_1_VaVdst_1
     $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -320,6 +657,28 @@ body: |
     ; GCN-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ;
+    ; CHECK-LABEL: name: test_xdl_csmacc_ooo_completion
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
     $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
@@ -344,6 +703,28 @@ body: |
     ; GCN-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ;
+    ; CHECK-LABEL: name: test_dpmacc_csmacc_ooo_completion
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr11, $vgpr18
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0_vgpr1 = V_FRACT_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0_vgpr1 = V_FRACT_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
     $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
@@ -368,6 +749,28 @@ body: |
     ; GCN-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ;
+    ; CHECK-LABEL: name: test_trans_csmacc_ooo_completion
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr11, $vgpr18
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = V_SQRT_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0 = V_SQRT_F32_e32 $vgpr0, implicit $exec, implicit $mode
     $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
@@ -392,6 +795,28 @@ body: |
     ; GCN-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_1
     ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ;
+    ; CHECK-LABEL: name: test_csmacc_csmacc_io_completion
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr11, $vgpr18
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = V_ADD_F32_e32 244, $vgpr0, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0 = V_ADD_F32_e32 244, $vgpr0, implicit $exec, implicit $mode
     $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
@@ -416,6 +841,28 @@ body: |
     ; GCN-NEXT: $vgpr4_vgpr5 = V_TRUNC_F64_e32 $vgpr2_vgpr3, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_1
     ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ;
+    ; CHECK-LABEL: name: test_dpmacc_dpmacc_io_completion
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr18
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0_vgpr1 = V_FRACT_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4_vgpr5 = V_TRUNC_F64_e32 $vgpr2_vgpr3, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0_vgpr1 = V_FRACT_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
     $vgpr4_vgpr5 = V_TRUNC_F64_e32 $vgpr2_vgpr3, implicit $exec, implicit $mode
     IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
@@ -440,6 +887,28 @@ body: |
     ; GCN-NEXT: $vgpr8 = V_LOG_F32_e32 $vgpr11, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_1
     ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ;
+    ; CHECK-LABEL: name: test_trans_trans_io_completion
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr11, $vgpr18
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = V_SQRT_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr8 = V_LOG_F32_e32 $vgpr11, implicit $exec, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0 = V_SQRT_F32_e32 $vgpr0, implicit $exec, implicit $mode
     $vgpr8 = V_LOG_F32_e32 $vgpr11, implicit $exec, implicit $mode
     IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
@@ -464,6 +933,28 @@ body: |
     ; GCN-NEXT: early-clobber $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_1
     ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ;
+    ; CHECK-LABEL: name: test_xdl_xdl_io_completion
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_vgpr11_vgpr12_vgpr13, 8, $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: early-clobber $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_vgpr11_vgpr12_vgpr13, 8, $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
     $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26, 0, 0, implicit $exec
     IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
@@ -494,6 +985,35 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
+    ;
+    ; CHECK-LABEL: name: test_war_vmvsrc_vmem_vmem_io
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr8_vgpr9_vgpr10_vgpr11 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
     $vgpr8_vgpr9_vgpr10_vgpr11 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
@@ -527,6 +1047,35 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr6, $vgpr7
+    ;
+    ; CHECK-LABEL: name: test_war_vmvsrc_flat_flat_io
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr5 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 $vgpr2, $vgpr3, implicit $mode, implicit $exec
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr6, $vgpr7
     $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr5 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
@@ -560,6 +1109,35 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
+    ;
+    ; CHECK-LABEL: name: test_war_vmvsrc_lds_lds_io
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr8_vgpr9_vgpr10_vgpr11 = DS_READ_B128_gfx9 $vgpr0, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
     $vgpr8_vgpr9_vgpr10_vgpr11 = DS_READ_B128_gfx9 $vgpr0, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
@@ -592,6 +1170,35 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
+    ;
+    ; CHECK-LABEL: name: test_war_vmvsrc_vmem_lds_ooo
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr8_vgpr9_vgpr10_vgpr11 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
     $vgpr8_vgpr9_vgpr10_vgpr11 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
@@ -624,6 +1231,35 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr1, $vgpr2
+    ;
+    ; CHECK-LABEL: name: test_war_vmvsrc_flat_lds_ooo
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr8 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr2, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 $vgpr2, $vgpr2, implicit $mode, implicit $exec
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr1, $vgpr2
     $vgpr8 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr2, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
@@ -656,6 +1292,35 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr1, $vgpr2
+    ;
+    ; CHECK-LABEL: name: test_war_vmvsrc_flat_vmem_ooo
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr8 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 $vgpr2, $vgpr2, implicit $mode, implicit $exec
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr1, $vgpr2
     $vgpr8 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
@@ -682,6 +1347,26 @@ body: |
     ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    ;
+    ; CHECK-LABEL: name: test_war_completed_vmem
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 100, 0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 100, 0, implicit $exec
     $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -709,6 +1394,22 @@ body: |
     ; GCN-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_vgpr11_vgpr12_vgpr13, 8, $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = DS_READ_B128_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ;
+    ; CHECK-LABEL: name: test_valu_src_war_hazard_ds_load
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr20
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_vgpr11_vgpr12_vgpr13, 8, $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = DS_READ_B128_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_vgpr11_vgpr12_vgpr13, 8, $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
     $vgpr14_vgpr15_vgpr16_vgpr17 = DS_READ_B128_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s128), addrspace 3)
 ...
@@ -734,6 +1435,28 @@ body: |
     ; GCN-NEXT: $vgpr5 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr1_vgpr2_vgpr3_vgpr4 = DS_READ_B128_gfx9 $vgpr10, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ;
+    ; CHECK-LABEL: name: test_regular_valu_src_war_hazard
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr5 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_EXPCNT 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT 0
+    ; CHECK-NEXT: S_WAIT_BVHCNT 0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr1_vgpr2_vgpr3_vgpr4 = DS_READ_B128_gfx9 $vgpr10, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     $vgpr5 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr0, implicit $mode, implicit $exec
     $vgpr1_vgpr2_vgpr3_vgpr4 = DS_READ_B128_gfx9 $vgpr10, 0, 0, implicit $exec :: (load (s128), addrspace 3)

@@ -197,10 +197,15 @@ public:
   // needed. It may also remove existing instructions for which a wait
   // is needed if it can be determined that it is better to generate new
   // instructions later, as can happen on gfx12.
-  virtual bool
-  applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
-                          MachineInstr &OldWaitcntInstr, AMDGPU::Waitcnt &Wait,
-                          MachineBasicBlock::instr_iterator It) const = 0;
+  //
+  // If AllowWaitDeletion is false, soft waits will not be deleted even
+  // if they appear redundant. This is used when not all predecessor states
+  // have been seen yet (e.g., loop headers on first visit before back-edge).
+  virtual bool applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
+                                       MachineInstr &OldWaitcntInstr,
+                                       AMDGPU::Waitcnt &Wait,
+                                       MachineBasicBlock::instr_iterator It,
+                                       bool AllowWaitDeletion = true) const = 0;
 
   // Transform a soft waitcnt into a normal one.
   bool promoteSoftWaitCnt(MachineInstr *Waitcnt) const;
@@ -259,10 +264,11 @@ class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
 
 public:
   using WaitcntGenerator::WaitcntGenerator;
-  bool
-  applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
-                          MachineInstr &OldWaitcntInstr, AMDGPU::Waitcnt &Wait,
-                          MachineBasicBlock::instr_iterator It) const override;
+  bool applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
+                               MachineInstr &OldWaitcntInstr,
+                               AMDGPU::Waitcnt &Wait,
+                               MachineBasicBlock::instr_iterator It,
+                               bool AllowWaitDeletion = true) const override;
 
   bool createNewWaitcnt(MachineBasicBlock &Block,
                         MachineBasicBlock::instr_iterator It,
@@ -313,10 +319,11 @@ public:
                             bool IsExpertMode)
       : WaitcntGenerator(MF, MaxCounter, Limits), IsExpertMode(IsExpertMode) {}
 
-  bool
-  applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
-                          MachineInstr &OldWaitcntInstr, AMDGPU::Waitcnt &Wait,
-                          MachineBasicBlock::instr_iterator It) const override;
+  bool applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
+                               MachineInstr &OldWaitcntInstr,
+                               AMDGPU::Waitcnt &Wait,
+                               MachineBasicBlock::instr_iterator It,
+                               bool AllowWaitDeletion = true) const override;
 
   bool createNewWaitcnt(MachineBasicBlock &Block,
                         MachineBasicBlock::instr_iterator It,
@@ -347,6 +354,9 @@ class SIInsertWaitcnts {
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
     bool Dirty = true;
+    // Track which predecessors have contributed to Incoming state.
+    // Used to determine if we've seen all paths before optimizing soft waits.
+    SmallPtrSet<MachineBasicBlock *, 4> SeenPredecessors;
     BlockInfo() = default;
     BlockInfo(BlockInfo &&) = default;
     BlockInfo &operator=(BlockInfo &&) = default;
@@ -432,11 +442,13 @@ public:
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr,
-                                 PreheaderFlushFlags FlushFlags);
+                                 PreheaderFlushFlags FlushFlags,
+                                 bool AllowWaitDeletion = true);
   bool generateWaitcnt(AMDGPU::Waitcnt Wait,
                        MachineBasicBlock::instr_iterator It,
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
-                       MachineInstr *OldWaitcntInstr);
+                       MachineInstr *OldWaitcntInstr,
+                       bool AllowWaitDeletion = true);
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
   bool isNextENDPGM(MachineBasicBlock::instr_iterator It,
@@ -444,7 +456,8 @@ public:
   bool insertForcedWaitAfter(MachineInstr &Inst, MachineBasicBlock &Block,
                              WaitcntBrackets &ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
-                            WaitcntBrackets &ScoreBrackets);
+                            WaitcntBrackets &ScoreBrackets,
+                            bool AllowWaitDeletion = true);
   /// Removes redundant Soft Xcnt Waitcnts in \p Block emitted by the Memory
   /// Legalizer. Returns true if block was modified.
   bool removeRedundantSoftXcnts(MachineBasicBlock &Block);
@@ -545,11 +558,13 @@ public:
   bool merge(const WaitcntBrackets &Other);
 
   bool counterOutOfOrder(AMDGPU::InstCounterType T) const;
-  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
-    simplifyWaitcnt(Wait, Wait);
+  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait,
+                       bool UseImpliedWait = true) const {
+    simplifyWaitcnt(Wait, Wait, UseImpliedWait);
   }
   void simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
-                       AMDGPU::Waitcnt &UpdateWait) const;
+                       AMDGPU::Waitcnt &UpdateWait,
+                       bool UseImpliedWait = true) const;
   void simplifyWaitcnt(AMDGPU::InstCounterType T, unsigned &Count) const;
   void simplifyWaitcnt(AMDGPU::Waitcnt &Wait, AMDGPU::InstCounterType T) const;
   void simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
@@ -1260,7 +1275,8 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
 /// Simplify \p UpdateWait by removing waits that are redundant based on the
 /// current WaitcntBrackets and any other waits specified in \p CheckWait.
 void WaitcntBrackets::simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
-                                      AMDGPU::Waitcnt &UpdateWait) const {
+                                      AMDGPU::Waitcnt &UpdateWait,
+                                      bool UseImpliedWait) const {
   simplifyWaitcnt(UpdateWait, AMDGPU::LOAD_CNT);
   simplifyWaitcnt(UpdateWait, AMDGPU::EXP_CNT);
   simplifyWaitcnt(UpdateWait, AMDGPU::DS_CNT);
@@ -1268,10 +1284,12 @@ void WaitcntBrackets::simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
   simplifyWaitcnt(UpdateWait, AMDGPU::SAMPLE_CNT);
   simplifyWaitcnt(UpdateWait, AMDGPU::BVH_CNT);
   simplifyWaitcnt(UpdateWait, AMDGPU::KM_CNT);
-  simplifyXcnt(CheckWait, UpdateWait);
+  if (UseImpliedWait)
+    simplifyXcnt(CheckWait, UpdateWait);
   simplifyWaitcnt(UpdateWait, AMDGPU::VA_VDST_RD);
   simplifyWaitcnt(UpdateWait, AMDGPU::VA_VDST_WR);
-  simplifyVmVsrc(CheckWait, UpdateWait);
+  if (UseImpliedWait)
+    simplifyVmVsrc(CheckWait, UpdateWait);
   simplifyWaitcnt(UpdateWait, AMDGPU::ASYNC_CNT);
 }
 
@@ -1638,7 +1656,8 @@ bool WaitcntGenerator::promoteSoftWaitCnt(MachineInstr *Waitcnt) const {
 /// correctness.
 bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     WaitcntBrackets &ScoreBrackets, MachineInstr &OldWaitcntInstr,
-    AMDGPU::Waitcnt &Wait, MachineBasicBlock::instr_iterator It) const {
+    AMDGPU::Waitcnt &Wait, MachineBasicBlock::instr_iterator It,
+    bool AllowWaitDeletion) const {
   assert(isNormalMode(MaxCounter));
 
   bool Modified = false;
@@ -1662,6 +1681,10 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     }
 
     unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
+    // TODO -- is this handled correctly in cases where we have predecessors
+    // which have not yet been visited (i.e. loops). In other words, are
+    // we prematurely deleting required soft waits? See
+    // WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt
     bool TrySimplify = Opcode != II.getOpcode() && !OptNone;
 
     // Update required wait count. If this is a soft waitcnt (= it was added
@@ -1873,7 +1896,8 @@ WaitcntGeneratorGFX12Plus::getAllZeroWaitcnt(bool IncludeVSCnt) const {
 /// assumes that these preexisting waits are required for correctness.
 bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     WaitcntBrackets &ScoreBrackets, MachineInstr &OldWaitcntInstr,
-    AMDGPU::Waitcnt &Wait, MachineBasicBlock::instr_iterator It) const {
+    AMDGPU::Waitcnt &Wait, MachineBasicBlock::instr_iterator It,
+    bool AllowWaitDeletion) const {
   assert(!isNormalMode(MaxCounter));
 
   bool Modified = false;
@@ -1903,7 +1927,6 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
 
     // Update required wait count. If this is a soft waitcnt (= it was added
     // by an earlier pass), it may be entirely removed.
-
     unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
     bool TrySimplify = Opcode != II.getOpcode() && !OptNone;
 
@@ -1951,9 +1974,10 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       OldWait.set(AMDGPU::VA_VDST_RD, VaVdst);
       OldWait.set(AMDGPU::VA_VDST_WR, VaVdst);
       OldWait.set(AMDGPU::VM_VSRC, AMDGPU::DepCtr::decodeFieldVmVsrc(OldEnc));
-      if (TrySimplify)
-        ScoreBrackets.simplifyWaitcnt(OldWait);
+
+      assert(!TrySimplify);
       Wait = Wait.combined(OldWait);
+
       if (WaitcntDepctrInstr == nullptr) {
         WaitcntDepctrInstr = &II;
       } else {
@@ -2010,6 +2034,40 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     }
   }
 
+  // Simplify Wait based on the combined waits. Note that we need to take care
+  // when using soft waits in our simplifications. In cases with loops, we may
+  // not have visited all predecessor edges of the block. The three possible
+  // states for a soft wait are: 1. it is required based on events from already
+  // visited predeccesors, 2. it is not required based on events from already
+  // visited predecesors, but is required after adding events from non-visited
+  // predecessors, or 3. it is not required based on events from already visited
+  // predecessors, and will not be required after adding events from non-visited
+  // predecessors.
+
+  // In case 1, we simply promote the soft wait to a regular wait. It will not
+  // be simplified by either call to simplifyWaitcnt. Since it is not simplified
+  // by the first call, it will be used to do implied wait simplifications in
+  // the second call. Then, given it is not simplified out and there is a
+  // meaningful wait, we will promote it.
+
+  // In case 2, we must simplify the soft wait out before using `Wait` for
+  // implied simplifications. For example, a S_WAIT_DSCNT_soft 0 will manifest
+  // as a 0 wait DS_CNT in `Wait`. If we use this (combined with RequiredWait)
+  // as the CheckWait in simplifyWaitcnt, we may have a case where we infer that
+  // a wait vm_vsrc is not required since the dscnt wait will cover all the
+  // oustanding events. However, since it is not a provably required soft wait
+  // we may end up deleting it, resulting in an incorrect implied
+  // simplification. Thus, we first do non-implied wait simplifications, to
+  // simplify out irrelevant softwaits, then use the simplified output to do
+  // implied simplifications. After simplifying in this way, the non provably
+  // required soft wait will not have a meaningful wait in the `Wait` Waitcnt,
+  // thus it will not be promoted. However, since we have not visited all
+  // predecessors we also do not delete it as we may find it is required later.
+
+  // In case 3, we handle the simpifications in the same way as case 2. The only
+  // difference is that when we reach the promote/delete decision, we recognize
+  // we have visited all the predecessor, so it is okay to remove the soft wait.
+  ScoreBrackets.simplifyWaitcnt(Wait, false);
   ScoreBrackets.simplifyWaitcnt(Wait.combined(RequiredWait), Wait);
   Wait = Wait.combined(RequiredWait);
 
@@ -2126,8 +2184,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
                               << "Old Instr: " << *It
                               << "New Instr: " << *WaitInstrs[CT] << '\n');
     } else {
-      WaitInstrs[CT]->eraseFromParent();
-      Modified = true;
+      if (AllowWaitDeletion) {
+        // Only delete waits if we've seen all predecessor states.
+        // Otherwise, keep them - they may become necessary after considering
+        // other edges.
+        WaitInstrs[CT]->eraseFromParent();
+        Modified = true;
+      }
     }
   }
 
@@ -2293,9 +2356,11 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
 ///  If FlushFlags.FlushVmCnt is true, we want to flush the vmcnt counter here.
 ///  If FlushFlags.FlushDsCnt is true, we want to flush the dscnt counter here
 ///  (GFX12+ only, where DS_CNT is a separate counter).
-bool SIInsertWaitcnts::generateWaitcntInstBefore(
-    MachineInstr &MI, WaitcntBrackets &ScoreBrackets,
-    MachineInstr *OldWaitcntInstr, PreheaderFlushFlags FlushFlags) {
+bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
+                                                 WaitcntBrackets &ScoreBrackets,
+                                                 MachineInstr *OldWaitcntInstr,
+                                                 PreheaderFlushFlags FlushFlags,
+                                                 bool AllowWaitDeletion) {
   LLVM_DEBUG(dbgs() << "\n*** GenerateWaitcntInstBefore: "; MI.print(dbgs()););
 
   assert(!isNonWaitcntMetaInst(MI));
@@ -2601,21 +2666,22 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     Wait.set(AMDGPU::LOAD_CNT, 0);
 
   return generateWaitcnt(Wait, MI.getIterator(), *MI.getParent(), ScoreBrackets,
-                         OldWaitcntInstr);
+                         OldWaitcntInstr, AllowWaitDeletion);
 }
 
 bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
                                        MachineBasicBlock::instr_iterator It,
                                        MachineBasicBlock &Block,
                                        WaitcntBrackets &ScoreBrackets,
-                                       MachineInstr *OldWaitcntInstr) {
+                                       MachineInstr *OldWaitcntInstr,
+                                       bool AllowWaitDeletion) {
   bool Modified = false;
 
   if (OldWaitcntInstr)
     // Try to merge the required wait with preexisting waitcnt instructions.
     // Also erase redundant waitcnt.
-    Modified =
-        WCG->applyPreexistingWaitcnt(ScoreBrackets, *OldWaitcntInstr, Wait, It);
+    Modified = WCG->applyPreexistingWaitcnt(ScoreBrackets, *OldWaitcntInstr,
+                                            Wait, It, AllowWaitDeletion);
 
   // ExpCnt can be merged into VINTERP.
   if (Wait.get(AMDGPU::EXP_CNT) != ~0u && It != Block.instr_end() &&
@@ -3043,7 +3109,8 @@ public:
 // Generate s_waitcnt instructions where needed.
 bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                             MachineBasicBlock &Block,
-                                            WaitcntBrackets &ScoreBrackets) {
+                                            WaitcntBrackets &ScoreBrackets,
+                                            bool AllowWaitDeletion) {
   bool Modified = false;
 
   LLVM_DEBUG({
@@ -3079,7 +3146,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // Generate an s_waitcnt instruction to be placed before Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr,
-                                          FlushFlags);
+                                          FlushFlags, AllowWaitDeletion);
     OldWaitcntInstr = nullptr;
 
     if (Inst.getOpcode() == AMDGPU::ASYNCMARK) {
@@ -3555,8 +3622,31 @@ bool SIInsertWaitcnts::run() {
 
       if (ST.hasWaitXcnt())
         Modified |= removeRedundantSoftXcnts(*MBB);
-      Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
+      // Only allow soft wait deletion if we've seen all reachable predecessors.
+      // This prevents premature deletion on the first pass through loop headers
+      // before back-edge state is known. We only count predecessors that are
+      // in BlockInfos (i.e., reachable via RPO traversal) to avoid infinite
+      // loops when unreachable blocks exist.
+      unsigned ReachablePredCount = 0;
+      for (MachineBasicBlock *Pred : MBB->predecessors()) {
+        if (BlockInfos.count(Pred))
+          ++ReachablePredCount;
+      }
+      bool AllowWaitDeletion = BI.SeenPredecessors.size() >= ReachablePredCount;
+      Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets, AllowWaitDeletion);
       BI.Dirty = false;
+      if (!AllowWaitDeletion) {
+        BI.Dirty = true;
+        Repeat = true;
+      }
+
+      // Track that this predecessor has been processed for all successors,
+      // regardless of whether it has pending events. This ensures
+      // AllowWaitDeletion is only true when we've truly seen all predecessors.
+      for (MachineBasicBlock *Succ : MBB->successors()) {
+        BlockInfo &SuccBI = BlockInfos.find(Succ)->second;
+        SuccBI.SeenPredecessors.insert(MBB);
+      }
 
       if (Brackets->hasPendingEvent()) {
         BlockInfo *MoveBracketsToSucc = nullptr;
