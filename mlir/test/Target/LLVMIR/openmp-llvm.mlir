@@ -769,6 +769,7 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   omp.simd linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       llvm.store %iv, %x : i32, !llvm.ptr
+      llvm.store %iv, %x : i32, !llvm.ptr
       omp.yield
     }
   } {linear_var_types = [i32]}

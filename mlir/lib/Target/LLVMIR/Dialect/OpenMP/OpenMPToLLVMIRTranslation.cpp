@@ -207,7 +207,7 @@ public:
       if (auto storeOp = dyn_cast<LLVM::StoreOp>(user)) {
         for (Value linearVar : simdOp.getLinearVars()) {
           if (linearVar == storeOp.getAddr()) {
-            if (linearLoopIV)
+            if (linearLoopIV && linearLoopIV != linearVar)
               return simdOp.emitError(
                   "Could not determine the linear variable associated with the "
                   "loop nest induction variable");
