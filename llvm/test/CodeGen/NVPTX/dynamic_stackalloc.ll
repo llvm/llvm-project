@@ -4,6 +4,7 @@
 
 ; RUN: llc < %s -mtriple=nvptx -mattr=+ptx73 -mcpu=sm_52 | FileCheck %s --check-prefixes=CHECK-32
 ; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | FileCheck %s --check-prefixes=CHECK-64
+; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 --nvptx-short-ptr | FileCheck %s --check-prefixes=CHECK-MIXED
 ; RUN: %if ptxas-isa-7.3 && ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
 ; RUN: %if ptxas-isa-7.3 %{ llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
 
@@ -50,6 +51,28 @@ define i32 @test_dynamic_stackalloc(i64 %n) {
 ; CHECK-64-NEXT:    } // callseq 0
 ; CHECK-64-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-64-NEXT:    ret;
+;
+; CHECK-MIXED-LABEL: test_dynamic_stackalloc(
+; CHECK-MIXED:       {
+; CHECK-MIXED-NEXT:    .reg .b32 %r<6>;
+; CHECK-MIXED-NEXT:    .reg .b64 %rd<3>;
+; CHECK-MIXED-EMPTY:
+; CHECK-MIXED-NEXT:  // %bb.0:
+; CHECK-MIXED-NEXT:    ld.param.b32 %r1, [test_dynamic_stackalloc_param_0];
+; CHECK-MIXED-NEXT:    add.s32 %r2, %r1, 7;
+; CHECK-MIXED-NEXT:    and.b32 %r3, %r2, -8;
+; CHECK-MIXED-NEXT:    alloca.u32 %r4, %r3, 16;
+; CHECK-MIXED-NEXT:    cvt.u64.u32 %rd1, %r4;
+; CHECK-MIXED-NEXT:    cvta.local.u64 %rd2, %rd1;
+; CHECK-MIXED-NEXT:    { // callseq 0, 0
+; CHECK-MIXED-NEXT:    .param .b64 param0;
+; CHECK-MIXED-NEXT:    .param .b32 retval0;
+; CHECK-MIXED-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-MIXED-NEXT:    call.uni (retval0), bar, (param0);
+; CHECK-MIXED-NEXT:    ld.param.b32 %r5, [retval0];
+; CHECK-MIXED-NEXT:    } // callseq 0
+; CHECK-MIXED-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-MIXED-NEXT:    ret;
   %alloca = alloca i8, i64 %n, align 16
   %call = call i32 @bar(ptr %alloca)
   ret i32 %call
@@ -84,6 +107,20 @@ define float @test_dynamic_stackalloc_unaligned(i64 %0) {
 ; CHECK-64-NEXT:    ld.local.b32 %r1, [%rd5];
 ; CHECK-64-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-64-NEXT:    ret;
+;
+; CHECK-MIXED-LABEL: test_dynamic_stackalloc_unaligned(
+; CHECK-MIXED:       {
+; CHECK-MIXED-NEXT:    .reg .b32 %r<7>;
+; CHECK-MIXED-EMPTY:
+; CHECK-MIXED-NEXT:  // %bb.0:
+; CHECK-MIXED-NEXT:    ld.param.b32 %r1, [test_dynamic_stackalloc_unaligned_param_0];
+; CHECK-MIXED-NEXT:    shl.b32 %r2, %r1, 2;
+; CHECK-MIXED-NEXT:    add.s32 %r3, %r2, 7;
+; CHECK-MIXED-NEXT:    and.b32 %r4, %r3, -8;
+; CHECK-MIXED-NEXT:    alloca.u32 %r5, %r4, 8;
+; CHECK-MIXED-NEXT:    ld.local.b32 %r6, [%r5];
+; CHECK-MIXED-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-MIXED-NEXT:    ret;
   %4 = alloca float, i64 %0, align 4
   %5 = getelementptr float, ptr %4, i64 0
   %6 = load float, ptr %5, align 4

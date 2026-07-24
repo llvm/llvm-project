@@ -110,9 +110,9 @@ define i32 @leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-addr
 ; COMPAT-LABEL: leaf_sign_all:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:  .Ltmp0:
 ; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp0
 ; COMPAT-NEXT:    adrp x16, .Ltmp0
 ; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp0
 ; COMPAT-NEXT:    hint #39
@@ -122,9 +122,9 @@ define i32 @leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-addr
 ; V83A-LABEL: leaf_sign_all:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:  .Ltmp0:
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp0
 ; V83A-NEXT:    adrp x16, .Ltmp0
 ; V83A-NEXT:    add x16, x16, :lo12:.Ltmp0
 ; V83A-NEXT:    hint #39
@@ -132,9 +132,9 @@ define i32 @leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-addr
 ;
 ; PAUTHLR-LABEL: leaf_sign_all:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp0:
 ; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp0
 ; PAUTHLR-NEXT:    retaasppc .Ltmp0
 ;
 ; CFISET-COMPAT-LABEL: leaf_sign_all:
@@ -196,9 +196,9 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
 ; COMPAT-LABEL: leaf_clobbers_lr:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:  .Ltmp1:
 ; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp1
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
@@ -215,9 +215,9 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
 ; V83A-LABEL: leaf_clobbers_lr:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:  .Ltmp1:
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp1
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
@@ -232,9 +232,9 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
 ;
 ; PAUTHLR-LABEL: leaf_clobbers_lr:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp1:
 ; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp1
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
@@ -341,9 +341,9 @@ define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ; COMPAT-LABEL: non_leaf_sign_all:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:  .Ltmp2:
 ; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp2
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
@@ -358,9 +358,9 @@ define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ; V83A-LABEL: non_leaf_sign_all:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:  .Ltmp2:
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp2
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
@@ -373,9 +373,9 @@ define i32 @non_leaf_sign_all(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ;
 ; PAUTHLR-LABEL: non_leaf_sign_all:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp2:
 ; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp2
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
@@ -468,9 +468,9 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
 ; COMPAT-LABEL: non_leaf_sign_non_leaf:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:  .Ltmp3:
 ; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp3
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
@@ -485,9 +485,9 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
 ; V83A-LABEL: non_leaf_sign_non_leaf:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:  .Ltmp3:
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp3
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
@@ -500,9 +500,9 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "branch-protection-pauth-lr" "sign-re
 ;
 ; PAUTHLR-LABEL: non_leaf_sign_non_leaf:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp3:
 ; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp3
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
@@ -596,9 +596,9 @@ define i32 @non_leaf_scs(i32 %x) "branch-protection-pauth-lr" "sign-return-addre
 ; CHECK-LABEL: non_leaf_scs:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    hint #39
-; CHECK-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    paciasp
+; CHECK-NEXT:    .cfi_set_ra_state 2, .Ltmp4
 ; CHECK-NEXT:    str x30, [x18], #8
 ; CHECK-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -615,9 +615,9 @@ define i32 @non_leaf_scs(i32 %x) "branch-protection-pauth-lr" "sign-return-addre
 ;
 ; PAUTHLR-LABEL: non_leaf_scs:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp4:
 ; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp4
 ; PAUTHLR-NEXT:    str x30, [x18], #8
 ; PAUTHLR-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -692,9 +692,9 @@ define i32 @leaf_sign_all_v83(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ; CHECK-LABEL: leaf_sign_all_v83:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    hint #39
-; CHECK-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-NEXT:  .Ltmp5:
 ; CHECK-NEXT:    paciasp
+; CHECK-NEXT:    .cfi_set_ra_state 2, .Ltmp5
 ; CHECK-NEXT:    adrp x16, .Ltmp5
 ; CHECK-NEXT:    add x16, x16, :lo12:.Ltmp5
 ; CHECK-NEXT:    hint #39
@@ -702,9 +702,9 @@ define i32 @leaf_sign_all_v83(i32 %x) "branch-protection-pauth-lr" "sign-return-
 ;
 ; PAUTHLR-LABEL: leaf_sign_all_v83:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp5:
 ; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp5
 ; PAUTHLR-NEXT:    retaasppc .Ltmp5
 ;
 ; CFISET-CHECK-LABEL: leaf_sign_all_v83:
@@ -744,9 +744,9 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
 ; COMPAT-LABEL: spill_lr_and_tail_call:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:  .Ltmp6:
 ; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp6
 ; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
@@ -763,9 +763,9 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
 ; V83A-LABEL: spill_lr_and_tail_call:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:  .Ltmp6:
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp6
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
@@ -781,9 +781,9 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
 ;
 ; PAUTHLR-LABEL: spill_lr_and_tail_call:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp6:
 ; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp6
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
@@ -893,9 +893,9 @@ define i32 @leaf_sign_all_a_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ; COMPAT-LABEL: leaf_sign_all_a_key:
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:  .Ltmp7:
 ; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp7
 ; COMPAT-NEXT:    adrp x16, .Ltmp7
 ; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp7
 ; COMPAT-NEXT:    hint #39
@@ -905,9 +905,9 @@ define i32 @leaf_sign_all_a_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ; V83A-LABEL: leaf_sign_all_a_key:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:  .Ltmp7:
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp7
 ; V83A-NEXT:    adrp x16, .Ltmp7
 ; V83A-NEXT:    add x16, x16, :lo12:.Ltmp7
 ; V83A-NEXT:    hint #39
@@ -915,9 +915,9 @@ define i32 @leaf_sign_all_a_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ;
 ; PAUTHLR-LABEL: leaf_sign_all_a_key:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp7:
 ; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp7
 ; PAUTHLR-NEXT:    retaasppc .Ltmp7
 ;
 ; CFISET-COMPAT-LABEL: leaf_sign_all_a_key:
@@ -980,9 +980,9 @@ define i32 @leaf_sign_all_b_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    .cfi_b_key_frame
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:  .Ltmp8:
 ; COMPAT-NEXT:    hint #27
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp8
 ; COMPAT-NEXT:    adrp x16, .Ltmp8
 ; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp8
 ; COMPAT-NEXT:    hint #39
@@ -993,9 +993,9 @@ define i32 @leaf_sign_all_b_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    .cfi_b_key_frame
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:  .Ltmp8:
 ; V83A-NEXT:    pacibsp
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp8
 ; V83A-NEXT:    adrp x16, .Ltmp8
 ; V83A-NEXT:    add x16, x16, :lo12:.Ltmp8
 ; V83A-NEXT:    hint #39
@@ -1004,9 +1004,9 @@ define i32 @leaf_sign_all_b_key(i32 %x) "branch-protection-pauth-lr" "sign-retur
 ; PAUTHLR-LABEL: leaf_sign_all_b_key:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp8:
 ; PAUTHLR-NEXT:    pacibsppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp8
 ; PAUTHLR-NEXT:    retabsppc .Ltmp8
 ;
 ; CFISET-COMPAT-LABEL: leaf_sign_all_b_key:
@@ -1074,9 +1074,9 @@ define i32 @leaf_sign_all_v83_b_key(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    .cfi_b_key_frame
 ; CHECK-NEXT:    hint #39
-; CHECK-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-NEXT:  .Ltmp9:
 ; CHECK-NEXT:    pacibsp
+; CHECK-NEXT:    .cfi_set_ra_state 2, .Ltmp9
 ; CHECK-NEXT:    adrp x16, .Ltmp9
 ; CHECK-NEXT:    add x16, x16, :lo12:.Ltmp9
 ; CHECK-NEXT:    hint #39
@@ -1085,9 +1085,9 @@ define i32 @leaf_sign_all_v83_b_key(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; PAUTHLR-LABEL: leaf_sign_all_v83_b_key:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:  .Ltmp9:
 ; PAUTHLR-NEXT:    pacibsppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp9
 ; PAUTHLR-NEXT:    retabsppc .Ltmp9
 ;
 ; CFISET-CHECK-LABEL: leaf_sign_all_v83_b_key:
@@ -1130,9 +1130,9 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; COMPAT:       // %bb.0:
 ; COMPAT-NEXT:    hint #34
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:  .Ltmp10:
 ; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp10
 ; COMPAT-NEXT:    adrp x16, .Ltmp10
 ; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp10
 ; COMPAT-NEXT:    hint #39
@@ -1143,9 +1143,9 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    hint #34
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:  .Ltmp10:
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp10
 ; V83A-NEXT:    adrp x16, .Ltmp10
 ; V83A-NEXT:    add x16, x16, :lo12:.Ltmp10
 ; V83A-NEXT:    hint #39
@@ -1153,10 +1153,10 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ;
 ; PAUTHLR-LABEL: leaf_sign_all_a_key_bti:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp10:
 ; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp10
 ; PAUTHLR-NEXT:    retaasppc .Ltmp10
 ;
 ; CFISET-COMPAT-LABEL: leaf_sign_all_a_key_bti:
@@ -1226,9 +1226,9 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; COMPAT-NEXT:    .cfi_b_key_frame
 ; COMPAT-NEXT:    hint #34
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:  .Ltmp11:
 ; COMPAT-NEXT:    hint #27
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp11
 ; COMPAT-NEXT:    adrp x16, .Ltmp11
 ; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp11
 ; COMPAT-NEXT:    hint #39
@@ -1240,9 +1240,9 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; V83A-NEXT:    .cfi_b_key_frame
 ; V83A-NEXT:    hint #34
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:  .Ltmp11:
 ; V83A-NEXT:    pacibsp
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp11
 ; V83A-NEXT:    adrp x16, .Ltmp11
 ; V83A-NEXT:    add x16, x16, :lo12:.Ltmp11
 ; V83A-NEXT:    hint #39
@@ -1251,10 +1251,10 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; PAUTHLR-LABEL: leaf_sign_all_b_key_bti:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp11:
 ; PAUTHLR-NEXT:    pacibsppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp11
 ; PAUTHLR-NEXT:    retabsppc .Ltmp11
 ;
 ; CFISET-COMPAT-LABEL: leaf_sign_all_b_key_bti:
@@ -1329,9 +1329,9 @@ define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "si
 ; CHECK-NEXT:    .cfi_b_key_frame
 ; CHECK-NEXT:    hint #34
 ; CHECK-NEXT:    hint #39
-; CHECK-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-NEXT:  .Ltmp12:
 ; CHECK-NEXT:    pacibsp
+; CHECK-NEXT:    .cfi_set_ra_state 2, .Ltmp12
 ; CHECK-NEXT:    adrp x16, .Ltmp12
 ; CHECK-NEXT:    add x16, x16, :lo12:.Ltmp12
 ; CHECK-NEXT:    hint #39
@@ -1340,10 +1340,10 @@ define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "si
 ; PAUTHLR-LABEL: leaf_sign_all_v83_b_key_bti:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
-; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp12:
 ; PAUTHLR-NEXT:    pacibsppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp12
 ; PAUTHLR-NEXT:    retabsppc .Ltmp12
 ;
 ; CFISET-CHECK-LABEL: leaf_sign_all_v83_b_key_bti:

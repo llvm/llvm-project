@@ -89,3 +89,11 @@ void e() {
   int f;
   a(f); // expected-warning {{1st function call argument is an uninitialized value [core.CallAndMessage]}}
 }
+
+void nullDerefGuardedByAtomicComp(int input) {
+  int *nullPointer = 0;
+  _Atomic int atomicValue = input;
+  if (atomicValue == 0) {
+    *nullPointer = 1; // no-crash // expected-warning {{Dereference of null pointer (loaded from variable 'nullPointer')}}
+  }
+}
