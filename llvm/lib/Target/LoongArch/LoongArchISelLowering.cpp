@@ -11327,6 +11327,8 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
       if (Subtarget.hasExtLSX() &&
           TRI->isTypeLegalForClass(LoongArch::LSX128RegClass, VT))
         return std::make_pair(0U, &LoongArch::LSX128RegClass);
+      if (Subtarget.hasExtLSX() && VT == MVT::i128)
+        return std::make_pair(0U, &LoongArch::LSX128RegClass);
       if (Subtarget.hasExtLASX() &&
           TRI->isTypeLegalForClass(LoongArch::LASX256RegClass, VT))
         return std::make_pair(0U, &LoongArch::LASX256RegClass);

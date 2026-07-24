@@ -24,7 +24,7 @@ def OpenMP : DirectiveLanguage {
   let loopModifierPrefix = "OMPLM_";
   let makeEnumAvailableInNamespace = true;
   let enableBitmaskEnumInNamespace = true;
-  let clauseEnumSetClass = "OmpClauseSet";
+  let clauseEnumSetClass = "llvm::omp::ClauseSet";
   let flangClauseBaseClass = "OmpClause";
 }
 

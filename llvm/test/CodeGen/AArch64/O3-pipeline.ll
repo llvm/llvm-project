@@ -28,10 +28,6 @@
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Expand IR instructions
 ; CHECK-NEXT:       Expand Atomic instructions
-; CHECK-NEXT:     SVE intrinsics optimizations
-; CHECK-NEXT:       FunctionPass Manager
-; CHECK-NEXT:         Dominator Tree Construction
-; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Simplify the CFG
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
@@ -156,6 +152,7 @@
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Machine Trace Metrics
 ; CHECK-NEXT:       AArch64 Conditional Compares
+; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine InstCombiner
 ; CHECK-NEXT:       AArch64 Conditional Branch Tuning
@@ -269,9 +266,6 @@
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       AArch64 Assembly Printer
 ; CHECK-NEXT:       Free MachineFunction
-; CHECK-NEXT: Pass Arguments:  -domtree
-; CHECK-NEXT:   FunctionPass Manager
-; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT: Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -loops -scalar-evolution -stack-safety-local
 ; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Target Library Information
