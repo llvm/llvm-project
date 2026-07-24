@@ -19,9 +19,9 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
 #include <optional>
 
