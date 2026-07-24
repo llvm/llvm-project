@@ -209,8 +209,8 @@ LIBC_INLINE constexpr static simd<T, N> abs(simd<T, N> x) {
   return __builtin_elementwise_abs(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr static simd<T, N> fma(simd<T, N> x, simd<T, N> y,
-                                            simd<T, N> z) {
+LIBC_INLINE constexpr static simd<T, N> multiply_add(simd<T, N> x, simd<T, N> y,
+                                                     simd<T, N> z) {
 #if __has_builtin(__builtin_elementwise_fma)
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
   if constexpr (cpp::is_same_v<T, float>)

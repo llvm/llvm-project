@@ -28,7 +28,7 @@ LIBC_INLINE static cpp::simd<double, N> inline_exp(cpp::simd<double, N> x) {
 
   // inv_ln2 = round(1/log(2), D, RN);
   constexpr cpp::simd<double, N> inv_ln2 = 0x1.71547652b82fep+0;
-  cpp::simd<double, N> z = cpp::fma(x, inv_ln2, shift);
+  cpp::simd<double, N> z = cpp::multiply_add(x, inv_ln2, shift);
   cpp::simd<double, N> n = z - shift;
 
   // ln2_hi = round(log(2), D, RN);
@@ -37,8 +37,8 @@ LIBC_INLINE static cpp::simd<double, N> inline_exp(cpp::simd<double, N> x) {
   constexpr cpp::simd<double, N> ln2_lo = 0x1.abc9e3b39803fp-56;
 
   cpp::simd<double, N> r = x;
-  r = cpp::fma(-n, ln2_hi, r);
-  r = cpp::fma(-n, ln2_lo, r);
+  r = cpp::multiply_add(-n, ln2_hi, r);
+  r = cpp::multiply_add(-n, ln2_lo, r);
 
   return eval_exp(r, z);
 }
