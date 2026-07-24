@@ -111,13 +111,15 @@ void buildGPUPassPipeline(OpPassManager &pm,
   {
     arith::ArithExpandOpsPassOptions arithExpandOptions;
     arithExpandOptions.includeF8E8M0 = true;
-    // Do not expand the min/max ops (arith.maximumf/minimumf/...) into
-    // cmpf + select here: they are lowered directly to the
-    // `llvm.intr.maximum`/`minimum`/... intrinsics (single hardware
-    // instructions) by the later arith-to-llvm conversion. Expanding them
-    // regresses e.g. flash-attention softmax, whose running-max is
-    // arith.maximumf-heavy.
-    arithExpandOptions.includeMinMax = false;
+    // Do not expand the min/max ops (arith.maximumf/minimumf/..., maxsi/...)
+    // into cmpf/cmpi + select here: they are lowered directly to the
+    // `llvm.intr.maximum`/`minimum`/... (and smax/umax/...) intrinsics (single
+    // hardware instructions) by the later arith-to-llvm conversion. Expanding
+    // the float ops regresses e.g. flash-attention softmax, whose running-max
+    // is arith.maximumf-heavy; the integer ops are kept as intrinsics for the
+    // same reason.
+    arithExpandOptions.includeMinMaxF = false;
+    arithExpandOptions.includeMinMaxI = false;
     pm.addNestedPass<gpu::GPUModuleOp>(
         arith::createArithExpandOpsPass(arithExpandOptions));
   }

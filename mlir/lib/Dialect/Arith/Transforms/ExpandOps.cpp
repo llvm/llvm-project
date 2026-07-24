@@ -840,22 +840,30 @@ struct ArithExpandOpsPass
     // clang-format on
 
     // The min/max ops also have a direct arith-to-llvm lowering to the
-    // `llvm.intr.maximum`/`minimum`/... intrinsics, which are a single hardware
-    // instruction on many targets. Only expand them into cmpf/cmpi + select
-    // when requested, so pipelines that run arith-to-llvm can keep the
-    // intrinsic lowering.
-    if (includeMinMax) {
-      arith::populateExpandMinMaxPatterns(patterns);
+    // `llvm.intr.maximum`/`minimum`/... (and smax/umax/...) intrinsics, which
+    // are a single hardware instruction on many targets. Only expand them into
+    // cmpf/cmpi + select when requested, so pipelines that run arith-to-llvm
+    // can keep the intrinsic lowering. The float and integer ops are gated
+    // separately.
+    if (includeMinMaxF) {
+      arith::populateExpandMinMaxFPatterns(patterns);
+      // clang-format off
+      target.addIllegalOp<
+        arith::MaximumFOp,
+        arith::MinimumFOp,
+        arith::MaxNumFOp,
+        arith::MinNumFOp
+      >();
+      // clang-format on
+    }
+    if (includeMinMaxI) {
+      arith::populateExpandMinMaxIPatterns(patterns);
       // clang-format off
       target.addIllegalOp<
         arith::MaxSIOp,
         arith::MaxUIOp,
         arith::MinSIOp,
-        arith::MinUIOp,
-        arith::MaximumFOp,
-        arith::MinimumFOp,
-        arith::MaxNumFOp,
-        arith::MinNumFOp
+        arith::MinUIOp
       >();
       // clang-format on
     }
@@ -951,19 +959,31 @@ void mlir::arith::populateExpandFlushDenormalsPatterns(
   patterns.add<FlushDenormalsOpConverter>(patterns.getContext());
 }
 
-void mlir::arith::populateExpandMinMaxPatterns(RewritePatternSet &patterns) {
+void mlir::arith::populateExpandMinMaxFPatterns(RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
-    MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,
-    MaxMinIOpConverter<MaxUIOp, arith::CmpIPredicate::ugt>,
-    MaxMinIOpConverter<MinSIOp, arith::CmpIPredicate::slt>,
-    MaxMinIOpConverter<MinUIOp, arith::CmpIPredicate::ult>,
     MaximumMinimumFOpConverter<MaximumFOp, arith::CmpFPredicate::UGT>,
     MaximumMinimumFOpConverter<MinimumFOp, arith::CmpFPredicate::ULT>,
     MaxNumMinNumFOpConverter<MaxNumFOp, arith::CmpFPredicate::UGT>,
     MaxNumMinNumFOpConverter<MinNumFOp, arith::CmpFPredicate::ULT>
    >(patterns.getContext());
   // clang-format on
+}
+
+void mlir::arith::populateExpandMinMaxIPatterns(RewritePatternSet &patterns) {
+  // clang-format off
+  patterns.add<
+    MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,
+    MaxMinIOpConverter<MaxUIOp, arith::CmpIPredicate::ugt>,
+    MaxMinIOpConverter<MinSIOp, arith::CmpIPredicate::slt>,
+    MaxMinIOpConverter<MinUIOp, arith::CmpIPredicate::ult>
+   >(patterns.getContext());
+  // clang-format on
+}
+
+void mlir::arith::populateExpandMinMaxPatterns(RewritePatternSet &patterns) {
+  populateExpandMinMaxFPatterns(patterns);
+  populateExpandMinMaxIPatterns(patterns);
 }
 
 void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {

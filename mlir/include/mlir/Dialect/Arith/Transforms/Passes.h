@@ -68,8 +68,15 @@ void populateExpandF8E8M0Patterns(RewritePatternSet &patterns);
 /// Add patterns to expand scaling ExtF/TruncF ops to equivalent arith ops
 void populateExpandScalingExtTruncPatterns(RewritePatternSet &patterns);
 
-/// Add patterns to expand the min/max ops (`arith.maximumf`/`minimumf`/
-/// `maxnumf`/`minnumf` and the signed/unsigned integer `max`/`min`) into
+/// Add patterns to expand the floating-point min/max ops (`arith.maximumf`/
+/// `minimumf`/`maxnumf`/`minnumf`) into `cmpf` + `select` sequences.
+void populateExpandMinMaxFPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand the signed/unsigned integer min/max ops
+/// (`arith.maxsi`/`maxui`/`minsi`/`minui`) into `cmpi` + `select` sequences.
+void populateExpandMinMaxIPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand both the floating-point and integer min/max ops into
 /// `cmpf`/`cmpi` + `select` sequences. These ops also have a direct
 /// arith-to-llvm lowering, so pipelines that run arith-to-llvm may prefer to
 /// skip this expansion.
