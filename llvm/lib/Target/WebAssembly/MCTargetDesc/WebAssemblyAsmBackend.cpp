@@ -19,8 +19,8 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSectionWasm.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
@@ -129,7 +129,8 @@ std::optional<bool> WebAssemblyAsmBackend::evaluateFixup(const MCFragment &F,
   const MCSymbol &SymA = SymExpr->getSymbol();
   assert(SymA.isInSection() && SymA.isTemporary() &&
          SymA.getSection().isText() &&
-         "Branch hint instruction target must be a temporary symbol in text section");
+         "Branch hint instruction target must be a temporary symbol in text "
+         "section");
 
   const uint64_t SymbolOffset = Asm->getSymbolOffset(SymA);
   uint8_t Buffer[5];

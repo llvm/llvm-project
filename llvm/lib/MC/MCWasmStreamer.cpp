@@ -181,8 +181,7 @@ void MCWasmStreamer::emitULEB128Value(const MCExpr *Value) {
     CodeOffset = 0;
   }
   // emit fixup for reloc / deferred resolution
-  MCFixup Fixup =
-      MCFixup::create(CodeOffset, Value, FK_Data_leb128);
+  MCFixup Fixup = MCFixup::create(CodeOffset, Value, FK_Data_leb128);
   F->appendFixups({Fixup});
 }
 
