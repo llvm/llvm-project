@@ -233,11 +233,9 @@ bool RecurrenceInfo::matchSimpleRecurrence(const PHINode *P) {
 BinaryOperator *
 RecurrenceInfo::digRecurrence(Instruction *V,
                               Instruction::BinaryOps BOWithConstOpToMatch) {
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE " Digging for recurrence starting with %"
-                    << V->getName() << ":\n");
   SmallVector<Instruction *> Worklist;
-  Worklist.push_back(V);
   SmallPtrSet<Instruction *, 16> Visited;
+  Worklist.push_back(V);
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
     // Skip this instruction if we have already visited it before.
@@ -250,20 +248,13 @@ RecurrenceInfo::digRecurrence(Instruction *V,
 
     // Find a recurrence over a BinOp, by matching either of its operands
     // with with the PHINode.
-    if (match(I, m_c_BinOp(m_Value(), m_Specific(Phi)))) {
-      LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                 "  Found recurrence over binary operator %"
-                        << I->getName() << "\n");
+    if (match(I, m_c_BinOp(m_Value(), m_Specific(Phi))))
       return cast<BinaryOperator>(I);
-    }
 
     // Bind to ExtraConst, if we match exactly one.
     if (I->getOpcode() == BOWithConstOpToMatch) {
-      if (ExtraConst) {
-        LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                   "  No recurrence found (>1 ExtraConst)\n");
+      if (ExtraConst)
         return nullptr;
-      }
       const APInt *C = nullptr;
       if (match(I, m_c_BinOp(m_APInt(C), m_Value())))
         ExtraConst = *C;
@@ -275,7 +266,6 @@ RecurrenceInfo::digRecurrence(Instruction *V,
         if (L.contains(UI))
           Worklist.push_back(UI);
   }
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE "  No recurrence found (worklist empty)\n");
   return nullptr;
 }
 
