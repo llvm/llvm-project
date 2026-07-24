@@ -204,6 +204,13 @@ class is_canonicalized_2<SDPatternOperator op> : PatFrag<
     const SITargetLowering &Lowering =
               *static_cast<const SITargetLowering *>(getTargetLowering());
 
+    // A poison operand is trivially canonical, but packing it is
+    // pointless. Leave those to the cheaper build_vector-with-undef
+    // patterns rather than materializing a v_pack for a don't-care
+    // lane.
+    if (N->getOperand(0).isUndef() || N->getOperand(1).isUndef())
+      return false;
+
     return Lowering.isCanonicalized(*CurDAG, N->getOperand(0)) &&
       Lowering.isCanonicalized(*CurDAG, N->getOperand(1));
    }]> {
