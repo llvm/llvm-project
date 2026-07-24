@@ -158,10 +158,6 @@ public:
     return MachineFunctionProperties().setIsSSA();
   }
 
-  MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().setNoPHIs();
-  }
-  
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     // Should preserve the same set that TwoAddressInstructions does.
