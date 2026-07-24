@@ -88,10 +88,8 @@ add_header_library(
     libc.hdr.func.free
     libc.hdr.func.malloc
     libc.hdr.func.realloc
-    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.integer_to_string
-    libc.src.__support.libc_assert
     libc.src.__support.macros.null_check
     libc.src.string.memory_utils.inline_memcpy
     libc.src.string.memory_utils.inline_memmove
