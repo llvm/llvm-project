@@ -28,11 +28,3 @@ scspspush x2, x2
 # CHECK-INST: scspspop sp, sp
 # CHECK-ENC: encoding: [0x73,0x01,0xc1,0x10]
 scspspop x2, x2
-
-# CHECK-INST: csrrs t1, mspcs, zero
-# CHECK-ENC: encoding: [0x73,0x23,0x90,0x34]
-csrrs t1, mspcs, zero
-
-# CHECK-INST: csrrs t1, sspcs, zero
-# CHECK-ENC: encoding: [0x73,0x23,0x90,0x14]
-csrrs t1, sspcs, zero

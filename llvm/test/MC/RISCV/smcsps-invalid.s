@@ -13,16 +13,12 @@ mcspspush sp, sp
 # NO-FEATURES: :[[#@LINE-1]]:1: error: instruction requires the following: 'Smcsps'
 mcspspop sp, sp
 # NO-FEATURES: :[[#@LINE-1]]:1: error: instruction requires the following: 'Smcsps'
-csrrs t1, mspcs, zero
-# NO-FEATURES: :[[#@LINE-1]]:11: error: system register 'mspcs' requires 'experimental-smcsps' to be enabled
 
 #--- no-sscsps.s
 scspspush sp, sp
 # NO-SSCPS: :[[#@LINE-1]]:1: error: instruction requires the following: 'Sscsps'
 scspspop sp, sp
 # NO-SSCPS: :[[#@LINE-1]]:1: error: instruction requires the following: 'Sscsps'
-csrrs t1, sspcs, zero
-# NO-SSCPS: :[[#@LINE-1]]:11: error: system register 'sspcs' requires 'experimental-sscsps' to be enabled
 
 #--- invalid-operands.s
 mcspspush x1, sp

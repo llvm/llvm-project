@@ -165,7 +165,6 @@ def : SysReg<"scause", 0x142>;
 def : SysReg<"stval", 0x143>;
 def : DeprecatedSysRegName<"sbadaddr", 0x143>;
 def : SysReg<"sip", 0x144>;
-let FeaturesRequired = [{ {RISCV::FeatureStdExtSscsps} }] in
 def : SysReg<"sspcs", 0x149>;
 def : SysReg<"siph", 0x154, RV32Only=true>;
 def : SysReg<"stopei", 0x15C>;
@@ -378,7 +377,6 @@ def : SysReg<"mcause", 0x342>;
 def : SysReg<"mtval", 0x343>;
 def : DeprecatedSysRegName<"mbadaddr", 0x343>;
 def : SysReg<"mip", 0x344>;
-let FeaturesRequired = [{ {RISCV::FeatureStdExtSmcsps} }] in
 def : SysReg<"mspcs", 0x349>;
 def : SysReg<"mtinst", 0x34A>;
 def : SysReg<"mtval2", 0x34B>;
