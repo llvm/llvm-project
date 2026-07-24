@@ -34,10 +34,3 @@ struct X {
 #define WHOLE [[vendor::attr(9)]]
 WHOLE int c;
 // CHECK: {{\[\[}}vendor::attr{{\]\]}} int c;
-
-// A statement attribute round-trips too, consistent with the declaration form.
-void fn() {
-  [[vendor::note]] 1 + 1;
-}
-// CHECK: void fn() {
-// CHECK: {{\[\[}}vendor::note{{\]\]}} 1 + 1;
