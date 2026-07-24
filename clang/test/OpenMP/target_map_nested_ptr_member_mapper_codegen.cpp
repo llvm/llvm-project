@@ -3,12 +3,9 @@
 // RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// PRESENT is propagated to pointee (attach-ptr) entries only at OpenMP >= 6.0.
-// FIXME: that propagation is done in a follow-on; until then the CHECK-60
-// output below is identical to CHECK (the pointee entries carry map-type mask
-// 1036 = ALWAYS|DELETE|CLOSE, without PRESENT). Once PRESENT is propagated, the
-// attach-ptr pointee entries should use mask 5132 = ALWAYS|DELETE|CLOSE|PRESENT
-// at 6.0.
+// PRESENT is propagated to pointee (attach-ptr) entries only at OpenMP >= 6.0:
+// at 6.0 those entries carry map-type mask 5132 = ALWAYS|DELETE|CLOSE|PRESENT,
+// while the default (<= 5.2) CHECK uses 1036 = ALWAYS|DELETE|CLOSE (no PRESENT).
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-60
 
 // expected-no-diagnostics
@@ -353,7 +350,7 @@ void foo(S2 *arr) {
 // CHECK-60:    br label [[OMP_TYPE_END9]]
 // CHECK-60:       omp.type.end9:
 // CHECK-60:    [[OMP_MAPTYPE10:%.*]] = phi i64 [ 0, [[OMP_TYPE_ALLOC4]] ], [ 0, [[OMP_TYPE_TO6]] ], [ 0, [[OMP_TYPE_FROM8]] ], [ 0, [[OMP_TYPE_TO_ELSE7]] ]
-// CHECK-60:    [[TMP38:%.*]] = and i64 [[TMP4]], 1036
+// CHECK-60:    [[TMP38:%.*]] = and i64 [[TMP4]], 5132
 // CHECK-60:    [[OMP_MAPTYPE_WITH_MODIFIERS11:%.*]] = or i64 [[OMP_MAPTYPE10]], [[TMP38]]
 // CHECK-60:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP15]], ptr [[X]], i64 [[TMP22]], i64 [[OMP_MAPTYPE_WITH_MODIFIERS11]], ptr null)
 // CHECK-60:    [[TMP39:%.*]] = add nuw i64 562949953421315, [[TMP24]]
@@ -377,7 +374,7 @@ void foo(S2 *arr) {
 // CHECK-60:    br label [[OMP_TYPE_END17]]
 // CHECK-60:       omp.type.end17:
 // CHECK-60:    [[OMP_MAPTYPE18:%.*]] = phi i64 [ [[TMP42]], [[OMP_TYPE_ALLOC12]] ], [ [[TMP44]], [[OMP_TYPE_TO14]] ], [ [[TMP46]], [[OMP_TYPE_FROM16]] ], [ [[TMP39]], [[OMP_TYPE_TO_ELSE15]] ]
-// CHECK-60:    [[TMP47:%.*]] = and i64 [[TMP4]], 1036
+// CHECK-60:    [[TMP47:%.*]] = and i64 [[TMP4]], 5132
 // CHECK-60:    [[OMP_MAPTYPE_WITH_MODIFIERS19:%.*]] = or i64 [[OMP_MAPTYPE18]], [[TMP47]]
 // CHECK-60:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP15]], ptr [[X]], i64 4, i64 [[OMP_MAPTYPE_WITH_MODIFIERS19]], ptr null)
 // CHECK-60:    [[TMP48:%.*]] = add nuw i64 562949953421315, [[TMP24]]
@@ -401,7 +398,7 @@ void foo(S2 *arr) {
 // CHECK-60:    br label [[OMP_TYPE_END25]]
 // CHECK-60:       omp.type.end25:
 // CHECK-60:    [[OMP_MAPTYPE26:%.*]] = phi i64 [ [[TMP51]], [[OMP_TYPE_ALLOC20]] ], [ [[TMP53]], [[OMP_TYPE_TO22]] ], [ [[TMP55]], [[OMP_TYPE_FROM24]] ], [ [[TMP48]], [[OMP_TYPE_TO_ELSE23]] ]
-// CHECK-60:    [[TMP56:%.*]] = and i64 [[TMP4]], 1036
+// CHECK-60:    [[TMP56:%.*]] = and i64 [[TMP4]], 5132
 // CHECK-60:    [[OMP_MAPTYPE_WITH_MODIFIERS27:%.*]] = or i64 [[OMP_MAPTYPE26]], [[TMP56]]
 // CHECK-60:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP17]], ptr [[Y]], i64 4, i64 [[OMP_MAPTYPE_WITH_MODIFIERS27]], ptr null)
 // CHECK-60:    [[TMP57:%.*]] = and i64 [[TMP4]], 3
