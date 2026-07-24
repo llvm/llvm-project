@@ -1741,6 +1741,7 @@ static std::optional<LangAS> getCUDADeclAddressSpace(const ASTContext &Ctx,
   // Host compilation does not attach the implicit CUDAConstantAttr that
   // SemaCUDA adds in device compilation.
   if (!Ctx.getLangOpts().CUDAIsDevice && VD->hasAttr<CUDADeviceAttr>() &&
+      VD->isThisDeclarationADefinition() == VarDecl::Definition &&
       (VD->isFileVarDecl() || VD->isStaticDataMember()) &&
       (VD->isConstexpr() || VD->getType().isConstQualified()))
     return LangAS::cuda_constant;
