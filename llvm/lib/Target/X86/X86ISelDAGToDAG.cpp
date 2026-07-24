@@ -2171,7 +2171,7 @@ bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
     return false;
   AM = Backup;
 
-  // Try again in reverse order
+  // Try again after commutating the operands.
   if (!MatchOperand(Handle.getValue().getOperand(1)) &&
       !MatchOperand(Handle.getValue().getOperand(0)))
     return false;
