@@ -846,8 +846,6 @@ VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
   getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, Ex, *this);
 
   ExplodedNodeSet EvalSet;
-  NodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
-
   QualType T = Ex->getTypeOfArgument();
 
   for (ExplodedNode *N : CheckedSet) {
@@ -858,11 +856,13 @@ VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
 
         // FIXME: Add support for VLA type arguments and VLA expressions.
         // When that happens, we should probably refactor VLASizeChecker's code.
+        EvalSet.insert(N);
         continue;
       } else if (T->getAs<ObjCObjectType>()) {
         // Some code tries to take the sizeof an ObjCObjectType, relying that
         // the compiler has laid out its representation.  Just report Unknown
         // for these.
+        EvalSet.insert(N);
         continue;
       }
     }
@@ -870,11 +870,8 @@ VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
     APSInt Value = Ex->EvaluateKnownConstInt(getContext());
     CharUnits amt = CharUnits::fromQuantity(Value.getZExtValue());
 
-    ProgramStateRef state = N->getState();
-    state = state->BindExpr(
-        Ex, N->getStackFrame(),
-        svalBuilder.makeIntVal(amt.getQuantity(), Ex->getType()));
-    Bldr.generateNode(Ex, N, state);
+    SVal V = svalBuilder.makeIntVal(amt.getQuantity(), Ex->getType());
+    EvalSet.insert(Engine.makeNodeWithBinding(N, Ex, V));
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
