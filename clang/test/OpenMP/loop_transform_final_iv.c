@@ -112,3 +112,18 @@ void test_for_lastprivate(void) {
   // i = last_iteration_value + stride = 9 + 2 = 11
 }
 
+void test_tile_workshare(void) {
+  // CHECK-LABEL: define {{.*}} @test_tile_workshare
+  int i;
+  #pragma omp for
+  #pragma omp tile sizes(2)
+  for (i = 1; i <= 10; i++) {
+  }
+  // CHECK: omp.loop.exit:
+  // CHECK-NOT: store {{.*}}, ptr %i
+  // CHECK: call void @__kmpc_for_static_fini
+  // i is private to the `for` construct; its post-loop value is
+  // unspecified here (same as plain omp-for), so no restoring store
+  // is expected for i after omp.loop.exit.
+}
+

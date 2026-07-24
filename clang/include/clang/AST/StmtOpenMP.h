@@ -5769,7 +5769,6 @@ class OMPUnrollDirective final
   enum {
     PreInitsOffset = 0,
     TransformedStmtOffset,
-    FinalsOffset,
   };
 
   explicit OMPUnrollDirective(SourceLocation StartLoc, SourceLocation EndLoc)

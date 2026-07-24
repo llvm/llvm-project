@@ -14968,9 +14968,9 @@ static Stmt *buildLoopFinalization(
     ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers) {
   SmallVector<Stmt *, 8> FinalizationStmts;
   for (const auto &Helper : LoopHelpers) {
-    if (!Helper.Finals.empty() && Helper.Finals[0]) {
-      FinalizationStmts.push_back(Helper.Finals[0]);
-    }
+    for (auto *Final : Helper.Finals)
+      if (Final)
+        FinalizationStmts.push_back(Final);
   }
   if (FinalizationStmts.empty())
     return nullptr;
@@ -16524,7 +16524,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<VarDecl *, 4> LBVarDecls;
   SmallVector<VarDecl *, 4> STVarDecls;
   SmallVector<VarDecl *, 4> NIVarDecls;
-  SmallVector<VarDecl *, 4> UBVarDecls;
   SmallVector<VarDecl *, 4> IVVarDecls;
 
   // Helper lambda to create variables for bounds, strides, and other
@@ -16607,8 +16606,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                       SeqAnalysis.Loops[I].TheForStmt,
                       SeqAnalysis.Loops[I].OriginalInits, PreInits);
     }
-    auto [UBVD, UBDStmt] =
-        CreateHelperVarAndStmt(SeqAnalysis.Loops[I].HelperExprs.UB, "ub", J);
     auto [LBVD, LBDStmt] =
         CreateHelperVarAndStmt(SeqAnalysis.Loops[I].HelperExprs.LB, "lb", J);
     auto [STVD, STDStmt] =
@@ -16621,14 +16618,11 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     assert(LBVD && STVD && NIVD && IVVD &&
            "OpenMP Fuse Helper variables creation failed");
 
-    UBVarDecls.push_back(UBVD);
     LBVarDecls.push_back(LBVD);
     STVarDecls.push_back(STVD);
     NIVarDecls.push_back(NIVD);
     IVVarDecls.push_back(IVVD);
 
-    if (UBDStmt.isUsable())
-      PreInits.push_back(UBDStmt.get());
     PreInits.push_back(LBDStmt.get());
     PreInits.push_back(STDStmt.get());
     PreInits.push_back(NIDStmt.get());
@@ -16856,9 +16850,9 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     // Get the user's actual loop variable.
     assert(!SeqAnalysis.Loops[I].HelperExprs.Counters.empty() &&
            "Expected at least one counter for the loop");
-    DeclRefExpr *UserLoopVarRef =
+    auto *UserLoopVarRef =
         cast<DeclRefExpr>(SeqAnalysis.Loops[I].HelperExprs.Counters[0]);
-    VarDecl *UserLoopVarDecl = cast<VarDecl>(UserLoopVarRef->getDecl());
+    auto *UserLoopVarDecl = cast<VarDecl>(UserLoopVarRef->getDecl());
 
     // Skip internal OpenMP variables (they start with .omp.).
     if (UserLoopVarDecl->getName().starts_with(".omp."))
