@@ -39,6 +39,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
 #include <optional>
 
@@ -169,6 +170,25 @@ public:
   ScriptInterpreter(Debugger &debugger, lldb::ScriptLanguage script_lang);
 
   virtual StructuredData::DictionarySP GetInterpreterInfo();
+
+  /// Describes one extension to emit into the generated template file.
+  ///
+  /// `full_name` is the dotted extension name as the user typed it (e.g.
+  /// `"ScriptedProcess"` or a nested `"...ChildKind"`), used to name the
+  /// generated class. `path` is the same name split on `.`; its last element
+  /// selects the ScriptedExtension kind and everything before it is treated
+  /// as a subclass discriminator. Both StringRefs must outlive the call to
+  /// GenerateExtensionTemplate; the implementation stores them, not copies.
+  struct ExtensionTemplateRequest {
+    llvm::StringRef full_name;
+    llvm::SmallVector<llvm::StringRef> path;
+  };
+
+  virtual llvm::Expected<FileSpec>
+  GenerateExtensionTemplate(const std::string &name,
+                            std::vector<ExtensionTemplateRequest> &extensions,
+                            bool generate_non_abstract_methods,
+                            std::string output_file);
 
   ~ScriptInterpreter() override = default;
 
@@ -509,6 +529,11 @@ public:
   static std::string LanguageToString(lldb::ScriptLanguage language);
 
   static lldb::ScriptLanguage StringToLanguage(const llvm::StringRef &string);
+
+  virtual llvm::Expected<std::string>
+  ExtensionToImportPath(lldb::ScriptedExtension extension) {
+    return llvm::make_error<UnimplementedError>();
+  }
 
   static llvm::StringLiteral
   ExtensionToString(lldb::ScriptedExtension extension);

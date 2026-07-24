@@ -1,8 +1,8 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+// RUN: not llvm-mc -triple=amdgpu9.00 -show-encoding %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
+// RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -filetype=null 2>&1 %s | FileCheck -check-prefix=GFX9-ERR -check-prefix=GCNERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -filetype=null 2>&1 %s | FileCheck -check-prefix=VI-ERR -check-prefix=GCNERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu9.00 -filetype=null 2>&1 %s | FileCheck -check-prefix=GFX9-ERR -check-prefix=GCNERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu8.02 -filetype=null 2>&1 %s | FileCheck -check-prefix=VI-ERR -check-prefix=GCNERR --implicit-check-not=error: %s
 
 
 flat_load_dword v1, v[3:4] offset:0

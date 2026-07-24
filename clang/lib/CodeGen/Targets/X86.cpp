@@ -1837,7 +1837,10 @@ static X86AVXABILevel getEffectiveX86AVXABILevel(CodeGenTypes &CGT,
   }
 
   X86AVXABILevel Level = GlobalAVXLevel;
-  if (!FD)
+  // TargetVersionAttr does not apply to x86.
+  // FIXME: Handling TargetClonesAttr and CPUSpecificAttr is intentionally
+  // deferred to a follow-up.
+  if (!FD || !FD->hasAttr<TargetAttr>())
     return Level;
 
   llvm::StringMap<bool> FeatureMap;
