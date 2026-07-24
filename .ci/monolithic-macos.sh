@@ -27,6 +27,7 @@ xcrun cmake -G Ninja \
       -D CMAKE_BUILD_TYPE=Release \
       -D LLDB_INCLUDE_TESTS=OFF \
       -D LLVM_ENABLE_ASSERTIONS=ON \
+      -D Python3_EXECUTABLE="${RUNNER_TEMP}/venv/bin/python3" \
       -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct" \
       -D CMAKE_C_COMPILER_LAUNCHER=sccache \
       -D CMAKE_CXX_COMPILER_LAUNCHER=sccache
