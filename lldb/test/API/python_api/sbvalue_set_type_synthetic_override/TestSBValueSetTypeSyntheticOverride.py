@@ -19,7 +19,13 @@ class TestCase(TestBase):
         # CXX runtime synthetic can be overridden
         vec = frame.FindVariable("vec")
         self.assertTrue(vec.IsSynthetic())
-        self.checkOverride(vec, before=None)
+
+        # On some platforms the synthetic child provider implementation of
+        # std::vector is not native, in other words it's scripted
+        #
+        # This test can't reliably tell the difference, so skip checking
+        # the 'before' implementation typename check
+        self.checkOverride(vec, before=None, skip_before_impl_check=True)
 
         # Python synthetic can be overridden
         foo = frame.FindVariable("foo")
@@ -31,19 +37,20 @@ class TestCase(TestBase):
         self.assertFalse(bar.IsSynthetic())
         self.checkOverride(bar, before=None)
 
-    def checkOverride(self, value, before):
+    def checkOverride(self, value, before, skip_before_impl_check=False):
         foo = lldb.SBTypeSynthetic.CreateWithClassName(f"foo_bar_synths.FooSynthetic")
         bar = lldb.SBTypeSynthetic.CreateWithClassName(f"foo_bar_synths.BarSynthetic")
 
         # Target the static (non synthetic) ValueObject
         static = value.GetNonSyntheticValue()
 
-        impl_before = static.GetSyntheticValue().GetTypeSyntheticImplementation()
-        if not before:
-            self.assertIsNone(impl_before)
-        else:
-            self.assertIsNotNone(impl_before)
-            self.assertEqual(type(impl_before).__name__, before)
+        if not skip_before_impl_check:
+            impl_before = static.GetSyntheticValue().GetTypeSyntheticImplementation()
+            if not before:
+                self.assertIsNone(impl_before)
+            else:
+                self.assertIsNotNone(impl_before)
+                self.assertEqual(type(impl_before).__name__, before)
 
         static.SetTypeSynthetic(bar)
         self.assertEqual(static.GetTypeSynthetic(), bar)

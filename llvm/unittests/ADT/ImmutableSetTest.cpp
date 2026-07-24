@@ -387,4 +387,58 @@ TEST_F(ImmutableSetTest, IteratorEquality) {
     EXPECT_TRUE(A == TreeIter());
   }
 }
+
+// Exercises Factory::unionSets against a std::set oracle over many random
+// input pairs, for both the canonicalizing (per-element fallback) and
+// non-canonicalizing (bulk tree-tree) code paths.
+template <bool Canonicalize> static void unionSetsStress() {
+  using Set = ImmutableSet<int, ImutContainerInfo<int>, Canonicalize>;
+  std::mt19937 Rng(42);
+  std::uniform_int_distribution<int> SizeDist(0, 120);
+  std::uniform_int_distribution<int> ValDist(0, 200);
+
+  for (int Trial = 0; Trial < 300; ++Trial) {
+    typename Set::Factory F;
+    Set A = F.getEmptySet();
+    Set B = F.getEmptySet();
+    std::set<int> RefA, RefB;
+
+    int NA = SizeDist(Rng), NB = SizeDist(Rng);
+    for (int I = 0; I < NA; ++I) {
+      int V = ValDist(Rng);
+      A = F.add(A, V);
+      RefA.insert(V);
+    }
+    for (int I = 0; I < NB; ++I) {
+      int V = ValDist(Rng);
+      B = F.add(B, V);
+      RefB.insert(V);
+    }
+
+    Set U = F.unionSets(A, B);
+
+    // The result is a structurally valid AVL tree.
+    if (const auto *Root = U.getRootWithoutRetain())
+      Root->validateTree();
+
+    // Its contents are exactly the union of the inputs.
+    std::set<int> RefU = RefA;
+    RefU.insert(RefB.begin(), RefB.end());
+    std::set<int> Got(U.begin(), U.end());
+    EXPECT_EQ(RefU, Got);
+
+    // The inputs are unchanged (persistence).
+    EXPECT_EQ(RefA, std::set<int>(A.begin(), A.end()));
+    EXPECT_EQ(RefB, std::set<int>(B.begin(), B.end()));
+
+    // Unioning with a subset / self is the identity.
+    EXPECT_TRUE(F.unionSets(U, A) == U);
+    EXPECT_TRUE(F.unionSets(A, A) == A);
+  }
+}
+
+TEST_F(ImmutableSetTest, UnionSetsStressTest) {
+  unionSetsStress</*Canonicalize=*/false>();
+  unionSetsStress</*Canonicalize=*/true>();
+}
 } // namespace

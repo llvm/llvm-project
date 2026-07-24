@@ -11,6 +11,7 @@
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
 # Maintainers.md files in the the respective subproject directories.
 
+/bolt/ @llvm/reviewers-bolt
 /libc/ @llvm/reviewers-libc
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
@@ -173,9 +174,6 @@
 
 # MLIR IRDL-related
 /mlir/**/*IRDL* @moxinilian
-
-# BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu @yavtuk
 
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt
