@@ -433,21 +433,10 @@ bool Sema::BoundsSafetyCheckCountedByFAMInStaticStorage(const VarDecl *VD) {
   // Arrays of such structs are still fixed-size allocations.
   const RecordDecl *RD =
       Context.getBaseElementType(VD->getType())->getAsRecordDecl();
-  if (!RD || RD->isInvalidDecl() || !RD->hasFlexibleArrayMember())
+  if (!RD || RD->isInvalidDecl())
     return true;
 
-  // Find the last field, descending through anonymous struct/union members.
-  const FieldDecl *FAM = nullptr;
-  for (const FieldDecl *FD : RD->fields())
-    FAM = FD;
-  while (FAM) {
-    const RecordDecl *FieldRD = FAM->getType()->getAsRecordDecl();
-    if (!FieldRD || !FieldRD->isAnonymousStructOrUnion())
-      break;
-    FAM = nullptr;
-    for (const FieldDecl *FD : FieldRD->fields())
-      FAM = FD;
-  }
+  const FieldDecl *FAM = RD->findFlexibleArrayMember();
   if (!FAM)
     return true;
   const auto *CATy = FAM->getType()->getAs<CountAttributedType>();

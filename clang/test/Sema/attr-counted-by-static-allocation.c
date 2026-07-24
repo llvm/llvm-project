@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -fsyntax-only -Wcounted-by-static-allocation -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify=quiet %s
+// RUN: %clang_cc1 -fsyntax-only -Wcounted-by-static-allocation -Wno-gnu-variable-sized-type-not-at-end -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-gnu-variable-sized-type-not-at-end -verify=quiet %s
 // quiet-no-diagnostics
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 
 struct flex {
   int count;
-  char fam[] __counted_by(count); // expected-note 6 {{'__counted_by' is intended for dynamically allocated objects, where the size of the allocation can be computed from the count}}
+  char fam[] __counted_by(count); // expected-note 7 {{'__counted_by' is intended for dynamically allocated objects, where the size of the allocation can be computed from the count}}
 };
 
 // Global definition with an initializer.
@@ -36,12 +36,30 @@ struct plain_flex {
 };
 struct plain_flex plain_global = {.count = 10};
 
-// Named nested FAM struct (GNU extension): not diagnosed.
+// Nested struct whose FAM is the last field: diagnosed (the FAM is at the tail).
 struct outer {
   int x;
   struct flex inner;
 };
-struct outer outer_global;
+struct outer outer_global; // expected-warning {{flexible array member 'fam' with '__counted_by' attribute in an object with static storage duration; the count in 'count' cannot grow or shrink the fixed-size allocation}}
+
+// FAM struct not the last field, so the FAM is not at the tail: not diagnosed.
+struct middle_fam {
+  int x;
+  struct flex inner;
+  int foo;
+};
+struct middle_fam middle_global;
+
+// Unions are not descended into (no counted_by in unions): not diagnosed.
+struct union_holder {
+  int count;
+  union {
+    struct flex inner;
+    long long y;
+  };
+};
+struct union_holder union_global;
 
 // FAM reached through a C11 anonymous struct: diagnosed.
 struct anon_holder {
