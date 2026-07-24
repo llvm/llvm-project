@@ -281,12 +281,6 @@ jobs:
       - name: Install Ninja, CMake, and sccache
         run: |
           brew install ninja cmake
-          # The python@3.14 postinstall step regenerates unversioned python/pip
-          # symlinks and can fail on the runner, but the interpreter itself
-          # installs fine and we invoke it by absolute path below. Tolerate that
-          # failure, then assert the interpreter is actually present.
-          brew install python@3.14 || true
-          test -x "$(brew --prefix python@3.14)/bin/python3.14"
           command -v sccache >/dev/null || brew install sccache
       - name: Set up Python venv
         run: |
