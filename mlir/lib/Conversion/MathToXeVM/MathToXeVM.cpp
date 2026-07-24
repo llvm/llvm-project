@@ -74,15 +74,14 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       operandTypes.push_back(opTy);
     }
 
-    Type resultType =
-        unwrapSizeOneVec ? cast<VectorType>(op.getType()).getElementType()
-                         : op.getType();
+    Type resultType = unwrapSizeOneVec
+                          ? cast<VectorType>(op.getType()).getElementType()
+                          : op.getType();
 
     auto moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
-    auto funcOpRes =
-        LLVM::lookupOrCreateFn(rewriter, moduleOp,
-                               getMangledNativeFuncName(operandTypes),
-                               operandTypes, resultType);
+    auto funcOpRes = LLVM::lookupOrCreateFn(
+        rewriter, moduleOp, getMangledNativeFuncName(operandTypes),
+        operandTypes, resultType);
     assert(!failed(funcOpRes));
     LLVM::LLVMFuncOp funcOp = funcOpRes.value();
 
