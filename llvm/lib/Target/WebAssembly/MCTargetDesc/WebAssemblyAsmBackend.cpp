@@ -120,8 +120,9 @@ std::optional<bool> WebAssemblyAsmBackend::evaluateFixup(const MCFragment &,
       // only evaluate fixups for temporary symbols
       // (in-function offsets for compilation hints metadata)
       if (const MCSymbol &SymA = SymExpr->getSymbol();
-          SymA.isInSection() && SymA.getSection().isText() &&
-          SymA.isTemporary()) {
+          SymA.isInSection() && SymA.isTemporary()) {
+        assert(SymA.getSection().isText() &&
+               "Only branch hint offsets in text sections are expected");
         const uint64_t SymbolOffset = Asm->getSymbolOffset(SymA);
         uint8_t Buffer[5];
         const unsigned EncodedSize = encodeULEB128(SymbolOffset, Buffer, 5);
