@@ -46,6 +46,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 
@@ -827,6 +828,7 @@ public:
   mutable DeclarationNameTable DeclarationNames;
   IntrusiveRefCntPtr<ExternalASTSource> ExternalSource;
   ASTMutationListener *Listener = nullptr;
+  SmallVector<PartialDiagnosticAt> *MSConstExprDiag = nullptr;
 
   /// Returns the clang bytecode interpreter context.
   interp::Context &getInterpContext() const;

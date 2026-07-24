@@ -6675,6 +6675,10 @@ ExprResult Sema::BuildConvertedConstantExpression(Expr *From, QualType T,
                                                   CCEKind CCE,
                                                   NamedDecl *Dest) {
   APValue PreNarrowingValue;
+  SmallVector<PartialDiagnosticAt> MSWarning;
+  ASTContext &Ctx = getASTContext();
+  llvm::SaveAndRestore<SmallVector<PartialDiagnosticAt> *> SAR(
+      Ctx.MSConstExprDiag, Ctx.getLangOpts().MSVCCompat ? &MSWarning : nullptr);
   return ::BuildConvertedConstantExpression(*this, From, T, CCE, Dest,
                                             PreNarrowingValue);
 }
