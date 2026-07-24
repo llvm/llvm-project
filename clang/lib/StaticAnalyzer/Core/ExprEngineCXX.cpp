@@ -1191,14 +1191,12 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
   // to be an RValue.
   SVal LambdaRVal = State->getSVal(R);
 
-  ExplodedNodeSet Tmp;
-  NodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
   // FIXME: is this the right program point kind?
-  Bldr.generateNode(LE, Pred, State->BindExpr(LE, SF, LambdaRVal), nullptr,
-                    ProgramPoint::PostLValueKind);
+  ExplodedNode *N = Engine.makeNodeWithBinding(Pred, LE, LambdaRVal, State,
+                                               ProgramPoint::PostLValueKind);
 
   // FIXME: Move all post/pre visits to ::Visit().
-  getCheckerManager().runCheckersForPostStmt(Dst, Tmp, LE, *this);
+  getCheckerManager().runCheckersForPostStmt(Dst, N, LE, *this);
 }
 
 void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
