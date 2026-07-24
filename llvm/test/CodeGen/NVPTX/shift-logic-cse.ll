@@ -7,23 +7,21 @@
 define void @mixed_logic_matches(i32 %x, ptr %p0, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: mixed_logic_matches(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [mixed_logic_matches_param_0];
-; CHECK-NEXT:    and.b32 %r2, %r1, 5;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [mixed_logic_matches_param_1];
-; CHECK-NEXT:    shl.b32 %r3, %r2, 2;
+; CHECK-NEXT:    shl.b32 %r2, %r1, 2;
+; CHECK-NEXT:    and.b32 %r3, %r2, 20;
 ; CHECK-NEXT:    ld.param.b64 %rd2, [mixed_logic_matches_param_2];
 ; CHECK-NEXT:    st.b32 [%rd1], %r3;
 ; CHECK-NEXT:    ld.param.b64 %rd3, [mixed_logic_matches_param_3];
-; CHECK-NEXT:    shl.b32 %r4, %r1, 2;
-; CHECK-NEXT:    or.b32 %r5, %r4, 28;
-; CHECK-NEXT:    st.b32 [%rd2], %r5;
-; CHECK-NEXT:    xor.b32 %r6, %r1, 17;
-; CHECK-NEXT:    shl.b32 %r7, %r6, 2;
-; CHECK-NEXT:    st.b32 [%rd3], %r7;
+; CHECK-NEXT:    or.b32 %r4, %r2, 28;
+; CHECK-NEXT:    st.b32 [%rd2], %r4;
+; CHECK-NEXT:    xor.b32 %r5, %r2, 68;
+; CHECK-NEXT:    st.b32 [%rd3], %r5;
 ; CHECK-NEXT:    ret;
   %and = and i32 %x, 5
   %and.shl = shl i32 %and, 2
@@ -42,19 +40,18 @@ define void @mixed_logic_matches(i32 %x, ptr %p0, ptr %p1, ptr %p2) {
 define void @zext_and_matches(i32 %x, ptr %p0, ptr %p1) {
 ; CHECK-LABEL: zext_and_matches(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [zext_and_matches_param_0];
-; CHECK-NEXT:    and.b32 %r2, %r1, 5;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [zext_and_matches_param_1];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [zext_and_matches_param_2];
-; CHECK-NEXT:    mul.wide.u32 %rd3, %r2, 8;
-; CHECK-NEXT:    st.b64 [%rd1], %rd3;
-; CHECK-NEXT:    and.b32 %r3, %r1, 6;
-; CHECK-NEXT:    mul.wide.u32 %rd4, %r3, 8;
-; CHECK-NEXT:    st.b64 [%rd2], %rd4;
+; CHECK-NEXT:    mul.wide.u32 %rd3, %r1, 8;
+; CHECK-NEXT:    and.b64 %rd4, %rd3, 40;
+; CHECK-NEXT:    st.b64 [%rd1], %rd4;
+; CHECK-NEXT:    and.b64 %rd5, %rd3, 48;
+; CHECK-NEXT:    st.b64 [%rd2], %rd5;
 ; CHECK-NEXT:    ret;
   %and0 = and i32 %x, 5
   %z0 = zext i32 %and0 to i64
@@ -71,19 +68,18 @@ define void @zext_and_matches(i32 %x, ptr %p0, ptr %p1) {
 define void @sext_or_matches(i32 %x, ptr %p0, ptr %p1) {
 ; CHECK-LABEL: sext_or_matches(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [sext_or_matches_param_0];
-; CHECK-NEXT:    or.b32 %r2, %r1, 5;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [sext_or_matches_param_1];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [sext_or_matches_param_2];
-; CHECK-NEXT:    mul.wide.s32 %rd3, %r2, 4;
-; CHECK-NEXT:    st.b64 [%rd1], %rd3;
-; CHECK-NEXT:    or.b32 %r3, %r1, 6;
-; CHECK-NEXT:    mul.wide.s32 %rd4, %r3, 4;
-; CHECK-NEXT:    st.b64 [%rd2], %rd4;
+; CHECK-NEXT:    mul.wide.s32 %rd3, %r1, 4;
+; CHECK-NEXT:    or.b64 %rd4, %rd3, 20;
+; CHECK-NEXT:    st.b64 [%rd1], %rd4;
+; CHECK-NEXT:    or.b64 %rd5, %rd3, 24;
+; CHECK-NEXT:    st.b64 [%rd2], %rd5;
 ; CHECK-NEXT:    ret;
   %or0 = or i32 %x, 5
   %e0 = sext i32 %or0 to i64
@@ -103,24 +99,23 @@ define void @sext_or_matches(i32 %x, ptr %p0, ptr %p1) {
 define void @gep_index_matches(i32 %base, ptr %data, ptr %p0, ptr %p1) {
 ; CHECK-LABEL: gep_index_matches(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<6>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [gep_index_matches_param_0];
-; CHECK-NEXT:    xor.b32 %r2, %r1, 5;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [gep_index_matches_param_1];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [gep_index_matches_param_2];
-; CHECK-NEXT:    mul.wide.u32 %rd3, %r2, 4;
-; CHECK-NEXT:    add.s64 %rd4, %rd1, %rd3;
-; CHECK-NEXT:    ld.param.b64 %rd5, [gep_index_matches_param_3];
-; CHECK-NEXT:    ld.b32 %r3, [%rd4];
-; CHECK-NEXT:    st.b32 [%rd2], %r3;
-; CHECK-NEXT:    xor.b32 %r4, %r1, 6;
-; CHECK-NEXT:    mul.wide.u32 %rd6, %r4, 4;
-; CHECK-NEXT:    add.s64 %rd7, %rd1, %rd6;
-; CHECK-NEXT:    ld.b32 %r5, [%rd7];
-; CHECK-NEXT:    st.b32 [%rd5], %r5;
+; CHECK-NEXT:    mul.wide.u32 %rd3, %r1, 4;
+; CHECK-NEXT:    xor.b64 %rd4, %rd3, 20;
+; CHECK-NEXT:    add.s64 %rd5, %rd1, %rd4;
+; CHECK-NEXT:    ld.param.b64 %rd6, [gep_index_matches_param_3];
+; CHECK-NEXT:    ld.b32 %r2, [%rd5];
+; CHECK-NEXT:    st.b32 [%rd2], %r2;
+; CHECK-NEXT:    xor.b64 %rd7, %rd3, 24;
+; CHECK-NEXT:    add.s64 %rd8, %rd1, %rd7;
+; CHECK-NEXT:    ld.b32 %r3, [%rd8];
+; CHECK-NEXT:    st.b32 [%rd6], %r3;
 ; CHECK-NEXT:    ret;
   %x0 = xor i32 %base, 5
   %i0 = zext i32 %x0 to i64

@@ -181,6 +181,11 @@ public:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth = 0) const override;
 
+  bool shouldCommuteShiftOfLogicToExposeCSE(const SDNode *,
+                                            CombineLevel) const override {
+    return true;
+  }
+
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   mutable unsigned GlobalUniqueCallSite;
