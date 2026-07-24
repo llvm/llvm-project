@@ -76,6 +76,16 @@ if(LLVM_BINARY_DIR)
   list(APPEND llvm_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
   list(APPEND clang_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
 endif()
+
+# Exports from LLVM and Clang may contain shared libraries. When targeting
+# platforms that lack shared library support, importing such
+# exports unrestrictedly will trigger an error. Set
+# LLVM_OMIT_EXPORTS_FROM_CONFIG flag to skip importing these exports
+# when the target platform does not support shared libraries.
+get_property(HAS_SHARED_SUPPORT GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if (NOT HAS_SHARED_SUPPORT)
+  set(LLVM_OMIT_EXPORTS_FROM_CONFIG ON)
+endif()
 find_package(LLVM PATHS ${llvm_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS ${clang_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
@@ -235,8 +245,22 @@ message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
 set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
-  include(NormalizeTriple)
-  normalize_triple("${CMAKE_C_COMPILER}" "${LLVM_DEFAULT_TARGET_TRIPLE}" LLVM_DEFAULT_TARGET_TRIPLE)
+  set(option_prefix "")
+  if (CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
+    set(option_prefix "/clang:")
+  endif()
+  set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${LLVM_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
+  execute_process(COMMAND ${print_target_triple}
+    RESULT_VARIABLE result
+    OUTPUT_VARIABLE output
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(result EQUAL 0)
+    set(LLVM_DEFAULT_TARGET_TRIPLE ${output})
+  else()
+    string(REPLACE ";" " " print_target_triple "${print_target_triple}")
+    # TODO(#97876): Report an error.
+    message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
+  endif()
 endif()
 
 # Determine output and install paths based on LLVM_TARGET_TRIPLE

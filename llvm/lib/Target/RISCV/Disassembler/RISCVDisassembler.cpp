@@ -531,7 +531,8 @@ static constexpr FeatureBitset XAndesGroup = {
     RISCV::FeatureVendorXAndesVSIntLoad, RISCV::FeatureVendorXAndesVPackFPH,
     RISCV::FeatureVendorXAndesVDot};
 
-static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot};
+static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot,
+                                            RISCV::FeatureVendorXSMTVDotII};
 
 static constexpr FeatureBitset XAIFGroup = {RISCV::FeatureVendorXAIFET};
 

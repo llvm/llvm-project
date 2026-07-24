@@ -882,9 +882,13 @@ CUDAIntrinsicLibrary::genAtomicCas(mlir::Type resultType,
           .getResult(0);
   auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
       builder, loc, address, arg1, arg2, successOrdering, failureOrdering);
-  mlir::Value boolResult =
-      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
-  return builder.createConvert(loc, resultType, boolResult);
+  // atomicCAS returns the value originally stored at the address, which is the
+  // first element of the cmpxchg result, not the success flag.
+  mlir::Value oldValue =
+      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 0);
+  if (mlir::isa<mlir::Float32Type, mlir::Float64Type>(resultType))
+    return mlir::LLVM::BitcastOp::create(builder, loc, resultType, oldValue);
+  return builder.createConvert(loc, resultType, oldValue);
 }
 
 mlir::Value

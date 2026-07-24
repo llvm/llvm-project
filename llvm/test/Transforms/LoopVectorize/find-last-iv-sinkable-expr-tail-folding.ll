@@ -236,8 +236,8 @@ define i64 @findlast_non_canonical_iv_with_expr(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP28:%.*]] = phi <4 x i64> [ [[TMP22]], %[[PRED_LOAD_CONTINUE6]] ], [ [[TMP27]], %[[PRED_LOAD_IF7]] ]
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq <4 x i64> [[TMP28]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP30:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 100)
-; CHECK-NEXT:    [[TMP31:%.*]] = select <4 x i1> [[TMP29]], <4 x i64> [[TMP30]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP36]] = select <4 x i1> [[TMP4]], <4 x i64> [[TMP31]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP31:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP29]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP36]] = select <4 x i1> [[TMP31]], <4 x i64> [[TMP30]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[VEC_IND_NEXT8]] = add nuw <4 x i64> [[VEC_IV]], splat (i64 4)
@@ -504,9 +504,9 @@ define i64 @findlast_expr_flipped_select_anyof(ptr %a, ptr %b, i64 %rdx.start, i
 ; CHECK-LABEL: define i64 @findlast_expr_flipped_select_anyof(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[UMIN]]
+; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[N]], [[UMIN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP18]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP1]], 3

@@ -27,12 +27,20 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/MathExtras.h"
-#include <cstring>
 #include <queue>
 #include <vector>
 
 namespace llvm {
 namespace SPIRV {
+static MDNode *findNamedMDOperand(NamedMDNode *NMD, StringRef Name) {
+  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
+    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
+      return MDS->getString() == Name;
+    return false;
+  });
+  return It == NMD->op_end() ? nullptr : *It;
+}
+
 // This code restores function args/retvalue types for composite cases
 // because the final types should still be aggregate whereas they're i32
 // during the translation to cope with aggregate flattening etc.
@@ -43,20 +51,15 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
   if (!NMD)
     return FTy;
 
-  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
-    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
-      return MDS->getString() == Name;
-    return false;
-  });
-
-  if (It == NMD->op_end())
+  MDNode *Match = findNamedMDOperand(NMD, Name);
+  if (!Match)
     return FTy;
 
   Type *RetTy = FTy->getReturnType();
   SmallVector<Type *, 4> PTys(FTy->params());
 
-  for (unsigned I = 1; I != (*It)->getNumOperands(); ++I) {
-    MDNode *MD = dyn_cast<MDNode>((*It)->getOperand(I));
+  for (unsigned I = 1; I != Match->getNumOperands(); ++I) {
+    MDNode *MD = dyn_cast<MDNode>(Match->getOperand(I));
     assert(MD && "MDNode operand is expected");
 
     if (auto *Const = getMDOperandAsConstInt(MD, 0)) {
@@ -83,21 +86,15 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
 static StringRef extractAsmConstraintsFromMetadata(NamedMDNode *NMD,
                                                    StringRef Constraints,
                                                    StringRef Name) {
-  // TODO: unify the extractors.
   if (!NMD)
     return Constraints;
 
-  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
-    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
-      return MDS->getString() == Name;
-    return false;
-  });
-
-  if (It == NMD->op_end())
+  MDNode *Match = findNamedMDOperand(NMD, Name);
+  if (!Match)
     return Constraints;
 
   // By convention, the constraints string is stored in the final MD operand.
-  MDNode *MD = dyn_cast<MDNode>((*It)->getOperand((*It)->getNumOperands() - 1));
+  MDNode *MD = dyn_cast<MDNode>(Match->getOperand(Match->getNumOperands() - 1));
   assert(MD && "MDNode operand is expected");
 
   if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
@@ -147,9 +144,15 @@ StringRef getOriginalAsmConstraints(const CallBase &CB) {
 // when making string comparisons in compiler passes.
 // SPIR-V requires null-terminated UTF-8 strings padded to 32-bit alignment.
 static uint32_t convertCharsToWord(StringRef Str, unsigned i) {
-  uint32_t Word = 0u; // Padding/null bytes are zero-initialized.
-  unsigned Count = std::min(static_cast<size_t>(4), Str.size() - i);
-  std::memcpy(&Word, Str.data() + i, Count);
+  uint32_t Word = 0u; // Build up this 32-bit word from 4 8-bit chars.
+  for (unsigned WordIndex = 0; WordIndex < 4; ++WordIndex) {
+    unsigned StrIndex = i + WordIndex;
+    uint8_t CharToAdd = 0;       // Initilize char as padding/null.
+    if (StrIndex < Str.size()) { // If it's within the string, get a real char.
+      CharToAdd = Str[StrIndex];
+    }
+    Word |= (CharToAdd << (WordIndex * 8));
+  }
   return Word;
 }
 
@@ -298,9 +301,26 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
             static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
       continue; // Ignored.
     }
-    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
-                   .addUse(Reg)
-                   .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
+    uint32_t Dec = static_cast<uint32_t>(DecorationId->getZExtValue());
+    if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId)) {
+      ConstantInt *ScopeV =
+          OpMD->getNumOperands() == 2
+              ? mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
+              : nullptr;
+      assert(ScopeV && isUInt<32>(ScopeV->getZExtValue()) &&
+             "Expect Scope <id> operand of the UniformId decoration");
+      SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+      SPIRVTypeInst SpvTypeInt32 =
+          GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
+      Register ScopeReg = GR->buildConstantInt(
+          ScopeV->getZExtValue(), MIRBuilder, SpvTypeInt32, /*EmitIR=*/false);
+      MIRBuilder.buildInstr(SPIRV::OpDecorateId)
+          .addUse(Reg)
+          .addImm(Dec)
+          .addUse(ScopeReg);
+      continue;
+    }
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate).addUse(Reg).addImm(Dec);
     for (unsigned OpI = 1, OpE = OpMD->getNumOperands(); OpI != OpE; ++OpI) {
       if (ConstantInt *OpV =
               mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(OpI)))
@@ -871,7 +891,26 @@ createExitVariable(BasicBlock *BB,
     return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
   }
 
-  // TODO: add support for switch cases.
+  if (auto *SI = dyn_cast<SwitchInst>(T)) {
+    Value *Condition = SI->getCondition();
+    // The default destination acts as the fallback value of the select chain.
+    Value *Result = TargetToValue.lookup(SI->getDefaultDest());
+    for (const auto &Case : SI->cases()) {
+      Value *CaseValue = TargetToValue.lookup(Case.getCaseSuccessor());
+      // Successors that are internal to the region have no exit value.
+      if (CaseValue == nullptr)
+        continue;
+      // The first known exit value becomes the base of the select chain.
+      if (Result == nullptr) {
+        Result = CaseValue;
+        continue;
+      }
+      Value *Cmp = Builder.CreateICmpEQ(Condition, Case.getCaseValue());
+      Result = Builder.CreateSelect(Cmp, CaseValue, Result);
+    }
+    return Result;
+  }
+
   llvm_unreachable("Unhandled terminator type.");
 }
 

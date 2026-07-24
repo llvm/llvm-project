@@ -302,9 +302,11 @@ lookupBuiltin(StringRef DemangledCall,
   // argument and repeat the search.
   if (BuiltinArgumentTypes.size() >= 1) {
     char FirstArgumentType = BuiltinArgumentTypes[0][0];
-    // Prefix to be added to the builtin's name for lookup.
-    // For example, OpenCL "abs" taking an unsigned value has a prefix "u_".
-    std::string Prefix;
+    // Prefix and suffix to be added to the builtin's name for lookup.
+    // For example, OpenCL "abs" taking an unsigned value has a prefix "u_",
+    // and "group_reduce_max" taking an unsigned value has a suffix "u".
+    StringRef Prefix;
+    StringRef Suffix;
 
     switch (FirstArgumentType) {
     // Unsigned:
@@ -313,6 +315,7 @@ lookupBuiltin(StringRef DemangledCall,
         Prefix = "u_";
       else if (Set == SPIRV::InstructionSet::GLSL_std_450)
         Prefix = "u";
+      Suffix = "u";
       break;
     // Signed:
     case 'c':
@@ -323,6 +326,7 @@ lookupBuiltin(StringRef DemangledCall,
         Prefix = "s_";
       else if (Set == SPIRV::InstructionSet::GLSL_std_450)
         Prefix = "s";
+      Suffix = "s";
       break;
     // Floating-point:
     case 'f':
@@ -331,43 +335,18 @@ lookupBuiltin(StringRef DemangledCall,
       if (Set == SPIRV::InstructionSet::OpenCL_std ||
           Set == SPIRV::InstructionSet::GLSL_std_450)
         Prefix = "f";
+      Suffix = "f";
       break;
     }
 
     // If argument-type name prefix was added, look up the builtin again.
     if (!Prefix.empty() &&
-        (Builtin = SPIRV::lookupBuiltin(Prefix + BuiltinName, Set)))
+        (Builtin = SPIRV::lookupBuiltin((Prefix + BuiltinName).str(), Set)))
       return std::make_unique<SPIRV::IncomingCall>(
           BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
 
-    // If lookup with a prefix failed, find a suffix to be added to the
-    // builtin's name for lookup. For example, OpenCL "group_reduce_max" taking
-    // an unsigned value has a suffix "u".
-    std::string Suffix;
-
-    switch (FirstArgumentType) {
-    // Unsigned:
-    case 'u':
-      Suffix = "u";
-      break;
-    // Signed:
-    case 'c':
-    case 's':
-    case 'i':
-    case 'l':
-      Suffix = "s";
-      break;
-    // Floating-point:
-    case 'f':
-    case 'd':
-    case 'h':
-      Suffix = "f";
-      break;
-    }
-
-    // If argument-type name suffix was added, look up the builtin again.
     if (!Suffix.empty() &&
-        (Builtin = SPIRV::lookupBuiltin(BuiltinName + Suffix, Set)))
+        (Builtin = SPIRV::lookupBuiltin((BuiltinName + Suffix).str(), Set)))
       return std::make_unique<SPIRV::IncomingCall>(
           BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
   }
@@ -484,7 +463,7 @@ static bool buildSelectInst(MachineIRBuilder &MIRBuilder,
 /// \p DestinationReg.
 static Register buildLoadInst(SPIRVTypeInst BaseType, Register PtrRegister,
                               MachineIRBuilder &MIRBuilder,
-                              SPIRVGlobalRegistry *GR, LLT LowLevelType,
+                              SPIRVGlobalRegistry *GR,
                               Register DestinationReg = Register(0)) {
   if (!DestinationReg.isValid())
     DestinationReg = createVirtualRegister(BaseType, GR, MIRBuilder);
@@ -521,7 +500,7 @@ static Register buildBuiltinVariableLoad(
 
   // Load the value from the global variable.
   Register LoadedRegister =
-      buildLoadInst(VariableType, Variable, MIRBuilder, GR, LLType, Reg);
+      buildLoadInst(VariableType, Variable, MIRBuilder, GR, Reg);
   MIRBuilder.getMRI()->setType(LoadedRegister, LLType);
   return LoadedRegister;
 }
@@ -783,10 +762,9 @@ static bool buildAtomicCompareExchangeInst(
   if (!ScopeReg.isValid())
     ScopeReg = buildConstantIntReg32(Scope, MIRBuilder, GR);
 
-  Register Expected = IsCmpxchg
-                          ? ExpectedArg
-                          : buildLoadInst(SpvDesiredTy, ExpectedArg, MIRBuilder,
-                                          GR, LLT::scalar(64));
+  Register Expected =
+      IsCmpxchg ? ExpectedArg
+                : buildLoadInst(SpvDesiredTy, ExpectedArg, MIRBuilder, GR);
   MRI->setType(Expected, DesiredLLT);
   Register Tmp = !IsCmpxchg ? MRI->createGenericVirtualRegister(DesiredLLT)
                             : Call->ReturnRegister;

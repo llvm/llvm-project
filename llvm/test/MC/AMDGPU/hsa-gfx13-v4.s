@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1310 < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1310 -filetype=obj < %s > %t
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1310 < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1310 -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
@@ -49,10 +49,10 @@
 .text
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1310"
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1310"
 
 .amdhsa_code_object_version 4
 // ASM: .amdhsa_code_object_version 4
+// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1310"
 
 .p2align 8
 .type minimal,@function

@@ -100,6 +100,8 @@ public:
   /// should be stack expanded.
   bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
+  bool isVectorClearMaskLegal(ArrayRef<int> M, EVT VT) const override;
+
   bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
     // If the pair to store is a mixture of float and int values, we will
     // save two bitwise instructions and one float-to-int instruction and
@@ -201,6 +203,11 @@ public:
 
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
+
+  CondMergingParams
+  getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *LHS,
+                                const Value *RHS,
+                                const Function *F) const override;
 
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {

@@ -44,7 +44,7 @@ from . import test_categories
 from . import test_result
 from ..support import seven
 from ..support import temp_file
-
+from ..support import xcode
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
@@ -381,12 +381,17 @@ def parseOptionsAndInitTestdirs():
             setting_list = setting[0].split("=", 1)
             configuration.settings.append((setting_list[0], setting_list[1]))
 
-    if args.d:
+    if args.d or args.debug_with:
         sys.stdout.write(
             "Suspending the process %d to wait for debugger to attach...\n"
             % os.getpid()
         )
         sys.stdout.flush()
+
+        # debug_with is always lowercased by argparse
+        if args.debug_with == "xcode":
+            xcode.attach(os.getpid())
+
         os.kill(os.getpid(), signal.SIGSTOP)
 
     if args.f:

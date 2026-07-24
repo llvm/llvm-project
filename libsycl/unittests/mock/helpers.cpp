@@ -300,12 +300,19 @@ void mock::MockLiboffload::initDefault() {
         return OL_SUCCESS;
       });
 
+  ON_CALL(*this, olSyncEvent)
+      .WillByDefault([this](ol_event_handle_t Event) -> ol_result_t {
+        if (!Event)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        return OL_SUCCESS;
+      });
+
   ON_CALL(*this, olMemcpy)
       .WillByDefault([this](ol_queue_handle_t Queue, void *DstPtr,
                             ol_device_handle_t DstDevice, const void *SrcPtr,
                             ol_device_handle_t SrcDevice,
                             size_t Size) -> ol_result_t {
-        if (!Queue || !DstDevice || !DstDevice)
+        if (!Queue || !DstDevice || !SrcDevice)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
         if (!DstPtr || !SrcPtr)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);

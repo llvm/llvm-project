@@ -880,6 +880,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FP_ROUND,   MVT::f32, Custom);
   }
 
+  // STRICT_(U/S)INT_TO_FP specifically use the input MVT to register with
+  // setOperationAction() as opposed to other opcodes that use the output MVT
+  // All inputs should be i32 due to type legalization
+  setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Custom);
+  setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i32, Custom);
+
   setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
   setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
 
@@ -2440,19 +2446,37 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   auto PtrVt = getPointerTy(DAG.getDataLayout());
 
   if (Subtarget->genLongCalls()) {
-    assert((!isPositionIndependent() || TT.isOSWindows()) &&
-           "long-calls codegen is not position independent!");
+    bool isPIC = isPositionIndependent() && !TT.isOSWindows();
+    if (isPIC && Subtarget->genExecuteOnly())
+      reportFatalUsageError("long-calls with execute-only and "
+                            "position-independent code is not supported");
+    if (Subtarget->isROPI())
+      reportFatalUsageError("long-calls with ROPI is not currently supported");
+
     // Handle a global address or an external symbol. If it's not one of
     // those, the target's already in a register, so we don't need to do
     // anything extra.
     if (isa<GlobalAddressSDNode>(Callee)) {
       if (Subtarget->genExecuteOnly()) {
+        // Execute-only forbids constant pools in .text, so use movw/movt.
+        // fPIC is not supported with execute-only.
         if (Subtarget->useMovt())
           ++NumMovwMovt;
         Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
                              DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
+      } else if (isPIC) {
+        // PIC without execute-only: use GOT-based addressing.
+        // DSO-local symbols use a plain PC-relative WrapperPIC;
+        // non-DSO-local symbols additionally load the address from the GOT.
+        SDValue G = DAG.getTargetGlobalAddress(
+            GVal, dl, PtrVt, 0, GVal->isDSOLocal() ? 0 : ARMII::MO_GOT);
+        Callee = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVt, G);
+        if (!GVal->isDSOLocal())
+          Callee =
+              DAG.getLoad(PtrVt, dl, DAG.getEntryNode(), Callee,
+                          MachinePointerInfo::getGOT(DAG.getMachineFunction()));
       } else {
-        // Create a constant pool entry for the callee address
+        // Neither execute-only nor PIC: load the address from a constant pool.
         unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
         ARMConstantPoolValue *CPV = ARMConstantPoolConstant::Create(
             GVal, ARMPCLabelIndex, ARMCP::CPValue, 0);
@@ -2468,12 +2492,32 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       const char *Sym = S->getSymbol();
 
       if (Subtarget->genExecuteOnly()) {
+        // Execute-only forbids constant pools in .text, so use movw/movt.
+        // fPIC is not supported with execute-only.
         if (Subtarget->useMovt())
           ++NumMovwMovt;
         Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
-                             DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
+                             DAG.getTargetExternalSymbol(Sym, PtrVt, 0));
+      } else if (isPIC) {
+        // PIC without execute-only: load the symbol's address from the GOT via
+        // a GOT_PREL constant pool entry consumed by a PICLDR.
+        unsigned PCAdj = Subtarget->isThumb() ? 4 : 8;
+        unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
+        ARMConstantPoolValue *CPV = ARMConstantPoolSymbol::Create(
+            *DAG.getContext(), Sym, ARMPCLabelIndex, PCAdj, ARMCP::GOT_PREL,
+            /*AddCurrentAddress=*/true);
+        SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVt, Align(4));
+        CPAddr = DAG.getNode(ARMISD::Wrapper, dl, MVT::i32, CPAddr);
+        SDValue GOTOffset = DAG.getLoad(
+            PtrVt, dl, DAG.getEntryNode(), CPAddr,
+            MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+        SDValue PICLabel = DAG.getConstant(ARMPCLabelIndex, dl, MVT::i32);
+        Callee = DAG.getNode(ARMISD::PIC_ADD, dl, PtrVt, GOTOffset, PICLabel);
+        Callee =
+            DAG.getLoad(PtrVt, dl, DAG.getEntryNode(), Callee,
+                        MachinePointerInfo::getGOT(DAG.getMachineFunction()));
       } else {
-        // Create a constant pool entry for the callee address
+        // Neither execute-only nor PIC: load the address from a constant pool.
         unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
         ARMConstantPoolValue *CPV = ARMConstantPoolSymbol::Create(
             *DAG.getContext(), Sym, ARMPCLabelIndex, 0);
@@ -3651,15 +3695,10 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
       return V;
 
   if (isPositionIndependent()) {
-    // Weak symbols need GOT indirection even when hidden/DSO-local.
-    // The assembler eagerly resolves PC-relative expressions when the
-    // symbol and reference are in the same section, which prevents the
-    // linker from overriding a weak definition with a non-weak one.
-    bool UseGOT = !GV->isDSOLocal() || GV->isWeakForLinker();
-    SDValue G = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
-                                           UseGOT ? ARMII::MO_GOT : 0);
+    SDValue G = DAG.getTargetGlobalAddress(
+        GV, dl, PtrVT, 0, GV->isDSOLocal() ? 0 : ARMII::MO_GOT);
     SDValue Result = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVT, G);
-    if (UseGOT)
+    if (!GV->isDSOLocal())
       Result =
           DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), Result,
                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
@@ -5742,16 +5781,6 @@ SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
     return IsStrict ? DAG.getMergeValues({Result, Chain}, Loc) : Result;
   }
 
-  // FIXME: Remove this when we have strict fp instruction selection patterns
-  if (IsStrict) {
-    SDLoc Loc(Op);
-    SDValue Result =
-        DAG.getNode(Op.getOpcode() == ISD::STRICT_FP_TO_SINT ? ISD::FP_TO_SINT
-                                                             : ISD::FP_TO_UINT,
-                    Loc, Op.getValueType(), SrcVal);
-    return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
-  }
-
   return Op;
 }
 
@@ -5840,17 +5869,24 @@ SDValue ARMTargetLowering::LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   if (VT.isVector())
     return LowerVectorINT_TO_FP(Op, DAG);
+
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+
   if (isUnsupportedFloatingType(VT)) {
     RTLIB::Libcall LC;
-    if (Op.getOpcode() == ISD::SINT_TO_FP)
-      LC = RTLIB::getSINTTOFP(Op.getOperand(0).getValueType(),
-                              Op.getValueType());
+    if (Op.getOpcode() == ISD::SINT_TO_FP ||
+        Op.getOpcode() == ISD::STRICT_SINT_TO_FP)
+      LC = RTLIB::getSINTTOFP(SrcVal.getValueType(), Op.getValueType());
     else
-      LC = RTLIB::getUINTTOFP(Op.getOperand(0).getValueType(),
-                              Op.getValueType());
+      LC = RTLIB::getUINTTOFP(SrcVal.getValueType(), Op.getValueType());
+    SDLoc Loc(Op);
     MakeLibCallOptions CallOptions;
-    return makeLibCall(DAG, LC, Op.getValueType(), Op.getOperand(0),
-                       CallOptions, SDLoc(Op)).first;
+    SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+    SDValue Result;
+    std::tie(Result, Chain) = makeLibCall(DAG, LC, Op.getValueType(), SrcVal,
+                                          CallOptions, Loc, Chain);
+    return IsStrict ? DAG.getMergeValues({Result, Chain}, Loc) : Result;
   }
 
   return Op;
@@ -10516,6 +10552,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VASTART:       return LowerVASTART(Op, DAG);
   case ISD::ATOMIC_FENCE:  return LowerATOMIC_FENCE(Op, DAG, Subtarget);
   case ISD::PREFETCH:      return LowerPREFETCH(Op, DAG, Subtarget);
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::STRICT_SINT_TO_FP:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:    return LowerINT_TO_FP(Op, DAG);
   case ISD::STRICT_FP_TO_SINT:
@@ -19405,7 +19443,7 @@ EVT ARMTargetLowering::getOptimalMemOpType(
     LLVMContext &Context, const MemOp &Op,
     const AttributeList &FuncAttributes) const {
   // See if we can use NEON instructions for this...
-  if ((Op.isMemcpy() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
+  if ((Op.isMemcpyOrMemmove() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
       !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
     unsigned Fast;
     if (Op.size() >= 16 &&

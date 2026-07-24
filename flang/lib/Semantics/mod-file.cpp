@@ -210,6 +210,9 @@ std::string ModFileWriter::GetAsString(const Symbol &symbol) {
   }
   all << '\n' << uses_.str();
   uses_.str().clear();
+  // Re-exported reduction modules are tracked per module file, so reset the set
+  // (like usedNonIntrinsicModules_) now that this module's uses are emitted.
+  reexportedReductionModules_.clear();
   all << useExtraAttrs_.str();
   useExtraAttrs_.str().clear();
   all << decls_.str();
@@ -377,11 +380,10 @@ static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
 
 static void PutOpenMPRequirements(
     llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
-  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
   unsigned version{semaCtx.langOptions().OpenMPVersion};
 
   if (const auto *decls{GetOmpDeclarative(symbol)}) {
-    if (const OmpClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
+    if (const llvm::omp::ClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
       os << "!$omp "
          << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                 llvm::omp::Directive::OMPD_requires, version));
@@ -393,12 +395,12 @@ static void PutOpenMPRequirements(
 
 static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
     const SymbolVector &symbols, SemanticsContext &semaCtx) {
-  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
   unsigned version{semaCtx.langOptions().OpenMPVersion};
 
   for (const Symbol &symbol : symbols) {
     if (const auto *decls{GetOmpDeclarative(symbol)}) {
-      if (const OmpClauseSet &dtgt{decls->ompDeclTarget()}; dtgt.count()) {
+      if (const llvm::omp::ClauseSet &dtgt{decls->ompDeclTarget()};
+          dtgt.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                   llvm::omp::Directive::OMPD_declare_target, version))
@@ -410,7 +412,8 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
       // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
       // this module recovers the directive from the .mod file. Common-block
       // names must be wrapped in slashes when reparsed.
-      if (const OmpClauseSet &gp{decls->ompGroupprivate()}; gp.count()) {
+      if (const llvm::omp::ClauseSet &gp{decls->ompGroupprivate()};
+          gp.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                   llvm::omp::Directive::OMPD_groupprivate, version))
@@ -887,6 +890,59 @@ void ModFileWriter::PutGeneric(const Symbol &symbol) {
 }
 
 void ModFileWriter::PutUse(const Symbol &symbol) {
+  // A declare reduction named by an operator has an internal mangled symbol
+  // name
+  // ("op.remote.", "op.+") that is not valid Fortran and cannot be emitted as a
+  // "use,only:" item (that module file could not be re-parsed, and reading it
+  // crashed, both for a plain re-export and for an embedded module in a
+  // hermetic module file). Its operator is itself re-exported as a valid item,
+  // and the resolver recovers the reduction through it (FindUserReductionSymbol
+  // / SearchOperatorReduction), keeping one shared reduction symbol, so skip
+  // the reduction's own use item. This covers a defined operator (which always
+  // has a mandatory "interface operator(.x.)") and an intrinsic operator with a
+  // user "interface operator(+)". A reduction named by a plain identifier
+  // ("myred") has a valid name and is emitted normally below. An operator-less
+  // reduction (a special function, or an intrinsic operator on an intrinsic
+  // type) has an unwritable name and no operator to recover through; it is
+  // re-exported by a plain USE of the defining module (see below).
+  const Symbol &ultimate{symbol.GetUltimate()};
+  if (ultimate.has<UserReductionDetails>()) {
+    std::string opId{GetReductionFortranId(ultimate.name())};
+    const Symbol *opSym{
+        opId.empty() ? nullptr : ultimate.owner().FindSymbol(opId)};
+    if (opSym && opSym->GetUltimate().has<GenericDetails>()) {
+      return;
+    }
+    // An operator-less reduction (a special function, or an intrinsic operator
+    // on an intrinsic type) has an unwritable mangled name and no operator to
+    // recover through. It can only have been re-exported by a plain USE of the
+    // defining module (a mangled name cannot appear in an only-list, and there
+    // is no operator surrogate to name), so re-export the whole module. The
+    // reduction then comes in as a shared use-association, with no facade-owned
+    // duplicate and no re-resolved directive text. Any entities the facade
+    // renames or makes private are still emitted with their own use/rename/
+    // private items, which the reader honors, so the plain USE does not widen
+    // their visibility.
+    llvm::StringRef mangled{ultimate.name().begin(), ultimate.name().size()};
+    if (mangled.starts_with("op.")) {
+      // Only a PUBLIC operator-less reduction is re-exported. If the facade
+      // made it private, it must not be re-exported at all: emitting the plain
+      // use would re-import the whole module publicly and, because the mangled
+      // name is otherwise unwritable, silently change a consumer from the
+      // intrinsic reduction to this private one across a module-file
+      // round-trip.
+      if (!symbol.attrs().test(Attr::PRIVATE)) {
+        auto &reductionUse{symbol.get<UseDetails>()};
+        const Symbol &reexportModule{GetUsedModule(reductionUse)};
+        if (!reductionUse.symbol().owner().parent().IsIntrinsicModules() &&
+            reexportedReductionModules_.insert(reexportModule).second) {
+          uses_ << "use " << reexportModule.name() << '\n';
+          usedNonIntrinsicModules_.insert(reexportModule);
+        }
+      }
+      return;
+    }
+  }
   auto &details{symbol.get<UseDetails>()};
   auto &use{details.symbol()};
   const Symbol &module{GetUsedModule(details)};
@@ -1724,7 +1780,12 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   // within the module file.
   Scope *previousHermetic{context_.currentHermeticModuleFileScope()};
   if (parseTree.v.size() > 1) {
-    parser::Program hermeticModules{std::move(parseTree.v)};
+    // Retain the embedded modules' parse tree for the lifetime of the
+    // SemanticsContext: symbols resolved from it (e.g. UserReductionDetails and
+    // MapperDetails, which hold raw parse-tree pointers) outlive this function
+    // and are dereferenced later, including at lowering time.
+    parser::Program &hermeticModules{
+        context_.SaveParseTree(parser::Program{std::move(parseTree.v)})};
     parseTree.v.emplace_back(std::move(hermeticModules.v.front()));
     hermeticModules.v.pop_front();
     Scope &hermeticScope{topScope.MakeScope(Scope::Kind::Global)};
