@@ -25,6 +25,14 @@ def ArithExpandOpsPass : Pass<"arith-expand"> {
               /*default=*/"false",
               "Enable expansion of `arith.flush_denormals` on IEEE-like "
               "floating-point types">,
+       Option<"includeMinMax", "include-min-max", "bool", /*default=*/"true",
+              "Enable expansion of the min/max ops (maximumf/minimumf/maxnumf/"
+              "minnumf and the signed/unsigned integer max/min). These ops "
+              "also have a direct arith-to-llvm lowering to the "
+              "`llvm.intr.maximum/minimum/maxnum/minnum` (and smax/umax/...) "
+              "intrinsics; disable this so pipelines that run arith-to-llvm "
+              "can use those single-instruction lowerings instead of the "
+              "cmpf/select expansion">,
   ];
 }
 
