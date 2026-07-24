@@ -376,6 +376,14 @@ MCRegister SPIRVNonSemanticDebugHandler::getCachedOpStringReg(StringRef S) {
   return It->second;
 }
 
+MCRegister SPIRVNonSemanticDebugHandler::emitAndCacheScopePathOpStringReg(
+    const DIScope *Scope, SPIRV::ModuleAnalysisInfo &MAI) {
+  MCRegister Reg = emitOpStringIfNew(getDebugFullPath(Scope), MAI);
+  if (Scope)
+    ScopeToPathOpStringReg[Scope] = Reg;
+  return Reg;
+}
+
 MCRegister SPIRVNonSemanticDebugHandler::getCachedScopePathOpStringReg(
     const DIScope *Scope, bool UseEmptyPathIfNullScope) {
   if (!Scope) {
@@ -832,8 +840,10 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
       static_cast<uint32_t>(M->getSizeInBits()), I32TypeReg, MAI);
   MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(M), I32TypeReg, MAI);
 
-  // NonSemantic DebugTypeMember has no Parent operand: the composite references
-  // its members, not the reverse.
+  // In NonSemantic.Shader.DebugInfo a DebugTypeMember has no Parent operand:
+  // only the composite references its members. This is by design, it drops the
+  // Parent that OpenCL.DebugInfo.100 had, and it avoids a composite/member
+  // reference cycle.
   //
   // FIXME: Static members are not handled yet: their constant initializer is
   // available but is not emitted as the optional Value operand, and under DWARF
@@ -910,7 +920,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   for (const DISubprogram *SP : SubprogramDeclarations) {
     emitOpStringIfNew(SP->getName(), MAI);
     emitOpStringIfNew(SP->getLinkageName(), MAI);
-    ScopeToPathOpStringReg[SP] = emitOpStringIfNew(getDebugFullPath(SP), MAI);
+    emitAndCacheScopePathOpStringReg(SP, MAI);
   }
 
   // Cache the OpStrings each DebugTypeComposite and its DebugTypeMembers use:
@@ -919,29 +929,20 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   for (const DICompositeType *CT : CompositeTypes) {
     emitOpStringIfNew(CT->getName(), MAI);
     emitOpStringIfNew(CT->getIdentifier(), MAI);
-    MCRegister PathReg =
-        emitOpStringIfNew(getDebugFullPath(CT->getFile()), MAI);
-    if (const DIFile *F = CT->getFile())
-      ScopeToPathOpStringReg[F] = PathReg;
+    emitAndCacheScopePathOpStringReg(CT->getFile(), MAI);
     for (const DINode *Element : CT->getElements()) {
       const auto *M = dyn_cast<DIDerivedType>(Element);
       if (!M || M->getTag() != dwarf::DW_TAG_member)
         continue;
       emitOpStringIfNew(M->getName(), MAI);
-      MCRegister MPathReg =
-          emitOpStringIfNew(getDebugFullPath(M->getFile()), MAI);
-      if (const DIFile *MF = M->getFile())
-        ScopeToPathOpStringReg[MF] = MPathReg;
+      emitAndCacheScopePathOpStringReg(M->getFile(), MAI);
     }
   }
 
   for (const auto &[GV, _] : GlobalVariableDebugInfoMap) {
     emitOpStringIfNew(GV->getName(), MAI);
     emitOpStringIfNew(GV->getLinkageName(), MAI);
-    SmallString<128> Path = getDebugFullPath(GV->getFile());
-    MCRegister PathReg = emitOpStringIfNew(Path, MAI);
-    if (const DIFile *F = GV->getFile())
-      ScopeToPathOpStringReg[F] = PathReg;
+    emitAndCacheScopePathOpStringReg(GV->getFile(), MAI);
   }
 
   CachedEmptyStringReg = emitOpStringIfNew("", MAI);

@@ -4,8 +4,7 @@
 ; DIGlobalVariable with a static data member declaration whose member type is a
 ; pointer with no DWARF address space. emitDebugTypePointer skips that type, so
 ; the member is not emitted, the Static Member Declaration operand cannot be
-; resolved, and the whole DebugGlobalVariable is skipped. Durable as more member
-; types are supported.
+; resolved, and the whole DebugGlobalVariable is skipped.
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: OpExtInst {{.*}} [[EXT]] DebugCompilationUnit

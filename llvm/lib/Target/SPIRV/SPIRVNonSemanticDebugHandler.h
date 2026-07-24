@@ -209,6 +209,12 @@ private:
   /// section 7 did not complete.
   MCRegister getCachedOpStringReg(StringRef S);
 
+  /// Section 7 only: emit the path \c OpString for \p Scope and cache it under
+  /// \p Scope when non-null. Returns the \c OpString result id, which is still
+  /// emitted when \p Scope is null but not cached.
+  MCRegister emitAndCacheScopePathOpStringReg(const DIScope *Scope,
+                                              SPIRV::ModuleAnalysisInfo &MAI);
+
   /// Section 10 only: lookup path \c OpString id for \p Scope from
   /// \c ScopeToPathOpStringReg; asserts if missing or invalid. When
   /// \p UseEmptyPathIfNullScope is true and \p Scope is null, returns
