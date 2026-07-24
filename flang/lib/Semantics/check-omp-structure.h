@@ -21,21 +21,17 @@
 #include "flang/Semantics/semantics.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
-
-using OmpClauseSet =
-    Fortran::common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 #define GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
-namespace llvm {
-namespace omp {
-static OmpClauseSet privateSet{
+namespace llvm::omp {
+static ClauseSet privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
-static OmpClauseSet privateReductionSet{
-    OmpClauseSet{Clause::OMPC_reduction} | privateSet};
-} // namespace omp
-} // namespace llvm
+static ClauseSet privateReductionSet{
+    ClauseSet{Clause::OMPC_reduction} | privateSet};
+} // namespace llvm::omp
 
 namespace Fortran::semantics {
 struct AnalyzedCondStmt;
@@ -49,10 +45,14 @@ struct LoopSequence;
 using SymbolSourceMap = std::multimap<const Symbol *, parser::CharBlock>;
 // Multimap to check the triple <current_dir, enclosing_dir, enclosing_clause>
 using DirectivesClauseTriple = std::multimap<llvm::omp::Directive,
-    std::pair<llvm::omp::Directive, const OmpClauseSet>>;
+    std::pair<llvm::omp::Directive, const llvm::omp::ClauseSet>>;
 
 using OmpStructureCheckerBase = DirectiveStructureChecker<llvm::omp::Directive,
-    llvm::omp::Clause, parser::OmpClause, llvm::omp::Clause_enumSize>;
+    llvm::omp::Clause, parser::OmpClause, llvm::omp::ClauseSet>;
+
+template <>
+void IterateOverMembers(const llvm::omp::ClauseSet &set,
+    std::function<void(llvm::omp::Clause)> func);
 
 class OmpStructureChecker : public OmpStructureCheckerBase {
 public:
@@ -145,6 +145,8 @@ public:
   void Enter(const parser::OmpDirectiveSpecification &);
   void Leave(const parser::OmpDirectiveSpecification &);
 
+  void Enter(const parser::OmpErrorDirective &);
+
   void Enter(const parser::OmpMetadirectiveDirective &);
   void Leave(const parser::OmpMetadirectiveDirective &);
 
@@ -202,6 +204,7 @@ public:
   void Enter(const parser::OmpClause::Linear &x);
   void Enter(const parser::OmpClause::Looprange &x);
   void Enter(const parser::OmpClause::Map &x);
+  void Enter(const parser::OmpClause::Message &x);
   void Enter(const parser::OmpClause::NumTeams &x);
   void Enter(const parser::OmpClause::NumThreads &x);
   void Enter(const parser::OmpClause::OmpxBare &x);
@@ -336,7 +339,7 @@ private:
       llvm::iterator_range<ClauseIterator> endClauses);
   void AnalyzeObject(const parser::OmpObject &object);
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
-  FindMutuallyExclusiveClauses(OmpClauseSet exclusive,
+  FindMutuallyExclusiveClauses(llvm::omp::ClauseSet exclusive,
       const std::vector<const parser::OmpClause *> &clauses);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
@@ -353,9 +356,9 @@ private:
   void CheckStructureComponent(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
-      const parser::OmpDirectiveName &name, const OmpDirectiveSet &);
+      const parser::OmpDirectiveName &name, const llvm::omp::DirectiveSet &);
 
-  bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
+  bool IsCloselyNestedRegion(const llvm::omp::DirectiveSet &set);
   bool IsNestedInDirective(llvm::omp::Directive directive);
   bool IsCombinedParallelWorksharing(llvm::omp::Directive directive) const;
   bool InTargetRegion();
