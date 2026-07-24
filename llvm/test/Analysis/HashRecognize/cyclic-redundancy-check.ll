@@ -335,6 +335,33 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
+define i16 @crc16.be.tc8.crc.init.select(i16 %a, i16 %b) {
+; CHECK-LABEL: 'crc16.be.tc8.crc.init.select'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Unable to find conditional recurrence
+;
+entry:
+  %a.inc = add i16 %a, 1
+  %b.inc = add i16 %b, 2
+  %init.cond = icmp ult i16 %a, %b
+  %crc.init = select i1 %init.cond, i16 %a.inc, i16 %b.inc
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
 define i8 @crc8.be.tc8.ptr.nested.loop(ptr %msg, i32 %loop.limit) {
 ; CHECK-LABEL: 'crc8.be.tc8.ptr.nested.loop'
 ; CHECK-NEXT:  Found big-endian CRC-8 loop with trip count 8
