@@ -223,6 +223,9 @@ protected:
   void beginInstruction(const MachineInstr *MI) override {}
   void endInstruction() override {}
 
+  // Override beginFunctionImpl(), not beginFunction():
+  // DebugHandlerBase::beginFunction() populates LScopes and DbgValues needed
+  // for future DebugLine emission.
   void beginFunctionImpl(const MachineFunction *MF) override;
   void endFunctionImpl(const MachineFunction *MF) override;
 
