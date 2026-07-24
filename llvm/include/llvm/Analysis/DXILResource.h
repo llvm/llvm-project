@@ -515,10 +515,9 @@ class DXILResourceMap {
   void populate(Module &M, DXILResourceTypeMap &DRTM);
   /// Populate the map given the resource binding calls in the given module.
   void populateResourceInfos(Module &M, DXILResourceTypeMap &DRTM);
-  /// Analyze and populate the directions of the resource counters.
-  void populateCounterDirections(Module &M);
-  /// Detect 64-bit atomic uses of resources and set `HasAtomic64Use`.
-  void populateAtomicUses(Module &M);
+  /// Analyze uses to fill in per-resource dynamic state — counter directions
+  /// and 64-bit atomic use — in a single walk of the module's instructions.
+  void populateFromInstructions(Module &M);
 
   /// Resolves a resource handle into a vector of ResourceInfos that
   /// represent the possible unique creations of the handle. Certain cases are
