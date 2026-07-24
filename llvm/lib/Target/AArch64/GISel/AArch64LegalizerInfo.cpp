@@ -2811,8 +2811,13 @@ bool AArch64LegalizerInfo::legalizeGetRounding(MachineInstr &MI,
   MachineInstrBuilder GetFPCR =
       MIRBuilder.buildIntrinsic(Intrinsic::aarch64_get_fpcr, ArrayRef{FPCR64});
 
-  // `((FPCR >> 22) + 1) & 0b11`, implemented as bitfield extraction of
-  // `(FPCR + (1 << 22))` as this version generates one less instruction.
+  // AArch64 rounding mode value to FLT_ROUNDS mapping is 0->1, 1->2, 2->3,
+  // 3->0, so we add one to the FPCR bits for the rounding mode.
+  // Instead of shifting and then adding as `((FPCR >> 22) + 1) & 0b11` which
+  // generates 3 instructions, we increment the rounding mode with
+  // `(FPCR + (1 << 22))` and extract the bits. The shift and addition is done
+  // in one instruction as `add	.., .., #1024, lsl #12`, so overall we generate
+  // one less instruction.
   auto FPCR32 = MIRBuilder.buildTrunc(I32, GetFPCR);
   auto One = MIRBuilder.buildConstant(I32, 1U << 22);
   auto Added = MIRBuilder.buildAdd(I32, FPCR32, One);
@@ -2831,7 +2836,8 @@ bool AArch64LegalizerInfo::legalizeSetRounding(MachineInstr &MI,
   const LLT I32 = LLT::integer(32);
   const LLT I64 = LLT::integer(64);
 
-  // Calculate new value of FPCR[23:22].
+  // AArch64 rounding mode value to FLT_ROUNDS mapping is 0->1, 1->2, 2->3,
+  // 3->0, so calculate the new value of FPCR[23:22] as `((arg - 1) & 3) << 22`.
   Register RM = MI.getOperand(0).getReg();
   auto One = MIRBuilder.buildConstant(I32, 1);
   auto Subtracted = MIRBuilder.buildSub(I32, RM, One);
@@ -2841,9 +2847,8 @@ bool AArch64LegalizerInfo::legalizeSetRounding(MachineInstr &MI,
   auto Shifted = MIRBuilder.buildShl(I32, Masked, ShiftAmount);
 
   // Get current value of FPCR.
-  Register FPCR64 = MRI.createGenericVirtualRegister(I64);
   MachineInstrBuilder GetFPCR =
-      MIRBuilder.buildIntrinsic(Intrinsic::aarch64_get_fpcr, ArrayRef{FPCR64});
+      MIRBuilder.buildIntrinsic(Intrinsic::aarch64_get_fpcr, {I64});
 
   // (FPCR & ~Mask) | Shifted
   auto FPCRMask = MIRBuilder.buildConstant(I64, ~((int64_t)0b11 << 22));
