@@ -18,6 +18,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/math_extras.h"
 #include "src/__support/wchar/mbstate.h"
 
@@ -59,10 +60,14 @@ public:
   template <typename CharType> size_t sizeAs();
 
   int push(char8_t utf8_byte);
+  int push(char16_t utf16);
   int push(char32_t utf32);
+  int push(wchar_t wchar);
 
   ErrorOr<char8_t> pop_utf8();
+  ErrorOr<char16_t> pop_utf16();
   ErrorOr<char32_t> pop_utf32();
+  ErrorOr<wchar_t> pop_wchar();
   template <typename CharType> ErrorOr<CharType> pop();
 };
 
@@ -120,6 +125,12 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
   return EILSEQ;
 }
 
+LIBC_INLINE int CharacterConverter::push(char16_t utf16) {
+  // TODO: support UTF-16
+  (void)utf16;
+  return -1;
+}
+
 LIBC_INLINE int CharacterConverter::push(char32_t utf32) {
   // we can't be partially through a conversion when pushing a utf32 value
   if (!isEmpty())
@@ -142,6 +153,16 @@ LIBC_INLINE int CharacterConverter::push(char32_t utf32) {
   return EILSEQ;
 }
 
+LIBC_INLINE int CharacterConverter::push(wchar_t wchar) {
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+  return push(static_cast<char32_t>(wchar));
+#elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+  return push(static_cast<char16_t>(wchar));
+#else
+  return -1;
+#endif
+}
+
 LIBC_INLINE ErrorOr<char32_t> CharacterConverter::pop_utf32() {
   // If pop is called too early, do not reset the state, use error to determine
   // whether enough bytes have been pushed
@@ -151,6 +172,11 @@ LIBC_INLINE ErrorOr<char32_t> CharacterConverter::pop_utf32() {
   // reset if successful pop
   clear();
   return utf32;
+}
+
+LIBC_INLINE ErrorOr<char16_t> CharacterConverter::pop_utf16() {
+  // TODO: support UTF-16
+  return Error(-1);
 }
 
 LIBC_INLINE ErrorOr<char8_t> CharacterConverter::pop_utf8() {
@@ -185,20 +211,57 @@ LIBC_INLINE ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   return static_cast<char8_t>(output);
 }
 
+LIBC_INLINE ErrorOr<wchar_t> CharacterConverter::pop_wchar() {
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+  ErrorOr<char32_t> Result = pop_utf32();
+  return Result ? ErrorOr<wchar_t>(static_cast<wchar_t>(*Result))
+                : ErrorOr<wchar_t>(Error(Result.error()));
+#elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+  ErrorOr<char16_t> Result = pop_utf16();
+  return Result ? ErrorOr<wchar_t>(static_cast<wchar_t>(*Result))
+                : ErrorOr<wchar_t>(Error(Result.error()));
+#else
+  return Error(-1);
+#endif
+}
+
 template <> LIBC_INLINE ErrorOr<char8_t> CharacterConverter::pop() {
   return pop_utf8();
+}
+
+template <> LIBC_INLINE ErrorOr<char16_t> CharacterConverter::pop() {
+  return pop_utf16();
 }
 
 template <> LIBC_INLINE ErrorOr<char32_t> CharacterConverter::pop() {
   return pop_utf32();
 }
 
+template <> LIBC_INLINE ErrorOr<wchar_t> CharacterConverter::pop() {
+  return pop_wchar();
+}
+
 template <> LIBC_INLINE size_t CharacterConverter::sizeAs<char8_t>() {
   return state->total_bytes;
 }
 
+template <> LIBC_INLINE size_t CharacterConverter::sizeAs<char16_t>() {
+  // TODO: support UTF-16
+  return 0;
+}
+
 template <> LIBC_INLINE size_t CharacterConverter::sizeAs<char32_t>() {
   return 1;
+}
+
+template <> LIBC_INLINE size_t CharacterConverter::sizeAs<wchar_t>() {
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+  return sizeAs<char32_t>();
+#elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+  return sizeAs<char16_t>();
+#else
+  return 0;
+#endif
 }
 
 } // namespace internal
