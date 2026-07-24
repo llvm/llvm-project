@@ -2354,9 +2354,13 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
         !(isa<OMPCapturedExprDecl>(D) && !D->hasAttr<OMPCaptureNoInitAttr>() &&
           !cast<OMPCapturedExprDecl>(D)->getInit()->isGLValue()) &&
         // If the variable is implicitly firstprivate and scalar - capture by
-        // copy
-        !((DSAStack->getDefaultDSA() == DSA_firstprivate ||
-           DSAStack->getDefaultDSA() == DSA_private) &&
+        // copy.  Query the default data-sharing attribute at the capture level
+        // being considered rather than at the innermost directive: a nested
+        // construct's default(firstprivate)/default(private) must not force an
+        // enclosing captured region (e.g. 'taskgraph') to capture a reduction
+        // variable by copy, which would sever the reduction's write-back.
+        !((DSAStack->getDefaultDSA(Level) == DSA_firstprivate ||
+           DSAStack->getDefaultDSA(Level) == DSA_private) &&
           !DSAStack->hasExplicitDSA(
               D, [](OpenMPClauseKind K, bool) { return K != OMPC_unknown; },
               Level) &&
