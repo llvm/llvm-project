@@ -1439,7 +1439,7 @@ loop.end:
   ret i64 %retval
 }
 
-; TODO: The dereferenceable_or_null attribute alone is not enough to prove the accesses
+; The dereferenceable_or_null attribute alone is not enough to prove the accesses
 ; are safe, but combined with the dereferenceable assumption on the same pointer
 ; we can vectorize the early-exit loop.
 define i8 @early_exit_deref_or_null_arg_with_deref_assumption(ptr dereferenceable_or_null(16) %ptr) nofree nosync {
@@ -1450,25 +1450,52 @@ define i8 @early_exit_deref_or_null_arg_with_deref_assumption(ptr dereferenceabl
 ; CHECK-NEXT:    [[LEN:%.*]] = load i64, ptr [[LEN_GEP]], align 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR]], i64 [[LEN]]) ]
 ; CHECK-NEXT:    [[NC:%.*]] = icmp ne i64 [[LEN]], 0
-; CHECK-NEXT:    br i1 [[NC]], label %[[SCALAR_PH:.*]], label %[[DEOPT:.*]]
+; CHECK-NEXT:    br i1 [[NC]], label %[[SCALAR_PH1:.*]], label %[[DEOPT:.*]]
+; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[LEN]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[LEN]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[LEN]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; CHECK-NEXT:    [[ELEMENT_GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 [[IV1]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[ELEMENT_GEP1]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], splat (i8 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV1]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP1]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[LEN]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[DEOPT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP1]], i1 false)
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i8> [[WIDE_LOAD]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[SCALAR_PH1]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ELEMENT_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 [[IV]]
 ; CHECK-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[ELEMENT_GEP]], align 1
 ; CHECK-NEXT:    [[RC:%.*]] = icmp eq i8 [[ELEMENT]], 1
-; CHECK-NEXT:    br i1 [[RC]], label %[[EXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 [[RC]], label %[[EXIT]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[LEN]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[DEOPT_LOOPEXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[DEOPT_LOOPEXIT]], label %[[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[DEOPT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[DEOPT]]
 ; CHECK:       [[DEOPT]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[ELEMENT_LCSSA:%.*]] = phi i8 [ [[ELEMENT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ELEMENT_LCSSA:%.*]] = phi i8 [ [[ELEMENT]], %[[LOOP]] ], [ [[TMP5]], %[[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i8 [[ELEMENT_LCSSA]]
 ;
 entry:
