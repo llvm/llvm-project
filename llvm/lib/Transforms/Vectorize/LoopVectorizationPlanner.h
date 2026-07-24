@@ -402,14 +402,13 @@ public:
     return RuntimeEC;
   }
 
-  /// Convert the input value \p Current to the corresponding value of an
-  /// induction with \p Start and \p Step values, using \p Start + \p Current *
-  /// \p Step.
+  /// Convert \p Current to \p Start + \p Current * \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
-                                     VPValue *Current, VPValue *Step) {
+                                     VPValue *Current, VPValue *Step,
+                                     const VPIRFlags::WrapFlagsTy &Flags = {}) {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
   VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
@@ -453,8 +452,8 @@ public:
     return createScalarIntrinsic(Intrinsic::vscale, {}, ResultTy, DL);
   }
 
-  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -464,8 +463,8 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -534,6 +533,27 @@ public:
       Type *Ty, Align Alignment, const VPIRMetadata &MD, DebugLoc DL) {
     return tryInsertInstruction(new VPWidenMemIntrinsicRecipe(
         VectorIntrinsicID, CallArguments, Ty, Alignment, MD, DL));
+  }
+
+  /// Create a recipe widening \p Load, loading from \p Addr with \p Mask (may
+  /// be null).
+  VPWidenLoadRecipe *createWidenLoad(LoadInst &Load, VPValue *Addr,
+                                     VPValue *Mask, bool Consecutive,
+                                     const VPIRMetadata &Metadata,
+                                     DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPWidenLoadRecipe(Load, Addr, Mask, Consecutive, Metadata, DL));
+  }
+
+  /// Create a recipe widening \p Store, storing \p StoredVal to \p Addr with
+  /// \p Mask (may be null).
+  VPWidenStoreRecipe *createWidenStore(StoreInst &Store, VPValue *Addr,
+                                       VPValue *StoredVal, VPValue *Mask,
+                                       bool Consecutive,
+                                       const VPIRMetadata &Metadata,
+                                       DebugLoc DL) {
+    return tryInsertInstruction(new VPWidenStoreRecipe(
+        Store, Addr, StoredVal, Mask, Consecutive, Metadata, DL));
   }
 
   //===--------------------------------------------------------------------===//
@@ -730,6 +750,13 @@ public:
 
   /// \return The vscale value used for tuning the cost model.
   std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
+
+  const TargetTransformInfo &getTTI() const { return TTI; }
+
+  PredicatedScalarEvolution &getPSE() const { return PSE; }
+
+  /// \return The loop being analyzed.
+  const Loop *getLoop() const { return TheLoop; }
 
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
@@ -968,10 +995,6 @@ public:
   /// Returns true if \p Plan requires a scalar epilogue after the vector
   /// loop. Asserts that the VPlan decision matches the legacy cost model.
   bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
-
-  /// Returns true if \p Plan folds the tail by masking. Asserts that the
-  /// VPlan-based decision matches the legacy cost model.
-  bool hasTailFolded(const VPlan &Plan) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

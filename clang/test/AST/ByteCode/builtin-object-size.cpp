@@ -61,7 +61,7 @@ namespace Padding {
   void foo() {
       LongDouble3Vec v1, v2;
 #if __SIZEOF_SIZE_T__ == 8
-#if !defined(_WIN32)
+#if __SIZEOF_LONG_DOUBLE__ == 16
       static_assert(__builtin_object_size(&v1, 0) == 64);
 #else
       static_assert(__builtin_object_size(&v1, 0) == 32);

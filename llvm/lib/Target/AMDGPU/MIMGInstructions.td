@@ -1078,6 +1078,14 @@ class VIMAGE_Atomic_gfx13<mimgopc op, string opcode,
                           bit noRtn = 0, bit enableDisasm=0>
   : VIMAGE_Atomic<op.GFX13, opcode, DataRC, num_addrs, GFX13Gen, MIMGEncGfx13, renamed, noRtn, enableDisasm>;
 
+// Mnemonic alias for a MIMG instruction that is only accepted for a specific
+// subtarget (e.g. an old opcode name kept for backward compatibility on a
+// single GFX generation).
+class AMDGPUMnemonicAliasMIMG<string asm, string alias, Predicate Pred>
+  : AMDGPUMnemonicAlias<asm, alias> {
+  let AssemblerPredicate = Pred;
+}
+
 multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
                                       RegisterOperand data_rc,
                                       bit enableDasm = 0,
@@ -1187,18 +1195,13 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
       }
     }
   }
-  if !and(op.HAS_GFX12, !not(!empty(renamed))) then
-    def : AMDGPUMnemonicAlias<asm, renamed> {
-      let AssemblerPredicate = isGFX12Plus;
-      bit IsAtomicRet; // Unused
-      MIMGBaseOpcode BaseOpcode; // Unused
-      int VDataDwords; // Unused
-    }
 }
 
 multiclass MIMG_Atomic_Base <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
-                        bit noRtn = 0, string renamed = ""> { // 64-bit atomics
+                        bit noRtn = 0, string renamed = "",
+                        bit defBaseOpcode = 1> { // 64-bit atomics
   let IsAtomicRet = !not(noRtn) in {
+    if defBaseOpcode then
     def "" : MIMGBaseOpcode {
       let Atomic = 1;
       let AtomicX2 = isCmpSwap;
@@ -1227,6 +1230,11 @@ multiclass MIMG_Atomic_Base <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP
       }
     }
   }
+
+  if !and(!not(noRtn), op.HAS_GFX12, !not(!empty(renamed))) then
+    def : AMDGPUMnemonicAliasMIMG<asm, renamed, isGFX12Only>;
+  if !and(!not(noRtn), op.HAS_GFX13, !not(!empty(renamed))) then
+    def : AMDGPUMnemonicAliasMIMG<asm, renamed, isGFX13Only>;
 }
 
 multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
@@ -1238,6 +1246,13 @@ multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
 multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
                                 bit isCmpSwap = 0, bit isFP = 0>
   : MIMG_Atomic <op, asm, isCmpSwap, isFP, renamed>;
+
+multiclass MIMG_Atomic_With_Alias <mimgopc op, string asm, string alias,
+                                   bit isCmpSwap = 0, bit isFP = 0,
+                                   bit defBaseOpcode = op.HAS_GFX12> {
+  defm ""       : MIMG_Atomic_Base <op, alias, isCmpSwap, isFP, /*noRtn=*/0, asm, defBaseOpcode>;
+  defm "_NORTN" : MIMG_Atomic_Base <op, alias, isCmpSwap, isFP, /*noRtn=*/1, asm, defBaseOpcode>;
+}
 
 class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterOperand dst_rc,
                            RegisterOperand src_rc, string dns="">
@@ -1807,8 +1822,10 @@ defm IMAGE_ATOMIC_FMAX          : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.
 defm IMAGE_ATOMIC_PK_ADD_F16    : MIMG_Atomic <mimgopc<0x86, 0x86, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_pk_add_f16", 0, 1>;
 defm IMAGE_ATOMIC_PK_ADD_BF16   : MIMG_Atomic <mimgopc<0x87, 0x87, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_pk_add_bf16", 0, 1>;
 defm IMAGE_ATOMIC_ADD_FLT       : MIMG_Atomic <mimgopc<0x83, 0x83, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_add_flt", 0, 1>;
-defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic <mimgopc<0x1e, 0x84, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_num_flt", 0, 1, "image_atomic_min_flt">;
-defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic <mimgopc<0x1f, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", 0, 1, "image_atomic_max_flt">;
+defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x84, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_flt", "image_atomic_min_num_flt", 0, 1>;
+defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x1e, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_num_flt", "image_atomic_min_flt", 0, 1>;
+defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_flt", "image_atomic_max_num_flt", 0, 1>;
+defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x1f, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", "image_atomic_max_flt", 0, 1>;
 let AssemblerPredicate = isGFX12Plus in {
   def : AMDGPUMnemonicAlias<"image_atomic_fmin", "image_atomic_min_flt">;
   def : AMDGPUMnemonicAlias<"image_atomic_fmax", "image_atomic_max_flt">;
@@ -1909,17 +1926,17 @@ defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, MIMG
 //def IMAGE_RSRC256 : MIMG_NoPattern_RSRC256 <"image_rsrc256", mimgopc<0x7e>>;
 //def IMAGE_SAMPLER : MIMG_NoPattern_ <"image_sampler", mimgopc<0x7f>>;
 
-let OtherPredicates = [HasImageInsts, HasGFX10_AEncoding, isGFX10Only] in
+let OtherPredicates = [HasImageInsts, HasBVHRayTracingInsts, isGFX10Only] in
 defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
 
-let OtherPredicates = [HasImageInsts, HasGFX10_AEncoding] in {
+let OtherPredicates = [HasImageInsts, HasBVHRayTracingInsts] in {
 defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x80, 0x18, 0x18, MIMG.NOP>, "image_msaa_load">;
 
 defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0, 0>;
 defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1, 0>;
 defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0, 0>;
 defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1, 0>;
-} // End OtherPredicates = [HasImageInsts, HasGFX10_AEncoding]
+} // End OtherPredicates = [HasImageInsts, HasBVHRayTracingInsts]
 
 defm IMAGE_BVH_DUAL_INTERSECT_RAY  : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x80, MIMG.NOP, MIMG.NOP>, "image_bvh_dual_intersect_ray", 1, 0, 1>;
 defm IMAGE_BVH8_INTERSECT_RAY      : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0x81, MIMG.NOP, MIMG.NOP>, "image_bvh8_intersect_ray", 1, 0, 0, 1>;

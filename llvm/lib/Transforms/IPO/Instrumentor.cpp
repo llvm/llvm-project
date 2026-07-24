@@ -111,6 +111,8 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
     return V;
   if (VTy->isAggregateType() || VTy->isVectorTy())
     return V;
+  if (VTy->isPointerTy() && Ty->isPointerTy())
+    return IRB.CreatePointerBitCastOrAddrSpaceCast(V, Ty);
   TypeSize RequestedSize = DL.getTypeSizeInBits(Ty);
   TypeSize ValueSize = DL.getTypeSizeInBits(VTy);
   bool ShouldTruncate = RequestedSize < ValueSize;
@@ -126,8 +128,6 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
                                        /*IsSigned=*/false),
                      Ty, DL, AllowTruncate);
   }
-  if (VTy->isPointerTy() && Ty->isPointerTy())
-    return IRB.CreatePointerBitCastOrAddrSpaceCast(V, Ty);
   if (VTy->isIntegerTy() && Ty->isIntegerTy())
     return IRB.CreateIntCast(V, Ty, /*IsSigned=*/false);
   // Use bit-preserving casts for floating-point values: convert float to int
@@ -797,7 +797,7 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
 
       auto *AI = IIRB.getAlloca(Fn, CallParam->getType());
       IIRB.IRB.CreateStore(CallParam, AI);
-      CallParam = CachedParam = AI;
+      CallParam = CachedParam = tryToCast(IIRB.IRB, AI, IIRB.PtrTy, DL);
     }
   }
 
@@ -1830,6 +1830,15 @@ Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
   return getCI(&Ty, Flag);
 }
 
+void NumericIO::addFlagNames() {
+  FlagNames["nsw"] = NUMERIC_FLAG_NO_SIGNED_WRAP;
+  FlagNames["nuw"] = NUMERIC_FLAG_NO_UNSIGNED_WRAP;
+  FlagNames["nnan"] = NUMERIC_FLAG_HAS_NO_NANS;
+  FlagNames["ninf"] = NUMERIC_FLAG_HAS_NO_INFS;
+  FlagNames["nsz"] = NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS;
+  FlagNames["exact"] = NUMERIC_FLAG_IS_EXACT;
+}
+
 void NumericIO::init(InstrumentationConfig &IConf,
                      InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
   if (UserConfig)
@@ -1873,6 +1882,7 @@ void NumericIO::init(InstrumentationConfig &IConf,
                "A bitmask value signaling which instruction flags are present.",
                IRTArg::NONE, getFlags));
   addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  addFlagNames();
   IConf.addChoice(*this, IIRB.Ctx);
 }
 
@@ -1895,6 +1905,13 @@ Value *CompareIO::getPredicate(Value &V, Type &Ty, InstrumentationConfig &IConf,
                                InstrumentorIRBuilderTy &IIRB) {
   auto *CI = dyn_cast<CmpInst>(&V);
   return getCI(&Ty, CI->getPredicate());
+}
+
+void CompareIO::addFlagNames() {
+  FlagNames["samesign"] = COMPARE_FLAG_SAMESIGN;
+  FlagNames["nnan"] = COMPARE_FLAG_HAS_NO_NANS;
+  FlagNames["ninf"] = COMPARE_FLAG_HAS_NO_INFS;
+  FlagNames["nsz"] = COMPARE_FLAG_HAS_NO_SIGNED_ZEROS;
 }
 
 Value *CompareIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
@@ -1971,6 +1988,7 @@ void CompareIO::init(InstrumentationConfig &IConf,
         IRTArg(IIRB.Int64Ty, "flags",
                "A bitmask value signaling which instruction flags are present.",
                IRTArg::NONE, getFlags));
+  addFlagNames();
   addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
   IConf.addChoice(*this, IIRB.Ctx);
 }

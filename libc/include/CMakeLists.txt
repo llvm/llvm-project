@@ -212,6 +212,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  alloca
+  ../libc/include/alloca.yaml
+  alloca.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.alloca_macros
+    .llvm-libc-types.size_t
+)
+
+add_header_macro(
   assert
   ../libc/include/assert.yaml
   assert.h
@@ -929,6 +939,8 @@ add_header_macro(
     .llvm-libc-types.in_addr_t
     .llvm-libc-types.in_port_t
     .llvm-libc-types.sa_family_t
+    .llvm-libc-types.struct_group_req
+    .llvm-libc-types.struct_group_source_req
     .llvm-libc-types.struct_sockaddr_in
     .llvm-libc-types.struct_sockaddr_in6
     .llvm-libc-types.struct_in_addr
@@ -1057,6 +1069,17 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.nl_types_macros
     .llvm-libc-types.nl_catd
+  )
+
+add_header_macro(
+  langinfo
+  ../libc/include/langinfo.yaml
+  langinfo.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.langinfo_macros
+    .llvm-libc-types.nl_item
+    .llvm-libc-types.locale_t
   )
 
 # UEFI spec references "Uefi.h" so we use that name for compatibility
