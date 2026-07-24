@@ -58,21 +58,21 @@ extern "C" int test_host_device_var() {
 }
 
 // HOST-LABEL: define{{.*}} i32 @test_host_device_var(
-// HOST: ret i32 27
+// HOST: ret i32 23
 
 extern "C" int test_host_constant_var() {
   return __builtin_pointee_address_space(&constant_var);
 }
 
 // HOST-LABEL: define{{.*}} i32 @test_host_constant_var(
-// HOST: ret i32 28
+// HOST: ret i32 24
 
 extern "C" int test_host_const_device_var() {
   return __builtin_pointee_address_space(&const_device_var);
 }
 
 // HOST-LABEL: define{{.*}} i32 @test_host_const_device_var(
-// HOST: ret i32 28
+// HOST: ret i32 24
 
 extern "C" int test_host_device_array_address() {
   return __builtin_pointee_address_space(&device_array);
@@ -178,24 +178,24 @@ extern "C" __device__ int test_shared_local() {
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_shared_local(
-// CUDA: ret i32 10
-// HIP: ret i32 29
+// CUDA: ret i32 8
+// HIP: ret i32 25
 
 extern "C" __device__ int test_device_var() {
   return __builtin_pointee_address_space(&device_var);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_device_var(
-// CUDA: ret i32 8
-// HIP: ret i32 27
+// CUDA: ret i32 6
+// HIP: ret i32 23
 
 extern "C" __device__ int test_device_array() {
   return __builtin_pointee_address_space(device_array);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_device_array(
-// CUDA: ret i32 8
-// HIP: ret i32 27
+// CUDA: ret i32 6
+// HIP: ret i32 23
 
 extern "C" __device__ int test_device_array_address() {
   return __builtin_pointee_address_space(&device_array);
@@ -223,16 +223,16 @@ extern "C" __device__ int test_constant_var() {
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_constant_var(
-// CUDA: ret i32 9
-// HIP: ret i32 28
+// CUDA: ret i32 7
+// HIP: ret i32 24
 
 extern "C" __device__ int test_const_device_var() {
   return __builtin_pointee_address_space(&const_device_var);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_const_device_var(
-// CUDA: ret i32 9
-// HIP: ret i32 28
+// CUDA: ret i32 7
+// HIP: ret i32 24
 
 extern "C" __device__ int test_explicit_cast() {
   return __builtin_pointee_address_space((int *)&constant_var);

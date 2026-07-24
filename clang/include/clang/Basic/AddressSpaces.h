@@ -127,30 +127,26 @@ enum ID : unsigned {
   OpenCLConstant = 3,
   OpenCLPrivate = 4,
   OpenCLGeneric = 5,
-  OpenCLGlobalDevice = 6,
-  OpenCLGlobalHost = 7,
-  CUDADevice = 8,
-  CUDAConstant = 9,
-  CUDAShared = 10,
-  SYCLGlobal = 11,
-  SYCLGlobalDevice = 12,
-  SYCLGlobalHost = 13,
-  SYCLLocal = 14,
-  SYCLPrivate = 15,
-  Ptr32Sptr = 16,
-  Ptr32Uptr = 17,
-  Ptr64 = 18,
-  HLSLGroupShared = 19,
-  HLSLConstant = 20,
-  HLSLPrivate = 21,
-  HLSLDevice = 22,
-  HLSLInput = 23,
-  HLSLOutput = 24,
-  HLSLPushConstant = 25,
-  WasmFuncRef = 26,
-  HIPDevice = 27,
-  HIPConstant = 28,
-  HIPShared = 29,
+  CUDADevice = 6,
+  CUDAConstant = 7,
+  CUDAShared = 8,
+  SYCLGlobal = 9,
+  SYCLLocal = 10,
+  SYCLPrivate = 11,
+  Ptr32Sptr = 12,
+  Ptr32Uptr = 13,
+  Ptr64 = 14,
+  HLSLGroupShared = 15,
+  HLSLConstant = 16,
+  HLSLPrivate = 17,
+  HLSLDevice = 18,
+  HLSLInput = 19,
+  HLSLOutput = 20,
+  HLSLPushConstant = 21,
+  WasmFuncRef = 22,
+  HIPDevice = 23,
+  HIPConstant = 24,
+  HIPShared = 25,
 
   TargetOffset = 0x1000000
 };
@@ -173,9 +169,8 @@ inline unsigned encode(LangAS AS, bool IsHIP = false) {
   case LangAS::opencl_generic:
     return OpenCLGeneric;
   case LangAS::opencl_global_device:
-    return OpenCLGlobalDevice;
   case LangAS::opencl_global_host:
-    return OpenCLGlobalHost;
+    return OpenCLGlobal;
   case LangAS::cuda_device:
     return IsHIP ? HIPDevice : CUDADevice;
   case LangAS::cuda_constant:
@@ -183,11 +178,9 @@ inline unsigned encode(LangAS AS, bool IsHIP = false) {
   case LangAS::cuda_shared:
     return IsHIP ? HIPShared : CUDAShared;
   case LangAS::sycl_global:
-    return SYCLGlobal;
   case LangAS::sycl_global_device:
-    return SYCLGlobalDevice;
   case LangAS::sycl_global_host:
-    return SYCLGlobalHost;
+    return SYCLGlobal;
   case LangAS::sycl_local:
     return SYCLLocal;
   case LangAS::sycl_private:

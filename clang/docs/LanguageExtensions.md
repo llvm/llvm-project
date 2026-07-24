@@ -4024,7 +4024,9 @@ uses the `__CLANG_ADDRESS_SPACE_HIP_*` values.
 For languages such as OpenCL, where address spaces are represented in AST
 types, the builtin returns the Clang address-space value of the pointee type of
 the expression as written. For an array expression, the pointee type is the
-array element type.
+array element type. The deprecated OpenCL and SYCL `global_device` and
+`global_host` address spaces are reported as their corresponding global address
+space.
 
 CUDA/HIP variables are not represented as address-space-qualified pointer types
 in Clang's AST. For CUDA/HIP, the builtin uses variable declaration attributes
