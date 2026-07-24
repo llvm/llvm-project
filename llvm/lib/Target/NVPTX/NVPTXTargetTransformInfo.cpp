@@ -139,9 +139,15 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
         : Special(Special), FtzRequirement(FtzReq) {}
   };
 
+  Type *RetTy = II->getFunctionType()->getReturnType();
+
   // Try to generate a SimplifyAction describing how to replace our
   // IntrinsicInstr with target-generic LLVM IR.
-  const SimplifyAction Action = [II]() -> SimplifyAction {
+  const SimplifyAction Action = [II, RetTy]() -> SimplifyAction {
+    Type *ScalarTy = RetTy->getScalarType();
+    const bool IsHalfOrBFloat = ScalarTy->isHalfTy() || ScalarTy->isBFloatTy();
+    const FtzRequirementTy NonF32FtzReq =
+        ScalarTy->isDoubleTy() ? FTZ_Any : FTZ_MustBeOff;
     switch (II->getIntrinsicID()) {
     // NVVM intrinsics that map directly to LLVM intrinsics.
     case Intrinsic::nvvm_ceil_d:
@@ -174,58 +180,22 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::fma, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fma_rn_bf16x2:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fmax_d:
-      return {Intrinsic::maximumnum, FTZ_Any};
-    case Intrinsic::nvvm_fmax_f:
-      return {Intrinsic::maximumnum, FTZ_MustBeOff};
-    case Intrinsic::nvvm_fmax_ftz_f:
-      return {Intrinsic::maximumnum, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fmax_nan_f:
-      return {Intrinsic::maximum, FTZ_MustBeOff};
-    case Intrinsic::nvvm_fmax_ftz_nan_f:
-      return {Intrinsic::maximum, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fmax_f16:
-      return {Intrinsic::maximumnum, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fmax_ftz_f16:
-      return {Intrinsic::maximumnum, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fmax_f16x2:
-      return {Intrinsic::maximumnum, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fmax_ftz_f16x2:
-      return {Intrinsic::maximumnum, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fmax_nan_f16:
-      return {Intrinsic::maximum, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fmax_ftz_nan_f16:
-      return {Intrinsic::maximum, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fmax_nan_f16x2:
-      return {Intrinsic::maximum, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fmax_ftz_nan_f16x2:
-      return {Intrinsic::maximum, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fmin_d:
-      return {Intrinsic::minimumnum, FTZ_Any};
-    case Intrinsic::nvvm_fmin_f:
-      return {Intrinsic::minimumnum, FTZ_MustBeOff};
-    case Intrinsic::nvvm_fmin_ftz_f:
-      return {Intrinsic::minimumnum, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fmin_nan_f:
-      return {Intrinsic::minimum, FTZ_MustBeOff};
-    case Intrinsic::nvvm_fmin_ftz_nan_f:
-      return {Intrinsic::minimum, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fmin_f16:
-      return {Intrinsic::minimumnum, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fmin_ftz_f16:
-      return {Intrinsic::minimumnum, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fmin_f16x2:
-      return {Intrinsic::minimumnum, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fmin_ftz_f16x2:
-      return {Intrinsic::minimumnum, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fmin_nan_f16:
-      return {Intrinsic::minimum, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fmin_ftz_nan_f16:
-      return {Intrinsic::minimum, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fmin_nan_f16x2:
-      return {Intrinsic::minimum, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fmin_ftz_nan_f16x2:
-      return {Intrinsic::minimum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmax:
+      return {Intrinsic::maximumnum, NonF32FtzReq, IsHalfOrBFloat};
+    case Intrinsic::nvvm_fmax_ftz:
+      return {Intrinsic::maximumnum, FTZ_MustBeOn, IsHalfOrBFloat};
+    case Intrinsic::nvvm_fmax_nan:
+      return {Intrinsic::maximum, NonF32FtzReq, IsHalfOrBFloat};
+    case Intrinsic::nvvm_fmax_ftz_nan:
+      return {Intrinsic::maximum, FTZ_MustBeOn, IsHalfOrBFloat};
+    case Intrinsic::nvvm_fmin:
+      return {Intrinsic::minimumnum, NonF32FtzReq, IsHalfOrBFloat};
+    case Intrinsic::nvvm_fmin_ftz:
+      return {Intrinsic::minimumnum, FTZ_MustBeOn, IsHalfOrBFloat};
+    case Intrinsic::nvvm_fmin_nan:
+      return {Intrinsic::minimum, NonF32FtzReq, IsHalfOrBFloat};
+    case Intrinsic::nvvm_fmin_ftz_nan:
+      return {Intrinsic::minimum, FTZ_MustBeOn, IsHalfOrBFloat};
     case Intrinsic::nvvm_sqrt_rn_d:
       return {Intrinsic::sqrt, FTZ_Any};
     case Intrinsic::nvvm_sqrt_f:

@@ -1296,7 +1296,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     if (Node->getOpcode() >= ISD::BUILTIN_OP_END) {
       Action = TLI.getCustomOperationAction(*Node);
     } else {
-      Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
+      Action = TLI.getOperationAction(Node, Node->getValueType(0));
     }
     break;
   }
