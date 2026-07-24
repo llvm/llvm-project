@@ -649,6 +649,10 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_variant                              202306L
 #endif
 
+#if _LIBCPP_STD_VER >= 29
+
+#endif
+
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 // clang-format on

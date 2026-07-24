@@ -79,12 +79,17 @@ _warningFlags = [
     "-flax-vector-conversions=none",
 ]
 
-_allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
+_allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26", "c++29"]
 
 
 def getStdFlag(cfg, std):
     if hasCompileFlag(cfg, "-std=" + std):
         return "-std=" + std
+    fallbacks = {
+        "c++29": "c++2d",
+    }
+    if std in fallbacks and hasCompileFlag(cfg, "-std=" + fallbacks[std]):
+        return "-std=" + fallbacks[std]
     return None
 
 
