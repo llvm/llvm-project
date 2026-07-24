@@ -51,10 +51,6 @@ using namespace llvm;
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
 
-namespace llvm {
-extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
-} // namespace llvm
-
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
 public:
@@ -117,7 +113,8 @@ public:
   void emitEndOfAsmFile(Module &M) override;
 
   void emitFunctionEntryLabel() override;
-  bool emitDirectiveOptionArch();
+  bool emitTargetFeaturePush(const MCSubtargetInfo &STI) override;
+  void emitTargetFeaturePop(const MCSubtargetInfo &STI, bool DidPush) override;
 
   void emitNoteGnuProperty(const Module &M);
 
@@ -527,20 +524,20 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-bool RISCVAsmPrinter::emitDirectiveOptionArch() {
+bool RISCVAsmPrinter::emitTargetFeaturePush(const MCSubtargetInfo &STI) {
   RISCVTargetStreamer &RTS = getTargetStreamer();
   SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
   const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
-  for (const auto &Feature : RISCVFeatureKV) {
-    if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
+  for (const auto &Feature : MCSTI.getAllProcessorFeatures()) {
+    if (STI.hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
       continue;
 
-    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
+    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
       continue;
 
-    auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
-                                                : RISCVOptionArchArgType::Minus;
-    StringRef ExtName = Feature.Key;
+    auto Delta = STI.hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
+                                               : RISCVOptionArchArgType::Minus;
+    StringRef ExtName = Feature.key();
     ExtName.consume_front("experimental-");
     NeedEmitStdOptionArgs.emplace_back(Delta, ExtName.str());
   }
@@ -553,11 +550,16 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
   return false;
 }
 
+void RISCVAsmPrinter::emitTargetFeaturePop(const MCSubtargetInfo &STI,
+                                           bool DidPush) {
+  if (DidPush)
+    getTargetStreamer().emitDirectiveOptionPop();
+}
+
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
-  RISCVTargetStreamer &RTS = getTargetStreamer();
 
-  bool EmittedOptionArch = emitDirectiveOptionArch();
+  bool EmittedOptionArch = emitTargetFeaturePush(*STI);
 
   SetupMachineFunction(MF);
   emitFunctionBody();
@@ -565,8 +567,7 @@ bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Emit the XRay table
   emitXRayTable();
 
-  if (EmittedOptionArch)
-    RTS.emitDirectiveOptionPop();
+  emitTargetFeaturePop(*STI, EmittedOptionArch);
   return false;
 }
 
@@ -642,10 +643,10 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
             /*ExperimentalExtensionVersionCheck=*/true);
         if (!errorToBool(ParseResult.takeError())) {
           auto &ISAInfo = *ParseResult;
-          for (const auto &Feature : RISCVFeatureKV) {
-            if (ISAInfo->hasExtension(Feature.Key) &&
+          for (const auto &Feature : SubtargetInfo.getAllProcessorFeatures()) {
+            if (ISAInfo->hasExtension(Feature.key()) &&
                 !SubtargetInfo.hasFeature(Feature.Value))
-              SubtargetInfo.ToggleFeature(Feature.Key);
+              SubtargetInfo.ToggleFeature(Feature.key());
           }
         }
       }

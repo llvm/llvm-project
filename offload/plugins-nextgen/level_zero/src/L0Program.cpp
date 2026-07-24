@@ -86,19 +86,24 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   ModuleDesc.pInputModule = Image;
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
   ModuleDesc.pConstants = &SpecConstants;
-  Error CreateErrors = Error::success();
-  auto handleError = [&](Error Err) {
-    if (BuildLog)
-      zeModuleBuildLogDestroy(BuildLog);
-    CreateErrors = joinErrors(std::move(CreateErrors), std::move(Err));
-  };
-  CALL_ZE_HANDLE_ERROR(handleError, zeModuleCreate, l0Device.getZeContext(),
-                       l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
-  if (CreateErrors)
-    return CreateErrors;
-
+  ze_result_t RC;
+  CALL_ZE(RC, zeModuleCreate, l0Device.getZeContext(), l0Device.getZeDevice(),
+          &ModuleDesc, &Module, &BuildLog);
   if (BuildLog)
     zeModuleBuildLogDestroy(BuildLog);
+  if (RC != ZE_RESULT_SUCCESS) {
+    // zeModuleCreate compiles/loads the provided image, so a build failure here
+    // means the image itself could not be loaded for this device (e.g. a
+    // truncated or malformed binary) rather than a generic JIT failure of an
+    // otherwise valid program. Report it as INVALID_BINARY in that case (as
+    // opposed to the default mapping of ZE_RESULT_ERROR_MODULE_BUILD_FAILURE
+    // to ErrorCode::COMPILE_FAILURE).
+    const auto ErrCode = RC == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE
+                             ? ErrorCode::INVALID_BINARY
+                             : getOffloadErrorCode(RC);
+    return Plugin::error(ErrCode, "zeModuleCreate failed with error %d, %s", RC,
+                         getZeErrorName(RC));
+  }
 
   // Check if module link is required. We do not need this check for
   // library module.
@@ -169,7 +174,8 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
   auto ExpectedNewE =
       ELFObjectFileBase::createELFObjectFile(MB->getMemBufferRef());
   if (!ExpectedNewE) {
-    ODBG(OLDT_Module) << "Warning: unable to get ELF handle!";
+    std::string ErrMsg = toString(ExpectedNewE.takeError());
+    ODBG(OLDT_Module) << "Warning: unable to get ELF handle: " << ErrMsg;
     return false;
   }
   bool Res = false;
@@ -181,7 +187,8 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
     const auto &ELFF = ELFObjF->getELFFile();
     auto Sections = ELFF.sections();
     if (!Sections) {
-      ODBG(OLDT_Module) << "Warning: unable to get ELF sections!";
+      std::string ErrMsg = toString(Sections.takeError());
+      ODBG(OLDT_Module) << "Warning: unable to get ELF sections: " << ErrMsg;
       return false;
     }
     bool SeenOffloadSection = false;
@@ -191,7 +198,9 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
       Error Err = Plugin::success();
       for (auto Note : ELFF.notes(Sec, Err)) {
         if (Err) {
-          ODBG(OLDT_Module) << "Warning: unable to get ELF notes handle!";
+          std::string ErrMsg = toString(std::move(Err));
+          ODBG(OLDT_Module)
+              << "Warning: unable to get ELF notes handle: " << ErrMsg;
           return false;
         }
         if (Note.getName() != "INTELONEOMPOFFLOAD")
@@ -240,14 +249,14 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     auto InnerBinariesOrErr = llvm::object::OffloadBinary::create(Image);
     if (!InnerBinariesOrErr)
       return Plugin::error(
-          ErrorCode::UNKNOWN, "Failed to parse inner OffloadBinary: %s",
+          ErrorCode::INVALID_BINARY, "Failed to parse inner OffloadBinary: %s",
           llvm::toString(InnerBinariesOrErr.takeError()).c_str());
 
     auto &InnerBinaries = *InnerBinariesOrErr;
 
     // Should contain exactly one image
     if (InnerBinaries.size() != 1)
-      return Plugin::error(ErrorCode::UNKNOWN,
+      return Plugin::error(ErrorCode::INVALID_BINARY,
                            "Expected single inner OffloadBinary entry, got %zu",
                            InnerBinaries.size());
 
@@ -290,7 +299,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
       ODBG(OLDT_Module) << "Loading native binary module";
       ModuleFormat = ZE_MODULE_FORMAT_NATIVE;
     } else {
-      return Plugin::error(ErrorCode::UNKNOWN,
+      return Plugin::error(ErrorCode::INVALID_BINARY,
                            "Unsupported image kind %d in inner OffloadBinary",
                            static_cast<int>(ImageKind));
     }
@@ -310,7 +319,8 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   uint64_t MajorVer, MinorVer;
   if (!isValidOneOmpImage(Image.getBuffer(), MajorVer, MinorVer)) {
     ODBG(OLDT_Module) << "Warning: image is not a valid oneAPI OpenMP image.";
-    return Plugin::error(ErrorCode::UNKNOWN, "Invalid oneAPI OpenMP image");
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "Invalid oneAPI OpenMP image");
   }
   ODBG(OLDT_Module) << "Processing ELF-wrapped SPIR-V image";
 
@@ -523,7 +533,8 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     return Plugin::success();
   }
 
-  return Plugin::error(ErrorCode::UNKNOWN, "Failed to create program modules.");
+  return Plugin::error(ErrorCode::INVALID_BINARY,
+                       "Failed to create program modules.");
 }
 
 Expected<std::unique_ptr<MemoryBuffer>> L0ProgramBuilderTy::getELF() {
@@ -542,7 +553,7 @@ Expected<std::unique_ptr<MemoryBuffer>> L0ProgramBuilderTy::getELF() {
 
 Error L0ProgramTy::getSymbolMetadata(const char *Name, void **AddrPtr,
                                      size_t *SizePtr) const {
-  if (!Name)
+  if (!Name || !AddrPtr || !SizePtr)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Invalid arguments to getSymbolDeviceAddr");
 
@@ -553,10 +564,14 @@ Error L0ProgramTy::getSymbolMetadata(const char *Name, void **AddrPtr,
     CALL_ZE(RC, zeModuleGetGlobalPointer, Module, Name, &SymbolSize,
             &SymbolAddr);
     if (RC == ZE_RESULT_SUCCESS && SymbolAddr) {
-      if (AddrPtr)
-        *AddrPtr = SymbolAddr;
-      if (SizePtr)
-        *SizePtr = SymbolSize;
+      *AddrPtr = SymbolAddr;
+      *SizePtr = SymbolSize;
+      return Plugin::success();
+    }
+    CALL_ZE(RC, zeModuleGetFunctionPointer, Module, Name, &SymbolAddr);
+    if (RC == ZE_RESULT_SUCCESS && SymbolAddr) {
+      *AddrPtr = SymbolAddr;
+      *SizePtr = 0;
       return Plugin::success();
     }
   }

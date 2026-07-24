@@ -413,7 +413,7 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   Symbol->setFragment(&getCurrentSectionOnly()->getDummyFragment());
 
   if (LFIRewriter)
-    LFIRewriter->onLabel(Symbol);
+    LFIRewriter->onLabel(Symbol, *this);
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
@@ -742,6 +742,28 @@ void MCStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
   MCSymbol *Label = emitCFILabel();
   MCCFIInstruction Instruction =
       MCCFIInstruction::createNegateRAStateWithPC(Label, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                                       SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createSetRAState(Label, State, PACSym, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                                       SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createSetRAState(Label, State, Offset, Loc);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
@@ -1282,6 +1304,9 @@ void MCStreamer::finish(SMLoc EndLoc) {
     getContext().reportError(EndLoc, "Unfinished frame!");
     return;
   }
+
+  if (LFIRewriter)
+    LFIRewriter->finish(*this);
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)

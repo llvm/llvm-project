@@ -227,10 +227,11 @@ struct VPlanTransforms {
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
-  /// to a wide recipe if needed.
-  LLVM_ABI_FOR_TEST static bool
-  tryToConvertVPInstructionsToVPRecipes(VPlan &Plan,
-                                        const TargetLibraryInfo &TLI);
+  /// to a wide recipe if needed. Uses \p PSE to detect contiguous memory
+  /// accesses w.r.t. the \p OuterLoop induction variable.
+  LLVM_ABI_FOR_TEST static bool tryToConvertVPInstructionsToVPRecipes(
+      VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
+      Loop *OuterLoop);
 
   /// Try to legalize reductions with multiple in-loop uses. Currently only
   /// strict and non-strict min/max reductions used by FindLastIV reductions are
@@ -292,12 +293,11 @@ struct VPlanTransforms {
   /// regions until no improvements are remaining.
   static void createAndOptimizeReplicateRegions(VPlan &Plan);
 
-  /// Replace (ICMP_ULE, wide canonical IV, backedge-taken-count) checks with an
-  /// (active-lane-mask recipe, wide canonical IV, trip-count). If \p
-  /// UseActiveLaneMaskForControlFlow is true, introduce an
-  /// VPActiveLaneMaskPHIRecipe.
-  static void addActiveLaneMask(VPlan &Plan,
-                                bool UseActiveLaneMaskForControlFlow);
+  /// Materialize the abstract header mask of the loop region into concrete
+  /// recipes: an active-lane-mask if \p UseActiveLaneMask (with a PHI if \p
+  /// UseActiveLaneMaskForControlFlow), else (WideCanonicalIV icmp ule BTC).
+  static void materializeHeaderMask(VPlan &Plan, bool UseActiveLaneMask,
+                                    bool UseActiveLaneMaskForControlFlow);
 
   /// Insert truncates and extends for any truncated recipe. Redundant casts
   /// will be folded later.
@@ -418,7 +418,7 @@ struct VPlanTransforms {
   /// one step backwards.
   static void optimizeInductionLiveOutUsers(VPlan &Plan,
                                             PredicatedScalarEvolution &PSE,
-                                            bool FoldTail);
+                                            const Loop *L);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
@@ -585,8 +585,7 @@ struct VPlanTransforms {
   /// recipes. Non load/store input instructions are left unchanged.
   static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                          VPRecipeBuilder &RecipeBuilder,
-                                         PredicatedScalarEvolution &PSE,
-                                         const Loop *L);
+                                         VPCostContext &CostCtx);
 
   /// Make VPlan-based scalarization decision prior to delegating to the ones
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains

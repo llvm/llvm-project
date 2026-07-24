@@ -38,10 +38,9 @@ public:
   using ThisT = GenericUniformityInfo<ContextT>;
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
-  using CycleT = typename CycleInfoT::CycleT;
 
   using TemporalDivergenceTuple =
-      std::tuple<ConstValueRefT, InstructionT *, const CycleT *>;
+      std::tuple<ConstValueRefT, InstructionT *, CycleRef>;
 
   GenericUniformityInfo(const DominatorTreeT &DT, const CycleInfoT &CI,
                         const TargetTransformInfo *TTI = nullptr);
@@ -56,6 +55,9 @@ public:
 
   /// The GPU kernel this analysis result is for
   const FunctionT &getFunction() const;
+
+  /// The cycle info this analysis was computed with.
+  const CycleInfoT &getCycleInfo() const;
 
   /// Whether \p V is divergent at its definition.
   bool isDivergentAtDef(ConstValueRefT V) const;

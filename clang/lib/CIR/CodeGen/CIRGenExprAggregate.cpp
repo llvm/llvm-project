@@ -262,11 +262,6 @@ public:
     case CK_NonAtomicToAtomic:
     case CK_AtomicToNonAtomic: {
       bool isToAtomic = (e->getCastKind() == CK_NonAtomicToAtomic);
-      if (!isToAtomic) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "AggExprEmitter: CK_AtomicToNonAtomic");
-        return;
-      }
 
       // Determine the atomic and value types.
       QualType atomicType = e->getSubExpr()->getType();
@@ -443,8 +438,7 @@ public:
   }
 
   void VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCXXRewrittenBinaryOperator");
+    Visit(e->getSemanticForm());
   }
   void VisitObjCMessageExpr(ObjCMessageExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -474,6 +468,8 @@ public:
         e->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
     isExternallyDestructed |= destructNonTrivialCStruct;
 
+    // emitIfOnBoolExpr terminates each region; an unconditional yield here
+    // would keep alive the dead block a noreturn arm leaves behind.
     cgf.emitIfOnBoolExpr(
         e->getCond(),
         /*thenBuilder=*/
@@ -486,7 +482,6 @@ public:
             dest.setExternallyDestructed(isExternallyDestructed);
             assert(!cir::MissingFeatures::incrementProfileCounter());
             Visit(e->getTrueExpr());
-            cir::YieldOp::create(b, loc);
           }
           eval.endEvaluation();
         },
@@ -506,7 +501,6 @@ public:
             dest.setExternallyDestructed(isExternallyDestructed);
             assert(!cir::MissingFeatures::incrementProfileCounter());
             Visit(e->getFalseExpr());
-            cir::YieldOp::create(b, loc);
           }
           eval.endEvaluation();
         },
@@ -692,7 +686,10 @@ void AggExprEmitter::emitAggLoadOfLValue(const Expr *e) {
   LValue lv = cgf.emitLValue(e);
 
   // If the type of the l-value is atomic, then do an atomic load.
-  assert(!cir::MissingFeatures::opLoadStoreAtomic());
+  if (lv.getType()->isAtomicType() || cgf.isLValueSuitableForInlineAtomic(lv)) {
+    cgf.emitAtomicLoad(lv, e->getExprLoc(), dest);
+    return;
+  }
 
   emitFinalDestCopy(e->getType(), lv);
 }
@@ -1338,8 +1335,7 @@ void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
   // NOTE(cir): original codegen would normally convert destPtr and srcPtr to
   // i8* since memcpy operates on bytes. We don't need that in CIR because
   // cir.copy will operate on any CIR pointer that points to a sized type.
-  builder.createCopy(destPtr.getPointer(), srcPtr.getPointer(), isVolatile,
-                     skipTailPadding);
+  builder.createCopy(destPtr, srcPtr, isVolatile, skipTailPadding);
 
   assert(!cir::MissingFeatures::opTBAA());
 }

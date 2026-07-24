@@ -783,6 +783,10 @@ public:
   // given compilation arguments.
   virtual CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const;
 
+  // GetCXXStdlibName - Determine the name of the C++ standard library to use
+  // with the given compilation arguments.
+  virtual StringRef GetCXXStdlibName(const llvm::opt::ArgList &Args) const;
+
   // GetUnwindLibType - Determine the unwind library type to use with the
   // given compilation arguments.
   virtual UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const;

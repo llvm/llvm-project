@@ -41,6 +41,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -61,6 +62,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
 
 #include <cstdint>
 #include <memory>
@@ -1819,23 +1821,35 @@ llvm::Error AppleObjCRuntimeV2::SharedCacheImageHeaders::UpdateIfNeeded() {
   constexpr lldb::addr_t metadata_size =
       sizeof(uint32_t) + sizeof(uint32_t); // count + entsize
 
-  Status error;
+  /// Sanity check: m_count and m_entsize are external input, guard against
+  /// invalid values using an arbitrary 1GB maximum size.
+  const size_t memory_needed = static_cast<size_t>(m_count) * m_entsize;
+  if (memory_needed > 1024 * 1024 * 1024)
+    return llvm::createStringError(
+        "SharedCacheImageHeaders require too much memory");
+
   const lldb::addr_t first_header_addr = m_headerInfoRWs_ptr + metadata_size;
-  DataBufferHeap header_buffer(m_entsize, '\0');
-  lldb::offset_t cursor = 0;
-  for (uint32_t i = 0; i < m_count; i++) {
-    const lldb::addr_t header_addr = first_header_addr + (i * m_entsize);
-    process->ReadMemory(header_addr, header_buffer.GetBytes(), m_entsize,
-                        error);
-    if (error.Fail())
+
+  llvm::SmallVector<Range<addr_t, size_t>> mem_ranges =
+      llvm::to_vector(llvm::map_range(llvm::seq(m_count), [&](uint32_t i) {
+        return Range<addr_t, size_t>(first_header_addr + (i * m_entsize),
+                                     m_entsize);
+      }));
+
+  llvm::SmallVector<uint8_t, 0> buffer(memory_needed, 0);
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+      process->ReadMemoryRanges(mem_ranges, buffer);
+
+  for (auto [i, header_data] : llvm::enumerate(read_results)) {
+    if (header_data.size() != m_entsize)
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Failed to read memory from inferior when "
                                      "populating SharedCacheImageHeaders");
 
-    DataExtractor header_extractor(header_buffer.GetBytes(), m_entsize,
+    DataExtractor header_extractor(header_data.data(), m_entsize,
                                    process->GetByteOrder(),
                                    process->GetAddressByteSize());
-    cursor = 0;
+    lldb::offset_t cursor = 0;
     bool is_loaded = false;
     if (m_entsize == 4) {
       uint32_t header = header_extractor.GetU32_unchecked(&cursor);
@@ -2626,13 +2640,12 @@ lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheReadOnlyAddress() {
         SectionList *section_list = objc_module_sp->GetSectionList();
 
         if (section_list) {
-          SectionSP text_segment_sp(
-              section_list->FindSectionByName(ConstString("__TEXT")));
+          SectionSP text_segment_sp(section_list->FindSectionByName("__TEXT"));
 
           if (text_segment_sp) {
             SectionSP objc_opt_section_sp(
                 text_segment_sp->GetChildren().FindSectionByName(
-                    ConstString("__objc_opt_ro")));
+                    "__objc_opt_ro"));
 
             if (objc_opt_section_sp) {
               return objc_opt_section_sp->GetLoadBaseAddress(
@@ -3629,6 +3642,7 @@ static void RegisterObjCExceptionRecognizer(Process *process) {
 
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
       StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-      module.GetFilename(), symbols, Mangled::NamePreference::ePreferDemangled,
+      ConstString(module.GetFilename()), symbols,
+      Mangled::NamePreference::ePreferDemangled,
       /*first_instruction_only*/ true);
 }

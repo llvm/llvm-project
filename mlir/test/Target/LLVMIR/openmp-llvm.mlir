@@ -41,6 +41,30 @@ llvm.func @test_flush_construct(%arg0: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: define void @test_error_construct
+llvm.func @test_error_construct(%msg : !llvm.ptr) {
+  // Severity is 1 for `warning` and 2 for `fatal`; the message is a pointer to
+  // a constant string, or a null pointer when absent.
+  // CHECK: call void @__kmpc_error(ptr @{{[0-9]+}}, i32 1, ptr @{{.*}})
+  omp.error severity(warning) message("a warning")
+
+  // CHECK: call void @__kmpc_error(ptr @{{[0-9]+}}, i32 2, ptr @{{.*}})
+  omp.error severity(fatal) message("fatal error")
+
+  // A runtime message is passed through as the supplied pointer operand.
+  // CHECK: call void @__kmpc_error(ptr @{{[0-9]+}}, i32 1, ptr %{{.*}})
+  omp.error severity(warning) message_expr(%msg : !llvm.ptr)
+
+  // CHECK: call void @__kmpc_error(ptr @{{[0-9]+}}, i32 2, ptr null)
+  omp.error severity(fatal)
+
+  // CHECK: call void @__kmpc_error(ptr @{{[0-9]+}}, i32 1, ptr null)
+  omp.error severity(warning)
+
+  // CHECK-NEXT:    ret void
+  llvm.return
+}
+
 // CHECK-LABEL: define void @test_omp_parallel_1()
 llvm.func @test_omp_parallel_1() -> () {
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_1:.*]])
@@ -3587,7 +3611,7 @@ llvm.func @omp_opaque_pointers(%arg0 : !llvm.ptr, %arg1: !llvm.ptr, %expr: i32) 
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 1
 module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubscription = true, 
                                           assume_threads_oversubscription = true, assume_no_thread_state = true, 
-                                          assume_no_nested_parallelism = true>} {}
+                                          assume_no_nested_parallelism = true>, omp.is_gpu = true} {}
 // -----
 
 // CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
@@ -3596,7 +3620,7 @@ module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubsc
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-module attributes {omp.flags = #omp.flags<>} {}
+module attributes {omp.flags = #omp.flags<>, omp.is_target_device = true, omp.is_gpu = true} {}
 
 // -----
 
@@ -3606,7 +3630,7 @@ module attributes {omp.flags = #omp.flags<>} {}
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
-module attributes {omp.flags = #omp.flags<openmp_device_version = 51>} {}
+module attributes {omp.flags = #omp.flags<openmp_device_version = 51>, omp.is_target_device = true, omp.is_gpu = true} {}
 
 // -----
 
@@ -3617,13 +3641,13 @@ module attributes {omp.flags = #omp.flags<openmp_device_version = 51>} {}
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-module attributes {omp.version = #omp.version<version = 50>, omp.flags = #omp.flags<>} {}
+module attributes {omp.version = #omp.version<version = 50>, omp.flags = #omp.flags<>, omp.is_target_device = true, omp.is_gpu = true} {}
 
 // -----
 
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 51}
 // CHECK-NOT: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-module attributes {omp.version = #omp.version<version = 51>} {}
+module attributes {omp.version = #omp.version<version = 51>, omp.is_target_device = true} {}
 
 // -----
 // CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
@@ -3633,7 +3657,7 @@ module attributes {omp.version = #omp.version<version = 51>} {}
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 module attributes {omp.flags = #omp.flags<debug_kind = 0, assume_teams_oversubscription = false, 
                                           assume_threads_oversubscription = false, assume_no_thread_state = false, 
-                                          assume_no_nested_parallelism = false>} {}
+                                          assume_no_nested_parallelism = false>, omp.is_gpu = true} {}
 
 // -----
 
@@ -3642,7 +3666,7 @@ module attributes {omp.flags = #omp.flags<debug_kind = 0, assume_teams_oversubsc
 // CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
-module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true>} {}
+module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true>, omp.is_gpu = true} {}
 
 // -----
 
@@ -3652,7 +3676,7 @@ module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, 
 // CHECK-NOT: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
 // CHECK-NOT: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true,
-                                          no_gpu_lib=true>} {}
+                                          no_gpu_lib=true>, omp.is_gpu = true} {}
 
 // -----
 
@@ -3701,7 +3725,7 @@ module attributes {omp.is_target_device = false} {
 // -----
 
 module attributes {omp.is_target_device = true} {
-  // CHECK: define void @filter_nohost
+  // CHECK: define hidden void @filter_nohost
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
@@ -3723,7 +3747,7 @@ module attributes {omp.is_target_device = true} {
 // -----
 
 module attributes {omp.is_target_device = true} {
-  // CHECK: define void @filter_nohost
+  // CHECK: define hidden void @filter_nohost
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
@@ -4033,7 +4057,7 @@ llvm.func @omp_groupprivate_device() attributes {
 // CHECK-DAG: @nohost = internal global i32 undef
 // CHECK-DAG: @[[SHARED_ANY:any.*]] = internal addrspace(3) global i32 poison
 // CHECK-DAG: @[[SHARED_NOHOST:nohost.*]] = internal addrspace(3) global i32 poison
-// CHECK: define void @omp_groupprivate_device()
+// CHECK: define hidden void @omp_groupprivate_device()
 // CHECK: store i32 1, ptr addrspace(3) @[[SHARED_ANY]], align 4
 // CHECK: store i32 1, ptr @host, align 4
 // CHECK: store i32 1, ptr addrspace(3) @[[SHARED_NOHOST]], align 4

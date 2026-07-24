@@ -134,7 +134,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   }
 
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+  const ModuleLibcallLoweringInfo *LibcallLowering =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
 
   if (!LibcallLowering) {
@@ -610,7 +610,7 @@ bool InsertStackProtectors(const TargetLowering &TLI,
   // impossible to emit the check in IR, so the target *must* support stack
   // protection in SDAG.
   bool SupportsSelectionDAGSP =
-      TLI.useStackGuardXorFP() ||
+      TLI.useStackGuardMixFP() ||
       (EnableSelectionDAGSP && !TLI.getTargetMachine().Options.EnableFastISel);
   AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
   BasicBlock *FailBB = nullptr;

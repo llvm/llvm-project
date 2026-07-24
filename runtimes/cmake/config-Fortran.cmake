@@ -6,11 +6,6 @@
 # not needed or is insufficient, e.g. if intrinsic modules are missing and
 # cannot be compiled on-the-fly.
 #
-# RUNTIMES_FORTRAN_BUILD_DEPS - If RUNTIMES_ENABLE_FORTRAN is true, this is a
-# list of dependencies that must be built before any Fortran source can be
-# compiled. Contains the build targets for intrinsic modules, if necessary.
-# Otherweise, it is empty.
-#
 # RUNTIMES_FORTRAN_MODULES - Whether to build Flang modules and emit them
 # into Flang's search path. This is a CMake CACHE option defined in
 # config-Fortran.cmake and default to ON iff the Fortran compiler is detected
@@ -23,6 +18,17 @@
 # RUNTIMES_INSTALL_RESOURCE_MOD_PATH - Where to install intrinsic module files
 # in the install prefix. Relative to CMAKE_INSTALL_PREFIX. Only used when
 # RUNTIMES_FORTRAN_MODULES is ON.
+#
+#
+# The following targets are defined:
+#
+# fortran-compile-options - sets the compile options necessary to compile
+# modules. Primarily sets up the intrinsic module search paths if necessary.
+# Gets applied to flang-rt as well.
+#
+# fortran-compile-depends - link to this INTERFACE library to ensure Fortran
+# sources can be compiled. Ensures that the builtin modules from
+# flang-rt are built before.
 
 
 # Check whether the Fortran compiler already has access to builtin modules. Sets
@@ -74,14 +80,19 @@ endfunction ()
 
 set(RUNTIMES_ENABLE_FORTRAN OFF)
 
-
-set(RUNTIMES_FORTRAN_BUILD_DEPS "")
+# Targets compiling Fortran sources can depend on this target to ensure toolchain
+# prerequisites (runtime library and intrinsic modules) are built before.
+add_library(fortran-compile-options INTERFACE)
+add_library(fortran-compile-depends INTERFACE)
+target_link_libraries(fortran-compile-depends INTERFACE fortran-compile-options)
 
 if (CMAKE_Fortran_COMPILER)
   # Workarounds for older versions of CMake not recognizing FLang. Hence, we
   # cannot use CMAKE_Fortran_COMPILER_ID.
   cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR
+      _Fortran_COMPILER_STEM STREQUAL "flang" OR
+      _Fortran_COMPILER_STEM STREQUAL "fakeflang")
     # CMake 3.24 is the first version of CMake that directly recognizes Flang.
     # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
     if (CMAKE_VERSION VERSION_LESS "3.24")
@@ -148,11 +159,19 @@ if (CMAKE_Fortran_COMPILER)
   enable_language(Fortran)
   include(CheckFortranSourceCompiles)
 
+  if (CMAKE_Fortran_COMPILER_ID MATCHES "LLVM")
+    target_compile_options(fortran-compile-options INTERFACE
+      # Flang bug workaround: Reformatting of cooked token buffer causes
+      # identifier to be split between lines
+      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-Xflang;SHELL:-fno-reformat>"
+    )
+  endif ()
+
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang" AND "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
     # In a bootstrapping build (or any runtimes-build that includes flang-rt),
     # the intrinsic modules are not built yet. Targets can depend on
     # flang-rt-mod to ensure that flang-rt's modules are built first.
-    list(APPEND RUNTIMES_FORTRAN_BUILD_DEPS flang-rt-mod)
+    target_link_libraries(fortran-compile-depends INTERFACE flang-rt-mod flang-rt-mod.barrier)
     set(RUNTIMES_ENABLE_FORTRAN ON)
     message(STATUS "Fortran support enabled using just-built Flang-RT builtin modules")
   else ()
@@ -201,6 +220,11 @@ if (RUNTIMES_FORTRAN_MODULES)
   # The INSTALL'ed directory must exist, even if empty, or `ninja install` will
   # fail with an error.
   file(MAKE_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}")
+
+  # Let all Fortran sources find the public module files
+  target_compile_options(fortran-compile-options INTERFACE
+    "$<$<COMPILE_LANGUAGE:Fortran>:-fintrinsic-modules-path=${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}>"
+  )
 else ()
   # If Flang modules are disabled (e.g. because the compiler is not Flang), avoid the risk of Flang accidentally picking them up.
   extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${CMAKE_CURRENT_BINARY_DIR}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
@@ -233,10 +257,12 @@ function (flang_module_target tgtname)
     ${ARGN}
   )
 
-  # Let all modules find the public module files
-  target_compile_options(${tgtname} PRIVATE
-    "$<$<COMPILE_LANGUAGE:Fortran>:-fintrinsic-modules-path=${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}>"
-  )
+  if (tgtname STREQUAL "flang-rt-mod")
+    # Avoid circular dependency on flang-rt itself
+    target_link_libraries(${tgtname} PRIVATE fortran-compile-options)
+  else ()
+    target_link_libraries(${tgtname} PRIVATE fortran-compile-depends)
+  endif ()
 
   # Make CMake not ignore "use, intrinsic ::"-dependencies. Unfortunately,
   # it is not universally handled by CMake s.t. we currently must not use
@@ -249,18 +275,6 @@ function (flang_module_target tgtname)
       Fortran_BUILDING_INTRINSIC_MODULES ON
       Fortran_BUILDING_INSTRINSIC_MODULES ON
   )
-
-  if (RUNTIMES_FORTRAN_BUILD_DEPS AND NOT tgtname IN_LIST RUNTIMES_FORTRAN_BUILD_DEPS)
-    target_link_libraries(${tgtname} PRIVATE ${RUNTIMES_FORTRAN_BUILD_DEPS})
-  endif ()
-
-  if (CMAKE_Fortran_COMPILER_ID MATCHES "LLVM")
-    target_compile_options(${tgtname} PRIVATE
-      # Flang bug workaround: Reformating of cooked token buffer causes
-      # identifier to be split between lines
-      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-Xflang;SHELL:-fno-reformat>"
-    )
-  endif ()
 
   if (ARG_PUBLIC)
     set_target_properties(${tgtname}

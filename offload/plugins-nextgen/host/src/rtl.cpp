@@ -390,6 +390,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     Info.add("Max Memory Allocation Size (bytes)", 1, "",
              DeviceInfo::MAX_MEM_ALLOC_SIZE);
     Info.add("Max Group size", 1, "", DeviceInfo::MAX_WORK_GROUP_SIZE);
+    Info.add("Number of Lanes", 1, "", DeviceInfo::NUM_LANES);
     auto &MaxGroupSize =
         *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
                   DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
@@ -558,7 +559,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 };
 
 template <typename... ArgsTy>
-static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
+[[maybe_unused]] static Error Plugin::check(int32_t Code, const char *ErrMsg,
+                                            ArgsTy... Args) {
   if (Code == 0)
     return Plugin::success();
 

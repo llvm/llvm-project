@@ -35,6 +35,34 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
   ret <8 x half> %load
 }
 
+define <8 x bfloat> @masked_load_v8bf16_without_bf16_attr(ptr %src, <8 x i1> %mask) {
+; CHECK-LABEL: masked_load_v8bf16_without_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    shl v0.8h, v0.8h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+  %load = call <8 x bfloat> @llvm.masked.load.v8bf16(ptr %src, i32 8, <8 x i1> %mask, <8 x bfloat> zeroinitializer)
+  ret <8 x bfloat> %load
+}
+
+define <8 x bfloat> @masked_load_v8bf16_with_bf16_attr(ptr %src, <8 x i1> %mask) #0 {
+; CHECK-LABEL: masked_load_v8bf16_with_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    shl v0.8h, v0.8h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+  %load = call <8 x bfloat> @llvm.masked.load.v8bf16(ptr %src, i32 8, <8 x i1> %mask, <8 x bfloat> zeroinitializer)
+  ret <8 x bfloat> %load
+}
+
 define <4 x float> @masked_load_v4f32(ptr %src, <4 x i1> %mask) {
 ; CHECK-LABEL: masked_load_v4f32:
 ; CHECK:       // %bb.0:
@@ -134,3 +162,47 @@ define <4 x half> @masked_load_v4f16(ptr %ap, ptr %bp) {
   %load = call <4 x half> @llvm.masked.load.v4f16(ptr %ap, i32 2, <4 x i1> %mask, <4 x half> zeroinitializer)
   ret <4 x half> %load
 }
+
+define <4 x bfloat> @masked_load_v4bf16_without_bf16_attr(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_load_v4bf16_without_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %a = load <4 x bfloat>, ptr %ap
+  %b = load <4 x bfloat>, ptr %bp
+  %mask = fcmp oeq <4 x bfloat> %a, %b
+  %load = call <4 x bfloat> @llvm.masked.load.v4bf16(ptr %ap, i32 2, <4 x i1> %mask, <4 x bfloat> zeroinitializer)
+  ret <4 x bfloat> %load
+}
+
+define <4 x bfloat> @masked_load_v4bf16_with_bf16_attr(ptr %ap, ptr %bp) #0 {
+; CHECK-LABEL: masked_load_v4bf16_with_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %a = load <4 x bfloat>, ptr %ap
+  %b = load <4 x bfloat>, ptr %bp
+  %mask = fcmp oeq <4 x bfloat> %a, %b
+  %load = call <4 x bfloat> @llvm.masked.load.v4bf16(ptr %ap, i32 2, <4 x i1> %mask, <4 x bfloat> zeroinitializer)
+  ret <4 x bfloat> %load
+}
+
+attributes #0 = { "target-features"="+bf16" }

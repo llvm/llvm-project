@@ -171,7 +171,8 @@ public:
     return VF.getKnownMinValue() * ST->getVScaleForTuning();
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
 
   bool prefersVectorizedAddressing() const override;
 
@@ -296,10 +297,8 @@ public:
     if (Ty->isPointerTy())
       return true;
 
-    if (Ty->isBFloatTy() && ST->hasBF16())
-      return true;
-
-    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
+    if (Ty->isBFloatTy() || Ty->isHalfTy() || Ty->isFloatTy() ||
+        Ty->isDoubleTy())
       return true;
 
     if (Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||

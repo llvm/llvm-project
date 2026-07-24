@@ -1923,6 +1923,142 @@ entry:
   ret i32 %sum
 }
 
+; Two reductions added through a scalar accumulator chain should reassociate
+; so the dot products accumulate into one vector register and only a single
+; reduction remains.
+define i32 @vdot4au_vv_scalar_add_chain2(<16 x i8> %a0, <16 x i8> %b0, <16 x i8> %a1, <16 x i8> %b1, i32 %acc) {
+; NODOT-LABEL: vdot4au_vv_scalar_add_chain2:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; NODOT-NEXT:    vwmulu.vv v12, v10, v11
+; NODOT-NEXT:    vwmulu.vv v14, v8, v9
+; NODOT-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; NODOT-NEXT:    vwaddu.vv v8, v12, v14
+; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT-NEXT:    vmv.s.x v12, a0
+; NODOT-NEXT:    vredsum.vs v8, v8, v12
+; NODOT-NEXT:    vmv.x.s a0, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: vdot4au_vv_scalar_add_chain2:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v12, 0
+; DOT-NEXT:    vdot4au.vv v12, v10, v11
+; DOT-NEXT:    vdot4au.vv v12, v8, v9
+; DOT-NEXT:    vmv.s.x v8, a0
+; DOT-NEXT:    vredsum.vs v8, v12, v8
+; DOT-NEXT:    vmv.x.s a0, v8
+; DOT-NEXT:    ret
+entry:
+  %a0.zext = zext <16 x i8> %a0 to <16 x i32>
+  %b0.zext = zext <16 x i8> %b0 to <16 x i32>
+  %mul0 = mul <16 x i32> %a0.zext, %b0.zext
+  %r0 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %mul0)
+  %a1.zext = zext <16 x i8> %a1 to <16 x i32>
+  %b1.zext = zext <16 x i8> %b1 to <16 x i32>
+  %mul1 = mul <16 x i32> %a1.zext, %b1.zext
+  %r1 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %mul1)
+  %s0 = add i32 %r0, %acc
+  %s1 = add i32 %r1, %s0
+  ret i32 %s1
+}
+
+; Signed variant exercising the vdot4a.vv path.
+define i32 @vdot4a_vv_scalar_add_chain2(<16 x i8> %a0, <16 x i8> %b0, <16 x i8> %a1, <16 x i8> %b1, i32 %acc) {
+; NODOT-LABEL: vdot4a_vv_scalar_add_chain2:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; NODOT-NEXT:    vsext.vf2 v16, v10
+; NODOT-NEXT:    vsext.vf2 v18, v8
+; NODOT-NEXT:    vsext.vf2 v20, v9
+; NODOT-NEXT:    vwmul.vv v12, v18, v20
+; NODOT-NEXT:    vsext.vf2 v8, v11
+; NODOT-NEXT:    vwmacc.vv v12, v16, v8
+; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT-NEXT:    vmv.s.x v8, a0
+; NODOT-NEXT:    vredsum.vs v8, v12, v8
+; NODOT-NEXT:    vmv.x.s a0, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: vdot4a_vv_scalar_add_chain2:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v12, 0
+; DOT-NEXT:    vdot4a.vv v12, v10, v11
+; DOT-NEXT:    vdot4a.vv v12, v8, v9
+; DOT-NEXT:    vmv.s.x v8, a0
+; DOT-NEXT:    vredsum.vs v8, v12, v8
+; DOT-NEXT:    vmv.x.s a0, v8
+; DOT-NEXT:    ret
+entry:
+  %a0.sext = sext <16 x i8> %a0 to <16 x i32>
+  %b0.sext = sext <16 x i8> %b0 to <16 x i32>
+  %mul0 = mul <16 x i32> %a0.sext, %b0.sext
+  %r0 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %mul0)
+  %a1.sext = sext <16 x i8> %a1 to <16 x i32>
+  %b1.sext = sext <16 x i8> %b1 to <16 x i32>
+  %mul1 = mul <16 x i32> %a1.sext, %b1.sext
+  %r1 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %mul1)
+  %s0 = add i32 %r0, %acc
+  %s1 = add i32 %r1, %s0
+  ret i32 %s1
+}
+
+; Four-term chain without an external accumulator (x264 SAD shape).
+define i32 @vdot4au_vv_chain4(<16 x i8> %a0, <16 x i8> %b0, <16 x i8> %a1, <16 x i8> %b1, <16 x i8> %a2, <16 x i8> %b2, <16 x i8> %a3, <16 x i8> %b3) {
+; NODOT-LABEL: vdot4au_vv_chain4:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; NODOT-NEXT:    vwmulu.vv v16, v14, v15
+; NODOT-NEXT:    vwmulu.vv v14, v10, v11
+; NODOT-NEXT:    vwmulu.vv v18, v8, v9
+; NODOT-NEXT:    vwmulu.vv v20, v12, v13
+; NODOT-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; NODOT-NEXT:    vwaddu.vv v8, v14, v18
+; NODOT-NEXT:    vwaddu.vv v12, v16, v20
+; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT-NEXT:    vadd.vv v8, v12, v8
+; NODOT-NEXT:    vmv.s.x v12, zero
+; NODOT-NEXT:    vredsum.vs v8, v8, v12
+; NODOT-NEXT:    vmv.x.s a0, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: vdot4au_vv_chain4:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v16, 0
+; DOT-NEXT:    vdot4au.vv v16, v10, v11
+; DOT-NEXT:    vdot4au.vv v16, v8, v9
+; DOT-NEXT:    vdot4au.vv v16, v14, v15
+; DOT-NEXT:    vdot4au.vv v16, v12, v13
+; DOT-NEXT:    vmv.s.x v8, zero
+; DOT-NEXT:    vredsum.vs v8, v16, v8
+; DOT-NEXT:    vmv.x.s a0, v8
+; DOT-NEXT:    ret
+entry:
+  %a0.zext = zext <16 x i8> %a0 to <16 x i32>
+  %b0.zext = zext <16 x i8> %b0 to <16 x i32>
+  %mul0 = mul <16 x i32> %a0.zext, %b0.zext
+  %r0 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %mul0)
+  %a1.zext = zext <16 x i8> %a1 to <16 x i32>
+  %b1.zext = zext <16 x i8> %b1 to <16 x i32>
+  %mul1 = mul <16 x i32> %a1.zext, %b1.zext
+  %r1 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %mul1)
+  %a2.zext = zext <16 x i8> %a2 to <16 x i32>
+  %b2.zext = zext <16 x i8> %b2 to <16 x i32>
+  %mul2 = mul <16 x i32> %a2.zext, %b2.zext
+  %r2 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %mul2)
+  %a3.zext = zext <16 x i8> %a3 to <16 x i32>
+  %b3.zext = zext <16 x i8> %b3 to <16 x i32>
+  %mul3 = mul <16 x i32> %a3.zext, %b3.zext
+  %r3 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %mul3)
+  %s0 = add i32 %r1, %r0
+  %s1 = add i32 %r2, %s0
+  %s2 = add i32 %r3, %s1
+  ret i32 %s2
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; DOT32: {{.*}}
 ; DOT64: {{.*}}

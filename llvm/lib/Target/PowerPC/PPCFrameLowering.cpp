@@ -1768,6 +1768,26 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
   assert(RBReg != ScratchReg && "Should have avoided ScratchReg");
+
+  // Lambda to build MTCRF/MTOCRF instruction for restoring CR fields
+  auto BuildMoveToCR = [&](MachineBasicBlock::iterator InsertPt,
+                           Register SrcReg) {
+    if (MustSaveCRs.size() == 1)
+      // Use MTOCRF for single CR field
+      BuildMI(MBB, InsertPt, dl, MoveToCRInst, MustSaveCRs[0])
+          .addReg(SrcReg, getKillRegState(true));
+    else {
+      // Build CR mask for MTCRF.
+      unsigned CRMask = 0;
+      for (unsigned CRField : MustSaveCRs) {
+        CRMask |= 0x80 >> (CRField - PPC::CR0);
+      }
+      BuildMI(MBB, InsertPt, dl, TII.get(isPPC64 ? PPC::MTCRF8 : PPC::MTCRF))
+          .addImm(CRMask)
+          .addReg(SrcReg, getKillRegState(true));
+    }
+  };
+
   // If there is no red zone, ScratchReg may be needed for holding a useful
   // value (although not the base register). Make sure it is not overwritten
   // too early.
@@ -1781,9 +1801,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     BuildMI(MBB, MBBI, dl, LoadWordInst, TempReg)
       .addImm(CRSaveOffset)
       .addReg(SPReg);
-    for (unsigned i = 0, e = MustSaveCRs.size(); i != e; ++i)
-      BuildMI(MBB, MBBI, dl, MoveToCRInst, MustSaveCRs[i])
-        .addReg(TempReg, getKillRegState(i == e-1));
+    BuildMoveToCR(MBBI, TempReg);
   }
 
   // Delay restoring of the LR if ScratchReg is needed. This is ok, since
@@ -1857,9 +1875,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (MustSaveCR &&
       !(SingleScratchReg && MustSaveLR))
-    for (unsigned i = 0, e = MustSaveCRs.size(); i != e; ++i)
-      BuildMI(MBB, MBBI, dl, MoveToCRInst, MustSaveCRs[i])
-        .addReg(TempReg, getKillRegState(i == e-1));
+    BuildMoveToCR(MBBI, TempReg);
 
   if (MustSaveLR) {
     // If ROP protection is required, an extra instruction is added to compute a
@@ -2545,19 +2561,31 @@ static void restoreCRs(bool is31, bool CR2Spilled, bool CR3Spilled,
   MBB.insert(MI,
              addFrameReference(BuildMI(*MF, DL, TII.get(PPC::LWZ), MoveReg),
                                CSI[CSIIndex].getFrameIdx()));
+  // Count how many CR fields need restoring
+  unsigned NumCRs =
+      (CR2Spilled ? 1 : 0) + (CR3Spilled ? 1 : 0) + (CR4Spilled ? 1 : 0);
 
-  unsigned RestoreOp = PPC::MTOCRF;
-  if (CR2Spilled)
-    MBB.insert(MI, BuildMI(*MF, DL, TII.get(RestoreOp), PPC::CR2)
-               .addReg(MoveReg, getKillRegState(!CR3Spilled && !CR4Spilled)));
+  assert(NumCRs >= 1 &&
+         "Requires at least one non-volatile CR field to be restored.");
 
-  if (CR3Spilled)
-    MBB.insert(MI, BuildMI(*MF, DL, TII.get(RestoreOp), PPC::CR3)
-               .addReg(MoveReg, getKillRegState(!CR4Spilled)));
-
-  if (CR4Spilled)
-    MBB.insert(MI, BuildMI(*MF, DL, TII.get(RestoreOp), PPC::CR4)
-               .addReg(MoveReg, getKillRegState(true)));
+  if (NumCRs == 1) {
+    // Use MTOCRF for single CR field
+    unsigned CRReg = CR2Spilled ? PPC::CR2 : (CR3Spilled ? PPC::CR3 : PPC::CR4);
+    MBB.insert(MI, BuildMI(*MF, DL, TII.get(PPC::MTOCRF), CRReg)
+                       .addReg(MoveReg, getKillRegState(true)));
+  } else {
+    // Use MTCRF for multiple CR fields.
+    unsigned CRMask = 0;
+    if (CR2Spilled)
+      CRMask |= 0x20;
+    if (CR3Spilled)
+      CRMask |= 0x10;
+    if (CR4Spilled)
+      CRMask |= 0x08;
+    MBB.insert(MI, BuildMI(*MF, DL, TII.get(PPC::MTCRF))
+                       .addImm(CRMask)
+                       .addReg(MoveReg, getKillRegState(true)));
+  }
 }
 
 MachineBasicBlock::iterator PPCFrameLowering::
@@ -2810,9 +2838,9 @@ uint64_t PPCFrameLowering::getStackThreshold() const {
   // when extending the stack and is positive when releasing the stack frame.
   // To make `stux` and `add` paired, the absolute value of the number contained
   // in the scratch register should be the same. Thus the maximum stack size
-  // is (2^63)-1, i.e., LONG_MAX.
+  // is (2^63)-1, i.e., INT64_MAX.
   if (Subtarget.isPPC64())
-    return LONG_MAX;
+    return INT64_MAX;
 
   return TargetFrameLowering::getStackThreshold();
 }

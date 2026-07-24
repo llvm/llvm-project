@@ -278,19 +278,24 @@ ObjFile::ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy)
     : InputFile(symtab, ObjectKind, coffObj->getMemoryBufferRef(), lazy),
       coffObj(coffObj) {}
 
-ObjFile *ObjFile::create(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy) {
+std::unique_ptr<COFFObjectFile>
+ObjFile::createCOFFObject(COFFLinkerContext &ctx, MemoryBufferRef m) {
   // Parse a memory buffer as a COFF file.
   Expected<std::unique_ptr<Binary>> bin = createBinary(m);
   if (!bin)
     Fatal(ctx) << "Could not parse " << m.getBufferIdentifier();
 
-  auto *obj = dyn_cast<COFFObjectFile>(bin->get());
-  if (!obj)
+  std::unique_ptr<COFFObjectFile> obj(dyn_cast<COFFObjectFile>(bin->release()));
+  if (!obj.get())
     Fatal(ctx) << m.getBufferIdentifier() << " is not a COFF file";
 
-  bin->release();
-  return make<ObjFile>(ctx.getSymtab(MachineTypes(obj->getMachine())), obj,
-                       lazy);
+  return obj;
+}
+
+ObjFile *ObjFile::create(COFFLinkerContext &ctx, COFFObjectFile *coffObj,
+                         bool lazy) {
+  return make<ObjFile>(ctx.getSymtab(MachineTypes(coffObj->getMachine())),
+                       coffObj, lazy);
 }
 
 void ObjFile::parseLazy() {
@@ -1501,17 +1506,6 @@ static bool isRVACode(COFFObjectFile *coffObj, uint64_t rva, InputFile *file) {
 }
 
 void DLLFile::parse() {
-  // Parse a memory buffer as a PE-COFF executable.
-  std::unique_ptr<Binary> bin = CHECK(createBinary(mb), this);
-
-  if (auto *obj = dyn_cast<COFFObjectFile>(bin.get())) {
-    bin.release();
-    coffObj.reset(obj);
-  } else {
-    Err(symtab.ctx) << toString(this) << " is not a COFF file";
-    return;
-  }
-
   if (!coffObj->getPE32Header() && !coffObj->getPE32PlusHeader()) {
     Err(symtab.ctx) << toString(this) << " is not a PE-COFF executable";
     return;
@@ -1559,9 +1553,8 @@ void DLLFile::parse() {
 }
 
 MachineTypes DLLFile::getMachineType() const {
-  if (coffObj)
-    return static_cast<MachineTypes>(coffObj->getMachine());
-  return IMAGE_FILE_MACHINE_UNKNOWN;
+  auto machine = static_cast<MachineTypes>(coffObj->getMachine());
+  return machine == ARM64X ? ARM64 : machine;
 }
 
 void DLLFile::makeImport(DLLFile::Symbol *s) {
@@ -1576,7 +1569,7 @@ void DLLFile::makeImport(DLLFile::Symbol *s) {
   auto *imp = reinterpret_cast<coff_import_header *>(p);
   p += sizeof(*imp);
   imp->Sig2 = 0xFFFF;
-  imp->Machine = coffObj->getMachine();
+  imp->Machine = static_cast<uint16_t>(getMachineType());
   imp->SizeOfData = impSize;
   imp->OrdinalHint = 0; // Only linking by name
   imp->TypeInfo = (s->nameType << 2) | s->importType;
