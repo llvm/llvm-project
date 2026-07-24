@@ -402,6 +402,12 @@ struct __optional_destruct_base<_Tp, false> {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept {
     if (__engaged_) {
       __val_.~value_type();
+      // TODO: Remove the workaround when supported compilers have CWG2424 implemented.
+#    if _LIBCPP_STD_VER >= 20
+      if consteval {
+        __null_state_ = char{};
+      }
+#    endif
       __engaged_ = false;
     }
   }
