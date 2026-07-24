@@ -6,7 +6,7 @@
 ; RUN: not --crash llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250  -o - %t/null-named-barrier-func.ll 2>&1 | FileCheck %s
 ; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -o - %t/null-named-barrier-func.ll 2>&1               | FileCheck %s
 
-; CHECK: named barrier GV cannot be used to represent the NULL named barrier
+; CHECK: named barrier global variable 'bar' has a NULL address, which is not supported
 
 ;--- null-named-barrier-kernel.ll
 

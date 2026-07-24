@@ -4,7 +4,7 @@
 
 ; The absolute_address of the GV can never be null.
 
-; CHECK: LLVM ERROR: named barrier GV cannot be used to represent the NULL named barrie
+; CHECK: LLVM ERROR: named barrier global variable 'bar' has a NULL address, which is not supported
 
 @bar = internal addrspace(15) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol !0
 
