@@ -1059,6 +1059,11 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT;
   }
 
+  static bool updateVMCntOnly(const MachineInstr &Inst) {
+    return (isVMEM(Inst) && !isFLAT(Inst)) || isFLATGlobal(Inst) ||
+           isFLATScratch(Inst);
+  }
+
   // Most sopk treat the immediate as a signed 16-bit, however some
   // use it as unsigned.
   static bool sopkIsZext(unsigned Opcode) {
