@@ -6,7 +6,7 @@
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
-// Test basic lowering of HLSL InterlockedXor to the target intrinsic.
+// Test basic lowering of HLSL InterlockedXor to `atomicrmw or monotonic`.
 
 groupshared int  gs_i32;
 groupshared uint gs_u32;
