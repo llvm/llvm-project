@@ -1822,9 +1822,9 @@ ASTReader::getPrimaryLoadedFile(const SLocFileIdentity &Id) const {
   if (It == PrimaryLoadedFiles.end())
     return nullptr;
   const PrimaryLoadedFileLoc &Primary = It->second;
-  // A matching name but different size or time is a different file, e.g. two
-  // modules built against different versions of the same path. Don't merge.
-  if (Primary.Size != Id.Size || Primary.Time != Id.Time)
+  // A matching name but different size is a different file, e.g. two modules
+  // built against different versions of the same path. Don't merge.
+  if (Primary.Size != Id.Size)
     return nullptr;
   return &Primary;
 }
@@ -1834,7 +1834,7 @@ void ASTReader::registerPrimaryLoadedFile(const SLocFileIdentity &Id,
                                           int ID) {
   assert(!Id.Name.empty() && "registering a non-file entry");
   PrimaryLoadedFiles.try_emplace(
-      Id.Name, PrimaryLoadedFileLoc{Offset, ID, Id.Size, Id.Time});
+      Id.Name, PrimaryLoadedFileLoc{Offset, ID, Id.Size});
 }
 
 bool ASTReader::scanLoadedSLocEntries(
@@ -1877,7 +1877,7 @@ bool ASTReader::scanLoadedSLocEntries(
       if (IFI.isValid())
         Files[I] = SLocFileIdentity{
             ResolveImportedPathAndAllocate(PathBuf, IFI.UnresolvedImportedFilename, F),
-            IFI.StoredSize, IFI.StoredTime};
+            IFI.StoredSize};
     }
   }
   return true;

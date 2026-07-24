@@ -2406,7 +2406,6 @@ public:
   struct SLocFileIdentity {
     std::string Name;
     off_t Size = 0;
-    time_t Time = 0;
   };
 
   /// Where a file's SLoc entry first landed in the loaded address space, kept
@@ -2416,7 +2415,6 @@ public:
     SourceLocation::UIntTy Offset = 0; ///< global start offset
     int ID = 0;                        ///< global SLoc entry ID
     off_t Size = 0;
-    time_t Time = 0;
   };
 
   /// Files already loaded into the loaded SLoc address space, keyed by stored
