@@ -1208,6 +1208,20 @@ static bool simplifyLogicalRecipe(VPSingleDefRecipe *Def, VPBuilder &Builder,
     return true;
   }
 
+  // select %M0, (select %M1, %X, %Y), %Y -> select (%M0 && %M1), %X, %Y
+  VPValue *Mask0, *Mask1;
+  if (CanCreateNewRecipe &&
+      match(Def,
+            m_SelectLike(m_VPValue(Mask0),
+                         m_OneUse(m_SelectLike(m_VPValue(Mask1), m_VPValue(X),
+                                               m_VPValue(Y))),
+                         m_Deferred(Y)))) {
+    auto *Select = Builder.createSelect(Builder.createLogicalAnd(Mask0, Mask1),
+                                        X, Y, Def->getDebugLoc());
+    Def->replaceAllUsesWith(Select);
+    return true;
+  }
+
   return false;
 }
 

@@ -1032,12 +1032,16 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     // - Subgroup reductions (gpu.all_reduce) require full subgroups
     // - Per-row workgroup barriers require blockDim.x aligned to subgroupSize
     bool isShuffleEnabled = false;
+    bool alignThreadXReduction =
+        getConstantIntValue(launch.getBlockSizeY()) != 1 ||
+        getConstantIntValue(launch.getBlockSizeZ()) != 1;
 
     launch.walk([&](gpu::AllReduceOp allReduce) -> WalkResult {
       ArrayRef<mlir::acc::GPUParallelDimAttr> parDims =
           mlir::acc::getParDimsAttr(allReduce).getArray();
       for (auto parDim : parDims) {
-        if (parDim.isThreadX() || parDim.isThreadY()) {
+        if (parDim.isThreadY() ||
+            (alignThreadXReduction && parDim.isThreadX())) {
           // Shuffle are enabled. Need to adjust the ThreadX length.
           isShuffleEnabled = true;
           return WalkResult::interrupt();
@@ -1055,7 +1059,8 @@ LogicalResult ACCCGToGPULowering::rewrite() {
             ArrayRef<mlir::acc::GPUParallelDimAttr> parDims =
                 mlir::acc::getParDimsAttr(allReduce).getArray();
             for (auto parDim : parDims) {
-              if (parDim.isThreadX() || parDim.isThreadY()) {
+              if (parDim.isThreadY() ||
+                  (alignThreadXReduction && parDim.isThreadX())) {
                 isShuffleEnabled = true;
                 return WalkResult::interrupt();
               }
@@ -1073,6 +1078,7 @@ LogicalResult ACCCGToGPULowering::rewrite() {
 
       Value curBlockDimX = launch.getBlockSizeX();
       Value curBlockDimY = launch.getBlockSizeY();
+      Value curBlockDimZ = launch.getBlockSizeZ();
 
       // Emit a report on changing parallelism.
       accSupport.emitRemark(computeRegion, [&]() {
@@ -1099,38 +1105,47 @@ LogicalResult ACCCGToGPULowering::rewrite() {
 
       std::optional<int64_t> constBlockDimX = getConstantIntValue(curBlockDimX);
       std::optional<int64_t> constBlockDimY = getConstantIntValue(curBlockDimY);
+      std::optional<int64_t> constBlockDimZ = getConstantIntValue(curBlockDimZ);
 
       // Skip subgroup alignment only when the total thread count is already
       // below a subgroup (constant blockDim.x in 2..subgroupSize-1 and
-      // constant blockDim.y == 1). If blockDim.y > 1 or is unknown, padding
-      // blockDim.x to a subgroup is still required so subgroups don't cross
-      // row boundaries for row-local shuffle/ThreadY-barrier reductions.
+      // constant blockDim.y/z == 1). If blockDim.y/z > 1 or is unknown,
+      // padding blockDim.x to a subgroup is still required so subgroups don't
+      // cross row boundaries for row-local shuffle/ThreadY-barrier reductions.
       bool skipAlign = false;
-      if (constBlockDimX && constBlockDimY && *constBlockDimX > 1 &&
-          *constBlockDimX < subgroupSize && *constBlockDimY == 1) {
+      if (constBlockDimX && constBlockDimY && constBlockDimZ &&
+          *constBlockDimX > 1 && *constBlockDimX < subgroupSize &&
+          *constBlockDimY == 1 && *constBlockDimZ == 1) {
         skipAlign = true;
       }
 
-      // Update both the ThreadX length and the number of ThreadY.
-      // When the original blockDim.x and blockDim.y are compile-time
+      // Update the ThreadX length and the numbers of ThreadY and ThreadZ.
+      // When the original block dimensions are compile-time
       // constants, compute the adjusted dimensions as constants directly so
       // that the GpuKernelOutliningPass can set `known_block_size` on the
       // outlined gpu.func.
-      Value newBlockDimX, newBlockDimY;
-      if (constBlockDimX && constBlockDimY) {
+      Value newBlockDimX, newBlockDimY, newBlockDimZ;
+      if (constBlockDimX && constBlockDimY && constBlockDimZ) {
         int64_t bdx = *constBlockDimX;
         int64_t bdy = *constBlockDimY;
+        int64_t bdz = *constBlockDimZ;
         int64_t alignedBdx =
             ((bdx + subgroupAlignMask) / subgroupSize) * subgroupSize;
-        int64_t numThreads = bdx * bdy;
-        int64_t newBdy = std::max<int64_t>(1, numThreads / alignedBdx);
+        int64_t numXYThreads = bdx * bdy;
+        int64_t numThreads = numXYThreads * bdz;
+        int64_t newBdy = std::max<int64_t>(1, numXYThreads / alignedBdx);
+        int64_t newBdz =
+            std::max<int64_t>(1, numThreads / (alignedBdx * newBdy));
         newBlockDimX =
             arith::ConstantIndexOp::create(rewriter, loc, alignedBdx);
         newBlockDimY = arith::ConstantIndexOp::create(rewriter, loc, newBdy);
+        newBlockDimZ = arith::ConstantIndexOp::create(rewriter, loc, newBdz);
       } else {
-        // numThreads = blockDim.x * blockDim.y
-        Value numThreads =
+        // numXYThreads = blockDim.x * blockDim.y
+        Value numXYThreads =
             arith::MulIOp::create(rewriter, loc, curBlockDimX, curBlockDimY);
+        Value numThreads =
+            arith::MulIOp::create(rewriter, loc, numXYThreads, curBlockDimZ);
         // blockDim.x = ((blockDim.x + mask) / subgroupSize) * subgroupSize
         Value cstMask =
             arith::ConstantIndexOp::create(rewriter, loc, subgroupAlignMask);
@@ -1142,16 +1157,23 @@ LogicalResult ACCCGToGPULowering::rewrite() {
             arith::DivUIOp::create(rewriter, loc, padded, cstSubgroupSize);
         newBlockDimX = arith::MulIOp::create(rewriter, loc, subgroupsRequired,
                                              cstSubgroupSize);
-        // blockDim.y = max(1, numThreads / blockDim.x)
+        // blockDim.y = max(1, numXYThreads / blockDim.x)
         Value quotient =
-            arith::DivUIOp::create(rewriter, loc, numThreads, newBlockDimX);
+            arith::DivUIOp::create(rewriter, loc, numXYThreads, newBlockDimX);
         Value cst1 = arith::ConstantIndexOp::create(rewriter, loc, 1);
         newBlockDimY = arith::MaxUIOp::create(rewriter, loc, cst1, quotient);
+        // blockDim.z = max(1, numThreads / (blockDim.x * blockDim.y))
+        Value newNumXYThreads =
+            arith::MulIOp::create(rewriter, loc, newBlockDimX, newBlockDimY);
+        quotient =
+            arith::DivUIOp::create(rewriter, loc, numThreads, newNumXYThreads);
+        newBlockDimZ = arith::MaxUIOp::create(rewriter, loc, cst1, quotient);
       }
 
       if (!skipAlign) {
         launch.getBlockSizeXMutable().assign(newBlockDimX);
         launch.getBlockSizeYMutable().assign(newBlockDimY);
+        launch.getBlockSizeZMutable().assign(newBlockDimZ);
       }
     }
   }
