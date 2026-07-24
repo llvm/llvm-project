@@ -1257,16 +1257,26 @@ public:
   const CallExpr* getTrylockCallExpr(const Stmt *Cond, LocalVarContext C,
                                      bool &Negate);
 
+  using TerminatorTrylockCall =
+      std::tuple<const CallExpr *, const NamedDecl *,
+                 std::optional<llvm::scope_exit<std::function<void()>>>>;
+
+  TerminatorTrylockCall getTerminatorTrylockCall(const CFGBlock *Block,
+                                                 bool &Negate);
+
   void getEdgeLockset(FactSet &Result, const FactSet &ExitSet,
                       const CFGBlock* PredBlock,
                       const CFGBlock *CurrBlock);
+
+  void getTerminatorTrylockCaps(const CFGBlock *Block, CapExprSet &Caps);
 
   bool join(const FactEntry &A, const FactEntry &B, SourceLocation JoinLoc,
             LockErrorKind EntryLEK);
 
   void intersectAndWarn(FactSet &EntrySet, const FactSet &ExitSet,
                         SourceLocation JoinLoc, LockErrorKind EntryLEK,
-                        LockErrorKind ExitLEK);
+                        LockErrorKind ExitLEK,
+                        const CapExprSet *TrylockRebranchCaps = nullptr);
 
   void intersectAndWarn(FactSet &EntrySet, const FactSet &ExitSet,
                         SourceLocation JoinLoc, LockErrorKind LEK) {
@@ -1668,40 +1678,57 @@ const CallExpr* ThreadSafetyAnalyzer::getTrylockCallExpr(const Stmt *Cond,
   return nullptr;
 }
 
-/// Find the lockset that holds on the edge between PredBlock
-/// and CurrBlock.  The edge set is the exit set of PredBlock (passed
-/// as the ExitSet parameter) plus any trylocks, which are conditionally held.
-void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
-                                          const FactSet &ExitSet,
-                                          const CFGBlock *PredBlock,
-                                          const CFGBlock *CurrBlock) {
-  Result = ExitSet;
+/// If the terminator of \p Block branches on the result of a call to a
+/// function annotated with try_acquire_capability (possibly negated or stored
+/// in a local variable), return that call and its callee. \p Negate is set if
+/// the branch tests the negated result of the call. In beta mode, this leaves
+/// the local variable lookup closure of SExprBuilder installed so that callers
+/// can translate the callee's attribute expressions
+ThreadSafetyAnalyzer::TerminatorTrylockCall
+ThreadSafetyAnalyzer::getTerminatorTrylockCall(const CFGBlock *Block,
+                                               bool &Negate) {
+  assert(!Negate && "Must be called with Negate initialized to false");
 
-  const Stmt *Cond = PredBlock->getTerminatorCondition();
+  const Stmt *Cond = Block->getTerminatorCondition();
   // We don't acquire try-locks on ?: branches, only when its result is used.
-  if (!Cond || isa<ConditionalOperator>(PredBlock->getTerminatorStmt()))
-    return;
+  if (!Cond || isa<ConditionalOperator>(Block->getTerminatorStmt()))
+    return {};
 
-  bool Negate = false;
-  const CFGBlockInfo *PredBlockInfo = &BlockInfo[PredBlock->getBlockID()];
-  const LocalVarContext &LVarCtx = PredBlockInfo->ExitContext;
+  const LocalVarContext &LVarCtx = BlockInfo[Block->getBlockID()].ExitContext;
 
+  std::optional<llvm::scope_exit<std::function<void()>>> Cleanup;
   if (Handler.issueBetaWarnings()) {
     // Temporarily set the lookup context for SExprBuilder.
     SxBuilder.setLookupLocalVarExpr(
         [this, Ctx = LVarCtx](const NamedDecl *D) mutable -> const Expr * {
           return LocalVarMap.lookupExpr(D, Ctx);
         });
+    Cleanup.emplace([this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
   }
-  llvm::scope_exit Cleanup(
-      [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
 
   const auto *Exp = getTrylockCallExpr(Cond, LVarCtx, Negate);
   if (!Exp)
-    return;
+    return {};
 
   auto *FunDecl = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
   if (!FunDecl || !FunDecl->hasAttr<TryAcquireCapabilityAttr>())
+    return {};
+
+  return {Exp, FunDecl, std::move(Cleanup)};
+}
+
+/// Find the lockset that holds on the edge between PredBlock
+/// and CurrBlock.  The edge set is the exit set of PredBlock (passed
+/// as the ExitSet parameter) plus any trylocks, which are conditionally held.
+void ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
+                                          const FactSet &ExitSet,
+                                          const CFGBlock *PredBlock,
+                                          const CFGBlock *CurrBlock) {
+  Result = ExitSet;
+
+  bool Negate = false;
+  auto [Exp, FunDecl, Cleanup] = getTerminatorTrylockCall(PredBlock, Negate);
+  if (!Exp)
     return;
 
   CapExprSet ExclusiveLocksToAdd;
@@ -1721,6 +1748,20 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
   for (const auto &SharedLockToAdd : SharedLocksToAdd)
     addLock(Result, FactMan.createFact<LockableFactEntry>(SharedLockToAdd,
                                                           LK_Shared, Loc));
+}
+
+/// If the terminator of \p Block branches on the result of a try-lock call
+/// (possibly stored in a local variable), add the capabilities acquired by
+/// that call to \p Caps.
+void ThreadSafetyAnalyzer::getTerminatorTrylockCaps(const CFGBlock *Block,
+                                                    CapExprSet &Caps) {
+  bool Negate = false;
+  auto [Exp, FunDecl, Cleanup] = getTerminatorTrylockCall(Block, Negate);
+  if (!Exp)
+    return;
+
+  for (const auto *Attr : FunDecl->specific_attrs<TryAcquireCapabilityAttr>())
+    getMutexIDs(Caps, Attr, Exp, FunDecl);
 }
 
 namespace {
@@ -2592,12 +2633,23 @@ bool ThreadSafetyAnalyzer::join(const FactEntry &A, const FactEntry &B,
 /// \param JoinLoc The location of the join point for error reporting
 /// \param EntryLEK The warning if a mutex is missing from \p EntrySet.
 /// \param ExitLEK The warning if a mutex is missing from \p ExitSet.
-void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
-                                            const FactSet &ExitSet,
-                                            SourceLocation JoinLoc,
-                                            LockErrorKind EntryLEK,
-                                            LockErrorKind ExitLEK) {
+/// \param TrylockRebranchCaps Capabilities acquired by a try-lock whose result
+/// the joining block's terminator branches on; differences in these are not
+/// diagnosed because the paths re-diverge at the terminator (but they are
+/// still removed from the intersection, and conditionally re-added on the
+/// outgoing edges by getEdgeLockset()).
+void ThreadSafetyAnalyzer::intersectAndWarn(
+    FactSet &EntrySet, const FactSet &ExitSet, SourceLocation JoinLoc,
+    LockErrorKind EntryLEK, LockErrorKind ExitLEK,
+    const CapExprSet *TrylockRebranchCaps) {
   FactSet EntrySetOrig = EntrySet;
+
+  auto IsTrylockRebranched = [TrylockRebranchCaps](const FactEntry &FE) {
+    return TrylockRebranchCaps &&
+           llvm::any_of(*TrylockRebranchCaps, [&FE](const CapabilityExpr &CE) {
+             return !CE.shouldIgnore() && FE.matches(CE);
+           });
+  };
 
   // Find locks in ExitSet that conflict or are not in EntrySet, and warn.
   for (const auto &Fact : ExitSet) {
@@ -2607,7 +2659,8 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
     if (EntryIt != EntrySet.end()) {
       if (join(FactMan[*EntryIt], ExitFact, JoinLoc, EntryLEK))
         *EntryIt = Fact;
-    } else if (!ExitFact.managed() || EntryLEK == LEK_LockedAtEndOfFunction) {
+    } else if ((!ExitFact.managed() || EntryLEK == LEK_LockedAtEndOfFunction) &&
+               !IsTrylockRebranched(ExitFact)) {
       ExitFact.handleRemovalFromIntersection(ExitSet, FactMan, JoinLoc,
                                              EntryLEK, Handler);
     }
@@ -2619,8 +2672,9 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
     const FactEntry *ExitFact = ExitSet.findLock(FactMan, *EntryFact);
 
     if (!ExitFact) {
-      if (!EntryFact->managed() || ExitLEK == LEK_LockedSomeLoopIterations ||
-          ExitLEK == LEK_NotLockedAtEndOfFunction)
+      if ((!EntryFact->managed() || ExitLEK == LEK_LockedSomeLoopIterations ||
+           ExitLEK == LEK_NotLockedAtEndOfFunction) &&
+          !IsTrylockRebranched(*EntryFact))
         EntryFact->handleRemovalFromIntersection(EntrySetOrig, FactMan, JoinLoc,
                                                  ExitLEK, Handler);
       if (ExitLEK == LEK_LockedSomePredecessors)
@@ -2832,6 +2886,10 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     // union because the real error is probably that we forgot to unlock M on
     // all code paths.
     bool LocksetInitialized = false;
+    // Capabilities acquired by a try-lock whose result this block's
+    // terminator branches on. Computed lazily on the first join.
+    CapExprSet TerminatorTrylockCaps;
+    bool TerminatorTrylockCapsComputed = false;
     for (CFGBlock::const_pred_iterator PI = CurrBlock->pred_begin(),
          PE  = CurrBlock->pred_end(); PI != PE; ++PI) {
       // if *PI -> CurrBlock is a back edge
@@ -2858,11 +2916,24 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         // Surprisingly 'continue' doesn't always produce back edges, because
         // the CFG has empty "transition" blocks where they meet with the end
         // of the regular loop body. We still want to diagnose them as loop.
-        intersectAndWarn(
-            CurrBlockInfo->EntrySet, PrevLockset, CurrBlockInfo->EntryLoc,
-            isa_and_nonnull<ContinueStmt>((*PI)->getTerminatorStmt())
-                ? LEK_LockedSomeLoopIterations
-                : LEK_LockedSomePredecessors);
+        if (isa_and_nonnull<ContinueStmt>((*PI)->getTerminatorStmt())) {
+          // Loop join: warn on locks held for only some iterations.
+          intersectAndWarn(CurrBlockInfo->EntrySet, PrevLockset,
+                           CurrBlockInfo->EntryLoc,
+                           LEK_LockedSomeLoopIterations,
+                           LEK_LockedSomeLoopIterations, nullptr);
+        } else {
+          // Branch join: a lockset difference is harmless if the terminator
+          // re-branches on the try-lock result.
+          if (!TerminatorTrylockCapsComputed) {
+            // Compute once; the result depends only on CurrBlock, not on *PI.
+            getTerminatorTrylockCaps(CurrBlock, TerminatorTrylockCaps);
+            TerminatorTrylockCapsComputed = true;
+          }
+          intersectAndWarn(CurrBlockInfo->EntrySet, PrevLockset,
+                           CurrBlockInfo->EntryLoc, LEK_LockedSomePredecessors,
+                           LEK_LockedSomePredecessors, &TerminatorTrylockCaps);
+        }
       }
     }
 

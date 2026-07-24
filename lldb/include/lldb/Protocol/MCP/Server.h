@@ -96,6 +96,10 @@ struct ServerInfo {
   static llvm::Expected<ServerInfoHandle> Write(const ServerInfo &);
   /// Loads any server info saved in `~/.lldb`.
   static llvm::Expected<std::vector<ServerInfo>> Load();
+  /// Removes the registry entry for the instance with the given \p pid. The
+  /// handle removes it on a clean exit, so this only prunes one orphaned by a
+  /// crash.
+  static llvm::Error Remove(lldb::pid_t pid);
 };
 llvm::json::Value toJSON(const ServerInfo &);
 bool fromJSON(const llvm::json::Value &, ServerInfo &, llvm::json::Path);

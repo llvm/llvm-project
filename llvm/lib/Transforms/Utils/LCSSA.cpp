@@ -94,7 +94,8 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
     UsesToRewrite.clear();
 
     Instruction *I = Worklist.pop_back_val();
-    assert(!I->getType()->isTokenTy() && "Tokens shouldn't be in the worklist");
+    assert(!I->getType()->isTokenLikeTy() &&
+           "Token-like values shouldn't be in the worklist");
     BasicBlock *InstBB = I->getParent();
     Loop *L = LI.getLoopFor(InstBB);
     assert(L && "Instruction belongs to a BB that's not part of a loop");
@@ -106,9 +107,21 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
     if (ExitBlocks.empty())
       continue;
 
+    SmallVector<Instruction *> LifetimeMarkers;
+    bool DropLifetimeMarkers = false;
     for (Use &U : make_early_inc_range(I->uses())) {
       Instruction *User = cast<Instruction>(U.getUser());
       BasicBlock *UserBB = User->getParent();
+
+      // Lifetime markers must refer directly to an alloca. Rewriting their
+      // operands through LCSSA PHIs would produce invalid IR, so conservatively
+      // drop all lifetime markers when one crosses the loop boundary.
+      if (User->isLifetimeStartOrEnd()) {
+        LifetimeMarkers.push_back(User);
+        if (InstBB != UserBB && !L->contains(UserBB))
+          DropLifetimeMarkers = true;
+        continue;
+      }
 
       // Skip uses in unreachable blocks.
       if (!DT.isReachableFromEntry(UserBB)) {
@@ -124,6 +137,13 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
 
       if (InstBB != UserBB && !L->contains(UserBB))
         UsesToRewrite.push_back(&U);
+    }
+
+    if (DropLifetimeMarkers) {
+      // Use-list order is arbitrary, so wait until all markers are collected.
+      for (Instruction *Marker : LifetimeMarkers)
+        Marker->eraseFromParent();
+      Changed = true;
     }
 
     // If there are no uses outside the loop, exit with no change.
@@ -405,11 +425,11 @@ static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
            !isa<PHINode>(I.user_back())))
         continue;
 
-      // Tokens cannot be used in PHI nodes, so we skip over them.
+      // Token-like values cannot be used in PHI nodes, so we skip over them.
       // We can run into tokens which are live out of a loop with catchswitch
       // instructions in Windows EH if the catchswitch has one catchpad which
       // is inside the loop and another which is not.
-      if (I.getType()->isTokenTy())
+      if (I.getType()->isTokenLikeTy())
         continue;
 
       Worklist.push_back(&I);

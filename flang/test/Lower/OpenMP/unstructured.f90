@@ -1,6 +1,6 @@
 ! Test unstructured code adjacent to and inside OpenMP constructs.
 
-! RUN: bbc %s -fopenmp -emit-hlfir -o "-" \
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region %s -fopenmp -emit-hlfir -o "-" \
 ! RUN: | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1{{.*}} {
@@ -101,7 +101,6 @@ end
 ! CHECK:           omp.yield
 ! CHECK:         }
 ! CHECK:       }
-! CHECK:       fir.result
 ! CHECK:     }
 ! CHECK:     omp.terminator
 ! CHECK:   }
@@ -217,7 +216,6 @@ end
 ! CHECK:          omp.yield
 ! CHECK:        }
 ! CHECK:      }
-! CHECK:      fir.result
 ! CHECK:    }
 ! CHECK:    omp.terminator
 ! CHECK:  }
@@ -263,7 +261,6 @@ end
 ! CHECK:       }
 ! CHECK:       omp.terminator
 ! CHECK:     }
-! CHECK:     fir.result
 ! CHECK:   }
 ! CHECK:   return
 subroutine ss7() ! EXIT inside OpenMP parallel do (inside do loop)
