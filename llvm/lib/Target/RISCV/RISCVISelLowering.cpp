@@ -12336,11 +12336,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     if (!Subtarget.is64Bit() && VT == MVT::v4i16) {
       auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Op.getOperand(1), DL);
       auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Op.getOperand(2), DL);
-      SDValue Id = Op.getOperand(0);
-      SDValue Lo = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::v2i16, Id,
-                               Rs1Lo, Rs2Lo);
-      SDValue Hi = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::v2i16, Id,
-                               Rs1Hi, Rs2Hi);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::v2i16, Rs1Lo, Rs2Lo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::v2i16, Rs1Hi, Rs2Hi);
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
 
@@ -16485,9 +16482,17 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       case Intrinsic::riscv_pmulqr:
         Opc = RISCVISD::MULQR;
         break;
+      case Intrinsic::riscv_pmulh:
+      case Intrinsic::riscv_pmulhr:
+      case Intrinsic::riscv_pmulhu:
+      case Intrinsic::riscv_pmulhru:
+      case Intrinsic::riscv_pmulhsu:
+      case Intrinsic::riscv_pmulhrsu:
+        Opc = getRVPMulHighOpcode(IntNo);
+        break;
       default:
-        // pas/psa/psas/pssa/paas/pasa, pmerge, and pmulh*: re-emit at the
-        // widened type rather than lowering to a generic node.
+        // pas/psa/psas/pssa/paas/pasa and pmerge: re-emit at the widened type
+        // rather than lowering to a generic node.
         Opc = ISD::INTRINSIC_WO_CHAIN;
         break;
       }
