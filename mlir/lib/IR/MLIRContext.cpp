@@ -714,6 +714,12 @@ ArrayRef<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
   return impl->sortedRegisteredOperations;
 }
 
+bool MLIRContext::hasTypeImplementingInterface(TypeID interfaceID) {
+  return llvm::any_of(impl->registeredTypes, [&](const auto &registered) {
+    return registered.second->hasInterface(interfaceID);
+  });
+}
+
 /// Return information for registered operations by dialect.
 ArrayRef<RegisteredOperationName>
 MLIRContext::getRegisteredOperationsByDialect(StringRef dialectName) {
