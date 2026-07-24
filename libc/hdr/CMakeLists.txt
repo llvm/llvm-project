@@ -242,7 +242,6 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.termios_macros
 )
 
-
 add_header_library(unistd_overlay HDRS unistd_overlay.h)
 add_proxy_header_library(
   unistd_macros
