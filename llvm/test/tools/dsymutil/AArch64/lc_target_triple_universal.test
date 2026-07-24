@@ -1,3 +1,4 @@
+# REQUIRES: system-darwin
 # REQUIRES: aarch64-registered-target
 
 # lc_target_triple_universal.arm64 is a fat Mach-O whose two slices each carry a
