@@ -198,6 +198,11 @@ struct ARMLoadStoreOptLegacy : public MachineFunctionPass {
   }
 
   StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 
 char ARMLoadStoreOptLegacy::ID = 0;
@@ -1813,21 +1818,23 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
       : (isT2 ? ARM::t2STMIA : ARM::STMIA);
     if (isLd) {
       BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(NewOpc))
-        .addReg(BaseReg, getKillRegState(BaseKill))
-        .addImm(Pred).addReg(PredReg)
-        .addReg(EvenReg, getDefRegState(isLd) | getDeadRegState(EvenDeadKill))
-        .addReg(OddReg,  getDefRegState(isLd) | getDeadRegState(OddDeadKill))
-        .cloneMemRefs(*MI);
+          .add(BaseOp)
+          .addImm(Pred)
+          .addReg(PredReg)
+          .addReg(EvenReg, getDefRegState(isLd) | getDeadRegState(EvenDeadKill))
+          .addReg(OddReg, getDefRegState(isLd) | getDeadRegState(OddDeadKill))
+          .cloneMemRefs(*MI);
       ++NumLDRD2LDM;
     } else {
       BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(NewOpc))
-        .addReg(BaseReg, getKillRegState(BaseKill))
-        .addImm(Pred).addReg(PredReg)
-        .addReg(EvenReg,
-                getKillRegState(EvenDeadKill) | getUndefRegState(EvenUndef))
-        .addReg(OddReg,
-                getKillRegState(OddDeadKill)  | getUndefRegState(OddUndef))
-        .cloneMemRefs(*MI);
+          .add(BaseOp)
+          .addImm(Pred)
+          .addReg(PredReg)
+          .addReg(EvenReg,
+                  getKillRegState(EvenDeadKill) | getUndefRegState(EvenUndef))
+          .addReg(OddReg,
+                  getKillRegState(OddDeadKill) | getUndefRegState(OddUndef))
+          .cloneMemRefs(*MI);
       ++NumSTRD2STM;
     }
   } else {
@@ -2189,6 +2196,7 @@ struct ARMPreAllocLoadStoreOptLegacy : public MachineFunctionPass {
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };

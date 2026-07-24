@@ -99,6 +99,7 @@ namespace format {
   TYPE(InheritanceComma)                                                       \
   TYPE(InlineASMBrace)                                                         \
   TYPE(InlineASMColon)                                                         \
+  TYPE(InlineASMParen)                                                         \
   TYPE(InlineASMSymbolicNameLSquare)                                           \
   TYPE(JavaAnnotation)                                                         \
   TYPE(JsAndAndEqual)                                                          \
@@ -330,9 +331,9 @@ struct FormatToken {
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
         ContinuesLineCommentSection(false), Finalized(false),
         ClosesRequiresClause(false), EndsCppAttributeGroup(false),
-        BlockKind(BK_Unknown), Decision(FD_Unformatted),
-        PackingKind(PPK_Inconclusive), TypeIsFinalized(false),
-        Type(TT_Unknown) {}
+        HasEnumTrailingCommaHandled(false), BlockKind(BK_Unknown),
+        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
+        TypeIsFinalized(false), Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -407,6 +408,9 @@ struct FormatToken {
 
   /// \c true if this token ends a group of C++ attributes.
   unsigned EndsCppAttributeGroup : 1;
+
+  /// \c true if a comma has been inserted or removed after the token.
+  unsigned HasEnumTrailingCommaHandled : 1;
 
 private:
   /// Contains the kind of block if this token is a brace.
@@ -827,7 +831,7 @@ public:
                    tok::kw_decltype, tok::kw_noexcept, tok::kw_static_assert,
                    tok::kw__Atomic,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
                    tok::kw_requires);
   }
 
@@ -1950,6 +1954,7 @@ struct AdditionalKeywords {
     case tok::kw_for:
     case tok::kw_if:
     case tok::kw_import:
+    case tok::kw_protected:
     case tok::kw_restrict:
     case tok::kw_signed:
     case tok::kw_static:

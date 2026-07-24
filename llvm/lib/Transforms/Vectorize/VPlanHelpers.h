@@ -37,6 +37,7 @@ class IRBuilderBase;
 class LoopInfo;
 class SCEV;
 class Type;
+class VFSelectionContext;
 class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
@@ -191,8 +192,8 @@ public:
 struct VPTransformState {
   VPTransformState(const TargetTransformInfo *TTI, ElementCount VF,
                    LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
-                   IRBuilderBase &Builder, VPlan *Plan, Loop *CurrentParentLoop,
-                   Type *CanonicalIVTy);
+                   IRBuilderBase &Builder, VPlan *Plan,
+                   Loop *CurrentParentLoop);
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
@@ -314,21 +315,14 @@ struct VPTransformState {
   /// The parent loop object for the current scope, or nullptr.
   Loop *CurrentParentLoop = nullptr;
 
-  /// VPlan-based type analysis.
-  VPTypeAnalysis TypeAnalysis;
-
   /// VPlan-based dominator tree.
   VPDominatorTree VPDT;
 };
 
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
-  /// Choice for how to widen a call at a given VF.
-  enum class CallWideningKind { Scalarize, Intrinsic, VectorVariant };
-
   const TargetTransformInfo &TTI;
   const TargetLibraryInfo &TLI;
-  VPTypeAnalysis Types;
   LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
@@ -339,12 +333,8 @@ struct VPCostContext {
   /// Number of predicated stores in the VPlan, computed on demand.
   std::optional<unsigned> NumPredStores;
 
-  VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                const VPlan &Plan, LoopVectorizationCostModel &CM,
-                TargetTransformInfo::TargetCostKind CostKind,
-                PredicatedScalarEvolution &PSE, const Loop *L)
-      : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
-        CostKind(CostKind), PSE(PSE), L(L) {}
+  VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
+                LoopVectorizationCostModel &CM, VFSelectionContext &Config);
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -353,6 +343,10 @@ struct VPCostContext {
   /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
+
+  /// Mark the widening decision for \p I at \p VF as invalidated since a VPlan
+  /// transform replaced the original recipe.
+  void invalidateWideningDecision(Instruction *I, ElementCount VF);
 
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
@@ -363,11 +357,6 @@ struct VPCostContext {
 
   /// Forwards to LoopVectorizationCostModel::isMaskRequired.
   bool isMaskRequired(Instruction *I) const;
-
-  /// Returns the legacy call widening decision for \p CI at \p VF, or
-  /// std::nullopt if none was recorded. Used only in asserts.
-  std::optional<CallWideningKind> getLegacyCallKind(CallInst *CI,
-                                                    ElementCount VF) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
@@ -482,8 +471,6 @@ class VPlanPrinter {
   unsigned getOrCreateBID(const VPBlockBase *Block) {
     return BlockID.count(Block) ? BlockID[Block] : BlockID[Block] = BID++;
   }
-
-  Twine getOrCreateName(const VPBlockBase *Block);
 
   Twine getUID(const VPBlockBase *Block);
 

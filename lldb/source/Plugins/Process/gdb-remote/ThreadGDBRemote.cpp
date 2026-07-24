@@ -48,8 +48,8 @@ ThreadGDBRemote::ThreadGDBRemote(Process &process, lldb::tid_t tid)
   if (!gdb_process.m_register_info_sp->IsReconfigurable())
     m_reg_info_sp = gdb_process.m_register_info_sp;
   else
-    m_reg_info_sp = std::make_shared<GDBRemoteDynamicRegisterInfo>(
-        *gdb_process.m_register_info_sp);
+    m_reg_info_sp =
+        std::make_shared<DynamicRegisterInfo>(*gdb_process.m_register_info_sp);
 }
 
 ThreadGDBRemote::~ThreadGDBRemote() {
@@ -337,6 +337,13 @@ bool ThreadGDBRemote::PrivateSetRegisterValue(uint32_t reg, uint64_t regval) {
       static_cast<GDBRemoteRegisterContext *>(GetRegisterContext().get());
   assert(gdb_reg_ctx);
   return gdb_reg_ctx->PrivateSetRegisterValue(reg, regval);
+}
+
+void ThreadGDBRemote::PrivateSetRegisterUnavailable(uint32_t reg) {
+  GDBRemoteRegisterContext *gdb_reg_ctx =
+      static_cast<GDBRemoteRegisterContext *>(GetRegisterContext().get());
+  assert(gdb_reg_ctx);
+  gdb_reg_ctx->SetRegisterIsUnavailable(reg);
 }
 
 bool ThreadGDBRemote::CalculateStopInfo() {

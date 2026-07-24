@@ -64,6 +64,7 @@
 #include "SIDefines.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -329,6 +330,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
 
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -2410,9 +2412,9 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   unsigned AS = SIInstrInfo::isFLATGlobal(MI) ? AMDGPUAS::GLOBAL_ADDRESS
                                               : AMDGPUAS::FLAT_ADDRESS;
 
-  uint64_t FlatVariant = AS == AMDGPUAS::GLOBAL_ADDRESS
-                             ? SIInstrFlags::FlatGlobal
-                             : SIInstrFlags::FLAT;
+  AMDGPU::FlatAddrSpace FlatVariant = AS == AMDGPUAS::GLOBAL_ADDRESS
+                                          ? AMDGPU::FlatAddrSpace::FlatGlobal
+                                          : AMDGPU::FlatAddrSpace::FLAT;
   bool AllowNegativeOffset =
       TII->allowNegativeFlatOffset(FlatVariant) && !TII->usesASYNC_CNT(MI);
   // The async global instructions use i24 offset for global address but u16

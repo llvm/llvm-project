@@ -66,6 +66,10 @@ public:
                                           cir::LangAddressSpace::Default);
   }
 
+  virtual mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const {
+    return nullptr;
+  }
+
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic
   /// convention or the non-variadic convention.
@@ -150,6 +154,8 @@ void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
 
 std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
+
+std::unique_ptr<TargetCIRGenInfo> createSPIRVTargetCIRGenInfo(CIRGenTypes &cgt);
 
 } // namespace clang::CIRGen
 

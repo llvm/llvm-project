@@ -3,9 +3,9 @@
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
-!rec_Other = !cir.record<struct "Other" padded {!u8i}>
-!rec_Struct = !cir.record<struct "Struct" {!cir.data_member<!s32i in !rec_Other>}>
-// CHECK: !rec_Struct = !cir.record<struct "Struct" {!s64i}>
+!rec_Other = !cir.struct<"Other" padded {!u8i}>
+!rec_Struct = !cir.struct<"Struct" {!cir.data_member<!s32i in !rec_Other>}>
+// CHECK: !rec_Struct = !cir.struct<"Struct" {!s64i}>
 
 !dmp = !cir.data_member<!s32i in !rec_Other>
 !dmp_ptr = !cir.ptr<!cir.data_member<!s32i in !rec_Other>>
@@ -54,35 +54,35 @@ cir.func @TypeAttrs(%arg0 : !rec_Struct, %arg1 : !dmp, %arg2 : !dmp_ptr) -> (!re
 }
 
   // cir::CXXCtorAttr
-cir.func @ctor() special_member<#cir.cxx_ctor<!rec_Struct, default>> {
-// CHECK: cir.func @ctor() special_member<#cir.cxx_ctor<!rec_Struct, default>> {
+cir.func @ctor() func_info<#cir.cxx_ctor<!rec_Struct, default>> {
+// CHECK: cir.func @ctor() func_info<#cir.cxx_ctor<!rec_Struct, default>> {
   cir.trap
 }
 
-cir.func @ctor2() special_member<#cir.cxx_ctor<!dmp, default>> {
-// CHECK: cir.func @ctor2() special_member<#cir.cxx_ctor<!s64i, default>> {
+cir.func @ctor2() func_info<#cir.cxx_ctor<!dmp, default>> {
+// CHECK: cir.func @ctor2() func_info<#cir.cxx_ctor<!s64i, default>> {
   cir.trap
 }
 
   // cir::CXXDtorAttr
-cir.func @dtor() special_member<#cir.cxx_dtor<!rec_Struct>> {
-// CHECK: cir.func @dtor() special_member<#cir.cxx_dtor<!rec_Struct>> {
+cir.func @dtor() func_info<#cir.cxx_dtor<!rec_Struct>> {
+// CHECK: cir.func @dtor() func_info<#cir.cxx_dtor<!rec_Struct>> {
   cir.trap
 }
 
-cir.func @dtor2() special_member<#cir.cxx_dtor<!dmp>> {
-// CHECK: cir.func @dtor2() special_member<#cir.cxx_dtor<!s64i>> {
+cir.func @dtor2() func_info<#cir.cxx_dtor<!dmp>> {
+// CHECK: cir.func @dtor2() func_info<#cir.cxx_dtor<!s64i>> {
   cir.trap
 }
 
   // cir::CXXAssignAttr
-cir.func @assign() special_member<#cir.cxx_assign<!rec_Struct, move>> {
-// CHECK: cir.func @assign() special_member<#cir.cxx_assign<!rec_Struct, move>> {
+cir.func @assign() func_info<#cir.cxx_assign<!rec_Struct, move>> {
+// CHECK: cir.func @assign() func_info<#cir.cxx_assign<!rec_Struct, move>> {
   cir.trap
 }
 
-cir.func @assign2() special_member<#cir.cxx_assign<!dmp, move>> {
-// CHECK: cir.func @assign2() special_member<#cir.cxx_assign<!s64i, move>> {
+cir.func @assign2() func_info<#cir.cxx_assign<!dmp, move>> {
+// CHECK: cir.func @assign2() func_info<#cir.cxx_assign<!s64i, move>> {
   cir.trap
 }
 }

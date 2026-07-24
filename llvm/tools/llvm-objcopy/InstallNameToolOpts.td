@@ -15,6 +15,14 @@ include "llvm/Option/OptParser.td"
 def help : Flag<["--"], "help">;
 def h : Flag<["-"], "h">, Alias<help>;
 
+def output : Option<["--"], "output", KIND_SEPARATE>,
+             HelpText<"Write output to <file>">,
+             MetaVarName<"<file>">;
+def o : JoinedOrSeparate<["-"], "o">,
+        Alias<output>,
+        HelpText<"Alias for --output">,
+        MetaVarName<"<file>">;
+
 def add_rpath : Option<["-", "--"], "add_rpath", KIND_SEPARATE>,
                 HelpText<"Add new rpath">;
 

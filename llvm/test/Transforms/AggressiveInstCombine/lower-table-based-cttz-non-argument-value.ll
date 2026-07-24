@@ -26,9 +26,9 @@ define i32 @test() !prof !0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @x, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP1]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]], !prof [[PROF_1:![0-9]+]]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i8 0, i8 [[TMP3]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;

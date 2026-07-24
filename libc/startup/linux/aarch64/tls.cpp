@@ -8,6 +8,7 @@
 
 #include "hdr/sys_mman_macros.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
@@ -65,7 +66,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
 void cleanup_tls(uintptr_t addr, uintptr_t size) {
   if (size == 0)
     return;
-  syscall_impl<long>(SYS_munmap, addr, size);
+  linux_syscalls::munmap(reinterpret_cast<void *>(addr), size);
 }
 
 bool set_thread_ptr(uintptr_t val) {
@@ -74,8 +75,8 @@ bool set_thread_ptr(uintptr_t val) {
 // https://github.com/gcc-mirror/gcc/commit/fc42900d21abd5eacb7537c3c8ffc5278d510195
 #if __has_builtin(__builtin_arm_wsr64)
   __builtin_arm_wsr64("tpidr_el0", val);
-#elif __has_builtin(__builtin_aarch64_wsr)
-  __builtin_aarch64_wsr("tpidr_el0", val);
+#elif __has_builtin(__builtin_aarch64_wsr64)
+  __builtin_aarch64_wsr64("tpidr_el0", val);
 #elif defined(__GNUC__)
   asm volatile("msr tpidr_el0, %0" ::"r"(val));
 #else

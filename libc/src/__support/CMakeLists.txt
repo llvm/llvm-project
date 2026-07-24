@@ -165,6 +165,7 @@ list(APPEND wctype_utils_deps
 if ("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
   list(APPEND wctype_utils_deps
       libc.src.__support.wctype.wctype_classification_utils
+      libc.src.__support.wctype.wctype_conversion_utils
   )
 endif()
 
@@ -453,12 +454,15 @@ add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)
 add_subdirectory(GPU)
 add_subdirectory(RPC)
+add_subdirectory(net)
 
 # Thread support is used by other "File". So, we add the "threads"
 # before "File".
 add_subdirectory(threads)
 
 add_subdirectory(File)
+
+add_subdirectory(printf_core)
 
 add_subdirectory(HashTable)
 
@@ -470,6 +474,10 @@ add_subdirectory(wchar)
 add_subdirectory(wctype)
 
 add_subdirectory(math)
+add_subdirectory(builtins)
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
   add_subdirectory(mathvec)
+endif()
+if(LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(regex)
 endif()

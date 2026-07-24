@@ -30,6 +30,7 @@ class FilterEvaluator {
   DenseMap<StringRef, StringRef> &StringPropertyValues;
   DenseMap<StringRef, Value *> &PointerPropertyValues;
   DenseMap<StringRef, PropertyType> &DynamicProperties;
+  StringMap<int32_t> &FlagNameVals;
   size_t Pos = 0;
 
 public:
@@ -37,11 +38,12 @@ public:
                   DenseMap<StringRef, int64_t> &IntPropertyValues,
                   DenseMap<StringRef, StringRef> &StringPropertyValues,
                   DenseMap<StringRef, Value *> &PointerPropertyValues,
-                  DenseMap<StringRef, PropertyType> &DynamicProperties)
+                  DenseMap<StringRef, PropertyType> &DynamicProperties,
+                  StringMap<int32_t> &FlagNameVals)
       : Expr(Expr), IntPropertyValues(IntPropertyValues),
         StringPropertyValues(StringPropertyValues),
         PointerPropertyValues(PointerPropertyValues),
-        DynamicProperties(DynamicProperties) {}
+        DynamicProperties(DynamicProperties), FlagNameVals(FlagNameVals) {}
 
   Expected<bool> evaluate() {
     if (Expr.empty())
@@ -54,8 +56,7 @@ public:
     if (Pos < Expr.size() && Result)
       return createStringError(
           "unexpected characters at position " + std::to_string(Pos) + ": '" +
-          Expr.substr(Pos, std::min<size_t>(10, Expr.size() - Pos)).str() +
-          "'");
+          Expr.substr(Pos, std::min<size_t>(10, Expr.size() - Pos)) + "'");
 
     return Result;
   }
@@ -148,6 +149,13 @@ private:
   Expected<bool> parseComparison() {
     skipWhitespace();
 
+    // Check for logical not operator.
+    bool LogicalNot = false;
+    if (Pos < Expr.size() && Expr[Pos] == '!') {
+      LogicalNot = true;
+      ++Pos;
+    }
+
     // Parse left-hand side (property name).
     size_t Start = Pos;
     while (Pos < Expr.size() && (std::isalnum(Expr[Pos]) || Expr[Pos] == '_'))
@@ -160,20 +168,34 @@ private:
 
     skipWhitespace();
 
-    // Check for .startswith() method call.
+    // Parse property fields and methods.
     if (Pos < Expr.size() && Expr[Pos] == '.') {
       ++Pos;
       skipWhitespace();
 
-      // Parse method name.
+      // Parse field name.
       Start = Pos;
       while (Pos < Expr.size() && std::isalpha(Expr[Pos]))
         ++Pos;
 
-      StringRef MethodName = Expr.slice(Start, Pos);
+      StringRef FieldName = Expr.slice(Start, Pos);
       skipWhitespace();
 
-      if (MethodName == "startswith") {
+      // Handle flag values.
+      if (PropName == "flags") {
+        auto FlagValIt = IntPropertyValues.find("flags");
+        if (FlagValIt != IntPropertyValues.end()) {
+          auto FlagNameIt = FlagNameVals.find(FieldName);
+          if (FlagNameIt == FlagNameVals.end())
+            return createStringError("Invalid flag '" + FieldName + "'");
+          return ((static_cast<int32_t>(FlagValIt->second) &
+                   FlagNameIt->second) == FlagNameIt->second) ^
+                 LogicalNot;
+        }
+      }
+
+      // Check for .startswith() method call.
+      if (FieldName == "startswith") {
         // Parse (.
         if (Pos >= Expr.size() || Expr[Pos] != '(')
           return createStringError(
@@ -200,7 +222,7 @@ private:
         // Evaluate startswith.
         auto StrIt = StringPropertyValues.find(PropName);
         if (StrIt != StringPropertyValues.end())
-          return StrIt->second.starts_with(*Prefix);
+          return StrIt->second.starts_with(*Prefix) ^ LogicalNot;
 
         // If this is a dynamic string property, assume the filter passes.
         if (DynamicProperties.lookup_or(PropName, UNKNOWN) == STRING)
@@ -211,8 +233,11 @@ private:
             "'");
       }
 
-      return createStringError("unknown method '" + MethodName.str() +
-                               "' on property '" + PropName.str() + "'");
+      return createStringError("unknown method '" + FieldName +
+                               "' on property '" + PropName + "'");
+    } else if (LogicalNot) {
+      return createStringError("expected boolean value at position " +
+                               std::to_string(Start));
     }
 
     // Check if this is an integer property.
@@ -251,8 +276,7 @@ private:
         }
       } else {
         return createStringError(
-            "expected comparison operator after property '" + PropName.str() +
-            "'");
+            "expected comparison operator after property '" + PropName + "'");
       }
 
       skipWhitespace();
@@ -266,8 +290,17 @@ private:
       }
 
       size_t DigitStart = Pos;
-      while (Pos < Expr.size() && std::isdigit(Expr[Pos]))
-        ++Pos;
+
+      // Parse binary literals.
+      if (Pos + 1 < Expr.size() && Expr[Pos] == '0' && Expr[Pos + 1] == 'b') {
+        Pos += 2;
+        while (Pos < Expr.size() && (Expr[Pos] == '0' || Expr[Pos] == '1'))
+          ++Pos;
+      } else {
+        // Parse decimal literals.
+        while (Pos < Expr.size() && std::isdigit(Expr[Pos]))
+          ++Pos;
+      }
 
       if (Pos == DigitStart)
         return createStringError("expected integer value at position " +
@@ -275,9 +308,8 @@ private:
 
       StringRef ValueStr = Expr.slice(Start, Pos);
       int64_t RHS = 0;
-      if (ValueStr.getAsInteger(10, RHS))
-        return createStringError("invalid integer value '" + ValueStr.str() +
-                                 "'");
+      if (ValueStr.getAsInteger(0, RHS))
+        return createStringError("invalid integer value '" + ValueStr + "'");
 
       if (Negative)
         RHS = -RHS;
@@ -316,13 +348,13 @@ private:
           Op = NE;
           Pos += 2;
         } else {
-          return createStringError("string property '" + PropName.str() +
+          return createStringError("string property '" + PropName +
                                    "' only supports == and != operators");
         }
       } else {
         return createStringError(
-            "expected comparison operator after string property '" +
-            PropName.str() + "'");
+            "expected comparison operator after string property '" + PropName +
+            "'");
       }
 
       skipWhitespace();
@@ -358,13 +390,13 @@ private:
           Op = NE;
           Pos += 2;
         } else {
-          return createStringError("pointer property '" + PropName.str() +
+          return createStringError("pointer property '" + PropName +
                                    "' only supports == and != operators");
         }
       } else {
         return createStringError(
-            "expected comparison operator after pointer property '" +
-            PropName.str() + "'");
+            "expected comparison operator after pointer property '" + PropName +
+            "'");
       }
 
       skipWhitespace();
@@ -378,7 +410,7 @@ private:
       if (RHS != "null")
         return createStringError("pointer comparisons only support 'null' as "
                                  "right-hand side, got '" +
-                                 RHS.str() + "'");
+                                 RHS + "'");
 
       // Check if the pointer is a constant null.
       bool IsNull = false;
@@ -405,12 +437,12 @@ private:
 
     // Unknown property, record an error.
     return createStringError("expected enabled property name, got '" +
-                             PropName.str() + "'");
+                             PropName + "'");
   }
 };
 } // anonymous namespace
 
-bool llvm::instrumentor::evaluateFilter(Value &V,
+bool llvm::instrumentor::evaluateFilter(Value &V, bool &Changed,
                                         InstrumentationOpportunity &IO,
                                         InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB) {
@@ -431,6 +463,10 @@ bool llvm::instrumentor::evaluateFilter(Value &V,
     Value *ArgValue = Arg.GetterCB(V, *Arg.Ty, IConf, IIRB);
     if (!ArgValue)
       continue;
+
+    // TODO: This is likely too broad and we might want GetterCB to indicate
+    // changes.
+    Changed = true;
 
     if (auto *CI = dyn_cast<ConstantInt>(ArgValue)) {
       // Check for constant integer values.
@@ -458,7 +494,8 @@ bool llvm::instrumentor::evaluateFilter(Value &V,
   }
 
   FilterEvaluator Evaluator(IO.Filter, IntPropertyValues, StringPropertyValues,
-                            PointerPropertyValues, DynamicProperties);
+                            PointerPropertyValues, DynamicProperties,
+                            IO.FlagNames);
 
   Expected<bool> Result = Evaluator.evaluate();
   if (!Result) {

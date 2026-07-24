@@ -255,7 +255,7 @@ public:
     // If this is the holding variable for a `BindingDecl`, we may already
     // have a storage location set up -- so check. (See also explanation below
     // where we process the `BindingDecl`.)
-    if (D.getType()->isReferenceType() && Env.getStorageLocation(D) != nullptr)
+    if (D.isImplicit() && Env.getStorageLocation(D) != nullptr)
       return;
 
     assert(Env.getStorageLocation(D) == nullptr);
@@ -371,12 +371,12 @@ public:
         } else {
           Loc->addChild(*Field, &Env.createStorageLocation(FieldType));
         }
+      }
 
-        for (const auto &Entry :
-             Env.getDataflowAnalysisContext().getSyntheticFields(Derived)) {
-          Loc->addSyntheticField(Entry.getKey(),
-                                 Env.createStorageLocation(Entry.getValue()));
-        }
+      for (const auto &Entry :
+           Env.getDataflowAnalysisContext().getSyntheticFields(Derived)) {
+        Loc->addSyntheticField(Entry.getKey(),
+                               Env.createStorageLocation(Entry.getValue()));
       }
       Env.initializeFieldsWithValues(*Loc, Derived);
 

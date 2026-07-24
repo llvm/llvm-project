@@ -145,6 +145,12 @@ let cppNamespace = "::cir" in {
       }]
       >,
       InterfaceMethod<"",
+      "void", "setGlobalVisibility", (ins "cir::VisibilityKind":$val), [{}],
+      /*defaultImplementation=*/[{
+        $_op.setGlobalVisibility(val);
+      }]
+      >,
+      InterfaceMethod<"",
       "bool", "isDSOLocal", (ins), [{}],
       /*defaultImplementation=*/[{
         return $_op.getDsoLocal();
@@ -248,6 +254,26 @@ let cppNamespace = "::cir" in {
         "mlir::Value", "getResult", (ins), [{}],
         /*defaultImplementation=*/[{
           return $_op.getResult();
+        }]>,
+    ];
+  }
+
+  def CIR_StdOpInterface : OpInterface<"StdOpInterface"> {
+    let description = [{
+      Interface for raised standard library ops, exposing the original callee
+      so LoweringPrepare can rebuild the call generically.
+    }];
+
+    let methods = [
+      InterfaceMethod<"Return the original callee symbol reference.",
+        "mlir::FlatSymbolRefAttr", "getOriginalFnAttr", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getOriginalFnAttr();
+        }]>,
+      InterfaceMethod<"Return the name of the original_fn attribute.",
+        "mlir::StringAttr", "getOriginalFnAttrName", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getOriginalFnAttrName();
         }]>,
     ];
   }

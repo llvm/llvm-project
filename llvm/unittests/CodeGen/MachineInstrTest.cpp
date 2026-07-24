@@ -43,8 +43,9 @@ std::unique_ptr<MCContext> createMCContext(const MCAsmInfo &AsmInfo) {
   Triple TheTriple(/*ArchStr=*/"", /*VendorStr=*/"", /*OSStr=*/"",
                    /*EnvironmentStr=*/"elf");
   static MCRegisterInfo MRI;
-  static const MCSubtargetInfo STI(TheTriple, "", "", "", {}, {}, {}, nullptr,
-                                   nullptr, nullptr, nullptr, nullptr, nullptr);
+  static const MCSubtargetInfo STI(TheTriple, "", "", "", "", {}, {}, nullptr,
+                                   nullptr, nullptr, nullptr, nullptr, nullptr,
+                                   nullptr);
   return std::make_unique<MCContext>(TheTriple, AsmInfo, MRI, STI, nullptr,
                                      false);
 }
@@ -512,8 +513,12 @@ MATCHER_P(HasMIMetadata, MIMD, "") {
 TEST(MachineInstrBuilder, BuildMI) {
   LLVMContext Ctx;
   MDNode *PCS = MDNode::getDistinct(Ctx, {});
-  MDNode *DI = MDNode::getDistinct(Ctx, {});
-  DebugLoc DL(DI);
+  DIFile *DIF = DIFile::getDistinct(Ctx, "filename", "");
+  DISubprogram *DIS = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", DIF, 0, nullptr, 0, nullptr, 0, 0, DINode::FlagZero,
+      DISubprogram::SPFlagZero, nullptr);
+  DILocation *DIL = DILocation::get(Ctx, 1, 5, DIS);
+  DebugLoc DL(DIL);
   MIMetadata MIMD(DL, PCS);
   EXPECT_EQ(MIMD.getDL(), DL);
   EXPECT_EQ(MIMD.getPCSections(), PCS);
@@ -587,9 +592,9 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_EQ(MI->getOperand(8).getImm(), MachineOperand::CreateImm(4).getImm());
 
   // test tied operands
-  MCRegisterClass MRC{
-      0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true};
-  TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCRegisterClass RC{
+      0, 0, 0,  0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true,
+      0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
   // MachineRegisterInfo will be very upset if these registers aren't
   // allocatable.
   assert(RC.isAllocatable() && "unusable TargetRegisterClass");

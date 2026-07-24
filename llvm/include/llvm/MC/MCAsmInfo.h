@@ -158,11 +158,8 @@ protected:
 
   /// For internal use by compiler and assembler, not meant to be visible
   /// externally. They are usually not emitted to the symbol table in the
-  /// object file.
+  /// object file. This is also used for labels for basic blocks.
   StringRef InternalSymbolPrefix = "L";
-
-  /// This prefix is used for labels for basic blocks. Defaults to "L"
-  StringRef PrivateLabelPrefix = "L";
 
   /// This prefix is used for symbols that should be passed through the
   /// assembler but be removed by the linker.  This is 'l' on Darwin, currently
@@ -377,6 +374,9 @@ protected:
   /// absolute difference.
   bool DwarfFDESymbolsUseAbsDiff = false;
 
+  /// The optional specifier to use for the relative FDE symbol references.
+  uint16_t DwarfFDERelSymbolSpec = 0;
+
   /// True if DWARF `.file directory' directive syntax is used by
   /// default.
   bool EnableDwarfFileDirectoryDefault = true;
@@ -487,16 +487,15 @@ public:
                                                     unsigned Encoding,
                                                     MCStreamer &Streamer) const;
 
-  virtual const MCExpr *getExprForFDESymbol(const MCSymbol *Sym,
-                                            unsigned Encoding,
-                                            MCStreamer &Streamer) const;
+  const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
+                                    MCStreamer &Streamer) const;
 
   /// Return true if C is an acceptable character inside a symbol name.
-  virtual bool isAcceptableChar(char C) const;
+  bool isAcceptableChar(char C) const;
 
   /// Return true if the identifier \p Name does not need quotes to be
   /// syntactically correct.
-  virtual bool isValidUnquotedName(StringRef Name) const;
+  bool isValidUnquotedName(StringRef Name) const;
 
   llvm::DenseSet<llvm::CachedHashStringRef> &getReservedIdentifiers() {
     return ReservedIdentifiers;
@@ -563,7 +562,6 @@ public:
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
   StringRef getInternalSymbolPrefix() const { return InternalSymbolPrefix; }
-  StringRef getPrivateLabelPrefix() const { return PrivateLabelPrefix; }
 
   bool hasLinkerPrivateGlobalPrefix() const {
     return !LinkerPrivateGlobalPrefix.empty();
@@ -693,8 +691,6 @@ public:
     return SupportsExtendedDwarfLocDirective;
   }
 
-  bool usesDwarfFileAndLocDirectives() const { return !IsAIX; }
-
   bool enableDwarfFileDirectoryDefault() const {
     return EnableDwarfFileDirectoryDefault;
   }
@@ -727,7 +723,7 @@ public:
   }
 
   /// Set whether target want to use AsmParser to parse inlineasm.
-  virtual void setParseInlineAsmUsingAsmParser(bool Value) {
+  void setParseInlineAsmUsingAsmParser(bool Value) {
     ParseInlineAsmUsingAsmParser = Value;
   }
 
@@ -735,10 +731,7 @@ public:
   bool preserveAsmComments() const { return PreserveAsmComments; }
 
   /// Set whether assembly (inline or otherwise) should be parsed.
-  virtual void setPreserveAsmComments(bool Value) {
-    PreserveAsmComments = Value;
-  }
-
+  void setPreserveAsmComments(bool Value) { PreserveAsmComments = Value; }
 
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 

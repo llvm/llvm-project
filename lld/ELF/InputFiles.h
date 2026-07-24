@@ -315,6 +315,10 @@ private:
   // The following variable contains the contents of .symtab_shndx.
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
+
+  // Section indices of kept SHT_GROUP sections, recorded by parse() in
+  // ascending order, to be used by the parallel initializeSections().
+  SmallVector<uint32_t, 0> keptGroups;
 };
 
 class BitcodeFile : public InputFile {

@@ -100,7 +100,7 @@ static void DumpTargetInfo(uint32_t target_idx, Target *target,
 
   uint32_t properties = 0;
   if (target_arch.IsValid()) {
-    strm.Printf(" ( arch=");
+    strm.PutCString(" ( arch=");
     target_arch.DumpTriple(strm.AsRawOstream());
     properties++;
   }
@@ -1338,9 +1338,10 @@ static void DumpDirectory(Stream &strm, const FileSpec *file_spec_ptr,
                           uint32_t width) {
   if (file_spec_ptr) {
     if (width > 0)
-      strm.Printf("%-*s", width, file_spec_ptr->GetDirectory().AsCString(""));
+      strm.Format("{0}", fmt_align(file_spec_ptr->GetDirectory(),
+                                   llvm::AlignStyle::Left, width));
     else
-      file_spec_ptr->GetDirectory().Dump(&strm);
+      strm.PutCString(file_spec_ptr->GetDirectory());
     return;
   }
   // Keep the width spacing correct if things go wrong...
@@ -1352,9 +1353,10 @@ static void DumpBasename(Stream &strm, const FileSpec *file_spec_ptr,
                          uint32_t width) {
   if (file_spec_ptr) {
     if (width > 0)
-      strm.Printf("%-*s", width, file_spec_ptr->GetFilename().AsCString(""));
+      strm.Format("{0}", fmt_align(file_spec_ptr->GetFilename(),
+                                   llvm::AlignStyle::Left, width));
     else
-      file_spec_ptr->GetFilename().Dump(&strm);
+      strm.PutCString(file_spec_ptr->GetFilename());
     return;
   }
   // Keep the width spacing correct if things go wrong...
@@ -1458,7 +1460,7 @@ static void DumpDwoFilesTable(Stream &strm,
     if (dict->GetValueForKeyAsInteger("dwo_id", dwo_id))
       strm.Printf("0x%16.16" PRIx64 " ", dwo_id);
     else
-      strm.Printf("0x???????????????? ");
+      strm.PutCString("0x???????????????? ");
 
     llvm::StringRef error;
     if (dict->GetValueForKeyAsString("error", error))
@@ -2989,11 +2991,10 @@ protected:
                   const char *sect_name = args.GetArgumentAtIndex(i);
                   const char *load_addr_cstr = args.GetArgumentAtIndex(i + 1);
                   if (sect_name && load_addr_cstr) {
-                    ConstString const_sect_name(sect_name);
                     addr_t load_addr;
                     if (llvm::to_integer(load_addr_cstr, load_addr)) {
                       SectionSP section_sp(
-                          section_list->FindSectionByName(const_sect_name));
+                          section_list->FindSectionByName(sect_name));
                       if (section_sp) {
                         if (section_sp->IsThreadSpecific()) {
                           result.AppendErrorWithFormat(
@@ -3186,7 +3187,7 @@ public:
       : CommandObjectParsed(
             interpreter, "target modules list",
             "List current executable and dependent shared library images.",
-            nullptr, eCommandRequiresTarget) {
+            nullptr, eCommandAllowsDummyTarget) {
     AddSimpleArgumentList(eArgTypeModule, eArgRepeatStar);
   }
 
@@ -3197,8 +3198,14 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
     const bool use_global_module_list = m_options.m_use_global_module_list;
+
+    // Every code path other than the global module list needs a real target.
+    if (!use_global_module_list && (!target || target->IsDummyTarget())) {
+      result.AppendError(GetInvalidTargetDescription());
+      return;
+    }
+
     // Define a local module list here to ensure it lives longer than any
     // "locker" object which might lock its contents below (through the
     // "module_list_ptr" variable).
@@ -3447,6 +3454,9 @@ protected:
       const char *object_name = module->GetObjectName().GetCString();
       if (object_name)
         strm.Printf("(%s)", object_name);
+      std::optional<addr_t> memory_addr = module->GetMemoryModuleAddress();
+      if (memory_addr.has_value())
+        strm.Printf("(0x%" PRIx64 ")", memory_addr.value());
     }
     strm.EOL();
   }
@@ -3777,6 +3787,11 @@ protected:
       ABISP abi_sp = process->GetABI();
       if (abi_sp) {
         if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
+          assert(((!plan_sp || plan_sp->GetRowCount() == 0 ||
+                   plan_sp->GetRowAtIndex(0)
+                       ->GetUnspecifiedRegistersAreUndefined())) &&
+                 "Default UnwindPlan must set "
+                 "UnspecifiedRegistersAreUndefined to true");
           result.GetOutputStream().Printf("Arch default UnwindPlan:\n");
           plan_sp->Dump(result.GetOutputStream(), thread.get(),
                         LLDB_INVALID_ADDRESS);
@@ -5067,9 +5082,10 @@ protected:
       // This is a scripted stop hook:
       Target::StopHookScripted *hook_ptr =
           static_cast<Target::StopHookScripted *>(new_hook_sp.get());
-      Status error = hook_ptr->SetScriptCallback(
+      ScriptedMetadata scripted_metadata(
           m_python_class_options.GetName(),
           m_python_class_options.GetStructuredData());
+      Status error = hook_ptr->SetScriptCallback(scripted_metadata);
       if (error.Success())
         result.AppendMessageWithFormatv("Stop hook #{0} added.",
                                         new_hook_sp->GetID());
@@ -5701,9 +5717,10 @@ protected:
                                       new_hook_sp->GetID());
     } else if (!m_python_class_options.GetName().empty()) {
       auto *hook = static_cast<Target::HookScripted *>(new_hook_sp.get());
-      Status callback_error =
-          hook->SetScriptCallback(m_python_class_options.GetName(),
-                                  m_python_class_options.GetStructuredData());
+      ScriptedMetadata scripted_metadata(
+          m_python_class_options.GetName(),
+          m_python_class_options.GetStructuredData());
+      Status callback_error = hook->SetScriptCallback(scripted_metadata);
       if (callback_error.Fail()) {
         result.AppendErrorWithFormat("couldn't add hook: %s",
                                      callback_error.AsCString());
@@ -6158,6 +6175,7 @@ protected:
     result.AppendMessageWithFormatv(
         "successfully registered scripted frame provider '{0}' for target",
         m_class_options.GetName().c_str());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupPythonClassWithDict m_class_options;

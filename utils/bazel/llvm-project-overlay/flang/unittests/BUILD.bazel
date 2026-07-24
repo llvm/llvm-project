@@ -1,0 +1,327 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+############################################################
+# Common
+############################################################
+
+cc_test(
+    name = "FlangCommonTests",
+    size = "small",
+    srcs = glob(["Common/*.cpp"]),
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:SupportHeaders",
+        "//flang/lib/Support:FortranSupport",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+############################################################
+# Decimal -- non-gtest standalone binaries
+############################################################
+
+cc_test(
+    name = "DecimalQuickSanityTest",
+    size = "small",
+    srcs = ["Decimal/quick-sanity-test.cpp"],
+    deps = [
+        "//flang:DecimalHeaders",
+        "//flang/lib/Decimal:FortranDecimal",
+        "//llvm:Support",
+    ],
+)
+
+cc_test(
+    name = "DecimalThoroughTest",
+    size = "enormous",
+    srcs = ["Decimal/thorough-test.cpp"],
+    tags = ["manual"],
+    deps = [
+        "//flang:DecimalHeaders",
+        "//flang/lib/Decimal:FortranDecimal",
+        "//llvm:Support",
+    ],
+)
+
+############################################################
+# Evaluate -- non-gtest standalone binaries
+############################################################
+
+[
+    cc_test(
+        name = name,
+        size = "small",
+        srcs = [src],
+        deps = [
+            "//flang:CommonHeaders",
+            "//flang:EvaluateHeaders",
+            "//flang:ParserHeaders",
+            "//flang:TestingHeaders",
+            "//flang/lib/Testing:NonGTestTesting",
+            "//llvm:Support",
+        ],
+    )
+    for name, src in [
+        ("EvaluateLeadingZeroBitCountTest", "Evaluate/leading-zero-bit-count.cpp"),
+        ("EvaluateBitPopulationCountTest", "Evaluate/bit-population-count.cpp"),
+        ("EvaluateUInt128Test", "Evaluate/uint128.cpp"),
+    ]
+]
+
+cc_test(
+    name = "EvaluateExpressionTest",
+    size = "small",
+    srcs = ["Evaluate/expression.cpp"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:EvaluateHeaders",
+        "//flang:ParserHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:SupportHeaders",
+        "//flang:TestingHeaders",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Parser:FortranParser",
+        "//flang/lib/Semantics:FortranSemantics",
+        "//flang/lib/Support:FortranSupport",
+        "//flang/lib/Testing:NonGTestTesting",
+        "//llvm:Support",
+    ],
+)
+
+cc_test(
+    name = "EvaluateIntegerTest",
+    size = "small",
+    srcs = ["Evaluate/integer.cpp"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:EvaluateHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:TestingHeaders",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Semantics:FortranSemantics",
+        "//flang/lib/Testing:NonGTestTesting",
+        "//llvm:Support",
+    ],
+)
+
+cc_test(
+    name = "EvaluateIntrinsicsTest",
+    size = "small",
+    srcs = ["Evaluate/intrinsics.cpp"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:DecimalHeaders",
+        "//flang:EvaluateHeaders",
+        "//flang:ParserHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:SupportHeaders",
+        "//flang:TestingHeaders",
+        "//flang/lib/Decimal:FortranDecimal",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Parser:FortranParser",
+        "//flang/lib/Semantics:FortranSemantics",
+        "//flang/lib/Support:FortranSupport",
+        "//flang/lib/Testing:NonGTestTesting",
+        "//llvm:Support",
+    ],
+)
+
+cc_test(
+    name = "EvaluateLogicalTest",
+    size = "small",
+    srcs = ["Evaluate/logical.cpp"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:EvaluateHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:TestingHeaders",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Semantics:FortranSemantics",
+        "//flang/lib/Testing:NonGTestTesting",
+        "//llvm:Support",
+    ],
+)
+
+cc_test(
+    name = "EvaluateRealTest",
+    size = "small",
+    srcs = [
+        "Evaluate/real.cpp",
+        "//flang/lib/Evaluate:host.h",
+    ],
+    # The real.cpp test relies on fenv.h floating-point exception trapping,
+    # which requires C++ exceptions to be enabled (the runtime catches FP
+    # signals).  The default flang library toolchain disables exceptions.
+    copts = [
+        "-fexceptions",
+        "-frtti",
+    ],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:DecimalHeaders",
+        "//flang:EvaluateHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:TestingHeaders",
+        "//flang/lib/Decimal:FortranDecimal",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Semantics:FortranSemantics",
+        "//flang/lib/Testing:NonGTestTesting",
+        "//llvm:Support",
+    ],
+)
+
+cc_test(
+    name = "EvaluateFoldingTest",
+    size = "small",
+    srcs = [
+        "Evaluate/folding.cpp",
+        # folding.cpp includes "../../lib/Evaluate/host.h", a private header
+        # of //flang/lib/Evaluate:FortranEvaluate. Pull it into srcs here so
+        # the test's own module owns it (same pattern as EvaluateRealTest).
+        "//flang/lib/Evaluate:host.h",
+    ],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:EvaluateHeaders",
+        "//flang:ParserHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:SupportHeaders",
+        "//flang:TestingHeaders",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Semantics:FortranSemantics",
+        "//flang/lib/Support:FortranSupport",
+        "//flang/lib/Testing:NonGTestTesting",
+        "//llvm:Support",
+    ],
+)
+
+############################################################
+# Frontend
+############################################################
+
+cc_test(
+    name = "FlangFrontendTests",
+    size = "medium",
+    srcs = glob(["Frontend/*.cpp"]),
+    deps = [
+        "//clang:basic",
+        "//clang:options",
+        "//flang:EvaluateHeaders",
+        "//flang:FrontendHeaders",
+        "//flang:FrontendToolHeaders",
+        "//flang:ParserHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:SupportHeaders",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Frontend:flangFrontend",
+        "//flang/lib/FrontendTool:flangFrontendTool",
+        "//flang/lib/Lower:FortranLower",
+        "//flang/lib/Parser:FortranParser",
+        "//flang/lib/Semantics:FortranSemantics",
+        "//flang/lib/Support:FortranSupport",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//mlir:IR",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+############################################################
+# Optimizer
+############################################################
+
+cc_test(
+    name = "FlangOptimizerTests",
+    size = "medium",
+    srcs = glob(
+        [
+            "Optimizer/*.cpp",
+            "Optimizer/*.h",
+            "Optimizer/Builder/*.cpp",
+            "Optimizer/Builder/*.h",
+            "Optimizer/Builder/Runtime/*.cpp",
+            "Optimizer/Builder/Runtime/*.h",
+        ],
+        allow_empty = True,
+    ),
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:RuntimeHeaders",
+        "//flang/include/flang/Optimizer/Analysis:AnalysisHeaders",
+        "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect:FIRDialectSupportHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF:CUFHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",
+        "//flang/include/flang/Optimizer/Support:FIRSupportHeaders",
+        "//flang/lib/Optimizer/Analysis:FIRAnalysis",
+        "//flang/lib/Optimizer/Builder:FIRBuilder",
+        "//flang/lib/Optimizer/Dialect:FIRDialect",
+        "//flang/lib/Optimizer/Dialect/CUF:CUFDialect",
+        "//flang/lib/Optimizer/Dialect/FIRCG:FIRCodeGenDialect",
+        "//flang/lib/Optimizer/Dialect/MIF:MIFDialect",
+        "//flang/lib/Optimizer/Dialect/Support:FIRDialectSupport",
+        "//flang/lib/Optimizer/HLFIR/IR:HLFIRDialect",
+        "//flang/lib/Optimizer/Support:FIRSupport",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//mlir:AllExtensions",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:LLVMDialect",
+        "//mlir:RegisterAllDialects",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+############################################################
+# Semantics
+############################################################
+
+cc_test(
+    name = "OpenMPUtilsTests",
+    size = "small",
+    srcs = glob(["Semantics/*.cpp"]),
+    deps = [
+        "//clang:basic",
+        "//flang:EvaluateHeaders",
+        "//flang:FrontendHeaders",
+        "//flang:FrontendToolHeaders",
+        "//flang:ParserHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:SupportHeaders",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Frontend:flangFrontend",
+        "//flang/lib/FrontendTool:flangFrontendTool",
+        "//flang/lib/Lower:FortranLower",
+        "//flang/lib/Parser:FortranParser",
+        "//flang/lib/Semantics:FortranSemantics",
+        "//flang/lib/Support:FortranSupport",
+        "//llvm:Core",
+        "//llvm:FrontendOpenACC",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//mlir:IR",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)

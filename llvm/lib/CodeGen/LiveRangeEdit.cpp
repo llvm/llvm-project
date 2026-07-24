@@ -167,9 +167,20 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   ++NumDCEFoldedLoads;
   if (CopyMI) {
     SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
-    LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
-    VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
-    LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+    Register CopyDstReg = CopyMI->getOperand(0).getReg();
+    LiveInterval &CopyDstLI = LIS.getInterval(CopyDstReg);
+
+    // The addSegment below extends CopyDstLI. If this vreg is already
+    // assigned in the LiveRegMatrix, the matrix becomes inconsistent.
+    // Notify the delegate so it can unassign and re-enqueue the vreg.
+    if (TheDelegate && CopyDstReg.isVirtual() && VRM &&
+        VRM->hasPhys(CopyDstReg))
+      TheDelegate->LRE_WillShrinkVirtReg(CopyDstReg);
+
+    VNInfo *VNI = CopyDstLI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
+    CopyDstLI.addSegment(
+        LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+
     Register R = CopyMI->getOperand(1).getReg();
     if (R.isVirtual()) {
       LiveInterval &SrcLI = LIS.getInterval(R);

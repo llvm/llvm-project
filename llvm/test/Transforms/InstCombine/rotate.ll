@@ -1086,3 +1086,35 @@ define i32 @not_rotl_i32_add_less(i32 %x, i32 %y) {
   %r = add i32 %shr, %shl
   ret i32 %r
 }
+
+; PR165306
+define <8 x i64> @fold_rot_fshr_v8i64(<8 x i64> %x, <8 x i64> %y) {
+; CHECK-LABEL: @fold_rot_fshr_v8i64(
+; CHECK-NEXT:    [[OR:%.*]] = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> [[X:%.*]], <8 x i64> [[X]], <8 x i64> [[Y:%.*]])
+; CHECK-NEXT:    ret <8 x i64> [[OR]]
+;
+  %trunc = trunc <8 x i64> %y to <8 x i6>
+  %neg = sub <8 x i6> zeroinitializer, %trunc
+  %zext = zext <8 x i6> %neg to <8 x i64>
+  %shl = shl <8 x i64> %x, %zext
+  %mask = and <8 x i64> %y, splat (i64 63)
+  %lshr = lshr <8 x i64> %x, %mask
+  %or = or <8 x i64> %shl, %lshr
+  ret <8 x i64> %or
+}
+
+; PR165306
+define i32 @fold_rot_fshl_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: @fold_rot_fshl_i32(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %trunc = trunc i32 %y to i5
+  %neg = sub i5 0, %trunc
+  %zext = zext i5 %neg to i32
+  %lshr = lshr i32 %x, %zext
+  %mask = and i32 %y, 31
+  %shl = shl i32 %x, %mask
+  %or = or i32 %shl, %lshr
+  ret i32 %or
+}

@@ -19,6 +19,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -42,6 +43,42 @@ static bool incrementWithoutOverflow(const APSInt &Value, APSInt &Result) {
   Result = Value;
   ++Result;
   return Value < Result;
+}
+
+static bool areEquivalentDeclRefExpr(const DeclRefExpr *L,
+                                     const DeclRefExpr *R) {
+  if (L->getDecl() != R->getDecl())
+    return false;
+
+  const PrintingPolicy &Policy =
+      L->getDecl()->getASTContext().getPrintingPolicy();
+
+  if (L->hasQualifier() && R->hasQualifier()) {
+    std::string LQual, RQual;
+    llvm::raw_string_ostream LOS(LQual), ROS(RQual);
+    L->getQualifier().print(LOS, Policy);
+    R->getQualifier().print(ROS, Policy);
+    if (LQual != RQual)
+      return false;
+  }
+
+  if (L->hasExplicitTemplateArgs() != R->hasExplicitTemplateArgs())
+    return false;
+  if (L->hasExplicitTemplateArgs()) {
+    if (L->getNumTemplateArgs() != R->getNumTemplateArgs())
+      return false;
+
+    return llvm::equal(L->template_arguments(), R->template_arguments(),
+                       [&Policy](const TemplateArgumentLoc &LArg,
+                                 const TemplateArgumentLoc &RArg) {
+                         std::string LStr, RStr;
+                         llvm::raw_string_ostream LOS(LStr), ROS(RStr);
+                         LArg.getArgument().print(Policy, LOS, true);
+                         RArg.getArgument().print(Policy, ROS, true);
+                         return LStr == RStr;
+                       });
+  }
+  return true;
 }
 
 static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
@@ -98,8 +135,8 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
     return cast<DependentScopeDeclRefExpr>(Left)->getQualifier() ==
            cast<DependentScopeDeclRefExpr>(Right)->getQualifier();
   case Stmt::DeclRefExprClass:
-    return cast<DeclRefExpr>(Left)->getDecl() ==
-           cast<DeclRefExpr>(Right)->getDecl();
+    return areEquivalentDeclRefExpr(cast<DeclRefExpr>(Left),
+                                    cast<DeclRefExpr>(Right));
   case Stmt::MemberExprClass:
     return cast<MemberExpr>(Left)->getMemberDecl() ==
            cast<MemberExpr>(Right)->getMemberDecl();
@@ -1178,8 +1215,10 @@ void RedundantExpressionCheck::checkBitwiseExpr(
         !retrieveIntegerConstantExpr(Result, "rhs", RhsValue))
       return;
 
-    const uint64_t LhsConstant = LhsValue.getZExtValue();
-    const uint64_t RhsConstant = RhsValue.getZExtValue();
+    const unsigned ConstantWidth =
+        std::max(LhsValue.getBitWidth(), RhsValue.getBitWidth());
+    const llvm::APInt LhsConstant = LhsValue.extOrTrunc(ConstantWidth);
+    const llvm::APInt RhsConstant = RhsValue.extOrTrunc(ConstantWidth);
     const SourceLocation Loc = ComparisonOperator->getOperatorLoc();
 
     // Check expression: x & k1 == k2  (i.e. x & 0xFF == 0xF00)

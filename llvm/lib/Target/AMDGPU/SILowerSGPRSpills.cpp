@@ -67,7 +67,7 @@ private:
   MBBVector SaveBlocks;
   MBBVector RestoreBlocks;
 
-  MachineBasicBlock *getCycleDomBB(MachineCycle *C);
+  MachineBasicBlock *getCycleDomBB(CycleRef C);
 
 public:
   SILowerSGPRSpills(LiveIntervals *LIS, SlotIndexes *Indexes,
@@ -119,61 +119,25 @@ INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
 
 char &llvm::SILowerSGPRSpillsLegacyID = SILowerSGPRSpillsLegacy::ID;
 
-static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
-                          const TargetRegisterInfo *TRI) {
-  for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
-    if (MBB.isLiveIn(*R)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /// Insert spill code for the callee-saved registers used in the function.
-static void insertCSRSaves(MachineBasicBlock &SaveBlock,
+static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
                            ArrayRef<CalleeSavedInfo> CSI, SlotIndexes *Indexes,
                            LiveIntervals *LIS) {
-  MachineFunction &MF = *SaveBlock.getParent();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *RI = ST.getRegisterInfo();
-
+  const TargetFrameLowering *TFI = ST.getFrameLowering();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   MachineBasicBlock::iterator I = SaveBlock.begin();
-  if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, RI)) {
-    for (const CalleeSavedInfo &CS : CSI) {
-      // Insert the spill to the stack frame.
-      MCRegister Reg = CS.getReg();
+  MachineInstrSpan MIS(I, &SaveBlock);
+  bool Success = TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI);
+  assert(Success && "spillCalleeSavedRegisters should always succeed");
+  (void)Success;
 
-      MachineInstrSpan MIS(I, &SaveBlock);
-      const TargetRegisterClass *RC = RI->getMinimalPhysRegClass(Reg);
+  // TFI doesn't update Indexes and LIS, so we have to do it separately.
+  if (Indexes)
+    Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
 
-      // If this value was already livein, we probably have a direct use of the
-      // incoming register value, so don't kill at the spill point. This happens
-      // since we pass some special inputs (workgroup IDs) in the callee saved
-      // range.
-      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, RI);
-      TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
-                              RC, Register());
-
-      if (Indexes) {
-        assert(std::distance(MIS.begin(), I) == 1);
-        MachineInstr &Inst = *std::prev(I);
-        Indexes->insertMachineInstrInMaps(Inst);
-      }
-
-      if (LIS)
-        LIS->removeAllRegUnitsForPhysReg(Reg);
-    }
-  } else {
-    // TFI doesn't update Indexes and LIS, so we have to do it separately.
-    if (Indexes)
-      Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
-
-    if (LIS)
-      for (const CalleeSavedInfo &CS : CSI)
-        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
-  }
+  if (LIS)
+    for (const CalleeSavedInfo &CS : CSI)
+      LIS->removeAllRegUnitsForPhysReg(CS.getReg());
 }
 
 /// Insert restore code for the callee-saved registers used in the function.
@@ -285,23 +249,45 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 
     std::vector<CalleeSavedInfo> CSI;
     const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
+    MCRegister RetAddrReg = TRI->getReturnAddressReg(MF);
+    MCRegister RetAddrRegSub0 = TRI->getSubReg(RetAddrReg, AMDGPU::sub0);
+    MCRegister RetAddrRegSub1 = TRI->getSubReg(RetAddrReg, AMDGPU::sub1);
+    bool SpillRetAddrReg = false;
 
     for (unsigned I = 0; CSRegs[I]; ++I) {
       MCRegister Reg = CSRegs[I];
 
       if (SavedRegs.test(Reg)) {
+        if (Reg == RetAddrRegSub0 || Reg == RetAddrRegSub1) {
+          SpillRetAddrReg = true;
+          continue;
+        }
+
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
-                                           TRI->getSpillAlign(*RC), true);
+                                           TRI->getSpillAlign(*RC), true,
+                                           nullptr, TRI->getSpillStackID(*RC));
 
         CSI.emplace_back(Reg, JunkFI);
         CalleeSavedFIs.push_back(JunkFI);
       }
     }
 
+    // Return address uses a register pair. Add the super register to the
+    // CSI list so that it's easier to identify the entire spill and CFI
+    // can be emitted appropriately.
+    if (SpillRetAddrReg) {
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(RetAddrReg);
+      int JunkFI =
+          MFI.CreateStackObject(TRI->getSpillSize(*RC), TRI->getSpillAlign(*RC),
+                                true, nullptr, TRI->getSpillStackID(*RC));
+      CSI.push_back(CalleeSavedInfo(RetAddrReg, JunkFI));
+      CalleeSavedFIs.push_back(JunkFI);
+    }
+
     if (!CSI.empty()) {
       for (MachineBasicBlock *SaveBlock : SaveBlocks)
-        insertCSRSaves(*SaveBlock, CSI, Indexes, LIS);
+        insertCSRSaves(ST, *SaveBlock, CSI, Indexes, LIS);
 
       // Add live ins to save blocks.
       assert(SaveBlocks.size() == 1 && "shrink wrapping not fully implemented");
@@ -316,17 +302,17 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
   return false;
 }
 
-MachineBasicBlock *SILowerSGPRSpills::getCycleDomBB(MachineCycle *C) {
+MachineBasicBlock *SILowerSGPRSpills::getCycleDomBB(CycleRef C) {
   // If the insertion point lands on a cycle entry, move it to a block that
   // dominates all entries.
-  if (C->isReducible()) {
-    if (auto *IDom = MDT->getNode(C->getHeader())->getIDom())
+  if (MCI->isReducible(C)) {
+    if (auto *IDom = MDT->getNode(MCI->getHeader(C))->getIDom())
       return IDom->getBlock();
     llvm_unreachable("Expected cycle to have an IDom.");
     return nullptr;
   }
 
-  const SmallVectorImpl<MachineBasicBlock *> &Entries = C->getEntries();
+  ArrayRef<MachineBasicBlock *> Entries = MCI->getEntries(C);
   assert(!Entries.empty() && "Expected cycle to have at least one entry.");
   MachineBasicBlock *EntryBB = Entries[0];
   for (unsigned I = 1; I < Entries.size(); ++I)
@@ -532,7 +518,7 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
 
     for (auto Reg : FuncInfo->getSGPRSpillVGPRs()) {
       LaneVGPRInsertPt IP = LaneVGPRDomInstr[Reg];
-      if (MachineCycle *C = MCI->getTopLevelParentCycle(IP.MBB)) {
+      if (CycleRef C = MCI->getTopLevelParentCycle(IP.MBB)) {
         MachineBasicBlock *AdjMBB = getCycleDomBB(C);
         IP = insertPt(AdjMBB, AdjMBB->getFirstTerminator());
       }

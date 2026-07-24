@@ -11,15 +11,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
-  let summary = "Distribute XeGPU ops to work items";
-  let description = [{
-    The pass distributes subgroup level (SIMD) XeGPU ops to work items.
-  }];
-  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
-                           "vector::VectorDialect", "index::IndexDialect"];
-}
-
 def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
   let summary = "Propagate and assign XeGPU layout information";
   let description = [{
@@ -109,10 +100,10 @@ def XeGPUPeepHoleOptimizer : Pass<"xegpu-optimize-peephole"> {
                            "vector::VectorDialect"];
 }
 
-def XeGPUSgToWiDistributeExperimental : Pass<"xegpu-sg-to-wi-distribute-experimental"> {
-  let summary = "Distribute XeGPU ops to work items";
+def XeGPUSgToLaneDistribute : Pass<"xegpu-sg-to-lane-distribute"> {
+  let summary = "Distribute XeGPU ops to lanes";
   let description = [{
-    The pass distributes subgroup level XeGPU ops to work item level XeGPU ops.
+    The pass distributes subgroup level XeGPU ops to lane level XeGPU ops.
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect", "index::IndexDialect"];

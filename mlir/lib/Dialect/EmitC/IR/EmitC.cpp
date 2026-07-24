@@ -263,56 +263,37 @@ LogicalResult AddOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// ApplyOp
+// Assignment operations
 //===----------------------------------------------------------------------===//
 
-LogicalResult ApplyOp::verify() {
-  StringRef applicableOperatorStr = getApplicableOperator();
-
-  // Applicable operator must not be empty.
-  if (applicableOperatorStr.empty())
-    return emitOpError("applicable operator must not be empty");
-
-  // Only `*` and `&` are supported.
-  if (applicableOperatorStr != "&" && applicableOperatorStr != "*")
-    return emitOpError("applicable operator is illegal");
-
-  Type operandType = getOperand().getType();
-  Type resultType = getResult().getType();
-  if (applicableOperatorStr == "&") {
-    if (!llvm::isa<emitc::LValueType>(operandType))
-      return emitOpError("operand type must be an lvalue when applying `&`");
-    if (!llvm::isa<emitc::PointerType>(resultType))
-      return emitOpError("result type must be a pointer when applying `&`");
-  } else {
-    if (!llvm::isa<emitc::PointerType>(operandType))
-      return emitOpError("operand type must be a pointer when applying `*`");
-  }
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// AssignOp
-//===----------------------------------------------------------------------===//
-
-/// The assign op requires that the assigned value's type matches the
-/// assigned-to variable type.
-LogicalResult emitc::AssignOp::verify() {
-  TypedValue<emitc::LValueType> variable = getVar();
+template <typename AssignmentOp>
+static LogicalResult verifyAssignmentOp(AssignmentOp op) {
+  TypedValue<emitc::LValueType> variable = op.getVar();
 
   if (!variable.getDefiningOp())
-    return emitOpError() << "cannot assign to block argument";
+    return op.emitOpError() << "cannot assign to block argument";
 
-  Type valueType = getValue().getType();
+  Type valueType = op.getValue().getType();
   Type variableType = variable.getType().getValueType();
   if (variableType != valueType)
-    return emitOpError() << "requires value's type (" << valueType
-                         << ") to match variable's type (" << variableType
-                         << ")\n  variable: " << variable
-                         << "\n  value: " << getValue() << "\n";
+    return op.emitOpError() << "requires value's type (" << valueType
+                            << ") to match variable's type (" << variableType
+                            << ")\n  variable: " << variable
+                            << "\n  value: " << op.getValue() << "\n";
   return success();
 }
+
+LogicalResult emitc::AssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::AddAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::SubAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::MulAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::DivAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::RemAssignOp::verify() { return verifyAssignmentOp(*this); }
 
 //===----------------------------------------------------------------------===//
 // CastOp
@@ -336,46 +317,72 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
        emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
 }
 
+Speculation::Speculatability emitc::CastOp::getSpeculatability() {
+  return getPure() ? Speculation::Speculatable : Speculation::NotSpeculatable;
+}
+
+void emitc::CastOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (getPure())
+    return;
+
+  effects.emplace_back(MemoryEffects::Read::get());
+  effects.emplace_back(MemoryEffects::Write::get());
+}
+
 //===----------------------------------------------------------------------===//
 // CallOpaqueOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult emitc::CallOpaqueOp::verify() {
+static LogicalResult
+verifyOpaqueCallCommon(Operation *op, StringRef callee,
+                       std::optional<ArrayAttr> args,
+                       std::optional<ArrayAttr> templateArgs,
+                       TypeRange resultTypes, size_t numArgsOperands) {
   // Callee must not be empty.
-  if (getCallee().empty())
-    return emitOpError("callee must not be empty");
+  if (callee.empty())
+    return op->emitOpError("callee must not be empty");
 
-  if (std::optional<ArrayAttr> argsAttr = getArgs()) {
-    for (Attribute arg : *argsAttr) {
+  if (args) {
+    for (Attribute arg : *args) {
       auto intAttr = llvm::dyn_cast<IntegerAttr>(arg);
       if (intAttr && llvm::isa<IndexType>(intAttr.getType())) {
         int64_t index = intAttr.getInt();
         // Args with elements of type index must be in range
-        // [0..operands.size).
-        if ((index < 0) || (index >= static_cast<int64_t>(getNumOperands())))
-          return emitOpError("index argument is out of range");
+        // [0..numArgsOperands).
+        if ((index < 0) || (index >= static_cast<int64_t>(numArgsOperands)))
+          return op->emitOpError("index argument is out of range");
 
-        // Args with elements of type ArrayAttr must have a type.
-      } else if (llvm::isa<ArrayAttr>(
-                     arg) /*&& llvm::isa<NoneType>(arg.getType())*/) {
-        // FIXME: Array attributes never have types
-        return emitOpError("array argument has no type");
+      } else if (llvm::isa<ArrayAttr>(arg)) {
+        return op->emitOpError("array argument has no type");
       }
     }
   }
 
-  if (std::optional<ArrayAttr> templateArgsAttr = getTemplateArgs()) {
-    for (Attribute tArg : *templateArgsAttr) {
+  if (templateArgs) {
+    for (Attribute tArg : *templateArgs) {
       if (!llvm::isa<TypeAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(tArg))
-        return emitOpError("template argument has invalid type");
+        return op->emitOpError("template argument has invalid type");
     }
   }
 
-  if (llvm::any_of(getResultTypes(), llvm::IsaPred<ArrayType>)) {
-    return emitOpError() << "cannot return array type";
+  if (llvm::any_of(resultTypes, llvm::IsaPred<ArrayType>)) {
+    return op->emitOpError() << "cannot return array type";
   }
 
   return success();
+}
+
+LogicalResult emitc::CallOpaqueOp::verify() {
+  return verifyOpaqueCallCommon(getOperation(), getCallee(), getArgs(),
+                                getTemplateArgs(), getResultTypes(),
+                                getNumOperands());
+}
+
+LogicalResult emitc::MemberCallOpaqueOp::verify() {
+  return verifyOpaqueCallCommon(getOperation(), getCallee(), getArgs(),
+                                getTemplateArgs(), getResultTypes(),
+                                getArgOperands().size());
 }
 
 //===----------------------------------------------------------------------===//
@@ -981,7 +988,7 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
                                SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -990,14 +997,14 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
   // Don't consider the else region if it is empty.
   Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
   else
     regions.push_back(RegionSuccessor(elseRegion));
 }
 
 ValueRange IfOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange();
 }
 
 void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
@@ -1012,7 +1019,7 @@ void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.emplace_back(RegionSuccessor::parent());
+      regions.emplace_back(RegionSuccessor(getOperation()));
   }
 }
 
@@ -1075,6 +1082,33 @@ LogicalResult emitc::LiteralOp::verify() {
     return emitOpError() << "value must not be empty";
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// MemberOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MemberOp::verify() {
+  Type operandType = getOperand().getType();
+  Type resultType = getResult().getType();
+  bool resultIsWritable = isa<emitc::LValueType, emitc::ArrayType>(resultType);
+
+  // Make sure the operand and return type agree on value/memory semantics:
+  // If the operand is an lvalue it models a memory location and as such its
+  // elements are also memory locations: They require a load operation to use
+  // their value and they can be assigned new values.
+  // If the operand isn't an lvalue it models an aggregate SSA value and as
+  // such its elements are also SSA values: Their value can be used directly
+  // but they cannot be assigned to.
+
+  if (isa<emitc::LValueType>(operandType) && !resultIsWritable)
+    return emitOpError("lvalues must return lvalues or arrays");
+
+  if (!isa<emitc::LValueType>(operandType) && resultIsWritable)
+    return emitOpError("non-lvalues cannot return lvalues or arrays");
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // SubOp
 //===----------------------------------------------------------------------===//
@@ -1705,14 +1739,6 @@ LogicalResult FieldOp::verify() {
 //===----------------------------------------------------------------------===//
 // GetFieldOp
 //===----------------------------------------------------------------------===//
-
-LogicalResult GetFieldOp::verify() {
-  auto parentClassOp = getOperation()->getParentOfType<emitc::ClassOp>();
-  if (!parentClassOp.getOperation())
-    return emitOpError(" must be nested within an emitc.class operation");
-
-  return success();
-}
 
 LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   mlir::FlatSymbolRefAttr fieldNameAttr = getFieldNameAttr();

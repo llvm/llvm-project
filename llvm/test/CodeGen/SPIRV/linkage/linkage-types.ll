@@ -54,7 +54,8 @@
 ; SPIRV-DAG: OpName %[[#g:]] "g"
 ; SPIRV-DAG: OpName %[[#inline_fun:]] "inline_fun"
 
-; SPIRV-DAG: OpDecorate %[[#ae]] LinkageAttributes "ae" Import
+; available_externally is emitted as a definition with Export linkage.
+; SPIRV-DAG: OpDecorate %[[#ae]] LinkageAttributes "ae" Export
 ; SPIRV-DAG: OpDecorate %[[#e]] LinkageAttributes "e" Import
 ; SPIRV-DAG: OpDecorate %[[#f]] LinkageAttributes "f" Export
 ; SPIRV-DAG: OpDecorate %[[#w]] LinkageAttributes "w" Export

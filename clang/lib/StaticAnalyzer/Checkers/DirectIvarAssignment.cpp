@@ -62,7 +62,7 @@ class DirectIvarAssignment :
     const ObjCInterfaceDecl *InterfD;
     BugReporter &BR;
     const CheckerBase *Checker;
-    LocationOrAnalysisDeclContext DCtx;
+    StackFrameOrAnalysisDeclContext DCtx;
 
   public:
     MethodCrawler(const IvarToPropertyMapTy &InMap, const ObjCMethodDecl *InMD,

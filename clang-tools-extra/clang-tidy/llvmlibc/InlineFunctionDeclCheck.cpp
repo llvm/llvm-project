@@ -22,7 +22,7 @@ getLastTemplateParameterList(const FunctionDecl *FuncDecl) {
       FuncDecl->getDescribedTemplateParams();
 
   if (!ReturnList) {
-    ArrayRef<TemplateParameterList *> TPLs =
+    const ArrayRef<TemplateParameterList *> TPLs =
         FuncDecl->getTemplateParameterLists();
 
     if (!TPLs.empty())

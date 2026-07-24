@@ -109,8 +109,8 @@ struct Polymorphic {
 };
 
 template struct __declspec(dllexport) Polymorphic<WithExportTag>;
-// MSC-DAG: @"??_7?$Polymorphic@UWithExportTag@@@@6B@" = dllexport unnamed_addr
-// GNU-DAG: @_ZTV11PolymorphicI13WithExportTagE = weak_odr dso_local dllexport unnamed_addr
+// MSC-DAG: @"??_7?$Polymorphic@UWithExportTag@@@@6B@" = dllexport
+// GNU-DAG: @_ZTV11PolymorphicI13WithExportTagE = weak_odr dso_local dllexport
 
 // MSC-DAG: define weak_odr dso_local dllexport void @"?noAttrVirtualMethod@?$Polymorphic@UWithExportTag@@@@UEAAXXZ"
 // GNU-DAG: define weak_odr dso_local dllexport void @_ZN11PolymorphicI13WithExportTagE19noAttrVirtualMethodEv
@@ -122,8 +122,8 @@ template struct __declspec(dllexport) Polymorphic<WithExportTag>;
 // GNU-DAG: define linkonce_odr dso_local void @_ZN11PolymorphicI13WithExportTagE29excludedExportedVirtualMethodEv
 
 template struct Polymorphic<NoAttrTag>;
-// MSC-DAG: @"??_7?$Polymorphic@UNoAttrTag@@@@6B@" = unnamed_addr
-// GNU-DAG: @_ZTV11PolymorphicI9NoAttrTagE = weak_odr dso_local unnamed_addr
+// MSC-DAG: @"??_7?$Polymorphic@UNoAttrTag@@@@6B@" =
+// GNU-DAG: @_ZTV11PolymorphicI9NoAttrTagE = weak_odr dso_local
 
 // MSC-DAG: define weak_odr dso_local void @"?noAttrVirtualMethod@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
 // GNU-DAG: define weak_odr dso_local void @_ZN11PolymorphicI9NoAttrTagE19noAttrVirtualMethodEv
@@ -136,8 +136,8 @@ template struct Polymorphic<NoAttrTag>;
 
 void usePolymorphic() {
   new Polymorphic<ImplicitTag>();
-  // MSC-DAG: @"??_7?$Polymorphic@UImplicitTag@@@@6B@" = unnamed_addr
-  // GNU-DAG: @_ZTV11PolymorphicI11ImplicitTagE = linkonce_odr dso_local unnamed_addr
+  // MSC-DAG: @"??_7?$Polymorphic@UImplicitTag@@@@6B@" =
+  // GNU-DAG: @_ZTV11PolymorphicI11ImplicitTagE = linkonce_odr dso_local
 
   // MSC-DAG: define linkonce_odr dso_local void @"?noAttrVirtualMethod@?$Polymorphic@UImplicitTag@@@@UEAAXXZ"
   // GNU-DAG: define linkonce_odr dso_local void @_ZN11PolymorphicI11ImplicitTagE19noAttrVirtualMethodEv

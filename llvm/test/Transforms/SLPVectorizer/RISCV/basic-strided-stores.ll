@@ -784,7 +784,7 @@ define void @reversed_addr_data_reorder(ptr %pl, ptr %ps) {
 ; CHECK-LABEL: define void @reversed_addr_data_reorder(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[L0:%.*]] = getelementptr i8, ptr [[PL]], i64 0
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr i8, ptr [[PS]], i64 8
+; CHECK-NEXT:    [[S3:%.*]] = getelementptr i8, ptr [[PS]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[L0]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 4, i32 5, i32 7, i32 2, i32 6, i32 1, i32 3, i32 0>
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i8.p0.i64(<8 x i8> [[TMP2]], ptr align 1 [[S3]], i64 2, <8 x i1> splat (i1 true), i32 8)

@@ -105,3 +105,51 @@ mlir::Block *cir::replaceCallWithTryCall(cir::CallOp callOp,
   rewriter.eraseOp(callOp);
   return normalDest;
 }
+
+mlir::Block *cir::replaceThrowWithTryThrow(cir::ThrowOp throwOp,
+                                           mlir::Block *unwindDest,
+                                           mlir::Location loc,
+                                           mlir::RewriterBase &rewriter) {
+  // The throw never returns, so the try_throw's normal destination is
+  // literally unreachable. Place it at the end of the parent function
+  // rather than splitting it out of the throw's block in the middle of
+  // the normal control flow.
+  auto funcOp = throwOp->getParentOfType<cir::FuncOp>();
+  assert(funcOp && "throw must be inside a function");
+  mlir::Region &body = funcOp.getBody();
+
+  mlir::Block *normalDest;
+  {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    normalDest = rewriter.createBlock(&body, body.end());
+    cir::UnreachableOp::create(rewriter, loc);
+  }
+
+  // Build the try_throw to replace the original throw.
+  rewriter.setInsertionPoint(throwOp);
+  auto tryThrowOp = cir::TryThrowOp::create(
+      rewriter, loc, throwOp.getExceptionPtr(), throwOp.getTypeInfoAttr(),
+      throwOp.getDtorAttr(), normalDest, unwindDest);
+
+  // Copy any extra attributes from the original throw. The type_info and
+  // dtor attributes are already set by TryThrowOp::create above.
+  llvm::StringRef excludedAttrs[] = {
+      "type_info",
+      "dtor",
+  };
+  for (mlir::NamedAttribute attr : throwOp->getAttrs()) {
+    if (llvm::is_contained(excludedAttrs, attr.getName()))
+      continue;
+    tryThrowOp->setAttr(attr.getName(), attr.getValue());
+  }
+
+  // Erase the throw along with any operations that followed it in its
+  // parent block (typically a cir.unreachable left over from CIR codegen).
+  // They must be removed because try_throw is a terminator and a block
+  // can have only one terminator.
+  mlir::Block *throwBlock = throwOp->getBlock();
+  while (&throwBlock->back() != tryThrowOp)
+    rewriter.eraseOp(&throwBlock->back());
+
+  return normalDest;
+}

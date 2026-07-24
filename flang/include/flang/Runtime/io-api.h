@@ -366,8 +366,6 @@ bool IODECL(InquireInteger64)(
 // rather than by terminating the image.
 enum Iostat IODECL(EndIoStatement)(Cookie);
 
-// Used for I/O from the offloading device.
-std::uint32_t IODECL(HandleRPCOpcodes)(void *raw, std::uint32_t numLanes);
 } // extern "C"
 } // namespace Fortran::runtime::io
 
