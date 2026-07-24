@@ -15,6 +15,8 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -193,6 +195,35 @@ static uint32_t mapCompositeTypeTag(unsigned Tag) {
   }
 }
 
+static const MachineInstr *
+findLastEmittedFunctionOpVariable(const MachineFunction &MF,
+                                  SPIRV::ModuleAnalysisInfo &MAI) {
+
+  // We iterate over the instructions to find the last OpVariable instruction if
+  // any. The following SPIRV rule is used to terminate the traversal earlier:
+  // SPIR-V 2.16.1, Function Structure: "All OpVariable instructions in a
+  // function must be in the first block in the function. These instructions,
+  // together with any intermixed OpLine and OpNoLine instructions, must be the
+  // first instructions in that block."
+  const MachineInstr *LastOpVariable = nullptr;
+  bool SeenOpVariable = false;
+  for (const MachineInstr &MI : MF.front()) {
+    if (MI.getOpcode() == SPIRV::OpVariable) {
+      SeenOpVariable = true;
+      if (!MAI.getSkipEmission(&MI))
+        LastOpVariable = &MI;
+      continue;
+    }
+
+    bool CanInterleaveWithOpVariable =
+        MI.getOpcode() == SPIRV::OpLine || MI.getOpcode() == SPIRV::OpNoLine;
+    if (SeenOpVariable && !CanInterleaveWithOpVariable &&
+        !MAI.getSkipEmission(&MI))
+      break;
+  }
+  return LastOpVariable;
+}
+
 } // namespace
 
 SPIRVNonSemanticDebugHandler::SPIRVNonSemanticDebugHandler(AsmPrinter &AP)
@@ -242,6 +273,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   SubprogramDefinitions.clear();
   GlobalVariableDebugInfoMap.clear();
   DebugFunctionDeclarationRegs.clear();
+  DebugFunctionRegs.clear();
   ScopeToPathOpStringReg.clear();
   CUToCompilationUnitDbgReg.clear();
   DebugSourceRegByFileStr.clear();
@@ -250,6 +282,9 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   I32ConstantCache.clear();
   DebugTypeFunctionCache.clear();
   GlobalDIEmitted = false;
+  GlobalNSDIEnabled = false;
+  CurrentMAI = nullptr;
+  CachedExtInstSetReg = MCRegister();
 #ifndef NDEBUG
   NonSemanticOpStringsSectionEmitted = false;
 #endif
@@ -1057,24 +1092,137 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
 #endif
 }
 
-void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
+void SPIRVNonSemanticDebugHandler::emitDebugFunctionDefinition(
+    MCRegister DebugFunctionReg, MCRegister OpFunctionReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
-  if (GlobalDIEmitted || CompileUnits.empty())
+  assert(DebugFunctionReg.isValid() && OpFunctionReg.isValid() &&
+         "DebugFunctionDefinition operands must be valid");
+  MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
+  emitExtInst(SPIRV::NonSemanticExtInst::DebugFunctionDefinition, VoidTypeReg,
+              CachedExtInstSetReg, {DebugFunctionReg, OpFunctionReg}, MAI);
+}
+
+void SPIRVNonSemanticDebugHandler::resetPerFunctionDebugState() {
+  CurrentMF = nullptr;
+  LastFunctionOpVariable = nullptr;
+  DebugFunctionDefinitionEmitted = false;
+}
+
+void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
+    const MachineFunction *MF) {
+  resetPerFunctionDebugState();
+  if (!GlobalNSDIEnabled || !CurrentMAI)
     return;
+
+  CurrentMF = MF;
+
+  if (MF->getFunction()
+          .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+          .isValid())
+    return;
+
+  const DISubprogram *SP = MF->getFunction().getSubprogram();
+  if (!SP || !SP->isDefinition())
+    return;
+
+  // DebugFunctionDefinition is emitted after the last function-level
+  // OpVariable. If there are none, it is emitted after the entry OpLabel.
+  LastFunctionOpVariable = findLastEmittedFunctionOpVariable(*MF, *CurrentMAI);
+}
+
+void SPIRVNonSemanticDebugHandler::tryEmitDebugFunctionDefinition(
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  if (DebugFunctionDefinitionEmitted || !GlobalNSDIEnabled)
+    return;
+
+  assert(CurrentMF && "no current MachineFunction");
+  const Function &F = CurrentMF->getFunction();
+  const DISubprogram *SP = F.getSubprogram();
+  if (!SP || !SP->isDefinition())
+    return;
+
+  auto DFIt = DebugFunctionRegs.find(SP);
+  if (DFIt == DebugFunctionRegs.end())
+    return;
+
+  MCRegister OpFunctionReg = MAI.getGlobalObjReg(&F);
+  if (!OpFunctionReg.isValid())
+    return;
+
+  emitDebugFunctionDefinition(DFIt->second, OpFunctionReg, MAI);
+  DebugFunctionDefinitionEmitted = true;
+}
+
+void SPIRVNonSemanticDebugHandler::beginFunctionImpl(
+    const MachineFunction *MF) {
+  preparePerFunctionDebug(MF);
+}
+
+void SPIRVNonSemanticDebugHandler::endFunctionImpl(const MachineFunction *MF) {
+  (void)MF;
+  resetPerFunctionDebugState();
+}
+
+void SPIRVNonSemanticDebugHandler::notifyMachineInstructionEmitted(
+    const MachineInstr *MI, const MachineFunction &MF,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  if (!GlobalNSDIEnabled || DebugFunctionDefinitionEmitted)
+    return;
+  assert(CurrentMF == &MF &&
+         "notification does not match the current MachineFunction");
+  if (MI->getParent() != &MF.front())
+    return;
+
+  // If this is the last function-level OpVariable, emit the
+  // DebugFunctionDefinition. Otherwise, we had already done it before right
+  // after the OpLabel.
+  if (MI == LastFunctionOpVariable)
+    tryEmitDebugFunctionDefinition(MAI);
+}
+
+void SPIRVNonSemanticDebugHandler::notifyEntryLabelEmitted(
+    const MachineFunction &MF, SPIRV::ModuleAnalysisInfo &MAI) {
+  if (!GlobalNSDIEnabled || DebugFunctionDefinitionEmitted)
+    return;
+  assert(CurrentMF == &MF &&
+         "notification does not match the current MachineFunction");
+
+  // If there are no function-level OpVariables, emit the
+  // DebugFunctionDefinition. Otherwise, DebugFunctionDefinition is emitted
+  // after the last OpVariable.
+  if (!LastFunctionOpVariable)
+    tryEmitDebugFunctionDefinition(MAI);
+}
+
+bool SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  if (GlobalDIEmitted)
+    return GlobalNSDIEnabled;
+
   GlobalDIEmitted = true;
+
+  if (CompileUnits.empty()) {
+    GlobalNSDIEnabled = false;
+    return false;
+  }
 
   // Retrieve the ext inst set register allocated by prepareModuleOutput().
   constexpr unsigned NSSet = static_cast<unsigned>(
       SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100);
   MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
-  if (!ExtInstSetReg.isValid())
-    return; // Extension not available.
+  if (!ExtInstSetReg.isValid()) {
+    GlobalNSDIEnabled = false;
+    return false;
+  }
 
 #ifndef NDEBUG
   assert(NonSemanticOpStringsSectionEmitted &&
          "emitNonSemanticDebugStrings() must run before "
          "emitNonSemanticGlobalDebugInfo()");
 #endif
+
+  CurrentMAI = &MAI;
+  CachedExtInstSetReg = ExtInstSetReg;
 
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
   MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
@@ -1229,13 +1377,19 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   }
 
   // Emit DebugFunction for DISubprogram definitions.
-  for (const DISubprogram *SP : SubprogramDefinitions)
-    emitDebugFunction(SP, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
+  for (const DISubprogram *SP : SubprogramDefinitions) {
+    if (auto FnReg =
+            emitDebugFunction(SP, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI))
+      DebugFunctionRegs[SP] = *FnReg;
+  }
 
   // Emit DebugGlobalVariable for each collected DIGlobalVariable.
   for (const auto &[GV, Info] : GlobalVariableDebugInfoMap)
     emitDebugGlobalVariable(GV, Info, VoidTypeReg, I32TypeReg, ExtInstSetReg,
                             MAI);
+
+  GlobalNSDIEnabled = true;
+  return true;
 }
 
 SmallString<128>

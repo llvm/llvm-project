@@ -40,16 +40,15 @@ class SPIRVSubtarget;
 /// the module contains debug info (llvm.dbg.cu).
 ///
 /// Call sequence:
-///   beginModule()                    -- collect compile-unit metadata.
-///   prepareModuleOutput()            -- add extension + ext inst set to MAI.
-///   emitNonSemanticDebugStrings()    -- OpString for NSDI strings (sec. 7).
-///   emitNonSemanticGlobalDebugInfo() -- emit DebugSource,
-///                                       DebugCompilationUnit, DebugTypeBasic,
-///                                       DebugTypePointer, DebugTypeFunction,
-///                                       DebugFunctionDeclaration,
-///                                       DebugFunction.
-///   beginFunctionImpl()              -- no-op (no per-function DI yet).
-///   endFunctionImpl()                -- no-op.
+/// - beginModule() collects compile-unit metadata.
+/// - prepareModuleOutput() adds the extension and ext-inst set to MAI.
+/// - emitNonSemanticDebugStrings() emits NSDI OpStrings in section 7.
+/// - emitNonSemanticGlobalDebugInfo() emits module-scope NSDI and sets
+///   GlobalNSDIEnabled.
+/// - beginFunctionImpl() prepares per-function DebugFunctionDefinition state.
+/// - SPIRVAsmPrinter notifies the handler when it emits MachineInstrs and the
+///   synthesized entry OpLabel.
+/// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   struct CompileUnitInfo {
     const DICompileUnit *TheCU = nullptr;
@@ -101,6 +100,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // (only entries where emission succeeded).
   DenseMap<const DISubprogram *, MCRegister> DebugFunctionDeclarationRegs;
 
+  // DebugFunction result id per emitted definition DISubprogram (only entries
+  // where emission succeeded).
+  DenseMap<const DISubprogram *, MCRegister> DebugFunctionRegs;
+
   // Path \c OpString result id per \c DIScope (CU, \c DIFile, declaration
   // \c DISubprogram, …). Filled during \c emitNonSemanticDebugStrings() using
   // \c getDebugFullPath + \c emitOpStringIfNew; section 10 uses it for
@@ -148,6 +151,20 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // change.
   bool GlobalDIEmitted = false;
 
+  // True when emitNonSemanticGlobalDebugInfo() completed module-scope NSDI
+  // emission for this module.
+  bool GlobalNSDIEnabled = false;
+
+  SPIRV::ModuleAnalysisInfo *CurrentMAI = nullptr;
+
+  MCRegister CachedExtInstSetReg;
+
+  const MachineFunction *CurrentMF = nullptr;
+
+  const MachineInstr *LastFunctionOpVariable = nullptr;
+
+  bool DebugFunctionDefinitionEmitted = false;
+
 public:
   explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);
 
@@ -177,7 +194,17 @@ public:
   /// SPIRVAsmPrinter::outputModuleSections() at section 10 in place of
   /// outputModuleSection(MB_NonSemanticGlobalDI). Requires
   /// emitNonSemanticDebugStrings() to have run first when NSDI strings apply.
-  void emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
+  /// \returns true when module-scope NSDI emission ran; false when skipped.
+  bool emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Called after an MI has been emitted.
+  void notifyMachineInstructionEmitted(const MachineInstr *MI,
+                                       const MachineFunction &MF,
+                                       SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Called after the synthesized entry \c OpLabel has been emitted.
+  void notifyEntryLabelEmitted(const MachineFunction &MF,
+                               SPIRV::ModuleAnalysisInfo &MAI);
 
 protected:
   // All module-level output is driven by emitNonSemanticGlobalDebugInfo(),
@@ -191,21 +218,23 @@ protected:
   // point and MMI remains null for this handler's entire lifetime. The
   // base-class beginInstruction/endInstruction dereference MMI to create temp
   // symbols for label tracking and would crash. Override them as no-ops.
-  // When per-function NSDI is implemented, use Asm->OutStreamer->getContext()
-  // for MCContext access rather than MMI->getContext().
+  // Future local NSDI that needs MCContext must use
+  // Asm->OutStreamer->getContext() rather than MMI->getContext().
   void beginInstruction(const MachineInstr *MI) override {}
   void endInstruction() override {}
 
-  // TODO: Emit DebugFunctionDefinition here once per-function NSDI emission is
-  // implemented. DebugHandlerBase::beginFunction() populates LScopes and
-  // DbgValues, which are needed for DebugLine emission. Do not override
-  // beginFunction() until that work is in place.
-  void beginFunctionImpl(const MachineFunction *MF) override {}
-  // TODO: Add per-function cleanup when DebugFunctionDefinition emission is in
-  // place.
-  void endFunctionImpl(const MachineFunction *MF) override {}
+  void beginFunctionImpl(const MachineFunction *MF) override;
+  void endFunctionImpl(const MachineFunction *MF) override;
 
 private:
+  void emitDebugFunctionDefinition(MCRegister DebugFunctionReg,
+                                   MCRegister OpFunctionReg,
+                                   SPIRV::ModuleAnalysisInfo &MAI);
+
+  void resetPerFunctionDebugState();
+  void preparePerFunctionDebug(const MachineFunction *MF);
+  void tryEmitDebugFunctionDefinition(SPIRV::ModuleAnalysisInfo &MAI);
+
   void emitMCInst(MCInst &Inst);
   MCRegister emitOpString(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
 
