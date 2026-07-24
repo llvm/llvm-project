@@ -37,7 +37,7 @@ class TestSwiftNoProcess(TestBase):
             "Swift expression with no target should fail.")
 
     @swiftTest
-    @skipIf(oslist=['windows'])
+    @skipEmbeddedSwiftOnWindows
     def test_swift_no_process(self):
         """Tests that we give a reasonable error if we try to run expressions with no process"""
         self.build()
