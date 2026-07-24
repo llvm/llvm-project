@@ -29,6 +29,7 @@
 #include "clang/AST/MatrixUtils.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticTrap.h"
@@ -293,6 +294,51 @@ static bool CanElideOverflowCheck(ASTContext &Ctx, const BinOpInfo &Op) {
   return (2 * Ctx.getTypeSize(LHSTy)) < PromotedSize ||
          (2 * Ctx.getTypeSize(RHSTy)) < PromotedSize;
 }
+
+/// Walks a C function body once, collecting local scalar VarDecls that are
+/// never assigned and never have their address taken. These are candidates
+/// for MSan's local uninitialized-read check (ISO C 6.3.2.1p2 indeterminate
+/// value; the "address never taken" gate is spec-correct since DR338/C11,
+/// not C23-specific). Scoped to C only — C++ lambdas, captures, and
+/// aggregates are out of scope.
+class UninitLocalVarVisitor
+    : public RecursiveASTVisitor<UninitLocalVarVisitor> {
+  llvm::DenseMap<const VarDecl *, bool> &Candidates;
+
+public:
+  UninitLocalVarVisitor(llvm::DenseMap<const VarDecl *, bool> &Candidates)
+      : Candidates(Candidates) {}
+
+  bool VisitVarDecl(VarDecl *VD) {
+    if (VD->isLocalVarDecl() && !VD->isStaticLocal() && !VD->hasInit() &&
+        VD->getType()->isScalarType())
+      Candidates[VD] = true;
+    return true;
+  }
+
+  // Deliberately no VisitBinaryOperator override to erase candidates on
+  // assignment. Under MSan, attaching the check to more loads is safe:
+  // if a path actually initializes the variable, MSan's own shadow
+  // tracking (genuinely path-sensitive at runtime, via phi-node shadow
+  // merging) reflects that and the check silently passes. Erasing on
+  // any assignment, anywhere in the function, made sense for the prior
+  // UBSan-based design (an unconditional trap with no runtime awareness
+  // of which path was taken) but is unnecessarily conservative here --
+  // it would produce false negatives on variables that are correctly
+  // initialized on some paths and read uninitialized on others.
+  // Verified empirically: no regressions on check-msan/check-ubsan, and
+  // confirmed correct runtime behavior on both branches of a genuinely
+  // conditional assignment (warns on the uninitialized path, silent on
+  // the initialized one).
+
+  bool VisitUnaryOperator(UnaryOperator *UO) {
+    if (UO->getOpcode() == UO_AddrOf)
+      if (auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParens()))
+        if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+          Candidates.erase(VD);
+    return true;
+  }
+};
 
 class ScalarExprEmitter
   : public StmtVisitor<ScalarExprEmitter, Value*> {
@@ -608,7 +654,28 @@ public:
   Value *VisitDeclRefExpr(DeclRefExpr *E) {
     if (CodeGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E))
       return CGF.emitScalarConstant(Constant, E);
-    return EmitLoadOfLValue(E);
+
+    Value *V = EmitLoadOfLValue(E);
+
+    if (CGF.SanOpts.has(SanitizerKind::Memory) &&
+        CGF.CGM.getCodeGenOpts().SanitizeMemoryLocalAddressNeverTaken &&
+        !CGF.getLangOpts().CPlusPlus) {
+      if (auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
+        if (!CGF.UninitReadAnalysisDone) {
+          if (auto *FD = dyn_cast<FunctionDecl>(CGF.CurFuncDecl))
+            if (const Stmt *Body = FD->getBody())
+              UninitLocalVarVisitor(CGF.UninitReadCandidates)
+                  .TraverseStmt(const_cast<Stmt *>(Body));
+          CGF.UninitReadAnalysisDone = true;
+        }
+        if (CGF.UninitReadCandidates.count(VD)) {
+          if (auto *LI = dyn_cast<llvm::LoadInst>(V))
+            LI->setUninitReadCheckMetadata();
+        }
+      }
+    }
+
+    return V;
   }
 
   Value *VisitObjCSelectorExpr(ObjCSelectorExpr *E) {

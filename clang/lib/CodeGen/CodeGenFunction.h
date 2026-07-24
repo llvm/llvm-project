@@ -591,6 +591,11 @@ public:
     ~SanitizerScope();
   };
 
+  /// Cache for MSan local-uninitialized-read analysis.
+  /// Populated lazily on first scalar read in a function body.
+  bool UninitReadAnalysisDone = false;
+  llvm::DenseMap<const VarDecl *, bool> UninitReadCandidates;
+
   /// In C++, whether we are code generating a thunk.  This controls whether we
   /// should emit cleanups.
   bool CurFuncIsThunk = false;
