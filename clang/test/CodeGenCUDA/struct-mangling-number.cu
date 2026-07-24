@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -o - -aux-triple x86_64-pc-windows-msvc \
-// RUN:   -fms-extensions -triple amdgcn-amd-amdhsa \
-// RUN:   -target-cpu gfx1030 -fcuda-is-device -x hip %s \
+// RUN:   -fms-extensions -triple amdgpu10.30-amd-amdhsa \
+// RUN: -fcuda-is-device -x hip %s \
 // RUN:   | FileCheck -check-prefix=DEV %s
 
 // RUN: %clang_cc1 -emit-llvm -o - -triple x86_64-pc-windows-msvc \
