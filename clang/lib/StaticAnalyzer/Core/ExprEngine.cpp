@@ -3351,7 +3351,6 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
     for (const auto I : CheckedSet)
       VisitCommonDeclRefExpr(M, Member, I, EvalSet);
   } else {
-    ExplodedNodeSet Tmp;
 
     for (const auto I : CheckedSet) {
       ProgramStateRef state = I->getState();
@@ -3412,10 +3411,7 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
         EvalSet.insert(Engine.makeNodeWithBinding(
             I, M, L, state, ProgramPoint::PostLValueKind));
       } else {
-        // FIXME: When evalLoad no longer uses NodeBuilders, eliminate Tmp and
-        // pass EvalSet as the first argument of evalLoad.
-        evalLoad(Tmp, M, M, I, state, L);
-        EvalSet.insert(Tmp);
+        evalLoad(EvalSet, M, M, I, state, L);
       }
     }
   }
