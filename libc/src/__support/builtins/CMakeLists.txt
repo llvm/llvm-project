@@ -230,6 +230,12 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.builtins.fixint_helper
+  extendbfsf2
+  HDRS
+    extendbfsf2.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.config
 )
 
@@ -252,6 +258,12 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.builtins.fixint_helper
+  truncsfbf2
+  HDRS
+    truncsfbf2.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.config
 )
 
@@ -262,6 +274,12 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.builtins.fixint_helper
+  truncdfbf2
+  HDRS
+    truncdfbf2.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.config
 )
 
@@ -350,3 +368,13 @@ add_header_library(
     libc.src.__support.macros.properties.types
     libc.src.__support.uint128
 )
+  trunctfbf2
+  HDRS
+    trunctfbf2.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+
