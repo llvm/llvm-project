@@ -544,7 +544,6 @@ u16 SizeClassAllocator64<Config>::popBlocksWithCV(
 
     if (PopulateFreeList) {
       ScopedLock ML(Region->MMLock);
-
       const bool RegionIsExhausted = Region->Exhausted;
       if (!RegionIsExhausted) {
         PopCount = populateFreeListAndPopBlocks(SizeClassAllocator, ClassId,
@@ -562,7 +561,6 @@ u16 SizeClassAllocator64<Config>::popBlocksWithCV(
         Region->isPopulatingFreeList = false;
         Region->FLLockCV.notifyAll(Region->FLLock);
       }
-
       break;
     }
 
@@ -1127,8 +1125,8 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str) {
 
   for (uptr I = 0; I < NumClasses; I++) {
     RegionInfo *Region = getRegionInfo(I);
-    ScopedLock L1(Region->MMLock);
-    ScopedLock L2(Region->FLLock);
+    ScopedLock L2(Region->MMLock);
+    ScopedLock L1(Region->FLLock);
     getStats(Str, I, Region);
   }
 }
