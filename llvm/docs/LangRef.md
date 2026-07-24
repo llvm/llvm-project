@@ -4177,6 +4177,29 @@ Otherwise, an atomic operation that is not marked
 monotonic modification order with other operations that are not marked
 `syncscope("singlethread")` or `syncscope("<target-scope>")`.
 
+(elementwise-atomics)=
+
+### Elementwise Atomic Operations
+
+The {ref}`atomicrmw <i_atomicrmw>` instruction may be marked `elementwise`.
+The access type must then be a fixed vector type whose total bit width is a
+power of two and whose element type is supported by the corresponding scalar
+atomic instruction. The {ref}`ordering <ordering>` of an `elementwise`
+instruction may not be `seq_cst`.
+
+An `elementwise` atomic instruction behaves as if it were expanded into one
+scalar version of that instruction for each vector element. Each resulting
+scalar operation has the same {ref}`ordering <ordering>` and `syncscope` as the
+original instruction. Each scalar operation occupies the original instruction's
+position in program order relative to other operations, but the scalar
+operations are not related in program order with respect to one another.
+Synchronizing with one scalar operation therefore does not, by itself,
+establish a happens-before relationship with any other scalar operation from
+the same `elementwise` instruction.
+
+Without `elementwise`, vector `atomicrmw` instructions are performed atomically
+over the entire vector operation.
+
 (floatenv)=
 
 ### Floating-Point Environment
@@ -12129,9 +12152,8 @@ isn't specified.
 An `atomicrmw` instruction can also take an optional
 "{ref}`syncscope <syncscope>`" argument.
 
-If the `elementwise` modifier is present, the instruction has per-element vector
-atomic semantics. It behaves as if it were expanded into one scalar `atomicrmw` per element, that are not ordered with respect to each other.
-Without `elementwise`, vector `atomicrmw` keeps whole-value atomic semantics.
+If `atomicrmw` is marked `elementwise`, the instruction has
+{ref}`elementwise atomic semantics <elementwise-atomics>`.
 
 ##### Semantics:
 
