@@ -1,12 +1,10 @@
-//===-- e^x range reduction and evaluation using integer-only --*- C++ -*-===//
+//===-- e^x integer-only utility functions ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-// TODO: update the description of this file above
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_UTILS_H

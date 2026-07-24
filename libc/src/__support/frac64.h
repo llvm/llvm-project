@@ -9,11 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FRAC64_H
 #define LLVM_LIBC_SRC___SUPPORT_FRAC64_H
 
-#include "hdr/stdint_proxy.h" // uint64_t
 #include "src/__support/big_int.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/optimization.h" // LIBC_INLINE
-#include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

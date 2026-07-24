@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
 
-// TODO: clean up includes
 #include "src/__support/CPP/bit.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/frac64.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/check/exp_exceptions.h"
 #include "src/__support/math/exp_integer_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -25,22 +24,27 @@ namespace math {
 
 namespace integer_only {
 
+// Round-nearest, no except implementation of expf using integer-only
+// arithmetic.
 LIBC_INLINE float expf(float x) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
 
   bool is_neg = xbits.is_neg();
-  uint32_t x_bits_abs = xbits.uintval() & 0x7fff'ffffU;
+  uint32_t x_val = xbits.uintval();
+  uint32_t x_val_abs = x_val & 0x7fff'ffffU;
 
   // When |x| >= 89, |x| < 2^-25, or x is NaN
-  if (LIBC_UNLIKELY(x_bits_abs >= 0x42b2'0000U || x_bits_abs <= 0x3380'0000U)) {
-    // |x| < 2^-24
-    // e^x ~ 1 + x
-    if (xbits.get_biased_exponent() <= 103) {
+  if (LIBC_UNLIKELY(x_val_abs >= 0x42b2'0000U || x_val_abs <= 0x3380'0000U)) {
+    if (x_val_abs < 0x3300'0000U) { // |x| < 2^-25
+      return 1.0f;
+    }
+
+    if (x_val_abs < 0x3380'0000U) { // |x| < 2^-24
       return 1.0f + x;
     }
 
-    if (LIBC_UNLIKELY(xbits.is_nan())) {
+    if (xbits.is_nan()) {
       // Per conversation with lntue, we don't need to raise exception here,
       // as we're assuming no FPUs/fenv in this kind of environment
       if (xbits.is_signaling_nan()) {
@@ -67,6 +71,11 @@ LIBC_INLINE float expf(float x) {
     if (xbits.uintval() >= 0xc2cf'f1b5U) {
       return 0.0f;
     }
+  }
+
+  if (LIBC_UNLIKELY(x_val >= check::exp_internal::Bounds<float>::UPPER_BITS &&
+                    !is_neg)) { // overflow
+    return FPBits::inf().get_val();
   }
 
   // Main calculations
@@ -106,7 +115,7 @@ LIBC_INLINE float expf(float x) {
   uint64_t e_y, l2y_r;
   uint32_t e_y_unbiased;
 
-  if (is_neg) {
+  if (LIBC_UNLIKELY(is_neg)) {
     e_y = (x_ln2_bit + FRAC_MASK) & ~FRAC_MASK;
     l2y_r = e_y - x_ln2_bit;
     e_y_unbiased = (FPBits::EXP_BIAS << 23) - static_cast<uint32_t>(e_y >> 31);
@@ -120,11 +129,28 @@ LIBC_INLINE float expf(float x) {
   Frac64 l2y_r_frac(l2y_r << 10);
 
   // p = 2^l2y_r_frac - 1
-  Frac64 p = fputil::polyeval(l2y_r_frac, EXPF_COEFFS[0], EXPF_COEFFS[1],
-                              EXPF_COEFFS[2], EXPF_COEFFS[3], EXPF_COEFFS[4],
-                              EXPF_COEFFS[5]);
-  // TODO: handle denorm, underflow, overflow, boundary cases
-  // We're currently focusing on rounding to nearest only
+  Frac64 p = fputil::polyeval(l2y_r_frac, Frac64(0), EXPF_COEFFS[0],
+                              EXPF_COEFFS[1], EXPF_COEFFS[2], EXPF_COEFFS[3],
+                              EXPF_COEFFS[4], EXPF_COEFFS[5]);
+
+  uint32_t k = static_cast<uint32_t>(e_y >> 54);
+  int d = static_cast<int>(k) - FPBits::EXP_BIAS;
+
+  if (LIBC_UNLIKELY(is_neg && d >= 23)) { // underflow
+    return 0.0f;
+  }
+
+  if (LIBC_UNLIKELY(is_neg && d >= 0)) { // subnormal
+    uint64_t full_val = (uint64_t(1) << 63) | (p.val[0] >> 1);
+
+    // add rounding bit
+    full_val += (uint64_t(1) << (40 + d));
+
+    // shift back to align to 32-bit float representation
+    uint32_t result = static_cast<uint32_t>(full_val >> (41 + d));
+
+    return cpp::bit_cast<float>(result);
+  }
 
   // RN 23 bits --> shift for the LSB to be 2^-24 --> +1, shift for another
   // bit
