@@ -1007,7 +1007,6 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
   evalLoad(Tmp, U, Ex, Pred, state, loc);
 
   ExplodedNodeSet Dst2;
-  NodeBuilder Bldr(Tmp, Dst2, *currBldrCtx);
   for (ExplodedNode *N : Tmp) {
     state = N->getState();
     assert(SF == N->getStackFrame());
@@ -1018,11 +1017,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
       state = state->BindExpr(U, SF, V2_untested);
 
       // Perform the store, so that the uninitialized value detection happens.
-      Bldr.takeNodes(N);
-      ExplodedNodeSet Dst3;
-      evalStore(Dst3, U, Ex, N, state, loc, V2_untested);
-      Bldr.addNodes(Dst3);
-
+      evalStore(Dst2, U, Ex, N, state, loc, V2_untested);
       continue;
     }
     DefinedSVal V2 = V2_untested.castAs<DefinedSVal>();
@@ -1086,10 +1081,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
       state = state->BindExpr(U, SF, U->isPostfix() ? V2 : Result);
 
     // Perform the store.
-    Bldr.takeNodes(N);
-    ExplodedNodeSet Dst3;
-    evalStore(Dst3, U, Ex, N, state, loc, Result);
-    Bldr.addNodes(Dst3);
+    evalStore(Dst2, U, Ex, N, state, loc, Result);
   }
   Dst.insert(Dst2);
 }
