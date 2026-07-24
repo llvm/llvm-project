@@ -351,3 +351,17 @@ body:             |
     %1:sreg_32 = COPY %0:vgpr_32
     %2:sreg_32 = S_PACK_LL_B32_B16 1, %1:sreg_32, implicit-def dead $scc
 ...
+
+---
+name:            v_or_b16_t16_from_hi16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: v_or_b16_t16_from_hi16
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_OR_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_OR_B16_t16_e64 0, [[DEF]].lo16, 0, [[DEF1]].hi16, 0, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %1.hi16
+    %3:vgpr_16 = V_OR_B16_t16_e64 0, %0.lo16, 0, killed %2, 0, implicit $exec
+...

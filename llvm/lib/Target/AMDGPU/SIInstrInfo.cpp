@@ -7894,18 +7894,27 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
   int16_t RCID = getOpRegClassID(get(Opcode).operands()[OpIdx]);
   const TargetRegisterClass *ExpectedRC = RI.getRegClass(RCID);
   if (RI.getMatchingSuperRegClass(CurrRC, ExpectedRC, AMDGPU::lo16)) {
-    Op.setSubReg(AMDGPU::lo16);
-  } else if (RI.getMatchingSuperRegClass(ExpectedRC, CurrRC, AMDGPU::lo16)) {
+    // Default to the lo16 only if the subregister is not specified.
+    if (Op.getSubReg() == AMDGPU::NoSubRegister)
+      Op.setSubReg(AMDGPU::lo16);
+    return;
+  }
+
+  const TargetRegisterClass *CurrSRC =
+      RI.getSubRegisterClass(CurrRC, Op.getSubReg());
+  if (RI.getRegSizeInBits(*CurrSRC) == 16 &&
+      RI.getRegSizeInBits(*ExpectedRC) == 32) {
     const DebugLoc &DL = MI.getDebugLoc();
     Register NewDstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
     BuildMI(*MBB, MI, DL, get(AMDGPU::IMPLICIT_DEF), Undef);
     BuildMI(*MBB, MI, DL, get(AMDGPU::REG_SEQUENCE), NewDstReg)
-        .addReg(Op.getReg())
+        .addReg(Op.getReg(), {}, Op.getSubReg())
         .addImm(AMDGPU::lo16)
         .addReg(Undef)
         .addImm(AMDGPU::hi16);
     Op.setReg(NewDstReg);
+    Op.setSubReg(AMDGPU::NoSubRegister);
   }
 }
 void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI,
@@ -8572,9 +8581,13 @@ void SIInstrInfo::moveToVALUImpl(
         // that copies will end up as machine instructions and not be
         // eliminated.
         addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
-        MRI.replaceRegWith(DstReg, NewDstReg);
+        unsigned SrcSubReg = Inst.getOperand(1).getSubReg();
+        for (MachineOperand &Use :
+             make_early_inc_range(MRI.use_operands(DstReg))) {
+          Use.setSubReg(RI.composeSubRegIndices(SrcSubReg, Use.getSubReg()));
+          Use.setReg(NewDstReg);
+        }
         MRI.clearKillFlags(NewDstReg);
-        Inst.getOperand(0).setReg(DstReg);
 
         if (!MRI.constrainRegClass(NewDstReg, CommonRC))
           llvm_unreachable("failed to constrain register");
