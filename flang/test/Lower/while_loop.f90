@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -emit-hlfir -o - %s | FileCheck %s
 
 ! Test a simple while loop.
 ! CHECK-LABEL: simple_loop

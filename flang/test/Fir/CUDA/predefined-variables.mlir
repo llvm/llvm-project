@@ -418,3 +418,29 @@ func.func @_QMoutermodPouter(%arg0: !fir.ref<!fir.array<?x?xf64>> {fir.bindc_nam
 // CHECK-NOT: _QM__fortran_builtinsE__builtin_blockidx
 // CHECK-NOT: _QM__fortran_builtinsE__builtin_griddim
 // CHECK-NOT: _QM__fortran_builtinsE__builtin_threadidx
+
+// -----
+
+// A single fir.address_of shared by two declares must not be erased while a
+// declare still uses it.
+func.func @_QMdevmodPkernel() attributes {cuf.proc_attr = #cuf.cuda_proc<global>, no_inline} {
+  %0 = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  %1 = fir.declare %0 {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  %2 = fir.declare %0 {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  %3 = fir.alloca i32 {bindc_name = "a"}
+  %4 = fir.alloca i32 {bindc_name = "b"}
+  %5 = fir.coordinate_of %1, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+  %6 = fir.load %5 : !fir.ref<i32>
+  fir.store %6 to %3 : !fir.ref<i32>
+  %7 = fir.coordinate_of %2, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+  %8 = fir.load %7 : !fir.ref<i32>
+  fir.store %8 to %4 : !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: func.func @_QMdevmodPkernel
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_threadidx
+// CHECK: %[[TID:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+// CHECK: %[[ADD:.*]] = arith.addi %[[TID]], %c1{{.*}} : i32
+// CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
+// CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>

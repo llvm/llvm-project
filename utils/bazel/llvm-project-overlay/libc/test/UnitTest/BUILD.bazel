@@ -44,7 +44,6 @@ libc_test_library(
         "ErrnoSetterMatcher.h",
         "ExecuteFunction.h",
         "LibcTest.h",
-        "PlatformDefs.h",
         "Test.h",
     ],
     deps = [
