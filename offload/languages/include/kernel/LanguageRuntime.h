@@ -9,10 +9,10 @@
 #ifndef LLVM_OFFLOAD_LANGUAGES_INCLUDE_KERNEL_LANGUAGE_RUNTIME_H
 #define LLVM_OFFLOAD_LANGUAGES_INCLUDE_KERNEL_LANGUAGE_RUNTIME_H
 
+#include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <stddef.h>
-#include <stdint.h>
 
 enum Error_t : uint32_t {
   Success = 0,
@@ -46,11 +46,6 @@ enum HostAllocFlags : unsigned int {
   HostAllocPortable = 0x01,
   HostAllocMapped = 0x02,
   HostAllocWriteCombined = 0x04,
-};
-
-enum StreamCreateWithFlagsFlags : unsigned int {
-  StreamDefault = 0x00,
-  StreamNonBlocking = 0x01,
 };
 
 typedef struct Stream_st *Stream_t;
@@ -93,14 +88,6 @@ static inline Error_t Memcpy(T *Dst, const T *Src, size_t Size,
 
 Error_t DeviceSynchronize();
 
-Error_t GetLastError();
-
-Error_t PeekAtLastError();
-
-const char *GetErrorName(Error_t Error);
-
-const char *GetErrorString(Error_t Error);
-
 Error_t GetDevice(int *DeviceNo);
 
 Error_t GetDeviceCount(int *Count);
@@ -109,35 +96,13 @@ Error_t SetDevice(int DeviceNo);
 
 Error_t FreeHost(void *Ptr);
 
-Error_t DriverGetVersion(int *Version);
-
 Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo);
 
 Error_t StreamCreate(Stream_t *stream);
 
-Error_t StreamCreateWithFlags(Stream_t *stream, unsigned int flags);
-
 Error_t StreamDestroy(Stream_t stream);
 
 Error_t StreamSynchronize(Stream_t stream);
-
-template <typename UnaryFunction, class T>
-static inline Error_t OccupancyMaxPotentialBlockSizeVariableSMem(
-    int *minGridSize, int *blockSize, T func,
-    UnaryFunction blockSizeToDynamicSMemSize, int blockSizeLimit = 0) {
-#if defined(__AMDGPU__)
-  // TODO: values taken from AMD Instinct MI250X gfx90a
-  *minGridSize = 220;
-  *blockSize = 1024;
-#elif defined(__NVPTX__)
-  // TODO: values taken from NVIDIA H100 80GB HBM3
-  *minGridSize = 264;
-  *blockSize = 1024;
-#endif
-  return Success;
-}
-
-///
 
 #if defined(__AMDGPU__) || defined(__NVPTX__)
 #include <gpuintrin.h>

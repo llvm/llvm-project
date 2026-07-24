@@ -20,10 +20,6 @@
 #undef MemcpyDeviceToHost
 #undef MemcpyDeviceToDevice
 #undef MemcpyDefault
-#undef GetLastError
-#undef PeekAtLastError
-#undef GetErrorName
-#undef GetErrorString
 #undef GetDevice
 #undef GetDeviceCount
 #undef SetDevice
@@ -35,14 +31,8 @@
 #undef HostAllocWriteCombined
 #undef MallocHost
 #undef FreeHost
-#undef DriverGetVersion
 #undef GetDeviceProperties
-#undef OccupancyMaxPotentialBlockSizeVariableSMem
 #undef Stream_t
 #undef StreamCreate
-#undef StreamCreateWithFlags
 #undef StreamDestroy
 #undef StreamSynchronize
-#undef StreamCreateWithFlagsFlags
-#undef StreamDefault
-#undef StreamNonBlocking
