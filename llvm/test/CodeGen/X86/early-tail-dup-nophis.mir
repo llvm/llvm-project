@@ -1,0 +1,12 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=early-tailduplication -o - %s | FileCheck %s
+
+---
+# CHECK-LABEL: name: test_nophis
+# CHECK: noPhis: true
+name:            test_nophis
+tracksRegLiveness: true
+noPhis:          true
+body:             |
+  bb.0:
+    RET64
+...

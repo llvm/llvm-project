@@ -61,10 +61,6 @@ class EarlyTailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
   static char ID;
   EarlyTailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, true) {}
-
-  MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().setNoPHIs();
-  }
 };
 
 } // end anonymous namespace
@@ -97,7 +93,8 @@ bool TailDuplicateBaseLegacy::runOnMachineFunction(MachineFunction &MF) {
   bool MadeChange = false;
   while (Duplicator.tailDuplicateBlocks())
     MadeChange = true;
-
+  if (MadeChange && PreRegAlloc)
+    MF.getProperties().resetNoPHIs();
   return MadeChange;
 }
 
