@@ -2,9 +2,9 @@
 
 [[clang::sycl_external]] int
 global_device_as(__attribute__((opencl_global_device)) int *p) {
-  static_assert(__builtin_pointee_address_space(p) ==
+  static_assert(__addrspaceof(*p) ==
                 __CLANG_ADDRESS_SPACE_SYCL_GLOBAL);
-  return __builtin_pointee_address_space(p);
+  return __addrspaceof(*p);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @_Z16global_device_asPU3AS5i(
@@ -13,9 +13,9 @@ global_device_as(__attribute__((opencl_global_device)) int *p) {
 
 [[clang::sycl_external]] int
 global_host_as(__attribute__((opencl_global_host)) int *p) {
-  static_assert(__builtin_pointee_address_space(p) ==
+  static_assert(__addrspaceof(*p) ==
                 __CLANG_ADDRESS_SPACE_SYCL_GLOBAL);
-  return __builtin_pointee_address_space(p);
+  return __addrspaceof(*p);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @_Z14global_host_asPU3AS6i(

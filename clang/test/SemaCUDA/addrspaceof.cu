@@ -14,30 +14,30 @@ __device__ int *device_ptr;
 __constant__ int constant_var;
 __device__ const int const_device_var = 1;
 
-static_assert(__builtin_pointee_address_space(&device_var) ==
+static_assert(__addrspaceof(device_var) ==
               __CLANG_ADDRESS_SPACE_HIP_DEVICE);
-static_assert(__builtin_pointee_address_space(device_array) ==
+static_assert(__addrspaceof(device_array) ==
               __CLANG_ADDRESS_SPACE_HIP_DEVICE);
-static_assert(__builtin_pointee_address_space(&device_array) ==
+static_assert(__addrspaceof(*&device_array) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
-static_assert(__builtin_pointee_address_space(device_array + 1) ==
+static_assert(__addrspaceof(*(device_array + 1)) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
-static_assert(__builtin_pointee_address_space(&constant_var) ==
+static_assert(__addrspaceof(constant_var) ==
               __CLANG_ADDRESS_SPACE_HIP_CONSTANT);
-static_assert(__builtin_pointee_address_space(&const_device_var) ==
+static_assert(__addrspaceof(const_device_var) ==
               __CLANG_ADDRESS_SPACE_HIP_CONSTANT);
-static_assert(__builtin_pointee_address_space((int *)&constant_var) ==
+static_assert(__addrspaceof(*(int *)&constant_var) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
-static_assert(__builtin_pointee_address_space(device_ptr) ==
+static_assert(__addrspaceof(*device_ptr) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
 
 void host_queries() {
-  (void)__builtin_pointee_address_space(&device_var);
-  (void)__builtin_pointee_address_space(device_array);
-  (void)__builtin_pointee_address_space(&device_array);
-  (void)__builtin_pointee_address_space(device_array + 1);
-  (void)__builtin_pointee_address_space(&constant_var);
-  (void)__builtin_pointee_address_space(&const_device_var);
-  (void)__builtin_pointee_address_space((int *)&constant_var);
-  (void)__builtin_pointee_address_space(device_ptr);
+  (void)__addrspaceof(device_var);
+  (void)__addrspaceof(device_array);
+  (void)__addrspaceof(*&device_array);
+  (void)__addrspaceof(*(device_array + 1));
+  (void)__addrspaceof(constant_var);
+  (void)__addrspaceof(const_device_var);
+  (void)__addrspaceof(*(int *)&constant_var);
+  (void)__addrspaceof(*device_ptr);
 }

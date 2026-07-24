@@ -47,6 +47,7 @@ offsetof_type *offsetof_ptr = &size_type_value;
 typeof(sizeof(float)) size_t_value;
 typeof_sizeof *size_t_ptr = &size_t_value;
 typeof_sizeof2 *size_t_ptr2 = &size_t_value;
+_Static_assert(AddressSpaceOfI == __CLANG_ADDRESS_SPACE_DEFAULT, "");
 
 // ArraySubscriptExpr
 array_subscript *double_ptr1_5 = &floating;
