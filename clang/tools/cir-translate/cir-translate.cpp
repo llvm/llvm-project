@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllTranslations.h"
@@ -31,8 +32,8 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/InitAllDialects.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -159,18 +160,20 @@ void registerToLLVMTranslation() {
           return mlir::failure();
 
         llvm::LLVMContext llvmContext;
+        const bool enableOpenMP = mlir::omp::isOpenMPModule(cirModule);
         std::unique_ptr<llvm::Module> llvmModule =
-            cir::direct::lowerDirectlyFromCIRToLLVMIR(cirModule, llvmContext);
+            cir::direct::lowerDirectlyFromCIRToLLVMIR(cirModule, llvmContext,
+                                                      enableOpenMP);
         if (!llvmModule)
           return mlir::failure();
         llvmModule->print(output, nullptr);
         return mlir::success();
       },
       [](mlir::DialectRegistry &registry) {
-        registry.insert<mlir::DLTIDialect, mlir::func::FuncDialect>();
+        cir::registerAllDialects(registry);
+        registry.insert<mlir::func::FuncDialect>();
         mlir::registerAllToLLVMIRTranslations(registry);
         cir::direct::registerCIRDialectTranslation(registry);
-        cir::omp::registerOpenMPExtensions(registry);
       });
 }
 

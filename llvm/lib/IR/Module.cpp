@@ -391,6 +391,11 @@ void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
   addModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
 }
 void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint64_t Val) {
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  addModuleFlag(Behavior, Key, ConstantInt::get(Int64Ty, Val));
+}
+void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            uint32_t Val) {
   Type *Int32Ty = Type::getInt32Ty(Context);
   addModuleFlag(Behavior, Key, ConstantInt::get(Int32Ty, Val));
@@ -424,6 +429,11 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
 void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Constant *Val) {
   setModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
+}
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint64_t Val) {
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  setModuleFlag(Behavior, Key, ConstantInt::get(Int64Ty, Val));
 }
 void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            uint32_t Val) {
@@ -957,11 +967,18 @@ StringRef Module::getTargetABIFromMD() {
   return TargetABI;
 }
 
-WinX64EHUnwindV2Mode Module::getWinX64EHUnwindV2Mode() const {
-  Metadata *MD = getModuleFlag("winx64-eh-unwindv2");
-  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
-    return static_cast<WinX64EHUnwindV2Mode>(CI->getZExtValue());
-  return WinX64EHUnwindV2Mode::Disabled;
+WinX64EHUnwindMode Module::getWinX64EHUnwindMode() const {
+  // Check the new unified flag first.
+  if (Metadata *MD = getModuleFlag("winx64-eh-unwind")) {
+    if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+      return static_cast<WinX64EHUnwindMode>(CI->getZExtValue());
+  }
+  // Fall back to the legacy V2 flag.
+  if (Metadata *MD = getModuleFlag("winx64-eh-unwindv2")) {
+    if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+      return static_cast<WinX64EHUnwindMode>(CI->getZExtValue());
+  }
+  return WinX64EHUnwindMode::V1;
 }
 
 ControlFlowGuardMode Module::getControlFlowGuardMode() const {
@@ -969,4 +986,24 @@ ControlFlowGuardMode Module::getControlFlowGuardMode() const {
   if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
     return static_cast<ControlFlowGuardMode>(CI->getZExtValue());
   return ControlFlowGuardMode::Disabled;
+}
+
+bool Module::GlobalAsmProperties::set(StringRef Name, std::string Value) {
+  if (Name == "target_features")
+    TargetFeatures = std::move(Value);
+  else if (Name == "target_cpu")
+    TargetCPU = std::move(Value);
+  else
+    return false;
+  return true;
+}
+
+SmallVector<std::pair<StringRef, StringRef>>
+Module::GlobalAsmProperties::getAsStrings() const {
+  SmallVector<std::pair<StringRef, StringRef>> Props;
+  if (!TargetFeatures.empty())
+    Props.emplace_back("target_features", TargetFeatures);
+  if (!TargetCPU.empty())
+    Props.emplace_back("target_cpu", TargetCPU);
+  return Props;
 }

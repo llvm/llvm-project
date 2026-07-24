@@ -13,6 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CMDLISTMANAGER_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CMDLISTMANAGER_H
 
+#include "L0Context.h"
 #include "L0Defs.h"
 #include "L0Trace.h"
 #include <mutex>
@@ -24,11 +25,14 @@ namespace llvm::omp::target::plugin {
 class L0CmdListManagerTy {
   /// Underlying immediate command list.
   ze_command_list_handle_t CmdList;
+  /// Owning context (provides driver-loaded extension function pointers).
+  L0ContextTy &Context;
   /// Mutex to protect L0 operations that are not thread safe.
   std::mutex Mtx;
 
 public:
-  L0CmdListManagerTy(ze_command_list_handle_t CmdList) : CmdList(CmdList) {}
+  L0CmdListManagerTy(ze_command_list_handle_t CmdList, L0ContextTy &Context)
+      : CmdList(CmdList), Context(Context) {}
 
   ze_command_list_handle_t getCmdList() const { return CmdList; }
 
@@ -92,6 +96,12 @@ public:
     return Plugin::success();
   }
 
+  Error appendMemoryPrefetch(const void *Ptr, size_t Size) {
+    std::lock_guard<std::mutex> Lock(Mtx);
+    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryPrefetch, CmdList, Ptr, Size);
+    return Plugin::success();
+  }
+
   Error appendLaunchKernel(ze_kernel_handle_t Kernel,
                            const ze_group_count_t *pLaunchFuncArgs,
                            ze_event_handle_t SignalEvent = nullptr,
@@ -127,11 +137,46 @@ public:
     return Plugin::success();
   }
 
+  Error appendSignalEvent(ze_event_handle_t Event) {
+    std::lock_guard<std::mutex> Lock(Mtx);
+    CALL_ZE_RET_ERROR(zeCommandListAppendSignalEvent, CmdList, Event);
+    return Plugin::success();
+  }
+
+  Error appendWaitOnEvents(size_t NumWaitEvents,
+                           ze_event_handle_t *WaitEvents) {
+    std::lock_guard<std::mutex> Lock(Mtx);
+    CALL_ZE_RET_ERROR(zeCommandListAppendWaitOnEvents, CmdList, NumWaitEvents,
+                      WaitEvents);
+    return Plugin::success();
+  }
+
+  Error appendWaitOnEvent(ze_event_handle_t Event) {
+    return appendWaitOnEvents(1, &Event);
+  }
+
   Error appendBarrier(ze_event_handle_t SignalEvent, uint32_t NumWaitEvents,
                       ze_event_handle_t *WaitEvents) {
     std::lock_guard<std::mutex> Lock(Mtx);
     CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, SignalEvent,
                       NumWaitEvents, WaitEvents);
+    return Plugin::success();
+  }
+
+  Error appendHostFunction(void (*Callback)(void *), void *UserData,
+                           ze_event_handle_t SignalEvent = nullptr,
+                           uint32_t NumWaitEvents = 0,
+                           ze_event_handle_t *WaitEvents = nullptr) {
+    auto zeCommandListAppendHost = Context.zeCommandListAppendHostFunction;
+    if (!zeCommandListAppendHost)
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "zeCommandListAppendHostFunction extension is not "
+                           "available on this driver");
+    std::lock_guard<std::mutex> Lock(Mtx);
+    CALL_ZE_RET_ERROR(zeCommandListAppendHost, CmdList,
+                      reinterpret_cast<void *>(Callback), UserData,
+                      /*pReserved*/ nullptr, SignalEvent, NumWaitEvents,
+                      WaitEvents);
     return Plugin::success();
   }
 };

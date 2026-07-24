@@ -22,11 +22,20 @@ IntrusiveRefCntPtr<Provenance> Provenance::nullary() {
   return Instance;
 }
 
+IntrusiveRefCntPtr<Provenance>
+Provenance::getWithKnownMemoryObject(MemoryObject &KnownObj) {
+  assert(!Obj && Wildcard && "The memory object has been determined.");
+  auto Res = makeIntrusiveRefCnt<Provenance>(*this);
+  Res->Obj = &KnownObj;
+  Res->Tag = APInt();
+  return Res;
+}
+
 void Pointer::print(raw_ostream &OS) const {
   SmallString<32> AddrStr;
   Address.toStringUnsigned(AddrStr, 16);
   OS << "ptr 0x" << AddrStr << " [";
-  if (MemoryObject *Obj = getMemoryObject()) {
+  if (MemoryObject *Obj = Prov->getMemoryObject()) {
     if (Obj->isIRGlobalValue())
       OS << "@";
     OS << Obj->getName();
@@ -36,8 +45,9 @@ void Pointer::print(raw_ostream &OS) const {
     if (State != MemoryObjectState::Alive)
       OS << (State == MemoryObjectState::Dead ? " (dead)" : " (dangling)");
   } else {
-    OS << "nullary";
+    OS << (Prov->isWildcard() ? "wildcard" : "nullary");
   }
+  // TODO: print provenance
   OS << "]";
 }
 
@@ -49,7 +59,7 @@ bool Pointer::isNullPtr(unsigned AS, const DataLayout &DL) const {
   return Address == DL.getNullPtrValue(AS);
 }
 
-void AnyValue::print(raw_ostream &OS) const {
+void AnyValue::print(Context &Ctx, raw_ostream &OS) const {
   switch (Kind) {
   case StorageKind::Integer:
     if (IntVal.getBitWidth() == 1) {
@@ -119,7 +129,7 @@ void AnyValue::print(raw_ostream &OS) const {
     for (size_t I = 0, E = AggVal.size(); I != E; ++I) {
       if (I != 0)
         OS << ", ";
-      AggVal[I].print(OS);
+      AggVal[I].print(Ctx, OS);
     }
     OS << " }";
     break;

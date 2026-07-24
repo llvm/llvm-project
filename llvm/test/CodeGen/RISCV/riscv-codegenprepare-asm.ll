@@ -131,9 +131,9 @@ for.body:                                         ; preds = %for.body, %for.body
 define i1 @widen_anyof_rdx(ptr %p, i64 %n) {
 ; CHECK-LABEL: widen_anyof_rdx:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:  .LBB2_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub a3, a1, a2
@@ -142,9 +142,9 @@ define i1 @widen_anyof_rdx(ptr %p, i64 %n) {
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vle32.v v10, (a4)
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    blt a2, a1, .LBB2_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
@@ -179,9 +179,9 @@ exit:
 define i1 @widen_anyof_rdx_use_in_loop(ptr %p, i64 %n) {
 ; CHECK-LABEL: widen_anyof_rdx_use_in_loop:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:  .LBB3_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub a3, a1, a2

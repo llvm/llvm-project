@@ -1451,10 +1451,6 @@ private:
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::OperationName> {
-  static mlir::OperationName getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::OperationName::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(mlir::OperationName val) {
     return DenseMapInfo<void *>::getHashValue(val.getAsOpaquePointer());
   }
@@ -1465,10 +1461,6 @@ struct DenseMapInfo<mlir::OperationName> {
 template <>
 struct DenseMapInfo<mlir::RegisteredOperationName>
     : public DenseMapInfo<mlir::OperationName> {
-  static mlir::RegisteredOperationName getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::RegisteredOperationName::getFromOpaquePointer(pointer);
-  }
 };
 
 template <>

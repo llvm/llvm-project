@@ -100,6 +100,13 @@ def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
                    I1Attr:$is_int_min_poison);
 }
 
+// Do not use LLVM_UnaryIntrOpF here: arithmetic.fence operates on floating
+// types, but the fence itself should not carry fastmath flags.
+def LLVM_ArithmeticFenceOp
+    : LLVM_UnaryIntrOpBase<"arithmetic.fence", LLVM_AnyFloat> {
+  let arguments = commonArgs;
+}
+
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
   /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
   /*immArgPositions=*/[1], /*immArgAttrNames=*/["bit"]> {
@@ -1124,22 +1131,25 @@ def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
 /// Create a call to Masked Store intrinsic.
 def LLVM_MaskedStoreOp : LLVM_ZeroResultIntrOp<"masked.store"> {
   let arguments = (ins LLVM_AnyVector:$value, LLVM_AnyPointer:$data,
-                   LLVM_VectorOf<I1>:$mask, I32Attr:$alignment);
+                   LLVM_VectorOf<I1>:$mask, I32Attr:$alignment,
+                   UnitAttr:$nontemporal);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
   let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
     "type($value) `,` type($mask) `into` qualified(type($data))";
 
   string llvmBuilder = [{
-    builder.CreateMaskedStore(
+    auto *inst = builder.CreateMaskedStore(
       $value, $data, llvm::Align($alignment), $mask);
-  }];
+  }] #setNonTemporalMetadataCode;
   string mlirBuilder = [{
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
     llvm::Align alignment = intrinInst->getParamAlign(1).valueOrOne();
+    bool nontemporal = intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal);
     $_op = LLVM::MaskedStoreOp::create($_builder, $_location,
-      $value, $data, $mask, $_builder.getI32IntegerAttr(alignment.value()));
+      $value, $data, $mask, $_builder.getI32IntegerAttr(alignment.value()),
+      nontemporal ? $_builder.getUnitAttr() : nullptr);
   }];
-  list<int> llvmArgIndices = [0, 1, 2, -1];
+  list<int> llvmArgIndices = [0, 1, 2, -1, -1];
 }
 
 /// Create a call to Masked Gather intrinsic.
@@ -1195,7 +1205,7 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 
 /// Create a call to Masked Expand Load intrinsic.
 def LLVM_masked_expandload
-  : LLVM_OneResultIntrOp<"masked.expandload", [0], [],
+  : LLVM_OneResultIntrOp<"masked.expandload", [0], [0],
   /*traits=*/[], /*requiresFastMath=*/0, /*requiresArgAndResultAttrs=*/1,
   /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {
   dag args = (ins LLVM_AnyPointer:$ptr,
@@ -1211,7 +1221,7 @@ def LLVM_masked_expandload
 
 /// Create a call to Masked Compress Store intrinsic.
 def LLVM_masked_compressstore
-    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0],
+    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0, 1],
   /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
   /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
   /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {

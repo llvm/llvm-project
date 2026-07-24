@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
@@ -83,6 +84,45 @@ public:
   constexpr bool test(unsigned I) const { return (*this)[I]; }
 
   constexpr size_t size() const { return MAX_SUBTARGET_FEATURES; }
+
+  /// Index of the first set bit at or after Begin, or size() if none.
+  unsigned find_first_from(unsigned Begin) const {
+    for (unsigned Word = Begin / 64; Word < Bits.size(); ++Word) {
+      uint64_t Masked = Bits[Word] & maskTrailingZeros<uint64_t>(Begin % 64);
+      if (Masked)
+        return Word * 64 + llvm::countr_zero(Masked);
+      Begin = (Word + 1) * 64;
+    }
+    return size();
+  }
+
+  /// Yields the index of each set bit, skipping unset bits via countr_zero.
+  class const_iterator
+      : public iterator_facade_base<const_iterator, std::forward_iterator_tag,
+                                    const unsigned, std::ptrdiff_t,
+                                    const unsigned *, unsigned> {
+    const FeatureBitset *Parent = nullptr;
+    unsigned Index = 0;
+
+  public:
+    const_iterator() = default;
+    const_iterator(const FeatureBitset &Parent, unsigned Index)
+        : Parent(&Parent), Index(Index) {}
+
+    unsigned operator*() const { return Index; }
+    const_iterator &operator++() {
+      Index = Parent->find_first_from(Index + 1);
+      return *this;
+    }
+    bool operator==(const const_iterator &RHS) const {
+      return Index == RHS.Index;
+    }
+  };
+
+  const_iterator begin() const {
+    return const_iterator(*this, find_first_from(0));
+  }
+  const_iterator end() const { return const_iterator(*this, size()); }
 
   bool any() const {
     return llvm::any_of(Bits, [](uint64_t I) { return I != 0; });

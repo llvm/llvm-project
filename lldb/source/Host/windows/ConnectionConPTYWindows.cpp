@@ -10,8 +10,6 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timeout.h"
 
-#include <cstring>
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -61,5 +59,30 @@ size_t ConnectionConPTY::Read(void *dst, size_t dst_len,
 size_t ConnectionConPTY::Write(const void *src, size_t src_len,
                                lldb::ConnectionStatus &status,
                                Status *error_ptr) {
-  llvm_unreachable("not implemented");
+  if (!m_pty || !m_pty->IsConnected()) {
+    status = eConnectionStatusNoConnection;
+    if (error_ptr)
+      *error_ptr = Status::FromErrorString("ConPTY not connected");
+    return 0;
+  }
+  HANDLE stdin_handle = m_pty->GetSTDINHandle();
+  if (stdin_handle == INVALID_HANDLE_VALUE || stdin_handle == nullptr) {
+    status = eConnectionStatusNoConnection;
+    if (error_ptr)
+      *error_ptr = Status::FromErrorString("ConPTY STDIN handle is invalid");
+    return 0;
+  }
+  DWORD written = 0;
+  if (!::WriteFile(stdin_handle, src, static_cast<DWORD>(src_len), &written,
+                   nullptr)) {
+    DWORD err = ::GetLastError();
+    status = (err == ERROR_BROKEN_PIPE || err == ERROR_NO_DATA)
+                 ? eConnectionStatusEndOfFile
+                 : eConnectionStatusError;
+    if (error_ptr)
+      *error_ptr = Status(err, lldb::eErrorTypeWin32);
+    return written;
+  }
+  status = eConnectionStatusSuccess;
+  return written;
 }

@@ -18,21 +18,68 @@
 using namespace mlir;
 using namespace mlir::NVVM;
 
-/// Returns true if the LLVM IR intrinsic is convertible to an MLIR NVVM dialect
-/// intrinsic. Returns false otherwise.
+/// LLVM intrinsic IDs of the four `bar.sync` variants imported into
+/// `nvvm.barrier`.
+static constexpr llvm::Intrinsic::ID kBarrierSyncIntrinsics[] = {
+    llvm::Intrinsic::nvvm_barrier_cta_sync_all,
+    llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all,
+    llvm::Intrinsic::nvvm_barrier_cta_sync_count,
+    llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count,
+};
+
+/// Returns true if `id` is one of the `bar.sync` intrinsic IDs imported into
+/// `nvvm.barrier`.
+static bool isBarrierSyncIntrinsic(llvm::Intrinsic::ID id) {
+  return llvm::is_contained(kBarrierSyncIntrinsics, id);
+}
+
+/// Imports one of the four `bar.sync` LLVM intrinsic variants into a single
+/// `nvvm.barrier` op, deriving the `aligned` attribute and the optional
+/// `numberOfThreads` operand from the specific intrinsic ID.
+static LogicalResult
+convertBarrierSyncIntrinsic(OpBuilder &odsBuilder, llvm::CallInst *inst,
+                            LLVM::ModuleImport &moduleImport,
+                            ArrayRef<llvm::Value *> llvmOperands,
+                            ArrayRef<llvm::OperandBundleUse> llvmOpBundles) {
+  llvm::Intrinsic::ID id = inst->getIntrinsicID();
+  bool aligned = (id == llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all ||
+                  id == llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count);
+  bool hasCount = (id == llvm::Intrinsic::nvvm_barrier_cta_sync_count ||
+                   id == llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count);
+
+  SmallVector<Value> mlirOperands;
+  SmallVector<NamedAttribute> mlirAttrs;
+  if (failed(moduleImport.convertIntrinsicArguments(
+          llvmOperands, llvmOpBundles, /*requiresOpBundles=*/false, {}, {},
+          mlirOperands, mlirAttrs)))
+    return failure();
+
+  auto op = NVVM::BarrierOp::create(
+      odsBuilder, moduleImport.translateLoc(inst->getDebugLoc()),
+      mlirOperands.front(), hasCount ? mlirOperands.back() : Value{},
+      odsBuilder.getBoolAttr(aligned));
+  moduleImport.mapNoResultOp(inst, op);
+  return success();
+}
+
+/// Returns true if the LLVM intrinsic `id` has a corresponding MLIR NVVM op.
 static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
   static const DenseSet<unsigned> convertibleIntrinsics = {
 #include "mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc"
   };
-  return convertibleIntrinsics.contains(id);
+  return convertibleIntrinsics.contains(id) || isBarrierSyncIntrinsic(id);
 }
 
-/// Returns the list of LLVM IR intrinsic identifiers that are convertible to
-/// MLIR NVVM dialect intrinsics.
+/// Returns the LLVM intrinsic IDs that have a corresponding MLIR NVVM op.
 static ArrayRef<unsigned> getSupportedIntrinsicsImpl() {
-  static const SmallVector<unsigned> convertibleIntrinsics = {
+  static const SmallVector<unsigned> convertibleIntrinsics = []() {
+    SmallVector<unsigned> ids = {
 #include "mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc"
-  };
+    };
+    ids.append(std::begin(kBarrierSyncIntrinsics),
+               std::end(kBarrierSyncIntrinsics));
+    return ids;
+  }();
   return convertibleIntrinsics;
 }
 
@@ -53,6 +100,11 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
     llvmOpBundles.reserve(inst->getNumOperandBundles());
     for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
       llvmOpBundles.push_back(inst->getOperandBundleAt(i));
+
+    // Route `bar.sync` intrinsics to `nvvm.barrier`.
+    if (isBarrierSyncIntrinsic(intrinsicID))
+      return convertBarrierSyncIntrinsic(odsBuilder, inst, moduleImport,
+                                         llvmOperands, llvmOpBundles);
 
 #include "mlir/Dialect/LLVMIR/NVVMFromLLVMIRConversions.inc"
   }

@@ -134,43 +134,31 @@ exit:
 ; Interchanging the loops changes the semantics of the program, e.g., `A[0][9]`
 ; will be overwritten in the original code, but not in the interchanged one.
 ;
-; FIXME: Currently the loops are interchanged.
-;
 define void @call_throw_exception(ptr %A) {
 ; CHECK-LABEL: define void @call_throw_exception(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[INNER_HEADER_PREHEADER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[INNER_HEADER_SPLIT:.*]]
-; CHECK:       [[INNER_HEADER_PREHEADER]]:
+; CHECK-NEXT:  [[INNER_HEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_LATCH_SPLIT:.*]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
-; CHECK:       [[INNER_HEADER_SPLIT]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[INNER_HEADER_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER_HEADER]] ], [ [[TMP0:%.*]], %[[INNER_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [10 x i8], ptr [[A]], i64 [[J]], i64 [[I]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[J]], 1
-; CHECK-NEXT:    br i1 [[COND]], label %[[UNWIND:.*]], label %[[INNER_LATCH:.*]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[UNWIND:.*]], label %[[INNER_LATCH]]
 ; CHECK:       [[UNWIND]]:
 ; CHECK-NEXT:    call void @throw_exception()
 ; CHECK-NEXT:    br label %[[INNER_LATCH]]
 ; CHECK:       [[INNER_LATCH]]:
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_INNER:%.*]] = icmp eq i64 [[J_NEXT]], 10
-; CHECK-NEXT:    br label %[[OUTER_LATCH]]
-; CHECK:       [[INNER_LATCH_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[OUTER_LATCH]], label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_OUTER:%.*]] = icmp eq i64 [[I_NEXT]], 10
-; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[INNER_LATCH_SPLIT]], label %[[OUTER_HEADER]]
+; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -219,42 +207,30 @@ exit:
 ; present in the original code (e.g., `A[9999]`) which results in UB. Thus we
 ; cannot interchange the loops.
 ;
-; FIXEM: Currently the loops are deemed legal to interchange.
-;
 define void @call_not_return() {
 ; CHECK-LABEL: define void @call_not_return() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
-; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[INNER_HEADER_SPLIT:.*]]
-; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:  [[OUTER_HEADER:.*]]:
 ; CHECK-NEXT:    br label %[[INNER_HEADER1:.*]]
 ; CHECK:       [[INNER_HEADER1]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_LATCH_SPLIT:.*]] ], [ 0, %[[OUTER_HEADER]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
-; CHECK:       [[INNER_HEADER_SPLIT]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[INNER_HEADER1]] ], [ [[TMP0:%.*]], %[[INNER_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [10 x i8], ptr @ARR_100, i64 [[J]], i64 [[I]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[I]], 1
-; CHECK-NEXT:    br i1 [[COND]], label %[[TRAP:.*]], label %[[INNER_LATCH:.*]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[TRAP:.*]], label %[[INNER_LATCH]]
 ; CHECK:       [[TRAP]]:
 ; CHECK-NEXT:    call void @not_return()
 ; CHECK-NEXT:    br label %[[INNER_LATCH]]
 ; CHECK:       [[INNER_LATCH]]:
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_INNER:%.*]] = icmp eq i64 [[J_NEXT]], 10
-; CHECK-NEXT:    br label %[[OUTER_LATCH]]
-; CHECK:       [[INNER_LATCH_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER1]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[OUTER_LATCH]], label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[EC_OUTER:%.*]] = icmp eq i64 [[I_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[INNER_LATCH_SPLIT]], label %[[INNER_HEADER]]
+; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[EXIT:.*]], label %[[INNER_HEADER1]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

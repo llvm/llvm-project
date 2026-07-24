@@ -896,10 +896,24 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
          "Body of an implicit assignment operator should be compound stmt.");
   const auto *rootCS = cast<CompoundStmt>(rootS);
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), assignOp);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), assignOp);
 
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
+
+  // A defaulted union copy/move assignment has an empty synthesized body:
+  // Sema skips union fields (the FIXME in SemaDeclCXX::buildSingleCopyAssign),
+  // so there is no AST expression for the implied whole-object memcpy.
+  // Emitting that body would silently drop the copy, so report NYI instead.
+  // Struct/array memcpy-equivalent assignments carry the implicit memberwise
+  // copies in the AST (per-field assignment expressions, or a builtin memcpy
+  // call for array members) and lower correctly through the loop below.
+  if (assignOp->isMemcpyEquivalentSpecialMember(getContext()) &&
+      assignOp->getParent()->isUnion()) {
+    cgm.errorNYI(assignOp->getSourceRange(),
+                 "defaulted union copy/move assignment operator");
+    return;
+  }
 
   // Classic codegen uses a special class to attempt to replace member
   // initializers with memcpy. We could possibly defer that to the

@@ -44,7 +44,7 @@ from . import test_categories
 from . import test_result
 from ..support import seven
 from ..support import temp_file
-
+from ..support import xcode
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
@@ -276,6 +276,8 @@ def parseOptionsAndInitTestdirs():
         configuration.dsymutil = seven.get_command_output(
             "xcrun -find -toolchain default dsymutil"
         )
+    if args.resource_dir:
+        configuration.resource_dir = args.resource_dir
     if args.llvm_tools_dir:
         configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
@@ -379,12 +381,17 @@ def parseOptionsAndInitTestdirs():
             setting_list = setting[0].split("=", 1)
             configuration.settings.append((setting_list[0], setting_list[1]))
 
-    if args.d:
+    if args.d or args.debug_with:
         sys.stdout.write(
             "Suspending the process %d to wait for debugger to attach...\n"
             % os.getpid()
         )
         sys.stdout.flush()
+
+        # debug_with is always lowercased by argparse
+        if args.debug_with == "xcode":
+            xcode.attach(os.getpid())
+
         os.kill(os.getpid(), signal.SIGSTOP)
 
     if args.f:
@@ -471,6 +478,12 @@ def parseOptionsAndInitTestdirs():
 
     if args.arm64e_debugserver:
         configuration.arm64e_debugserver = True
+
+    if args.print_lldb_version:
+        configuration.print_lldb_version = True
+
+    if args.lldb_python_dir:
+        configuration.lldb_python_dir = args.lldb_python_dir
 
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
@@ -568,7 +581,8 @@ def setupSysPath():
         )
         sys.exit(-1)
 
-    os.system("%s -v" % lldbtest_config.lldbExec)
+    if configuration.print_lldb_version:
+        os.system("%s -v" % lldbtest_config.lldbExec)
 
     lldbDir = os.path.dirname(lldbtest_config.lldbExec)
 
@@ -582,17 +596,32 @@ def setupSysPath():
 
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
 
-    # If our lldb supports the -P option, use it to find the python path:
-    lldb_dash_p_result = subprocess.check_output(
-        [lldbtest_config.lldbExec, "-P"], universal_newlines=True
-    )
-    if lldb_dash_p_result:
-        for line in lldb_dash_p_result.splitlines():
-            if os.path.isdir(line) and os.path.exists(
-                os.path.join(line, "lldb", "__init__.py")
-            ):
-                lldbPythonDir = line
-                break
+    if configuration.lldb_python_dir:
+        # The path was passed in (typically by LIT, which discovers it once for
+        # the whole test run). Trust it without spawning lldb.
+        candidate = configuration.lldb_python_dir
+        if os.path.isdir(candidate) and os.path.exists(
+            os.path.join(candidate, "lldb", "__init__.py")
+        ):
+            lldbPythonDir = candidate
+        else:
+            print(
+                "warning: --lldb-python-dir '%s' does not contain 'lldb/__init__.py'; "
+                "falling back to '%s -P'" % (candidate, lldbtest_config.lldbExec)
+            )
+
+    if not lldbPythonDir:
+        # If our lldb supports the -P option, use it to find the python path:
+        lldb_dash_p_result = subprocess.check_output(
+            [lldbtest_config.lldbExec, "-P"], universal_newlines=True
+        )
+        if lldb_dash_p_result:
+            for line in lldb_dash_p_result.splitlines():
+                if os.path.isdir(line) and os.path.exists(
+                    os.path.join(line, "lldb", "__init__.py")
+                ):
+                    lldbPythonDir = line
+                    break
 
     if not lldbPythonDir:
         print(
@@ -808,6 +837,22 @@ def canRunLibcxxTests():
     if lldbplatformutil.platformIsDarwin():
         if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
             return False, "libc++ tests require a locally built libc++"
+
+        # Check that the libc++ architecture matches the test architecture.
+        test_architecture = lldbplatformutil.getArchitecture()
+
+        libcxx_dylib_path = os.path.join(
+            configuration.libcxx_library_dir, "libc++.dylib"
+        )
+        try:
+            libcxx_arch_list = subprocess.check_output(
+                ["lipo", "-archs", libcxx_dylib_path], text=True
+            ).split()
+            if test_architecture not in libcxx_arch_list:
+                return False, f"libc++ dylib missing {test_architecture} slice"
+        except subprocess.CalledProcessError:
+            return False, "libc++ dylib is not present"
+
         return True, "libc++ present"
 
     if platform == "linux":
@@ -912,6 +957,8 @@ def canRunWatchpointTests():
     from lldbsuite.test import lldbplatformutil
 
     platform = lldbplatformutil.getPlatform()
+    if platform.startswith("wasi"):
+        return False, "watchpoints are not supported on WebAssembly"
     if platform == "netbsd":
         if os.geteuid() == 0:
             return True, "root can always write dbregs"
@@ -954,6 +1001,18 @@ def checkObjcSupport():
         if configuration.verbose:
             print("objc tests will be skipped because of unsupported platform")
         configuration.skip_categories.append("objc")
+
+
+def checkExpressionSupport():
+    from lldbsuite.test import lldbplatformutil
+
+    # WebAssembly targets cannot JIT or interpret expressions yet.
+    if lldbplatformutil.getPlatform().startswith("wasi"):
+        if "expression" in configuration.categories_list:
+            return  # explicitly requested, let it run.
+        if configuration.verbose:
+            print("expression tests will be skipped because of unsupported platform")
+        configuration.skip_categories.append("expression")
 
 
 def checkDebugInfoSupport():
@@ -1126,6 +1185,7 @@ def run_suite():
     checkDebugInfoSupport()
     checkDebugServerSupport()
     checkObjcSupport()
+    checkExpressionSupport()
     checkForkVForkSupport()
     checkPexpectSupport()
     checkDAPSupport()

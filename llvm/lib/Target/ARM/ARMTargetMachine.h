@@ -79,13 +79,9 @@ public:
   }
 
   bool isTargetHardFloat() const {
-    return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-           TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-           TargetTriple.getEnvironment() == Triple::EABIHF ||
-           (TargetTriple.isOSBinFormatMachO() &&
-            TargetTriple.getSubArch() == Triple::ARMSubArch_v7em) ||
-           TargetTriple.isOSWindows() || TargetABI == ARM::ARM_ABI_AAPCS16;
+    // -target-abi=aapcs16 overrides the triple default.
+    return TargetABI == ARM::ARM_ABI_AAPCS16 ||
+           TargetTriple.getDefaultFloatABI() == FloatABI::Hard;
   }
 
   bool targetSchedulesPostRAScheduling() const override { return true; };

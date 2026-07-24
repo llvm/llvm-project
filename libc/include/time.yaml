@@ -17,6 +17,7 @@ types:
   - type_name: rsize_t
   - type_name: size_t
   - type_name: locale_t
+  - type_name: tm_gmtoff_t
 enums: []
 objects: []
 functions:
@@ -86,13 +87,6 @@ functions:
     arguments:
       - type: time_t
       - type: time_t
-  - name: gettimeofday
-    standards:
-      - posix
-    return_type: int
-    arguments:
-      - type: struct timeval *
-      - type: void *
   - name: gmtime
     standards:
       - stdc

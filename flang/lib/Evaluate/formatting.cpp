@@ -247,6 +247,7 @@ llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
           },
           [&](const AssumedType &assumedType) { assumedType.AsFortran(o); },
           [&](const common::Label &label) { o << '*' << label; },
+          [&](const ConditionalArg &condArg) { condArg.AsFortran(o); },
       },
       u_);
   if (isPercentVal() || isPercentRef()) {
@@ -260,6 +261,38 @@ std::string ActualArgument::AsFortran() const {
   llvm::raw_string_ostream sstream(result);
   AsFortran(sstream);
   return result;
+}
+
+// Helper: emit the inner part of a conditional arg without outer parens
+static void EmitConditionalArgInner(
+    llvm::raw_ostream &o, const ActualArgument::ConditionalArg &ca) {
+  auto emitConsequent{
+      [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+        if (cons) {
+          cons->value().AsFortran(o);
+        } else {
+          o << ".NIL.";
+        }
+      }};
+  ca.condition().AsFortran(o);
+  o << " ? ";
+  emitConsequent(ca.consequent());
+  o << " : ";
+  ca.VisitTail(
+      [&](const ActualArgument::ConditionalArg &inner) {
+        EmitConditionalArgInner(o, inner);
+      },
+      [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+        emitConsequent(cons);
+      });
+}
+
+llvm::raw_ostream &ActualArgument::ConditionalArg::AsFortran(
+    llvm::raw_ostream &o) const {
+  o << "( ";
+  EmitConditionalArgInner(o, *this);
+  o << " )";
+  return o;
 }
 
 llvm::raw_ostream &SpecificIntrinsic::AsFortran(llvm::raw_ostream &o) const {
@@ -664,6 +697,14 @@ static std::string DerivedTypeSpecAsFortran(
 
 llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
   o << DerivedTypeSpecAsFortran(result_.derivedTypeSpec());
+  if (result_.derivedTypeSpec().IsEnumerationType()) {
+    // Print as enum_name(ordinal) without exposing the hidden __ordinal keyword
+    o << '(';
+    if (!values_.empty()) {
+      values_.begin()->second.value().AsFortran(o);
+    }
+    return o << ')';
+  }
   if (values_.empty()) {
     o << '(';
   } else {

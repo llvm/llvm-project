@@ -314,8 +314,6 @@ struct IRInstructionDataList
 LLVM_ABI bool isClose(const IRInstructionData &A, const IRInstructionData &B);
 
 struct IRInstructionDataTraits : DenseMapInfo<IRInstructionData *> {
-  static inline IRInstructionData *getEmptyKey() { return nullptr; }
-
   static unsigned getHashValue(const IRInstructionData *E) {
     using llvm::hash_value;
     assert(E && "IRInstructionData is a nullptr?");
@@ -324,10 +322,7 @@ struct IRInstructionDataTraits : DenseMapInfo<IRInstructionData *> {
 
   static bool isEqual(const IRInstructionData *LHS,
                       const IRInstructionData *RHS) {
-    if (RHS == getEmptyKey() || LHS == getEmptyKey())
-      return LHS == RHS;
-
-    assert(LHS && RHS && "nullptr should have been caught by getEmptyKey?");
+    assert(LHS && RHS && "nullptr is not expected as a key");
     return isClose(*LHS, *RHS);
   }
 };
@@ -503,11 +498,6 @@ struct IRInstructionMapper {
   IRInstructionMapper(SpecificBumpPtrAllocator<IRInstructionData> *IDA,
                       SpecificBumpPtrAllocator<IRInstructionDataList> *IDLA)
       : InstDataAllocator(IDA), IDLAllocator(IDLA) {
-    // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
-    // changed.
-    static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
-                  static_cast<unsigned>(-1));
-
     IDL = new (IDLAllocator->Allocate())
         IRInstructionDataList();
   }

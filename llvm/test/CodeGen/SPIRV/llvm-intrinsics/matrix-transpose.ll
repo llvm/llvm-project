@@ -74,7 +74,9 @@ define internal void @test_transpose_f32_2x3() {
 
 ; Test Transpose 1x4 float (Result is 4x1 float), should be a copy (vector of 4 floats)
 ; CHECK-LABEL: ; -- Begin function test_transpose_f32_1x4_to_4x1
-; CHECK: %[[Shuffle:[0-9]+]] = OpVectorShuffle %[[V4F32_ID]] {{.*}} 0 1 2 3
+; CHECK-COUNT-4: OpCompositeInsert %[[V4F32_ID]]
+; CHECK-NOT: OpVectorShuffle
+; CHECK-COUNT-4: OpCompositeExtract %[[Float_ID]]
 define internal void @test_transpose_f32_1x4_to_4x1() {
  %1 = load <4 x float>, ptr addrspace(10) @private_v4f32
  %2 = call <4 x float> @llvm.matrix.transpose.v4f32.i32(<4 x float> %1, i32 1, i32 4)
@@ -84,7 +86,9 @@ define internal void @test_transpose_f32_1x4_to_4x1() {
 
 ; Test Transpose 4x1 float (Result is 1x4 float), should be a copy (vector of 4 floats)
 ; CHECK-LABEL: ; -- Begin function test_transpose_f32_4x1_to_1x4
-; CHECK: %[[Shuffle:[0-9]+]] = OpVectorShuffle %[[V4F32_ID]] {{.*}} 0 1 2 3
+; CHECK-COUNT-4: OpCompositeInsert %[[V4F32_ID]]
+; CHECK-NOT: OpVectorShuffle
+; CHECK-COUNT-4: OpCompositeExtract %[[Float_ID]]
 define internal void @test_transpose_f32_4x1_to_1x4() {
  %1 = load <4 x float>, ptr addrspace(10) @private_v4f32
  %2 = call <4 x float> @llvm.matrix.transpose.v4f32.i32(<4 x float> %1, i32 4, i32 1)

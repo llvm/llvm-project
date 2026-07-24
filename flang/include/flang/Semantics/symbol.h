@@ -14,6 +14,7 @@
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Semantics/module-dependences.h"
+#include "flang/Semantics/omp-declare-variant.h"
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -32,7 +33,7 @@ class raw_ostream;
 namespace Fortran::parser {
 struct Expr;
 struct OpenMPDeclarativeConstruct;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
@@ -66,6 +67,32 @@ public:
     ompAtomicDefaultMemOrder_ = flags;
   }
 
+  const OmpClauseSet &ompDeclTarget() const { return ompDeclTarget_; }
+  void set_ompDeclTarget(OmpClauseSet clauses) { ompDeclTarget_ = clauses; }
+
+  const std::optional<common::OmpDeviceType> &ompDeclTargetDeviceType() const {
+    return ompDeclTargetDeviceType_;
+  }
+  void set_ompDeclTarget(common::OmpDeviceType device) {
+    ompDeclTargetDeviceType_ = device;
+  }
+
+  const OmpClauseSet &ompGroupprivate() const { return ompGroupprivate_; }
+  void set_ompGroupprivate(OmpClauseSet clauses) { ompGroupprivate_ = clauses; }
+
+  const std::optional<common::OmpDeviceType> &
+  ompGroupprivateDeviceType() const {
+    return ompGroupprivateDeviceType_;
+  }
+  void set_ompGroupprivate(common::OmpDeviceType device) {
+    ompGroupprivateDeviceType_ = device;
+  }
+
+  // \p dir indicates to which declarative directive the given clauses
+  // belong to.
+  void printClauseSet(llvm::raw_ostream &os, const OmpClauseSet &clauses,
+      llvm::omp::Directive dir,
+      parser::CharBlock name = parser::CharBlock{}) const;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const WithOmpDeclarative &);
 
@@ -81,6 +108,17 @@ private:
   // The argument to ATOMIC_DEFAULT_MEM_ORDER. Only needed when the ADMO
   // clause is present in the ompRequires_ set.
   std::optional<common::OmpMemoryOrderType> ompAtomicDefaultMemOrder_;
+  // The set of clauses on DECLARE_TARGET directive that apply to this
+  // symbol.
+  OmpClauseSet ompDeclTarget_;
+  // The argument to DEVICE_TYPE clause. Only needed when the clause is
+  // present in the ompDeclTarget_ set.
+  std::optional<common::OmpDeviceType> ompDeclTargetDeviceType_;
+  // The set of clauses on a GROUPPRIVATE directive declaring this symbol.
+  OmpClauseSet ompGroupprivate_;
+  // The argument to a DEVICE_TYPE clause on a GROUPPRIVATE directive declaring
+  // this symbol. Only needed when the clause is present in ompGroupprivate_.
+  std::optional<common::OmpDeviceType> ompGroupprivateDeviceType_;
 };
 
 // A module or submodule.
@@ -270,6 +308,13 @@ public:
     openACCRoutineInfos_.push_back(info);
   }
 
+  const std::vector<OmpDeclareVariantEntry> &ompDeclareVariants() const {
+    return ompDeclareVariants_;
+  }
+  void addOmpDeclareVariant(OmpDeclareVariantEntry &&entry) {
+    ompDeclareVariants_.push_back(std::move(entry));
+  }
+
 private:
   bool isInterface_{false}; // true if this represents an interface-body
   bool isDummy_{false}; // true when interface of dummy procedure
@@ -288,6 +333,7 @@ private:
   std::vector<std::int64_t> cudaLaunchBounds_, cudaClusterDims_;
   // OpenACC routine information
   std::vector<OpenACCRoutineInfo> openACCRoutineInfos_;
+  std::vector<OmpDeclareVariantEntry> ompDeclareVariants_;
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const SubprogramDetails &);
@@ -379,7 +425,7 @@ private:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const AssocEntityDetails &);
 
 // An entity known to be an object.
-class ObjectEntityDetails : public EntityDetails {
+class ObjectEntityDetails : public EntityDetails, public WithOmpDeclarative {
 public:
   explicit ObjectEntityDetails(EntityDetails &&);
   ObjectEntityDetails(const ObjectEntityDetails &) = default;
@@ -450,7 +496,9 @@ private:
 // A procedure pointer (other than one defined with POINTER and an
 // INTERFACE block), a dummy procedure (without an INTERFACE but with
 // EXTERNAL or use in a procedure reference), or external procedure.
-class ProcEntityDetails : public EntityDetails, public WithPassArg {
+class ProcEntityDetails : public EntityDetails,
+                          public WithPassArg,
+                          public WithOmpDeclarative {
 public:
   ProcEntityDetails() = default;
   explicit ProcEntityDetails(EntityDetails &&);
@@ -506,6 +554,13 @@ public:
   const SymbolVector &paramDeclOrder() const { return paramDeclOrder_; }
   bool sequence() const { return sequence_; }
   bool isDECStructure() const { return isDECStructure_; }
+  bool isEnumerationType() const { return isEnumerationType_; }
+  void set_isEnumerationType(bool x = true) { isEnumerationType_ = x; }
+  // Name of the hidden component created for an enumeration type to hold
+  // the 1-based enumerator ordinal.
+  static constexpr char ordinalComponentName[]{"__ordinal"};
+  int enumeratorCount() const { return enumeratorCount_; }
+  void set_enumeratorCount(int n) { enumeratorCount_ = n; }
   std::map<SourceName, SymbolRef> &finals() { return finals_; }
   const std::map<SourceName, SymbolRef> &finals() const { return finals_; }
   bool isForwardReferenced() const { return isForwardReferenced_; }
@@ -557,6 +612,10 @@ private:
   bool isForwardReferenced_{false};
   std::map<SourceName, const parser::Expr *> originalKindParameterMap_;
 
+  // These fields are only used if the derived type is an enumeration type.
+  bool isEnumerationType_{false};
+  int enumeratorCount_{0};
+
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const DerivedTypeDetails &);
 };
@@ -587,7 +646,7 @@ private:
   SymbolVector objects_;
 };
 
-class CommonBlockDetails : public WithBindName {
+class CommonBlockDetails : public WithBindName, public WithOmpDeclarative {
 public:
   explicit CommonBlockDetails(SourceName location)
       : sourceLocation_{location} {}
@@ -861,6 +920,8 @@ public:
       AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
       // OpenACC declare
       AccDeclare,
+      // OpenACC declare on allocatable/pointer needs cross-TU action recipes
+      AccDeclareAction,
       // OpenACC data-movement attribute
       AccDevice, AccHost, AccSelf,
       // OpenACC miscellaneous flags
@@ -876,8 +937,8 @@ public:
       // OpenMP special variables
       OmpInVar, OmpOrigVar, OmpOutVar, OmpPrivVar,
       // OpenMP miscellaneous flags
-      OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned, OmpNontemporal,
-      OmpAllocate, OmpDeclarativeAllocateDirective,
+      OmpReserved, OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned,
+      OmpNontemporal, OmpAllocate, OmpDeclarativeAllocateDirective,
       OmpExecutableAllocateDirective, OmpDeclareSimd, OmpDeclareTarget,
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
       OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
@@ -1191,6 +1252,12 @@ inline const DeclTypeSpec *Symbol::GetTypeImpl(int depth) const {
 
 inline const DeclTypeSpec *Symbol::GetType() const { return GetTypeImpl(); }
 
+// Defined here, where Symbol is a complete type, so that it can be inlined
+// into FortranEvaluate without that library needing to link FortranSemantics.
+inline const Scope *DerivedTypeSpec::GetScope() const {
+  return scope_ ? scope_ : typeSymbol_.scope();
+}
+
 // Sets and maps keyed by Symbols
 
 struct SymbolAddressCompare {
@@ -1236,11 +1303,6 @@ SourceOrderedSymbolSet OrderBySourcePosition(const A &container) {
 // Define required  info so that SymbolRef can be used inside llvm::DenseMap.
 namespace llvm {
 template <> struct DenseMapInfo<Fortran::semantics::SymbolRef> {
-  static inline Fortran::semantics::SymbolRef getEmptyKey() {
-    auto ptr = DenseMapInfo<const Fortran::semantics::Symbol *>::getEmptyKey();
-    return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
-  }
-
   static unsigned getHashValue(const Fortran::semantics::SymbolRef &sym) {
     return DenseMapInfo<const Fortran::semantics::Symbol *>::getHashValue(
         &sym.get());

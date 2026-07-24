@@ -1156,10 +1156,6 @@ private:
 } // namespace clang
 
 template <> struct llvm::DenseMapInfo<clang::ModuleFileKey> {
-  static clang::ModuleFileKey getEmptyKey() {
-    return DenseMapInfo<const void *>::getEmptyKey();
-  }
-
   static unsigned getHashValue(const clang::ModuleFileKey &Val) {
     return hash_combine(Val.Ptr, Val.ImplicitModulePathSuffix);
   }

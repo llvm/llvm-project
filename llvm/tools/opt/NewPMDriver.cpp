@@ -41,6 +41,7 @@
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 
@@ -426,8 +427,6 @@ bool llvm::runPassPipeline(
                                     Options.FloatABIType, Options.EABIVersion,
                                     Options.MCOptions.ABIName, Options.VecLib);
     });
-
-    MAM.registerPass([&] { return LibcallLoweringModuleAnalysis(); });
   }
 
   PassInstrumentationCallbacks PIC;
@@ -527,14 +526,21 @@ bool llvm::runPassPipeline(
   case OK_NoOutput:
     break; // No output pass needed.
   case OK_OutputAssembly:
+    if (EmitSummaryIndex) {
+      MPM.addPass(AssignGUIDPass());
+    }
     MPM.addPass(PrintModulePass(
         Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex));
     break;
   case OK_OutputBitcode:
+    if (EmitSummaryIndex) {
+      MPM.addPass(AssignGUIDPass());
+    }
     MPM.addPass(BitcodeWriterPass(Out->os(), ShouldPreserveBitcodeUseListOrder,
                                   EmitSummaryIndex, EmitModuleHash));
     break;
   case OK_OutputThinLTOBitcode:
+    MPM.addPass(AssignGUIDPass());
     MPM.addPass(ThinLTOBitcodeWriterPass(
         Out->os(), ThinLTOLinkOut ? &ThinLTOLinkOut->os() : nullptr,
         ShouldPreserveBitcodeUseListOrder));
@@ -553,7 +559,7 @@ bool llvm::runPassPipeline(
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    outs() << Pipeline;
+    printFormattedPipelinePasses(outs(), Pipeline, *PrintPipelinePasses);
     outs() << "\n";
 
     if (!DisablePipelineVerification) {

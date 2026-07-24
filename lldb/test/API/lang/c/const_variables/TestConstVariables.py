@@ -36,7 +36,6 @@ class ConstVariableTestCase(TestBase):
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         self.runCmd("next")
-        self.runCmd("next")
 
         # Try frame variable.
         self.expect(

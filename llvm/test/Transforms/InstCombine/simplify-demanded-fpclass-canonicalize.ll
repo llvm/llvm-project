@@ -561,7 +561,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_zero__dynamic(
 define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_zero__dapz(i1 %cond, float nofpclass(sub norm inf) %must.be.zero.or.nan) #2 {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_zero__dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(inf sub norm) [[MUST_BE_ZERO_OR_NAN:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float [[MUST_BE_ZERO_OR_NAN]]
 ;
   %canon = call float @llvm.canonicalize.f32(float %must.be.zero.or.nan)
   ret float %canon

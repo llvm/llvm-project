@@ -74,7 +74,6 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
   return llvm::TypeSwitch<Operation *, FailureOr<int>>(operation)
       .Case([&](emitc::AddressOfOp op) { return 15; })
       .Case([&](emitc::AddOp op) { return 12; })
-      .Case([&](emitc::ApplyOp op) { return 15; })
       .Case([&](emitc::BitwiseAndOp op) { return 7; })
       .Case([&](emitc::BitwiseLeftShiftOp op) { return 11; })
       .Case([&](emitc::BitwiseNotOp op) { return 15; })
@@ -104,6 +103,7 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case([&](emitc::DereferenceOp op) { return 15; })
       .Case([&](emitc::DivOp op) { return 13; })
       .Case([&](emitc::GetGlobalOp op) { return 18; })
+      .Case([&](emitc::GetFieldOp op) { return 18; })
       .Case([&](emitc::LiteralOp op) { return 18; })
       .Case([&](emitc::LoadOp op) { return 16; })
       .Case([&](emitc::LogicalAndOp op) { return 4; })
@@ -112,6 +112,10 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case([&](emitc::MemberOfPtrOp op) { return 17; })
       .Case([&](emitc::MemberOp op) { return 17; })
       .Case([&](emitc::MulOp op) { return 13; })
+      .Case([&](emitc::PostDecrementOp op) { return 16; })
+      .Case([&](emitc::PostIncrementOp op) { return 16; })
+      .Case([&](emitc::PreDecrementOp op) { return 15; })
+      .Case([&](emitc::PreIncrementOp op) { return 15; })
       .Case([&](emitc::RemOp op) { return 13; })
       .Case([&](emitc::SubOp op) { return 12; })
       .Case([&](emitc::SubscriptOp op) { return 17; })
@@ -477,9 +481,13 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::MemberOp memberOp) {
-  if (!emitter.isPartOfCurrentExpression(memberOp.getOperation()))
-    return success();
-
+  if (memberOp.alwaysInline()) {
+    if (!emitter.isPartOfCurrentExpression(memberOp.getOperation()))
+      return success();
+  } else {
+    if (failed(emitter.emitAssignPrefix(*memberOp.getOperation())))
+      return failure();
+  }
   if (failed(emitter.emitOperand(memberOp.getOperand())))
     return failure();
   emitter.ostream() << "." << memberOp.getMember();
@@ -600,6 +608,42 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return emitter.emitOperand(assignOp.getValue());
 }
 
+static LogicalResult
+printCompoundAssignmentOperation(CppEmitter &emitter, Operation *operation,
+                                 StringRef compoundAssignmentOperator) {
+  if (failed(emitter.emitOperand(operation->getOperand(0))))
+    return failure();
+
+  emitter.ostream() << " " << compoundAssignmentOperator << " ";
+
+  return emitter.emitOperand(operation->getOperand(1));
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::AddAssignOp addAssignOp) {
+  return printCompoundAssignmentOperation(emitter, addAssignOp, "+=");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::SubAssignOp subAssignOp) {
+  return printCompoundAssignmentOperation(emitter, subAssignOp, "-=");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::MulAssignOp mulAssignOp) {
+  return printCompoundAssignmentOperation(emitter, mulAssignOp, "*=");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::DivAssignOp divAssignOp) {
+  return printCompoundAssignmentOperation(emitter, divAssignOp, "/=");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::RemAssignOp remAssignOp) {
+  return printCompoundAssignmentOperation(emitter, remAssignOp, "%=");
+}
+
 static LogicalResult printOperation(CppEmitter &emitter, emitc::LoadOp loadOp) {
   if (failed(emitter.emitAssignPrefix(*loadOp)))
     return failure();
@@ -638,6 +682,22 @@ static LogicalResult printUnaryOperation(CppEmitter &emitter,
 
   if (failed(emitter.emitOperand(operation->getOperand(0))))
     return failure();
+
+  return success();
+}
+
+static LogicalResult printPostfixUnaryOperation(CppEmitter &emitter,
+                                                Operation *operation,
+                                                StringRef unaryOperator) {
+  raw_ostream &os = emitter.ostream();
+
+  if (failed(emitter.emitAssignPrefix(*operation)))
+    return failure();
+
+  if (failed(emitter.emitOperand(operation->getOperand(0))))
+    return failure();
+
+  os << unaryOperator;
 
   return success();
 }
@@ -997,25 +1057,6 @@ printOperation(CppEmitter &emitter,
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
-                                    emitc::ApplyOp applyOp) {
-  raw_ostream &os = emitter.ostream();
-  Operation &op = *applyOp.getOperation();
-
-  if (failed(emitter.emitAssignPrefix(op)))
-    return failure();
-
-  StringRef applicableOperator = applyOp.getApplicableOperator();
-  Value operand = applyOp.getOperand();
-
-  // Check if we're taking address of a const global.
-  if (applicableOperator == "&" && getConstGlobal(operand, &op))
-    return emitAddressOfWithConstCast(emitter, op, operand);
-
-  os << applicableOperator;
-  return emitter.emitOperand(operand);
-}
-
-static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::BitwiseAndOp bitwiseAndOp) {
   Operation *operation = bitwiseAndOp.getOperation();
   return printBinaryOperation(emitter, operation, "&");
@@ -1051,6 +1092,30 @@ static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::BitwiseXorOp bitwiseXorOp) {
   Operation *operation = bitwiseXorOp.getOperation();
   return printBinaryOperation(emitter, operation, "^");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::PreIncrementOp preIncrementOp) {
+  Operation *operation = preIncrementOp.getOperation();
+  return printUnaryOperation(emitter, operation, "++");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::PostIncrementOp postIncrementOp) {
+  Operation *operation = postIncrementOp.getOperation();
+  return printPostfixUnaryOperation(emitter, operation, "++");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::PreDecrementOp preDecrementOp) {
+  Operation *operation = preDecrementOp.getOperation();
+  return printUnaryOperation(emitter, operation, "--");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::PostDecrementOp postDecrementOp) {
+  Operation *operation = postDecrementOp.getOperation();
+  return printPostfixUnaryOperation(emitter, operation, "--");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -1898,23 +1963,26 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddressOfOp, emitc::AddOp, emitc::ApplyOp,
+          .Case<emitc::AddAssignOp, emitc::AddressOfOp, emitc::AddOp,
                 emitc::AssignOp, emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
                 emitc::BitwiseNotOp, emitc::BitwiseOrOp,
                 emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
-                emitc::DeclareFuncOp, emitc::DereferenceOp, emitc::DivOp,
-                emitc::DoOp, emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
-                emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp,
+                emitc::DeclareFuncOp, emitc::DereferenceOp, emitc::DivAssignOp,
+                emitc::DivOp, emitc::DoOp, emitc::ExpressionOp, emitc::FieldOp,
+                emitc::FileOp, emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp,
                 emitc::GetGlobalOp, emitc::GlobalOp, emitc::IfOp,
                 emitc::IncludeOp, emitc::LiteralOp, emitc::LoadOp,
                 emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
                 emitc::MemberCallOpaqueOp, emitc::MemberOfPtrOp,
-                emitc::MemberOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
-                emitc::SubscriptOp, emitc::SubOp, emitc::SwitchOp,
-                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+                emitc::MemberOp, emitc::MulAssignOp, emitc::MulOp,
+                emitc::PostDecrementOp, emitc::PostIncrementOp,
+                emitc::PreDecrementOp, emitc::PreIncrementOp,
+                emitc::RemAssignOp, emitc::RemOp, emitc::ReturnOp,
+                emitc::SubAssignOp, emitc::SubscriptOp, emitc::SubOp,
+                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
+                emitc::VariableOp, emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.

@@ -38,11 +38,11 @@ def int_dx_resource_handlefromimplicitbinding
 
 def int_dx_resource_getpointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_any_ty],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrConvergent, IntrNoMem]>;
 
 def int_dx_resource_getbasepointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrConvergent, IntrNoMem]>;
 
 def int_dx_resource_nonuniformindex
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
@@ -62,6 +62,17 @@ def int_dx_resource_store_rawbuffer
           [], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_any_ty],
           [IntrWriteMem]>;
 
+// Atomic read-modify-write on a UAV resource element. Emitted by
+// DXILResourceAccess from an `atomicrmw` on a `dx.resource.getpointer` result,
+// and lowered by DXILOpLowering to the DXIL `AtomicBinOp` op (78).
+// Args: handle, AtomicBinOpCode, coord0 (index), coord1 (offset or poison),
+//       new value. Returns the original value.
+def int_dx_resource_atomic_binop
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+           LLVMMatchType<0>],
+          [IntrArgMemOnly]>;
 // dx.resource.load.cbufferrow encodes the number of elements returned in the
 // function name. The total size of the return should always be 128 bits.
 def int_dx_resource_load_cbufferrow_8
@@ -275,10 +286,15 @@ def int_dx_wave_prefix_product : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatch
 def int_dx_wave_prefix_uproduct : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_quad_read_across_x : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_quad_read_across_y : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
+def int_dx_quad_read_across_diagonal : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_sign : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_any_ty], [IntrNoMem]>;
 def int_dx_step : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_splitdouble : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
     [LLVMScalarOrSameVectorWidth<0, llvm_double_ty>], [IntrNoMem, IntrTriviallyScalarizable]>;
+def int_dx_imul : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
+    [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
+def int_dx_umul : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
+    [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_radians : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_discard : DefaultAttrsIntrinsic<[], [llvm_i1_ty], []>;
 def int_dx_ddx_coarse : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;

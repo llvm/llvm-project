@@ -127,10 +127,6 @@ hash_code hash_value(const ComplexValue &Arg) {
 typedef SmallVector<struct ComplexValue, 2> ComplexValues;
 
 template <> struct llvm::DenseMapInfo<ComplexValue> {
-  static inline ComplexValue getEmptyKey() {
-    return {DenseMapInfo<Value *>::getEmptyKey(),
-            DenseMapInfo<Value *>::getEmptyKey()};
-  }
   static unsigned getHashValue(const ComplexValue &Val) {
     return hash_combine(DenseMapInfo<Value *>::getHashValue(Val.Real),
                         DenseMapInfo<Value *>::getHashValue(Val.Imag));
@@ -1249,11 +1245,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
   auto Collect = [&Flags](Instruction *Insn, SmallVectorImpl<Product> &Muls,
                           AddendList &Addends) -> bool {
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
-    SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
       auto [V, IsPositive] = Worklist.pop_back_val();
-      if (!Visited.insert(V).second)
-        continue;
 
       Instruction *I = dyn_cast<Instruction>(V);
       if (!I) {

@@ -424,9 +424,6 @@ template <typename... PTs> struct PointerLikeTypeTraits<PointerUnion<PTs...>> {
 // Teach DenseMap how to use PointerUnions as keys.
 template <typename... PTs> struct DenseMapInfo<PointerUnion<PTs...>> {
   using Union = PointerUnion<PTs...>;
-  using FirstInfo = DenseMapInfo<TypeAtIndex<0, PTs...>>;
-
-  static inline Union getEmptyKey() { return Union(FirstInfo::getEmptyKey()); }
 
   static unsigned getHashValue(const Union &UnionVal) {
     auto Key = reinterpret_cast<uintptr_t>(UnionVal.getOpaqueValue());

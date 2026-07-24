@@ -86,6 +86,18 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
     // This also handles the case of zext(trunc(x)) -> zext(x).
     Res = CastInst::CreateIntegerCast(I->getOperand(0), Ty,
                                       Opc == Instruction::SExt);
+    if (auto *Trunc = dyn_cast<TruncInst>(I)) {
+      if (auto *NewTrunc = dyn_cast<TruncInst>(Res)) {
+        if (Trunc->getType()->getScalarSizeInBits() <=
+            Ty->getScalarSizeInBits()) {
+          NewTrunc->setHasNoSignedWrap(Trunc->hasNoSignedWrap());
+          NewTrunc->setHasNoUnsignedWrap(Trunc->hasNoUnsignedWrap());
+        }
+      } else if (auto *NewZExt = dyn_cast<ZExtInst>(Res)) {
+        if (Trunc->hasNoUnsignedWrap())
+          NewZExt->setNonNeg();
+      }
+    }
     break;
   case Instruction::Select: {
     Value *True = EvaluateInDifferentTypeImpl(I->getOperand(1), Ty, isSigned,
@@ -269,7 +281,7 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
   // cast (shuffle X, Mask) --> shuffle (cast X), Mask
   Value *X;
   ArrayRef<int> Mask;
-  if (match(Src, m_OneUse(m_Shuffle(m_Value(X), m_Undef(), m_Mask(Mask))))) {
+  if (match(Src, m_OneUse(m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))) {
     // TODO: Allow scalable vectors?
     auto *SrcTy = dyn_cast<FixedVectorType>(X->getType());
     auto *DestTy = dyn_cast<FixedVectorType>(Ty);
@@ -412,8 +424,18 @@ private:
     // done and and ready to have a positive verdict, we should double-check all
     // of the pending users and ensure that we visited them. allPendingVisited
     // predicate checks exactly that.
-    if (!I->hasOneUse())
-      llvm::append_range(Pending, I->users());
+    if (!I->hasOneUse()) {
+      for (Use &U : I->uses()) {
+        // For most instructions, evaluating them in a different type will
+        // change the type of all operands. This is not the case for select
+        // conditions. Make sure we don't retain an extra use via the select
+        // condition.
+        if (isa<SelectInst>(U.getUser()) && U.getOperandNo() == 0)
+          return false;
+
+        Pending.push_back(U.getUser());
+      }
+    }
 
     const bool Result = Pred(V, Ty);
     // We have to set result this way and not via It because Pred is recursive
@@ -456,8 +478,8 @@ bool TypeEvaluationHelper::canAlwaysEvaluateInType(Value *V, Type *Ty) {
     return match(V, m_ImmConstant());
 
   Value *X;
-  if ((match(V, m_ZExtOrSExt(m_Value(X))) || match(V, m_Trunc(m_Value(X)))) &&
-      X->getType() == Ty)
+  if (match(V, m_ZExtOrSExt(m_SpecificType(Ty, X))) ||
+      match(V, m_Trunc(m_SpecificType(Ty, X))))
     return true;
 
   return false;
@@ -925,12 +947,12 @@ Instruction *InstCombinerImpl::narrowBinOp(TruncInst &Trunc) {
       return BinaryOperator::Create(BinOp->getOpcode(), TruncX, NarrowC);
     }
     Value *X;
-    if (match(BinOp0, m_ZExtOrSExt(m_Value(X))) && X->getType() == DestTy) {
+    if (match(BinOp0, m_ZExtOrSExt(m_SpecificType(DestTy, X)))) {
       // trunc (binop (ext X), Y) --> binop X, (trunc Y)
       Value *NarrowOp1 = Builder.CreateTrunc(BinOp1, DestTy);
       return BinaryOperator::Create(BinOp->getOpcode(), X, NarrowOp1);
     }
-    if (match(BinOp1, m_ZExtOrSExt(m_Value(X))) && X->getType() == DestTy) {
+    if (match(BinOp1, m_ZExtOrSExt(m_SpecificType(DestTy, X)))) {
       // trunc (binop Y, (ext X)) --> binop (trunc Y), X
       Value *NarrowOp0 = Builder.CreateTrunc(BinOp0, DestTy);
       return BinaryOperator::Create(BinOp->getOpcode(), NarrowOp0, X);
@@ -977,25 +999,26 @@ Instruction *InstCombinerImpl::narrowBinOp(TruncInst &Trunc) {
 /// creating a shuffle type that targets may not be able to lower effectively.
 static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
                                        InstCombiner::BuilderTy &Builder) {
-  auto *Shuf = dyn_cast<ShuffleVectorInst>(Trunc.getOperand(0));
-  if (Shuf && Shuf->hasOneUse() && match(Shuf->getOperand(1), m_Undef()) &&
-      all_equal(Shuf->getShuffleMask()) &&
-      ElementCount::isKnownGE(Shuf->getType()->getElementCount(),
-                              cast<VectorType>(Shuf->getOperand(0)->getType())
-                                  ->getElementCount())) {
-    // trunc (shuf X, Undef, SplatMask) --> shuf (trunc X), Poison, SplatMask
-    // trunc (shuf X, Poison, SplatMask) --> shuf (trunc X), Poison, SplatMask
-    Type *NewTruncTy = Shuf->getOperand(0)->getType()->getWithNewType(
-        Trunc.getType()->getScalarType());
-    Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), NewTruncTy);
-    return new ShuffleVectorInst(NarrowOp, Shuf->getShuffleMask());
+  Value *Shuf = Trunc.getOperand(0), *ShufVec;
+  ArrayRef<int> SplatMask;
+  if (match(Shuf, m_OneUse(m_Shuffle(m_Value(ShufVec), m_Poison(),
+                                     m_Mask(SplatMask)))) &&
+      match(SplatMask, m_SplatMask()) &&
+      ElementCount::isKnownGE(
+          cast<VectorType>(Shuf->getType())->getElementCount(),
+          cast<VectorType>(ShufVec->getType())->getElementCount())) {
+    // trunc (shuf X, poison, SplatMask) --> shuf (trunc X), poison, SplatMask
+    Type *NewTruncTy =
+        ShufVec->getType()->getWithNewType(Trunc.getType()->getScalarType());
+    Value *NarrowOp = Builder.CreateTrunc(ShufVec, NewTruncTy);
+    return new ShuffleVectorInst(NarrowOp, SplatMask);
   }
 
   return nullptr;
 }
 
 /// Try to narrow the width of an insert element. This could be generalized for
-/// any vector constant, but we limit the transform to insertion into undef to
+/// any vector constant, but we limit the transform to insertion into poison to
 /// avoid potential backend problems from unsupported insertion widths. This
 /// could also be extended to handle the case of inserting a scalar constant
 /// into a vector variable.
@@ -1005,22 +1028,15 @@ static Instruction *shrinkInsertElt(CastInst &Trunc,
   assert((Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) &&
          "Unexpected instruction for shrinking");
 
-  auto *InsElt = dyn_cast<InsertElementInst>(Trunc.getOperand(0));
-  if (!InsElt || !InsElt->hasOneUse())
-    return nullptr;
-
-  Type *DestTy = Trunc.getType();
-  Type *DestScalarTy = DestTy->getScalarType();
-  Value *VecOp = InsElt->getOperand(0);
-  Value *ScalarOp = InsElt->getOperand(1);
-  Value *Index = InsElt->getOperand(2);
-
-  if (match(VecOp, m_Undef())) {
-    // trunc   (inselt undef, X, Index) --> inselt undef,   (trunc X), Index
-    // fptrunc (inselt undef, X, Index) --> inselt undef, (fptrunc X), Index
-    UndefValue *NarrowUndef = UndefValue::get(DestTy);
-    Value *NarrowOp = Builder.CreateCast(Opcode, ScalarOp, DestScalarTy);
-    return InsertElementInst::Create(NarrowUndef, NarrowOp, Index);
+  Value *Elt, *Index;
+  if (match(Trunc.getOperand(0),
+            m_OneUse(m_InsertElt(m_Poison(), m_Value(Elt), m_Value(Index))))) {
+    // trunc   (inselt poison, X, Index) --> inselt poison,   (trunc X), Index
+    // fptrunc (inselt poison, X, Index) --> inselt poison, (fptrunc X), Index
+    auto *NarrowPoison = PoisonValue::get(Trunc.getType());
+    Value *NarrowOp =
+        Builder.CreateCast(Opcode, Elt, Trunc.getType()->getScalarType());
+    return InsertElementInst::Create(NarrowPoison, NarrowOp, Index);
   }
 
   return nullptr;
@@ -1072,6 +1088,11 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       }
     }
   }
+  Value *X;
+  if (DestWidth == 1 &&
+      (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) &&
+      match(Src, m_Exact(m_Shr(m_Value(X), m_Value()))))
+    return new ICmpInst(ICmpInst::ICMP_NE, X, Constant::getNullValue(SrcTy));
 
   // See if we can simplify any instructions used by the input whose sole
   // purpose is to compute bits we don't care about.
@@ -1081,7 +1102,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   if (DestWidth == 1) {
     Value *Zero = Constant::getNullValue(SrcTy);
 
-    Value *X;
     const APInt *C1;
     Constant *C2;
     if (match(Src, m_OneUse(m_Shr(m_Shl(m_Power2(C1), m_Value(X)),
@@ -1139,22 +1159,22 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   Constant *C;
 
   // trunc(u/smin(zext(a) + zext(b), MAX)) --> uadd.sat(a, b)
-  if (match(Src,
-            m_OneUse(m_CombineOr(
-                m_UMin(m_OneUse(m_Add(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
-                       m_SpecificInt(APInt::getMaxValue(DestWidth))),
-                m_SMin(m_OneUse(m_Add(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
-                       m_SpecificInt(APInt::getMaxValue(DestWidth)))))) &&
-      A->getType() == DestTy && B->getType() == DestTy) {
+  if (match(Src, m_OneUse(m_CombineOr(
+                     m_UMin(m_OneUse(m_Add(m_ZExt(m_SpecificType(DestTy, A)),
+                                           m_ZExt(m_SpecificType(DestTy, B)))),
+                            m_SpecificInt(APInt::getMaxValue(DestWidth))),
+                     m_SMin(m_OneUse(m_Add(m_ZExt(m_SpecificType(DestTy, A)),
+                                           m_ZExt(m_SpecificType(DestTy, B)))),
+                            m_SpecificInt(APInt::getMaxValue(DestWidth))))))) {
     return replaceInstUsesWith(
         Trunc, Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, A, B));
   }
 
   // trunc(smax(zext(a) - zext(b), 0)) --> usub.sat(a, b)
-  if (match(Src, m_OneUse(m_SMax(
-                     m_OneUse(m_Sub(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
-                     m_Zero()))) &&
-      A->getType() == DestTy && B->getType() == DestTy) {
+  if (match(Src,
+            m_OneUse(m_SMax(m_OneUse(m_Sub(m_ZExt(m_SpecificType(DestTy, A)),
+                                           m_ZExt(m_SpecificType(DestTy, B)))),
+                            m_Zero())))) {
     return replaceInstUsesWith(
         Trunc, Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, B));
   }
@@ -1272,6 +1292,16 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
           return replaceInstUsesWith(Trunc, Builder.CreateVScale(DestTy));
     }
   }
+
+  // trunc(scmp(x, y)) -> scmp(x, y) with a narrower result type.
+  // trunc(ucmp(x, y)) -> ucmp(x, y) with a narrower result type.
+  // scmp/ucmp produce only -1, 0, or 1, so any result type with at least 2
+  // bits can represent every possible value and the truncation is lossless.
+  if (DestWidth >= 2)
+    if (auto *CI = dyn_cast<CmpIntrinsic>(Src); CI && CI->hasOneUse())
+      return replaceInstUsesWith(
+          Trunc, Builder.CreateIntrinsic(DestTy, CI->getIntrinsicID(),
+                                         {CI->getLHS(), CI->getRHS()}));
 
   if (DestWidth == 1 &&
       (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) &&
@@ -1649,20 +1679,23 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (auto *Cmp = dyn_cast<ICmpInst>(Src))
     return transformZExtICmp(Cmp, Zext);
 
-  // zext(trunc(X) & C) -> (X & zext(C)).
   Constant *C;
   Value *X;
-  if (match(Src, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Constant(C)))) &&
-      X->getType() == DestTy)
-    return BinaryOperator::CreateAnd(X, Builder.CreateZExt(C, DestTy));
-
   // zext((trunc(X) & C) ^ C) -> ((X & zext(C)) ^ zext(C)).
   Value *And;
   if (match(Src, m_OneUse(m_Xor(m_Value(And), m_Constant(C)))) &&
-      match(And, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Specific(C)))) &&
-      X->getType() == DestTy) {
+      match(And, m_OneUse(m_And(m_Trunc(m_SpecificType(DestTy, X)),
+                                m_Specific(C))))) {
     Value *ZC = Builder.CreateZExt(C, DestTy);
     return BinaryOperator::CreateXor(Builder.CreateAnd(X, ZC), ZC);
+  }
+
+  // zext(sub(0, trunc(X))) -> and(sub(0, X), mask)
+  if (match(Src, m_Sub(m_Zero(), m_Trunc(m_SpecificType(DestTy, X))))) {
+    APInt Mask = APInt::getLowBitsSet(DestTy->getScalarSizeInBits(),
+                                      SrcTy->getScalarSizeInBits());
+    Value *Neg = Builder.CreateSub(ConstantInt::get(DestTy, 0), X);
+    return BinaryOperator::CreateAnd(Neg, ConstantInt::get(DestTy, Mask));
   }
 
   // If we are truncating, masking, and then zexting back to the original type,
@@ -1670,10 +1703,17 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   // intermediate values have extra uses. This could be generalized further for
   // a non-constant mask operand.
   // zext (and (trunc X), C) --> and X, (zext C)
-  if (match(Src, m_And(m_Trunc(m_Value(X)), m_Constant(C))) &&
-      X->getType() == DestTy) {
+  if (match(Src, m_And(m_Trunc(m_SpecificType(DestTy, X)), m_Constant(C)))) {
     Value *ZextC = Builder.CreateZExt(C, DestTy);
     return BinaryOperator::CreateAnd(X, ZextC);
+  }
+
+  Value *Y;
+  if (match(Src, m_OneUse(m_c_BitwiseLogic(
+                     m_NUWTrunc(m_SpecificType(DestTy, X)), m_Value(Y))))) {
+    Value *ZextY = Builder.CreateZExt(Y, DestTy);
+    return BinaryOperator::Create(cast<BinaryOperator>(Src)->getOpcode(), X,
+                                  ZextY);
   }
 
   if (match(Src, m_VScale())) {
@@ -1952,9 +1992,10 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   Value *A = nullptr;
   // TODO: Eventually this could be subsumed by EvaluateInDifferentType.
   Constant *BA = nullptr, *CA = nullptr;
-  if (match(Src, m_AShr(m_Shl(m_Trunc(m_Value(A)), m_Constant(BA)),
-                        m_ImmConstant(CA))) &&
-      BA->isElementWiseEqual(CA) && A->getType() == DestTy) {
+  if (match(Src,
+            m_AShr(m_Shl(m_Trunc(m_SpecificType(DestTy, A)), m_Constant(BA)),
+                   m_ImmConstant(CA))) &&
+      BA->isElementWiseEqual(CA)) {
     Constant *WideCurrShAmt =
         ConstantFoldCastOperand(Instruction::SExt, CA, DestTy, DL);
     assert(WideCurrShAmt && "Constant folding of ImmConstant cannot fail");
@@ -2002,12 +2043,17 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   // sext(ucmp(x, y)) -> ucmp(x, y) with a wider result type.
   // scmp/ucmp return only -1, 0, or 1, which sign-extend correctly to any
   // wider integer type, so we can sink the extension into the intrinsic.
-  if (auto *II = dyn_cast<IntrinsicInst>(Src)) {
-    Intrinsic::ID IID = II->getIntrinsicID();
-    if ((IID == Intrinsic::scmp || IID == Intrinsic::ucmp) && II->hasOneUse())
-      return replaceInstUsesWith(
-          Sext, Builder.CreateIntrinsic(
-                    DestTy, IID, {II->getArgOperand(0), II->getArgOperand(1)}));
+  if (auto *CI = dyn_cast<CmpIntrinsic>(Src); CI && CI->hasOneUse())
+    return replaceInstUsesWith(
+        Sext, Builder.CreateIntrinsic(DestTy, CI->getIntrinsicID(),
+                                      {CI->getLHS(), CI->getRHS()}));
+
+  Value *Y;
+  if (match(Src, m_OneUse(m_c_BitwiseLogic(
+                     m_NSWTrunc(m_SpecificType(DestTy, X)), m_Value(Y))))) {
+    Value *SextY = Builder.CreateSExt(Y, DestTy);
+    return BinaryOperator::Create(cast<BinaryOperator>(Src)->getOpcode(), X,
+                                  SextY);
   }
 
   return nullptr;
@@ -2069,11 +2115,11 @@ static Type *shrinkFPConstantVector(Value *V, bool PreferBFloat) {
 
   // For fixed-width vectors we find the minimal type by looking
   // through the constant values of the vector.
-  for (unsigned i = 0; i != NumElts; ++i) {
-    if (isa<UndefValue>(CV->getAggregateElement(i)))
+  for (unsigned I = 0; I != NumElts; ++I) {
+    if (match(CV->getAggregateElement(I), m_Poison()))
       continue;
 
-    auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
+    auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(I));
     if (!CFP)
       return nullptr;
 
@@ -2206,6 +2252,13 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     unsigned RHSWidth = RHSMinType->getFPMantissaWidth();
     unsigned SrcWidth = std::max(LHSWidth, RHSWidth);
     unsigned DstWidth = Ty->getFPMantissaWidth();
+
+    // Narrowing recomputes the binop in a smaller type, which can overflow to
+    // inf where the wide op was finite. Therefore we can only keep ninf if
+    // both the binop and the fptrunc have that flag.
+    FastMathFlags NarrowFMF = BO->getFastMathFlags();
+    NarrowFMF.setNoInfs(NarrowFMF.noInfs() && FPT.hasNoInfs());
+
     switch (BO->getOpcode()) {
       default: break;
       case Instruction::FAdd:
@@ -2232,7 +2285,7 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
           Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
           Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
           Instruction *RI = BinaryOperator::Create(BO->getOpcode(), LHS, RHS);
-          RI->copyFastMathFlags(BO);
+          RI->setFastMathFlags(NarrowFMF);
           return RI;
         }
         break;
@@ -2245,7 +2298,7 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
         if (OpWidth >= LHSWidth + RHSWidth && DstWidth >= SrcWidth) {
           Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
           Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
-          return BinaryOperator::CreateFMulFMF(LHS, RHS, BO);
+          return BinaryOperator::CreateFMulFMF(LHS, RHS, NarrowFMF);
         }
         break;
       case Instruction::FDiv:
@@ -2258,7 +2311,7 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
         if (OpWidth >= 2*DstWidth && DstWidth >= SrcWidth) {
           Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
           Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
-          return BinaryOperator::CreateFDivFMF(LHS, RHS, BO);
+          return BinaryOperator::CreateFDivFMF(LHS, RHS, NarrowFMF);
         }
         break;
       case Instruction::FRem: {
@@ -2300,16 +2353,16 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     // If we are truncating a select that has an extended operand, we can
     // narrow the other operand and do the select as a narrow op.
     Value *Cond, *X, *Y;
-    if (match(Op, m_Select(m_Value(Cond), m_FPExt(m_Value(X)), m_Value(Y))) &&
-        X->getType() == Ty) {
+    if (match(Op, m_Select(m_Value(Cond), m_FPExt(m_SpecificType(Ty, X)),
+                           m_Value(Y)))) {
       // fptrunc (select Cond, (fpext X), Y --> select Cond, X, (fptrunc Y)
       Value *NarrowY = Builder.CreateFPTruncFMF(Y, Ty, FMF);
       Value *Sel =
           Builder.CreateSelectFMF(Cond, X, NarrowY, FMF, "narrow.sel", Op);
       return replaceInstUsesWith(FPT, Sel);
     }
-    if (match(Op, m_Select(m_Value(Cond), m_Value(Y), m_FPExt(m_Value(X)))) &&
-        X->getType() == Ty) {
+    if (match(Op, m_Select(m_Value(Cond), m_Value(Y),
+                           m_FPExt(m_SpecificType(Ty, X))))) {
       // fptrunc (select Cond, Y, (fpext X) --> select Cond, (fptrunc Y), X
       Value *NarrowY = Builder.CreateFPTruncFMF(Y, Ty, FMF);
       Value *Sel =
@@ -2468,7 +2521,64 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
   if (FPClass.isKnownNever(Mask))
     return IC.replaceInstUsesWith(FI, ConstantInt::getNullValue(FI.getType()));
 
-  return nullptr;
+  // fpto{u/s}i (fdiv ({u/s}itofp X to F), C_fp) --> {u/s}div X, C
+  //
+  // F has precision p (significand bits incl. hidden bit); C_fp is the exact FP
+  // value of the integer constant C. Given N = integer width, this is safe if:
+  //   Unsigned: C > 0 and N <= p.
+  //   Signed:   C != 0 and N - 1 <= p, excluding (X == INT_MIN, C == -1) since
+  //             sdiv INT_MIN, -1 is UB while the FP path only yields poison.
+  //             fdiv X, -1 gets transformed to fneg in InstCombine regardless.
+  //
+  // The bounds make {u/s}itofp and C_fp exact (every |int| <= 2^p is exact),
+  // and ensure the rounded quotient never crosses an integer boundary:
+  //   Rounding lemma: for 0 <= A <= 2^p, 1 <= B <= 2^p, q = floor(A/B),
+  //     trunc(R_p(A/B)) = q.
+  //   For r = A - qB > 0, m = q+1, half-gap H(m) <= q/2^p and
+  //   m - A/B = (B-r)/B >= 1/B > q/2^p >= H(m), so R_p(A/B) < m; q = 0 is
+  //   similar (H(1) = 2^(-p-1) < 2^-p <= 1/B).
+  //   Signed case: by symmetry R_p(-z) = -R_p(z), so fptosi yields s*q = sdiv.
+  bool IsSigned = FI.getOpcode() == Instruction::FPToSI;
+  Value *X;
+  const APFloat *APF;
+  if (IsSigned) {
+    if (!match(FI.getOperand(0),
+               m_OneUse(m_FDiv(m_SIToFP(m_Value(X)), m_APFloat(APF)))))
+      return nullptr;
+  } else {
+    if (!match(FI.getOperand(0),
+               m_OneUse(m_FDiv(m_UIToFP(m_Value(X)), m_APFloat(APF)))))
+      return nullptr;
+  }
+  Type *IntTy = X->getType();
+  if (FI.getType() != IntTy)
+    return nullptr;
+
+  unsigned IntWidth = IntTy->getScalarSizeInBits();
+  unsigned Precision = APFloat::semanticsPrecision(APF->getSemantics());
+  if (Precision + IsSigned < IntWidth)
+    return nullptr;
+
+  if (!APF->isInteger())
+    return nullptr;
+
+  APSInt Divisor(IntWidth, !IsSigned);
+  bool IsExact = false;
+  APF->convertToInteger(Divisor, APFloat::rmTowardZero, &IsExact);
+  if (!IsExact)
+    return nullptr;
+
+  if (Divisor.isZero())
+    return nullptr;
+
+  // sdiv INT_MIN, -1 is UB, not poison, so this isn't valid if X == INT_MIN.
+  // fdiv X, -1 gets transformed to fneg anyways, so we do not handle C == -1.
+  if (IsSigned && Divisor.isAllOnes())
+    return nullptr;
+
+  Constant *C = ConstantInt::get(IntTy, Divisor);
+  return IsSigned ? BinaryOperator::CreateSDiv(X, C)
+                  : BinaryOperator::CreateUDiv(X, C);
 }
 
 Instruction *InstCombinerImpl::visitFPToUI(FPToUIInst &FI) {
@@ -2610,18 +2720,16 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
   //    -> (and (ptrtoint P), M)
   // This is generally beneficial as `and` is better supported than `ptrmask`.
   Value *Ptr, *Mask;
-  if (match(SrcOp, m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(m_Value(Ptr),
-                                                            m_Value(Mask)))) &&
-      Mask->getType() == Ty)
+  if (match(SrcOp, m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(
+                       m_Value(Ptr), m_SpecificType(Ty, Mask)))))
     return BinaryOperator::CreateAnd(Builder.CreatePtrToInt(Ptr, Ty), Mask);
 
   if (Value *V = foldPtrToIntOrAddrOfGEP(Ty, SrcOp))
     return replaceInstUsesWith(CI, V);
 
   Value *Vec, *Scalar, *Index;
-  if (match(SrcOp, m_OneUse(m_InsertElt(m_IntToPtr(m_Value(Vec)),
-                                        m_Value(Scalar), m_Value(Index)))) &&
-      Vec->getType() == Ty) {
+  if (match(SrcOp, m_OneUse(m_InsertElt(m_IntToPtr(m_SpecificType(Ty, Vec)),
+                                        m_Value(Scalar), m_Value(Index))))) {
     assert(Vec->getType()->getScalarSizeInBits() == PtrSize && "Wrong type");
     // Convert the scalar to int followed by insert to eliminate one cast:
     // p2i (ins (i2p Vec), Scalar, Index --> ins Vec, (p2i Scalar), Index
@@ -2640,9 +2748,8 @@ Instruction *InstCombinerImpl::visitPtrToAddr(PtrToAddrInst &CI) {
   //    -> (and (ptrtoaddr P), M)
   // This is generally beneficial as `and` is better supported than `ptrmask`.
   Value *Ptr, *Mask;
-  if (match(SrcOp, m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(m_Value(Ptr),
-                                                            m_Value(Mask)))) &&
-      Mask->getType() == Ty)
+  if (match(SrcOp, m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(
+                       m_Value(Ptr), m_SpecificType(Ty, Mask)))))
     return BinaryOperator::CreateAnd(Builder.CreatePtrToAddr(Ptr), Mask);
 
   if (Value *V = foldPtrToIntOrAddrOfGEP(Ty, SrcOp))
@@ -2763,8 +2870,9 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
   assert(isMultipleOfTypeSize(Shift, VecEltTy) &&
          "Shift should be a multiple of the element type size");
 
-  // Undef values never contribute useful bits to the result.
-  if (isa<UndefValue>(V)) return true;
+  // Poison values never contribute useful bits to the result.
+  if (match(V, m_Poison()))
+    return true;
 
   // If we got down to a value of the right type, we win, try inserting into the
   // right element.
@@ -2894,8 +3002,7 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
   for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
     if (!Elements[i]) continue;  // Unset element.
 
-    Result = IC.Builder.CreateInsertElement(Result, Elements[i],
-                                            IC.Builder.getInt32(i));
+    Result = IC.Builder.CreateInsertElement(Result, Elements[i], i);
   }
 
   return Result;
@@ -2974,15 +3081,17 @@ static Instruction *foldBitCastBitwiseLogic(BitCastInst &BitCast,
     return nullptr;
 
   Value *X;
-  if (match(BO->getOperand(0), m_OneUse(m_BitCast(m_Value(X)))) &&
-      X->getType() == DestTy && !isa<Constant>(X)) {
+  if (match(BO->getOperand(0),
+            m_OneUse(m_BitCast(m_SpecificType(DestTy, X)))) &&
+      !isa<Constant>(X)) {
     // bitcast(logic(bitcast(X), Y)) --> logic'(X, bitcast(Y))
     Value *CastedOp1 = Builder.CreateBitCast(BO->getOperand(1), DestTy);
     return BinaryOperator::Create(BO->getOpcode(), X, CastedOp1);
   }
 
-  if (match(BO->getOperand(1), m_OneUse(m_BitCast(m_Value(X)))) &&
-      X->getType() == DestTy && !isa<Constant>(X)) {
+  if (match(BO->getOperand(1),
+            m_OneUse(m_BitCast(m_SpecificType(DestTy, X)))) &&
+      !isa<Constant>(X)) {
     // bitcast(logic(Y, bitcast(X))) --> logic'(bitcast(Y), X)
     Value *CastedOp0 = Builder.CreateBitCast(BO->getOperand(0), DestTy);
     return BinaryOperator::Create(BO->getOpcode(), CastedOp0, X);
@@ -3044,14 +3153,14 @@ static Instruction *foldBitCastSelect(BitCastInst &BitCast,
     return nullptr;
 
   Value *X;
-  if (match(TVal, m_OneUse(m_BitCast(m_Value(X)))) && X->getType() == DestTy &&
+  if (match(TVal, m_OneUse(m_BitCast(m_SpecificType(DestTy, X)))) &&
       !isa<Constant>(X)) {
     // bitcast(select(Cond, bitcast(X), Y)) --> select'(Cond, X, bitcast(Y))
     Value *CastedVal = Builder.CreateBitCast(FVal, DestTy);
     return SelectInst::Create(Cond, X, CastedVal, "", nullptr, Sel);
   }
 
-  if (match(FVal, m_OneUse(m_BitCast(m_Value(X)))) && X->getType() == DestTy &&
+  if (match(FVal, m_OneUse(m_BitCast(m_SpecificType(DestTy, X)))) &&
       !isa<Constant>(X)) {
     // bitcast(select(Cond, Y, bitcast(X))) --> select'(Cond, bitcast(Y), X)
     Value *CastedVal = Builder.CreateBitCast(TVal, DestTy);
@@ -3306,9 +3415,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       // If our destination is not a vector, then make this a straight
       // scalar-scalar cast.
       if (!DestTy->isVectorTy()) {
-        Value *Elem =
-          Builder.CreateExtractElement(Src,
-                     Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
+        Value *Elem = Builder.CreateExtractElement(Src, uint64_t{0});
         return CastInst::Create(Instruction::BitCast, Elem, DestTy);
       }
 
@@ -3323,10 +3430,11 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     unsigned BitWidth = DestTy->getScalarSizeInBits();
     Value *X, *Y;
     uint64_t IndexC;
-    if (match(Src, m_OneUse(m_InsertElt(m_OneUse(m_BitCast(m_Value(X))),
-                                        m_Value(Y), m_ConstantInt(IndexC)))) &&
-        DestTy->isIntegerTy() && X->getType() == DestTy &&
-        Y->getType()->isIntegerTy() && isDesirableIntType(BitWidth)) {
+    if (match(Src, m_OneUse(m_InsertElt(
+                       m_OneUse(m_BitCast(m_SpecificType(DestTy, X))),
+                       m_Value(Y), m_ConstantInt(IndexC)))) &&
+        DestTy->isIntegerTy() && Y->getType()->isIntegerTy() &&
+        isDesirableIntType(BitWidth)) {
       // Adjust for big endian - the LSBs are at the high index.
       if (DL.isBigEndian())
         IndexC = SrcVTy->getNumElements() - 1 - IndexC;
@@ -3375,7 +3483,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     // bitcast <N x i8> (shuf X, undef, <N, N-1,...0>) -> bswap (bitcast X)
     // bitcast <N x i1> (shuf X, undef, <N, N-1,...0>) -> bitreverse (bitcast X)
     if (DestTy->isIntegerTy() && ShufElts.getKnownMinValue() % 2 == 0 &&
-        Shuf->hasOneUse() && Shuf->isReverse()) {
+        Shuf->hasOneUse() && Shuf->isReverse() && match(ShufOp1, m_Poison())) {
       unsigned IntrinsicNum = 0;
       if (DL.isLegalInteger(DestTy->getScalarSizeInBits()) &&
           SrcTy->getScalarSizeInBits() == 8) {
@@ -3385,7 +3493,6 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       }
       if (IntrinsicNum != 0) {
         assert(ShufOp0->getType() == SrcTy && "Unexpected shuffle mask");
-        assert(match(ShufOp1, m_Undef()) && "Unexpected shuffle op");
         Function *BswapOrBitreverse = Intrinsic::getOrInsertDeclaration(
             CI.getModule(), IntrinsicNum, DestTy);
         Value *ScalarX = Builder.CreateBitCast(ShufOp0, DestTy);

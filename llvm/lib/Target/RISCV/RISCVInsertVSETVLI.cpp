@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include <queue>
 using namespace llvm;
 using namespace RISCV;
@@ -108,6 +109,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
 
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
@@ -1094,9 +1096,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     insertReadVL(MBB);
 
-  for (MachineBasicBlock &MBB : MF) {
-    insertVSETMTK(MBB, VSETTM);
-    insertVSETMTK(MBB, VSETTK);
+  if (ST->hasVendorXSfmmbase()) {
+    for (MachineBasicBlock &MBB : MF) {
+      insertVSETMTK(MBB, VSETTM);
+      insertVSETMTK(MBB, VSETTK);
+    }
   }
 
   BlockInfo.clear();

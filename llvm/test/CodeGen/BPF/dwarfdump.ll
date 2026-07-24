@@ -34,10 +34,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !6, !6}
 !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!7 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 4.0.0 (trunk 287518) (llvm/trunk 287520)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !8, globals: !9)
+!7 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 4.0.0 (trunk 287518) (llvm/trunk 287520)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !8)
 !8 = !{}
-!9 = !{!0}
-!10 = !{!11, !12}
+!10 = !{!0, !11, !12}
 !11 = !DILocalVariable(name: "myvar_a", arg: 1, scope: !2, file: !3, line: 1, type: !6)
 !12 = !DILocalVariable(name: "myvar_b", arg: 2, scope: !2, file: !3, line: 1, type: !6)
 !13 = !{i32 2, !"Dwarf Version", i32 4}

@@ -263,28 +263,41 @@ public:
                                   mlir::Block *defaultDestination,
                                   const APInt &lowerBound,
                                   const APInt &upperBound) const {
-    assert(lowerBound.sle(upperBound) && "Invalid range");
+    auto condType = mlir::cast<cir::IntType>(op.getCondition().getType());
+    bool isSigned = condType.isSigned();
+    assert(
+        (isSigned ? lowerBound.sle(upperBound) : lowerBound.ule(upperBound)) &&
+        "Invalid range");
     mlir::Block *resBlock = rewriter.createBlock(defaultDestination);
-    cir::IntType sIntType = cir::IntType::get(op.getContext(), 32, true);
-    cir::IntType uIntType = cir::IntType::get(op.getContext(), 32, false);
 
-    cir::ConstantOp rangeLength = cir::ConstantOp::create(
-        rewriter, op.getLoc(),
-        cir::IntAttr::get(sIntType, upperBound - lowerBound));
+    // Build the range check at the switch operand's width.  The classic
+    // `sub x, lo; ule (x - lo), (hi - lo)` idiom is a cyclic-distance test that
+    // is correct for both signed and unsigned switches, so the comparison is
+    // always unsigned.
+    cir::IntType uIntType =
+        cir::IntType::get(op.getContext(), condType.getWidth(),
+                          /*isSigned=*/false);
 
     cir::ConstantOp lowerBoundValue = cir::ConstantOp::create(
-        rewriter, op.getLoc(), cir::IntAttr::get(sIntType, lowerBound));
+        rewriter, op.getLoc(), cir::IntAttr::get(condType, lowerBound));
     mlir::Value diffValue = cir::SubOp::create(
         rewriter, op.getLoc(), op.getCondition(), lowerBoundValue);
 
-    // Use unsigned comparison to check if the condition is in the range.
-    cir::CastOp uDiffValue = cir::CastOp::create(
-        rewriter, op.getLoc(), uIntType, CastKind::integral, diffValue);
-    cir::CastOp uRangeLength = cir::CastOp::create(
-        rewriter, op.getLoc(), uIntType, CastKind::integral, rangeLength);
+    // Use an unsigned comparison to check whether the condition is in range.
+    // cir.cmp takes its signedness from the operand type, so a signed
+    // difference needs a same-width integral cast to the unsigned type (a
+    // signedness reinterpretation) to make the `le` unsigned; an unsigned
+    // difference already has the right type.
+    if (isSigned)
+      diffValue = cir::CastOp::create(rewriter, op.getLoc(), uIntType,
+                                      CastKind::integral, diffValue);
+
+    cir::ConstantOp rangeLength = cir::ConstantOp::create(
+        rewriter, op.getLoc(),
+        cir::IntAttr::get(uIntType, upperBound - lowerBound));
 
     cir::CmpOp cmpResult = cir::CmpOp::create(
-        rewriter, op.getLoc(), cir::CmpOpKind::le, uDiffValue, uRangeLength);
+        rewriter, op.getLoc(), cir::CmpOpKind::le, diffValue, rangeLength);
     cir::BrCondOp::create(rewriter, op.getLoc(), cmpResult, rangeDestination,
                           defaultDestination);
     return resBlock;
@@ -443,22 +456,31 @@ public:
         rewriter.eraseOp(caseOp);
     }
 
+    bool isSigned =
+        mlir::cast<cir::IntType>(op.getCondition().getType()).isSigned();
     for (auto [rangeVal, operand, destination] :
          llvm::zip(rangeValues, rangeOperands, rangeDestinations)) {
       APInt lowerBound = rangeVal.first;
       APInt upperBound = rangeVal.second;
 
-      // The case range is unreachable, skip it.
-      if (lowerBound.sgt(upperBound))
+      // An empty range (lo > hi in the switch's signedness) is unreachable.
+      if (isSigned ? lowerBound.sgt(upperBound) : lowerBound.ugt(upperBound))
         continue;
 
       // If range is small, add multiple switch instruction cases.
       // This magical number is from the original CGStmt code.
-      constexpr int kSmallRangeThreshold = 64;
-      if ((upperBound - lowerBound)
-              .ult(llvm::APInt(32, kSmallRangeThreshold))) {
-        for (APInt iValue = lowerBound; iValue.sle(upperBound); ++iValue) {
-          caseValues.push_back(iValue);
+      constexpr uint64_t kSmallRangeThreshold = 64;
+      APInt rangeSize = upperBound - lowerBound;
+      if (rangeSize.ult(kSmallRangeThreshold)) {
+        // Expand into individual cases.  rangeSize < kSmallRangeThreshold, so
+        // the inclusive case count (rangeSize + 1) fits in a uint64_t.  Drive
+        // termination by the count rather than by comparing caseValue to
+        // upperBound: when upperBound is the type's maximum the final
+        // caseValue++ wraps past the top, which is harmless because the
+        // wrapped value is never used.
+        APInt caseValue = lowerBound;
+        for (uint64_t n = rangeSize.getZExtValue() + 1; n != 0; --n) {
+          caseValues.push_back(caseValue++);
           caseOperands.push_back(operand);
           caseDestinations.push_back(destination);
         }
@@ -496,6 +518,154 @@ public:
                                                exit);
   }
 
+  // Rewrite a loop that has a per-iteration cleanup region into a loop whose
+  // condition is always 'true' and whose body is a cir.cleanup.scope enclosing
+  // the original condition, body, and step regions.
+  //
+  // The condition test is sunk to the top of the scope body (a false
+  // result becomes a cir.break out of the loop) and, for a for loop, the step
+  // is appended to the end of the scope body. The loop's cleanup region becomes
+  // the cleanup region of a cir.cleanup.scope enclosing the new body.
+  //
+  // For example, a while loop:
+  //
+  //   cir.while { <cond>; cir.condition(%c) }
+  //          do { <body> }
+  //     cleanup all { <cleanup> }
+  //
+  // becomes:
+  //
+  //   cir.while { cir.condition(%true) } do {
+  //     cir.cleanup.scope {
+  //       <cond>
+  //       cir.brcond %c ^body, ^cond_false
+  //     ^cond_false:
+  //       cir.break
+  //     ^body:
+  //       <body>
+  //     } cleanup all { <cleanup> }
+  //     cir.yield
+  //   }
+  //
+  // A for loop is the same, except the step region is appended to the scope
+  // body (after the body) and both the body's normal end and any continue are
+  // redirected into the step so that the step runs before the cleanup. The init
+  // section of a for loop is already outside the loop op.
+  mlir::LogicalResult
+  rewriteLoopWithCleanup(cir::LoopOpInterface op,
+                         mlir::PatternRewriter &rewriter) const {
+    mlir::Location loc = op.getLoc();
+    mlir::Region *stepRegion = op.maybeGetStep();
+
+    cir::CleanupKindAttr cleanupKind = op.maybeGetCleanupKind();
+    assert(cleanupKind && "loop cleanup region without a cleanup kind");
+
+    mlir::Region &condRegion = op.getCond();
+    mlir::Region &bodyRegion = op.getBody();
+    mlir::Region &cleanupRegion = *op.maybeGetCleanup();
+
+    // The cir.condition is the terminator of the condition region's last block
+    // (there can be more than one block if a nested scope was already
+    // flattened within the condition).
+    auto conditionOp =
+        cast<cir::ConditionOp>(condRegion.back().getTerminator());
+    mlir::Value condVal = conditionOp.getCondition();
+
+    // Capture block references and exit terminators before moving blocks
+    // around. Block pointers stay valid across region inlining because blocks
+    // are reparented, not recreated.
+    mlir::Block *bodyFront = &bodyRegion.front();
+    mlir::Block *stepFront = stepRegion ? &stepRegion->front() : nullptr;
+
+    // For a for loop the body's normal end and any continue must run the step
+    // before the cleanup, so collect them to redirect into the step region. For
+    // a while loop they are genuine cleanup-scope exits and are left untouched.
+    llvm::SmallVector<cir::YieldOp> bodyYieldsToStep;
+    llvm::SmallVector<cir::ContinueOp> continuesToStep;
+    if (stepRegion) {
+      for (mlir::Block &blk : bodyRegion.getBlocks())
+        if (auto y = dyn_cast<cir::YieldOp>(blk.getTerminator()))
+          bodyYieldsToStep.push_back(y);
+      op.walkBodySkippingNestedLoops([&](mlir::Operation *o) {
+        if (auto c = dyn_cast<cir::ContinueOp>(o)) {
+          continuesToStep.push_back(c);
+          return mlir::WalkResult::skip();
+        }
+        return mlir::WalkResult::advance();
+      });
+    }
+
+    // Assemble the per-iteration blocks into the condition region, in
+    // execution order: [ cond blocks..., body blocks..., step blocks... ].
+    rewriter.inlineRegionBefore(bodyRegion, condRegion, condRegion.end());
+    if (stepRegion)
+      rewriter.inlineRegionBefore(*stepRegion, condRegion, condRegion.end());
+
+    // Replace cir.condition(%c) with a conditional branch into the body whose
+    // false edge breaks out of the loop.
+    mlir::Block *breakBlock =
+        rewriter.createBlock(&condRegion, condRegion.end());
+    rewriter.setInsertionPointToEnd(breakBlock);
+    cir::BreakOp::create(rewriter, conditionOp.getLoc());
+
+    rewriter.setInsertionPoint(conditionOp);
+    rewriter.replaceOpWithNewOp<cir::BrCondOp>(conditionOp, condVal, bodyFront,
+                                               breakBlock);
+
+    // For a for loop, redirect the body's normal end and any continue to the
+    // step. The step's own yield remains the normal end of the iteration.
+    for (cir::YieldOp y : bodyYieldsToStep)
+      lowerTerminator(y, stepFront, rewriter);
+    for (cir::ContinueOp c : continuesToStep)
+      lowerTerminator(c, stepFront, rewriter);
+
+    // Build the trivial loop body: a single cir.cleanup.scope followed by a
+    // yield, in a fresh block (the body region's blocks were moved out above).
+    mlir::Block *newBodyBlock = rewriter.createBlock(&bodyRegion);
+    rewriter.setInsertionPointToEnd(newBodyBlock);
+    auto emitYield = [](mlir::OpBuilder &b, mlir::Location l) {
+      cir::YieldOp::create(b, l);
+    };
+    auto scope = cir::CleanupScopeOp::create(
+        rewriter, loc, cleanupKind.getValue(), emitYield, emitYield);
+    cir::YieldOp::create(rewriter, loc);
+
+    // Move the assembled per-iteration blocks into the scope's body region and
+    // the loop's cleanup blocks into the scope's cleanup region, discarding the
+    // placeholder blocks the builder created.
+    mlir::Block *bodyPlaceholder = &scope.getBodyRegion().front();
+    rewriter.inlineRegionBefore(condRegion, bodyPlaceholder);
+    rewriter.eraseBlock(bodyPlaceholder);
+
+    mlir::Block *cleanupPlaceholder = &scope.getCleanupRegion().front();
+    rewriter.inlineRegionBefore(cleanupRegion, cleanupPlaceholder);
+    rewriter.eraseBlock(cleanupPlaceholder);
+
+    // Rebuild the loop condition region with an always-true condition.
+    mlir::Block *newCondBlock = rewriter.createBlock(&condRegion);
+    rewriter.setInsertionPointToEnd(newCondBlock);
+    mlir::Value trueVal = cir::ConstantOp::create(
+        rewriter, loc, cir::BoolAttr::get(rewriter.getContext(), true));
+    cir::ConditionOp::create(rewriter, loc, trueVal);
+
+    // For a for loop, rebuild the (now empty) step region with a trivial yield.
+    if (stepRegion) {
+      mlir::Block *newStepBlock = rewriter.createBlock(stepRegion);
+      rewriter.setInsertionPointToEnd(newStepBlock);
+      cir::YieldOp::create(rewriter, loc);
+    }
+
+    // Drop the cleanup-kind attribute now that the loop's cleanup region is
+    // empty, so the trivial loop verifies and takes the no-cleanup flattening
+    // path when the greedy driver revisits it.
+    if (auto whileOp = mlir::dyn_cast<cir::WhileOp>(op.getOperation()))
+      whileOp.removeCleanupKindAttr();
+    else if (auto forOp = mlir::dyn_cast<cir::ForOp>(op.getOperation()))
+      forOp.removeCleanupKindAttr();
+
+    return mlir::success();
+  }
+
   mlir::LogicalResult
   matchAndRewrite(cir::LoopOpInterface op,
                   mlir::PatternRewriter &rewriter) const final {
@@ -506,6 +676,17 @@ public:
     for (mlir::Region &region : op->getRegions())
       if (hasNestedOpsToFlatten(region))
         return mlir::failure();
+
+    // Loops with a per-iteration cleanup region need every iteration-exit edge
+    // routed through that cleanup, including the false-condition exit and any
+    // exceptions that might be thrown from the step region. Rather than trying
+    // to figure out all of the cleanup routing here, we sink the condition into
+    // the body region, hoist the step region (if any) and create a new
+    // cir.cleanup.scope enclosing the body region. Subsequent passes of the
+    // greedy driver will flatten the cir.cleanup.scope and the loop reusing
+    // the normal handlers.
+    if (op.maybeGetCleanup())
+      return rewriteLoopWithCleanup(op, rewriter);
 
     // Setup CFG blocks.
     mlir::Block *entry = rewriter.getInsertionBlock();
@@ -653,7 +834,7 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   cir::CIRDataLayout dataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
   uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
   auto allocaOp = cir::AllocaOp::create(
-      rewriter, loc, ptrToS32Type, s32Type, "__cleanup_dest_slot",
+      rewriter, loc, ptrToS32Type, "__cleanup_dest_slot",
       /*alignment=*/rewriter.getI64IntegerAttr(alignment));
   allocaOp.setCleanupDestSlot(true);
   return allocaOp;
@@ -960,9 +1141,9 @@ public:
           uint64_t alignment =
               dataLayout.getAlignment(operand.getType(), true).value();
           cir::PointerType ptrType = cir::PointerType::get(operand.getType());
-          alloca = cir::AllocaOp::create(rewriter, loc, ptrType,
-                                         operand.getType(), "__ret_operand_tmp",
-                                         rewriter.getI64IntegerAttr(alignment));
+          alloca =
+              cir::AllocaOp::create(rewriter, loc, ptrType, "__ret_operand_tmp",
+                                    rewriter.getI64IntegerAttr(alignment));
         }
 
         // Store the operand value at the original return location.
@@ -971,16 +1152,19 @@ public:
           rewriter.setInsertionPoint(exitOp);
           cir::StoreOp::create(rewriter, loc, operand, alloca,
                                /*isVolatile=*/false,
+                               /*isNontemporal=*/false,
                                /*alignment=*/mlir::IntegerAttr(),
                                cir::SyncScopeKindAttr(), cir::MemOrderAttr());
         }
 
         // Reload the value from the temporary alloca in the destination block.
         rewriter.setInsertionPointToEnd(destBlock);
-        auto loaded = cir::LoadOp::create(
-            rewriter, loc, alloca, /*isDeref=*/false,
-            /*isVolatile=*/false, /*alignment=*/mlir::IntegerAttr(),
-            cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+        auto loaded =
+            cir::LoadOp::create(rewriter, loc, alloca, /*isDeref=*/false,
+                                /*isVolatile=*/false, /*isNontemporal=*/false,
+                                /*alignment=*/mlir::IntegerAttr(),
+                                cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
+                                /*invariant=*/false);
         returnValues.push_back(loaded);
       }
     }
@@ -1290,10 +1474,12 @@ public:
         rewriter.setInsertionPointToEnd(exitBlock);
 
         // Load the destination slot value.
-        auto slotValue = cir::LoadOp::create(
-            rewriter, loc, destSlot, /*isDeref=*/false,
-            /*isVolatile=*/false, /*alignment=*/mlir::IntegerAttr(),
-            cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+        auto slotValue =
+            cir::LoadOp::create(rewriter, loc, destSlot, /*isDeref=*/false,
+                                /*isVolatile=*/false, /*isNontemporal=*/false,
+                                /*alignment=*/mlir::IntegerAttr(),
+                                cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
+                                /*invariant=*/false);
 
         // Create destination blocks for each exit and collect switch case info.
         llvm::SmallVector<mlir::APInt, 8> caseValues;
@@ -1322,6 +1508,7 @@ public:
               rewriter, loc, cir::IntAttr::get(s32Type, exit.destinationId));
           cir::StoreOp::create(rewriter, loc, destIdConst, destSlot,
                                /*isVolatile=*/false,
+                               /*isNontemporal=*/false,
                                /*alignment=*/mlir::IntegerAttr(),
                                cir::SyncScopeKindAttr(), cir::MemOrderAttr());
           rewriter.replaceOpWithNewOp<cir::BrOp>(exit.exitOp, cleanupEntry);

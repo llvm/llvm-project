@@ -24,8 +24,6 @@
 // This file can only include headers from src/__support/ or test/UnitTest. No
 // other headers should be included.
 
-#include "PlatformDefs.h"
-
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
@@ -175,6 +173,15 @@ protected:
       typename ValType,
       cpp::enable_if_t<
           cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::string_view>, int> = 0>
+  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
+            const char *RHSStr, internal::Location Loc) {
+    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
+  }
+
+  template <
+      typename ValType,
+      cpp::enable_if_t<
+          cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::wstring_view>, int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
@@ -482,7 +489,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 ////////////////////////////////////////////////////////////////////////////////
 // Subprocess checks.
 
-#ifdef ENABLE_SUBPROCESS_TESTS
+#if LIBC_TEST_SUBPROCESS_TESTS
 
 #define LIBC_TEST_PROCESS_(TEST_FUNC, FUNC, VALUE, RET_OR_EMPTY)               \
   LIBC_TEST_SCAFFOLDING_(                                                      \
@@ -509,7 +516,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #endif // LIBC_TEST_SKIP_DEATH_TESTS
 
-#endif // ENABLE_SUBPROCESS_TESTS
+#endif // LIBC_TEST_SUBPROCESS_TESTS
 
 ////////////////////////////////////////////////////////////////////////////////
 // Custom matcher checks.

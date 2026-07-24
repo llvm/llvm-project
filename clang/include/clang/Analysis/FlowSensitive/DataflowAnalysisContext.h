@@ -242,11 +242,6 @@ private:
   friend class Environment;
 
   struct NullableQualTypeDenseMapInfo : private llvm::DenseMapInfo<QualType> {
-    static QualType getEmptyKey() {
-      // Allow a NULL `QualType` by using a different value as the empty key.
-      return QualType::getFromOpaquePtr(reinterpret_cast<Type *>(1));
-    }
-
     using DenseMapInfo::getHashValue;
     using DenseMapInfo::isEqual;
   };
