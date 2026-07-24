@@ -341,12 +341,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   VPLane LastLane = VPLane::getLastLaneForVF(VF);
   IRBuilderBase::InsertPointGuard Guard(Builder);
   if (auto *LastInst = dyn_cast<Instruction>(get(Def, LastLane)))
-    // Set the insert point after the last scalarized instruction or after the
-    // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
-    // will directly follow the scalar definitions.
-    Builder.SetInsertPoint(isa<PHINode>(LastInst)
-                               ? LastInst->getParent()->getFirstNonPHIIt()
-                               : std::next(BasicBlock::iterator(LastInst)));
+    // Set the insert point after the last scalarized instruction. This
+    // ensures the insertelement sequence will directly follow the scalar
+    // definitions.
+    if (auto InsertPt = LastInst->getInsertionPointAfterDef())
+      Builder.SetInsertPoint(*InsertPt);
   Value *VectorValue = GetBroadcastInstrs(ScalarValue);
   set(Def, VectorValue);
   return VectorValue;
@@ -1870,14 +1869,6 @@ bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
                           : TruncatedVal.zext(WideSize);
   return ExtendedVal == *C;
 }
-
-VPCostContext::VPCostContext(const TargetTransformInfo &TTI,
-                             const TargetLibraryInfo &TLI, const VPlan &Plan,
-                             LoopVectorizationCostModel &CM,
-                             const VFSelectionContext &Config,
-                             PredicatedScalarEvolution &PSE, const Loop *L)
-    : TTI(TTI), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM), Config(Config),
-      CostKind(Config.CostKind), PSE(PSE), L(L) {}
 
 TargetTransformInfo::OperandValueInfo
 VPCostContext::getOperandInfo(VPValue *V) const {

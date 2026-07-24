@@ -752,6 +752,13 @@ public:
   /// \return The vscale value used for tuning the cost model.
   std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
 
+  const TargetTransformInfo &getTTI() const { return TTI; }
+
+  PredicatedScalarEvolution &getPSE() const { return PSE; }
+
+  /// \return The loop being analyzed.
+  const Loop *getLoop() const { return TheLoop; }
+
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
 

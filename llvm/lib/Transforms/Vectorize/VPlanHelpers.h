@@ -334,10 +334,8 @@ struct VPCostContext {
   /// Number of predicated stores in the VPlan, computed on demand.
   std::optional<unsigned> NumPredStores;
 
-  VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                const VPlan &Plan, LoopVectorizationCostModel &CM,
-                const VFSelectionContext &Config,
-                PredicatedScalarEvolution &PSE, const Loop *L);
+  VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
+                LoopVectorizationCostModel &CM, VFSelectionContext &Config);
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.

@@ -3272,6 +3272,11 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   DeclarationNameInfo NameInfo
     = SemaRef.SubstDeclarationNameInfo(D->getNameInfo(), TemplateArgs);
 
+  // Check if the substitution of template args failed
+  // leading to an empty DeclarationNameInfo.
+  if (!NameInfo.getName())
+    return nullptr;
+
   if (FunctionRewriteKind != RewriteKind::None)
     adjustForRewrite(FunctionRewriteKind, D, T, TInfo, NameInfo);
 
