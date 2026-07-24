@@ -2064,6 +2064,8 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
     AM.Base_Reg = CurDAG->getRegister(X86::RIP, MVT::i64);
   }
 
+  assert((!AM.isRIPRelative() || !AM.IndexReg.getNode()) &&
+         "Invalid RIP-relative addressing mode with index register");
   return false;
 }
 
@@ -2169,7 +2171,7 @@ bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
     return false;
   AM = Backup;
 
-  // Try again after commutating the operands.
+  // Try again in reverse order
   if (!MatchOperand(Handle.getValue().getOperand(1)) &&
       !MatchOperand(Handle.getValue().getOperand(0)))
     return false;
@@ -3002,6 +3004,10 @@ bool X86DAGToDAGISel::matchAddressBase(SDValue N, X86ISelAddressMode &AM) {
   if (AM.BaseType != X86ISelAddressMode::RegBase || AM.Base_Reg.getNode()) {
     // If so, check to see if the scale index register is set.
     if (!AM.IndexReg.getNode()) {
+      // RIP-relative addressing has no SIB byte, so it cannot carry an index.
+      if (AM.isRIPRelative())
+        return true;
+
       AM.IndexReg = N;
       AM.Scale = 1;
       return false;
