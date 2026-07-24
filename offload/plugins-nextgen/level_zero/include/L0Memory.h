@@ -457,7 +457,7 @@ public:
   ~StagingBufferTy() = default;
 
   Error clear() {
-    for (auto* Ptr : Buffers)
+    for (auto *Ptr : Buffers)
       CALL_ZE_RET_ERROR(zeMemFree, Context, Ptr);
     Context = nullptr;
     return Plugin::success();
