@@ -16,4 +16,6 @@ void expression_operand(T &value, decltype(__addrspaceof(value))) {}
 template void expression_operand<int>(int &, int);
 
 // CHECK-DAG: define weak_odr void @_Z12type_operandIiEvDTu13__addrspaceofT_EE(
-// CHECK-DAG: define weak_odr void @_Z18expression_operandIiEvRT_DTu13__addrspaceofXfL0p_EEE(
+// The boolean template argument records the entity form because ordinary
+// expression mangling does not preserve parentheses.
+// CHECK-DAG: define weak_odr void @_Z18expression_operandIiEvRT_DTu13__addrspaceofLb1EXfL0p_EEE(
