@@ -752,9 +752,17 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeArray(
     const auto *SR = dyn_cast<DISubrange>(Element);
     if (!SR)
       continue;
+    // A DIVariable count (a variable-length array) is not a ConstantInt, so it
+    // maps to 0 here. DebugTypeArray also allows a DebugLocalVariable or
+    // DebugGlobalVariable id for it, but no frontend we target emits one. A
+    // constant wider than 32 bits maps to 0 too, since the count operand is a
+    // 32-bit OpConstant and such an array cannot occur in a shader.
     uint32_t Count = 0;
-    if (const auto *CI = dyn_cast_if_present<ConstantInt *>(SR->getCount()))
-      Count = static_cast<uint32_t>(CI->getZExtValue());
+    if (const auto *CI = dyn_cast_if_present<ConstantInt *>(SR->getCount())) {
+      const APInt &Value = CI->getValue();
+      if (Value.getActiveBits() <= 32)
+        Count = static_cast<uint32_t>(Value.getZExtValue());
+    }
     Ops.push_back(emitOpConstantI32(Count, I32TypeReg, MAI));
   }
 
