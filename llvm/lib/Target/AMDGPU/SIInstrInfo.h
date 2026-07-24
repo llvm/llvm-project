@@ -1490,7 +1490,7 @@ public:
   /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
   /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
   /// be used.
-  bool isLegalWidePackedInstOperand(const MachineRegisterInfo &MRI,
+  bool isLegalSingleSGPRReadOperand(const MachineRegisterInfo &MRI,
                                     const MachineInstr &MI, unsigned SrcN,
                                     const MachineOperand *MO = nullptr) const;
 
