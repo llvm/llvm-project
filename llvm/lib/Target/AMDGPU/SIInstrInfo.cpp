@@ -8584,7 +8584,8 @@ void SIInstrInfo::moveToVALUImpl(
         unsigned SrcSubReg = Inst.getOperand(1).getSubReg();
         for (MachineOperand &UseMO :
              make_early_inc_range(MRI.use_operands(DstReg))) {
-          UseMO.setSubReg(RI.composeSubRegIndices(SrcSubReg, UseMO.getSubReg()));
+          UseMO.setSubReg(
+              RI.composeSubRegIndices(SrcSubReg, UseMO.getSubReg()));
           UseMO.setReg(NewDstReg);
         }
         MRI.clearKillFlags(NewDstReg);
