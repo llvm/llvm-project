@@ -8,9 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ExportedAPI.h"
-
 #include "OffloadAPI.h"
+#include "Types.h"
 
 #include <cstdint>
 #include <iterator>

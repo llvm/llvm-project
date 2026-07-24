@@ -10,11 +10,14 @@
 
 #include "LanguageRegistration.h"
 #include "OffloadAPI.h"
+#include "RuntimeAPI.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Support/Error.h"
 #include <cstdio>
 #include <inttypes.h>
+
+namespace language_registration = llvm::offload::kernel;
 
 typedef struct __attribute__((__packed__)) {
   uint32_t Magic;
@@ -57,7 +60,7 @@ typedef struct __attribute__((__packed__)) {
 } HipFatbinBundleEntry;
 
 static void readTUFatbin(const char *Binary, const FatbinWrapperTy *FW) {
-  ol_device_handle_t Device = olKGetDefaultDevice();
+  ol_device_handle_t Device = language_registration::getDefaultDevice();
 
   const CudaFatbinHeader *Header =
       reinterpret_cast<const CudaFatbinHeader *>(FW->Data);
@@ -111,11 +114,11 @@ static void readTUFatbin(const char *Binary, const FatbinWrapperTy *FW) {
     abort();
   }
 
-  olKRegisterProgram(Binary, Program);
+  language_registration::registerProgram(Binary, Program);
 }
 
 static void readHIPFatbinEntries(const char *Binary, const char *HIPFatbinPtr) {
-  ol_device_handle_t Device = olKGetDefaultDevice();
+  ol_device_handle_t Device = language_registration::getDefaultDevice();
 
   const char *CurrentReadPosition = HIPFatbinPtr;
 
@@ -179,7 +182,7 @@ static void readHIPFatbinEntries(const char *Binary, const char *HIPFatbinPtr) {
     abort();
   }
 
-  olKRegisterProgram(Binary, Program);
+  language_registration::registerProgram(Binary, Program);
 }
 
 /// Hidden, but exported, Registration API
@@ -190,7 +193,7 @@ void __llvmRegisterFunction(const char *Binary, const char *KernelID,
                             char *KernelName, const char *KernelName1, int,
                             uint3 *, uint3 *, dim3 *, dim3 *, int *) {
   ol_symbol_handle_t Kernel;
-  ol_program_handle_t Program = olKGetProgram(Binary);
+  ol_program_handle_t Program = language_registration::getProgram(Binary);
   ol_result_t Result = olGetSymbol(
       Program, KernelName, ol_symbol_kind_t::OL_SYMBOL_KIND_KERNEL, &Kernel);
   if (Result && Result->Code) {
@@ -199,7 +202,7 @@ void __llvmRegisterFunction(const char *Binary, const char *KernelID,
     abort();
   }
 
-  olKRegisterKernel(KernelID, Kernel);
+  language_registration::registerKernel(KernelID, Kernel);
 }
 
 const char *__llvmRegisterFatBinary(const char *Binary) {
@@ -219,7 +222,8 @@ const char *__llvmRegisterFatBinary(const char *Binary) {
 }
 
 void __llvmUnregisterFatBinary(void *Handle) {
-  if (ol_program_handle_t Program = olKUnregisterProgram(Handle))
+  if (ol_program_handle_t Program =
+          language_registration::unregisterProgram(Handle))
     olDestroyProgram(Program);
 }
 
@@ -264,7 +268,7 @@ struct __tgt_bin_desc {
 
 void __tgt_register_lib(__tgt_bin_desc *Desc) {
   // TODO: For each device, lazily.
-  ol_device_handle_t Device = olKGetDefaultDevice();
+  ol_device_handle_t Device = language_registration::getDefaultDevice();
 
   for (int32_t I = 0, E = Desc->NumDeviceImages; I < E; ++I) {
     ol_program_handle_t Program = nullptr;
@@ -282,7 +286,7 @@ void __tgt_register_lib(__tgt_bin_desc *Desc) {
       abort();
     }
 
-    olKRegisterProgram(DeviceImage.ImageStart, Program);
+    language_registration::registerProgram(DeviceImage.ImageStart, Program);
 
     for (auto *Entry = DeviceImage.EntriesBegin;
          Entry != DeviceImage.EntriesEnd; ++Entry) {
@@ -301,11 +305,11 @@ void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
     for (auto *Entry = DeviceImage.EntriesBegin;
          Entry != DeviceImage.EntriesEnd; ++Entry) {
       if (!Entry->Size && !Entry->Flags)
-        olKUnregisterKernel((const char *)Entry->Address);
+        language_registration::unregisterKernel((const char *)Entry->Address);
     }
 
     if (ol_program_handle_t Program =
-            olKUnregisterProgram(DeviceImage.ImageStart))
+            language_registration::unregisterProgram(DeviceImage.ImageStart))
       olDestroyProgram(Program);
   }
 }

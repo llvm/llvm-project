@@ -8,8 +8,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
-
 #ifndef LANGUAGE
 #error This file should be included, or used, with a LANGUAGE macro set.
 #endif
@@ -38,3 +36,7 @@ MAKE_ALIAS(__, void, RegisterTexture, void **, const struct textureReference *,
 
 MAKE_ALIAS(__, unsigned, PushCallConfiguration, dim3, dim3, size_t, void *)
 MAKE_ALIAS(__, unsigned, PopCallConfiguration, dim3 *, dim3 *, size_t *, void *)
+
+#undef MAKE_ALIAS
+#undef MA_IMPL1
+#undef MA_IMPL2

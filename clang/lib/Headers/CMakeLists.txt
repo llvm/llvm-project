@@ -393,12 +393,6 @@ set(openmp_wrapper_files
   openmp_wrappers/new
 )
 
-set(llvm_offload_wrapper_files
-  llvm_offload_wrappers/__llvm_offload.h
-  llvm_offload_wrappers/__llvm_offload_host.h
-  llvm_offload_wrappers/__llvm_offload_device.h
-)
-
 set(llvm_libc_wrapper_files
   llvm_libc_wrappers/assert.h
   llvm_libc_wrappers/stdio.h

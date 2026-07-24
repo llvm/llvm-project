@@ -15,7 +15,7 @@
 #error This file should be included, or used, with a LANGUAGE macro set.
 #endif
 
-#include "ExportedAPI.h"
+#include "RuntimeAPI.h"
 #include "Types.h"
 
 #include "OffloadAPI.h"
@@ -29,7 +29,9 @@
 #define STR(X) #X
 #define LANGUAGE_STR STR(LANGUAGE)
 
-static Error_t olKConvertResult(ol_result_t Result) {
+namespace language_runtime = llvm::offload::kernel;
+
+static Error_t convertResult(ol_result_t Result) {
   if (Result == OL_SUCCESS)
     return Success;
   switch (Result->Code) {
@@ -41,41 +43,41 @@ static Error_t olKConvertResult(ol_result_t Result) {
 }
 
 Error_t Malloc(void **DevPtr, size_t Size) {
-  ol_device_handle_t Device = olKGetDefaultDevice();
+  ol_device_handle_t Device = language_runtime::getDefaultDevice();
   ol_result_t Result = olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, DevPtr);
-  return olKConvertResult(Result);
+  return convertResult(Result);
 }
 
 Error_t Free(void *DevPtr) {
   ol_result_t Result = olMemFree(DevPtr);
-  return olKConvertResult(Result);
+  return convertResult(Result);
 }
 
 Error_t Memcpy(void *Dst, const void *Src, size_t Size, MemcpyKind Kind) {
-  ol_queue_handle_t Queue = olKGetDefaultQueue();
+  ol_queue_handle_t Queue = language_runtime::getDefaultQueue();
 
   ol_result_t Result;
   switch (Kind) {
   case MemcpyHostToHost: {
-    ol_device_handle_t Host = olKGetHostDevice();
+    ol_device_handle_t Host = language_runtime::getHostDevice();
     Result = olMemcpy(Queue, Dst, Host, const_cast<void *>(Src), Host, Size);
     break;
   }
   case MemcpyHostToDevice: {
-    ol_device_handle_t Device = olKGetDefaultDevice();
-    ol_device_handle_t Host = olKGetHostDevice();
+    ol_device_handle_t Device = language_runtime::getDefaultDevice();
+    ol_device_handle_t Host = language_runtime::getHostDevice();
     Result = olMemcpy(Queue, Dst, Device, const_cast<void *>(Src), Host, Size);
     break;
   }
   case MemcpyDeviceToHost: {
-    ol_device_handle_t Device = olKGetDefaultDevice();
-    ol_device_handle_t Host = olKGetHostDevice();
+    ol_device_handle_t Device = language_runtime::getDefaultDevice();
+    ol_device_handle_t Host = language_runtime::getHostDevice();
 
     Result = olMemcpy(Queue, Dst, Host, const_cast<void *>(Src), Device, Size);
     break;
   }
   case MemcpyDeviceToDevice: {
-    ol_device_handle_t Device = olKGetDefaultDevice();
+    ol_device_handle_t Device = language_runtime::getDefaultDevice();
 
     Result =
         olMemcpy(Queue, Dst, Device, const_cast<void *>(Src), Device, Size);
@@ -88,15 +90,15 @@ Error_t Memcpy(void *Dst, const void *Src, size_t Size, MemcpyKind Kind) {
 
   Result = olSyncQueue(Queue);
 
-  return olKConvertResult(Result);
+  return convertResult(Result);
 }
 
 Error_t DeviceSynchronize() {
   // TODO: This is not correct. We likely want to pipe this through to the
   // plugins.
-  ol_queue_handle_t Queue = olKGetDefaultQueue();
+  ol_queue_handle_t Queue = language_runtime::getDefaultQueue();
   ol_result_t Result = olSyncQueue(Queue);
-  return olKConvertResult(Result);
+  return convertResult(Result);
 }
 
 Error_t GetLastError() {
@@ -120,28 +122,29 @@ const char *GetErrorString(Error_t Error) {
 }
 
 Error_t GetDevice(int *DeviceNo) {
-  ol_device_handle_t Device = olKGetDevice(DeviceNo);
+  ol_device_handle_t Device = language_runtime::getDevice(DeviceNo);
   if (!Device)
     return ErrorInvalidValue;
   return Success;
 }
 
 Error_t GetDeviceCount(int *Count) {
-  *Count = olKGetDeviceCount();
+  *Count = language_runtime::getDeviceCount();
   return Success;
 }
 
 Error_t SetDevice(int DeviceNo) {
-  ol_device_handle_t Device = olKSetDefaultDevice(DeviceNo);
-  assert(Device == olKGetDefaultDevice() && "Set Device is not Default Device");
+  ol_device_handle_t Device = language_runtime::setDefaultDevice(DeviceNo);
+  assert(Device == language_runtime::getDefaultDevice() &&
+         "Set Device is not Default Device");
   return Device ? Success : ErrorInvalidValue;
 }
 
 Error_t HostAlloc(void **Ptr, size_t Size, unsigned int Flags) {
   // TODO:
-  ol_device_handle_t Device = olKGetDefaultDevice();
+  ol_device_handle_t Device = language_runtime::getDefaultDevice();
   ol_result_t Result = olMemAlloc(Device, OL_ALLOC_TYPE_HOST, Size, Ptr);
-  return olKConvertResult(Result);
+  return convertResult(Result);
 }
 
 Error_t MallocHost(void **Ptr, size_t Size) {
@@ -150,7 +153,7 @@ Error_t MallocHost(void **Ptr, size_t Size) {
 
 Error_t FreeHost(void *Ptr) {
   ol_result_t Result = olMemFree(Ptr);
-  return olKConvertResult(Result);
+  return convertResult(Result);
 }
 
 Error_t DriverGetVersion(int *Version) {
@@ -161,7 +164,7 @@ Error_t DriverGetVersion(int *Version) {
 
 Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
   // TODO: [h15] add remaining pci/mem fields
-  ol_device_handle_t Device = olKGetDefaultDevice();
+  ol_device_handle_t Device = language_runtime::getDefaultDevice();
   size_t nameSize = 0;
   olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &nameSize);
   olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, nameSize, &DeviceProp->name[0]);
@@ -169,7 +172,7 @@ Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
                   &DeviceProp->totalGlobalMem);
   olGetDeviceInfo(Device, OL_DEVICE_INFO_NUM_COMPUTE_UNITS, sizeof(uint32_t),
                   &DeviceProp->multiProcessorCount);
-  olGetDeviceInfo(Device, OL_DEVICE_INFO_WARP_SIZE, sizeof(uint32_t),
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_NUM_LANES, sizeof(uint32_t),
                   &DeviceProp->warpSize);
   return Success;
 }
@@ -183,7 +186,7 @@ static Error_t getQueueFromStream(Stream_t Stream, ol_queue_handle_t *Queue) {
 
 Error_t StreamCreate(Stream_t *Stream) {
   ol_queue_handle_t Queue;
-  olCreateQueue(olKGetDefaultDevice(), &Queue);
+  olCreateQueue(language_runtime::getDefaultDevice(), &Queue);
   *Stream = reinterpret_cast<Stream_t>(Queue);
   return Success;
 }
@@ -204,7 +207,7 @@ Error_t StreamDestroy(Stream_t Stream) {
   if (Err != Success)
     return Err;
   ol_result_t Result = olDestroyQueue(Queue);
-  return olKConvertResult(Result);
+  return convertResult(Result);
 }
 
 Error_t StreamSynchronize(Stream_t Stream) {
@@ -213,5 +216,5 @@ Error_t StreamSynchronize(Stream_t Stream) {
   if (Err != Success)
     return Err;
   ol_result_t Result = olSyncQueue(Queue);
-  return olKConvertResult(Result);
+  return convertResult(Result);
 }

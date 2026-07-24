@@ -15,13 +15,6 @@
 
 #include "../../kernel/src/LanguageRuntime.cpp"
 
-#include "../../kernel/src/LanguageRegistration.cpp"
-
-#include "../../kernel/src/LanguageLaunch.cpp"
-
-// Must be last as it introduces alises for some definitions from above.
-#include "LanguageAliases.h"
-
 extern "C" {
 void __cudaRegisterFatBinaryEnd(void *) {}
 }

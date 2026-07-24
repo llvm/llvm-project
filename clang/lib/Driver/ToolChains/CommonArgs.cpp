@@ -1469,8 +1469,7 @@ bool tools::addLLVMOffloadingRuntime(const Compilation &C,
                     options::OPT_fno_offload_via_llvm, false))
     return false;
 
-  CmdArgs.push_back("-lLLVMhip64");
-  CmdArgs.push_back("-lLLVMcudart");
+  CmdArgs.push_back("-lLLVMOffloadKernel");
   return true;
 }
 
@@ -1481,8 +1480,7 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   bool IsOffloadViaLLVM = Args.hasFlag(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   if (IsOffloadViaLLVM && IsOffloadingHost) {
-    CmdArgs.push_back("-lLLVMhip64");
-    CmdArgs.push_back("-lLLVMcudart");
+    CmdArgs.push_back("-lLLVMOffloadKernel");
   }
 
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,

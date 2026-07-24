@@ -11,7 +11,6 @@
 #ifndef LLVM_LANGUAGE_LAUNCH_H
 #define LLVM_LANGUAGE_LAUNCH_H
 
-#include "ExportedAPI.h"
 #include "OffloadAPI.h"
 #include "Types.h"
 

@@ -9,15 +9,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "LanguageLaunch.h"
+#include "RuntimeAPI.h"
 
 #include <cstdio>
+
+namespace language_launch = llvm::offload::kernel;
 
 extern "C" {
 
 /// Push call configuration for kernel launch
 unsigned __llvmPushCallConfiguration(dim3 __grid_size, dim3 __block_size,
                                      size_t __shared_memory, void *__stream) {
-  CallConfigurationTy &CC = *olKGetCallConfiguration();
+  CallConfigurationTy &CC = *language_launch::getCallConfiguration();
 
   CC.GridSize = __grid_size;
   CC.BlockSize = __block_size;
@@ -29,7 +32,7 @@ unsigned __llvmPushCallConfiguration(dim3 __grid_size, dim3 __block_size,
 /// Pop call configuration for kernel launch
 unsigned __llvmPopCallConfiguration(dim3 *__grid_size, dim3 *__block_size,
                                     size_t *__shared_memory, void *__stream) {
-  CallConfigurationTy &CC = *olKGetCallConfiguration();
+  CallConfigurationTy &CC = *language_launch::getCallConfiguration();
   *__grid_size = CC.GridSize;
   *__block_size = CC.BlockSize;
   *__shared_memory = CC.SharedMemory;
@@ -41,8 +44,8 @@ unsigned __llvmPopCallConfiguration(dim3 *__grid_size, dim3 *__block_size,
 ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
                                    dim3 BlockDim, void *KernelArgsPtr,
                                    size_t DynamicSharedMem, void *Stream) {
-  ol_device_handle_t Device = olKGetDefaultDevice();
-  ol_symbol_handle_t Kernel = olKGetKernel(KernelID);
+  ol_device_handle_t Device = language_launch::getDefaultDevice();
+  ol_symbol_handle_t Kernel = language_launch::getKernel(KernelID);
 
   ol_dimensions_t GridDimensions, BlockDimensions;
   ol_kernel_launch_size_args_t LaunchSizeArgs;
@@ -59,7 +62,7 @@ ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
   LaunchSizeArgs.DynSharedMemory = DynamicSharedMem;
 
   ol_queue_handle_t Queue = Stream ? reinterpret_cast<ol_queue_handle_t>(Stream)
-                                   : olKGetDefaultQueue();
+                                   : language_launch::getDefaultQueue();
 
   ol_kernel_launch_prop_t Properties = {.type = OL_KERNEL_LAUNCH_PROP_TYPE_NONE,
                                         .data = nullptr};
