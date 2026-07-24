@@ -12,7 +12,6 @@
 
 #include "NVPTXAtomicLower.h"
 #include "NVPTX.h"
-#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
