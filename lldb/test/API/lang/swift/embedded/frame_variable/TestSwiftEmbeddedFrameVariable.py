@@ -95,6 +95,12 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
         nonPayload2 = frame.FindVariable("nonPayload2")
         lldbutil.check_variable(self, nonPayload2, True, value="two")
 
+        trivial = frame.FindVariable("trivial")
+        lldbutil.check_variable(self, trivial, True, value="theCase")
+
+        voidPayload = frame.FindVariable("voidPayload")
+        lldbutil.check_variable(self, voidPayload, True, value="theCase")
+
         singlePayload = frame.FindVariable("singlePayload")
         payload = singlePayload.GetChildMemberWithName("payload")
         field = payload.GetChildMemberWithName("a").GetChildMemberWithName("field")

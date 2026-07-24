@@ -569,11 +569,13 @@ getDWARFBuiltinTypeDescriptor(TypeSystemSwiftTypeRef &swift_typesystem,
     return nullptr;
   auto &[type, die] = *pair;
 
+  bool is_enum = false;
   if (!TypeSystemSwiftTypeRef::IsBuiltinType(type)) {
     if (die.Tag() == llvm::dwarf::DW_TAG_structure_type) {
       auto child = die.GetFirstChild();
       if (child.Tag() != llvm::dwarf::DW_TAG_variant_part)
         return nullptr;
+      is_enum = true;
     } else if (die.Tag() != llvm::dwarf::DW_TAG_base_type)
       return nullptr;
   }
@@ -581,6 +583,15 @@ getDWARFBuiltinTypeDescriptor(TypeSystemSwiftTypeRef &swift_typesystem,
   auto byte_size = die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_byte_size,
                                                    LLDB_INVALID_ADDRESS);
   if (byte_size == LLDB_INVALID_ADDRESS)
+    return nullptr;
+
+  // Enums with DWARF byte_size 0 are an LLVM artifact: the compiler
+  // can't emit unsized types, so an unsubstituted generic enum's size
+  // is emitted as 0.  If we're here this must be a payload-carrying
+  // enum, and such an enum is never 0 bytes, even if its payload is
+  // size 0. Decline to synthesize a fixed descriptor so reflection
+  // instead derives the layout dynamically from the payloads.
+  if (is_enum && byte_size == 0)
     return nullptr;
 
   auto alignment = die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment,

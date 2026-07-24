@@ -12,6 +12,12 @@ enum TrivialEnum {
   case theCase
 }
 
+// Single case whose payload is (): zero-sized, yet it syntactically carries a
+// payload. It collapses to a trivial layout (no DWARF variant part).
+enum VoidPayloadEnum {
+  case theCase(())
+}
+
 // Enum with 2 or more non-payload cases and no payload cases
 enum NonPayloadEnum {
   case one
@@ -156,6 +162,7 @@ func g() {
     )
     let array : [Int] = [1, 2, 3, 4]
     let trivial = TrivialEnum.theCase
+    let voidPayload = VoidPayloadEnum.theCase(())
     let nonPayload1 = NonPayloadEnum.one
     let nonPayload2 = NonPayloadEnum.two
     let singlePayload = SinglePayloadEnum.payload(B())
