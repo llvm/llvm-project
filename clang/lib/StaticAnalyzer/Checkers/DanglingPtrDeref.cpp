@@ -15,8 +15,8 @@ public:
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
-  void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N,
-                           CheckerContext &C) const;
+  void reportUseAfterScope(const MemRegion *Region, const Stmt *S,
+                           ExplodedNode *N, CheckerContext &C) const;
   const BugType BugMsg{this, "ReportDanglingPtrDeref", "LifetimeBound"};
 };
 
@@ -45,7 +45,7 @@ void DanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   if (const MemRegion *LocRegion = Loc.getAsRegion()) {
     if (lifetime_modeling::isDeallocated(State, LocRegion)) {
       if (ExplodedNode *N = C.generateNonFatalErrorNode(State))
-        reportUseAfterScope(LocRegion, N, C);
+        reportUseAfterScope(LocRegion, S, N, C);
     }
   }
 }
@@ -62,7 +62,7 @@ void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
     if (const MemRegion *ArgRegion = Call.getArgSVal(Idx).getAsRegion())
       if (lifetime_modeling::isDeallocated(State, ArgRegion))
         if (ExplodedNode *N = C.generateNonFatalErrorNode())
-          reportUseAfterScope(ArgRegion, N, C);
+          reportUseAfterScope(ArgRegion, Call.getArgExpr(Idx), N, C);
   }
 }
 
@@ -75,7 +75,7 @@ static std::string getRegionName(const MemRegion *Reg) {
 }
 
 void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
-                                           ExplodedNode *N,
+                                           const Stmt *S, ExplodedNode *N,
                                            CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
@@ -83,6 +83,7 @@ void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
        " after its lifetime ended."),
       N);
   BR->addVisitor<DanglingPtrDerefBRVisitor>(Region);
+  bugreporter::trackExpressionValue(N, bugreporter::getDerefExpr(S), *BR);
   C.emitReport(std::move(BR));
 }
 

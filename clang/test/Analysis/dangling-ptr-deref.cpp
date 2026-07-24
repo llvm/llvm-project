@@ -4,8 +4,8 @@
 void test_case_one() {
   int *ptr = nullptr;
   {
-    int num = 5;
-    ptr = &num;
+    int num = 5; // expected-note {{'num' initialized to 5}}
+    ptr = &num; // expected-note  {{Value assigned to 'ptr'}}
   }
   // expected-note@-1 {{'num' is destroyed here}}
   *ptr = 6;
@@ -17,10 +17,10 @@ void test_case_two() {
   int *ptr_one = nullptr;
   int *ptr_two = nullptr;
   {
-    int n = 1;
-    int m = 2;
-    ptr_one = &n;
-    ptr_two = &m;
+    int n = 1; // expected-note {{'n' initialized to 1}}
+    int m = 2; // expected-note {{'m' initialized to 2}}
+    ptr_one = &n; // expected-note {{Value assigned to 'ptr_one'}}
+    ptr_two = &m; // expected-note {{Value assigned to 'ptr_two'}}
   }
   // expected-note@-1 {{'n' is destroyed here}}
   // expected-note@-2 {{'m' is destroyed here}}
@@ -45,7 +45,7 @@ void test_case_three() {
 void test_case_four() {
   int *ptr = nullptr;
   {
-    int num = 5;
+    int num = 5; // expected-note {{'num' initialized to 5}}
     ptr = &num;
   }
   // expected-note@-1 {{'num' is destroyed here}}
@@ -75,8 +75,8 @@ void test_case_seven() {
   // expected-note@+3 {{Loop condition is true.  Entering loop body}}
   // expected-note@+2 {{Assuming 'i' is >= 10}}
   // expected-note@+1 {{Loop condition is false. Execution continues on line}}
-  for (int i = 0; i < 10; ++i) {
-    ptr = &i;
+  for (int i = 0; i < 10; ++i) { // expected-note {{'i' initialized to 0}}
+    ptr = &i; // expected-note {{Value assigned to 'ptr'}}
     escape(ptr);
   }
   // expected-note@-1 {{'i' is destroyed here}}
