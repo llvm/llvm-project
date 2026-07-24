@@ -58,6 +58,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -333,12 +334,12 @@ public:
 protected:
   /// Initializes the visitor and returns the set of initial directives of
   /// interest to be matched the beginning of the pattern.
-  virtual OmpDirectiveSet initialize() = 0;
+  virtual llvm::omp::DirectiveSet initialize() = 0;
 
   /// Visits a single directive and, based on it, returns the set of other
   /// directives of interest that would be part of the pattern if nested inside.
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) = 0;
+  virtual llvm::omp::DirectiveSet visitDirective(lower::pft::Evaluation &eval,
+                                                 llvm::omp::Directive dir) = 0;
 
   /// Obtain the list of clauses of the given OpenMP block or loop construct
   /// evaluation. If it's not an OpenMP construct, no modifications are made to
@@ -395,14 +396,14 @@ private:
       return;
 
     const auto &ompEval{eval.get<parser::OpenMPConstruct>()};
-    OmpDirectiveSet visitNested{
+    llvm::omp::DirectiveSet visitNested{
         visitDirective(eval, parser::omp::GetOmpDirectiveName(ompEval).v)};
 
-    if (visitNested.empty())
+    if (visitNested.none())
       return;
 
     if (lower::pft::Evaluation *nestedEval = extractOnlyOmpNestedEval(eval)) {
-      OmpDirectiveSet prevDirs{directivesOfInterest};
+      llvm::omp::DirectiveSet prevDirs{directivesOfInterest};
       directivesOfInterest = visitNested;
       visitEval(*nestedEval);
       directivesOfInterest = prevDirs;
@@ -413,7 +414,7 @@ protected:
   semantics::SemanticsContext &semaCtx;
 
 private:
-  OmpDirectiveSet directivesOfInterest;
+  llvm::omp::DirectiveSet directivesOfInterest;
 };
 
 /// Helper pattern to navigate target SPMD.
@@ -423,13 +424,14 @@ public:
   virtual ~TargetSPMDVisitor() = default;
 
 protected:
-  virtual OmpDirectiveSet initialize() override {
+  virtual llvm::omp::DirectiveSet initialize() override {
     teamsVisited = false;
     return llvm::omp::allTargetSet;
   }
 
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) override {
+  virtual llvm::omp::DirectiveSet
+  visitDirective(lower::pft::Evaluation &eval,
+                 llvm::omp::Directive dir) override {
     using namespace llvm::omp;
 
     // The default implementation does nothing, except it returns the allowed
@@ -501,8 +503,9 @@ public:
   virtual ~HostEvalVisitor() = default;
 
 protected:
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) override {
+  virtual llvm::omp::DirectiveSet
+  visitDirective(lower::pft::Evaluation &eval,
+                 llvm::omp::Directive dir) override {
     using namespace llvm::omp;
 
     List<lower::omp::Clause> clauses;
@@ -626,8 +629,9 @@ public:
   }
 
 protected:
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) override {
+  virtual llvm::omp::DirectiveSet
+  visitDirective(lower::pft::Evaluation &eval,
+                 llvm::omp::Directive dir) override {
     using namespace llvm::omp;
 
     // We know this to be the case because any changes to the exec mode are made
@@ -5031,11 +5035,11 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
       // statements or directives preventing them from being combined need the
       // attribute as well. Disallow block constructs that can only be outermost
       // leafs and loop transformation constructs.
-      OmpDirectiveSet combinableDirs =
+      llvm::omp::DirectiveSet combinableDirs =
           (llvm::omp::blockConstructSet &
-           ~OmpDirectiveSet{llvm::omp::Directive::OMPD_ordered,
-                            llvm::omp::Directive::OMPD_scope,
-                            llvm::omp::Directive::OMPD_taskgroup}) |
+           ~llvm::omp::DirectiveSet{llvm::omp::Directive::OMPD_ordered,
+                                    llvm::omp::Directive::OMPD_scope,
+                                    llvm::omp::Directive::OMPD_taskgroup}) |
           (llvm::omp::loopConstructSet & ~llvm::omp::loopTransformationSet);
       const auto &ompEval = nestedEval->get<parser::OpenMPConstruct>();
       llvm::omp::Directive nestedDir =
@@ -6944,7 +6948,7 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
 
   if (auto offloadMod =
           llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(mod)) {
-    semantics::WithOmpDeclarative::OmpClauseSet reqs;
+    llvm::omp::ClauseSet reqs;
     if (symbol) {
       common::visit(
           [&](const auto &details) {
