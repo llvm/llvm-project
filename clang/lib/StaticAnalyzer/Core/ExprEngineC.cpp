@@ -818,10 +818,8 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
   Dst.insert(Engine.makeNodeWithBinding(Pred, Ex, V));
 }
 
-void ExprEngine::
-VisitOffsetOfExpr(const OffsetOfExpr *OOE,
-                  ExplodedNode *Pred, ExplodedNodeSet &Dst) {
-  NodeBuilder B(Pred, Dst, *currBldrCtx);
+void ExprEngine::VisitOffsetOfExpr(const OffsetOfExpr *OOE, ExplodedNode *Pred,
+                                   ExplodedNodeSet &Dst) {
   Expr::EvalResult Result;
   if (OOE->EvaluateAsInt(Result, getContext())) {
     APSInt IV = Result.Val.getInt();
@@ -829,12 +827,10 @@ VisitOffsetOfExpr(const OffsetOfExpr *OOE,
     assert(OOE->getType()->castAs<BuiltinType>()->isInteger());
     assert(IV.isSigned() == OOE->getType()->isSignedIntegerType());
     SVal X = svalBuilder.makeIntVal(IV);
-    B.generateNode(OOE, Pred,
-                   Pred->getState()->BindExpr(OOE, Pred->getStackFrame(), X));
+    Dst.insert(Engine.makeNodeWithBinding(Pred, OOE, X));
   }
   // FIXME: Handle the case where __builtin_offsetof is not a constant.
 }
-
 
 void ExprEngine::
 VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
