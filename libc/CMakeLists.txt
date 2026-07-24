@@ -161,9 +161,10 @@ option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
 if(LIBC_TARGET_OS_IS_LINUX)
-  set(kernel_headers "/usr/include")
-  if(CMAKE_LIBRARY_ARCHITECTURE AND EXISTS "/usr/include/${CMAKE_LIBRARY_ARCHITECTURE}")
-    list(APPEND kernel_headers "/usr/include/${CMAKE_LIBRARY_ARCHITECTURE}")
+  if(LIBC_TARGET_TRIPLE AND EXISTS "/usr/${LIBC_TARGET_TRIPLE}/include")
+    set(kernel_headers "/usr/${LIBC_TARGET_TRIPLE}/include")
+  else()
+    set(kernel_headers "/usr/include")
   endif()
 endif()
 set(LIBC_KERNEL_HEADERS "${kernel_headers}" CACHE STRING "Path to Linux kernel headers")
