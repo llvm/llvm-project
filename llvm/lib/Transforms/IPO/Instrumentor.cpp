@@ -1208,6 +1208,38 @@ Value *AllocaIO::getAlignment(Value &V, Type &Ty, InstrumentationConfig &IConf,
 }
 ///}
 
+// Check if a pointer comes from an intrinsic function and is one of the AMD GCN intrinsics we avoid when instrumenting
+static bool ptrOriginatesFromAMDGCNIntrinsic(llvm::Value *PtrArg) {
+  llvm::errs() << "checking if should instrument a pointer...";
+  SmallVector<const llvm::Value *, 4> Objs;
+  llvm::getUnderlyingObjects(PtrArg, Objs, nullptr, 20);
+  assert(!Objs.empty() && "How can a pointer have no underlying objects?");
+
+  auto IsAMDGCNObj = [](const llvm::Value *Obj) {
+    if (auto *II = llvm::dyn_cast<llvm::IntrinsicInst>(Obj))
+      if (llvm::Function *CalledFunc = II->getCalledFunction())
+        return CalledFunc->getName().contains("amdgcn");
+    return false;
+  };
+
+  bool SawAMDGCN = false;
+  bool SawNonAMDGCN = false;
+  for (const llvm::Value *Obj : Objs) {
+    if (IsAMDGCNObj(Obj))
+      SawAMDGCN = true;
+    else
+      SawNonAMDGCN = true;
+  }
+
+  assert(!(SawAMDGCN && SawNonAMDGCN) &&
+         "Mixed underlying objects: either all underlying objects must contain "
+         "'amdgcn' or none of them may contain it");
+
+  bool ShouldInstrument = !SawAMDGCN;
+  llvm::errs() << "shouldInstrument =" << ShouldInstrument << "\n";
+  return ShouldInstrument;
+}
+
 void StoreIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
                    ConfigTy *UserConfig) {
   if (UserConfig)
@@ -1278,6 +1310,11 @@ void StoreIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
 
   addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
   IConf.addChoice(*this, IIRB.Ctx);
+
+  CB = [&](Value &V) -> bool {
+    Value *Ptr = cast<StoreInst>(V).getPointerOperand();
+    return ptrOriginatesFromAMDGCNIntrinsic(Ptr);
+  };
 }
 
 Value *StoreIO::getPointer(Value &V, Type &Ty, InstrumentationConfig &IConf,
@@ -1428,6 +1465,11 @@ void LoadIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
 
   addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
   IConf.addChoice(*this, IIRB.Ctx);
+
+  CB = [&](Value &V) -> bool {
+    Value *Ptr = cast<LoadInst>(V).getPointerOperand();
+    return ptrOriginatesFromAMDGCNIntrinsic(Ptr);
+  };
 }
 
 Value *LoadIO::getPointer(Value &V, Type &Ty, InstrumentationConfig &IConf,
