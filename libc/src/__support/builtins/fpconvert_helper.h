@@ -50,6 +50,9 @@ LIBC_INLINE constexpr To fpconvert(From x) {
 
   FromBits x_bits(x);
 
+  if constexpr (cpp::is_same_v<To, From>)
+    return x;
+
   if (x_bits.is_nan()) {
     if (x_bits.is_signaling_nan()) {
       fputil::raise_except_if_required(FE_INVALID);
