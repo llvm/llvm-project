@@ -795,10 +795,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    // We can preserve nuw when the step is non-negative.
     VPIRFlags::WrapFlagsTy WrapFlags;
-    ConstantInt *Step = ID.getConstIntStepValue();
-    if (Step && !Step->isNegative())
+    // We can preserve nuw when the step is non-negative.
+    const APInt *Step;
+    if (match(WideIV->getStepValue(), m_APInt(Step)) && Step->isNonNegative())
       WrapFlags = {static_cast<bool>(WideIV->getNoWrapFlagsOrNone().HasNUW),
                    false};
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(

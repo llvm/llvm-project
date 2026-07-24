@@ -4155,10 +4155,10 @@ protected:
 #endif
 };
 
-/// A recipe for converting \p Index into \p Start + \p Index * \p Step.
+/// A recipe for converting \p Current into \p Start + \p Current * \p Step.
 /// FastMathFlags are derived from the \p FPBinOp in the case of FP inductions,
 /// and the passed NoWrap \p Flags apply in the case of Ptr and Int inductions.
-class VPDerivedIVRecipe : public VPSingleDefRecipe, public VPIRFlags {
+class VPDerivedIVRecipe : public VPRecipeWithIRFlags {
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
   /// If not nullptr, the floating point induction binary operator. Must be set
@@ -4168,11 +4168,11 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe, public VPIRFlags {
 public:
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
                     const FPMathOperator *FPBinOp, VPValue *Start,
-                    VPValue *Index, VPValue *Step,
+                    VPValue *Current, VPValue *Step,
                     const VPIRFlags::WrapFlagsTy &Flags = {})
-      : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, Index, Step},
-                          Start->getScalarType()),
-        VPIRFlags(Flags), Kind(Kind), FPBinOp(FPBinOp) {}
+      : VPRecipeWithIRFlags(VPRecipeBase::VPDerivedIVSC, {Start, Current, Step},
+                            Start->getScalarType(), Flags),
+        Kind(Kind), FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 
