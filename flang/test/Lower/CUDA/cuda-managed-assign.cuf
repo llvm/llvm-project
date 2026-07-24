@@ -1,0 +1,65 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! A whole-array assignment whose right-hand side is a managed variable or a
+! managed function result is a synchronous data transfer (matching CUDA Fortran
+! assignment-statement semantics). Element-wise (scalar) accesses and right-hand
+! side expressions involving managed data are performed on the host and need no
+! transfer.
+
+module mfr
+contains
+  function fr(n) result(r)
+    integer, value :: n
+    integer(4), allocatable, managed :: r(:)
+    allocate(r(n))
+    r = 7
+  end function
+end module
+
+subroutine managed_array_assign()
+  integer(4), managed :: ma(16), mb(16)
+  integer(4) :: ha(16)
+  ma = mb    ! managed = managed
+  ma = ha    ! managed = host
+  ha = ma    ! host = managed
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_array_assign()
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<device_device>}
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<host_device>}
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<device_host>}
+
+! A right-hand side expression involving managed data is evaluated on the host
+! to avoid materializing a temporary, so no data transfer is generated.
+subroutine managed_expr_assign()
+  integer(4), managed :: ma(16), mb(16)
+  integer(4) :: ha(16)
+  ma = mb + 1    ! managed = managed expression
+  ha = ma + 1    ! host = managed expression
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_expr_assign()
+! CHECK-NOT: cuf.data_transfer
+
+subroutine managed_scalar_access(n)
+  integer :: n, i
+  integer(4), managed :: ma(16)
+  integer(4) :: ha(16)
+  do i = 1, n
+    ha(i) = ma(i) + 1   ! element-wise access is performed on the host
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_scalar_access
+! CHECK-NOT: cuf.data_transfer
+
+! A managed function result may be produced by an asynchronous kernel, so
+! consuming it in an assignment is a synchronizing data transfer.
+subroutine managed_func_result()
+  use mfr
+  integer(4), managed :: b(4)
+  b = fr(4)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_func_result()
+! CHECK: cuf.data_transfer

@@ -9,6 +9,7 @@
 #ifndef __LLVM_LIBC_TYPES_STRUCT_TERMIOS_H__
 #define __LLVM_LIBC_TYPES_STRUCT_TERMIOS_H__
 
+#include "../llvm-libc-macros/termios-macros.h"
 #include "cc_t.h"
 #include "speed_t.h"
 #include "tcflag_t.h"

@@ -92,7 +92,7 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <8 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP233:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <8 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP234:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <8 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP235:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 32
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 64
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP4]], 96
@@ -348,7 +348,7 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI10:%.*]] = phi <8 x float> [ [[TMP239]], %[[VEC_EPILOG_PH]] ], [ [[TMP297:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP240:%.*]] = shl i64 [[INDEX9]], 5
+; CHECK-NEXT:    [[TMP240:%.*]] = shl nuw i64 [[INDEX9]], 5
 ; CHECK-NEXT:    [[TMP241:%.*]] = add i64 [[TMP240]], 32
 ; CHECK-NEXT:    [[TMP242:%.*]] = add i64 [[TMP240]], 64
 ; CHECK-NEXT:    [[TMP243:%.*]] = add i64 [[TMP240]], 96

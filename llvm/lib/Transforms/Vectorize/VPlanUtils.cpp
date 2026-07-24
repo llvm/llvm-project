@@ -587,12 +587,12 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
     Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
-    VPBuilder &Builder) {
+    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
   VPSingleDefRecipe *BaseIV =
-      Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step);
+      Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step, Flags);
 
   // Truncate base induction if needed.
   Type *ResultTy = BaseIV->getScalarType();
