@@ -1,0 +1,80 @@
+# TEMPORARY — DO NOT MERGE.
+#
+# This workflow exists only to reproduce and investigate the LNT installation
+# failure seen on the macOS self-hosted benchmark runners:
+#
+#   https://github.com/llvm/llvm-project/actions/runs/30092892111/job/89479960018
+#
+# The benchmark job installs `python@3.14` via Homebrew and prepends
+# `$(brew --prefix python@3.14)/libexec/bin` to the PATH. That directory only
+# provides *unversioned* `python`/`pip` symlinks -- it has no `python3`. So a
+# `python3` invocation (used by run-benchmarks to create the venv) still
+# resolves to Apple's `/usr/bin/python3` (3.9.6), and `pip install llvm-lnt`
+# then fails because every llvm-lnt release requires Python >= 3.10.
+#
+# This job mirrors the benchmark setup, dumps the relevant diagnostics, then
+# reproduces the failure and validates a candidate fix on the same runners.
+
+name: Investigate LNT install failure (macOS)
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/libcxx-investigate-lnt.yml'
+
+jobs:
+  investigate:
+    runs-on: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+    steps:
+      - name: Install python@3.14 via Homebrew (same as the benchmark job)
+        run: |
+          brew update
+          brew install python@3.14
+          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
+
+      - name: Diagnose which python3 / pip3 are actually on PATH
+        run: |
+          echo "PATH=${PATH}"
+          echo "--- which -a python3 python pip3 pip ---"
+          which -a python3 python pip3 pip || true
+          echo "--- versions ---"
+          echo "python3 -> $(command -v python3): $(python3 --version 2>&1)"
+          echo "python  -> $(command -v python)  : $(python  --version 2>&1)"
+          prefix="$(brew --prefix python@3.14)"
+          echo "--- brew --prefix python@3.14 = ${prefix} ---"
+          echo "libexec/bin (this is what we add to PATH -- note: no python3):"
+          ls -l "${prefix}/libexec/bin"
+          echo "bin (this one DOES contain python3/pip3):"
+          ls -l "${prefix}/bin"
+
+      - name: Reproduce the failure -- venv via 'python3' + pip install llvm-lnt
+        run: |
+          set -x
+          venv="$(mktemp -d)/venv"
+          python3 -m venv "${venv}"
+          "${venv}/bin/python" --version
+          "${venv}/bin/pip" --version
+          # This is the exact command that fails in the benchmark job. We expect
+          # it to fail here too; capture the status instead of aborting the job
+          # so the candidate-fix step below still runs.
+          if "${venv}/bin/pip" install llvm-lnt; then
+            echo "::warning::UNEXPECTED: 'pip install llvm-lnt' succeeded with python3"
+          else
+            echo "::notice::REPRODUCED: 'pip install llvm-lnt' failed with python3 (Apple 3.9.6), as in CI"
+          fi
+
+      - name: Candidate fix -- venv via 'python3.14' + pip install llvm-lnt
+        run: |
+          set -x
+          venv="$(mktemp -d)/venv"
+          python3.14 -m venv "${venv}"
+          "${venv}/bin/python" --version
+          "${venv}/bin/pip" install llvm-lnt
+          "${venv}/bin/lnt" --help | head -n 5
+          echo "::notice::FIX CONFIRMED: 'pip install llvm-lnt' works when the venv uses python3.14"
