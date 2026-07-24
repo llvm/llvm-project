@@ -1,22 +1,20 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -verify %s
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple \
+// RUN:   dxil-pc-shadermodel6.6-compute %s -emit-llvm -o - -verify
 
-// Test that assigning a ternary expression to a static resource variable
-// triggers a -Whlsl-explicit-binding warning.
-// DXC: Error (codegen) — "non const static global resource use is disallowed in library exports"
-//       and "local resource not guaranteed to map to unique global resource"
-
+// expected-error@*:* {{missing entry point definition 'main'}}
 RWBuffer<uint> In : register(u0);
 RWStructuredBuffer<uint> Out0 : register(u1);
 RWStructuredBuffer<uint> Out1 : register(u2);
 
-cbuffer c {
-    bool cond;
+cbuffer C {
+    bool Cond;
 };
 
 static RWStructuredBuffer<uint> StaticOut;
 
-void static_conditional_assignment(uint idx) {
-    // expected-warning@+1 {{assignment of 'cond ? Out0 : Out1' to local resource 'StaticOut' is not to the same unique global resource}}
-    StaticOut = cond ? Out0 : Out1;
-    StaticOut[idx] = In[idx];
+// expected-error@+1 {{unknown type name 'Export'}}
+Export void static_conditional_assignment(uint Idx) {
+// expected-warning@+1 {{assignment of 'Cond ? Out0 : Out1' to local resource 'StaticOut' is not to the same unique global resource}}
+    StaticOut = Cond ? Out0 : Out1;
+    StaticOut[Idx] = In[Idx];
 }
