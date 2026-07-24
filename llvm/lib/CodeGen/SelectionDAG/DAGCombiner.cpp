@@ -12732,9 +12732,7 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
     TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), TransformVT);
 
   // We have checked nnan and nsz as pre-conditions for the transform.
-  SDNodeFlags Flags;
-  Flags.setNoNaNs(true);
-  Flags.setNoSignedZeros(true);
+  SDNodeFlags Flags = SDNodeFlags::NoNaNs | SDNodeFlags::NoSignedZeros;
 
   switch (CC) {
   case ISD::SETOLT:
