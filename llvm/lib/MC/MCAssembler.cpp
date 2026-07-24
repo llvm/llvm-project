@@ -408,7 +408,8 @@ static uint64_t maxNopBytesAt(const MCAssembler &Asm, uint64_t Remaining,
   return Bytes;
 }
 
-/// Write NOPs while limiting the maximum NOP size.
+/// Write NumBytes of NOPs in chunks of at most MaxNopSize bytes. When bundling
+/// is enabled, no chunk crosses a bundle boundary.
 static void writeControlledNops(raw_ostream &OS, const MCAssembler &Asm,
                                 uint64_t NumBytes, uint64_t FragmentOffset,
                                 uint64_t MaxNopSize,
@@ -474,16 +475,9 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
     // In the nops mode, call the backend hook to write `Count` nops.
     if (F.hasAlignEmitNops()) {
-      if (!Asm.isBundlingEnabled()) {
-        if (!Asm.getBackend().writeNopData(OS, Count, F.getSubtargetInfo()))
-          reportFatalInternalError("unable to write nop sequence of " +
-                                   Twine(Count) + " bytes");
-      } else {
-        // Ensure that no nop of the fill crosses a bundle boundary.
-        writeControlledNops(OS, Asm, Count,
-                            Asm.getFragmentOffset(F) + F.getFixedSize(), Count,
-                            F.getSubtargetInfo());
-      }
+      writeControlledNops(OS, Asm, Count,
+                          Asm.getFragmentOffset(F) + F.getFixedSize(), Count,
+                          F.getSubtargetInfo());
     } else {
       // Otherwise, write out in multiples of the value size.
       for (uint64_t i = 0; i != Count; ++i) {
@@ -591,15 +585,8 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
   case MCFragment::FT_BoundaryAlign: {
     const MCBoundaryAlignFragment &BF = cast<MCBoundaryAlignFragment>(F);
-    if (!Asm.isBundlingEnabled()) {
-      if (!Asm.getBackend().writeNopData(OS, FragmentSize,
-                                         BF.getSubtargetInfo()))
-        reportFatalInternalError("unable to write nop sequence of " +
-                                 Twine(FragmentSize) + " bytes");
-    } else {
-      writeControlledNops(OS, Asm, FragmentSize, Asm.getFragmentOffset(BF),
-                          FragmentSize, BF.getSubtargetInfo());
-    }
+    writeControlledNops(OS, Asm, FragmentSize, Asm.getFragmentOffset(BF),
+                        FragmentSize, BF.getSubtargetInfo());
     break;
   }
 
