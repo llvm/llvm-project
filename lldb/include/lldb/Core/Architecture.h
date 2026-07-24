@@ -10,11 +10,16 @@
 #define LLDB_CORE_ARCHITECTURE_H
 
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Core/Value.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "lldb/Target/RegisterContextUnwind.h"
 
+#include <optional>
+
 namespace lldb_private {
+
+class StackFrame;
 
 class Architecture : public PluginInterface {
 public:
@@ -70,6 +75,17 @@ public:
   /// used for WebAssembly, where a function begins with a local variable
   /// declaration header.
   virtual Address SkipFunctionHeader(Address addr) const { return addr; }
+
+  /// Return the value to seed a variable's DWARF location expression with, or
+  /// std::nullopt to evaluate it with an empty stack.
+  ///
+  /// A location is normally self-contained, but some architectures express it
+  /// relative to the frame base without DW_OP_fbreg, taking the frame base as
+  /// the initial stack value. WebAssembly does this for shadow-stack locals.
+  virtual std::optional<Value>
+  GetVariableLocationInitialValue(StackFrame &frame) const {
+    return std::nullopt;
+  }
 
   /// Get \a load_addr as a callable code load address for this target
   ///

@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
@@ -159,8 +160,13 @@ bool ValueObjectVariable::UpdateValue() {
             sc.function->GetAddress().GetLoadAddress(target);
     }
     Value old_value(m_value);
-    llvm::Expected<Value> maybe_value = expr_list.Evaluate(
-        &exe_ctx, nullptr, loclist_base_load_addr, nullptr, nullptr);
+    std::optional<Value> initial_value;
+    if (Architecture *arch = target ? target->GetArchitecturePlugin() : nullptr)
+      if (StackFrame *frame = exe_ctx.GetFramePtr())
+        initial_value = arch->GetVariableLocationInitialValue(*frame);
+    llvm::Expected<Value> maybe_value =
+        expr_list.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
+                           initial_value ? &*initial_value : nullptr, nullptr);
 
     if (maybe_value) {
       m_value = *maybe_value;

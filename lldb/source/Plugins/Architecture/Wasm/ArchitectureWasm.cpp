@@ -8,9 +8,13 @@
 
 #include "Plugins/Architecture/Wasm/ArchitectureWasm.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Value.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -52,4 +56,18 @@ Address ArchitectureWasm::SkipFunctionHeader(Address addr) const {
 
   addr.Slide(symbol_addr + header_size - this_addr);
   return addr;
+}
+
+std::optional<Value>
+ArchitectureWasm::GetVariableLocationInitialValue(StackFrame &frame) const {
+  Scalar frame_base;
+  if (llvm::Error error = frame.GetFrameBaseValue(frame_base)) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(error),
+                   "failed to get the WebAssembly frame base: {0}");
+    return std::nullopt;
+  }
+  Value value;
+  value.GetScalar() = frame_base;
+  value.SetValueType(Value::ValueType::LoadAddress);
+  return value;
 }

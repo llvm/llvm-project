@@ -28,6 +28,9 @@ public:
   /// so the address lands on the first instruction.
   Address SkipFunctionHeader(Address addr) const override;
 
+  std::optional<Value>
+  GetVariableLocationInitialValue(StackFrame &frame) const override;
+
 private:
   static std::unique_ptr<Architecture> Create(const ArchSpec &arch);
   ArchitectureWasm() = default;
