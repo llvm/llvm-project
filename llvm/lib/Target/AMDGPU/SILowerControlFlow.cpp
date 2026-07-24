@@ -223,15 +223,6 @@ static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI) {
   return true;
 }
 
-static void moveInsAfterPhis(MachineInstr &MI) {
-  MachineBasicBlock::iterator It, End;
-  for (It = std::next(MI.getIterator()), End = MI.getParent()->end();
-       It != End && It->getOpcode() == AMDGPU::PHI; ++It)
-    ;
-  
-  MI.moveBefore(&*It);
-}
-
 void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -332,7 +323,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
 
-  MachineBasicBlock::iterator Start = MBB.begin();
+  MachineBasicBlock::iterator Start = MBB.getFirstNonPHI();
 
   // This must be inserted before phis and any spill code inserted before the
   // else.
@@ -342,8 +333,6 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
           .add(MI.getOperand(1)); // Saved EXEC
   if (LV)
     LV->replaceKillInstruction(SrcReg, MI, *OrSaveExec);
-
-  moveInsAfterPhis(*OrSaveExec);
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
@@ -500,7 +489,7 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  MachineBasicBlock::iterator InsPt = MBB.begin();
+  MachineBasicBlock::iterator InsPt = MBB.getFirstNonPHI();
 
   // If we have instructions that aren't prolog instructions, split the block
   // and emit a terminator instruction. This ensures correct spill placement.
@@ -882,9 +871,6 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
       LIS->createAndComputeVirtRegInterval(Reg);
     }
   }
-
-  for (MachineInstr *MI : LoweredEndCf)
-    moveInsAfterPhis(*MI);
 
   RecomputeRegs.clear();
   LoweredEndCf.clear();

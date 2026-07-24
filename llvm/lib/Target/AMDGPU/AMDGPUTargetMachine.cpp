@@ -1760,6 +1760,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
   }
   addPass(&DeadMachineInstructionElimID);
   addPass(createSIShrinkInstructionsLegacyPass());
+  addPass(&SILowerControlFlowLegacyID);
 }
 
 bool GCNPassConfig::addILPOpts() {
@@ -1819,11 +1820,6 @@ void GCNPassConfig::addFastRegAlloc() {
   // FIXME: We have to disable the verifier here because of PHIElimination +
   // TwoAddressInstructions disabling it.
 
-  // This must be run immediately after phi elimination and before
-  // TwoAddressInstructions, otherwise the processing of the tied operand of
-  // SI_ELSE will introduce a copy of the tied operand source after the else.
-  //insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
-
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
   TargetPassConfig::addFastRegAlloc();
@@ -1844,13 +1840,6 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // we should fix it and enable the verifier.
   if (OptVGPRLiveRange)
     insertPass(&LiveVariablesID, &SIOptimizeVGPRLiveRangeLegacyID);
-
-  insertPass(&SIOptimizeVGPRLiveRangeLegacyID, &SILowerControlFlowLegacyID);
-
-  // This must be run immediately after phi elimination and before
-  // TwoAddressInstructions, otherwise the processing of the tied operand of
-  // SI_ELSE will introduce a copy of the tied operand source after the else.
-  //insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
