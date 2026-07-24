@@ -371,7 +371,6 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 
-
 ### OpenACC Specific Changes
 
 ### OpenCL Specific Changes
