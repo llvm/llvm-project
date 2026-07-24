@@ -1565,7 +1565,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (CfiICallNormalizeIntegers)
     CmdArgs.push_back("-fsanitize-cfi-icall-experimental-normalize-integers");
 
-  if (KcfiArity) {
+  if (KcfiArity && Sanitizers.has(SanitizerKind::KCFI)) {
     if (!TC.getTriple().isOSLinux() || !TC.getTriple().isArch64Bit()) {
       TC.getDriver().Diag(clang::diag::err_drv_kcfi_arity_unsupported_target)
           << TC.getTriple().str();
