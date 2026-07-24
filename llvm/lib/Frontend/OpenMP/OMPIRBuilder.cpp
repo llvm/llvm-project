@@ -2184,6 +2184,25 @@ void OpenMPIRBuilder::createFlush(const LocationDescription &Loc) {
   emitFlush(Loc);
 }
 
+void OpenMPIRBuilder::createError(const LocationDescription &Loc, bool IsFatal,
+                                  Value *Message) {
+  if (!updateToLocation(Loc))
+    return;
+
+  // Build call void __kmpc_error(ident_t *loc, int severity,
+  //                              const char *message)
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  // Severity: 1 = warning, 2 = fatal.
+  Value *Severity = ConstantInt::get(Int32, IsFatal ? 2 : 1);
+  Value *MessageArg = Message ? Message : ConstantPointerNull::get(Int8Ptr);
+  Value *Args[] = {Ident, Severity, MessageArg};
+
+  createRuntimeFunctionCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_error),
+                            Args);
+}
+
 void OpenMPIRBuilder::emitTaskyieldImpl(const LocationDescription &Loc) {
   // Build call __kmpc_omp_taskyield(loc, thread_id, 0);
   uint32_t SrcLocStrSize;
