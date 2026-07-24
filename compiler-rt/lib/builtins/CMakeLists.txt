@@ -1152,21 +1152,31 @@ else ()
       # -mlink-builtin-bitcode expects raw LLVM IR and cannot unpack a static archive,
       # so we use llvm-link to merge the archive members into a single .bc file.
       if("${arch}" STREQUAL "spirv64")
-        set(SPIRV64_BC_OUTPUT "${BUILTIN_LIB_OUTPUT_DIR}/lib${BUILTIN_LIB_OUTPUT_NAME}.bc")
-        add_custom_command(
-          OUTPUT "${SPIRV64_BC_OUTPUT}"
-          COMMAND "${LLVM_TOOLS_BINARY_DIR}/llvm-link"
-                  "$<TARGET_FILE:clang_rt.builtins-spirv64>"
-                  -o "${SPIRV64_BC_OUTPUT}"
-          DEPENDS clang_rt.builtins-spirv64
-          COMMENT "Linking lib${BUILTIN_LIB_OUTPUT_NAME}.bc")
-        add_custom_target(clang_rt.builtins-spirv64-bc ALL
-          DEPENDS "${SPIRV64_BC_OUTPUT}")
-        add_dependencies(builtins clang_rt.builtins-spirv64-bc)
-        get_compiler_rt_install_dir(${arch} BUILTIN_INSTALL_DIR)
-        install(FILES "${SPIRV64_BC_OUTPUT}"
-                DESTINATION "${BUILTIN_INSTALL_DIR}"
-                COMPONENT builtins)
+        find_program(LLVM_LINK llvm-link
+          PATHS ${LLVM_TOOLS_BINARY_DIR}
+          NO_DEFAULT_PATH)
+        if(LLVM_LINK)
+          set(SPIRV64_BC_OUTPUT "${BUILTIN_LIB_OUTPUT_DIR}/lib${BUILTIN_LIB_OUTPUT_NAME}.bc")
+          add_custom_command(
+            OUTPUT "${SPIRV64_BC_OUTPUT}"
+            COMMAND "${LLVM_LINK}"
+                    "$<TARGET_FILE:clang_rt.builtins-spirv64>"
+                    -o "${SPIRV64_BC_OUTPUT}"
+            DEPENDS clang_rt.builtins-spirv64
+            COMMENT "Linking lib${BUILTIN_LIB_OUTPUT_NAME}.bc"
+            VERBATIM)
+          add_custom_target(clang_rt.builtins-spirv64-bc ALL
+            DEPENDS "${SPIRV64_BC_OUTPUT}")
+          add_dependencies(builtins clang_rt.builtins-spirv64-bc)
+          get_compiler_rt_install_dir(${arch} BUILTIN_INSTALL_DIR)
+          install(FILES "${SPIRV64_BC_OUTPUT}"
+                  DESTINATION "${BUILTIN_INSTALL_DIR}"
+                  COMPONENT builtins)
+        else()
+          message(WARNING
+            "llvm-link not found (LLVM_TOOLS_BINARY_DIR='${LLVM_TOOLS_BINARY_DIR}'); "
+            "skipping libclang_rt.builtins.bc for spirv64")
+        endif()
       endif()
 
       cmake_pop_check_state()
