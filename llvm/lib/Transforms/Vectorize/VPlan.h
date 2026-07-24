@@ -1138,7 +1138,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPRecipeID() == VPRecipeBase::VPReplicateSC ||
            R->getVPRecipeID() == VPRecipeBase::VPVectorEndPointerSC ||
            R->getVPRecipeID() == VPRecipeBase::VPVectorPointerSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC;
+           R->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC ||
+           R->getVPRecipeID() == VPRecipeBase::VPDerivedIVSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -3852,11 +3853,11 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
   VPValue *getEVL() const { return getOperand(1); }
 
   /// Generate the wide load or gather.
-  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenLoadEVLRecipe.
-  LLVM_ABI_FOR_TEST InstructionCost
-  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -3868,13 +3869,13 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
   }
 
 protected:
-  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
-  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -3957,11 +3958,11 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
   VPValue *getEVL() const { return getOperand(2); }
 
   /// Generate the wide store or scatter.
-  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenStoreEVLRecipe.
-  LLVM_ABI_FOR_TEST InstructionCost
-  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -3978,13 +3979,13 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
   }
 
 protected:
-  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
-  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -4154,10 +4155,10 @@ protected:
 #endif
 };
 
-/// A recipe for converting the input value \p IV value to the corresponding
-/// value of an IV with different start and step values, using Start + IV *
-/// Step.
-class VPDerivedIVRecipe : public VPSingleDefRecipe {
+/// A recipe for converting \p Current into \p Start + \p Current * \p Step.
+/// FastMathFlags are derived from the \p FPBinOp in the case of FP inductions,
+/// and the passed NoWrap \p Flags apply in the case of Ptr and Int inductions.
+class VPDerivedIVRecipe : public VPRecipeWithIRFlags {
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
   /// If not nullptr, the floating point induction binary operator. Must be set
@@ -4166,17 +4167,18 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
 
 public:
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
-                    const FPMathOperator *FPBinOp, VPValue *Start, VPValue *IV,
-                    VPValue *Step)
-      : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, IV, Step},
-                          Start->getScalarType(), nullptr),
+                    const FPMathOperator *FPBinOp, VPValue *Start,
+                    VPValue *Current, VPValue *Step,
+                    const VPIRFlags::WrapFlagsTy &Flags = {})
+      : VPRecipeWithIRFlags(VPRecipeBase::VPDerivedIVSC, {Start, Current, Step},
+                            Start->getScalarType(), Flags),
         Kind(Kind), FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 
   VPDerivedIVRecipe *clone() override {
     return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(), getOperand(1),
-                                 getStepValue());
+                                 getStepValue(), getNoWrapFlags());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPDerivedIVSC)

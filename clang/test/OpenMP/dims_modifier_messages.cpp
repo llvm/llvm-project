@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=61 -triple x86_64-unknown-unknown %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=61 -triple x86_64-unknown-unknown %s
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=61 -triple x86_64-unknown-unknown -fopenmp-targets=nvptx64 %s
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=61 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=61 -triple x86_64-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa %s
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -triple x86_64-unknown-unknown -DVERSION52 %s
 
 void foo() {

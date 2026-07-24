@@ -7,8 +7,8 @@ define i32 @red_extended_add_incomplete_chain(ptr %start, ptr %end, i32 %offset)
 ; CHECK-LABEL: define i32 @red_extended_add_incomplete_chain(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[END1]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP9]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16

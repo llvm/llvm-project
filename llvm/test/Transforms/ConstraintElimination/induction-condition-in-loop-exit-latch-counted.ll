@@ -15,8 +15,7 @@ define i1 @latch_counted_header_check_removable(ptr %p, i64 %n, i64 %lim) {
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = shl nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[RC:%.*]] = icmp ult i64 [[OFF]], [[LIM]]
-; CHECK-NEXT:    br i1 [[RC]], label %[[LOOP_LATCH]], label %[[EXIT_1]]
+; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[EXIT_1]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFF]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
@@ -58,8 +57,10 @@ exit.1:
   ret i1 false
 }
 
-define i1 @latch_counted_raw_phi_not_removable(ptr %p, i64 %n, i64 %lim) {
-; CHECK-LABEL: define i1 @latch_counted_raw_phi_not_removable(
+; The latch compares the phi (%iv == %n), not the post-increment. The header
+; check is not removable.
+define i1 @latch_counted_phi_not_removable(ptr %p, i64 %n, i64 %lim) {
+; CHECK-LABEL: define i1 @latch_counted_phi_not_removable(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[LIM:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i64 [[N]], 0
@@ -113,8 +114,8 @@ exit.1:
   ret i1 false
 }
 
-define i1 @latch_counted_bound_consumer_not_folded(ptr %s, i64 %n) {
-; CHECK-LABEL: define i1 @latch_counted_bound_consumer_not_folded(
+define i1 @latch_counted_bound_consumer_folded(ptr %s, i64 %n) {
+; CHECK-LABEL: define i1 @latch_counted_bound_consumer_folded(
 ; CHECK-SAME: ptr [[S:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
@@ -129,8 +130,7 @@ define i1 @latch_counted_bound_consumer_not_folded(ptr %s, i64 %n) {
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[SUB]], 0
-; CHECK-NEXT:    ret i1 [[CMP_NOT]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   br label %loop.header
@@ -150,4 +150,186 @@ exit:
   %sub = add i64 %n, -1
   %cmp.not = icmp eq i64 %sub, 0
   ret i1 %cmp.not
+}
+
+; Conditions from both the header and latch need to be used.
+define i64 @both_header_and_latch_guards(ptr %p, i64 %n) {
+; CHECK-LABEL: define i64 @both_header_and_latch_guards(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[POS:%.*]] = icmp ugt i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[POS]], label %[[LOOP_HEADER:.*]], label %[[EXIT_EARLY:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_HDR:.*]], label %[[LOOP_BODY:.*]]
+; CHECK:       [[LOOP_BODY]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[EXIT_TRAP:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT_LCH:.*]]
+; CHECK:       [[EXIT_HDR]]:
+; CHECK-NEXT:    ret i64 1
+; CHECK:       [[EXIT_LCH]]:
+; CHECK-NEXT:    ret i64 2
+; CHECK:       [[EXIT_TRAP]]:
+; CHECK-NEXT:    ret i64 -1
+; CHECK:       [[EXIT_EARLY]]:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %pos = icmp ugt i64 %n, 0
+  br i1 %pos, label %loop.header, label %exit.early
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %hc = icmp eq i64 %iv, %n
+  br i1 %hc, label %exit.hdr, label %loop.body
+
+loop.body:
+  %rc = icmp ult i64 %iv, %n
+  %gep = getelementptr i8, ptr %p, i64 %iv
+  store i8 0, ptr %gep
+  br i1 %rc, label %loop.latch, label %exit.trap
+
+loop.latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp ne i64 %iv.next, %n
+  br i1 %ec, label %loop.header, label %exit.lch
+
+exit.hdr:
+  ret i64 1
+
+exit.lch:
+  ret i64 2
+
+exit.trap:
+  ret i64 -1
+
+exit.early:
+  ret i64 0
+}
+
+define i1 @single_block_header_is_latch(ptr %p, i64 %n) {
+; CHECK-LABEL: define i1 @single_block_header_is_latch(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 5, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GE:%.*]] = icmp uge i64 [[IV]], 5
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 [[GE]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 5, %entry ], [ %iv.next, %loop ]
+  %ge = icmp uge i64 %iv, 5
+  %gep = getelementptr i8, ptr %p, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %done = icmp eq i64 %iv.next, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret i1 %ge
+}
+
+define i1 @latch_counted_signed_header_check_removable(ptr %p, i64 %n) {
+; CHECK-LABEL: define i1 @latch_counted_signed_header_check_removable(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[POS:%.*]] = icmp sge i64 [[N]], -9
+; CHECK-NEXT:    br i1 [[POS]], label %[[PH:.*]], label %[[EXIT_0:.*]]
+; CHECK:       [[PH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -10, %[[PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[EXIT_1:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[LOOP_HEADER]], label %[[EXIT_0]]
+; CHECK:       [[EXIT_0]]:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[EXIT_1]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %pos = icmp sge i64 %n, -9
+  br i1 %pos, label %ph, label %exit.0
+
+ph:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ -10, %ph ], [ %iv.next, %loop.latch ]
+  %c = icmp slt i64 %iv, %n
+  br i1 %c, label %loop.latch, label %exit.1
+
+loop.latch:
+  %gep = getelementptr i8, ptr %p, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add i64 %iv, 1
+  %done = icmp ne i64 %iv.next, %n
+  br i1 %done, label %loop.header, label %exit.0
+
+exit.0:
+  ret i1 true
+
+exit.1:
+  ret i1 false
+}
+
+define i1 @latch_counted_signed_header_check_missing_precond(ptr %p, i64 %n) {
+; CHECK-LABEL: define i1 @latch_counted_signed_header_check_missing_precond(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -10, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[EXIT_1:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[LOOP_HEADER]], label %[[EXIT_0:.*]]
+; CHECK:       [[EXIT_0]]:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[EXIT_1]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ -10, %entry ], [ %iv.next, %loop.latch ]
+  %c = icmp slt i64 %iv, %n
+  br i1 %c, label %loop.latch, label %exit.1
+
+loop.latch:
+  %gep = getelementptr i8, ptr %p, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add i64 %iv, 1
+  %done = icmp ne i64 %iv.next, %n
+  br i1 %done, label %loop.header, label %exit.0
+
+exit.0:
+  ret i1 true
+
+exit.1:
+  ret i1 false
 }

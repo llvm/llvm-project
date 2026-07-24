@@ -47,18 +47,6 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
   ExceptionsType = ExceptionHandling::AIX;
 }
 
-bool MCAsmInfoXCOFF::isAcceptableChar(char C) const {
-  // QualName is allowed for a MCSymbolXCOFF, and
-  // QualName contains '[' and ']'.
-  if (C == '[' || C == ']')
-    return true;
-
-  // For AIX assembler, symbols may consist of numeric digits,
-  // underscores, periods, uppercase or lowercase letters, or
-  // any combination of these.
-  return isAlnum(C) || C == '_' || C == '.';
-}
-
 bool MCAsmInfoXCOFF::useCodeAlign(const MCSection &Sec) const {
   return static_cast<const MCSectionXCOFF &>(Sec).getKind().isText();
 }

@@ -133,7 +133,7 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   LiveIntervals *LIS = nullptr;
   SlotIndexes *SI = nullptr;
   const MachineLoopInfo *Loops = nullptr;
-  RegisterClassInfo RegClassInfo;
+  const RegisterClassInfo *RegClassInfo = nullptr;
 
   /// Position and VReg of a PHI instruction during coalescing.
   struct PHIValPos {
@@ -387,8 +387,9 @@ public:
   RegisterCoalescer &operator=(RegisterCoalescer &&Other) = default;
 
   RegisterCoalescer(LiveIntervals *LIS, SlotIndexes *SI,
-                    const MachineLoopInfo *Loops)
-      : LIS(LIS), SI(SI), Loops(Loops) {}
+                    const MachineLoopInfo *Loops,
+                    const RegisterClassInfo *RegClassInfo)
+      : LIS(LIS), SI(SI), Loops(Loops), RegClassInfo(RegClassInfo) {}
 
   bool run(MachineFunction &MF);
 };
@@ -420,6 +421,7 @@ INITIALIZE_PASS_BEGIN(RegisterCoalescerLegacy, "register-coalescer",
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(RegisterCoalescerLegacy, "register-coalescer",
                     "Register Coalescer", false, false)
 
@@ -606,6 +608,8 @@ void RegisterCoalescerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreservedID(MachineDominatorsID);
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -1821,11 +1825,13 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
 
   // Mark uses as undef.
   for (MachineOperand &MO : MRI->reg_nodbg_operands(DstReg)) {
-    if (MO.isDef() /*|| MO.isUndef()*/)
+    if (MO.isDef() && !MO.getSubReg())
       continue;
     const MachineInstr &MI = *MO.getParent();
     SlotIndex UseIdx = LIS->getInstructionIndex(MI);
     LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
+    if (MO.isDef())
+      UseMask = ~UseMask;
     bool isLive;
     if (!UseMask.all() && DstLI.hasSubRanges()) {
       isLive = false;
@@ -2059,7 +2065,7 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
   }
 
   if (CP.getNewRC()) {
-    if (RegClassInfo.getNumAllocatableRegs(CP.getNewRC()) == 0) {
+    if (RegClassInfo->getNumAllocatableRegs(CP.getNewRC()) == 0) {
       LLVM_DEBUG(dbgs() << "\tNo " << TRI->getRegClassName(CP.getNewRC())
                         << "are available for allocation\n");
       return JoinResult::Rejected;
@@ -2244,7 +2250,7 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
 
   // Removing sub-register copies can ease the register class constraints.
   // Make sure we attempt to inflate the register class of DstReg.
-  if (!CP.isPhys() && RegClassInfo.isProperSubClass(CP.getNewRC()))
+  if (!CP.isPhys() && RegClassInfo->isProperSubClass(CP.getNewRC()))
     InflateRegs.push_back(CP.getDstReg());
 
   // CopyMI has been erased by joinIntervals at this point. Remove it from
@@ -4292,7 +4298,8 @@ RegisterCoalescerPass::run(MachineFunction &MF,
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   auto &Loops = MFAM.getResult<MachineLoopAnalysis>(MF);
   auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
-  RegisterCoalescer Impl(&LIS, SI, &Loops);
+  auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  RegisterCoalescer Impl(&LIS, SI, &Loops, RegClassInfo);
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -4308,8 +4315,10 @@ bool RegisterCoalescerLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   auto *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  auto *RegClassInfo =
+      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   SlotIndexes *SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
-  RegisterCoalescer Impl(LIS, SI, Loops);
+  RegisterCoalescer Impl(LIS, SI, Loops, RegClassInfo);
   return Impl.run(MF);
 }
 
@@ -4364,8 +4373,6 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
 
   DbgVRegToValues.clear();
   buildVRegToDbgValueMap(fn);
-
-  RegClassInfo.runOnMachineFunction(fn);
 
   // Join (coalesce) intervals if requested.
   if (EnableJoining)

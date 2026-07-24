@@ -18,6 +18,10 @@
 # CHECK: - instruction: $p0 = PTRUE_D 32, implicit $vg
 # CHECK: *** Bad machine code: OPERAND_IMM_UINT5 should be in the range 0 to 31 ***
 # CHECK: - instruction: $p0 = PTRUES_H -1, implicit-def $nzcv, implicit $vg
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT4plus1 should be in the range 1 to 16 ***
+# CHECK: - instruction: $x0 = DECB_XPiI $x0(tied-def 0), 31, 0
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT4plus1 should be in the range 1 to 16 ***
+# CHECK: - instruction: $x0 = INCW_XPiI $x0(tied-def 0), 31, 17
 
 ---
 name:            verifyImm
@@ -36,5 +40,7 @@ body:             |
     $q0 = FMOVv2f64_ns 256
     $p0 = PTRUE_D 32, implicit $vg
     $p0 = PTRUES_H -1, implicit-def $nzcv, implicit $vg
+    $x0 = DECB_XPiI $x0, 31, 0
+    $x0 = INCW_XPiI $x0, 31, 17
     RET undef $lr, implicit $x0
 ...

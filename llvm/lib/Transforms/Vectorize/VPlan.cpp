@@ -341,12 +341,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   VPLane LastLane = VPLane::getLastLaneForVF(VF);
   IRBuilderBase::InsertPointGuard Guard(Builder);
   if (auto *LastInst = dyn_cast<Instruction>(get(Def, LastLane)))
-    // Set the insert point after the last scalarized instruction or after the
-    // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
-    // will directly follow the scalar definitions.
-    Builder.SetInsertPoint(isa<PHINode>(LastInst)
-                               ? LastInst->getParent()->getFirstNonPHIIt()
-                               : std::next(BasicBlock::iterator(LastInst)));
+    // Set the insert point after the last scalarized instruction. This
+    // ensures the insertelement sequence will directly follow the scalar
+    // definitions.
+    if (auto InsertPt = LastInst->getInsertionPointAfterDef())
+      Builder.SetInsertPoint(*InsertPt);
   Value *VectorValue = GetBroadcastInstrs(ScalarValue);
   set(Def, VectorValue);
   return VectorValue;
