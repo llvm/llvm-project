@@ -33,13 +33,12 @@ using namespace ento;
 void ExprEngine::CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
                                           ExplodedNode *Pred,
                                           ExplodedNodeSet &Dst) {
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   const Expr *tempExpr = ME->getSubExpr()->IgnoreParens();
   ProgramStateRef state = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
   state = createTemporaryRegionIfNeeded(state, SF, tempExpr, ME);
-  Bldr.generateNode(ME, Pred, state);
+  Dst.insert(Engine.makePostStmtNode(ME, state, Pred));
 }
 
 void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
