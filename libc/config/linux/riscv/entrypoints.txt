@@ -4,6 +4,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.arpa.inet.htons
     libc.src.arpa.inet.inet_addr
     libc.src.arpa.inet.inet_aton
+    libc.src.arpa.inet.inet_ntoa
     libc.src.arpa.inet.inet_ntop
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
@@ -514,6 +515,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.setitimer
     libc.src.sys.time.getitimer
+    libc.src.sys.time.gettimeofday
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -882,6 +884,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
+    libc.src.math.lgammaf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
@@ -1187,6 +1190,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
     libc.src.stdfix.rdivi
+    libc.src.stdfix.divir
+    libc.src.stdfix.divilr
+    libc.src.stdfix.divik
+    libc.src.stdfix.divilk
+    libc.src.stdfix.diviur
+    libc.src.stdfix.diviulr
+    libc.src.stdfix.diviuk
+    libc.src.stdfix.diviulk
   )
 endif()
 
@@ -1268,6 +1279,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getname_np
+    libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
     libc.src.pthread.pthread_getthreadid_np
     libc.src.pthread.pthread_getunique_np
@@ -1315,6 +1327,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_spin_unlock
     libc.src.pthread.pthread_self
     libc.src.pthread.pthread_setname_np
+    libc.src.pthread.pthread_setschedparam
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
@@ -1468,7 +1481,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime
-    libc.src.time.gettimeofday
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.localtime

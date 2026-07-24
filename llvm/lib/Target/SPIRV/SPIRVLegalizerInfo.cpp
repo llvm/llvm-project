@@ -332,7 +332,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT}).lower();
 
-  getActionDefinitionsBuilder(G_STRICT_FLDEXP)
+  getActionDefinitionsBuilder({G_FLDEXP, G_STRICT_FLDEXP})
       .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
@@ -355,6 +355,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
       .legalForCartesianProduct(allScalarsAndVectors)
       .legalIf(extendedScalarsAndVectorsProduct);
+
+  // Lower G_SEXT_INREG to the canonical shl/ashr pair, which map to
+  // OpShiftLeftLogical + OpShiftRightArithmetic.
+  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor(allPtrsScalarsAndVectors)

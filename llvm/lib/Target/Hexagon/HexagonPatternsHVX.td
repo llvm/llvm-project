@@ -672,6 +672,26 @@ let Predicates = [UseHVXV68, UseHVX128B, UseHVXQFloat] in {
   def: OpR_RR_pat<V6_vmax_hf, pf2<fmaximumnum>, VecF16, HVF16>;
   def: OpR_RR_pat<V6_vmin_sf, pf2<fminimumnum>, VecF32, HVF32>;
   def: OpR_RR_pat<V6_vmax_sf, pf2<fmaximumnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vmin_hf, pf2<fminnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vmax_hf, pf2<fmaxnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vmin_sf, pf2<fminnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vmax_sf, pf2<fmaxnum>, VecF32, HVF32>;
+}
+
+// V6_veqsf/V6_veqhf use IEEE-754 float equality (NaN != NaN), which correctly
+// detects NaN. Override the integer V6_veqw/V6_veqh setoeq patterns on
+// v81+QFloat so that NaN handling works correctly.
+let Predicates = [UseHVXV81, UseHVXQFloat] in {
+  let AddedComplexity = 10 in {
+    def: OpR_RR_pat<V6_veqsf, setoeq, VecQ32, HVF32>;
+    def: OpR_RR_pat<V6_veqhf, setoeq, VecQ16, HVF16>;
+    def: AccRRR_pat<V6_veqhf_and,    And,         setoeq,  HQ16, HVF16, HVF16>;
+    def: AccRRR_pat<V6_veqhf_or,      Or,         setoeq,  HQ16, HVF16, HVF16>;
+    def: AccRRR_pat<V6_veqhf_xor,    Xor,         setoeq,  HQ16, HVF16, HVF16>;
+    def: AccRRR_pat<V6_veqsf_and,    And,         setoeq,  HQ32, HVF32, HVF32>;
+    def: AccRRR_pat<V6_veqsf_or,      Or,         setoeq,  HQ32, HVF32, HVF32>;
+    def: AccRRR_pat<V6_veqsf_xor,    Xor,         setoeq,  HQ32, HVF32, HVF32>;
+  }
 }
 
 let Predicates = [UseHVXV68, UseHVX128B, UseHVXIEEEFP] in {
@@ -685,6 +705,10 @@ let Predicates = [UseHVXV68, UseHVX128B, UseHVXIEEEFP] in {
   def: OpR_RR_pat<V6_vfmax_hf, pf2<fmaximumnum>, VecF16, HVF16>;
   def: OpR_RR_pat<V6_vfmin_sf, pf2<fminimumnum>, VecF32, HVF32>;
   def: OpR_RR_pat<V6_vfmax_sf, pf2<fmaximumnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vfmin_hf, pf2<fminnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vfmax_hf, pf2<fmaxnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vfmin_sf, pf2<fminnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vfmax_sf, pf2<fmaxnum>, VecF32, HVF32>;
 }
 
 let Predicates = [UseHVX] in {
@@ -1029,14 +1053,12 @@ let Predicates = [UseHVX] in {
 
 let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
   def: OpR_RR_pat<V6_veqh,              seteq,  VecQ16, HVF16>;
-  def: OpR_RR_pat<V6_veqh,             setoeq,  VecQ16, HVF16>;
   def: OpR_RR_pat<V6_veqh,             setueq,  VecQ16, HVF16>;
   def: OpR_RR_pat<V6_vgthf,             setgt,  VecQ16, HVF16>;
   def: OpR_RR_pat<V6_vgthf,            setogt,  VecQ16, HVF16>;
   def: OpR_RR_pat<V6_vgthf,            setugt,  VecQ16, HVF16>;
 
   def: OpR_RR_pat<V6_veqw,              seteq,  VecQ32, HVF32>;
-  def: OpR_RR_pat<V6_veqw,             setoeq,  VecQ32, HVF32>;
   def: OpR_RR_pat<V6_veqw,             setueq,  VecQ32, HVF32>;
   def: OpR_RR_pat<V6_vgtsf,             setgt,  VecQ32, HVF32>;
   def: OpR_RR_pat<V6_vgtsf,            setogt,  VecQ32, HVF32>;
@@ -1045,9 +1067,6 @@ let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
   def: AccRRR_pat<V6_veqh_and,    And,          seteq,  HQ16, HVF16, HVF16>;
   def: AccRRR_pat<V6_veqh_or,      Or,          seteq,  HQ16, HVF16, HVF16>;
   def: AccRRR_pat<V6_veqh_xor,    Xor,          seteq,  HQ16, HVF16, HVF16>;
-  def: AccRRR_pat<V6_veqh_and,    And,         setoeq,  HQ16, HVF16, HVF16>;
-  def: AccRRR_pat<V6_veqh_or,      Or,         setoeq,  HQ16, HVF16, HVF16>;
-  def: AccRRR_pat<V6_veqh_xor,    Xor,         setoeq,  HQ16, HVF16, HVF16>;
   def: AccRRR_pat<V6_veqh_and,    And,         setueq,  HQ16, HVF16, HVF16>;
   def: AccRRR_pat<V6_veqh_or,      Or,         setueq,  HQ16, HVF16, HVF16>;
   def: AccRRR_pat<V6_veqh_xor,    Xor,         setueq,  HQ16, HVF16, HVF16>;
@@ -1064,9 +1083,6 @@ let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
   def: AccRRR_pat<V6_veqw_and,    And,          seteq,  HQ32, HVF32, HVF32>;
   def: AccRRR_pat<V6_veqw_or,      Or,          seteq,  HQ32, HVF32, HVF32>;
   def: AccRRR_pat<V6_veqw_xor,    Xor,          seteq,  HQ32, HVF32, HVF32>;
-  def: AccRRR_pat<V6_veqw_and,    And,         setoeq,  HQ32, HVF32, HVF32>;
-  def: AccRRR_pat<V6_veqw_or,      Or,         setoeq,  HQ32, HVF32, HVF32>;
-  def: AccRRR_pat<V6_veqw_xor,    Xor,         setoeq,  HQ32, HVF32, HVF32>;
   def: AccRRR_pat<V6_veqw_and,    And,         setueq,  HQ32, HVF32, HVF32>;
   def: AccRRR_pat<V6_veqw_or,      Or,         setueq,  HQ32, HVF32, HVF32>;
   def: AccRRR_pat<V6_veqw_xor,    Xor,         setueq,  HQ32, HVF32, HVF32>;

@@ -265,18 +265,17 @@ define <4 x i32> @bitcast_poison_lanes(<4 x i32> %a) {
 ; Negative test: different operations on halves should not fold.
 define <4 x i32> @bitcast_different_ops_neg(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @bitcast_different_ops_neg(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[BC_A_LO:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[A]] to <2 x i64>
-; CHECK-NEXT:    [[BC_A_HI:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[BC_A_LO:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[BC_B_LO:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
-; CHECK-NEXT:    [[BC_B_HI:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[ADD_LO:%.*]] = add <1 x i64> [[BC_A_LO]], [[BC_B_LO]]
-; CHECK-NEXT:    [[XOR_HI:%.*]] = xor <1 x i64> [[BC_A_HI]], [[BC_B_HI]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <1 x i64> [[ADD_LO]], <1 x i64> [[XOR_HI]], <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[RESULT:%.*]] = bitcast <2 x i64> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    [[DOTINNER:%.*]] = xor <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[DOTINNER]] to <2 x i64>
+; CHECK-NEXT:    [[RES_LO:%.*]] = bitcast <1 x i64> [[ADD_LO]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    [[RES_HI:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <2 x i32> [[RES_LO]], <2 x i32> [[RES_HI]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[RESULT]]
 ;
   %a_lo = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 1>

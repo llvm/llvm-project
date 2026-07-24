@@ -2580,12 +2580,12 @@ foreach vt = Reg32Types.types in {
 // unnecessary copy from SGPR to VGPR.
 def : GCNPat <
   (VGPRImm<(p5 frameindex)>:$fi),
-  (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
+  (V_MOV_B32_e32 (p5 (to_tframeindex $fi)))
 >;
 
 def : GCNPat <
   (p5 frameindex:$fi),
-  (S_MOV_B32 (p5 (frameindex_to_targetframeindex $fi)))
+  (S_MOV_B32 (p5 (to_tframeindex $fi)))
 >;
 
 def : GCNPat <
@@ -2764,12 +2764,6 @@ def : GCNPat <(i1 imm:$imm),
               (S_MOV_B32 imm:$imm)> {
   let WaveSizePredicate = isWave32;
 }
-
-let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <
-  (i32 (DivergentBinFrag<srl> VGPR_32:$src, (i32 16))),
-  (REG_SEQUENCE VGPR_32, (i16 (EXTRACT_SUBREG $src, hi16)), lo16, (V_MOV_B16_t16_e64 0, (i16 0x0000), 0), hi16)
->;
 
 /********** ================== **********/
 /********** Intrinsic Patterns **********/

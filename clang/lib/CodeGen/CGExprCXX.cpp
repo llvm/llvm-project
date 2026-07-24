@@ -92,7 +92,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
   MemberCallInfo CallInfo = commonEmitCXXMemberOrOperatorCall(
       *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args, RtlArgs);
   auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
-      Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize);
+      Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize,
+      getCurrentFunctionDecl());
   return EmitCall(FnInfo, Callee, ReturnValue, Args, CallOrInvoke,
                   CE && CE == MustTailCall,
                   CE ? CE->getExprLoc() : SourceLocation());
@@ -494,7 +495,8 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   // And the rest of the call args
   EmitCallArgs(Args, FPT, E->arguments());
   return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
-                                                      /*PrefixSize=*/0),
+                                                      /*PrefixSize=*/0,
+                                                      getCurrentFunctionDecl()),
                   Callee, ReturnValue, Args, CallOrInvoke, E == MustTailCall,
                   E->getExprLoc());
 }
@@ -1354,9 +1356,10 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
   llvm::Constant *CalleePtr =
       CalleeOverride ? CalleeOverride : CGF.CGM.GetAddrOfFunction(CalleeDecl);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(CalleeDecl));
-  RValue RV = CGF.EmitCall(CGF.CGM.getTypes().arrangeFreeFunctionCall(
-                               Args, CalleeType, /*ChainCall=*/false),
-                           Callee, ReturnValueSlot(), Args, &CallOrInvoke);
+  RValue RV = CGF.EmitCall(
+      CGF.CGM.getTypes().arrangeFreeFunctionCall(
+          Args, CalleeType, /*ChainCall=*/false, CGF.getCurrentFunctionDecl()),
+      Callee, ReturnValueSlot(), Args, &CallOrInvoke);
 
   /// C++1y [expr.new]p10:
   ///   [In a new-expression,] an implementation is allowed to omit a call
@@ -2108,8 +2111,20 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   //     operator delete are both irrelevant to the trigger.
   if (E->isGlobalDelete() && CGM.getTarget().getCXXABI().isMicrosoft()) {
     const CXXRecordDecl *RD = E->getDestroyedType()->getAsCXXRecordDecl();
-    if (RD && RD->hasDefinition() && !RD->hasTrivialDestructor())
+    if (RD && RD->hasDefinition() && !RD->hasTrivialDestructor()) {
       CGM.noteDirectGlobalDelete();
+      // Ensure a __global_delete wrapper (and thus a strong forwarding body)
+      // is emitted in THIS TU for the resolved global ::operator delete, even
+      // when no vector deleting destructor here references it. Without this, a
+      // TU that only does ::delete (with the deleting destructor defined in
+      // another TU) would emit no forwarder, leaving the wrapper bound to the
+      // trapping empty fallback and crashing at runtime.
+      const FunctionDecl *OD = E->getOperatorDelete();
+      assert(!isa<CXXMethodDecl>(OD) &&
+             "global ::delete should resolve to a namespace-scope "
+             "operator delete");
+      CGM.getOrCreateMSVCGlobalDeleteWrapper(OD);
+    }
   }
 
   // Null check the pointer.

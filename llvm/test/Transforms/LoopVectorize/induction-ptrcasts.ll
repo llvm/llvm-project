@@ -8,8 +8,8 @@ define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF1-LABEL: define void @int_iv_based_on_pointer_iv(
 ; VF1-SAME: ptr [[A:%.*]]) {
 ; VF1-NEXT:  [[ENTRY:.*:]]
-; VF1-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 add (i64 ptrtoint (ptr @f to i64), i64 -4), i64 0)
-; VF1-NEXT:    [[TMP6:%.*]] = sub i64 ptrtoint (ptr @f to i64), [[SMIN]]
+; VF1-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 add (i64 ptrtoaddr (ptr @f to i64), i64 -4), i64 0)
+; VF1-NEXT:    [[TMP6:%.*]] = sub i64 ptrtoaddr (ptr @f to i64), [[SMIN]]
 ; VF1-NEXT:    [[TMP0:%.*]] = add i64 [[TMP6]], -1
 ; VF1-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 2
 ; VF1-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
@@ -40,8 +40,8 @@ define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF2-LABEL: define void @int_iv_based_on_pointer_iv(
 ; VF2-SAME: ptr [[A:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 add (i64 ptrtoint (ptr @f to i64), i64 -4), i64 0)
-; VF2-NEXT:    [[TMP7:%.*]] = sub i64 ptrtoint (ptr @f to i64), [[SMIN]]
+; VF2-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 add (i64 ptrtoaddr (ptr @f to i64), i64 -4), i64 0)
+; VF2-NEXT:    [[TMP7:%.*]] = sub i64 ptrtoaddr (ptr @f to i64), [[SMIN]]
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[TMP7]], -1
 ; VF2-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 2
 ; VF2-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1

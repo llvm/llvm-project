@@ -33,12 +33,13 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
+#include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <optional>
 
@@ -438,13 +439,6 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   return DstMF;
 }
 
-static void initializeTargetInfo() {
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
-}
-
 void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
   if (MMI) {
     printMIR(ROS, *M);
@@ -829,8 +823,6 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
   auto MMM = std::make_unique<ReducerWorkItem>();
 
   if (IsMIR) {
-    initializeTargetInfo();
-
     auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
     if (std::error_code EC = FileOrErr.getError()) {
       WithColor::error(errs(), ToolName) << EC.message() << '\n';
@@ -886,10 +878,10 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
     } else {
       IsBitcode = true;
       MMM->readBitcode(MemoryBufferRef(**MB), Ctxt, ToolName);
-
-      if (MMM->LTOInfo->IsThinLTO && MMM->LTOInfo->EnableSplitLTOUnit)
-        initializeTargetInfo();
     }
+
+    if (MMM->LTOInfo)
+      AssignGUIDPass::runOnModule(MMM->getModule());
   }
   if (MMM->verify(&errs())) {
     WithColor::error(errs(), ToolName)

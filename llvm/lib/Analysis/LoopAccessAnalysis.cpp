@@ -227,8 +227,10 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
       DL, CheckForNonNull, /*CanBeFreed=*/nullptr);
 
+  // If the deref size is only known when the pointer is non-null, ignore it
+  // here and fall back to a dereferenceable assumption below.
   if (DerefBytes && CheckForNonNull)
-    return false;
+    DerefBytes = 0;
 
   const SCEV *Step = AR->getStepRecurrence(SE);
   Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
@@ -2940,14 +2942,8 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   LLVM_DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
 
   // Emit remark for first unsafe dependence
-  bool HasForcedDistribution = false;
-  std::optional<const MDOperand *> Value =
-      findStringMetadataForLoop(TheLoop, "llvm.loop.distribute.enable");
-  if (Value) {
-    const MDOperand *Op = *Value;
-    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
-    HasForcedDistribution = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
-  }
+  bool HasForcedDistribution =
+      getBooleanLoopAttribute(TheLoop, "llvm.loop.distribute.enable");
 
   const std::string Info =
       HasForcedDistribution

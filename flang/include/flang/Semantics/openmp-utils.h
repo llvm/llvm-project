@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 
 #include <memory>
@@ -33,6 +34,7 @@
 #include <vector>
 
 namespace Fortran::semantics {
+class DeclTypeSpec;
 class Scope;
 class SemanticsContext;
 class Symbol;
@@ -113,6 +115,38 @@ bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
 bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
 
 const Symbol *GetHostSymbol(const Symbol &sym);
+
+// Resolve a user-defined reduction visible in scope under the mangled name
+// mangledName (e.g. "op.myop." for operator(.myop.), or a named reduction).
+// Follows USE associations, operator renames, private visibility, and merged
+// generics exactly as the OpenMP semantic checks do, returning the found
+// (non-ultimate) reduction symbol, or null if none is visible. When type is
+// non-null, only a reduction that supports that type is accepted (used to
+// disambiguate an operator that carries reductions for several types). When
+// ambiguous is non-null, it is set true if more than one distinct reduction
+// supports the type (an operator merged from several modules that each declare
+// a reduction for it, or a mangled reduction name that collides across
+// modules).
+const Symbol *FindUserReductionSymbol(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type = nullptr,
+    bool *ambiguous = nullptr);
+
+// Resolve the user-defined reduction associated with the defined-operator
+// symbol operatorSym. Delegates to FindUserReductionSymbol from scope (the
+// scope where the reduction clause appears) with the operator's mangled
+// ("op...") name. Searching from the clause scope, not the operator's owning
+// scope, finds a reduction that is local, host-, or use-associated there (a
+// reduction may be declared in a contained procedure that host-associates the
+// operator from an enclosing module). type filters by supported type as above.
+const Symbol *FindOperatorUserReductionSymbol(const Scope &scope,
+    const Symbol &operatorSym, const DeclTypeSpec *type = nullptr);
+
+// Mangled reduction name ("op.+", "op.*", "op.AND", ...) that semantics stores
+// an intrinsic-operator user reduction under, produced by the same
+// MakeNameFromOperator the reduction-declaration semantics use so a clause-side
+// lookup matches byte-for-byte.
+parser::CharBlock MangledIntrinsicOperatorReductionName(
+    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
@@ -223,6 +257,16 @@ private:
   std::string features_;
 };
 
+/// True if a variant guarded by \p selector may be selected in the current
+/// compilation context.
+///
+/// False only if the complete selector is provably inapplicable. A null
+/// \p selector, or one using an unsupported feature (see
+/// \c FindUnsupportedSelectorFeature), is treated as possibly selectable.
+bool MayVariantBeSelected(
+    const parser::traits::OmpContextSelectorSpecification *selector,
+    SemanticsContext &context, OmpVariantMatchContext &matchContext);
+
 std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
@@ -253,6 +297,21 @@ bool IsLoopTransforming(llvm::omp::Directive dir);
 bool HasDataEnvironment(llvm::omp::Directive dir);
 
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
+
+/// The AT, SEVERITY, and MESSAGE clause values of an `!$omp error` directive.
+/// `at` and `severity` default to AT(compilation)/SEVERITY(fatal) when absent;
+/// `message` is null when there is no MESSAGE clause.
+struct OmpErrorArgs {
+  parser::OmpAtClause::ActionTime at{
+      parser::OmpAtClause::ActionTime::Compilation};
+  parser::OmpSeverityClause::SevLevel severity{
+      parser::OmpSeverityClause::SevLevel::Fatal};
+  const parser::Expr *message{nullptr};
+};
+
+/// Scan the clause list of an `!$omp error` directive for its AT, SEVERITY, and
+/// MESSAGE clause values.
+OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir);
 
 inline bool IsDoConcurrentLegal(unsigned version) {
   // DO CONCURRENT is allowed (as an alternative to a Canonical Loop Nest)
@@ -359,6 +418,12 @@ std::optional<int64_t> GetMinimumSequenceCount(
 std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
     const parser::OpenMPLoopConstruct &x, unsigned version,
     SemanticsContext *semaCtx = nullptr);
+
+/// Returns whether the loop nest associated with `x` is a doacross loop nest,
+/// i.e. its body contains an `ordered` directive carrying a doacross
+/// dependence (the `doacross` clause, or the pre-5.2 `depend(sink/source)`
+/// equivalent) that binds to `x`. Such a nest must be perfectly nested.
+bool IsDoacrossAffected(const parser::OpenMPLoopConstruct &x);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,

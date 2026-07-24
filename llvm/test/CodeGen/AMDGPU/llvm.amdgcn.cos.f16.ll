@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgpu8.03 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 declare half @llvm.amdgcn.cos.f16(half %a)
 

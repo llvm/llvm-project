@@ -295,12 +295,12 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        if (Level.getSpeedupLevel() > 0)
+        if (Level != OptimizationLevel::O0)
           LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
   PB.registerLoopOptimizerEndEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        if (Level.getSpeedupLevel() > 0)
+        if (Level != OptimizationLevel::O0)
           LPM.addPass(HexagonVectorLoopCarriedReusePass());
       });
 }

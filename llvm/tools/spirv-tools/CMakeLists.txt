@@ -19,9 +19,7 @@ if (NOT SPIRV_DIS OR NOT SPIRV_VAL OR NOT SPIRV_AS OR NOT SPIRV_LINK)
     BINARY_DIR ${BINARY_DIR}
     BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target spirv-dis spirv-val spirv-as spirv-link
     BUILD_BYPRODUCTS ${BINARY_DIR}/tools/spirv-dis ${BINARY_DIR}/tools/spirv-val ${BINARY_DIR}/tools/spirv-as ${BINARY_DIR}/tools/spirv-link
-    DOWNLOAD_COMMAND git clone https://github.com/KhronosGroup/SPIRV-Tools.git SPIRVTools &&
-      cd SPIRVTools &&
-      ${Python3_EXECUTABLE} utils/git-sync-deps
+    PATCH_COMMAND ${Python3_EXECUTABLE} utils/git-sync-deps
     UPDATE_COMMAND git pull origin main &&
       ${Python3_EXECUTABLE} utils/git-sync-deps
     # Don't auto-update on every build.
@@ -44,7 +42,7 @@ if (SPIRV_DIS)
   add_custom_target(spirv-dis
     COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${SPIRV_DIS}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-dis${CMAKE_EXECUTABLE_SUFFIX}")
 else ()
-  add_custom_target(spirv-dis${CMAKE_EXECUTABLE_SUFFIX}
+  add_custom_target(spirv-dis
     COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${BINARY_DIR}/tools/spirv-dis${CMAKE_EXECUTABLE_SUFFIX}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-dis${CMAKE_EXECUTABLE_SUFFIX}"
     DEPENDS SPIRVTools
     )
