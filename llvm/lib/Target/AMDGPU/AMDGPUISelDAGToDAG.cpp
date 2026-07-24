@@ -4640,7 +4640,10 @@ bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
 }
 
 SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
-  if (In.isUndef())
+  if (In.getOpcode() == ISD::POISON)
+    return CurDAG->getPOISON(MVT::i32);
+
+  if (In.getOpcode() == ISD::UNDEF)
     return CurDAG->getUNDEF(MVT::i32);
 
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(In)) {
