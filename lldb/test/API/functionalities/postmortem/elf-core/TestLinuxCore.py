@@ -1453,7 +1453,17 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "/path/nt_file_foo")
+        exe_path = "/path/nt_file_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        # Verify that the process info is correct.
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), "nt_file_foo")
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
@@ -1472,7 +1482,18 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "/path/execfn_foo")
+        exe_path = "/path/execfn_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        # Verify that the process info is correct.
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), "execfn_foo")
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
+
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
@@ -1488,7 +1509,18 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "prpsinfo_foo")
+        exe_path = "prpsinfo_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), exe_path)
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
+
+
         self.dbg.DeleteTarget(target)
 
 

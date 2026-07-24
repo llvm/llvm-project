@@ -358,6 +358,62 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(Triple::SubArchType SubArch) {
   }
 }
 
+unsigned AMDGPU::getTotalNumSGPRs(GPUKind AK) {
+  IsaVersion Version = getIsaVersion(getSubArch(AK));
+  if (Version.Major >= 8)
+    return 800;
+  return 512;
+}
+
+unsigned AMDGPU::getTotalNumSGPRs(Triple::SubArchType SubArch) {
+  IsaVersion Version = getIsaVersion(SubArch);
+  if (Version.Major >= 8)
+    return 800;
+  return 512;
+}
+
+unsigned AMDGPU::getAddressableNumSGPRs(GPUKind AK) {
+  if (getArchAttrAMDGCN(AK) & FEATURE_SGPR_INIT_BUG)
+    return FIXED_NUM_SGPRS_FOR_INIT_BUG;
+
+  IsaVersion Version = getIsaVersion(getSubArch(AK));
+  if (Version.Major >= 10)
+    return 106;
+  if (Version.Major >= 8)
+    return 102;
+  return 104;
+}
+
+unsigned AMDGPU::getAddressableNumSGPRs(Triple::SubArchType SubArch) {
+  if (getArchAttrAMDGCN(SubArch) & FEATURE_SGPR_INIT_BUG)
+    return FIXED_NUM_SGPRS_FOR_INIT_BUG;
+
+  IsaVersion Version = getIsaVersion(SubArch);
+  if (Version.Major >= 10)
+    return 106;
+  if (Version.Major >= 8)
+    return 102;
+  return 104;
+}
+
+unsigned AMDGPU::getSGPRAllocGranule(GPUKind AK) {
+  IsaVersion Version = getIsaVersion(getSubArch(AK));
+  if (Version.Major >= 10)
+    return getAddressableNumSGPRs(AK);
+  if (Version.Major >= 8)
+    return 16;
+  return 8;
+}
+
+unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
+  IsaVersion Version = getIsaVersion(SubArch);
+  if (Version.Major >= 10)
+    return getAddressableNumSGPRs(SubArch);
+  if (Version.Major >= 8)
+    return 16;
+  return 8;
+}
+
 StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   assert(T.isAMDGPU());
   auto ProcKind = T.isAMDGCN() ? parseArchAMDGCN(Arch) : parseArchR600(Arch);
@@ -371,7 +427,10 @@ static std::pair<FeatureError, StringRef>
 insertWaveSizeFeature(StringRef GPU, const Triple &T,
                       const StringMap<bool> &DefaultFeatures,
                       StringMap<bool> &Features) {
-  const bool IsNullGPU = GPU.empty();
+  // A bare subarch triple (no -target-cpu) still pins down the target, so it is
+  // not a null GPU: DefaultFeatures has already been populated from the
+  // subarch.
+  const bool IsNullGPU = T.getSubArch() == Triple::NoSubArch && GPU.empty();
   const bool TargetHasWave32 = DefaultFeatures.count("wavefrontsize32");
   const bool TargetHasWave64 = DefaultFeatures.count("wavefrontsize64");
 
@@ -428,7 +487,10 @@ insertWaveSizeFeature(StringRef GPU, const Triple &T,
 /// default target features with entries overridden by \p Features.
 static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
                                  StringMap<bool> &Features) {
-  AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
+  // With no explicit GPU, the triple's subarch identifies the target.
+  AMDGPU::GPUKind Kind = GPU.empty() && T.getSubArch() != Triple::NoSubArch
+                             ? getGPUKindFromSubArch(T.getSubArch())
+                             : parseArchAMDGCN(GPU);
   switch (Kind) {
   case GK_GFX1310:
   case GK_GFX13_GENERIC:
@@ -473,6 +535,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["cvt-pknorm-vop3-insts"] = true;
     Features["image-insts"] = true;
+    Features["async-load-to-lds-insts"] = true;
     break;
   case GK_GFX1251:
     Features["gfx1251-gemm-insts"] = true;
@@ -532,6 +595,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["wavefrontsize32"] = true;
     Features["clusters"] = true;
     Features["mcast-load-insts"] = true;
+    Features["async-load-to-lds-insts"] = true;
+    Features["async-store-from-lds-insts"] = true;
     Features["asynccnt"] = true;
     break;
   case GK_GFX1201:
