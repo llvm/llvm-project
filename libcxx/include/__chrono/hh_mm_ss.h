@@ -46,11 +46,10 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr _Duration __abs_d(_Duration __d, bool __is_neg) {
-    if constexpr (is_unsigned_v<typename _Duration::rep>) {
+    if constexpr (is_unsigned_v<typename _Duration::rep>)
       return __d;
-    } else {
+    else
       return __is_neg ? -__d : __d;
-    }
   }
 
 public:
