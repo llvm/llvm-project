@@ -319,6 +319,42 @@ void test_fp_ops_fail(struct FPOps *ops) {
   ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex '&FPOps::mu' exclusively}}
 }
 
+// Function pointer parameters. The attributes constrain the function reached
+// through the pointer, so they are checked where the pointer is called, and
+// must not be mistaken for requirements of the enclosing function's callers
+// (nor for scoped-lockable parameter annotations).
+typedef void (*visit_fn)(int);
+
+void visit_all(visit_fn visit EXCLUSIVE_LOCKS_REQUIRED(mu1), int n);
+void visit_all_locked_fp(void (*visit)(int) EXCLUSIVE_LOCKS_REQUIRED(mu1), int n)
+    EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+  visit(n);
+}
+void visit_all_unlocked_fp(void (*visit)(int) EXCLUSIVE_LOCKS_REQUIRED(mu1), int n) {
+  visit(n); // expected-warning {{calling function 'visit' requires holding mutex 'mu1' exclusively}}
+}
+
+void visit_cb(int x) EXCLUSIVE_LOCKS_REQUIRED(mu1);
+
+// Passing an annotated callee is not itself a use of the capability, so these
+// calls do not require mu1 to be held here.
+void test_fp_param(int n) {
+  visit_all(visit_cb, n);
+  visit_all(&visit_cb, n);
+  visit_all_unlocked_fp(visit_cb, n);
+  // Only visit_all_locked_fp's own attribute requires mu1.
+  visit_all_locked_fp(visit_cb, n); // expected-warning {{calling function 'visit_all_locked_fp' requires holding mutex 'mu1' exclusively}}
+}
+
+// Acquire/release on a function pointer parameter likewise describe the pointee,
+// so calling the enclosing function neither acquires nor releases mu1.
+void call_locker(void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu1));
+void test_fp_param_acquire(void) {
+  call_locker(0);
+  mutex_exclusive_lock(&mu1);
+  mutex_exclusive_unlock(&mu1);
+}
+
 // Function pointer attributes referring to parameters.
 struct BDev {
   struct Mutex lock;

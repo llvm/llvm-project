@@ -62,6 +62,17 @@ using namespace threadSafety;
 // Key method definition
 ThreadSafetyHandler::~ThreadSafetyHandler() = default;
 
+/// True if capability attributes on \p Param describe the function reached
+/// through it rather than the argument bound to it.
+///
+/// Sema accepts capability attributes on a parameter for two unrelated
+/// purposes: a scoped-lockable parameter, where the attributes describe the
+/// locks the passed scope object holds, and a function pointer parameter, where
+/// they describe the requirements of the function called through the pointer.
+static bool isFunctionPointerParam(const ParmVarDecl *Param) {
+  return Param->getType().getNonReferenceType()->isFunctionPointerType();
+}
+
 /// Issue a warning about an invalid lock expression
 static void warnInvalidLock(ThreadSafetyHandler &Handler,
                             const Expr *MutexExp, const NamedDecl *D,
@@ -2327,6 +2338,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
   const auto *CalledFunction = dyn_cast<FunctionDecl>(D);
   if (CalledFunction && Args.has_value()) {
     for (auto [Param, Arg] : zip(CalledFunction->parameters(), *Args)) {
+      if (isFunctionPointerParam(Param))
+        continue;
       CapExprSet DeclaredLocks;
       for (const Attr *At : Param->attrs()) {
         switch (At->getKind()) {
@@ -2899,6 +2912,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     else
       llvm_unreachable("Unknown function kind");
     for (const ParmVarDecl *Param : Params) {
+      if (isFunctionPointerParam(Param))
+        continue;
       CapExprSet UnderlyingLocks;
       for (const auto *Attr : Param->attrs()) {
         Loc = Attr->getLocation();
