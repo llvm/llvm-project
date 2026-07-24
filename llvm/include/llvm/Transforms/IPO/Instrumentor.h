@@ -474,7 +474,7 @@ struct InstrumentationOpportunity {
   SmallVector<IRTArg> IRTArgs;
 
   /// Instruction flag names and their integer bitmask values.
-  DenseMap<StringRef, int32_t> FlagNames;
+  StringMap<int32_t> FlagNames;
 
   /// Whether the opportunity is enabled.
   bool Enabled = true;

@@ -1831,12 +1831,12 @@ Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
 }
 
 void NumericIO::addFlagNames() {
-  FlagNames.insert({"nsw", NUMERIC_FLAG_NO_SIGNED_WRAP});
-  FlagNames.insert({"nuw", NUMERIC_FLAG_NO_UNSIGNED_WRAP});
-  FlagNames.insert({"nnan", NUMERIC_FLAG_HAS_NO_NANS});
-  FlagNames.insert({"ninf", NUMERIC_FLAG_HAS_NO_INFS});
-  FlagNames.insert({"nsz", NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS});
-  FlagNames.insert({"exact", NUMERIC_FLAG_IS_EXACT});
+  FlagNames["nsw"] = NUMERIC_FLAG_NO_SIGNED_WRAP;
+  FlagNames["nuw"] = NUMERIC_FLAG_NO_UNSIGNED_WRAP;
+  FlagNames["nnan"] = NUMERIC_FLAG_HAS_NO_NANS;
+  FlagNames["ninf"] = NUMERIC_FLAG_HAS_NO_INFS;
+  FlagNames["nsz"] = NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS;
+  FlagNames["exact"] = NUMERIC_FLAG_IS_EXACT;
 }
 
 void NumericIO::init(InstrumentationConfig &IConf,
@@ -1908,10 +1908,10 @@ Value *CompareIO::getPredicate(Value &V, Type &Ty, InstrumentationConfig &IConf,
 }
 
 void CompareIO::addFlagNames() {
-  FlagNames.insert({"samesign", COMPARE_FLAG_SAMESIGN});
-  FlagNames.insert({"nnan", COMPARE_FLAG_HAS_NO_NANS});
-  FlagNames.insert({"ninf", COMPARE_FLAG_HAS_NO_INFS});
-  FlagNames.insert({"nsz", COMPARE_FLAG_HAS_NO_SIGNED_ZEROS});
+  FlagNames["samesign"] = COMPARE_FLAG_SAMESIGN;
+  FlagNames["nnan"] = COMPARE_FLAG_HAS_NO_NANS;
+  FlagNames["ninf"] = COMPARE_FLAG_HAS_NO_INFS;
+  FlagNames["nsz"] = COMPARE_FLAG_HAS_NO_SIGNED_ZEROS;
 }
 
 Value *CompareIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,

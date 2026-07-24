@@ -30,7 +30,7 @@ class FilterEvaluator {
   DenseMap<StringRef, StringRef> &StringPropertyValues;
   DenseMap<StringRef, Value *> &PointerPropertyValues;
   DenseMap<StringRef, PropertyType> &DynamicProperties;
-  DenseMap<StringRef, int32_t> &FlagNameVals;
+  StringMap<int32_t> &FlagNameVals;
   size_t Pos = 0;
 
 public:
@@ -39,7 +39,7 @@ public:
                   DenseMap<StringRef, StringRef> &StringPropertyValues,
                   DenseMap<StringRef, Value *> &PointerPropertyValues,
                   DenseMap<StringRef, PropertyType> &DynamicProperties,
-                  DenseMap<StringRef, int32_t> &FlagNameVals)
+                  StringMap<int32_t> &FlagNameVals)
       : Expr(Expr), IntPropertyValues(IntPropertyValues),
         StringPropertyValues(StringPropertyValues),
         PointerPropertyValues(PointerPropertyValues),
@@ -181,7 +181,7 @@ private:
       StringRef FieldName = Expr.slice(Start, Pos);
       skipWhitespace();
 
-      // Handle flag values
+      // Handle flag values.
       if (PropName == "flags") {
         auto FlagValIt = IntPropertyValues.find("flags");
         if (FlagValIt != IntPropertyValues.end()) {
@@ -235,9 +235,10 @@ private:
 
       return createStringError("unknown method '" + FieldName +
                                "' on property '" + PropName + "'");
-    } else if (LogicalNot)
+    } else if (LogicalNot) {
       return createStringError("expected boolean value at position " +
                                std::to_string(Start));
+    }
 
     // Check if this is an integer property.
     auto IntIt = IntPropertyValues.find(PropName);
