@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck --check-prefixes=GFX1200-ERR %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
+// RUN: not llvm-mc -triple=amdgpu12.00 -filetype=null %s 2>&1 | FileCheck --check-prefixes=GFX1200-ERR %s
+// RUN: llvm-mc -triple=amdgpu12.50 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
 
 s_mov_b32 s0, src_flat_scratch_base_lo
 // GFX1200-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: src_flat_scratch_base_lo register not available on this GPU
