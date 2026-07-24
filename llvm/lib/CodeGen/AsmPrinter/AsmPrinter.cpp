@@ -3239,8 +3239,8 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
   bool NeedsLocalForSize = MAI.needsLocalForSize();
-  if (F.hasFnAttribute("tail-pad-to-size") ||
-      F.hasFnAttribute("patchable-function-entry") ||
+  if (F.hasFnAttribute("patchable-function-entry") ||
+      F.hasFnAttribute("tail-pad-to-size") ||
       F.hasFnAttribute("function-instrument") ||
       F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabels(MF, *this) || NeedsLocalForSize ||
