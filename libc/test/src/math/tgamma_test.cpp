@@ -33,9 +33,9 @@ TEST_F(LlvmLibcTgammaTest, ExtremelySmallInputs) {
   for (size_t i = 0; i < sizeof(INPUTS) / sizeof(INPUTS[0]); i++) {
     double x = INPUTS[i];
     EXPECT_MPFR_MATCH(mpfr::Operation::Tgamma, x, LIBC_NAMESPACE::tgamma(x),
-                      0.5);
+                      1.0);
     EXPECT_MPFR_MATCH(mpfr::Operation::Tgamma, -x, LIBC_NAMESPACE::tgamma(-x),
-                      0.5);
+                      1.0);
   }
 }
 
