@@ -297,7 +297,8 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       if (!MD->getNumOperands())
         return SectionKind::getExclude();
     if (MDNode *MD = GVar->getMetadata(LLVMContext::MD_metadata_section_kind))
-      return SectionKind::getMetadata();
+      if (!MD->getNumOperands())
+        return SectionKind::getMetadata();
   }
 
   // If the global is marked constant, we can put it into a mergable section,
