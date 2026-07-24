@@ -4187,20 +4187,20 @@ monotonic modification order with other operations that are not marked
 
 Certain atomic instructions, such as {ref}`atomicrmw <i_atomicrmw>`,
 and {ref}`atomic load <i_load>`, may be marked `elementwise`. The access type
-must then be a fixed vector type whose total bit width is a power of two greater
-than or equal to eight, and whose element type is supported by the corresponding
-scalar atomic instruction. The {ref}`ordering <ordering>` of an `elementwise`
-instruction may not be `seq_cst`.
+must then be a fixed vector type whose total bit width is a power of two and
+whose element type is supported by the corresponding scalar atomic instruction.
+The {ref}`ordering <ordering>` of an `elementwise` instruction may not be
+`seq_cst`.
 
 An `elementwise` atomic instruction behaves as if it were expanded into one
 scalar version of that instruction for each vector element. Each resulting
 scalar operation has the same {ref}`ordering <ordering>` and `syncscope` as the
 original instruction. Each scalar operation occupies the original instruction's
 position in program order relative to other operations, but the scalar
-operations are not ordered by program order with respect to one another.
-Synchronizing with one scalar operation does not, by itself, establish a
-happens-before relationship with any other scalar operation from the same
-`elementwise` instruction.
+operations are not related in program order with respect to one another.
+Synchronizing with one scalar operation therefore does not, by itself,
+establish a happens-before relationship with any other scalar operation from
+the same `elementwise` instruction.
 
 Without `elementwise`, vector atomic instructions are performed atomically over
 the entire vector operation.
@@ -11767,8 +11767,8 @@ equal to eight.
 
 If the `load` is marked `elementwise`, the instruction has
 {ref}`elementwise atomic semantics <elementwise-atomics>`. The loaded type must
-be a fixed vector type whose total bit width is a power of two greater than or
-equal to eight, and whose element type is supported by scalar atomic loads.
+be a fixed vector type whose total bit width is a power of two and whose
+element type is supported by scalar atomic loads.
 
 `align` must be explicitly specified on atomic loads, and is otherwise
 optional on non-atomic loads. Note: if the alignment is not greater than or equal
