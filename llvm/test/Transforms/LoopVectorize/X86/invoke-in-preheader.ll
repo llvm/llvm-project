@@ -7,7 +7,7 @@ declare i32 @foo(i32)
 ; See https://github.com/llvm/llvm-project/issues/210342
 define i32 @test_invoke_broadcast() #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define i32 @test_invoke_broadcast(
-; CHECK-SAME: ) #[[ATTR0:[0-9]+]] gc "statepoint-example" personality ptr @__gxx_personality_v0 {
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[INVOKE:%.*]] = invoke i32 @foo(i32 0)
 ; CHECK-NEXT:            to label %[[ITER_CHECK:.*]] unwind label %[[UNWIND:.*]]
