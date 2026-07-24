@@ -706,16 +706,17 @@ TEST(GOFFObjectFileTest, GlobalSymbols) {
   GOFFData[GOFF::RecordLength * 8 + 71] = (char)0x01; // Size of symbol name.
   GOFFData[GOFF::RecordLength * 8 + 72] = (char)0xC8; // Symbol name is H.
 
- // ESD record 9: type LD + Import-Export binding scope
+  // ESD record 9: type LD + Import-Export binding scope
   GOFFData[GOFF::RecordLength * 9] = (char)0x03;
   GOFFData[GOFF::RecordLength * 9 + 3] = (char)0x02;  // Type: LD
   GOFFData[GOFF::RecordLength * 9 + 7] = (char)0x09;  // ESDID.
   GOFFData[GOFF::RecordLength * 9 + 11] = (char)0x02; // Parent ESDID.
-  GOFFData[GOFF::RecordLength * 9 + 65] = (char)0x04; // Binding Scope: ImportExport.
+  GOFFData[GOFF::RecordLength * 9 + 65] =
+      (char)0x04; // Binding Scope: ImportExport.
   GOFFData[GOFF::RecordLength * 9 + 71] = (char)0x01; // Size of symbol name.
   GOFFData[GOFF::RecordLength * 9 + 72] = (char)0xC9; // Symbol name is I.
 
-   // ESD record 10: type LD + blank name
+  // ESD record 10: type LD + blank name
   GOFFData[GOFF::RecordLength * 10] = (char)0x03;
   GOFFData[GOFF::RecordLength * 10 + 3] = (char)0x02;  // Type: LD
   GOFFData[GOFF::RecordLength * 10 + 7] = (char)0x0A;  // ESDID.
@@ -737,7 +738,6 @@ TEST(GOFFObjectFileTest, GlobalSymbols) {
 
   GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
 
-
   auto SymbolRange = GOFFObj->symbols();
   auto Symbol = SymbolRange.begin();
   auto ValidateGlobal = [&](StringRef Name, bool IsGlobal) {
@@ -753,7 +753,7 @@ TEST(GOFFObjectFileTest, GlobalSymbols) {
     Expected<uint32_t> SymbolFlagsOrErr = Symbol->getFlags();
     ASSERT_THAT_EXPECTED(SymbolFlagsOrErr, Succeeded());
     uint32_t SymbolFlags = SymbolFlagsOrErr.get();
-    if (IsGlobal){
+    if (IsGlobal) {
       EXPECT_TRUE(SymbolFlags & SymbolRef::SF_Global);
     } else {
       EXPECT_FALSE(SymbolFlags & SymbolRef::SF_Global);
