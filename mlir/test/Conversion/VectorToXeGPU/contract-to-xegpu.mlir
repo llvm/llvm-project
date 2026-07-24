@@ -180,3 +180,51 @@ func.func @negative_accumulator_shape(%lhs: vector<8x16xf16>, %rhs: vector<16x16
 
 // CHECK-LABEL: @negative_accumulator_shape(
 // CHECK:       vector.contract
+
+// -----
+
+// A batched matmul whose leading dimension is a batch dimension shared across
+// lhs, rhs, and acc lowers to a batched xegpu.dpas.
+
+#map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+func.func @dpas_batched_gemm(%lhs: vector<4x8x16xf16>, %rhs: vector<4x16x16xf16>,
+    %acc: vector<4x8x16xf32>) -> vector<4x8x16xf32> {
+  %3 = vector.contract
+    {indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>} %lhs, %rhs, %acc
+    : vector<4x8x16xf16>, vector<4x16x16xf16> into vector<4x8x16xf32>
+  return %3 : vector<4x8x16xf32>
+}
+
+// CHECK-LABEL: @dpas_batched_gemm(
+// CHECK-SAME:  %[[LHS:.+]]: vector<4x8x16xf16>,
+// CHECK-SAME:  %[[RHS:.+]]: vector<4x16x16xf16>,
+// CHECK-SAME:  %[[ACC:.+]]: vector<4x8x16xf32>
+// CHECK:       %[[DPAS:.+]] = xegpu.dpas
+// CHECK-SAME:    %[[LHS]], %[[RHS]], %[[ACC]]
+// CHECK-SAME:    {{.*}}-> vector<4x8x16xf32>
+// CHECK:       return %[[DPAS]]
+
+// -----
+
+// An N-D contraction whose leading dimension is not a batch dimension shared
+// across lhs, rhs, and acc does not map to a (batched) row-major matmul.
+
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d0, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+func.func @negative_non_batched_nd(%lhs: vector<128x64x64xf16>, %rhs: vector<64x64xf16>,
+    %acc: vector<128x64xf16>) -> vector<128x64xf16> {
+  %3 = vector.contract
+    {indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>} %lhs, %rhs, %acc
+    : vector<128x64x64xf16>, vector<64x64xf16> into vector<128x64xf16>
+  return %3 : vector<128x64xf16>
+}
+
+// CHECK-LABEL: @negative_non_batched_nd(
+// CHECK:       vector.contract
