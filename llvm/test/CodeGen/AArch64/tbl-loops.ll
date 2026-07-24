@@ -711,6 +711,8 @@ for.body:                                         ; preds = %for.body.preheader4
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
+
+
 define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture noundef readonly %data, i32 noundef %width) {
 ; CHECK-IAENABLED-LABEL: loop4:
 ; CHECK-IAENABLED:       // %bb.0: // %entry
@@ -1315,7 +1317,6 @@ for.body:                                         ; preds = %for.body.preheader3
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-
 define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr nocapture noundef readonly %data, i32 noundef %width) {
 ; CHECK-LABEL: loop3_intrinsic:
 ; CHECK:       // %bb.0: // %entry
@@ -1532,7 +1533,6 @@ for.body:                                         ; preds = %for.body.preheader4
   %exitcond.not = icmp eq i32 %inc, %width
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
-
 
 define void @loop4_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr nocapture noundef readonly %data, i32 noundef %width) {
 ; CHECK-LABEL: loop4_intrinsic:
