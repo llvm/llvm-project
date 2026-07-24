@@ -476,7 +476,8 @@ bool Sema::BoundsSafetyCheckCountedByFAMInStaticStorage(const VarDecl *VD) {
   Diag(VD->getLocation(), diag::warn_counted_by_attr_fam_static_storage)
       << FAM << CATy->getAttributeName(/*WithMacroPrefix=*/true) << StorageKind
       << CountFD;
-  Diag(FAM->getLocation(), diag::note_counted_by_intended_for_dynamic_allocation)
+  Diag(FAM->getLocation(),
+       diag::note_counted_by_intended_for_dynamic_allocation)
       << CATy->getAttributeName(/*WithMacroPrefix=*/true);
   return false;
 }
