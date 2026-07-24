@@ -18,7 +18,7 @@
 #include "fp_libc_config.h"
 #include "shared/builtins/extenddftf2.h"
 
-#if defined(CRT_HAS_TF_MODE)
+#ifdef CRT_HAS_TF_MODE
 extern "C" COMPILER_RT_ABI tf_float __extenddftf2(double a) {
   return LIBC_NAMESPACE::shared::extenddftf2(a);
 }

@@ -18,7 +18,7 @@
 #include "fp_libc_config.h"
 #include "shared/builtins/trunctfsf2.h"
 
-#if defined(CRT_HAS_TF_MODE)
+#ifdef CRT_HAS_TF_MODE
 extern "C" COMPILER_RT_ABI float __trunctfsf2(tf_float a) {
   return LIBC_NAMESPACE::shared::trunctfsf2(a);
 }
