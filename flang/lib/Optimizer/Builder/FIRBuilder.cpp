@@ -8,6 +8,7 @@
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/Analysis/ArraySectionAnalyzer.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -21,10 +22,12 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -1144,24 +1147,6 @@ fir::factory::getNonDefaultLowerBounds(fir::FirOpBuilder &builder,
       [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
 }
 
-llvm::SmallVector<mlir::Value>
-fir::factory::getNonDeferredLenParams(const fir::ExtendedValue &exv) {
-  return exv.match(
-      [&](const fir::CharArrayBoxValue &character)
-          -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
-      [&](const fir::CharBoxValue &character)
-          -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
-      [&](const fir::MutableBoxValue &box) -> llvm::SmallVector<mlir::Value> {
-        return {box.nonDeferredLenParams().begin(),
-                box.nonDeferredLenParams().end()};
-      },
-      [&](const fir::BoxValue &box) -> llvm::SmallVector<mlir::Value> {
-        return {box.getExplicitParameters().begin(),
-                box.getExplicitParameters().end()};
-      },
-      [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
-}
-
 // If valTy is a box type, then we need to extract the type parameters from
 // the box value.
 static llvm::SmallVector<mlir::Value> getFromBox(mlir::Location loc,
@@ -1620,64 +1605,6 @@ fir::factory::getRaggedArrayHeaderType(fir::FirOpBuilder &builder) {
   return mlir::TupleType::get(builder.getContext(), {i64Ty, buffTy, shTy});
 }
 
-mlir::Value fir::factory::genLenOfCharacter(
-    fir::FirOpBuilder &builder, mlir::Location loc, fir::ArrayLoadOp arrLoad,
-    llvm::ArrayRef<mlir::Value> path, llvm::ArrayRef<mlir::Value> substring) {
-  llvm::SmallVector<mlir::Value> typeParams(arrLoad.getTypeparams());
-  return genLenOfCharacter(builder, loc,
-                           mlir::cast<fir::SequenceType>(arrLoad.getType()),
-                           arrLoad.getMemref(), typeParams, path, substring);
-}
-
-mlir::Value fir::factory::genLenOfCharacter(
-    fir::FirOpBuilder &builder, mlir::Location loc, fir::SequenceType seqTy,
-    mlir::Value memref, llvm::ArrayRef<mlir::Value> typeParams,
-    llvm::ArrayRef<mlir::Value> path, llvm::ArrayRef<mlir::Value> substring) {
-  auto idxTy = builder.getIndexType();
-  auto zero = builder.createIntegerConstant(loc, idxTy, 0);
-  auto saturatedDiff = [&](mlir::Value lower, mlir::Value upper) {
-    auto diff = mlir::arith::SubIOp::create(builder, loc, upper, lower);
-    auto one = builder.createIntegerConstant(loc, idxTy, 1);
-    auto size = mlir::arith::AddIOp::create(builder, loc, diff, one);
-    auto cmp = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::sgt, size, zero);
-    return mlir::arith::SelectOp::create(builder, loc, cmp, size, zero);
-  };
-  if (substring.size() == 2) {
-    auto upper = builder.createConvert(loc, idxTy, substring.back());
-    auto lower = builder.createConvert(loc, idxTy, substring.front());
-    return saturatedDiff(lower, upper);
-  }
-  auto lower = zero;
-  if (substring.size() == 1)
-    lower = builder.createConvert(loc, idxTy, substring.front());
-  auto eleTy = fir::applyPathToType(seqTy, path);
-  if (!fir::hasDynamicSize(eleTy)) {
-    if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
-      // Use LEN from the type.
-      return builder.createIntegerConstant(loc, idxTy, charTy.getLen());
-    }
-    // Do we need to support !fir.array<!fir.char<k,n>>?
-    fir::emitFatalError(loc,
-                        "application of path did not result in a !fir.char");
-  }
-  if (fir::isa_box_type(memref.getType())) {
-    if (mlir::isa<fir::BoxCharType>(memref.getType()))
-      return fir::BoxCharLenOp::create(builder, loc, idxTy, memref);
-    if (mlir::isa<fir::BoxType>(memref.getType()))
-      return CharacterExprHelper(builder, loc).readLengthFromBox(memref);
-    fir::emitFatalError(loc, "memref has wrong type");
-  }
-  if (typeParams.empty()) {
-    fir::emitFatalError(loc, "array_load must have typeparams");
-  }
-  if (fir::isa_char(seqTy.getEleTy())) {
-    assert(typeParams.size() == 1 && "too many typeparams");
-    return typeParams.front();
-  }
-  TODO(loc, "LEN of character must be computed at runtime");
-}
-
 mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
                                           mlir::Location loc, mlir::Type type) {
   mlir::Type i1 = builder.getIntegerType(1);
@@ -1715,34 +1642,6 @@ mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
   }
   fir::emitFatalError(loc, "internal: trying to generate one value of non "
                            "numeric or logical type");
-}
-
-std::optional<std::int64_t>
-fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
-                                   mlir::Value stride) {
-  std::function<std::optional<std::int64_t>(mlir::Value)> getConstantValue =
-      [&](mlir::Value value) -> std::optional<std::int64_t> {
-    if (auto valInt = fir::getIntIfConstant(value))
-      return *valInt;
-    auto *definingOp = value.getDefiningOp();
-    if (mlir::isa_and_nonnull<fir::ConvertOp>(definingOp)) {
-      auto valOp = mlir::dyn_cast<fir::ConvertOp>(definingOp);
-      return getConstantValue(valOp.getValue());
-    }
-    return {};
-  };
-  if (auto lbInt = getConstantValue(lb)) {
-    if (auto ubInt = getConstantValue(ub)) {
-      if (auto strideInt = getConstantValue(stride)) {
-        if (*strideInt != 0) {
-          std::int64_t extent = 1 + (*ubInt - *lbInt) / *strideInt;
-          if (extent > 0)
-            return extent;
-        }
-      }
-    }
-  }
-  return {};
 }
 
 mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
@@ -2006,4 +1905,138 @@ mlir::Value fir::factory::getDescriptorWithNewBaseAddress(
   mlir::Value typeMold = fir::isPolymorphicType(boxType) ? box : mlir::Value{};
   return builder.createBox(loc, boxType, newAddr, shape, /*slice=*/{},
                            fir::getTypeParams(openedInput), typeMold);
+}
+
+std::optional<mlir::Value> fir::factory::genIndexBasedDisjointnessCheck(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value lhsRef,
+    mlir::Value rhsRef) {
+  auto des1 = lhsRef.getDefiningOp<hlfir::DesignateOp>();
+  auto des2 = rhsRef.getDefiningOp<hlfir::DesignateOp>();
+  if (!des1 || !des2)
+    return std::nullopt;
+
+  if (des1.getMemref() != des2.getMemref())
+    return std::nullopt;
+
+  if (des1.getComponent() != des2.getComponent() ||
+      des1.getComponentShape() != des2.getComponentShape() ||
+      des1.getSubstring() != des2.getSubstring() ||
+      des1.getComplexPart() != des2.getComplexPart() ||
+      des1.getTypeparams() != des2.getTypeparams())
+    return std::nullopt;
+
+  if (des1.getIsTriplet().empty() ||
+      !llvm::equal(des1.getIsTriplet(), des2.getIsTriplet()))
+    return std::nullopt;
+
+  using Analyzer = fir::ArraySectionAnalyzer;
+  mlir::Type idxTy = builder.getIndexType();
+  auto toIdx = [&](mlir::Value v) -> mlir::Value {
+    return fir::ConvertOp::create(builder, loc, idxTy, v);
+  };
+
+  mlir::Value disjoint;
+  auto des1It = des1.getIndices().begin();
+  auto des2It = des2.getIndices().begin();
+  for (bool isTriplet : des1.getIsTriplet()) {
+    Analyzer::SectionDesc desc1 = Analyzer::readSectionDesc(des1It, isTriplet);
+    Analyzer::SectionDesc desc2 = Analyzer::readSectionDesc(des2It, isTriplet);
+    auto [lb1, ub1] = Analyzer::getOrderedBounds(desc1);
+    auto [lb2, ub2] = Analyzer::getOrderedBounds(desc2);
+    if (!lb1 || !lb2)
+      continue;
+
+    mlir::Value c1 = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::slt, toIdx(ub1), toIdx(lb2));
+    mlir::Value c2 = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::slt, toIdx(ub2), toIdx(lb1));
+    mlir::Value c1Orc2 = mlir::arith::OrIOp::create(builder, loc, c1, c2);
+    disjoint = disjoint
+                   ? mlir::arith::OrIOp::create(builder, loc, disjoint, c1Orc2)
+                   : c1Orc2;
+  }
+  if (!disjoint)
+    return std::nullopt;
+  return disjoint;
+}
+
+std::optional<mlir::Value> fir::factory::genAddressBasedDisjointnessCheck(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value lhsRef,
+    mlir::Value rhsRef) {
+  if (!mlir::isa<fir::BaseBoxType>(lhsRef.getType()) ||
+      !mlir::isa<fir::BaseBoxType>(rhsRef.getType()))
+    return std::nullopt;
+
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Type intPtrTy = builder.getIntPtrType();
+
+  //   Disjoint if: xEnd < yStart || yEnd < xStart.
+  auto computeRange =
+      [&](mlir::Value box) -> std::pair<mlir::Value, mlir::Value> {
+    mlir::Value baseAddr = fir::BoxAddrOp::create(builder, loc, box);
+    mlir::Value baseInt =
+        fir::ConvertOp::create(builder, loc, intPtrTy, baseAddr);
+
+    mlir::Value eleSize = fir::BoxEleSizeOp::create(builder, loc, idxTy, box);
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+
+    mlir::Value least = zero;
+    mlir::Value most = zero;
+
+    auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
+    unsigned rank = 0;
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+            fir::unwrapRefType(boxTy.getEleTy())))
+      rank = seqTy.getShape().size();
+
+    if (rank == 0)
+      return {nullptr, nullptr};
+
+    for (unsigned dim = 0; dim < rank; ++dim) {
+      mlir::Value dimVal = builder.createIntegerConstant(loc, idxTy, dim);
+      auto dims = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box,
+                                         dimVal);
+      mlir::Value extent = dims.getExtent();
+      mlir::Value stride = dims.getByteStride();
+
+      mlir::Value extentM1 =
+          mlir::arith::SubIOp::create(builder, loc, extent, one);
+      mlir::Value dimOffset =
+          mlir::arith::MulIOp::create(builder, loc, extentM1, stride);
+
+      mlir::Value isStrideNeg = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::slt, stride, zero);
+      mlir::Value addToLeast = mlir::arith::SelectOp::create(
+          builder, loc, isStrideNeg, dimOffset, zero);
+      mlir::Value addToMost = mlir::arith::SelectOp::create(
+          builder, loc, isStrideNeg, zero, dimOffset);
+      least = mlir::arith::AddIOp::create(builder, loc, least, addToLeast);
+      most = mlir::arith::AddIOp::create(builder, loc, most, addToMost);
+    }
+
+    mlir::Value eleSizeM1 =
+        mlir::arith::SubIOp::create(builder, loc, eleSize, one);
+    most = mlir::arith::AddIOp::create(builder, loc, most, eleSizeM1);
+
+    mlir::Value leastInt =
+        fir::ConvertOp::create(builder, loc, intPtrTy, least);
+    mlir::Value mostInt = fir::ConvertOp::create(builder, loc, intPtrTy, most);
+    mlir::Value rangeStart =
+        mlir::arith::AddIOp::create(builder, loc, baseInt, leastInt);
+    mlir::Value rangeEnd =
+        mlir::arith::AddIOp::create(builder, loc, baseInt, mostInt);
+    return {rangeStart, rangeEnd};
+  };
+
+  auto [lhsStart, lhsEnd] = computeRange(lhsRef);
+  auto [rhsStart, rhsEnd] = computeRange(rhsRef);
+  if (!lhsStart || !rhsStart)
+    return std::nullopt;
+
+  mlir::Value cond1 = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::ult, lhsEnd, rhsStart);
+  mlir::Value cond2 = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::ult, rhsEnd, lhsStart);
+  return mlir::arith::OrIOp::create(builder, loc, cond1, cond2);
 }

@@ -6,7 +6,6 @@
 // REQUIRES: glibc
 
 // Regression test for #84482 and #21068
-// XFAIL: msan, dfsan
 
 #ifndef BUILD_SO
 #  define _GNU_SOURCE

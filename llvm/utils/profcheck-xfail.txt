@@ -1,5 +1,4 @@
 CodeGen/ARM/sjljeh-swifterror.ll
-CodeGen/BPF/sink-min-max.ll
 CodeGen/WinEH/wineh-comdat.ll
 CodeGen/WinEH/wineh-scope-statenumbering.ll
 CodeGen/WinEH/wineh-setjmp.ll
@@ -47,6 +46,7 @@ Transforms/Coroutines/coro-split-musttail7.ll
 Transforms/Coroutines/coro-split-musttail8.ll
 Transforms/Coroutines/coro-split-musttail9.ll
 Transforms/Coroutines/coro-split-noinline.ll
+Transforms/Coroutines/coro-split-resume-fallthrough-destroy-slot.ll
 Transforms/Coroutines/coro-split-tbaa-md-neg-2.ll
 Transforms/Coroutines/coro-split-tbaa-md-neg.ll
 Transforms/Coroutines/coro-split-tbaa-md.ll

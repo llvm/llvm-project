@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -ast-dump %s | FileCheck %s -check-prefixes=CHECK,DXIL
-// RUN: %clang_cc1 -triple spirv-unknown-vulkan-compute -ast-dump %s | FileCheck %s -check-prefixes=CHECK,SPIRV
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump %s | FileCheck %s -check-prefixes=CHECK,DXIL
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan-library -ast-dump %s | FileCheck %s -check-prefixes=CHECK,SPIRV
 
 // Single resource field in struct
 

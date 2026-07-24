@@ -1,8 +1,8 @@
 ! This test checks lowering of OpenMP compound (combined and composite) loop
 ! constructs.
 
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 program main
   integer :: i,j
@@ -242,19 +242,23 @@ program main
   ! CHECK-NEXT: omp.wsloop
   ! CHECK-NEXT: omp.loop_nest
   !
-  ! Verify the conrol-flow of the unstructured inner loop.
-  ! CHECK:        cf.br ^[[BB1:.*]]
-  ! CHECK:      ^[[BB1]]:
-  ! CHECK:        cf.br ^[[BB2:.*]]
-  ! CHECK:      ^[[BB2]]:
-  ! CHECK:        cf.cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
-  ! CHECK:      ^[[BB3]]:
-  ! CHECK:        cf.cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB5:.*]]
-  ! CHECK:      ^[[BB4]]:
-  ! CHECK:        cf.br ^[[BB6]]
-  ! CHECK:      ^[[BB5]]:
-  ! CHECK:        cf.br ^[[BB2]]
-  ! CHECK:      ^[[BB6]]:
+  ! Verify the control-flow of the unstructured inner loop, wrapped in an
+  ! scf.execute_region.
+  ! CHECK:        scf.execute_region no_inline {
+  ! CHECK:          cf.br ^[[BB1:.*]]
+  ! CHECK:        ^[[BB1]]:
+  ! CHECK:          cf.br ^[[BB2:.*]]
+  ! CHECK:        ^[[BB2]]:
+  ! CHECK:          cf.cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
+  ! CHECK:        ^[[BB3]]:
+  ! CHECK:          cf.cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB5:.*]]
+  ! CHECK:        ^[[BB4]]:
+  ! CHECK:          cf.br ^[[BB6]]
+  ! CHECK:        ^[[BB5]]:
+  ! CHECK:          cf.br ^[[BB2]]
+  ! CHECK:        ^[[BB6]]:
+  ! CHECK-NEXT:     scf.yield
+  ! CHECK:        }
   ! CHECK-NEXT:   omp.yield
   !$omp target teams distribute parallel do
   do i = 1, 10
