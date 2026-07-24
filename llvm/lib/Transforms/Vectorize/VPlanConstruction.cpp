@@ -1248,6 +1248,15 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
                                        PredicatedScalarEvolution &PSE,
                                        DominatorTree &DT, AssumptionCache *AC) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
+  bool HasEarlyExits =
+      any_of(Plan.getExitBlocks(), [MiddleVPBB](VPIRBasicBlock *EB) {
+        return any_of(EB->getPredecessors(), [MiddleVPBB](VPBlockBase *Pred) {
+          return Pred != MiddleVPBB;
+        });
+      });
+  if (!HasEarlyExits)
+    return true;
+
   auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
 
   // TODO: We would like to detect uncountable exits and stores within loops
