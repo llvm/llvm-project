@@ -42,7 +42,7 @@ public:
                                          0.33333333333333333333)) <= epsilon);
     EXPECT_TRUE(abs_diff(func(2, 3), static_cast<FXType>(
                                          0.66666666666666666667)) <= epsilon);
-    EXPECT_TRUE(abs_diff(func(3, 4), 3 * one_fourth) <= epsilon);
+    EXPECT_EQ(func(3, 4), 3 * one_fourth);
     EXPECT_TRUE(abs_diff(func(5, 7), static_cast<FXType>(
                                          0.71428571428571428571)) <= epsilon);
     if constexpr (is_signed) {
@@ -88,8 +88,7 @@ public:
       constexpr IntType edge = static_cast<IntType>(1) << F;
       EXPECT_EQ(func(-edge, edge), static_cast<FXType>(-1));
       if constexpr (has_integral) {
-        EXPECT_TRUE(abs_diff(func(edge - 1, edge),
-                             static_cast<FXType>(1) - epsilon) <= epsilon);
+        EXPECT_EQ(func(edge - 1, edge), static_cast<FXType>(1) - epsilon);
       } else {
         EXPECT_EQ(func(edge - 1, edge), fx_max);
       }
@@ -105,7 +104,10 @@ public:
       EXPECT_EQ(func(27, 23), fx_max);
     }
 
-    EXPECT_EQ(func(1, int_max), fx_zero);
+    // Cannot EXPECT_EQ even though int_max is a power of 2 because rounding
+    // direction for magnitudes smaller than the representable precision is
+    // implementation defined. The result must be within 1 ulp.
+    EXPECT_TRUE(abs_diff(func(1, int_max), fx_zero) <= epsilon);
 
     if constexpr (is_signed) {
       constexpr IntType int_min = cpp::numeric_limits<IntType>::min();
@@ -120,16 +122,40 @@ public:
       }
 
       EXPECT_EQ(func(int_min, 1), fx_min);
+
+      // Cannot EXPECT_EQ even though int_min is a power of 2 because rounding
+      // direction for magnitudes smaller than the representable precision is
+      // implementation defined. The result must be within 1 ulp.
       EXPECT_TRUE(abs_diff(func(1, int_min), fx_zero) <= epsilon);
 
-      if constexpr (has_integral) {
-        EXPECT_EQ(func(3, -1), static_cast<FXType>(-3));
-        EXPECT_EQ(func(-3, -1), static_cast<FXType>(3));
-        EXPECT_EQ(func(3, 1), static_cast<FXType>(3));
-        EXPECT_EQ(func(-3, 1), static_cast<FXType>(-3));
-      }
       EXPECT_EQ(func(int_min, -1), fx_max);
       EXPECT_EQ(func(int_max, -1), fx_min);
+    }
+
+    if constexpr (has_integral) {
+      EXPECT_EQ(func(1, 1), static_cast<FXType>(1));
+      EXPECT_EQ(func(2, 1), static_cast<FXType>(2));
+      EXPECT_EQ(func(3, 1), static_cast<FXType>(3));
+    } else {
+      EXPECT_EQ(func(1, 1), fx_max);
+      EXPECT_EQ(func(2, 1), fx_max);
+      EXPECT_EQ(func(3, 1), fx_max);
+    }
+
+    if constexpr (is_signed) {
+      EXPECT_EQ(func(-1, 1), static_cast<FXType>(-1));
+      EXPECT_EQ(func(1, -1), static_cast<FXType>(-1));
+
+      if constexpr (has_integral) {
+        EXPECT_EQ(func(-1, -1), static_cast<FXType>(1));
+        EXPECT_EQ(func(3, -1), static_cast<FXType>(-3));
+        EXPECT_EQ(func(-3, -1), static_cast<FXType>(3));
+        EXPECT_EQ(func(-3, 1), static_cast<FXType>(-3));
+      } else {
+        EXPECT_EQ(func(-1, -1), fx_max);
+        EXPECT_EQ(func(3, -1), fx_min);
+        EXPECT_EQ(func(-3, -1), fx_max);
+      }
     }
   }
 
