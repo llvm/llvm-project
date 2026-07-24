@@ -2112,6 +2112,38 @@ entry:
 ; CHECK-LABEL: atomic64_umin_monotonic
 ; CHECK: call i64 @__tsan_atomic64_fetch_umin(ptr %a, i64 0, i32 0), !dbg
 
+define void @atomic128_max_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw max ptr %a, i128 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic128_max_monotonic
+; CHECK: call i128 @__tsan_atomic128_fetch_max(ptr %a, i128 0, i32 0), !dbg
+
+define void @atomic128_min_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw min ptr %a, i128 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic128_min_monotonic
+; CHECK: call i128 @__tsan_atomic128_fetch_min(ptr %a, i128 0, i32 0), !dbg
+
+define void @atomic128_umax_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw umax ptr %a, i128 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic128_umax_monotonic
+; CHECK: call i128 @__tsan_atomic128_fetch_umax(ptr %a, i128 0, i32 0), !dbg
+
+define void @atomic128_umin_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw umin ptr %a, i128 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic128_umin_monotonic
+; CHECK: call i128 @__tsan_atomic128_fetch_umin(ptr %a, i128 0, i32 0), !dbg
+
 define void @atomic128_cas_monotonic(ptr %a) nounwind uwtable {
 entry:
   cmpxchg ptr %a, i128 0, i128 1 monotonic monotonic, !dbg !7
