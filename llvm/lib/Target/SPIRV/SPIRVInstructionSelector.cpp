@@ -193,9 +193,6 @@ private:
       Register ResVReg, SPIRVTypeInst ResType, MachineIRBuilder &MIRBuilder,
       function_ref<Register(SPIRVTypeInst IntType)> EmitAtomic) const;
 
-  bool selectInterlockedOp(Register ResVReg, SPIRVTypeInst ResType,
-                           MachineInstr &I, unsigned Opcode) const;
-
   bool selectAtomicCmpXchg(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
 
@@ -2579,36 +2576,6 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
       .addUse(ScopeReg)
       .addUse(MemSemReg)
       .addUse(ValueReg)
-      .constrainAllUses(TII, TRI, RBI);
-  return true;
-}
-
-bool SPIRVInstructionSelector::selectInterlockedOp(Register ResVReg,
-                                                   SPIRVTypeInst ResType,
-                                                   MachineInstr &I,
-                                                   unsigned Opcode) const {
-  Register Ptr = I.getOperand(2).getReg();
-  Register Value = I.getOperand(3).getReg();
-
-  SPIRV::StorageClass::StorageClass SC = GR.getPointerStorageClass(Ptr);
-  assert((SC == SPIRV::StorageClass::Workgroup ||
-          SC == SPIRV::StorageClass::StorageBuffer) &&
-         "InterlockedAdd requires Workgroup or StorageBuffer storage class");
-  uint32_t Scope = static_cast<uint32_t>(SC == SPIRV::StorageClass::Workgroup
-                                             ? SPIRV::Scope::Workgroup
-                                             : SPIRV::Scope::Device);
-  Register ScopeReg = buildI32Constant(Scope, I);
-
-  uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(SC));
-  Register MemSemReg = buildI32Constant(MemSem, I);
-
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(Ptr)
-      .addUse(ScopeReg)
-      .addUse(MemSemReg)
-      .addUse(Value)
       .constrainAllUses(TII, TRI, RBI);
   return true;
 }
@@ -5507,8 +5474,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_reduce_and:
     return selectWaveReduceOp(ResVReg, ResType, I,
                               SPIRV::OpGroupNonUniformBitwiseAnd);
-  case Intrinsic::spv_interlocked_or:
-    return selectInterlockedOp(ResVReg, ResType, I, SPIRV::OpAtomicOr);
   case Intrinsic::spv_wave_reduce_umax:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:

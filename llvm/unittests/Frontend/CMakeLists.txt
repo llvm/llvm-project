@@ -13,6 +13,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(LLVMFrontendTests
+  EnumSetTest.cpp
   HLSLBindingTest.cpp
   HLSLRootSignatureDumpTest.cpp
   OpenACCTest.cpp

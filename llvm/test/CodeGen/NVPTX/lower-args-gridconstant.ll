@@ -229,12 +229,12 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; PTX-SHORT-PTR:       {
 ; PTX-SHORT-PTR-NEXT:    .local .align 4 .b8 __local_depot4[4];
 ; PTX-SHORT-PTR-NEXT:    .reg .b64 %SP;
-; PTX-SHORT-PTR-NEXT:    .reg .b64 %SPL;
+; PTX-SHORT-PTR-NEXT:    .reg .b32 %SPL;
 ; PTX-SHORT-PTR-NEXT:    .reg .b32 %r<5>;
 ; PTX-SHORT-PTR-NEXT:    .reg .b64 %rd<8>;
 ; PTX-SHORT-PTR-NEXT:  prototype_1 : .callprototype (.param .b32 _) _ (.param .b64 _, .param .b64 _, .param .b64 _);
 ; PTX-SHORT-PTR-NEXT:  // %bb.0:
-; PTX-SHORT-PTR-NEXT:    mov.b64 %SPL, __local_depot4;
+; PTX-SHORT-PTR-NEXT:    mov.b32 %SPL, __local_depot4;
 ; PTX-SHORT-PTR-NEXT:    mov.b32 %r1, multiple_grid_const_escape_param_0;
 ; PTX-SHORT-PTR-NEXT:    mov.b32 %r2, multiple_grid_const_escape_param_2;
 ; PTX-SHORT-PTR-NEXT:    cvt.u64.u32 %rd1, %r2;

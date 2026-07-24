@@ -17,6 +17,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/STLExtras.h"
 
 // Resolve unknown tile sizes (represented as -1 for tile(*)) to the default.
 // Returns a value with the same type as targetType.
@@ -48,19 +49,13 @@ static void removeWorkerVectorFromLoop(mlir::acc::LoopOp loop) {
 }
 
 // Create a new ACC loop with new steps, lb, ub from original loop
-static mlir::acc::LoopOp
-createACCLoopFromOriginal(mlir::acc::LoopOp origLoop,
-                          mlir::RewriterBase &rewriter, mlir::ValueRange lb,
-                          mlir::ValueRange ub, mlir::ValueRange step,
-                          mlir::DenseBoolArrayAttr inclusiveUBAttr,
-                          mlir::acc::CombinedConstructsTypeAttr combinedAttr,
-                          mlir::Location loc, bool preserveCollapse) {
+static mlir::acc::LoopOp createACCLoopFromOriginal(
+    mlir::acc::LoopOp origLoop, mlir::RewriterBase &rewriter,
+    mlir::ValueRange lb, mlir::ValueRange ub, mlir::ValueRange step,
+    mlir::DenseBoolArrayAttr inclusiveUBAttr,
+    mlir::acc::CombinedConstructsTypeAttr combinedAttr, mlir::Location loc) {
   mlir::ArrayAttr collapseAttr = mlir::ArrayAttr{};
   mlir::ArrayAttr collapseDeviceTypeAttr = mlir::ArrayAttr{};
-  if (preserveCollapse) {
-    collapseAttr = origLoop.getCollapseAttr();
-    collapseDeviceTypeAttr = origLoop.getCollapseDeviceTypeAttr();
-  }
   auto newLoop = mlir::acc::LoopOp::create(
       rewriter, loc, origLoop->getResultTypes(), lb, ub, step, inclusiveUBAttr,
       collapseAttr, collapseDeviceTypeAttr, origLoop.getGangOperands(),
@@ -76,53 +71,6 @@ createACCLoopFromOriginal(mlir::acc::LoopOp origLoop,
       origLoop.getPrivateOperands(), origLoop.getFirstprivateOperands(),
       origLoop.getReductionOperands(), combinedAttr);
   return newLoop;
-}
-
-// Create inner loop inside input loop
-static mlir::acc::LoopOp
-createInnerLoop(mlir::acc::LoopOp inputLoop, mlir::RewriterBase &rewriter,
-                mlir::ValueRange lb, mlir::ValueRange ub, mlir::ValueRange step,
-                mlir::DenseBoolArrayAttr inclusiveUBAttr, mlir::Location loc) {
-  mlir::acc::LoopOp elementLoop = createACCLoopFromOriginal(
-      inputLoop, rewriter, lb, ub, step, inclusiveUBAttr,
-      mlir::acc::CombinedConstructsTypeAttr{}, loc, /*preserveCollapse*/ false);
-
-  // Remove gang/worker attributes from inner loops
-  rewriter.startOpModification(elementLoop);
-  if (inputLoop.hasGang() ||
-      inputLoop.getGangValue(mlir::acc::GangArgType::Num) ||
-      inputLoop.getGangValue(mlir::acc::GangArgType::Dim) ||
-      inputLoop.getGangValue(mlir::acc::GangArgType::Static)) {
-    elementLoop.removeGangAttr();
-    elementLoop.removeGangOperandsArgTypeAttr();
-    elementLoop.removeGangOperandsSegmentsAttr();
-    elementLoop.removeGangOperandsDeviceTypeAttr();
-    // Also drop the operand values themselves so that elementLoop does not
-    // end up with a non-empty gang operand list but no corresponding
-    // device-type/segment/arg-type attributes. Leaving stale operands behind
-    // makes elementLoop look like it still has gang operands to later
-    // queries (e.g. LoopOp::getGangValue), which then dereference the
-    // now-missing device-type attribute.
-    elementLoop.getGangOperandsMutable().clear();
-  }
-  if (inputLoop.hasVector() || inputLoop.getVectorValue()) {
-    elementLoop.removeWorkerAttr();
-    elementLoop.removeWorkerNumOperandsDeviceTypeAttr();
-    // As above for gang, also drop the worker operand values so elementLoop
-    // does not keep a dangling worker operand with no device-type attribute.
-    elementLoop.getWorkerNumOperandsMutable().clear();
-  }
-  rewriter.finalizeOpModification(elementLoop);
-
-  // Create empty block in elementLoop and add IV argument
-  mlir::Block *blk = rewriter.createBlock(&elementLoop.getRegion(),
-                                          elementLoop.getRegion().begin());
-  rewriter.setInsertionPointToEnd(blk);
-  mlir::acc::YieldOp::create(rewriter, loc);
-  elementLoop.getBody().addArgument(
-      inputLoop.getBody().getArgument(0).getType(), loc);
-
-  return elementLoop;
 }
 
 // Move ops from source to target Loop and replace uses of IVs
@@ -159,180 +107,145 @@ static void moveOpsAndReplaceIVs(mlir::acc::LoopOp sourceLoop,
     rewriter.finalizeOpModification(op);
 }
 
-mlir::acc::LoopOp
-mlir::acc::tileACCLoops(llvm::SmallVector<mlir::acc::LoopOp> &tileLoops,
-                        const llvm::SmallVector<mlir::Value> &tileSizes,
-                        int32_t defaultTileSize, mlir::RewriterBase &rewriter) {
-  // Tile collapsed and/or nested loops
-  mlir::acc::LoopOp outerLoop = tileLoops[0];
-  const mlir::Location loc = outerLoop.getLoc();
+// Create a single "element group" loop nested in `tileLoop`, carrying
+// `ivTypes.size()` induction variables so the whole element space is one
+// multi-IV loop. The element group carries vector or worker but not gang.
+static mlir::acc::LoopOp
+createElementGroupLoop(mlir::acc::LoopOp tileLoop, mlir::RewriterBase &rewriter,
+                       mlir::ValueRange lbs, mlir::ValueRange ubs,
+                       mlir::ValueRange steps,
+                       mlir::DenseBoolArrayAttr inclusiveUBAttr,
+                       llvm::ArrayRef<mlir::Type> ivTypes, mlir::Location loc) {
+  mlir::acc::LoopOp elementLoop = createACCLoopFromOriginal(
+      tileLoop, rewriter, lbs, ubs, steps, inclusiveUBAttr,
+      mlir::acc::CombinedConstructsTypeAttr{}, loc);
 
-  mlir::acc::LoopOp innerLoop = tileLoops[tileLoops.size() - 1];
-  llvm::SmallVector<mlir::Value, 3> origIVs;
-  llvm::SmallVector<mlir::Value, 3> origSteps;
-  llvm::SmallVector<mlir::Value, 3> origUBs;
-  llvm::SmallVector<mlir::Value, 3> newSteps;
-  llvm::SmallVector<mlir::Value, 3> newUBs;
-  llvm::SmallVector<mlir::Value, 3> newIVs;
-  size_t nOps = innerLoop.getBody().getOperations().size();
-
-  // Extract original inclusiveUBs
-  llvm::SmallVector<bool> inclusiveUBs;
-  for (auto tileLoop : tileLoops) {
-    for (auto [j, step] : llvm::enumerate(tileLoop.getStep())) {
-      // inclusiveUBs are present on the IR from Fortran frontend for DO loops
-      // but might not be present from other frontends (python)
-      // So check if it exists
-      if (tileLoop.getInclusiveUpperboundAttr())
-        inclusiveUBs.push_back(
-            tileLoop.getInclusiveUpperboundAttr().asArrayRef()[j]);
-      else
-        inclusiveUBs.push_back(false);
-    }
+  // Drop gang from the element group, keeping vector/worker. The operand
+  // values must be cleared too, not just the attributes.
+  rewriter.startOpModification(elementLoop);
+  if (tileLoop.hasGang() ||
+      tileLoop.getGangValue(mlir::acc::GangArgType::Num) ||
+      tileLoop.getGangValue(mlir::acc::GangArgType::Dim) ||
+      tileLoop.getGangValue(mlir::acc::GangArgType::Static)) {
+    elementLoop.removeGangAttr();
+    elementLoop.removeGangOperandsArgTypeAttr();
+    elementLoop.removeGangOperandsSegmentsAttr();
+    elementLoop.removeGangOperandsDeviceTypeAttr();
+    elementLoop.getGangOperandsMutable().clear();
   }
-
-  // Extract original ivs, UBs, steps, and calculate new steps
-  rewriter.setInsertionPoint(outerLoop);
-  for (auto [i, tileLoop] : llvm::enumerate(tileLoops)) {
-    for (auto arg : tileLoop.getBody().getArguments())
-      origIVs.push_back(arg);
-    for (auto ub : tileLoop.getUpperbound())
-      origUBs.push_back(ub);
-
-    llvm::SmallVector<mlir::Value, 3> currentLoopSteps;
-    for (auto [j, step] : llvm::enumerate(tileLoop.getStep())) {
-      origSteps.push_back(step);
-      if (i + j >= tileSizes.size()) {
-        currentLoopSteps.push_back(step);
-      } else {
-        mlir::Value tileSize = resolveAndCastTileSize(
-            tileSizes[i + j], defaultTileSize, step.getType(), rewriter, loc);
-        auto newLoopStep =
-            mlir::arith::MulIOp::create(rewriter, loc, step, tileSize);
-        currentLoopSteps.push_back(newLoopStep);
-        newSteps.push_back(newLoopStep);
-      }
-    }
-
-    rewriter.startOpModification(tileLoop);
-    tileLoop.getStepMutable().clear();
-    tileLoop.getStepMutable().append(currentLoopSteps);
-    rewriter.finalizeOpModification(tileLoop);
+  if (tileLoop.hasVector() || tileLoop.getVectorValue()) {
+    elementLoop.removeWorkerAttr();
+    elementLoop.removeWorkerNumOperandsDeviceTypeAttr();
+    elementLoop.getWorkerNumOperandsMutable().clear();
   }
+  rewriter.finalizeOpModification(elementLoop);
 
-  // Calculate new upper bounds for element loops
-  for (size_t i = 0; i < newSteps.size(); i++) {
-    rewriter.setInsertionPoint(innerLoop.getBody().getTerminator());
-    // UpperBound: min(origUB, origIV+(originalStep*tile_size))
-    auto stepped =
-        mlir::arith::AddIOp::create(rewriter, loc, origIVs[i], newSteps[i]);
-    mlir::Value newUB = stepped;
-    if (inclusiveUBs[i]) {
-      // Handle InclusiveUB
-      // UpperBound: min(origUB, origIV+(originalStep*tile_size - 1))
-      auto c1 = mlir::arith::ConstantOp::create(
-          rewriter, loc, newSteps[i].getType(),
-          rewriter.getIntegerAttr(newSteps[i].getType(), 1));
-      newUB = mlir::arith::SubIOp::create(rewriter, loc, stepped, c1);
-    }
-    newUBs.push_back(
-        mlir::arith::MinSIOp::create(rewriter, loc, origUBs[i], newUB));
-  }
-
-  // Create and insert nested elementLoopOps before terminator of outer loopOp
-  mlir::acc::LoopOp currentLoop = innerLoop;
-  for (size_t i = 0; i < tileSizes.size(); i++) {
-    rewriter.setInsertionPoint(currentLoop.getBody().getTerminator());
-    mlir::DenseBoolArrayAttr inclusiveUBAttr = mlir::DenseBoolArrayAttr{};
-    if (inclusiveUBs[i])
-      inclusiveUBAttr = rewriter.getDenseBoolArrayAttr({true});
-
-    mlir::acc::LoopOp elementLoop =
-        createInnerLoop(innerLoop, rewriter, mlir::ValueRange{origIVs[i]},
-                        mlir::ValueRange{newUBs[i]},
-                        mlir::ValueRange{origSteps[i]}, inclusiveUBAttr, loc);
-
-    // Remove vector/worker attributes from inner element loops except
-    // outermost element loop
-    if (i > 0) {
-      rewriter.startOpModification(elementLoop);
-      removeWorkerVectorFromLoop(elementLoop);
-      rewriter.finalizeOpModification(elementLoop);
-    }
-    newIVs.push_back(elementLoop.getBody().getArgument(0));
-    currentLoop = elementLoop;
-  }
-
-  // Remove vector/worker attributes from outer tile loops
-  for (auto tileLoop : tileLoops) {
-    rewriter.startOpModification(tileLoop);
-    removeWorkerVectorFromLoop(tileLoop);
-    rewriter.finalizeOpModification(tileLoop);
-  }
-
-  // Move ops from inner tile loop to inner element loop and replace IV uses
-  moveOpsAndReplaceIVs(innerLoop, currentLoop, newIVs, origIVs, nOps, rewriter);
-
-  return outerLoop;
-}
-
-llvm::SmallVector<mlir::acc::LoopOp>
-mlir::acc::uncollapseLoops(mlir::acc::LoopOp origLoop, unsigned tileCount,
-                           unsigned collapseCount,
-                           mlir::RewriterBase &rewriter) {
-  llvm::SmallVector<mlir::acc::LoopOp> newLoops;
-  llvm::SmallVector<mlir::Value, 3> newIVs;
-  mlir::Location loc = origLoop.getLoc();
-  llvm::SmallVector<bool> newInclusiveUBs;
-  llvm::SmallVector<mlir::Value, 3> lbs, ubs, steps;
-  for (unsigned i = 0; i < collapseCount; i++) {
-    // inclusiveUpperbound attribute might not be set, default to false
-    bool inclusiveUB = false;
-    if (origLoop.getInclusiveUpperboundAttr())
-      inclusiveUB = origLoop.getInclusiveUpperboundAttr().asArrayRef()[i];
-    newInclusiveUBs.push_back(inclusiveUB);
-    lbs.push_back(origLoop.getLowerbound()[i]);
-    ubs.push_back(origLoop.getUpperbound()[i]);
-    steps.push_back(origLoop.getStep()[i]);
-  }
-  mlir::acc::LoopOp outerLoop = createACCLoopFromOriginal(
-      origLoop, rewriter, lbs, ubs, steps,
-      rewriter.getDenseBoolArrayAttr(newInclusiveUBs),
-      origLoop.getCombinedAttr(), loc, /*preserveCollapse*/ true);
-  mlir::Block *blk = rewriter.createBlock(&outerLoop.getRegion(),
-                                          outerLoop.getRegion().begin());
+  // Create the element loop body: one block argument per IV plus a terminator.
+  mlir::Block *blk = rewriter.createBlock(&elementLoop.getRegion(),
+                                          elementLoop.getRegion().begin());
   rewriter.setInsertionPointToEnd(blk);
   mlir::acc::YieldOp::create(rewriter, loc);
-  for (unsigned i = 0; i < collapseCount; i++) {
-    outerLoop.getBody().addArgument(origLoop.getBody().getArgument(i).getType(),
-                                    loc);
-    newIVs.push_back(outerLoop.getBody().getArgument(i));
-  }
-  newLoops.push_back(outerLoop);
+  for (mlir::Type ivType : ivTypes)
+    elementLoop.getBody().addArgument(ivType, loc);
 
-  mlir::acc::LoopOp currentLoopOp = outerLoop;
-  for (unsigned i = collapseCount; i < tileCount; i++) {
-    rewriter.setInsertionPoint(currentLoopOp.getBody().getTerminator());
-    bool inclusiveUB = false;
-    if (origLoop.getInclusiveUpperboundAttr())
-      inclusiveUB = origLoop.getInclusiveUpperboundAttr().asArrayRef()[i];
-    mlir::DenseBoolArrayAttr inclusiveUBAttr =
-        rewriter.getDenseBoolArrayAttr({inclusiveUB});
-    mlir::acc::LoopOp innerLoop = createInnerLoop(
-        origLoop, rewriter, mlir::ValueRange{origLoop.getLowerbound()[i]},
-        mlir::ValueRange{origLoop.getUpperbound()[i]},
-        mlir::ValueRange{origLoop.getStep()[i]}, inclusiveUBAttr, loc);
-    newIVs.push_back(innerLoop.getBody().getArgument(0));
-    newLoops.push_back(innerLoop);
-    currentLoopOp = innerLoop;
+  return elementLoop;
+}
+
+mlir::acc::LoopOp
+mlir::acc::tileACCLoops(mlir::acc::LoopOp tileLoop,
+                        const llvm::SmallVector<mlir::Value> &tileSizes,
+                        int32_t defaultTileSize, mlir::RewriterBase &rewriter) {
+  // Tile a single fused acc.loop that carries all associated induction
+  // variables. This keeps the tile iterations as one multi-IV "tile group"
+  // loop and the in-tile iterations as one multi-IV "element group" loop, each
+  // spanning all of its induction variables.
+  const mlir::Location loc = tileLoop.getLoc();
+  const unsigned tileCount = tileSizes.size();
+
+  llvm::SmallVector<mlir::Value, 3> origIVs(tileLoop.getBody().getArguments());
+  llvm::SmallVector<mlir::Value, 3> origUBs(tileLoop.getUpperbound());
+  llvm::SmallVector<mlir::Value, 3> origSteps(tileLoop.getStep());
+  const unsigned numIVs = origIVs.size();
+  const size_t nOps = tileLoop.getBody().getOperations().size();
+
+  // Original inclusive-UB flags (default false when the attribute is absent).
+  llvm::SmallVector<bool> inclusiveUBs;
+  for (unsigned i = 0; i < numIVs; ++i) {
+    if (tileLoop.getInclusiveUpperboundAttr())
+      inclusiveUBs.push_back(
+          tileLoop.getInclusiveUpperboundAttr().asArrayRef()[i]);
+    else
+      inclusiveUBs.push_back(false);
   }
-  // Move ops from origLoop to innermost loop and replace uses of IVs
-  size_t nOps = origLoop.getBody().getOperations().size();
-  llvm::SmallVector<mlir::Value, 3> origIVs;
-  for (auto arg : origLoop.getBody().getArguments())
-    origIVs.push_back(arg);
-  moveOpsAndReplaceIVs(origLoop, currentLoopOp, newIVs, origIVs, nOps,
+
+  // Scale each tiled dimension's step by its tile size to form the tile group
+  // loop steps.
+  rewriter.setInsertionPoint(tileLoop);
+  llvm::SmallVector<mlir::Value, 3> scaledSteps;
+  llvm::SmallVector<mlir::Value, 3> tileLoopSteps;
+  for (unsigned i = 0; i < numIVs; ++i) {
+    if (i < tileCount) {
+      mlir::Value tileSize = resolveAndCastTileSize(
+          tileSizes[i], defaultTileSize, origSteps[i].getType(), rewriter, loc);
+      mlir::Value scaled =
+          mlir::arith::MulIOp::create(rewriter, loc, origSteps[i], tileSize);
+      scaledSteps.push_back(scaled);
+      tileLoopSteps.push_back(scaled);
+    } else {
+      tileLoopSteps.push_back(origSteps[i]);
+    }
+  }
+
+  // Compute the element-loop upper bounds min(origUB, origIV + scaledStep).
+  rewriter.setInsertionPoint(tileLoop.getBody().getTerminator());
+  llvm::SmallVector<mlir::Value, 3> elemLBs, elemUBs, elemSteps;
+  llvm::SmallVector<mlir::Type, 3> elemIVTypes;
+  llvm::SmallVector<bool> elemInclusiveUBs;
+  for (unsigned i = 0; i < tileCount; ++i) {
+    mlir::Value stepped =
+        mlir::arith::AddIOp::create(rewriter, loc, origIVs[i], scaledSteps[i]);
+    mlir::Value newUB = stepped;
+    if (inclusiveUBs[i]) {
+      // Inclusive UB: min(origUB, origIV + (scaledStep - 1)).
+      mlir::Value c1 = mlir::arith::ConstantOp::create(
+          rewriter, loc, scaledSteps[i].getType(),
+          rewriter.getIntegerAttr(scaledSteps[i].getType(), 1));
+      newUB = mlir::arith::SubIOp::create(rewriter, loc, stepped, c1);
+    }
+    elemUBs.push_back(
+        mlir::arith::MinSIOp::create(rewriter, loc, origUBs[i], newUB));
+    elemLBs.push_back(origIVs[i]);
+    elemSteps.push_back(origSteps[i]);
+    elemIVTypes.push_back(origIVs[i].getType());
+    elemInclusiveUBs.push_back(inclusiveUBs[i]);
+  }
+
+  // Only attach an inclusiveUpperbound attribute if at least one element
+  // dimension is inclusive.
+  mlir::DenseBoolArrayAttr elemInclAttr = mlir::DenseBoolArrayAttr{};
+  if (llvm::is_contained(elemInclusiveUBs, true))
+    elemInclAttr = rewriter.getDenseBoolArrayAttr(elemInclusiveUBs);
+
+  // Create the element group loop from the unmodified tile loop.
+  mlir::acc::LoopOp elementLoop =
+      createElementGroupLoop(tileLoop, rewriter, elemLBs, elemUBs, elemSteps,
+                             elemInclAttr, elemIVTypes, loc);
+
+  // Move the original body into the element loop and remap the tiled IVs to the
+  // element IVs.
+  llvm::SmallVector<mlir::Value, 3> newIVs(
+      elementLoop.getBody().getArguments());
+  llvm::SmallVector<mlir::Value, 3> tiledOrigIVs(origIVs.begin(),
+                                                 origIVs.begin() + tileCount);
+  moveOpsAndReplaceIVs(tileLoop, elementLoop, newIVs, tiledOrigIVs, nOps,
                        rewriter);
 
-  return newLoops;
+  // Turn the fused loop into the tile group: scaled steps, gang only.
+  rewriter.startOpModification(tileLoop);
+  tileLoop.getStepMutable().clear();
+  tileLoop.getStepMutable().append(tileLoopSteps);
+  removeWorkerVectorFromLoop(tileLoop);
+  rewriter.finalizeOpModification(tileLoop);
+
+  return tileLoop;
 }
