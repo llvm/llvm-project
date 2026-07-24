@@ -91,13 +91,11 @@ jobs:
         include:
           - platform: macOS 26.5 arm64
             runner: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
-            cc: clang
             cxx: clang++
             install-python: false
             install-macos-dependencies: true
           - platform: Linux x86_64
             runner: llvm-premerge-libcxx-runners
-            cc: clang-22
             cxx: clang++-22
             install-python: true
             install-macos-dependencies: false
@@ -108,8 +106,11 @@ jobs:
     needs:
       - extract-info
     env:
-      CC: ${{ matrix.cc }}
-      CXX: ${{ matrix.cxx }}
+      BENCHMARKS: ${{ needs.extract-info.outputs.benchmarks }}
+      COMPILER: ${{ matrix.cxx }}
+      PLATFORM: ${{ matrix.platform }}
+      PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
+      PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -136,34 +137,29 @@ jobs:
           python -m pip install -r libcxx/utils/requirements.txt
 
       - name: Build the baseline and the candidate
-        env:
-          PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
-          PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
         run: |
           source .venv/bin/activate
           baseline_commit=$(git merge-base $PR_BASE $PR_HEAD)
-          ./libcxx/utils/build-at-commit --commit ${baseline_commit} --install-dir install/baseline -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
-          ./libcxx/utils/build-at-commit --commit $PR_HEAD --install-dir install/candidate -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          ./libcxx/utils/build-at-commit --commit ${baseline_commit} --install-dir install/baseline -- -DCMAKE_CXX_COMPILER="${COMPILER}" -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          ./libcxx/utils/build-at-commit --commit $PR_HEAD --install-dir install/candidate -- -DCMAKE_CXX_COMPILER="${COMPILER}" -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
       - name: Run baseline and candidate interleaved
-        env:
-          BENCHMARKS: ${{ needs.extract-info.outputs.benchmarks }}
         run: |
           source .venv/bin/activate
           # Run 3 times so we can pick the median, and interleave to mitigate the impact of environmental noise
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee candidate.lnt
 
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
 
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
           ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
 
       - name: Compare baseline and candidate runs
@@ -173,8 +169,6 @@ jobs:
 
       - name: Update comment with results
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          PLATFORM: ${{ matrix.platform }}
         with:
           script: |
             const fs = require('fs');
@@ -206,8 +200,6 @@ jobs:
       - name: Report failure in the comment
         if: failure()
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          PLATFORM: ${{ matrix.platform }}
         with:
           script: |
             const { data: comment } = await github.rest.issues.getComment({

@@ -118,7 +118,7 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyRegNumberingLegacyPass(PR);
   initializeWebAssemblyDebugFixupLegacyPass(PR);
   initializeWebAssemblyPeepholeLegacyPass(PR);
-  initializeWebAssemblyMCLowerPrePassPass(PR);
+  initializeWebAssemblyMCLowerPreLegacyPass(PR);
   initializeWebAssemblyFixBrTableDefaultsLegacyPass(PR);
   initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
 }
@@ -507,7 +507,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
     addPass(createWebAssemblyDebugFixupLegacyPass());
 
   // Collect information to prepare for MC lowering / asm printing.
-  addPass(createWebAssemblyMCLowerPrePass());
+  addPass(createWebAssemblyMCLowerPreLegacyPass());
 }
 
 bool WebAssemblyPassConfig::addPreISel() {
