@@ -26,7 +26,7 @@ class TestSwiftNoProcess(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @swiftTest
-    @skipIf(oslist=['linux', 'windows'])
+    @skipIfLinux
     def test_swift_no_target(self):
         """Tests that we give a reasonable error if we try to run expressions with no target"""
         result = lldb.SBCommandReturnObject()
