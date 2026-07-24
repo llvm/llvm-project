@@ -43,6 +43,8 @@ public:
   constexpr FreeListHeap(span<cpp::byte> region)
       : begin(region.begin()), end(region.end()) {}
 
+  bool adopt(span<cpp::byte> mem);
+
   void *allocate(size_t size);
   void *aligned_allocate(size_t alignment, size_t size);
   // NOTE: All pointers passed to free must come from one of the other
@@ -88,6 +90,39 @@ LIBC_INLINE void FreeListHeap::init() {
   free_store.set_range({0, cpp::bit_ceil(block.inner_size())});
   free_store.insert(block);
   is_initialized = true;
+}
+
+LIBC_INLINE bool FreeListHeap::adopt(span<cpp::byte> mem) {
+  if (!is_initialized)
+    init();
+  LIBC_ASSERT(end == mem.begin() && "Adopted region must be contiguous");
+  auto result = BlockRef::init(mem);
+  if (!result.has_value())
+    return false;
+
+  BlockRef old_last(mem.begin() - BlockRef::HEADER_SIZE);
+  LIBC_ASSERT(old_last.is_last() && "Old last block must be a sentinel");
+
+  old_last.clear_last();
+
+  LIBC_ASSERT(old_last.next() == *result &&
+              "Old last block must point to the new block");
+
+  old_last.mark_free();
+
+  [[maybe_unused]] bool merged = old_last.merge_next();
+  LIBC_ASSERT(merged && "Failed to merge old last block with new block");
+
+  BlockRef to_insert = old_last;
+  if (BlockRef prev = old_last.prev_free()) {
+    free_store.remove(prev);
+    prev.merge_next();
+    to_insert = prev;
+  }
+
+  end = mem.end();
+  free_store.insert(to_insert);
+  return true;
 }
 
 LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {

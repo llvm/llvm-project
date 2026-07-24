@@ -132,3 +132,46 @@ TEST(LlvmLibcFreeTrie, Remove) {
   EXPECT_EQ(trie.find_best_fit(large.inner_size())->block().addr(),
             large.addr());
 }
+
+TEST(LlvmLibcFreeTrie, DynamicExpansion) {
+  byte mem[4096];
+  optional<BlockRef> maybe_block = BlockRef::init(mem);
+  ASSERT_TRUE(maybe_block.has_value());
+  BlockRef block1 = *maybe_block;
+  maybe_block = block1.split(256);
+  ASSERT_TRUE(maybe_block.has_value());
+  BlockRef block2 = *maybe_block;
+  maybe_block = block2.split(1500);
+  ASSERT_TRUE(maybe_block.has_value());
+
+  FreeTrie trie({0, 1024});
+  trie.push(block1);
+  EXPECT_EQ(trie.find_best_fit(block1.inner_size())->block().addr(),
+            block1.addr());
+
+  // Pushing block2 (inner_size >= 1500) exceeds the initial range of 1024,
+  // triggering dynamic trie expansion to 2048 and creating a new root.
+  trie.push(block2);
+  EXPECT_EQ(trie.find_best_fit(block2.inner_size())->block().addr(),
+            block2.addr());
+  EXPECT_EQ(trie.find_best_fit(block1.inner_size())->block().addr(),
+            block1.addr());
+
+  trie.remove(trie.find_best_fit(block2.inner_size()));
+  EXPECT_EQ(trie.find_best_fit(block1.inner_size())->block().addr(),
+            block1.addr());
+  trie.remove(trie.find_best_fit(block1.inner_size()));
+  EXPECT_TRUE(trie.empty());
+}
+
+TEST(LlvmLibcFreeTrie, DynamicExpansionFromEmpty) {
+  byte mem[4096];
+  optional<BlockRef> maybe_block = BlockRef::init(mem);
+  ASSERT_TRUE(maybe_block.has_value());
+  BlockRef block = *maybe_block;
+
+  FreeTrie trie; // Default constructed with {0, 0}
+  trie.push(block);
+  EXPECT_EQ(trie.find_best_fit(block.inner_size())->block().addr(),
+            block.addr());
+}
