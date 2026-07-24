@@ -82,6 +82,11 @@ def DataSizeOf : UnaryExprOrTypeTrait {
   let Spelling = "__datasizeof";
 }
 
+def AddrSpaceOf : UnaryExprOrTypeTrait {
+  let Spelling = "__addrspaceof";
+  let KeyFlags = [KEYALL];
+}
+
 // C2y
 def CountOf : UnaryExprOrTypeTrait {
   let Spelling = "_Countof";

@@ -20,27 +20,35 @@ __device__ const int const_device_var = 1;
 #define EXPECTED_SHARED_ADDRESS_SPACE __CLANG_ADDRESS_SPACE_CUDA_SHARED
 #endif
 
+static_assert(__addrspaceof(device_ptr) == EXPECTED_DEVICE_ADDRESS_SPACE);
+static_assert(__addrspaceof(*device_ptr) ==
+              __CLANG_ADDRESS_SPACE_DEFAULT);
+static_assert(__addrspaceof((device_ptr)) ==
+              __CLANG_ADDRESS_SPACE_DEFAULT);
+static_assert(__addrspaceof((device_var)) ==
+              __CLANG_ADDRESS_SPACE_DEFAULT);
+
 #ifdef HOST_TEST
 
 template <class T> consteval int host_consteval_address_space(T *p) {
-  return __builtin_pointee_address_space(p);
+  return __addrspaceof(*p);
 }
 
 template <class T> constexpr int host_constexpr_address_space(T *p) {
-  return __builtin_pointee_address_space(p);
+  return __addrspaceof(*p);
 }
 
-static_assert(__builtin_pointee_address_space(&device_var) ==
+static_assert(__addrspaceof(device_var) ==
               EXPECTED_DEVICE_ADDRESS_SPACE);
-static_assert(__builtin_pointee_address_space(&constant_var) ==
+static_assert(__addrspaceof(constant_var) ==
               EXPECTED_CONSTANT_ADDRESS_SPACE);
-static_assert(__builtin_pointee_address_space(&const_device_var) ==
+static_assert(__addrspaceof(const_device_var) ==
               EXPECTED_CONSTANT_ADDRESS_SPACE);
-static_assert(__builtin_pointee_address_space(device_array) ==
+static_assert(__addrspaceof(device_array) ==
               EXPECTED_DEVICE_ADDRESS_SPACE);
-static_assert(__builtin_pointee_address_space(&device_array) ==
+static_assert(__addrspaceof(*&device_array) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
-static_assert(__builtin_pointee_address_space(device_array + 1) ==
+static_assert(__addrspaceof(*(device_array + 1)) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
 static_assert(host_consteval_address_space(&device_var) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
@@ -54,28 +62,28 @@ static_assert(host_constexpr_address_space(&constant_var) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
 
 extern "C" int test_host_device_var() {
-  return __builtin_pointee_address_space(&device_var);
+  return __addrspaceof(device_var);
 }
 
 // HOST-LABEL: define{{.*}} i32 @test_host_device_var(
 // HOST: ret i32 23
 
 extern "C" int test_host_constant_var() {
-  return __builtin_pointee_address_space(&constant_var);
+  return __addrspaceof(constant_var);
 }
 
 // HOST-LABEL: define{{.*}} i32 @test_host_constant_var(
 // HOST: ret i32 24
 
 extern "C" int test_host_const_device_var() {
-  return __builtin_pointee_address_space(&const_device_var);
+  return __addrspaceof(const_device_var);
 }
 
 // HOST-LABEL: define{{.*}} i32 @test_host_const_device_var(
 // HOST: ret i32 24
 
 extern "C" int test_host_device_array_address() {
-  return __builtin_pointee_address_space(&device_array);
+  return __addrspaceof(*&device_array);
 }
 
 // HOST-LABEL: define{{.*}} i32 @test_host_device_array_address(
@@ -84,11 +92,11 @@ extern "C" int test_host_device_array_address() {
 #else
 
 template <class T> consteval int consteval_address_space(T *p) {
-  return __builtin_pointee_address_space(p);
+  return __addrspaceof(*p);
 }
 
 template <class T> constexpr int constexpr_address_space(T *p) {
-  return __builtin_pointee_address_space(p);
+  return __addrspaceof(*p);
 }
 
 template <int AS> struct AddressSpaceSpecialization;
@@ -107,7 +115,7 @@ struct AddressSpaceSpecialization<EXPECTED_CONSTANT_ADDRESS_SPACE> {
   static constexpr int value = EXPECTED_CONSTANT_ADDRESS_SPACE;
 };
 
-static_assert(__builtin_pointee_address_space((int *)&constant_var) ==
+static_assert(__addrspaceof(*(int *)&constant_var) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
 static_assert(consteval_address_space(&device_var) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
@@ -119,21 +127,21 @@ static_assert(consteval_address_space((int *)&constant_var) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
 static_assert(constexpr_address_space(&constant_var) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
-static_assert(__builtin_pointee_address_space(device_array) ==
+static_assert(__addrspaceof(device_array) ==
               EXPECTED_DEVICE_ADDRESS_SPACE);
-static_assert(__builtin_pointee_address_space(&device_array) ==
+static_assert(__addrspaceof(*&device_array) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
-static_assert(__builtin_pointee_address_space(device_array + 1) ==
+static_assert(__addrspaceof(*(device_array + 1)) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
-static_assert(__builtin_pointee_address_space(device_ptr) ==
+static_assert(__addrspaceof(*device_ptr) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
 static_assert(
     AddressSpaceSpecialization<
-      __builtin_pointee_address_space(&device_var)>::value ==
+      __addrspaceof(device_var)>::value ==
       EXPECTED_DEVICE_ADDRESS_SPACE);
 static_assert(
     AddressSpaceSpecialization<
-      __builtin_pointee_address_space(&constant_var)>::value ==
+      __addrspaceof(constant_var)>::value ==
       EXPECTED_CONSTANT_ADDRESS_SPACE);
 static_assert(
     AddressSpaceSpecialization<
@@ -141,7 +149,7 @@ static_assert(
     __CLANG_ADDRESS_SPACE_DEFAULT);
 
 extern "C" __device__ int test_generic_pointer(int *p) {
-  return __builtin_pointee_address_space(p);
+  return __addrspaceof(*p);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_generic_pointer(
@@ -150,19 +158,19 @@ extern "C" __device__ int test_generic_pointer(int *p) {
 extern "C" __device__ int test_shared_local() {
   __shared__ int shared_var;
   __shared__ int shared_array[4];
-  static_assert(__builtin_pointee_address_space(&shared_var) ==
+  static_assert(__addrspaceof(shared_var) ==
                 EXPECTED_SHARED_ADDRESS_SPACE);
-  static_assert(__builtin_pointee_address_space((void *)&shared_var) ==
+  static_assert(__addrspaceof(*(char *)&shared_var) ==
                 __CLANG_ADDRESS_SPACE_DEFAULT);
-  static_assert(__builtin_pointee_address_space(&shared_var + 1) ==
+  static_assert(__addrspaceof(*(&shared_var + 1)) ==
                 __CLANG_ADDRESS_SPACE_DEFAULT);
-  static_assert(__builtin_pointee_address_space(shared_array) ==
+  static_assert(__addrspaceof(shared_array) ==
                 EXPECTED_SHARED_ADDRESS_SPACE);
-  static_assert(__builtin_pointee_address_space(&shared_array) ==
+  static_assert(__addrspaceof(*&shared_array) ==
                 __CLANG_ADDRESS_SPACE_DEFAULT);
-  static_assert(__builtin_pointee_address_space(&shared_array[0]) ==
+  static_assert(__addrspaceof(shared_array[0]) ==
                 __CLANG_ADDRESS_SPACE_DEFAULT);
-  static_assert(__builtin_pointee_address_space(shared_array + 1) ==
+  static_assert(__addrspaceof(*(shared_array + 1)) ==
                 __CLANG_ADDRESS_SPACE_DEFAULT);
   static_assert(consteval_address_space(&shared_var) ==
                 __CLANG_ADDRESS_SPACE_DEFAULT);
@@ -172,9 +180,9 @@ extern "C" __device__ int test_shared_local() {
                 __CLANG_ADDRESS_SPACE_DEFAULT);
   static_assert(
       AddressSpaceSpecialization<
-      __builtin_pointee_address_space(&shared_var)>::value ==
+      __addrspaceof(shared_var)>::value ==
       EXPECTED_SHARED_ADDRESS_SPACE);
-  return __builtin_pointee_address_space(&shared_var);
+  return __addrspaceof(shared_var);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_shared_local(
@@ -182,7 +190,7 @@ extern "C" __device__ int test_shared_local() {
 // HIP: ret i32 25
 
 extern "C" __device__ int test_device_var() {
-  return __builtin_pointee_address_space(&device_var);
+  return __addrspaceof(device_var);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_device_var(
@@ -190,7 +198,7 @@ extern "C" __device__ int test_device_var() {
 // HIP: ret i32 23
 
 extern "C" __device__ int test_device_array() {
-  return __builtin_pointee_address_space(device_array);
+  return __addrspaceof(device_array);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_device_array(
@@ -198,28 +206,28 @@ extern "C" __device__ int test_device_array() {
 // HIP: ret i32 23
 
 extern "C" __device__ int test_device_array_address() {
-  return __builtin_pointee_address_space(&device_array);
+  return __addrspaceof(*&device_array);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_device_array_address(
 // CHECK: ret i32 0
 
 extern "C" __device__ int test_device_array_arithmetic() {
-  return __builtin_pointee_address_space(device_array + 1);
+  return __addrspaceof(*(device_array + 1));
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_device_array_arithmetic(
 // CHECK: ret i32 0
 
 extern "C" __device__ int test_device_pointer_value() {
-  return __builtin_pointee_address_space(device_ptr);
+  return __addrspaceof(*device_ptr);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_device_pointer_value(
 // CHECK: ret i32 0
 
 extern "C" __device__ int test_constant_var() {
-  return __builtin_pointee_address_space(&constant_var);
+  return __addrspaceof(constant_var);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_constant_var(
@@ -227,7 +235,7 @@ extern "C" __device__ int test_constant_var() {
 // HIP: ret i32 24
 
 extern "C" __device__ int test_const_device_var() {
-  return __builtin_pointee_address_space(&const_device_var);
+  return __addrspaceof(const_device_var);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_const_device_var(
@@ -235,7 +243,7 @@ extern "C" __device__ int test_const_device_var() {
 // HIP: ret i32 24
 
 extern "C" __device__ int test_explicit_cast() {
-  return __builtin_pointee_address_space((int *)&constant_var);
+  return __addrspaceof(*(int *)&constant_var);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_explicit_cast(
@@ -243,7 +251,7 @@ extern "C" __device__ int test_explicit_cast() {
 
 extern "C" __device__ int
 test_target_address_space_3(int __attribute__((address_space(3))) *p) {
-  return __builtin_pointee_address_space(p);
+  return __addrspaceof(*p);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_target_address_space_3(
@@ -251,7 +259,7 @@ test_target_address_space_3(int __attribute__((address_space(3))) *p) {
 
 extern "C" __device__ int
 test_target_address_space_4(int __attribute__((address_space(4))) *p) {
-  return __builtin_pointee_address_space(p);
+  return __addrspaceof(*p);
 }
 
 // CHECK-LABEL: define{{.*}} i32 @test_target_address_space_4(
