@@ -97,7 +97,7 @@ void AMDGPULatencyTracker::scan(const MachineInstr &MI) {
       LatencyMIs.erase(Reg);
   } else {
     auto GetAluStatus = [](const MachineInstr &MI, const SIInstrInfo *SIII) {
-      if (SIII->isVALU(MI.getOpcode(), false))
+      if (SIII->isVALU(MI.getOpcode()))
         return AluStatus::Vector;
       if (SIII->isSALU(MI.getOpcode()))
         return AluStatus::Scalar;
