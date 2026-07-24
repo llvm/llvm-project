@@ -26,6 +26,19 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dwarfdebug"
 
+/// Return whether the rest of the expression needs the complex register path.
+/// We use this to decide whether we can emit a simple register location and
+/// whether a subregister needs to be masked. Non-emitting operations don't
+/// affect either decision, so look past them.
+static bool isRemainingExpressionComplex(const DIExpressionCursor &ExprCursor) {
+  for (DIExpression::ExprOperand Op : ExprCursor) {
+    if (Op.isNonEmitting())
+      continue;
+    return Op.getOp() != dwarf::DW_OP_LLVM_fragment;
+  }
+  return false;
+}
+
 void DwarfExpression::emitConstu(uint64_t Value) {
   if (Value < 32)
     emitOp(dwarf::DW_OP_lit0 + Value);
@@ -295,10 +308,8 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     return false;
   }
 
-  bool HasComplexExpression = false;
   auto Op = ExprCursor.peek();
-  if (Op && Op->getOp() != dwarf::DW_OP_LLVM_fragment)
-    HasComplexExpression = true;
+  bool HasComplexExpression = isRemainingExpressionComplex(ExprCursor);
 
   // If the register can only be described by a complex expression (i.e.,
   // multiple subregisters) it doesn't safely compose with another complex
@@ -348,9 +359,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     DwarfRegs.clear();
     // If we need to mask out a subregister, do it now, unless the next
     // operation would emit an OpPiece anyway.
-    auto NextOp = ExprCursor.peek();
-    if (SubRegisterSizeInBits && NextOp &&
-        (NextOp->getOp() != dwarf::DW_OP_LLVM_fragment))
+    if (SubRegisterSizeInBits && isRemainingExpressionComplex(ExprCursor))
       maskSubRegister();
     return true;
   }
@@ -415,9 +424,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
 
   // If we need to mask out a subregister, do it now, unless the next
   // operation would emit an OpPiece anyway.
-  auto NextOp = ExprCursor.peek();
-  if (SubRegisterSizeInBits && NextOp &&
-      (NextOp->getOp() != dwarf::DW_OP_LLVM_fragment))
+  if (SubRegisterSizeInBits && isRemainingExpressionComplex(ExprCursor))
     maskSubRegister();
 
   return true;

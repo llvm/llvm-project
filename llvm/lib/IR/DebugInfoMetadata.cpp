@@ -1757,6 +1757,10 @@ unsigned DIExpression::ExprOperand::getSize() const {
   }
 }
 
+bool DIExpression::ExprOperand::isNonEmitting() const {
+  return getOp() == dwarf::DW_OP_LLVM_tag_offset;
+}
+
 bool DIExpression::isValid() const {
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
@@ -1878,11 +1882,12 @@ bool DIExpression::isComplex() const {
   if (getNumElements() == 0)
     return false;
 
-  // If there are any elements other than fragment or tag_offset, then some
-  // kind of complex computation occurs.
+  // Tag offsets are non-emitting. They, fragments, and location operands don't
+  // perform a computation by themselves.
   for (const auto &It : expr_ops()) {
+    if (It.isNonEmitting())
+      continue;
     switch (It.getOp()) {
-    case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_LLVM_fragment:
     case dwarf::DW_OP_LLVM_arg:
       continue;
@@ -2323,17 +2328,19 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
                       }) &&
          "Can't append this op");
 
-  // Append a DW_OP_deref after Expr's current op list if it's non-empty and
-  // has no DW_OP_stack_value.
-  //
-  // Match .* DW_OP_stack_value (DW_OP_LLVM_fragment A B)?.
-  std::optional<FragmentInfo> FI = Expr->getFragmentInfo();
-  unsigned DropUntilStackValue = FI ? 3 : 0;
-  ArrayRef<uint64_t> ExprOpsBeforeFragment =
-      Expr->getElements().drop_back(DropUntilStackValue);
-  bool NeedsDeref = (Expr->getNumElements() > DropUntilStackValue) &&
-                    (ExprOpsBeforeFragment.back() != dwarf::DW_OP_stack_value);
-  bool NeedsStackValue = NeedsDeref || ExprOpsBeforeFragment.empty();
+  // DIExpression stores opcodes and their arguments in a flat array. Walk the
+  // parsed operations to find the last opcode that determines whether the
+  // expression already ends in DW_OP_stack_value.
+  std::optional<uint64_t> LastValueOp;
+  for (auto Op : Expr->expr_ops()) {
+    if (Op.isNonEmitting() ||
+        Op.getOp() == dwarf::DW_OP_LLVM_fragment)
+      continue;
+    LastValueOp = Op.getOp();
+  }
+  bool NeedsDeref =
+      LastValueOp && *LastValueOp != dwarf::DW_OP_stack_value;
+  bool NeedsStackValue = NeedsDeref || !LastValueOp;
 
   // Append a DW_OP_deref after Expr's current op list if needed, then append
   // the new ops, and finally ensure that a single DW_OP_stack_value is present.
