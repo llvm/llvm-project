@@ -936,10 +936,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                        PointeeAddressSpace::OpenCLPrivate);
   DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_OPENCL_GENERIC",
                        PointeeAddressSpace::OpenCLGeneric);
-  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_OPENCL_GLOBAL_DEVICE",
-                       PointeeAddressSpace::OpenCLGlobalDevice);
-  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_OPENCL_GLOBAL_HOST",
-                       PointeeAddressSpace::OpenCLGlobalHost);
   DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_CUDA_DEVICE",
                        PointeeAddressSpace::CUDADevice);
   DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_CUDA_CONSTANT",
@@ -948,10 +944,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                        PointeeAddressSpace::CUDAShared);
   DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_SYCL_GLOBAL",
                        PointeeAddressSpace::SYCLGlobal);
-  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_SYCL_GLOBAL_DEVICE",
-                       PointeeAddressSpace::SYCLGlobalDevice);
-  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_SYCL_GLOBAL_HOST",
-                       PointeeAddressSpace::SYCLGlobalHost);
   DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_SYCL_LOCAL",
                        PointeeAddressSpace::SYCLLocal);
   DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_SYCL_PRIVATE",
