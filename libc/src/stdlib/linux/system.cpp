@@ -82,14 +82,14 @@ LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
 
     // Error checking isn't helpful since this is the forked process, so we
     // can't set errno. All we can meaningfully do is exit with status 127.
-    linux_syscalls::execle("/bin/sh", "sh", "-c", command, nullptr, environ);
+    linux_syscalls::execle("/bin/sh", "sh", "-c", command, 0, environ);
 
     internal::exit(127);
   }
 
   int status = 0;
   int wait_ret = 0;
-  do {
+  while (true) {
     if (auto wait_res = linux_syscalls::wait4(pid, &status, 0, nullptr);
         !wait_res.has_value()) {
       if (wait_res.error() == EINTR)
@@ -100,7 +100,7 @@ LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
     }
     wait_ret = status;
     break;
-  } while (true);
+  }
 
   linux_syscalls::rt_sigaction(SIGINT, &orig_int, nullptr);
   linux_syscalls::rt_sigaction(SIGQUIT, &orig_quit, nullptr);
