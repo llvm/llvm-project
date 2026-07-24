@@ -377,13 +377,12 @@ TEST(LlvmLibcBlockTest, Allocate) {
   }
 
   // Ensure we can allocate a byte at every guaranteeable alignment.
-  for (size_t i = 1; i < kN / BlockRef::MIN_ALIGN; ++i) {
+  for (size_t alignment = BlockRef::MIN_ALIGN; alignment < kN; alignment *= 2) {
     array<byte, kN> bytes;
     auto result = BlockRef::init(bytes);
     ASSERT_TRUE(result.has_value());
     BlockRef block = *result;
 
-    size_t alignment = i * BlockRef::MIN_ALIGN;
     if (BlockRef::min_size_for_allocation(alignment, 1) > block.inner_size())
       continue;
 
@@ -434,8 +433,9 @@ TEST(LlvmLibcBlockTest, AllocateNeedsAlignment) {
   // it. We want to explicitly test that the block will split into one before
   // it.
   size_t alignment = BlockRef::MIN_ALIGN;
-  while (block.is_usable_space_aligned(alignment))
-    alignment += BlockRef::MIN_ALIGN;
+  while (block.is_usable_space_aligned(alignment) &&
+         alignment < block.inner_size() / 2)
+    alignment *= 2;
 
   auto [aligned_block, prev, next] = BlockRef::allocate(block, alignment, 10);
 
@@ -475,8 +475,9 @@ TEST(LlvmLibcBlockTest, PreviousBlockMergedIfNotFirst) {
   // it. We want to explicitly test that the block will split into one before
   // it.
   size_t alignment = BlockRef::MIN_ALIGN;
-  while (newblock.is_usable_space_aligned(alignment))
-    alignment += BlockRef::MIN_ALIGN;
+  while (newblock.is_usable_space_aligned(alignment) &&
+         alignment < newblock.inner_size() / 2)
+    alignment *= 2;
 
   // Ensure we can allocate in the new block.
   auto [aligned_block, prev, next] = BlockRef::allocate(newblock, alignment, 1);
@@ -512,8 +513,9 @@ TEST(LlvmLibcBlockTest, CanRemergeBlockAllocations) {
   // it. We want to explicitly test that the block will split into one before
   // it.
   size_t alignment = BlockRef::MIN_ALIGN;
-  while (block.is_usable_space_aligned(alignment))
-    alignment += BlockRef::MIN_ALIGN;
+  while (block.is_usable_space_aligned(alignment) &&
+         alignment < block.inner_size() / 2)
+    alignment *= 2;
 
   auto [aligned_block, prev, next] = BlockRef::allocate(block, alignment, 1);
 

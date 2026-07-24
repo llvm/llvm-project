@@ -31,8 +31,14 @@ namespace LIBC_NAMESPACE_DECL {
 
 /// Returns the value rounded down to the nearest multiple of alignment.
 LIBC_INLINE constexpr size_t align_down(size_t value, size_t alignment) {
-  // Note this shouldn't overflow since the result will always be <= value.
-  return (value / alignment) * alignment;
+#if defined(__builtin_align_down) ||                                           \
+    (defined(__has_builtin) && __has_builtin(__builtin_align_down))
+  return __builtin_align_down(value, alignment);
+#else
+  // Compiler cannot optimize out udiv and mul even if we provide
+  // __builtin_assume((alignment & (alignment - 1)) == 0);
+  return value & ~(alignment - 1);
+#endif
 }
 
 /// Returns the value rounded up to the nearest multiple of alignment. May wrap

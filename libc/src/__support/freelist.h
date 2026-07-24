@@ -28,7 +28,9 @@ namespace LIBC_NAMESPACE_DECL {
 /// fragmentation.
 class FreeList {
 public:
-  class Node {
+  // Providing alignment allows compiler to emit paired store load instructions
+  // on Thumb targets.
+  class alignas(BlockRef::MIN_ALIGN) Node {
   public:
     /// @returns The block containing this node.
     LIBC_INLINE BlockRef block() const {
