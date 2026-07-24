@@ -60,6 +60,12 @@ private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
+  /// Parameters annotated [[clang::lifetime_capture_by(X)]] with X *not* naming
+  /// `this`, whose borrow nonetheless escapes into the enclosing object (a
+  /// store into a field of `this`) -- the body captures into `this`, which the
+  /// annotation's named capturer does not describe. Keyed by parameter to
+  /// de-duplicate.
+  llvm::DenseSet<const ParmVarDecl *> CaptureByFieldViolations;
   llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
@@ -106,6 +112,7 @@ public:
     issuePendingWarnings();
     suggestAnnotations();
     reportNoescapeViolations();
+    reportCaptureByViolations();
     reportLifetimeboundViolations();
     reportMisplacedLifetimebound();
     reportInapplicableLifetimebound();
@@ -114,6 +121,29 @@ public:
     //  explicit and inferred findings with separate warning groups.
     if (AST.getLangOpts().EnableLifetimeSafetyInference)
       inferAnnotations();
+  }
+
+  /// Returns true if \p PVD is annotated [[clang::lifetime_capture_by(X...)]]
+  /// whose capturer list names only concrete parameters -- not `this`, and not
+  /// the `unknown`/`global` sentinels. Only then does a store into a field of
+  /// `this` contradict the stated capturer (`this` already covers the object,
+  /// `unknown` may stand in for it, and `global` is a separate concern).
+  static bool capturesNamedNonThis(const ParmVarDecl *PVD) {
+    const auto *A = PVD->getAttr<LifetimeCaptureByAttr>();
+    if (!A)
+      return false;
+    bool NamesConcrete = false;
+    for (int Idx : A->params())
+      switch (Idx) {
+      case LifetimeCaptureByAttr::This:
+      case LifetimeCaptureByAttr::Unknown:
+      case LifetimeCaptureByAttr::Global:
+      case LifetimeCaptureByAttr::Invalid:
+        return false;
+      default:
+        NamesConcrete = true; // a concrete parameter capturer
+      }
+    return NamesConcrete;
   }
 
   /// Checks if an escaping origin holds a placeholder loan, indicating a
@@ -167,9 +197,18 @@ public:
     for (LoanID LID : EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
       const AccessPath &AP = L->getAccessPath();
-      if (const auto *PVD = AP.getAsPlaceholderParam())
+      if (const auto *PVD = AP.getAsPlaceholderParam()) {
+        // A [[clang::lifetime_capture_by(X)]] parameter promises its borrow is
+        // captured by X. If the borrow instead escapes into the enclosing
+        // object -- a store into a field of `this` (FieldEscapeFact) -- while X
+        // names only concrete parameters (not `this`), the annotation does not
+        // describe this capture. (A capture into a genuine parameter capturer
+        // produces no field escape; `this`/`unknown` capturers are excluded.)
+        if (isa<FieldEscapeFact>(OEF) && !MovedAtEscape.lookup(LID) &&
+            capturesNamedNonThis(PVD))
+          CaptureByFieldViolations.insert(PVD);
         CheckParam(PVD, /*IsMoved=*/MovedAtEscape.lookup(LID));
-      else if (const auto *MD = AP.getAsPlaceholderThis())
+      } else if (const auto *MD = AP.getAsPlaceholderThis())
         CheckImplicitThis(MD);
     }
   }
@@ -431,6 +470,13 @@ public:
       else
         llvm_unreachable("Unhandled EscapingTarget type");
     }
+  }
+
+  void reportCaptureByViolations() {
+    if (!SemaHelper)
+      return;
+    for (const ParmVarDecl *PVD : CaptureByFieldViolations)
+      SemaHelper->reportCaptureByViolation(PVD);
   }
 
   void reportLifetimeboundViolations() {

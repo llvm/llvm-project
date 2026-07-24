@@ -135,6 +135,13 @@ public:
   virtual void
   reportLifetimeboundViolation(const CXXMethodDecl *MDWithLifetimebound) {}
 
+  // Reports a parameter annotated [[clang::lifetime_capture_by(X)]] (with X not
+  // naming `this`) whose borrow is instead captured into the enclosing object
+  // -- stored into a field of `this`. The annotation names a different capturer
+  // than the body uses, so callers are told the wrong entity aliases the
+  // argument.
+  virtual void reportCaptureByViolation(const ParmVarDecl *PVD) {}
+
   // Reports a member function definition that has [[clang::lifetimebound]] on
   // the implicit this parameter when the canonical declaration does not.
   virtual void reportMisplacedLifetimebound(WarningScope Scope,

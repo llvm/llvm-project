@@ -236,6 +236,21 @@ features cannot lower the translation-unit ABI level;
   };
   ```
 
+- Added `-Wlifetime-safety-capture-by-violation` to detect a parameter annotated
+  `[[clang::lifetime_capture_by(X)]]` (with `X` not naming `this`) whose borrow
+  is instead captured into the enclosing object -- stored into a field of
+  `this`. The annotation names a different capturer than the body uses. For
+  example:
+
+  ```c++
+  struct S {
+    const int *field;
+    void store(Cap &c, const int &x [[clang::lifetime_capture_by(c)]]) {
+      field = &x;  // warning: the borrow is captured into this object, but the annotation does not name 'this'
+    }
+  };
+  ```
+
 - Improved `-Wassign-enum` performance by caching enum enumerator values. (#GH176454)
 
 - Fixed a false negative in `-Warray-bounds` where the warning was suppressed

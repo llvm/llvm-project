@@ -11073,6 +11073,13 @@ def warn_lifetime_safety_lifetimebound_violation
       InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 
+def warn_lifetime_safety_capture_by_violation
+    : Warning<"the borrow from %select{an unnamed parameter|'%1'}0 is captured "
+              "into this object, but '[[clang::lifetime_capture_by]]' does not "
+              "name 'this'">,
+      InGroup<LifetimeSafetyCaptureByViolation>,
+      DefaultIgnore;
+
 def warn_lifetime_safety_intra_tu_misplaced_lifetimebound
     : Warning<"'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead">,
       InGroup<LifetimeSafetyIntraTUMisplacedLifetimebound>,
