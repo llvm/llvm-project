@@ -736,7 +736,7 @@ TEST(GOFFObjectFileTest, GlobalSymbols) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile*>((*GOFFObjOrErr).get());
 
   auto SymbolRange = GOFFObj->symbols();
   auto Symbol = SymbolRange.begin();
