@@ -7,8 +7,9 @@
 define void @halfx3_extend_chain(ptr align 16 captures(none) %rd0) {
 ; CHECK-LABEL: halfx3_extend_chain(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<7>;
-; CHECK-NEXT:    .reg .b32 %r<12>;
+; CHECK-NEXT:    .reg .pred %p<7>;
+; CHECK-NEXT:    .reg .b16 %rs<14>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -16,20 +17,25 @@ define void @halfx3_extend_chain(ptr align 16 captures(none) %rd0) {
 ; CHECK-NEXT:    .pragma "used_bytes_mask 0xfff";
 ; CHECK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
-; CHECK-NEXT:    mov.b32 {_, %rs3}, %r2;
-; CHECK-NEXT:    mov.b32 %r5, {%rs3, %rs1};
-; CHECK-NEXT:    mov.b32 %r6, {%rs2, %rs4};
-; CHECK-NEXT:    mov.b32 %r7, 0;
-; CHECK-NEXT:    max.f16x2 %r8, %r2, %r7;
-; CHECK-NEXT:    max.f16x2 %r9, %r1, %r7;
-; CHECK-NEXT:    st.b32 [%rd1], %r9;
-; CHECK-NEXT:    mov.b32 {%rs5, _}, %r8;
-; CHECK-NEXT:    st.b16 [%rd1+4], %rs5;
-; CHECK-NEXT:    max.f16x2 %r10, %r6, %r7;
-; CHECK-NEXT:    max.f16x2 %r11, %r5, %r7;
-; CHECK-NEXT:    st.b32 [%rd1+6], %r11;
-; CHECK-NEXT:    mov.b32 {%rs6, _}, %r10;
-; CHECK-NEXT:    st.b16 [%rd1+10], %rs6;
+; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
+; CHECK-NEXT:    mov.b16 %rs7, 0x0000;
+; CHECK-NEXT:    setp.gt.f16 %p1, %rs5, %rs7;
+; CHECK-NEXT:    setp.gt.f16 %p2, %rs6, %rs7;
+; CHECK-NEXT:    setp.gt.f16 %p3, %rs3, %rs7;
+; CHECK-NEXT:    selp.b16 %rs8, %rs3, 0x0000, %p3;
+; CHECK-NEXT:    selp.b16 %rs9, %rs6, 0x0000, %p2;
+; CHECK-NEXT:    selp.b16 %rs10, %rs5, 0x0000, %p1;
+; CHECK-NEXT:    st.v2.b16 [%rd1], {%rs10, %rs9};
+; CHECK-NEXT:    st.b16 [%rd1+4], %rs8;
+; CHECK-NEXT:    setp.gt.f16 %p4, %rs4, %rs7;
+; CHECK-NEXT:    setp.gt.f16 %p5, %rs1, %rs7;
+; CHECK-NEXT:    setp.gt.f16 %p6, %rs2, %rs7;
+; CHECK-NEXT:    selp.b16 %rs11, %rs2, 0x0000, %p6;
+; CHECK-NEXT:    selp.b16 %rs12, %rs1, 0x0000, %p5;
+; CHECK-NEXT:    selp.b16 %rs13, %rs4, 0x0000, %p4;
+; CHECK-NEXT:    st.v2.b16 [%rd1+6], {%rs13, %rs12};
+; CHECK-NEXT:    st.b16 [%rd1+10], %rs11;
 ; CHECK-NEXT:    ret;
   %load1 = load <3 x half>, ptr %rd0, align 16
   %p1 = fcmp ogt <3 x half> %load1, zeroinitializer
@@ -47,29 +53,33 @@ define void @halfx3_extend_chain(ptr align 16 captures(none) %rd0) {
 define void @halfx3_no_align(ptr align 4 captures(none) %rd0) {
 ; CHECK-LABEL: halfx3_no_align(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<7>;
-; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .pred %p<7>;
+; CHECK-NEXT:    .reg .b16 %rs<14>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [halfx3_no_align_param_0];
 ; CHECK-NEXT:    ld.b16 %rs1, [%rd1+4];
-; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; CHECK-NEXT:    ld.b32 %r2, [%rd1];
-; CHECK-NEXT:    mov.b32 %r3, 0;
-; CHECK-NEXT:    max.f16x2 %r4, %r1, %r3;
-; CHECK-NEXT:    max.f16x2 %r5, %r2, %r3;
-; CHECK-NEXT:    st.b32 [%rd1], %r5;
-; CHECK-NEXT:    mov.b32 {%rs3, _}, %r4;
-; CHECK-NEXT:    st.b16 [%rd1+4], %rs3;
-; CHECK-NEXT:    ld.b16 %rs4, [%rd1+10];
-; CHECK-NEXT:    mov.b32 %r6, {%rs4, %rs5};
-; CHECK-NEXT:    ld.b32 %r7, [%rd1+6];
-; CHECK-NEXT:    max.f16x2 %r8, %r6, %r3;
-; CHECK-NEXT:    max.f16x2 %r9, %r7, %r3;
-; CHECK-NEXT:    st.b32 [%rd1+6], %r9;
-; CHECK-NEXT:    mov.b32 {%rs6, _}, %r8;
-; CHECK-NEXT:    st.b16 [%rd1+10], %rs6;
+; CHECK-NEXT:    ld.v2.b16 {%rs2, %rs3}, [%rd1];
+; CHECK-NEXT:    mov.b16 %rs4, 0x0000;
+; CHECK-NEXT:    setp.gt.f16 %p1, %rs2, %rs4;
+; CHECK-NEXT:    setp.gt.f16 %p2, %rs3, %rs4;
+; CHECK-NEXT:    setp.gt.f16 %p3, %rs1, %rs4;
+; CHECK-NEXT:    selp.b16 %rs5, %rs1, 0x0000, %p3;
+; CHECK-NEXT:    selp.b16 %rs6, %rs3, 0x0000, %p2;
+; CHECK-NEXT:    selp.b16 %rs7, %rs2, 0x0000, %p1;
+; CHECK-NEXT:    st.v2.b16 [%rd1], {%rs7, %rs6};
+; CHECK-NEXT:    st.b16 [%rd1+4], %rs5;
+; CHECK-NEXT:    ld.b16 %rs8, [%rd1+10];
+; CHECK-NEXT:    ld.v2.b16 {%rs9, %rs10}, [%rd1+6];
+; CHECK-NEXT:    setp.gt.f16 %p4, %rs9, %rs4;
+; CHECK-NEXT:    setp.gt.f16 %p5, %rs10, %rs4;
+; CHECK-NEXT:    setp.gt.f16 %p6, %rs8, %rs4;
+; CHECK-NEXT:    selp.b16 %rs11, %rs8, 0x0000, %p6;
+; CHECK-NEXT:    selp.b16 %rs12, %rs10, 0x0000, %p5;
+; CHECK-NEXT:    selp.b16 %rs13, %rs9, 0x0000, %p4;
+; CHECK-NEXT:    st.v2.b16 [%rd1+6], {%rs13, %rs12};
+; CHECK-NEXT:    st.b16 [%rd1+10], %rs11;
 ; CHECK-NEXT:    ret;
   %load1 = load <3 x half>, ptr %rd0, align 4
   %p1 = fcmp ogt <3 x half> %load1, zeroinitializer

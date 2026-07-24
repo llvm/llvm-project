@@ -2146,15 +2146,11 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
 //
 // Category 0: WMMA with Latency 8
 //   WMMA_*F16, WMMA_*BF16
-//   WMMA_*FP8FP8
-//   WMMA_*FP8BF8
-//   WMMA_*BF8FP8
-//   WMMA_*BF8BF8
-//   WMMA_*F8F6F4 if SRCA & SRCB != F8
+//   WMMA_*_16X16X128_{FP8,BF8}
+//   WMMA_*F8F6F4 if SRCA & SRCB are not both F4
 //
 // Category 1: WMMA Latency 16
 //   WMMA_IU8
-//   WMMA_*F8F6F4 if SRCA OR SRCB == F8
 //
 // Category 2: SWMMAC with Latency 8
 //   SWMMAC_*F16, SWMMAC_*BF16,
@@ -2179,6 +2175,10 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
 //   V_WMMA_F32_32X16X128_F4
 //   V_WMMA_I32_16X16X64_IU8
 //   V_WMMA_I32_16X16X64_IU8
+//
+// Category 6: gfx1250 WMMA with Latency 4 (one co-execution slot)
+//   WMMA_*_16X16X64_{FP8,BF8}
+//   WMMA_*F8F6F4 if SRCA & SRCB are both F4
 static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
                                             const SIInstrInfo *TII,
                                             const TargetSchedModel &SchedModel,
@@ -2190,6 +2190,12 @@ static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
 
   unsigned Latency = SchedModel.computeInstrLatency(&MI);
   switch (Latency) {
+  case 4:
+    // Dense 4-cycle WMMA (gfx1250 16x16x64 FP8/BF8 and f8f6f4 with both
+    // inputs F4). One co-execution slot; there is no 4-cycle SWMMAC.
+    assert(!IsSWMMAC && "no 4-cycle SWMMAC expected");
+    Category = 6;
+    break;
   case 8:
     Category = IsSWMMAC ? 2 : 0;
     break;
@@ -2220,8 +2226,8 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
   // (WMMAWaitStates if the second is also a WMMA, VALUWaitStates if the second
   // is a VALU). Refer to SPG 4.6.12.1. "Requirements for WMMA data hazards" for
   // numbers, which depends on the category of the first WMMA.
-  const int WMMAWaitStates[] = {5, 9, 3, 5, 9, 17};
-  const int VALUWaitStates[] = {4, 8, 2, 4, 8, 16};
+  const int WMMAWaitStates[] = {5, 9, 3, 5, 9, 17, 2};
+  const int VALUWaitStates[] = {4, 8, 2, 4, 8, 16, 1};
   unsigned Category = 0;
 
   auto IsWMMAHazardFn = [MI, TII, &Category, this](const MachineInstr &I) {

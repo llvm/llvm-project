@@ -3008,7 +3008,7 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     unsigned IndexTySize = IndexTy->getScalarSizeInBits();
     if ((NeedsAdd || NeedsMul || NeedsShl) && StepTySize != IndexTySize) {
       unsigned CastOpc =
-          StepTySize < IndexTySize ? Instruction::Trunc : Instruction::SExt;
+          StepTySize < IndexTySize ? Instruction::Trunc : Instruction::ZExt;
       Cost += Ctx.TTI.getCastInstrCost(
           CastOpc, StepTy, IndexTy, TTI::CastContextHint::None, Ctx.CostKind);
     }
