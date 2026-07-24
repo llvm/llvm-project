@@ -469,6 +469,7 @@ body:             |
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr16 = V_MOV_B32_e32 killed $sgpr31, implicit $exec
     ; GFX950-NEXT: $vgpr17 = V_MOV_B32_e32 killed $vgpr4, implicit $exec
+    ; GFX950-NEXT: renamable $vgpr16_vgpr17 = V_PK_MOV_B32 12, killed $sgpr28_sgpr29, 8, killed $vgpr16_vgpr17, 0, 0, 0, 0, 0, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
     ;
     early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
@@ -487,6 +488,7 @@ body:             |
     $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_vgpr17 = V_PK_MOV_B32 12, killed $sgpr30_sgpr31, 8, killed $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $exec
+    renamable $vgpr16_vgpr17 = V_PK_MOV_B32 12, killed $sgpr28_sgpr29, 8, killed $vgpr16_vgpr17, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 
