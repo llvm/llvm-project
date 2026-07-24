@@ -12,9 +12,9 @@
 // RUN: %clang -S -### -cl-finite-math-only %s 2>&1 | FileCheck --check-prefix=CHECK-FINITE-MATH-ONLY %s
 // RUN: %clang -S -### -cl-kernel-arg-info %s 2>&1 | FileCheck --check-prefix=CHECK-KERNEL-ARG-INFO %s
 // RUN: %clang -S -### -cl-unsafe-math-optimizations %s 2>&1 | FileCheck --check-prefix=CHECK-UNSAFE-MATH-OPT %s
-// RUN: %clang -S -### -cl-fast-relaxed-math %s 2>&1 | FileCheck --check-prefix=CHECK-FAST-RELAXED-MATH %s
-// RUN: %clang -S -### -cl-fast-relaxed-math -fhonor-nans %s 2>&1 | FileCheck --check-prefixes=CHECK-FAST-RELAXED-MATH,NO-NNAN %s
-// RUN: %clang -S -### -cl-fast-relaxed-math -fhonor-infinities %s 2>&1 | FileCheck --check-prefixes=CHECK-FAST-RELAXED-MATH,NO-NINF %s
+// RUN: %clang -S -### -cl-fast-relaxed-math %s 2>&1 | FileCheck --check-prefixes=CHECK-FAST-RELAXED-MATH,NO-MNO-ENABLE %s
+// RUN: %clang -S -### -cl-fast-relaxed-math -fhonor-nans %s 2>&1 | FileCheck --check-prefixes=CHECK-FAST-RELAXED-MATH,NO-NNAN,YES-NO-ENABLE-NNAN %s
+// RUN: %clang -S -### -cl-fast-relaxed-math -fhonor-infinities %s 2>&1 | FileCheck --check-prefixes=CHECK-FAST-RELAXED-MATH,NO-NINF,YES-NO-ENABLE-NINF %s
 // RUN: %clang -S -### -cl-mad-enable %s 2>&1 | FileCheck --check-prefix=CHECK-MAD-ENABLE %s
 // RUN: %clang -S -### -cl-no-signed-zeros %s 2>&1 | FileCheck --check-prefix=CHECK-NO-SIGNED-ZEROS %s
 // RUN: %clang -S -### -cl-denorms-are-zero %s 2>&1 | FileCheck --check-prefix=CHECK-DENORMS-ARE-ZERO %s
@@ -47,6 +47,10 @@
 // CHECK-NO-SIGNED-ZEROS: "-cc1" {{.*}} "-cl-no-signed-zeros"
 // NO-NNAN-NOT: "menable-no-nans"
 // NO-NINF-NOT: "menable-no-infs"
+// YES-NO-ENABLE-NNAN: "-mno-enable-no-nans"
+// YES-NO-ENABLE-NINF: "-mno-enable-no-infs"
+// NO-MNO-ENABLE-NOT: "-mno-enable-no-nans"
+// NO-MNO-ENABLE-NOT: "-mno-enable-no-infs"
 
 // This is not forwarded
 // CHECK-DENORMS-ARE-ZERO-NOT: "-cl-denorms-are-zero"
