@@ -2,7 +2,7 @@
 # This workflow is intended to be triggered manually or via the Github API. As such,
 # it requires several inputs that allow customizing its behavior.
 
-name: Benchmark libc++ commit
+name: "[libc++] Run benchmark suite against commit"
 
 permissions:
   contents: read
