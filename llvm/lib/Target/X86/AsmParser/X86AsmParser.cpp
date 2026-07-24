@@ -860,8 +860,7 @@ private:
         // Recognize this register as a scaled index register. This covers
         // 'scale * reg' and 'scale * (reg)', including parenthesized or
         // multi-factor scales where the accumulated value is held in TmpScale.
-        if (TmpScale.has_value() || PrevState == IES_MULTIPLY ||
-            (PrevState == IES_INTEGER && CurrState == IES_MULTIPLY)) {
+        if (TmpScale.has_value()){
           if (IndexReg)
             return regsUseUpError(ErrMsg);
           if (NegativeAdditiveTerm) {
@@ -904,6 +903,8 @@ private:
       case IES_LPAREN:
         if (setSymRef(SymRef, SymRefName, ErrMsg))
           return true;
+        // Mark TmpScale as invalid, in case of multiplying by register
+        TmpScale = 0;
         MemExpr = true;
         State = IES_INTEGER;
         IC.pushOperand(IC_IMM);
@@ -967,12 +968,6 @@ private:
         State = IES_ERROR;
         break;
       case IES_INTEGER:
-        // Seed the scale accumulator with the integer just parsed (the left
-        // operand of this '*'), reading it back from the operand stack.
-        if (!TmpScale.has_value()) {
-          TmpScale = IC.popOperand();
-          IC.pushOperand(IC_IMM, TmpScale.value());
-        }
         State = IES_MULTIPLY;
         IC.pushOperator(IC_MULTIPLY);
         break;
@@ -1036,11 +1031,11 @@ private:
       case IES_CAST:
         assert(!BracCount && "BracCount should be zero on parsing's start");
         State = IES_LBRAC;
-        // Entering a new memory expression; clear the pending scale.
         break;
       }
       NegativeAdditiveTerm = false;
       NegativeAdditiveTermLoc = SMLoc();
+      // Entering a new memory expression; clear the pending scale.
       TmpScale.reset();
       MemExpr = true;
       BracketUsed = true;
