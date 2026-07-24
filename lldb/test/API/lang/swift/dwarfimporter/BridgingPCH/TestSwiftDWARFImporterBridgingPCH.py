@@ -36,9 +36,7 @@ class TestSwiftDWARFImporterBridgingHeader(lldbtest.TestBase):
         shutil.rmtree(include)
 
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
-    # This test needs a working Remote Mirrors implementation.
-    @skipIf(oslist=['windows'])
-    # We delete the pch that would contains the debug info as part of the setup.
+    @skipEmbeddedSwiftOnWindows
     #@skipIf(debug_info=no_match(["dsym"]))
     @swiftTest
     def test_dwarf_importer(self):
