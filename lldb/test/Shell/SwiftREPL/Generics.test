@@ -1,6 +1,5 @@
 // Test that generics work in the REPL.
 // REQUIRES: swift
-// XFAIL: system-windows
 
 // RUN: %lldb --repl < %s | FileCheck %s
 
