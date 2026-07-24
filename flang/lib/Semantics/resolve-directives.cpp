@@ -1847,6 +1847,18 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
         !symbol.has<AssocEntityDetails>() && !symbol.has<MiscDetails>()) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (&symbol != found) {
+          // Don't "adjust" a name that resolution already bound to a construct
+          // entity declared within this region: a DO CONCURRENT or FORALL
+          // index-name (Forall scope) or an entity declared in a nested BLOCK
+          // construct (BlockConstruct scope). currScope() here does not descend
+          // into those construct scopes, so FindSymbol instead resolves to a
+          // like-named variable in an enclosing scope. Rebinding to it would
+          // make the construct entity alias the enclosing variable and, e.g.,
+          // trip the DO-variable redefinition check when that enclosing
+          // variable is an active DO index.
+          if (DoesScopeContain(&currScope(), symbol)) {
+            return;
+          }
           // adjust the symbol within the region
           // TODO: why didn't name resolution set the right name originally?
           name.symbol = found;

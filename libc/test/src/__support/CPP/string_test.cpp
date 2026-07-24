@@ -173,12 +173,12 @@ TEST(LlvmLibcStringTest, ResizeCapacityAndNullTermination) {
   // One char
   a.resize(1);
   ASSERT_EQ(a.size(), size_t(1));
-  ASSERT_GE(a.capacity(), size_t(2));
+  ASSERT_GE(a.capacity(), size_t(1));
   ASSERT_EQ(a.data()[1], '\0');
   // Clear
   a.resize(0);
   ASSERT_EQ(a.size(), size_t(0));
-  ASSERT_GE(a.capacity(), size_t(2));
+  ASSERT_GE(a.capacity(), size_t(1));
   ASSERT_EQ(a.data()[0], '\0');
   // Resize and check zero initialized
   a.resize(10);
@@ -193,8 +193,26 @@ TEST(LlvmLibcStringTest, ResizeWithCapacityPlus1) {
   a.resize(32);
 
   size_t previous_capacity = a.capacity();
-  a.resize(previous_capacity);
+  a.resize(previous_capacity + 1);
   ASSERT_GT(a.capacity(), previous_capacity);
+}
+
+TEST(LlvmLibcStringTest, ReserveWithSameCapacityIsNop) {
+  string a;
+  a.resize(32);
+
+  size_t previous_capacity = a.capacity();
+  // Since C++20, calling reserve with capacity less than or equal
+  // to the current capacity should have no effect.
+  a.reserve(previous_capacity);
+  ASSERT_EQ(a.capacity(), previous_capacity);
+}
+
+TEST(LlvmLibcStringTest, ReserveOnEmptyStringKeepsNullTerminator) {
+  string s;
+  s.reserve(10);
+  ASSERT_EQ(s.size(), size_t(0));
+  ASSERT_EQ(s[0], '\0');
 }
 
 TEST(LlvmLibcStringTest, ConcatWithCString) {

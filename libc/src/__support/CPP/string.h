@@ -48,8 +48,14 @@ private:
     return const_cast<char *>(&NULL_CHARACTER);
   }
 
+  // Backing data for the represented string.
+  // This may point to NULL_CHARACTER or a heap-allocated buffer.
   char *buffer_ = get_empty_string();
+
+  // Size of the string represented in buffer_.
   size_t size_ = 0;
+
+  // The size of buffer_.
   size_t capacity_ = 0;
 
   constexpr void reset_no_deallocate() {
@@ -169,7 +175,13 @@ public:
       ::free(buffer_);
   }
 
-  LIBC_INLINE constexpr size_t capacity() const { return capacity_; }
+  // Returns the number of writable bytes in this string.
+  // Does not include the string-managed null terminator.
+  LIBC_INLINE constexpr size_t capacity() const {
+    if (capacity_ == 0)
+      return 0;
+    return capacity_ - 1;
+  }
   LIBC_INLINE constexpr size_t size() const { return size_; }
   LIBC_INLINE constexpr bool empty() const { return size_ == 0; }
 
@@ -199,17 +211,25 @@ public:
     return string_view(buffer_, size_);
   }
 
-  LIBC_INLINE void reserve(size_t new_size) {
-    size_t new_capacity = capacity_needed_for_size(new_size);
-    if (new_capacity <= capacity_)
+  LIBC_INLINE void reserve(size_t new_cap) {
+    size_t allocation_size = capacity_needed_for_size(new_cap); // +1 for terminating '\0'
+    if (allocation_size <= capacity_)
       return;
 
-    buffer_ = realloc_or_die(buffer_ == get_empty_string() ? nullptr : buffer_,
-                             new_capacity);
-    capacity_ = new_capacity;
+    // We extend the capacity to amortize buffer_ reallocations.
+    // We choose to augment the value by 11 / 8, this is about +40% and division
+    // by 8 is cheap. We guard the extension so the operation doesn't overflow.
+    if (allocation_size < SIZE_MAX / 11)
+      allocation_size = allocation_size * 11 / 8;
 
-    // Add null character in case we reallocated out of the empty buffer.
-    set_size_and_add_null_character(size_);
+    if (buffer_ == get_empty_string()) {
+      buffer_ = realloc_or_die(nullptr, allocation_size);
+      buffer_[0] = NULL_CHARACTER;
+    } else {
+      buffer_ = realloc_or_die(buffer_, allocation_size);
+    }
+
+    capacity_ = allocation_size;
   }
 
   LIBC_INLINE void resize(size_t size) {
@@ -218,7 +238,7 @@ public:
     if (size == size_)
       return;
 
-    if (size >= capacity_) {
+    if (size > capacity()) {
       reserve(size);
       const size_t size_extension = size - size_;
       inline_memset(data() + size_, '\0', size_extension);

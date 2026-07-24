@@ -23,6 +23,18 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
+#include <cstddef>
+#include <functional>
+#include <list>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
+#include <vector>
+
 #define GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 #include "llvm/Frontend/OpenMP/OMP.inc"
 

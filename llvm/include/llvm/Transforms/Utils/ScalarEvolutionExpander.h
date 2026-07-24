@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -315,6 +316,13 @@ public:
   LLVM_ABI static void
   dropPoisonGeneratingAnnotationsAndReinfer(ScalarEvolution &SE,
                                             Instruction *I);
+
+  /// Find an existing cast among \p PtrOp's users that computes the same value
+  /// as a `ptrtoaddr` of \p PtrOp to \p Ty and can be reused when expanding
+  /// ptrtoaddr.
+  LLVM_ABI static CastInst *
+  findReusableCastForPtrToAddr(Value *PtrOp, Type *Ty, const DataLayout &DL,
+                               function_ref<bool(const CastInst *)> Dominates);
 
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
