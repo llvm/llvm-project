@@ -836,7 +836,8 @@ define amdgpu_kernel void @fence_in_loop() {
 ; CHECK-NEXT:    store i32 0, ptr addrspace(3) null, align 4
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[I:%.*]] = load <1 x i32>, ptr addrspace(1) null, align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) null, align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[I]])
 ; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
