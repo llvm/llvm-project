@@ -617,10 +617,6 @@ private:
   // fragment may not be fully resolved.
   unsigned FirstLinkerRelaxable = -1u;
 
-  /// If bundle-locked, we ensure all instructions in the section are placed in
-  /// the same bundle.
-  bool IsBundleLocked = false;
-
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
 
@@ -628,6 +624,10 @@ private:
 
   bool IsText : 1;
   bool IsBss : 1;
+
+  /// If bundle-locked, we ensure all instructions in the section are placed in
+  /// the same bundle.
+  bool IsBundleLocked : 1;
 
   MCFragment DummyFragment;
 

@@ -124,7 +124,7 @@ class X86AsmBackend : public MCAsmBackend {
   Align AlignBoundary;
   unsigned TargetPrefixMax = 0;
 
-  bool ReuseBA;
+  bool ReuseBA = false;
   MCInst PrevInst;
   unsigned PrevInstOpcode = 0;
   MCBoundaryAlignFragment *PendingBA = nullptr;

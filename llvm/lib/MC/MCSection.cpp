@@ -20,7 +20,7 @@ using namespace llvm;
 
 MCSection::MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin)
     : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
-      IsBss(IsBss), Name(Name) {
+      IsBss(IsBss), IsBundleLocked(false), Name(Name) {
   DummyFragment.setParent(this);
 }
 
