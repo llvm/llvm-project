@@ -1193,7 +1193,7 @@ public:
                  .insert(getFunctionSelectorKey(CXXMethod.Name,
                                                 *WhereParameters.second))
                  .second) {
-          emitError(llvm::Twine("duplicate definition of C++ method '") +
+          emitError(llvm::Twine("multiple API notes entries for C++ method '") +
                     CXXMethod.Name + "' with Where.Parameters " +
                     formatAPINotesParameterSelector(*WhereParameters.second));
           continue;
@@ -1287,9 +1287,10 @@ public:
                  .insert(getFunctionSelectorKey(Function.Name,
                                                 *WhereParameters.second))
                  .second) {
-          emitError(llvm::Twine("duplicate definition of global function '") +
-                    Function.Name + "' with Where.Parameters " +
-                    formatAPINotesParameterSelector(*WhereParameters.second));
+          emitError(
+              llvm::Twine("multiple API notes entries for global function '") +
+              Function.Name + "' with Where.Parameters " +
+              formatAPINotesParameterSelector(*WhereParameters.second));
           continue;
         }
       }

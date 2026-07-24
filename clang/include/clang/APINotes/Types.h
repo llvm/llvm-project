@@ -13,6 +13,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <climits>
@@ -31,43 +32,6 @@ std::string
 formatAPINotesParameterSelector(llvm::ArrayRef<llvm::StringRef> Parameters);
 std::string
 formatAPINotesParameterSelector(llvm::ArrayRef<std::string> Parameters);
-
-/// Stable reader-facing identity for an API notes function selector entry.
-///
-/// This mirrors the serialized function table key closely enough for Sema-side
-/// diagnostics to use it as a DenseMap key, without exposing the reader's
-/// private FunctionTableKey implementation type.
-struct APINotesFunctionSelectorKey {
-  bool IsCXXMethod = false;
-  uint32_t ParentContextID = 0;
-  uint32_t NameID = 0;
-  std::optional<llvm::SmallVector<uint32_t, 2>> ParameterTypeIDs;
-
-  llvm::hash_code hashValue() const {
-    auto Hash = llvm::hash_combine(IsCXXMethod, ParentContextID, NameID,
-                                   static_cast<bool>(ParameterTypeIDs));
-    if (ParameterTypeIDs) {
-      Hash = llvm::hash_combine(Hash, ParameterTypeIDs->size());
-      for (uint32_t TypeID : *ParameterTypeIDs)
-        Hash = llvm::hash_combine(Hash, TypeID);
-    }
-    return Hash;
-  }
-};
-
-inline bool operator==(const APINotesFunctionSelectorKey &LHS,
-                       const APINotesFunctionSelectorKey &RHS) {
-  return LHS.IsCXXMethod == RHS.IsCXXMethod &&
-         LHS.ParentContextID == RHS.ParentContextID &&
-         LHS.NameID == RHS.NameID &&
-         LHS.ParameterTypeIDs == RHS.ParameterTypeIDs;
-}
-
-/// Exact function selector key plus parameter spelling used for diagnostics.
-struct APINotesFunctionSelector {
-  APINotesFunctionSelectorKey Key;
-  llvm::SmallVector<std::string, 4> Parameters;
-};
 
 enum class RetainCountConventionKind {
   None,
@@ -1035,6 +999,89 @@ struct Context {
   Context(ContextID id, ContextKind kind) : id(id), kind(kind) {}
 };
 
+using IdentifierID = llvm::PointerEmbeddedInt<unsigned, 31>;
+
+/// A key for a stored global-function or C++-method API notes entry.
+///
+/// The key is represented by the ID of its parent context, the declaration
+/// name, and optional exact parameter types.
+struct FunctionTableKey {
+  uint32_t parentContextID;
+  uint32_t nameID;
+  std::optional<llvm::SmallVector<IdentifierID, 2>> parameterTypeIDs;
+
+  FunctionTableKey() : parentContextID(-1), nameID(-1) {}
+
+  FunctionTableKey(uint32_t ParentContextID, uint32_t NameID)
+      : parentContextID(ParentContextID), nameID(NameID) {}
+
+  FunctionTableKey(uint32_t ParentContextID, uint32_t NameID,
+                   const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
+      : parentContextID(ParentContextID), nameID(NameID) {
+    parameterTypeIDs.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
+  }
+
+  FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID)
+      : parentContextID(ParentCtx ? ParentCtx->id.Value
+                                  : static_cast<uint32_t>(-1)),
+        nameID(NameID) {}
+
+  FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID,
+                   const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
+      : parentContextID(ParentCtx ? ParentCtx->id.Value
+                                  : static_cast<uint32_t>(-1)),
+        nameID(NameID) {
+    parameterTypeIDs.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
+  }
+
+  llvm::hash_code hashValue() const {
+    auto Hash = llvm::hash_combine(parentContextID, nameID,
+                                   static_cast<bool>(parameterTypeIDs));
+    if (parameterTypeIDs) {
+      Hash = llvm::hash_combine(Hash, parameterTypeIDs->size());
+      for (IdentifierID TypeID : *parameterTypeIDs)
+        Hash = llvm::hash_combine(Hash, static_cast<unsigned>(TypeID));
+    }
+    return Hash;
+  }
+};
+
+inline bool operator==(const FunctionTableKey &LHS,
+                       const FunctionTableKey &RHS) {
+  return LHS.parentContextID == RHS.parentContextID &&
+         LHS.nameID == RHS.nameID &&
+         LHS.parameterTypeIDs == RHS.parameterTypeIDs;
+}
+
+/// Stable reader-facing identity for an API notes function selector entry.
+///
+/// The key keeps the serialized function table identity together with the table
+/// kind. parentContextID names only the declaration context and does not say
+/// whether the entry came from the global-function or C++-method table.
+struct APINotesFunctionSelectorKey {
+  FunctionTableKey Key;
+  bool IsCXXMethod = false;
+
+  APINotesFunctionSelectorKey getWithoutParameterSelector() const {
+    return {FunctionTableKey(Key.parentContextID, Key.nameID), IsCXXMethod};
+  }
+
+  llvm::hash_code hashValue() const {
+    return llvm::hash_combine(Key.hashValue(), IsCXXMethod);
+  }
+};
+
+inline bool operator==(const APINotesFunctionSelectorKey &LHS,
+                       const APINotesFunctionSelectorKey &RHS) {
+  return LHS.Key == RHS.Key && LHS.IsCXXMethod == RHS.IsCXXMethod;
+}
+
+/// Exact function selector key plus parameter spellings used for diagnostics.
+struct APINotesFunctionSelector {
+  APINotesFunctionSelectorKey Key;
+  llvm::SmallVector<std::string, 4> Parameters;
+};
+
 /// A temporary reference to an Objective-C selector, suitable for
 /// referencing selector data on the stack.
 ///
@@ -1049,16 +1096,38 @@ struct ObjCSelectorRef {
 } // namespace clang
 
 namespace llvm {
+template <> struct DenseMapInfo<clang::api_notes::FunctionTableKey> {
+  static clang::api_notes::FunctionTableKey getEmptyKey() {
+    return {0, ~uint32_t(0)};
+  }
+
+  static clang::api_notes::FunctionTableKey getTombstoneKey() {
+    return {0, ~uint32_t(0) - 1};
+  }
+
+  static unsigned getHashValue(const clang::api_notes::FunctionTableKey &Key) {
+    return Key.hashValue();
+  }
+
+  static bool isEqual(const clang::api_notes::FunctionTableKey &LHS,
+                      const clang::api_notes::FunctionTableKey &RHS) {
+    return LHS == RHS;
+  }
+};
+
 template <> struct DenseMapInfo<clang::api_notes::APINotesFunctionSelectorKey> {
+  // The local Key values below are DenseMap sentinels for the wrapper type.
+  // Key.Key stores the wrapped FunctionTableKey sentinel.
   static clang::api_notes::APINotesFunctionSelectorKey getEmptyKey() {
     clang::api_notes::APINotesFunctionSelectorKey Key;
-    Key.NameID = ~uint32_t(0);
+    Key.Key = DenseMapInfo<clang::api_notes::FunctionTableKey>::getEmptyKey();
     return Key;
   }
 
   static clang::api_notes::APINotesFunctionSelectorKey getTombstoneKey() {
     clang::api_notes::APINotesFunctionSelectorKey Key;
-    Key.NameID = ~uint32_t(0) - 1;
+    Key.Key =
+        DenseMapInfo<clang::api_notes::FunctionTableKey>::getTombstoneKey();
     return Key;
   }
 

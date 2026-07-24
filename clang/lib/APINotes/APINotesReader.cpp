@@ -15,6 +15,7 @@
 #include "clang/APINotes/APINotesReader.h"
 #include "APINotesFormat.h"
 #include "clang/APINotes/Types.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/DJB.h"
@@ -760,10 +761,9 @@ public:
   /// The identifier table.
   std::unique_ptr<SerializedIdentifierTable> IdentifierTable;
 
-  /// Lazy reverse lookup cache for identifier IDs. Identifier IDs are dense and
-  /// start at 1. Slot 0 is reserved for the empty identifier.
+  /// Lazy reverse lookup cache from identifier ID to string.
   bool IdentifierStringsInitialized = false;
-  llvm::SmallVector<std::optional<llvm::StringRef>, 0> IdentifierStrings;
+  llvm::DenseMap<uint32_t, llvm::StringRef> IdentifierStrings;
 
   using SerializedContextIDTable =
       llvm::OnDiskIterableChainedHashTable<ContextIDTableInfo>;
@@ -921,8 +921,10 @@ APINotesReader::Implementation::getIdentifierString(IdentifierID ID) {
 
   if (!IdentifierStringsInitialized) {
     IdentifierStringsInitialized = true;
-    // keys() and data() iterate over the same serialized entries in lockstep,
-    // so build the reverse cache without doing a lookup for each key.
+    // keys() and data() iterate over the same serialized entries in lockstep.
+    // The serialized hash-table order is not guaranteed to be identifier-ID
+    // order, so keep an explicit ID-to-string map rather than indexing a vector
+    // by ID.
     auto Identifiers = IdentifierTable->keys();
     auto IDs = IdentifierTable->data();
     auto Identifier = Identifiers.begin();
@@ -930,33 +932,15 @@ APINotesReader::Implementation::getIdentifierString(IdentifierID ID) {
     auto IdentifierEnd = Identifiers.end();
     auto KnownIDEnd = IDs.end();
     for (; Identifier != IdentifierEnd && KnownID != KnownIDEnd;
-         ++Identifier, ++KnownID) {
-      unsigned Index = static_cast<unsigned>(*KnownID);
-      if (IdentifierStrings.size() <= Index)
-        IdentifierStrings.resize(Index + 1);
-      IdentifierStrings[Index] = *Identifier;
-    }
+         ++Identifier, ++KnownID)
+      IdentifierStrings.try_emplace(static_cast<uint32_t>(*KnownID),
+                                    *Identifier);
   }
 
-  unsigned Index = static_cast<unsigned>(ID);
-  if (Index >= IdentifierStrings.size())
+  auto Known = IdentifierStrings.find(static_cast<uint32_t>(ID));
+  if (Known == IdentifierStrings.end())
     return std::nullopt;
-  return IdentifierStrings[Index];
-}
-
-static APINotesFunctionSelectorKey
-toAPINotesFunctionSelectorKey(const FunctionTableKey &Key, bool IsCXXMethod) {
-  APINotesFunctionSelectorKey SelectorKey;
-  SelectorKey.IsCXXMethod = IsCXXMethod;
-  SelectorKey.ParentContextID = Key.parentContextID;
-  SelectorKey.NameID = Key.nameID;
-  if (Key.parameterTypeIDs) {
-    SelectorKey.ParameterTypeIDs.emplace();
-    SelectorKey.ParameterTypeIDs->reserve(Key.parameterTypeIDs->size());
-    for (IdentifierID TypeID : *Key.parameterTypeIDs)
-      SelectorKey.ParameterTypeIDs->push_back(static_cast<unsigned>(TypeID));
-  }
-  return SelectorKey;
+  return Known->second;
 }
 
 template <typename TableT>
@@ -966,12 +950,12 @@ bool APINotesReader::Implementation::collectExactFunctionParameterSelectors(
   if (!Table)
     return true;
 
-  for (FunctionTableKey Key : Table->keys()) {
+  for (const FunctionTableKey &Key : Table->keys()) {
     if (!Key.parameterTypeIDs)
       continue;
 
     APINotesFunctionSelector Selector;
-    Selector.Key = toAPINotesFunctionSelectorKey(Key, IsCXXMethod);
+    Selector.Key = {Key, IsCXXMethod};
     Selector.Parameters.reserve(Key.parameterTypeIDs->size());
     for (IdentifierID TypeID : *Key.parameterTypeIDs) {
       std::optional<llvm::StringRef> TypeName = getIdentifierString(TypeID);
@@ -2449,7 +2433,7 @@ APINotesReader::getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name) {
       Implementation->getFunctionKey(CtxID.Value, Name);
   if (!Key)
     return std::nullopt;
-  return toAPINotesFunctionSelectorKey(*Key, /*IsCXXMethod=*/true);
+  return APINotesFunctionSelectorKey{*Key, /*IsCXXMethod=*/true};
 }
 
 std::optional<APINotesFunctionSelectorKey>
@@ -2460,7 +2444,7 @@ APINotesReader::getCXXMethodSelectorKey(
       Implementation->getFunctionKey(CtxID.Value, Name, Parameters);
   if (!Key)
     return std::nullopt;
-  return toAPINotesFunctionSelectorKey(*Key, /*IsCXXMethod=*/true);
+  return APINotesFunctionSelectorKey{*Key, /*IsCXXMethod=*/true};
 }
 
 auto APINotesReader::lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name)
@@ -2537,7 +2521,7 @@ APINotesReader::getGlobalFunctionSelectorKey(llvm::StringRef Name,
       Implementation->getFunctionKey(Ctx, Name);
   if (!Key)
     return std::nullopt;
-  return toAPINotesFunctionSelectorKey(*Key, /*IsCXXMethod=*/false);
+  return APINotesFunctionSelectorKey{*Key, /*IsCXXMethod=*/false};
 }
 
 std::optional<APINotesFunctionSelectorKey>
@@ -2548,7 +2532,7 @@ APINotesReader::getGlobalFunctionSelectorKey(
       Implementation->getFunctionKey(Ctx, Name, Parameters);
   if (!Key)
     return std::nullopt;
-  return toAPINotesFunctionSelectorKey(*Key, /*IsCXXMethod=*/false);
+  return APINotesFunctionSelectorKey{*Key, /*IsCXXMethod=*/false};
 }
 
 bool APINotesReader::collectExactFunctionParameterSelectors(
