@@ -249,7 +249,7 @@ public:
       // External linkage (see convertLinkage in CodeGen.cpp), so an
       // initializer-less global emits as `.extern .global ...` in PTX.
       // The host-side definition stays. CUFAddConstructor will emit
-      // CUFRegisterExternalVariable (= __cudaRegisterHostVar) so the CUDA
+      // cuf.register_variable_static so the CUDA
       // runtime maps the device extern to the host pointer at module-load
       // time, and HMM/ATS handles migration.
       if (cudaUnified && !globalOp.getConstant() &&
