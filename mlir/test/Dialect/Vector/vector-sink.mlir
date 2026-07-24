@@ -200,8 +200,8 @@ func.func @source_and_result_mismatch(%arg0 : f32) -> vector<1xi1> {
 //    %scalar_res = vector.fma %scalar_1, %scalar2
 //    %vec_res = vector.broadcast %scalar_res
 //
-// TODO: It should be possible to support this case by rewriting to math.fma
-
+// TODO: It may be better to support this case by promoting the scalar
+// to a single element vector.
 // CHECK-LABEL: func.func @negative_fma_scalar_broadcast_source
 //     CHECK:   %[[BROADCAST:.+]] = vector.broadcast
 //     CHECK:   %[[RESULT:.+]] = vector.fma %[[BROADCAST]]
