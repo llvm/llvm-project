@@ -6194,33 +6194,6 @@ static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
   return success();
 }
 
-/// Verifies that `memRefTy`'s most minor dimension does not have a
-/// statically known non-unit stride; a dynamic (not provably unit) stride
-/// is accepted.
-///
-/// This is more permissive than vector.load/store's stride check: ops such
-/// as vector.maskedload/maskedstore and vector.expandload/compressstore are
-/// also used on memrefs whose most minor dimension is contiguous at runtime
-/// but not provable as such at the type level (e.g., buffers produced by
-/// the sparsifier).
-static LogicalResult verifyNonStaticNonUnitStrideRejected(Operation *op,
-                                                          VectorType vecTy,
-                                                          MemRefType memRefTy) {
-  if (!vecTy.isScalable() &&
-      (vecTy.getRank() == 0 || vecTy.getNumElements() == 1))
-    return success();
-
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(memRefTy.getStridesAndOffset(strides, offset)))
-    return success();
-
-  if (!strides.empty() && !ShapedType::isDynamic(strides.back()) &&
-      strides.back() != 1)
-    return op->emitOpError("most minor memref dim must have unit stride");
-  return success();
-}
-
 LogicalResult vector::LoadOp::verify() {
   VectorType resVecTy = getVectorType();
   MemRefType memRefTy = getMemRefType();
@@ -6330,8 +6303,8 @@ LogicalResult MaskedLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (failed(verifyNonStaticNonUnitStrideRejected(*this, resVType, memType)))
-    return failure();
+  if (!memType.isLastDimUnitStride())
+    return emitOpError("most minor memref dim must have unit stride");
 
   // Negative strides are not supported on vector.maskedload. The lowering to
   // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
@@ -6399,8 +6372,8 @@ LogicalResult MaskedStoreOp::verify() {
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (failed(verifyNonStaticNonUnitStrideRejected(*this, valueVType, memType)))
-    return failure();
+  if (!memType.isLastDimUnitStride())
+    return emitOpError("most minor memref dim must have unit stride");
 
   // Negative strides are not supported on vector.maskedstore. The lowering to
   // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
@@ -6685,8 +6658,8 @@ LogicalResult ExpandLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (failed(verifyNonStaticNonUnitStrideRejected(*this, resVType, memType)))
-    return failure();
+  if (!memType.isLastDimUnitStride())
+    return emitOpError("most minor memref dim must have unit stride");
 
   // Negative strides are not supported on vector.expandload. The lowering to
   // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
@@ -6751,8 +6724,8 @@ LogicalResult CompressStoreOp::verify() {
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (failed(verifyNonStaticNonUnitStrideRejected(*this, valueVType, memType)))
-    return failure();
+  if (!memType.isLastDimUnitStride())
+    return emitOpError("most minor memref dim must have unit stride");
 
   // Negative strides are not supported on vector.compressstore. The lowering
   // to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
