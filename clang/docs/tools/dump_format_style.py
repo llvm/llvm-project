@@ -71,8 +71,8 @@ def pluralize(word: str):
         return register_plural(word, word + "s")
 
 
-def reindent_fenced_code_blocks(text):
-    """Reindent fenced code body text to match the fence nesting indent.
+def reindent_fenced_blocks(text):
+    """Reindent fenced block body text to match the fence nesting indent.
 
     For example, this collapses the code body's internal Doxygen indentation:
 
@@ -85,21 +85,38 @@ def reindent_fenced_code_blocks(text):
       ```yaml
       BasedOnStyle: LLVM
       ```
+
+    It also normalizes MyST colon-fenced directives:
+
+      :::{note}
+        This line should use the directive's indentation.
+      :::
+
+    to this Markdown shape:
+
+      :::{note}
+      This line should use the directive's indentation.
+      :::
     """
 
-    def dedent_block(match):
+    def reindent_block(match):
         indent = match.group("indent")
-        lang = match.group("lang")
+        fence = match.group("fence")
+        info = match.group("info")
         body = match.group("body")
         dedented_body = "".join(
             indent + line for line in textwrap.dedent(body).splitlines(keepends=True)
         )
-        return f"{indent}```{lang}\n{dedented_body}{indent}```{match.group('trailing')}"
+        return (
+            f"{indent}{fence}{info}\n"
+            f"{dedented_body}"
+            f"{indent}{fence}{match.group('trailing')}"
+        )
 
     return re.sub(
-        r"(?ms)^(?P<indent>[^\S\n]*)```(?P<lang>[^\n]*)\n"
-        r"(?P<body>.*?)(?P=indent)```(?P<trailing>\n|$)",
-        dedent_block,
+        r"(?ms)^(?P<indent>[^\S\n]*)(?P<fence>```|:::)(?P<info>[^\n]*)\n"
+        r"(?P<body>.*?)(?P=indent)(?P=fence)(?P<trailing>\n|$)",
+        reindent_block,
         text,
     )
 
@@ -143,7 +160,7 @@ def doxygen2md(text):
         ),
         text,
     )
-    text = reindent_fenced_code_blocks(text)
+    text = reindent_fenced_blocks(text)
     return text
 
 

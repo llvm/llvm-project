@@ -224,9 +224,10 @@ shortcut in the BBEdit preferences, under Menus & Shortcuts.
 
 ## CLion Integration
 
-{program}`clang-format` is integrated into [CLion](https://www.jetbrains.com/clion/) as an alternative code formatter. CLion turns it on
-automatically when there is a `.clang-format` file under the project root.
-Code style rules are applied as you type, including indentation,
+{program}`clang-format` is integrated into
+[CLion](https://www.jetbrains.com/clion/) as an alternative code formatter.
+CLion turns it on automatically when there is a `.clang-format` file under the
+project root. Code style rules are applied as you type, including indentation,
 auto-completion, code generation, and refactorings.
 
 {program}`clang-format` can also be enabled without a `.clang-format` file.
@@ -235,11 +236,14 @@ or the default LLVM style.
 
 ## Visual Studio Integration
 
-Download the latest Visual Studio extension from the [alpha build site](https://llvm.org/builds/). The default key-binding is Ctrl-R,Ctrl-F.
+Download the latest Visual Studio extension from the [alpha build
+site](https://llvm.org/builds/). The default key-binding is Ctrl-R,Ctrl-F.
 
 ## Visual Studio Code Integration
 
-Get the latest Visual Studio Code extension from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=xaver.clang-format). The default key-binding is Alt-Shift-F.
+Get the latest Visual Studio Code extension from the [Visual Studio
+Marketplace](https://marketplace.visualstudio.com/items?itemName=xaver.clang-format).
+The default key-binding is Alt-Shift-F.
 
 ## Git integration
 
