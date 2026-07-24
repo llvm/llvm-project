@@ -66,11 +66,22 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   MemRefType type = getType();
   if (!type.hasStaticShape())
     return {};
-  // Make sure the memref contains only a single element.
-  if (type.getNumElements() != 1)
-    return {};
 
-  return {MemorySlot{getResult(), type.getElementType()}};
+  // A single-element memref is promoted to a scalar SSA value.
+  if (type.getNumElements() == 1)
+    return {MemorySlot{getResult(), type.getElementType()}};
+
+  // A multi-element memref can be promoted to a single vector SSA value when it
+  // is only ever accessed as a whole buffer (e.g. through whole-buffer
+  // `vector.transfer_read`/`vector.transfer_write`). Offering the slot is safe
+  // and purely additive: any access that is not a whole-buffer transfer will
+  // fail its `canUsesBeRemoved` check and abort promotion of this slot.
+  if (VectorType::isValidElementType(type.getElementType()))
+    return {MemorySlot{
+        getResult(),
+        VectorType::get(type.getShape(), type.getElementType())}};
+
+  return {};
 }
 
 Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
