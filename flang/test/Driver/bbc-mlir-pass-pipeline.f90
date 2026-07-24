@@ -21,7 +21,6 @@ end program
 ! CHECK-NEXT: 'fir.global' Pipeline
 ! CHECK-NEXT:   CharacterConversion
 ! CHECK-NEXT: 'func.func' Pipeline
-! CHECK-NEXT:   ArrayValueCopy
 ! CHECK-NEXT:   CharacterConversion
 ! CHECK-NEXT: 'omp.declare_mapper' Pipeline
 ! CHECK-NEXT:   CharacterConversion

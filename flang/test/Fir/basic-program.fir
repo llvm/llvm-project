@@ -93,7 +93,6 @@ func.func @_QQmain() {
 // PASSES-NEXT: 'fir.global' Pipeline
 // PASSES-NEXT:   CharacterConversion
 // PASSES-NEXT: 'func.func' Pipeline
-// PASSES-NEXT:   ArrayValueCopy
 // PASSES-NEXT:   CharacterConversion
 // PASSES-NEXT: 'omp.declare_mapper' Pipeline
 // PASSES-NEXT:   CharacterConversion

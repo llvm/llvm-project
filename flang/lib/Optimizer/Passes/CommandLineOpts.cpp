@@ -51,7 +51,6 @@ codegenoptions::DebugInfoKind noDebugInfo{codegenoptions::NoDebugInfo};
 
 /// Optimizer Passes
 DisableOption(CfgConversion, "cfg-conversion", "disable FIR to CFG pass");
-DisableOption(FirAvc, "avc", "array value copy analysis and transformation");
 DisableOption(FirMao, "memory-allocation-opt",
               "memory allocation optimization");
 
