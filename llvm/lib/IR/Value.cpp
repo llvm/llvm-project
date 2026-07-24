@@ -168,6 +168,16 @@ bool Value::hasOneUser() const {
   return std::equal(++user_begin(), user_end(), user_begin());
 }
 
+User *Value::getUniqueUser() {
+  User *Result = nullptr;
+  for (auto *U : users()) {
+    if (Result && Result != U)
+      return nullptr;
+    Result = U;
+  }
+  return Result;
+}
+
 static bool isUnDroppableUser(const User *U) { return !U->isDroppable(); }
 
 Use *Value::getSingleUndroppableUse() {
