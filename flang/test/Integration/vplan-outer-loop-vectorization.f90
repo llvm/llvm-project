@@ -6,7 +6,10 @@
 !
 ! This test disables that workaround (-disable-vector-always-unroll) to check
 ! whether LLVM's VPlan-native outer-loop vectorization can vectorize the outer
-! loop directly.
+! loop directly. -fno-unroll-loops keeps LLVM's own unroller from unrolling the
+! inner loop on its own (which would otherwise expose the outer loop to the
+! regular vectorizer and mask the need for the workaround); with it, only a
+! forced `llvm.loop.unroll.full` from the workaround unrolls the inner loop.
 !
 ! VPlan-native outer-loop vectorization does not yet handle this pattern, so the
 ! expected "vectorized loop" remark is not produced and the test is marked
@@ -21,7 +24,8 @@
 
 ! RUN: %flang_fc1 -emit-llvm -O2 -triple x86_64-unknown-linux-gnu \
 ! RUN:   -mllvm -enable-vplan-native-path -mmlir -disable-vector-always-unroll \
-! RUN:   -Rpass=loop-vectorize -o /dev/null %s 2>&1 | FileCheck %s
+! RUN:   -fno-unroll-loops -Rpass=loop-vectorize -o /dev/null %s 2>&1 \
+! RUN:   | FileCheck %s
 
 subroutine outer_vec(a, b)
   real :: a(8, 8), b(8, 8)
